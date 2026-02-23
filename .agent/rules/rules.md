@@ -2,13 +2,9 @@
 trigger: always_on
 ---
 
----
-
-## trigger: always_on
-
 # AI AGENT ENFORCED ARCHITECTURE RULES
 
-## Multi-Workspace SaaS - Turborepo - Encrypted REST
+## Multi-Workspace SaaS — Turborepo — Encrypted REST
 
 Single source of truth. No deviation allowed.
 
@@ -16,23 +12,64 @@ Single source of truth. No deviation allowed.
 
 # System Overview
 
-**Stack:** Turborepo - Bun - Next.js (apps/app) - ElysiaJS (apps/api) - PostgreSQL - Shared packages
+**Stack:** Turborepo · Bun · Next.js (`apps/app`) · ElysiaJS (`apps/api`) · PostgreSQL · Drizzle ORM · Redis · Supabase (auth/storage) · Sentry
 
-**Flow:** `apps/app` -> Encrypted REST -> `apps/api` -> Database
+**Flow:** `apps/app` → Encrypted REST → `apps/api` → Database
 
 ---
 
-# Monorepo Structure (NO `src/` ALLOWED)
+# Monorepo Structure
 
 ```
-apps/app/         -> app/ components/ modules/ lib/ middleware.ts
-apps/api/modules/{feature}/ -> controller - service - repository - model - __tests__/
-apps/api/         -> plugins/ config/ index.ts
-packages/         -> utils/ email/ logger/ database/ types/ ui/
-.env - .env.test - .mcp.json - turbo.json
+apps/app/
+  actions/          → REST wrappers only (*.actions.ts)
+  app/[locale]/     → Next.js App Router pages with i18n
+  components/       → All UI components
+  lib/              → Client utilities (axios, cookie, currency, preferences, fonts)
+  hooks/            → Custom React hooks
+  stores/           → Client state (Zustand or equivalent)
+  navigation/       → Sidebar/nav config
+  server/           → Next.js Server Actions (server-actions.ts)
+  config/           → App-level config (app-config.ts)
+  types/            → App-local types only (e.g. settings.ts)
+  data/             → Static/seed data consumed by UI
+  middleware.ts     → Auth + workspace guard only
+
+apps/api/
+  modules/{feature}/  → controller · service · repository · model|dto · __tests__/
+  plugins/            → auth · encryption · logger · rate-limit
+  config/             → env.ts (startup validation)
+  index.ts
+  instrument.ts       → Sentry instrumentation
+
+packages/
+  bucket/           → Object/file storage client (S3-compatible)
+  constants/        → countries.json · roles.ts · default/category.ts · default/wallet.ts
+  currencyfreaks/   → CurrencyFreaks API client
+  database/         → Drizzle ORM: schema/ · drizzle/ · client.ts · drizzle.config.ts · index.ts
+  dictionaries/     → i18n JSON files (en · id · ja) + index.ts
+  email/            → Email sender + templates/
+  encryption/       → AES encryption utilities
+  eslint-config/    → Shared ESLint configs
+  logger/           → Shared logger
+  redis/            → Redis client singleton
+  supabase/         → Supabase client · queries · mutations · types · utils
+  types/            → Shared TypeScript types + error codes (no runtime logic)
+  typescript-config/→ Shared tsconfig bases
+  ui/               → shadcn/ui components (uses src/ internally)
+  utils/            → Pure TS utilities (api-response · formatting · pagination · env · load-env)
 ```
 
-`src/` is forbidden everywhere.
+---
+
+# `src/` Directory Rule
+
+`src/` is **forbidden everywhere** with exactly **two exceptions**:
+
+- `packages/ui/src/` — shadcn component library convention
+- `packages/bucket/src/` — existing package structure
+
+All other packages and apps MUST NOT use `src/`. No new packages should adopt `src/`.
 
 ---
 
@@ -40,281 +77,206 @@ packages/         -> utils/ email/ logger/ database/ types/ ui/
 
 Every workspace-scoped table MUST have `workspace_id` + `deleted_at`.
 
-**Workspace context priority:** JWT `workspace_id` -> `x-workspace-id` header -> subdomain. JWT always wins on conflict.
+**Workspace context priority:** JWT `workspace_id` → `x-workspace-id` header → subdomain. JWT always wins on conflict.
 
-All repository queries MUST filter by `workspace_id` and `deleted_at: null`. No cross-workspace joins. No global queries.
+All repository queries MUST filter by `workspace_id` and `deleted_at: null`. No cross-workspace joins. No global queries without explicit super-admin role check.
 
 ```ts
 where: { workspace_id, deleted_at: null }
 ```
 
-**Forbidden:** hardcoded workspace IDs - super-admin bypass without role check - returning data without workspace validation.
+**Forbidden:** hardcoded workspace IDs · super-admin bypass without role check · returning data without workspace validation.
 
 ---
 
-# User <-> Workspace Model (CRITICAL)
+# User ↔ Workspace Model (CRITICAL)
 
-**users table:** `workspace_id FK -> workspaces.id` (active workspace, nullable until first join)
+**users table:** `workspace_id FK → workspaces.id` (active workspace, nullable until first join)
 
-**user_workspaces table:** `{ user_id, workspace_id, role: "owner"|"admin"|"member", joined_at }`
+**user_workspaces table:** `{ user_id, workspace_id, role: "owner" | "admin" | "member", joined_at }`
 
-- `workspaces` on user = resolved via `user_workspaces` join table. NEVER an array/JSON column.
-- `workspace_id` auto-set on first join. Updated on switch. Null or reassigned on leave.
+- Workspace membership resolved via `user_workspaces` join table. NEVER an array/JSON column on users.
+- `workspace_id` on users auto-set on first join. Updated on workspace switch. Null or reassigned on leave.
+- Roles defined in `packages/constants/roles.ts` only — never hardcoded strings inline.
 
 **JWT MUST include:** `{ user_id, workspace_id }`
 
-**Forbidden:** array/JSON workspaces column - skipping `user_workspaces` membership check - JWT without `workspace_id` - access without a membership row.
+**Forbidden:** array/JSON workspaces column on users · skipping `user_workspaces` membership check · JWT without `workspace_id` · access without a membership row.
 
 ---
 
 # apps/app Rules
 
-- UI only. REST consumer only. No DB access. No business logic.
-- `apps/app` CANNOT import `packages/database`.
-- Components -> `/components` only. No `_components` in routes. No API calls in client components.
-- Modules -> REST wrappers only (`auth.action.ts`, `auth.types.ts`). No DB, no business logic.
+UI and REST consumer only. No DB access. No business logic. No direct ElysiaJS imports.
 
-**middleware.ts** - auth + workspace guard only:
+**`apps/app` CANNOT import `packages/database` or `packages/supabase` in client components.**
 
-- Verify JWT, redirect unauthed to `/login`, detect `workspace_id`, redirect no-workspace users to onboarding.
-- CANNOT: contain business logic - call DB - call apps/api directly.
+### Directory Responsibilities
+
+**`actions/`** — REST wrappers only. One file per feature: `auth.actions.ts`, `wallet.actions.ts`, etc. Files call the encrypted API via axios and return typed responses. No DB, no business logic, no direct Drizzle usage.
+
+**`app/[locale]/`** — Next.js App Router with i18n locale segment. Route groups: `(auth)/` for public auth pages, `(main)/` for authenticated app shell. Page components are thin — they import from `components/` and call `actions/`. No API calls directly in page files.
+
+**`components/`** — All React components. Organized by feature domain (auth, layout, setting, transactions, vault, wallets, shared) plus `ui/` for primitives. PascalCase files. No business logic. Server components may call `actions/`; client components use hooks/stores.
+
+**`lib/`** — Client-side utilities: `axios.ts` (configured instance with encryption interceptors), `cookie.client.ts`, `currency.ts`, `local-storage.client.ts`, `fonts/`, `preferences/`. No DB, no API routes.
+
+**`hooks/`** — Custom React hooks (`use-currency.ts`, `use-localized-route.ts`, etc.). Hooks may use stores or call actions. Must be client-only (`"use client"`).
+
+**`stores/`** — Client state management (Zustand). Stores are client-only. Do not persist sensitive data to localStorage without encryption.
+
+**`navigation/`** — Sidebar and nav config objects only. No rendering logic.
+
+**`server/`** — Next.js Server Actions (`server-actions.ts`). May call `actions/` or use server-only utilities. Never expose raw DB queries.
+
+**`config/`** — App-level configuration constants (`app-config.ts`). No secrets; only public-safe config.
+
+**`types/`** — App-local types that are not shared across apps (e.g., `settings.ts`). Shared types belong in `packages/types`.
+
+**`data/`** — Static data consumed by UI (e.g., `users.ts` for mock/seed display). No business logic.
+
+**`middleware.ts`** — Auth + workspace guard only:
+
+- Verify JWT, redirect unauthenticated users to `/login`
+- Detect `workspace_id`, redirect no-workspace users to onboarding
+- Handle i18n locale detection/redirect
+- CANNOT: contain business logic · call DB · call `apps/api` directly
+
+### i18n Rules
+
+- All routes nested under `app/[locale]/`. Supported locales configured in `i18n-config.ts`.
+- Dictionary strings loaded via `get-dictionary.ts`. Dictionary files live in `packages/dictionaries/`.
+- Hard-coded user-facing strings in components are FORBIDDEN. All copy goes through the dictionary system.
+- Locale-aware navigation via `hooks/use-localized-route.ts`.
+
+### Sentry (apps/app)
+
+- `instrumentation.ts` initializes Sentry on the server.
+- `sentry.client.config.ts` initializes Sentry on the client.
+- `sentry.server.config.ts` for server-side config.
+- Never log decrypted payloads or secrets to Sentry. Scrub PII before sending.
 
 ---
 
 # apps/api Rules
 
-Only layer allowed to: access DB - contain business logic - handle workspace validation.
+Only layer allowed to: access DB · contain business logic · handle workspace validation.
 
-**Layer flow:** `Controller -> Service -> Repository -> Database`
+**Layer flow:** `Controller → Service → Repository → Database`
 
-- **Controller:** route definition + TypeBox input validation + call service + encrypt response. No DB, no business logic.
-- **Service:** business logic + workspace validation + plan enforcement + call repository. No HTTP logic.
-- **Repository:** only layer importing `packages/database`. Enforce `workspace_id` filter + `deleted_at: null` on all reads. No business logic. Never hard delete.
+### Controller
 
----
+- Route definition + TypeBox input validation + call service + encrypt response.
+- No DB access. No business logic. No plan logic.
+- File naming: `{feature}.controller.ts`. For sub-features: `rates.controller.ts` inside the parent module folder.
+- Register routes on the Elysia app instance exported from `modules/{feature}/index.ts`.
 
-# Encrypted API Response (MANDATORY)
+### Service
 
-Raw JSON responses are FORBIDDEN.
+- All business logic: workspace validation · plan enforcement · orchestration · audit log writes.
+- No HTTP primitives (no `ctx`, no status codes).
+- File naming: `{feature}.service.ts`.
 
-```ts
-type ApiResponse<T> = {
-  success: boolean;
-  code: string;
-  message: string;
-  data: T | null;
-  meta: {
-    timestamp: number;
-    request_id?: string;
-    pagination?: {
-      total: number;
-      page: number;
-      limit: number;
-      total_pages: number;
-    };
-  };
-};
-```
+### Repository
 
-**Pagination:** all list endpoints MUST return `meta.pagination`. Default limit=20, max=100. No unbounded queries.
+- Only layer importing `packages/database`. Enforces `workspace_id` + `deleted_at: null` on all reads.
+- No business logic. Never hard-delete workspace-scoped records. Use soft delete (`deleted_at = now()`).
+- File naming: `{feature}.repository.ts`.
 
-**Errors:** `success: false` + machine-readable `code` from `packages/types` + correct HTTP status.
+### Model / DTO Files
 
-```
-400 validation - 401 unauthed - 403 forbidden - 404 not found
-409 conflict - 422 business logic - 429 rate limit - 500 server error
-```
+- TypeBox schemas for request/response validation live in `{feature}.model.ts` OR `{feature}.dto.ts`.
+- Use `.model.ts` when the file defines the primary resource shape (categories, users, workspaces, transactions).
+- Use `.dto.ts` when the file defines request/response transfer objects for a service with complex sub-operations (vault, wallets, settings).
+- Never duplicate TypeBox schema definitions across files. One source per shape.
 
-NEVER return raw `Error` object, stack trace, or `200` for an error.
+### Auth Module
 
-**Flow:** Build `ApiResponse<T>` -> AES encrypt -> return string. Frontend: receive -> decrypt in axios interceptor -> consume typed response.
+- `auth.controller.ts` — route definitions and TypeBox validation.
+- `utils.ts` — auth-specific helpers (token generation, bcrypt helpers). Acceptable to skip separate service/repository for pure auth logic that doesn't require workspace DB queries.
+- Workspace-scoped auth actions (e.g. invite acceptance) MUST go through a proper service+repository.
+
+### Sub-module Pattern
+
+For features with sub-resources (e.g. `wallets/groups/`, `wallets/items/`, `settings/sub-currencies/`):
+
+- Create a sub-directory under the parent module.
+- Sub-module follows the same controller/service/repository pattern.
+- Parent module `index.ts` registers all sub-module routes.
+
+### Sentry (apps/api)
+
+- `instrument.ts` at api root initializes Sentry. Import first in `index.ts` before anything else.
+- Never send raw error objects, stack traces, or decrypted payloads to Sentry.
 
 ---
 
 # packages/ Rules
 
-**packages/utils/** - `api-response.ts - formatting.ts - date.ts - string.ts - number.ts - pagination.ts - index.ts`
-Pure TypeScript only. No DB, no framework code.
+## packages/database
 
-**packages/database/** - Drizzle ORM only.
+Drizzle ORM only.
 
 ```
-schema/           -> one file per table e.g. users.ts, workspaces.ts
-migrations/       -> generated migration SQL files (never edit manually)
-drizzle.config.ts -> Drizzle Kit config
-client.ts         -> db client singleton
-seed.ts           -> dev/test seeding only
-index.ts          -> re-exports client + schema + types
+schema/           → one file per table (users.ts, workspaces.ts, wallets.ts, etc.)
+drizzle/          → generated migration SQL files — NEVER edit manually
+drizzle.config.ts → Drizzle Kit config
+client.ts         → db client singleton
+check_migrations.ts → migration integrity check
+index.ts          → re-exports client + schema + types
 ```
 
-- Singleton client. Migrations generated via `drizzle-kit generate`, applied via `drizzle-kit migrate`.
-- Schema changes require running `drizzle-kit generate` to produce migration files before applying.
+- Singleton DB client. Migrations generated via `drizzle-kit generate`, applied via `drizzle-kit migrate`.
+- Schema changes require `drizzle-kit generate` before `drizzle-kit migrate`. No exceptions.
+- Every workspace-scoped table MUST define `workspace_id` and `deleted_at` columns in its schema file.
 - Only `apps/api` repositories may import this package.
-- Every workspace-scoped table schema MUST define `workspace_id` and `deleted_at` columns.
+- `scripts/` inside database are one-off migration helpers. Do not add business logic here.
 
-**packages/types/** - shared contract for both apps.
+**Current schema files:** `articles.ts · audit-logs.ts · categories.ts · transactions.ts · user-workspaces.ts · users.ts · vault-files.ts · wallet-groups.ts · wallets.ts · workspace-invitations.ts · workspace-settings.ts · workspace-sub-currencies.ts · workspaces.ts`
+
+## packages/types
+
+Shared TypeScript contract for all apps. Types + constants only. No runtime logic. No DB imports.
 
 ```
-api.ts - workspace.ts - user.ts - error-codes.ts - index.ts
+api.ts          → ApiResponse<T>, pagination types
+workspace.ts    → Workspace, WorkspaceMember types
+user.ts         → User types
+category.ts     → Category types
+transaction.ts  → Transaction types
+wallet.ts       → Wallet, WalletGroup types
+error-codes.ts  → ErrorCode const (SCREAMING_SNAKE_CASE)
+index.ts        → re-exports all
 ```
 
-- Types + constants only. No runtime logic. No DB imports.
 - All error codes defined here as `const ErrorCode = { WORKSPACE_NOT_FOUND, FORBIDDEN, ... }`.
+- Plan names defined here only — never hardcoded elsewhere.
 - Never duplicated across apps.
+- The `src/` sub-directory inside `packages/types` is a legacy artifact — do not add new files there; place all types at the package root.
 
----
+## packages/constants
 
-# Naming Conventions
-
-- Variables -> `snake_case` - Functions -> `camelCase` - Components -> `PascalCase`
-- Files/folders -> `kebab-case` - Props -> `camelCase`
-- Test files -> `{name}.test.ts` in `__tests__/` - Error codes -> `SCREAMING_SNAKE_CASE`
-- Drizzle schema files -> named after the table they define e.g. `users.ts`, `workspaces.ts`
-
----
-
-# Security Rules
-
-- No secrets in frontend except public key. No logging decrypted payloads.
-- Passwords hashed with bcrypt (min cost 12). JWT includes `user_id` + `workspace_id`.
-- Encryption key in root `.env`. Rate limiting per workspace + per IP.
-- All input validated with TypeBox before service layer.
-
----
-
-# Forbidden Actions (ZERO TOLERANCE)
-
-- Create `src/` - access DB from `apps/app` - skip repository layer - return raw DB row or Error object
-- Skip workspace validation - duplicate shared logic - mix business logic in controller
-- Cross-workspace query - workspaces as array/JSON on users - skip `user_workspaces` check
-- JWT without `workspace_id` - unbounded list query - hard delete workspace-scoped records
-- Define error codes inline - return `200` for errors - skip MCP reads before writing code
-- Run destructive DB commands via MCP without user confirmation
-- Manually edit generated migration files - skip `drizzle-kit generate` before applying schema changes
-
----
-
-# Clean Architecture
-
-Each feature isolated in `modules/{feature}/`. No global feature dumping.
-
----
-
-# SaaS Scalability
-
-Unlimited workspaces - per-workspace isolation - per-workspace subscription - role-based access per workspace - horizontal scaling.
-
----
-
-# Subscription & Plan Enforcement
-
-Plan gates MUST live in **service layer** only. Controllers and repositories have no plan logic.
-
-- Check plan limits before every write operation.
-- `workspace_subscriptions` table tracks active plan per workspace.
-- Plan names defined in `packages/types` only - never hardcoded.
-
----
-
-# Audit Logging
-
-Every mutation on workspace-scoped data MUST produce an audit log.
-
-`audit_logs`: `{ id, workspace_id, user_id, action, entity, entity_id, before, after, created_at }`
-
-- Written in **service layer** after successful repo calls. Append-only - never updated or deleted.
-- `before`/`after` MUST NOT include passwords or secrets.
-- `action` format: `"{entity}.{verb}"` e.g. `"invoice.deleted"`.
-
----
-
-# API Versioning
-
-All routes prefixed `/v1/{resource}`. Version prefix set at router level, never per-endpoint.
-
-- Breaking changes -> new version (`/v2/`). Never mutate existing versioned routes.
-- Deprecated routes stay functional for one full version cycle before removal.
-
----
-
-# Rate Limiting
-
-Applied globally as an ElysiaJS plugin.
-
-- Authenticated: 300 req/min per workspace - Unauthenticated: 30 req/min per IP - Auth endpoints: 10 req/15min per IP.
-- Redis-backed (in-memory for dev). Returns HTTP 429 + `ErrorCode.RATE_LIMIT_EXCEEDED`.
-- Response headers required: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`.
-
----
-
-# Environment Variables
-
-Root `.env` (shared): `ENCRYPTION_KEY - DATABASE_URL - JWT_SECRET - JWT_EXPIRES_IN - REDIS_URL`
-`apps/api` adds: `PORT - API_BASE_URL`
-`apps/app` adds: `NEXT_PUBLIC_API_URL - NEXT_PUBLIC_APP_URL` (public vars only)
-
-- Secrets in root `.env` only. `NEXT_PUBLIC_` for browser-safe vars only.
-- All required vars validated at startup via `apps/api/config/`.
-- `.env` and `.env.test` never committed. `.env.test` never contains production secrets.
-
----
-
-# Unit Testing (Bun Test Runner)
-
-Tests co-located in `modules/{feature}/__tests__/`. Mocks in `__tests__/mocks/`.
-
-| Layer      | Type        | Cover                                     |
-| ---------- | ----------- | ----------------------------------------- |
-| Service    | Unit        | Logic, plan gates, error throwing         |
-| Repository | Integration | Queries against test DB, workspace filter |
-| Controller | Integration | Input validation, HTTP status codes       |
-| Utils      | Unit        | Pure function correctness                 |
-
-- Service tests MUST mock repository. Never hit real DB.
-- Repository tests use `.env.test` DB, reset with `drizzle-kit migrate` against a clean test DB between runs.
-- Every method: >=1 happy path test + >=1 error path test.
-- Workspace isolation MUST be asserted: `workspace_id_A` queries cannot return `workspace_id_B` data.
-- Test name format: `should {behaviour} when {condition}`.
-- Coverage: service >=80% - utils >=90%. Zero coverage on service layer is forbidden.
-
----
-
-# MCP Rules
-
-Agent MUST use MCP to read real project context before writing any code. Guessing is forbidden.
-
-**Required MCP servers:**
-
-- `filesystem` - read/write project files. Read before every write. Read `packages/database/schema/` before any DB-related code. Check packages before creating types/utils.
-- `postgres` - verify live table/column state before writing repository queries.
-- `github` - check open branches/PRs before starting features. Branch per feature: `feature/{name}`. Never push to `main`/`dev`.
-- `shell` - run `bun test`, `bun run typecheck`, `bun run lint`, `bun run build` after every change. Run `drizzle-kit generate` + `drizzle-kit migrate` after schema changes.
-
-**Config:** `.mcp.json` at project root, committed to version control. Secrets via `.env` references only - never hardcoded.
-
-**Mandatory agent order:**
+Shared static constants. No runtime logic. No DB imports.
 
 ```
-1. filesystem -> read existing module + packages/database/schema/ + packages/types
-2. postgres   -> confirm live table/column state
-3. github     -> check open branches/PRs
-4. write code
-5. shell      -> bun test + typecheck + lint
-6. shell      -> drizzle-kit generate + drizzle-kit migrate (if schema changed)
-7. shell      -> bun run build
+countries.json      → ISO country list
+roles.ts            → Role definitions ("owner" | "admin" | "member")
+default/category.ts → Default category seeds
+default/wallet.ts   → Default wallet seeds
+index.ts            → re-exports
 ```
 
-**MCP Security:**
+- Role strings imported from here everywhere — never hardcoded as plain strings.
+- Default seed data used by `packages/database/seed` and onboarding logic only.
 
-- Filesystem scoped to project root only. No system-wide access.
-- PostgreSQL uses limited DB user - never superuser.
-- Shell MUST NOT run destructive commands (`DROP`, `rm -rf`) without explicit user confirmation.
-- GitHub token: `repo` scope only. MCP servers for dev/CI only - never production.
+## packages/utils
 
----
+Pure TypeScript utilities. No DB, no framework code.
 
-# Final Principle
-
-Enterprise SaaS - Multi-workspace - Encrypted REST - Strict-layered - MCP-connected - Monorepo
-
-Agent must always align with: workspace isolation - layer separation - reusable packages - encryption-first API - paginated responses - typed error codes - soft deletes - audit logs - versioned routes - rate limiting - validated env vars - tested layers - MCP-verified context - no `src/` - no architectural violation.
+```
+api-response.ts  → ApiResponse builder helpers
+formatting.ts    → Display formatting
+pagination.ts    → Pagination helpers
+env.ts           → Env var accessors
+load-env.ts      → Env loadi
+```
