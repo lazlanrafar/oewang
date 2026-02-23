@@ -25,7 +25,8 @@
     "@workspace/currencyfreaks": "workspace:*",
     "drizzle-orm": "^0.45.1",
     "elysia": "^1.3.3",
-    "jose": "^6.0.11"
+    "jose": "^6.0.11",
+    "@workspace/ai": "workspace:*"
   },
   "devDependencies": {
     "@workspace/typescript-config": "workspace:*",

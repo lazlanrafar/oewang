@@ -1,5 +1,6 @@
 import { Elysia, t } from "elysia";
 import { TransactionsService } from "./transactions.service";
+import { TransactionsImportService } from "./transactions.import.service";
 import { TransactionModel } from "./transactions.model";
 import { ErrorCode } from "@workspace/types";
 import { authPlugin } from "../../plugins/auth";
@@ -81,6 +82,34 @@ export const transactions = new Elysia({
       params: t.Object({ id: t.String() }),
       detail: {
         summary: "Delete transaction",
+        tags: ["Transactions"],
+      },
+    },
+  )
+  .post(
+    "/import",
+    async ({ auth, body }) => {
+      if (!auth?.workspace_id) {
+        throw status(401, buildError(ErrorCode.UNAUTHORIZED, "Unauthorized"));
+      }
+      const file = body.file as File;
+      const arrayBuffer = await file.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+
+      return TransactionsImportService.importFromFile(
+        auth.workspace_id,
+        auth.user_id,
+        buffer,
+        file.type || "application/octet-stream",
+        file.name || "upload",
+      );
+    },
+    {
+      body: t.Object({
+        file: t.File(),
+      }),
+      detail: {
+        summary: "Import transactions from file using AI",
         tags: ["Transactions"],
       },
     },

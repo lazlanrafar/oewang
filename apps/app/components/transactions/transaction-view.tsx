@@ -4,10 +4,11 @@ import { Transaction } from "@workspace/types";
 import { TransactionList } from "./transaction-list";
 import { TransactionForm } from "./transaction-form";
 import { Button } from "@workspace/ui";
-import { Plus, Loader2 } from "lucide-react";
+import { Plus, Loader2, Upload } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@workspace/ui";
 import { useState, useEffect, useCallback } from "react";
 import { getTransactions } from "@/actions/transaction.actions";
+import { ImportModal } from "./import-modal";
 
 const PAGE_LIMIT = 20;
 
@@ -22,6 +23,7 @@ export function TransactionView({
 }: TransactionViewProps) {
   const [addOpen, setAddOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] =
     useState<Transaction | null>(null);
 
@@ -73,10 +75,16 @@ export function TransactionView({
       {/* Header */}
       <div className="flex items-center justify-between py-4 border-b shrink-0">
         <h1 className="text-xl font-semibold">Transactions</h1>
-        <Button onClick={() => setAddOpen(true)}>
-          <Plus className="w-4 h-4 mr-2" />
-          Add Transaction
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setImportOpen(true)}>
+            <Upload className="w-4 h-4 mr-2" />
+            Import
+          </Button>
+          <Button onClick={() => setAddOpen(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            Add Transaction
+          </Button>
+        </div>
       </div>
 
       {/* Table area */}
@@ -151,6 +159,16 @@ export function TransactionView({
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* Import Modal */}
+      <ImportModal
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        onSuccess={() => {
+          setImportOpen(false);
+          fetchPage(1);
+        }}
+      />
     </div>
   );
 }

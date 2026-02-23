@@ -74,7 +74,7 @@ export function VaultPickerModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[480px] max-h-[70vh] flex flex-col">
+      <DialogContent className="sm:max-w-[800px] max-h-[70vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Paperclip className="w-4 h-4" />
@@ -101,7 +101,7 @@ export function VaultPickerModal({
                   key={file.id}
                   type="button"
                   onClick={() => toggle(file.id)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors hover:bg-muted/50 ${
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors hover:bg-muted/50 mb-1 ${
                     selected ? "bg-primary/10 text-primary" : ""
                   }`}
                 >
