@@ -23,11 +23,28 @@ export abstract class TransactionsService {
     const amount =
       typeof body.amount === "number" ? body.amount.toString() : body.amount;
 
+    // Sanitize optional UUID fields: empty strings from the frontend are not valid UUIDs.
+    const toWalletId = body.toWalletId || undefined;
+    const categoryId = body.categoryId || undefined;
+    // Strip non-DB fields before insert
+    const { attachmentIds, ...dbBody } = body;
+
     const transaction = await TransactionsRepository.create({
-      ...body,
+      ...dbBody,
       workspaceId,
       amount,
+      toWalletId,
+      categoryId,
     });
+
+    // Sync attachments
+    if (attachmentIds && attachmentIds.length > 0) {
+      await TransactionsRepository.syncAttachments(
+        transaction.id,
+        workspaceId,
+        attachmentIds,
+      );
+    }
 
     const val = Number(amount);
 
@@ -97,11 +114,13 @@ export abstract class TransactionsService {
     const amount =
       typeof body.amount === "number" ? body.amount.toString() : body.amount;
 
-    const rawData: any = { ...body };
+    // Strip non-DB fields and empty strings before update
+    const { attachmentIds, ...bodyWithoutAttachments } = body;
+    const rawData: any = { ...bodyWithoutAttachments };
     if (amount !== undefined) rawData.amount = amount;
 
     const updateData = Object.fromEntries(
-      Object.entries(rawData).filter(([_, v]) => v !== undefined),
+      Object.entries(rawData).filter(([_, v]) => v !== undefined && v !== ""),
     );
 
     const oldVal = Number(transaction.amount);
@@ -140,6 +159,15 @@ export abstract class TransactionsService {
       throw status(
         404,
         buildError(ErrorCode.NOT_FOUND, "Transaction not found"),
+      );
+    }
+
+    // Sync attachments if provided
+    if (attachmentIds !== undefined) {
+      await TransactionsRepository.syncAttachments(
+        id,
+        workspaceId,
+        attachmentIds,
       );
     }
 

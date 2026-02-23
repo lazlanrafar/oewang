@@ -21,7 +21,7 @@ export const transactions = pgTable("transactions", {
   date: timestamp("date", { mode: "string" }).notNull(),
   type: text("type").notNull(), // 'income' | 'expense' | 'transfer'
   description: text("description"),
-  note: text("note"),
+  name: text("name"),
   createdAt: timestamp("created_at", { mode: "string" }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().notNull(),
   deletedAt: timestamp("deleted_at", { mode: "string" }),

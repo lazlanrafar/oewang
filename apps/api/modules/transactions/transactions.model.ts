@@ -12,8 +12,9 @@ export const TransactionModel = {
       t.Literal("expense"),
       t.Literal("transfer"),
     ]),
+    name: t.Optional(t.String()),
     description: t.Optional(t.String()),
-    note: t.Optional(t.String()),
+    attachmentIds: t.Optional(t.Array(t.String())),
   }),
   update: t.Object({
     walletId: t.Optional(t.String()),
@@ -28,8 +29,9 @@ export const TransactionModel = {
         t.Literal("transfer"),
       ]),
     ),
+    name: t.Optional(t.String()),
     description: t.Optional(t.String()),
-    note: t.Optional(t.String()),
+    attachmentIds: t.Optional(t.Array(t.String())),
   }),
   listQuery: t.Object({
     page: t.Optional(t.Numeric()),

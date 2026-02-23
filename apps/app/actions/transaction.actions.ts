@@ -84,11 +84,15 @@ export const updateTransaction = async (
   data: Partial<Transaction>,
 ): Promise<ActionResponse<Transaction>> => {
   try {
-    const { data: response } = await api.patch<ApiResponse<Transaction>>(
+    const response = await api.put<ApiResponse<Transaction>>(
       `/transactions/${id}`,
       data,
     );
-    return { success: true, data: response.data as Transaction };
+    const apiResponse = (response as any)
+      ._api_response as ApiResponse<Transaction>;
+    const transaction =
+      apiResponse?.data ?? (response.data as any)?.data ?? response.data;
+    return { success: true, data: transaction as Transaction };
   } catch (error: any) {
     return {
       success: false,

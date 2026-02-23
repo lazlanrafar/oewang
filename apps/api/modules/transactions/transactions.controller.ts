@@ -52,6 +52,7 @@ export const transactions = new Elysia({
       if (!auth?.workspace_id) {
         throw status(401, buildError(ErrorCode.UNAUTHORIZED, "Unauthorized"));
       }
+
       return TransactionsService.update(
         auth.workspace_id,
         auth.user_id,

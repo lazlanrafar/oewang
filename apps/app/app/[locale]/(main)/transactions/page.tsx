@@ -3,21 +3,22 @@ import { TransactionView } from "@/components/transactions/transaction-view";
 import { Suspense } from "react";
 import { Transaction } from "@workspace/types";
 
-export const dynamic = "force-dynamic"; // Ensure fresh data on every request
+export const dynamic = "force-dynamic";
+
+const PAGE_LIMIT = 20;
 
 export default async function TransactionPage() {
-  // Fetch initial data server-side
-  // If this fails (e.g. 401), error boundary or middleware should handle it.
-  // We'll assume auth middleware redirects if unauthed.
   let initialTransactions: Transaction[] = [];
+  let initialTotal = 0;
+
   try {
-    const response = await getTransactions({ limit: 50 });
+    const response = await getTransactions({ page: 1, limit: PAGE_LIMIT });
     if (response?.success && response?.data) {
       initialTransactions = response.data;
+      initialTotal = response.meta?.pagination?.total ?? 0;
     }
   } catch (error) {
     console.error("Failed to fetch transactions:", error);
-    // Fallback to empty list or handle error UI
   }
 
   return (
@@ -30,7 +31,10 @@ export default async function TransactionPage() {
             </div>
           }
         >
-          <TransactionView initialTransactions={initialTransactions} />
+          <TransactionView
+            initialTransactions={initialTransactions}
+            initialTotal={initialTotal}
+          />
         </Suspense>
       </div>
     </div>

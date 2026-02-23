@@ -1,37 +1,26 @@
+"use client";
+
 import { Transaction } from "@workspace/types";
 import {
   ArrowRightLeft,
   ArrowUpRight,
   ArrowDownLeft,
   Wallet,
-  Utensils,
-  ShoppingBag,
-  Home,
-  FileText,
 } from "lucide-react";
 import { cn } from "@workspace/ui";
-import { format } from "date-fns";
+import { useCurrency } from "@/hooks/use-currency";
+import { Badge } from "@workspace/ui";
 
 interface TransactionItemProps {
   transaction: Transaction;
+  onClick: () => void;
 }
 
-const getCategoryIcon = (categoryName?: string | null) => {
-  // Simple mapping - in a real app this might be dynamic or stored in DB
-  const name = categoryName?.toLowerCase() || "";
-  if (name.includes("food")) return Utensils;
-  if (name.includes("shopping")) return ShoppingBag;
-  if (name.includes("rent") || name.includes("home")) return Home;
-  if (name.includes("bill")) return FileText;
-  return Wallet;
-};
-
-import { useCurrency } from "@/hooks/use-currency";
-
-// ... (other imports)
-
-export function TransactionItem({ transaction }: TransactionItemProps) {
-  const { formatAmount } = useCurrency(); // Use the hook
+export function TransactionItem({
+  transaction,
+  onClick,
+}: TransactionItemProps) {
+  const { formatAmount } = useCurrency();
 
   const isExpense = transaction.type === "expense";
   const isIncome = transaction.type === "income";
@@ -39,62 +28,84 @@ export function TransactionItem({ transaction }: TransactionItemProps) {
 
   const Icon = isTransfer
     ? ArrowRightLeft
-    : transaction.categoryId
-      ? getCategoryIcon(transaction.categoryId) // We only have ID here, ideally we need the name or category object
-      : Wallet;
-
-  // For now using Wallet/Icon based on type if category not resolved
-  const DisplayIcon = isTransfer
-    ? ArrowRightLeft
     : isIncome
       ? ArrowDownLeft
       : ArrowUpRight;
 
+  const label =
+    transaction.description ||
+    (isTransfer
+      ? `Transfer → ${transaction.toWallet?.name ?? "Unknown"}`
+      : (transaction.category?.name ?? "Uncategorized"));
+
+  const subtitle = isTransfer
+    ? `${transaction.wallet?.name} → ${transaction.toWallet?.name}`
+    : (transaction.wallet?.name ?? "");
+
   return (
-    <div className="flex items-center justify-between p-4 border-b last:border-b-0 hover:bg-muted/50 transition-colors cursor-pointer">
-      <div className="flex items-center gap-4">
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(e) => e.key === "Enter" && onClick()}
+      className="grid grid-cols-[2fr_1fr_1fr_1fr] items-center px-6 py-3 border-b last:border-b-0 hover:bg-muted/40 active:bg-muted/60 transition-colors cursor-pointer group"
+    >
+      {/* Description */}
+      <div className="flex items-center gap-3 min-w-0">
         <div
           className={cn(
-            "p-2 rounded-full",
+            "shrink-0 p-1.5 rounded-full",
             isExpense && "bg-red-100 text-red-600 dark:bg-red-900/20",
             isIncome && "bg-green-100 text-green-600 dark:bg-green-900/20",
             isTransfer && "bg-blue-100 text-blue-600 dark:bg-blue-900/20",
           )}
         >
-          <DisplayIcon className="w-5 h-5" />
+          <Icon className="w-4 h-4" />
         </div>
-        <div className="flex flex-col">
-          <span className="font-medium text-sm">
-            {transaction.description ||
-              (isTransfer
-                ? `Transfer to ${transaction.toWallet?.name || "Unknown"}`
-                : transaction.category?.name || "Uncategorized")}
-          </span>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            {isTransfer ? (
-              <span>From {transaction.wallet?.name}</span>
-            ) : (
-              <span>{transaction.wallet?.name}</span>
-            )}
-            {transaction.note && <span>• {transaction.note}</span>}
-          </div>
+        <div className="min-w-0">
+          <p className="text-sm font-medium truncate">{label}</p>
+          {transaction.note && (
+            <p className="text-xs text-muted-foreground truncate">
+              {transaction.note}
+            </p>
+          )}
         </div>
       </div>
-      <div className="text-right">
-        <div
+
+      {/* Category / Wallet */}
+      <div className="text-sm text-muted-foreground truncate pr-4">
+        {subtitle}
+      </div>
+
+      {/* Type Badge */}
+      <div>
+        <Badge
+          variant="outline"
           className={cn(
-            "font-semibold text-sm",
-            isExpense && "text-red-600",
-            isIncome && "text-green-600",
-            isTransfer && "text-blue-600",
+            "text-xs capitalize font-normal",
+            isExpense &&
+              "border-red-200 text-red-600 dark:border-red-800 dark:text-red-400",
+            isIncome &&
+              "border-green-200 text-green-600 dark:border-green-800 dark:text-green-400",
+            isTransfer &&
+              "border-blue-200 text-blue-600 dark:border-blue-800 dark:text-blue-400",
           )}
         >
-          {isExpense ? "-" : "+"}
-          {formatAmount(Number(transaction.amount))}
-        </div>
-        <div className="text-xs text-muted-foreground">
-          {format(new Date(transaction.date), "MMM d, yyyy")}
-        </div>
+          {transaction.type}
+        </Badge>
+      </div>
+
+      {/* Amount */}
+      <div
+        className={cn(
+          "text-sm font-semibold text-right",
+          isExpense && "text-red-600 dark:text-red-400",
+          isIncome && "text-green-600 dark:text-green-400",
+          isTransfer && "text-blue-600 dark:text-blue-400",
+        )}
+      >
+        {isExpense ? "−" : "+"}
+        {formatAmount(Number(transaction.amount))}
       </div>
     </div>
   );

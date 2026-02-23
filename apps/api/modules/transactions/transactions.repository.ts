@@ -1,4 +1,11 @@
-import { db, transactions, wallets, categories } from "@workspace/database";
+import {
+  db,
+  transactions,
+  wallets,
+  categories,
+  transactionAttachments,
+  vaultFiles,
+} from "@workspace/database";
 import type { Transaction } from "@workspace/types";
 import {
   and,
@@ -9,6 +16,7 @@ import {
   sql,
   aliasedTable,
   isNull,
+  inArray,
 } from "drizzle-orm";
 
 export abstract class TransactionsRepository {
@@ -24,7 +32,6 @@ export abstract class TransactionsRepository {
       throw new Error("Failed to create transaction");
     }
 
-    // Cast to Transaction type where dates are strings
     return {
       ...transaction,
       date: transaction.date,
@@ -62,6 +69,12 @@ export abstract class TransactionsRepository {
 
     if (!result) return undefined;
 
+    // Fetch attachments
+    const attachments = await TransactionsRepository.findAttachments(
+      id,
+      workspaceId,
+    );
+
     return {
       ...result.transaction,
       date: result.transaction.date,
@@ -71,6 +84,7 @@ export abstract class TransactionsRepository {
       wallet: result.wallet,
       toWallet: result.toWallet,
       category: result.category,
+      attachments,
     } as unknown as Transaction;
   }
 
@@ -165,7 +179,6 @@ export abstract class TransactionsRepository {
       )
       .returning();
 
-    // Re-fetch to get relations
     if (transaction) {
       return this.findById(workspaceId, id);
     }
@@ -190,5 +203,58 @@ export abstract class TransactionsRepository {
       .returning();
 
     return transaction as unknown as Transaction | undefined;
+  }
+
+  // ── Attachments ──────────────────────────────────────────────────────────
+
+  static async findAttachments(transactionId: string, workspaceId: string) {
+    return db
+      .select({
+        id: vaultFiles.id,
+        name: vaultFiles.name,
+        key: vaultFiles.key,
+        size: vaultFiles.size,
+        type: vaultFiles.type,
+        tags: vaultFiles.tags,
+      })
+      .from(transactionAttachments)
+      .innerJoin(
+        vaultFiles,
+        eq(transactionAttachments.vaultFileId, vaultFiles.id),
+      )
+      .where(
+        and(
+          eq(transactionAttachments.transactionId, transactionId),
+          eq(transactionAttachments.workspaceId, workspaceId),
+          isNull(vaultFiles.deletedAt),
+        ),
+      );
+  }
+
+  static async syncAttachments(
+    transactionId: string,
+    workspaceId: string,
+    vaultFileIds: string[],
+  ) {
+    // Delete all current attachments for this transaction
+    await db
+      .delete(transactionAttachments)
+      .where(
+        and(
+          eq(transactionAttachments.transactionId, transactionId),
+          eq(transactionAttachments.workspaceId, workspaceId),
+        ),
+      );
+
+    // Re-insert the new set
+    if (vaultFileIds.length > 0) {
+      await db.insert(transactionAttachments).values(
+        vaultFileIds.map((vaultFileId) => ({
+          transactionId,
+          workspaceId,
+          vaultFileId,
+        })),
+      );
+    }
   }
 }

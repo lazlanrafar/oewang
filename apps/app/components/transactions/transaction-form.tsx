@@ -22,7 +22,16 @@ import {
   CommandList,
 } from "@workspace/ui";
 import { Popover, PopoverContent, PopoverTrigger } from "@workspace/ui";
-import { Check, ChevronsUpDown } from "lucide-react";
+import {
+  Check,
+  ChevronsUpDown,
+  Paperclip,
+  X,
+  File,
+  Image,
+  Film,
+  FileText,
+} from "lucide-react";
 import { cn } from "@workspace/ui";
 import { Tabs, TabsList, TabsTrigger } from "@workspace/ui";
 import {
@@ -31,12 +40,13 @@ import {
 } from "@/actions/transaction.actions";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
 import { Wallet, Category } from "@workspace/types";
 import { getWallets } from "@/actions/wallet.actions";
 import { getCategories } from "@/actions/category.actions";
 import { useCurrency } from "@/hooks/use-currency";
 import { CurrencyInput } from "@/components/ui/currency-input";
+import { Editor } from "@workspace/ui";
+import { VaultPickerModal } from "./vault-picker-modal";
 
 const transactionSchema = z.object({
   amount: z.coerce.number().positive("Amount must be positive"),
@@ -47,32 +57,75 @@ const transactionSchema = z.object({
   walletId: z.string().min(1, "Wallet is required"),
   toWalletId: z.string().optional(),
   categoryId: z.string().optional(),
+  name: z.string().optional(),
   description: z.string().optional(),
-  note: z.string().optional(),
+  attachmentIds: z.array(z.string()).optional(),
 });
 
 type TransactionFormValues = z.infer<typeof transactionSchema>;
 
+interface VaultFileRef {
+  id: string;
+  name: string;
+  size: number;
+  type: string;
+}
+
 interface TransactionFormProps {
   onSuccess?: () => void;
   defaultValues?: Partial<TransactionFormValues>;
-  transactionId?: string; // If provided, it's an edit
+  initialAttachments?: VaultFileRef[];
+  transactionId?: string;
+}
+
+function formatBytes(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function FileIcon({ type }: { type: string }) {
+  if (type.startsWith("image/")) return <Image className="w-4 h-4" />;
+  if (type.startsWith("video/")) return <Film className="w-4 h-4" />;
+  if (type === "application/pdf") return <FileText className="w-4 h-4" />;
+  return <File className="w-4 h-4" />;
 }
 
 export function TransactionForm({
   onSuccess,
   defaultValues,
+  initialAttachments = [],
   transactionId,
 }: TransactionFormProps) {
-  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<"income" | "expense" | "transfer">(
     (defaultValues?.type as "income" | "expense" | "transfer") || "expense",
   );
-
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [attachments, setAttachments] =
+    useState<VaultFileRef[]>(initialAttachments);
+  const [vaultPickerOpen, setVaultPickerOpen] = useState(false);
   const { settings } = useCurrency();
+
+  const form = useForm<TransactionFormValues>({
+    resolver: zodResolver(transactionSchema),
+    defaultValues: {
+      type: "expense",
+      date: new Date().toISOString().split("T")[0],
+      amount: 0,
+      name: "",
+      description: "",
+      walletId: "",
+      categoryId: "",
+      toWalletId: "",
+      attachmentIds: [],
+      ...defaultValues,
+    },
+  });
+
+  const type = form.watch("type");
+  const filteredCategories = categories.filter((c) => c.type === activeTab);
 
   useEffect(() => {
     const loadData = async () => {
@@ -85,9 +138,24 @@ export function TransactionForm({
         if (walletsResponse.success && walletsResponse.data) {
           setWallets(walletsResponse.data);
         }
-
         if (categoriesResponse.success && categoriesResponse.data) {
           setCategories(categoriesResponse.data);
+        }
+
+        // Re-sync on edit so comboboxes display the correct names
+        if (defaultValues) {
+          form.reset({
+            type: "expense",
+            date: new Date().toISOString().split("T")[0],
+            amount: 0,
+            name: "",
+            description: "",
+            walletId: "",
+            categoryId: "",
+            toWalletId: "",
+            attachmentIds: [],
+            ...defaultValues,
+          });
         }
       } catch (error) {
         console.error("Failed to load form data", error);
@@ -95,48 +163,26 @@ export function TransactionForm({
       }
     };
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const form = useForm<TransactionFormValues>({
-    resolver: zodResolver(transactionSchema),
-    defaultValues: {
-      type: "expense",
-      date: new Date().toISOString().split("T")[0],
-      amount: 0,
-      description: "",
-      note: "",
-      walletId: "",
-      categoryId: "",
-      toWalletId: "",
-      ...defaultValues,
-    },
-  });
-
-  // Watch type to conditionally render fields
-  const type = form.watch("type");
-
-  // In a real app we might want to fetch categories when type changes
-  // For now, let's filter the already fetched categories
-  const filteredCategories = categories.filter((c) => c.type === activeTab);
 
   async function onSubmit(data: TransactionFormValues) {
     setIsLoading(true);
     try {
+      const payload = {
+        ...data,
+        amount: data.amount.toString(),
+        attachmentIds: attachments.map((a) => a.id),
+      };
+
       if (transactionId) {
-        await updateTransaction(transactionId, {
-          ...data,
-          amount: data.amount.toString(),
-        });
+        await updateTransaction(transactionId, payload);
         toast.success("Transaction updated");
       } else {
-        await createTransaction({
-          ...data,
-          amount: data.amount.toString(),
-        });
+        await createTransaction(payload);
         toast.success("Transaction created");
       }
       form.reset();
-      router.refresh();
       onSuccess?.();
     } catch (error) {
       console.error(error);
@@ -150,15 +196,29 @@ export function TransactionForm({
     const newType = value as "income" | "expense" | "transfer";
     setActiveTab(newType);
     form.setValue("type", newType);
-    // Reset category when type changes as it might not be valid
     if (newType === "transfer") {
       form.setValue("categoryId", undefined);
     }
   };
 
+  const handleVaultConfirm = (ids: string[]) => {
+    // Keep previously loaded refs where ID still chosen; new IDs use placeholder shape
+    const newAttachments = ids.map((id) => {
+      const existing = attachments.find((a) => a.id === id);
+      return (
+        existing ?? { id, name: id, size: 0, type: "application/octet-stream" }
+      );
+    });
+    setAttachments(newAttachments);
+  };
+
+  const removeAttachment = (id: string) =>
+    setAttachments((prev) => prev.filter((a) => a.id !== id));
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        {/* Type tabs */}
         <Tabs
           value={activeTab}
           onValueChange={handleTabChange}
@@ -171,6 +231,7 @@ export function TransactionForm({
           </TabsList>
         </Tabs>
 
+        {/* Amount */}
         <FormField
           control={form.control}
           name="amount"
@@ -203,6 +264,7 @@ export function TransactionForm({
           )}
         />
 
+        {/* Date + Wallet */}
         <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control}
@@ -217,7 +279,6 @@ export function TransactionForm({
               </FormItem>
             )}
           />
-          {/* Wallet Selection */}
           <FormField
             control={form.control}
             name="walletId"
@@ -236,8 +297,7 @@ export function TransactionForm({
                         )}
                       >
                         {field.value
-                          ? wallets.find((wallet) => wallet.id === field.value)
-                              ?.name
+                          ? wallets.find((w) => w.id === field.value)?.name
                           : "Select wallet"}
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
@@ -256,9 +316,9 @@ export function TransactionForm({
                             <CommandItem
                               value={wallet.name}
                               key={wallet.id}
-                              onSelect={() => {
-                                form.setValue("walletId", wallet.id);
-                              }}
+                              onSelect={() =>
+                                form.setValue("walletId", wallet.id)
+                              }
                             >
                               <Check
                                 className={cn(
@@ -282,6 +342,7 @@ export function TransactionForm({
           />
         </div>
 
+        {/* To Wallet (transfer only) */}
         {activeTab === "transfer" && (
           <FormField
             control={form.control}
@@ -301,8 +362,7 @@ export function TransactionForm({
                         )}
                       >
                         {field.value
-                          ? wallets.find((wallet) => wallet.id === field.value)
-                              ?.name
+                          ? wallets.find((w) => w.id === field.value)?.name
                           : "Select destination"}
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
@@ -323,9 +383,9 @@ export function TransactionForm({
                               <CommandItem
                                 value={wallet.name}
                                 key={wallet.id}
-                                onSelect={() => {
-                                  form.setValue("toWalletId", wallet.id);
-                                }}
+                                onSelect={() =>
+                                  form.setValue("toWalletId", wallet.id)
+                                }
                               >
                                 <Check
                                   className={cn(
@@ -349,6 +409,7 @@ export function TransactionForm({
           />
         )}
 
+        {/* Category (non-transfer only) */}
         {activeTab !== "transfer" && (
           <FormField
             control={form.control}
@@ -368,9 +429,8 @@ export function TransactionForm({
                         )}
                       >
                         {field.value
-                          ? filteredCategories.find(
-                              (category) => category.id === field.value,
-                            )?.name
+                          ? filteredCategories.find((c) => c.id === field.value)
+                              ?.name
                           : "Select category"}
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
@@ -389,9 +449,9 @@ export function TransactionForm({
                             <CommandItem
                               value={category.name}
                               key={category.id}
-                              onSelect={() => {
-                                form.setValue("categoryId", category.id);
-                              }}
+                              onSelect={() =>
+                                form.setValue("categoryId", category.id)
+                              }
                             >
                               <Check
                                 className={cn(
@@ -415,6 +475,25 @@ export function TransactionForm({
           />
         )}
 
+        {/* Name (transaction title) */}
+        <FormField
+          control={form.control}
+          name="name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Name</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="e.g. Grocery shopping, Salary…"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Description (rich text) */}
         <FormField
           control={form.control}
           name="description"
@@ -422,31 +501,74 @@ export function TransactionForm({
             <FormItem>
               <FormLabel>Description</FormLabel>
               <FormControl>
-                <Input placeholder="What is this for?" {...field} />
+                <div className="min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+                  <Editor
+                    initialContent={field.value || ""}
+                    placeholder="Add notes, links, or any details…"
+                    onUpdate={(editor) => field.onChange(editor.getText())}
+                    onBlur={field.onBlur}
+                  />
+                </div>
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
 
-        <FormField
-          control={form.control}
-          name="note"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Note</FormLabel>
-              <FormControl>
-                <Input placeholder="Additional notes..." {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
+        {/* Attachments */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium">Attachments</span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setVaultPickerOpen(true)}
+            >
+              <Paperclip className="w-3.5 h-3.5 mr-1.5" />
+              Attach from Vault
+            </Button>
+          </div>
+
+          {attachments.length > 0 && (
+            <div className="space-y-1">
+              {attachments.map((file) => (
+                <div
+                  key={file.id}
+                  className="flex items-center gap-2 px-3 py-2 rounded-md border bg-muted/30 text-sm"
+                >
+                  <FileIcon type={file.type} />
+                  <span className="flex-1 truncate">{file.name}</span>
+                  {file.size > 0 && (
+                    <span className="text-xs text-muted-foreground shrink-0">
+                      {formatBytes(file.size)}
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => removeAttachment(file.id)}
+                    className="shrink-0 text-muted-foreground hover:text-destructive transition-colors"
+                    aria-label={`Remove ${file.name}`}
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
           )}
-        />
+        </div>
 
         <Button type="submit" className="w-full" disabled={isLoading}>
-          {isLoading ? "Saving..." : "Save Transaction"}
+          {isLoading ? "Saving…" : "Save Transaction"}
         </Button>
       </form>
+
+      <VaultPickerModal
+        open={vaultPickerOpen}
+        onOpenChange={setVaultPickerOpen}
+        selectedIds={attachments.map((a) => a.id)}
+        onConfirm={handleVaultConfirm}
+      />
     </Form>
   );
 }

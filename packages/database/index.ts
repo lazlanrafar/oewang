@@ -13,3 +13,4 @@ export * from "./schema/workspace-sub-currencies";
 export * from "./schema/vault-files";
 export * from "./schema/workspace-invitations";
 export * from "./schema/transactions";
+export * from "./schema/transaction-attachments";
