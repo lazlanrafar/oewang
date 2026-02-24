@@ -40,11 +40,10 @@ export interface NavGroup {
 export const sidebarItems: NavGroup[] = [
   {
     id: 1,
-    // label: "Core",
     items: [
       {
         title: "Overview",
-        url: "/dashboard/default",
+        url: "/overview",
         icon: LayoutDashboard,
       },
       {
