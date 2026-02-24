@@ -2,20 +2,29 @@
 
 import { useState, useRef, useEffect, useTransition } from "react";
 import { sendChatMessage, type ChatMessage } from "@/actions/ai.actions";
-import { cn } from "@workspace/ui";
+import { cn, useSidebar } from "@workspace/ui";
 import {
-  X,
+  History,
   ArrowLeft,
   Plus,
-  CornerDownLeft,
+  ArrowUp,
   Sparkles,
-  MessageCircle,
   Wallet,
   TrendingUp,
   Receipt,
   LineChart,
   PieChart,
+  Globe,
+  Zap,
+  Search,
 } from "lucide-react";
+
+export type ChatSession = {
+  id: string;
+  title: string;
+  messages: ChatMessage[];
+  updatedAt: Date;
+};
 
 const SUGGESTION_CHIPS = [
   {
@@ -96,14 +105,42 @@ function MessageBubble({ message }: { message: ChatMessage }) {
 }
 
 export function AiChat() {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  const { state, isMobile } = useSidebar();
+
   const [input, setInput] = useState("");
   const [isPending, startTransition] = useTransition();
   const [isLoading, setIsLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  const hasMessages = messages.length > 0;
+  const activeSession = sessions.find((s) => s.id === currentSessionId);
+  const messages = activeSession ? activeSession.messages : [];
+  const hasMessages = currentSessionId !== null && messages.length > 0;
+
+  const sidebarOffset = isMobile ? 0 : state === "expanded" ? 256 : 48;
+
+  useEffect(() => {
+    const saved = localStorage.getItem("okane:chat-sessions");
+    if (saved) {
+      try {
+        setSessions(JSON.parse(saved));
+      } catch (e) {
+        console.error("Failed to parse chat sessions", e);
+      }
+    }
+    setIsLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    if (isLoaded) {
+      localStorage.setItem("okane:chat-sessions", JSON.stringify(sessions));
+    }
+  }, [sessions, isLoaded]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -113,40 +150,99 @@ export function AiChat() {
     const trimmed = text.trim();
     if (!trimmed || isLoading) return;
 
-    const userMessage: ChatMessage = { role: "user", content: trimmed };
-    const updatedMessages = [...messages, userMessage];
+    let sessionId = currentSessionId;
+    if (!sessionId) {
+      sessionId = crypto.randomUUID();
+      setCurrentSessionId(sessionId);
+      setSessions((prev) => [
+        {
+          id: sessionId!,
+          title: trimmed.slice(0, 30) + (trimmed.length > 30 ? "..." : ""),
+          messages: [],
+          updatedAt: new Date(),
+        },
+        ...prev,
+      ]);
+    }
 
-    setMessages(updatedMessages);
+    const userMessage: ChatMessage = { role: "user", content: trimmed };
+
+    setSessions((prev) =>
+      prev.map((s) =>
+        s.id === sessionId
+          ? {
+              ...s,
+              messages: [...s.messages, userMessage],
+              updatedAt: new Date(),
+            }
+          : s,
+      ),
+    );
+
     setInput("");
     setIsLoading(true);
+    setIsHistoryOpen(false);
 
     startTransition(async () => {
       try {
-        const result = await sendChatMessage(updatedMessages);
+        const currentMessages = activeSession ? activeSession.messages : [];
+        const result = await sendChatMessage([...currentMessages, userMessage]);
+
         if (result.success && result.data) {
-          setMessages((prev) => [
-            ...prev,
-            { role: "assistant", content: result.data!.reply },
-          ]);
+          setSessions((prev) =>
+            prev.map((s) =>
+              s.id === sessionId
+                ? {
+                    ...s,
+                    messages: [
+                      ...s.messages,
+                      { role: "assistant", content: result.data!.reply },
+                    ],
+                    updatedAt: new Date(),
+                  }
+                : s,
+            ),
+          );
         } else {
-          setMessages((prev) => [
-            ...prev,
-            {
-              role: "assistant",
-              content:
-                result.error ?? "Something went wrong. Please try again.",
-            },
-          ]);
+          setSessions((prev) =>
+            prev.map((s) =>
+              s.id === sessionId
+                ? {
+                    ...s,
+                    messages: [
+                      ...s.messages,
+                      {
+                        role: "assistant",
+                        content:
+                          result.error ??
+                          "Something went wrong. Please try again.",
+                      },
+                    ],
+                    updatedAt: new Date(),
+                  }
+                : s,
+            ),
+          );
         }
       } catch {
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: "assistant",
-            content:
-              "Failed to connect. Please check your connection and try again.",
-          },
-        ]);
+        setSessions((prev) =>
+          prev.map((s) =>
+            s.id === sessionId
+              ? {
+                  ...s,
+                  messages: [
+                    ...s.messages,
+                    {
+                      role: "assistant",
+                      content:
+                        "Failed to connect. Please check your connection and try again.",
+                    },
+                  ],
+                  updatedAt: new Date(),
+                }
+              : s,
+          ),
+        );
       } finally {
         setIsLoading(false);
       }
@@ -172,27 +268,28 @@ export function AiChat() {
       {/* Inline Chat History Area */}
       {hasMessages && (
         <div className="flex-1 w-full flex flex-col animate-in fade-in duration-300 relative">
-          {/* Sticky Navigation Buttons */}
-          <div className="absolute top-0 left-0 z-10">
+          {/* Top Header matching the screenshot */}
+          <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-4 py-2 bg-background/80 backdrop-blur">
             <button
-              onClick={() => setMessages([])}
-              className="text-muted-foreground hover:text-foreground bg-background/80 backdrop-blur border border-border/50 shadow-sm p-2 rounded-xl transition-colors flex items-center justify-center"
-              title="Back to Dashboard"
+              onClick={() => setCurrentSessionId(null)}
+              className="w-10 h-10 border border-border/80 bg-background flex items-center justify-center rounded-lg hover:bg-muted transition-colors shadow-sm"
+              title="Back"
             >
-              <ArrowLeft className="w-5 h-5" />
+              <ArrowLeft className="w-5 h-5 text-muted-foreground" />
             </button>
-          </div>
-          <div className="absolute top-0 right-0 z-10">
+            <div className="text-sm font-medium">
+              {activeSession?.title || "Greeting and Introduction"}
+            </div>
             <button
-              onClick={() => setMessages([])}
-              className="text-muted-foreground hover:text-foreground bg-background/80 backdrop-blur border border-border/50 shadow-sm p-2 rounded-xl transition-colors flex items-center justify-center"
-              title="Clear Chat"
+              onClick={() => setCurrentSessionId(null)}
+              className="w-10 h-10 border border-border/80 bg-background flex items-center justify-center rounded-lg hover:bg-muted transition-colors shadow-sm"
+              title="New Chat"
             >
-              <Plus className="w-5 h-5" />
+              <Plus className="w-5 h-5 text-muted-foreground" />
             </button>
           </div>
 
-          <div className="w-full max-w-3xl mx-auto flex-1 flex flex-col pt-2 pb-[140px]">
+          <div className="w-full max-w-3xl mx-auto flex-1 flex flex-col pt-16 pb-[140px]">
             <div className="flex flex-col gap-6 px-4 w-full h-full">
               <div className="flex items-center justify-center my-4">
                 <div className="bg-muted px-3 py-1 rounded-full text-xs text-muted-foreground">
@@ -221,7 +318,57 @@ export function AiChat() {
       )}
 
       {/* Floating Input Container */}
-      <div className="relative bottom-4 left-1/2 -translate-x-1/2 w-full max-w-3xl z-50 flex flex-col items-center">
+      <div
+        className="fixed bottom-10 z-50 flex flex-col items-center w-full max-[768px]:px-4 md:w-full md:max-w-3xl transition-all duration-200 ease-linear"
+        style={{
+          left: `calc(50% + ${sidebarOffset / 2}px)`,
+          transform: "translateX(-50%)",
+        }}
+      >
+        {/* Chat History Popover */}
+        {isHistoryOpen && (
+          <div className="absolute bottom-full left-0 mb-4 w-full bg-background border border-border/80 shadow-lg p-0 max-h-[400px] overflow-hidden flex flex-col z-50 rounded-xl animate-in slide-in-from-bottom-2">
+            <div className="sticky top-0 bg-muted/40 p-2 backdrop-blur-md border-b border-border/50">
+              <div className="flex items-center bg-background border border-border/50 rounded-md px-3 py-2 shadow-sm">
+                <Search className="w-4 h-4 text-muted-foreground mr-2 shrink-0" />
+                <input
+                  type="text"
+                  placeholder="Search history"
+                  className="bg-transparent border-none outline-none text-sm w-full placeholder:text-muted-foreground"
+                />
+              </div>
+            </div>
+            <div className="p-2 flex flex-col overflow-y-auto">
+              {sessions.length === 0 ? (
+                <div className="text-sm text-muted-foreground px-4 py-8 text-center">
+                  No recent chats
+                </div>
+              ) : (
+                sessions.map((session) => (
+                  <button
+                    key={session.id}
+                    onClick={() => {
+                      setCurrentSessionId(session.id);
+                      setIsHistoryOpen(false);
+                    }}
+                    className="w-full flex items-center justify-between px-3 py-3 text-sm rounded-lg hover:bg-muted transition-colors text-left"
+                  >
+                    <span className="truncate pr-4 font-medium text-foreground">
+                      {session.title}
+                    </span>
+                    <span className="shrink-0 text-xs text-muted-foreground">
+                      {new Date(session.updatedAt).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </span>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Suggestion Chips (only show when no messages) */}
         {!hasMessages && (
           <div className="w-full flex flex-wrap justify-center gap-2 mb-4">
@@ -245,11 +392,7 @@ export function AiChat() {
         )}
 
         {/* Auto-sizing Input Bar */}
-        <div className="w-full rounded-2xl border border-border/80 bg-background/90 backdrop-blur-md shadow-lg focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/50 transition-all flex items-end p-2 gap-2">
-          <div className="mb-1.5 ml-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-            <MessageCircle className="w-4 h-4" />
-          </div>
-
+        <div className="w-full rounded-2xl bg-[#F7F7F7] dark:bg-[#131313] shadow-sm border border-border/50 flex flex-col overflow-hidden transition-all">
           <textarea
             ref={inputRef}
             value={input}
@@ -260,28 +403,63 @@ export function AiChat() {
                 Math.min(e.target.scrollHeight, 200) + "px";
             }}
             onKeyDown={handleKeyDown}
-            placeholder="Ask Okane anything..."
+            placeholder="Ask anything"
             disabled={isLoading}
             rows={1}
             className={cn(
-              "flex-1 resize-none bg-transparent text-sm outline-none placeholder:text-muted-foreground/70 py-2",
+              "w-full resize-none bg-transparent outline-none p-4 placeholder:text-muted-foreground text-sm",
               "disabled:cursor-not-allowed",
             )}
-            style={{ minHeight: "36px", maxHeight: "200px" }}
+            style={{ minHeight: "60px", maxHeight: "200px" }}
           />
 
-          <button
-            onClick={() => sendMessage(input)}
-            disabled={isLoading || !input.trim()}
-            className={cn(
-              "mb-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl transition-all shadow-sm",
-              input.trim() && !isLoading
-                ? "bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow"
-                : "bg-muted text-muted-foreground cursor-not-allowed opacity-70",
-            )}
-          >
-            <CornerDownLeft className="h-4 w-4" />
-          </button>
+          <div className="flex items-center justify-between px-3 pb-3">
+            <div className="flex items-center gap-1.5">
+              <button
+                className="p-2 text-muted-foreground hover:bg-black/5 dark:hover:bg-white/5 rounded-md transition-colors"
+                title="Add attachment"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+              <button
+                className="p-2 text-muted-foreground hover:bg-black/5 dark:hover:bg-white/5 rounded-md transition-colors"
+                title="Suggested actions"
+              >
+                <Zap className="w-4 h-4" />
+              </button>
+              <button
+                className="p-2 text-muted-foreground hover:bg-black/5 dark:hover:bg-white/5 rounded-md transition-colors"
+                title="Web search"
+              >
+                <Globe className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setIsHistoryOpen(!isHistoryOpen)}
+                className={cn(
+                  "p-2 text-muted-foreground hover:bg-black/5 dark:hover:bg-white/5 rounded-md transition-colors",
+                  isHistoryOpen && "bg-black/5 dark:bg-white/5 text-foreground",
+                )}
+                title="Chat History"
+              >
+                <History className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => sendMessage(input)}
+                disabled={isLoading || !input.trim()}
+                className={cn(
+                  "w-8 h-8 flex items-center justify-center rounded transition-all",
+                  input.trim() && !isLoading
+                    ? "bg-[#1A1A1A] text-white hover:bg-black dark:bg-white dark:text-black dark:hover:bg-gray-200"
+                    : "bg-muted text-muted-foreground cursor-not-allowed opacity-50",
+                )}
+              >
+                <ArrowUp className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </>
