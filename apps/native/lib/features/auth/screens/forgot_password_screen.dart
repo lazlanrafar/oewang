@@ -89,7 +89,7 @@ class _FormView extends StatelessWidget {
         Text(
           "Enter your email and we'll send a reset link.",
           style: AppTextStyles.bodyMedium.copyWith(
-            color: AppColors.textSecondary,
+            color: context.colors.mutedForeground,
           ),
         ),
         const SizedBox(height: 32),
@@ -126,12 +126,12 @@ class _SuccessView extends StatelessWidget {
           width: 72,
           height: 72,
           decoration: BoxDecoration(
-            color: AppColors.surfaceElevated,
+            color: context.colors.surfaceElevated,
             borderRadius: BorderRadius.circular(36),
           ),
-          child: const Icon(
+          child: Icon(
             Icons.mark_email_read_outlined,
-            color: AppColors.income,
+            color: context.colors.income,
             size: 36,
           ),
         ),
@@ -142,7 +142,7 @@ class _SuccessView extends StatelessWidget {
           'We sent a password reset link to\n$email',
           textAlign: TextAlign.center,
           style: AppTextStyles.bodyMedium.copyWith(
-            color: AppColors.textSecondary,
+            color: context.colors.mutedForeground,
           ),
         ),
         const SizedBox(height: 32),

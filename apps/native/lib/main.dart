@@ -29,7 +29,9 @@ class OkaneApp extends StatelessWidget {
     return MaterialApp.router(
       title: 'Okane',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.dark,
+      themeMode: ThemeMode.system, // Switch automatically based on OS setting
+      theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
       routerConfig: appRouter,
     );
   }

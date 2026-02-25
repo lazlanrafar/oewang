@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 
-/// A horizontal rule divider with centered label text.
-///
-/// Used in auth screens as "or continue with" separator.
+/// A horizontal rule divider with centered label text, matched to shadcn style.
 class AppDivider extends StatelessWidget {
   const AppDivider({super.key, this.label = 'or continue with'});
 
@@ -15,12 +13,15 @@ class AppDivider extends StatelessWidget {
       children: [
         const Expanded(child: Divider()),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Text(
-            label,
-            style: const TextStyle(
-              color: AppColors.textSecondary,
+            label.toUpperCase(),
+            style: TextStyle(
+              color: context.colors.mutedForeground,
               fontSize: 12,
+              fontWeight: FontWeight.w400,
+              letterSpacing: 0.5,
+              fontFamily: 'Inter',
             ),
           ),
         ),

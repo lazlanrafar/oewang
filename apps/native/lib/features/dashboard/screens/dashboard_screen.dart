@@ -26,22 +26,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Trans.',
           style: TextStyle(
-            color: AppColors.textPrimary,
+            color: context.colors.textPrimary,
             fontSize: 20,
             fontWeight: FontWeight.w700,
             letterSpacing: -0.3,
+            fontFamily: 'Inter',
           ),
         ),
         leading: IconButton(
-          icon: const Icon(Icons.search, color: AppColors.textPrimary),
+          icon: Icon(Icons.search, color: context.colors.textPrimary),
           onPressed: () {},
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.tune, color: AppColors.textPrimary),
+            icon: Icon(Icons.tune, color: context.colors.textPrimary),
             onPressed: () {},
           ),
         ],
@@ -56,20 +57,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.receipt_long_outlined,
-                    color: AppColors.textDisabled,
+                    color: context.colors.textDisabled,
                     size: 56,
                   ),
                   const SizedBox(height: 12),
                   Text(
                     'No transactions yet',
                     style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.textSecondary,
+                      color: context.colors.textSecondary,
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Text(email, style: AppTextStyles.caption),
+                  Text(
+                    email,
+                    style: AppTextStyles.caption.copyWith(
+                      color: context.colors.textSecondary,
+                    ),
+                  ),
                   const SizedBox(height: 32),
                   TextButton.icon(
                     onPressed: _signOut,
@@ -84,8 +90,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {},
-        backgroundColor: AppColors.primary,
-        child: const Icon(Icons.add, color: Colors.white),
+        backgroundColor: context.colors.primary,
+        child: Icon(Icons.add, color: context.colors.primaryForeground),
       ),
       bottomNavigationBar: _BottomNav(
         selectedIndex: _selectedIndex,
@@ -104,12 +110,12 @@ class _MonthNavBar extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           IconButton(
-            icon: const Icon(Icons.chevron_left, color: AppColors.textPrimary),
+            icon: Icon(Icons.chevron_left, color: context.colors.textPrimary),
             onPressed: () {},
           ),
           Text('Jan 2026', style: AppTextStyles.titleMedium),
           IconButton(
-            icon: const Icon(Icons.chevron_right, color: AppColors.textPrimary),
+            icon: Icon(Icons.chevron_right, color: context.colors.textPrimary),
             onPressed: () {},
           ),
         ],
@@ -148,17 +154,20 @@ class _TabPill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         border: active
-            ? const Border(
-                bottom: BorderSide(color: AppColors.primary, width: 2),
+            ? Border(
+                bottom: BorderSide(color: context.colors.primary, width: 2),
               )
             : null,
       ),
       child: Text(
         label,
         style: TextStyle(
-          color: active ? AppColors.textPrimary : AppColors.textSecondary,
+          color: active
+              ? context.colors.textPrimary
+              : context.colors.textSecondary,
           fontWeight: active ? FontWeight.w600 : FontWeight.w400,
           fontSize: 13,
+          fontFamily: 'Inter',
         ),
       ),
     );
@@ -170,16 +179,24 @@ class _SummaryRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      color: AppColors.surface,
+      color: context.colors.surface,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: const [
-          _SummaryCell(label: 'Income', value: '0,00', color: AppColors.income),
-          _SummaryCell(label: 'Exp.', value: '0,00', color: AppColors.accent),
+        children: [
+          _SummaryCell(
+            label: 'Income',
+            value: '0,00',
+            color: context.colors.income,
+          ),
+          _SummaryCell(
+            label: 'Exp.',
+            value: '0,00',
+            color: context.colors.accent,
+          ),
           _SummaryCell(
             label: 'Total',
             value: '0,00',
-            color: AppColors.textPrimary,
+            color: context.colors.textPrimary,
           ),
         ],
       ),
@@ -204,7 +221,9 @@ class _SummaryCell extends StatelessWidget {
       children: [
         Text(
           label,
-          style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+          style: AppTextStyles.caption.copyWith(
+            color: context.colors.textSecondary,
+          ),
         ),
         Text(
           value,
@@ -228,9 +247,9 @@ class _BottomNav extends StatelessWidget {
     return BottomNavigationBar(
       currentIndex: selectedIndex,
       onTap: onTap,
-      backgroundColor: AppColors.surface,
-      selectedItemColor: AppColors.primary,
-      unselectedItemColor: AppColors.textSecondary,
+      backgroundColor: context.colors.surface,
+      selectedItemColor: context.colors.primary,
+      unselectedItemColor: context.colors.textSecondary,
       type: BottomNavigationBarType.fixed,
       selectedFontSize: 11,
       unselectedFontSize: 11,

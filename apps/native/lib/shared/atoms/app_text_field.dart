@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 
-/// Reusable app-wide text field atom.
-///
-/// Handles password visibility toggle automatically when [obscureText] is true.
-/// Use [validator] for inline form validation.
+/// Reusable app-wide text field atom matching shadcn style.
 ///
 /// Usage:
 /// ```dart
@@ -12,8 +9,6 @@ import '../../core/theme/app_colors.dart';
 ///   label: 'Email',
 ///   controller: _emailCtrl,
 ///   keyboardType: TextInputType.emailAddress,
-///   prefixIcon: const Icon(Icons.email_outlined),
-///   validator: (v) => v!.isEmpty ? 'Required' : null,
 /// )
 /// ```
 class AppTextField extends StatefulWidget {
@@ -65,38 +60,64 @@ class _AppTextFieldState extends State<AppTextField> {
 
   @override
   Widget build(BuildContext context) {
-    return TextFormField(
-      controller: widget.controller,
-      obscureText: _isObscured,
-      keyboardType: widget.keyboardType,
-      textInputAction: widget.textInputAction,
-      validator: widget.validator,
-      autofillHints: widget.autofillHints,
-      onFieldSubmitted: widget.onFieldSubmitted,
-      enabled: widget.enabled,
-      maxLines: widget.obscureText ? 1 : widget.maxLines,
-      onChanged: widget.onChanged,
-      style: const TextStyle(color: AppColors.textPrimary, fontSize: 15),
-      decoration: InputDecoration(
-        labelText: widget.label,
-        hintText: widget.hint,
-        prefixIcon: widget.prefixIcon != null
-            ? IconTheme(
-                data: const IconThemeData(color: AppColors.textSecondary),
-                child: widget.prefixIcon!,
-              )
-            : null,
-        suffixIcon: widget.obscureText
-            ? IconButton(
-                icon: Icon(
-                  _isObscured ? Icons.visibility_off : Icons.visibility,
-                  color: AppColors.textSecondary,
-                  size: 20,
-                ),
-                onPressed: () => setState(() => _isObscured = !_isObscured),
-              )
-            : widget.suffixIcon,
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (widget.label.isNotEmpty) ...[
+          Text(
+            widget.label,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: context.colors.foreground,
+              fontFamily: 'Inter',
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+        TextFormField(
+          controller: widget.controller,
+          obscureText: _isObscured,
+          keyboardType: widget.keyboardType,
+          textInputAction: widget.textInputAction,
+          validator: widget.validator,
+          autofillHints: widget.autofillHints,
+          onFieldSubmitted: widget.onFieldSubmitted,
+          enabled: widget.enabled,
+          maxLines: widget.obscureText ? 1 : widget.maxLines,
+          onChanged: widget.onChanged,
+          style: TextStyle(
+            color: context.colors.foreground,
+            fontSize: 14,
+            fontFamily: 'Inter',
+          ),
+          decoration: InputDecoration(
+            hintText: widget.hint,
+            floatingLabelBehavior: FloatingLabelBehavior.never,
+            prefixIcon: widget.prefixIcon != null
+                ? IconTheme(
+                    data: IconThemeData(
+                      color: context.colors.mutedForeground,
+                      size: 18,
+                    ),
+                    child: widget.prefixIcon!,
+                  )
+                : null,
+            suffixIcon: widget.obscureText
+                ? IconButton(
+                    icon: Icon(
+                      _isObscured ? Icons.visibility_off : Icons.visibility,
+                      color: context.colors.mutedForeground,
+                      size: 18,
+                    ),
+                    onPressed: () => setState(() => _isObscured = !_isObscured),
+                    splashRadius: 20,
+                  )
+                : widget.suffixIcon,
+          ),
+        ),
+      ],
     );
   }
 }

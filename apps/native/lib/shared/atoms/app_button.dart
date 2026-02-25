@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 
 /// Variant of [AppButton].
-enum AppButtonVariant { primary, outlined, text, ghost }
+enum AppButtonVariant { primary, outlined, text, ghost, destructive }
 
-/// Reusable app-wide button atom.
+/// Reusable app-wide button atom styled like shadcn/ui.
 ///
 /// Usage:
 /// ```dart
@@ -21,7 +21,7 @@ class AppButton extends StatelessWidget {
     this.isLoading = false,
     this.leadingIcon,
     this.fullWidth = true,
-    this.size = AppButtonSize.md,
+    this.size = AppButtonSize.defaultSize,
   });
 
   const AppButton.outlined({
@@ -31,7 +31,7 @@ class AppButton extends StatelessWidget {
     this.isLoading = false,
     this.leadingIcon,
     this.fullWidth = true,
-    this.size = AppButtonSize.md,
+    this.size = AppButtonSize.defaultSize,
   }) : variant = AppButtonVariant.outlined;
 
   const AppButton.text({
@@ -41,7 +41,7 @@ class AppButton extends StatelessWidget {
     this.isLoading = false,
     this.leadingIcon,
     this.fullWidth = false,
-    this.size = AppButtonSize.md,
+    this.size = AppButtonSize.defaultSize,
   }) : variant = AppButtonVariant.text;
 
   const AppButton.ghost({
@@ -51,8 +51,18 @@ class AppButton extends StatelessWidget {
     this.isLoading = false,
     this.leadingIcon,
     this.fullWidth = true,
-    this.size = AppButtonSize.md,
+    this.size = AppButtonSize.defaultSize,
   }) : variant = AppButtonVariant.ghost;
+
+  const AppButton.destructive({
+    super.key,
+    required this.label,
+    required this.onPressed,
+    this.isLoading = false,
+    this.leadingIcon,
+    this.fullWidth = true,
+    this.size = AppButtonSize.defaultSize,
+  }) : variant = AppButtonVariant.destructive;
 
   final String label;
   final VoidCallback? onPressed;
@@ -64,58 +74,85 @@ class AppButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // shadcn heights: sm/h-9 (36), default/h-10 (40), lg/h-11 (44px)
     final height = switch (size) {
-      AppButtonSize.sm => 40.0,
-      AppButtonSize.md => 52.0,
-      AppButtonSize.lg => 60.0,
+      AppButtonSize.sm => 36.0,
+      AppButtonSize.defaultSize => 44.0,
+      AppButtonSize.lg => 48.0,
+      AppButtonSize.icon => 40.0,
     };
+
     final fontSize = switch (size) {
       AppButtonSize.sm => 13.0,
-      AppButtonSize.md => 15.0,
-      AppButtonSize.lg => 16.0,
+      AppButtonSize.defaultSize => 14.0,
+      AppButtonSize.lg => 15.0,
+      AppButtonSize.icon => 14.0,
     };
 
     final minSize = Size(fullWidth ? double.infinity : 0, height);
-    final child = _buildChild(fontSize);
+    final child = _buildChild(context, fontSize);
 
     return switch (variant) {
       AppButtonVariant.primary => ElevatedButton(
         onPressed: isLoading ? null : onPressed,
-        style: ElevatedButton.styleFrom(minimumSize: minSize),
+        style: ElevatedButton.styleFrom(
+          minimumSize: minSize,
+          backgroundColor: context.colors.primary,
+          foregroundColor: context.colors.primaryForeground,
+        ),
+        child: child,
+      ),
+      AppButtonVariant.destructive => ElevatedButton(
+        onPressed: isLoading ? null : onPressed,
+        style: ElevatedButton.styleFrom(
+          minimumSize: minSize,
+          backgroundColor: context.colors.destructive,
+          foregroundColor: Colors.white,
+        ),
         child: child,
       ),
       AppButtonVariant.outlined => OutlinedButton(
         onPressed: isLoading ? null : onPressed,
-        style: OutlinedButton.styleFrom(minimumSize: minSize),
+        style: OutlinedButton.styleFrom(
+          minimumSize: minSize,
+          foregroundColor: context.colors.foreground,
+          side: BorderSide(color: context.colors.border, width: 1),
+        ),
         child: child,
       ),
       AppButtonVariant.text => TextButton(
         onPressed: isLoading ? null : onPressed,
-        style: TextButton.styleFrom(minimumSize: minSize),
+        style: TextButton.styleFrom(
+          minimumSize: minSize,
+          foregroundColor: context.colors.foreground,
+        ),
         child: child,
       ),
-      AppButtonVariant.ghost => OutlinedButton(
+      AppButtonVariant.ghost => TextButton(
         onPressed: isLoading ? null : onPressed,
-        style: OutlinedButton.styleFrom(
+        style: TextButton.styleFrom(
           minimumSize: minSize,
-          side: BorderSide(color: AppColors.inputBorder.withValues(alpha: 0.5)),
-          foregroundColor: AppColors.textSecondary,
+          foregroundColor: context.colors.foreground,
         ),
         child: child,
       ),
     };
   }
 
-  Widget _buildChild(double fontSize) {
+  Widget _buildChild(BuildContext context, double fontSize) {
     if (isLoading) {
       return SizedBox(
-        height: 20,
-        width: 20,
+        height: 18,
+        width: 18,
         child: CircularProgressIndicator(
-          strokeWidth: 2.5,
-          color: variant == AppButtonVariant.primary
-              ? Colors.white
-              : AppColors.textSecondary,
+          strokeWidth: 2,
+          color:
+              (variant == AppButtonVariant.primary ||
+                  variant == AppButtonVariant.destructive)
+              ? (variant == AppButtonVariant.primary
+                    ? context.colors.primaryForeground
+                    : Colors.white)
+              : context.colors.foreground,
         ),
       );
     }
@@ -126,17 +163,30 @@ class AppButton extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           leadingIcon!,
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
           Text(
             label,
-            style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.w500),
+            style: TextStyle(
+              fontSize: fontSize,
+              fontWeight: FontWeight.w500,
+              fontFamily: 'Inter',
+              letterSpacing: -0.1,
+            ),
           ),
         ],
       );
     }
 
-    return Text(label, style: TextStyle(fontSize: fontSize));
+    return Text(
+      label,
+      style: TextStyle(
+        fontSize: fontSize,
+        fontWeight: FontWeight.w500,
+        fontFamily: 'Inter',
+        letterSpacing: -0.1,
+      ),
+    );
   }
 }
 
-enum AppButtonSize { sm, md, lg }
+enum AppButtonSize { defaultSize, sm, lg, icon }

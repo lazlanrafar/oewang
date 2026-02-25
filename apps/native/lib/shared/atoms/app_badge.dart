@@ -1,36 +1,38 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 
-/// A pill-shaped badge showing a label with an optional color scheme.
-///
-/// Used for auth mode indicators (📴 Local / ☁️ Synced) and status labels.
+/// A pill-shaped badge matching the Shadcn Badge component.
 class AppBadge extends StatelessWidget {
   const AppBadge({
     super.key,
     required this.label,
-    this.color = AppColors.income,
+    this.color,
     this.backgroundColor,
   });
 
   final String label;
-  final Color color;
+  final Color? color;
   final Color? backgroundColor;
 
   @override
   Widget build(BuildContext context) {
+    final fgColor = color ?? context.colors.foreground;
+    final bgColor = backgroundColor ?? context.colors.secondary;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
       decoration: BoxDecoration(
-        color: backgroundColor ?? color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withValues(alpha: 0.4)),
+        color: bgColor,
+        borderRadius: BorderRadius.circular(100), // full pill radius
+        border: Border.all(color: context.colors.border),
       ),
       child: Text(
         label,
         style: TextStyle(
-          fontSize: 11,
+          fontSize: 12,
           fontWeight: FontWeight.w600,
-          color: color,
+          color: fgColor,
+          fontFamily: 'Inter',
         ),
       ),
     );

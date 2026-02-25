@@ -2,9 +2,6 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 
 /// The Okane brand logo + name molecule.
-///
-/// Composed of an icon container atom + two Text atoms.
-/// Reused on login, register, and splash screens.
 class AppBrand extends StatelessWidget {
   const AppBrand({super.key, this.size = 64.0});
 
@@ -18,32 +15,39 @@ class AppBrand extends StatelessWidget {
           width: size,
           height: size,
           decoration: BoxDecoration(
-            color: AppColors.primary,
-            borderRadius: BorderRadius.circular(size * 0.25),
+            color: context.colors.primary,
+            borderRadius: BorderRadius.circular(
+              size * 0.22,
+            ), // slightly tighter rounding for shadcn feel
           ),
           child: Icon(
             Icons.account_balance_wallet,
-            color: Colors.white,
-            size: size * 0.5,
+            color: context
+                .colors
+                .primaryForeground, // use primaryForeground instead of white
+            size: size * 0.45, // slightly smaller icon
           ),
         ),
-        const SizedBox(height: 12),
-        const Text(
+        const SizedBox(height: 16),
+        Text(
           'Okane',
           style: TextStyle(
-            color: AppColors.textPrimary,
-            fontSize: 22,
+            color: context.colors.foreground,
+            fontSize: 24,
             fontWeight: FontWeight.w700,
-            letterSpacing: -0.5,
+            letterSpacing: -0.8,
+            fontFamily: 'Inter',
           ),
         ),
         const SizedBox(height: 2),
-        const Text(
-          'Personal Finance',
+        Text(
+          'Financial Dashboard', // Sounds slightly more professional
           style: TextStyle(
-            color: AppColors.textSecondary,
-            fontSize: 12,
-            letterSpacing: 1.2,
+            color: context.colors.mutedForeground,
+            fontSize: 13,
+            letterSpacing: 0,
+            fontWeight: FontWeight.w400,
+            fontFamily: 'Inter',
           ),
         ),
       ],

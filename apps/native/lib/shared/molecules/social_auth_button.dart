@@ -63,9 +63,9 @@ class _ProviderIcon extends StatelessWidget {
           ),
         ),
       ),
-      SocialProvider.apple => const Icon(
+      SocialProvider.apple => Icon(
         Icons.apple,
-        color: AppColors.textPrimary,
+        color: context.colors.foreground,
         size: 20,
       ),
     };

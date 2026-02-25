@@ -50,7 +50,6 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!result.success) {
       _showError(result.error ?? 'Google sign-in failed.');
     }
-    // On success, Supabase OAuth opens browser and deep-links back
   }
 
   void _showError(String message) {
@@ -76,7 +75,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Text(
                   'Sign in to your account',
                   style: AppTextStyles.bodyMedium.copyWith(
-                    color: AppColors.textSecondary,
+                    color: context.colors.mutedForeground,
                   ),
                 ),
                 const SizedBox(height: 32),
