@@ -1,0 +1,52 @@
+name: okane_native
+description: "Okane — Personal Finance Tracker mobile app."
+publish_to: "none"
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  # Supabase (includes OAuth + deep link handling)
+  supabase_flutter: ^2.9.1
+
+  # Routing
+  go_router: ^14.8.1
+
+  # HTTP client
+  dio: ^5.8.0+1
+
+  # Env vars
+  flutter_dotenv: ^5.2.1
+
+  # Google Fonts
+  google_fonts: ^6.2.1
+
+  # Secure storage (JWT)
+  flutter_secure_storage: ^9.2.4
+
+  # Shared preferences (guest mode flag, simple local prefs)
+  shared_preferences: ^2.5.3
+
+  # SQLite — local database for guest mode
+  sqflite: ^2.4.2
+  path: ^1.9.1
+
+  # AES-256-GCM decryption (matches apps/api encryption plugin)
+  pointycastle: ^3.9.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/.env

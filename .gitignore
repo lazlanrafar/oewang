@@ -27,7 +27,6 @@ out/
 build
 dist
 
-
 # Debug
 npm-debug.log*
 yarn-debug.log*
@@ -40,3 +39,17 @@ yarn-error.log*
 # Logs
 logs/
 packages/ui/src/globals.css
+
+# Flutter / Dart (apps/native)
+apps/native/.dart_tool/
+apps/native/.flutter-plugins
+apps/native/.flutter-plugins-dependencies
+apps/native/build/
+apps/native/android/.gradle/
+apps/native/ios/Pods/
+apps/native/ios/.symlinks/
+apps/native/**/*.g.dart
+apps/native/**/*.freezed.dart
+
+# FVM Version Cache
+.fvm/
