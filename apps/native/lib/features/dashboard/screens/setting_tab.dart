@@ -12,24 +12,60 @@ class SettingTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.only(top: 8, bottom: 40),
       children: [
-        _buildSectionHeader(context, "Workspace"),
+        // Top Section (No Header)
         _buildListTile(
           context,
-          icon: Icons.work_outline,
-          title: "Acme Marketing",
-          subtitle: "Current Workspace",
+          icon: Icons.receipt_long_outlined,
+          title: "Transaction Settings",
+          subtitle: "Monthly Start Date, Carry-over Setting, Period, Oth...",
+          onTap: () {
+            context.push('/settings/transaction');
+          },
+        ),
+        _buildListTile(
+          context,
+          icon: Icons.repeat,
+          title: "Repeat Setting",
+          isComingSoon: true,
           onTap: () {},
         ),
         _buildListTile(
           context,
-          icon: Icons.swap_horiz_outlined,
-          title: "Switch Workspace",
+          icon: Icons.file_copy_outlined,
+          title: "Copy-Paste Settings",
+          isComingSoon: true,
+          onTap: () {},
+        ),
+
+        const SizedBox(height: 16),
+        _buildSectionHeader(context, "Category/Accounts"),
+        _buildListTile(
+          context,
+          icon: Icons.add_circle_outline, // closest to stack with +
+          title: "Income Category Setting",
+          isComingSoon: true,
           onTap: () {},
         ),
         _buildListTile(
           context,
-          icon: Icons.settings_applications_outlined,
-          title: "Workspace Settings",
+          icon: Icons.remove_circle_outline, // closest to stack with -
+          title: "Expenses Category Setting",
+          isComingSoon: true,
+          onTap: () {},
+        ),
+        _buildListTile(
+          context,
+          icon: Icons.account_balance_outlined,
+          title: "Accounts Setting",
+          subtitle: "Account Group, Accounts, Include in totals, Transf...",
+          isComingSoon: true,
+          onTap: () {},
+        ),
+        _buildListTile(
+          context,
+          icon: Icons.edit_document,
+          title: "Budget Setting",
+          isComingSoon: true,
           onTap: () {},
         ),
 
@@ -37,84 +73,7 @@ class SettingTab extends StatelessWidget {
         _buildSectionHeader(context, "Settings"),
         _buildListTile(
           context,
-          icon: Icons.person_outline,
-          title: "Profile",
-          onTap: () {},
-        ),
-        _buildListTile(
-          context,
-          icon: Icons.group_outlined,
-          title: "Members",
-          onTap: () {},
-        ),
-        _buildListTile(
-          context,
-          icon: Icons.settings_outlined,
-          title: "Account",
-          onTap: () {},
-        ),
-        _buildListTile(
-          context,
-          icon: Icons.palette_outlined,
-          title: "Appearance",
-          onTap: () {},
-        ),
-        _buildListTile(
-          context,
-          icon: Icons.notifications_outlined,
-          title: "Notifications",
-          isComingSoon: true,
-          onTap: () {},
-        ),
-        _buildListTile(
-          context,
-          icon: Icons.desktop_mac_outlined,
-          title: "Display",
-          isComingSoon: true,
-          onTap: () {},
-        ),
-        _buildListTile(
-          context,
-          icon: Icons.receipt_long_outlined,
-          title: "Transaction",
-          onTap: () {
-            context.push('/settings/transaction');
-          },
-        ),
-
-        const SizedBox(height: 16),
-        _buildSectionHeader(context, "Category / Accounts"),
-        _buildListTile(
-          context,
-          icon: Icons.account_balance_wallet_outlined,
-          title: "Income Category",
-          onTap: () {},
-        ),
-        _buildListTile(
-          context,
-          icon: Icons.trending_down_outlined,
-          title: "Expenses Category",
-          onTap: () {},
-        ),
-        _buildListTile(
-          context,
-          icon: Icons.account_balance_outlined,
-          title: "Accounts",
-          onTap: () {},
-        ),
-        _buildListTile(
-          context,
-          icon: Icons.straighten_outlined,
-          title: "Budget",
-          isComingSoon: true,
-          onTap: () {},
-        ),
-
-        const SizedBox(height: 16),
-        _buildSectionHeader(context, "General"),
-        _buildListTile(
-          context,
-          icon: Icons.backup_outlined,
+          icon: Icons.settings_backup_restore,
           title: "Backup",
           subtitle: "Export, Import, A complete reset",
           isComingSoon: true,
@@ -131,22 +90,45 @@ class SettingTab extends StatelessWidget {
         ),
         _buildListTile(
           context,
-          icon: Icons.attach_money_outlined,
-          title: "Currency",
+          icon: Icons.payments_outlined,
+          title: "Main Currency Setting",
           subtitle: "IDR(Rp)",
+          isComingSoon: true,
           onTap: () {},
         ),
         _buildListTile(
           context,
-          icon: Icons.alarm_outlined,
+          icon: Icons.request_quote_outlined,
+          title: "Sub Currency Setting",
+          isComingSoon: true,
+          onTap: () {},
+        ),
+        _buildListTile(
+          context,
+          icon: Icons.notifications_active_outlined,
           title: "Alarm Setting",
           isComingSoon: true,
           onTap: () {},
         ),
         _buildListTile(
           context,
-          icon: Icons.language_outlined,
+          icon: Icons.palette_outlined,
+          title: "Style",
+          isComingSoon: true,
+          onTap: () {},
+        ),
+        _buildListTile(
+          context,
+          icon: Icons.rocket_launch_outlined,
+          title: "Application Icon",
+          isComingSoon: true,
+          onTap: () {},
+        ),
+        _buildListTile(
+          context,
+          icon: Icons.translate,
           title: "Language Setting",
+          isComingSoon: true,
           onTap: () {},
         ),
 
