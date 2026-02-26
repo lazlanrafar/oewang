@@ -156,8 +156,59 @@ export abstract class TransactionsRepository {
       category: row.category,
     }));
 
+    // Fetch attachments for the whole page
+    const transactionIds = data.map((t) => t.id);
+    const allAttachments: Record<string, any[]> = {};
+
+    if (transactionIds.length > 0) {
+      const attachmentsQuery = await db
+        .select({
+          transactionId: transactionAttachments.transactionId,
+          id: vaultFiles.id,
+          name: vaultFiles.name,
+          key: vaultFiles.key,
+          size: vaultFiles.size,
+          type: vaultFiles.type,
+          tags: vaultFiles.tags,
+        })
+        .from(transactionAttachments)
+        .innerJoin(
+          vaultFiles,
+          eq(transactionAttachments.vaultFileId, vaultFiles.id),
+        )
+        .where(
+          and(
+            inArray(transactionAttachments.transactionId, transactionIds),
+            eq(transactionAttachments.workspaceId, workspaceId),
+            isNull(vaultFiles.deletedAt),
+          ),
+        );
+
+      for (const row of attachmentsQuery) {
+        const tId = row.transactionId;
+        if (tId) {
+          if (!allAttachments[tId]) {
+            allAttachments[tId] = [];
+          }
+          allAttachments[tId]!.push({
+            id: row.id,
+            name: row.name,
+            key: row.key,
+            size: row.size,
+            type: row.type,
+            tags: row.tags,
+          });
+        }
+      }
+    }
+
+    const dataWithAttachments = data.map((t) => ({
+      ...t,
+      attachments: allAttachments[t.id] || [],
+    }));
+
     return {
-      data: data as unknown as Transaction[],
+      data: dataWithAttachments as unknown as Transaction[],
       total: Number(countResult?.count || 0),
     };
   }

@@ -2,6 +2,7 @@ import { IntegrationsRepository } from "./integrations.repository";
 import { AiService } from "../ai/ai.service";
 import { TransactionsService } from "../transactions/transactions.service";
 import { walletsRepository } from "../wallets/wallets.repository";
+import { vaultService } from "../vault/vault.service";
 import { buildSuccess } from "@workspace/utils";
 
 export abstract class IntegrationsService {
@@ -69,8 +70,17 @@ export abstract class IntegrationsService {
           const arrayBuffer = await response.arrayBuffer();
           const base64Image = Buffer.from(arrayBuffer).toString("base64");
 
-          // Parse with AI
+          // 1. Upload receipt to Vault
+          const vaultFile = await vaultService.uploadFile(workspaceId, {
+            name: `receipt-${Date.now()}.${contentType === "application/pdf" ? "pdf" : "jpg"}`,
+            type: contentType,
+            size: Buffer.byteLength(base64Image, "base64"),
+            buffer: Buffer.from(base64Image, "base64"),
+          });
+
+          // 2. Parse with AI
           const parsedReceipt = await AiService.parseReceipt(
+            workspaceId,
             base64Image,
             contentType,
           );
@@ -90,11 +100,13 @@ export abstract class IntegrationsService {
                 type: "expense",
                 name: parsedReceipt.name || "Expense",
                 description: "Parsed automatically from WhatsApp Receipt",
+                categoryId: parsedReceipt.categoryId,
+                attachmentIds: vaultFile ? [vaultFile.id] : undefined,
               });
 
               if (toTwilioNumber && fromUserNumber) {
                 const amountStr = Number(parsedReceipt.amount).toLocaleString();
-                const replyBody = `✅ Added expense: ${parsedReceipt.name || "Receipt"} for ${amountStr}.`;
+                const replyBody = `✅ Added expense: ${parsedReceipt.name || "Receipt"} for ${amountStr}. Includes attached receipt file!`;
                 await IntegrationsService.sendWhatsAppMessage(
                   fromUserNumber,
                   toTwilioNumber,

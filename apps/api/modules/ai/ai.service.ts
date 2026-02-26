@@ -4,6 +4,7 @@ import { AiRepository } from "./ai.repository";
 import { CategoriesRepository } from "../categories/categories.repository";
 import { aiTools, executeAiTool } from "./ai.tools";
 import { PDFExtract } from "pdf.js-extract";
+import { redis } from "@workspace/redis";
 
 const SYSTEM_PROMPT_BASE = `You are Okane, a friendly and insightful personal finance assistant. You have access to the user's real financial data below and can answer questions about their spending, income, wallet balances, and financial health.
 
@@ -270,10 +271,22 @@ ${recentLines}
     return AiRepository.getSessionMessages(sessionId);
   }
 
-  static async parseReceipt(base64Image: string, mediaType: string) {
+  static async parseReceipt(
+    workspaceId: string,
+    base64Image: string,
+    mediaType: string,
+  ) {
     const client = new Anthropic({
       apiKey: process.env.ANTHROPIC_API_KEY,
     });
+
+    const categories = await CategoriesRepository.findMany(
+      workspaceId,
+      "expense",
+    );
+    const categoryLines = categories
+      .map((c) => `- ${c.name} (ID: ${c.id})`)
+      .join("\n");
 
     let pdfText = "";
     if (mediaType === "application/pdf") {
@@ -318,14 +331,19 @@ ${recentLines}
     const response = await client.messages.create({
       model: "claude-3-haiku-20240307",
       max_tokens: 500,
-      system: `You are an AI receipt parser. The user has uploaded an image or document text of a receipt. Extract the relevant financial data exactly as JSON with these keys:
+      system: `You are an AI receipt parser. The user has uploaded an image or document text of a receipt.
+Extract the relevant financial data exactly as JSON with these keys:
 {
   "amount": number, // total amount
   "date": "YYYY-MM-DDTHH:mm:ss.000Z", // iso string date
   "name": string, // name of merchant or item
-  "category": string // guessed category
+  "categoryId": string // The ID of the most appropriate category
 }
-Only output the JSON object without any markdown wrapping or extra text.`,
+
+Available Expense Categories to choose from:
+${categoryLines || "No categories found. Return null for categoryId."}
+
+Return the exact category ID that best matches. Only output the JSON object without any markdown wrapping or extra text.`,
       messages: [
         {
           role: "user",
@@ -340,7 +358,15 @@ Only output the JSON object without any markdown wrapping or extra text.`,
     if (!textBlock) return null;
 
     try {
-      return JSON.parse(textBlock.text.trim());
+      const parsed = JSON.parse(textBlock.text.trim());
+
+      // Cache the resulting category for this merchant name
+      if (parsed.name && parsed.categoryId) {
+        const cacheKey = `okane:category-cache:${workspaceId}:${parsed.name.toLowerCase().trim()}`;
+        await redis.set(cacheKey, parsed.categoryId, { ex: 60 * 60 * 24 * 30 }); // cache for 30 days
+      }
+
+      return parsed;
     } catch (e) {
       console.error("Failed to parse AI JSON response", e);
       return null;

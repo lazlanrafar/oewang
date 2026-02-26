@@ -27,6 +27,7 @@
         "@workspace/email": "workspace:*",
         "@workspace/encryption": "workspace:*",
         "@workspace/logger": "workspace:*",
+        "@workspace/redis": "workspace:*",
         "@workspace/supabase": "workspace:*",
         "@workspace/types": "workspace:*",
         "@workspace/utils": "workspace:*",
