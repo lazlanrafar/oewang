@@ -1,5 +1,5 @@
 name: okane_native
-description: "Okane — Personal Finance Tracker mobile app."
+description: "Okane - Money Manager is a modern, privacy-first personal finance tracker to help you take control of your wealth."
 publish_to: "none"
 
 version: 1.0.0+1
@@ -44,6 +44,13 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.1
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/icon.png"
+  min_sdk_android: 21
 
 flutter:
   uses-material-design: true
