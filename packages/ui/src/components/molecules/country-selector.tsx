@@ -3,20 +3,19 @@
 import { useMemo, useState } from "react";
 
 import { COUNTRIES } from "@workspace/constants";
+import { Check, ChevronsUpDown } from "lucide-react";
+
+import { Button } from "../atoms/button";
+import { cn } from "../../lib/utils";
 import {
-  Button,
   Command,
   CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
   CommandList,
-  cn,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@workspace/ui";
-import { Check, ChevronsUpDown } from "lucide-react";
+} from "../atoms/command";
+import { Popover, PopoverContent, PopoverTrigger } from "../atoms/popover";
 
 interface Country {
   name: string;
@@ -30,7 +29,12 @@ interface CountrySelectorProps {
   className?: string;
 }
 
-export function CountrySelector({ value, onSelect, trigger, className }: CountrySelectorProps) {
+export function CountrySelector({
+  value,
+  onSelect,
+  trigger,
+  className,
+}: CountrySelectorProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -67,9 +71,16 @@ export function CountrySelector({ value, onSelect, trigger, className }: Country
           </Button>
         )}
       </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+      <PopoverContent
+        className="w-[--radix-popover-trigger-width] p-0"
+        align="start"
+      >
         <Command>
-          <CommandInput placeholder="Search country..." value={search} onValueChange={setSearch} />
+          <CommandInput
+            placeholder="Search country..."
+            value={search}
+            onValueChange={setSearch}
+          />
           <CommandList className="max-h-[300px] overflow-y-auto overflow-x-hidden">
             <CommandEmpty>No country found.</CommandEmpty>
             {groupedCountries.map(([letter, countries]) => (
@@ -83,8 +94,17 @@ export function CountrySelector({ value, onSelect, trigger, className }: Country
                       setOpen(false);
                     }}
                   >
-                    <Check className={cn("mr-2 h-4 w-4", value === c.name ? "opacity-100" : "opacity-0")} />
-                    <img src={c.flag} alt={`${c.name} flag`} className="mr-2 h-3 w-4 rounded-sm object-cover" />
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        value === c.name ? "opacity-100" : "opacity-0",
+                      )}
+                    />
+                    <img
+                      src={c.flag}
+                      alt={`${c.name} flag`}
+                      className="mr-2 h-3 w-4 rounded-sm object-cover"
+                    />
                     <span className="text-sm">{c.name}</span>
                   </CommandItem>
                 ))}

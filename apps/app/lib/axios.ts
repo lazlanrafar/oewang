@@ -4,7 +4,7 @@ import axios from "axios";
 
 // Create a configured axios instance
 export const axiosInstance = axios.create({
-  baseURL: `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"}/v1`,
+  baseURL: `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3002"}/v1`,
   headers: {
     "Content-Type": "application/json",
   },
@@ -18,11 +18,16 @@ axiosInstance.interceptors.request.use(async (config) => {
   if (typeof window !== "undefined") {
     // 1. Client-side: Try to get token from cookies
     const cookies = document.cookie.split(";");
-    token = cookies.find((c) => c.trim().startsWith("okane-session="))?.split("=")[1];
+    token = cookies
+      .find((c) => c.trim().startsWith("okane-session="))
+      ?.split("=")[1];
 
     // 2. Client-side: Fallback to localStorage
     if (!token) {
-      token = localStorage.getItem("auth-token") || localStorage.getItem("token") || undefined;
+      token =
+        localStorage.getItem("auth-token") ||
+        localStorage.getItem("token") ||
+        undefined;
     }
   } else {
     // 3. Server-side: Try to get token from Next.js cookies

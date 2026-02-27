@@ -27,6 +27,7 @@
     "@workspace/supabase": "workspace:*",
     "@workspace/types": "workspace:*",
     "@workspace/utils": "workspace:*",
+    "canvas": "^3.2.1",
     "date-fns": "^4.1.0",
     "drizzle-orm": "^0.45.1",
     "elysia": "^1.3.3",

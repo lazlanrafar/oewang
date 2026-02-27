@@ -9,7 +9,7 @@ import { Button } from "@workspace/ui";
 import { Building2, Globe } from "lucide-react";
 
 import { CurrencySelector } from "@/components/setting/currency-selector";
-import { CountrySelector } from "@/components/shared/country-selector";
+import { CountrySelector } from "@workspace/ui";
 
 import { createWorkspaceAction } from "../../../../actions/auth.actions";
 
@@ -66,8 +66,8 @@ export default function CreateWorkspacePage() {
         </div>
         <h1 className="text-[28px] tracking-tight">Business details</h1>
         <p className="text-muted-foreground text-sm leading-normal">
-          Add company details so amounts, currency, tax, and reporting periods line up correctly across insights,
-          invoices and exports.
+          Add company details so amounts, currency, tax, and reporting periods
+          line up correctly across insights, invoices and exports.
         </p>
       </div>
 
@@ -97,10 +97,13 @@ export default function CreateWorkspacePage() {
 
         <div className="space-y-2 flex flex-col">
           <span className="text-sm font-medium">Base currency</span>
-          <CurrencySelector value={currency.code} onSelect={(c) => setCurrency({ code: c.code, symbol: c.symbol })} />
+          <CurrencySelector
+            value={currency.code}
+            onSelect={(c) => setCurrency({ code: c.code, symbol: c.symbol })}
+          />
           <p className="text-xs text-muted-foreground pt-1 leading-relaxed">
-            If you have multiple accounts in different currencies, this will be the default currency for your company.
-            You can change it later.
+            If you have multiple accounts in different currencies, this will be
+            the default currency for your company. You can change it later.
           </p>
         </div>
 
@@ -111,7 +114,12 @@ export default function CreateWorkspacePage() {
         )}
 
         <div className="pt-8">
-          <Button type="submit" className="w-full cursor-pointer" disabled={loading || !name.trim()} loading={loading}>
+          <Button
+            type="submit"
+            className="w-full cursor-pointer"
+            disabled={loading || !name.trim()}
+            loading={loading}
+          >
             {loading ? "Creating..." : "Continue"}
           </Button>
         </div>

@@ -10,7 +10,7 @@ const envSchema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
 
   // API
-  API_PORT: z.string().optional().default("3001"),
+  API_PORT: z.string().optional().default("3002"),
 
   // Monitoring
   SENTRY_DSN: z.string().optional(),
@@ -21,12 +21,12 @@ const envSchema = z.object({
   ENCRYPTION_KEY: z.string().length(32),
 
   // API Client
-  API_URL: z.string().url().optional().default("http://localhost:3001"),
+  API_URL: z.string().url().optional().default("http://localhost:3002"),
   NEXT_PUBLIC_API_URL: z
     .string()
     .url()
     .optional()
-    .default("http://localhost:3001"),
+    .default("http://localhost:3002"),
 
   // Frontend Supabase (Optional but recommended)
   NEXT_PUBLIC_SUPABASE_URL: z.string().url().optional(),

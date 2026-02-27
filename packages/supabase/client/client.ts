@@ -15,5 +15,9 @@ export function createBrowserClient() {
     );
   }
 
-  return supabaseCreateBrowserClient(supabaseUrl, supabaseAnonKey);
+  return supabaseCreateBrowserClient(supabaseUrl, supabaseAnonKey, {
+    cookieOptions: process.env.NEXT_PUBLIC_SUPABASE_COOKIE_NAME
+      ? { name: process.env.NEXT_PUBLIC_SUPABASE_COOKIE_NAME }
+      : undefined,
+  });
 }

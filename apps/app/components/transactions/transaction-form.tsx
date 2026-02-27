@@ -29,15 +29,27 @@ import {
   TabsTrigger,
   Textarea,
 } from "@workspace/ui";
-import { Check, ChevronsUpDown, File, FileText, Film, Image, Paperclip, X } from "lucide-react";
+import {
+  Check,
+  ChevronsUpDown,
+  File,
+  FileText,
+  Film,
+  Image,
+  Paperclip,
+  X,
+} from "lucide-react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import * as z from "zod";
 
 import { getCategories } from "@/actions/category.actions";
-import { createTransaction, updateTransaction } from "@/actions/transaction.actions";
+import {
+  createTransaction,
+  updateTransaction,
+} from "@/actions/transaction.actions";
 import { getWallets } from "@/actions/wallet.actions";
-import { CurrencyInput } from "@/components/ui/currency-input";
+import { CurrencyInput } from "@workspace/ui";
 import { useCurrency } from "@/hooks/use-currency";
 
 import { VaultPickerModal } from "../shared/vault-picker-modal";
@@ -97,7 +109,8 @@ export function TransactionForm({
   );
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [attachments, setAttachments] = useState<VaultFileRef[]>(initialAttachments);
+  const [attachments, setAttachments] =
+    useState<VaultFileRef[]>(initialAttachments);
   const [vaultPickerOpen, setVaultPickerOpen] = useState(false);
   const { settings } = useCurrency();
 
@@ -123,7 +136,10 @@ export function TransactionForm({
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [walletsResponse, categoriesResponse] = await Promise.all([getWallets(), getCategories()]);
+        const [walletsResponse, categoriesResponse] = await Promise.all([
+          getWallets(),
+          getCategories(),
+        ]);
 
         if (walletsResponse.success && walletsResponse.data) {
           setWallets(walletsResponse.data);
@@ -195,18 +211,25 @@ export function TransactionForm({
     // Keep previously loaded refs where ID still chosen; new IDs use placeholder shape
     const newAttachments = ids.map((id) => {
       const existing = attachments.find((a) => a.id === id);
-      return existing ?? { id, name: id, size: 0, type: "application/octet-stream" };
+      return (
+        existing ?? { id, name: id, size: 0, type: "application/octet-stream" }
+      );
     });
     setAttachments(newAttachments);
   };
 
-  const removeAttachment = (id: string) => setAttachments((prev) => prev.filter((a) => a.id !== id));
+  const removeAttachment = (id: string) =>
+    setAttachments((prev) => prev.filter((a) => a.id !== id));
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         {/* Type tabs */}
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+        <Tabs
+          value={activeTab}
+          onValueChange={handleTabChange}
+          className="w-full"
+        >
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="income">Income</TabsTrigger>
             <TabsTrigger value="expense">Expense</TabsTrigger>
@@ -279,12 +302,17 @@ export function TransactionForm({
                           !field.value && "text-muted-foreground",
                         )}
                       >
-                        {field.value ? wallets.find((w) => w.id === field.value)?.name : "Select wallet"}
+                        {field.value
+                          ? wallets.find((w) => w.id === field.value)?.name
+                          : "Select wallet"}
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </FormControl>
                   </PopoverTrigger>
-                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                  <PopoverContent
+                    className="w-[--radix-popover-trigger-width] p-0"
+                    align="start"
+                  >
                     <Command>
                       <CommandInput placeholder="Search wallet..." />
                       <CommandList>
@@ -294,10 +322,17 @@ export function TransactionForm({
                             <CommandItem
                               value={wallet.name}
                               key={wallet.id}
-                              onSelect={() => form.setValue("walletId", wallet.id)}
+                              onSelect={() =>
+                                form.setValue("walletId", wallet.id)
+                              }
                             >
                               <Check
-                                className={cn("mr-2 h-4 w-4", wallet.id === field.value ? "opacity-100" : "opacity-0")}
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  wallet.id === field.value
+                                    ? "opacity-100"
+                                    : "opacity-0",
+                                )}
                               />
                               {wallet.name}
                             </CommandItem>
@@ -332,12 +367,17 @@ export function TransactionForm({
                           !field.value && "text-muted-foreground",
                         )}
                       >
-                        {field.value ? wallets.find((w) => w.id === field.value)?.name : "Select destination"}
+                        {field.value
+                          ? wallets.find((w) => w.id === field.value)?.name
+                          : "Select destination"}
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </FormControl>
                   </PopoverTrigger>
-                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                  <PopoverContent
+                    className="w-[--radix-popover-trigger-width] p-0"
+                    align="start"
+                  >
                     <Command>
                       <CommandInput placeholder="Search wallet..." />
                       <CommandList>
@@ -349,12 +389,16 @@ export function TransactionForm({
                               <CommandItem
                                 value={wallet.name}
                                 key={wallet.id}
-                                onSelect={() => form.setValue("toWalletId", wallet.id)}
+                                onSelect={() =>
+                                  form.setValue("toWalletId", wallet.id)
+                                }
                               >
                                 <Check
                                   className={cn(
                                     "mr-2 h-4 w-4",
-                                    wallet.id === field.value ? "opacity-100" : "opacity-0",
+                                    wallet.id === field.value
+                                      ? "opacity-100"
+                                      : "opacity-0",
                                   )}
                                 />
                                 {wallet.name}
@@ -390,12 +434,18 @@ export function TransactionForm({
                           !field.value && "text-muted-foreground",
                         )}
                       >
-                        {field.value ? filteredCategories.find((c) => c.id === field.value)?.name : "Select category"}
+                        {field.value
+                          ? filteredCategories.find((c) => c.id === field.value)
+                              ?.name
+                          : "Select category"}
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </FormControl>
                   </PopoverTrigger>
-                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                  <PopoverContent
+                    className="w-[--radix-popover-trigger-width] p-0"
+                    align="start"
+                  >
                     <Command>
                       <CommandInput placeholder="Search category..." />
                       <CommandList>
@@ -405,12 +455,16 @@ export function TransactionForm({
                             <CommandItem
                               value={category.name}
                               key={category.id}
-                              onSelect={() => form.setValue("categoryId", category.id)}
+                              onSelect={() =>
+                                form.setValue("categoryId", category.id)
+                              }
                             >
                               <Check
                                 className={cn(
                                   "mr-2 h-4 w-4",
-                                  category.id === field.value ? "opacity-100" : "opacity-0",
+                                  category.id === field.value
+                                    ? "opacity-100"
+                                    : "opacity-0",
                                 )}
                               />
                               {category.name}
@@ -435,7 +489,10 @@ export function TransactionForm({
             <FormItem>
               <FormLabel>Name</FormLabel>
               <FormControl>
-                <Input placeholder="e.g. Grocery shopping, Salary…" {...field} />
+                <Input
+                  placeholder="e.g. Grocery shopping, Salary…"
+                  {...field}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -468,7 +525,12 @@ export function TransactionForm({
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium">Attachments</span>
-            <Button type="button" variant="outline" size="sm" onClick={() => setVaultPickerOpen(true)}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setVaultPickerOpen(true)}
+            >
               <Paperclip className="w-3.5 h-3.5 mr-1.5" />
               Attach from Vault
             </Button>
@@ -477,11 +539,16 @@ export function TransactionForm({
           {attachments.length > 0 && (
             <div className="space-y-1">
               {attachments.map((file) => (
-                <div key={file.id} className="flex items-center gap-2 px-3 py-2 rounded-md border bg-muted/30 text-sm">
+                <div
+                  key={file.id}
+                  className="flex items-center gap-2 px-3 py-2 rounded-md border bg-muted/30 text-sm"
+                >
                   <FileIcon type={file.type} />
                   <span className="flex-1 truncate">{file.name}</span>
                   {file.size > 0 && (
-                    <span className="text-xs text-muted-foreground shrink-0">{formatBytes(file.size)}</span>
+                    <span className="text-xs text-muted-foreground shrink-0">
+                      {formatBytes(file.size)}
+                    </span>
                   )}
                   <button
                     type="button"

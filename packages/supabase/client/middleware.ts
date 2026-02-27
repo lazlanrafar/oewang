@@ -32,5 +32,8 @@ export function createMiddlewareClient(
         }
       },
     },
+    cookieOptions: process.env.NEXT_PUBLIC_SUPABASE_COOKIE_NAME
+      ? { name: process.env.NEXT_PUBLIC_SUPABASE_COOKIE_NAME }
+      : undefined,
   });
 }
