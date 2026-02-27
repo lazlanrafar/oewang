@@ -18,7 +18,7 @@ import {
 import { ChevronsUpDown, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 
-import { switchWorkspaceAction } from "@/actions/user.actions";
+import { switchWorkspaceAction } from "@workspace/modules";
 
 type WorkspaceData = {
   id: string;

@@ -53,7 +53,7 @@ import {
   updateVaultFileTags,
   uploadVaultFile,
   type VaultFile,
-} from "@/actions/vault.actions";
+} from "@workspace/modules";
 
 const ALLOWED_TYPES = [
   "image/jpeg",

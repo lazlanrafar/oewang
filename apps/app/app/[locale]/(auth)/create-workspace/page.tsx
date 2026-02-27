@@ -11,7 +11,7 @@ import { Building2, Globe } from "lucide-react";
 import { CurrencySelector } from "@/components/setting/currency-selector";
 import { CountrySelector } from "@workspace/ui";
 
-import { createWorkspaceAction } from "../../../../actions/auth.actions";
+import { createWorkspaceAction } from "@workspace/modules";
 
 export default function CreateWorkspacePage() {
   const router = useRouter();

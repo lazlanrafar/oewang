@@ -15,8 +15,8 @@ import {
 } from "@workspace/ui";
 import { toast } from "sonner";
 
-import { updateTransactionSettings } from "@/actions/setting.actions";
-import type { TransactionSettings } from "@/types/settings";
+import { updateTransactionSettings } from "@workspace/modules";
+import type { TransactionSettings } from "@workspace/types";
 
 import { CurrencySelector } from "../currency-selector";
 

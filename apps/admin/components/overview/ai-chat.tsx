@@ -39,7 +39,7 @@ import {
   getChatSessionMessages,
   getChatSessions,
   sendChatMessage,
-} from "@/actions/ai.actions";
+} from "@workspace/modules";
 import { useAiChatStore } from "@/stores/ai-chat-store";
 
 export type ChatSession = {

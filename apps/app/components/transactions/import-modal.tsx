@@ -5,7 +5,7 @@ import { useCallback, useRef, useState } from "react";
 import { Button, cn, Dialog, DialogContent, DialogHeader, DialogTitle } from "@workspace/ui";
 import { AlertCircle, CheckCircle2, FileUp, Loader2, Upload, X } from "lucide-react";
 
-import { importTransactions } from "@/actions/import.actions";
+import { importTransactions } from "@workspace/modules";
 
 interface ImportModalProps {
   open: boolean;

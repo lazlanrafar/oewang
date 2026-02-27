@@ -48,11 +48,11 @@ import {
   deleteWallet,
   getWallets,
   reorderWallets,
-} from "@/actions/wallet.actions";
+} from "@workspace/modules";
 import {
   deleteWalletGroup,
   getWalletGroups,
-} from "@/actions/wallet-group.actions";
+} from "@workspace/modules";
 import { WalletForm } from "@/components/setting/wallet/wallet-form";
 import { WalletGroupForm } from "@/components/setting/wallet/wallet-group-form";
 import {

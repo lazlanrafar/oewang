@@ -67,7 +67,7 @@ import {
   getIncomeCategories,
   reorderCategories,
   updateCategory,
-} from "@/actions/category.actions";
+} from "@workspace/modules";
 
 interface CategoryFormProps {
   type: "income" | "expense";

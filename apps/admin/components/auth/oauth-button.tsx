@@ -5,7 +5,7 @@ import { Button, cn, SimpleIcon } from "@workspace/ui";
 import { siGithub, siGoogle } from "simple-icons";
 import { toast } from "sonner";
 
-import { loginWithOAuth } from "@/actions/auth.actions";
+import { loginWithOAuth } from "@workspace/modules";
 
 interface OAuthButtonProps extends React.ComponentProps<typeof Button> {
   provider: "google" | "github";

@@ -28,8 +28,8 @@ import {
 } from "@workspace/ui";
 import { toast } from "sonner";
 
-import { getTransactionSettings, updateTransactionSettings } from "@/actions/setting.actions";
-import type { TransactionSettings } from "@/types/settings";
+import { getTransactionSettings, updateTransactionSettings } from "@workspace/modules";
+import type { TransactionSettings } from "@workspace/types";
 
 interface TransactionSettingsFormProps {
   dictionary: {

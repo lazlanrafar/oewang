@@ -14,7 +14,7 @@ import {
 } from "@workspace/ui";
 import { BadgeCheck, Bell, CreditCard, LogOut } from "lucide-react";
 
-import { logout } from "@/actions/auth.actions";
+import { logout } from "@workspace/modules";
 
 export function AccountSwitcher({
   user,

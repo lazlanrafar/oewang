@@ -3,16 +3,28 @@
 import { useTransition } from "react";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Button, Checkbox, Form, FormControl, FormField, FormItem, FormLabel, FormMessage, Input } from "@workspace/ui";
+import {
+  Button,
+  Checkbox,
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+  Input,
+} from "@workspace/ui";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
-import { login } from "../../actions/auth.actions";
+import { login } from "@workspace/modules";
 
 const FormSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address." }),
-  password: z.string().min(6, { message: "Password must be at least 6 characters." }),
+  password: z
+    .string()
+    .min(6, { message: "Password must be at least 6 characters." }),
   remember: z.boolean().optional(),
 });
 
@@ -100,7 +112,10 @@ export function LoginForm() {
                   disabled={is_pending}
                 />
               </FormControl>
-              <FormLabel htmlFor="login-remember" className="ml-1 font-medium text-muted-foreground text-sm">
+              <FormLabel
+                htmlFor="login-remember"
+                className="ml-1 font-medium text-muted-foreground text-sm"
+              >
                 Remember me for 30 days
               </FormLabel>
             </FormItem>

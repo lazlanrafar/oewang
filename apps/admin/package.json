@@ -31,6 +31,7 @@
     "@workspace/constants": "workspace:*",
     "@workspace/dictionaries": "workspace:*",
     "@workspace/supabase": "workspace:*",
+    "@workspace/modules": "workspace:*",
     "@workspace/ui": "workspace:*",
     "axios": "^1.13.4",
     "class-variance-authority": "^0.7.1",

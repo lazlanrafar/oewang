@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 
 import * as jose from "jose";
 
-import { getWorkspaceInvitations, getWorkspaceMembers } from "@/actions/workspace.actions";
+import { getWorkspaceInvitations, getWorkspaceMembers } from "@workspace/modules";
 import { MembersClient } from "@/components/setting/members/members-client";
 
 async function getWorkspaceIdFromToken(): Promise<string | null> {

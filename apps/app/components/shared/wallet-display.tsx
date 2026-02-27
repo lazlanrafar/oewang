@@ -5,8 +5,8 @@ import * as React from "react";
 import { Button, cn, Table, TableBody, TableCell, TableRow } from "@workspace/ui";
 import { GripVertical, Pencil, Trash2 } from "lucide-react";
 
-import type { Wallet } from "@/actions/wallet.actions";
-import type { WalletGroup } from "@/actions/wallet-group.actions";
+import type { Wallet } from "@workspace/modules";
+import type { WalletGroup } from "@workspace/modules";
 import { useCurrency } from "@/hooks/use-currency";
 
 export type { Wallet, WalletGroup };

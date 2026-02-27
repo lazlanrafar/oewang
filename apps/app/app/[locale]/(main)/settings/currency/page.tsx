@@ -1,6 +1,6 @@
 import { Separator } from "@workspace/ui";
 
-import { getSubCurrencies, getTransactionSettings } from "@/actions/setting.actions";
+import { getSubCurrencies, getTransactionSettings } from "@workspace/modules";
 import { MainCurrencyForm } from "@/components/setting/main-currency/main-currency-form";
 import { SubCurrencyList } from "@/components/setting/sub-currency/sub-currency-list";
 import { getDictionary } from "@/get-dictionary";

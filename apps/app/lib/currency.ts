@@ -1,4 +1,4 @@
-import type { TransactionSettings } from "@/types/settings";
+import type { TransactionSettings } from "@workspace/types";
 
 export function formatCurrency(amount: number, settings: TransactionSettings | null | undefined) {
   if (!settings) {

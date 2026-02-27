@@ -1,0 +1,26 @@
+{
+  "name": "@workspace/modules",
+  "version": "0.0.0",
+  "private": true,
+  "exports": {
+    "./*": "./src/*.ts",
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@workspace/encryption": "workspace:*",
+    "@workspace/supabase": "workspace:*",
+    "@workspace/types": "workspace:*",
+    "axios": "^1.6.0",
+    "next": "15.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@workspace/eslint-config": "workspace:*",
+    "@workspace/typescript-config": "workspace:*",
+    "typescript": "^5.0.0"
+  }
+}

@@ -3,8 +3,8 @@ import { NextResponse } from "next/server";
 
 import { createClient } from "@workspace/supabase/server";
 
-import { exchangeSupabaseToken } from "@/actions/auth.actions";
-import { sync_user } from "@/actions/user.actions";
+import { exchangeSupabaseToken } from "@workspace/modules";
+import { sync_user } from "@workspace/modules";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);

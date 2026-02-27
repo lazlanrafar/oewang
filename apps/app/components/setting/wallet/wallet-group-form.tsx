@@ -10,7 +10,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import * as z from "zod";
 
-import { createWalletGroup, updateWalletGroup, type WalletGroup } from "@/actions/wallet-group.actions";
+import { createWalletGroup, updateWalletGroup, type WalletGroup } from "@workspace/modules";
 
 interface WalletGroupFormProps {
   group?: WalletGroup | null;

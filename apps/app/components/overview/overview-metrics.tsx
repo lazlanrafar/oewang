@@ -2,9 +2,9 @@
 
 import { DonutChart, LineMetricChart } from "@workspace/ui";
 
-import type { CategoryBreakdownPoint, ChartDataPoint } from "@/actions/metrics.actions";
+import type { CategoryBreakdownPoint, ChartDataPoint } from "@workspace/modules";
 import { formatCurrency } from "@/lib/currency";
-import type { TransactionSettings } from "@/types/settings";
+import type { TransactionSettings } from "@workspace/types";
 
 export function OverviewMetrics({
   revenueData,

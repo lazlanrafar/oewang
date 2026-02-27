@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { Button, Dialog, DialogContent, DialogHeader, DialogTitle } from "@workspace/ui";
 import { Check, File, FileText, Film, Image, Paperclip } from "lucide-react";
 
-import { getVaultFiles } from "@/actions/vault.actions";
+import { getVaultFiles } from "@workspace/modules";
 
 interface VaultFile {
   id: string;

@@ -31,8 +31,8 @@ import {
   type UpdateWalletData,
   updateWallet,
   type Wallet,
-} from "@/actions/wallet.actions";
-import { getWalletGroups } from "@/actions/wallet-group.actions";
+} from "@workspace/modules";
+import { getWalletGroups } from "@workspace/modules";
 
 interface WalletFormProps {
   wallet?: Wallet | null;

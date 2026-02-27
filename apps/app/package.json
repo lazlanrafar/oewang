@@ -14,7 +14,9 @@
     "generate:presets": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' scripts/generate-theme-presets.ts"
   },
   "lint-staged": {
-    "*.{js,ts,jsx,tsx}": ["biome check --write --no-errors-on-unmatched"]
+    "*.{js,ts,jsx,tsx}": [
+      "biome check --write --no-errors-on-unmatched"
+    ]
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -29,6 +31,7 @@
     "@workspace/constants": "workspace:*",
     "@workspace/dictionaries": "workspace:*",
     "@workspace/supabase": "workspace:*",
+    "@workspace/modules": "workspace:*",
     "axios": "^1.13.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

@@ -7,7 +7,7 @@ import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitl
 import { Loader2, ShieldCheck, Unlink } from "lucide-react";
 import { toast } from "sonner";
 
-import { disconnectProviderAction, getProvidersAction } from "@/actions/user.actions";
+import { disconnectProviderAction, getProvidersAction } from "@workspace/modules";
 
 interface AccountFormProps {
   dictionary: {

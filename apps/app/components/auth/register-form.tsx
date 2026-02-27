@@ -8,7 +8,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
-import { signup } from "../../actions/auth.actions";
+import { signup } from "@workspace/modules";
 
 const FormSchema = z
   .object({

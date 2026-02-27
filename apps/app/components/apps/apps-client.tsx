@@ -35,11 +35,11 @@ import { toast } from "sonner";
 import {
   getTransactionSettings,
   updateTransactionSettings,
-} from "@/actions/setting.actions";
+} from "@workspace/modules";
 import {
   getIntegrationsAction,
   connectWhatsAppAction,
-} from "@/actions/integrations.actions";
+} from "@workspace/modules";
 
 const MOCK_APPS = [
   {

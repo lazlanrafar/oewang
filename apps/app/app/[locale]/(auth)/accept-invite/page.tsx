@@ -10,7 +10,7 @@ import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } fro
 import { CheckCircle2, Loader2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 
-import { acceptInvitationAction } from "@/actions/workspace.actions";
+import { acceptInvitationAction } from "@workspace/modules";
 
 export default function AcceptInvitePage() {
   const searchParams = useSearchParams();
