@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useTransition } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import {
@@ -10,32 +10,20 @@ import {
   DropdownMenuTrigger,
   Button,
 } from "@workspace/ui";
-import { MoreHorizontal, ShieldPlus, ShieldMinus } from "lucide-react";
+import { MoreHorizontal, UserCog } from "lucide-react";
 
-import { revokeAdminAccess, promoteUserToAdmin } from "@workspace/modules";
+import { updateSystemRoleAction } from "@workspace/modules";
 import type { SystemAdminUser } from "@workspace/types";
 
 export function AdminActionsDropdown({ user }: { user: SystemAdminUser }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  const handlePromote = () => {
+  const handleRoleChange = (role: "owner" | "finance" | "user") => {
     startTransition(async () => {
-      const result = await promoteUserToAdmin(user.id);
+      const result = await updateSystemRoleAction(user.id, role);
       if (result.success) {
-        toast.success(`${user.name || user.email} is now an Admin`);
-        router.refresh();
-      } else {
-        toast.error(result.error);
-      }
-    });
-  };
-
-  const handleRevoke = () => {
-    startTransition(async () => {
-      const result = await revokeAdminAccess(user.id);
-      if (result.success) {
-        toast.success(`Admin access revoked for ${user.name || user.email}`);
+        toast.success(`Role updated to ${role} for ${user.name || user.email}`);
         router.refresh();
       } else {
         toast.error(result.error);
@@ -52,20 +40,28 @@ export function AdminActionsDropdown({ user }: { user: SystemAdminUser }) {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        {user.is_super_admin ? (
-          <DropdownMenuItem
-            onClick={handleRevoke}
-            className="text-red-600 focus:text-red-700"
-          >
-            <ShieldMinus className="mr-2 h-4 w-4" />
-            <span>Revoke Admin Access</span>
-          </DropdownMenuItem>
-        ) : (
-          <DropdownMenuItem onClick={handlePromote}>
-            <ShieldPlus className="mr-2 h-4 w-4" />
-            <span>Promote to Admin</span>
-          </DropdownMenuItem>
-        )}
+        <DropdownMenuItem disabled className="opacity-100 font-medium">
+          <UserCog className="mr-2 h-4 w-4" />
+          Assign Role
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => handleRoleChange("owner")}
+          disabled={user.system_role === "owner"}
+        >
+          - Owner
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => handleRoleChange("finance")}
+          disabled={user.system_role === "finance"}
+        >
+          - Finance
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => handleRoleChange("user")}
+          disabled={user.system_role === "user"}
+        >
+          - User
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

@@ -12,12 +12,12 @@ export default async function UsersPage(props: {
   const page =
     typeof searchParams.page === "string" ? parseInt(searchParams.page) : 1;
   const limit =
-    typeof searchParams.limit === "string" ? parseInt(searchParams.limit) : 50;
+    typeof searchParams.limit === "string" ? parseInt(searchParams.limit) : 10;
   const search =
     typeof searchParams.search === "string" ? searchParams.search : undefined;
-  const is_super_admin =
-    typeof searchParams.is_super_admin === "string"
-      ? searchParams.is_super_admin
+  const system_role =
+    typeof searchParams.system_role === "string"
+      ? searchParams.system_role
       : undefined;
   const sortBy =
     typeof searchParams.sortBy === "string" ? searchParams.sortBy : undefined;
@@ -34,7 +34,7 @@ export default async function UsersPage(props: {
       page,
       limit,
       search,
-      is_super_admin,
+      system_role,
       sortBy,
       sortOrder,
     });
@@ -61,7 +61,7 @@ export default async function UsersPage(props: {
             initialUsers={initialUsers}
             initialTotal={initialTotal}
             initialSearch={search}
-            initialRole={is_super_admin}
+            initialRole={system_role}
             initialSortBy={sortBy}
             initialSortOrder={sortOrder}
           />

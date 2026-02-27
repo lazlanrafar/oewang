@@ -6,6 +6,8 @@ import {
   buildSuccess,
   buildPagination,
 } from "@workspace/utils";
+import { db, users } from "@workspace/database";
+import { eq } from "drizzle-orm";
 import { SystemAdminsRepository } from "./system-admins.repository";
 
 export abstract class SystemAdminsService {
@@ -13,7 +15,7 @@ export abstract class SystemAdminsService {
     page: number;
     limit: number;
     search?: string;
-    is_super_admin?: boolean;
+    system_role?: string;
     sortBy?: string;
     sortOrder?: "asc" | "desc";
   }) {
@@ -21,15 +23,10 @@ export abstract class SystemAdminsService {
       const { rows, total } = await SystemAdminsRepository.findAll(params);
 
       // Return Drizzle users only. We don't fetch the whole Supabase list anymore.
-      // Drizzle doesn't store is_super_admin natively, so we only flag the fallback email locally
-      // unless we query Supabase individually (which is too slow for lists).
-      const mappedRows = rows.map((row) => ({
-        ...row,
-        is_super_admin: row.email === "lazlanrafar@gmail.com",
-      }));
+      // Drizzle now natively stores system_role.
 
       return buildPaginatedSuccess(
-        mappedRows,
+        rows,
         buildPagination(total, params.page, params.limit),
       );
     } catch (error: any) {
@@ -38,68 +35,50 @@ export abstract class SystemAdminsService {
     }
   }
 
-  static async promoteUser(targetUserId: string) {
+  static async updateSystemRole(
+    targetUserId: string,
+    newRole: import("@workspace/constants").SystemRole,
+  ) {
+    // 1. Fetch user from database
+    const [dbUser] = await db
+      .select({ email: users.email })
+      .from(users)
+      .where(eq(users.id, targetUserId))
+      .limit(1);
+
+    if (!dbUser) {
+      return buildError(ErrorCode.NOT_FOUND, "User not found in database.");
+    }
+
+    // 2. Prevent demoting the root owner
+    if (dbUser.email === "lazlanrafar@gmail.com" && newRole !== "owner") {
+      return buildError(ErrorCode.FORBIDDEN, "Cannot demote the root owner.");
+    }
+
+    // 3. Update the database record
+    await db
+      .update(users)
+      .set({ system_role: newRole })
+      .where(eq(users.id, targetUserId));
+
+    // 4. Try to sync to Supabase (graceful fail for local test users)
     const supabaseAdmin = createAdminClient();
-
-    // 1. Fetch current user metadata
-    const { data, error: userError } =
+    const { data: authData, error: authError } =
       await supabaseAdmin.auth.admin.getUserById(targetUserId);
-    if (userError || !data?.user) {
-      return buildError(
-        ErrorCode.NOT_FOUND,
-        "User not found in authentication system",
-      );
-    }
 
-    // 2. Update app_metadata
-    const currentMetadata = data.user.app_metadata || {};
-    const { error: updateError } =
-      await supabaseAdmin.auth.admin.updateUserById(targetUserId, {
-        app_metadata: { ...currentMetadata, is_super_admin: true },
-      });
+    if (!authError && authData?.user) {
+      const currentMetadata = authData.user.app_metadata || {};
+      const { error: updateError } =
+        await supabaseAdmin.auth.admin.updateUserById(targetUserId, {
+          app_metadata: { ...currentMetadata, system_role: newRole },
+        });
 
-    if (updateError) {
-      return buildError(
-        ErrorCode.INTERNAL_ERROR,
-        "Failed to promote user: " + updateError.message,
-      );
-    }
-
-    return buildSuccess(undefined);
-  }
-
-  static async revokeUser(targetUserId: string) {
-    const supabaseAdmin = createAdminClient();
-
-    // 1. Fetch current user metadata
-    const { data, error: userError } =
-      await supabaseAdmin.auth.admin.getUserById(targetUserId);
-    if (userError || !data?.user) {
-      return buildError(
-        ErrorCode.NOT_FOUND,
-        "User not found in authentication system",
-      );
-    }
-
-    if (data.user.email === "lazlanrafar@gmail.com") {
-      return buildError(
-        ErrorCode.FORBIDDEN,
-        "Cannot revoke the root administrator.",
-      );
-    }
-
-    // 2. Update app_metadata
-    const currentMetadata = data.user.app_metadata || {};
-    const { error: updateError } =
-      await supabaseAdmin.auth.admin.updateUserById(targetUserId, {
-        app_metadata: { ...currentMetadata, is_super_admin: false },
-      });
-
-    if (updateError) {
-      return buildError(
-        ErrorCode.INTERNAL_ERROR,
-        "Failed to revoke user: " + updateError.message,
-      );
+      if (updateError) {
+        console.warn(
+          "Database updated, but failed to sync Supabase role:",
+          updateError.message,
+        );
+      }
     }
 
     return buildSuccess(undefined);

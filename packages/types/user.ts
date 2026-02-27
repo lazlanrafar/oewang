@@ -13,6 +13,7 @@ export type UserWithWorkspaces = User & {
 export type JwtPayload = {
   user_id: string;
   workspace_id: string;
+  system_role: import("../constants").SystemRole;
 };
 
 export type SystemAdminUser = {
@@ -21,5 +22,5 @@ export type SystemAdminUser = {
   name: string | null;
   profile_picture: string | null;
   created_at: Date | string;
-  is_super_admin: boolean;
+  system_role: import("../constants").SystemRole;
 };

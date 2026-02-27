@@ -11,7 +11,7 @@ export const getSystemAdminUsers = async (params: {
   page?: number;
   limit?: number;
   search?: string;
-  is_super_admin?: string;
+  system_role?: string;
   sortBy?: string;
   sortOrder?: "asc" | "desc";
 }): Promise<
@@ -54,30 +54,18 @@ export const getSystemAdminUsers = async (params: {
   }
 };
 
-export const promoteUserToAdmin = async (
+export const updateSystemRoleAction = async (
   userId: string,
+  role: "owner" | "finance" | "user",
 ): Promise<ActionResponse<void>> => {
   try {
-    await api.post(`/system-admins/users/${userId}/promote`);
+    await api.patch(`/system-admins/users/${userId}/role`, { role });
     return { success: true, data: undefined };
   } catch (error: any) {
     return {
       success: false,
-      error: error.response?.data?.message || "Failed to promote user",
-    };
-  }
-};
-
-export const revokeAdminAccess = async (
-  userId: string,
-): Promise<ActionResponse<void>> => {
-  try {
-    await api.post(`/system-admins/users/${userId}/revoke`);
-    return { success: true, data: undefined };
-  } catch (error: any) {
-    return {
-      success: false,
-      error: error.response?.data?.message || "Failed to revoke user",
+      error:
+        error.response?.data?.message || `Failed to update user to ${role}`,
     };
   }
 };

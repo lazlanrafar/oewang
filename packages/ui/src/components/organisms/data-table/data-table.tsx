@@ -91,9 +91,10 @@ export function DataTable<TData, TValue>({
   showSelect = false,
   onReorder,
 }: DataTableProps<TData, TValue>) {
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Only toggle select visibility when showSelect prop changes
   React.useEffect(() => {
     table.getColumn("select")?.toggleVisibility(!!showSelect);
-  }, [table, showSelect]);
+  }, [showSelect]);
 
   const dataIds: UniqueIdentifier[] = table
     .getRowModel()

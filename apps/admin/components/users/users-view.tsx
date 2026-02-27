@@ -5,24 +5,31 @@ import {
   Avatar,
   AvatarFallback,
   AvatarImage,
-  Badge,
   Button,
   Checkbox,
   DataTable,
   DataTableColumnHeader,
+  DataTableFacetedFilter,
   DataTablePagination,
   DataTableViewOptions,
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
   Input,
   getInitials,
-  useDataTableInstance,
 } from "@workspace/ui";
-import { type ColumnDef } from "@tanstack/react-table";
-import { PlusCircle, Search } from "lucide-react";
-import React, { useEffect, useRef, useTransition } from "react";
+import {
+  type ColumnDef,
+  type ColumnFiltersState,
+  type SortingState,
+  type VisibilityState,
+  getCoreRowModel,
+  getFacetedRowModel,
+  getFacetedUniqueValues,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+} from "@tanstack/react-table";
+import { Search, ShieldCheck, User, X } from "lucide-react";
+import React, { useCallback, useEffect, useRef, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AdminActionsDropdown } from "./admin-actions-dropdown";
 
@@ -35,6 +42,24 @@ export interface UsersViewProps {
   initialSortOrder?: "asc" | "desc";
   pageCount?: number;
 }
+
+const roleFilterOptions = [
+  {
+    label: "Owner",
+    value: "owner",
+    icon: ShieldCheck,
+  },
+  {
+    label: "Finance",
+    value: "finance",
+    icon: ShieldCheck,
+  },
+  {
+    label: "User",
+    value: "user",
+    icon: User,
+  },
+];
 
 const columns: ColumnDef<SystemAdminUser>[] = [
   {
@@ -85,21 +110,19 @@ const columns: ColumnDef<SystemAdminUser>[] = [
     },
   },
   {
-    accessorKey: "is_super_admin",
+    accessorKey: "system_role",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Role" />
     ),
     cell: ({ row }) => {
-      const isSuperAdmin = row.getValue("is_super_admin") as boolean;
-      return (
-        <span className="text-muted-foreground">
-          {isSuperAdmin ? "System Admin" : "User"}
-        </span>
-      );
+      const role = String(row.getValue("system_role"));
+      const displayRole = role.charAt(0).toUpperCase() + role.slice(1);
+      return <span className="text-muted-foreground">{displayRole}</span>;
     },
-    filterFn: (row, id, value) => {
+    filterFn: (row, id, value: string[]) => {
       if (!value || value.length === 0) return true;
-      return value.includes(row.getValue(id));
+      const cellValue = String(row.getValue(id));
+      return value.includes(cellValue);
     },
   },
   {
@@ -150,27 +173,55 @@ export function UsersView({
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
-
-  const isInitialMount = useRef(true);
   const [isPending, startTransition] = useTransition();
 
-  // Parse SSR initial URL state back into TanStack structure
-  const defaultSorting = initialSortBy
-    ? [{ id: initialSortBy, desc: initialSortOrder === "desc" }]
-    : [];
+  // --- URL sync helper (deferred to avoid calling startTransition during render) ---
+  const syncToUrl = useCallback(
+    (updates: Record<string, string | undefined>) => {
+      // Use the actual current URL to prevent stale state before transitions complete
+      const url = new URL(window.location.href);
+      const params = new URLSearchParams(url.search);
 
-  const defaultColumnFilters = initialRole
-    ? [
-        {
-          id: "is_super_admin",
-          value: initialRole === "true" ? [true] : [false],
-        },
-      ]
-    : [];
+      for (const [key, value] of Object.entries(updates)) {
+        if (value === undefined || value === "") {
+          params.delete(key);
+        } else {
+          params.set(key, value);
+        }
+      }
 
-  const totalPages = pageCount ?? Math.ceil(initialTotal / 50);
+      queueMicrotask(() => {
+        startTransition(() => {
+          router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+        });
+      });
+    },
+    [pathname, router],
+  );
 
-  // Determine starting page offset from URL via searchParams or default to 1
+  // --- TanStack Table state (local) ---
+  const [sorting, setSorting] = React.useState<SortingState>(
+    initialSortBy
+      ? [{ id: initialSortBy, desc: initialSortOrder === "desc" }]
+      : [],
+  );
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
+    initialRole
+      ? [
+          {
+            id: "system_role",
+            value: decodeURIComponent(initialRole).split(","),
+          },
+        ]
+      : [],
+  );
+  const [columnVisibility, setColumnVisibility] =
+    React.useState<VisibilityState>({
+      select: false,
+    });
+  const [rowSelection, setRowSelection] = React.useState({});
+  const [globalFilter, setGlobalFilter] = React.useState(initialSearch ?? "");
+
   const currentPageParams = searchParams.get("page");
   const startingPageIndex = currentPageParams
     ? parseInt(currentPageParams) - 1
@@ -180,100 +231,166 @@ export function UsersView({
     ? parseInt(currentLimitParams)
     : 50;
 
-  const table = useDataTableInstance({
-    data: initialUsers,
-    columns,
-    enableRowSelection: true,
-    manualSorting: true,
-    manualFiltering: true,
-    manualPagination: true,
-    pageCount: totalPages,
-    defaultSorting,
-    defaultColumnFilters,
-    defaultGlobalFilter: initialSearch,
-    defaultPageIndex: startingPageIndex,
-    defaultPageSize: startingPageSize,
-    defaultColumnVisibility: {
-      select: false,
-    },
+  const [pagination, setPagination] = React.useState({
+    pageIndex: startingPageIndex,
+    pageSize: startingPageSize,
   });
 
-  // Local state for debounced searching
+  const totalPages = pageCount ?? Math.ceil(initialTotal / pagination.pageSize);
+
+  // --- Sorting change: update state, then sync to URL ---
+  const handleSortingChange = useCallback(
+    (updaterOrValue: SortingState | ((old: SortingState) => SortingState)) => {
+      const next =
+        typeof updaterOrValue === "function"
+          ? updaterOrValue(sorting)
+          : updaterOrValue;
+      setSorting(next);
+      queueMicrotask(() => {
+        if (next.length > 0) {
+          syncToUrl({
+            sortBy: next[0]?.id || "",
+            sortOrder: next[0]?.desc ? "desc" : "asc",
+          });
+        } else {
+          syncToUrl({ sortBy: undefined, sortOrder: undefined });
+        }
+      });
+    },
+    [sorting, syncToUrl],
+  );
+
+  // --- Column filter change: state-only (no URL sync here) ---
+  const handleColumnFiltersChange = useCallback(
+    (
+      updaterOrValue:
+        | ColumnFiltersState
+        | ((old: ColumnFiltersState) => ColumnFiltersState),
+    ) => {
+      const next =
+        typeof updaterOrValue === "function"
+          ? updaterOrValue(columnFilters)
+          : updaterOrValue;
+      setColumnFilters(next);
+    },
+    [columnFilters],
+  );
+
+  // --- Role filter URL sync (called by DataTableFacetedFilter) ---
+  const handleRoleFilterChange = useCallback(
+    (values: string[]) => {
+      if (values.length > 0) {
+        setColumnFilters([{ id: "system_role", value: values }]);
+        syncToUrl({ system_role: values.join(",") });
+      } else {
+        setColumnFilters([]);
+        syncToUrl({ system_role: undefined });
+      }
+    },
+    [syncToUrl],
+  );
+
+  // --- Pagination change: update state, then sync to URL ---
+  const handlePaginationChange = useCallback(
+    (
+      updaterOrValue:
+        | typeof pagination
+        | ((old: typeof pagination) => typeof pagination),
+    ) => {
+      const next =
+        typeof updaterOrValue === "function"
+          ? updaterOrValue(pagination)
+          : updaterOrValue;
+      setPagination(next);
+      queueMicrotask(() => {
+        syncToUrl({
+          page:
+            next.pageIndex > 0 ? (next.pageIndex + 1).toString() : undefined,
+          limit: next.pageSize !== 50 ? next.pageSize.toString() : undefined,
+        });
+      });
+    },
+    [pagination, syncToUrl],
+  );
+
+  // --- Search: debounce input, sync to URL ---
   const [searchValue, setSearchValue] = React.useState(initialSearch ?? "");
+  const isInitialMount = useRef(true);
 
-  // Debounce global filter to prevent rapid router.replace during typing
   useEffect(() => {
-    const timeout = setTimeout(() => {
-      table.setGlobalFilter(searchValue);
-    }, 300);
-    return () => clearTimeout(timeout);
-  }, [searchValue, table]);
-
-  // Sync Table state bounds directly to Next Router changes
-  useEffect(() => {
+    // Skip the first mount to prevent double-navigation
     if (isInitialMount.current) {
       isInitialMount.current = false;
       return;
     }
 
-    const params = new URLSearchParams(searchParams.toString());
+    const timeout = setTimeout(() => {
+      setGlobalFilter(searchValue);
+      const updates: Record<string, string | undefined> = {
+        search: searchValue || undefined,
+      };
+      // Reset to page 1 when searching
+      if (searchValue) {
+        updates.page = undefined;
+        setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+      }
+      syncToUrl(updates);
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, [searchValue, syncToUrl]);
 
-    // Sync Sorting
-    const sortState = table.getState().sorting;
-    if (sortState.length > 0) {
-      params.set("sortBy", sortState[0]?.id || "");
-      params.set("sortOrder", sortState[0]?.desc ? "desc" : "asc");
-    } else {
-      params.delete("sortBy");
-      params.delete("sortOrder");
-    }
+  // --- Sync URL params to State on server navigation ---
+  useEffect(() => {
+    setColumnFilters(
+      initialRole
+        ? [
+            {
+              id: "system_role",
+              value: decodeURIComponent(initialRole).split(","),
+            },
+          ]
+        : [],
+    );
+  }, [initialRole]);
 
-    // Sync Search
-    const search = table.getState().globalFilter;
-    if (search) {
-      params.set("search", search as string);
-      // Reset to page 1 to ensure user searches from start of results
-      params.delete("page");
-    } else {
-      params.delete("search");
-    }
+  // --- Check if any filters are active ---
+  const isFiltered = columnFilters.length > 0;
 
-    // Sync Custom Filters
-    const roleFilter = table.getColumn("is_super_admin")?.getFilterValue() as
-      | boolean[]
-      | undefined;
-    if (roleFilter && roleFilter.length === 1) {
-      // Set if exactly one mode is selected, else let DB query both
-      params.set("is_super_admin", roleFilter[0] ? "true" : "false");
-    } else {
-      params.delete("is_super_admin");
-    }
-
-    // Sync Pagination
-    const pageIndex = table.getState().pagination.pageIndex;
-    if (pageIndex > 0) {
-      params.set("page", (pageIndex + 1).toString());
-    } else {
-      params.delete("page");
-    }
-
-    const pageSize = table.getState().pagination.pageSize;
-    if (pageSize !== 50) {
-      params.set("limit", pageSize.toString());
-    } else {
-      params.delete("limit");
-    }
-
-    const currentUrl = `${pathname}?${params.toString()}`;
-    startTransition(() => {
-      router.replace(currentUrl, { scroll: false });
-    });
-  }, [
-    table.getState().sorting,
-    table.getState().globalFilter,
-    table.getState().columnFilters,
-    table.getState().pagination,
-  ]);
+  // --- Table instance ---
+  const table = useReactTable({
+    data: initialUsers,
+    columns,
+    pageCount: totalPages,
+    manualPagination: true,
+    manualSorting: true,
+    manualFiltering: true,
+    state: {
+      sorting,
+      columnVisibility,
+      rowSelection,
+      columnFilters,
+      pagination,
+      globalFilter,
+    },
+    onGlobalFilterChange: setGlobalFilter,
+    enableRowSelection: true,
+    autoResetPageIndex: false,
+    autoResetExpanded: false,
+    // @ts-ignore - Prevent TanStack table from resetting filters to initial mount values on every data fetch
+    autoResetColumnFilters: false,
+    getRowId: (row) => row.id.toString(),
+    onRowSelectionChange: setRowSelection,
+    onSortingChange: handleSortingChange,
+    onColumnFiltersChange: handleColumnFiltersChange,
+    onColumnVisibilityChange: setColumnVisibility,
+    onPaginationChange: handlePaginationChange,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getFacetedRowModel: getFacetedRowModel(),
+    getFacetedUniqueValues: getFacetedUniqueValues(),
+  });
 
   return (
     <div className="flex flex-col h-full space-y-4">
@@ -284,149 +401,44 @@ export function UsersView({
 
       {/* Toolbar */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-1 items-center space-x-2">
           <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search users..."
+              placeholder="Filter users..."
               value={searchValue}
               onChange={(event) => setSearchValue(event.target.value)}
-              className="h-9 w-[150px] lg:w-[250px] pl-8 bg-background"
+              className="h-8 w-[150px] lg:w-[250px] pl-8 bg-background"
             />
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-9 border-dashed hidden sm:flex"
-              >
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Status
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-[150px]">
-              <DropdownMenuCheckboxItem
-                checked={
-                  (
-                    table.getColumn("status")?.getFilterValue() as
-                      | boolean[]
-                      | undefined
-                  )?.includes(true) ?? false
-                }
-                onCheckedChange={(checked) => {
-                  const val =
-                    (table
-                      .getColumn("status")
-                      ?.getFilterValue() as boolean[]) ?? [];
-                  const set = new Set(val);
-                  if (checked) set.add(true);
-                  else set.delete(true);
-                  table
-                    .getColumn("status")
-                    ?.setFilterValue(
-                      Array.from(set).length ? Array.from(set) : undefined,
-                    );
-                }}
-              >
-                Active
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem
-                checked={
-                  (
-                    table.getColumn("status")?.getFilterValue() as
-                      | boolean[]
-                      | undefined
-                  )?.includes(false) ?? false
-                }
-                onCheckedChange={(checked) => {
-                  const val =
-                    (table
-                      .getColumn("status")
-                      ?.getFilterValue() as boolean[]) ?? [];
-                  const set = new Set(val);
-                  if (checked) set.add(false);
-                  else set.delete(false);
-                  table
-                    .getColumn("status")
-                    ?.setFilterValue(
-                      Array.from(set).length ? Array.from(set) : undefined,
-                    );
-                }}
-              >
-                Pending
-              </DropdownMenuCheckboxItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-9 border-dashed hidden sm:flex"
-              >
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Role
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-[150px]">
-              <DropdownMenuCheckboxItem
-                checked={
-                  (
-                    table.getColumn("is_super_admin")?.getFilterValue() as
-                      | boolean[]
-                      | undefined
-                  )?.includes(true) ?? false
-                }
-                onCheckedChange={(checked) => {
-                  const val =
-                    (table
-                      .getColumn("is_super_admin")
-                      ?.getFilterValue() as boolean[]) ?? [];
-                  const set = new Set(val);
-                  if (checked) set.add(true);
-                  else set.delete(true);
-                  table
-                    .getColumn("is_super_admin")
-                    ?.setFilterValue(
-                      Array.from(set).length ? Array.from(set) : undefined,
-                    );
-                }}
-              >
-                System Admin
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem
-                checked={
-                  (
-                    table.getColumn("is_super_admin")?.getFilterValue() as
-                      | boolean[]
-                      | undefined
-                  )?.includes(false) ?? false
-                }
-                onCheckedChange={(checked) => {
-                  const val =
-                    (table
-                      .getColumn("is_super_admin")
-                      ?.getFilterValue() as boolean[]) ?? [];
-                  const set = new Set(val);
-                  if (checked) set.add(false);
-                  else set.delete(false);
-                  table
-                    .getColumn("is_super_admin")
-                    ?.setFilterValue(
-                      Array.from(set).length ? Array.from(set) : undefined,
-                    );
-                }}
-              >
-                User
-              </DropdownMenuCheckboxItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {table.getColumn("system_role") && (
+            <DataTableFacetedFilter
+              column={table.getColumn("system_role")}
+              title="Role"
+              options={roleFilterOptions}
+              onFilterChange={handleRoleFilterChange}
+              filterValues={
+                columnFilters.find((f) => f.id === "system_role")?.value as
+                  | string[]
+                  | undefined
+              }
+            />
+          )}
+          {isFiltered && (
+            <Button
+              variant="ghost"
+              onClick={() => {
+                table.resetColumnFilters();
+                syncToUrl({ system_role: undefined });
+              }}
+              className="h-8 px-2 lg:px-3"
+            >
+              Reset
+              <X className="ml-2 h-4 w-4" />
+            </Button>
+          )}
         </div>
-        <div className="flex items-center space-x-2">
-          <DataTableViewOptions table={table} />
-        </div>
+        <DataTableViewOptions table={table} />
       </div>
 
       {/* Table Area */}

@@ -1,12 +1,23 @@
 import { db, users } from "@workspace/database";
-import { ilike, or, eq, desc, asc, and, not, sql, type SQL } from "drizzle-orm";
+import {
+  ilike,
+  or,
+  eq,
+  desc,
+  asc,
+  and,
+  not,
+  sql,
+  inArray,
+  type SQL,
+} from "drizzle-orm";
 
 export abstract class SystemAdminsRepository {
   static async findAll(params: {
     page: number;
     limit: number;
     search?: string;
-    is_super_admin?: boolean;
+    system_role?: string;
     sortBy?: string;
     sortOrder?: "asc" | "desc";
   }) {
@@ -21,21 +32,23 @@ export abstract class SystemAdminsRepository {
       );
     }
 
-    if (params.is_super_admin !== undefined) {
-      if (params.is_super_admin) {
-        conditions.push(eq(users.email, "lazlanrafar@gmail.com"));
-      } else {
-        conditions.push(not(eq(users.email, "lazlanrafar@gmail.com")));
-      }
+    if (params.system_role) {
+      const roles = params.system_role.split(
+        ",",
+      ) as import("@workspace/constants").SystemRole[];
+      conditions.push(inArray(users.system_role, roles));
     }
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-    let orderByParam: any = desc(users.created_at);
+    // Default sort: Role hierarchy (owner > finance > user), then alphabetically
+    const roleSort = sql`CASE WHEN ${users.system_role} = 'owner' THEN 1 WHEN ${users.system_role} = 'finance' THEN 2 ELSE 3 END`;
+    let orderByParams: any[] = [asc(roleSort), asc(users.name)];
+
     if (params.sortBy) {
       const col = (users as any)[params.sortBy];
       if (col) {
-        orderByParam = params.sortOrder === "asc" ? asc(col) : desc(col);
+        orderByParams = params.sortOrder === "asc" ? [asc(col)] : [desc(col)];
       }
     }
 
@@ -45,11 +58,12 @@ export abstract class SystemAdminsRepository {
         email: users.email,
         name: users.name,
         profile_picture: users.profile_picture,
+        system_role: users.system_role,
         created_at: users.created_at,
       })
       .from(users)
       .where(whereClause)
-      .orderBy(orderByParam)
+      .orderBy(...orderByParams)
       .limit(params.limit)
       .offset((params.page - 1) * params.limit);
 

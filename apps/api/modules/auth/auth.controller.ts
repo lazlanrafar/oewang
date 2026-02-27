@@ -31,6 +31,7 @@ export const authController = new Elysia({ prefix: "/auth" })
           auth.user_id,
           auth.workspace_id,
           auth.email,
+          auth.system_role,
         );
         return buildSuccess(
           { token, user_id: auth.user_id, workspace_id: auth.workspace_id },
@@ -51,7 +52,12 @@ export const authController = new Elysia({ prefix: "/auth" })
       }
 
       const email = auth.email || ""; // Should come from auth plugin now
-      const token = await generateJwt(auth.user_id, workspaceId, email);
+      const token = await generateJwt(
+        auth.user_id,
+        workspaceId,
+        email,
+        auth.system_role,
+      );
       return buildSuccess(
         { token, user_id: auth.user_id, workspace_id: workspaceId || null },
         "Token generated",

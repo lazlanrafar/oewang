@@ -14,7 +14,7 @@ export type AuthContext = {
     user_id: string;
     workspace_id: string;
     email: string;
-    is_super_admin: boolean;
+    system_role: import("@workspace/constants").SystemRole;
   } | null;
 };
 
@@ -22,14 +22,14 @@ async function generateJwt(
   user_id: string,
   workspace_id: string,
   email: string,
-  is_super_admin: boolean = false,
+  system_role: import("@workspace/constants").SystemRole = "user",
 ): Promise<string> {
   const expires_in = process.env.JWT_EXPIRES_IN ?? "7d";
   const jwt = await new jose.SignJWT({
     user_id,
     workspace_id,
     email,
-    is_super_admin,
+    system_role,
   })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
@@ -42,23 +42,23 @@ async function generateJwt(
 /**
  * Verify and decode an app JWT.
  */
-async function verifyJwt(
-  token: string,
-): Promise<{
+async function verifyJwt(token: string): Promise<{
   user_id: string;
   workspace_id: string;
   email?: string;
-  is_super_admin?: boolean;
+  system_role?: import("@workspace/constants").SystemRole;
 } | null> {
   try {
     const { payload } = await jose.jwtVerify(token, JWT_SECRET_KEY());
     const user_id = payload.user_id as string;
     const workspace_id = payload.workspace_id as string;
     const email = payload.email as string;
-    const is_super_admin = payload.is_super_admin as boolean | undefined;
+    const system_role = payload.system_role as
+      | import("@workspace/constants").SystemRole
+      | undefined;
 
     if (!user_id) return null; // workspace_id can be empty string
-    return { user_id, workspace_id, email, is_super_admin };
+    return { user_id, workspace_id, email, system_role };
   } catch {
     return null;
   }
@@ -113,9 +113,12 @@ export const authPlugin = new Elysia({ name: "auth" })
         .where(eq(user_workspaces.user_id, user.id))
         .limit(1);
 
-      // Look up user record for workspace_id
+      // Look up user record for workspace_id and is_super_admin
       const [db_user] = await db
-        .select({ workspace_id: users.workspace_id })
+        .select({
+          workspace_id: users.workspace_id,
+          system_role: users.system_role,
+        })
         .from(users)
         .where(eq(users.id, user.id))
         .limit(1);
@@ -128,9 +131,8 @@ export const authPlugin = new Elysia({ name: "auth" })
           user_id: user.id,
           workspace_id: workspace_id ?? "",
           email: user.email!,
-          is_super_admin:
-            user.app_metadata?.is_super_admin === true ||
-            user.email === "lazlanrafar@gmail.com",
+          system_role:
+            db_user?.system_role || user.app_metadata?.system_role || "user",
         },
       };
     } catch (e) {

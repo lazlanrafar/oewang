@@ -9,6 +9,9 @@ export const users = pgTable("users", {
   oauth_provider: text("oauth_provider"),
   providers: text("providers").array(),
   workspace_id: uuid("workspace_id").references(() => workspaces.id),
+  system_role: text("system_role", { enum: ["owner", "finance", "user"] })
+    .default("user")
+    .notNull(),
   created_at: timestamp("created_at").defaultNow().notNull(),
   updated_at: timestamp("updated_at").defaultNow().notNull(),
 });
