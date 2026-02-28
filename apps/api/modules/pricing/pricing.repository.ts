@@ -1,0 +1,128 @@
+import { db, pricing } from "@workspace/database";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  ilike,
+  isNull,
+  or,
+  sql,
+  type SQL,
+} from "drizzle-orm";
+import type {
+  CreatePricingInput,
+  PricingListInput,
+  UpdatePricingInput,
+} from "./pricing.dto";
+
+export abstract class PricingRepository {
+  static async findAll(query: PricingListInput) {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 50;
+    const offset = (page - 1) * limit;
+
+    const conditions: (SQL<unknown> | undefined)[] = [
+      isNull(pricing.deleted_at),
+    ];
+
+    if (query.search) {
+      conditions.push(
+        or(
+          ilike(pricing.name, `%${query.search}%`),
+          ilike(pricing.description, `%${query.search}%`),
+        ),
+      );
+    }
+
+    if (query.is_active !== undefined) {
+      conditions.push(eq(pricing.is_active, query.is_active));
+    }
+
+    let orderByClause = asc(pricing.created_at);
+    if (query.sortBy === "name") {
+      orderByClause =
+        query.sortOrder === "desc" ? desc(pricing.name) : asc(pricing.name);
+    } else if (query.sortBy === "price_monthly") {
+      orderByClause =
+        query.sortOrder === "desc"
+          ? desc(pricing.price_monthly)
+          : asc(pricing.price_monthly);
+    } else if (query.sortBy === "created_at") {
+      orderByClause =
+        query.sortOrder === "desc"
+          ? desc(pricing.created_at)
+          : asc(pricing.created_at);
+    }
+
+    const [data, totalCount] = await Promise.all([
+      db
+        .select()
+        .from(pricing)
+        .where(and(...conditions))
+        .orderBy(orderByClause)
+        .limit(limit)
+        .offset(offset),
+      db
+        .select({ count: sql<number>`count(*)` })
+        .from(pricing)
+        .where(and(...conditions)),
+    ]);
+
+    return {
+      rows: data,
+      total: Number(totalCount[0]?.count || 0),
+    };
+  }
+
+  static async findById(id: string) {
+    const result = await db
+      .select()
+      .from(pricing)
+      .where(and(eq(pricing.id, id), isNull(pricing.deleted_at)))
+      .limit(1);
+
+    return result[0] || null;
+  }
+
+  static async create(dto: CreatePricingInput) {
+    const [result] = await db
+      .insert(pricing)
+      .values({
+        name: dto.name,
+        description: dto.description,
+        price_monthly: dto.price_monthly,
+        price_yearly: dto.price_yearly,
+        price_one_time: dto.price_one_time,
+        currency: dto.currency || "usd",
+        features: dto.features || [],
+        is_active: dto.is_active ?? true,
+      })
+      .returning();
+
+    return result;
+  }
+
+  static async update(id: string, dto: UpdatePricingInput) {
+    const [result] = await db
+      .update(pricing)
+      .set({
+        ...dto,
+        updated_at: new Date(),
+      })
+      .where(eq(pricing.id, id))
+      .returning();
+
+    return result;
+  }
+
+  static async softDelete(id: string) {
+    const [result] = await db
+      .update(pricing)
+      .set({ deleted_at: new Date() })
+      .where(eq(pricing.id, id))
+      .returning();
+
+    return result;
+  }
+}

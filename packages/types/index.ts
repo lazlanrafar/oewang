@@ -3,7 +3,6 @@ export * from "./error-codes";
 export * from "./workspace";
 export * from "./user";
 export * from "./transaction";
-export * from "./user";
 export * from "./wallet";
 export * from "./category";
-export * from "./settings";
+export * from "./pricing";

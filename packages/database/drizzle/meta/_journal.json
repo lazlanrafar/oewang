@@ -134,6 +134,13 @@
       "when": 1772207688901,
       "tag": "0018_smiling_frank_castle",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1772212632225,
+      "tag": "0019_bitter_jack_flag",
+      "breakpoints": true
     }
   ]
 }

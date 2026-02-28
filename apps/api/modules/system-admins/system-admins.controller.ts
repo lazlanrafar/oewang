@@ -6,7 +6,7 @@ import { SystemAdminsService } from "./system-admins.service";
 import { ErrorCode } from "@workspace/types";
 
 // Admin Guard Plugin
-const requireAdminAccess = new Elysia({ name: "guard.admin-access" })
+export const requireAdminAccess = new Elysia({ name: "guard.admin-access" })
   .use(authPlugin)
   .derive(({ auth, status }) => {
     if (!auth) {

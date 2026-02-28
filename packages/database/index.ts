@@ -17,3 +17,4 @@ export * from "./schema/transaction-attachments";
 export * from "./schema/ai-sessions";
 export * from "./schema/ai-messages";
 export * from "./schema/workspace-integrations";
+export * from "./schema/pricing";
