@@ -7,6 +7,8 @@ import {
   vaultFiles,
   count,
   sql,
+  pricing,
+  workspaces,
 } from "@workspace/database";
 
 export const vaultRepository = {
@@ -91,5 +93,25 @@ export const vaultRepository = {
       )
       .returning();
     return file ?? null;
+  },
+
+  async getUsageAndQuota(workspaceId: string) {
+    const [usageData] = await db
+      .select({
+        used: workspaces.vault_size_used_bytes,
+        maxMb: pricing.max_vault_size_mb,
+      })
+      .from(workspaces)
+      .leftJoin(pricing, eq(workspaces.plan_id, pricing.id))
+      .where(eq(workspaces.id, workspaceId))
+      .limit(1);
+    return usageData;
+  },
+
+  async updateVaultSize(workspaceId: string, newSize: number) {
+    await db
+      .update(workspaces)
+      .set({ vault_size_used_bytes: newSize })
+      .where(eq(workspaces.id, workspaceId));
   },
 };

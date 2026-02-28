@@ -12,6 +12,7 @@ import { CategoriesRepository } from "../categories/categories.repository";
 import { SettingsRepository } from "../settings/settings.repository";
 import { walletGroupsRepository } from "../wallets/groups/groups.repository";
 import { walletsRepository } from "../wallets/wallets.repository";
+import { db, pricing, eq } from "@workspace/database";
 
 /**
  * Workspaces service — business logic layer.
@@ -38,11 +39,20 @@ export const workspacesService = {
     const random_suffix = Math.random().toString(36).substring(2, 7);
     const slug = `${base_slug}-${random_suffix}`;
 
+    // Find default Free Tier plan
+    const [freePlan] = await db
+      .select({ id: pricing.id })
+      .from(pricing)
+      .where(eq(pricing.name, "Free Tier"))
+      .limit(1);
+
     // Create workspace
     const workspace = await workspacesRepository.create({
       name,
       slug,
       country,
+      plan_id: freePlan?.id,
+      plan_status: "free",
     });
     if (!workspace) {
       throw new Error("Failed to create workspace");
@@ -143,6 +153,10 @@ export const workspacesService = {
    */
   async listWorkspaces(user_id: string) {
     return workspacesRepository.getMemberWorkspaces(user_id);
+  },
+
+  async getActiveWorkspace(workspace_id: string) {
+    return workspacesRepository.findById(workspace_id);
   },
 
   async getMembers(workspace_id: string) {

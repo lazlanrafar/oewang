@@ -23,6 +23,7 @@ import {
   User,
   Users,
   Wallet,
+  CreditCard,
 } from "lucide-react";
 
 interface SidebarNavProps extends React.HTMLAttributes<HTMLElement> {
@@ -45,6 +46,7 @@ interface SidebarNavProps extends React.HTMLAttributes<HTMLElement> {
       currency: string;
       alarm: string;
       language: string;
+      billing: string;
       soon: string;
     };
   };
@@ -156,6 +158,11 @@ export function SettingSidebar({
           title: sidebar.language,
           href: "/settings/language",
           icon: Languages,
+        },
+        {
+          title: sidebar.billing,
+          href: "/settings/billing",
+          icon: CreditCard,
         },
       ],
     },

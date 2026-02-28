@@ -10,6 +10,8 @@ import {
   categories,
   aiSessions,
   aiMessages,
+  pricing,
+  workspaces,
 } from "@workspace/database";
 
 export abstract class AiRepository {
@@ -211,5 +213,35 @@ export abstract class AiRepository {
       .orderBy(sql`TO_CHAR(${transactions.date}::date, 'YYYY-MM') DESC`);
 
     return result;
+  }
+
+  /**
+   * Get AI token usage and quota metrics for a workspace.
+   */
+  static async getUsageAndQuota(workspaceId: string) {
+    const [usageData] = await db
+      .select({
+        used: workspaces.ai_tokens_used,
+        maxTokens: pricing.max_ai_tokens,
+      })
+      .from(workspaces)
+      .leftJoin(pricing, eq(workspaces.plan_id, pricing.id))
+      .where(eq(workspaces.id, workspaceId))
+      .limit(1);
+    return usageData;
+  }
+
+  /**
+   * Safely increment the token usage tracker.
+   */
+  static async incrementAiTokens(
+    workspaceId: string,
+    currentTokens: number,
+    tokensSpent: number,
+  ) {
+    await db
+      .update(workspaces)
+      .set({ ai_tokens_used: currentTokens + tokensSpent })
+      .where(eq(workspaces.id, workspaceId));
   }
 }

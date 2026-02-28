@@ -85,6 +85,38 @@ export const workspacesController = new Elysia({ prefix: "/workspaces" })
     },
   )
   .get(
+    "/active",
+    async ({ set, auth }: any) => {
+      if (!auth || !auth.workspace_id) {
+        set.status = 401;
+        return buildError(ErrorCode.UNAUTHORIZED, "Unauthorized");
+      }
+
+      try {
+        const workspace = await workspacesService.getActiveWorkspace(
+          auth.workspace_id,
+        );
+        if (!workspace) {
+          set.status = 404;
+          return buildError(
+            ErrorCode.WORKSPACE_NOT_FOUND,
+            "Workspace not found",
+          );
+        }
+        return buildSuccess(workspace, "Active workspace retrieved");
+      } catch (error: any) {
+        set.status = 500;
+        return buildError(ErrorCode.INTERNAL_ERROR, error.message);
+      }
+    },
+    {
+      detail: {
+        summary: "Get Active Workspace",
+        tags: ["Workspaces"],
+      },
+    },
+  )
+  .get(
     "/:id/members",
     async ({ set, auth, params }: any) => {
       if (!auth) {

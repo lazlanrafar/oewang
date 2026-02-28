@@ -9,6 +9,7 @@
     "lint": "biome lint",
     "format": "biome format --write",
     "check": "biome check",
+    "check-types": "tsc --noEmit",
     "check:fix": "biome check --write",
     "prepare": "husky",
     "generate:presets": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' scripts/generate-theme-presets.ts"

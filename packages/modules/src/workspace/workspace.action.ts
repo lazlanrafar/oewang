@@ -1,6 +1,10 @@
 "use server";
 
-import type { ActionResponse, Workspace, WorkspaceWithRole } from "@workspace/types";
+import type {
+  ActionResponse,
+  Workspace,
+  WorkspaceWithRole,
+} from "@workspace/types";
 
 import { axiosInstance } from "../lib/axios";
 
@@ -11,7 +15,10 @@ export interface CreateWorkspaceDTO {
   mainCurrencySymbol?: string;
 }
 
-export const createWorkspace = async (data: CreateWorkspaceDTO, token?: string): Promise<ActionResponse<Workspace>> => {
+export const createWorkspace = async (
+  data: CreateWorkspaceDTO,
+  token?: string,
+): Promise<ActionResponse<Workspace>> => {
   try {
     const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
     const response = await axiosInstance.post("workspaces", data, { headers });
@@ -24,7 +31,9 @@ export const createWorkspace = async (data: CreateWorkspaceDTO, token?: string):
   }
 };
 
-export const getMyWorkspaces = async (): Promise<ActionResponse<WorkspaceWithRole[]>> => {
+export const getMyWorkspaces = async (): Promise<
+  ActionResponse<WorkspaceWithRole[]>
+> => {
   try {
     const response = await axiosInstance.get("workspaces");
     return { success: true, data: response.data };
@@ -40,9 +49,13 @@ export const getMyWorkspaces = async (): Promise<ActionResponse<WorkspaceWithRol
 export const create_workspace = createWorkspace;
 export const get_my_workspaces = getMyWorkspaces;
 
-export const getWorkspaceMembers = async (workspaceId: string): Promise<ActionResponse<any>> => {
+export const getWorkspaceMembers = async (
+  workspaceId: string,
+): Promise<ActionResponse<any>> => {
   try {
-    const response = await axiosInstance.get(`workspaces/${workspaceId}/members`);
+    const response = await axiosInstance.get(
+      `workspaces/${workspaceId}/members`,
+    );
     return { success: true, data: response.data };
   } catch (error: any) {
     return {
@@ -58,7 +71,10 @@ export const inviteMember = async (
   role: "admin" | "member",
 ): Promise<ActionResponse<any>> => {
   try {
-    const response = await axiosInstance.post(`workspaces/${workspaceId}/invitations`, { email, role });
+    const response = await axiosInstance.post(
+      `workspaces/${workspaceId}/invitations`,
+      { email, role },
+    );
     return { success: true, data: response.data };
   } catch (error: any) {
     return {
@@ -68,9 +84,13 @@ export const inviteMember = async (
   }
 };
 
-export const getWorkspaceInvitations = async (workspaceId: string): Promise<ActionResponse<any>> => {
+export const getWorkspaceInvitations = async (
+  workspaceId: string,
+): Promise<ActionResponse<any>> => {
   try {
-    const response = await axiosInstance.get(`workspaces/${workspaceId}/invitations`);
+    const response = await axiosInstance.get(
+      `workspaces/${workspaceId}/invitations`,
+    );
     return { success: true, data: response.data };
   } catch (error: any) {
     return {
@@ -80,9 +100,14 @@ export const getWorkspaceInvitations = async (workspaceId: string): Promise<Acti
   }
 };
 
-export const cancelInvitation = async (workspaceId: string, invitationId: string): Promise<ActionResponse<any>> => {
+export const cancelInvitation = async (
+  workspaceId: string,
+  invitationId: string,
+): Promise<ActionResponse<any>> => {
   try {
-    const response = await axiosInstance.delete(`workspaces/${workspaceId}/invitations/${invitationId}`);
+    const response = await axiosInstance.delete(
+      `workspaces/${workspaceId}/invitations/${invitationId}`,
+    );
     return { success: true, data: response.data };
   } catch (error: any) {
     return {
@@ -92,14 +117,34 @@ export const cancelInvitation = async (workspaceId: string, invitationId: string
   }
 };
 
-export const acceptInvitationAction = async (token: string): Promise<ActionResponse<{ workspaceId: string }>> => {
+export const acceptInvitationAction = async (
+  token: string,
+): Promise<ActionResponse<{ workspaceId: string }>> => {
   try {
-    const response = await axiosInstance.post<{ workspaceId: string }>("workspaces/invitations/accept", { token });
+    const response = await axiosInstance.post<{ workspaceId: string }>(
+      "workspaces/invitations/accept",
+      { token },
+    );
     return { success: true, data: response.data };
   } catch (error: any) {
     return {
       success: false,
       error: error.response?.data?.message || "Failed to accept invitation",
+    };
+  }
+};
+
+export const getActiveWorkspace = async (): Promise<
+  ActionResponse<Workspace>
+> => {
+  try {
+    const response = await axiosInstance.get("workspaces/active");
+    return { success: true, data: response.data.data };
+  } catch (error: any) {
+    return {
+      success: false,
+      error:
+        error.response?.data?.message || "Failed to fetch active workspace",
     };
   }
 };

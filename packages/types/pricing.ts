@@ -5,6 +5,12 @@ export interface Pricing {
   price_monthly: number | null;
   price_yearly: number | null;
   price_one_time: number | null;
+  stripe_product_id: string | null;
+  stripe_price_id_monthly: string | null;
+  stripe_price_id_yearly: string | null;
+  stripe_price_id_one_time: string | null;
+  max_vault_size_mb: number;
+  max_ai_tokens: number;
   currency: string;
   features: string[];
   is_active: boolean;
@@ -19,6 +25,12 @@ export interface CreatePricingInput {
   price_monthly?: number;
   price_yearly?: number;
   price_one_time?: number;
+  stripe_product_id?: string;
+  stripe_price_id_monthly?: string;
+  stripe_price_id_yearly?: string;
+  stripe_price_id_one_time?: string;
+  max_vault_size_mb?: number;
+  max_ai_tokens?: number;
   currency?: string;
   features?: string[];
   is_active?: boolean;

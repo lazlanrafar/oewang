@@ -30,6 +30,8 @@ import { metricsController } from "./modules/metrics/metrics.controller";
 import { integrationsController } from "./modules/integrations/integrations.controller";
 import { systemAdminsController } from "./modules/system-admins/system-admins.controller";
 import { pricingController } from "./modules/pricing/pricing.controller";
+import { stripeController } from "./modules/stripe/stripe.controller";
+import { ordersController } from "./modules/orders/orders.controller";
 
 const log = createLogger("api");
 const port = process.env.API_PORT ?? 3001;
@@ -69,7 +71,9 @@ const app = new Elysia()
       .use(metricsController)
       .use(integrationsController)
       .use(systemAdminsController)
-      .use(pricingController),
+      .use(pricingController)
+      .use(stripeController)
+      .use(ordersController),
   )
   .onError(({ error, code }) => {
     if (code === "NOT_FOUND") return;

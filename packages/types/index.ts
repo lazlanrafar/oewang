@@ -6,3 +6,5 @@ export * from "./transaction";
 export * from "./wallet";
 export * from "./category";
 export * from "./pricing";
+export * from "./settings";
+export * from "./orders";

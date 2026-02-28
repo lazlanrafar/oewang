@@ -5,6 +5,9 @@ import { CategoriesRepository } from "../categories/categories.repository";
 import { aiTools, executeAiTool } from "./ai.tools";
 import { PDFExtract } from "pdf.js-extract";
 import { redis } from "@workspace/redis";
+import { buildError } from "@workspace/utils";
+import { status } from "elysia";
+import { ErrorCode } from "@workspace/types";
 
 const SYSTEM_PROMPT_BASE = `You are Okane, a friendly and insightful personal finance assistant. You have access to the user's real financial data below and can answer questions about their spending, income, wallet balances, and financial health.
 
@@ -176,12 +179,32 @@ ${recentLines}
       if (!session) throw new Error("Chat session not found or access denied.");
     }
 
-    // Save the new user message
     await AiRepository.saveMessage(
       currentSessionId,
       latestUserMessage.role,
       latestUserMessage.content,
     );
+
+    const usageData = await AiRepository.getUsageAndQuota(workspaceId);
+
+    if (!usageData)
+      throw status(
+        404,
+        buildError(ErrorCode.WORKSPACE_NOT_FOUND, "Workspace not found"),
+      );
+
+    const maxTokens = usageData.maxTokens ?? 100;
+    const currentTokens = Number(usageData.used);
+
+    if (currentTokens >= maxTokens) {
+      throw status(
+        422,
+        buildError(
+          ErrorCode.PLAN_LIMIT_REACHED,
+          `Monthly AI Token limit exceeded. Max: ${maxTokens} tokens.`,
+        ),
+      );
+    }
 
     const financialContext = await AiService.buildFinancialContext(workspaceId);
     const systemPrompt = `${SYSTEM_PROMPT_BASE}\n\n${financialContext}`;
@@ -251,6 +274,15 @@ ${recentLines}
     // Save assistant response
     await AiRepository.saveMessage(currentSessionId, "assistant", reply);
 
+    // Increment AI tokens successfully used
+    const tokensSpent =
+      response.usage.input_tokens + response.usage.output_tokens;
+    await AiRepository.incrementAiTokens(
+      workspaceId,
+      currentTokens,
+      tokensSpent,
+    );
+
     return {
       sessionId: currentSessionId,
       reply,
@@ -296,7 +328,9 @@ ${recentLines}
         const data = await pdfExtract.extractBuffer(buffer);
         // Extract text from the page structures
         pdfText = data.pages
-          .map((page) => page.content.map((item) => item.str).join(" "))
+          .map((page: any) =>
+            page.content.map((item: any) => item.str).join(" "),
+          )
           .join("\n");
       } catch (e) {
         console.error("Failed to parse PDF locally", e);

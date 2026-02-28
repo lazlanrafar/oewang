@@ -14,7 +14,12 @@ const envSchema = z.object({
   JWT_EXPIRES_IN: z.string().optional().default("7d"),
 
   // API
-  API_PORT: z.string().optional().default("3001"),
+  API_PORT: z.string().optional().default("3002"),
+  API_BASE_URL: z.string().url(),
+
+  // Stripe
+  STRIPE_SECRET_KEY: z.string().min(1),
+  STRIPE_WEBHOOK_SECRET: z.string().min(1),
 
   // Monitoring
   SENTRY_DSN: z.string().optional(),

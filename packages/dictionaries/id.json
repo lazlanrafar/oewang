@@ -42,8 +42,20 @@
       "passcode": "Kode Sandi",
       "currency": "Pengaturan Mata Uang",
       "alarm": "Pengaturan Alarm",
-      "language": "Pengaturan Bahasa",
+      "language": "Language Setting",
+      "billing": "Billing & Subscription",
       "soon": "Segera"
+    },
+    "billing": {
+      "title": "Billing & Subscription",
+      "description": "Manage your workspace plan and resource usage.",
+      "vault_storage": "Vault Storage",
+      "ai_tokens": "AI Tokens",
+      "current_plan": "Current Plan",
+      "manage_subscription": "Manage Subscription",
+      "upgrade": "Upgrade",
+      "active_plan": "Active Plan",
+      "monthly": "per month"
     },
     "appearance": {
       "title": "Tampilan",

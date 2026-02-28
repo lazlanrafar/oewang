@@ -2,8 +2,14 @@ import { vaultRepository } from "./vault.repository";
 import { BucketClient } from "@workspace/bucket";
 import { db, workspaceSettings, eq, and, isNull } from "@workspace/database";
 import { decrypt } from "@workspace/encryption";
-import { buildPagination, parsePaginationQuery } from "@workspace/utils";
+import {
+  buildPagination,
+  parsePaginationQuery,
+  buildError,
+} from "@workspace/utils";
 import type { PaginationQuery } from "@workspace/types";
+import { ErrorCode } from "@workspace/types";
+import { status } from "elysia";
 
 export class VaultService {
   private async getBucketClient(workspaceId: string) {
@@ -62,6 +68,28 @@ export class VaultService {
     workspaceId: string,
     file: { name: string; type: string; size: number; buffer: Buffer },
   ) {
+    const usageData = await vaultRepository.getUsageAndQuota(workspaceId);
+
+    if (!usageData)
+      throw status(
+        404,
+        buildError(ErrorCode.WORKSPACE_NOT_FOUND, "Workspace not found"),
+      );
+
+    const maxVaultMb = usageData.maxMb ?? 100;
+    const usedBytes = Number(usageData.used);
+    const maxBytes = maxVaultMb * 1024 * 1024;
+
+    if (usedBytes + file.size > maxBytes) {
+      throw status(
+        422,
+        buildError(
+          ErrorCode.PLAN_LIMIT_REACHED,
+          `Vault storage limit exceeded. Max: ${maxVaultMb}MB.`,
+        ),
+      );
+    }
+
     const bucket = await this.getBucketClient(workspaceId);
 
     // Generate unique key
@@ -71,13 +99,18 @@ export class VaultService {
 
     await bucket.upload(key, file.buffer, file.type);
 
-    return vaultRepository.create({
+    const vaultEntry = await vaultRepository.create({
       workspaceId,
       name: file.name,
       key,
       size: file.size,
       type: file.type,
     });
+
+    // Increment vault size safely in DB
+    await vaultRepository.updateVaultSize(workspaceId, usedBytes + file.size);
+
+    return vaultEntry;
   }
 
   async listFiles(workspaceId: string, query: PaginationQuery) {
@@ -111,7 +144,18 @@ export class VaultService {
     const bucket = await this.getBucketClient(workspaceId);
     await bucket.delete(file.key);
 
-    return vaultRepository.delete(fileId, workspaceId);
+    const deletedFile = await vaultRepository.delete(fileId, workspaceId);
+
+    // Decrement the vault size usage safely in DB
+    const workspaceSync = await vaultRepository.getUsageAndQuota(workspaceId);
+
+    if (workspaceSync) {
+      const currentUsed = Number(workspaceSync.used);
+      const newUsed = Math.max(0, currentUsed - Number(file.size));
+      await vaultRepository.updateVaultSize(workspaceId, newUsed);
+    }
+
+    return deletedFile;
   }
 
   async getDownloadUrl(workspaceId: string, fileId: string) {

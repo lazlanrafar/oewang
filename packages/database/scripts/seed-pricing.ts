@@ -5,6 +5,19 @@ async function main() {
   console.log("🌱 Seeding pricing packages...");
 
   await db.transaction(async (tx) => {
+    // Free Tier
+    await tx.insert(pricing).values({
+      name: "Free Tier",
+      description: "Basic features for personal use.",
+      price_monthly: 0,
+      price_yearly: 0,
+      currency: "usd",
+      features: ["1 Workspace", "Basic Reporting", "Limited AI Tokens"],
+      max_vault_size_mb: 50,
+      max_ai_tokens: 50,
+      is_active: true,
+    });
+
     // Basic Tier (Monthly & Yearly)
     await tx.insert(pricing).values({
       name: "Basic Tier",
@@ -13,6 +26,8 @@ async function main() {
       price_yearly: 9000, // $90.00
       currency: "usd",
       features: ["1 Workspace", "Basic Reporting", "Community Support"],
+      max_vault_size_mb: 500,
+      max_ai_tokens: 1000,
       is_active: true,
     });
 
@@ -29,6 +44,8 @@ async function main() {
         "Priority Email Support",
         "Custom Exports",
       ],
+      max_vault_size_mb: 2048, // 2GB
+      max_ai_tokens: 10000,
       is_active: true,
     });
 
@@ -47,6 +64,8 @@ async function main() {
         "Dedicated Account Manager",
         "SSO Authentication",
       ],
+      max_vault_size_mb: 10240, // 10GB
+      max_ai_tokens: 100000,
       is_active: true,
     });
 
@@ -61,6 +80,8 @@ async function main() {
         "Lifetime Updates",
         "Exclusive Early Access",
       ],
+      max_vault_size_mb: 5120, // 5GB
+      max_ai_tokens: 50000,
       is_active: true,
     });
   });

@@ -42,8 +42,20 @@
       "passcode": "パスコード",
       "currency": "通貨設定",
       "alarm": "アラーム設定",
-      "language": "言語設定",
-      "soon": "近日公開"
+      "language": "Language Setting",
+      "billing": "Billing & Subscription",
+      "soon": "Soon"
+    },
+    "billing": {
+      "title": "Billing & Subscription",
+      "description": "Manage your workspace plan and resource usage.",
+      "vault_storage": "Vault Storage",
+      "ai_tokens": "AI Tokens",
+      "current_plan": "Current Plan",
+      "manage_subscription": "Manage Subscription",
+      "upgrade": "Upgrade",
+      "active_plan": "Active Plan",
+      "monthly": "per month"
     },
     "appearance": {
       "title": "外観",

@@ -1,0 +1,1 @@
+ALTER TABLE "pricing" ADD COLUMN "stripe_price_id_one_time" text;
