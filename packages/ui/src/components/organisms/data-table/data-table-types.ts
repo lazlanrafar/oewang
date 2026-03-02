@@ -107,6 +107,12 @@ export const ACTIONS_STICKY_HEADER_CLASS =
   "group/header relative h-full px-4 !border-t !border-l !border-border flex items-center justify-center md:sticky md:right-0 bg-background z-10";
 
 /**
+ * Actions cell class when sticky to the right
+ */
+export const ACTIONS_STICKY_CELL_CLASS =
+  "bg-background group-hover:bg-[#F2F1EF] group-hover:dark:bg-[#0f0f0f] px-4 !border-l !border-border md:sticky md:right-0 flex items-center justify-center z-10";
+
+/**
  * Actions cell class when it should be full width
  */
 export const ACTIONS_FULL_WIDTH_CELL_CLASS =

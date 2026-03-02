@@ -240,6 +240,13 @@ These serve as the fallback; there is no separate default.css file. */
   html[data-font="greatVibes"] body {
     --font-sans: var(--font-great-vibes);
   }
+
+  .scrollbar-hide {
+    scrollbar-width: none; /* Firefox */
+    &::-webkit-scrollbar {
+      display: none; /* Chrome, Safari, Edge */
+    }
+  }
 }
 
 html {

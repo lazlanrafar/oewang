@@ -24,6 +24,7 @@ import { TableId } from "./data-table-settings";
 import {
   ACTIONS_FULL_WIDTH_HEADER_CLASS,
   ACTIONS_STICKY_HEADER_CLASS,
+  getHeaderLabel,
   TableScrollState,
 } from "./data-table-types";
 import { useStickyColumns } from "../../../hooks/use-sticky-columns";
@@ -269,7 +270,7 @@ function renderHeaderContent<TData>(
   // Last sticky column — render sort button + horizontal pagination arrows
   if (columnId === lastStickyColumnId) {
     const sortField = SORT_FIELD_MAPS[tableId][columnId];
-    const label = getHeaderLabel(columnId);
+    const label = getHeaderLabel(header.column.columnDef);
     return (
       <div className="flex items-center justify-between w-full overflow-hidden">
         <div className="min-w-0 overflow-hidden">
@@ -300,7 +301,7 @@ function renderHeaderContent<TData>(
 
   // Default sortable header
   if (sortField) {
-    const headerLabel = getHeaderLabel(columnId);
+    const headerLabel = getHeaderLabel(header.column.columnDef);
     return (
       <div className="w-full overflow-hidden">
         <SortButton
@@ -351,22 +352,4 @@ function SortButton({
       )}
     </Button>
   );
-}
-
-function getHeaderLabel(columnId: string): string {
-  const labels: Record<string, string> = {
-    date: "Date",
-    description: "Description",
-    amount: "Amount",
-    taxAmount: "Tax Amount",
-    category: "Category",
-    counterparty: "From / To",
-    tags: "Tags",
-    bank_account: "Account",
-    method: "Method",
-    assigned: "Assigned",
-    status: "Status",
-    actions: "Actions",
-  };
-  return labels[columnId] || columnId;
 }

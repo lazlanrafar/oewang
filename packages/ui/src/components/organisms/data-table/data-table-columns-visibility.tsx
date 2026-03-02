@@ -9,6 +9,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "../../atoms";
+import { getHeaderLabel } from "./data-table-types";
 
 export function DataTableColumnsVisibility({
   columns,
@@ -41,7 +42,7 @@ export function DataTableColumnsVisibility({
                     htmlFor={column.id}
                     className="text-sm peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                   >
-                    {column.columnDef.header?.toString() ?? column.id}
+                    {getHeaderLabel(column.columnDef)}
                   </label>
                 </div>
               );

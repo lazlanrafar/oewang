@@ -11,20 +11,32 @@ import {
 } from "@workspace/ui";
 import { Suspense } from "react";
 
+import { getSystemAdminUsers } from "@workspace/modules";
+import UserDataTableWrapper from "@/components/users/user-data-table-wrapper";
+
 export default async function UsersPage(props: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  const mockUsers = Array.from({ length: 100 }).map((_, i) => ({
-    id: i + 1,
-    name: `User ${i + 1}`,
-    email: `user${i + 1}@example.com`,
-    role: i % 2 === 0 ? "ADMIN" : "USER",
-    status: i % 3 === 0 ? "INACTIVE" : "ACTIVE",
-    createdAt: new Date(Date.now() - i * 10000000).toISOString(),
-  }));
+  const searchParams = await props.searchParams;
+  const page = Number(searchParams.page) || 1;
+  const limit = Number(searchParams.limit) || 20;
+  const search =
+    typeof searchParams.search === "string" ? searchParams.search : undefined;
+
+  // Get initial data for SSR
+  const response = await getSystemAdminUsers({
+    page,
+    limit,
+    search,
+  });
+
+  const users = response.success ? response.data.users : [];
+  const meta = response.success
+    ? response.data.meta
+    : { total: 0, total_pages: 0 };
 
   // Get unified table settings from cookie
-  const initialSettings = await getInitialTableSettings("transactions");
+  const initialSettings = await getInitialTableSettings("users");
 
   return (
     <ScrollableContent>
@@ -34,9 +46,7 @@ export default async function UsersPage(props: {
           <div className="flex items-center gap-4">
             <div className="hidden md:flex items-center gap-2">
               <UserDataTableColumnVisibility />
-              {/* <AddTransactions /> */}
             </div>
-            {/* <TransactionTabs /> */}
           </div>
         </div>
 
@@ -47,12 +57,18 @@ export default async function UsersPage(props: {
               columnVisibility={initialSettings.columns}
               columnSizing={initialSettings.sizing}
               columnOrder={initialSettings.order}
-              stickyColumnIds={["select", "date", "description"]}
+              stickyColumnIds={["name"]}
               actionsColumnId="actions"
             />
           }
         >
-          <UserDataTable data={mockUsers} />
+          <UserDataTableWrapper
+            initialData={users}
+            rowCount={meta.total}
+            pageCount={meta.total_pages}
+            initialPage={page - 1}
+            pageSize={limit}
+          />
         </Suspense>
       </div>
     </ScrollableContent>

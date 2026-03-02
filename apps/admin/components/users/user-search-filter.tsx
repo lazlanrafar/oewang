@@ -7,23 +7,40 @@ import {
   Icons,
   Input,
 } from "@workspace/ui";
-import React, { useRef, useState } from "react";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import React, { useRef, useState, useEffect } from "react";
 
 export default function UserSearchFilter() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [isOpen, setIsOpen] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
-  const [placeholder, setPlaceholder] = useState("");
-  const [input, setInput] = useState("");
+  const [placeholder, setPlaceholder] = useState("Search users");
+  const [input, setInput] = useState(searchParams.get("search") || "");
+
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const params = new URLSearchParams(searchParams);
+      if (input) {
+        params.set("search", input);
+      } else {
+        params.delete("search");
+      }
+      // Reset to page 1 on new search
+      params.set("page", "1");
+
+      router.push(`${pathname}?${params.toString()}`);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [input, pathname, router, searchParams]);
 
   const handleSearch = (evt: React.ChangeEvent<HTMLInputElement>) => {
-    const value = evt.target.value;
-    if (value) {
-      setInput(value);
-    } else {
-      setInput("");
-    }
+    setInput(evt.target.value);
   };
 
   return (
@@ -51,7 +68,29 @@ export default function UserSearchFilter() {
             spellCheck="false"
           />
 
-          <DropdownMenuTrigger asChild>
+          {input ? (
+            <button
+              onClick={() => setInput("")}
+              type="button"
+              className="absolute z-10 right-3 top-[10px] opacity-50 transition-opacity duration-300 hover:opacity-100 cursor-pointer"
+            >
+              <Icons.Close className="h-4 w-4" />
+            </button>
+          ) : (
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className={cn(
+                  "absolute z-10 right-3 top-[10px] opacity-50 transition-opacity duration-300 hover:opacity-100",
+                  isOpen && "opacity-100",
+                )}
+              >
+                <Icons.Filter className="h-4 w-4" />
+              </button>
+            </DropdownMenuTrigger>
+          )}
+
+          {/* <DropdownMenuTrigger asChild>
             <button
               onClick={() => setIsOpen((prev) => !prev)}
               type="button"
@@ -63,7 +102,7 @@ export default function UserSearchFilter() {
             >
               <Icons.Filter />
             </button>
-          </DropdownMenuTrigger>
+          </DropdownMenuTrigger> */}
         </form>
       </div>
     </DropdownMenu>

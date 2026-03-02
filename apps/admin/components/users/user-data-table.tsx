@@ -1,33 +1,29 @@
 "use client";
 
-import { DataTable } from "@workspace/ui";
-import { userColumns } from "./user-columns";
-import { useEffect } from "react";
 import { useUsersStore } from "@/stores/users";
-
-type User = {
-  id: number;
-  name: string;
-  email: string;
-  role: string;
-  status: string;
-  createdAt: string;
-};
+import type { PaginationState } from "@tanstack/react-table";
+import { DataTable } from "@workspace/ui";
+import type { SystemAdminUser } from "@workspace/types";
+import { userColumns } from "./user-columns";
 
 type Props = {
-  data: User[];
-  onRowClick?: (user: User) => void;
+  data: SystemAdminUser[];
+  onRowClick?: (user: SystemAdminUser) => void;
+  pagination?: PaginationState;
+  onPaginationChange?: (updater: any) => void;
+  rowCount?: number;
+  pageCount?: number;
 };
 
-export function UserDataTable({ data, onRowClick }: Props) {
-  const {
-    setRowSelection: setRowSelectionForTab,
-    rowSelectionByTab,
-    setColumns,
-    setCanDelete,
-    lastClickedIndex,
-    setLastClickedIndex,
-  } = useUsersStore();
+export function UserDataTable({
+  data,
+  onRowClick,
+  pagination,
+  onPaginationChange,
+  rowCount,
+  pageCount,
+}: Props) {
+  const { setColumns } = useUsersStore();
 
   return (
     <DataTable
@@ -41,6 +37,11 @@ export function UserDataTable({ data, onRowClick }: Props) {
         startFromColumn: 1,
       }}
       emptyMessage="No users found."
+      manualPagination
+      pagination={pagination}
+      onPaginationChange={onPaginationChange}
+      rowCount={rowCount}
+      pageCount={pageCount}
     />
   );
 }
