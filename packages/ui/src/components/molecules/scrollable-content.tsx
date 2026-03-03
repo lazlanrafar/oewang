@@ -1,7 +1,9 @@
 import type { ReactNode } from "react";
+import { cn } from "../../lib/utils";
 
 interface ScrollableContentProps {
   children: ReactNode;
+  className?: string;
 }
 
 /**
@@ -9,10 +11,13 @@ interface ScrollableContentProps {
  * Use this to wrap content that should move up when the header hides on scroll.
  * Used primarily for table pages (transactions, invoices, etc.)
  */
-export function ScrollableContent({ children }: ScrollableContentProps) {
+export function ScrollableContent({
+  children,
+  className,
+}: ScrollableContentProps) {
   return (
     <div
-      className="transition-transform"
+      className={cn("transition-transform", className)}
       style={{
         transform: "translateY(calc(var(--header-offset, 0px) * -1))",
         transitionDuration: "var(--header-transition, 200ms)",

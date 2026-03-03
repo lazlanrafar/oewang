@@ -18,7 +18,7 @@ export abstract class PricingService {
     const limit = query.limit || 50;
     const page = query.page || 1;
 
-    return buildPaginatedSuccess(rows, buildPagination(page, limit, total));
+    return buildPaginatedSuccess(rows, buildPagination(total, page, limit));
   }
 
   static async getById(id: string) {

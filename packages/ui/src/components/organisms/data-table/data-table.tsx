@@ -5,6 +5,7 @@ import { useStickyColumns } from "../../../hooks/use-sticky-columns";
 import { useTableDnd } from "../../../hooks/use-table-dnd";
 import { useTableScroll } from "../../../hooks/use-table-scroll";
 import { useTableSettings } from "../../../hooks/use-table-settings";
+import { cn } from "../../../lib/utils";
 
 import { DataTableRow } from "./data-table-row";
 import { TableId, type TableSettings } from "./data-table-settings";
@@ -84,6 +85,8 @@ type Props<TData extends { id: string | number }> = {
   ) => void;
   /** Total number of records (used for display in footer). */
   rowCount?: number;
+  /** Whether the table should fill its container's height. If true, containerHeight is ignored. */
+  hFull?: boolean;
 };
 
 export function DataTable<TData extends { id: string | number }>({
@@ -103,6 +106,7 @@ export function DataTable<TData extends { id: string | number }>({
   pagination: paginationProp,
   onPaginationChange,
   rowCount,
+  hFull,
 }: Props<TData>) {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
@@ -249,10 +253,17 @@ export function DataTable<TData extends { id: string | number }>({
   }
 
   return (
-    <div className="relative">
+    <div
+      className={cn(
+        "relative",
+        hFull && "flex flex-col h-full overflow-hidden",
+      )}
+    >
       <TooltipProvider delayDuration={20}>
         <Tooltip>
-          <div className="w-full">
+          <div
+            className={cn("w-full", hFull && "flex-1 flex flex-col min-h-0")}
+          >
             <div
               ref={(el) => {
                 scrollContainerRef.current = el;
@@ -260,8 +271,11 @@ export function DataTable<TData extends { id: string | number }>({
                   tableScroll.containerRef as React.MutableRefObject<HTMLDivElement | null>
                 ).current = el;
               }}
-              className="overflow-auto overscroll-none border-l border-r border-b border-border scrollbar-hide"
-              style={{ height: containerHeight }}
+              className={cn(
+                "overflow-auto overscroll-none border-l border-r border-b border-border scrollbar-hide",
+                hFull ? "flex-1" : "",
+              )}
+              style={hFull ? {} : { height: containerHeight }}
             >
               {/* Block div carries minWidth so overflow:auto clips correctly.
                   Native <table> elements (display:table) can escape overflow:auto —
@@ -305,8 +319,8 @@ export function DataTable<TData extends { id: string | number }>({
         </Tooltip>
       </TooltipProvider>
 
-      {/* Pagination controls */}
-      {pageCount > 1 && (
+      {/* Pagination summary and controls */}
+      {totalCount > 0 && (
         <div className="flex items-center justify-between px-1 py-4">
           <p className="text-sm text-muted-foreground">
             Page{" "}
@@ -319,51 +333,53 @@ export function DataTable<TData extends { id: string | number }>({
             total
           </p>
 
-          <Pagination className="w-auto mx-0">
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious
-                  onClick={() => table.previousPage()}
-                  aria-disabled={!table.getCanPreviousPage()}
-                  className={
-                    !table.getCanPreviousPage()
-                      ? "pointer-events-none opacity-50"
-                      : "cursor-pointer"
-                  }
-                />
-              </PaginationItem>
+          {pageCount > 1 && (
+            <Pagination className="w-auto mx-0">
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    onClick={() => table.previousPage()}
+                    aria-disabled={!table.getCanPreviousPage()}
+                    className={
+                      !table.getCanPreviousPage()
+                        ? "pointer-events-none opacity-50"
+                        : "cursor-pointer"
+                    }
+                  />
+                </PaginationItem>
 
-              {buildPageLinks().map((page, i) =>
-                page === "ellipsis" ? (
-                  <PaginationItem key={`ellipsis-${i}`}>
-                    <PaginationEllipsis />
-                  </PaginationItem>
-                ) : (
-                  <PaginationItem key={page}>
-                    <PaginationLink
-                      isActive={page === pageIndex}
-                      onClick={() => table.setPageIndex(page)}
-                      className="cursor-pointer"
-                    >
-                      {page + 1}
-                    </PaginationLink>
-                  </PaginationItem>
-                ),
-              )}
+                {buildPageLinks().map((page, i) =>
+                  page === "ellipsis" ? (
+                    <PaginationItem key={`ellipsis-${i}`}>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  ) : (
+                    <PaginationItem key={page}>
+                      <PaginationLink
+                        isActive={page === pageIndex}
+                        onClick={() => table.setPageIndex(page)}
+                        className="cursor-pointer"
+                      >
+                        {page + 1}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ),
+                )}
 
-              <PaginationItem>
-                <PaginationNext
-                  onClick={() => table.nextPage()}
-                  aria-disabled={!table.getCanNextPage()}
-                  className={
-                    !table.getCanNextPage()
-                      ? "pointer-events-none opacity-50"
-                      : "cursor-pointer"
-                  }
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
+                <PaginationItem>
+                  <PaginationNext
+                    onClick={() => table.nextPage()}
+                    aria-disabled={!table.getCanNextPage()}
+                    className={
+                      !table.getCanNextPage()
+                        ? "pointer-events-none opacity-50"
+                        : "cursor-pointer"
+                    }
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          )}
         </div>
       )}
     </div>

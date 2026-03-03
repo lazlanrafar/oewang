@@ -3,160 +3,194 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import type { Pricing } from "@workspace/types";
 import {
-  Badge,
   Button,
-  DataTableColumnHeader as TableColumnHeader,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  Badge,
 } from "@workspace/ui";
-import { formatCurrency } from "@workspace/utils";
-import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
-import { useState } from "react";
-import { PricingDialog } from "./pricing-dialog";
-import { deletePricingAction } from "@workspace/modules";
+import {
+  MoreHorizontal,
+  Trash,
+  Edit,
+  CheckCircle,
+  XCircle,
+} from "lucide-react";
+import { deletePricingAction, updatePricingAction } from "@workspace/modules";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { usePricingStore } from "@/stores/pricing";
+import React from "react";
 
-// Cell Actions Component to keep the column definition clean
-const CellActions = ({ row }: { row: any }) => {
-  const pricing = row.original as Pricing;
-  const [isEditOpen, setIsEditOpen] = useState(false);
+const CellActions = ({ row }: { row: { original: Pricing } }) => {
+  const pricing = row.original;
   const router = useRouter();
+  const { openEdit } = usePricingStore();
+  const [isLoading, setIsLoading] = React.useState(false);
+
+  const handleToggleActive = async () => {
+    setIsLoading(true);
+    try {
+      const result = await updatePricingAction(pricing.id, {
+        is_active: !pricing.is_active,
+      });
+      if (result.success) {
+        toast.success(
+          `Pricing plan ${pricing.is_active ? "deactivated" : "activated"}`,
+        );
+        router.refresh();
+      } else {
+        toast.error(result.error);
+      }
+    } catch (error) {
+      toast.error("An unexpected error occurred");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleDelete = async () => {
     if (!confirm("Are you sure you want to delete this pricing plan?")) return;
-    const result = await deletePricingAction(pricing.id);
-    if (result.success) {
-      router.refresh();
-    } else {
-      alert(result.error);
+    setIsLoading(true);
+    try {
+      const result = await deletePricingAction(pricing.id);
+      if (result.success) {
+        toast.success("Pricing plan deleted");
+        router.refresh();
+      } else {
+        toast.error(result.error);
+      }
+    } catch (error) {
+      toast.error("An unexpected error occurred");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="h-8 w-8 p-0">
-            <span className="sr-only">Open menu</span>
-            <MoreHorizontal className="h-4 w-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => setIsEditOpen(true)}>
-            <Pencil className="mr-2 h-4 w-4" />
-            Edit Plan
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            className="text-destructive focus:text-destructive"
-            onClick={handleDelete}
-          >
-            <Trash2 className="mr-2 h-4 w-4" />
-            Delete
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-
-      {isEditOpen && (
-        <PricingDialog
-          open={isEditOpen}
-          onOpenChange={setIsEditOpen}
-          pricing={pricing}
-        />
-      )}
-    </>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" className="h-8 w-8 p-0">
+          <span className="sr-only">Open menu</span>
+          <MoreHorizontal className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => openEdit(pricing)}>
+          <Edit className="mr-2 h-4 w-4" />
+          <span>Edit Plan</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={handleToggleActive} disabled={isLoading}>
+          {pricing.is_active ? (
+            <>
+              <XCircle className="mr-2 h-4 w-4 text-destructive" />
+              <span>Deactivate</span>
+            </>
+          ) : (
+            <>
+              <CheckCircle className="mr-2 h-4 w-4 text-success" />
+              <span>Activate</span>
+            </>
+          )}
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={handleDelete}
+          className="text-destructive"
+          disabled={isLoading}
+        >
+          <Trash className="mr-2 h-4 w-4" />
+          <span>Delete Plan</span>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 };
 
-export const columns: ColumnDef<Pricing>[] = [
+export const pricingColumns: ColumnDef<Pricing>[] = [
   {
     accessorKey: "name",
-    header: ({ column }) => (
-      <TableColumnHeader column={column} title="Plan Name" />
-    ),
-    cell: ({ row }) => {
-      const is_active = row.original.is_active;
-      return (
-        <div className="flex items-center gap-2">
-          <span className="font-medium">{row.getValue("name")}</span>
-          {!is_active && (
-            <Badge variant="secondary" className="text-xs">
-              Inactive
-            </Badge>
-          )}
-        </div>
-      );
+    header: "Name",
+    size: 200,
+    minSize: 120,
+    enableHiding: false,
+    meta: {
+      sticky: true,
+      headerLabel: "Name",
     },
+    cell: ({ getValue }) => (
+      <span className="truncate font-medium">{getValue<string>()}</span>
+    ),
   },
   {
     accessorKey: "price_monthly",
-    header: ({ column }) => (
-      <TableColumnHeader column={column} title="Monthly" />
-    ),
-    cell: ({ row }) => {
-      const val = row.getValue<number | null>("price_monthly");
-      if (val === null || val === undefined)
-        return <span className="text-muted-foreground">-</span>;
-      return formatCurrency(val / 100, { currency: row.original.currency });
+    header: "Monthly",
+    size: 120,
+    meta: {
+      headerLabel: "Monthly",
+    },
+    cell: ({ getValue }) => {
+      const amount = getValue<number>();
+      return <span>${(amount / 100).toFixed(2)}</span>;
     },
   },
   {
     accessorKey: "price_yearly",
-    header: ({ column }) => (
-      <TableColumnHeader column={column} title="Yearly" />
-    ),
-    cell: ({ row }) => {
-      const val = row.getValue<number | null>("price_yearly");
-      if (val === null || val === undefined)
-        return <span className="text-muted-foreground">-</span>;
-      return formatCurrency(val / 100, { currency: row.original.currency });
+    header: "Yearly",
+    size: 120,
+    meta: {
+      headerLabel: "Yearly",
     },
-  },
-  {
-    accessorKey: "price_one_time",
-    header: ({ column }) => (
-      <TableColumnHeader column={column} title="Lifetime" />
-    ),
-    cell: ({ row }) => {
-      const val = row.getValue<number | null>("price_one_time");
-      if (val === null || val === undefined)
-        return <span className="text-muted-foreground">-</span>;
-      return formatCurrency(val / 100, { currency: row.original.currency });
+    cell: ({ getValue }) => {
+      const amount = getValue<number>();
+      return <span>${(amount / 100).toFixed(2)}</span>;
     },
   },
   {
     accessorKey: "is_active",
-    header: ({ column }) => (
-      <TableColumnHeader column={column} title="Status" />
-    ),
-    cell: ({ row }) => {
-      const val = row.getValue<boolean>("is_active");
+    header: "Status",
+    size: 100,
+    meta: {
+      headerLabel: "Status",
+    },
+    cell: ({ getValue }) => {
+      const isActive = getValue<boolean>();
       return (
-        <Badge variant={val ? "default" : "secondary"}>
-          {val ? "Active" : "Inactive"}
+        <Badge variant={isActive ? "success" : "secondary"}>
+          {isActive ? "Active" : "Inactive"}
         </Badge>
       );
-    },
-    filterFn: (row, id, value) => {
-      return value.includes(row.getValue(id) ? "true" : "false");
     },
   },
   {
     accessorKey: "created_at",
-    header: ({ column }) => (
-      <TableColumnHeader column={column} title="Created" />
-    ),
-    cell: ({ row }) => {
-      return new Date(row.getValue("created_at")).toLocaleDateString();
+    header: "Created At",
+    size: 160,
+    meta: {
+      headerLabel: "Created At",
+    },
+    cell: ({ getValue }) => {
+      const val = getValue<string>();
+      if (!val) return "N/A";
+      return new Date(val).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
     },
   },
   {
     id: "actions",
+    size: 90,
+    enableHiding: false,
+    meta: {
+      headerLabel: "Actions",
+    },
     cell: ({ row }) => <CellActions row={row} />,
   },
 ];

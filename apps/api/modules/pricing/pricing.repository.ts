@@ -55,6 +55,12 @@ export abstract class PricingRepository {
           : asc(pricing.created_at);
     }
 
+    console.log(
+      "[PricingRepository.findAll] Final conditions count:",
+      conditions.length,
+    );
+    console.log("[PricingRepository.findAll] Executing queries...");
+
     const [data, totalCount] = await Promise.all([
       db
         .select()
@@ -68,6 +74,13 @@ export abstract class PricingRepository {
         .from(pricing)
         .where(and(...conditions)),
     ]);
+
+    console.log(
+      "[PricingRepository.findAll] Queries finished. Rows:",
+      data.length,
+      "Total:",
+      totalCount[0]?.count,
+    );
 
     return {
       rows: data,

@@ -46,7 +46,10 @@ export default async function Layout({
   const user_workspaces = me_data?.workspaces ?? [];
 
   return (
-    <SidebarProvider defaultOpen={default_open}>
+    <SidebarProvider
+      defaultOpen={default_open}
+      className="h-svh overflow-hidden"
+    >
       <AppSidebar
         variant={variant}
         collapsible={collapsible}
@@ -55,7 +58,7 @@ export default async function Layout({
       />
       <SidebarInset
         className={cn(
-          "min-w-0 overflow-x-clip",
+          "min-w-0 overflow-hidden",
           "[html[data-content-layout=centered]_&]:mx-auto! [html[data-content-layout=centered]_&]:max-w-screen-2xl!",
           "max-[113rem]:peer-data-[variant=inset]:mr-2! min-[101rem]:peer-data-[variant=inset]:peer-data-[state=collapsed]:mr-auto!",
         )}
@@ -90,7 +93,9 @@ export default async function Layout({
             </div>
           </div>
         </header>
-        <div className="h-full p-4 md:p-6">{children}</div>
+        <main className="flex-1 min-h-0 p-4 md:p-6 overflow-hidden">
+          {children}
+        </main>
       </SidebarInset>
     </SidebarProvider>
   );

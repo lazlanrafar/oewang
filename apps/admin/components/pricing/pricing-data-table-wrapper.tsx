@@ -2,20 +2,20 @@
 
 import { useState, useTransition } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { UserDataTable } from "./user-data-table";
 import { cn } from "@workspace/ui";
+import { PricingDataTable } from "./pricing-data-table";
 import type { PaginationState } from "@tanstack/react-table";
-import type { SystemAdminUser } from "@workspace/types";
+import type { Pricing } from "@workspace/types";
 
 type Props = {
-  initialData: SystemAdminUser[];
+  initialData: Pricing[];
   rowCount: number;
   pageCount: number;
   initialPage: number;
   pageSize: number;
 };
 
-export default function UserDataTableWrapper({
+export default function PricingDataTableWrapper({
   initialData,
   rowCount,
   pageCount,
@@ -54,7 +54,7 @@ export default function UserDataTableWrapper({
         isPending ? "opacity-50 transition-opacity" : "",
       )}
     >
-      <UserDataTable
+      <PricingDataTable
         data={initialData}
         pagination={pagination}
         onPaginationChange={handlePaginationChange}

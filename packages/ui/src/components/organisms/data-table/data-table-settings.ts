@@ -12,7 +12,8 @@ export type TableId =
   | "customers"
   | "invoices"
   | "vault"
-  | "users";
+  | "users"
+  | "pricing";
 
 /**
  * Settings for a single table
@@ -53,6 +54,7 @@ export const defaultHiddenColumns: Record<TableId, string[]> = {
   ],
   vault: [], // No hidden columns by default
   users: [],
+  pricing: [],
 };
 
 /**

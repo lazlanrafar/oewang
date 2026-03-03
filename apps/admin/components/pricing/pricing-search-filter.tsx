@@ -10,15 +10,14 @@ import {
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import React, { useRef, useState, useEffect } from "react";
 
-export default function UserSearchFilter() {
+export default function PricingSearchFilter() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [isOpen, setIsOpen] = useState(false);
-  const [isFocused, setIsFocused] = useState(false);
-  const [placeholder, setPlaceholder] = useState("Search users");
+  const [placeholder, setPlaceholder] = useState("Search pricing plans");
   const [input, setInput] = useState(searchParams.get("search") || "");
 
   // Debounce search
@@ -54,7 +53,6 @@ export default function UserSearchFilter() {
           className="relative flex-1 sm:flex-initial"
           onSubmit={(e) => {
             e.preventDefault();
-            // handleSubmit();
           }}
         >
           <Icons.Search className="absolute pointer-events-none left-3 top-[11px]" />
@@ -64,8 +62,6 @@ export default function UserSearchFilter() {
             className="pl-9 w-full sm:w-[350px] pr-8"
             value={input}
             onChange={handleSearch}
-            onFocus={() => setIsFocused(true)}
-            onBlur={() => setIsFocused(false)}
             autoComplete="off"
             autoCapitalize="none"
             autoCorrect="off"
@@ -93,20 +89,6 @@ export default function UserSearchFilter() {
               </button>
             </DropdownMenuTrigger>
           )}
-
-          {/* <DropdownMenuTrigger asChild>
-            <button
-              onClick={() => setIsOpen((prev) => !prev)}
-              type="button"
-              className={cn(
-                "absolute z-10 right-3 top-[10px] opacity-50 transition-opacity duration-300 hover:opacity-100",
-                // hasValidFilters && "opacity-100",
-                isOpen && "opacity-100",
-              )}
-            >
-              <Icons.Filter />
-            </button>
-          </DropdownMenuTrigger> */}
         </form>
       </div>
     </DropdownMenu>

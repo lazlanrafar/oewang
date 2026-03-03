@@ -39,9 +39,9 @@ export default async function UsersPage(props: {
   const initialSettings = await getInitialTableSettings("users");
 
   return (
-    <ScrollableContent>
-      <div className="relative h-full">
-        <div className="flex justify-between items-center pb-6">
+    <ScrollableContent className="h-full">
+      <div className="flex flex-col h-full bg-background no-scrollbar space-y-4">
+        <div className="flex justify-between items-center pb-6 shrink-0">
           <UserSearchFilter />
           <div className="flex items-center gap-4">
             <div className="hidden md:flex items-center gap-2">
@@ -52,23 +52,27 @@ export default async function UsersPage(props: {
 
         <Suspense
           fallback={
-            <TableSkeleton
-              columns={userColumns}
-              columnVisibility={initialSettings.columns}
-              columnSizing={initialSettings.sizing}
-              columnOrder={initialSettings.order}
-              stickyColumnIds={["name"]}
-              actionsColumnId="actions"
-            />
+            <div className="flex-1 min-h-0">
+              <TableSkeleton
+                columns={userColumns}
+                columnVisibility={initialSettings.columns}
+                columnSizing={initialSettings.sizing}
+                columnOrder={initialSettings.order}
+                stickyColumnIds={["name"]}
+                actionsColumnId="actions"
+              />
+            </div>
           }
         >
-          <UserDataTableWrapper
-            initialData={users}
-            rowCount={meta.total}
-            pageCount={meta.total_pages}
-            initialPage={page - 1}
-            pageSize={limit}
-          />
+          <div className="flex-1 min-h-0">
+            <UserDataTableWrapper
+              initialData={users}
+              rowCount={meta.total}
+              pageCount={meta.total_pages}
+              initialPage={page - 1}
+              pageSize={limit}
+            />
+          </div>
         </Suspense>
       </div>
     </ScrollableContent>

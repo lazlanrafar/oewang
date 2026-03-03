@@ -20,6 +20,7 @@ export const STICKY_COLUMNS: Record<TableId, StickyColumnConfig[]> = {
     { id: "title", width: 250 },
   ],
   users: [{ id: "name", width: 200 }],
+  pricing: [{ id: "name", width: 200 }],
 };
 
 /**
@@ -68,6 +69,12 @@ export const SORT_FIELD_MAPS: Record<TableId, Record<string, string>> = {
     status: "status",
     createdAt: "createdAt",
   },
+  pricing: {
+    name: "name",
+    price_monthly: "price_monthly",
+    price_yearly: "price_yearly",
+    created_at: "created_at",
+  },
 };
 
 /**
@@ -79,6 +86,7 @@ export const NON_REORDERABLE_COLUMNS: Record<TableId, Set<string>> = {
   customers: new Set(["name", "actions"]),
   vault: new Set(["select", "title", "actions"]),
   users: new Set(["name", "actions"]),
+  pricing: new Set(["name", "actions"]),
 };
 
 /**
@@ -90,6 +98,7 @@ export const ROW_HEIGHTS: Record<TableId, number> = {
   customers: 45,
   vault: 45,
   users: 45,
+  pricing: 45,
 };
 
 /**
@@ -140,6 +149,13 @@ export const TABLE_CONFIGS: Record<TableId, TableConfig> = {
     sortFieldMap: SORT_FIELD_MAPS.users,
     nonReorderableColumns: NON_REORDERABLE_COLUMNS.users,
     rowHeight: ROW_HEIGHTS.users,
+  },
+  pricing: {
+    tableId: "pricing",
+    stickyColumns: STICKY_COLUMNS.pricing,
+    sortFieldMap: SORT_FIELD_MAPS.pricing,
+    nonReorderableColumns: NON_REORDERABLE_COLUMNS.pricing,
+    rowHeight: ROW_HEIGHTS.pricing,
   },
 };
 
