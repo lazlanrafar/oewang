@@ -9,6 +9,7 @@ import type {
 export const getAdminOrders = async (params: {
   page?: number;
   limit?: number;
+  search?: string;
 }): Promise<
   ActionResponse<{
     orders: AdminOrderListing[];

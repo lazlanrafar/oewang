@@ -6,6 +6,8 @@ import {
   workspaces,
   users,
   and,
+  or,
+  ilike,
   sql,
 } from "@workspace/database";
 
@@ -42,16 +44,34 @@ export const ordersRepository = {
     return order;
   },
 
-  async findAll(page = 1, limit = 20) {
+  async findAll(page = 1, limit = 20, search?: string) {
     const offset = (page - 1) * limit;
+
+    const conditions: any[] = [];
+    if (search) {
+      const searchPattern = `%${search}%`;
+      const codeSql = sql<string>`'INV' || to_char(${orders.created_at}, 'IYYY') || lpad(${orders.sequence_number}::text, 4, '0')`;
+      conditions.push(
+        or(
+          ilike(users.email, searchPattern),
+          ilike(users.name, searchPattern),
+          ilike(codeSql, searchPattern),
+        ),
+      );
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
     const [totalResult] = await db
       .select({ count: sql<number>`count(*)` })
-      .from(orders);
+      .from(orders)
+      .leftJoin(users, eq(orders.user_id, users.id))
+      .where(whereClause);
 
     const rows = await db
       .select({
         id: orders.id,
+        code: sql<string>`'INV' || to_char(${orders.created_at}, 'IYYY') || lpad(${orders.sequence_number}::text, 4, '0')`,
         amount: orders.amount,
         currency: orders.currency,
         status: orders.status,
@@ -63,6 +83,7 @@ export const ordersRepository = {
       .from(orders)
       .leftJoin(workspaces, eq(orders.workspace_id, workspaces.id))
       .leftJoin(users, eq(orders.user_id, users.id))
+      .where(whereClause)
       .orderBy(desc(orders.created_at))
       .limit(limit)
       .offset(offset);

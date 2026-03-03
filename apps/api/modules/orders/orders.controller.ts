@@ -5,33 +5,25 @@ import { encryptionPlugin } from "../../plugins/encryption";
 import { buildError } from "@workspace/utils";
 import { ErrorCode } from "@workspace/types";
 
+import { requireAdminAccess } from "../system-admins/system-admins.controller";
+
 export const ordersController = new Elysia({
   prefix: "/orders",
   name: "orders.controller",
 })
-  .use(authPlugin)
-  .use(encryptionPlugin)
-  .onBeforeHandle(({ auth, set }) => {
-    if (!auth) {
-      set.status = 401;
-      return buildError(ErrorCode.UNAUTHORIZED, "Unauthorized");
-    }
-    if (auth.system_role !== "admin") {
-      set.status = 403;
-      return buildError(ErrorCode.FORBIDDEN, "Admin access required");
-    }
-  })
+  .use(requireAdminAccess)
   .get(
     "/",
     async ({ query }) => {
       const page = Number(query.page) || 1;
       const limit = Number(query.limit) || 20;
-      return OrdersService.getAllOrders(page, limit);
+      return OrdersService.getAllOrders(page, limit, query.search);
     },
     {
       query: t.Object({
         page: t.Optional(t.Numeric()),
         limit: t.Optional(t.Numeric()),
+        search: t.Optional(t.String()),
       }),
     },
   )

@@ -41,7 +41,7 @@ export default async function UsersPage(props: {
   return (
     <ScrollableContent className="h-full">
       <div className="flex flex-col h-full bg-background no-scrollbar space-y-4">
-        <div className="flex justify-between items-center pb-6 shrink-0">
+        <div className="flex justify-between items-center shrink-0">
           <UserSearchFilter />
           <div className="flex items-center gap-4">
             <div className="hidden md:flex items-center gap-2">
@@ -67,8 +67,8 @@ export default async function UsersPage(props: {
           <div className="flex-1 min-h-0">
             <UserDataTableWrapper
               initialData={users}
-              rowCount={meta.total}
-              pageCount={meta.total_pages}
+              rowCount={meta?.total}
+              pageCount={meta?.total_pages}
               initialPage={page - 1}
               pageSize={limit}
             />

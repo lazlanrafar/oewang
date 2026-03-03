@@ -7,13 +7,7 @@ import type {
 /**
  * Table identifiers for all supported tables
  */
-export type TableId =
-  | "transactions"
-  | "customers"
-  | "invoices"
-  | "vault"
-  | "users"
-  | "pricing";
+export type TableId = "users" | "pricing" | "orders";
 
 /**
  * Settings for a single table
@@ -40,21 +34,9 @@ export const TABLE_SETTINGS_COOKIE = "table-settings";
  * Default hidden columns for each table
  */
 export const defaultHiddenColumns: Record<TableId, string[]> = {
-  transactions: ["assigned", "tags", "method", "counterparty", "taxAmount"],
-  customers: ["tags", "website", "financeEmail", "language"],
-  invoices: [
-    "sentAt",
-    "exclVat",
-    "exclTax",
-    "vatAmount",
-    "taxAmount",
-    "vatRate",
-    "taxRate",
-    "internalNote",
-  ],
-  vault: [], // No hidden columns by default
   users: [],
   pricing: [],
+  orders: [],
 };
 
 /**

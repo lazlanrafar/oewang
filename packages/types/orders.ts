@@ -1,5 +1,6 @@
 export interface Order {
   id: string;
+  code: string;
   workspace_id: string | null;
   user_id: string | null;
   stripe_payment_intent_id: string | null;
@@ -14,6 +15,7 @@ export interface Order {
 
 export interface AdminOrderListing {
   id: string;
+  code: string;
   amount: number;
   currency: string;
   status: string;

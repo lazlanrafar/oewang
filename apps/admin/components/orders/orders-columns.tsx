@@ -8,20 +8,37 @@ import { format } from "date-fns";
 
 export const columns: ColumnDef<AdminOrderListing>[] = [
   {
-    accessorKey: "id",
+    accessorKey: "code",
     header: "Order ID",
+    size: 140,
+    minSize: 100,
+    maxSize: 250,
+    enableResizing: true,
+    enableHiding: false,
+    meta: {
+      sticky: true,
+      headerLabel: "Order ID",
+      className:
+        "w-[140px] min-w-[100px] md:sticky md:left-[var(--stick-left)] bg-background group-hover:bg-[#F2F1EF] group-hover:dark:bg-[#0f0f0f] z-10",
+    },
     cell: ({ row }) => (
-      <span className="font-mono text-xs">
-        {row.original.id.slice(0, 8)}...
-      </span>
+      <span className="font-mono text-xs">{row.original.code}</span>
     ),
   },
   {
     accessorKey: "workspaceName",
     header: "Workspace",
+    size: 200,
+    minSize: 140,
+    maxSize: 400,
+    enableResizing: true,
+    meta: {
+      headerLabel: "Workspace",
+      className: "w-[200px] min-w-[140px]",
+    },
     cell: ({ row }) => (
-      <div className="flex flex-col">
-        <span className="font-medium text-sm">
+      <div className="flex flex-col truncate">
+        <span className="font-medium text-sm truncate">
           {row.original.workspaceName || "N/A"}
         </span>
       </div>
@@ -30,10 +47,20 @@ export const columns: ColumnDef<AdminOrderListing>[] = [
   {
     accessorKey: "userEmail",
     header: "Customer",
+    size: 240,
+    minSize: 180,
+    maxSize: 400,
+    enableResizing: true,
+    meta: {
+      headerLabel: "Customer",
+      className: "w-[240px] min-w-[180px]",
+    },
     cell: ({ row }) => (
-      <div className="flex flex-col">
-        <span className="text-sm">{row.original.userName || "N/A"}</span>
-        <span className="text-xs text-muted-foreground">
+      <div className="flex flex-col truncate">
+        <span className="text-sm truncate">
+          {row.original.userName || "N/A"}
+        </span>
+        <span className="text-xs text-muted-foreground truncate">
           {row.original.userEmail || "N/A"}
         </span>
       </div>
@@ -42,6 +69,14 @@ export const columns: ColumnDef<AdminOrderListing>[] = [
   {
     accessorKey: "amount",
     header: "Amount",
+    size: 140,
+    minSize: 100,
+    maxSize: 200,
+    enableResizing: true,
+    meta: {
+      headerLabel: "Amount",
+      className: "w-[140px] min-w-[100px]",
+    },
     cell: ({ row }) => (
       <span className="font-medium text-sm">
         {formatCurrency(row.original.amount / 100, {
@@ -53,6 +88,14 @@ export const columns: ColumnDef<AdminOrderListing>[] = [
   {
     accessorKey: "status",
     header: "Status",
+    size: 120,
+    minSize: 90,
+    maxSize: 200,
+    enableResizing: true,
+    meta: {
+      headerLabel: "Status",
+      className: "w-[120px] min-w-[90px]",
+    },
     cell: ({ row }) => {
       const status = row.original.status;
       let variant: "default" | "secondary" | "destructive" | "outline" =
@@ -81,6 +124,14 @@ export const columns: ColumnDef<AdminOrderListing>[] = [
   {
     accessorKey: "created_at",
     header: "Date",
+    size: 180,
+    minSize: 140,
+    maxSize: 300,
+    enableResizing: true,
+    meta: {
+      headerLabel: "Date",
+      className: "w-[180px] min-w-[140px]",
+    },
     cell: ({ row }) => (
       <span className="text-sm text-muted-foreground">
         {format(new Date(row.original.created_at), "MMM d, yyyy HH:mm")}

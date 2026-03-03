@@ -51,9 +51,13 @@ export abstract class OrdersService {
     return buildSuccess(order, "Order updated");
   }
 
-  static async getAllOrders(page: number, limit: number) {
-    const result = await ordersRepository.findAll(page, limit);
-    return buildSuccess(result, "Orders fetched");
+  static async getAllOrders(page: number, limit: number, search?: string) {
+    const result = await ordersRepository.findAll(page, limit, search);
+    return buildPaginatedSuccess(
+      result.rows,
+      buildPagination(result.total, page, limit),
+      "Orders fetched",
+    );
   }
 
   static async getOrderDetails(id: string) {

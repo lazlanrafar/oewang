@@ -118,10 +118,14 @@ export const pricingColumns: ColumnDef<Pricing>[] = [
     header: "Name",
     size: 200,
     minSize: 120,
+    maxSize: 400,
+    enableResizing: true,
     enableHiding: false,
     meta: {
       sticky: true,
       headerLabel: "Name",
+      className:
+        "w-[200px] min-w-[120px] md:sticky md:left-[var(--stick-left)] bg-background group-hover:bg-[#F2F1EF] group-hover:dark:bg-[#0f0f0f] z-10",
     },
     cell: ({ getValue }) => (
       <span className="truncate font-medium">{getValue<string>()}</span>
@@ -130,9 +134,13 @@ export const pricingColumns: ColumnDef<Pricing>[] = [
   {
     accessorKey: "price_monthly",
     header: "Monthly",
-    size: 120,
+    size: 140,
+    minSize: 100,
+    maxSize: 200,
+    enableResizing: true,
     meta: {
       headerLabel: "Monthly",
+      className: "w-[140px] min-w-[100px]",
     },
     cell: ({ getValue }) => {
       const amount = getValue<number>();
@@ -142,9 +150,13 @@ export const pricingColumns: ColumnDef<Pricing>[] = [
   {
     accessorKey: "price_yearly",
     header: "Yearly",
-    size: 120,
+    size: 140,
+    minSize: 100,
+    maxSize: 200,
+    enableResizing: true,
     meta: {
       headerLabel: "Yearly",
+      className: "w-[140px] min-w-[100px]",
     },
     cell: ({ getValue }) => {
       const amount = getValue<number>();
@@ -154,9 +166,13 @@ export const pricingColumns: ColumnDef<Pricing>[] = [
   {
     accessorKey: "price_one_time",
     header: "One-Time",
-    size: 120,
+    size: 140,
+    minSize: 100,
+    maxSize: 200,
+    enableResizing: true,
     meta: {
       headerLabel: "One-Time",
+      className: "w-[140px] min-w-[100px]",
     },
     cell: ({ getValue }) => {
       const amount = getValue<number>();
@@ -166,9 +182,13 @@ export const pricingColumns: ColumnDef<Pricing>[] = [
   {
     accessorKey: "is_active",
     header: "Status",
-    size: 100,
+    size: 120,
+    minSize: 90,
+    maxSize: 200,
+    enableResizing: true,
     meta: {
       headerLabel: "Status",
+      className: "w-[120px] min-w-[90px]",
     },
     cell: ({ getValue }) => {
       const isActive = getValue<boolean>();
@@ -183,8 +203,12 @@ export const pricingColumns: ColumnDef<Pricing>[] = [
     accessorKey: "created_at",
     header: "Created At",
     size: 160,
+    minSize: 120,
+    maxSize: 260,
+    enableResizing: true,
     meta: {
       headerLabel: "Created At",
+      className: "w-[160px] min-w-[120px]",
     },
     cell: ({ getValue }) => {
       const val = getValue<string>();

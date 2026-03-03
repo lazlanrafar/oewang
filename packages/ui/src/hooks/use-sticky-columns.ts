@@ -35,7 +35,7 @@ export function useStickyColumns({
   const resolvedStickyColumns = useMemo((): StickyColumnConfig[] => {
     // If no columns provided, use defaults for the tableId
     if (!stickyColumns) {
-      return tableId ? STICKY_COLUMNS[tableId] : STICKY_COLUMNS.transactions;
+      return tableId ? STICKY_COLUMNS[tableId] : STICKY_COLUMNS.users;
     }
 
     // If already full configs, return as is (ignoring type check for a moment to handle both)
@@ -47,11 +47,11 @@ export function useStickyColumns({
     const ids = stickyColumns as string[];
     const tableConfig = tableId
       ? STICKY_COLUMNS[tableId]
-      : STICKY_COLUMNS.transactions;
+      : STICKY_COLUMNS.users;
 
     return ids
       .map((id) => {
-        const config = tableConfig.find((c) => c.id === id);
+        const config = tableConfig.find((c: StickyColumnConfig) => c.id === id);
         return config ? config : { id, width: 150 }; // Fallback width
       })
       .filter(Boolean) as StickyColumnConfig[];
