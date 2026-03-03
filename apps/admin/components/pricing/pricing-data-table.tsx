@@ -8,6 +8,7 @@ import { pricingColumns } from "./pricing-columns";
 
 type Props = {
   data: Pricing[];
+  onRowClick?: (pricing: Pricing) => void;
   pagination?: PaginationState;
   onPaginationChange?: (updater: any) => void;
   rowCount?: number;
@@ -16,6 +17,7 @@ type Props = {
 
 export function PricingDataTable({
   data,
+  onRowClick,
   pagination,
   onPaginationChange,
   rowCount,
@@ -29,7 +31,7 @@ export function PricingDataTable({
       columns={pricingColumns}
       setColumns={setColumns}
       tableId="pricing"
-      meta={{}}
+      meta={{ onRowClick }}
       sticky={{
         columns: ["name"],
         startFromColumn: 1,

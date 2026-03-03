@@ -1,9 +1,12 @@
+"use server";
+
 import { ScrollableContent } from "@workspace/ui";
 import { getPricing } from "@workspace/modules";
 import PricingDataTableWrapper from "@/components/pricing/pricing-data-table-wrapper";
 import PricingSearchFilter from "@/components/pricing/pricing-search-filter";
 import PricingDataTableColumnVisibility from "@/components/pricing/pricing-data-table-column-visibility";
 import { PricingSheet } from "@/components/pricing/pricing-sheet";
+import { PricingDetailSheet } from "@/components/pricing/pricing-detail-sheet";
 import { PricingAddButton } from "@/components/pricing/pricing-add-button";
 
 interface Props {
@@ -72,6 +75,7 @@ export default async function PricingPage({ searchParams }: Props) {
         </div>
 
         <PricingSheet />
+        <PricingDetailSheet />
       </div>
     </ScrollableContent>
   );

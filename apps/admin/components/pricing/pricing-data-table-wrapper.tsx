@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { cn } from "@workspace/ui";
 import { PricingDataTable } from "./pricing-data-table";
+import { usePricingStore } from "@/stores/pricing";
 import type { PaginationState } from "@tanstack/react-table";
 import type { Pricing } from "@workspace/types";
 
@@ -47,6 +48,12 @@ export default function PricingDataTableWrapper({
     });
   };
 
+  const { openDetail } = usePricingStore();
+
+  const handleRowClick = (pricing: Pricing) => {
+    openDetail(pricing);
+  };
+
   return (
     <div
       className={cn(
@@ -60,6 +67,7 @@ export default function PricingDataTableWrapper({
         onPaginationChange={handlePaginationChange}
         rowCount={rowCount}
         pageCount={pageCount}
+        onRowClick={handleRowClick}
       />
     </div>
   );

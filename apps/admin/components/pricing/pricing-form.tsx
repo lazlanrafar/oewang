@@ -26,6 +26,10 @@ const pricingSchema = z.object({
   description: z.string().optional(),
   price_monthly: z.coerce.number().min(0, "Price must be at least 0"),
   price_yearly: z.coerce.number().min(0, "Price must be at least 0"),
+  price_one_time: z.coerce
+    .number()
+    .min(0, "Price must be at least 0")
+    .default(0),
   currency: z.string().min(1, "Currency is required"),
   is_active: z.boolean().default(true),
   features: z.string().optional(), // We'll parse this as string[] on submit
@@ -49,6 +53,7 @@ export function PricingForm({ initialData, onSuccess }: PricingFormProps) {
       description: initialData?.description ?? "",
       price_monthly: (initialData?.price_monthly ?? 0) / 100,
       price_yearly: (initialData?.price_yearly ?? 0) / 100,
+      price_one_time: (initialData?.price_one_time ?? 0) / 100,
       currency: initialData?.currency ?? "usd",
       is_active: initialData?.is_active ?? true,
       features: initialData?.features?.join("\n") ?? "",
@@ -62,6 +67,7 @@ export function PricingForm({ initialData, onSuccess }: PricingFormProps) {
         ...values,
         price_monthly: Math.round(values.price_monthly * 100),
         price_yearly: Math.round(values.price_yearly * 100),
+        price_one_time: Math.round((values.price_one_time || 0) * 100),
         features: values.features
           ? values.features.split("\n").filter((f) => f.trim())
           : [],
@@ -120,7 +126,7 @@ export function PricingForm({ initialData, onSuccess }: PricingFormProps) {
           )}
         />
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           <FormField
             control={form.control}
             name="price_monthly"
@@ -140,6 +146,19 @@ export function PricingForm({ initialData, onSuccess }: PricingFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Yearly Price</FormLabel>
+                <FormControl>
+                  <Input type="number" step="0.01" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="price_one_time"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>One-Time Price</FormLabel>
                 <FormControl>
                   <Input type="number" step="0.01" {...field} />
                 </FormControl>

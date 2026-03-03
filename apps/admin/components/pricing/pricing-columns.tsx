@@ -148,7 +148,19 @@ export const pricingColumns: ColumnDef<Pricing>[] = [
     },
     cell: ({ getValue }) => {
       const amount = getValue<number>();
-      return <span>${(amount / 100).toFixed(2)}</span>;
+      return <span>${((amount || 0) / 100).toFixed(2)}</span>;
+    },
+  },
+  {
+    accessorKey: "price_one_time",
+    header: "One-Time",
+    size: 120,
+    meta: {
+      headerLabel: "One-Time",
+    },
+    cell: ({ getValue }) => {
+      const amount = getValue<number>();
+      return <span>${((amount || 0) / 100).toFixed(2)}</span>;
     },
   },
   {
