@@ -22,6 +22,7 @@ import {
   SIDEBAR_VARIANT_VALUES,
 } from "@/lib/preferences/layout";
 import { getPreference } from "@/server/server-actions";
+import { AccountSwitcher } from "@/components/layout/account-switcher";
 
 async function getUserAndWorkspaces() {
   const result = await getMe();
@@ -82,8 +83,9 @@ export default async function Layout({
               {/* <LayoutControls /> */}
               <ThemeSwitcher />
               {current_user && (
-                <NavUser
+                <AccountSwitcher
                   user={{
+                    id: current_user.id,
                     name: current_user.name || current_user.email,
                     email: current_user.email,
                     avatar: current_user.profile_picture || "",
