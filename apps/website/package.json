@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@formatjs/intl-localematcher": "^0.8.1",
+    "@workspace/constants": "workspace:*",
     "@workspace/ui": "workspace:*",
     "lucide-react": "^0.562.0",
     "negotiator": "^1.0.0",

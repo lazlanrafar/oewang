@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { Separator } from "@workspace/ui";
 import { Command } from "lucide-react";
 
-import { APP_CONFIG } from "@/config/app-config";
+import { ADMIN_CONFIG as APP_CONFIG } from "@workspace/constants";
 
 export default function Layout({
   children,

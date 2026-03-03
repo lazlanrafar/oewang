@@ -4,7 +4,7 @@ import { Toaster } from "@workspace/ui";
 import type { Metadata } from "next";
 
 import { Providers } from "@/components/providers";
-import { APP_CONFIG } from "@/config/app-config";
+import { APP_CONFIG } from "@workspace/constants";
 import { fontVars } from "@/lib/fonts/registry";
 import { PREFERENCE_DEFAULTS } from "@/lib/preferences/preferences-config";
 import { ThemeBootScript } from "@/scripts/theme-boot";
@@ -27,8 +27,15 @@ export default async function RootLayout({
 }: Readonly<{ children: ReactNode; params: Promise<{ locale: string }> }>) {
   const { locale } = await params;
 
-  const { theme_mode, theme_preset, content_layout, navbar_style, sidebar_variant, sidebar_collapsible, font } =
-    PREFERENCE_DEFAULTS;
+  const {
+    theme_mode,
+    theme_preset,
+    content_layout,
+    navbar_style,
+    sidebar_variant,
+    sidebar_collapsible,
+    font,
+  } = PREFERENCE_DEFAULTS;
 
   return (
     <html

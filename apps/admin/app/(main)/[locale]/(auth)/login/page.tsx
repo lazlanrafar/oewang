@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { LoginForm } from "@/components/auth/login-form";
 import { OAuthButton } from "@/components/auth/oauth-button";
-import { APP_CONFIG } from "@/config/app-config";
+import { ADMIN_CONFIG as APP_CONFIG } from "@workspace/constants";
 
 export default function LoginV2() {
   return (
