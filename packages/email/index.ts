@@ -1,9 +1,10 @@
 import { Resend } from "resend";
 import fs from "fs";
 import path from "path";
+import { Env } from "@workspace/constants";
 
 // Initialize Resend with API key from environment
-const resend = new Resend(process.env.RESEND_API_KEY || "re_123456789");
+const resend = new Resend(Env.RESEND_API_KEY || "re_123456789");
 
 export async function sendInvitationEmail(
   to: string,
@@ -40,7 +41,7 @@ export async function sendInvitationEmail(
     .replace("{{workspaceName}}", workspaceName)
     .replace("{{inviteLink}}", inviteLink);
 
-  if (!process.env.RESEND_API_KEY) {
+  if (!Env.RESEND_API_KEY) {
     console.log("Mock Sending Email:", {
       to,
       subject: "Invitation to join " + workspaceName,

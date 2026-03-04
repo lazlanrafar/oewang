@@ -1,10 +1,11 @@
 import { decrypt } from "@workspace/encryption";
 import type { ApiResponse } from "@workspace/types";
 import axios from "axios";
+import { Env } from "@workspace/constants";
 
 // Create a configured axios instance
 export const axiosInstance = axios.create({
-  baseURL: `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3002"}/v1`,
+  baseURL: `${Env.NEXT_PUBLIC_API_URL ?? "http://localhost:3002"}/v1`,
   headers: {
     "Content-Type": "application/json",
   },
@@ -15,7 +16,7 @@ axiosInstance.interceptors.request.use(async (config) => {
   let token: string | undefined;
 
   const cookieName =
-    process.env.NEXT_PUBLIC_SESSION_COOKIE_NAME || "okane-session";
+    Env.NEXT_PUBLIC_SESSION_COOKIE_NAME || "okane-session";
 
   if (typeof window !== "undefined") {
     // 1. Client-side: Try to get token from cookies
@@ -55,7 +56,7 @@ axiosInstance.interceptors.response.use(
     // Check for encrypted response
     const is_encrypted = response.headers["x-encrypted"] === "true";
     if (is_encrypted && response.data?.data) {
-      const secret = process.env.ENCRYPTION_KEY;
+      const secret = Env.ENCRYPTION_KEY;
       if (secret) {
         try {
           const decrypted = decrypt(response.data.data, secret);
@@ -79,7 +80,7 @@ axiosInstance.interceptors.response.use(
     if (error.response) {
       const is_encrypted = error.response.headers["x-encrypted"] === "true";
       if (is_encrypted && error.response.data?.data) {
-        const secret = process.env.ENCRYPTION_KEY;
+        const secret = Env.ENCRYPTION_KEY;
         if (secret) {
           try {
             const decrypted = decrypt(error.response.data.data, secret);

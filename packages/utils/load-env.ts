@@ -8,7 +8,6 @@ import fs from "fs";
  */
 export function loadEnv() {
   // If strict env vars are already present, skip loading/overwriting
-  // This allows process.env to take precedence (e.g. in replacement)
   if (process.env.DATABASE_URL && process.env.SUPABASE_URL) return;
 
   let current = process.cwd();

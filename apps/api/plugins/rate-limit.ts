@@ -2,6 +2,7 @@ import { Elysia } from "elysia";
 import { ErrorCode } from "@workspace/types";
 import { buildError } from "@workspace/utils";
 import { encrypt } from "@workspace/encryption";
+import { Env } from "@workspace/constants";
 
 /**
  * Rate limiter state. In-memory for dev, Redis-backed in production.
@@ -111,7 +112,7 @@ export const rateLimitPlugin = new Elysia({
       "Too many requests. Please try again later.",
     );
 
-    const secret = process.env.ENCRYPTION_KEY;
+    const secret = Env.ENCRYPTION_KEY;
     if (secret) {
       try {
         const encrypted = encrypt(JSON.stringify(error_response), secret);

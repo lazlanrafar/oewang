@@ -8,6 +8,7 @@ import { redis } from "@workspace/redis";
 import { buildError } from "@workspace/utils";
 import { status } from "elysia";
 import { ErrorCode } from "@workspace/types";
+import { Env } from "@workspace/constants";
 
 const SYSTEM_PROMPT_BASE = `You are Okane, a friendly and insightful personal finance assistant. You have access to the user's real financial data below and can answer questions about their spending, income, wallet balances, and financial health.
 
@@ -124,7 +125,7 @@ ${recentLines}
    */
   static async generateTitle(firstMessage: string): Promise<string> {
     const client = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY,
+      apiKey: Env.ANTHROPIC_API_KEY,
     });
     const response = await client.messages.create({
       model: "claude-3-haiku-20240307",
@@ -151,7 +152,7 @@ ${recentLines}
     sessionId?: string,
   ): Promise<ChatResponse> {
     const client = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY,
+      apiKey: Env.ANTHROPIC_API_KEY,
     });
 
     let currentSessionId = sessionId;
@@ -309,7 +310,7 @@ ${recentLines}
     mediaType: string,
   ) {
     const client = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY,
+      apiKey: Env.ANTHROPIC_API_KEY,
     });
 
     const categories = await CategoriesRepository.findMany(

@@ -13,6 +13,7 @@ import { SettingsRepository } from "../settings/settings.repository";
 import { walletGroupsRepository } from "../wallets/groups/groups.repository";
 import { walletsRepository } from "../wallets/wallets.repository";
 import { db, pricing, eq } from "@workspace/database";
+import { Env } from "@workspace/constants";
 
 /**
  * Workspaces service — business logic layer.
@@ -223,7 +224,7 @@ export const workspacesService = {
     // 5. Send email
     const workspace = await workspacesRepository.findById(workspace_id);
     if (workspace) {
-      const inviteLink = `${process.env.APP_URL}/accept-invite?token=${token}`;
+      const inviteLink = `${Env.APP_URL}/accept-invite?token=${token}`;
       await sendInvitationEmail(email, workspace.name, inviteLink);
     }
 

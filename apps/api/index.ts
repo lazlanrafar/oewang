@@ -6,9 +6,9 @@ import { cors } from "@elysiajs/cors";
 import { swagger } from "@elysiajs/swagger";
 import * as Sentry from "@sentry/bun";
 import { createLogger } from "@workspace/logger";
-import { validateEnv } from "./config/env";
+import { getEnv } from "@workspace/constants";
 // Validate environment variables early
-validateEnv();
+getEnv();
 
 import { authPlugin } from "./plugins/auth";
 import { encryptionPlugin } from "./plugins/encryption";
@@ -32,9 +32,10 @@ import { systemAdminsController } from "./modules/system-admins/system-admins.co
 import { pricingController } from "./modules/pricing/pricing.controller";
 import { stripeController } from "./modules/stripe/stripe.controller";
 import { ordersController } from "./modules/orders/orders.controller";
+import { Env } from "@workspace/constants";
 
 const log = createLogger("api");
-const port = process.env.API_PORT ?? 3001;
+const port = Env.API_PORT ?? 3001;
 
 const app = new Elysia()
   .use(cors())

@@ -4,6 +4,7 @@ import { TransactionsService } from "../transactions/transactions.service";
 import { walletsRepository } from "../wallets/wallets.repository";
 import { vaultService } from "../vault/vault.service";
 import { buildSuccess } from "@workspace/utils";
+import { Env } from "@workspace/constants";
 
 export abstract class IntegrationsService {
   static async connectWhatsApp(
@@ -55,7 +56,7 @@ export abstract class IntegrationsService {
         ) {
           // Fetch the file from Twilio
           const twilioAuth = Buffer.from(
-            `${process.env.TWILIO_ACCOUNT_SID}:${process.env.TWILIO_AUTH_TOKEN}`,
+            `${Env.TWILIO_ACCOUNT_SID}:${Env.TWILIO_AUTH_TOKEN}`,
           ).toString("base64");
 
           const response = await fetch(mediaUrl, {
@@ -170,8 +171,8 @@ export abstract class IntegrationsService {
     from: string,
     body: string,
   ) {
-    const accountSid = process.env.TWILIO_ACCOUNT_SID;
-    const authToken = process.env.TWILIO_AUTH_TOKEN;
+    const accountSid = Env.TWILIO_ACCOUNT_SID;
+    const authToken = Env.TWILIO_AUTH_TOKEN;
 
     if (!accountSid || !authToken) {
       console.warn("[WhatsApp] Twilio credentials missing, cannot send reply.");

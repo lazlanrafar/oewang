@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { LoginForm } from "@/components/auth/login-form";
 import { OAuthButton } from "@/components/auth/oauth-button";
-import { ADMIN_CONFIG as APP_CONFIG } from "@workspace/constants";
+import { ADMIN_CONFIG as APP_CONFIG, Env } from "@workspace/constants";
 
 export default function LoginV2() {
   return (
@@ -47,7 +47,7 @@ export default function LoginV2() {
           <p className="text-center text-sm text-muted-foreground max-w-[400px]">
             By signing in you agree to our{" "}
             <Link
-              href={`${process.env.NEXT_PUBLIC_APP_URL}/terms`}
+              href={`${Env.NEXT_PUBLIC_APP_URL}/terms`}
               target="_blank"
               rel="noopener noreferrer"
               className="underline underline-offset-4 hover:text-foreground pointer-events-auto"
@@ -56,7 +56,7 @@ export default function LoginV2() {
             </Link>
             &{" "}
             <Link
-              href={`${process.env.NEXT_PUBLIC_APP_URL}/policy`}
+              href={`${Env.NEXT_PUBLIC_APP_URL}/policy`}
               target="_blank"
               rel="noopener noreferrer"
               className="underline underline-offset-4 hover:text-foreground pointer-events-auto"

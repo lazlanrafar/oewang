@@ -10,6 +10,7 @@ import {
 import type { PaginationQuery } from "@workspace/types";
 import { ErrorCode } from "@workspace/types";
 import { status } from "elysia";
+import { Env } from "@workspace/constants";
 
 export class VaultService {
   private async getBucketClient(workspaceId: string) {
@@ -24,7 +25,7 @@ export class VaultService {
       )
       .limit(1);
 
-    const secret = process.env.ENCRYPTION_KEY || "";
+    const secret = Env.ENCRYPTION_KEY || "";
 
     // If custom R2 settings exist, use them
     if (
@@ -42,10 +43,10 @@ export class VaultService {
     }
 
     // Fallback to system bucket (from env)
-    const systemEndpoint = process.env.R2_ENDPOINT;
-    const systemAccessKeyId = process.env.R2_ACCESS_KEY_ID;
-    const systemSecretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
-    const systemBucketName = process.env.R2_BUCKET_NAME;
+    const systemEndpoint = Env.R2_ENDPOINT;
+    const systemAccessKeyId = Env.R2_ACCESS_KEY_ID;
+    const systemSecretAccessKey = Env.R2_SECRET_ACCESS_KEY;
+    const systemBucketName = Env.R2_BUCKET_NAME;
 
     if (
       !systemEndpoint ||

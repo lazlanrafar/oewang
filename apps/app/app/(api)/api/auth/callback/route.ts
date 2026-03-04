@@ -5,6 +5,7 @@ import { createClient } from "@workspace/supabase/server";
 
 import { exchangeSupabaseToken } from "@workspace/modules";
 import { syncUser } from "@workspace/modules";
+import { Env } from "@workspace/constants";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
@@ -49,7 +50,7 @@ export async function GET(request: Request) {
                 {
                   path: "/",
                   httpOnly: true,
-                  secure: process.env.NODE_ENV === "production",
+                  secure: Env.NODE_ENV === "production",
                   sameSite: "lax",
                   maxAge: 60 * 60 * 24 * 7, // 7 days
                 },

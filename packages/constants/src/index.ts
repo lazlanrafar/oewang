@@ -2,7 +2,7 @@ export * from "./default/category";
 export * from "./default/wallet";
 export * from "./roles";
 export * from "./colors";
-import countriesJson from "./countries.json";
+import countriesJson from "./json/countries.json";
 
 export const COUNTRIES = countriesJson;
 
@@ -61,3 +61,4 @@ export const MONTHLY_START_DATE_WEEKEND_HANDLING_OPTIONS = [
 ] as const;
 
 export * from "./app-config";
+export * from "./env";

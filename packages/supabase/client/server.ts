@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { Env } from "@workspace/constants";
 
 /**
  * Create a Supabase client for Server Actions and Server Components.
@@ -9,8 +10,8 @@ export async function createClient() {
   const cookieStore = await cookies();
 
   return createServerClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_ANON_KEY!,
+    Env.SUPABASE_URL!,
+    Env.SUPABASE_ANON_KEY!,
     {
       cookies: {
         getAll() {
@@ -27,8 +28,8 @@ export async function createClient() {
           }
         },
       },
-      cookieOptions: process.env.NEXT_PUBLIC_SUPABASE_COOKIE_NAME
-        ? { name: process.env.NEXT_PUBLIC_SUPABASE_COOKIE_NAME }
+      cookieOptions: Env.NEXT_PUBLIC_SUPABASE_COOKIE_NAME
+        ? { name: Env.NEXT_PUBLIC_SUPABASE_COOKIE_NAME }
         : undefined,
     },
   );

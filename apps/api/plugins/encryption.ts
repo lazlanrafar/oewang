@@ -1,5 +1,6 @@
 import type { Elysia } from "elysia";
 import { encrypt } from "@workspace/encryption";
+import { Env } from "@workspace/constants";
 
 /**
  * Encryption plugin — encrypts ALL JSON responses with AES-256-GCM.
@@ -21,7 +22,7 @@ export const encryptionPlugin = (app: Elysia) =>
       !(response instanceof ReadableStream) &&
       !(response instanceof Response)
     ) {
-      const secret = process.env.ENCRYPTION_KEY;
+      const secret = Env.ENCRYPTION_KEY;
 
       if (!secret) {
         return;

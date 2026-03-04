@@ -1,5 +1,6 @@
 import { createServerClient as supabaseCreateServerClient } from "@supabase/ssr";
 import type { NextRequest, NextResponse } from "next/server";
+import { Env } from "@workspace/constants";
 
 /**
  * Create a Supabase client for use in Next.js middleware.
@@ -9,8 +10,8 @@ export function createMiddlewareClient(
   request: NextRequest,
   response: NextResponse,
 ) {
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+  const supabaseUrl = Env.SUPABASE_URL;
+  const supabaseAnonKey = Env.SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
     throw new Error(
@@ -32,8 +33,8 @@ export function createMiddlewareClient(
         }
       },
     },
-    cookieOptions: process.env.NEXT_PUBLIC_SUPABASE_COOKIE_NAME
-      ? { name: process.env.NEXT_PUBLIC_SUPABASE_COOKIE_NAME }
+    cookieOptions: Env.NEXT_PUBLIC_SUPABASE_COOKIE_NAME
+      ? { name: Env.NEXT_PUBLIC_SUPABASE_COOKIE_NAME }
       : undefined,
   });
 }

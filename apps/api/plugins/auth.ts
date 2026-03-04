@@ -3,8 +3,9 @@ import { createClient } from "@workspace/supabase/admin";
 import { db, eq } from "@workspace/database";
 import { users, user_workspaces } from "@workspace/database";
 import * as jose from "jose";
+import { Env } from "@workspace/constants";
 
-const JWT_SECRET_KEY = () => new TextEncoder().encode(process.env.JWT_SECRET!);
+const JWT_SECRET_KEY = () => new TextEncoder().encode(Env.JWT_SECRET!);
 
 /**
  * Generate an app JWT with { user_id, workspace_id }.
@@ -24,7 +25,7 @@ async function generateJwt(
   email: string,
   system_role: import("@workspace/constants").SystemRole = "user",
 ): Promise<string> {
-  const expires_in = process.env.JWT_EXPIRES_IN ?? "7d";
+  const expires_in = Env.JWT_EXPIRES_IN ?? "7d";
   const jwt = await new jose.SignJWT({
     user_id,
     workspace_id,

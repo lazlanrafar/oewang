@@ -1,4 +1,5 @@
 import { createBrowserClient as supabaseCreateBrowserClient } from "@supabase/ssr";
+import { Env } from "@workspace/constants";
 
 /**
  * Create a browser-side Supabase client.
@@ -6,8 +7,8 @@ import { createBrowserClient as supabaseCreateBrowserClient } from "@supabase/ss
  * Uses @supabase/ssr to handle cookie-based sessions.
  */
 export function createBrowserClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabaseUrl = Env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = Env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
     throw new Error(
@@ -16,8 +17,8 @@ export function createBrowserClient() {
   }
 
   return supabaseCreateBrowserClient(supabaseUrl, supabaseAnonKey, {
-    cookieOptions: process.env.NEXT_PUBLIC_SUPABASE_COOKIE_NAME
-      ? { name: process.env.NEXT_PUBLIC_SUPABASE_COOKIE_NAME }
+    cookieOptions: Env.NEXT_PUBLIC_SUPABASE_COOKIE_NAME
+      ? { name: Env.NEXT_PUBLIC_SUPABASE_COOKIE_NAME }
       : undefined,
   });
 }

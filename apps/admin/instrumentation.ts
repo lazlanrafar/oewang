@@ -7,8 +7,8 @@ export async function register() {
     loadEnv();
   }
 
-  const { validateEnv } = await import("@workspace/utils/env");
-  validateEnv();
+  const { getEnv } = await import("@workspace/constants");
+  getEnv();
 
   if (process.env.NEXT_RUNTIME === "nodejs") {
     await import("./sentry.server.config");

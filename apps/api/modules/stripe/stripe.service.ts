@@ -6,12 +6,13 @@ import { ErrorCode } from "@workspace/types";
 import { buildSuccess, buildError } from "@workspace/utils";
 import { status } from "elysia";
 import { OrdersService } from "../orders/orders.service";
+import { Env } from "@workspace/constants";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string);
+const stripe = new Stripe(Env.STRIPE_SECRET_KEY as string);
 
 export abstract class StripeService {
   static async handleWebhook(rawBody: string, signature: string) {
-    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    const webhookSecret = Env.STRIPE_WEBHOOK_SECRET;
     if (!webhookSecret) {
       throw new Error("STRIPE_WEBHOOK_SECRET is not configured");
     }
@@ -172,7 +173,7 @@ export abstract class StripeService {
     userId: string,
     priceId: string,
   ) {
-    if (!process.env.STRIPE_SECRET_KEY) {
+    if (!Env.STRIPE_SECRET_KEY) {
       throw status(
         500,
         buildError(ErrorCode.INTERNAL_ERROR, "Stripe is not configured"),
@@ -206,7 +207,7 @@ export abstract class StripeService {
     }
 
     const appUrl =
-      process.env.API_BASE_URL?.replace("api.", "") || "http://localhost:3001";
+      Env.API_BASE_URL?.replace("api.", "") || "http://localhost:3001";
 
     // Determine mode based on which price ID it is
     const mode =
@@ -250,7 +251,7 @@ export abstract class StripeService {
     }
 
     const appUrl =
-      process.env.API_BASE_URL?.replace("api.", "") || "http://localhost:3001";
+      Env.API_BASE_URL?.replace("api.", "") || "http://localhost:3001";
 
     const session = await stripe.billingPortal.sessions.create({
       customer: workspace.stripe_customer_id,

@@ -8,6 +8,7 @@ import type { ActionResponse, User, WorkspaceWithRole } from "@workspace/types";
 
 import { axiosInstance } from "../lib/axios";
 import { exchangeSupabaseToken } from "../auth/auth.action";
+import { Env } from "@workspace/constants";
 
 export interface SyncUserDTO {
   id: string;
@@ -70,7 +71,7 @@ export const switchWorkspaceAction = async (workspace_id: string): Promise<Actio
         (await cookies()).set("okane-session", exchangeResult.data.token, {
           path: "/",
           httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
+          secure: Env.NODE_ENV === "production",
           sameSite: "lax",
           maxAge: 60 * 60 * 24 * 7, // 7 days
         });

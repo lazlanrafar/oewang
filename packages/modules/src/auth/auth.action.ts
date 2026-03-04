@@ -1,6 +1,5 @@
 "use server";
 
-// @ts-expect-error: Internal Next.js import not typed in isolated workspace module
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -12,6 +11,7 @@ import { axiosInstance } from "../lib/axios";
 
 import { sync_user } from "../user/user.action";
 import { createWorkspace } from "../workspace/workspace.action";
+import { Env } from "@workspace/constants";
 
 export async function login(
   form_data: FormData,
@@ -62,7 +62,7 @@ export async function login(
             (await cookies()).set("okane-session", exchangeResult.data.token, {
               path: "/",
               httpOnly: true,
-              secure: process.env.NODE_ENV === "production",
+              secure: Env.NODE_ENV === "production",
               sameSite: "lax",
               maxAge: 60 * 60 * 24 * 7, // 7 days
             });
@@ -128,7 +128,7 @@ export async function signup(
             (await cookies()).set("okane-session", exchangeResult.data.token, {
               path: "/",
               httpOnly: true,
-              secure: process.env.NODE_ENV === "production",
+              secure: Env.NODE_ENV === "production",
               sameSite: "lax",
               maxAge: 60 * 60 * 24 * 7, // 7 days
             });
@@ -209,7 +209,7 @@ export async function createWorkspaceAction(data: {
     (await cookies()).set("okane-session", exchangeResult.data.token, {
       path: "/",
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: Env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: 60 * 60 * 24 * 7, // 7 days
     });

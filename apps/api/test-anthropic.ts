@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+import { Env } from "@workspace/constants";
+const client = new Anthropic({ apiKey: Env.ANTHROPIC_API_KEY });
 async function test() {
   const models = ["claude-3-sonnet-20240229", "claude-3-opus-20240229"];
   for (const m of models) {

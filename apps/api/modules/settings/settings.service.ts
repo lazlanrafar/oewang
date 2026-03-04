@@ -3,6 +3,7 @@ import type { TransactionSettingsInput } from "./settings.model";
 import { encrypt } from "@workspace/encryption";
 import { buildSuccess } from "@workspace/utils";
 import { auditLogsService } from "../audit-logs/audit-logs.service";
+import { Env } from "@workspace/constants";
 
 export abstract class SettingsService {
   static async getTransactionSettings(workspaceId: string) {
@@ -35,7 +36,7 @@ export abstract class SettingsService {
       await SettingsRepository.create(workspaceId);
     }
 
-    const encryptionSecret = process.env.ENCRYPTION_KEY || "";
+    const encryptionSecret = Env.ENCRYPTION_KEY || "";
     const updateData = { ...data };
 
     if (updateData.r2AccessKeyId && updateData.r2AccessKeyId !== "********") {

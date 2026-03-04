@@ -1,12 +1,13 @@
 import pino from "pino";
 import path from "node:path";
 import fs from "node:fs";
+import { Env } from "@workspace/constants";
 
 const isPretty =
-  process.env.LOG_PRETTY === "true" || process.env.LOG_PRETTY === "1";
+  Env.LOG_PRETTY === "true" || Env.LOG_PRETTY === "1";
 
 // Ensure logs directory exists at the monorepo root
-const logsDir = path.resolve(process.cwd(), process.env.LOGS_DIR ?? "logs");
+const logsDir = path.resolve(process.cwd(), Env.LOGS_DIR ?? "logs");
 fs.mkdirSync(logsDir, { recursive: true });
 
 const logFilePath = path.join(logsDir, "app.log.txt");
@@ -15,7 +16,7 @@ const logFilePath = path.join(logsDir, "app.log.txt");
  * Create the base pino logger instance
  */
 const baseLogger = pino({
-  level: process.env.LOG_LEVEL || "info",
+  level: Env.LOG_LEVEL || "info",
   serializers: {
     req: pino.stdSerializers.req,
     res: pino.stdSerializers.res,
@@ -37,12 +38,12 @@ const baseLogger = pino({
             useLevelLabels: true,
             levelFirst: true,
           },
-          level: process.env.LOG_LEVEL || "info",
+          level: Env.LOG_LEVEL || "info",
         },
         {
           target: "pino/file",
           options: { destination: logFilePath, mkdir: true },
-          level: process.env.LOG_LEVEL || "info",
+          level: Env.LOG_LEVEL || "info",
         },
       ],
     },
@@ -54,12 +55,12 @@ const baseLogger = pino({
         {
           target: "pino/file",
           options: { destination: 1 }, // stdout
-          level: process.env.LOG_LEVEL || "info",
+          level: Env.LOG_LEVEL || "info",
         },
         {
           target: "pino/file",
           options: { destination: logFilePath, mkdir: true },
-          level: process.env.LOG_LEVEL || "info",
+          level: Env.LOG_LEVEL || "info",
         },
       ],
     },

@@ -1,6 +1,7 @@
 import axios from "axios";
 import { redis } from "@workspace/redis";
 import { loadEnv } from "@workspace/utils/load-env";
+import { Env } from "@workspace/constants";
 
 loadEnv();
 
@@ -8,7 +9,7 @@ loadEnv();
    CONFIG
 ======================= */
 
-const API_TOKEN = process.env.CURRENCYFREAKS_API_KEY;
+const API_TOKEN = Env.CURRENCYFREAKS_API_KEY;
 const API_URL = "https://api.currencyfreaks.com/v2.0/rates/latest";
 const CACHE_KEY = "currency:rates:latest";
 const ONE_DAY_SECONDS = 60 * 60 * 24;

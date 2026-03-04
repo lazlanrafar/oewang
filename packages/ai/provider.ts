@@ -10,13 +10,14 @@ import {
   parseMappingOutput,
 } from "./prompt";
 import * as XLSX from "xlsx";
+import { Env } from "@workspace/constants";
 
 export type AiProviderName = "openai" | "claude" | "none";
 
 /** Detect which provider to use based on available env keys */
 export function detectProvider(): AiProviderName {
-  if (process.env.OPENAI_API_KEY) return "openai";
-  if (process.env.ANTHROPIC_API_KEY) return "claude";
+  if (Env.OPENAI_API_KEY) return "openai";
+  if (Env.ANTHROPIC_API_KEY) return "claude";
   return "none";
 }
 
@@ -242,7 +243,7 @@ export class AiProvider {
     input: AiInput,
     systemPrompt: string,
   ): Promise<ExtractedTransaction[]> {
-    const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const client = new OpenAI({ apiKey: Env.OPENAI_API_KEY });
 
     const userContent: OpenAI.Chat.ChatCompletionContentPart[] = [];
 
@@ -297,7 +298,7 @@ export class AiProvider {
     sampleJson: string,
     systemPrompt: string,
   ) {
-    const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const client = new OpenAI({ apiKey: Env.OPENAI_API_KEY });
     const response = await client.chat.completions.create({
       model: "gpt-4o",
       response_format: {
@@ -324,7 +325,7 @@ export class AiProvider {
     input: AiInput,
     systemPrompt: string,
   ): Promise<ExtractedTransaction[]> {
-    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const client = new Anthropic({ apiKey: Env.ANTHROPIC_API_KEY });
 
     const userContent: Anthropic.MessageParam["content"] = [];
 
@@ -386,7 +387,7 @@ export class AiProvider {
     sampleJson: string,
     systemPrompt: string,
   ) {
-    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const client = new Anthropic({ apiKey: Env.ANTHROPIC_API_KEY });
 
     try {
       const response = await client.messages.create({
