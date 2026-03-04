@@ -10,7 +10,9 @@ import { encrypt } from "@workspace/encryption";
  * Flow: ApiResponse<T> → JSON.stringify → AES encrypt → { data: encrypted_string }
  */
 export const encryptionPlugin = (app: Elysia) =>
-  app.mapResponse(({ response, set: _set }) => {
+  app.mapResponse(({ response, set: _set, path }) => {
+    if (path && path.startsWith("/swagger")) return;
+
     // Only encrypt JSON responses
     if (
       response &&

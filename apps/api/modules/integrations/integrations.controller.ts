@@ -15,19 +15,26 @@ export const integrationsController = new Elysia({ prefix: "/integrations" })
       IntegrationsService.handleWhatsAppWebhook(body).catch(console.error);
       // return "OK";
     },
-    { body: TwilioWebhookDto },
+    {
+      body: TwilioWebhookDto,
+      detail: { summary: "WhatsApp Webhook", tags: ["Integrations"] },
+    },
   )
   // Authenticated route for connecting phone number
   .use(authPlugin)
-  .get("/", async ({ auth }) => {
-    if (!auth?.workspace_id) {
-      throw Error("Unauthorized");
-    }
-    const integrations = await IntegrationsRepository.findAll(
-      auth.workspace_id,
-    );
-    return { success: true, data: integrations, code: "OK" };
-  })
+  .get(
+    "/",
+    async ({ auth }) => {
+      if (!auth?.workspace_id) {
+        throw Error("Unauthorized");
+      }
+      const integrations = await IntegrationsRepository.findAll(
+        auth.workspace_id,
+      );
+      return { success: true, data: integrations, code: "OK" };
+    },
+    { detail: { summary: "List Integrations", tags: ["Integrations"] } },
+  )
   .post(
     "/whatsapp/connect",
     async ({ body, auth }) => {
@@ -41,5 +48,8 @@ export const integrationsController = new Elysia({ prefix: "/integrations" })
       );
       return result;
     },
-    { body: ConnectWhatsAppDto },
+    {
+      body: ConnectWhatsAppDto,
+      detail: { summary: "Connect WhatsApp", tags: ["Integrations"] },
+    },
   );

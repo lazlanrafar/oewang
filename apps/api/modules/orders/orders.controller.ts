@@ -25,6 +25,7 @@ export const ordersController = new Elysia({
         limit: t.Optional(t.Numeric()),
         search: t.Optional(t.String()),
       }),
+      detail: { summary: "List Orders", tags: ["Orders"] },
     },
   )
   .get(
@@ -36,5 +37,6 @@ export const ordersController = new Elysia({
       params: t.Object({
         id: t.String(),
       }),
+      detail: { summary: "Get Order Details", tags: ["Orders"] },
     },
   );

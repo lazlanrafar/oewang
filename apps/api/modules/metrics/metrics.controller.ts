@@ -24,7 +24,7 @@ export const metricsController = new Elysia({ prefix: "/metrics" })
       return response;
     },
     {
-      detail: { tags: ["Metrics"] },
+      detail: { summary: "Get Revenue", tags: ["Metrics"] },
     },
   )
   .get(
@@ -34,7 +34,7 @@ export const metricsController = new Elysia({ prefix: "/metrics" })
       return response;
     },
     {
-      detail: { tags: ["Metrics"] },
+      detail: { summary: "Get Expenses", tags: ["Metrics"] },
     },
   )
   .get(
@@ -44,7 +44,7 @@ export const metricsController = new Elysia({ prefix: "/metrics" })
       return response;
     },
     {
-      detail: { tags: ["Metrics"] },
+      detail: { summary: "Get Burn Rate", tags: ["Metrics"] },
     },
   )
   .get(
@@ -58,6 +58,6 @@ export const metricsController = new Elysia({ prefix: "/metrics" })
       return response;
     },
     {
-      detail: { tags: ["Metrics"] },
+      detail: { summary: "Get Category Breakdown", tags: ["Metrics"] },
     },
   );

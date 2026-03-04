@@ -23,7 +23,7 @@ export const aiController = new Elysia({ prefix: "/ai" })
       const sessions = await AiService.getSessions(workspaceId!);
       return buildSuccess(sessions, "Sessions retrieved");
     },
-    { detail: { tags: ["AI"] } },
+    { detail: { summary: "Get AI Sessions", tags: ["AI"] } },
   )
   .get(
     "/sessions/:id",
@@ -31,7 +31,7 @@ export const aiController = new Elysia({ prefix: "/ai" })
       const messages = await AiService.getSessionMessages(id, workspaceId!);
       return buildSuccess(messages, "Session messages retrieved");
     },
-    { detail: { tags: ["AI"] } },
+    { detail: { summary: "Get Session Messages", tags: ["AI"] } },
   )
   .post(
     "/chat",
@@ -52,5 +52,5 @@ export const aiController = new Elysia({ prefix: "/ai" })
         );
       }
     },
-    { body: ChatRequestDto, detail: { tags: ["AI"] } },
+    { body: ChatRequestDto, detail: { summary: "Chat with AI", tags: ["AI"] } },
   );

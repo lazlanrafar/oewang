@@ -35,6 +35,7 @@ export const vaultController = new Elysia({ prefix: "/vault" })
     },
     {
       query: getVaultFilesQuery,
+      detail: { summary: "List Vault Files", tags: ["Vault"] },
     },
   )
   .post(
@@ -59,16 +60,25 @@ export const vaultController = new Elysia({ prefix: "/vault" })
     },
     {
       body: uploadFileBody,
+      detail: { summary: "Upload File to Vault", tags: ["Vault"] },
     },
   )
-  .delete("/:id", async ({ workspaceId, params: { id } }) => {
-    const data = await vaultService.deleteFile(workspaceId!, id);
-    return buildSuccess(data, "File deleted successfully");
-  })
-  .get("/:id/download", async ({ workspaceId, params: { id } }) => {
-    const url = await vaultService.getDownloadUrl(workspaceId!, id);
-    return buildSuccess({ url }, "Download URL generated");
-  })
+  .delete(
+    "/:id",
+    async ({ workspaceId, params: { id } }) => {
+      const data = await vaultService.deleteFile(workspaceId!, id);
+      return buildSuccess(data, "File deleted successfully");
+    },
+    { detail: { summary: "Delete Vault File", tags: ["Vault"] } },
+  )
+  .get(
+    "/:id/download",
+    async ({ workspaceId, params: { id } }) => {
+      const url = await vaultService.getDownloadUrl(workspaceId!, id);
+      return buildSuccess({ url }, "Download URL generated");
+    },
+    { detail: { summary: "Get Download URL", tags: ["Vault"] } },
+  )
   .patch(
     "/:id/tags",
     async ({ workspaceId, params: { id }, body: { tags } }) => {
@@ -77,5 +87,6 @@ export const vaultController = new Elysia({ prefix: "/vault" })
     },
     {
       body: updateTagsBody,
+      detail: { summary: "Update Vault File Tags", tags: ["Vault"] },
     },
   );

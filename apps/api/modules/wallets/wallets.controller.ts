@@ -25,10 +25,14 @@ export const walletsController = new Elysia()
   })
   .group("/wallet-groups", (app) =>
     app
-      .get("/", async ({ workspaceId }) => {
-        const data = await walletsService.getGroups(workspaceId!);
-        return buildSuccess(data, "Wallet groups retrieved");
-      })
+      .get(
+        "/",
+        async ({ workspaceId }) => {
+          const data = await walletsService.getGroups(workspaceId!);
+          return buildSuccess(data, "Wallet groups retrieved");
+        },
+        { detail: { summary: "Get Wallet Groups", tags: ["Wallets"] } },
+      )
       .post(
         "/",
         async ({ workspaceId, body, set }) => {
@@ -38,6 +42,7 @@ export const walletsController = new Elysia()
         },
         {
           body: createWalletGroupBody,
+          detail: { summary: "Create Wallet Group", tags: ["Wallets"] },
         },
       )
       .put(
@@ -48,6 +53,7 @@ export const walletsController = new Elysia()
         },
         {
           body: reorderWalletGroupsBody,
+          detail: { summary: "Reorder Wallet Groups", tags: ["Wallets"] },
         },
       )
       .put(
@@ -58,19 +64,28 @@ export const walletsController = new Elysia()
         },
         {
           body: updateWalletGroupBody,
+          detail: { summary: "Update Wallet Group", tags: ["Wallets"] },
         },
       )
-      .delete("/:id", async ({ workspaceId, params: { id } }) => {
-        const data = await walletsService.deleteGroup(workspaceId!, id);
-        return buildSuccess(data, "Wallet group deleted");
-      }),
+      .delete(
+        "/:id",
+        async ({ workspaceId, params: { id } }) => {
+          const data = await walletsService.deleteGroup(workspaceId!, id);
+          return buildSuccess(data, "Wallet group deleted");
+        },
+        { detail: { summary: "Delete Wallet Group", tags: ["Wallets"] } },
+      ),
   )
   .group("/wallets", (app) =>
     app
-      .get("/", async ({ workspaceId }) => {
-        const data = await walletsService.getWallets(workspaceId!);
-        return buildSuccess(data, "Wallets retrieved");
-      })
+      .get(
+        "/",
+        async ({ workspaceId }) => {
+          const data = await walletsService.getWallets(workspaceId!);
+          return buildSuccess(data, "Wallets retrieved");
+        },
+        { detail: { summary: "Get Wallets", tags: ["Wallets"] } },
+      )
       .post(
         "/",
         async ({ workspaceId, body, set }) => {
@@ -80,6 +95,7 @@ export const walletsController = new Elysia()
         },
         {
           body: createWalletBody,
+          detail: { summary: "Create Wallet", tags: ["Wallets"] },
         },
       )
       .put(
@@ -90,6 +106,7 @@ export const walletsController = new Elysia()
         },
         {
           body: reorderWalletsBody,
+          detail: { summary: "Reorder Wallets", tags: ["Wallets"] },
         },
       )
       .put(
@@ -104,10 +121,15 @@ export const walletsController = new Elysia()
         },
         {
           body: updateWalletBody,
+          detail: { summary: "Update Wallet", tags: ["Wallets"] },
         },
       )
-      .delete("/:id", async ({ workspaceId, params: { id } }) => {
-        const data = await walletsService.deleteWallet(workspaceId!, id);
-        return buildSuccess(data, "Wallet deleted");
-      }),
+      .delete(
+        "/:id",
+        async ({ workspaceId, params: { id } }) => {
+          const data = await walletsService.deleteWallet(workspaceId!, id);
+          return buildSuccess(data, "Wallet deleted");
+        },
+        { detail: { summary: "Delete Wallet", tags: ["Wallets"] } },
+      ),
   );

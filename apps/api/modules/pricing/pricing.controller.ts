@@ -23,11 +23,16 @@ export const pricingController = new Elysia({
     },
     {
       query: PricingListQuery,
+      detail: { summary: "List Pricing Plans", tags: ["Pricing"] },
     },
   )
-  .get("/:id", async ({ params: { id } }) => {
-    return PricingService.getById(id);
-  })
+  .get(
+    "/:id",
+    async ({ params: { id } }) => {
+      return PricingService.getById(id);
+    },
+    { detail: { summary: "Get Pricing Plan Details", tags: ["Pricing"] } },
+  )
   // Protect mutations via admin access (owner or finance)
   .use(requireAdminAccess)
   .post(
@@ -38,6 +43,7 @@ export const pricingController = new Elysia({
     },
     {
       body: CreatePricingDto,
+      detail: { summary: "Create Pricing Plan", tags: ["Pricing"] },
     },
   )
   .patch(
@@ -48,9 +54,14 @@ export const pricingController = new Elysia({
     },
     {
       body: UpdatePricingDto,
+      detail: { summary: "Update Pricing Plan", tags: ["Pricing"] },
     },
   )
-  .delete("/:id", async ({ params: { id }, auth }) => {
-    // @ts-ignore
-    return PricingService.softDelete(id, auth?.user_id || "system");
-  });
+  .delete(
+    "/:id",
+    async ({ params: { id }, auth }) => {
+      // @ts-ignore
+      return PricingService.softDelete(id, auth?.user_id || "system");
+    },
+    { detail: { summary: "Delete Pricing Plan", tags: ["Pricing"] } },
+  );

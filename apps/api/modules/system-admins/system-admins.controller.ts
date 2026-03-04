@@ -46,7 +46,10 @@ export const systemAdminsController = new Elysia({ prefix: "/system-admins" })
 
       return results;
     },
-    { query: SystemAdminModel.listQuery },
+    {
+      query: SystemAdminModel.listQuery,
+      detail: { summary: "List All Users", tags: ["System Admins"] },
+    },
   )
   .patch(
     "/users/:id/role",
@@ -66,5 +69,6 @@ export const systemAdminsController = new Elysia({ prefix: "/system-admins" })
           t.Literal("user"),
         ]),
       }),
+      detail: { summary: "Update System Role", tags: ["System Admins"] },
     },
   );
