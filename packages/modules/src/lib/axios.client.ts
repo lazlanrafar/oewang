@@ -67,7 +67,7 @@ axiosInstance.interceptors.response.use(
         try {
           const decrypted = decrypt(response.data.data, secret);
           const parsed: ApiResponse<unknown> = JSON.parse(decrypted);
-          response.data = parsed.data;
+          response.data = parsed;
           (response as any)._api_response = parsed;
         } catch (e) {
           console.error("Failed to decrypt response", e);

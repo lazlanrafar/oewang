@@ -16,6 +16,9 @@ import { db, pricing, eq } from "@workspace/database";
 import { Env } from "@workspace/constants";
 import { OrdersService } from "../orders/orders.service";
 import { generateSlug } from "@workspace/utils";
+import { status } from "elysia";
+import { ErrorCode } from "@workspace/types";
+import { buildError } from "@workspace/utils";
 
 /**
  * Workspaces service — business logic layer.
@@ -36,6 +39,19 @@ export const workspacesService = {
     },
   ) {
     const { name, country, mainCurrencyCode, mainCurrencySymbol } = data;
+
+    // 0. Check for existing workspaces (Free Tier limit)
+    const existingWorkspaces =
+      await workspacesRepository.getMemberWorkspaces(user_id);
+    if (existingWorkspaces && existingWorkspaces.length > 0) {
+      throw status(
+        422,
+        buildError(
+          ErrorCode.PLAN_LIMIT_REACHED,
+          "You already have a workspace. Free tier accounts are limited to one workspace.",
+        ),
+      );
+    }
 
     // 1. Parallelize initial setup: generate slug and find default plan
     const [slug, freePlan] = await Promise.all([

@@ -81,17 +81,24 @@ export async function proxy(request: NextRequest) {
 
   // Protect dashboard routes
   if (pathAfterLocale.startsWith("/overview")) {
-    if (!session || !okane_session) {
+    if (!session) {
       return NextResponse.redirect(new URL(`/${locale}/login`, request.url));
+    }
+    if (!okane_session) {
+      return NextResponse.redirect(new URL(`/${locale}/sync`, request.url));
     }
 
     // Optional: Redirect if workspace_id is missing in JWT (handled by API, but we could enforce it here)
   }
 
-  // Protect create-workspace (must be logged in)
-  // Protect create-workspace (must be logged in)
-  if (pathAfterLocale.startsWith("/create-workspace") && !session) {
-    return NextResponse.redirect(new URL(`/${locale}/login`, request.url));
+  // Protect create-workspace (must be logged in, but not already on a workspace)
+  if (pathAfterLocale.startsWith("/create-workspace")) {
+    if (!session) {
+      return NextResponse.redirect(new URL(`/${locale}/login`, request.url));
+    }
+    if (okane_session) {
+      return NextResponse.redirect(new URL(`/${locale}/overview`, request.url));
+    }
   }
 
   // Redirect to dashboard or onboarding if logged in and on login/register pages
@@ -102,9 +109,7 @@ export async function proxy(request: NextRequest) {
     if (okane_session) {
       return NextResponse.redirect(new URL(`/${locale}/overview`, request.url));
     } else {
-      return NextResponse.redirect(
-        new URL(`/${locale}/create-workspace`, request.url),
-      );
+      return NextResponse.redirect(new URL(`/${locale}/sync`, request.url));
     }
   }
 

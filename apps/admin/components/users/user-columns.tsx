@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@workspace/ui";
 import { MoreHorizontal, Shield, User, Landmark } from "lucide-react";
-import { updateSystemRoleAction } from "@workspace/modules";
+import { updateSystemRoleAction } from "@workspace/modules/system-admin/system-admin.action";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 

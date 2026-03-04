@@ -1,7 +1,7 @@
 "use server";
 
 import { ScrollableContent } from "@workspace/ui";
-import { getPricing } from "@workspace/modules";
+import { getPricing } from "@workspace/modules/pricing/pricing.action";
 import PricingDataTableWrapper from "@/components/pricing/pricing-data-table-wrapper";
 import PricingSearchFilter from "@/components/pricing/pricing-search-filter";
 import PricingDataTableColumnVisibility from "@/components/pricing/pricing-data-table-column-visibility";

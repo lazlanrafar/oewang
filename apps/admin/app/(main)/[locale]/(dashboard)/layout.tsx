@@ -11,7 +11,7 @@ import {
   SidebarTrigger,
 } from "@workspace/ui";
 
-import { getMe } from "@workspace/modules";
+import { getMe } from "@workspace/modules/user/user.action";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { LayoutControls } from "@/components/layout/layout-controls";
 import { NavUser } from "@/components/layout/nav-user";

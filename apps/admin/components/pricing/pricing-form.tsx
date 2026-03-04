@@ -18,7 +18,7 @@ import {
 import { toast } from "sonner";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createPricingAction, updatePricingAction } from "@workspace/modules";
+import { createPricingAction, updatePricingAction } from "@workspace/modules/pricing/pricing.action";
 import type { Pricing } from "@workspace/types";
 
 const pricingSchema = z.object({

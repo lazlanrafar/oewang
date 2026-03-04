@@ -1,6 +1,6 @@
 import { ShieldAlert } from "lucide-react";
 import { Button } from "@workspace/ui";
-import { logout } from "@workspace/modules";
+import { logout } from "@workspace/modules/auth/auth.action";
 
 export default function UnauthorizedPage() {
   return (

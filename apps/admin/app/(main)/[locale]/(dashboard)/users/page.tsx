@@ -11,7 +11,7 @@ import {
 } from "@workspace/ui";
 import { Suspense } from "react";
 
-import { getSystemAdminUsers } from "@workspace/modules";
+import { getSystemAdminUsers } from "@workspace/modules/system-admin/system-admin.action";
 import UserDataTableWrapper from "@/components/users/user-data-table-wrapper";
 
 export default async function UsersPage(props: {

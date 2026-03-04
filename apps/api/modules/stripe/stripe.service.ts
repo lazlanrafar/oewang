@@ -208,7 +208,11 @@ export abstract class StripeService {
     }
 
     const appUrl =
-      Env.API_BASE_URL?.replace("api.", "") || "http://localhost:3001";
+      Env.NEXT_PUBLIC_APP_URL ||
+      (Env.API_BASE_URL || "http://localhost:3001")
+        .replace("api.", "")
+        .replace(":3002", ":3001")
+        .replace(/\/v1$/, "");
 
     // Determine mode based on which price ID it is
     const mode =
@@ -252,7 +256,11 @@ export abstract class StripeService {
     }
 
     const appUrl =
-      Env.API_BASE_URL?.replace("api.", "") || "http://localhost:3001";
+      Env.NEXT_PUBLIC_APP_URL ||
+      (Env.API_BASE_URL || "http://localhost:3001")
+        .replace("api.", "")
+        .replace(":3002", ":3001")
+        .replace(/\/v1$/, "");
 
     const session = await stripe.billingPortal.sessions.create({
       customer: workspace.stripe_customer_id,

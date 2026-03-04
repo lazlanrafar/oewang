@@ -18,7 +18,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
-import { login } from "@workspace/modules";
+import { login } from "@workspace/modules/auth/auth.action";
 
 const FormSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address." }),

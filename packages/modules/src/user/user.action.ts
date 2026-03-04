@@ -4,7 +4,12 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 
 import { createClient } from "@workspace/supabase/server";
-import type { ActionResponse, User, WorkspaceWithRole } from "@workspace/types";
+import type {
+  ActionResponse,
+  ApiResponse,
+  User,
+  WorkspaceWithRole,
+} from "@workspace/types";
 
 import { axiosInstance } from "../lib/axios.server";
 import { exchangeSupabaseToken } from "../auth/auth.action";
@@ -28,11 +33,11 @@ export const syncUser = async (
   user: SyncUserDTO,
 ): Promise<ActionResponse<SyncUserResponse>> => {
   try {
-    const response = await axiosInstance.post<SyncUserResponse>(
+    const response = await axiosInstance.post<ApiResponse<SyncUserResponse>>(
       "users/sync",
       user,
     );
-    return { success: true, data: response.data };
+    return { success: true, data: response.data.data as SyncUserResponse };
   } catch (error: any) {
     return {
       success: false,
@@ -46,8 +51,17 @@ export const getMe = async (): Promise<
 > => {
   try {
     // Note: token is handled by axiosInstance interceptor from okane-session cookie
-    const response = await axiosInstance.get("users/me");
-    return { success: true, data: response.data };
+    const response =
+      await axiosInstance.get<
+        ApiResponse<{ user: User; workspaces: WorkspaceWithRole[] }>
+      >("users/me");
+    return {
+      success: true,
+      data: response.data.data as {
+        user: User;
+        workspaces: WorkspaceWithRole[];
+      },
+    };
   } catch (error: any) {
     return {
       success: false,

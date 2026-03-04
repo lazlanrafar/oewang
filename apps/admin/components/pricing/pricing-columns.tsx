@@ -19,7 +19,7 @@ import {
   CheckCircle,
   XCircle,
 } from "lucide-react";
-import { deletePricingAction, updatePricingAction } from "@workspace/modules";
+import { deletePricingAction, updatePricingAction } from "@workspace/modules/pricing/pricing.action";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { usePricingStore } from "@/stores/pricing";

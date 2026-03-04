@@ -1,4 +1,4 @@
-import { getAdminOrders } from "@workspace/modules";
+import { getAdminOrders } from "@workspace/modules/orders/orders.action";
 import OrdersDataTableWrapper from "@/components/orders/orders-data-table-wrapper";
 import OrdersSearchFilter from "@/components/orders/orders-search-filter";
 import OrdersDataTableColumnVisibility from "@/components/orders/orders-data-table-column-visibility";

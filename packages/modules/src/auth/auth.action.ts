@@ -55,19 +55,7 @@ export async function login(
         // 3. Exchange for app JWT
         const { data: session_data } = await supabase.auth.getSession();
         if (session_data.session?.access_token) {
-          const exchangeResult = await exchangeSupabaseToken(
-            session_data.session.access_token,
-          );
-
-          if (exchangeResult.success && exchangeResult.data) {
-            (await cookies()).set("okane-session", exchangeResult.data.token, {
-              path: "/",
-              httpOnly: true,
-              secure: Env.NODE_ENV === "production",
-              sameSite: "lax",
-              maxAge: 60 * 60 * 24 * 7, // 7 days
-            });
-          }
+          await exchangeSupabaseToken(session_data.session.access_token);
         }
       }
     } catch (e: any) {
@@ -121,19 +109,7 @@ export async function signup(
         // 3. Exchange for app JWT
         const { data: session_data } = await supabase.auth.getSession();
         if (session_data.session?.access_token) {
-          const exchangeResult = await exchangeSupabaseToken(
-            session_data.session.access_token,
-          );
-
-          if (exchangeResult.success && exchangeResult.data) {
-            (await cookies()).set("okane-session", exchangeResult.data.token, {
-              path: "/",
-              httpOnly: true,
-              secure: Env.NODE_ENV === "production",
-              sameSite: "lax",
-              maxAge: 60 * 60 * 24 * 7, // 7 days
-            });
-          }
+          await exchangeSupabaseToken(session_data.session.access_token);
         }
       }
     } catch (e: any) {
@@ -198,7 +174,7 @@ export async function onboardingCreateWorkspaceAction(data: {
     }
     const workspace = wsResult.data;
 
-    // 2. Exchange token for app JWT (now with workspace_id)
+    // 2. Exchange token for app JWT (now with workspace_id and sets cookie)
     const exchangeResult = await exchangeSupabaseToken(session.access_token);
     if (!exchangeResult.success || !exchangeResult.data) {
       return {
@@ -206,15 +182,6 @@ export async function onboardingCreateWorkspaceAction(data: {
         error: exchangeResult.error || "Failed to establish session",
       };
     }
-
-    // 3. Set cookie
-    (await cookies()).set("okane-session", exchangeResult.data.token, {
-      path: "/",
-      httpOnly: true,
-      secure: Env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 7, // 7 days
-    });
     return { success: true, data: workspace };
   } catch (error: any) {
     if (isRedirectError(error)) throw error;
@@ -239,7 +206,28 @@ export async function exchangeSupabaseToken(supabase_token: string): Promise<
       {},
       { headers: { Authorization: `Bearer ${supabase_token}` } },
     );
-    return { success: true, data: response.data };
+
+    const result = response.data.data as {
+      token: string;
+      user_id: string;
+      workspace_id: string | null;
+    };
+
+    // Set the cookie so the proxy can detect it
+    if (result.token) {
+      (await cookies()).set("okane-session", result.token, {
+        path: "/",
+        httpOnly: true,
+        secure: Env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 60 * 60 * 24 * 7, // 7 days
+      });
+    }
+
+    return {
+      success: true,
+      data: result,
+    };
   } catch (error: any) {
     return {
       success: false,

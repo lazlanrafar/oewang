@@ -22,7 +22,7 @@ export const createWorkspace = async (
   try {
     const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
     const response = await axiosInstance.post("workspaces", data, { headers });
-    return { success: true, data: response.data };
+    return { success: true, data: response.data.data };
   } catch (error: any) {
     return {
       success: false,
@@ -36,7 +36,7 @@ export const getMyWorkspaces = async (): Promise<
 > => {
   try {
     const response = await axiosInstance.get("workspaces");
-    return { success: true, data: response.data };
+    return { success: true, data: response.data.data };
   } catch (error: any) {
     return {
       success: false,
@@ -56,7 +56,7 @@ export const getWorkspaceMembers = async (
     const response = await axiosInstance.get(
       `workspaces/${workspaceId}/members`,
     );
-    return { success: true, data: response.data };
+    return { success: true, data: response.data.data };
   } catch (error: any) {
     return {
       success: false,
@@ -75,7 +75,7 @@ export const inviteMember = async (
       `workspaces/${workspaceId}/invitations`,
       { email, role },
     );
-    return { success: true, data: response.data };
+    return { success: true, data: response.data.data };
   } catch (error: any) {
     return {
       success: false,
@@ -91,7 +91,7 @@ export const getWorkspaceInvitations = async (
     const response = await axiosInstance.get(
       `workspaces/${workspaceId}/invitations`,
     );
-    return { success: true, data: response.data };
+    return { success: true, data: response.data.data };
   } catch (error: any) {
     return {
       success: false,
@@ -108,7 +108,7 @@ export const cancelInvitation = async (
     const response = await axiosInstance.delete(
       `workspaces/${workspaceId}/invitations/${invitationId}`,
     );
-    return { success: true, data: response.data };
+    return { success: true, data: response.data.data };
   } catch (error: any) {
     return {
       success: false,
@@ -125,7 +125,8 @@ export const acceptInvitationAction = async (
       "workspaces/invitations/accept",
       { token },
     );
-    return { success: true, data: response.data };
+    const resData = response.data as any;
+    return { success: true, data: resData.data };
   } catch (error: any) {
     return {
       success: false,

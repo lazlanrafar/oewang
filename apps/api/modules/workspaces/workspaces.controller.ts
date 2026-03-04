@@ -38,6 +38,13 @@ export const workspacesController = new Elysia({ prefix: "/workspaces" })
         return buildSuccess(workspace, "Workspace created successfully");
       } catch (error: any) {
         console.error("Error creating workspace:", error);
+
+        // Handle errors thrown by service using status()
+        if (error.status && error.body) {
+          set.status = error.status;
+          return error.body;
+        }
+
         set.status = 500;
         return buildError(
           ErrorCode.INTERNAL_ERROR,

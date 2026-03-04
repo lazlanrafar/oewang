@@ -1,4 +1,4 @@
-import { getMe } from "@workspace/modules";
+import { getMe } from "@workspace/modules/user/user.action";
 
 function getGreeting() {
   const hour = new Date().getHours();
