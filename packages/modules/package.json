@@ -33,12 +33,12 @@
     "@workspace/supabase": "workspace:*",
     "@workspace/types": "workspace:*",
     "axios": "^1.6.0",
-    "next": "15.0.0"
+    "next": "catalog:"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
     "@workspace/eslint-config": "workspace:*",
     "@workspace/typescript-config": "workspace:*",
-    "typescript": "^5.0.0"
+    "typescript": "catalog:"
   }
 }

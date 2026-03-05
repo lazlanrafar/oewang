@@ -17,12 +17,12 @@
   "dependencies": {
     "@workspace/types": "workspace:*",
     "dotenv": "^16.4.7",
-    "zod": "^3.24.2"
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@workspace/eslint-config": "workspace:*",
     "@workspace/typescript-config": "workspace:*",
-    "typescript": "^5.9.3",
+    "typescript": "catalog:",
     "@types/node": "^22.10.2"
   }
 }

@@ -23,7 +23,7 @@
   "devDependencies": {
     "@workspace/typescript-config": "workspace:*",
     "@types/node": "^22.16.4",
-    "next": "^16.1.6",
-    "typescript": "^5.9.3"
+    "next": "catalog:",
+    "typescript": "catalog:"
   }
 }

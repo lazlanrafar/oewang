@@ -34,20 +34,20 @@
     "@workspace/modules": "workspace:*",
     "axios": "^1.13.4",
     "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1",
+    "clsx": "catalog:",
     "cmdk": "^1.1.1",
-    "date-fns": "^3.6.0",
+    "date-fns": "catalog:",
     "embla-carousel-react": "^8.6.0",
     "input-otp": "^1.4.2",
     "jose": "^6.1.3",
     "lucide-react": "^0.562.0",
     "negotiator": "^1.0.0",
-    "next": "^16.1.6",
+    "next": "catalog:",
     "next-themes": "^0.4.6",
     "radix-ui": "^1.4.3",
-    "react": "^19.2.4",
+    "react": "catalog:",
     "react-day-picker": "^9.13.0",
-    "react-dom": "^19.2.4",
+    "react-dom": "catalog:",
     "react-hook-form": "^7.71.1",
     "react-markdown": "^10.1.0",
     "react-resizable-panels": "^3.0.6",
@@ -55,10 +55,10 @@
     "rehype-raw": "^7.0.0",
     "remark-gfm": "^4.0.1",
     "simple-icons": "^15.22.0",
-    "sonner": "^2.0.7",
-    "tailwind-merge": "^3.4.0",
+    "sonner": "catalog:",
+    "tailwind-merge": "catalog:",
     "vaul": "^1.1.2",
-    "zod": "^3.25.76",
+    "zod": "catalog:",
     "zustand": "^5.0.10"
   },
   "devDependencies": {
@@ -83,6 +83,6 @@
     "ts-node": "^10.9.2",
     "tsx": "^4.21.0",
     "tw-animate-css": "^1.4.0",
-    "typescript": "^5.9.3"
+    "typescript": "catalog:"
   }
 }

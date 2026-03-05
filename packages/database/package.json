@@ -17,13 +17,13 @@
   },
   "dependencies": {
     "dotenv": "^16.4.7",
-    "drizzle-orm": "^0.45.1",
+    "drizzle-orm": "catalog:",
     "postgres": "^3.4.5"
   },
   "devDependencies": {
     "@types/node": "^22.16.4",
     "@workspace/typescript-config": "workspace:*",
     "drizzle-kit": "^0.31.9",
-    "typescript": "^5.9.3"
+    "typescript": "catalog:"
   }
 }

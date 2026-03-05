@@ -9,9 +9,9 @@
   },
   "devDependencies": {
     "@workspace/typescript-config": "workspace:*",
-    "typescript": "^5.3.3"
+    "typescript": "catalog:"
   },
   "dependencies": {
-    "zod": "^4.3.6"
+    "zod": "catalog:"
   }
 }
