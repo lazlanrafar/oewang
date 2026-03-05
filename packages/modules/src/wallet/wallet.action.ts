@@ -34,7 +34,7 @@ export interface UpdateWalletData {
 export const getWallets = async (): Promise<ActionResponse<Wallet[]>> => {
   try {
     const res = await api.get("/wallets");
-    return { success: true, data: res.data };
+    return { success: true, data: res.data?.data || [] };
   } catch (error: any) {
     return {
       success: false,
@@ -43,10 +43,12 @@ export const getWallets = async (): Promise<ActionResponse<Wallet[]>> => {
   }
 };
 
-export const createWallet = async (data: CreateWalletData): Promise<ActionResponse<Wallet>> => {
+export const createWallet = async (
+  data: CreateWalletData,
+): Promise<ActionResponse<Wallet>> => {
   try {
     const res = await api.post("/wallets", data);
-    return { success: true, data: res.data };
+    return { success: true, data: res.data?.data };
   } catch (error: any) {
     return {
       success: false,
@@ -55,10 +57,13 @@ export const createWallet = async (data: CreateWalletData): Promise<ActionRespon
   }
 };
 
-export const updateWallet = async (id: string, data: UpdateWalletData): Promise<ActionResponse<Wallet>> => {
+export const updateWallet = async (
+  id: string,
+  data: UpdateWalletData,
+): Promise<ActionResponse<Wallet>> => {
   try {
     const res = await api.put(`/wallets/${id}`, data);
-    return { success: true, data: res.data };
+    return { success: true, data: res.data?.data };
   } catch (error: any) {
     return {
       success: false,
@@ -72,7 +77,7 @@ export const reorderWallets = async (
 ): Promise<ActionResponse<void>> => {
   try {
     const res = await api.put("/wallets/reorder", { updates });
-    return { success: true, data: res.data };
+    return { success: true, data: res.data?.data };
   } catch (error: any) {
     return {
       success: false,
@@ -81,10 +86,12 @@ export const reorderWallets = async (
   }
 };
 
-export const deleteWallet = async (id: string): Promise<ActionResponse<void>> => {
+export const deleteWallet = async (
+  id: string,
+): Promise<ActionResponse<void>> => {
   try {
     const res = await api.delete(`/wallets/${id}`);
-    return { success: true, data: res.data };
+    return { success: true, data: res.data?.data };
   } catch (error: any) {
     return {
       success: false,

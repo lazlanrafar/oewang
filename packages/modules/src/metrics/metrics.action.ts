@@ -11,38 +11,47 @@ export interface ChartDataPoint {
   average?: number;
 }
 
-export const getRevenueMetrics = async (): Promise<ActionResponse<ChartDataPoint[]>> => {
+export const getRevenueMetrics = async (): Promise<
+  ActionResponse<ChartDataPoint[]>
+> => {
   try {
     const res = await api.get("/metrics/revenue");
-    return { success: true, data: res.data };
+    return { success: true, data: res.data?.data || [] };
   } catch (error: any) {
     return {
       success: false,
-      error: error?.response?.data?.message || "Failed to fetch revenue metrics",
+      error:
+        error?.response?.data?.message || "Failed to fetch revenue metrics",
     };
   }
 };
 
-export const getExpenseMetrics = async (): Promise<ActionResponse<ChartDataPoint[]>> => {
+export const getExpenseMetrics = async (): Promise<
+  ActionResponse<ChartDataPoint[]>
+> => {
   try {
     const res = await api.get("/metrics/expenses");
-    return { success: true, data: res.data };
+    return { success: true, data: res.data?.data || [] };
   } catch (error: any) {
     return {
       success: false,
-      error: error?.response?.data?.message || "Failed to fetch expense metrics",
+      error:
+        error?.response?.data?.message || "Failed to fetch expense metrics",
     };
   }
 };
 
-export const getBurnRateMetrics = async (): Promise<ActionResponse<ChartDataPoint[]>> => {
+export const getBurnRateMetrics = async (): Promise<
+  ActionResponse<ChartDataPoint[]>
+> => {
   try {
     const res = await api.get("/metrics/burn-rate");
-    return { success: true, data: res.data };
+    return { success: true, data: res.data?.data || [] };
   } catch (error: any) {
     return {
       success: false,
-      error: error?.response?.data?.message || "Failed to fetch burn rate metrics",
+      error:
+        error?.response?.data?.message || "Failed to fetch burn rate metrics",
     };
   }
 };
@@ -60,11 +69,13 @@ export const getCategoryBreakdown = async (
     const res = await api.get("/metrics/category-breakdown", {
       params: { type },
     });
-    return { success: true, data: res.data };
+    return { success: true, data: res.data?.data || [] };
   } catch (error: any) {
     return {
       success: false,
-      error: error?.response?.data?.message || "Failed to fetch category breakdown metrics",
+      error:
+        error?.response?.data?.message ||
+        "Failed to fetch category breakdown metrics",
     };
   }
 };

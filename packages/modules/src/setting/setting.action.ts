@@ -7,14 +7,17 @@ import type { ActionResponse } from "@workspace/types";
 import { axiosInstance as api } from "../lib/axios.server";
 import type { TransactionSettings } from "@workspace/types";
 
-export const getTransactionSettings = async (): Promise<ActionResponse<TransactionSettings>> => {
+export const getTransactionSettings = async (): Promise<
+  ActionResponse<TransactionSettings>
+> => {
   try {
     const res = await api.get("/settings/transaction");
-    return { success: true, data: res.data };
+    return { success: true, data: res.data?.data };
   } catch (error: any) {
     return {
       success: false,
-      error: error.response?.data?.message || "Failed to fetch transaction settings",
+      error:
+        error.response?.data?.message || "Failed to fetch transaction settings",
     };
   }
 };
@@ -25,11 +28,13 @@ export const updateTransactionSettings = async (
   try {
     const res = await api.patch("/settings/transaction", data);
     revalidatePath("/settings");
-    return { success: true, data: res.data };
+    return { success: true, data: res.data?.data };
   } catch (error: any) {
     return {
       success: false,
-      error: error.response?.data?.message || "Failed to update transaction settings",
+      error:
+        error.response?.data?.message ||
+        "Failed to update transaction settings",
     };
   }
 };
@@ -37,7 +42,7 @@ export const updateTransactionSettings = async (
 export const getSubCurrencies = async (): Promise<ActionResponse<any>> => {
   try {
     const res = await api.get("/settings/sub-currencies");
-    return { success: true, data: res.data };
+    return { success: true, data: res.data?.data || [] };
   } catch (error: any) {
     return {
       success: false,
@@ -46,10 +51,12 @@ export const getSubCurrencies = async (): Promise<ActionResponse<any>> => {
   }
 };
 
-export const addSubCurrency = async (data: { currencyCode: string }): Promise<ActionResponse<any>> => {
+export const addSubCurrency = async (data: {
+  currencyCode: string;
+}): Promise<ActionResponse<any>> => {
   try {
     const res = await api.post("/settings/sub-currencies", data);
-    return { success: true, data: res.data };
+    return { success: true, data: res.data?.data };
   } catch (error: any) {
     return {
       success: false,
@@ -58,10 +65,12 @@ export const addSubCurrency = async (data: { currencyCode: string }): Promise<Ac
   }
 };
 
-export const removeSubCurrency = async (id: string): Promise<ActionResponse<void>> => {
+export const removeSubCurrency = async (
+  id: string,
+): Promise<ActionResponse<void>> => {
   try {
     const res = await api.delete(`/settings/sub-currencies/${id}`);
-    return { success: true, data: res.data };
+    return { success: true, data: res.data?.data };
   } catch (error: any) {
     return {
       success: false,
@@ -70,10 +79,12 @@ export const removeSubCurrency = async (id: string): Promise<ActionResponse<void
   }
 };
 
-export const getExchangeRates = async (base?: string): Promise<ActionResponse<any>> => {
+export const getExchangeRates = async (
+  base?: string,
+): Promise<ActionResponse<any>> => {
   try {
     const res = await api.get("/settings/rates", { params: { base } });
-    return { success: true, data: res.data };
+    return { success: true, data: res.data?.data || [] };
   } catch (error: any) {
     return {
       success: false,
@@ -89,7 +100,7 @@ export const convertCurrency = async (params: {
 }): Promise<ActionResponse<any>> => {
   try {
     const res = await api.get("/settings/rates/convert", { params });
-    return { success: true, data: res.data };
+    return { success: true, data: res.data?.data };
   } catch (error: any) {
     return {
       success: false,

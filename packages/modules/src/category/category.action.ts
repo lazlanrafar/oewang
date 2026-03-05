@@ -18,7 +18,7 @@ export const getCategories = async (
 ): Promise<ActionResponse<Category[]>> => {
   try {
     const res = await api.get("/categories", { params: { type } });
-    return { success: true, data: res.data || [] };
+    return { success: true, data: res.data?.data || [] };
   } catch (error: any) {
     return {
       success: false,
@@ -44,7 +44,7 @@ export const createCategory = async (
 ): Promise<ActionResponse<Category>> => {
   try {
     const res = await api.post("/categories", data);
-    return { success: true, data: res.data };
+    return { success: true, data: res.data?.data };
   } catch (error: any) {
     return {
       success: false,
@@ -59,7 +59,7 @@ export const updateCategory = async (
 ): Promise<ActionResponse<Category>> => {
   try {
     const res = await api.patch(`/categories/${id}`, data);
-    return { success: true, data: res.data };
+    return { success: true, data: res.data?.data };
   } catch (error: any) {
     return {
       success: false,
@@ -73,7 +73,7 @@ export const reorderCategories = async (
 ): Promise<ActionResponse<void>> => {
   try {
     const res = await api.put("/categories/reorder", { updates });
-    return { success: true, data: res.data };
+    return { success: true, data: res.data?.data };
   } catch (error: any) {
     return {
       success: false,
@@ -87,7 +87,7 @@ export const deleteCategory = async (
 ): Promise<ActionResponse<void>> => {
   try {
     const res = await api.delete(`/categories/${id}`);
-    return { success: true, data: res.data };
+    return { success: true, data: res.data?.data };
   } catch (error: any) {
     return {
       success: false,
