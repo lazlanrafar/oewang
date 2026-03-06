@@ -1,1 +1,0 @@
-ALTER TABLE orders ADD COLUMN sequence_number SERIAL NOT NULL;

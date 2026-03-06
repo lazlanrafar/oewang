@@ -18,5 +18,6 @@ export * from "./workspace/workspace.action";
 export * from "./pricing/pricing.action";
 export * from "./stripe/stripe.action";
 export * from "./orders/orders.action";
+export * from "./system-metrics/system-metrics.action";
 
 export * from "./lib/axios.server";

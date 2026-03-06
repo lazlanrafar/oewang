@@ -10,11 +10,7 @@
     },
     "postgres": {
       "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-postgres",
-        "postgresql://postgres.ljgdzuveqbmocxjuxlld:ctIe5HuD9EWFKoaL@aws-1-ap-northeast-1.pooler.supabase.com:6543/postgres"
-      ]
+      "args": ["-y", "@modelcontextprotocol/server-postgres"]
     }
   }
 }
