@@ -27,6 +27,7 @@ import {
   getHeaderLabel,
   TableScrollState,
 } from "./data-table-types";
+import type { StickyConfig } from "./data-table";
 import { useStickyColumns } from "../../../hooks/use-sticky-columns";
 import { useSortQuery } from "../../../hooks/use-sort-query";
 import { DataTableResizeHandle } from "./data-table-resize-handle";
@@ -37,6 +38,7 @@ interface Props<TData> {
   loading?: boolean;
   tableScroll?: TableScrollState;
   tableId: TableId;
+  sticky?: StickyConfig;
 }
 
 export function DataTableHeader<TData>({
@@ -44,6 +46,7 @@ export function DataTableHeader<TData>({
   loading,
   tableScroll,
   tableId,
+  sticky,
 }: Props<TData>) {
   const { sortColumn, sortValue, createSortQuery } = useSortQuery();
 
@@ -52,6 +55,7 @@ export function DataTableHeader<TData>({
     table,
     loading,
     tableId,
+    stickyColumns: sticky?.columns,
   });
 
   // Get sortable column IDs (excluding sticky columns)
@@ -164,7 +168,7 @@ export function DataTableHeader<TData>({
                   ? actionsFullWidth
                     ? ACTIONS_FULL_WIDTH_HEADER_CLASS
                     : ACTIONS_STICKY_HEADER_CLASS
-                  : `${stickyClass} bg-background z-10`;
+                  : `${stickyClass} bg-background z-20`;
 
                 return (
                   <TableHead

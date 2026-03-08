@@ -118,3 +118,23 @@ export const deleteTransaction = async (
     };
   }
 };
+
+export const bulkDeleteTransactions = async (
+  ids: string[],
+): Promise<ActionResponse<void>> => {
+  try {
+    // Check if backend supports bulk delete, otherwise loop (safer for now if unsure)
+    // Most REST APIs for bulk use POST /bulk-delete or similar,
+    // but without seeing controller, I'll provide a loop as fallback or
+    // assume a standard DELETE /transactions?ids=... if preferred.
+    // Let's assume a loop for maximum compatibility unless I see a bulk endpoint.
+    await Promise.all(ids.map((id) => api.delete(`/transactions/${id}`)));
+    return { success: true, data: undefined };
+  } catch (error: any) {
+    return {
+      success: false,
+      error:
+        error.response?.data?.message || "Failed to delete some transactions",
+    };
+  }
+};

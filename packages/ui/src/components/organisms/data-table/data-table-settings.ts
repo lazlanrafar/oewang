@@ -7,7 +7,12 @@ import type {
 /**
  * Table identifiers for all supported tables
  */
-export type TableId = "users" | "pricing" | "orders" | "accounts";
+export type TableId =
+  | "users"
+  | "pricing"
+  | "orders"
+  | "accounts"
+  | "transactions";
 
 /**
  * Settings for a single table
@@ -38,6 +43,7 @@ export const defaultHiddenColumns: Record<TableId, string[]> = {
   pricing: [],
   orders: [],
   accounts: [],
+  transactions: [],
 };
 
 /**

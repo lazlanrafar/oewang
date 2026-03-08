@@ -111,8 +111,9 @@ function DataTableRowInner<TData>({
           <TableCell
             key={cell.id}
             className={cn(
-              "h-full flex items-center border-b border-border overflow-hidden",
+              "h-full flex items-center border-b border-border overflow-hidden bg-background",
               cellClassName,
+              isSticky && "z-10",
             )}
             style={cellStyle}
             onClick={() => {

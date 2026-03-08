@@ -9,6 +9,11 @@ export const STICKY_COLUMNS: Record<TableId, StickyColumnConfig[]> = {
   pricing: [{ id: "name", width: 200 }],
   orders: [{ id: "code", width: 200 }],
   accounts: [{ id: "name", width: 200 }],
+  transactions: [
+    { id: "select", width: 40 },
+    { id: "date", width: 110 },
+    { id: "name", width: 320 },
+  ],
 };
 
 /**
@@ -39,6 +44,14 @@ export const SORT_FIELD_MAPS: Record<TableId, Record<string, string>> = {
     balance: "balance",
     createdAt: "createdAt",
   },
+  transactions: {
+    name: "name",
+    "category.name": "categoryId",
+    "wallet.name": "walletId",
+    amount: "amount",
+    date: "date",
+    type: "type",
+  },
 };
 
 /**
@@ -49,6 +62,7 @@ export const NON_REORDERABLE_COLUMNS: Record<TableId, Set<string>> = {
   pricing: new Set(["name", "actions"]),
   orders: new Set(["code", "actions"]),
   accounts: new Set(["name", "actions"]),
+  transactions: new Set(["select", "date", "name", "actions"]),
 };
 
 /**
@@ -59,6 +73,7 @@ export const ROW_HEIGHTS: Record<TableId, number> = {
   pricing: 45,
   orders: 45,
   accounts: 45,
+  transactions: 45,
 };
 
 /**
@@ -97,6 +112,13 @@ export const TABLE_CONFIGS: Record<TableId, TableConfig> = {
     sortFieldMap: SORT_FIELD_MAPS.accounts,
     nonReorderableColumns: NON_REORDERABLE_COLUMNS.accounts,
     rowHeight: ROW_HEIGHTS.accounts,
+  },
+  transactions: {
+    tableId: "transactions",
+    stickyColumns: STICKY_COLUMNS.transactions,
+    sortFieldMap: SORT_FIELD_MAPS.transactions,
+    nonReorderableColumns: NON_REORDERABLE_COLUMNS.transactions,
+    rowHeight: ROW_HEIGHTS.transactions,
   },
 };
 

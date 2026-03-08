@@ -41,7 +41,7 @@ import { ROW_HEIGHTS } from "./data-table-configs";
 // Stable reference for non-clickable columns
 const DEFAULT_NON_CLICKABLE_COLUMNS = new Set(["select", "actions"]);
 
-type StickyConfig = {
+export type StickyConfig = {
   /** Column IDs that should be sticky. Order matters — they stack left-to-right. */
   columns: string[];
   /** How many leading columns to skip when computing scroll offsets. */
@@ -86,6 +86,12 @@ type Props<TData extends { id: string | number }> = {
   ) => void;
   /** Total number of records (used for display in footer). */
   rowCount?: number;
+  /** Current row selection state. */
+  rowSelection?: RowSelectionState;
+  /** Callback for row selection changes. */
+  onRowSelectionChange?: (
+    updater: import("@tanstack/react-table").Updater<RowSelectionState>,
+  ) => void;
   /** Whether the table should fill its container's height. If true, containerHeight is ignored. */
   hFull?: boolean;
 };
@@ -108,6 +114,8 @@ export function DataTable<TData extends { id: string | number }>({
   onPaginationChange,
   rowCount,
   hFull,
+  rowSelection: rowSelectionProp,
+  onRowSelectionChange: onRowSelectionChangeProp,
 }: Props<TData>) {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
@@ -120,7 +128,8 @@ export function DataTable<TData extends { id: string | number }>({
     setColumnOrder,
   } = useTableSettings({ tableId, initialSettings });
 
-  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  const [internalRowSelection, setInternalRowSelection] =
+    useState<RowSelectionState>({});
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: pageSizeProp,
@@ -152,16 +161,15 @@ export function DataTable<TData extends { id: string | number }>({
     data,
     columns,
     state: {
-      columnVisibility,
       columnSizing,
       columnOrder,
-      rowSelection,
+      rowSelection: rowSelectionProp ?? internalRowSelection,
       pagination: paginationProp ?? pagination,
     },
     manualPagination,
     pageCount: pageCountProp,
     onPaginationChange: onPaginationChange ?? setPagination,
-    onRowSelectionChange: setRowSelection,
+    onRowSelectionChange: onRowSelectionChangeProp ?? setInternalRowSelection,
     onColumnVisibilityChange: setColumnVisibility,
     onColumnSizingChange: setColumnSizing,
     onColumnOrderChange: setColumnOrder,
@@ -181,11 +189,13 @@ export function DataTable<TData extends { id: string | number }>({
       const rows = table.getRowModel().rows;
       const start = Math.min(startIndex, endIndex);
       const end = Math.max(startIndex, endIndex);
+      const currentSelection = rowSelectionProp ?? internalRowSelection;
       const allSelected = Array.from({ length: end - start + 1 }, (_, i) => {
         const row = rows[start + i];
-        return row ? rowSelection[row.id] : true;
+        return row ? currentSelection[row.id] : true;
       }).every(Boolean);
-      setRowSelection((prev) => {
+      const setSelection = onRowSelectionChangeProp ?? setInternalRowSelection;
+      setSelection((prev) => {
         const next = { ...prev };
         for (let i = start; i <= end; i++) {
           const row = rows[i];
@@ -196,7 +206,7 @@ export function DataTable<TData extends { id: string | number }>({
         return next;
       });
     },
-    [table, rowSelection],
+    [table, rowSelectionProp, internalRowSelection, onRowSelectionChangeProp],
   );
 
   const { getStickyStyle, getStickyClassName } = useStickyColumns({
@@ -294,6 +304,7 @@ export function DataTable<TData extends { id: string | number }>({
                       table={table}
                       tableScroll={tableScroll}
                       tableId={tableId}
+                      sticky={sticky}
                     />
 
                     <TableBody className="border-l-0 border-r-0 block">
@@ -309,7 +320,9 @@ export function DataTable<TData extends { id: string | number }>({
                           columnSizing={columnSizing}
                           columnOrder={columnOrder}
                           columnVisibility={columnVisibility}
-                          isSelected={!!rowSelection[row.id]}
+                          isSelected={
+                            !!(rowSelectionProp ?? internalRowSelection)[row.id]
+                          }
                         />
                       ))}
                     </TableBody>
