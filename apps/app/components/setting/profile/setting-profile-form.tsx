@@ -22,7 +22,10 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import * as z from "zod";
 
-import { getMe, updateProfileAction } from "@workspace/modules/user/user.action";
+import {
+  getMe,
+  updateProfileAction,
+} from "@workspace/modules/user/user.action";
 
 interface SettingProfileFormProps {
   dictionary: {
@@ -80,7 +83,7 @@ export function SettingProfileForm({ dictionary }: SettingProfileFormProps) {
     email: z
       .string({
         required_error: profile.email.error_required,
-      })
+      } as any)
       .email(),
     bio: z.string().max(160).optional(),
   });
@@ -88,7 +91,7 @@ export function SettingProfileForm({ dictionary }: SettingProfileFormProps) {
   type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
   const form = useForm<ProfileFormValues>({
-    resolver: zodResolver(profileFormSchema),
+    resolver: zodResolver(profileFormSchema as any),
     defaultValues: {
       username: "",
       email: "",
@@ -175,7 +178,11 @@ export function SettingProfileForm({ dictionary }: SettingProfileFormProps) {
             <FormItem>
               <FormLabel>{profile.bio.label}</FormLabel>
               <FormControl>
-                <Textarea placeholder={profile.bio.placeholder} className="resize-none" {...field} />
+                <Textarea
+                  placeholder={profile.bio.placeholder}
+                  className="resize-none"
+                  {...field}
+                />
               </FormControl>
               <FormDescription>{profile.bio.description}</FormDescription>
               <FormMessage />
@@ -183,7 +190,9 @@ export function SettingProfileForm({ dictionary }: SettingProfileFormProps) {
           )}
         />
         <Button type="submit" disabled={updateMutation.isPending}>
-          {updateMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {updateMutation.isPending && (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          )}
           {profile.update_profile}
         </Button>
       </form>

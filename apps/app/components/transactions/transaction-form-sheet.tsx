@@ -309,7 +309,7 @@ export function TransactionFormSheet({
                       <Input
                         placeholder="e.g. Grocery shopping, Salary…"
                         {...field}
-                        className="bg-transparent border-muted/40 h-10 transition-colors focus:border-foreground"
+                        className="bg-transparent h-10 transition-colors focus:border-foreground"
                       />
                     </FormControl>
                     <FormDescription className="text-[11px]">
@@ -341,7 +341,7 @@ export function TransactionFormSheet({
                             currencySymbol={settings?.mainCurrencySymbol}
                             decimalPlaces={settings?.mainCurrencyDecimalPlaces}
                             className={cn(
-                              "pl-8 text-sm bg-transparent border-muted/40 h-10 transition-colors focus:border-foreground",
+                              "pl-8 text-sm bg-transparent h-10 transition-colors focus:border-foreground",
                               activeTab === "expense"
                                 ? "text-red-500"
                                 : activeTab === "income"
@@ -365,7 +365,7 @@ export function TransactionFormSheet({
                   </FormLabel>
                   <Button
                     variant="outline"
-                    className="w-full justify-between pl-3 text-left font-normal bg-transparent border-muted/40 h-10 hover:bg-muted/10 text-muted-foreground"
+                    className="w-full justify-between pl-3 text-left font-normal bg-transparent h-10 hover:bg-muted/10 text-muted-foreground"
                     disabled
                   >
                     {settings?.mainCurrencyCode || "USD"}
@@ -391,7 +391,7 @@ export function TransactionFormSheet({
                         <SelectAccount
                           value={field.value ?? undefined}
                           onChange={(id) => form.setValue("walletId", id)}
-                          className="w-full justify-start px-3 text-left font-normal bg-transparent border-muted/40 h-10 transition-colors hover:bg-muted/10 hover:bg-transparent"
+                          className="w-full justify-start px-3 text-left font-normal bg-transparent h-10 transition-colors hover:bg-muted/10 hover:bg-transparent"
                         />
                       </FormControl>
                       <FormDescription className="text-[11px]">
@@ -414,7 +414,7 @@ export function TransactionFormSheet({
                         <Input
                           type="date"
                           {...field}
-                          className="bg-transparent border-muted/40 h-10 transition-colors focus:border-foreground"
+                          className="bg-transparent h-10 transition-colors focus:border-foreground"
                         />
                       </FormControl>
                       <FormDescription className="text-[11px]">
@@ -442,7 +442,7 @@ export function TransactionFormSheet({
                             value={field.value ?? undefined}
                             type={activeTab === "income" ? "income" : "expense"}
                             onChange={(id) => form.setValue("categoryId", id)}
-                            className="w-full justify-start px-3 text-left font-normal bg-transparent border-muted/40 h-10 transition-colors hover:bg-muted/10 hover:bg-transparent"
+                            className="w-full justify-start px-3 text-left font-normal bg-transparent h-10 transition-colors hover:bg-muted/10 hover:bg-transparent"
                           />
                         </FormControl>
                         <FormDescription className="text-[11px]">
@@ -466,7 +466,7 @@ export function TransactionFormSheet({
                             value={field.value ?? undefined}
                             onChange={(id) => form.setValue("toWalletId", id)}
                             placeholder="Select destination"
-                            className="w-full justify-start px-3 text-left font-normal bg-transparent border-muted/40 h-10 transition-colors hover:bg-muted/10 hover:bg-transparent"
+                            className="w-full justify-start px-3 text-left font-normal bg-transparent h-10 transition-colors hover:bg-muted/10 hover:bg-transparent"
                           />
                         </FormControl>
                         <FormDescription className="text-[11px]">
@@ -491,7 +491,7 @@ export function TransactionFormSheet({
                           value={field.value ?? undefined}
                           onChange={(id) => form.setValue("assignedUserId", id)}
                           placeholder="Select member"
-                          className="w-full justify-start px-3 text-left font-normal bg-transparent border-muted/40 h-10 transition-colors hover:bg-muted/10 hover:bg-transparent"
+                          className="w-full justify-start px-3 text-left font-normal bg-transparent h-10 transition-colors hover:bg-muted/10 hover:bg-transparent"
                         />
                       </FormControl>
                       <FormDescription className="text-[11px]">
@@ -511,7 +511,7 @@ export function TransactionFormSheet({
                   <FormItem className="space-y-2">
                     <FormLabel className="text-sm font-medium">Notes</FormLabel>
                     <FormControl>
-                      <div className="min-h-[120px] rounded-md border border-muted/40 bg-transparent px-3 py-2 text-sm transition-colors focus-within:border-foreground focus-within:ring-0 mb-4">
+                      <div className="min-h-[120px] rounded-md border bg-transparent px-3 py-2 text-sm transition-colors focus-within:border-foreground focus-within:ring-0 mb-4">
                         <Editor
                           initialContent={field.value || ""}
                           placeholder="Add notes, links, or any details…"
@@ -554,7 +554,7 @@ export function TransactionFormSheet({
                     {attachments.map((file) => (
                       <div
                         key={file.id}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-md border border-muted/20 bg-muted/5 text-sm group transition-colors hover:border-muted/40"
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-md border border-muted/20 bg-muted/5 text-sm group transition-colors hover"
                       >
                         <FileIcon type={file.type} />
                         <span className="flex-1 truncate">{file.name}</span>

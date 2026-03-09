@@ -53,7 +53,7 @@ export function WalletForm({ wallet, onClose, dictionary }: WalletFormProps) {
   });
 
   const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(formSchema as any),
     defaultValues: {
       name: wallet?.name ?? "",
       groupId: wallet?.groupId ?? "none",

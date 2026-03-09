@@ -161,14 +161,6 @@ export const transactionColumns = (
     },
   },
   {
-    id: "tax_amount",
-    header: "Tax Amount",
-    cell: () => <span className="text-xs text-muted-foreground">-</span>,
-    size: 170,
-    minSize: 100,
-    maxSize: 400,
-  },
-  {
     accessorKey: "amount",
     header: "Amount",
     cell: ({ row, table }) => {

@@ -176,6 +176,7 @@ export function DataTable<TData extends { id: string | number }>({
     data,
     columns,
     state: {
+      columnVisibility,
       columnSizing,
       columnOrder,
       rowSelection: rowSelectionProp ?? internalRowSelection,

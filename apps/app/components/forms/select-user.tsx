@@ -58,13 +58,13 @@ export function SelectUser({
   });
 
   const selectedMember = useMemo(() => {
-    return members?.find((m) => m.userId === value);
+    return members?.find((m: any) => m.userId === value);
   }, [members, value]);
 
   const filteredMembers = useMemo(() => {
     if (!searchValue || !members) return members || [];
     return members.filter(
-      (m) =>
+      (m: any) =>
         m.name?.toLowerCase().includes(searchValue.toLowerCase()) ||
         m.email.toLowerCase().includes(searchValue.toLowerCase()),
     );
@@ -125,7 +125,7 @@ export function SelectUser({
 
             {!isLoading && (
               <CommandGroup>
-                {filteredMembers.map((member) => (
+                {filteredMembers.map((member: any) => (
                   <CommandItem
                     key={member.userId}
                     value={member.email}

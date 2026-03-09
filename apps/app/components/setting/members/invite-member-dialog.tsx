@@ -47,7 +47,7 @@ export function InviteMemberDialog({ onSuccess }: InviteMemberDialogProps) {
   const [loading, setLoading] = useState(false);
 
   const form = useForm<InviteFormValues>({
-    resolver: zodResolver(inviteSchema),
+    resolver: zodResolver(inviteSchema as any),
     defaultValues: { email: "", role: "member" },
   });
 
