@@ -35,7 +35,10 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { getVaultFiles, uploadVaultFile } from "@workspace/modules/vault/vault.action";
+import {
+  getVaultFiles,
+  uploadVaultFile,
+} from "@workspace/modules/vault/vault.action";
 
 const ALLOWED_TYPES = [
   "image/jpeg",
@@ -70,13 +73,20 @@ function formatBytes(bytes: number) {
 }
 
 function FileIcon({ type }: { type: string }) {
-  if (type.startsWith("image/")) return <ImageIcon className="w-4 h-4 shrink-0" />;
+  if (type.startsWith("image/"))
+    return <ImageIcon className="w-4 h-4 shrink-0" />;
   if (type.startsWith("video/")) return <Film className="w-4 h-4 shrink-0" />;
-  if (type === "application/pdf") return <FileText className="w-4 h-4 shrink-0" />;
+  if (type === "application/pdf")
+    return <FileText className="w-4 h-4 shrink-0" />;
   return <FileIconLucide className="w-4 h-4 shrink-0" />;
 }
 
-export function VaultPickerModal({ open, onOpenChange, selectedIds, onConfirm }: VaultPickerModalProps) {
+export function VaultPickerModal({
+  open,
+  onOpenChange,
+  selectedIds,
+  onConfirm,
+}: VaultPickerModalProps) {
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [files, setFiles] = useState<VaultFile[]>([]);
@@ -95,7 +105,7 @@ export function VaultPickerModal({ open, onOpenChange, selectedIds, onConfirm }:
   const LIMIT = 12;
 
   const processedFiles = useMemo(() => {
-    let result = [...files];
+    let result = Array.isArray(files) ? [...files] : [];
 
     // Search
     if (search) {
@@ -167,7 +177,9 @@ export function VaultPickerModal({ open, onOpenChange, selectedIds, onConfirm }:
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
       if (!ALLOWED_TYPES.includes(file.type)) {
-        throw new Error(`Invalid file type for ${file.name}. Only documents and images are allowed.`);
+        throw new Error(
+          `Invalid file type for ${file.name}. Only documents and images are allowed.`,
+        );
       }
       const formData = new FormData();
       formData.append("file", file);
@@ -194,7 +206,9 @@ export function VaultPickerModal({ open, onOpenChange, selectedIds, onConfirm }:
     const toastId = toast.loading(`Uploading ${filesArray.length} file(s)...`);
 
     try {
-      await Promise.all(filesArray.map((file) => uploadMutation.mutateAsync(file)));
+      await Promise.all(
+        filesArray.map((file) => uploadMutation.mutateAsync(file)),
+      );
       toast.success("All files uploaded successfully", { id: toastId });
     } catch (error) {
       toast.error("Some files failed to upload", { id: toastId });
@@ -238,19 +252,34 @@ export function VaultPickerModal({ open, onOpenChange, selectedIds, onConfirm }:
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={() => setSortBy("newest")}>
-                    Newest first {sortBy === "newest" && <Check className="w-4 h-4 ml-auto" />}
+                    Newest first{" "}
+                    {sortBy === "newest" && (
+                      <Check className="w-4 h-4 ml-auto" />
+                    )}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setSortBy("name_asc")}>
-                    Name (A-Z) {sortBy === "name_asc" && <Check className="w-4 h-4 ml-auto" />}
+                    Name (A-Z){" "}
+                    {sortBy === "name_asc" && (
+                      <Check className="w-4 h-4 ml-auto" />
+                    )}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setSortBy("name_desc")}>
-                    Name (Z-A) {sortBy === "name_desc" && <Check className="w-4 h-4 ml-auto" />}
+                    Name (Z-A){" "}
+                    {sortBy === "name_desc" && (
+                      <Check className="w-4 h-4 ml-auto" />
+                    )}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setSortBy("size_desc")}>
-                    Size (Largest) {sortBy === "size_desc" && <Check className="w-4 h-4 ml-auto" />}
+                    Size (Largest){" "}
+                    {sortBy === "size_desc" && (
+                      <Check className="w-4 h-4 ml-auto" />
+                    )}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setSortBy("size_asc")}>
-                    Size (Smallest) {sortBy === "size_asc" && <Check className="w-4 h-4 ml-auto" />}
+                    Size (Smallest){" "}
+                    {sortBy === "size_asc" && (
+                      <Check className="w-4 h-4 ml-auto" />
+                    )}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -272,15 +301,23 @@ export function VaultPickerModal({ open, onOpenChange, selectedIds, onConfirm }:
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-40">
-                  <DropdownMenuItem onClick={() => setView("list")} className="justify-between">
+                  <DropdownMenuItem
+                    onClick={() => setView("list")}
+                    className="justify-between"
+                  >
                     <span className="flex items-center">
-                      <ListIcon className="w-4 h-4 mr-2 text-muted-foreground" /> List view
+                      <ListIcon className="w-4 h-4 mr-2 text-muted-foreground" />{" "}
+                      List view
                     </span>
                     {view === "list" && <Check className="w-4 h-4" />}
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setView("grid")} className="justify-between">
+                  <DropdownMenuItem
+                    onClick={() => setView("grid")}
+                    className="justify-between"
+                  >
                     <span className="flex items-center">
-                      <Grid className="w-4 h-4 mr-2 text-muted-foreground" /> Grid view
+                      <Grid className="w-4 h-4 mr-2 text-muted-foreground" />{" "}
+                      Grid view
                     </span>
                     {view === "grid" && <Check className="w-4 h-4" />}
                   </DropdownMenuItem>
@@ -293,22 +330,37 @@ export function VaultPickerModal({ open, onOpenChange, selectedIds, onConfirm }:
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm">
-                  {filterType === "all" ? "File type" : filterType.charAt(0).toUpperCase() + filterType.slice(1)}{" "}
+                  {filterType === "all"
+                    ? "File type"
+                    : filterType.charAt(0).toUpperCase() +
+                      filterType.slice(1)}{" "}
                   <ChevronDown className="w-3 h-3 ml-1" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
                 <DropdownMenuItem onClick={() => setFilterType("all")}>
-                  All types {filterType === "all" && <Check className="w-4 h-4 ml-auto" />}
+                  All types{" "}
+                  {filterType === "all" && (
+                    <Check className="w-4 h-4 ml-auto" />
+                  )}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setFilterType("image")}>
-                  Images {filterType === "image" && <Check className="w-4 h-4 ml-auto" />}
+                  Images{" "}
+                  {filterType === "image" && (
+                    <Check className="w-4 h-4 ml-auto" />
+                  )}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setFilterType("document")}>
-                  Documents {filterType === "document" && <Check className="w-4 h-4 ml-auto" />}
+                  Documents{" "}
+                  {filterType === "document" && (
+                    <Check className="w-4 h-4 ml-auto" />
+                  )}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setFilterType("video")}>
-                  Videos {filterType === "video" && <Check className="w-4 h-4 ml-auto" />}
+                  Videos{" "}
+                  {filterType === "video" && (
+                    <Check className="w-4 h-4 ml-auto" />
+                  )}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -328,16 +380,28 @@ export function VaultPickerModal({ open, onOpenChange, selectedIds, onConfirm }:
               </DropdownMenuTrigger>
               <DropdownMenuContent>
                 <DropdownMenuItem onClick={() => setFilterSize("all")}>
-                  Any size {filterSize === "all" && <Check className="w-4 h-4 ml-auto" />}
+                  Any size{" "}
+                  {filterSize === "all" && (
+                    <Check className="w-4 h-4 ml-auto" />
+                  )}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setFilterSize("small")}>
-                  Under 1MB {filterSize === "small" && <Check className="w-4 h-4 ml-auto" />}
+                  Under 1MB{" "}
+                  {filterSize === "small" && (
+                    <Check className="w-4 h-4 ml-auto" />
+                  )}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setFilterSize("medium")}>
-                  1MB - 5MB {filterSize === "medium" && <Check className="w-4 h-4 ml-auto" />}
+                  1MB - 5MB{" "}
+                  {filterSize === "medium" && (
+                    <Check className="w-4 h-4 ml-auto" />
+                  )}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setFilterSize("large")}>
-                  Over 5MB {filterSize === "large" && <Check className="w-4 h-4 ml-auto" />}
+                  Over 5MB{" "}
+                  {filterSize === "large" && (
+                    <Check className="w-4 h-4 ml-auto" />
+                  )}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -361,15 +425,25 @@ export function VaultPickerModal({ open, onOpenChange, selectedIds, onConfirm }:
                 if (e.target.files) handleUploadFiles(e.target.files);
               }}
             />
-            <Button variant="outline" onClick={() => fileInputRef.current?.click()} disabled={uploadMutation.isPending}>
+            <Button
+              variant="outline"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadMutation.isPending}
+            >
               Add media <ChevronDown className="w-4 h-4 ml-2" />
             </Button>
-            <p className="text-sm text-muted-foreground">Drag and drop images, videos, 3D models, and files</p>
+            <p className="text-sm text-muted-foreground">
+              Drag and drop images, videos, 3D models, and files
+            </p>
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto min-h-0">
-          {isLoading && <p className="py-8 text-center text-sm text-muted-foreground">Loading vault…</p>}
+          {isLoading && (
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              Loading vault…
+            </p>
+          )}
           {!isLoading && files.length === 0 && (
             <p className="py-8 text-center text-sm text-muted-foreground">
               No vault files found. Upload files in the Vault section first.
@@ -397,19 +471,28 @@ export function VaultPickerModal({ open, onOpenChange, selectedIds, onConfirm }:
                                 : "bg-background border-input hover:border-foreground",
                             )}
                           >
-                            {selected && <Check className="w-3.5 h-3.5" strokeWidth={3} />}
+                            {selected && (
+                              <Check className="w-3.5 h-3.5" strokeWidth={3} />
+                            )}
                           </button>
                         </div>
                         <div className="w-10 h-10 rounded shrink-0 overflow-hidden bg-muted flex items-center justify-center border">
                           {file.type.startsWith("image/") && file.url ? (
-                            <img src={file.url} alt={file.name} className="w-full h-full object-cover" />
+                            <img
+                              src={file.url}
+                              alt={file.name}
+                              className="w-full h-full object-cover"
+                            />
                           ) : (
                             <FileIcon type={file.type} />
                           )}
                         </div>
                         <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                           <div className="flex-1 truncate pr-4">
-                            <p className="text-sm font-medium truncate cursor-pointer" onClick={() => toggle(file.id)}>
+                            <p
+                              className="text-sm font-medium truncate cursor-pointer"
+                              onClick={() => toggle(file.id)}
+                            >
                               {file.name}
                             </p>
                           </div>
@@ -418,8 +501,13 @@ export function VaultPickerModal({ open, onOpenChange, selectedIds, onConfirm }:
                             <span className="w-16 truncate uppercase text-xs font-semibold">
                               {file.type.split("/")[1] || file.type}
                             </span>
-                            <span className="w-24 truncate">{(file as any).metadata?.orientation || "Landscape"}</span>
-                            <span className="w-20 text-right truncate">{formatBytes(file.size)}</span>
+                            <span className="w-24 truncate">
+                              {(file as any).metadata?.orientation ||
+                                "Landscape"}
+                            </span>
+                            <span className="w-20 text-right truncate">
+                              {formatBytes(file.size)}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -431,7 +519,10 @@ export function VaultPickerModal({ open, onOpenChange, selectedIds, onConfirm }:
                   {processedFiles.map((file) => {
                     const selected = pending.has(file.id);
                     return (
-                      <div key={file.id} className="group relative flex flex-col gap-2 rounded-xl bg-muted/20 pb-3">
+                      <div
+                        key={file.id}
+                        className="group relative flex flex-col gap-2 rounded-xl bg-muted/20 pb-3"
+                      >
                         <div
                           className="w-full aspect-square bg-muted rounded-t-xl rounded-b-md overflow-hidden relative cursor-pointer border"
                           onClick={() => toggle(file.id)}
@@ -462,7 +553,9 @@ export function VaultPickerModal({ open, onOpenChange, selectedIds, onConfirm }:
                                   : "bg-background/80 border-input opacity-0 group-hover:opacity-100 backdrop-blur-sm",
                               )}
                             >
-                              {selected && <Check className="w-3 h-3" strokeWidth={3} />}
+                              {selected && (
+                                <Check className="w-3 h-3" strokeWidth={3} />
+                              )}
                             </button>
                           </div>
 
@@ -470,7 +563,10 @@ export function VaultPickerModal({ open, onOpenChange, selectedIds, onConfirm }:
                         </div>
 
                         <div className="px-3 flex flex-col text-center">
-                          <span className="text-sm font-medium truncate" title={file.name}>
+                          <span
+                            className="text-sm font-medium truncate"
+                            title={file.name}
+                          >
                             {file.name}
                           </span>
                           <span className="text-xs text-muted-foreground uppercase mt-0.5">
@@ -500,13 +596,23 @@ export function VaultPickerModal({ open, onOpenChange, selectedIds, onConfirm }:
             {/* We keep pagination hidden logically unless files > limit, but Shopify reference hides pagination in this drawer context. We leave it invisible if totalPages=1. */}
             {totalPages > 1 && (
               <div className="flex items-center gap-1">
-                <Button variant="ghost" size="icon" disabled={page <= 1} onClick={() => setPage(page - 1)}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  disabled={page <= 1}
+                  onClick={() => setPage(page - 1)}
+                >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
                 <span className="text-xs px-2">
                   Page {page} of {totalPages}
                 </span>
-                <Button variant="outline" size="icon" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  disabled={page >= totalPages}
+                  onClick={() => setPage(page + 1)}
+                >
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>

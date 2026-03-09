@@ -124,14 +124,14 @@ export const workspacesController = new Elysia({ prefix: "/workspaces" })
     },
   )
   .get(
-    "/:id/members",
-    async ({ set, auth, params }: any) => {
-      if (!auth) {
+    "/members",
+    async ({ set, auth }: any) => {
+      if (!auth || !auth.workspace_id) {
         set.status = 401;
         return buildError(ErrorCode.UNAUTHORIZED, "Unauthorized");
       }
       try {
-        const members = await workspacesService.getMembers(params.id);
+        const members = await workspacesService.getMembers(auth.workspace_id);
         return buildSuccess(members, "Members retrieved");
       } catch (error: any) {
         set.status = 500;
@@ -146,9 +146,9 @@ export const workspacesController = new Elysia({ prefix: "/workspaces" })
     },
   )
   .post(
-    "/:id/invitations",
-    async ({ body, set, auth, params }: any) => {
-      if (!auth) {
+    "/invitations",
+    async ({ body, set, auth }: any) => {
+      if (!auth || !auth.workspace_id) {
         set.status = 401;
         return buildError(ErrorCode.UNAUTHORIZED, "Unauthorized");
       }
@@ -156,7 +156,7 @@ export const workspacesController = new Elysia({ prefix: "/workspaces" })
       try {
         const invitation = await workspacesService.inviteMember(
           auth.user_id,
-          params.id,
+          auth.workspace_id,
           body.email,
           body.role,
         );
@@ -177,16 +177,18 @@ export const workspacesController = new Elysia({ prefix: "/workspaces" })
     },
   )
   .get(
-    "/:id/invitations",
-    async ({ set, auth, params }: any) => {
-      if (!auth) {
+    "/invitations",
+    async ({ set, auth }: any) => {
+      if (!auth || !auth.workspace_id) {
         set.status = 401;
         return buildError(ErrorCode.UNAUTHORIZED, "Unauthorized");
       }
 
       try {
         // ideally check if user is member of workspace first
-        const invitations = await workspacesService.getInvitations(params.id);
+        const invitations = await workspacesService.getInvitations(
+          auth.workspace_id,
+        );
         return buildSuccess(invitations, "Invitations retrieved");
       } catch (error: any) {
         set.status = 500;
@@ -201,9 +203,9 @@ export const workspacesController = new Elysia({ prefix: "/workspaces" })
     },
   )
   .delete(
-    "/:id/invitations/:invitationId",
+    "/invitations/:invitationId",
     async ({ set, auth, params }: any) => {
-      if (!auth) {
+      if (!auth || !auth.workspace_id) {
         set.status = 401;
         return buildError(ErrorCode.UNAUTHORIZED, "Unauthorized");
       }
@@ -211,7 +213,7 @@ export const workspacesController = new Elysia({ prefix: "/workspaces" })
       try {
         await workspacesService.cancelInvitation(
           auth.user_id,
-          params.id,
+          auth.workspace_id,
           params.invitationId,
         );
         return buildSuccess(null, "Invitation cancelled");
@@ -221,7 +223,6 @@ export const workspacesController = new Elysia({ prefix: "/workspaces" })
       }
     },
     {
-      params: InvitationParams,
       detail: {
         summary: "Cancel Invitation",
         tags: ["Workspaces"],

@@ -48,16 +48,11 @@ interface Invitation {
 }
 
 interface MembersClientProps {
-  workspaceId: string;
   members: Member[];
   invitations: Invitation[];
 }
 
-export function MembersClient({
-  workspaceId,
-  members,
-  invitations,
-}: MembersClientProps) {
+export function MembersClient({ members, invitations }: MembersClientProps) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("members");
 
@@ -66,7 +61,7 @@ export function MembersClient({
   };
 
   const handleCancelInvitation = async (invitationId: string) => {
-    const result = await cancelInvitation(workspaceId, invitationId);
+    const result = await cancelInvitation(invitationId);
     if (result.success) {
       toast.success("Invitation cancelled");
       handleRefresh();
@@ -79,10 +74,7 @@ export function MembersClient({
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold tracking-tight">Members</h2>
-        <InviteMemberDialog
-          workspaceId={workspaceId}
-          onSuccess={handleRefresh}
-        />
+        <InviteMemberDialog onSuccess={handleRefresh} />
       </div>
 
       <Tabs

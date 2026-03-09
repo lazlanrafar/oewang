@@ -3,7 +3,18 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import type { Transaction } from "@workspace/types";
 import {
-  Badge,
+  Landmark,
+  Receipt,
+  Loader2,
+  MoreHorizontal,
+  Trash,
+  Edit,
+  Copy,
+  Check,
+  FileCheck,
+  ExternalLink,
+} from "lucide-react";
+import {
   cn,
   Checkbox,
   Tooltip,
@@ -16,21 +27,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@workspace/ui";
+import { SelectCategory } from "@/components/forms/select-category";
+import { SelectAccount } from "@/components/forms/select-account";
+import { SelectUser } from "@/components/forms/select-user";
 import { format } from "date-fns";
 import { formatCurrency } from "@workspace/utils";
-import {
-  Landmark,
-  Receipt,
-  Loader2,
-  MoreHorizontal,
-  Trash,
-  Edit,
-  Copy,
-  Check,
-  FileCheck,
-  ExternalLink,
-} from "lucide-react";
-import { SelectCategory } from "../shared/select-category";
 import { updateTransaction } from "@workspace/modules/transaction/transaction.action";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -197,13 +198,36 @@ export const transactionColumns = (
     maxSize: 400,
   },
   {
+    accessorKey: "wallet.name",
+    header: "Account",
+    cell: ({ row, table }) => (
+      <AccountCell transaction={row.original} table={table} />
+    ),
+    size: 200,
+    minSize: 120,
+    maxSize: 300,
+  },
+  {
     id: "category",
     accessorKey: "category.name",
     header: "Category",
-    cell: ({ row }) => <CategoryCell transaction={row.original} />,
+    cell: ({ row, table }) => (
+      <CategoryCell transaction={row.original} table={table} />
+    ),
     size: 250,
     minSize: 150,
     maxSize: 400,
+  },
+  {
+    id: "assignee",
+    accessorKey: "user.name",
+    header: "Assignee",
+    cell: ({ row, table }) => (
+      <UserCell transaction={row.original} table={table} />
+    ),
+    size: 200,
+    minSize: 120,
+    maxSize: 300,
   },
   {
     id: "actions",
@@ -311,9 +335,16 @@ export const transactionColumns = (
   },
 ];
 
-function CategoryCell({ transaction }: { transaction: Transaction }) {
+function CategoryCell({
+  transaction,
+  table,
+}: {
+  transaction: Transaction;
+  table: any;
+}) {
   const router = useRouter();
   const [updating, setUpdating] = useState(false);
+  const meta = table.options.meta as any;
 
   const handleCategoryChange = async (categoryId: string) => {
     if (categoryId === transaction.categoryId) return;
@@ -340,8 +371,7 @@ function CategoryCell({ transaction }: { transaction: Transaction }) {
       {canHaveCategory ? (
         <>
           <SelectCategory
-            selectedCategoryId={transaction.categoryId ?? undefined}
-            selectedCategoryName={transaction.category?.name ?? undefined}
+            value={transaction.categoryId ?? undefined}
             type={transaction.type as "income" | "expense"}
             onChange={handleCategoryChange}
             disabled={updating}
@@ -355,6 +385,89 @@ function CategoryCell({ transaction }: { transaction: Transaction }) {
         </>
       ) : (
         <span className="text-xs text-muted-foreground ml-3">-</span>
+      )}
+    </div>
+  );
+}
+
+function AccountCell({
+  transaction,
+  table,
+}: {
+  transaction: Transaction;
+  table: any;
+}) {
+  const router = useRouter();
+  const [updating, setUpdating] = useState(false);
+  const meta = table.options.meta as any;
+
+  const handleAccountChange = async (walletId: string) => {
+    if (walletId === transaction.walletId) return;
+
+    setUpdating(true);
+    const res = await updateTransaction(transaction.id, {
+      walletId,
+    });
+
+    if (res.success) {
+      toast.success("Account updated");
+      router.refresh();
+    } else {
+      toast.error(res.error || "Failed to update account");
+    }
+    setUpdating(false);
+  };
+
+  return (
+    <div className="relative group w-full h-full flex items-center">
+      <SelectAccount
+        value={transaction.walletId}
+        onChange={handleAccountChange}
+        disabled={updating}
+        className="w-full justify-start px-3 h-full rounded-none border-none hover:bg-transparent focus-visible:ring-0"
+      />
+      {updating && (
+        <div className="absolute inset-0 flex items-center justify-center bg-background/50 z-20">
+          <Loader2 className="h-3 w-3 animate-spin text-primary" />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function UserCell({ transaction }: { transaction: Transaction; table: any }) {
+  const router = useRouter();
+  const [updating, setUpdating] = useState(false);
+
+  const handleUserChange = async (userId: string) => {
+    if (userId === transaction.assignedUserId) return;
+
+    setUpdating(true);
+    const res = await updateTransaction(transaction.id, {
+      assignedUserId: userId,
+    });
+
+    if (res.success) {
+      toast.success("Assignee updated");
+      router.refresh();
+    } else {
+      toast.error(res.error || "Failed to update assignee");
+    }
+    setUpdating(false);
+  };
+
+  return (
+    <div className="relative group w-full h-full flex items-center">
+      <SelectUser
+        value={transaction.assignedUserId ?? undefined}
+        onChange={handleUserChange}
+        disabled={updating}
+        className="w-full justify-start px-3 h-full rounded-none border-none hover:bg-transparent focus-visible:ring-0"
+      />
+      {updating && (
+        <div className="absolute inset-0 flex items-center justify-center bg-background/50 z-20">
+          <Loader2 className="h-3 w-3 animate-spin text-primary" />
+        </div>
       )}
     </div>
   );

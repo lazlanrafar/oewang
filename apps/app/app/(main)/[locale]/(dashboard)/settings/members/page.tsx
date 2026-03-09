@@ -29,15 +29,9 @@ async function getWorkspaceIdFromToken(): Promise<string | null> {
 }
 
 export default async function MembersPage() {
-  const workspaceId = await getWorkspaceIdFromToken();
-
-  if (!workspaceId) {
-    redirect("/sign-in");
-  }
-
   const [membersResult, invitationsResult] = await Promise.all([
-    getWorkspaceMembers(workspaceId),
-    getWorkspaceInvitations(workspaceId),
+    getWorkspaceMembers(),
+    getWorkspaceInvitations(),
   ]);
 
   const members = membersResult.success ? membersResult.data : [];
@@ -51,11 +45,7 @@ export default async function MembersPage() {
           Manage who has access to this workspace.
         </p>
       </div>
-      <MembersClient
-        workspaceId={workspaceId}
-        members={members}
-        invitations={invitations}
-      />
+      <MembersClient members={members} invitations={invitations} />
     </div>
   );
 }

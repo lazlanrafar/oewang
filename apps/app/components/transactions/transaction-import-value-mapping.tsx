@@ -1,7 +1,9 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useCsvContext } from "./transaction-import-context";
+import { Loader2, Plus, Wallet as WalletIcon, Tag } from "lucide-react";
 import {
   Button,
   Select,
@@ -15,16 +17,16 @@ import {
   getCategories,
   createCategory,
 } from "@workspace/modules/category/category.action";
-import { getWallets } from "@workspace/modules/wallet/wallet.action";
+import {
+  getWallets,
+  createWallet,
+} from "@workspace/modules/wallet/wallet.action";
 import { toast } from "sonner";
-import { SelectCategory } from "../shared/select-category";
-import { Category, Wallet } from "@workspace/types";
-import { Loader2, Plus, Wallet as WalletIcon, Tag } from "lucide-react";
+import { SelectAccount } from "@/components/forms/select-account";
+import { SelectCategory } from "@/components/forms/select-category";
 
 export function ValueMapping({ onNext }: { onNext: () => void }) {
   const { firstRows, watch, valueMappings, setValueMappings } = useCsvContext();
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [wallets, setWallets] = useState<Wallet[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const categoryCol = watch("category");
@@ -71,9 +73,6 @@ export function ValueMapping({ onNext }: { onNext: () => void }) {
 
       const cats = catRes.success ? catRes.data || [] : [];
       const walls = wallRes.success ? wallRes.data || [] : [];
-
-      setCategories(cats);
-      setWallets(walls);
 
       // Auto-mapping logic
       const newMappings = { ...valueMappings };
@@ -276,21 +275,11 @@ export function ValueMapping({ onNext }: { onNext: () => void }) {
                   <p className="text-sm font-medium truncate">{val}</p>
                 </div>
                 <div className="w-[240px]">
-                  <Select
-                    value={valueMappings.wallets[val] || ""}
-                    onValueChange={(id) => handleWalletMap(val, id)}
-                  >
-                    <SelectTrigger className="h-8 text-xs">
-                      <SelectValue placeholder="Select account..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {wallets.map((w) => (
-                        <SelectItem key={w.id} value={w.id} className="text-xs">
-                          {w.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SelectAccount
+                    value={valueMappings.wallets[val] || undefined}
+                    onChange={(id) => handleWalletMap(val, id)}
+                    className="h-8 text-xs"
+                  />
                 </div>
               </div>
             ))}
@@ -320,10 +309,8 @@ export function ValueMapping({ onNext }: { onNext: () => void }) {
                 </div>
                 <CategoryMappingRow
                   csvValue={val}
-                  categories={categories}
                   handleCategoryMap={handleCategoryMap}
                   valueMappings={valueMappings}
-                  setCategories={setCategories}
                 />
               </div>
             ))}
@@ -336,25 +323,21 @@ export function ValueMapping({ onNext }: { onNext: () => void }) {
 
 function CategoryMappingRow({
   csvValue,
-  categories,
   handleCategoryMap,
   valueMappings,
-  setCategories,
 }: {
   csvValue: string;
-  categories: Category[];
   handleCategoryMap: (csvValue: string, categoryId: string) => void;
   valueMappings: any;
-  setCategories: (cats: Category[]) => void;
 }) {
+  const queryClient = useQueryClient();
   return (
     <div className="w-[280px] flex gap-2">
       <SelectCategory
         type="expense"
         onChange={(id) => handleCategoryMap(csvValue, id)}
-        selectedCategoryId={valueMappings.categories[csvValue]}
+        value={valueMappings.categories[csvValue]}
         className="flex-1 h-8 text-xs"
-        initialCategories={categories}
       />
       {!valueMappings.categories[csvValue] && (
         <Button
@@ -367,7 +350,9 @@ function CategoryMappingRow({
               type: "expense",
             });
             if (res.success && res.data) {
-              setCategories([...categories, res.data]);
+              queryClient.invalidateQueries({
+                queryKey: ["categories", "expense"],
+              });
               handleCategoryMap(csvValue, res.data.id);
               toast.success(`Category "${csvValue}" created`);
             } else {

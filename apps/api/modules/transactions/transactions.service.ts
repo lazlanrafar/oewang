@@ -26,6 +26,7 @@ export abstract class TransactionsService {
     // Sanitize optional UUID fields: empty strings from the frontend are not valid UUIDs.
     const toWalletId = body.toWalletId || undefined;
     const categoryId = body.categoryId || undefined;
+    const assignedUserId = body.assignedUserId || userId;
     // Strip non-DB fields before insert
     const { attachmentIds, ...dbBody } = body;
 
@@ -35,6 +36,7 @@ export abstract class TransactionsService {
       amount,
       toWalletId,
       categoryId,
+      assignedUserId,
     });
 
     // Sync attachments
@@ -92,6 +94,7 @@ export abstract class TransactionsService {
             : item.amount;
         const toWalletId = item.toWalletId || undefined;
         const categoryId = item.categoryId || undefined;
+        const assignedUserId = item.assignedUserId || userId;
         const { attachmentIds, ...dbBody } = item;
 
         const transaction = await TransactionsRepository.create({
@@ -100,6 +103,7 @@ export abstract class TransactionsService {
           amount,
           toWalletId,
           categoryId,
+          assignedUserId,
         });
 
         const val = Number(amount);

@@ -17,6 +17,7 @@ export const TransactionModel = {
     description: t.Optional(t.String()),
     isReady: t.Optional(t.Boolean()),
     isExported: t.Optional(t.Boolean()),
+    assignedUserId: t.Optional(t.String()),
     attachmentIds: t.Optional(t.Array(t.String())),
   }),
   bulkCreate: t.Array(
@@ -37,6 +38,7 @@ export const TransactionModel = {
       description: t.Optional(t.String()),
       isReady: t.Optional(t.Boolean()),
       isExported: t.Optional(t.Boolean()),
+      assignedUserId: t.Optional(t.String()),
       attachmentIds: t.Optional(t.Array(t.String())),
     }),
   ),
@@ -59,6 +61,7 @@ export const TransactionModel = {
     description: t.Optional(t.String()),
     isReady: t.Optional(t.Boolean()),
     isExported: t.Optional(t.Boolean()),
+    assignedUserId: t.Optional(t.String()),
     attachmentIds: t.Optional(t.Array(t.String())),
   }),
   listQuery: t.Object({

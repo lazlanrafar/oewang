@@ -5,6 +5,7 @@ import {
   categories,
   transactionAttachments,
   vaultFiles,
+  users,
 } from "@workspace/database";
 import type { Transaction } from "@workspace/types";
 import {
@@ -75,11 +76,18 @@ export abstract class TransactionsRepository {
         wallet: { id: fromWallet.id, name: fromWallet.name },
         toWallet: { id: toWallet.id, name: toWallet.name },
         category: { id: categories.id, name: categories.name },
+        user: {
+          id: users.id,
+          name: users.name,
+          email: users.email,
+          profile_picture: users.profile_picture,
+        },
       })
       .from(transactions)
       .leftJoin(fromWallet, eq(transactions.walletId, fromWallet.id))
       .leftJoin(toWallet, eq(transactions.toWalletId, toWallet.id))
       .leftJoin(categories, eq(transactions.categoryId, categories.id))
+      .leftJoin(users, eq(transactions.assignedUserId, users.id))
       .where(
         and(
           eq(transactions.workspaceId, workspaceId),
@@ -107,6 +115,7 @@ export abstract class TransactionsRepository {
       wallet: result.wallet,
       toWallet: result.toWallet,
       category: result.category,
+      user: result.user,
       attachments,
     } as unknown as Transaction;
   }
@@ -162,11 +171,18 @@ export abstract class TransactionsRepository {
         wallet: { id: fromWallet.id, name: fromWallet.name },
         toWallet: { id: toWallet.id, name: toWallet.name },
         category: { id: categories.id, name: categories.name },
+        user: {
+          id: users.id,
+          name: users.name,
+          email: users.email,
+          profile_picture: users.profile_picture,
+        },
       })
       .from(transactions)
       .leftJoin(fromWallet, eq(transactions.walletId, fromWallet.id))
       .leftJoin(toWallet, eq(transactions.toWalletId, toWallet.id))
       .leftJoin(categories, eq(transactions.categoryId, categories.id))
+      .leftJoin(users, eq(transactions.assignedUserId, users.id))
       .where(and(...filters))
       .limit(params.limit)
       .offset((params.page - 1) * params.limit)
@@ -183,6 +199,7 @@ export abstract class TransactionsRepository {
       wallet: row.wallet,
       toWallet: row.toWallet,
       category: row.category,
+      user: row.user,
     }));
 
     // Fetch attachments for the whole page

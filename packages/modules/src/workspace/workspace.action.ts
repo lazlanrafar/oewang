@@ -49,13 +49,9 @@ export const getMyWorkspaces = async (): Promise<
 export const create_workspace = createWorkspace;
 export const get_my_workspaces = getMyWorkspaces;
 
-export const getWorkspaceMembers = async (
-  workspaceId: string,
-): Promise<ActionResponse<any>> => {
+export const getWorkspaceMembers = async (): Promise<ActionResponse<any>> => {
   try {
-    const response = await axiosInstance.get(
-      `workspaces/${workspaceId}/members`,
-    );
+    const response = await axiosInstance.get("workspaces/members");
     return { success: true, data: response.data.data };
   } catch (error: any) {
     return {
@@ -66,15 +62,14 @@ export const getWorkspaceMembers = async (
 };
 
 export const inviteMember = async (
-  workspaceId: string,
   email: string,
   role: "admin" | "member",
 ): Promise<ActionResponse<any>> => {
   try {
-    const response = await axiosInstance.post(
-      `workspaces/${workspaceId}/invitations`,
-      { email, role },
-    );
+    const response = await axiosInstance.post("workspaces/invitations", {
+      email,
+      role,
+    });
     return { success: true, data: response.data.data };
   } catch (error: any) {
     return {
@@ -84,13 +79,11 @@ export const inviteMember = async (
   }
 };
 
-export const getWorkspaceInvitations = async (
-  workspaceId: string,
-): Promise<ActionResponse<any>> => {
+export const getWorkspaceInvitations = async (): Promise<
+  ActionResponse<any>
+> => {
   try {
-    const response = await axiosInstance.get(
-      `workspaces/${workspaceId}/invitations`,
-    );
+    const response = await axiosInstance.get("workspaces/invitations");
     return { success: true, data: response.data.data };
   } catch (error: any) {
     return {
@@ -101,12 +94,11 @@ export const getWorkspaceInvitations = async (
 };
 
 export const cancelInvitation = async (
-  workspaceId: string,
   invitationId: string,
 ): Promise<ActionResponse<any>> => {
   try {
     const response = await axiosInstance.delete(
-      `workspaces/${workspaceId}/invitations/${invitationId}`,
+      `workspaces/invitations/${invitationId}`,
     );
     return { success: true, data: response.data.data };
   } catch (error: any) {

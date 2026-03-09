@@ -39,11 +39,10 @@ const inviteSchema = z.object({
 type InviteFormValues = z.infer<typeof inviteSchema>;
 
 interface InviteMemberDialogProps {
-  workspaceId: string;
   onSuccess?: () => void;
 }
 
-export function InviteMemberDialog({ workspaceId, onSuccess }: InviteMemberDialogProps) {
+export function InviteMemberDialog({ onSuccess }: InviteMemberDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -54,7 +53,7 @@ export function InviteMemberDialog({ workspaceId, onSuccess }: InviteMemberDialo
 
   async function onSubmit(values: InviteFormValues) {
     setLoading(true);
-    const result = await inviteMember(workspaceId, values.email, values.role);
+    const result = await inviteMember(values.email, values.role);
     setLoading(false);
 
     if (result.success) {
@@ -79,7 +78,9 @@ export function InviteMemberDialog({ workspaceId, onSuccess }: InviteMemberDialo
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Invite Member</DialogTitle>
-          <DialogDescription>Invite a new member to join your workspace.</DialogDescription>
+          <DialogDescription>
+            Invite a new member to join your workspace.
+          </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
@@ -104,7 +105,10 @@ export function InviteMemberDialog({ workspaceId, onSuccess }: InviteMemberDialo
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Role</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select a role" />
@@ -121,7 +125,12 @@ export function InviteMemberDialog({ workspaceId, onSuccess }: InviteMemberDialo
             />
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={loading}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setOpen(false)}
+                disabled={loading}
+              >
                 Cancel
               </Button>
               <Button type="submit" disabled={loading}>

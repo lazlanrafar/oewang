@@ -3,13 +3,11 @@
 import { useEffect, useState } from "react";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { getCategories } from "@workspace/modules/category/category.action";
 import {
   createTransaction,
   updateTransaction,
 } from "@workspace/modules/transaction/transaction.action";
-import { getWallets } from "@workspace/modules/wallet/wallet.action";
-import type { Category, Transaction, Wallet } from "@workspace/types";
+import type { Transaction } from "@workspace/types";
 import {
   Button,
   Command,
@@ -23,6 +21,7 @@ import {
   Editor,
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -31,6 +30,7 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
+  Select,
   Sheet,
   SheetContent,
   SheetHeader,
@@ -39,6 +39,9 @@ import {
   TabsList,
   TabsTrigger,
 } from "@workspace/ui";
+import { SelectAccount } from "@/components/forms/select-account";
+import { SelectCategory } from "@/components/forms/select-category";
+import { SelectUser } from "@/components/forms/select-user";
 import { useCurrency } from "@workspace/ui/hooks";
 import {
   Check,
@@ -73,6 +76,7 @@ const transactionSchema = z.object({
   categoryId: z.string().optional(),
   name: z.string().optional(),
   description: z.string().optional(),
+  assignedUserId: z.string().optional(),
   attachmentIds: z.array(z.string()).optional(),
 });
 
@@ -115,8 +119,6 @@ export function TransactionFormSheet({
   const [activeTab, setActiveTab] = useState<TransactionFormValues["type"]>(
     (transaction?.type as TransactionFormValues["type"]) || "expense",
   );
-  const [wallets, setWallets] = useState<Wallet[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
   const [attachments, setAttachments] = useState<VaultFileRef[]>([]);
   const [vaultPickerOpen, setVaultPickerOpen] = useState(false);
   const { settings } = useCurrency();
@@ -132,27 +134,14 @@ export function TransactionFormSheet({
       walletId: "",
       categoryId: "",
       toWalletId: "",
+      assignedUserId: "",
       attachmentIds: [],
     },
   });
 
-  const filteredCategories = categories.filter((c) => c.type === activeTab);
-
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [walletsResponse, categoriesResponse] = await Promise.all([
-          getWallets(),
-          getCategories(),
-        ]);
-
-        if (walletsResponse.success && walletsResponse.data) {
-          setWallets(walletsResponse.data);
-        }
-        if (categoriesResponse.success && categoriesResponse.data) {
-          setCategories(categoriesResponse.data);
-        }
-
         if (transaction) {
           form.reset({
             amount: Number(transaction.amount),
@@ -164,9 +153,10 @@ export function TransactionFormSheet({
             walletId: transaction.walletId ?? "",
             toWalletId: transaction.toWalletId ?? "",
             categoryId: transaction.categoryId ?? "",
-            name: (transaction as any).name ?? "",
+            name: transaction.name ?? "",
             description: transaction.description ?? "",
             attachmentIds: (transaction as any).attachmentIds ?? [],
+            assignedUserId: transaction.assignedUserId ?? "",
           });
           setAttachments((transaction as any).attachments ?? []);
           setActiveTab(transaction.type as any);
@@ -181,13 +171,13 @@ export function TransactionFormSheet({
             categoryId: "",
             toWalletId: "",
             attachmentIds: [],
+            assignedUserId: "",
           });
           setAttachments([]);
           setActiveTab("expense");
         }
       } catch (error) {
         console.error("Failed to load form data", error);
-        toast.error("Failed to load wallets or categories");
       }
     };
     if (open) {
@@ -246,88 +236,178 @@ export function TransactionFormSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent>
-        <SheetHeader className="mb-10">
-          <SheetTitle className="text-3xl font-sans tracking-tight font-bold">
+      <SheetContent className="flex flex-col h-full p-0">
+        <SheetHeader className="px-6 py-6 border-b shrink-0">
+          <SheetTitle>
             {transaction ? "Edit Transaction" : "New Transaction"}
           </SheetTitle>
         </SheetHeader>
 
-        <div className="flex-1 overflow-y-auto px-6 pb-20 no-scrollbar">
+        <div className="flex-1 overflow-y-auto px-6 py-6 no-scrollbar">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              {/* Type tabs */}
-              <Tabs
-                value={activeTab}
-                onValueChange={handleTabChange}
-                className="w-full mb-8"
-              >
-                <TabsList className="grid w-full grid-cols-3 bg-muted/30 h-11 p-1">
-                  <TabsTrigger
-                    value="income"
-                    className="rounded-sm data-[state=active]:bg-background data-[state=active]:shadow-sm"
-                  >
-                    Income
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="expense"
-                    className="rounded-sm data-[state=active]:bg-background data-[state=active]:shadow-sm"
-                  >
-                    Expense
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="transfer"
-                    className="rounded-sm data-[state=active]:bg-background data-[state=active]:shadow-sm"
-                  >
-                    Transfer
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
+            <form
+              id="transaction-form"
+              onSubmit={form.handleSubmit(onSubmit)}
+              className="space-y-8"
+            >
+              {/* Type Toggle */}
+              <div className="flex w-full border border-border bg-muted/30 rounded-md overflow-hidden">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className={cn(
+                    "flex-1 rounded-none text-xs border-r border-border last:border-r-0 h-full",
+                    activeTab === "expense"
+                      ? "bg-muted font-medium shadow-sm"
+                      : "bg-transparent text-muted-foreground hover:bg-muted/50",
+                  )}
+                  onClick={() => handleTabChange("expense")}
+                >
+                  Expense
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className={cn(
+                    "flex-1 rounded-none text-xs border-r border-border last:border-r-0 h-full",
+                    activeTab === "income"
+                      ? "bg-muted font-medium shadow-sm"
+                      : "bg-transparent text-muted-foreground hover:bg-muted/50",
+                  )}
+                  onClick={() => handleTabChange("income")}
+                >
+                  Income
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className={cn(
+                    "flex-1 rounded-none text-xs h-full",
+                    activeTab === "transfer"
+                      ? "bg-muted font-medium shadow-sm"
+                      : "bg-transparent text-muted-foreground hover:bg-muted/50",
+                  )}
+                  onClick={() => handleTabChange("transfer")}
+                >
+                  Transfer
+                </Button>
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-[-24px] mb-4">
+                Select whether this is money coming in (Income) or going out
+                (Expense)
+              </p>
 
-              {/* Amount */}
               <FormField
                 control={form.control}
-                name="amount"
+                name="name"
                 render={({ field }) => (
-                  <FormItem className="space-y-3 mb-8">
-                    <FormLabel className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                      Amount
+                  <FormItem>
+                    <FormLabel className="text-sm font-medium">
+                      Description
                     </FormLabel>
                     <FormControl>
-                      <div className="relative group">
-                        <span className="absolute left-0 top-1/2 -translate-y-1/2 text-3xl font-light text-muted-foreground/50 transition-colors group-focus-within:text-foreground">
-                          {settings?.mainCurrencySymbol ?? "$"}
-                        </span>
-                        <CurrencyInput
-                          value={field.value}
-                          onChange={field.onChange}
-                          currencySymbol={settings?.mainCurrencySymbol}
-                          decimalPlaces={settings?.mainCurrencyDecimalPlaces}
-                          className={cn(
-                            "pl-8 text-5xl font-bold bg-transparent border-none focus-visible:ring-0 transition-all",
-                            activeTab === "expense"
-                              ? "text-red-500"
-                              : activeTab === "income"
-                                ? "text-green-500"
-                                : "text-blue-500",
-                          )}
-                          autoFocus
-                        />
-                      </div>
+                      <Input
+                        placeholder="e.g. Grocery shopping, Salary…"
+                        {...field}
+                        className="bg-transparent border-muted/40 h-10 transition-colors focus:border-foreground"
+                      />
                     </FormControl>
+                    <FormDescription className="text-[11px]">
+                      A brief description of what this transaction is for
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              {/* Date + Wallet */}
-              <div className="grid grid-cols-2 gap-6 mb-6">
+              {/* Amount + Currency */}
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="amount"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium">
+                        Amount
+                      </FormLabel>
+                      <FormControl>
+                        <div className="relative group">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground/50 transition-colors group-focus-within:text-foreground">
+                            {settings?.mainCurrencySymbol ?? "$"}
+                          </span>
+                          <CurrencyInput
+                            value={field.value}
+                            onChange={field.onChange}
+                            currencySymbol={settings?.mainCurrencySymbol}
+                            decimalPlaces={settings?.mainCurrencyDecimalPlaces}
+                            className={cn(
+                              "pl-8 text-sm bg-transparent border-muted/40 h-10 transition-colors focus:border-foreground",
+                              activeTab === "expense"
+                                ? "text-red-500"
+                                : activeTab === "income"
+                                  ? "text-green-500"
+                                  : "text-blue-500",
+                            )}
+                          />
+                        </div>
+                      </FormControl>
+                      <FormDescription className="text-[11px]">
+                        Enter the transaction amount
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="flex flex-col">
+                  <FormLabel className="text-sm font-medium mb-2 pr-4 pt-1">
+                    Currency
+                  </FormLabel>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-between pl-3 text-left font-normal bg-transparent border-muted/40 h-10 hover:bg-muted/10 text-muted-foreground"
+                    disabled
+                  >
+                    {settings?.mainCurrencyCode || "USD"}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                  <FormDescription className="text-[11px] mt-2">
+                    The currency for this transaction
+                  </FormDescription>
+                </div>
+              </div>
+
+              {/* Account + Date */}
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="walletId"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel className="text-sm font-medium">
+                        Account
+                      </FormLabel>
+                      <FormControl>
+                        <SelectAccount
+                          value={field.value ?? undefined}
+                          onChange={(id) => form.setValue("walletId", id)}
+                          className="w-full justify-start px-3 text-left font-normal bg-transparent border-muted/40 h-10 transition-colors hover:bg-muted/10 hover:bg-transparent"
+                        />
+                      </FormControl>
+                      <FormDescription className="text-[11px]">
+                        The account this transaction belongs to
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 <FormField
                   control={form.control}
                   name="date"
                   render={({ field }) => (
                     <FormItem className="space-y-2">
-                      <FormLabel className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      <FormLabel className="text-sm font-medium">
                         Date
                       </FormLabel>
                       <FormControl>
@@ -337,248 +417,101 @@ export function TransactionFormSheet({
                           className="bg-transparent border-muted/40 h-10 transition-colors focus:border-foreground"
                         />
                       </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="walletId"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col space-y-2">
-                      <FormLabel className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                        From Wallet
-                      </FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              role="combobox"
-                              className={cn(
-                                "w-full justify-between pl-3 text-left font-normal bg-transparent border-muted/40 h-10 transition-colors hover:bg-muted/10",
-                                !field.value && "text-muted-foreground",
-                              )}
-                            >
-                              {field.value
-                                ? wallets.find((w) => w.id === field.value)
-                                    ?.name
-                                : "Select wallet"}
-                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent
-                          className="w-[--radix-popover-trigger-width] p-0"
-                          align="start"
-                        >
-                          <Command>
-                            <CommandInput placeholder="Search wallet..." />
-                            <CommandList>
-                              <CommandEmpty>No wallet found.</CommandEmpty>
-                              <CommandGroup>
-                                {wallets.map((wallet) => (
-                                  <CommandItem
-                                    value={wallet.name}
-                                    key={wallet.id}
-                                    onSelect={() =>
-                                      form.setValue("walletId", wallet.id)
-                                    }
-                                  >
-                                    <Check
-                                      className={cn(
-                                        "mr-2 h-4 w-4",
-                                        wallet.id === field.value
-                                          ? "opacity-100"
-                                          : "opacity-0",
-                                      )}
-                                    />
-                                    {wallet.name}
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
+                      <FormDescription className="text-[11px]">
+                        When this transaction occurred
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
 
-              {/* To Wallet (transfer only) */}
-              {activeTab === "transfer" && (
-                <FormField
-                  control={form.control}
-                  name="toWalletId"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                        To Wallet
-                      </FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              role="combobox"
-                              className={cn(
-                                "w-full justify-between pl-3 text-left font-normal bg-transparent border-muted/40 h-10 transition-colors hover:bg-muted/10",
-                                !field.value && "text-muted-foreground",
-                              )}
-                            >
-                              {field.value
-                                ? wallets.find((w) => w.id === field.value)
-                                    ?.name
-                                : "Select destination"}
-                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent
-                          className="w-[--radix-popover-trigger-width] p-0"
-                          align="start"
-                        >
-                          <Command>
-                            <CommandInput placeholder="Search wallet..." />
-                            <CommandList>
-                              <CommandEmpty>No wallet found.</CommandEmpty>
-                              <CommandGroup>
-                                {wallets
-                                  .filter(
-                                    (w) => w.id !== form.getValues("walletId"),
-                                  )
-                                  .map((wallet) => (
-                                    <CommandItem
-                                      value={wallet.name}
-                                      key={wallet.id}
-                                      onSelect={() =>
-                                        form.setValue("toWalletId", wallet.id)
-                                      }
-                                    >
-                                      <Check
-                                        className={cn(
-                                          "mr-2 h-4 w-4",
-                                          wallet.id === field.value
-                                            ? "opacity-100"
-                                            : "opacity-0",
-                                        )}
-                                      />
-                                      {wallet.name}
-                                    </CommandItem>
-                                  ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
-
-              {/* Category (non-transfer only) */}
-              {activeTab !== "transfer" && (
-                <FormField
-                  control={form.control}
-                  name="categoryId"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                        Category
-                      </FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              role="combobox"
-                              className={cn(
-                                "w-full justify-between pl-3 text-left font-normal bg-transparent border-muted/40 h-10 transition-colors hover:bg-muted/10",
-                                !field.value && "text-muted-foreground",
-                              )}
-                            >
-                              {field.value
-                                ? categories.find((c) => c.id === field.value)
-                                    ?.name
-                                : "Select category"}
-                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent
-                          className="w-[--radix-popover-trigger-width] p-0"
-                          align="start"
-                        >
-                          <Command>
-                            <CommandInput placeholder="Search category..." />
-                            <CommandList>
-                              <CommandEmpty>No category found.</CommandEmpty>
-                              <CommandGroup>
-                                {filteredCategories.map((category) => (
-                                  <CommandItem
-                                    value={category.name}
-                                    key={category.id}
-                                    onSelect={() =>
-                                      form.setValue("categoryId", category.id)
-                                    }
-                                  >
-                                    <Check
-                                      className={cn(
-                                        "mr-2 h-4 w-4",
-                                        category.id === field.value
-                                          ? "opacity-100"
-                                          : "opacity-0",
-                                      )}
-                                    />
-                                    {category.name}
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
-
-              {/* Name (transaction title) */}
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem className="space-y-2 mb-6">
-                    <FormLabel className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                      Name
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="e.g. Grocery shopping, Salary…"
-                        {...field}
-                        className="bg-transparent border-muted/40 h-10 transition-colors focus:border-foreground"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+              {/* Category + Assign (Placeholder for team) */}
+              <div className="grid grid-cols-2 gap-4">
+                {activeTab !== "transfer" ? (
+                  <FormField
+                    control={form.control}
+                    name="categoryId"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <FormLabel className="text-sm font-medium">
+                          Category
+                        </FormLabel>
+                        <FormControl>
+                          <SelectCategory
+                            value={field.value ?? undefined}
+                            type={activeTab === "income" ? "income" : "expense"}
+                            onChange={(id) => form.setValue("categoryId", id)}
+                            className="w-full justify-start px-3 text-left font-normal bg-transparent border-muted/40 h-10 transition-colors hover:bg-muted/10 hover:bg-transparent"
+                          />
+                        </FormControl>
+                        <FormDescription className="text-[11px]">
+                          Help organize and track your transactions
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                ) : (
+                  <FormField
+                    control={form.control}
+                    name="toWalletId"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <FormLabel className="text-sm font-medium">
+                          To Wallet
+                        </FormLabel>
+                        <FormControl>
+                          <SelectAccount
+                            value={field.value ?? undefined}
+                            onChange={(id) => form.setValue("toWalletId", id)}
+                            placeholder="Select destination"
+                            className="w-full justify-start px-3 text-left font-normal bg-transparent border-muted/40 h-10 transition-colors hover:bg-muted/10 hover:bg-transparent"
+                          />
+                        </FormControl>
+                        <FormDescription className="text-[11px]">
+                          The destination account for this transfer
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 )}
-              />
+
+                <FormField
+                  control={form.control}
+                  name="assignedUserId"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel className="text-sm font-medium">
+                        Assign
+                      </FormLabel>
+                      <FormControl>
+                        <SelectUser
+                          value={field.value ?? undefined}
+                          onChange={(id) => form.setValue("assignedUserId", id)}
+                          placeholder="Select member"
+                          className="w-full justify-start px-3 text-left font-normal bg-transparent border-muted/40 h-10 transition-colors hover:bg-muted/10 hover:bg-transparent"
+                        />
+                      </FormControl>
+                      <FormDescription className="text-[11px]">
+                        Assign this transaction to a team member
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               {/* Description (rich text) */}
               <FormField
                 control={form.control}
                 name="description"
                 render={({ field }) => (
-                  <FormItem className="space-y-2 mb-8">
-                    <FormLabel className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                      Description
-                    </FormLabel>
+                  <FormItem className="space-y-2">
+                    <FormLabel className="text-sm font-medium">Notes</FormLabel>
                     <FormControl>
-                      <div className="min-h-[100px] rounded-md border border-muted/40 bg-transparent px-3 py-2 text-sm transition-colors focus-within:border-foreground focus-within:ring-0">
+                      <div className="min-h-[120px] rounded-md border border-muted/40 bg-transparent px-3 py-2 text-sm transition-colors focus-within:border-foreground focus-within:ring-0 mb-4">
                         <Editor
                           initialContent={field.value || ""}
                           placeholder="Add notes, links, or any details…"
@@ -589,6 +522,10 @@ export function TransactionFormSheet({
                         />
                       </div>
                     </FormControl>
+                    <FormDescription className="text-[11px]">
+                      Add any additional details or context about this
+                      transaction
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -639,14 +576,6 @@ export function TransactionFormSheet({
                   </div>
                 )}
               </div>
-
-              <Button
-                type="submit"
-                className="w-full h-12 text-sm font-bold tracking-wide uppercase transition-all hover:scale-[1.01] active:scale-[0.99]"
-                disabled={isLoading}
-              >
-                {isLoading ? "Saving…" : "Save Transaction"}
-              </Button>
             </form>
 
             <VaultPickerModal
@@ -656,6 +585,17 @@ export function TransactionFormSheet({
               onConfirm={handleVaultConfirm}
             />
           </Form>
+        </div>
+
+        <div className="p-6 border-t bg-background shrink-0 mt-auto">
+          <Button
+            form="transaction-form"
+            type="submit"
+            className="w-full"
+            disabled={isLoading}
+          >
+            {isLoading ? "Saving…" : "Save Transaction"}
+          </Button>
         </div>
       </SheetContent>
     </Sheet>

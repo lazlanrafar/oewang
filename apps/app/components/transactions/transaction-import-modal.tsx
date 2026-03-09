@@ -220,7 +220,6 @@ export function ImportModal({
           : data.walletId;
 
         return {
-          workspaceId: "placeholder",
           walletId: resolvedWalletId,
           amount: (data.inverted ? -amount : amount).toString(),
           date: parseDate(row[data.date] || ""),

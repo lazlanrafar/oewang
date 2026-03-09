@@ -34,8 +34,8 @@ export const getVaultFiles = async (
     return {
       success: true,
       data: {
-        files: res.data,
-        pagination: (res as any)._api_response.meta.pagination,
+        files: res.data.data,
+        pagination: res.data.meta.pagination,
       },
     };
   } catch (error: any) {

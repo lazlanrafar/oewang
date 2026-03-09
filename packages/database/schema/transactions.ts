@@ -9,6 +9,7 @@ import {
 import { workspaces } from "./workspaces";
 import { wallets } from "./wallets";
 import { categories } from "./categories";
+import { users } from "./users";
 
 export const transactions = pgTable("transactions", {
   id: uuid("id").defaultRandom().primaryKey().notNull(),
@@ -22,6 +23,9 @@ export const transactions = pgTable("transactions", {
     onDelete: "set null",
   }),
   categoryId: uuid("category_id").references(() => categories.id, {
+    onDelete: "set null",
+  }),
+  assignedUserId: uuid("assigned_user_id").references(() => users.id, {
     onDelete: "set null",
   }),
   amount: decimal("amount", { precision: 19, scale: 4 }).notNull(),

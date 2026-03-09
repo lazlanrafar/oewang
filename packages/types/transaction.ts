@@ -13,8 +13,15 @@ export interface Transaction {
   updatedAt: string;
   isReady: boolean;
   isExported: boolean;
+  assignedUserId?: string | null;
   deletedAt?: string | null;
   wallet?: { id: string; name: string };
   toWallet?: { id: string; name: string } | null;
   category?: { id: string; name: string } | null;
+  user?: {
+    id: string;
+    name: string | null;
+    email: string;
+    profile_picture: string | null;
+  } | null;
 }

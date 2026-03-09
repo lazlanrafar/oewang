@@ -242,7 +242,7 @@ export function TransactionsClient({
   ];
 
   const nonClickableColumns = useMemo(
-    () => new Set(["select", "actions", "category"]),
+    () => new Set(["select", "actions", "category", "assignee"]),
     [],
   );
 
@@ -356,6 +356,8 @@ export function TransactionsClient({
           onRowSelectionChange={setRowSelection}
           meta={{
             settings,
+            categories,
+            wallets,
             onRowClick: handleRowClick,
             onDelete: (id: string) => deleteMutation.mutate(id),
           }}
