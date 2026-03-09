@@ -33,8 +33,8 @@ export function AccountDetailSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="flex flex-col p-0 sm:max-w-[450px]">
-        <SheetHeader className="p-6 mb-0">
+      <SheetContent>
+        <SheetHeader className="mb-0">
           <SheetTitle className="font-sans font-medium">
             Account Details
           </SheetTitle>
@@ -43,8 +43,8 @@ export function AccountDetailSheet({
           </SheetDescription>
         </SheetHeader>
 
-        <ScrollArea className="h-full p-0 pb-[100px]">
-          <div className="space-y-8 px-6 py-4">
+        <ScrollArea className="h-full p-0">
+          <div className="space-y-8 py-4">
             <div className="space-y-1">
               <p className="text-sm text-muted-foreground">Account Name</p>
               <p className="text-xl font-sans">{wallet.name}</p>
@@ -92,7 +92,7 @@ export function AccountDetailSheet({
           </div>
         </ScrollArea>
 
-        <div className="fixed bottom-8 w-full sm:max-w-[450px] px-6 right-0">
+        <div className="mt-8">
           <Button onClick={onEdit} className="w-full gap-2 font-sans">
             <Pencil className="h-4 w-4" />
             Edit Account

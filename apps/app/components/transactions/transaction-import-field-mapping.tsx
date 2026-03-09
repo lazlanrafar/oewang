@@ -1,6 +1,6 @@
 "use client";
 
-import { useCsvContext, mappableFields } from "./import-context";
+import { useCsvContext, mappableFields } from "./transaction-import-context";
 import {
   Select,
   SelectContent,

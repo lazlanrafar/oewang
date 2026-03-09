@@ -66,7 +66,7 @@ export function AccountFormSheet({
   const { settings } = useCurrency();
 
   const form = useForm<AccountFormValues>({
-    resolver: zodResolver(accountSchema),
+    resolver: zodResolver(accountSchema as any),
     defaultValues: {
       name: "",
       groupId: null,
@@ -130,8 +130,8 @@ export function AccountFormSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="flex flex-col p-0 sm:max-w-[450px]">
-        <SheetHeader className="p-6 mb-0">
+      <SheetContent>
+        <SheetHeader className="mb-0">
           <SheetTitle>{wallet ? "Edit Account" : "Add Account"}</SheetTitle>
           <SheetDescription>
             {wallet
@@ -145,8 +145,8 @@ export function AccountFormSheet({
             onSubmit={form.handleSubmit(onSubmit)}
             className="flex flex-col h-full"
           >
-            <ScrollArea className="h-full p-0 pb-[100px]">
-              <div className="space-y-6 px-6 py-4">
+            <ScrollArea className="h-full p-0">
+              <div className="space-y-6 py-4">
                 <FormField
                   control={form.control}
                   name="name"
@@ -243,7 +243,7 @@ export function AccountFormSheet({
               </div>
             </ScrollArea>
 
-            <div className="fixed bottom-8 w-full sm:max-w-[450px] px-6 right-0">
+            <div className="mt-8">
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading
                   ? "Saving..."

@@ -5,7 +5,7 @@ import type { Category, Transaction, Wallet } from "@workspace/types";
 import { getCategories } from "@workspace/modules/server";
 import { getTransactions } from "@workspace/modules/server";
 import { getWallets } from "@workspace/modules/server";
-import { TransactionsClient } from "@/components/transactions/transactions-client";
+import { TransactionsClient } from "@/components/transactions/transaction-client";
 
 export const dynamic = "force-dynamic";
 

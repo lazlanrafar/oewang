@@ -64,16 +64,16 @@ export function TransactionDetailSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-[580px] p-0 flex flex-col h-full no-scrollbar">
+      <SheetContent>
         <div className="flex-1 overflow-y-auto no-scrollbar pb-24">
           {/* Header Info */}
-          <div className="px-8 pt-8 pb-4 flex justify-end">
+          <div className="pt-2 pb-4 flex justify-end">
             <span className="text-[11px] text-muted-foreground font-sans">
               {format(new Date(transaction.date), "MMM d, yyyy")}
             </span>
           </div>
 
-          <div className="px-8 pb-8 space-y-1">
+          <div className="pb-8 space-y-1">
             <h2 className="text-xl font-sans font-medium tracking-tight text-foreground/90">
               Transaction
             </h2>
@@ -91,7 +91,7 @@ export function TransactionDetailSheet({
             </h1>
           </div>
 
-          <div className="px-8 space-y-8">
+          <div className="space-y-8">
             {/* Category and Assign Grid */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">

@@ -20,9 +20,9 @@ import { transactionColumns } from "./transaction-columns";
 import { TransactionFormSheet } from "./transaction-form-sheet";
 import { TransactionDetailSheet } from "./transaction-detail-sheet";
 import { useCurrency } from "@workspace/ui/hooks";
-import { ImportModal } from "./import-modal";
+import { ImportModal } from "./transaction-import-modal";
 import { useTransactionsStore } from "@/stores/transactions";
-import { BulkEditBar } from "./bulk-edit-bar";
+import { BulkEditBar } from "./transaction-bulk-edit-bar";
 
 interface Props {
   initialData: Transaction[];
@@ -121,15 +121,11 @@ export function TransactionsClient({
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button
-                size="icon"
-                variant="outline"
-                className="h-8 w-8 rounded-md"
-              >
+              <Button size="icon" variant="outline">
                 <Plus className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 font-sans">
+            <DropdownMenuContent align="end" className="w-48 ">
               <DropdownMenuItem
                 className="gap-2 cursor-pointer"
                 onClick={() => {}}
@@ -189,7 +185,7 @@ export function TransactionsClient({
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 relative font-sans">
+      <div className="flex-1 min-h-0 relative ">
         <DataTable
           data={initialData}
           columns={columnsWithActions}

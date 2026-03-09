@@ -154,7 +154,7 @@ export const transactionColumns = (
       return (
         <div
           className={cn(
-            "text-xs font-sans font-medium",
+            "text-xs font-medium text-right",
             isExpense && "text-red-500",
             isIncome && "text-emerald-500",
             transaction.type === "transfer" && "text-blue-500",
@@ -164,22 +164,6 @@ export const transactionColumns = (
         </div>
       );
     },
-    size: 170,
-    minSize: 100,
-    maxSize: 400,
-  },
-  {
-    id: "base_amount",
-    header: "Base Amount",
-    cell: () => <span className="text-xs text-muted-foreground">-</span>,
-    size: 170,
-    minSize: 100,
-    maxSize: 400,
-  },
-  {
-    id: "base_tax_amount",
-    header: "Base Tax Amount",
-    cell: () => <span className="text-xs text-muted-foreground">-</span>,
     size: 170,
     minSize: 100,
     maxSize: 400,

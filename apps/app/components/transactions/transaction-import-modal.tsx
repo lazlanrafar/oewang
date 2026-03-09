@@ -35,10 +35,10 @@ import {
   ImportCsvContext,
   importSchema,
   type ImportCsvFormData,
-} from "./import-context";
-import { SelectFile } from "./import-select-file";
-import { FieldMapping } from "./import-field-mapping";
-import { ValueMapping } from "./import-value-mapping";
+} from "./transaction-import-context";
+import { SelectFile } from "./transaction-import-select-file";
+import { FieldMapping } from "./transaction-import-field-mapping";
+import { ValueMapping } from "./transaction-import-value-mapping";
 import { bulkCreateTransactions } from "@workspace/modules/transaction/transaction.action";
 
 interface ImportModalProps {

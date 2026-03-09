@@ -4,7 +4,7 @@ import Papa from "papaparse";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Dropzone, { type FileRejection } from "react-dropzone";
 import { Controller } from "react-hook-form";
-import { useCsvContext } from "./import-context";
+import { useCsvContext } from "./transaction-import-context";
 import { FileUp, Loader2 } from "lucide-react";
 import { cn } from "@workspace/ui";
 

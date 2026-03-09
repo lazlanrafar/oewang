@@ -32,8 +32,14 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { getTransactionSettings, updateTransactionSettings } from "@workspace/modules/setting/setting.action";
-import { getIntegrationsAction, connectWhatsAppAction } from "@workspace/modules/integrations/integrations.action";
+import {
+  getTransactionSettings,
+  updateTransactionSettings,
+} from "@workspace/modules/setting/setting.action";
+import {
+  getIntegrationsAction,
+  connectWhatsAppAction,
+} from "@workspace/modules/integrations/integrations.action";
 
 const MOCK_APPS = [
   {
@@ -435,16 +441,13 @@ export function AppsClient() {
         open={!!expandedApp}
         onOpenChange={(open) => !open && setExpandedApp(null)}
       >
-        <SheetContent
-          side="right"
-          className="overflow-y-auto sm:max-w-md w-full p-0"
-        >
+        <SheetContent side="right">
           {(() => {
             const activeApp = allApps.find((a) => a.id === expandedApp);
             if (!activeApp) return null;
             return (
               <>
-                <SheetHeader className="p-6 pb-2">
+                <SheetHeader className="pb-2">
                   <SheetTitle className="flex items-center gap-3 text-xl font-bold">
                     <div className="h-10 w-10 rounded-lg bg-secondary flex items-center justify-center border border-border">
                       <activeApp.icon className="h-5 w-5 text-foreground" />
@@ -455,7 +458,7 @@ export function AppsClient() {
                     {activeApp.desc}
                   </SheetDescription>
                 </SheetHeader>
-                <div className="p-6">
+                <div className="py-6">
                   {activeApp.renderContent && activeApp.renderContent()}
                 </div>
               </>

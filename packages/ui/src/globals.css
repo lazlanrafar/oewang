@@ -18,24 +18,24 @@
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
@@ -52,6 +52,13 @@
   --color-green: var(--green);
   --color-red: var(--red);
 
+  /* Minimal Shadows */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: none;
+  --shadow-lg: none;
+  --shadow-xl: none;
+  --shadow-2xl: none;
+
   --animate-shimmer: shimmer 2s linear infinite;
 
   @keyframes shimmer {
@@ -67,28 +74,28 @@
 /* Default theme styles (used when no data-theme-preset is set or when 'default' is selected).
 These serve as the fallback; there is no separate default.css file. */
 :root {
-  --green: #00a354;
-  --red: #e5484d;
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.1815 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.1405 0.0044 285.8237);
-  --popover: oklch(0.9722 0.0038 91.4432);
-  --popover-foreground: oklch(0.1405 0.0044 285.8237);
-  --primary: oklch(0.2103 0.0059 285.8835);
-  --primary-foreground: oklch(0.9848 0 0);
-  --secondary: oklch(0.9192 0.006 84.5675);
-  --secondary-foreground: oklch(0.2103 0.0059 285.8835);
-  --muted: lab(96.52% -0.0000298023 0.0000119209);
-  --muted-foreground: lab(48.496% 0 0);
-  --accent: oklch(0.956 0.0029 84.5592);
-  --accent-foreground: oklch(0.2103 0.0059 285.8835);
-  --destructive: oklch(0.6368 0.2078 25.3259);
-  --destructive-foreground: oklch(0.9848 0 0);
-  --border: lab(90.6739% 0.53075 -1.9261);
-  --input: oklch(0.9197 0.004 286.3199);
-  --ring: oklch(0.2103 0.0059 285.8835);
+  --green: 142 71% 45%;
+  --red: 358 75% 59%;
+  --radius: 0.5rem;
+  --background: 0 0% 100%;
+  --foreground: 0 0% 7%;
+  --card: 45 18% 96%;
+  --card-foreground: 240 10% 3.9%;
+  --popover: 45 18% 96%;
+  --popover-foreground: 240 10% 3.9%;
+  --primary: 240 5.9% 10%;
+  --primary-foreground: 0 0% 98%;
+  --secondary: 40 11% 89%;
+  --secondary-foreground: 240 5.9% 10%;
+  --muted: 40 11% 89%;
+  --muted-foreground: 0 0% 38%;
+  --accent: 40 10% 94%;
+  --accent-foreground: 240 5.9% 10%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 45 5% 85%;
+  --input: 240 5.9% 90%;
+  --ring: 240 5.9% 10%;
 
   /* Chart colors */
   --chart-grid-stroke: #e6e6e6;
@@ -105,19 +112,19 @@ These serve as the fallback; there is no separate default.css file. */
   --chart-gradient-start: #707070;
   --chart-gradient-end: #000000;
   --chart-line-secondary: #666666;
-  --chart-1: oklch(0.809 0.105 251.813);
-  --chart-2: oklch(0.623 0.214 259.815);
-  --chart-3: oklch(0.546 0.245 262.881);
-  --chart-4: oklch(0.488 0.243 264.376);
-  --chart-5: oklch(0.424 0.199 265.638);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.141 0.005 285.823);
-  --sidebar-primary: oklch(0.546 0.245 262.881);
-  --sidebar-primary-foreground: oklch(0.97 0.014 254.604);
-  --sidebar-accent: oklch(0.967 0.001 286.375);
-  --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
-  --sidebar-border: oklch(0.92 0.004 286.32);
-  --sidebar-ring: oklch(0.708 0 0);
+  --chart-1: 240 5.9% 10%;
+  --chart-2: 240 5.9% 50%;
+  --chart-3: 240 5.9% 30%;
+  --chart-4: 240 5.9% 70%;
+  --chart-5: 240 5.9% 90%;
+  --sidebar: 0 0% 100%;
+  --sidebar-foreground: 240 10% 3.9%;
+  --sidebar-primary: 240 5.9% 10%;
+  --sidebar-primary-foreground: 0 0% 98%;
+  --sidebar-accent: 40 10% 94%;
+  --sidebar-accent-foreground: 240 5.9% 10%;
+  --sidebar-border: 45 5% 85%;
+  --sidebar-ring: 240 5.9% 10%;
 
   /* fonts */
   --font-sans: var(--font-inter);
@@ -125,27 +132,27 @@ These serve as the fallback; there is no separate default.css file. */
 }
 
 .dark {
-  --green: #00c969;
-  --red: #f2555a;
-  --background: oklch(0.1579 0 0);
-  --foreground: oklch(0.9848 0 0);
-  --card: oklch(0.1815 0 0);
-  --card-foreground: oklch(0.9848 0 0);
-  --popover: oklch(0.1815 0 0);
-  --popover-foreground: oklch(0.9848 0 0);
-  --primary: oklch(0.9848 0 0);
-  --primary-foreground: oklch(0.2103 0.0059 285.8835);
-  --secondary: oklch(0.1815 0 0);
-  --secondary-foreground: oklch(0.9848 0 0);
-  --muted: oklch(0.2267 0 0);
-  --muted-foreground: oklch(0.7119 0.0129 286.0684);
-  --accent: oklch(0.2267 0 0);
-  --accent-foreground: oklch(0.9848 0 0);
-  --destructive: oklch(0.6532 0.2328 25.8853);
-  --destructive-foreground: oklch(1 0 0);
-  --border: oklch(0.2267 0 0);
-  --input: oklch(0.2267 0 0);
-  --ring: oklch(0.8709 0.0055 286.2852);
+  --green: 151 100% 39%;
+  --red: 357 85% 64%;
+  --background: 0 0% 5%;
+  --foreground: 0 0% 98%;
+  --card: 0 0% 7%;
+  --card-foreground: 0 0% 98%;
+  --popover: 0 0% 7%;
+  --popover-foreground: 0 0% 98%;
+  --primary: 0 0% 98%;
+  --primary-foreground: 240 5.9% 10%;
+  --secondary: 0 0% 7%;
+  --secondary-foreground: 0 0% 98%;
+  --muted: 0 0% 11%;
+  --muted-foreground: 0 0% 38%;
+  --accent: 0 0% 11%;
+  --accent-foreground: 0 0% 98%;
+  --destructive: 359 100% 61%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 0 0% 11%;
+  --input: 0 0% 11%;
+  --ring: 240 4.9% 83.9%;
 
   /* Chart colors */
   --chart-grid-stroke: #1d1d1d;
@@ -162,22 +169,20 @@ These serve as the fallback; there is no separate default.css file. */
   --chart-gradient-start: #666666;
   --chart-gradient-end: #ffffff;
   --chart-line-secondary: #999999;
-  --chart-1: oklch(0.809 0.105 251.813);
-  --chart-2: oklch(0.623 0.214 259.815);
-  --chart-3: oklch(0.546 0.245 262.881);
-  --chart-4: oklch(0.488 0.243 264.376);
-  --chart-5: oklch(0.424 0.199 265.638);
-  --sidebar: oklch(0.21 0.006 285.885);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.623 0.214 259.815);
-  --sidebar-primary-foreground: oklch(0.97 0.014 254.604);
-  --sidebar-accent: oklch(0.274 0.006 286.033);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.439 0 0);
+  --sidebar: 0 0% 5%;
+  --sidebar-foreground: 0 0% 98%;
+  --sidebar-primary: 0 0% 98%;
+  --sidebar-primary-foreground: 240 5.9% 10%;
+  --sidebar-accent: 0 0% 11%;
+  --sidebar-accent-foreground: 0 0% 98%;
+  --sidebar-border: 0 0% 11%;
+  --sidebar-ring: 240 4.9% 83.9%;
 }
 
 @layer base {
+  html {
+    font-size: 15px;
+  }
   * {
     @apply border-border;
   }
