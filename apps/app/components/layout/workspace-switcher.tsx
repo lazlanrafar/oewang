@@ -15,7 +15,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@workspace/ui";
-import { ChevronsUpDown, Loader2, Plus } from "lucide-react";
+import { Cat, ChevronsUpDown, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import { switchWorkspaceAction } from "@workspace/modules/user/user.action";
@@ -87,11 +87,11 @@ export function WorkspaceSwitcher({
               size="lg"
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground font-semibold text-sm">
+              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-foreground text-background font-semibold text-sm">
                 {isSwitching ? (
                   <Loader2 className="size-4 animate-spin" />
                 ) : (
-                  activeWorkspace.name.charAt(0).toUpperCase()
+                  <Cat className="size-4" />
                 )}
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
