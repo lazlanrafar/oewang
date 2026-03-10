@@ -69,7 +69,7 @@ export const sidebarItems: NavGroup[] = [
     items: [
       {
         title: "Customers",
-        url: "/coming-soon",
+        url: "/customers",
         icon: Users,
       },
       {

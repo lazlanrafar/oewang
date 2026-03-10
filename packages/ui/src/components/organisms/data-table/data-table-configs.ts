@@ -9,6 +9,7 @@ export const STICKY_COLUMNS: Record<TableId, StickyColumnConfig[]> = {
   pricing: [{ id: "name", width: 200 }],
   orders: [{ id: "code", width: 200 }],
   accounts: [{ id: "name", width: 200 }],
+  customers: [{ id: "name", width: 200 }],
   transactions: [
     { id: "select", width: 50 },
     { id: "date", width: 110 },
@@ -45,6 +46,11 @@ export const SORT_FIELD_MAPS: Record<TableId, Record<string, string>> = {
     balance: "balance",
     createdAt: "createdAt",
   },
+  customers: {
+    name: "name",
+    email: "email",
+    createdAt: "createdAt",
+  },
   transactions: {
     name: "name",
     "category.name": "categoryId",
@@ -63,6 +69,7 @@ export const NON_REORDERABLE_COLUMNS: Record<TableId, Set<string>> = {
   pricing: new Set(["name", "actions"]),
   orders: new Set(["code", "actions"]),
   accounts: new Set(["name", "actions"]),
+  customers: new Set(["name", "actions"]),
   transactions: new Set(["select", "date", "name", "actions"]),
 };
 
@@ -74,6 +81,7 @@ export const ROW_HEIGHTS: Record<TableId, number> = {
   pricing: 45,
   orders: 45,
   accounts: 45,
+  customers: 45,
   transactions: 45,
 };
 
@@ -113,6 +121,13 @@ export const TABLE_CONFIGS: Record<TableId, TableConfig> = {
     sortFieldMap: SORT_FIELD_MAPS.accounts,
     nonReorderableColumns: NON_REORDERABLE_COLUMNS.accounts,
     rowHeight: ROW_HEIGHTS.accounts,
+  },
+  customers: {
+    tableId: "customers",
+    stickyColumns: STICKY_COLUMNS.customers,
+    sortFieldMap: SORT_FIELD_MAPS.customers,
+    nonReorderableColumns: NON_REORDERABLE_COLUMNS.customers,
+    rowHeight: ROW_HEIGHTS.customers,
   },
   transactions: {
     tableId: "transactions",

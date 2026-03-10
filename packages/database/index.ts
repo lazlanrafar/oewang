@@ -19,3 +19,4 @@ export * from "./schema/ai-messages";
 export * from "./schema/workspace-integrations";
 export * from "./schema/pricing";
 export * from "./schema/orders";
+export * from "./schema/customers";
