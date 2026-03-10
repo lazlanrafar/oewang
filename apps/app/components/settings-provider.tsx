@@ -17,6 +17,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       return null;
     },
     staleTime: 1000 * 60 * 60, // 1 hour
+    refetchOnWindowFocus: false,
   });
 
   useEffect(() => {

@@ -161,10 +161,10 @@ export function TransactionFormSheet({
             categoryId: transaction.categoryId ?? "",
             name: transaction.name ?? "",
             description: transaction.description ?? "",
-            attachmentIds: (transaction as any).attachmentIds ?? [],
+            attachmentIds: transaction.attachmentIds ?? [],
             assignedUserId: transaction.assignedUserId ?? "",
           });
-          setAttachments((transaction as any).attachments ?? []);
+          setAttachments(transaction.attachments ?? []);
           setActiveTab(transaction.type as any);
         } else {
           form.reset({

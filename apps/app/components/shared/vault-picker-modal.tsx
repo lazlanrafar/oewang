@@ -225,7 +225,7 @@ export function VaultPickerModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[1000px] max-h-[70vh] flex flex-col">
+      <DialogContent className="sm:max-w-[900px] max-h-[70vh] flex flex-col">
         <DialogHeader className="flex flex-row items-center  py-4 border-b sr-only">
           <DialogTitle>Select file</DialogTitle>
         </DialogHeader>

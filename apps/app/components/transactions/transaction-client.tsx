@@ -114,6 +114,8 @@ export function TransactionsClient({
         ? pagination.page + 1
         : undefined;
     },
+    staleTime: 10000,
+    refetchOnWindowFocus: false,
     initialData: {
       pages: [
         {
@@ -148,6 +150,8 @@ export function TransactionsClient({
     },
     initialPageParam: 1,
     getNextPageParam: () => undefined,
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
   });
 
   const reviewCount = reviewCountData?.pages[0]?.meta?.pagination?.total ?? 0;
@@ -189,10 +193,13 @@ export function TransactionsClient({
 
   // Sync state with transactionId from URL
   useReactEffect(() => {
-    if (transactionId && !selectedTransaction) {
+    if (transactionId) {
       const found = transactions.find((t) => t.id === transactionId);
       if (found) {
-        setSelectedTransaction(found);
+        // Only update if it's different to avoid infinite loops if shallow comparison fails
+        if (JSON.stringify(found) !== JSON.stringify(selectedTransaction)) {
+          setSelectedTransaction(found);
+        }
         setIsDetailOpen(true);
       }
     } else if (!transactionId && isDetailOpen) {

@@ -34,16 +34,52 @@ import {
   Copy,
   ChevronUp,
   ChevronDown,
+  Paperclip,
+  File,
+  FileText,
+  Film,
+  Image,
+  X,
 } from "lucide-react";
 import { formatCurrency } from "@workspace/utils";
 import { useState, useEffect } from "react";
 import { updateTransaction } from "@workspace/modules/transaction/transaction.action";
+import { getVaultDownloadUrl } from "@workspace/modules/vault/vault.action";
 import { toast } from "sonner";
 import { SelectCategory } from "../forms/select-category";
 import { SelectUser } from "../forms/select-user";
 import { useQueryClient } from "@tanstack/react-query";
 import { useDebounce } from "../../hooks/use-debounce";
 import { useSettingsStore } from "../../stores/settings-store";
+import { VaultPickerModal } from "../shared/vault-picker-modal";
+import { FilePreviewSheet } from "../shared/file-preview-sheet";
+
+interface FilePreview {
+  id: string;
+  name: string;
+  type: string;
+  url: string;
+}
+
+interface VaultFileRef {
+  id: string;
+  name: string;
+  size: number;
+  type: string;
+}
+
+function formatBytes(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function FileIcon({ type }: { type: string }) {
+  if (type.startsWith("image/")) return <Image className="w-4 h-4" />;
+  if (type.startsWith("video/")) return <Film className="w-4 h-4" />;
+  if (type === "application/pdf") return <FileText className="w-4 h-4" />;
+  return <File className="w-4 h-4" />;
+}
 
 interface Props {
   open: boolean;
@@ -67,6 +103,10 @@ export function TransactionDetailSheet({
   const [markAsRecurring, setMarkAsRecurring] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [attachments, setAttachments] = useState<VaultFileRef[]>([]);
+  const [vaultPickerOpen, setVaultPickerOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewFile, setPreviewFile] = useState<FilePreview | null>(null);
 
   const debouncedName = useDebounce(name, 500);
   const debouncedDescription = useDebounce(description, 500);
@@ -79,35 +119,33 @@ export function TransactionDetailSheet({
       // Actually let's just initialize from transaction props
       setName(transaction.name || "");
       setDescription(transaction.description || "");
+      setAttachments(transaction.attachments || []);
     }
   }, [transaction]);
 
-  // Real-time update for Name
+  // Real-time update for Name and Description
   useEffect(() => {
-    if (!transaction || debouncedName === transaction.name) return;
+    if (!transaction) return;
+
+    const hasChanged =
+      (debouncedName !== transaction.name && debouncedName !== "") ||
+      (debouncedDescription !== transaction.description &&
+        debouncedDescription !== "");
+
+    if (!hasChanged) return;
+
     const update = async () => {
       const res = await updateTransaction(transaction.id, {
         name: debouncedName,
-      });
-      if (res.success)
-        queryClient.invalidateQueries({ queryKey: ["transactions"] });
-    };
-    update();
-  }, [debouncedName, transaction, queryClient]);
-
-  // Real-time update for Description
-  useEffect(() => {
-    if (!transaction || debouncedDescription === transaction.description)
-      return;
-    const update = async () => {
-      const res = await updateTransaction(transaction.id, {
         description: debouncedDescription,
       });
-      if (res.success)
+      if (res.success) {
         queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      }
     };
+
     update();
-  }, [debouncedDescription, transaction, queryClient]);
+  }, [debouncedName, debouncedDescription, transaction, queryClient]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -133,6 +171,55 @@ export function TransactionDetailSheet({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [open, transaction, queryClient]);
+
+  const handleVaultConfirm = async (ids: string[]) => {
+    if (!transaction) return;
+
+    // In a real scenario, the VaultPicker already uploaded the files.
+    // We just need to link them to the transaction.
+    // However, we need the basic file info to show them in the UI immediately.
+    // For now, let's assume we update the transaction with the new IDs.
+    const res = await updateTransaction(transaction.id, {
+      attachmentIds: ids,
+    });
+
+    if (res.success && res.data) {
+      setAttachments(res.data.attachments || []);
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      toast.success("Attachments updated");
+    }
+  };
+
+  const removeAttachment = async (id: string) => {
+    if (!transaction) return;
+
+    const newIds = attachments.filter((a) => a.id !== id).map((a) => a.id);
+    const res = await updateTransaction(transaction.id, {
+      attachmentIds: newIds,
+    });
+
+    if (res.success && res.data) {
+      setAttachments(res.data.attachments || []);
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      toast.success("Attachment removed");
+    }
+  };
+
+  const handlePreview = async (file: VaultFileRef) => {
+    // We fetch a fresh signed URL to ensure it hasn't expired
+    const res = await getVaultDownloadUrl(file.id);
+    if (res.success && res.data) {
+      setPreviewFile({
+        id: file.id,
+        name: file.name,
+        type: file.type,
+        url: res.data.url,
+      });
+      setPreviewOpen(true);
+    } else {
+      toast.error("Failed to load file preview");
+    }
+  };
 
   if (!transaction) return null;
 
@@ -242,14 +329,52 @@ export function TransactionDetailSheet({
                 Attachments
               </AccordionTrigger>
               <AccordionContent className="space-y-4 pt-1">
-                <div className="aspect-3/1 border-2 border-dashed flex flex-col items-center justify-center gap-3 bg-muted/5 group hover:bg-muted/10 hover:border-border/60 transition-all cursor-pointer">
+                {attachments.length > 0 && (
+                  <div className="grid grid-cols-1 gap-2 mb-4">
+                    {attachments.map((file) => (
+                      <div
+                        key={file.id}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-md border border-muted/20 bg-muted/5 text-sm group transition-colors hover:bg-muted/10 cursor-pointer"
+                        onClick={() => handlePreview(file)}
+                      >
+                        <FileIcon type={file.type} />
+                        <span className="flex-1 truncate font-medium">
+                          {file.name}
+                        </span>
+                        {file.size > 0 && (
+                          <span className="text-xs text-muted-foreground shrink-0 font-sans">
+                            {formatBytes(file.size)}
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeAttachment(file.id);
+                          }}
+                          className="shrink-0 text-muted-foreground hover:text-destructive transition-colors p-1"
+                          aria-label={`Remove ${file.name}`}
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div
+                  onClick={() => setVaultPickerOpen(true)}
+                  className="aspect-3/1 border-2 border-dashed flex flex-col items-center justify-center gap-3 bg-muted/5 group hover:bg-muted/10 hover:border-border/60 transition-all cursor-pointer rounded-lg"
+                >
                   <div className="bg-background p-2 rounded-full shadow-sm border border-border/20 group-hover:scale-110 transition-transform">
-                    <Plus className="h-4 w-4 text-muted-foreground" />
+                    <Paperclip className="h-4 w-4 text-muted-foreground" />
                   </div>
                   <p className="text-[11px] text-muted-foreground text-center px-8 leading-relaxed">
-                    Drop files here or click to upload
+                    Attach files from your Vault
                     <br />
-                    <span className="opacity-50 text-[10px]">Max 5MB</span>
+                    <span className="opacity-50 text-[10px]">
+                      Images, PDFs, and more
+                    </span>
                   </p>
                 </div>
               </AccordionContent>
@@ -349,6 +474,19 @@ export function TransactionDetailSheet({
             </button>
           </div>
         </div>
+
+        <VaultPickerModal
+          open={vaultPickerOpen}
+          onOpenChange={setVaultPickerOpen}
+          selectedIds={attachments.map((a) => a.id)}
+          onConfirm={handleVaultConfirm}
+        />
+
+        <FilePreviewSheet
+          open={previewOpen}
+          onOpenChange={setPreviewOpen}
+          file={previewFile}
+        />
       </SheetContent>
     </Sheet>
   );
