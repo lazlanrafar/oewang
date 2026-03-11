@@ -22,6 +22,7 @@
     "./workspace/workspace.action": "./src/workspace/workspace.action.ts",
     "./pricing/pricing.action": "./src/pricing/pricing.action.ts",
     "./stripe/stripe.action": "./src/stripe/stripe.action.ts",
+    "./invoice/invoice.action": "./src/invoice/invoice.action.ts",
     "./orders/orders.action": "./src/orders/orders.action.ts"
   },
   "scripts": {

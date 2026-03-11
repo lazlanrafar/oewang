@@ -20,6 +20,8 @@ import {
   Copy,
   Trash2,
   Pencil,
+  Globe,
+  Lock,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -38,7 +40,7 @@ import {
   DropdownMenuRadioItem,
   Button,
 } from "@workspace/ui";
-import { SelectCurrency } from "@/components/molecules/select-currency";
+import { SelectCurrency, CurrencySelector } from "@/components/molecules/select-currency";
 
 export interface InvoiceSettingsProps {
   settings: {
@@ -125,10 +127,10 @@ export function InvoiceSettings({
                   </DropdownMenuSubTrigger>
                   <DropdownMenuPortal>
                     <DropdownMenuSubContent className="p-0 border-none shadow-none">
-                      <SelectCurrency
+                      <CurrencySelector
                         value={settings.currency}
                         onChange={(v) => onUpdate("currency", v)}
-                        className="h-auto px-1 py-1 text-[13px] hover:bg-transparent"
+                        className="border-none shadow-none"
                       />
                     </DropdownMenuSubContent>
                   </DropdownMenuPortal>
@@ -264,11 +266,53 @@ export function InvoiceSettings({
             <ChevronRight className="ml-auto h-4 w-4 text-muted-foreground/50" />
           </DropdownMenuItem>
 
-          <DropdownMenuItem disabled>
+          <DropdownMenuItem disabled={settings.invoiceSettings.qrCode}>
             <CreditCard className="mr-2 h-4 w-4" />
             <span>Payments</span>
             <ChevronRight className="ml-auto h-4 w-4 text-muted-foreground/50" />
           </DropdownMenuItem>
+        </DropdownMenuGroup>
+
+        <DropdownMenuSeparator />
+
+        <DropdownMenuGroup>
+          <DropdownMenuLabel className="text-[10px] font-normal text-muted-foreground px-2 py-1.5 uppercase tracking-wider">
+            Sharing
+          </DropdownMenuLabel>
+          <DropdownMenuCheckboxItem
+            checked={(settings as any).isPublic}
+            onCheckedChange={(v) => onUpdate("isPublic", v)}
+          >
+            <Globe className="mr-2 h-4 w-4" />
+            <span>Public view</span>
+          </DropdownMenuCheckboxItem>
+
+          {(settings as any).isPublic && (
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                <Lock className="mr-2 h-4 w-4" />
+                <span>Access code</span>
+              </DropdownMenuSubTrigger>
+              <DropdownMenuPortal>
+                <DropdownMenuSubContent className="p-2 w-48">
+                  <div className="flex flex-col gap-2">
+                    <span className="text-[10px] text-muted-foreground uppercase">Set access code</span>
+                    <input
+                      type="text"
+                      placeholder="Enter code..."
+                      className="w-full bg-muted border-none rounded-md p-1.5 text-xs focus:ring-1 focus:ring-primary outline-none"
+                      value={(settings as any).accessCode || ""}
+                      onChange={(e) => onUpdate("accessCode", e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <p className="text-[9px] text-muted-foreground">
+                      Visitors must enter this code to view the invoice.
+                    </p>
+                  </div>
+                </DropdownMenuSubContent>
+              </DropdownMenuPortal>
+            </DropdownMenuSub>
+          )}
         </DropdownMenuGroup>
 
         <DropdownMenuSeparator />

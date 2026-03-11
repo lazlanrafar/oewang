@@ -279,6 +279,8 @@ const formSchema = z.object({
     units: z.boolean().default(false),
     qrCode: z.boolean().default(true),
   }),
+  isPublic: z.boolean().default(false),
+  accessCode: z.string().optional().nullable(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -338,6 +340,8 @@ export function InvoiceFormSheet({
         units: false,
         qrCode: true,
       },
+      isPublic: false,
+      accessCode: "",
     },
   });
 
@@ -438,6 +442,8 @@ export function InvoiceFormSheet({
           units: false,
           qrCode: true,
         },
+        isPublic: invoice.isPublic ?? false,
+        accessCode: (invoice as any).accessCode ?? "",
       });
     } else if (open && !invoice) {
       const today = new Date();
@@ -473,6 +479,8 @@ export function InvoiceFormSheet({
           units: false,
           qrCode: true,
         },
+        isPublic: false,
+        accessCode: "",
       });
     }
   }, [invoice, open, form]);

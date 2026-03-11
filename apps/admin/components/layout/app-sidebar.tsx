@@ -13,7 +13,6 @@ import { sidebarItems } from "@/navigation/sidebar/sidebar-items";
 import { usePreferencesStore } from "@workspace/ui";
 
 import { NavMain } from "./nav-main";
-import { NavUser } from "./nav-user";
 import { Cat } from "lucide-react";
 
 type WorkspaceData = {

@@ -128,11 +128,14 @@ export function InvoicesClient({ initialData }: Props) {
     [refresh],
   );
 
-  const handleStatusChange = useCallback(
-    async (id: string, status: string) => {
-      const res = await updateInvoice(id, { status } as any);
+  const handleUpdate = useCallback(
+    async (id: string, data: Partial<Invoice>) => {
+      const res = await updateInvoice(id, data as any);
       if (res.success) {
         refresh();
+        setSelectedInvoice((prev) =>
+          prev?.id === id ? { ...prev, ...data } : prev
+        );
       } else {
         throw new Error("Update failed");
       }
@@ -283,7 +286,7 @@ export function InvoicesClient({ initialData }: Props) {
         }}
         onEdit={handleEdit}
         onDelete={handleDelete}
-        onStatusChange={handleStatusChange}
+        onUpdate={handleUpdate}
       />
     </div>
   );

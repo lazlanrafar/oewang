@@ -21,6 +21,8 @@ export interface Invoice {
   paymentDetails: string | null;
   logoUrl: string | null;
   lineItems: InvoiceLineItem[];
+  isPublic: boolean;
+  accessCode: string | null;
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;

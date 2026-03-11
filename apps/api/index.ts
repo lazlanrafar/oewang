@@ -35,6 +35,7 @@ import { ordersController } from "./modules/orders/orders.controller";
 import { systemMetricsController } from "./modules/system-metrics/system-metrics.controller";
 import { customersController } from "./modules/customers/customers.controller";
 import { invoicesController } from "./modules/invoices/invoices.controller";
+import { publicInvoicesController } from "./modules/invoices/public-invoices.controller";
 import { Env } from "@workspace/constants";
 
 const log = createLogger("api");
@@ -80,7 +81,8 @@ const app = new Elysia()
       .use(ordersController)
       .use(systemMetricsController)
       .use(customersController)
-      .use(invoicesController),
+      .use(invoicesController)
+      .use(publicInvoicesController),
   )
   .onError(({ error, code }) => {
     if (code === "NOT_FOUND") return;

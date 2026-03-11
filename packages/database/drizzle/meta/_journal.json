@@ -64,6 +64,13 @@
       "when": 1773201072071,
       "tag": "0008_tricky_apocalypse",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1773209354116,
+      "tag": "0009_massive_strong_guy",
+      "breakpoints": true
     }
   ]
 }

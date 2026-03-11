@@ -17,6 +17,13 @@ import {
 import { COUNTRIES } from "@workspace/constants";
 import { useState, useMemo } from "react";
 
+export interface CurrencySelectorProps {
+  value?: string;
+  onChange: (currency: string) => void;
+  onSelect?: () => void;
+  className?: string;
+}
+
 export interface SelectCurrencyProps {
   value?: string;
   onChange: (currency: string) => void;
@@ -25,14 +32,12 @@ export interface SelectCurrencyProps {
   placeholder?: string;
 }
 
-export function SelectCurrency({
+export function CurrencySelector({
   value,
   onChange,
+  onSelect,
   className,
-  disabled,
-  placeholder = "Select currency",
-}: SelectCurrencyProps) {
-  const [open, setOpen] = useState(false);
+}: CurrencySelectorProps) {
   const [searchValue, setSearchValue] = useState("");
 
   const currencies = useMemo(() => {
@@ -50,14 +55,81 @@ export function SelectCurrency({
     );
   }, []);
 
-  const selectedCurrency = currencies.find((c) => c.code === value);
-
   const filteredCurrencies = useMemo(() => {
     if (!searchValue) return currencies;
     return currencies.filter((c) =>
       c.code.toLowerCase().includes(searchValue.toLowerCase()),
     );
   }, [currencies, searchValue]);
+
+  return (
+    <Command className={cn("font-sans", className)} shouldFilter={false}>
+      <CommandInput
+        placeholder="Search currencies..."
+        value={searchValue}
+        onValueChange={setSearchValue}
+        className="h-9"
+      />
+      <CommandList
+        className="max-h-[300px] overflow-y-auto"
+        onWheel={(e) => e.stopPropagation()}
+      >
+        {filteredCurrencies.length === 0 && ( searchValue.length > 0 ) && (
+          <CommandEmpty className="py-4 text-xs text-center text-muted-foreground">
+            No currency found.
+          </CommandEmpty>
+        )}
+
+        <CommandGroup>
+          {filteredCurrencies.map((currency) => (
+            <CommandItem
+              key={currency.code}
+              value={currency.code}
+              onSelect={() => {
+                onChange(currency.code);
+                onSelect?.();
+                setSearchValue("");
+              }}
+              className="text-xs py-2 flex items-center justify-between cursor-pointer"
+            >
+              <span className="font-medium">
+                {currency.code} ({currency.symbol})
+              </span>
+              {value === currency.code && (
+                <Check className="h-3.5 w-3.5 text-primary ml-2 shrink-0" />
+              )}
+            </CommandItem>
+          ))}
+        </CommandGroup>
+      </CommandList>
+    </Command>
+  );
+}
+
+export function SelectCurrency({
+  value,
+  onChange,
+  className,
+  disabled,
+  placeholder = "Select currency",
+}: SelectCurrencyProps) {
+  const [open, setOpen] = useState(false);
+
+  // We need to get the symbol for the display button
+  const currencies = useMemo(() => {
+    const uniqueCurrencies = new Map<
+      string,
+      { code: string; symbol: string }
+    >();
+    for (const country of COUNTRIES) {
+      if (country.currency) {
+        uniqueCurrencies.set(country.currency.code, country.currency);
+      }
+    }
+    return Array.from(uniqueCurrencies.values());
+  }, []);
+  
+  const selectedCurrency = currencies.find((c) => c.code === value);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -85,46 +157,11 @@ export function SelectCurrency({
         align="end"
         onClick={(e) => e.stopPropagation()}
       >
-        <Command className="font-sans" shouldFilter={false}>
-          <CommandInput
-            placeholder="Search currencies..."
-            value={searchValue}
-            onValueChange={setSearchValue}
-            className="h-9"
-          />
-          <CommandList
-            className="max-h-[300px] overflow-y-auto"
-            onWheel={(e) => e.stopPropagation()}
-          >
-            {filteredCurrencies.length === 0 && (
-              <CommandEmpty className="py-4 text-xs text-center text-muted-foreground">
-                No currency found.
-              </CommandEmpty>
-            )}
-
-            <CommandGroup>
-              {filteredCurrencies.map((currency) => (
-                <CommandItem
-                  key={currency.code}
-                  value={currency.code}
-                  onSelect={() => {
-                    onChange(currency.code);
-                    setOpen(false);
-                    setSearchValue("");
-                  }}
-                  className="text-xs py-2 flex items-center justify-between cursor-pointer"
-                >
-                  <span className="font-medium">
-                    {currency.code} ({currency.symbol})
-                  </span>
-                  {value === currency.code && (
-                    <Check className="h-3.5 w-3.5 text-primary ml-2 shrink-0" />
-                  )}
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
+        <CurrencySelector 
+          value={value} 
+          onChange={onChange} 
+          onSelect={() => setOpen(false)} 
+        />
       </PopoverContent>
     </Popover>
   );

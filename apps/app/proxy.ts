@@ -43,9 +43,17 @@ export async function proxy(request: NextRequest) {
       !pathname.startsWith(`/${locale}/`) && pathname !== `/${locale}`,
   );
 
-  // Redirect if there is no locale
+  // Redirect or Rewrite if there is no locale
   if (pathnameIsMissingLocale) {
     const locale = getLocale(request);
+
+    // Support short sharing links for invoices via rewrite
+    if (pathname.startsWith("/invoice/")) {
+      const rewriteUrl = new URL(`/${locale}${pathname}`, request.url);
+      rewriteUrl.search = request.nextUrl.search;
+      return NextResponse.rewrite(rewriteUrl);
+    }
+
     const url = new URL(
       `/${locale}${pathname.startsWith("/") ? "" : "/"}${pathname}`,
       request.url,

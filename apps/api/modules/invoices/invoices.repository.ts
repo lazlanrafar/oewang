@@ -8,6 +8,8 @@ import {
   isNull,
   sql,
   desc,
+  workspaceSettings,
+  workspaces,
 } from "@workspace/database";
 import type { CreateInvoiceInput, UpdateInvoiceInput } from "./invoices.dto";
 
@@ -60,6 +62,35 @@ export abstract class InvoicesRepository {
       })
       .from(invoices)
       .leftJoin(customers, eq(invoices.customerId, customers.id))
+      .where(
+        and(
+          eq(invoices.id, id),
+          eq(invoices.workspaceId, workspaceId),
+          isNull(invoices.deletedAt),
+        ),
+      )
+      .limit(1);
+
+    return result;
+  }
+
+  static async findPublicById(id: string, workspaceId: string) {
+    const [result] = await db
+      .select({
+        invoice: invoices,
+        customer: customers,
+        workspace: {
+          id: workspaces.id,
+          name: workspaces.name,
+        },
+        settings: {
+          invoiceLogoUrl: workspaceSettings.invoiceLogoUrl,
+        },
+      })
+      .from(invoices)
+      .leftJoin(customers, eq(invoices.customerId, customers.id))
+      .leftJoin(workspaces, eq(invoices.workspaceId, workspaces.id))
+      .leftJoin(workspaceSettings, eq(invoices.workspaceId, workspaceSettings.workspaceId))
       .where(
         and(
           eq(invoices.id, id),

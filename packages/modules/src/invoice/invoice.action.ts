@@ -17,6 +17,8 @@ export interface CreateInvoiceData {
   paymentDetails?: string;
   logoUrl?: string;
   lineItems: Array<{ name: string; quantity: number; price: number }>;
+  isPublic?: boolean;
+  accessCode?: string;
 }
 
 export interface UpdateInvoiceData extends Partial<CreateInvoiceData> {}
@@ -95,6 +97,51 @@ export const deleteInvoice = async (
     return {
       success: false,
       error: error.response?.data?.message || "Failed to delete invoice",
+    };
+  }
+};
+
+export const getInvoiceToken = async (
+  id: string,
+): Promise<ActionResponse<{ token: string }>> => {
+  try {
+    const res = await api.get(`/invoices/${id}/token`);
+    return { success: true, data: res.data?.data };
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.response?.data?.message || "Failed to fetch invoice token",
+    };
+  }
+};
+
+export const getInvoiceActivity = async (
+  id: string,
+): Promise<ActionResponse<any[]>> => {
+  try {
+    const res = await api.get(`/invoices/${id}/activity`);
+    return { success: true, data: res.data?.data };
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.response?.data?.message || "Failed to fetch invoice activity",
+    };
+  }
+};
+
+export const getPublicInvoice = async (
+  token: string,
+  code?: string,
+): Promise<ActionResponse<any>> => {
+  try {
+    const res = await api.get(`/public/invoices/${token}`, {
+      params: { code },
+    });
+    return { success: true, data: res.data?.data };
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.response?.data?.message || "Failed to fetch public invoice",
     };
   }
 };

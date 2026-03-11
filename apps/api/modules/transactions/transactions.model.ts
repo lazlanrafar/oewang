@@ -14,6 +14,7 @@ export const TransactionModel = {
       t.Literal("transfer-in"),
       t.Literal("transfer-out"),
     ]),
+    name: t.Optional(t.String()),
     description: t.Optional(t.String()),
     isReady: t.Optional(t.Boolean()),
     isExported: t.Optional(t.Boolean()),

@@ -1,4 +1,4 @@
-import { Elysia } from "elysia";
+import { Elysia, t } from "elysia";
 import { authPlugin } from "../../plugins/auth";
 import { InvoicesService } from "./invoices.service";
 import { buildError } from "@workspace/utils";
@@ -8,11 +8,14 @@ import {
   UpdateInvoiceDto,
   InvoiceListQuery,
 } from "./invoices.dto";
+import { generateInvoiceToken } from "./invoices.utils";
+import { buildSuccess } from "@workspace/utils";
 
 export const invoicesController = new Elysia({ prefix: "/invoices" })
   .use(authPlugin)
   .derive(({ auth }) => ({
     workspaceId: auth?.workspace_id,
+    userId: auth?.user_id,
   }))
   .onBeforeHandle(({ auth, set }) => {
     if (!auth) {
@@ -30,6 +33,17 @@ export const invoicesController = new Elysia({ prefix: "/invoices" })
       detail: { summary: "Get Invoices", tags: ["Invoices"] },
     },
   )
+  .post(
+    "/",
+    async ({ workspaceId, userId, body, set }) => {
+      set.status = 201;
+      return InvoicesService.create(body, workspaceId!, userId!);
+    },
+    {
+      body: CreateInvoiceDto,
+      detail: { summary: "Create Invoice", tags: ["Invoices"] },
+    },
+  )
   .get(
     "/:id",
     async ({ workspaceId, params: { id } }) => {
@@ -39,21 +53,29 @@ export const invoicesController = new Elysia({ prefix: "/invoices" })
       detail: { summary: "Get Invoice by ID", tags: ["Invoices"] },
     },
   )
-  .post(
-    "/",
-    async ({ workspaceId, body, set }) => {
-      set.status = 201;
-      return InvoicesService.create(body, workspaceId!);
+  .get(
+    "/:id/token",
+    async ({ workspaceId, params: { id } }) => {
+      const token = await generateInvoiceToken(id, workspaceId!);
+      return buildSuccess({ token });
     },
     {
-      body: CreateInvoiceDto,
-      detail: { summary: "Create Invoice", tags: ["Invoices"] },
+      detail: { summary: "Get Invoice Public Token", tags: ["Invoices"] },
+    },
+  )
+  .get(
+    "/:id/activity",
+    async ({ workspaceId, params: { id } }) => {
+      return InvoicesService.getActivity(id, workspaceId!);
+    },
+    {
+      detail: { summary: "Get Invoice Activity", tags: ["Invoices"] },
     },
   )
   .patch(
     "/:id",
-    async ({ workspaceId, params: { id }, body }) => {
-      return InvoicesService.update(id, workspaceId!, body);
+    async ({ workspaceId, userId, params: { id }, body }) => {
+      return InvoicesService.update(id, workspaceId!, userId!, body);
     },
     {
       body: UpdateInvoiceDto,
@@ -62,8 +84,8 @@ export const invoicesController = new Elysia({ prefix: "/invoices" })
   )
   .delete(
     "/:id",
-    async ({ workspaceId, params: { id } }) => {
-      return InvoicesService.delete(id, workspaceId!);
+    async ({ workspaceId, userId, params: { id } }) => {
+      return InvoicesService.delete(id, workspaceId!, userId!);
     },
     {
       detail: { summary: "Delete Invoice", tags: ["Invoices"] },

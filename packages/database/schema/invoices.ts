@@ -5,6 +5,7 @@ import {
   uuid,
   decimal,
   jsonb,
+  boolean,
 } from "drizzle-orm/pg-core";
 import { workspaces } from "./workspaces";
 import { customers } from "./customers";
@@ -48,6 +49,8 @@ export const invoices = pgTable("invoices", {
     qrCode: true,
   }),
 
+  isPublic: boolean("is_public").notNull().default(false),
+  accessCode: text("access_code"), 
   createdAt: timestamp("created_at", { mode: "string" }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().notNull(),
   deletedAt: timestamp("deleted_at", { mode: "string" }),
