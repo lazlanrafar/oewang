@@ -14,6 +14,7 @@ import {
   AccordionContent,
   ScrollArea,
   Badge,
+  Markdown,
 } from "@workspace/ui";
 
 type App = any;
@@ -219,11 +220,15 @@ export function AppsCard({
                     <AccordionTrigger className="hover:no-underline font-semibold">
                       How it works
                     </AccordionTrigger>
-                    <AccordionContent className="text-muted-foreground text-sm prose prose-sm dark:prose-invert max-w-none">
-                      {app.description ||
-                        app.overview ||
-                        app.short_description ||
-                        "No description available."}
+                    <AccordionContent>
+                      <Markdown
+                        content={
+                          app.description ||
+                          app.overview ||
+                          app.short_description ||
+                          "No description available."
+                        }
+                      />
                     </AccordionContent>
                   </AccordionItem>
 
