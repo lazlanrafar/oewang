@@ -6,6 +6,11 @@ const nextConfig = {
   compiler: {
     removeConsole: process.env.NODE_ENV === "production",
   },
+  typescript: {
+    // Type checking is handled by `bun run typecheck` separately.
+    // Disabling here prevents OOM during `next build`.
+    ignoreBuildErrors: true,
+  },
   transpilePackages: ["@workspace/ui", "@workspace/supabase", "@workspace/utils", "@workspace/dictionaries"],
   // async redirects() {
   //   return [
