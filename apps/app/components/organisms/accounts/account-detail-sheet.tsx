@@ -21,11 +21,11 @@ import {
 } from "lucide-react";
 import { useSettingsStore } from "@/stores/settings-store";
 import { useState, useEffect } from "react";
-import { useDebounce } from "../../hooks/use-debounce";
+import { useDebounce } from "@/hooks/use-debounce";
 import { updateWallet } from "@workspace/modules/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { SelectAccountGroup } from "../forms/select-account-group";
+import { SelectAccountGroup } from "@/components/molecules/select-account-group";
 import { format } from "date-fns";
 
 interface AccountDetailSheetProps {

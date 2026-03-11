@@ -1,6 +1,6 @@
 import { Separator } from "@workspace/ui";
 
-import { AccountForm } from "@/components/setting/account/account-form";
+import { AccountForm } from "@/components/organisms/setting/account/account-form";
 import { getDictionary } from "@/get-dictionary";
 import type { Locale } from "@/i18n-config";
 

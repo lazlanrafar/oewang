@@ -2,7 +2,7 @@ import React from "react";
 
 import { Separator } from "@workspace/ui";
 
-import { TransactionSettingsForm } from "@/components/setting/transaction/transaction-settings-form";
+import { TransactionSettingsForm } from "@/components/organisms/setting/transaction/transaction-settings-form";
 import { getDictionary } from "@/get-dictionary";
 import type { Locale } from "@/i18n-config";
 

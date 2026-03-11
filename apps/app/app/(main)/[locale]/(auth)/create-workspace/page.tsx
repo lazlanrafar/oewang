@@ -1,7 +1,7 @@
 // Server wrapper — fetches pricing server-side (ENCRYPTION_KEY is available)
 // then passes plans as a prop to the client form.
 
-import { WorkspaceForm } from "@/components/auth/workspace-form";
+import { WorkspaceForm } from "@/components/organisms/auth/workspace-form";
 import { getPricing } from "@workspace/modules/server";
 import type { Pricing } from "@workspace/types";
 

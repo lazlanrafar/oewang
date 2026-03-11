@@ -2,7 +2,7 @@ import React from "react";
 import { ScrollableContent } from "@workspace/ui";
 import { getWallets } from "@workspace/modules/server";
 import { getWalletGroups } from "@workspace/modules/server";
-import { AccountsClient } from "@/components/accounts/accounts-client";
+import { AccountsClient } from "@/components/organisms/accounts/accounts-client";
 
 export default async function AccountsPage(props: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;

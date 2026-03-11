@@ -1,7 +1,7 @@
 import Link from "next/link";
 
-import { LoginForm } from "@/components/auth/login-form";
-import { OAuthButton } from "@/components/auth/oauth-button";
+import { LoginForm } from "@/components/organisms/auth/login-form";
+import { OAuthButton } from "@/components/organisms/auth/oauth-button";
 
 export default function LoginV2() {
   return (

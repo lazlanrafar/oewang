@@ -1,6 +1,6 @@
 import React from "react";
 
-import { LanguageSettingsForm } from "@/components/setting/language/language-settings-form";
+import { LanguageSettingsForm } from "@/components/organisms/setting/language/language-settings-form";
 import { getDictionary } from "@/get-dictionary";
 import type { Locale } from "@/i18n-config";
 

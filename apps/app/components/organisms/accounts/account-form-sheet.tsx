@@ -26,7 +26,7 @@ import {
 import { createWallet, updateWallet } from "@workspace/modules/client";
 import type { Wallet } from "@workspace/types";
 import { useSettingsStore } from "@/stores/settings-store";
-import { SelectAccountGroup } from "../forms/select-account-group";
+import { SelectAccountGroup } from "@/components/molecules/select-account-group";
 
 const accountSchema = z.object({
   name: z.string().min(1, "Name is required"),

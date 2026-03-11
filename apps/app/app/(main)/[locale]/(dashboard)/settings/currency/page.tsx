@@ -1,8 +1,8 @@
 import { Separator } from "@workspace/ui";
 
 import { getSubCurrencies, getTransactionSettings } from "@workspace/modules/server";
-import { MainCurrencyForm } from "@/components/setting/main-currency/main-currency-form";
-import { SubCurrencyList } from "@/components/setting/sub-currency/sub-currency-list";
+import { MainCurrencyForm } from "@/components/organisms/setting/main-currency/main-currency-form";
+import { SubCurrencyList } from "@/components/organisms/setting/sub-currency/sub-currency-list";
 import { getDictionary } from "@/get-dictionary";
 import type { Locale } from "@/i18n-config";
 

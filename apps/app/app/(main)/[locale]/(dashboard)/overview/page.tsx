@@ -9,10 +9,10 @@ import {
 } from "@workspace/modules/server";
 import { getTransactionSettings } from "@workspace/modules/server";
 import { getMe } from "@workspace/modules/server";
-import { AiChat } from "@/components/overview/ai-chat";
-import { OverviewCards } from "@/components/overview/overview-cards";
-import { OverviewMetrics } from "@/components/overview/overview-metrics";
-import { OverviewTabs } from "@/components/overview/overview-tabs";
+import { AiChat } from "@/components/organisms/overview/ai-chat";
+import { OverviewCards } from "@/components/organisms/overview/overview-cards";
+import { OverviewMetrics } from "@/components/organisms/overview/overview-metrics";
+import { OverviewTabs } from "@/components/organisms/overview/overview-tabs";
 
 function getGreeting() {
   const hour = new Date().getHours();

@@ -12,11 +12,11 @@ import {
 } from "@workspace/ui";
 
 import { getMe } from "@workspace/modules/server";
-import { AccountSwitcher } from "@/components/layout/account-switcher";
-import { AppSidebar } from "@/components/layout/app-sidebar";
-import { LayoutControls } from "@/components/layout/layout-controls";
-import { SearchDialog } from "@/components/layout/search-dialog";
-import { ThemeSwitcher } from "@/components/layout/theme-switcher";
+import { AccountSwitcher } from "@/components/organisms/layout/account-switcher";
+import { AppSidebar } from "@/components/organisms/layout/app-sidebar";
+import { LayoutControls } from "@/components/organisms/layout/layout-controls";
+import { SearchDialog } from "@/components/organisms/layout/search-dialog";
+import { ThemeSwitcher } from "@/components/organisms/layout/theme-switcher";
 import {
   SIDEBAR_COLLAPSIBLE_VALUES,
   SIDEBAR_VARIANT_VALUES,

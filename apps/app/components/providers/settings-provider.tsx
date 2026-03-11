@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getTransactionSettings } from "@workspace/modules/setting/setting.action";
-import { useSettingsStore } from "../stores/settings-store";
+import { useSettingsStore } from "@/stores/settings-store";
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const setSettings = useSettingsStore((state) => state.setSettings);

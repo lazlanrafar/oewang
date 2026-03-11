@@ -47,7 +47,7 @@ import { toast } from "sonner";
 
 import { deleteWallet, getWallets, reorderWallets } from "@workspace/modules/wallet/wallet.action";
 import { deleteWalletGroup, getWalletGroups } from "@workspace/modules/wallet-group/wallet-group.action";
-import { type Wallet, type WalletGroup, WalletGroupHeader, WalletItem } from "@/components/shared/wallet-display";
+import { type Wallet, type WalletGroup, WalletGroupHeader, WalletItem } from "@/components/molecules/wallet-display";
 
 import { WalletForm } from "./wallet-form";
 import { WalletGroupForm } from "./wallet-group-form";

@@ -1,5 +1,5 @@
 import { getCustomers } from "@workspace/modules/server";
-import { CustomersClient } from "@/components/customers/customers-client";
+import { CustomersClient } from "@/components/organisms/customers/customers-client";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {

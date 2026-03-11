@@ -1,4 +1,4 @@
-import { VaultClient } from "@/components/vault/vault-client";
+import { VaultClient } from "@/components/organisms/vault/vault-client";
 
 export default function VaultPage() {
   return (

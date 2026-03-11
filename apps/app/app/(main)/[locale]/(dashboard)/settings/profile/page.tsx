@@ -1,6 +1,6 @@
 import { Separator } from "@workspace/ui";
 
-import { SettingProfileForm } from "@/components/setting/profile/setting-profile-form";
+import { SettingProfileForm } from "@/components/organisms/setting/profile/setting-profile-form";
 import { getDictionary } from "@/get-dictionary";
 import type { Locale } from "@/i18n-config";
 

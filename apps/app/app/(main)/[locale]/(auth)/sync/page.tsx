@@ -1,4 +1,4 @@
-import { AuthSync } from "@/components/auth/auth-sync";
+import { AuthSync } from "@/components/organisms/auth/auth-sync";
 import type { Locale } from "@/i18n-config";
 
 export default async function SyncPage(props: {

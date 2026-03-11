@@ -1,7 +1,7 @@
 import Link from "next/link";
 
-import { OAuthButton } from "@/components/auth/oauth-button";
-import { RegisterForm } from "@/components/auth/register-form";
+import { OAuthButton } from "@/components/organisms/auth/oauth-button";
+import { RegisterForm } from "@/components/organisms/auth/register-form";
 
 export default function RegisterV2() {
   return (

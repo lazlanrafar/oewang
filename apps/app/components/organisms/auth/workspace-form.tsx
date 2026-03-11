@@ -17,7 +17,7 @@ import {
   displayPrice,
 } from "@workspace/utils";
 
-import { CurrencySelector } from "@/components/setting/currency-selector";
+import { CurrencySelector } from "@/components/organisms/setting/currency-selector";
 
 // ---------------------------------------------------------------------------
 // Step indicator

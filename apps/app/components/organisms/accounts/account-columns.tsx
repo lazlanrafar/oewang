@@ -15,7 +15,7 @@ import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { deleteWallet, updateWallet } from "@workspace/modules/client";
 import { formatCurrency } from "@workspace/utils";
-import { SelectAccountGroup } from "../forms/select-account-group";
+import { SelectAccountGroup } from "@/components/molecules/select-account-group";
 import { useQueryClient } from "@tanstack/react-query";
 
 const CellActions = ({

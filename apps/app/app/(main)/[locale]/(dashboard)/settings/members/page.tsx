@@ -7,7 +7,7 @@ import {
   getWorkspaceInvitations,
   getWorkspaceMembers,
 } from "@workspace/modules/server";
-import { MembersClient } from "@/components/setting/members/members-client";
+import { MembersClient } from "@/components/organisms/setting/members/members-client";
 import { Env } from "@workspace/constants";
 
 async function getWorkspaceIdFromToken(): Promise<string | null> {

@@ -1,4 +1,4 @@
-import { WalletList } from "@/components/setting/wallet/wallet-list";
+import { WalletList } from "@/components/organisms/setting/wallet/wallet-list";
 import { getDictionary } from "@/get-dictionary";
 import type { Locale } from "@/i18n-config";
 

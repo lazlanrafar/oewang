@@ -1,6 +1,6 @@
 import React from "react";
 
-import { AppearanceForm } from "@/components/setting/appearance/appearance-form";
+import { AppearanceForm } from "@/components/organisms/setting/appearance/appearance-form";
 import { getDictionary } from "@/get-dictionary";
 import type { Locale } from "@/i18n-config";
 

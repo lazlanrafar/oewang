@@ -38,7 +38,7 @@ import {
   DropdownMenuRadioItem,
   Button,
 } from "@workspace/ui";
-import { SelectCurrency } from "../forms/select-currency";
+import { SelectCurrency } from "@/components/molecules/select-currency";
 
 export interface InvoiceSettingsProps {
   settings: {

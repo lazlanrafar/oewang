@@ -45,9 +45,9 @@ import {
   TabsList,
   TabsTrigger,
 } from "@workspace/ui";
-import { SelectAccount } from "@/components/forms/select-account";
-import { SelectCategory } from "@/components/forms/select-category";
-import { SelectUser } from "@/components/forms/select-user";
+import { SelectAccount } from "@/components/molecules/select-account";
+import { SelectCategory } from "@/components/molecules/select-category";
+import { SelectUser } from "@/components/molecules/select-user";
 import { useSettingsStore } from "@/stores/settings-store";
 import {
   Check,
@@ -63,7 +63,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import * as z from "zod";
 
-import { VaultPickerModal } from "../shared/vault-picker-modal";
+import { VaultPickerModal } from "@/components/organisms/vault-picker-modal";
 
 const transactionSchema = z.object({
   amount: z.coerce.number().positive("Amount must be positive"),

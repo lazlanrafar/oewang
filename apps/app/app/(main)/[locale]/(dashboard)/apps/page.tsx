@@ -1,4 +1,4 @@
-import { AppsClient } from "@/components/apps/apps-client";
+import { AppsClient } from "@/components/organisms/apps/apps-client";
 
 export default function AppsPage() {
   return (

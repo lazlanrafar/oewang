@@ -22,8 +22,8 @@ import {
   createWallet,
 } from "@workspace/modules/wallet/wallet.action";
 import { toast } from "sonner";
-import { SelectAccount } from "@/components/forms/select-account";
-import { SelectCategory } from "@/components/forms/select-category";
+import { SelectAccount } from "@/components/molecules/select-account";
+import { SelectCategory } from "@/components/molecules/select-category";
 
 export function ValueMapping({ onNext }: { onNext: () => void }) {
   const { firstRows, watch, valueMappings, setValueMappings } = useCsvContext();

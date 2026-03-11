@@ -1,4 +1,4 @@
-import { InvoicesClient } from "@/components/invoices/invoices-client";
+import { InvoicesClient } from "@/components/organisms/invoices/invoices-client";
 import { getInvoices } from "@workspace/modules/server";
 
 export default async function InvoicesPage() {

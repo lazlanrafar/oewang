@@ -49,7 +49,7 @@ import type { Invoice } from "@workspace/types";
 import type { CreateInvoiceData } from "@workspace/modules/client";
 import { cn } from "@workspace/ui";
 import { format } from "date-fns";
-import { SelectCustomer } from "../forms/select-customer";
+import { SelectCustomer } from "@/components/molecules/select-customer";
 import { InvoiceSettings } from "./invoice-settings";
 import { uploadVaultFile } from "@workspace/modules/vault/vault.action";
 import {

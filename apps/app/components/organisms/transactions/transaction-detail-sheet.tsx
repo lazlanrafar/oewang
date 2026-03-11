@@ -33,14 +33,14 @@ import { useState, useEffect } from "react";
 import { updateTransaction } from "@workspace/modules/transaction/transaction.action";
 import { getVaultDownloadUrl } from "@workspace/modules/vault/vault.action";
 import { toast } from "sonner";
-import { SelectCategory } from "../forms/select-category";
-import { SelectUser } from "../forms/select-user";
-import { SelectAccount } from "../forms/select-account";
+import { SelectCategory } from "@/components/molecules/select-category";
+import { SelectUser } from "@/components/molecules/select-user";
+import { SelectAccount } from "@/components/molecules/select-account";
 import { useQueryClient } from "@tanstack/react-query";
-import { useDebounce } from "../../hooks/use-debounce";
-import { useSettingsStore } from "../../stores/settings-store";
-import { VaultPickerModal } from "../shared/vault-picker-modal";
-import { FilePreviewSheet } from "../shared/file-preview-sheet";
+import { useDebounce } from "@/hooks/use-debounce";
+import { useSettingsStore } from "@/stores/settings-store";
+import { VaultPickerModal } from "@/components/organisms/vault-picker-modal";
+import { FilePreviewSheet } from "@/components/organisms/file-preview-sheet";
 
 interface FilePreview {
   id: string;

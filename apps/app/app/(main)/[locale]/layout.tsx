@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { Toaster } from "@workspace/ui";
 import type { Metadata } from "next";
 
-import { Providers } from "@/components/providers";
+import { Providers } from "@/components/providers/root-provider";
 import { APP_CONFIG } from "@workspace/constants";
 import { fontVars } from "@workspace/ui";
 import { PREFERENCE_DEFAULTS } from "@workspace/ui";

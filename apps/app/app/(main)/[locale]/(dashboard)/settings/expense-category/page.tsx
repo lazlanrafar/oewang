@@ -1,4 +1,4 @@
-import { CategoryForm } from "@/components/setting/category/category-form";
+import { CategoryForm } from "@/components/organisms/setting/category/category-form";
 import { getDictionary } from "@/get-dictionary";
 import type { Locale } from "@/i18n-config";
 

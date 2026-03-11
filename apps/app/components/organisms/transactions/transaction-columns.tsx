@@ -27,12 +27,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@workspace/ui";
-import { SelectCategory } from "@/components/forms/select-category";
-import { SelectAccount } from "@/components/forms/select-account";
-import { SelectUser } from "@/components/forms/select-user";
+import { SelectCategory } from "@/components/molecules/select-category";
+import { SelectAccount } from "@/components/molecules/select-account";
+import { SelectUser } from "@/components/molecules/select-user";
 import { format } from "date-fns";
 import { formatCurrency as formatCurrencyUtil } from "@workspace/utils";
-import { useSettingsStore } from "../../stores/settings-store";
+import { useSettingsStore } from "@/stores/settings-store";
 import { updateTransaction } from "@workspace/modules/transaction/transaction.action";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
