@@ -52,6 +52,7 @@ const serverSchema = z.object({
   WHATSAPP_ACCESS_TOKEN: z.string().optional(),
   WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),
   WHATSAPP_VERIFY_TOKEN: z.string().optional(),
+  TELEGRAM_BOT_TOKEN: z.string().optional(),
 
   // R2 Storage
   R2_ENDPOINT: z.string().url().optional(),
@@ -90,6 +91,7 @@ const clientSchema = z.object({
     .default("okane-session"),
   NEXT_PUBLIC_SUPABASE_COOKIE_NAME: z.string().optional(),
   NEXT_PUBLIC_WHATSAPP_NUMBER: z.string().optional().default("+1234567890"),
+  NEXT_PUBLIC_TELEGRAM_BOT_USER: z.string().optional().default("OkaneBot"),
 });
 
 // Create the combined env object manually for Next.js bundle resolution.
@@ -108,6 +110,7 @@ const clientEnv = {
   NEXT_PUBLIC_SUPABASE_COOKIE_NAME:
     process.env.NEXT_PUBLIC_SUPABASE_COOKIE_NAME,
   NEXT_PUBLIC_WHATSAPP_NUMBER: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER,
+  NEXT_PUBLIC_TELEGRAM_BOT_USER: process.env.NEXT_PUBLIC_TELEGRAM_BOT_USER,
 };
 
 let _env: z.infer<typeof serverSchema> & z.infer<typeof clientSchema>;

@@ -4,7 +4,7 @@ export default {
   name: "Google Drive",
   id: "google-drive",
   category: "storage",
-  active: false,
+  active: false, hidden: true,
   logo: Logo,
   short_description:
     "Connect Google Drive to automatically sync and organize your files and documents with Midday.",

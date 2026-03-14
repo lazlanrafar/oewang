@@ -4,7 +4,7 @@ export default {
   name: "Perplexity",
   id: "perplexity-mcp",
   category: "ai-automation",
-  active: true,
+  active: true, hidden: true,
   logo: Logo,
   short_description:
     "Connect Perplexity to your Midday data with AI-powered search.",

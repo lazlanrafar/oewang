@@ -4,7 +4,7 @@ export default {
   name: "Dropbox",
   id: "dropbox",
   category: "storage",
-  active: false,
+  active: false, hidden: true,
   logo: Logo,
   short_description:
     "Connect Dropbox to automatically sync and organize your files and documents with Midday.",

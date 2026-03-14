@@ -5,7 +5,8 @@ export const baseConfig = {
   name: "WhatsApp",
   id: "whatsapp",
   category: "capture",
-  active: true,
+  active: true, hidden: true,
+  hidden: true,
   logo: Logo,
   short_description:
     "Forward receipts and invoices directly from WhatsApp. Midday automatically extracts data and matches them to transactions.",

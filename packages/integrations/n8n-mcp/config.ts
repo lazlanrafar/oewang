@@ -4,7 +4,7 @@ export default {
   name: "n8n",
   id: "n8n-mcp",
   category: "ai-automation",
-  active: true,
+  active: true, hidden: true,
   logo: Logo,
   short_description:
     "Connect n8n workflows to your Midday data via MCP. Automate financial tasks with AI agents.",

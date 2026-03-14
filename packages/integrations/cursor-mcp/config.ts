@@ -4,7 +4,7 @@ export default {
   name: "Cursor",
   id: "cursor-mcp",
   category: "ai-automation",
-  active: true,
+  active: true, hidden: true,
   logo: Logo,
   short_description:
     "Connect Cursor to your Midday data via MCP. Ask questions about finances while you code.",

@@ -5,12 +5,23 @@ import type { Metadata } from "next";
 
 import { Providers } from "@/components/providers/root-provider";
 import { APP_CONFIG } from "@workspace/constants";
-import { fontVars } from "@workspace/ui";
+import { fontRegistry, fontVars } from "@workspace/ui";
 import { PREFERENCE_DEFAULTS } from "@workspace/ui";
 import { ThemeBootScript } from "@/scripts/theme-boot";
 import { PreferencesStoreProvider } from "@workspace/ui";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
+import { getPreference } from "@/server/server-actions";
+import {
+  THEME_MODE_VALUES,
+  THEME_PRESET_VALUES,
+  CONTENT_LAYOUT_VALUES,
+  NAVBAR_STYLE_VALUES,
+  SIDEBAR_VARIANT_VALUES,
+  SIDEBAR_COLLAPSIBLE_VALUES,
+} from "@workspace/ui";
 import "@workspace/ui/globals.css";
+
+const FONT_VALUES_PREF = Object.keys(fontRegistry) as any;
 // import { i18n } from "@/i18n-config";
 
 export const metadata: Metadata = {
@@ -28,7 +39,7 @@ export default async function RootLayout({
 }: Readonly<{ children: ReactNode; params: Promise<{ locale: string }> }>) {
   const { locale } = await params;
 
-  const {
+  const [
     theme_mode,
     theme_preset,
     content_layout,
@@ -36,7 +47,15 @@ export default async function RootLayout({
     sidebar_variant,
     sidebar_collapsible,
     font,
-  } = PREFERENCE_DEFAULTS;
+  ] = await Promise.all([
+    getPreference("theme_mode", THEME_MODE_VALUES, PREFERENCE_DEFAULTS.theme_mode),
+    getPreference("theme_preset", THEME_PRESET_VALUES, PREFERENCE_DEFAULTS.theme_preset),
+    getPreference("content_layout", CONTENT_LAYOUT_VALUES, PREFERENCE_DEFAULTS.content_layout),
+    getPreference("navbar_style", NAVBAR_STYLE_VALUES, PREFERENCE_DEFAULTS.navbar_style),
+    getPreference("sidebar_variant", SIDEBAR_VARIANT_VALUES, PREFERENCE_DEFAULTS.sidebar_variant),
+    getPreference("sidebar_collapsible", SIDEBAR_COLLAPSIBLE_VALUES, PREFERENCE_DEFAULTS.sidebar_collapsible),
+    getPreference("font", FONT_VALUES_PREF, PREFERENCE_DEFAULTS.font),
+  ]);
 
   return (
     <html
@@ -60,6 +79,8 @@ export default async function RootLayout({
           themePreset={theme_preset}
           contentLayout={content_layout}
           navbarStyle={navbar_style}
+          sidebarVariant={sidebar_variant}
+          sidebarCollapsible={sidebar_collapsible}
           font={font}
         >
           <NuqsAdapter>

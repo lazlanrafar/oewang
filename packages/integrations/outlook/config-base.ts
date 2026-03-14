@@ -5,7 +5,8 @@ export const baseConfig = {
   name: "Outlook",
   id: "outlook",
   category: "capture",
-  active: true,
+  active: true, hidden: true,
+  hidden: true,
   logo: Logo,
   short_description:
     "Automatically capture receipts and invoices from your Outlook inbox. Documents are extracted and matched to transactions in real-time.",

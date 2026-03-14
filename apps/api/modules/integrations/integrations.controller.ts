@@ -46,6 +46,17 @@ export const integrationsController = new Elysia({ prefix: "/integrations" })
       detail: { summary: "WhatsApp Webhook", tags: ["Integrations"] },
     },
   )
+  .post(
+    "/telegram/webhook",
+    async ({ body }) => {
+      IntegrationsService.handleTelegramWebhook(body).catch(console.error);
+      return "OK";
+    },
+    {
+      body: t.Any(),
+      detail: { summary: "Telegram Webhook", tags: ["Integrations"] },
+    },
+  )
   // Authenticated route for connecting phone number
   .use(authPlugin)
   .get(
@@ -69,5 +80,20 @@ export const integrationsController = new Elysia({ prefix: "/integrations" })
     {
       body: ConnectWhatsAppDto,
       detail: { summary: "Connect WhatsApp", tags: ["Integrations"] },
+    },
+  )
+  .post(
+    "/telegram/connect",
+    async ({ body, auth }) => {
+      if (!auth?.workspace_id || !auth?.user_id) throw Error("Unauthorized");
+      return await IntegrationsService.connectTelegram(
+        auth.workspace_id,
+        auth.user_id,
+        body.chatId,
+      );
+    },
+    {
+      body: t.Object({ chatId: t.String() }),
+      detail: { summary: "Connect Telegram", tags: ["Integrations"] },
     },
   );

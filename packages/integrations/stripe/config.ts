@@ -4,7 +4,7 @@ export default {
   name: "Stripe",
   id: "stripe",
   category: "payments",
-  active: false,
+  active: false, hidden: true,
   logo: Logo,
   short_description:
     "Connect Stripe to automatically sync your payments, invoices, and revenue data with Midday.",

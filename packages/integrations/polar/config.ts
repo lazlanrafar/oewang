@@ -4,7 +4,7 @@ export default {
   name: "Polar",
   id: "polar",
   category: "payments",
-  active: false,
+  active: false, hidden: true,
   logo: Logo,
   short_description:
     "Connect Polar to automatically sync your payments, subscriptions, and revenue data with Midday.",

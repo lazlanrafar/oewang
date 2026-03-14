@@ -25,6 +25,21 @@ export abstract class IntegrationsService {
     return buildSuccess(integration, "WhatsApp connected successfully");
   }
 
+  static async connectTelegram(
+    workspaceId: string,
+    userId: string,
+    telegramChatId: string,
+  ) {
+    const integration = await IntegrationsRepository.upsert({
+      workspaceId,
+      provider: "telegram",
+      settings: { telegramChatId, connectedByUserId: userId },
+      isActive: true,
+    });
+
+    return buildSuccess(integration, "Telegram connected successfully");
+  }
+
   static async getAll(workspace_id: string) {
     const integrations = await IntegrationsRepository.findAll(workspace_id);
     return buildSuccess(integrations, "Integrations retrieved successfully");
@@ -55,9 +70,20 @@ export abstract class IntegrationsService {
       const match = text.match(/^Connect Okane\s+([a-f0-9-]{36})$/i);
       if (match) {
         const targetWorkspaceId = match[1];
+        
+        let targetUserId = await IntegrationsRepository.findFirstMemberId(targetWorkspaceId);
+        
+        if (!targetUserId) {
+          await IntegrationsService.sendWhatsAppMessage(
+            fromUserNumber,
+            "❌ Could not find a valid user to link with this workspace. Please use the link from the Okane app.",
+          );
+          return "OK";
+        }
+
         await IntegrationsService.connectWhatsApp(
           targetWorkspaceId,
-          "00000000-0000-0000-0000-000000000000",
+          targetUserId,
           fromUserNumber,
         );
 
@@ -75,9 +101,14 @@ export abstract class IntegrationsService {
     if (!integration) return "Unauthorized / unknown number";
 
     const { workspaceId, settings } = integration;
-    const userId = (settings as any)?.connectedByUserId;
+    let userId = (settings as any)?.connectedByUserId;
 
-    if (!userId) return "Need a valid user to create transaction";
+    // Resolve invalid zero UUID or missing userId to a valid workspace member
+    if (!userId || userId === "00000000-0000-0000-0000-000000000000") {
+      const fallbackId = await IntegrationsRepository.findFirstMemberId(workspaceId);
+      if (!fallbackId) return "Need a valid user to create transaction";
+      userId = fallbackId;
+    }
 
     try {
       if (type === "image" || type === "document") {
@@ -157,13 +188,23 @@ export abstract class IntegrationsService {
         }
       } else if (type === "text" && text) {
         try {
+          const chatSessionId = (settings as any)?.chatSessionId;
           const chatResponse = await AiService.chat(
             [{ role: "user", content: text }],
             workspaceId,
             userId,
+            chatSessionId,
           );
 
           if (chatResponse && chatResponse.reply) {
+            // Save current session ID if it's new
+            if (chatResponse.sessionId && chatResponse.sessionId !== chatSessionId) {
+              await IntegrationsRepository.updateSettings(integration.id, {
+                ...((settings as any) || {}),
+                chatSessionId: chatResponse.sessionId,
+              });
+            }
+
             await IntegrationsService.sendWhatsAppMessage(
               fromUserNumber,
               chatResponse.reply,
@@ -182,6 +223,202 @@ export abstract class IntegrationsService {
     }
 
     return "OK";
+  }
+
+  static async handleTelegramWebhook(payload: Record<string, any>) {
+    const message = payload.message;
+    if (!message) return "OK";
+
+    const chatId = message.chat?.id?.toString();
+    const text = message.text?.trim();
+    const photo = message.photo; // Array of PhotoSize, last is biggest
+
+    if (!chatId) return "OK";
+
+    // 1. Check for linking command
+    if (text) {
+      const startMatch = text.match(/^\/start\s+([a-f0-9-]{36})(?:___([a-f0-9-]{36}))?$/i) || 
+                         text.match(/^Connect Okane\s+([a-f0-9-]{36})(?:___([a-f0-9-]{36}))?$/i);
+      
+      if (startMatch) {
+        const targetWorkspaceId = startMatch[1];
+        let targetUserId = startMatch[2];
+
+        // If userId is missing, try to find the first member of the workspace
+        if (!targetUserId) {
+          targetUserId = await IntegrationsRepository.findFirstMemberId(targetWorkspaceId);
+        }
+
+        // If still no userId, we can't link safely
+        if (!targetUserId) {
+          await IntegrationsService.sendTelegramMessage(
+            chatId,
+            "❌ Could not find a valid user to link with this workspace. Please use the link from the Okane app.",
+          );
+          return "OK";
+        }
+
+        await IntegrationsService.connectTelegram(
+          targetWorkspaceId,
+          targetUserId,
+          chatId,
+        );
+
+        await IntegrationsService.sendTelegramMessage(
+          chatId,
+          "✅ Your Telegram is now connected to Okane! You can now send me your expenses or upload receipts anytime.",
+        );
+        return "OK";
+      }
+    }
+
+    // 2. Find integration
+    const integration = await IntegrationsRepository.findByTelegramChatId(chatId);
+
+    if (!integration) {
+      await IntegrationsService.sendTelegramMessage(
+        chatId,
+        "👋 Welcome to Okane! To connect your account, please use the 'Connect Telegram' button in your Okane dashboard or type `Connect Okane <your-workspace-id>`.",
+      );
+      return "OK";
+    }
+
+    const { workspaceId, settings } = integration;
+    let userId = (settings as any)?.connectedByUserId;
+
+    // Resolve invalid zero UUID or missing userId to a valid workspace member
+    if (!userId || userId === "00000000-0000-0000-0000-000000000000") {
+      const fallbackId = await IntegrationsRepository.findFirstMemberId(workspaceId);
+      if (!fallbackId) return "Need a valid user to create transaction";
+      userId = fallbackId;
+    }
+
+    try {
+      if (photo && photo.length > 0) {
+        // Handle receipt image
+        const fileId = photo[photo.length - 1].file_id;
+        
+        // A. Get file path from Telegram
+        const fileResponse = await fetch(
+          `https://api.telegram.org/bot${Env.TELEGRAM_BOT_TOKEN}/getFile?file_id=${fileId}`
+        );
+        const fileData = await fileResponse.json();
+        
+        if (fileData.ok && fileData.result.file_path) {
+          const filePath = fileData.result.file_path;
+          const downloadUrl = `https://api.telegram.org/file/bot${Env.TELEGRAM_BOT_TOKEN}/${filePath}`;
+          
+          // B. Download media
+          const response = await fetch(downloadUrl);
+          if (!response.ok) throw new Error("Failed to download media from Telegram");
+
+          const arrayBuffer = await response.arrayBuffer();
+          const base64Image = Buffer.from(arrayBuffer).toString("base64");
+          const mimeType = "image/jpeg"; // Telegram photos are usually jpeg
+
+          // C. Upload to Vault
+          const vaultFile = await vaultService.uploadFile(workspaceId, {
+            name: `receipt-${Date.now()}.jpg`,
+            type: mimeType,
+            size: Buffer.byteLength(base64Image, "base64"),
+            buffer: Buffer.from(base64Image, "base64"),
+          });
+
+          // D. Parse with AI
+          const parsedReceipt = await AiService.parseReceipt(
+            workspaceId,
+            base64Image,
+            mimeType,
+          );
+
+          if (parsedReceipt && parsedReceipt.amount) {
+            const wallets = await walletsRepository.findMany(workspaceId);
+            if (wallets.length > 0) {
+              const defaultWallet = wallets[0];
+              if (!defaultWallet) return "OK";
+
+              await TransactionsService.create(workspaceId, userId, {
+                walletId: defaultWallet.id,
+                amount: parsedReceipt.amount,
+                date: parsedReceipt.date || new Date().toISOString(),
+                type: "expense",
+                name: parsedReceipt.name || "Expense",
+                description: "Parsed automatically from Telegram Receipt",
+                categoryId: parsedReceipt.categoryId,
+                attachmentIds: vaultFile ? [vaultFile.id] : undefined,
+              });
+
+              const amountStr = Number(parsedReceipt.amount).toLocaleString();
+              const replyBody = `✅ Added expense: ${parsedReceipt.name || "Receipt"} for ${amountStr}. Includes attached receipt file!`;
+              await IntegrationsService.sendTelegramMessage(chatId, replyBody);
+            }
+          } else {
+            await IntegrationsService.sendTelegramMessage(
+              chatId,
+              "❌ Sorry, I couldn't extract receipt data from that image.",
+            );
+          }
+        }
+      } else if (text) {
+        // Handle AI Chat
+        try {
+          const chatSessionId = (settings as any)?.chatSessionId;
+          const chatResponse = await AiService.chat(
+            [{ role: "user", content: text }],
+            workspaceId,
+            userId,
+            chatSessionId,
+          );
+
+          if (chatResponse && chatResponse.reply) {
+            // Save current session ID if it's new
+            if (chatResponse.sessionId && chatResponse.sessionId !== chatSessionId) {
+              await IntegrationsRepository.updateSettings(integration.id, {
+                ...((settings as any) || {}),
+                chatSessionId: chatResponse.sessionId,
+              });
+            }
+
+            await IntegrationsService.sendTelegramMessage(
+              chatId,
+              chatResponse.reply,
+            );
+          }
+        } catch (chatErr) {
+          console.error("[Telegram AI Chat Error]", chatErr);
+          await IntegrationsService.sendTelegramMessage(
+            chatId,
+            "❌ Sorry, I encountered an error processing your request.",
+          );
+        }
+      }
+    } catch (error) {
+       console.error("[Telegram Webhook] Error processing message:", error);
+    }
+
+    return "OK";
+  }
+
+  static async sendTelegramMessage(chatId: string, text: string) {
+    const token = Env.TELEGRAM_BOT_TOKEN;
+    if (!token) {
+      console.warn("[Telegram] Bot token missing, cannot send message.");
+      return;
+    }
+
+    const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text,
+        parse_mode: "Markdown",
+      }),
+    });
+
+    if (!response.ok) {
+      console.error("[Telegram] Failed to send message:", await response.text());
+    }
   }
 
   static async sendWhatsAppMessage(to: string, body: string) {

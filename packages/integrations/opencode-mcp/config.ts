@@ -4,7 +4,7 @@ export default {
   name: "OpenCode",
   id: "opencode-mcp",
   category: "ai-automation",
-  active: true,
+  active: true, hidden: true,
   logo: Logo,
   short_description:
     "Connect OpenCode to your Midday data via MCP. Track time for clients from your terminal.",

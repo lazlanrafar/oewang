@@ -4,6 +4,7 @@ export interface UnifiedApp {
   category: string;
   active: boolean;
   beta?: boolean;
+  hidden?: boolean;
   logo?: React.ComponentType | string;
   short_description?: string;
   description?: string;

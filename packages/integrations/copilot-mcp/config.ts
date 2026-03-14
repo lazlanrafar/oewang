@@ -4,7 +4,7 @@ export default {
   name: "Microsoft Copilot",
   id: "copilot-mcp",
   category: "ai-automation",
-  active: true,
+  active: true, hidden: true,
   logo: Logo,
   short_description:
     "Connect Midday to Microsoft Copilot Studio. Query your business data from Microsoft 365.",

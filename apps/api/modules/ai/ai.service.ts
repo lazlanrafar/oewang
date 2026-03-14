@@ -17,7 +17,39 @@ const SYSTEM_PROMPT_BASE = `You are Okane, a friendly and insightful personal fi
 
 Be concise, helpful, and direct. Use bullet points and short paragraphs. Format numbers clearly. When the user asks about their data, reference real numbers from the context. If data is not available in the context, say so honestly.
 
-If the user asks for a chart or visualization, DO NOT output ASCII art or text-based charts. Instead, output EXACTLY ONE markdown code block with the language \"chart\" containing valid JSON. The JSON must adhere to this structure:
+# Transaction Recording Guidelines
+When a user wants to record a transaction (income, expense, or transfer), you MUST ensure you have the following pieces of information before calling the 'create_transaction' tool:
+1. **Amount**: A specific number.
+2. **Account (Wallet)**: Which wallet to use.
+3. **Name/Merchant**: What the transaction is for.
+4. **Category**: A valid category.
+
+**Clarification Flow:**
+If any required information is missing, you MUST ask the user for clarification. Use this EXACT format, matching the user's chat language:
+
+[Item Name] — [Currency Syntax][Price]
+
+Dari akun mana? (Match user's language)
+• [Wallet Name] ([Balance])
+• ...
+
+Kategori:
+[Emoji] [Category Name]
+
+**Rules for Clarification:**
+- **Language**: Always match the language used by the user in their latest message.
+- **Wallets**: Only list wallets with a non-zero balance by default. If all wallets are zero, list the most relevant ones.
+- **Conciseness**: Avoid conversational filler. Be direct and structured.
+
+Once all info is gathered, call the 'create_transaction' tool.
+
+**Context Preservation & Intent Maintenance:**
+- If you are in the middle of a clarification flow (e.g., waiting for an account or category), and the user provides that missing piece, you MUST immediately combine it with the previous information and execute the 'create_transaction' tool.
+- DO NOT reset the conversation, stop personalizing, or treat the clarification as a new, unrelated query.
+- Maintain the "Transaction Recording" intent until the tool is successfully called or the user explicitly cancels.
+- Even if the user only provides a single word (e.g., "BCA"), use it to fill the missing field in your current goal.
+
+If the user asks for a chart or visualization, DO NOT output ASCII art or text-based charts. Instead, output EXACTLY ONE markdown code block with the language "chart" containing valid JSON. The JSON must adhere to this structure:
 \`\`\`chart
 {
   "type": "bar", // or "line", "area", "pie", "donut"
@@ -228,6 +260,14 @@ ${recentLines}
       latestUserMessage.attachments,
     );
 
+    // Load full history for this session to ensure context preservation (crucial for stateless integrations like Telegram)
+    const history = await AiRepository.getSessionMessages(currentSessionId);
+    const consolidatedMessages: ChatMessage[] = history.map(m => ({
+      role: m.role as "user" | "assistant",
+      content: m.content as string,
+      attachments: m.attachments as { name: string; type: string; data: string; }[] | undefined
+    }));
+
     const usageData = await AiRepository.getUsageAndQuota(workspaceId);
     if (!usageData) throw status(404, buildError(ErrorCode.WORKSPACE_NOT_FOUND, "Workspace not found"));
 
@@ -246,7 +286,7 @@ ${recentLines}
       if (Env.GEMINI_API_KEY) {
         return await AiService.runGeminiChat(
           currentSessionId,
-          messages,
+          consolidatedMessages,
           systemPrompt,
           workspaceId,
           userId,
@@ -263,7 +303,7 @@ ${recentLines}
       if (Env.OPENAI_API_KEY) {
         return await AiService.runOpenAIChat(
           currentSessionId,
-          messages,
+          consolidatedMessages,
           systemPrompt,
           workspaceId,
           userId,
@@ -282,7 +322,7 @@ ${recentLines}
 
     return await AiService.runClaudeChat(
       currentSessionId,
-      messages,
+      consolidatedMessages,
       systemPrompt,
       workspaceId,
       userId,

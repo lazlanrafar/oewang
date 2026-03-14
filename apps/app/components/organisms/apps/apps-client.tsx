@@ -8,7 +8,7 @@ import { apps as appStoreApps } from "@workspace/integrations";
 import { useQuery } from "@tanstack/react-query";
 import { getIntegrationsAction } from "@workspace/modules/integrations/integrations.action";
 import { AppsCard } from "./apps-card";
-import { ConnectWhatsApp } from "./connect-whatsapp";
+import { ConnectTelegram } from "./connect-telegram";
 
 export function AppsClient() {
   const router = useRouter();
@@ -27,7 +27,9 @@ export function AppsClient() {
   });
 
   // Transform official apps
-  const transformedOfficialApps = appStoreApps.map((app) => {
+  const transformedOfficialApps = appStoreApps
+    .filter((app) => !app.hidden)
+    .map((app) => {
     // Check if the app is installed via the integrations API response
     const isInstalled =
       installedApps?.some(
@@ -164,7 +166,7 @@ export function AppsClient() {
           </div>
         )}
       </div>
-      <ConnectWhatsApp />
+      <ConnectTelegram />
     </div>
   );
 }

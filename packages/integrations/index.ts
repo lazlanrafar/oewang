@@ -23,6 +23,7 @@ import slackApp from "./slack/config-client";
 import stripePaymentsApp from "./stripe-payments/config-client";
 import stripeApp from "./stripe/config";
 import whatsappApp from "./whatsapp/config-client";
+import telegramApp from "./telegram/config-client";
 import xeroApp from "./xero/config-client";
 
 export const apps = [
@@ -51,4 +52,5 @@ export const apps = [
   copilotMcpApp,
   n8nMcpApp,
   makeMcpApp,
+  telegramApp,
 ];

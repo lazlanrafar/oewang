@@ -4,7 +4,7 @@ export default {
   name: "Raycast",
   id: "raycast",
   category: "apps",
-  active: false,
+  active: false, hidden: true,
   logo: Logo,
   short_description:
     "Track time directly in Raycast. You can start a timer, add time to an existing project or create a new project directly from Raycast.",

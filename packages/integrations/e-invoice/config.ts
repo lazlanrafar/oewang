@@ -4,7 +4,7 @@ export default {
   name: "E-Invoice",
   id: "e-invoice",
   category: "payments",
-  active: false,
+  active: false, hidden: true,
   logo: Logo,
   short_description:
     "Send and receive e-invoices via the Peppol network for compliant electronic invoicing across Europe.",

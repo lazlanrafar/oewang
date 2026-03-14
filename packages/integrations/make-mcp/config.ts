@@ -4,7 +4,7 @@ export default {
   name: "Make",
   id: "make-mcp",
   category: "ai-automation",
-  active: true,
+  active: true, hidden: true,
   logo: Logo,
   short_description:
     "Connect Make scenarios to your Midday data via MCP. Build visual automations with financial tools.",
