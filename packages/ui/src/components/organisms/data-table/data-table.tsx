@@ -136,6 +136,8 @@ type Props<TData extends { id: string | number }> = {
   topContent?: React.ReactNode;
   /** Virtualization strategy. 'absolute' uses translateY (default), 'flow' uses spacers. */
   virtualizationStrategy?: "absolute" | "flow";
+  /** Whether rows should be selectable. Can be a boolean or a function. */
+  enableRowSelection?: boolean | ((row: Row<TData>) => boolean);
 };
 
 export function DataTable<TData extends { id: string | number }>({
@@ -169,6 +171,7 @@ export function DataTable<TData extends { id: string | number }>({
   hideHeader,
   topContent,
   virtualizationStrategy = "absolute",
+  enableRowSelection,
 }: Props<TData>) {
   const internalScrollContainerRef = useRef<HTMLDivElement | null>(null);
   const scrollContainerRef = externalScrollContainerRef || internalScrollContainerRef;
@@ -236,6 +239,7 @@ export function DataTable<TData extends { id: string | number }>({
       : getPaginationRowModel(),
     columnResizeMode: "onChange",
     enableColumnResizing: true,
+    enableRowSelection,
     meta: tableMeta,
   });
 

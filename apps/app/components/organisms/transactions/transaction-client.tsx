@@ -33,7 +33,7 @@ import { TransactionDetailSheet } from "./transaction-detail-sheet";
 import { ImportModal } from "./transaction-import-modal";
 import { useTransactionsStore } from "@/stores/transactions";
 import { useSettingsStore } from "@/stores/settings-store";
-import { BulkEditBar } from "./transaction-bulk-edit-bar";
+import { TransactionBulkEditBar } from "./transaction-bulk-edit-bar";
 import { TransactionTableSkeleton } from "./transaction-table-skeleton";
 import {
   useInfiniteQuery,
@@ -120,6 +120,14 @@ export function TransactionsClient({
     debounceMs: 500,
   });
 
+  const [mountFilters] = useState(filters);
+  const isInitial = useMemo(() => {
+    return (
+      JSON.stringify(filters) === JSON.stringify(mountFilters) &&
+      activeTab === "all"
+    );
+  }, [filters, mountFilters, activeTab]);
+
   const {
     data,
     fetchNextPage,
@@ -152,26 +160,28 @@ export function TransactionsClient({
     },
     staleTime: 300000,
     refetchOnWindowFocus: false,
-    initialData: {
-      pages: [
-        {
-          success: true,
-          data: initialData,
-          code: "OK",
-          message: "Initial data",
-          meta: {
-            pagination: {
-              total: rowCount,
-              page: initialPage + 1,
-              limit: pageSize,
-              total_pages: pageCount,
+    initialData: isInitial
+      ? {
+          pages: [
+            {
+              success: true,
+              data: initialData,
+              code: "OK",
+              message: "Initial data",
+              meta: {
+                pagination: {
+                  total: rowCount,
+                  page: initialPage + 1,
+                  limit: pageSize,
+                  total_pages: pageCount,
+                },
+                timestamp: Date.now(),
+              },
             },
-            timestamp: Date.now(),
-          },
-        },
-      ],
-      pageParams: [1],
-    },
+          ],
+          pageParams: [1],
+        }
+      : undefined,
   });
 
   const { data: reviewCountData } = useInfiniteQuery({
@@ -500,6 +510,7 @@ export function TransactionsClient({
             isFetchingNextPage={isFetchingNextPage}
             hFull
             virtualizationStrategy="flow"
+            enableRowSelection={(row) => !(row.original as any)._isGroup}
             getRowHeight={(index) => {
               const item = processedRows[index] as any;
               if (item?._isGroup) {
@@ -518,6 +529,46 @@ export function TransactionsClient({
               wallets,
               onRowClick: handleRowClick,
               onDelete: (id: string) => deleteMutation.mutate(id),
+              // Custom selection logic for grouped rows (proxy rows)
+              isAllTransactionsSelected: () => {
+                const transactionIds = processedRows.flatMap((r: any) =>
+                  r._isGroup
+                    ? (r.transactions || []).map((t: any) => t.id)
+                    : [r.id],
+                );
+                if (transactionIds.length === 0) return false;
+                return transactionIds.every((id) => !!rowSelection[id]);
+              },
+              isSomeTransactionsSelected: () => {
+                const transactionIds = processedRows.flatMap((r: any) =>
+                  r._isGroup
+                    ? (r.transactions || []).map((t: any) => t.id)
+                    : [r.id],
+                );
+                return (
+                  transactionIds.some((id) => !!rowSelection[id]) &&
+                  !transactionIds.every((id) => !!rowSelection[id])
+                );
+              },
+              toggleAllTransactions: (value: boolean) => {
+                const transactionIds = processedRows.flatMap((r: any) =>
+                  r._isGroup
+                    ? (r.transactions || []).map((t: any) => t.id)
+                    : [r.id],
+                );
+
+                setRowSelection((prev) => {
+                  const next = { ...prev };
+                  transactionIds.forEach((id) => {
+                    if (value) {
+                      next[id] = true;
+                    } else {
+                      delete next[id];
+                    }
+                  });
+                  return next;
+                });
+              },
             }}
             renderRow={({ row, getStickyStyle, getStickyClassName, table }) => {
               const item = row.original as any;
@@ -593,6 +644,23 @@ export function TransactionsClient({
                                 ...baseRow,
                                 id: tx.id,
                                 original: tx,
+                                getIsSelected: () => !!rowSelection[tx.id],
+                                toggleSelected: (value?: boolean) => {
+                                  setRowSelection((prev) => {
+                                    const next = { ...prev };
+                                    const isSelected =
+                                      value !== undefined
+                                        ? value
+                                        : !prev[tx.id];
+
+                                    if (isSelected) {
+                                      next[tx.id] = true;
+                                    } else {
+                                      delete next[tx.id];
+                                    }
+                                    return next;
+                                  });
+                                },
                                 getValue: (colId: string) =>
                                   (tx as any)[colId] ||
                                   (tx.wallet && colId === "wallet.name"
@@ -605,6 +673,23 @@ export function TransactionsClient({
                                   ...baseRow,
                                   id: tx.id,
                                   original: tx,
+                                  getIsSelected: () => !!rowSelection[tx.id],
+                                  toggleSelected: (value?: boolean) => {
+                                    setRowSelection((prev) => {
+                                      const next = { ...prev };
+                                      const isSelected =
+                                        value !== undefined
+                                          ? value
+                                          : !prev[tx.id];
+
+                                      if (isSelected) {
+                                        next[tx.id] = true;
+                                      } else {
+                                        delete next[tx.id];
+                                      }
+                                      return next;
+                                    });
+                                  },
                                   getValue: (colId: string) =>
                                     (tx as any)[colId] ||
                                     (tx.wallet && colId === "wallet.name"
@@ -666,7 +751,7 @@ export function TransactionsClient({
         )}
       </div>
 
-      <BulkEditBar />
+      <TransactionBulkEditBar />
 
       <TransactionFormSheet
         open={isFormOpen && !selectedTransaction}

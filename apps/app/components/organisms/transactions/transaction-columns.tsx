@@ -44,17 +44,29 @@ export const transactionColumns = (
 ): ColumnDef<Transaction>[] => [
   {
     id: "select",
-    header: ({ table }) => (
-      <Checkbox
-        checked={
-          table.getIsAllPageRowsSelected() ||
-          (table.getIsSomePageRowsSelected() && "indeterminate")
-        }
-        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-        aria-label="Select all"
-        className="translate-y-[2px]"
-      />
-    ),
+    header: ({ table }) => {
+      const meta = table.options.meta as any;
+      const isAllSelected = meta?.isAllTransactionsSelected
+        ? meta.isAllTransactionsSelected()
+        : table.getIsAllPageRowsSelected();
+      const isSomeSelected = meta?.isSomeTransactionsSelected
+        ? meta.isSomeTransactionsSelected()
+        : table.getIsSomePageRowsSelected();
+
+      return (
+        <Checkbox
+          checked={isAllSelected || (isSomeSelected && "indeterminate")}
+          onCheckedChange={(value) => {
+            if (meta?.toggleAllTransactions) {
+              meta.toggleAllTransactions(!!value);
+            } else {
+              table.toggleAllPageRowsSelected(!!value);
+            }
+          }}
+          aria-label="Select all"
+        />
+      );
+    },
     cell: ({ row }) => (
       <Checkbox
         checked={row.getIsSelected()}
@@ -81,7 +93,7 @@ export const transactionColumns = (
     header: "Date",
     cell: ({ row }) => {
       const date = row.getValue("date") as string;
-      
+
       if (!date || isNaN(new Date(date).getTime())) {
         return (
           <p className="text-xs font-sans text-muted-foreground whitespace-nowrap">

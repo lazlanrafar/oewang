@@ -9,7 +9,7 @@ import {
   SortableContext,
   horizontalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import type { Header, Table } from "@tanstack/react-table";
+import { flexRender, type Header, type Table } from "@tanstack/react-table";
 import { ArrowDown, ArrowUp } from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
 import { useMemo } from "react";
@@ -65,15 +65,20 @@ export function DataTableHeader<TData>({
   const sortableColumnIds = useMemo(() => {
     if (!table) return [];
     return table
-      .getAllLeafColumns()
+      .getVisibleFlatColumns()
       .filter((col) => !NON_REORDERABLE_COLUMNS[tableId].has(col.id))
       .map((col) => col.id);
-  }, [table, tableId]);
+  }, [
+    table,
+    tableId,
+    table?.getState().columnVisibility,
+    table?.getState().columnOrder,
+  ]);
 
   // Find the ID of the last visible non-sticky non-actions column
   const lastNonStickyColumnId = useMemo(() => {
     if (!table) return null;
-    const visibleColumns = table.getVisibleLeafColumns();
+    const visibleColumns = table.getVisibleFlatColumns();
     for (let i = visibleColumns.length - 1; i >= 0; i--) {
       const col = visibleColumns[i];
       if (!col) continue;
@@ -82,18 +87,27 @@ export function DataTableHeader<TData>({
       if (!m?.sticky) return col.id;
     }
     return null;
-  }, [table]);
+  }, [
+    table,
+    table?.getState().columnVisibility,
+    table?.getState().columnOrder,
+  ]);
 
   // Find the ID of the last visible column overall
   const lastVisibleColumnId = useMemo(() => {
     if (!table) return null;
-    const visibleColumns = table.getVisibleLeafColumns();
+    const visibleColumns = table.getVisibleFlatColumns();
     const lastCol = visibleColumns[visibleColumns.length - 1];
     return lastCol?.id ?? null;
-  }, [table]);
+  }, [
+    table,
+    table?.getState().columnVisibility,
+    table?.getState().columnOrder,
+  ]);
 
   // The last sticky column gets the horizontal pagination arrows
   const lastStickyColumnId = useMemo(() => {
+    if (!table) return null;
     const stickyCols = STICKY_COLUMNS[tableId];
     // Walk backwards to find the last sticky column that's actually visible
     for (let i = stickyCols.length - 1; i >= 0; i--) {
@@ -101,7 +115,12 @@ export function DataTableHeader<TData>({
       if (col && isVisible(col.id)) return col.id;
     }
     return null;
-  }, [tableId, isVisible]);
+  }, [
+    tableId,
+    isVisible,
+    table?.getState().columnVisibility,
+    table?.getState().columnOrder,
+  ]);
 
   if (!table) return null;
 
@@ -110,7 +129,12 @@ export function DataTableHeader<TData>({
   return (
     <TableHeader
       className="border-0 block sticky z-45 bg-background w-full shadow-sm"
-      style={{ top: stickyOffset ?? 0, width: "100%", display: "block", minWidth: "100%" }}
+      style={{
+        top: stickyOffset ?? 0,
+        width: "100%",
+        display: "block",
+        minWidth: "100%",
+      }}
     >
       {headerGroups.map((headerGroup) => (
         <TableRow
@@ -122,12 +146,12 @@ export function DataTableHeader<TData>({
             items={sortableColumnIds}
             strategy={horizontalListSortingStrategy}
           >
-            {headerGroup.headers.map((header, headerIndex, headers) => {
+            {headerGroup.headers.map((header) => {
               const columnId = header.column.id;
               const meta = header.column.columnDef.meta as
                 | { sticky?: boolean; className?: string }
                 | undefined;
-              const isSticky = meta?.sticky;
+              const isSticky = meta?.sticky ?? false;
               const canReorder =
                 !NON_REORDERABLE_COLUMNS[tableId].has(columnId);
               const isActions = columnId === "actions";
@@ -135,7 +159,7 @@ export function DataTableHeader<TData>({
               if (!isVisible(columnId)) return null;
 
               // Check if actions should be full width (no non-sticky visible columns)
-              const hasNonStickyVisible = headers.some((h) => {
+              const hasNonStickyVisible = headerGroup.headers.some((h) => {
                 if (h.column.id === "actions") return false;
                 if (!isVisible(h.column.id)) return false;
                 const hMeta = h.column.columnDef.meta as
@@ -145,13 +169,13 @@ export function DataTableHeader<TData>({
               });
               const actionsFullWidth = isActions && !hasNonStickyVisible;
 
-              // Check if this column should flex (last before actions, or full-width actions, or true last non-sticky)
+              // Check if this column should flex
               const isLastNonSticky = columnId === lastNonStickyColumnId;
               const shouldFlex = isLastNonSticky || actionsFullWidth;
 
               const headerStyle: CSSProperties = {
                 width:
-                  actionsFullWidth || shouldFlex ? "100%" : header.getSize(),
+                  actionsFullWidth || shouldFlex ? undefined : header.getSize(),
                 minWidth: actionsFullWidth
                   ? 0
                   : isSticky
@@ -165,7 +189,11 @@ export function DataTableHeader<TData>({
                       : header.column.columnDef.maxSize,
                 flexShrink: shouldFlex ? 1 : 0,
                 ...(!actionsFullWidth && getStickyStyle(columnId)),
-                ...(shouldFlex && { flex: "1 1 0%", flexGrow: 1, width: "100%" }),
+                ...(shouldFlex && {
+                  flex: "1 1 0%",
+                  flexGrow: 1,
+                  minWidth: 0,
+                }),
               };
 
               // Non-reorderable columns (sticky + actions)
@@ -187,7 +215,10 @@ export function DataTableHeader<TData>({
                 return (
                   <TableHead
                     key={header.id}
-                    className={finalClassName}
+                    className={cn(
+                      finalClassName,
+                      columnId === "select" && "px-0",
+                    )}
                     style={headerStyle}
                   >
                     {renderHeaderContent(
@@ -214,7 +245,7 @@ export function DataTableHeader<TData>({
                   className={getStickyClassName(
                     columnId,
                     cn(
-                      "group/header relative h-full px-4 border-t border-border flex items-center",
+                      "group/header relative h-full px-4 border-t border-border flex items-center bg-background",
                       shouldFlex && "border-r-0",
                     ),
                   )}
@@ -260,19 +291,35 @@ function renderHeaderContent<TData>(
 ) {
   const sortField = SORT_FIELD_MAPS[tableId][columnId];
 
-  // Select column - checkbox
+  // Priority 1: Custom header renderer from column definition
+  if (typeof header.column.columnDef.header !== "string") {
+    // For the select column, we still want the centering wrapper
+    if (columnId === "select") {
+      return (
+        <div className="flex items-center justify-center w-full">
+          {flexRender(header.column.columnDef.header, header.getContext())}
+        </div>
+      );
+    }
+    return flexRender(header.column.columnDef.header, header.getContext());
+  }
+
+  // Priority 2: Hardcoded specialized column behavior (legacy fallback or specific behaviors)
+  // Select column - checkbox (if not using custom renderer)
   if (columnId === "select") {
     return (
-      <Checkbox
-        checked={
-          table.getIsAllPageRowsSelected()
-            ? true
-            : table.getIsSomePageRowsSelected()
-              ? "indeterminate"
-              : false
-        }
-        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-      />
+      <div className="flex items-center justify-center w-full">
+        <Checkbox
+          checked={
+            table.getIsAllPageRowsSelected()
+              ? true
+              : table.getIsSomePageRowsSelected()
+                ? "indeterminate"
+                : false
+          }
+          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+        />
+      </div>
     );
   }
 

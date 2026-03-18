@@ -56,7 +56,7 @@ export function DataTableHeaderDraggable({
       {!disabled && (
         <GripVertical
           size={14}
-          className="absolute right-1 text-muted-foreground opacity-0 group-hover/header:opacity-100 flex-shrink-0 cursor-grab active:cursor-grabbing z-30"
+          className="absolute right-1 text-muted-foreground opacity-0 group-hover/header:opacity-100 shrink-0 cursor-grab active:cursor-grabbing z-30"
           {...attributes}
           {...listeners}
         />

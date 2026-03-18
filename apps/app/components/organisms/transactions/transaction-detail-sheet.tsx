@@ -156,6 +156,7 @@ export function TransactionDetailSheet({
           name: debouncedName,
           description: debouncedDescription,
         });
+        await queryClient.invalidateQueries({ queryKey: ["transactions"] });
       }
     };
 
@@ -175,6 +176,7 @@ export function TransactionDetailSheet({
           });
           if (res.success) {
             updateTransactionInCache({ isReady: !transaction.isReady });
+            await queryClient.invalidateQueries({ queryKey: ["transactions"] });
             toast.success(
               transaction.isReady ? "Marked as pending" : "Marked as ready",
             );
@@ -204,6 +206,7 @@ export function TransactionDetailSheet({
         attachmentIds: ids,
         attachments: res.data.attachments,
       });
+      await queryClient.invalidateQueries({ queryKey: ["transactions"] });
       toast.success("Attachments updated");
     }
   };
@@ -222,6 +225,7 @@ export function TransactionDetailSheet({
         attachmentIds: newIds,
         attachments: res.data.attachments,
       });
+      await queryClient.invalidateQueries({ queryKey: ["transactions"] });
       toast.success("Attachment removed");
     }
   };
@@ -264,6 +268,9 @@ export function TransactionDetailSheet({
                   });
                   if (res.success && res.data) {
                     updateTransactionInCache(res.data);
+                    await queryClient.invalidateQueries({
+                      queryKey: ["transactions"],
+                    });
                     toast.success("Account updated");
                   }
                 }}
@@ -288,6 +295,9 @@ export function TransactionDetailSheet({
                     });
                     if (res.success && res.data) {
                       updateTransactionInCache(res.data);
+                      await queryClient.invalidateQueries({
+                        queryKey: ["transactions"],
+                      });
                       toast.success("Date updated");
                     }
                   }
@@ -334,6 +344,9 @@ export function TransactionDetailSheet({
                         });
                         if (res.success && res.data) {
                           updateTransactionInCache(res.data);
+                          await queryClient.invalidateQueries({
+                            queryKey: ["transactions"],
+                          });
                           toast.success("Amount updated");
                         }
                       }
@@ -375,6 +388,9 @@ export function TransactionDetailSheet({
                       categoryId,
                       category: res.data.category,
                     });
+                    await queryClient.invalidateQueries({
+                      queryKey: ["transactions"],
+                    });
                     toast.success("Category updated");
                   }
                 }}
@@ -395,6 +411,9 @@ export function TransactionDetailSheet({
                     updateTransactionInCache({
                       assignedUserId,
                       user: res.data.user,
+                    });
+                    await queryClient.invalidateQueries({
+                      queryKey: ["transactions"],
                     });
                     toast.success("Assignee updated");
                   }
@@ -505,6 +524,9 @@ export function TransactionDetailSheet({
                       });
                       if (res.success) {
                         updateTransactionInCache({ isExported: checked });
+                        await queryClient.invalidateQueries({
+                          queryKey: ["transactions"],
+                        });
                         toast.success(
                           checked
                             ? "Excluded from reports"
@@ -550,6 +572,9 @@ export function TransactionDetailSheet({
                       updateTransactionInCache({
                         toWalletId,
                         toWallet: res.data.toWallet,
+                      });
+                      await queryClient.invalidateQueries({
+                        queryKey: ["transactions"],
                       });
                       toast.success("Destination updated");
                     }

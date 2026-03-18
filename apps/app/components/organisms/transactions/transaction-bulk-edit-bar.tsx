@@ -13,17 +13,19 @@ import {
 import { AnimatePresence, motion } from "framer-motion";
 import { Trash2, X, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { bulkDeleteTransactions } from "@workspace/modules/transaction/transaction.action";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
-export function BulkEditBar() {
+export function TransactionBulkEditBar() {
   const { rowSelection, resetSelection } = useTransactionsStore();
   const selectedCount = Object.keys(rowSelection).length;
   const hasSelection = selectedCount > 0;
   const [show, setShow] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     setShow(hasSelection);
@@ -41,7 +43,7 @@ export function BulkEditBar() {
           exit={{ y: 100, opacity: 0 }}
           transition={{ duration: 0.3, ease: "easeOut" }}
         >
-          <div className="pointer-events-auto flex items-center gap-4 bg-background/80 backdrop-blur-xl border border-border/50 rounded-2xl px-6 py-3 shadow-2xl min-w-[320px] justify-between">
+          <div className="pointer-events-auto flex items-center gap-4 bg-background/80 backdrop-blur-xl border border-border/50 px-6 py-2 shadow-2xl min-w-[320px] justify-between">
             <div className="flex items-center gap-3">
               <span className="text-sm font-sans font-medium text-foreground">
                 {selectedCount} selected
@@ -72,6 +74,9 @@ export function BulkEditBar() {
                           toast.success(
                             `Successfully deleted ${ids.length} transactions`,
                           );
+                          await queryClient.invalidateQueries({
+                            queryKey: ["transactions"],
+                          });
                           resetSelection();
                           router.refresh();
                         } else {

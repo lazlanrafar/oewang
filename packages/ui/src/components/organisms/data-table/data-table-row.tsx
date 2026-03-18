@@ -46,15 +46,18 @@ function DataTableRowInner<TData>({
       const c = cells[i];
       if (!c) continue;
       const m = c.column.columnDef.meta as TableColumnMeta | undefined;
-      if (!m?.sticky && c.column.id !== "actions") return c.column.id;
+      // Skip actions and sticky columns
+      if (c.column.id !== "actions" && !m?.sticky) {
+        return c.column.id;
+      }
     }
     return null;
   })();
 
-  const hasNonStickyBeforeActions = cells.some((cell) => {
+  const hasNonStickyVisible = cells.some((cell) => {
     if (cell.column.id === "actions") return false;
     const meta = cell.column.columnDef.meta as TableColumnMeta | undefined;
-    return !(meta?.sticky ?? false);
+    return !meta?.sticky;
   });
 
   return (
@@ -73,15 +76,16 @@ function DataTableRowInner<TData>({
         const meta = cell.column.columnDef.meta as TableColumnMeta | undefined;
         const isSticky = meta?.sticky ?? false;
         const isActions = columnId === "actions";
-        const actionsFullWidth = isActions && !hasNonStickyBeforeActions;
+        const isSelect = columnId === "select";
+        const actionsFullWidth = isActions && !hasNonStickyVisible;
         const isLastNonSticky = columnId === lastNonStickyColumnId;
-        const shouldFlex = isLastNonSticky || actionsFullWidth;
+        const shouldFlex = isLastNonSticky || (isActions && actionsFullWidth);
 
         const cellStyle: CSSProperties = {
           width:
             actionsFullWidth || shouldFlex ? undefined : cell.column.getSize(),
           minWidth: actionsFullWidth
-            ? undefined
+            ? 0
             : isSticky
               ? cell.column.getSize()
               : cell.column.columnDef.minSize,
@@ -93,7 +97,11 @@ function DataTableRowInner<TData>({
                 : cell.column.columnDef.maxSize,
           flexShrink: shouldFlex ? 1 : 0,
           ...(!actionsFullWidth && getStickyStyle(columnId)),
-          ...(shouldFlex && { flex: 1, flexGrow: 1 }),
+          ...(shouldFlex && {
+            flex: "1 1 0%",
+            flexGrow: 1,
+            minWidth: 0,
+          }),
         };
 
         const cellClassName = isActions
@@ -103,6 +111,47 @@ function DataTableRowInner<TData>({
           : getStickyClassName(columnId, meta?.className);
 
         const isClickable = !nonClickableColumns.has(columnId);
+
+        if (isSelect) {
+          return (
+            <TableCell
+              key={cell.id}
+              className={cn(
+                getStickyClassName(
+                  columnId,
+                  "bg-background z-20 px-0 h-full flex items-center border-b border-border",
+                ),
+              )}
+              style={cellStyle}
+            >
+              <div className="flex items-center justify-center w-full h-full">
+                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+              </div>
+            </TableCell>
+          );
+        }
+
+        if (isActions) {
+          return (
+            <TableCell
+              key={cell.id}
+              className={getStickyClassName(
+                columnId,
+                cn(
+                  actionsFullWidth
+                    ? ACTIONS_FULL_WIDTH_CELL_CLASS
+                    : ACTIONS_STICKY_CELL_CLASS,
+                  "h-full flex items-center justify-center border-b border-border bg-background px-4",
+                ),
+              )}
+              style={cellStyle}
+            >
+              <div className="flex items-center justify-center w-full h-full">
+                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+              </div>
+            </TableCell>
+          );
+        }
 
         return (
           <TableCell
