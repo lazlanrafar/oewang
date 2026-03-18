@@ -132,51 +132,33 @@ export const pricingColumns: ColumnDef<Pricing>[] = [
     ),
   },
   {
-    accessorKey: "price_monthly",
-    header: "Monthly",
-    size: 140,
-    minSize: 100,
-    maxSize: 200,
+    id: "prices_summary",
+    accessorFn: (row) => row.prices,
+    header: "Pricing (Base USD)",
+    size: 200,
+    minSize: 150,
+    maxSize: 300,
     enableResizing: true,
     meta: {
-      headerLabel: "Monthly",
-      className: "w-[140px] min-w-[100px]",
+      headerLabel: "Pricing",
+      className: "w-[200px] min-w-[150px]",
     },
     cell: ({ getValue }) => {
-      const amount = getValue<number>();
-      return <span>${(amount / 100).toFixed(2)}</span>;
-    },
-  },
-  {
-    accessorKey: "price_yearly",
-    header: "Yearly",
-    size: 140,
-    minSize: 100,
-    maxSize: 200,
-    enableResizing: true,
-    meta: {
-      headerLabel: "Yearly",
-      className: "w-[140px] min-w-[100px]",
-    },
-    cell: ({ getValue }) => {
-      const amount = getValue<number>();
-      return <span>${((amount || 0) / 100).toFixed(2)}</span>;
-    },
-  },
-  {
-    accessorKey: "price_one_time",
-    header: "One-Time",
-    size: 140,
-    minSize: 100,
-    maxSize: 200,
-    enableResizing: true,
-    meta: {
-      headerLabel: "One-Time",
-      className: "w-[140px] min-w-[100px]",
-    },
-    cell: ({ getValue }) => {
-      const amount = getValue<number>();
-      return <span>${((amount || 0) / 100).toFixed(2)}</span>;
+      const prices = getValue<Pricing["prices"]>();
+      if (!prices || prices.length === 0) return <span className="text-muted-foreground italic">Free</span>;
+      
+      const basePrice = prices.find((p) => p.currency.toLowerCase() === "usd") || prices[0];
+      
+      if (!basePrice || (basePrice.monthly === 0 && basePrice.yearly === 0)) {
+        return <span className="text-muted-foreground italic">Free</span>;
+      }
+
+      return (
+        <span className="flex flex-col gap-0.5">
+          <span className="text-sm">${(basePrice.monthly / 100).toFixed(2)} / mo</span>
+          <span className="text-xs text-muted-foreground">${(basePrice.yearly / 100).toFixed(2)} / yr</span>
+        </span>
+      );
     },
   },
   {

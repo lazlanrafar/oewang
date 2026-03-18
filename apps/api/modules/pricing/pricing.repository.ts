@@ -43,11 +43,7 @@ export abstract class PricingRepository {
     if (query.sortBy === "name") {
       orderByClause =
         query.sortOrder === "desc" ? desc(pricing.name) : asc(pricing.name);
-    } else if (query.sortBy === "price_monthly") {
-      orderByClause =
-        query.sortOrder === "desc"
-          ? desc(pricing.price_monthly)
-          : asc(pricing.price_monthly);
+
     } else if (query.sortBy === "created_at") {
       orderByClause =
         query.sortOrder === "desc"
@@ -104,10 +100,9 @@ export abstract class PricingRepository {
       .values({
         name: dto.name,
         description: dto.description,
-        price_monthly: dto.price_monthly,
-        price_yearly: dto.price_yearly,
-        price_one_time: dto.price_one_time,
-        currency: dto.currency || "usd",
+        prices: dto.prices || [],
+        max_vault_size_mb: dto.max_vault_size_mb || 100,
+        max_ai_tokens: dto.max_ai_tokens || 100,
         features: dto.features || [],
         is_active: dto.is_active ?? true,
       })

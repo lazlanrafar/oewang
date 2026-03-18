@@ -2,6 +2,7 @@ export * from "./default/category";
 export * from "./default/wallet";
 export * from "./roles";
 export * from "./colors";
+export * from "./pricing-features";
 export * from "./transaction-types";
 export * from "./artifact-config";
 export * from "./chat-utils";

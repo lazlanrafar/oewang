@@ -1,7 +1,7 @@
 import Stripe from "stripe";
 import { db } from "@workspace/database";
 import { workspaces, pricing } from "@workspace/database";
-import { eq, or, and } from "drizzle-orm";
+import { eq, or, and, sql } from "drizzle-orm";
 import { ErrorCode } from "@workspace/types";
 import { buildSuccess, buildError } from "@workspace/utils";
 import { status } from "elysia";
@@ -46,8 +46,8 @@ export abstract class StripeService {
                 .from(pricing)
                 .where(
                   or(
-                    eq(pricing.stripe_price_id_monthly, priceId),
-                    eq(pricing.stripe_price_id_yearly, priceId),
+                    sql`${pricing.prices} @> ${JSON.stringify([{ stripe_monthly_id: priceId }])}::jsonb`,
+                    sql`${pricing.prices} @> ${JSON.stringify([{ stripe_yearly_id: priceId }])}::jsonb`,
                   ),
                 )
                 .limit(1);
@@ -208,8 +208,8 @@ export abstract class StripeService {
             .from(pricing)
             .where(
               or(
-                eq(pricing.stripe_price_id_monthly, priceId),
-                eq(pricing.stripe_price_id_yearly, priceId),
+                sql`${pricing.prices} @> ${JSON.stringify([{ stripe_monthly_id: priceId }])}::jsonb`,
+                sql`${pricing.prices} @> ${JSON.stringify([{ stripe_yearly_id: priceId }])}::jsonb`,
               ),
             )
             .limit(1);
@@ -293,9 +293,8 @@ export abstract class StripeService {
       .from(pricing)
       .where(
         or(
-          eq(pricing.stripe_price_id_monthly, priceId),
-          eq(pricing.stripe_price_id_yearly, priceId),
-          eq(pricing.stripe_price_id_one_time, priceId),
+          sql`${pricing.prices} @> ${JSON.stringify([{ stripe_monthly_id: priceId }])}::jsonb`,
+          sql`${pricing.prices} @> ${JSON.stringify([{ stripe_yearly_id: priceId }])}::jsonb`,
         ),
       )
       .limit(1);
@@ -312,8 +311,7 @@ export abstract class StripeService {
         .replace(/\/v1$/, "");
 
     // Determine mode based on which price ID it is
-    const mode =
-      priceId === plan.stripe_price_id_one_time ? "payment" : "subscription";
+    const mode = "subscription";
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],

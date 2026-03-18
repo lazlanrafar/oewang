@@ -12,6 +12,7 @@ export interface CurrencySelectorProps {
   onSelect?: () => void;
   className?: string;
   headless?: boolean;
+  variant?: "default" | "ghost";
 }
 
 export interface SelectCurrencyProps {
@@ -22,6 +23,7 @@ export interface SelectCurrencyProps {
   placeholder?: string;
   headless?: boolean;
   hideLoading?: boolean;
+  variant?: "default" | "ghost";
 }
 
 export function CurrencySelector({
@@ -30,6 +32,7 @@ export function CurrencySelector({
   onSelect,
   className,
   headless = true,
+  variant,
 }: CurrencySelectorProps) {
   const currencies = useMemo(() => {
     const uniqueCurrencies = new Map<
@@ -104,6 +107,7 @@ export function SelectCurrency({
       onChange={onChange}
       className={className}
       headless={headless}
+      variant={variant}
     />
   );
 }

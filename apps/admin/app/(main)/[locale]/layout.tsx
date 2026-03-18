@@ -61,6 +61,8 @@ export default async function RootLayout({
           themePreset={theme_preset}
           contentLayout={content_layout}
           navbarStyle={navbar_style}
+          sidebarVariant={sidebar_variant}
+          sidebarCollapsible={sidebar_collapsible}
           font={font}
         >
           <NuqsAdapter>

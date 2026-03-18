@@ -70,11 +70,9 @@ export function OverviewCards({
   categoryData?: CategoryBreakdownPoint[];
   settings?: TransactionSettings | null;
 }) {
-  const sendMessageFn = useChatStore((state) => state.sendMessageFn);
-
   const handleCardClick = (message: string) => {
     if (onCardClick) onCardClick(message);
-    if (sendMessageFn) sendMessageFn(message);
+    // sendMessageFn is no longer in ChatStore
   };
 
   const fmt = (v: number) => formatCurrency(v, settings);

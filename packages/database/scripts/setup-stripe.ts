@@ -17,7 +17,8 @@ async function main() {
     .where(eq(pricing.is_active, true));
 
   for (const plan of plans) {
-    if (!plan.price_monthly && !plan.price_yearly && !plan.price_one_time) {
+    const hasPrices = plan.prices && plan.prices.some(p => p.monthly > 0 || p.yearly > 0);
+    if (!hasPrices) {
       console.log(`\n⏭  Skipping free plan: ${plan.name}`);
       continue;
     }
@@ -37,49 +38,43 @@ async function main() {
       console.log(`  ✅ Using existing Product: ${productId}`);
     }
 
-    let priceIdMonthly = plan.stripe_price_id_monthly;
-    let priceIdYearly = plan.stripe_price_id_yearly;
-    let priceIdOneTime = plan.stripe_price_id_one_time;
+    let updatedPrices = [];
 
-    // Create Monthly Price
-    if (plan.price_monthly && !priceIdMonthly) {
-      const price = await stripe.prices.create({
-        product: productId,
-        unit_amount: plan.price_monthly,
-        currency: plan.currency.toLowerCase(),
-        recurring: { interval: "month" },
-      });
-      priceIdMonthly = price.id;
-      console.log(
-        `  ✅ Created Monthly Price: ${priceIdMonthly} ($${(plan.price_monthly / 100).toFixed(2)})`,
-      );
-    }
+    // Create Prices for each currency
+    for (const priceObj of plan.prices || []) {
+      const { currency, monthly, yearly } = priceObj;
+      let stripe_monthly_id = priceObj.stripe_monthly_id;
+      let stripe_yearly_id = priceObj.stripe_yearly_id;
 
-    // Create Yearly Price
-    if (plan.price_yearly && !priceIdYearly) {
-      const price = await stripe.prices.create({
-        product: productId,
-        unit_amount: plan.price_yearly,
-        currency: plan.currency.toLowerCase(),
-        recurring: { interval: "year" },
-      });
-      priceIdYearly = price.id;
-      console.log(
-        `  ✅ Created Yearly Price: ${priceIdYearly} ($${(plan.price_yearly / 100).toFixed(2)})`,
-      );
-    }
+      // Create Monthly Price
+      if (monthly > 0 && !stripe_monthly_id) {
+        const price = await stripe.prices.create({
+          product: productId,
+          unit_amount: monthly,
+          currency: currency.toLowerCase(),
+          recurring: { interval: "month" },
+        });
+        stripe_monthly_id = price.id;
+        console.log(
+          `  ✅ Created Monthly Price (${currency.toUpperCase()}): ${stripe_monthly_id} ($${(monthly / 100).toFixed(2)})`,
+        );
+      }
 
-    // Create One Time Price
-    if (plan.price_one_time && !priceIdOneTime) {
-      const price = await stripe.prices.create({
-        product: productId,
-        unit_amount: plan.price_one_time,
-        currency: plan.currency.toLowerCase(),
-      });
-      priceIdOneTime = price.id;
-      console.log(
-        `  ✅ Created One-Time Price: ${priceIdOneTime} ($${(plan.price_one_time / 100).toFixed(2)})`,
-      );
+      // Create Yearly Price
+      if (yearly > 0 && !stripe_yearly_id) {
+        const price = await stripe.prices.create({
+          product: productId,
+          unit_amount: yearly,
+          currency: currency.toLowerCase(),
+          recurring: { interval: "year" },
+        });
+        stripe_yearly_id = price.id;
+        console.log(
+          `  ✅ Created Yearly Price (${currency.toUpperCase()}): ${stripe_yearly_id} ($${(yearly / 100).toFixed(2)})`,
+        );
+      }
+
+      updatedPrices.push({ ...priceObj, stripe_monthly_id, stripe_yearly_id });
     }
 
     // Update database
@@ -87,9 +82,7 @@ async function main() {
       .update(pricing)
       .set({
         stripe_product_id: productId,
-        stripe_price_id_monthly: priceIdMonthly,
-        stripe_price_id_yearly: priceIdYearly,
-        stripe_price_id_one_time: priceIdOneTime,
+        prices: updatedPrices,
       })
       .where(eq(pricing.id, plan.id));
 

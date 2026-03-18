@@ -78,6 +78,13 @@
       "when": 1773364476496,
       "tag": "0010_normal_sugar_man",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1773814541192,
+      "tag": "0011_special_ulik",
+      "breakpoints": true
     }
   ]
 }

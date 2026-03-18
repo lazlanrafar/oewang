@@ -5,7 +5,7 @@ export const baseConfig = {
   name: "WhatsApp",
   id: "whatsapp",
   category: "capture",
-  active: true, hidden: true,
+  active: true,
   hidden: true,
   logo: Logo,
   short_description:

@@ -3,10 +3,19 @@ import { t, type UnwrapSchema } from "elysia";
 export const CreatePricingDto = t.Object({
   name: t.String({ minLength: 1, maxLength: 255 }),
   description: t.Optional(t.String()),
-  price_monthly: t.Optional(t.Number({ minimum: 0 })),
-  price_yearly: t.Optional(t.Number({ minimum: 0 })),
-  price_one_time: t.Optional(t.Number({ minimum: 0 })),
-  currency: t.Optional(t.String({ default: "usd" })),
+  prices: t.Optional(
+    t.Array(
+      t.Object({
+        currency: t.String(),
+        monthly: t.Number({ minimum: 0 }),
+        yearly: t.Number({ minimum: 0 }),
+        stripe_monthly_id: t.Optional(t.String()),
+        stripe_yearly_id: t.Optional(t.String()),
+      }),
+    ),
+  ),
+  max_vault_size_mb: t.Optional(t.Number({ minimum: 0, default: 100 })),
+  max_ai_tokens: t.Optional(t.Number({ minimum: 0, default: 100 })),
   features: t.Optional(t.Array(t.String())),
   is_active: t.Optional(t.Boolean({ default: true })),
 });

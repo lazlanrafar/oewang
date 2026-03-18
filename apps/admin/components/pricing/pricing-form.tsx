@@ -1,6 +1,6 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import {
@@ -15,6 +15,11 @@ import {
   Textarea,
   Switch,
   ScrollArea,
+  Checkbox,
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
 } from "@workspace/ui";
 import { toast } from "sonner";
 import { useState } from "react";
@@ -24,19 +29,26 @@ import {
   updatePricingAction,
 } from "@workspace/modules/pricing/pricing.action";
 import type { Pricing } from "@workspace/types";
+import { PRICING_FEATURES } from "@workspace/constants";
 
 const pricingSchema = z.object({
   name: z.string().min(1, "Name is required").max(255),
   description: z.string().optional(),
-  price_monthly: z.coerce.number().min(0, "Price must be at least 0"),
-  price_yearly: z.coerce.number().min(0, "Price must be at least 0"),
-  price_one_time: z.coerce
-    .number()
-    .min(0, "Price must be at least 0")
-    .default(0),
-  currency: z.string().min(1, "Currency is required"),
+  prices: z
+    .array(
+      z.object({
+        currency: z.string().min(1, "Currency is required"),
+        monthly: z.coerce.number().min(0, "Price must be at least 0"),
+        yearly: z.coerce.number().min(0, "Price must be at least 0"),
+        stripe_monthly_id: z.string().optional(),
+        stripe_yearly_id: z.string().optional(),
+      }),
+    )
+    .min(1, "At least one currency price is required"),
+  max_vault_size_mb: z.coerce.number().min(1, "Required").default(100),
+  max_ai_tokens: z.coerce.number().min(1, "Required").default(100),
   is_active: z.boolean().default(true),
-  features: z.string().optional(), // We'll parse this as string[] on submit
+  features: z.array(z.string()).default([]),
 });
 
 type PricingFormValues = z.infer<typeof pricingSchema>;
@@ -55,13 +67,46 @@ export function PricingForm({ initialData, onSuccess }: PricingFormProps) {
     defaultValues: {
       name: initialData?.name ?? "",
       description: initialData?.description ?? "",
-      price_monthly: (initialData?.price_monthly ?? 0) / 100,
-      price_yearly: (initialData?.price_yearly ?? 0) / 100,
-      price_one_time: (initialData?.price_one_time ?? 0) / 100,
-      currency: initialData?.currency ?? "usd",
+      prices:
+        initialData?.prices && initialData.prices.length > 0
+          ? initialData.prices.map((p) => ({
+              ...p,
+              monthly: p.monthly / 100,
+              yearly: p.yearly / 100,
+            }))
+          : [
+              {
+                currency: "usd",
+                monthly: 0,
+                yearly: 0,
+                stripe_monthly_id: "",
+                stripe_yearly_id: "",
+              },
+              {
+                currency: "eur",
+                monthly: 0,
+                yearly: 0,
+                stripe_monthly_id: "",
+                stripe_yearly_id: "",
+              },
+              {
+                currency: "idr",
+                monthly: 0,
+                yearly: 0,
+                stripe_monthly_id: "",
+                stripe_yearly_id: "",
+              },
+            ],
+      max_vault_size_mb: initialData?.max_vault_size_mb ?? 100,
+      max_ai_tokens: initialData?.max_ai_tokens ?? 100,
       is_active: initialData?.is_active ?? true,
-      features: initialData?.features?.join("\n") ?? "",
+      features: initialData?.features ?? [],
     },
+  });
+
+  const { fields: priceFields } = useFieldArray({
+    control: form.control,
+    name: "prices",
   });
 
   async function onSubmit(values: PricingFormValues) {
@@ -69,12 +114,11 @@ export function PricingForm({ initialData, onSuccess }: PricingFormProps) {
     try {
       const payload = {
         ...values,
-        price_monthly: Math.round(values.price_monthly * 100),
-        price_yearly: Math.round(values.price_yearly * 100),
-        price_one_time: Math.round((values.price_one_time || 0) * 100),
-        features: values.features
-          ? values.features.split("\n").filter((f) => f.trim())
-          : [],
+        prices: values.prices.map((p) => ({
+          ...p,
+          monthly: Math.round(p.monthly * 100),
+          yearly: Math.round(p.yearly * 100),
+        })),
       };
 
       if (initialData?.id) {
@@ -97,137 +141,224 @@ export function PricingForm({ initialData, onSuccess }: PricingFormProps) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)}>
-        <div className="space-y-4 px-6 py-4">
-          <FormField
-            control={form.control}
-            name="name"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Name</FormLabel>
-                <FormControl>
-                  <Input placeholder="e.g. Pro Plan" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+      <form onSubmit={form.handleSubmit(onSubmit)} className="pb-24">
+        <ScrollArea className="h-full">
+          <div className="space-y-6">
+            <div className="space-y-4">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g. Pro Plan" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-          <FormField
-            control={form.control}
-            name="description"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Description</FormLabel>
-                <FormControl>
-                  <Textarea
-                    placeholder="Describe the plan..."
-                    className="resize-none"
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Describe the plan..."
+                        className="resize-none"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
-          <div className="grid grid-cols-3 gap-4">
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium">Pricing by Currency</h3>
+              {priceFields.map((field, index) => (
+                <Card key={field.id} className="shadow-sm">
+                  <CardHeader className="py-3 px-4 border-b bg-muted/20">
+                    <CardTitle className="text-sm font-medium uppercase tracking-wider">
+                      {form.watch(`prices.${index}.currency`)}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4 grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name={`prices.${index}.monthly`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs text-muted-foreground">
+                            Monthly Price
+                          </FormLabel>
+                          <FormControl>
+                            <Input type="number" step="0.01" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name={`prices.${index}.yearly`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs text-muted-foreground">
+                            Yearly Price
+                          </FormLabel>
+                          <FormControl>
+                            <Input type="number" step="0.01" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name={`prices.${index}.stripe_monthly_id`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs text-muted-foreground">
+                            Stripe Monthly ID (Optional)
+                          </FormLabel>
+                          <FormControl>
+                            <Input placeholder="price_..." {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name={`prices.${index}.stripe_yearly_id`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs text-muted-foreground">
+                            Stripe Yearly ID (Optional)
+                          </FormLabel>
+                          <FormControl>
+                            <Input placeholder="price_..." {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="max_vault_size_mb"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Max Storage (MB)</FormLabel>
+                    <FormControl>
+                      <Input type="number" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="max_ai_tokens"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Max AI Tokens</FormLabel>
+                    <FormControl>
+                      <Input type="number" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
             <FormField
               control={form.control}
-              name="price_monthly"
-              render={({ field }) => (
+              name="features"
+              render={() => (
                 <FormItem>
-                  <FormLabel>Monthly Price</FormLabel>
-                  <FormControl>
-                    <Input type="number" step="0.01" {...field} />
-                  </FormControl>
+                  <div className="mb-4">
+                    <FormLabel className="text-base text-foreground">
+                      Features
+                    </FormLabel>
+                    <div className="text-[0.8rem] text-muted-foreground">
+                      Select the features included in this plan.
+                    </div>
+                  </div>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    {PRICING_FEATURES.map((item) => (
+                      <FormField
+                        key={item}
+                        control={form.control}
+                        name="features"
+                        render={({ field }) => {
+                          return (
+                            <FormItem
+                              key={item}
+                              className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-3 shadow-sm bg-background"
+                            >
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value?.includes(item)}
+                                  onCheckedChange={(checked) => {
+                                    return checked
+                                      ? field.onChange([...field.value, item])
+                                      : field.onChange(
+                                          field.value?.filter(
+                                            (value) => value !== item,
+                                          ),
+                                        );
+                                  }}
+                                />
+                              </FormControl>
+                              <FormLabel className="font-normal text-sm cursor-pointer w-full leading-none m-0">
+                                {item}
+                              </FormLabel>
+                            </FormItem>
+                          );
+                        }}
+                      />
+                    ))}
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
             />
+
             <FormField
               control={form.control}
-              name="price_yearly"
+              name="is_active"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Yearly Price</FormLabel>
+                <FormItem className="flex items-center justify-between rounded-lg border p-4 shadow-sm">
+                  <div className="space-y-0.5">
+                    <FormLabel>Active Status</FormLabel>
+                    <div className="text-[0.8rem] text-muted-foreground">
+                      Whether this plan is visible to users.
+                    </div>
+                  </div>
                   <FormControl>
-                    <Input type="number" step="0.01" {...field} />
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
                   </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="price_one_time"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>One-Time Price</FormLabel>
-                  <FormControl>
-                    <Input type="number" step="0.01" {...field} />
-                  </FormControl>
-                  <FormMessage />
                 </FormItem>
               )}
             />
           </div>
+        </ScrollArea>
 
-          <FormField
-            control={form.control}
-            name="currency"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Currency</FormLabel>
-                <FormControl>
-                  <Input placeholder="usd" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="features"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Features (one per line)</FormLabel>
-                <FormControl>
-                  <Textarea
-                    placeholder="Unlimited users&#10;Priority support"
-                    rows={5}
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="is_active"
-            render={({ field }) => (
-              <FormItem className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
-                <div className="space-y-0.5">
-                  <FormLabel>Active</FormLabel>
-                  <div className="text-[0.8rem] text-muted-foreground">
-                    Whether this plan is available for selection.
-                  </div>
-                </div>
-                <FormControl>
-                  <Switch
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-              </FormItem>
-            )}
-          />
-        </div>
-
-        <div className="fixed bottom-8 w-full sm:max-w-[455px] right-8">
+        <div className="absolute bottom-0 w-full sm:max-w-[455px] right-0 p-4 bg-background border-t">
           <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading
               ? "Saving..."

@@ -150,7 +150,7 @@ export function WorkspaceForm({ plans }: WorkspaceFormProps) {
   };
 
   const selected = plans.find((p) => p.id === selectedPlanId);
-  const hasAnnual = plans.some((p) => p.price_yearly != null && !isFree(p));
+  const hasAnnual = plans.some((p) => p.prices?.some((pr) => pr.yearly > 0) && !isFree(p));
   const hasPaid = plans.some((p) => !isFree(p));
   const bestSavings = Math.max(...plans.map((p) => annualSavingsPct(p) ?? 0));
 

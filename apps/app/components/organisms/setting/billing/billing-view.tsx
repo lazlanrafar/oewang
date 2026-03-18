@@ -18,7 +18,7 @@ import type { Pricing } from "@workspace/types";
 import { getPricing } from "@workspace/modules/pricing/pricing.action";
 import { createCheckoutSession, createCustomerPortal } from "@workspace/modules/stripe/stripe.action";
 import { toast } from "sonner";
-import { formatBytes, displayPrice, getPlanLimits } from "@workspace/utils";
+import { formatBytes, displayPrice, getPlanLimits, getStripePrice } from "@workspace/utils";
 
 interface BillingViewProps {
   dictionary: any;
@@ -193,8 +193,9 @@ export function BillingView({ dictionary, workspace }: BillingViewProps) {
                   currentPlanId === plan.id || checkoutMutation.isPending
                 }
                 onClick={() => {
-                  if (plan.stripe_price_id_monthly) {
-                    checkoutMutation.mutate(plan.stripe_price_id_monthly);
+                  const stripePriceId = getStripePrice(plan, "monthly");
+                  if (stripePriceId) {
+                    checkoutMutation.mutate(stripePriceId);
                   } else {
                     toast.error(
                       "This plan does not have a price ID configured.",

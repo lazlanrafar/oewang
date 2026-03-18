@@ -2,16 +2,16 @@ export interface Pricing {
   id: string;
   name: string;
   description: string | null;
-  price_monthly: number | null;
-  price_yearly: number | null;
-  price_one_time: number | null;
+  prices: {
+    currency: string;
+    monthly: number;
+    yearly: number;
+    stripe_monthly_id?: string;
+    stripe_yearly_id?: string;
+  }[];
   stripe_product_id: string | null;
-  stripe_price_id_monthly: string | null;
-  stripe_price_id_yearly: string | null;
-  stripe_price_id_one_time: string | null;
   max_vault_size_mb: number;
   max_ai_tokens: number;
-  currency: string;
   features: string[];
   is_active: boolean;
   deleted_at: Date | null;
@@ -22,16 +22,14 @@ export interface Pricing {
 export interface CreatePricingInput {
   name: string;
   description?: string;
-  price_monthly?: number;
-  price_yearly?: number;
-  price_one_time?: number;
+  prices?: {
+    currency: string;
+    monthly: number;
+    yearly: number;
+    stripe_monthly_id?: string;
+    stripe_yearly_id?: string;
+  }[];
   stripe_product_id?: string;
-  stripe_price_id_monthly?: string;
-  stripe_price_id_yearly?: string;
-  stripe_price_id_one_time?: string;
-  max_vault_size_mb?: number;
-  max_ai_tokens?: number;
-  currency?: string;
   features?: string[];
   is_active?: boolean;
 }

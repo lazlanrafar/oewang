@@ -68,7 +68,7 @@ export function CustomerDetailSheet({ customer, open, onClose }: Props) {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(formSchema as any) as any,
     defaultValues: {
       name: customer?.name ?? "",
       email: customer?.email ?? "",

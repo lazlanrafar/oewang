@@ -27,7 +27,7 @@ export function OrdersDetailSheet() {
 
   return (
     <Sheet open={isDetailOpen} onOpenChange={closeDetail}>
-      <SheetContent showCloseButton={false}>
+      <SheetContent>
         <SheetHeader className="sr-only">
           <SheetTitle>Order Details</SheetTitle>
         </SheetHeader>

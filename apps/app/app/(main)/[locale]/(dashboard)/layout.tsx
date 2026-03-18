@@ -51,7 +51,7 @@ export default async function Layout({
       />
       <SidebarInset
         className={cn(
-          "min-w-0",
+          "min-w-0 h-svh overflow-hidden",
           "[html[data-content-layout=centered]_&]:mx-auto! [html[data-content-layout=centered]_&]:max-w-screen-2xl!",
           "max-[113rem]:peer-data-[variant=inset]:mr-2! min-[101rem]:peer-data-[variant=inset]:peer-data-[state=collapsed]:mr-auto!",
         )}
@@ -87,7 +87,9 @@ export default async function Layout({
             </div>
           </div>
         </header>
-        <div className="h-full p-4 md:p-6">{children}</div>
+        <div className="flex flex-col flex-1 min-h-0 p-4 md:p-6">
+          {children}
+        </div>
       </SidebarInset>
     </SidebarProvider>
   );

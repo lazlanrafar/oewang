@@ -21,10 +21,11 @@ const PLANS = [
   {
     name: "Starter",
     description: "Get started with the essentials. No credit card required.",
-    price_monthly: null, // free
-    price_yearly: null, // free
-    price_one_time: null, // free
-    currency: "usd",
+    prices: [
+      { currency: "usd", monthly: 0, yearly: 0 },
+      { currency: "eur", monthly: 0, yearly: 0 },
+      { currency: "idr", monthly: 0, yearly: 0 },
+    ],
     max_vault_size_mb: 100,
     max_ai_tokens: 500,
     features: [
@@ -39,10 +40,11 @@ const PLANS = [
   {
     name: "Pro",
     description: "Everything you need to run a growing business.",
-    price_monthly: 1200, // $12.00 in cents
-    price_yearly: 11520, // $115.20 / yr in cents (~$9.60/mo, 20% off)
-    price_one_time: null,
-    currency: "usd",
+    prices: [
+      { currency: "usd", monthly: 1200, yearly: 11520 },
+      { currency: "eur", monthly: 1100, yearly: 10560 },
+      { currency: "idr", monthly: 180000, yearly: 1728000 },
+    ],
     max_vault_size_mb: 2048,
     max_ai_tokens: 10000,
     features: [
@@ -58,10 +60,11 @@ const PLANS = [
   {
     name: "Business",
     description: "For teams that need full control and collaboration.",
-    price_monthly: 3900, // $39.00 in cents
-    price_yearly: 37440, // $374.40 / yr in cents (~$31.20/mo, 20% off)
-    price_one_time: null,
-    currency: "usd",
+    prices: [
+      { currency: "usd", monthly: 3900, yearly: 37440 },
+      { currency: "eur", monthly: 3600, yearly: 34560 },
+      { currency: "idr", monthly: 585000, yearly: 5616000 },
+    ],
     max_vault_size_mb: 10240,
     max_ai_tokens: 50000,
     features: [
