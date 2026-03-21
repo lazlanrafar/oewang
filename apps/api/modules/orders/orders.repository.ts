@@ -152,4 +152,24 @@ export const ordersRepository = {
       .limit(1);
     return order ?? null;
   },
+  async findByWorkspaceId(workspaceId: string) {
+    return await db
+      .select({
+        id: orders.id,
+        code: sql<string>`'INV' || to_char(${orders.created_at}, 'IYYY') || lpad(${orders.sequence_number}::text, 4, '0')`,
+        workspace_id: orders.workspace_id,
+        user_id: orders.user_id,
+        stripe_payment_intent_id: orders.stripe_payment_intent_id,
+        stripe_invoice_id: orders.stripe_invoice_id,
+        stripe_subscription_id: orders.stripe_subscription_id,
+        amount: orders.amount,
+        currency: orders.currency,
+        status: orders.status,
+        created_at: orders.created_at,
+        updated_at: orders.updated_at,
+      })
+      .from(orders)
+      .where(eq(orders.workspace_id, workspaceId))
+      .orderBy(desc(orders.created_at));
+  },
 };

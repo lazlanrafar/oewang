@@ -5,13 +5,21 @@ import { useQuery } from "@tanstack/react-query";
 import { getTransactionSettings } from "@workspace/modules/setting/setting.action";
 import { getActiveWorkspace } from "@workspace/modules/workspace/workspace.action";
 import { getMe } from "@workspace/modules/user/user.action";
-import { useWorkspaceStore } from "@/stores/workspace-store";
+import { useAppStore, type AppState } from "../../stores/app";
+import type { Dictionary } from "@workspace/dictionaries";
 
-export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
-  const setUser = useWorkspaceStore((state) => state.setUser);
-  const setWorkspace = useWorkspaceStore((state) => state.setWorkspace);
-  const setSettings = useWorkspaceStore((state) => state.setSettings);
-  const setIsLoading = useWorkspaceStore((state) => state.setIsLoading);
+export function AppProvider({
+  children,
+  dictionary,
+}: {
+  children: React.ReactNode;
+  dictionary: Dictionary;
+}) {
+  const setUser = useAppStore((state: AppState) => state.setUser);
+  const setWorkspace = useAppStore((state: AppState) => state.setWorkspace);
+  const setSettings = useAppStore((state: AppState) => state.setSettings);
+  const setDictionary = useAppStore((state: AppState) => state.setDictionary);
+  const setIsLoading = useAppStore((state: AppState) => state.setIsLoading);
 
   const { data: userData, isLoading: isUserLoading } = useQuery({
     queryKey: ["user", "me"],
@@ -48,19 +56,22 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     if (userData) setUser(userData.user);
     if (workspaceData) setWorkspace(workspaceData);
     if (settingsData) setSettings(settingsData);
-    
+    if (dictionary) setDictionary(dictionary);
+
     setIsLoading(isUserLoading || isWorkspaceLoading || isSettingsLoading);
   }, [
-    userData, 
-    workspaceData, 
-    settingsData, 
-    isUserLoading, 
-    isWorkspaceLoading, 
-    isSettingsLoading, 
-    setUser, 
-    setWorkspace, 
-    setSettings, 
-    setIsLoading
+    userData,
+    workspaceData,
+    settingsData,
+    dictionary,
+    isUserLoading,
+    isWorkspaceLoading,
+    isSettingsLoading,
+    setUser,
+    setWorkspace,
+    setSettings,
+    setDictionary,
+    setIsLoading,
   ]);
 
   return <>{children}</>;

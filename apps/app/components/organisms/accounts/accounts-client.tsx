@@ -14,7 +14,7 @@ import { AccountDetailSheet } from "./account-detail-sheet";
 import { useDataTableFilter } from "@/hooks/use-data-table-filter";
 import { Plus } from "lucide-react";
 import { useAccountsStore } from "@/stores/accounts";
-import { useWorkspaceStore } from "@/stores/workspace-store";
+import { useAppStore } from "@/stores/app";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { getWallets } from "@workspace/modules/client";
 
@@ -40,7 +40,7 @@ export function AccountsClient({
   const [selectedWalletId, setSelectedWalletId] = useState<
     string | undefined
   >();
-  const { settings, formatCurrency } = useWorkspaceStore();
+  const { settings, formatCurrency } = useAppStore();
   const queryClient = useQueryClient();
 
   const { filters, handleFilterChange, pagination, handlePaginationChange } =

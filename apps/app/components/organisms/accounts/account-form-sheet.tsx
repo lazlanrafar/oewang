@@ -25,7 +25,7 @@ import {
 } from "@workspace/ui";
 import { createWallet, updateWallet } from "@workspace/modules/client";
 import type { Wallet } from "@workspace/types";
-import { useWorkspaceStore } from "@/stores/workspace-store";
+import { useAppStore } from "@/stores/app";
 import { SelectAccountGroup } from "@/components/molecules/select-account-group";
 
 const accountSchema = z.object({
@@ -51,7 +51,7 @@ export function AccountFormSheet({
   onSuccess,
 }: AccountSheetProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const { settings } = useWorkspaceStore();
+  const { settings } = useAppStore();
 
   const form = useForm<AccountFormValues>({
     resolver: zodResolver(accountSchema as any),

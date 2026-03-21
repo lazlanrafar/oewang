@@ -84,6 +84,24 @@ export abstract class StripeService {
                   vault_size_used_bytes: 0,
                 })
                 .where(eq(workspaces.id, workspaceId));
+
+              // Create or update order from session info as a fallback for the race condition
+              // This ensures that for new customers, the order is created even if invoice.paid arrives too early to find the workspace
+              if (session.payment_status === "paid" && session.invoice) {
+                console.log(
+                  `[Stripe Webhook] Session paid. Creating/updating order from session ${session.id}...`,
+                );
+                await OrdersService.createOrderFromStripe({
+                  workspace_id: workspaceId,
+                  user_id: userId,
+                  stripe_invoice_id: session.invoice as string,
+                  stripe_subscription_id: subscriptionId,
+                  stripe_payment_intent_id: session.payment_intent as string,
+                  amount: session.amount_total || 0,
+                  currency: session.currency || "usd",
+                  status: "paid",
+                });
+              }
             }
           }
         }
@@ -363,5 +381,36 @@ export abstract class StripeService {
     });
 
     return buildSuccess({ url: session.url }, "Customer portal created");
+  }
+
+  static async getInvoiceUrl(invoiceId: string) {
+    const invoice = await stripe.invoices.retrieve(invoiceId);
+    return buildSuccess(
+      { url: invoice.invoice_pdf || invoice.hosted_invoice_url },
+      "Invoice URL retrieved",
+    );
+  }
+
+  static async cancelSubscription(workspaceId: string) {
+    const workspace = await db.query.workspaces.findFirst({
+      where: eq(workspaces.id, workspaceId),
+    });
+
+    if (!workspace || !workspace.stripe_subscription_id) {
+      throw status(
+        400,
+        buildError(ErrorCode.VALIDATION_ERROR, "No active subscription found"),
+      );
+    }
+
+    const subscription = await stripe.subscriptions.update(
+      workspace.stripe_subscription_id,
+      { cancel_at_period_end: true },
+    );
+
+    return buildSuccess(
+      subscription,
+      "Subscription set to cancel at period end",
+    );
   }
 }

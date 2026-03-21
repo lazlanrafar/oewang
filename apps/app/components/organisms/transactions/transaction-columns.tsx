@@ -32,7 +32,7 @@ import { SelectAccount } from "@/components/molecules/select-account";
 import { SelectUser } from "@/components/molecules/select-user";
 import { format } from "date-fns";
 import { formatCurrency as formatCurrencyUtil } from "@workspace/utils";
-import { useWorkspaceStore } from "@/stores/workspace-store";
+import { useAppStore } from "@/stores/app";
 import { updateTransaction } from "@workspace/modules/transaction/transaction.action";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -204,8 +204,7 @@ export const transactionColumns = (
       const isExpense = transaction.type === "expense";
       const isIncome = transaction.type === "income";
 
-      const { getTransactionColor, formatCurrency } =
-        useWorkspaceStore.getState();
+      const { getTransactionColor, formatCurrency } = useAppStore.getState();
 
       return (
         <div

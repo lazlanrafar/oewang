@@ -66,4 +66,19 @@ export const stripeController = new Elysia({
       return StripeService.createCustomerPortal(auth.workspace_id);
     },
     { detail: { summary: "Create Customer Portal", tags: ["Stripe"] } },
+  )
+  .get(
+    "/invoices/:id",
+    async ({ params }) => {
+      return StripeService.getInvoiceUrl(params.id);
+    },
+    { detail: { summary: "Get Invoice URL", tags: ["Stripe"] } },
+  )
+  .post(
+    "/cancel-subscription",
+    async ({ auth }) => {
+      if (!auth?.workspace_id) throw new Error("Unauthorized");
+      return StripeService.cancelSubscription(auth.workspace_id);
+    },
+    { detail: { summary: "Cancel Subscription", tags: ["Stripe"] } },
   );

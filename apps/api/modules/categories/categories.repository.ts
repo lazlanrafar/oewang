@@ -82,12 +82,12 @@ export abstract class CategoriesRepository {
 
     for (const update of updates) {
       sqlChunks.push(
-        sql`WHEN ${categories.id} = ${update.id} THEN ${update.sortOrder}`,
+        sql`WHEN ${categories.id} = ${update.id}::uuid THEN ${update.sortOrder}`,
       );
       ids.push(update.id);
     }
 
-    sqlChunks.push(sql`END)::integer`);
+    sqlChunks.push(sql`ELSE ${categories.sortOrder} END)::integer`);
 
     const finalSql = sql.join(sqlChunks, sql` `);
 

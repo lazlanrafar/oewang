@@ -1,6 +1,9 @@
 import { Separator } from "@workspace/ui";
 
-import { getSubCurrencies, getTransactionSettings } from "@workspace/modules/server";
+import {
+  getSubCurrencies,
+  getTransactionSettings,
+} from "@workspace/modules/server";
 import { MainCurrencyForm } from "@/components/organisms/setting/main-currency/main-currency-form";
 import { SubCurrencyList } from "@/components/organisms/setting/sub-currency/sub-currency-list";
 import { getDictionary } from "@/get-dictionary";
@@ -19,7 +22,9 @@ export default async function CurrencyPage({ params }: CurrencyPageProps) {
   const subCurrenciesResult = await getSubCurrencies();
 
   const settings = settingsResult.success ? settingsResult.data : null;
-  const subCurrencies = subCurrenciesResult.success ? subCurrenciesResult.data : [];
+  const subCurrencies = subCurrenciesResult.success
+    ? subCurrenciesResult.data
+    : [];
 
   if (!settings) {
     // Should handle this better, but for now just return empty or error
@@ -28,15 +33,15 @@ export default async function CurrencyPage({ params }: CurrencyPageProps) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-medium">{dictionary.settings.sidebar.currency}</h3>
-        <p className="text-sm text-muted-foreground">Manage your primary currency settings.</p>
-      </div>
       <MainCurrencyForm settings={settings} dictionary={dictionary} />
 
       <Separator />
 
-      <SubCurrencyList initialSubCurrencies={subCurrencies} settings={settings} dictionary={dictionary} />
+      <SubCurrencyList
+        initialSubCurrencies={subCurrencies}
+        settings={settings}
+        dictionary={dictionary}
+      />
     </div>
   );
 }

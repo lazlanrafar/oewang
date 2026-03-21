@@ -88,4 +88,8 @@ export abstract class OrdersService {
     }
     return buildSuccess(order, "Order details fetched");
   }
+  static async getWorkspaceOrders(workspaceId: string) {
+    const orders = await ordersRepository.findByWorkspaceId(workspaceId);
+    return buildSuccess(orders, "Workspace orders fetched");
+  }
 }

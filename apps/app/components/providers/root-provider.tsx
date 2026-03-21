@@ -5,9 +5,16 @@ import { useState } from "react";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-import { WorkspaceProvider } from "./workspace-provider";
+import { AppProvider } from "./app-provider";
+import type { Dictionary } from "@workspace/dictionaries";
 
-export function Providers({ children }: { children: ReactNode }) {
+export function Providers({ 
+  children,
+  dictionary
+}: { 
+  children: ReactNode,
+  dictionary: Dictionary
+}) {
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -21,7 +28,7 @@ export function Providers({ children }: { children: ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <WorkspaceProvider>{children}</WorkspaceProvider>
+      <AppProvider dictionary={dictionary}>{children}</AppProvider>
     </QueryClientProvider>
   );
 }

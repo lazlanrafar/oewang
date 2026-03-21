@@ -1,13 +1,15 @@
-import { Elysia } from "elysia";
+import { Elysia, t } from "elysia";
 import { ErrorCode } from "@workspace/types";
 import { buildSuccess, buildError } from "@workspace/utils";
 import { workspacesService } from "./workspaces.service";
+import { OrdersService } from "../orders/orders.service";
 import {
   CreateWorkspaceBody,
   CreateInvitationBody,
   InvitationParams,
 } from "./workspaces.model";
 import { authPlugin } from "../../plugins/auth";
+import { encryptionPlugin } from "../../plugins/encryption";
 
 /**
  * Workspaces controller — route definitions + validation + call service.
@@ -15,6 +17,7 @@ import { authPlugin } from "../../plugins/auth";
  */
 export const workspacesController = new Elysia({ prefix: "/workspaces" })
   .use(authPlugin)
+  .use(encryptionPlugin)
   .post(
     "/",
     // biome-ignore lint/suspicious/noExplicitAny: Generic handler
@@ -254,6 +257,28 @@ export const workspacesController = new Elysia({ prefix: "/workspaces" })
     {
       detail: {
         summary: "Accept Invitation",
+        tags: ["Workspaces"],
+      },
+    },
+  )
+  .get(
+    "/billing/history",
+    async ({ auth, set }) => {
+      if (!auth || !auth.workspace_id) {
+        set.status = 401;
+        return buildError(ErrorCode.UNAUTHORIZED, "Unauthorized");
+      }
+
+      try {
+        return await OrdersService.getWorkspaceOrders(auth.workspace_id);
+      } catch (error: any) {
+        set.status = 500;
+        return buildError(ErrorCode.INTERNAL_ERROR, error.message);
+      }
+    },
+    {
+      detail: {
+        summary: "Get Billing History",
         tags: ["Workspaces"],
       },
     },

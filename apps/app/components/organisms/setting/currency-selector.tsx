@@ -18,6 +18,8 @@ import {
 } from "@workspace/ui";
 import { Check, ChevronsUpDown } from "lucide-react";
 
+import { useAppStore } from "@/stores/app";
+
 interface Currency {
   name: string;
   flag: string;
@@ -29,19 +31,28 @@ interface Currency {
 
 interface CurrencySelectorProps {
   value?: string;
-  onSelect: (currency: NonNullable<Currency["currency"]> & { countryName: string }) => void;
+  onSelect: (
+    currency: NonNullable<Currency["currency"]> & { countryName: string },
+  ) => void;
   trigger?: React.ReactNode;
   className?: string;
 }
 
-export function CurrencySelector({ value, onSelect, trigger, className }: CurrencySelectorProps) {
+export function CurrencySelector({
+  value,
+  onSelect,
+  trigger,
+  className,
+}: CurrencySelectorProps) {
+  const { dictionary } = useAppStore();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
 
   const filteredCurrencies = useMemo(() => {
     return (COUNTRIES as Currency[]).filter((c) => {
       if (!c.currency) return false;
-      const searchStr = `${c.name} ${c.currency.code} ${c.currency.symbol}`.toLowerCase();
+      const searchStr =
+        `${c.name} ${c.currency.code} ${c.currency.symbol}`.toLowerCase();
       return searchStr.includes(search.toLowerCase());
     });
   }, [search]);
@@ -58,6 +69,8 @@ export function CurrencySelector({ value, onSelect, trigger, className }: Curren
     return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
   }, [filteredCurrencies]);
 
+  const common = dictionary?.settings?.common;
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -68,16 +81,25 @@ export function CurrencySelector({ value, onSelect, trigger, className }: Curren
             aria-expanded={open}
             className={cn("w-full justify-between", className)}
           >
-            {value || "Select currency..."}
+            {value || common?.select_currency || "Select currency..."}
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         )}
       </PopoverTrigger>
-      <PopoverContent className="w-(--radix-popover-trigger-width) p-0" align="start">
+      <PopoverContent
+        className="w-(--radix-popover-trigger-width) p-0 min-w-[200px]"
+        align="start"
+      >
         <Command>
-          <CommandInput placeholder="Search currency..." value={search} onValueChange={setSearch} />
+          <CommandInput
+            placeholder={common?.search_currency || "Search currency..."}
+            value={search}
+            onValueChange={setSearch}
+          />
           <CommandList className="max-h-[300px] overflow-y-auto overflow-x-hidden">
-            <CommandEmpty>No currency found.</CommandEmpty>
+            <CommandEmpty>
+              {common?.no_currency_found || "No currency found."}
+            </CommandEmpty>
             {groupedCurrencies.map(([letter, currencies]) => (
               <CommandGroup key={letter} heading={letter}>
                 {currencies.map((c) => (
@@ -95,7 +117,12 @@ export function CurrencySelector({ value, onSelect, trigger, className }: Curren
                     }}
                   >
                     <Check
-                      className={cn("mr-2 h-4 w-4", value?.startsWith(c.currency!.code) ? "opacity-100" : "opacity-0")}
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        value?.startsWith(c.currency!.code)
+                          ? "opacity-100"
+                          : "opacity-0",
+                      )}
                     />
                     <span className="text-sm font-medium">
                       {c.currency!.code} - {c.name} ({c.currency!.symbol})

@@ -1,4 +1,5 @@
 "use client";
+import * as React from "react";
 
 import {
   Button,
@@ -9,12 +10,18 @@ import {
   SelectTrigger,
   SelectValue,
   Separator,
+  Skeleton,
   ToggleGroup,
   ToggleGroupItem,
 } from "@workspace/ui";
 
 import { type FontKey, fontOptions } from "@workspace/ui";
-import type { ContentLayout, NavbarStyle, SidebarCollapsible, SidebarVariant } from "@workspace/ui";
+import type {
+  ContentLayout,
+  NavbarStyle,
+  SidebarCollapsible,
+  SidebarVariant,
+} from "@workspace/ui";
 import {
   applyContentLayout,
   applyFont,
@@ -24,59 +31,52 @@ import {
 } from "@workspace/ui";
 import { PREFERENCE_DEFAULTS } from "@workspace/ui";
 import { persistPreference } from "@workspace/ui";
-import { THEME_PRESET_OPTIONS, type ThemeMode, type ThemePreset } from "@workspace/ui";
+import {
+  THEME_PRESET_OPTIONS,
+  type ThemeMode,
+  type ThemePreset,
+} from "@workspace/ui";
 import { applyThemePreset } from "@workspace/ui";
 import { usePreferencesStore } from "@workspace/ui";
 
-interface AppearanceFormProps {
-  dictionary: {
-    settings: {
-      appearance: {
-        title: string;
-        description: string;
-        theme: {
-          title: string;
-          description: string;
-          preset: string;
-          mode: string;
-          light: string;
-          dark: string;
-          system: string;
-        };
-        layout: {
-          title: string;
-          description: string;
-          page_layout: string;
-          centered: string;
-          full_width: string;
-          navbar_behavior: string;
-          sticky: string;
-          scroll: string;
-        };
-        sidebar: {
-          title: string;
-          description: string;
-          style: string;
-          inset: string;
-          sidebar: string;
-          floating: string;
-          collapse_mode: string;
-          icon: string;
-          offcanvas: string;
-        };
-        typography: {
-          title: string;
-          description: string;
-          font_family: string;
-        };
-        restore_defaults: string;
-      };
-    };
-  };
+import { useAppStore, type AppState } from "@/stores/app";
+
+function SettingAppearanceSkeleton() {
+  return (
+    <div className="space-y-8">
+      <div className="space-y-1">
+        <Skeleton className="h-6 w-48 " />
+        <Skeleton className="h-4 w-72 " />
+      </div>
+      <Separator className="" />
+
+      <div className="space-y-8">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="space-y-4">
+            <div className="space-y-1">
+              <Skeleton className="h-4 w-32 " />
+              <Skeleton className="h-3 w-56 " />
+            </div>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Skeleton className="h-3 w-20 " />
+                <Skeleton className="h-10 w-full max-w-md " />
+              </div>
+              <div className="space-y-2">
+                <Skeleton className="h-3 w-20 " />
+                <Skeleton className="h-10 w-full max-w-md " />
+              </div>
+            </div>
+            {i < 4 && <Separator className="" />}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
-export function AppearanceForm({ dictionary }: AppearanceFormProps) {
-  const { appearance } = dictionary.settings;
+export function AppearanceForm() {
+  const { dictionary, isLoading: isDictLoading } = useAppStore();
   const themeMode = usePreferencesStore((s) => s.themeMode);
   const resolvedThemeMode = usePreferencesStore((s) => s.resolvedThemeMode);
   const setThemeMode = usePreferencesStore((s) => s.setThemeMode);
@@ -89,9 +89,23 @@ export function AppearanceForm({ dictionary }: AppearanceFormProps) {
   const variant = usePreferencesStore((s) => s.sidebarVariant);
   const setSidebarVariant = usePreferencesStore((s) => s.setSidebarVariant);
   const collapsible = usePreferencesStore((s) => s.sidebarCollapsible);
-  const setSidebarCollapsible = usePreferencesStore((s) => s.setSidebarCollapsible);
+  const setSidebarCollapsible = usePreferencesStore(
+    (s) => s.setSidebarCollapsible,
+  );
   const font = usePreferencesStore((s) => s.font);
   const setFont = usePreferencesStore((s) => s.setFont);
+
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted || isDictLoading || !dictionary) {
+    return <SettingAppearanceSkeleton />;
+  }
+
+  const { appearance } = dictionary.settings;
 
   const onThemePresetChange = (preset: ThemePreset) => {
     applyThemePreset(preset);
@@ -151,189 +165,291 @@ export function AppearanceForm({ dictionary }: AppearanceFormProps) {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-medium">{appearance.title}</h3>
-        <p className="text-sm text-muted-foreground">{appearance.description}</p>
+    <div className="space-y-8 pb-10 focus:outline-none">
+      <div className="space-y-1">
+        <h2 className="text-lg font-medium tracking-tight">
+          {appearance.title}
+        </h2>
+        <p className="text-xs text-muted-foreground">
+          {appearance.description}
+        </p>
       </div>
-      <Separator />
+      <Separator className="" />
 
-      {/* Theme Settings */}
-      <div className="space-y-4">
-        <div>
-          <h4 className="text-sm font-medium">{appearance.theme.title}</h4>
-          <p className="text-sm text-muted-foreground">{appearance.theme.description}</p>
-        </div>
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label>{appearance.theme.preset}</Label>
-            <Select value={themePreset} onValueChange={onThemePresetChange}>
-              <SelectTrigger className="w-full md:w-[240px]">
-                <SelectValue placeholder="Preset" />
-              </SelectTrigger>
-              <SelectContent>
-                {THEME_PRESET_OPTIONS.map((preset) => (
-                  <SelectItem key={preset.value} value={preset.value}>
-                    <div className="flex items-center gap-2">
-                      <span
-                        className="size-4 rounded-full"
-                        style={{
-                          backgroundColor:
-                            (resolvedThemeMode ?? "light") === "dark" ? preset.primary.dark : preset.primary.light,
-                        }}
-                      />
-                      {preset.label}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+      <div className="space-y-10">
+        {/* Theme Settings */}
+        <section className="space-y-6">
+          <div className="space-y-1">
+            <h3 className="text-sm font-medium tracking-tight">
+              {appearance.theme.title}
+            </h3>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              {appearance.theme.description}
+            </p>
           </div>
-          <div className="space-y-2">
-            <Label>{appearance.theme.mode}</Label>
-            <ToggleGroup
-              type="single"
-              variant="outline"
-              value={themeMode}
-              onValueChange={onThemeModeChange}
-              className="justify-start"
-            >
-              <ToggleGroupItem value="light" aria-label="Toggle light">
-                {appearance.theme.light}
-              </ToggleGroupItem>
-              <ToggleGroupItem value="dark" aria-label="Toggle dark">
-                {appearance.theme.dark}
-              </ToggleGroupItem>
-              <ToggleGroupItem value="system" aria-label="Toggle system">
-                {appearance.theme.system}
-              </ToggleGroupItem>
-            </ToggleGroup>
+          <div className="grid gap-6 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-semibold px-0.5">
+                {appearance.theme.preset}
+              </Label>
+              <Select value={themePreset} onValueChange={onThemePresetChange}>
+                <SelectTrigger className="w-full h-8 text-xs font-normal border bg-background hover:bg-accent/5 transition-colors">
+                  <SelectValue placeholder={appearance.theme.preset_placeholder} />
+                </SelectTrigger>
+                <SelectContent className="border bg-background p-0">
+                  {THEME_PRESET_OPTIONS.map((preset) => (
+                    <SelectItem
+                      key={preset.value}
+                      value={preset.value}
+                      className=" text-xs px-2 focus:bg-accent focus:text-accent-foreground cursor-pointer py-1.5"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="size-2.5  ring-1 ring-border/50"
+                          style={{
+                            backgroundColor:
+                              (resolvedThemeMode ?? "light") === "dark"
+                                ? preset.primary.dark
+                                : preset.primary.light,
+                          }}
+                        />
+                        <span className="text-[11px]">{preset.label}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-semibold px-0.5">
+                {appearance.theme.mode}
+              </Label>
+              <ToggleGroup
+                type="single"
+                variant="outline"
+                value={themeMode}
+                onValueChange={onThemeModeChange}
+                className="justify-start gap-0"
+              >
+                <ToggleGroupItem
+                  value="light"
+                  aria-label="Toggle light"
+                  className=" h-8 text-[11px] px-3.5 font-normal border-r-0 data-[state=on]:bg-accent data-[state=on]:text-accent-foreground"
+                >
+                  {appearance.theme.light}
+                </ToggleGroupItem>
+                <ToggleGroupItem
+                  value="dark"
+                  aria-label="Toggle dark"
+                  className=" h-8 text-[11px] px-3.5 font-normal border-r-0 data-[state=on]:bg-accent data-[state=on]:text-accent-foreground"
+                >
+                  {appearance.theme.dark}
+                </ToggleGroupItem>
+                <ToggleGroupItem
+                  value="system"
+                  aria-label="Toggle system"
+                  className=" h-8 text-[11px] px-3.5 font-normal data-[state=on]:bg-accent data-[state=on]:text-accent-foreground"
+                >
+                  {appearance.theme.system}
+                </ToggleGroupItem>
+              </ToggleGroup>
+            </div>
           </div>
-        </div>
-      </div>
-      <Separator />
+        </section>
 
-      {/* Layout Settings */}
-      <div className="space-y-4">
-        <div>
-          <h4 className="text-sm font-medium">{appearance.layout.title}</h4>
-          <p className="text-sm text-muted-foreground">{appearance.layout.description}</p>
-        </div>
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label>{appearance.layout.page_layout}</Label>
-            <ToggleGroup
-              type="single"
-              variant="outline"
-              value={contentLayout}
-              onValueChange={onContentLayoutChange}
-              className="justify-start"
-            >
-              <ToggleGroupItem value="centered" aria-label="Toggle centered">
-                {appearance.layout.centered}
-              </ToggleGroupItem>
-              <ToggleGroupItem value="full-width" aria-label="Toggle full-width">
-                {appearance.layout.full_width}
-              </ToggleGroupItem>
-            </ToggleGroup>
-          </div>
-          <div className="space-y-2">
-            <Label>{appearance.layout.navbar_behavior}</Label>
-            <ToggleGroup
-              type="single"
-              variant="outline"
-              value={navbarStyle}
-              onValueChange={onNavbarStyleChange}
-              className="justify-start"
-            >
-              <ToggleGroupItem value="sticky" aria-label="Toggle sticky">
-                {appearance.layout.sticky}
-              </ToggleGroupItem>
-              <ToggleGroupItem value="scroll" aria-label="Toggle scroll">
-                {appearance.layout.scroll}
-              </ToggleGroupItem>
-            </ToggleGroup>
-          </div>
-        </div>
-      </div>
-      <Separator />
+        <Separator className=" opacity-50" />
 
-      {/* Sidebar Settings */}
-      <div className="space-y-4">
-        <div>
-          <h4 className="text-sm font-medium">{appearance.sidebar.title}</h4>
-          <p className="text-sm text-muted-foreground">{appearance.sidebar.description}</p>
-        </div>
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label>{appearance.sidebar.style}</Label>
-            <ToggleGroup
-              type="single"
-              variant="outline"
-              value={variant}
-              onValueChange={onSidebarStyleChange}
-              className="justify-start"
-            >
-              <ToggleGroupItem value="inset" aria-label="Toggle inset">
-                {appearance.sidebar.inset}
-              </ToggleGroupItem>
-              <ToggleGroupItem value="sidebar" aria-label="Toggle sidebar">
-                {appearance.sidebar.sidebar}
-              </ToggleGroupItem>
-              <ToggleGroupItem value="floating" aria-label="Toggle floating">
-                {appearance.sidebar.floating}
-              </ToggleGroupItem>
-            </ToggleGroup>
+        {/* Layout Settings */}
+        <section className="space-y-6">
+          <div className="space-y-1">
+            <h3 className="text-sm font-medium tracking-tight">
+              {appearance.layout.title}
+            </h3>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              {appearance.layout.description}
+            </p>
           </div>
-          <div className="space-y-2">
-            <Label>{appearance.sidebar.collapse_mode}</Label>
-            <ToggleGroup
-              type="single"
-              variant="outline"
-              value={collapsible}
-              onValueChange={onSidebarCollapseModeChange}
-              className="justify-start"
-            >
-              <ToggleGroupItem value="icon" aria-label="Toggle icon">
-                {appearance.sidebar.icon}
-              </ToggleGroupItem>
-              <ToggleGroupItem value="offcanvas" aria-label="Toggle offcanvas">
-                {appearance.sidebar.offcanvas}
-              </ToggleGroupItem>
-            </ToggleGroup>
+          <div className="grid gap-6 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-semibold px-0.5">
+                {appearance.layout.page_layout}
+              </Label>
+              <ToggleGroup
+                type="single"
+                variant="outline"
+                value={contentLayout}
+                onValueChange={onContentLayoutChange}
+                className="justify-start gap-0"
+              >
+                <ToggleGroupItem
+                  value="centered"
+                  aria-label="Toggle centered"
+                  className=" h-8 text-[11px] px-3.5 font-normal border-r-0 data-[state=on]:bg-accent data-[state=on]:text-accent-foreground"
+                >
+                  {appearance.layout.centered}
+                </ToggleGroupItem>
+                <ToggleGroupItem
+                  value="full-width"
+                  aria-label="Toggle full-width"
+                  className=" h-8 text-[11px] px-3.5 font-normal data-[state=on]:bg-accent data-[state=on]:text-accent-foreground"
+                >
+                  {appearance.layout.full_width}
+                </ToggleGroupItem>
+              </ToggleGroup>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-semibold px-0.5">
+                {appearance.layout.navbar_behavior}
+              </Label>
+              <ToggleGroup
+                type="single"
+                variant="outline"
+                value={navbarStyle}
+                onValueChange={onNavbarStyleChange}
+                className="justify-start gap-0"
+              >
+                <ToggleGroupItem
+                  value="sticky"
+                  aria-label="Toggle sticky"
+                  className=" h-8 text-[11px] px-3.5 font-normal border-r-0 data-[state=on]:bg-accent data-[state=on]:text-accent-foreground"
+                >
+                  {appearance.layout.sticky}
+                </ToggleGroupItem>
+                <ToggleGroupItem
+                  value="scroll"
+                  aria-label="Toggle scroll"
+                  className=" h-8 text-[11px] px-3.5 font-normal data-[state=on]:bg-accent data-[state=on]:text-accent-foreground"
+                >
+                  {appearance.layout.scroll}
+                </ToggleGroupItem>
+              </ToggleGroup>
+            </div>
           </div>
-        </div>
-      </div>
-      <Separator />
+        </section>
 
-      {/* Typography */}
-      <div className="space-y-4">
-        <div>
-          <h4 className="text-sm font-medium">{appearance.typography.title}</h4>
-          <p className="text-sm text-muted-foreground">{appearance.typography.description}</p>
-        </div>
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label>{appearance.typography.font_family}</Label>
-            <Select value={font} onValueChange={onFontChange}>
-              <SelectTrigger className="w-full md:w-[240px]">
-                <SelectValue placeholder="Select font" />
-              </SelectTrigger>
-              <SelectContent>
-                {fontOptions.map((font) => (
-                  <SelectItem key={font.key} value={font.key}>
-                    {font.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        <Separator className=" opacity-50" />
+
+        {/* Sidebar Settings */}
+        <section className="space-y-6">
+          <div className="space-y-1">
+            <h3 className="text-sm font-medium tracking-tight">
+              {appearance.sidebar.title}
+            </h3>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              {appearance.sidebar.description}
+            </p>
           </div>
-          <div className="pt-4">
-            <Button type="button" variant="destructive" onClick={handleRestore}>
-              {appearance.restore_defaults}
-            </Button>
+          <div className="grid gap-6 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-semibold px-0.5">
+                {appearance.sidebar.style}
+              </Label>
+              <ToggleGroup
+                type="single"
+                variant="outline"
+                value={variant}
+                onValueChange={onSidebarStyleChange}
+                className="justify-start gap-0"
+              >
+                <ToggleGroupItem
+                  value="inset"
+                  aria-label="Toggle inset"
+                  className=" h-8 text-[11px] px-3.5 font-normal border-r-0 data-[state=on]:bg-accent data-[state=on]:text-accent-foreground"
+                >
+                  {appearance.sidebar.inset}
+                </ToggleGroupItem>
+                <ToggleGroupItem
+                  value="sidebar"
+                  aria-label="Toggle sidebar"
+                  className=" h-8 text-[11px] px-3.5 font-normal border-r-0 data-[state=on]:bg-accent data-[state=on]:text-accent-foreground"
+                >
+                  {appearance.sidebar.sidebar}
+                </ToggleGroupItem>
+                <ToggleGroupItem
+                  value="floating"
+                  aria-label="Toggle floating"
+                  className=" h-8 text-[11px] px-3.5 font-normal data-[state=on]:bg-accent data-[state=on]:text-accent-foreground"
+                >
+                  {appearance.sidebar.floating}
+                </ToggleGroupItem>
+              </ToggleGroup>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-semibold px-0.5">
+                {appearance.sidebar.collapse_mode}
+              </Label>
+              <ToggleGroup
+                type="single"
+                variant="outline"
+                value={collapsible}
+                onValueChange={onSidebarCollapseModeChange}
+                className="justify-start gap-0"
+              >
+                <ToggleGroupItem
+                  value="icon"
+                  aria-label="Toggle icon"
+                  className=" h-8 text-[11px] px-3.5 font-normal border-r-0 data-[state=on]:bg-accent data-[state=on]:text-accent-foreground"
+                >
+                  {appearance.sidebar.icon}
+                </ToggleGroupItem>
+                <ToggleGroupItem
+                  value="offcanvas"
+                  aria-label="Toggle offcanvas"
+                  className=" h-8 text-[11px] px-3.5 font-normal data-[state=on]:bg-accent data-[state=on]:text-accent-foreground"
+                >
+                  {appearance.sidebar.offcanvas}
+                </ToggleGroupItem>
+              </ToggleGroup>
+            </div>
           </div>
-        </div>
+        </section>
+
+        <Separator className=" opacity-50" />
+
+        {/* Typography */}
+        <section className="space-y-6">
+          <div className="space-y-1">
+            <h3 className="text-sm font-medium tracking-tight">
+              {appearance.typography.title}
+            </h3>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              {appearance.typography.description}
+            </p>
+          </div>
+          <div className="grid gap-6 sm:grid-cols-2 items-end">
+            <div className="space-y-2">
+              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-semibold px-0.5">
+                {appearance.typography.font_family}
+              </Label>
+              <Select value={font} onValueChange={onFontChange}>
+                <SelectTrigger className="w-full h-8 text-xs font-normal border bg-background hover:bg-accent/5 transition-colors">
+                  <SelectValue placeholder={appearance.typography.font_placeholder} />
+                </SelectTrigger>
+                <SelectContent className="border bg-background p-0">
+                  {fontOptions.map((font) => (
+                    <SelectItem
+                      key={font.key}
+                      value={font.key}
+                      className=" text-xs px-2 focus:bg-accent focus:text-accent-foreground cursor-pointer py-1.5"
+                    >
+                      <span className="text-[11px]">{font.label}</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex sm:justify-start">
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={handleRestore}
+                className=" text-[11px] h-8 font-normal px-4 opacity-90 hover:opacity-100 transition-opacity"
+              >
+                {appearance.restore_defaults}
+              </Button>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   );

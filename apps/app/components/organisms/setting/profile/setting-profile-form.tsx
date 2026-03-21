@@ -22,32 +22,34 @@ import {
   Skeleton,
 } from "@workspace/ui";
 
+import { useAppStore } from "@/stores/app";
+
 function SettingProfileSkeleton() {
   return (
-    <div className="space-y-8 animate-pulse">
-      <div className="space-y-2">
-        <Skeleton className="h-6 w-48" />
-        <Skeleton className="h-4 w-72" />
+    <div className="space-y-8">
+      <div className="space-y-1">
+        <Skeleton className="h-6 w-48 rounded-none" />
+        <Skeleton className="h-4 w-72 rounded-none" />
       </div>
-      <Separator />
+      <Separator className="rounded-none" />
       <div className="flex items-center gap-6">
-        <Skeleton className="h-20 w-20 rounded-full" />
+        <Skeleton className="h-20 w-20 rounded-none" />
         <div className="space-y-2">
-          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-4 w-24 rounded-none" />
           <Skeleton className="h-8 w-32 rounded-none" />
-          <Skeleton className="h-3 w-40" />
+          <Skeleton className="h-3 w-40 rounded-none" />
         </div>
       </div>
       <div className="space-y-4">
         <div className="space-y-2">
-          <Skeleton className="h-4 w-20" />
+          <Skeleton className="h-4 w-20 rounded-none" />
           <Skeleton className="h-10 w-full max-w-md rounded-none" />
-          <Skeleton className="h-4 w-64" />
+          <Skeleton className="h-4 w-64 rounded-none" />
         </div>
         <div className="space-y-2">
-          <Skeleton className="h-4 w-20" />
+          <Skeleton className="h-4 w-20 rounded-none" />
           <Skeleton className="h-10 w-full max-w-md rounded-none" />
-          <Skeleton className="h-4 w-64" />
+          <Skeleton className="h-4 w-64 rounded-none" />
         </div>
       </div>
       <Skeleton className="h-8 w-28 rounded-none" />
@@ -65,38 +67,8 @@ import {
   updateAvatarAction,
 } from "@workspace/modules/user/user.action";
 
-interface SettingProfileFormProps {
-  dictionary: {
-    settings: {
-      profile: {
-        title: string;
-        description: string;
-        username: {
-          label: string;
-          placeholder: string;
-          description: string;
-          error_min: string;
-          error_max: string;
-        };
-        email: {
-          label: string;
-          placeholder: string;
-          description: string;
-          error_required: string;
-        };
-        update_profile: string;
-        toast_submitted: string;
-      };
-    };
-  };
-}
-
-export function SettingProfileForm({ dictionary }: SettingProfileFormProps) {
-  const { profile } = dictionary.settings;
-  const queryClient = useQueryClient();
-  const [isUploading, setIsUploading] = React.useState(false);
-
-  // 1. Fetch real user data
+export function SettingProfileForm() {
+  const { dictionary, isLoading: isDictLoading } = useAppStore();
   const { data: meData, isLoading: isMeLoading } = useQuery({
     queryKey: ["me"],
     queryFn: async () => {
@@ -105,6 +77,20 @@ export function SettingProfileForm({ dictionary }: SettingProfileFormProps) {
       throw new Error(result.error);
     },
   });
+
+  if (isMeLoading || isDictLoading || !dictionary || !meData?.user) {
+    return <SettingProfileSkeleton />;
+  }
+
+  const profile = dictionary.settings.profile;
+
+  return <ProfileFormInner profile={profile} user={meData.user} />;
+}
+
+function ProfileFormInner({ profile, user }: { profile: any; user: any }) {
+  const { dictionary } = useAppStore();
+  const queryClient = useQueryClient();
+  const [isUploading, setIsUploading] = React.useState(false);
 
   const profileFormSchema = z.object({
     username: z
@@ -128,23 +114,12 @@ export function SettingProfileForm({ dictionary }: SettingProfileFormProps) {
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema as any),
     defaultValues: {
-      username: "",
-      email: "",
-      profile_picture: "",
+      username: user.name || "",
+      email: user.email,
+      profile_picture: user.profile_picture || "",
     },
     mode: "onChange",
   });
-
-  // 2. Sync form values when data is loaded
-  React.useEffect(() => {
-    if (meData?.user) {
-      form.reset({
-        username: meData.user.name || "",
-        email: meData.user.email,
-        profile_picture: meData.user.profile_picture || "",
-      });
-    }
-  }, [meData, form]);
 
   const updateMutation = useMutation({
     mutationFn: async (data: ProfileFormValues) => {
@@ -156,11 +131,15 @@ export function SettingProfileForm({ dictionary }: SettingProfileFormProps) {
       return result.data;
     },
     onSuccess: () => {
-      toast.success("Profile updated successfully");
+      toast.success(profile.toast_success);
       queryClient.invalidateQueries({ queryKey: ["me"] });
     },
     onError: (error) => {
-      toast.error(`Error: ${(error as Error).message}`);
+      toast.error(
+        `${dictionary?.settings.common.error || "Error"}: ${
+          (error as Error).message
+        }`,
+      );
     },
   });
 
@@ -173,7 +152,7 @@ export function SettingProfileForm({ dictionary }: SettingProfileFormProps) {
     if (!file) return;
 
     if (file.size > 10 * 1024 * 1024) {
-      toast.error("File size exceeds 10MB limit");
+      toast.error(profile.avatar.error_size);
       return;
     }
 
@@ -187,42 +166,37 @@ export function SettingProfileForm({ dictionary }: SettingProfileFormProps) {
       if (response.success && response.data?.url) {
         const newUrl = response.data.url;
         form.setValue("profile_picture", newUrl);
-        toast.success("Profile picture updated automatically");
-        // Invalidate "me" query so global avatar updates
+        toast.success(profile.avatar.toast_success);
         queryClient.invalidateQueries({ queryKey: ["me"] });
       } else {
-        toast.error(response.error || "Failed to upload photo");
+        toast.error(response.error || profile.avatar.error_upload);
       }
     } catch (error) {
-      toast.error("Failed to upload photo");
+      toast.error(profile.avatar.error_upload);
     } finally {
       setIsUploading(false);
     }
   };
 
-  if (isMeLoading) {
-    return <SettingProfileSkeleton />;
-  }
-
   return (
     <div className="space-y-8">
-      <div>
-        <h3 className="text-lg font-medium">{profile.title}</h3>
-        <p className="text-muted-foreground text-sm">{profile.description}</p>
+      <div className="space-y-1">
+        <h2 className="text-lg font-medium tracking-tight">{profile.title}</h2>
+        <p className="text-xs text-muted-foreground">{profile.description}</p>
       </div>
-      <Separator className="my-6" />
+      <Separator className="rounded-none" />
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
           <div className="flex items-center gap-6">
-            <Avatar className="h-20 w-20">
+            <Avatar className="h-20 w-20 rounded-none">
               <AvatarImage src={form.getValues("profile_picture")} />
-              <AvatarFallback className="text-xl">
+              <AvatarFallback className="text-xl rounded-none">
                 {form.getValues("username")?.charAt(0)?.toUpperCase() || "?"}
               </AvatarFallback>
             </Avatar>
             <div className="space-y-2">
-              <FormLabel>Profile Photo</FormLabel>
+              <FormLabel>{profile.avatar.label}</FormLabel>
               <div className="flex items-center gap-3">
                 <Input
                   type="file"
@@ -236,18 +210,20 @@ export function SettingProfileForm({ dictionary }: SettingProfileFormProps) {
                   variant="outline"
                   className="h-8 text-xs rounded-none"
                   disabled={isUploading}
-                  onClick={() => document.getElementById("avatar-upload")?.click()}
+                  onClick={() =>
+                    document.getElementById("avatar-upload")?.click()
+                  }
                 >
                   {isUploading ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : (
                     <Upload className="mr-2 h-4 w-4" />
                   )}
-                  Upload New
+                  {profile.avatar.upload_new}
                 </Button>
               </div>
               <p className="text-[11px] text-muted-foreground">
-                JPG, GIF or PNG. 10MB max.
+                {profile.avatar.allowed_formats}
               </p>
             </div>
           </div>
@@ -259,9 +235,15 @@ export function SettingProfileForm({ dictionary }: SettingProfileFormProps) {
               <FormItem>
                 <FormLabel>{profile.username.label}</FormLabel>
                 <FormControl>
-                  <Input placeholder={profile.username.placeholder} {...field} className="rounded-none max-w-md" />
+                  <Input
+                    placeholder={profile.username.placeholder}
+                    {...field}
+                    className="rounded-none max-w-md"
+                  />
                 </FormControl>
-                <FormDescription>{profile.username.description}</FormDescription>
+                <FormDescription>
+                  {profile.username.description}
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -273,7 +255,11 @@ export function SettingProfileForm({ dictionary }: SettingProfileFormProps) {
               <FormItem>
                 <FormLabel>{profile.email.label}</FormLabel>
                 <FormControl>
-                  <Input disabled {...field} className="rounded-none max-w-md" />
+                  <Input
+                    disabled
+                    {...field}
+                    className="rounded-none max-w-md"
+                  />
                 </FormControl>
                 <FormDescription>{profile.email.description}</FormDescription>
                 <FormMessage />
@@ -281,8 +267,8 @@ export function SettingProfileForm({ dictionary }: SettingProfileFormProps) {
             )}
           />
 
-          <Button 
-            type="submit" 
+          <Button
+            type="submit"
             disabled={updateMutation.isPending}
             className="rounded-none text-xs h-8"
           >

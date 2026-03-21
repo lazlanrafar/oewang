@@ -29,7 +29,7 @@ import {
   getStripePrice,
   annualSavingsPct,
 } from "@workspace/utils";
-import { useWorkspaceStore } from "@/stores/workspace-store";
+import { useAppStore } from "@/stores/app";
 import { motion } from "framer-motion";
 
 interface UpgradeClientProps {
@@ -43,7 +43,7 @@ const planIcons: Record<string, React.ReactNode> = {
 };
 
 export function UpgradeClient({ dictionary }: UpgradeClientProps) {
-  const { workspace, settings } = useWorkspaceStore();
+  const { workspace, settings } = useAppStore();
   const [billingCycle, setBillingCycle] = React.useState<"monthly" | "annual">(
     "annual",
   );
@@ -193,7 +193,8 @@ export function UpgradeClient({ dictionary }: UpgradeClientProps) {
                   isPro
                     ? "border-primary/20 bg-primary/5 shadow-xl shadow-primary/5 scale-105 z-10"
                     : "border-border bg-card shadow-sm hover:shadow-md",
-                  isCurrent && "ring-2 ring-primary ring-offset-4 ring-offset-background",
+                  isCurrent &&
+                    "ring-2 ring-primary ring-offset-4 ring-offset-background",
                 )}
               >
                 {isPro && (
@@ -205,17 +206,24 @@ export function UpgradeClient({ dictionary }: UpgradeClientProps) {
                 <div className="space-y-6 flex-1">
                   <div className="flex items-center justify-between">
                     <div className="p-3 rounded-2xl bg-background border shadow-sm">
-                      {planIcons[plan.name.toLowerCase()] || <Rocket className="h-6 w-6 text-primary" />}
+                      {planIcons[plan.name.toLowerCase()] || (
+                        <Rocket className="h-6 w-6 text-primary" />
+                      )}
                     </div>
                     {isCurrent && (
-                      <Badge variant="secondary" className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider">
+                      <Badge
+                        variant="secondary"
+                        className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider"
+                      >
                         Current Plan
                       </Badge>
                     )}
                   </div>
 
                   <div>
-                    <h3 className="text-2xl font-black text-foreground">{plan.name}</h3>
+                    <h3 className="text-2xl font-black text-foreground">
+                      {plan.name}
+                    </h3>
                     <p className="text-muted-foreground text-sm mt-1 leading-relaxed">
                       {plan.description || "The essentials to get you started."}
                     </p>
@@ -228,19 +236,32 @@ export function UpgradeClient({ dictionary }: UpgradeClientProps) {
                       </span>
                       {plan.name.toLowerCase() !== "starter" && (
                         <span className="text-muted-foreground font-semibold text-lg">
-                          {price.note?.includes("billed annually") ?  "/mo" : "/mo"}
+                          {price.note?.includes("billed annually")
+                            ? "/mo"
+                            : "/mo"}
                         </span>
                       )}
                     </div>
-                    {billingCycle === "annual" && plan.prices.find(p => p.currency === currency)?.yearly! > 0 && (
-                      <p className="text-xs text-muted-foreground/80 mt-1.5 font-medium italic">
-                        Billed as {displayPrice(plan, "annual", { compact: false, currency }).label}/year
-                      </p>
-                    )}
+                    {billingCycle === "annual" &&
+                      plan.prices.find((p) => p.currency === currency)
+                        ?.yearly! > 0 && (
+                        <p className="text-xs text-muted-foreground/80 mt-1.5 font-medium italic">
+                          Billed as{" "}
+                          {
+                            displayPrice(plan, "annual", {
+                              compact: false,
+                              currency,
+                            }).label
+                          }
+                          /year
+                        </p>
+                      )}
                   </div>
 
                   <div className="space-y-4 pt-4">
-                    <p className="text-xs font-black uppercase tracking-widest text-foreground/70">What's included:</p>
+                    <p className="text-xs font-black uppercase tracking-widest text-foreground/70">
+                      What's included:
+                    </p>
                     {plan.features.map((feature, i) => (
                       <div key={i} className="flex items-start gap-3">
                         <div className="mt-1 h-4 w-4 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
@@ -262,17 +283,26 @@ export function UpgradeClient({ dictionary }: UpgradeClientProps) {
                       isPro
                         ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20"
                         : "bg-foreground text-background hover:bg-foreground/90 shadow-lg shadow-black/10",
-                      isCurrent && "bg-muted text-muted-foreground border-transparent cursor-default scale-100"
+                      isCurrent &&
+                        "bg-muted text-muted-foreground border-transparent cursor-default scale-100",
                     )}
                     onClick={() => {
                       if (isCurrent || !priceId) return;
                       checkoutMutation.mutate(priceId);
                     }}
-                    disabled={checkoutMutation.isPending || isCurrent || (!priceId && plan.name.toLowerCase() !== "starter")}
+                    disabled={
+                      checkoutMutation.isPending ||
+                      isCurrent ||
+                      (!priceId && plan.name.toLowerCase() !== "starter")
+                    }
                   >
-                    {isCurrent 
-                      ? "Your Active Plan" 
-                      : (checkoutMutation.isPending ? "Connecting..." : (plan.name.toLowerCase() === "starter" ? "Selected Plan" : "Get Started"))}
+                    {isCurrent
+                      ? "Your Active Plan"
+                      : checkoutMutation.isPending
+                        ? "Connecting..."
+                        : plan.name.toLowerCase() === "starter"
+                          ? "Selected Plan"
+                          : "Get Started"}
                   </Button>
                 </div>
               </motion.div>
@@ -287,24 +317,34 @@ export function UpgradeClient({ dictionary }: UpgradeClientProps) {
           <div className="space-y-2">
             <ShieldCheck className="h-8 w-8 mx-auto text-primary" />
             <h4 className="font-bold">Secure Checkout</h4>
-            <p className="text-xs text-muted-foreground leading-relaxed">Encrypted payments processed via Stripe.</p>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Encrypted payments processed via Stripe.
+            </p>
           </div>
           <div className="space-y-2">
             <Sparkles className="h-8 w-8 mx-auto text-primary" />
             <h4 className="font-bold">Instant Upgrade</h4>
-            <p className="text-xs text-muted-foreground leading-relaxed">Features unlocked immediately after checkout.</p>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Features unlocked immediately after checkout.
+            </p>
           </div>
           <div className="space-y-2">
             <Info className="h-8 w-8 mx-auto text-primary" />
             <h4 className="font-bold">Flexible Billing</h4>
-            <p className="text-xs text-muted-foreground leading-relaxed">Cancel or switch plans anytime in settings.</p>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Cancel or switch plans anytime in settings.
+            </p>
           </div>
         </div>
 
         <div className="space-y-12">
           <div className="text-center space-y-4">
-            <h2 className="text-3xl font-black tracking-tight">Frequently Asked Questions</h2>
-            <p className="text-muted-foreground">Everything you need to know about our plans.</p>
+            <h2 className="text-3xl font-black tracking-tight">
+              Frequently Asked Questions
+            </h2>
+            <p className="text-muted-foreground">
+              Everything you need to know about our plans.
+            </p>
           </div>
           <Accordion type="single" collapsible className="w-full">
             <AccordionItem value="item-1" className="border-b px-0">
@@ -312,8 +352,9 @@ export function UpgradeClient({ dictionary }: UpgradeClientProps) {
                 Can I switch between monthly and yearly?
               </AccordionTrigger>
               <AccordionContent className="text-muted-foreground pb-6 text-base leading-relaxed">
-                Yes, you can switch your billing cycle at any time from your workspace settings. 
-                Switching to annual billing mid-period will convert your remaining time into credit.
+                Yes, you can switch your billing cycle at any time from your
+                workspace settings. Switching to annual billing mid-period will
+                convert your remaining time into credit.
               </AccordionContent>
             </AccordionItem>
             <AccordionItem value="item-2" className="border-b px-0">
@@ -321,8 +362,9 @@ export function UpgradeClient({ dictionary }: UpgradeClientProps) {
                 What happens if I cancel my subscription?
               </AccordionTrigger>
               <AccordionContent className="text-muted-foreground pb-6 text-base leading-relaxed">
-                If you cancel, you'll still have full access to your paid features until the end of your 
-                already paid billing period. After that, your workspace will revert to the Starter plan.
+                If you cancel, you'll still have full access to your paid
+                features until the end of your already paid billing period.
+                After that, your workspace will revert to the Starter plan.
               </AccordionContent>
             </AccordionItem>
             <AccordionItem value="item-3" className="border-b px-0">
@@ -330,8 +372,9 @@ export function UpgradeClient({ dictionary }: UpgradeClientProps) {
                 Is my data safe and exportable?
               </AccordionTrigger>
               <AccordionContent className="text-muted-foreground pb-6 text-base leading-relaxed">
-                Absolutely. We take data security very seriously. All your financial records are 
-                encrypted and you can export all your data in CSV or PDF format at any time.
+                Absolutely. We take data security very seriously. All your
+                financial records are encrypted and you can export all your data
+                in CSV or PDF format at any time.
               </AccordionContent>
             </AccordionItem>
           </Accordion>

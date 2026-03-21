@@ -30,6 +30,7 @@ import { toast } from "sonner";
 import * as z from "zod";
 
 import { inviteMember } from "@workspace/modules/workspace/workspace.action";
+import { useAppStore } from "@/stores/app";
 
 const inviteSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
@@ -45,6 +46,11 @@ interface InviteMemberDialogProps {
 export function InviteMemberDialog({ onSuccess }: InviteMemberDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const { dictionary } = useAppStore();
+
+  if (!dictionary) return null;
+
+  const dict = dictionary.settings.members;
 
   const form = useForm<InviteFormValues>({
     resolver: zodResolver(inviteSchema as any),
@@ -57,8 +63,10 @@ export function InviteMemberDialog({ onSuccess }: InviteMemberDialogProps) {
     setLoading(false);
 
     if (result.success) {
-      toast.success("Invitation sent!", {
-        description: `${values.email} will receive an invite shortly.`,
+      toast.success(dict.form.success || "Invitation sent!", {
+        description:
+          dict.form.description?.replace("{email}", values.email) ||
+          `${values.email} will receive an invite shortly.`,
       });
       setOpen(false);
       form.reset();
@@ -70,31 +78,45 @@ export function InviteMemberDialog({ onSuccess }: InviteMemberDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <Button onClick={() => setOpen(true)}>
-        <UserPlus className="h-4 w-4" />
-        Invite Member
+      <Button
+        onClick={() => setOpen(true)}
+        className="rounded-none h-8 text-xs"
+      >
+        <UserPlus className="h-4 w-4 mr-2" />
+        {dict.invite_button}
       </Button>
 
-      <DialogContent>
+      <DialogContent className="rounded-none sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Invite Member</DialogTitle>
-          <DialogDescription>
-            Invite a new member to join your workspace.
+          <DialogTitle className="text-lg font-medium">
+            {dict.invite_button}
+          </DialogTitle>
+          <DialogDescription className="text-xs text-muted-foreground">
+            {dict.description}
           </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="space-y-6 py-4"
+          >
             <FormField
               control={form.control}
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email</FormLabel>
+                  <FormLabel className="text-xs">
+                    {dict.form.email.label}
+                  </FormLabel>
                   <FormControl>
-                    <Input placeholder="colleague@company.com" {...field} />
+                    <Input
+                      placeholder={dict.form.email.placeholder}
+                      {...field}
+                      className="rounded-none text-sm h-10 px-3"
+                    />
                   </FormControl>
-                  <FormMessage />
+                  <FormMessage className="text-[10px]" />
                 </FormItem>
               )}
             />
@@ -104,38 +126,55 @@ export function InviteMemberDialog({ onSuccess }: InviteMemberDialogProps) {
               name="role"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Role</FormLabel>
+                  <FormLabel className="text-xs">
+                    {dict.form.role.label}
+                  </FormLabel>
                   <Select
                     onValueChange={field.onChange}
                     defaultValue={field.value}
                   >
                     <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a role" />
+                      <SelectTrigger className="rounded-none h-10 px-3 text-sm">
+                        <SelectValue placeholder={dict.form.role.placeholder} />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
-                      <SelectItem value="member">Member</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
+                    <SelectContent className="rounded-none">
+                      <SelectItem
+                        value="member"
+                        className="rounded-none text-xs"
+                      >
+                        {dict.form.role.options.member}
+                      </SelectItem>
+                      <SelectItem
+                        value="admin"
+                        className="rounded-none text-xs"
+                      >
+                        {dict.form.role.options.admin}
+                      </SelectItem>
                     </SelectContent>
                   </Select>
-                  <FormMessage />
+                  <FormMessage className="text-[10px]" />
                 </FormItem>
               )}
             />
 
-            <DialogFooter>
+            <DialogFooter className="pt-4">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setOpen(false)}
                 disabled={loading}
+                className="rounded-none h-9 text-xs flex-1 sm:flex-none"
               >
-                Cancel
+                {dict.form.cancel}
               </Button>
-              <Button type="submit" disabled={loading}>
+              <Button
+                type="submit"
+                disabled={loading}
+                className="rounded-none h-9 text-xs flex-1 sm:flex-none"
+              >
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Send Invitation
+                {dict.form.submit}
               </Button>
             </DialogFooter>
           </form>

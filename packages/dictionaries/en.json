@@ -16,6 +16,28 @@
     "empty": "No accounts found. Start by adding one in settings."
   },
   "settings": {
+    "common": {
+      "select_currency": "Select currency...",
+      "search_currency": "Search currency...",
+      "no_currency_found": "No currency found.",
+      "change": "Change",
+      "active": "Active",
+      "processing": "Processing...",
+      "connecting": "Connecting...",
+      "current": "Current",
+      "na": "N/A",
+      "actions": "Actions",
+      "remove": "Remove",
+      "cancel": "Cancel",
+      "save": "Save",
+      "delete": "Delete",
+      "opening": "Opening...",
+      "view_pdf": "View PDF",
+      "used": "used",
+      "remaining": "remaining",
+      "open_menu": "Open menu",
+      "error": "Error"
+    },
     "language": {
       "title": "Language",
       "description": "Select your preferred language",
@@ -23,7 +45,8 @@
         "en": "English",
         "ja": "Japanese",
         "id": "Indonesian"
-      }
+      },
+      "placeholder": "Select language"
     },
     "sidebar": {
       "profile": "Profile",
@@ -55,7 +78,28 @@
       "manage_subscription": "Manage Subscription",
       "upgrade": "Upgrade",
       "active_plan": "Active Plan",
-      "monthly": "per month"
+      "monthly": "per month",
+      "annual": "per year",
+      "mo": "mo",
+      "yr": "yr",
+      "available_plans": "Available Plans",
+      "free_plan": "Free Plan",
+      "starter_plan": "Starter",
+      "monthly_toggle": "Monthly",
+      "annual_toggle": "Annual",
+      "no_plans": "No plans available.",
+      "downgrade_confirm": "Are you sure you want to downgrade? Your extra resources will be lost.",
+      "get_started": "Get Started",
+      "history": {
+        "title": "Billing History",
+        "date": "Date",
+        "invoice": "Invoice",
+        "amount": "Amount",
+        "status": "Status",
+        "action": "Action",
+        "no_history": "No billing history",
+        "no_history_description": "Historical invoices will appear here once you start a subscription."
+      }
     },
     "appearance": {
       "title": "Appearance",
@@ -64,6 +108,7 @@
         "title": "Theme Settings",
         "description": "Customize your UI theme and colors.",
         "preset": "Theme Preset",
+        "preset_placeholder": "Preset",
         "mode": "Theme Mode",
         "light": "Light",
         "dark": "Dark",
@@ -93,7 +138,8 @@
       "typography": {
         "title": "Typography",
         "description": "Choose the font that suits your style.",
-        "font_family": "Font Family"
+        "font_family": "Font Family",
+        "font_placeholder": "Select font"
       },
       "restore_defaults": "Restore Defaults"
     },
@@ -125,11 +171,22 @@
         "error_invalid": "Please enter a valid URL."
       },
       "update_profile": "Update profile",
-      "toast_submitted": "You submitted the following values:"
+      "toast_success": "Profile updated successfully",
+      "toast_submitted": "You submitted the following values:",
+      "avatar": {
+        "label": "Profile Photo",
+        "upload_new": "Upload New",
+        "allowed_formats": "JPG, GIF or PNG. 10MB max.",
+        "error_size": "File size exceeds 10MB limit",
+        "toast_success": "Profile picture updated automatically",
+        "error_upload": "Failed to upload photo"
+      }
     },
     "account": {
       "title": "Account",
       "description": "Manage your account settings and set your preferred language and timezone.",
+      "no_providers": "No providers linked.",
+      "logged_in_via": "Logged in via",
       "providers": {
         "title": "Connected Accounts",
         "description": "The accounts currently linked to your Okane account.",
@@ -139,9 +196,62 @@
         "primary_label": "Primary"
       }
     },
+    "currency": {
+      "title": "Main Currency",
+      "description": "Set your primary currency for all transactions.",
+      "unit_position": "Unit position",
+      "decimal_point": "Decimal point",
+      "toast_updated": "Main currency settings updated",
+      "label": "Currency",
+      "positions": {
+        "Front": "Front",
+        "Back": "Back"
+      }
+    },
+    "members": {
+      "title": "Members",
+      "description": "Manage your workspace members and invitations.",
+      "invite_button": "Invite Member",
+      "toast_cancelled": "Invitation cancelled",
+      "no_members": "No members found.",
+      "no_invitations": "No pending invitations.",
+      "cancel_invitation": "Cancel Invitation",
+      "invitation_status": {
+        "pending": "Pending",
+        "accepted": "Accepted",
+        "expired": "Expired"
+      },
+      "tabs": {
+        "members": "Members",
+        "invitations": "Invitations"
+      },
+      "form": {
+        "email": {
+          "label": "Email Address",
+          "placeholder": "colleague@company.com"
+        },
+        "role": {
+          "label": "Workspace Role",
+          "placeholder": "Select a role",
+          "options": {
+            "admin": "Admin",
+            "member": "Member",
+            "owner": "Owner"
+          }
+        },
+        "submit": "Send Invitation",
+        "cancel": "Cancel",
+        "success": "Invitation sent!",
+        "description": "{email} will receive an invite shortly."
+      }
+    },
     "transaction": {
       "title": "Transaction Settings",
       "description": "Manage how your transactions are handled and displayed.",
+      "toast_updated": "Settings updated",
+      "toast_error": "Failed to update settings",
+      "exp": "Exp.",
+      "inc": "Inc.",
       "date_time": {
         "title": "Date & Time",
         "description": "Configure how dates and times are handled in transactions.",
@@ -209,18 +319,18 @@
       },
       "input_interaction": {
         "title": "Input & Interaction",
-        "description": "Fine-tune how you input data and interact with lists.",
+        "description": "Fine-tune how you interact with transactions.",
         "carry_over": {
           "label": "Carry-over Balance",
-          "description": "Automatically carry over the remaining balance to the next period."
+          "description": "Carry over remaining balance to the next period."
         },
         "autocomplete": {
           "label": "Autocomplete",
-          "description": "Suggest previous entries when typing."
+          "description": "Suggest values as you type."
         },
         "time_input": {
           "label": "Time Input",
-          "description": "Enable time selection for transactions.",
+          "description": "Show time input when adding transactions.",
           "placeholder": "Select time input",
           "options": {
             "none": "None",
@@ -230,7 +340,7 @@
         },
         "swipe_action": {
           "label": "Swipe Action",
-          "description": "Configure the action when swiping on a transaction.",
+          "description": "Action when swiping on a transaction.",
           "placeholder": "Select swipe action",
           "options": {
             "change-date": "Change Date",
@@ -240,7 +350,7 @@
         },
         "input_order": {
           "label": "Input Order",
-          "description": "Choose the order of fields when adding a transaction.",
+          "description": "Order of fields when adding a transaction.",
           "placeholder": "Select input order",
           "options": {
             "amount": "From Amount",
@@ -249,11 +359,11 @@
         },
         "show_description": {
           "label": "Show Description",
-          "description": "Display transaction descriptions in the list view."
+          "description": "Show transaction descriptions in lists."
         },
         "quick_note_button": {
           "label": "Quick Note Button",
-          "description": "Show a button to quickly add notes to transactions."
+          "description": "Show a button to quickly add notes."
         }
       }
     },
@@ -316,6 +426,16 @@
           "update_success": "Category updated successfully"
         }
       }
+    },
+    "sub_currencies": {
+      "title": "Sub Currencies",
+      "description": "Manage secondary currencies for your workspace.",
+      "add_button": "Add Currency",
+      "toast_added": "{code} added to sub-currencies",
+      "toast_removed": "{code} removed",
+      "workspace_label": "Workspace Currency",
+      "rate_now": "RATE NOW",
+      "empty": "No sub-currencies added yet."
     },
     "wallets": {
       "title": "Wallets & Banks",

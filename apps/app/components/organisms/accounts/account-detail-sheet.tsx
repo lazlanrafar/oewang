@@ -19,7 +19,7 @@ import {
   Layers,
   X,
 } from "lucide-react";
-import { useWorkspaceStore } from "@/stores/workspace-store";
+import { useAppStore } from "@/stores/app";
 import { useState, useEffect } from "react";
 import { useDebounce } from "@/hooks/use-debounce";
 import { updateWallet } from "@workspace/modules/client";
@@ -43,7 +43,7 @@ export function AccountDetailSheet({
   groups = [],
   onEdit,
 }: AccountDetailSheetProps) {
-  const { settings, formatCurrency } = useWorkspaceStore();
+  const { settings, formatCurrency } = useAppStore();
   const [name, setName] = useState("");
   const [balance, setBalance] = useState(0);
   const [isIncludedInTotals, setIsIncludedInTotals] = useState(true);

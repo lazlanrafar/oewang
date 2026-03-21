@@ -17,7 +17,7 @@ import {
   Separator,
   Skeleton,
 } from "@workspace/ui";
-import { useWorkspaceStore } from "@/stores/workspace-store";
+import { useAppStore } from "@/stores/app";
 import {
   ChevronDown,
   ChevronLeft,
@@ -652,8 +652,8 @@ export function VaultClient() {
 }
 
 function HeaderStorageUsage() {
-  const { workspace, checkLimit } = useWorkspaceStore();
-  
+  const { workspace, checkLimit } = useAppStore();
+
   if (!workspace) return null;
 
   const usage = workspace.vault_size_used_bytes || 0;
@@ -665,12 +665,16 @@ function HeaderStorageUsage() {
         <span className="text-muted-foreground">
           {formatBytes(usage)} / {limit} MB
         </span>
-        <span className={cn(
-          "font-bold",
-          percent > 90 ? "text-destructive" : 
-          percent > 70 ? "text-amber-600" : 
-          "text-primary"
-        )}>
+        <span
+          className={cn(
+            "font-bold",
+            percent > 90
+              ? "text-destructive"
+              : percent > 70
+                ? "text-amber-600"
+                : "text-primary",
+          )}
+        >
           {Math.round(percent)}%
         </span>
       </div>

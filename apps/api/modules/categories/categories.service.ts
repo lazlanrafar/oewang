@@ -85,7 +85,7 @@ export abstract class CategoriesService {
       user_id: userId,
       action: "categories.reordered",
       entity: "category",
-      entity_id: "bulk",
+      entity_id: "00000000-0000-0000-0000-000000000000",
       after: data.updates,
     });
 

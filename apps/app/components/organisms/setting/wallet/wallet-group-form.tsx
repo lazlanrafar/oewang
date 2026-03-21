@@ -38,10 +38,12 @@ export function WalletGroupForm({
 }: WalletGroupFormProps) {
   const queryClient = useQueryClient();
 
+  const { groups } = dictionary.wallets;
+
   const formSchema = z.object({
     name: z
       .string()
-      .min(1, { message: dictionary.groups.form.name.error_required }),
+      .min(1, { message: groups.form.name.error_required }),
   });
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -59,14 +61,11 @@ export function WalletGroupForm({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["wallet-groups"] });
-      toast.success(dictionary.form.create_success); // Helper text might be generic or I should add specific key?
-      // I added generic success message to dictionary for wallets.
-      // For groups, I didn't add specific success message.
-      // I'll just use generic "Saved" or reuse wallet success for now to save time/space.
+      toast.success(dictionary.settings?.wallets?.form?.create_success ?? dictionary.common.save); // Using fallback because group success is not in dict yet
       onClose();
     },
     onError: (error) => {
-      toast.error(`Error: ${(error as Error).message}`);
+      toast.error(`${dictionary.common.error}: ${(error as Error).message}`);
     },
   });
 
@@ -79,11 +78,11 @@ export function WalletGroupForm({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["wallet-groups"] });
-      toast.success(dictionary.form.update_success);
+      toast.success(dictionary.settings?.wallets?.form?.update_success ?? dictionary.common.save);
       onClose();
     },
     onError: (error) => {
-      toast.error(`Error: ${(error as Error).message}`);
+      toast.error(`${dictionary.common.error}: ${(error as Error).message}`);
     },
   });
 
@@ -106,11 +105,12 @@ export function WalletGroupForm({
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{dictionary.groups.form.name.label}</FormLabel>
+              <FormLabel>{groups.form.name.label}</FormLabel>
               <FormControl>
                 <Input
-                  placeholder={dictionary.groups.form.name.placeholder}
+                  placeholder={groups.form.name.placeholder}
                   {...field}
+                  className="rounded-none"
                 />
               </FormControl>
               <FormMessage />
@@ -118,18 +118,19 @@ export function WalletGroupForm({
           )}
         />
 
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end gap-2 pt-4">
           <Button
             type="button"
             variant="outline"
             onClick={onClose}
             disabled={isSubmitting}
+            className="rounded-none h-8 text-xs"
           >
-            {dictionary.form.cancel}
+            {dictionary.common.cancel}
           </Button>
-          <Button type="submit" disabled={isSubmitting}>
+          <Button type="submit" disabled={isSubmitting} className="rounded-none h-8 text-xs">
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {dictionary.form.submit}
+            {dictionary.common.save}
           </Button>
         </div>
       </form>

@@ -47,3 +47,35 @@ export const createCustomerPortal = async (): Promise<
     };
   }
 };
+
+export const cancelSubscription = async (): Promise<ActionResponse<any>> => {
+  try {
+    const response = await api.post("/stripe/cancel-subscription");
+    return {
+      success: true,
+      data: response.data.data,
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.response?.data?.message || "Failed to cancel subscription",
+    };
+  }
+};
+
+export const getInvoiceUrl = async (
+  invoiceId: string,
+): Promise<ActionResponse<{ url: string }>> => {
+  try {
+    const response = await api.get(`/stripe/invoices/${invoiceId}`);
+    return {
+      success: true,
+      data: response.data.data,
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.response?.data?.message || "Failed to get invoice URL",
+    };
+  }
+};

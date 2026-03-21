@@ -9,6 +9,8 @@ import { fontRegistry, fontVars } from "@workspace/ui";
 import { PREFERENCE_DEFAULTS } from "@workspace/ui";
 import { ThemeBootScript } from "@/scripts/theme-boot";
 import { PreferencesStoreProvider } from "@workspace/ui";
+import { i18n, type Locale } from "@/i18n-config";
+import { getDictionary } from "@/get-dictionary";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { getPreference } from "@/server/server-actions";
 import {
@@ -47,6 +49,7 @@ export default async function RootLayout({
     sidebar_variant,
     sidebar_collapsible,
     font,
+    dictionary,
   ] = await Promise.all([
     getPreference("theme_mode", THEME_MODE_VALUES, PREFERENCE_DEFAULTS.theme_mode),
     getPreference("theme_preset", THEME_PRESET_VALUES, PREFERENCE_DEFAULTS.theme_preset),
@@ -55,6 +58,7 @@ export default async function RootLayout({
     getPreference("sidebar_variant", SIDEBAR_VARIANT_VALUES, PREFERENCE_DEFAULTS.sidebar_variant),
     getPreference("sidebar_collapsible", SIDEBAR_COLLAPSIBLE_VALUES, PREFERENCE_DEFAULTS.sidebar_collapsible),
     getPreference("font", FONT_VALUES_PREF, PREFERENCE_DEFAULTS.font),
+    getDictionary(locale as Locale),
   ]);
 
   return (
@@ -84,7 +88,7 @@ export default async function RootLayout({
           font={font}
         >
           <NuqsAdapter>
-            <Providers>
+            <Providers dictionary={dictionary}>
               {children}
               <Toaster />
             </Providers>

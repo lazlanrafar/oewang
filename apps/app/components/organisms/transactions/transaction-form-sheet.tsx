@@ -48,7 +48,7 @@ import {
 import { SelectAccount } from "@/components/molecules/select-account";
 import { SelectCategory } from "@/components/molecules/select-category";
 import { SelectUser } from "@/components/molecules/select-user";
-import { useWorkspaceStore } from "@/stores/workspace-store";
+import { useAppStore } from "@/stores/app";
 import {
   Check,
   ChevronsUpDown,
@@ -128,7 +128,7 @@ export function TransactionFormSheet({
   );
   const [attachments, setAttachments] = useState<VaultFileRef[]>([]);
   const [vaultPickerOpen, setVaultPickerOpen] = useState(false);
-  const { settings, formatCurrency } = useWorkspaceStore();
+  const { settings, formatCurrency } = useAppStore();
 
   const form = useForm<TransactionFormValues>({
     resolver: zodResolver(transactionSchema as any),

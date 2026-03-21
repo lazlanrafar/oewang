@@ -1,4 +1,4 @@
-import { integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { index, integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { workspaces } from "./workspaces";
 
 export const categories = pgTable("categories", {
@@ -12,4 +12,6 @@ export const categories = pgTable("categories", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   deletedAt: timestamp("deleted_at"),
+}, (table) => {
+  return [index("categories_workspace_id_idx").on(table.workspaceId)];
 });

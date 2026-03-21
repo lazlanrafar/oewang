@@ -27,7 +27,7 @@ import {
 import type { Transaction } from "@workspace/types";
 import { formatCurrency, formatBytes } from "@workspace/utils";
 import { format } from "date-fns";
-import { useWorkspaceStore } from "@/stores/workspace-store";
+import { useAppStore } from "@/stores/app";
 
 const SHORTCUTS = [
   { label: "Overview", icon: Icons.Overview, href: "/en/overview" },
@@ -44,7 +44,11 @@ const SETTINGS_ITEMS = [
     icon: Icons.Settings,
     href: "/en/settings/profile",
   },
-  { label: "Appearance", icon: Icons.Settings, href: "/en/settings/appearance" },
+  {
+    label: "Appearance",
+    icon: Icons.Settings,
+    href: "/en/settings/appearance",
+  },
 ];
 
 export function SearchDialog() {
@@ -55,7 +59,7 @@ export function SearchDialog() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [debounceDelay, setDebounceDelay] = useState(200);
   const [isFetching, setIsFetching] = useState(false);
-  const { settings } = useWorkspaceStore();
+  const { settings } = useAppStore();
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {

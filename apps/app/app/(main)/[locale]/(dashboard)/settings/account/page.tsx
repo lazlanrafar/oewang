@@ -22,7 +22,7 @@ export default async function SettingsAccountPage({ params }: Props) {
         <p className="text-muted-foreground text-sm">{account.description}</p>
       </div>
       <Separator />
-      <AccountForm dictionary={dictionary} />
+      <AccountForm />
     </div>
   );
 }

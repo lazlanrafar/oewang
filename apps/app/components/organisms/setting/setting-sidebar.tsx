@@ -81,11 +81,6 @@ export function SettingSidebar({
     //   icon: Settings,
     // },
     {
-      title: "Billing",
-      href: "/settings/billing",
-      icon: CreditCard,
-    },
-    {
       title: sidebar.appearance,
       href: "/settings/appearance",
       icon: Palette,

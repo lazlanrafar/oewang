@@ -2,15 +2,18 @@ import { create } from "zustand";
 import type { User, Workspace, TransactionSettings } from "@workspace/types";
 import { INCOME_EXPENSES_COLOR_OPTIONS } from "@workspace/constants";
 import { formatCurrency as formatCurrencyUtil } from "@workspace/utils";
+import type { Dictionary } from "@workspace/dictionaries";
 
-interface WorkspaceState {
+export interface AppState {
   user: User | null;
   workspace: Workspace | null;
   settings: TransactionSettings | null;
+  dictionary: Dictionary | null;
   isLoading: boolean;
   setUser: (user: User | null) => void;
   setWorkspace: (workspace: Workspace | null) => void;
   setSettings: (settings: TransactionSettings | null) => void;
+  setDictionary: (dictionary: Dictionary | null) => void;
   setIsLoading: (isLoading: boolean) => void;
   getTransactionColor: (type: string) => string;
   formatCurrency: (amount: number) => string;
@@ -23,14 +26,16 @@ interface WorkspaceState {
   };
 }
 
-export const useWorkspaceStore = create<WorkspaceState>()((set, get) => ({
+export const useAppStore = create<AppState>()((set, get) => ({
   user: null,
   workspace: null,
   settings: null,
+  dictionary: null,
   isLoading: true,
   setUser: (user) => set({ user }),
   setWorkspace: (workspace) => set({ workspace }),
   setSettings: (settings) => set({ settings }),
+  setDictionary: (dictionary) => set({ dictionary }),
   setIsLoading: (isLoading) => set({ isLoading }),
   getTransactionColor: (type) => {
     const { settings } = get();

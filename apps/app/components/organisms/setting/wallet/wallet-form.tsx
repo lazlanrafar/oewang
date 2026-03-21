@@ -45,8 +45,11 @@ interface WalletFormProps {
 export function WalletForm({ wallet, onClose, dictionary }: WalletFormProps) {
   const queryClient = useQueryClient();
 
+  const { form: walletForm } = dictionary.wallets;
+  const { form: commonForm } = dictionary; // Assuming dictionary is dict.settings
+
   const formSchema = z.object({
-    name: z.string().min(1, { message: dictionary.form.name.error_required }),
+    name: z.string().min(1, { message: walletForm.name.error_required }),
     groupId: z.string().optional().nullable(),
     balance: z.string().optional(),
     isIncludedInTotals: z.boolean().default(true),
@@ -86,11 +89,11 @@ export function WalletForm({ wallet, onClose, dictionary }: WalletFormProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["wallets"] });
-      toast.success(dictionary.form.create_success);
+      toast.success(walletForm.create_success);
       onClose();
     },
     onError: (error) => {
-      toast.error(`Error: ${(error as Error).message}`);
+      toast.error(`${dictionary.common.error}: ${(error as Error).message}`);
     },
   });
 
@@ -109,7 +112,7 @@ export function WalletForm({ wallet, onClose, dictionary }: WalletFormProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["wallets"] });
-      toast.success(dictionary.form.update_success);
+      toast.success(walletForm.update_success);
       onClose();
     },
     onError: (error) => {
@@ -136,11 +139,12 @@ export function WalletForm({ wallet, onClose, dictionary }: WalletFormProps) {
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{dictionary.form.name.label}</FormLabel>
+              <FormLabel>{walletForm.name.label}</FormLabel>
               <FormControl>
                 <Input
-                  placeholder={dictionary.form.name.placeholder}
+                  placeholder={walletForm.name.placeholder}
                   {...field}
+                  className="rounded-none"
                 />
               </FormControl>
               <FormMessage />
@@ -154,21 +158,21 @@ export function WalletForm({ wallet, onClose, dictionary }: WalletFormProps) {
           name="groupId"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{dictionary.form.group.label}</FormLabel>
+              <FormLabel>{walletForm.group.label}</FormLabel>
               <Select
                 onValueChange={field.onChange}
                 defaultValue={field.value ?? "none"}
               >
                 <FormControl>
-                  <SelectTrigger>
+                  <SelectTrigger className="rounded-none h-8 text-xs">
                     <SelectValue
-                      placeholder={dictionary.form.group.placeholder}
+                      placeholder={walletForm.group.placeholder}
                     />
                   </SelectTrigger>
                 </FormControl>
-                <SelectContent>
+                <SelectContent className="rounded-none">
                   <SelectItem value="none">
-                    {dictionary.form.group.none}
+                    {walletForm.group.none}
                   </SelectItem>
                   {groups?.map((group) => (
                     <SelectItem key={group.id} value={group.id}>
@@ -195,6 +199,7 @@ export function WalletForm({ wallet, onClose, dictionary }: WalletFormProps) {
                   step="0.01"
                   placeholder={dictionary.form.balance.placeholder}
                   {...field}
+                  className="rounded-none border"
                 />
               </FormControl>
               <FormMessage />
@@ -207,35 +212,37 @@ export function WalletForm({ wallet, onClose, dictionary }: WalletFormProps) {
           control={form.control}
           name="isIncludedInTotals"
           render={({ field }) => (
-            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+            <FormItem className="flex flex-row items-center justify-between rounded-none border p-3 shadow-sm">
               <div className="space-y-0.5">
-                <FormLabel>{dictionary.form.is_included.label}</FormLabel>
+                <FormLabel>{walletForm.is_included.label}</FormLabel>
                 <p className="text-[0.8rem] text-muted-foreground">
-                  {dictionary.form.is_included.description}
+                  {walletForm.is_included.description}
                 </p>
               </div>
               <FormControl>
                 <Switch
                   checked={field.value}
                   onCheckedChange={field.onChange}
+                  className="rounded-none"
                 />
               </FormControl>
             </FormItem>
           )}
         />
 
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end gap-2 pt-4">
           <Button
             type="button"
             variant="outline"
             onClick={onClose}
             disabled={isSubmitting}
+            className="rounded-none h-8 text-xs"
           >
-            {dictionary.form.cancel}
+            {dictionary.common.cancel}
           </Button>
-          <Button type="submit" disabled={isSubmitting}>
+          <Button type="submit" disabled={isSubmitting} className="rounded-none h-8 text-xs">
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {dictionary.form.submit}
+            {dictionary.common.save}
           </Button>
         </div>
       </form>

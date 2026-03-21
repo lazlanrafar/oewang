@@ -1,33 +1,49 @@
 "use client";
 
 import * as React from "react";
-
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Skeleton } from "@workspace/ui";
-import { Loader2, ShieldCheck, Unlink } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Button, Skeleton, Separator } from "@workspace/ui";
+import { Loader2, Unlink } from "lucide-react";
 import { toast } from "sonner";
+import {
+  disconnectProviderAction,
+  getProvidersAction,
+} from "@workspace/modules/user/user.action";
+import { useAppStore } from "@/stores/app";
 
-import { disconnectProviderAction, getProvidersAction } from "@workspace/modules/user/user.action";
-
-interface AccountFormProps {
-  dictionary: {
-    settings: {
-      account: {
-        providers: {
-          title: string;
-          description: string;
-          disconnect: string;
-          disconnect_confirm: string;
-          disconnect_success: string;
-          primary_label: string;
-        };
-      };
-    };
-  };
+function SettingAccountSkeleton() {
+  return (
+    <div className="space-y-8">
+      <div className="space-y-1">
+        <Skeleton className="h-6 w-48 rounded-none" />
+        <Skeleton className="h-4 w-72 rounded-none" />
+      </div>
+      <Separator className="rounded-none" />
+      <div className="space-y-4">
+        {[1, 2].map((i) => (
+          <div
+            key={i}
+            className="flex items-center justify-between border-t py-6 first:border-t-0"
+          >
+            <div className="flex items-center gap-4">
+              <Skeleton className="size-10 rounded-none text-xs" />
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-24 rounded-none" />
+                <Skeleton className="h-3 w-32 rounded-none" />
+              </div>
+            </div>
+            <Skeleton className="h-8 w-24 rounded-none" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
-export function AccountForm({ dictionary }: AccountFormProps) {
-  const { providers: t } = dictionary.settings.account;
+export function AccountForm() {
+  const { dictionary, isLoading: isDictLoading } = useAppStore();
+  const account = dictionary?.settings?.account;
+  const providers_t = account?.providers;
 
   const { data, isLoading } = useQuery({
     queryKey: ["providers"],
@@ -38,74 +54,78 @@ export function AccountForm({ dictionary }: AccountFormProps) {
     },
   });
 
+  const queryClient = useQueryClient();
+
   const disconnectMutation = useMutation({
     mutationFn: async (provider: string) => {
-      if (!window.confirm(t.disconnect_confirm)) return;
+      if (!providers_t) return;
+      if (!window.confirm(providers_t.disconnect_confirm)) return;
       const result = await disconnectProviderAction(provider);
       if (!result.success) throw new Error(result.error);
     },
     onSuccess: () => {
-      toast.success(t.disconnect_success);
+      toast.success(providers_t?.disconnect_success);
+      queryClient.invalidateQueries({ queryKey: ["providers"] });
     },
     onError: (error) => {
       toast.error(`Error: ${(error as Error).message}`);
     },
   });
 
-  if (isLoading) {
-    return (
-      <Card>
-        <CardHeader>
-          <Skeleton className="h-5 w-[200px] mb-2" />
-          <Skeleton className="h-4 w-[350px]" />
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {[1, 2].map((i) => (
-            <div key={i} className="flex items-center justify-between rounded-lg border p-4">
-              <div className="flex items-center gap-4">
-                <Skeleton className="size-10 rounded-full" />
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-[100px]" />
-                  <Skeleton className="h-3 w-[150px]" />
-                </div>
-              </div>
-              <Skeleton className="h-8 w-[100px]" />
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-    );
+  if (isLoading || isDictLoading || !account || !providers_t) {
+    return <SettingAccountSkeleton />;
   }
 
   const providers = data?.providers || [];
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">{t.title}</CardTitle>
-          <CardDescription>{t.description}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {providers.length === 0 && <p className="text-sm text-muted-foreground">No providers linked.</p>}
+    <div className="space-y-8">
+      <div className="space-y-1">
+        <h2 className="text-lg font-medium tracking-tight">{account.title}</h2>
+        <p className="text-xs text-muted-foreground">{account.description}</p>
+      </div>
+      <Separator className="rounded-none" />
+
+      <div className="space-y-6">
+        <div>
+          <h3 className="text-sm font-medium">{providers_t.title}</h3>
+          <p className="text-xs text-muted-foreground">
+            {providers_t.description}
+          </p>
+        </div>
+
+        <div className="space-y-0">
+          {providers.length === 0 && (
+            <p className="text-sm text-muted-foreground font-medium">
+              {account.no_providers}
+            </p>
+          )}
           {providers.map((provider) => (
-            <div key={provider} className="flex items-center justify-between rounded-lg border p-4">
+            <div
+              key={provider}
+              className="flex items-center justify-between border-b last:border-b-0 py-6 border"
+            >
               <div className="flex items-center gap-4">
-                <div className="flex size-10 items-center justify-center rounded-full bg-muted capitalize font-bold">
+                <div className="flex size-10 items-center justify-center rounded-none bg-muted capitalize font-bold text-xs">
                   {provider.charAt(0)}
                 </div>
                 <div>
-                  <p className="text-sm font-medium capitalize">{provider}</p>
-                  <p className="text-xs text-muted-foreground">Logged in via {provider}</p>
+                  <p className="text-sm font-medium capitalize tracking-tight">
+                    {provider}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground tracking-tight">
+                    {account.logged_in_via} {provider}
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                {/* For now we just show a badge for all since we don't distinguish primary yet easily without more complex identity check */}
-                {/* But we can disable disconnect for the very last one */}
                 <Button
                   variant="outline"
                   size="sm"
-                  disabled={providers.length <= 1 || disconnectMutation.isPending}
+                  className="rounded-none h-8 text-xs font-normal"
+                  disabled={
+                    providers.length <= 1 || disconnectMutation.isPending
+                  }
                   onClick={() => disconnectMutation.mutate(provider)}
                 >
                   {disconnectMutation.isPending ? (
@@ -113,13 +133,13 @@ export function AccountForm({ dictionary }: AccountFormProps) {
                   ) : (
                     <Unlink className="size-4 mr-2" />
                   )}
-                  {t.disconnect}
+                  {providers_t.disconnect}
                 </Button>
               </div>
             </div>
           ))}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }
