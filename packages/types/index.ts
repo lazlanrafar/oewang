@@ -8,6 +8,7 @@ export * from "./category";
 export * from "./pricing";
 export * from "./settings";
 export * from "./orders";
-export * from "./customer";
 export * from "./invoice";
 export * from "./agents";
+export * from "./contact";
+export * from "./debt";

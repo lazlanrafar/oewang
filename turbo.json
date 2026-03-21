@@ -40,6 +40,9 @@
     },
     "test": {
       "dependsOn": ["^build"]
+    },
+    "migrate": {
+      "cache": false
     }
   }
 }

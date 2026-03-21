@@ -113,7 +113,7 @@ export function InvoiceActivity({ invoiceId }: InvoiceActivityProps) {
 function ActivityDiff({ before, after }: { before: any; after: any }) {
   const changes = useMemo(() => {
     const diffs: Array<{ field: string; from: any; to: any }> = [];
-    const keys = ["status", "amount", "dueDate", "customerId", "isPublic"];
+    const keys = ["status", "amount", "dueDate", "contactId", "isPublic"];
 
     for (const key of keys) {
       if (before[key] !== after[key]) {

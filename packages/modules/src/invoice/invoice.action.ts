@@ -4,7 +4,7 @@ import type { ActionResponse, Invoice } from "@workspace/types";
 import { axiosInstance as api } from "../lib/axios.server";
 
 export interface CreateInvoiceData {
-  customerId: string;
+  contactId: string;
   invoiceNumber: string;
   issueDate?: string;
   dueDate?: string;

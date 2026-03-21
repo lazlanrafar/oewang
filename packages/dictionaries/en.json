@@ -485,5 +485,45 @@
         "update_success": "Wallet updated successfully"
       }
     }
+  },
+  "debts": {
+    "title": "Debts",
+    "description": "Manage your debts, receivables, and bill splits.",
+    "add_button": "Add Debt",
+    "empty": {
+      "title": "No debts found",
+      "description": "Keep track of your debts and receivables. Add your first debt to get started.",
+      "action": "Add Your First Debt"
+    },
+    "form": {
+      "contact": {
+        "label": "Contact",
+        "placeholder": "Select contact",
+        "error_required": "Contact is required"
+      },
+      "type": {
+        "label": "Type",
+        "payable": "Payable",
+        "receivable": "Receivable"
+      },
+      "amount": {
+        "label": "Amount",
+        "placeholder": "0.00",
+        "error_required": "Amount is required"
+      },
+      "description": {
+        "label": "Description",
+        "placeholder": "What is this debt for?"
+      },
+      "due_date": {
+        "label": "Due Date",
+        "placeholder": "Select date"
+      },
+      "submit": "Save",
+      "cancel": "Cancel",
+      "create_success": "Debt created successfully",
+      "update_success": "Debt updated successfully",
+      "delete_success": "Debt deleted successfully"
+    }
   }
 }

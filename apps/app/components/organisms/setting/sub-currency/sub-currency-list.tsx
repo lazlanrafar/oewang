@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { Button, Separator, Skeleton } from "@workspace/ui";
+import { Button, Separator, Skeleton, SelectCurrency } from "@workspace/ui";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -10,7 +10,6 @@ import {
   removeSubCurrency,
 } from "@workspace/modules/setting/setting.action";
 import type { SubCurrency, TransactionSettings } from "@workspace/types";
-import { CurrencySelector } from "../currency-selector";
 import { useAppStore } from "@/stores/app";
 
 interface SubCurrencyListProps {
@@ -127,7 +126,7 @@ export function SubCurrencyList({
             {dictionary?.settings.sub_currencies.description}
           </p>
         </div>
-        <CurrencySelector
+        <SelectCurrency
           onSelect={handleAdd}
           trigger={
             <Button size="sm" className="rounded-none h-8 text-xs gap-2">

@@ -49,7 +49,7 @@ import type { Invoice } from "@workspace/types";
 import type { CreateInvoiceData } from "@workspace/modules/client";
 import { cn } from "@workspace/ui";
 import { format } from "date-fns";
-import { SelectCustomer } from "@/components/molecules/select-customer";
+import { SelectContact } from "@/components/molecules/select-contact";
 import { InvoiceSettings } from "./invoice-settings";
 import { uploadVaultFile } from "@workspace/modules/vault/vault.action";
 import {
@@ -251,7 +251,7 @@ const lineItemSchema = z.object({
 });
 
 const formSchema = z.object({
-  customerId: z.string().min(1, "Please select a customer"),
+  contactId: z.string().min(1, "Please select a contact"),
   invoiceNumber: z.string().min(1, "Invoice number is required"),
   currency: z.string().min(3).max(3),
   issueDate: z.string().optional(),
@@ -309,7 +309,7 @@ export function InvoiceFormSheet({
   const form = useForm<any>({
     resolver: zodResolver(formSchema as any),
     defaultValues: {
-      customerId: "",
+      contactId: "",
       invoiceNumber: "",
       currency: "USD",
       issueDate: format(new Date(), "yyyy-MM-dd"),
@@ -412,7 +412,7 @@ export function InvoiceFormSheet({
   useEffect(() => {
     if (invoice && open) {
       form.reset({
-        customerId: invoice.customerId ?? "",
+        contactId: invoice.contactId ?? "",
         invoiceNumber: invoice.invoiceNumber ?? "",
         currency: invoice.currency ?? "USD",
         issueDate: invoice.issueDate?.slice(0, 10) ?? "",
@@ -449,7 +449,7 @@ export function InvoiceFormSheet({
       const today = new Date();
       const nextMonth = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
       form.reset({
-        customerId: "",
+        contactId: "",
         invoiceNumber: `INV-${Math.floor(Math.random() * 10000)
           .toString()
           .padStart(4, "0")}`,
@@ -485,13 +485,13 @@ export function InvoiceFormSheet({
     }
   }, [invoice, open, form]);
 
-  // Auto-save as draft when customer is selected for a new invoice
-  const customerId = useWatch({ control: form.control, name: "customerId" });
+  // Auto-save as draft when contact is selected for a new invoice
+  const contactId = useWatch({ control: form.control, name: "contactId" });
   useEffect(() => {
     if (
       open &&
       !isEditing &&
-      customerId &&
+      contactId &&
       form.getValues("status") === "draft"
     ) {
       const currentValues = form.getValues();
@@ -499,7 +499,7 @@ export function InvoiceFormSheet({
         onFormSubmit(currentValues, true);
       }
     }
-  }, [customerId, open, isEditing, form, onSubmit]);
+  }, [contactId, open, isEditing, form, onSubmit]);
 
   const onFormSubmit = async (values: FormValues, isSilent = false) => {
     if (loading) return;
@@ -673,13 +673,13 @@ export function InvoiceFormSheet({
                   <span className="text-[11px] text-muted-foreground">To</span>
                   <FormField
                     control={form.control as any}
-                    name="customerId"
+                    name="contactId"
                     render={({ field }) => (
                       <FormItem>
-                        <SelectCustomer
+                        <SelectContact
                           value={field.value}
                           onChange={field.onChange}
-                          placeholder="Select customer"
+                          placeholder="Select contact"
                         />
                         <FormMessage />
                       </FormItem>

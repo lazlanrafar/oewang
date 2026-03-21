@@ -41,6 +41,7 @@ type Props<T> = {
   className?: string;
   modal?: boolean;
   variant?: React.ComponentProps<typeof Button>["variant"];
+  trigger?: React.ReactNode;
 };
 
 export function Combobox<T extends ComboboxItem>({
@@ -60,6 +61,7 @@ export function Combobox<T extends ComboboxItem>({
   className,
   modal = true,
   variant = "outline",
+  trigger,
 }: Props<T>) {
   const [open, setOpen] = React.useState(false);
   const [internalSelectedItem, setInternalSelectedItem] = React.useState<
@@ -73,7 +75,8 @@ export function Combobox<T extends ComboboxItem>({
     item.label.toLowerCase().includes(inputValue.toLowerCase()),
   );
 
-  const showCreate = onCreate && Boolean(inputValue) && !filteredItems.length;
+  const showCreate =
+    onCreate && Boolean(inputValue) && filteredItems.length === 0;
 
   const Component = (
     <Command loop shouldFilter={false}>
@@ -95,21 +98,19 @@ export function Combobox<T extends ComboboxItem>({
                 className={cn("cursor-pointer", className)}
                 key={item.id}
                 value={item.id}
-                  onSelect={(id) => {
-                    const foundItem = items.find((item) => item.id === id);
+                onSelect={(id) => {
+                  const foundItem = items.find((item) => item.id === id);
 
-                    if (!foundItem) {
-                      return;
-                    }
+                  if (!foundItem) {
+                    return;
+                  }
 
-                    onSelect(foundItem);
-                    setInternalSelectedItem(foundItem);
-                    setOpen(false);
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                  }}
-                >
+                  onSelect(foundItem);
+                  setInternalSelectedItem(foundItem);
+                  setOpen(false);
+                  setInputValue("");
+                }}
+              >
                 {renderListItem ? (
                   renderListItem({ isChecked, item })
                 ) : (
@@ -131,8 +132,8 @@ export function Combobox<T extends ComboboxItem>({
 
           {showCreate && (
             <CommandItem
-              key={inputValue}
-              value={inputValue}
+              key={`create-${inputValue}`}
+              value={`create-${inputValue}`}
               onSelect={() => {
                 onCreate(inputValue);
                 setOpen(false);
@@ -141,9 +142,6 @@ export function Combobox<T extends ComboboxItem>({
               onMouseDown={(event) => {
                 event.preventDefault();
                 event.stopPropagation();
-              }}
-              onClick={(e) => {
-                e.stopPropagation();
               }}
             >
               {renderOnCreate ? renderOnCreate(inputValue) : null}
@@ -159,33 +157,42 @@ export function Combobox<T extends ComboboxItem>({
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen} modal={modal}>
+    <Popover
+      open={open}
+      onOpenChange={(isOpen) => {
+        setOpen(isOpen);
+        if (!isOpen) {
+          setInputValue("");
+        }
+      }}
+      modal={modal}
+    >
       <PopoverTrigger asChild disabled={disabled} className="w-full">
-        <Button
-          variant={variant}
-          aria-expanded={open}
-          className="w-full justify-between relative font-normal"
-          onClick={(e) => {
-            e.stopPropagation();
-          }}
-        >
-          <span className="truncate text-ellipsis pr-3">
-            {selectedItem ? (
-              <span className="items-center overflow-hidden whitespace-nowrap text-ellipsis block">
-                {renderSelectedItem
-                  ? renderSelectedItem(selectedItem)
-                  : selectedItem.label}
-              </span>
-            ) : (
-              (placeholder ?? "Select item...")
-            )}
-          </span>
-          <ChevronsUpDown className="size-4 opacity-50 absolute right-2" />
-        </Button>
+        {trigger ?? (
+          <Button
+            variant={variant}
+            aria-expanded={open}
+            className="w-full justify-between relative font-normal"
+          >
+            <span className="truncate text-ellipsis pr-3">
+              {selectedItem ? (
+                <span className="items-center overflow-hidden whitespace-nowrap text-ellipsis block">
+                  {renderSelectedItem
+                    ? renderSelectedItem(selectedItem)
+                    : selectedItem.label}
+                </span>
+              ) : (
+                (placeholder ?? "Select item...")
+              )}
+            </span>
+            <ChevronsUpDown className="size-4 opacity-50 absolute right-2" />
+          </Button>
+        )}
       </PopoverTrigger>
 
       <PopoverContent
         {...popoverProps}
+        portal={false}
         className={cn("p-0", popoverProps?.className)}
         style={{
           width: "var(--radix-popover-trigger-width)",

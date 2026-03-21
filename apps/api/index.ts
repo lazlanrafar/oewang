@@ -33,10 +33,11 @@ import { pricingController } from "./modules/pricing/pricing.controller";
 import { stripeController } from "./modules/stripe/stripe.controller";
 import { ordersController } from "./modules/orders/orders.controller";
 import { systemMetricsController } from "./modules/system-metrics/system-metrics.controller";
-import { customersController } from "./modules/customers/customers.controller";
 import { invoicesController } from "./modules/invoices/invoices.controller";
 import { publicInvoicesController } from "./modules/invoices/public-invoices.controller";
 import { Env } from "@workspace/constants";
+import { contactsController } from "./modules/contacts";
+import { debtsController } from "./modules/debts";
 
 const log = createLogger("api");
 const port = Env.API_PORT ?? 3001;
@@ -80,9 +81,10 @@ const app = new Elysia()
       .use(stripeController)
       .use(ordersController)
       .use(systemMetricsController)
-      .use(customersController)
       .use(invoicesController)
-      .use(publicInvoicesController),
+      .use(publicInvoicesController)
+      .use(contactsController)
+      .use(debtsController),
   )
   .onError(({ error, code }) => {
     if (code === "NOT_FOUND") return;

@@ -485,5 +485,45 @@
         "update_success": "ウォレットが正常に更新されました"
       }
     }
+  },
+  "debts": {
+    "title": "貸借管理",
+    "description": "貸し借りを管理し、返済状況を追跡します。",
+    "add_button": "データを追加",
+    "empty": {
+      "title": "データが見つかりません",
+      "description": "最初の貸借データを記録して追跡を開始しましょう。",
+      "action": "最初のデータを追加"
+    },
+    "form": {
+      "contact": {
+        "label": "連絡先",
+        "placeholder": "連絡先を選択",
+        "error_required": "連絡先は必須です"
+      },
+      "type": {
+        "label": "タイプ",
+        "payable": "借りたお金 (Payable)",
+        "receivable": "貸したお金 (Receivable)"
+      },
+      "amount": {
+        "label": "金額",
+        "placeholder": "0.00",
+        "error_required": "金額は必須です"
+      },
+      "description": {
+        "label": "説明",
+        "placeholder": "この貸借の説明を入力"
+      },
+      "due_date": {
+        "label": "期日",
+        "placeholder": "日付を選択"
+      },
+      "submit": "保存",
+      "cancel": "キャンセル",
+      "create_success": "データを記録しました",
+      "update_success": "データを更新しました",
+      "delete_success": "データを削除しました"
+    }
   }
 }

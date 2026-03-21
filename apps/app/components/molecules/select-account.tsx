@@ -93,28 +93,28 @@ export function SelectAccount({
       onSelect={(item) => {
         onChange(item.id);
       }}
-      className={className}
+      className={cn("rounded-none", className)}
       onCreate={(value) => {
         createMutation.mutate(value);
       }}
       renderSelectedItem={(item) => (
         <div className="flex items-center space-x-2">
-          <Landmark className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-          <span className="text-left truncate max-w-[90%]">
+          <Landmark className="h-3 w-3 text-muted-foreground shrink-0" />
+          <span className="text-left truncate max-w-[90%] text-sm font-medium">
             {item.label}
           </span>
         </div>
       )}
       renderOnCreate={(value) => (
         <div className="flex items-center space-x-2">
-          <Landmark className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-          <span>{`Create "${value}"`}</span>
+          <Landmark className="h-3 w-3 text-muted-foreground shrink-0" />
+          <span className="text-sm">{`Create "${value}"`}</span>
         </div>
       )}
       renderListItem={({ item }) => (
-        <div className="flex items-center space-x-2">
-          <Landmark className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-          <span className="line-clamp-1">{item.label}</span>
+        <div className="flex items-center space-x-2 py-1">
+          <Landmark className="h-3 w-3 text-muted-foreground shrink-0" />
+          <span className="line-clamp-1 text-sm">{item.label}</span>
         </div>
       )}
     />

@@ -2,6 +2,8 @@ import Anthropic from "@anthropic-ai/sdk";
 import { TransactionsService } from "../transactions/transactions.service";
 import { walletsRepository } from "../wallets/wallets.repository";
 import { CategoriesRepository } from "../categories/categories.repository";
+import { ContactsRepository } from "../contacts/contacts.repository";
+import { DebtsService } from "../debts/debts.service";
 
 export const aiTools: Anthropic.Tool[] = [
   {
@@ -46,6 +48,36 @@ export const aiTools: Anthropic.Tool[] = [
         id: { type: "string" },
       },
       required: ["id"],
+    },
+  },
+  {
+    name: "create_debt",
+    description: "Create a new debt record (Hutang or Piutang) when the user owes money or someone owes them.",
+    input_schema: {
+      type: "object",
+      properties: {
+        contactName: { type: "string", description: "Name of the person involved." },
+        type: { type: "string", enum: ["payable", "receivable"], description: " payable (hutang) if the user owes them, receivable (piutang) if they owe the user." },
+        amount: { type: "number", description: "Amount of the debt." },
+        description: { type: "string" },
+        dueDate: { type: "string", description: "Optional due date." },
+      },
+      required: ["contactName", "type", "amount"],
+    },
+  },
+  {
+    name: "split_bill",
+    description: "Create an expense transaction and split it equally with others. Auto-records receivable debts.",
+    input_schema: {
+      type: "object",
+      properties: {
+        amount: { type: "number", description: "Total amount paid initially." },
+        name: { type: "string", description: "Transaction name/merchant." },
+        walletId: { type: "string", description: "Wallet to deduct the total from." },
+        categoryId: { type: "string" },
+        contactNames: { type: "array", items: { type: "string" }, description: "List of people the transaction is split with." }
+      },
+      required: ["amount", "name", "walletId", "contactNames"],
     },
   },
 ];
@@ -118,6 +150,54 @@ export async function executeAiTool(
           userId,
           input.id,
         );
+        return { success: true, data: result.data };
+      }
+      case "create_debt": {
+        let contact = await ContactsRepository.findByName(workspaceId, input.contactName);
+        if (!contact) {
+          contact = await ContactsRepository.create({ workspaceId, name: input.contactName });
+        }
+        if (!contact) return { success: false, error: "Failed to resolve contact." };
+
+        const body = {
+          contactId: contact.id,
+          type: input.type,
+          amount: input.amount,
+          description: input.description,
+          dueDate: input.dueDate,
+        };
+
+        const result = await DebtsService.createDebt(workspaceId, userId, body);
+        return { success: true, data: result.data };
+      }
+      case "split_bill": {
+        let walletId = input.walletId;
+        if (walletId && !isUuid(walletId)) {
+          const allWallets = await walletsRepository.findMany(workspaceId);
+          const match = allWallets.find((w: any) =>
+            w.name.toLowerCase().includes(walletId.toLowerCase())
+          );
+          if (match) walletId = match.id;
+        }
+
+        let categoryId = input.categoryId;
+        if (categoryId && !isUuid(categoryId)) {
+          const allCats = await CategoriesRepository.findMany(workspaceId);
+          const match = allCats.find((c: any) =>
+            c.name.toLowerCase().includes(categoryId.toLowerCase())
+          );
+          if (match) categoryId = match.id;
+        }
+
+        const body = {
+          amount: input.amount,
+          name: input.name,
+          walletId,
+          categoryId,
+          contactNames: input.contactNames,
+        };
+
+        const result = await DebtsService.splitBill(workspaceId, userId, body);
         return { success: true, data: result.data };
       }
       default:

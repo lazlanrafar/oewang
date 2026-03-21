@@ -30,13 +30,13 @@ import {
   X,
 } from "lucide-react";
 import { useState, useEffect } from "react";
-import { updateTransaction } from "@workspace/modules/transaction/transaction.action";
+import { updateTransaction, getTransactionDebts } from "@workspace/modules/transaction/transaction.action";
 import { getVaultDownloadUrl } from "@workspace/modules/vault/vault.action";
 import { toast } from "sonner";
 import { SelectCategory } from "@/components/molecules/select-category";
 import { SelectUser } from "@/components/molecules/select-user";
 import { SelectAccount } from "@/components/molecules/select-account";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useAppStore } from "@/stores/app";
 import { VaultPickerModal } from "@/components/organisms/vault-picker-modal";
@@ -102,6 +102,13 @@ export function TransactionDetailSheet({
   const debouncedDescription = useDebounce(description, 500);
 
   const queryClient = useQueryClient();
+
+  const { data: debtsResponse, isLoading: isDebtsLoading } = useQuery({
+    queryKey: ["transaction-debts", transaction?.id],
+    queryFn: () => getTransactionDebts(transaction!.id),
+    enabled: !!transaction?.id && open,
+  });
+  const relatedDebts = debtsResponse?.data || [];
 
   useEffect(() => {
     if (transaction) {
@@ -499,6 +506,49 @@ export function TransactionDetailSheet({
                 </div>
               </AccordionContent>
             </AccordionItem>
+
+            {relatedDebts.length > 0 && (
+              <AccordionItem value="debts" className="border-none">
+                <AccordionTrigger className="hover:no-underline py-4 text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.2em]">
+                  Related Debts
+                </AccordionTrigger>
+                <AccordionContent className="space-y-3 pt-1">
+                  {isDebtsLoading ? (
+                    <div className="text-xs text-muted-foreground animate-pulse">Loading debts...</div>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-2 mb-2">
+                      {relatedDebts.map((item: any) => (
+                        <div
+                          key={item.payment?.id}
+                          className="flex flex-col gap-1 px-3 py-2.5 rounded-md border border-muted/20 bg-muted/5 text-sm"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium truncate max-w-[200px]">
+                              {item.contact?.name || "Unknown"}
+                            </span>
+                            <span
+                              className={cn(
+                                "font-serif tracking-tight",
+                                getTransactionColor(
+                                  item.debt?.type === "payable" ? "expense" : "income"
+                                ),
+                              )}
+                            >
+                              {formatCurrency(Number(item.payment?.amount))}
+                            </span>
+                          </div>
+                          {item.debt?.description && (
+                            <span className="text-[11px] text-muted-foreground line-clamp-1">
+                              {item.debt.description}
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </AccordionContent>
+              </AccordionItem>
+            )}
 
             <AccordionItem value="general" className="border-none">
               <AccordionTrigger className="hover:no-underline py-4 text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.2em]">

@@ -75,7 +75,7 @@ export function useStickyColumns({
 
   // Get sticky column IDs for quick lookup
   const stickyColumnIds = useMemo(
-    () => new Set(resolvedStickyColumns.map((col) => col.id)),
+    () => new Set((resolvedStickyColumns || []).map((col) => col.id)),
     [resolvedStickyColumns],
   );
 

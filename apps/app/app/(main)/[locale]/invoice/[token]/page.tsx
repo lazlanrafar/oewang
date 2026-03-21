@@ -141,7 +141,7 @@ export default function PublicInvoicePage() {
   }
 
   const invoice = response.data.invoice;
-  const customer = response.data.customer;
+  const contact = response.data.contact;
   const workspace = response.data.workspace;
   const settings = response.data.settings;
 

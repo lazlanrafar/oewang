@@ -25,7 +25,7 @@ import { useInvoicesStore } from "@/stores/invoices";
 import { toast } from "sonner";
 
 type InvoiceRow = Invoice & {
-  customer?: { name?: string; email?: string } | null;
+  contact?: { name?: string; email?: string } | null;
 };
 
 interface Props {
@@ -82,14 +82,14 @@ export function InvoicesClient({ initialData }: Props) {
           if (item.invoice) {
             return {
               ...item.invoice,
-              customer: item.customer,
+              contact: item.contact,
             };
           }
           return item;
         });
       }
       if (typeof items === "object" && "invoice" in items) {
-        return [{ ...items.invoice, customer: (items as any).customer }];
+        return [{ ...items.invoice, contact: (items as any).contact }];
       }
       return [];
     }) ?? [];

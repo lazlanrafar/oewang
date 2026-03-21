@@ -12,6 +12,8 @@ import {
   aiMessages,
   pricing,
   workspaces,
+  debts,
+  contacts,
 } from "@workspace/database";
 
 export abstract class AiRepository {
@@ -133,6 +135,29 @@ export abstract class AiRepository {
       .limit(limit);
 
     return result;
+  }
+
+  /**
+   * Get all wallets with their current balances.
+   */
+  static async getOutstandingDebts(workspaceId: string) {
+    return await db
+      .select({
+        id: debts.id,
+        contactName: contacts.name,
+        type: debts.type,
+        remainingAmount: debts.remainingAmount,
+        dueDate: debts.dueDate,
+      })
+      .from(debts)
+      .leftJoin(contacts, eq(debts.contactId, contacts.id))
+      .where(
+        and(
+          eq(debts.workspaceId, workspaceId),
+          eq(debts.status, "unpaid"),
+          isNull(debts.deletedAt),
+        ),
+      );
   }
 
   /**

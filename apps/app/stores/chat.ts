@@ -295,17 +295,17 @@ const COMMAND_SUGGESTIONS = [
   // Customers
   {
     command: "/show",
-    title: "Show customers",
-    toolName: "getCustomers",
+    title: "Show contacts",
+    toolName: "getContacts",
     toolParams: { pageSize: 10 },
-    keywords: ["show", "customers", "clients", "list"],
+    keywords: ["show", "contacts", "clients", "list"],
   },
   {
     command: "/find",
-    title: "Find top customers",
-    toolName: "getCustomers",
+    title: "Find top contacts",
+    toolName: "getContacts",
     toolParams: { pageSize: 10 },
-    keywords: ["find", "top", "customers", "clients"],
+    keywords: ["find", "top", "contacts", "clients"],
   },
   // Cash Flow
   {

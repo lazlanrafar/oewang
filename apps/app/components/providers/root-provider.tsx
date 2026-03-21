@@ -6,6 +6,7 @@ import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import { AppProvider } from "./app-provider";
+import { ConfirmModalProvider } from "./confirm-modal-provider";
 import type { Dictionary } from "@workspace/dictionaries";
 
 export function Providers({ 
@@ -28,7 +29,11 @@ export function Providers({
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AppProvider dictionary={dictionary}>{children}</AppProvider>
+      <AppProvider dictionary={dictionary}>
+        <ConfirmModalProvider>
+          {children}
+        </ConfirmModalProvider>
+      </AppProvider>
     </QueryClientProvider>
   );
 }

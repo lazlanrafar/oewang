@@ -23,16 +23,17 @@ export function InputDate({
   placeholder = "Pick a date",
   disabled,
 }: InputDateProps) {
-  const date = value ? parseISO(value) : undefined;
+  const date =
+    value && !isNaN(parseISO(value).getTime()) ? parseISO(value) : undefined;
 
   return (
-    <Popover>
+    <Popover modal={true}>
       <PopoverTrigger asChild>
         <Button
           variant={"outline"}
           disabled={disabled}
           className={cn(
-            "w-full justify-start text-left font-normal bg-transparent h-10 transition-colors hover:bg-muted/10 border-input hover:border-foreground/20",
+            "w-full justify-start text-left font-normal bg-transparent h-9 transition-colors hover:bg-muted/10 border-input hover:border-foreground/20",
             !value && "text-muted-foreground",
             className,
           )}

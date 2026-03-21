@@ -172,3 +172,20 @@ export const bulkDeleteTransactions = async (
     };
   }
 };
+
+export const getTransactionDebts = async (
+  id: string,
+): Promise<ActionResponse<any[]>> => {
+  try {
+    const response = await api.get(`/transactions/${id}/debts`);
+    const apiResponse = (response as any)._api_response;
+    return { success: true, data: apiResponse?.data ?? response.data?.data };
+  } catch (error: any) {
+    return {
+      success: false,
+      error:
+        error.response?.data?.message || "Failed to fetch transaction debts",
+    };
+  }
+};
+

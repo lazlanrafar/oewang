@@ -6,6 +6,9 @@ import {
   transactionAttachments,
   vaultFiles,
   users,
+  debtPayments,
+  debts,
+  contacts,
 } from "@workspace/database";
 import type { Transaction } from "@workspace/types";
 import {
@@ -364,5 +367,35 @@ export abstract class TransactionsRepository {
         })),
       );
     }
+  }
+
+  static async findDebts(transactionId: string, workspaceId: string) {
+    return db
+      .select({
+        payment: {
+          id: debtPayments.id,
+          amount: debtPayments.amount,
+          createdAt: debtPayments.createdAt,
+        },
+        debt: {
+          id: debts.id,
+          description: debts.description,
+          type: debts.type,
+        },
+        contact: {
+          id: contacts.id,
+          name: contacts.name,
+        },
+      })
+      .from(debtPayments)
+      .innerJoin(debts, eq(debtPayments.debtId, debts.id))
+      .leftJoin(contacts, eq(debts.contactId, contacts.id))
+      .where(
+        and(
+          eq(debtPayments.transactionId, transactionId),
+          eq(debtPayments.workspaceId, workspaceId),
+          isNull(debtPayments.deletedAt),
+        ),
+      );
   }
 }

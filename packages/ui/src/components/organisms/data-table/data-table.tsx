@@ -86,7 +86,7 @@ type Props<TData extends { id: string | number }> = {
   /** Height of the scrollable table body. Default: calc(100svh - 210px) */
   containerHeight?: string;
   /** Message shown when data is empty. Default: "No results" */
-  emptyMessage?: string;
+  emptyMessage?: string | React.ReactNode;
   /** Whether pagination is handled externally (server-side). */
   manualPagination?: boolean;
   /** Total number of pages (required if manualPagination is true). */
@@ -346,7 +346,11 @@ export function DataTable<TData extends { id: string | number }>({
   if (!data.length) {
     return (
       <div className="relative overflow-hidden flex items-center justify-center py-20">
-        <p className="text-muted-foreground">{emptyMessage}</p>
+        {typeof emptyMessage === "string" ? (
+          <p className="text-muted-foreground">{emptyMessage}</p>
+        ) : (
+          emptyMessage
+        )}
       </div>
     );
   }

@@ -8,16 +8,16 @@ import {
   boolean,
 } from "drizzle-orm/pg-core";
 import { workspaces } from "./workspaces";
-import { customers } from "./customers";
+import { contacts } from "./contacts";
 
 export const invoices = pgTable("invoices", {
   id: uuid("id").defaultRandom().primaryKey().notNull(),
   workspaceId: uuid("workspace_id")
     .notNull()
     .references(() => workspaces.id, { onDelete: "cascade" }),
-  customerId: uuid("customer_id")
+  contactId: uuid("contact_id")
     .notNull()
-    .references(() => customers.id, { onDelete: "restrict" }),
+    .references(() => contacts.id, { onDelete: "restrict" }),
   invoiceNumber: text("invoice_number").notNull(),
   status: text("status").notNull().default("draft"), // 'draft', 'unpaid', 'paid', 'overdue', 'canceled'
 

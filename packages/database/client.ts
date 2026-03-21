@@ -20,8 +20,10 @@ import * as ai_sessions from "./schema/ai-sessions";
 import * as ai_messages from "./schema/ai-messages";
 import * as workspace_integrations from "./schema/workspace-integrations";
 import * as pricing from "./schema/pricing";
-import * as customers from "./schema/customers";
 import * as invoices from "./schema/invoices";
+import * as contacts from "./schema/contacts";
+import * as debts from "./schema/debts";
+import * as debt_payments from "./schema/debt-payments";
 
 const schema = {
   ...users,
@@ -43,8 +45,10 @@ const schema = {
   ...ai_messages,
   ...workspace_integrations,
   ...pricing,
-  ...customers,
   ...invoices,
+  ...contacts,
+  ...debts,
+  ...debt_payments,
 };
 
 // Disable prefetch as it is not supported for "Transaction" pool mode

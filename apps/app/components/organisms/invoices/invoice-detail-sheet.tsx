@@ -84,7 +84,7 @@ function formatAmount(amount: number | string, currency: string) {
 }
 
 type InvoiceRow = Invoice & {
-  customer?: { name?: string; email?: string } | null;
+  contact?: { name?: string; email?: string } | null;
 };
 
 interface InvoiceDetailSheetProps {
@@ -243,8 +243,8 @@ export function InvoiceDetailSheet({
 
               <div className="grid grid-cols-1 gap-1 pt-2">
                 <InfoRow
-                  label="Customer"
-                  value={invoice.customer?.name ?? "-"}
+                  label="Contact"
+                  value={invoice.contact?.name ?? "-"}
                 />
                 <InfoRow
                   label="Issue Date"

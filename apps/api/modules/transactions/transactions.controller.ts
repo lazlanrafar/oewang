@@ -133,4 +133,20 @@ export const transactions = new Elysia({
         tags: ["Transactions"],
       },
     },
+  )
+  .get(
+    "/:id/debts",
+    async ({ auth, params: { id } }) => {
+      if (!auth?.workspace_id) {
+        throw status(401, buildError(ErrorCode.UNAUTHORIZED, "Unauthorized"));
+      }
+      return TransactionsService.getDebts(auth.workspace_id, id);
+    },
+    {
+      params: t.Object({ id: t.String() }),
+      detail: {
+        summary: "Get debts associated with transaction",
+        tags: ["Transactions"],
+      },
+    },
   );

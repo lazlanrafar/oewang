@@ -344,4 +344,17 @@ export abstract class TransactionsService {
 
     return buildSuccess(null, "Transaction deleted successfully");
   }
+
+  static async getDebts(workspaceId: string, id: string) {
+    const transaction = await TransactionsRepository.findById(workspaceId, id);
+    if (!transaction) {
+      throw status(
+        404,
+        buildError(ErrorCode.NOT_FOUND, "Transaction not found"),
+      );
+    }
+
+    const debts = await TransactionsRepository.findDebts(id, workspaceId);
+    return buildSuccess(debts, "Transaction debts retrieved successfully");
+  }
 }

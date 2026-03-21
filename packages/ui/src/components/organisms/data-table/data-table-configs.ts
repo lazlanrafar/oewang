@@ -9,7 +9,7 @@ export const STICKY_COLUMNS: Record<TableId, StickyColumnConfig[]> = {
   pricing: [{ id: "name", width: 200 }],
   orders: [{ id: "code", width: 200 }],
   accounts: [{ id: "name", width: 200 }],
-  customers: [{ id: "name", width: 200 }],
+  contacts: [{ id: "name", width: 200 }],
   invoices: [{ id: "invoiceNumber", width: 180 }],
   transactions: [
     { id: "select", width: 50 },
@@ -17,7 +17,13 @@ export const STICKY_COLUMNS: Record<TableId, StickyColumnConfig[]> = {
     { id: "name", width: 320 },
     { id: "actions", width: 100 },
   ],
+  debts: [
+    { id: "select", width: 50 },
+    { id: "contactName", width: 200 },
+    { id: "actions", width: 100 },
+  ],
 };
+
 
 /**
  * Sort field mappings for each table
@@ -47,7 +53,7 @@ export const SORT_FIELD_MAPS: Record<TableId, Record<string, string>> = {
     balance: "balance",
     createdAt: "createdAt",
   },
-  customers: {
+  contacts: {
     name: "name",
     email: "email",
     createdAt: "createdAt",
@@ -67,7 +73,14 @@ export const SORT_FIELD_MAPS: Record<TableId, Record<string, string>> = {
     date: "date",
     type: "type",
   },
+  debts: {
+    contactName: "contactName",
+    amount: "amount",
+    dueDate: "dueDate",
+    status: "status",
+  },
 };
+
 
 /**
  * Non-reorderable columns for each table (sticky + actions)
@@ -77,10 +90,12 @@ export const NON_REORDERABLE_COLUMNS: Record<TableId, Set<string>> = {
   pricing: new Set(["name", "actions"]),
   orders: new Set(["code", "actions"]),
   accounts: new Set(["name", "actions"]),
-  customers: new Set(["name", "actions"]),
+  contacts: new Set(["name", "actions"]),
   invoices: new Set(["invoiceNumber", "actions"]),
   transactions: new Set(["select", "date", "name", "actions"]),
+  debts: new Set(["select", "contactName", "actions"]),
 };
+
 
 /**
  * Row heights for each table
@@ -90,10 +105,12 @@ export const ROW_HEIGHTS: Record<TableId, number> = {
   pricing: 45,
   orders: 45,
   accounts: 45,
-  customers: 45,
+  contacts: 45,
   invoices: 45,
   transactions: 45,
+  debts: 45,
 };
+
 
 /**
  * Summary grid heights for tables with summary sections
@@ -132,12 +149,12 @@ export const TABLE_CONFIGS: Record<TableId, TableConfig> = {
     nonReorderableColumns: NON_REORDERABLE_COLUMNS.accounts,
     rowHeight: ROW_HEIGHTS.accounts,
   },
-  customers: {
-    tableId: "customers",
-    stickyColumns: STICKY_COLUMNS.customers,
-    sortFieldMap: SORT_FIELD_MAPS.customers,
-    nonReorderableColumns: NON_REORDERABLE_COLUMNS.customers,
-    rowHeight: ROW_HEIGHTS.customers,
+  contacts: {
+    tableId: "contacts",
+    stickyColumns: STICKY_COLUMNS.contacts,
+    sortFieldMap: SORT_FIELD_MAPS.contacts,
+    nonReorderableColumns: NON_REORDERABLE_COLUMNS.contacts,
+    rowHeight: ROW_HEIGHTS.contacts,
   },
   invoices: {
     tableId: "invoices",
@@ -153,7 +170,15 @@ export const TABLE_CONFIGS: Record<TableId, TableConfig> = {
     nonReorderableColumns: NON_REORDERABLE_COLUMNS.transactions,
     rowHeight: ROW_HEIGHTS.transactions,
   },
+  debts: {
+    tableId: "debts",
+    stickyColumns: STICKY_COLUMNS.debts,
+    sortFieldMap: SORT_FIELD_MAPS.debts,
+    nonReorderableColumns: NON_REORDERABLE_COLUMNS.debts,
+    rowHeight: ROW_HEIGHTS.debts,
+  },
 };
+
 
 /**
  * Get table configuration by ID

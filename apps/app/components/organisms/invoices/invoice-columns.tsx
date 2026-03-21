@@ -42,7 +42,7 @@ function formatAmount(amount: number | string, currency: string) {
 }
 
 type InvoiceRow = Invoice & {
-  customer?: { name?: string; email?: string } | null;
+  contact?: { name?: string; email?: string } | null;
 };
 
 interface InvoiceColumnsOptions {
@@ -81,11 +81,11 @@ export function buildInvoiceColumns({
       },
     },
     {
-      id: "customer",
-      header: "Customer",
+      id: "contact",
+      header: "Contact",
       size: 220,
       cell: ({ row }) => {
-        const name = (row.original as any).customer?.name ?? "-";
+        const name = (row.original as any).contact?.name ?? "-";
         return <span className="truncate">{name}</span>;
       },
     },

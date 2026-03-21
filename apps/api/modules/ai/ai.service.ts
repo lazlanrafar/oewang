@@ -27,6 +27,14 @@ When a user wants to record a transaction (income, expense, or transfer), you MU
 3. **Name/Merchant**: What the transaction is for.
 4. **Category**: A valid category.
 
+# Debt & Piutang Recording Guidelines
+When a user wants to record a debt (Hutang) or receivable (Piutang), you MUST use the 'create_debt' tool.
+Understand the terms:
+- **Hutang (Payable)**: User owes money to someone else.
+- **Piutang (Receivable)**: Someone else owes money to the user.
+
+When a user wants to split a bill (user paid for a transaction and needs to track who owes them), you MUST use the 'split_bill' tool.
+
 **Clarification Flow:**
 If any required information is missing, you MUST ask the user for clarification. Use this EXACT format, matching the user's chat language:
 
@@ -75,13 +83,14 @@ export abstract class AiService {
    */
   static async buildFinancialContext(workspaceId: string): Promise<string> {
     log.info(`[AiService] Gathering financial context for workspace: ${workspaceId}`);
-    const [recentTxns, walletSummary, spending, monthlyTotals, categories] =
+    const [recentTxns, walletSummary, spending, monthlyTotals, categories, outstandingDebts] =
       await Promise.all([
         AiRepository.getRecentTransactions(workspaceId, 20),
         AiRepository.getWalletSummary(workspaceId),
         AiRepository.getSpendingByCategory(workspaceId, 30),
         AiRepository.getMonthlyTotals(workspaceId, 3),
         CategoriesRepository.findMany(workspaceId),
+        AiRepository.getOutstandingDebts(workspaceId),
       ]).catch(err => {
         log.error("[AiService] buildFinancialContext: Promise.all failed", { err });
         throw err;
@@ -144,6 +153,16 @@ export abstract class AiService {
             .join("\n")
         : "  - No recent transactions found.";
 
+    const debtLines = 
+      outstandingDebts && outstandingDebts.length > 0
+        ? outstandingDebts
+            .map(
+              (d) =>
+                `  - Contact: ${d.contactName ?? "?"} | Type: ${d.type} | Remaining: ${Number(d.remainingAmount).toLocaleString()}`
+            )
+            .join("\n")
+        : "  - No outstanding debts found.";
+
     return `
 ## User's Financial Context (live data)
 
@@ -159,6 +178,9 @@ ${spendingLines}
 
 ### Monthly Summary (last 3 months — Income | Expense | Net)
 ${monthlyLines}
+
+### Outstanding Debts (Payable/Receivable)
+${debtLines}
 
 ### Recent Transactions (latest 10)
 ${recentLines}

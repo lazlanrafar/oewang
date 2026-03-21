@@ -7,7 +7,7 @@ export const InvoiceLineItemDto = t.Object({
 });
 
 export const CreateInvoiceDto = t.Object({
-  customerId: t.String({ format: "uuid" }),
+  contactId: t.String({ format: "uuid" }),
   invoiceNumber: t.String({ minLength: 1 }),
   issueDate: t.Optional(t.String()),
   dueDate: t.Optional(t.String()),

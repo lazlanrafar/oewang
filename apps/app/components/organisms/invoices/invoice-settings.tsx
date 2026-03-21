@@ -40,7 +40,7 @@ import {
   DropdownMenuRadioItem,
   Button,
 } from "@workspace/ui";
-import { SelectCurrency, CurrencySelector } from "@/components/molecules/select-currency";
+import { SelectCurrency } from "@workspace/ui";
 
 export interface InvoiceSettingsProps {
   settings: {
@@ -127,9 +127,9 @@ export function InvoiceSettings({
                   </DropdownMenuSubTrigger>
                   <DropdownMenuPortal>
                     <DropdownMenuSubContent className="p-0 border-none shadow-none">
-                      <CurrencySelector
+                      <SelectCurrency
                         value={settings.currency}
-                        onChange={(v) => onUpdate("currency", v)}
+                        onSelect={(c) => onUpdate("currency", c.code)}
                         className="border-none shadow-none"
                       />
                     </DropdownMenuSubContent>

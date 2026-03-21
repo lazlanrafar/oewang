@@ -4,8 +4,15 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 
 import { createBrowserClient } from "@workspace/supabase/client";
-import { Button, Input, Label, Badge, cn } from "@workspace/ui";
-import { CountrySelector } from "@workspace/ui";
+import {
+  Button,
+  Input,
+  Label,
+  Badge,
+  cn,
+  SelectCountry,
+  SelectCurrency,
+} from "@workspace/ui";
 import type { Pricing } from "@workspace/types";
 import { onboardingCreateWorkspaceAction } from "@workspace/modules/auth/auth.action";
 import { createCheckoutSession } from "@workspace/modules/stripe/stripe.action";
@@ -16,8 +23,6 @@ import {
   getStripePrice,
   displayPrice,
 } from "@workspace/utils";
-
-import { CurrencySelector } from "@/components/organisms/setting/currency-selector";
 
 // ---------------------------------------------------------------------------
 // Step indicator
@@ -212,12 +217,12 @@ export function WorkspaceForm({ plans }: WorkspaceFormProps) {
 
             <div className="space-y-2">
               <Label>Country</Label>
-              <CountrySelector value={country} onSelect={handleCountryChange} />
+              <SelectCountry value={country} onSelect={handleCountryChange} />
             </div>
 
             <div className="space-y-2">
               <Label>Base currency</Label>
-              <CurrencySelector
+              <SelectCurrency
                 value={currency.code}
                 onSelect={(c) =>
                   setCurrency({ code: c.code, symbol: c.symbol })

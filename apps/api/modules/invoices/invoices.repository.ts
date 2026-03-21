@@ -1,7 +1,7 @@
 import {
   db,
   invoices,
-  customers,
+  contacts,
   and,
   eq,
   ilike,
@@ -34,10 +34,10 @@ export abstract class InvoicesRepository {
       db
         .select({
           invoice: invoices,
-          customer: customers,
+          contact: contacts,
         })
         .from(invoices)
-        .leftJoin(customers, eq(invoices.customerId, customers.id))
+        .leftJoin(contacts, eq(invoices.contactId, contacts.id))
         .where(where)
         .limit(limit)
         .offset(offset)
@@ -58,10 +58,10 @@ export abstract class InvoicesRepository {
     const [result] = await db
       .select({
         invoice: invoices,
-        customer: customers,
+        contact: contacts,
       })
       .from(invoices)
-      .leftJoin(customers, eq(invoices.customerId, customers.id))
+      .leftJoin(contacts, eq(invoices.contactId, contacts.id))
       .where(
         and(
           eq(invoices.id, id),
@@ -78,7 +78,7 @@ export abstract class InvoicesRepository {
     const [result] = await db
       .select({
         invoice: invoices,
-        customer: customers,
+        contact: contacts,
         workspace: {
           id: workspaces.id,
           name: workspaces.name,
@@ -88,7 +88,7 @@ export abstract class InvoicesRepository {
         },
       })
       .from(invoices)
-      .leftJoin(customers, eq(invoices.customerId, customers.id))
+      .leftJoin(contacts, eq(invoices.contactId, contacts.id))
       .leftJoin(workspaces, eq(invoices.workspaceId, workspaces.id))
       .leftJoin(workspaceSettings, eq(invoices.workspaceId, workspaceSettings.workspaceId))
       .where(

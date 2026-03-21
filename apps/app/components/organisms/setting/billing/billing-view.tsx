@@ -176,7 +176,7 @@ export function BillingView({ initialPlans }: { initialPlans: Pricing[] }) {
       <Separator className="rounded-none" />
 
       {/* Current Plan + Manage */}
-      <div className="flex items-center justify-between bg-accent/5 p-4 border border rounded-none relative overflow-hidden group">
+      <div className="flex items-center justify-between bg-accent/5 p-4 border  rounded-none relative overflow-hidden group">
         <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
           <Zap className="h-20 w-20" />
         </div>
@@ -299,7 +299,7 @@ export function BillingView({ initialPlans }: { initialPlans: Pricing[] }) {
             {dict.available_plans}
           </p>
           {/* Billing cycle toggle */}
-          <div className="flex border border bg-background">
+          <div className="flex border  bg-background">
             <button
               type="button"
               onClick={() => setBillingCycle("monthly")}
@@ -328,7 +328,7 @@ export function BillingView({ initialPlans }: { initialPlans: Pricing[] }) {
         </div>
 
         {sortedPlans.length === 0 ? (
-          <p className="text-xs text-muted-foreground py-8 text-center border border-dashed rounded-none bg-accent/5">
+          <p className="text-xs text-muted-foreground py-8 text-center border -dashed rounded-none bg-accent/5">
             {dict.no_plans}
           </p>
         ) : (
@@ -550,7 +550,7 @@ export function BillingView({ initialPlans }: { initialPlans: Pricing[] }) {
               </div>
             ) : (
               <div className="p-16 text-center bg-accent/5">
-                <div className="size-12 rounded-none border border-dashed border flex items-center justify-center mx-auto mb-4 opacity-50">
+                <div className="size-12 rounded-none border-dashed flex items-center justify-center mx-auto mb-4 opacity-50">
                   <CreditCard className="h-6 w-6 text-muted-foreground" />
                 </div>
                 <p className="text-xs font-semibold uppercase tracking-widest mb-1">

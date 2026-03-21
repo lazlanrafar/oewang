@@ -7,7 +7,7 @@ export interface InvoiceLineItem {
 export interface Invoice {
   id: string;
   workspaceId: string;
-  customerId: string;
+  contactId: string;
   invoiceNumber: string;
   status: "draft" | "unpaid" | "paid" | "overdue" | "canceled";
   issueDate: string | null;

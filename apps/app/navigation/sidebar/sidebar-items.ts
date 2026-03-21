@@ -11,6 +11,7 @@ import {
   Settings,
   Users,
   Zap,
+  HandCoins,
 } from "lucide-react";
 
 export interface NavSubItem {
@@ -69,9 +70,14 @@ export const sidebarItems: NavGroup[] = [
     label: "Management",
     items: [
       {
-        title: "Customers",
-        url: "/customers",
+        title: "Contacts",
+        url: "/contacts",
         icon: Users,
+      },
+      {
+        title: "Debts",
+        url: "/debts",
+        icon: HandCoins,
       },
       {
         title: "Tracker",

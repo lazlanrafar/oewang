@@ -6,7 +6,7 @@ import type { Invoice } from "@workspace/types";
 import { forwardRef } from "react";
 
 interface InvoiceA4Props {
-  invoice: any; // Using any for now to handle joined customer data
+  invoice: any; // Using any for now to handle joined contact data
   workspace?: {
     name: string;
     logoUrl?: string | null;
@@ -60,10 +60,10 @@ export const InvoiceA4 = forwardRef<HTMLDivElement, InvoiceA4Props>(
               </p>
               <div className="space-y-1">
                 <p className="font-serif text-lg font-medium text-foreground/90">
-                  {invoice.customer?.name}
+                  {invoice.contact?.name}
                 </p>
                 <p className="text-xs text-muted-foreground/80 leading-relaxed max-w-[200px]">
-                  {invoice.customer?.email}
+                  {invoice.contact?.email}
                 </p>
               </div>
             </div>

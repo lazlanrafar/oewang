@@ -11,11 +11,11 @@ import {
   SelectValue,
   Separator,
   Skeleton,
+  SelectCurrency,
 } from "@workspace/ui";
 import { toast } from "sonner";
 import { updateTransactionSettings } from "@workspace/modules/setting/setting.action";
 import type { TransactionSettings } from "@workspace/types";
-import { CurrencySelector } from "../currency-selector";
 import { useAppStore } from "@/stores/app";
 
 interface MainCurrencyFormProps {
@@ -105,7 +105,7 @@ export function MainCurrencyForm({
         </p>
         <p className="text-4xl font-semibold">{formatPreview()}</p>
         <div className="pt-4">
-          <CurrencySelector
+          <SelectCurrency
             onSelect={(c) => {
               handleUpdate({
                 mainCurrencyCode: c.code,
