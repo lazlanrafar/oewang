@@ -1,11 +1,7 @@
 "use client";
 
 import { useMemo, useCallback, useRef } from "react";
-import {
-  useRouter,
-  usePathname,
-  useSearchParams,
-} from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import {
   format,
   addMonths,
@@ -314,7 +310,7 @@ function MonthView({
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Day-of-week header */}
-      <div className="grid grid-cols-7 border-b bg-background flex-shrink-0">
+      <div className="grid grid-cols-7 border-b bg-background shrink-0">
         {DAY_LABELS.map((d) => (
           <div
             key={d}
@@ -428,9 +424,9 @@ function WeekView({
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Sticky day header */}
-      <div className="flex flex-shrink-0 border-b bg-background">
+      <div className="flex shrink-0 border-b bg-background">
         {/* Time gutter */}
-        <div className="w-14 flex-shrink-0" />
+        <div className="w-14 shrink-0" />
         {weekDays.map((day) => {
           const isToday = isSameDay(day, today);
           const { income, expense, dayDebts } = dayDataForDate(day);
@@ -483,7 +479,7 @@ function WeekView({
       >
         <div className="flex relative" style={{ minHeight: `${24 * 60}px` }}>
           {/* Time labels gutter */}
-          <div className="w-14 flex-shrink-0 relative">
+          <div className="w-14 shrink-0 relative">
             {HOURS.map((h) => (
               <div
                 key={h}
@@ -578,7 +574,7 @@ function WeekView({
               className="absolute left-14 right-0 z-20 pointer-events-none flex items-center"
               style={{ top: `${nowPct}%` }}
             >
-              <div className="w-2 h-2 rounded-full bg-primary ml-0.5 flex-shrink-0" />
+              <div className="w-2 h-2 rounded-full bg-primary ml-0.5 shrink-0" />
               <div className="flex-1 h-px bg-primary opacity-60" />
             </div>
           )}

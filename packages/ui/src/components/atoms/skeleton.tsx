@@ -11,7 +11,7 @@ const Skeleton = React.forwardRef<
     className={cn(
       "relative overflow-hidden",
       "bg-muted",
-      "bg-linear-to-r from-transparent via-white/10 to-transparent",
+      "bg-linear-to-r from-transparent via-black/10 dark:via-white/10 to-transparent",
       "bg-size-[200%_100%]",
       animate && "animate-shimmer",
       className,

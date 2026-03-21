@@ -1,5 +1,6 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import {
   Card,
   CardContent,
@@ -7,7 +8,7 @@ import {
   CardHeader,
   CardTitle,
   cn,
-  Icons,
+  Skeleton,
 } from "@workspace/ui";
 import {
   LineChart,
@@ -20,12 +21,13 @@ import {
   Minus,
 } from "lucide-react";
 
-import { useChatStore } from "@/stores/chat";
-import type {
-  ChartDataPoint,
-  CategoryBreakdownPoint,
-} from "@workspace/modules/metrics/metrics.action";
-import type { TransactionSettings } from "@workspace/types";
+import { useChatActions } from "@ai-sdk-tools/store";
+import {
+  getCategoryBreakdown,
+  getExpenseMetrics,
+  getRevenueMetrics,
+  getTransactionSettings,
+} from "@workspace/modules/server";
 import { formatCurrency } from "@workspace/utils";
 
 const SUGGESTION_CHIPS = [
@@ -57,55 +59,89 @@ const SUGGESTION_CHIPS = [
   },
 ];
 
-export function OverviewCards({
-  onCardClick,
-  revenueData,
-  expenseData,
-  categoryData,
-  settings,
-}: {
-  onCardClick?: (message: string) => void;
-  revenueData?: ChartDataPoint[];
-  expenseData?: ChartDataPoint[];
-  categoryData?: CategoryBreakdownPoint[];
-  settings?: TransactionSettings | null;
-}) {
-  const handleCardClick = (message: string) => {
-    if (onCardClick) onCardClick(message);
-    // sendMessageFn is no longer in ChatStore
-  };
+/** Skeleton block for a monetary value line */
+function ValueSkeleton() {
+  return <Skeleton className="h-6 w-40" />;
+}
+
+/** Skeleton block for a sub-line (trend) */
+function TrendSkeleton() {
+  return <Skeleton className="h-3 w-24 mt-1" />;
+}
+
+export function OverviewCards() {
+  const { sendMessage } = useChatActions();
+
+  // —— Data fetching ——
+  const { data: incomeResult, isLoading: loadingIncome } = useQuery({
+    queryKey: ["metrics", "revenue"],
+    queryFn: getRevenueMetrics,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: expenseResult, isLoading: loadingExpense } = useQuery({
+    queryKey: ["metrics", "expense"],
+    queryFn: getExpenseMetrics,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: categoryResult, isLoading: loadingCategory } = useQuery({
+    queryKey: ["metrics", "category", "expense"],
+    queryFn: () => getCategoryBreakdown("expense"),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: settingsResult } = useQuery({
+    queryKey: ["settings", "transaction"],
+    queryFn: getTransactionSettings,
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const isLoading = loadingIncome || loadingExpense;
+
+  // —— Derived values ——
+  const revenueData = incomeResult?.success ? incomeResult.data! : [];
+  const expenseData = expenseResult?.success ? expenseResult.data! : [];
+  const categoryData = categoryResult?.success ? categoryResult.data! : [];
+  const settings = settingsResult?.success ? settingsResult.data! : null;
 
   const fmt = (v: number) => formatCurrency(v, settings);
 
-  // Extract current month metrics (last item in the array)
-  const currentRevenue = revenueData?.[revenueData.length - 1]?.current ?? 0;
+  const currentRevenue = revenueData[revenueData.length - 1]?.current ?? 0;
   const previousRevenue =
-    revenueData?.[revenueData.length - 1]?.previous ??
-    revenueData?.[revenueData.length - 2]?.current ??
+    revenueData[revenueData.length - 1]?.previous ??
+    revenueData[revenueData.length - 2]?.current ??
     0;
 
-  const currentExpense = expenseData?.[expenseData.length - 1]?.current ?? 0;
+  const currentExpense = expenseData[expenseData.length - 1]?.current ?? 0;
   const previousExpense =
-    expenseData?.[expenseData.length - 1]?.previous ??
-    expenseData?.[expenseData.length - 2]?.current ??
+    expenseData[expenseData.length - 1]?.previous ??
+    expenseData[expenseData.length - 2]?.current ??
     0;
 
   const currentNetIncome = currentRevenue - currentExpense;
   const previousNetIncome = previousRevenue - previousExpense;
 
-  // Find the top expense category
   const topCategory = categoryData?.length
     ? categoryData.reduce((prev, current) =>
         prev.value > current.value ? prev : current,
       )
     : null;
 
-  // Helper to render growth indicator
+  // —— Helpers ——
+  const handleCardClick = (message: string) => {
+    sendMessage({
+      role: "user",
+      parts: [{ type: "text", text: message }],
+    } as any);
+  };
+
   const renderTrend = (
     current: number,
     previous: number,
     reverseColors = false,
   ) => {
+    if (isLoading) return <TrendSkeleton />;
     if (!previous && !current) return null;
     if (!previous)
       return (
@@ -164,9 +200,13 @@ export function OverviewCards({
             </CardDescription>
           </CardHeader>
           <CardContent className="p-4 pt-0">
-            <div className="text-2xl font-serif tracking-tight font-medium">
-              {fmt(currentRevenue)}
-            </div>
+            {isLoading ? (
+              <ValueSkeleton />
+            ) : (
+              <div className="text-2xl font-serif tracking-tight font-medium">
+                {fmt(currentRevenue)}
+              </div>
+            )}
             <div className="flex items-center mt-1">
               <span className="text-xs text-muted-foreground">This month</span>
               {renderTrend(currentRevenue, previousRevenue)}
@@ -189,9 +229,13 @@ export function OverviewCards({
             </CardDescription>
           </CardHeader>
           <CardContent className="p-4 pt-0">
-            <div className="text-2xl font-serif tracking-tight font-medium">
-              {fmt(currentExpense)}
-            </div>
+            {isLoading ? (
+              <ValueSkeleton />
+            ) : (
+              <div className="text-2xl font-serif tracking-tight font-medium">
+                {fmt(currentExpense)}
+              </div>
+            )}
             <div className="flex items-center mt-1">
               <span className="text-xs text-muted-foreground">This month</span>
               {renderTrend(currentExpense, previousExpense, true)}
@@ -216,9 +260,13 @@ export function OverviewCards({
             </CardDescription>
           </CardHeader>
           <CardContent className="p-4 pt-0">
-            <div className="text-2xl font-serif tracking-tight font-medium">
-              {fmt(currentNetIncome)}
-            </div>
+            {isLoading ? (
+              <ValueSkeleton />
+            ) : (
+              <div className="text-2xl font-serif tracking-tight font-medium">
+                {fmt(currentNetIncome)}
+              </div>
+            )}
             <div className="flex items-center mt-1">
               <span className="text-xs text-muted-foreground">This month</span>
               {renderTrend(currentNetIncome, previousNetIncome)}
@@ -243,7 +291,12 @@ export function OverviewCards({
             </CardDescription>
           </CardHeader>
           <CardContent className="p-4 pt-0">
-            {topCategory ? (
+            {loadingCategory ? (
+              <>
+                <ValueSkeleton />
+                <TrendSkeleton />
+              </>
+            ) : topCategory ? (
               <>
                 <div className="text-lg font-medium truncate">
                   {topCategory.name}
@@ -268,7 +321,7 @@ export function OverviewCards({
             onClick={() => handleCardClick(chip.message)}
             className={cn(
               "border bg-background px-3 py-2 text-xs transition-all",
-              "hover:border-primary/30 hover:bg-muted hover:text-foreground",
+              "hover:border-foreground/50 hover:text-foreground",
               "disabled:cursor-not-allowed disabled:opacity-50",
               "flex items-center gap-1.5 text-muted-foreground",
               "cursor-pointer",

@@ -87,7 +87,7 @@ export default async function Layout({
             </div>
           </div>
         </header>
-        <div className="flex flex-col flex-1 min-h-0 p-4 md:p-6">
+        <div className="flex flex-col flex-1 min-h-0 p-4 md:p-6 relative overflow-y-auto">
           {children}
         </div>
       </SidebarInset>
