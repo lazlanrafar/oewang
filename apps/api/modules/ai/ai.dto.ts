@@ -42,3 +42,11 @@ export type ChatResponse = {
     output_tokens: number;
   };
 };
+
+export const ParseReceiptDto = t.Object({
+  file: t.Object({
+    name: t.String(),
+    type: t.String(),
+    data: t.String(), // Base64
+  }),
+});

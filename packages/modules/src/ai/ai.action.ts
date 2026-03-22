@@ -90,3 +90,30 @@ export async function getChatSessionMessages(
     };
   }
 }
+
+export interface ParsedReceipt {
+  amount: number;
+  date: string;
+  name: string;
+  categoryId: string;
+}
+
+export async function parseReceipt(file: {
+  name: string;
+  type: string;
+  data: string;
+}): Promise<{ success: boolean; data?: ParsedReceipt; error?: string }> {
+  try {
+    const response = await api.post("/ai/parse-receipt", { file });
+    const apiResponse = (response as any)._api_response;
+    return {
+      success: true,
+      data: (apiResponse?.data ?? response.data?.data) as ParsedReceipt,
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.response?.data?.message ?? "Failed to parse receipt",
+    };
+  }
+}

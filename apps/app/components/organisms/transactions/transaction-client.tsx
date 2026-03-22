@@ -44,7 +44,10 @@ import type { Row } from "@tanstack/react-table";
 import {
   getTransactions,
   deleteTransaction,
+  createTransaction,
 } from "@workspace/modules/transaction/transaction.action";
+import { uploadVaultFile } from "@workspace/modules/vault/vault.action";
+import { parseReceipt, type ParsedReceipt } from "@workspace/modules/ai/ai.action";
 import { toast } from "sonner";
 import { useQueryState, parseAsString } from "nuqs";
 import { useEffect as useReactEffect } from "react";
@@ -64,6 +67,7 @@ import {
 } from "./transaction-grouping-selector";
 import { formatCurrency } from "@workspace/utils";
 import { useConfirm } from "@/components/providers/confirm-modal-provider";
+import { TransactionReceiptConfirmationModal } from "./transaction-receipt-confirmation-modal";
 
 interface Props {
   initialData: Transaction[];
@@ -90,6 +94,13 @@ export function TransactionsClient({
   const [selectedTransaction, setSelectedTransaction] = useState<
     Transaction | undefined
   >();
+  const [isReceiptConfirmOpen, setIsReceiptConfirmOpen] = useState(false);
+  const [parsedReceiptData, setParsedReceiptData] = useState<ParsedReceipt | null>(
+    null,
+  );
+  const [uploadedReceiptId, setUploadedReceiptId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [columns, setColumns] = useState<any[]>([]);
   const { settings } = useAppStore();
   const [activeTab, setActiveTab] = useState<"all" | "review">("all");
@@ -381,6 +392,79 @@ export function TransactionsClient({
     setIsFormOpen(true);
   };
 
+  const handleUploadReceipt = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Limit size to 3MB
+    if (file.size > 3 * 1024 * 1024) {
+      toast.error("File size exceeds 3MB limit");
+      return;
+    }
+
+    // Limit type to image or pdf
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Only images and PDFs are allowed");
+      return;
+    }
+
+    const toastId = toast.loading("Uploading and parsing receipt...");
+
+    try {
+      // 1. Upload to Vault
+      const formData = new FormData();
+      formData.append("file", file);
+      const uploadResult = await uploadVaultFile(formData);
+
+      if (!uploadResult.success || !uploadResult.data) {
+        throw new Error(uploadResult.error || "Upload failed");
+      }
+
+      const vaultFileId = uploadResult.data.id;
+      setUploadedReceiptId(vaultFileId);
+
+      // 2. Read file as base64 for AI parsing
+      const reader = new FileReader();
+      const base64Promise = new Promise<string>((resolve, reject) => {
+        reader.onload = () => {
+          if (typeof reader.result === "string") {
+            const base64 = reader.result.split(",")[1];
+            resolve(base64 || "");
+          } else {
+            reject(new Error("Failed to read file as base64"));
+          }
+        };
+        reader.onerror = reject;
+      });
+      reader.readAsDataURL(file);
+      const base64Data = await base64Promise;
+
+      // 3. Parse with AI
+      const parseResult = await parseReceipt({
+        name: file.name,
+        type: file.type,
+        data: base64Data,
+      });
+
+      if (!parseResult.success || !parseResult.data) {
+        throw new Error(parseResult.error || "AI parsing failed");
+      }
+
+      setParsedReceiptData(parseResult.data);
+      setIsReceiptConfirmOpen(true);
+      toast.success("Receipt parsed successfully", { id: toastId });
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error.message || "Failed to process receipt", { id: toastId });
+    } finally {
+      // Clear input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
   const typeOptions = [
     { id: "income", name: "Income" },
     { id: "expense", name: "Expense" },
@@ -455,13 +539,21 @@ export function TransactionsClient({
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="gap-2 cursor-pointer"
-                onClick={() => {}}
+                onClick={() => fileInputRef.current?.click()}
               >
                 <Upload className="h-4 w-4" />
                 <span>Upload receipts</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+
+          <input
+            type="file"
+            ref={fileInputRef}
+            className="hidden"
+            accept="image/*,application/pdf"
+            onChange={handleUploadReceipt}
+          />
 
           {/* <div className="flex items-center bg-muted/20 p-1 rounded-md h-8 ml-2">
             <button
@@ -778,6 +870,16 @@ export function TransactionsClient({
           }
         }}
         transaction={isFormOpen ? selectedTransaction : undefined}
+      />
+
+      <TransactionReceiptConfirmationModal
+        open={isReceiptConfirmOpen}
+        onOpenChange={setIsReceiptConfirmOpen}
+        data={parsedReceiptData}
+        vaultFileId={uploadedReceiptId}
+        onSuccess={() => {
+          refetch();
+        }}
       />
 
       <TransactionDetailSheet

@@ -3,7 +3,7 @@ import { authPlugin } from "../../plugins/auth";
 import { buildSuccess, buildError } from "@workspace/utils";
 import { ErrorCode } from "@workspace/types";
 import { AiService } from "./ai.service";
-import { ChatRequestDto } from "./ai.dto";
+import { ChatRequestDto, ParseReceiptDto } from "./ai.dto";
 
 export const aiController = new Elysia({ prefix: "/ai" })
   .use(authPlugin)
@@ -61,4 +61,28 @@ export const aiController = new Elysia({ prefix: "/ai" })
       }
     },
     { body: ChatRequestDto, detail: { summary: "Chat with AI", tags: ["AI"] } },
+  )
+  .post(
+    "/parse-receipt",
+    async ({ body, workspaceId, set }) => {
+      try {
+        const result = await AiService.parseReceipt(
+          workspaceId!,
+          body.file.data,
+          body.file.type,
+        );
+        return buildSuccess(result, "Receipt parsed successfully");
+      } catch (error: any) {
+        console.log("[AI Receipt Parse] Error parsing receipt", error);
+        set.status = 500;
+        return buildError(
+          ErrorCode.INTERNAL_ERROR,
+          error?.message ?? "Failed to parse receipt",
+        );
+      }
+    },
+    {
+      body: ParseReceiptDto,
+      detail: { summary: "Parse Receipt with AI", tags: ["AI"] },
+    },
   );
