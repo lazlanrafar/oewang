@@ -1,11 +1,15 @@
-import { AiProvider, parseFileToAiInput } from "@workspace/ai";
-import type { ExtractedTransaction } from "@workspace/ai";
+import { 
+  ExtractionService, 
+  parseFileToAiInput, 
+  type ExtractedTransaction 
+} from "@workspace/ai";
 import { walletsRepository } from "../wallets/wallets.repository";
 import { TransactionsRepository } from "./transactions.repository";
 import { CategoriesRepository } from "../categories/categories.repository";
 import { auditLogsService } from "../audit-logs/audit-logs.service";
 import { buildSuccess, buildError } from "@workspace/utils";
 import { ErrorCode } from "@workspace/types";
+import { Env } from "@workspace/constants";
 import { status } from "elysia";
 
 export abstract class TransactionsImportService {
@@ -37,10 +41,15 @@ export abstract class TransactionsImportService {
     // 3. Call AI
     let extracted: ExtractedTransaction[];
     try {
-      extracted = await AiProvider.extractTransactions(
+      extracted = await ExtractionService.extractTransactions(
         aiInput,
         walletNames,
         categoryNames,
+        {
+          geminiKey: process.env.GEMINI_API_KEY,
+          openaiKey: process.env.OPENAI_API_KEY,
+          anthropicKey: process.env.ANTHROPIC_API_KEY,
+        }
       );
     } catch (err: any) {
       console.error("[AI Import Error]:", err);
@@ -49,7 +58,7 @@ export abstract class TransactionsImportService {
           422,
           buildError(
             ErrorCode.VALIDATION_ERROR,
-            "No AI provider configured. Add OPENAI_API_KEY or ANTHROPIC_API_KEY to your environment.",
+            "No AI provider configured. Add Gemini/OpenAI/Anthropic keys.",
           ),
         );
       }

@@ -10,7 +10,14 @@
   "dependencies": {
     "openai": "^4.103.0",
     "@anthropic-ai/sdk": "^0.40.0",
-    "xlsx": "^0.18.5"
+    "@google/generative-ai": "^0.24.1",
+    "pdf.js-extract": "^0.2.1",
+    "xlsx": "^0.18.5",
+    "@workspace/redis": "workspace:*",
+    "@workspace/utils": "workspace:*",
+    "@workspace/constants": "workspace:*",
+    "@workspace/logger": "workspace:*",
+    "@workspace/database": "workspace:*"
   },
   "devDependencies": {
     "@workspace/typescript-config": "workspace:*",
