@@ -215,6 +215,7 @@ export function AccountsClient({
           meta={{
             groups: initialGroups,
             settings,
+            formatCurrency,
             onRowClick: handleRowClick,
           }}
         />

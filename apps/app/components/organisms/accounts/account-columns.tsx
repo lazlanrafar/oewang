@@ -14,7 +14,6 @@ import {
 import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { deleteWallet, updateWallet } from "@workspace/modules/client";
-import { formatCurrency } from "@workspace/utils";
 import { SelectAccountGroup } from "@/components/molecules/select-account-group";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -90,12 +89,14 @@ const GroupCell = ({
   };
 
   return (
-    <SelectAccountGroup
-      value={wallet.groupId || undefined}
-      onChange={handleGroupChange}
-      variant="ghost"
-      className="h-8 w-full justify-start font-normal"
-    />
+    <div onClick={(e) => e.stopPropagation()}>
+      <SelectAccountGroup
+        value={wallet.groupId || undefined}
+        onChange={handleGroupChange}
+        variant="ghost"
+        className="h-8 w-full justify-start font-normal"
+      />
+    </div>
   );
 };
 
@@ -154,10 +155,11 @@ export const accountColumns = (
     },
     cell: ({ getValue, table }) => {
       const balance = getValue<number>();
-      const settings = (table.options.meta as any)?.settings;
+      const { formatCurrency } = (table.options.meta as any) || {};
+
       return (
         <span className="font-sans font-medium text-right block w-full text-sm px-2">
-          {formatCurrency(balance, settings)}
+          {formatCurrency ? formatCurrency(balance) : balance}
         </span>
       );
     },

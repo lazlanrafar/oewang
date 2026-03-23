@@ -1,9 +1,10 @@
 "use client";
 
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@workspace/ui";
-import { format } from "date-fns";
+import { useRouter } from "next/navigation";
+import { format, startOfMonth, endOfMonth } from "date-fns";
 import { Transaction, Debt } from "@workspace/types";
-import { formatCurrency } from "@workspace/utils";
+import { useAppStore } from "@/stores/app";
 
 interface CalendarDaySheetProps {
   date: Date | null;
@@ -20,22 +21,32 @@ export function CalendarDaySheet({
   transactions,
   debts,
 }: CalendarDaySheetProps) {
+  const router = useRouter();
+  const { formatCurrency, getTransactionColor } = useAppStore();
+
+  const handleTransactionClick = (id: string) => {
+    onOpenChange(false);
+    const start = startOfMonth(date || new Date()).toISOString();
+    const end = endOfMonth(date || new Date()).toISOString();
+    router.push(
+      `/transactions?transactionId=${id}&startDate=${start}&endDate=${end}&page=1`,
+    );
+  };
+
   if (!date) return null;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right">
-        <div className="flex flex-col h-full">
-          <SheetHeader className="p-6 border-b sticky top-0 bg-background/95 backdrop-blur z-10 flex flex-row items-center justify-between">
-            <SheetTitle className="text-xl font-serif">
-              {format(date, "EEEE, MMMM do, yyyy")}
-            </SheetTitle>
+      <SheetContent side="right" className="p-0">
+        <div className="flex flex-col h-full bg-background">
+          <SheetHeader className="px-6 py-4 border-b sticky top-0 bg-background/95 backdrop-blur z-10 flex flex-row items-center justify-between transition-all">
+            <SheetTitle>{format(date, "EEEE, MMMM do, yyyy")}</SheetTitle>
           </SheetHeader>
 
-          <div className="flex-1 p-6 space-y-8">
+          <div className="flex-1 overflow-y-auto px-6 py-8 space-y-8">
             {/* Summary */}
             <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 rounded-xl border bg-muted/20">
+              <div className="p-4 border bg-muted/20">
                 <p className="text-sm text-muted-foreground mb-1">
                   Total Income
                 </p>
@@ -47,7 +58,7 @@ export function CalendarDaySheet({
                   )}
                 </p>
               </div>
-              <div className="p-4 rounded-xl border bg-muted/20">
+              <div className="p-4 border bg-muted/20">
                 <p className="text-sm text-muted-foreground mb-1">
                   Total Expense
                 </p>
@@ -63,7 +74,7 @@ export function CalendarDaySheet({
 
             {/* Transactions List */}
             <div>
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">
+              <h3 className="text-sm tracking-wider mb-4">
                 Transactions ({transactions.length})
               </h3>
               {transactions.length > 0 ? (
@@ -71,18 +82,15 @@ export function CalendarDaySheet({
                   {transactions.map((t) => (
                     <div
                       key={t.id}
-                      className="p-3 border rounded-lg bg-card flex flex-col gap-1"
+                      onClick={() => handleTransactionClick(t.id)}
+                      className="p-3 border flex flex-col gap-1 cursor-pointer hover:bg-muted/30 transition-colors group"
                     >
                       <div className="flex justify-between items-start">
-                        <span className="font-medium">
+                        <span className="font-medium text-sm group-hover:text-primary transition-colors">
                           {t.name || "Unknown"}
                         </span>
                         <span
-                          className={`font-serif tracking-tight ${
-                            t.type === "income"
-                              ? "text-emerald-600 dark:text-emerald-400"
-                              : "text-red-600 dark:text-red-400"
-                          }`}
+                          className={`font-serif tracking-tight ${getTransactionColor(t.type)}`}
                         >
                           {t.type === "income" ? "+" : "-"}
                           {formatCurrency(Number(t.amount))}
@@ -92,7 +100,7 @@ export function CalendarDaySheet({
                   ))}
                 </div>
               ) : (
-                <div className="text-sm text-muted-foreground p-4 bg-muted/20 rounded-lg text-center">
+                <div className="text-sm text-muted-foreground p-4 bg-muted/20  text-center">
                   No transactions for this day.
                 </div>
               )}
@@ -100,7 +108,7 @@ export function CalendarDaySheet({
 
             {/* Debts List */}
             <div>
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">
+              <h3 className="text-sm tracking-wider mb-4">
                 Debts Required/Incurred ({debts.length})
               </h3>
               {debts.length > 0 ? (
@@ -108,7 +116,7 @@ export function CalendarDaySheet({
                   {debts.map((d) => (
                     <div
                       key={d.id}
-                      className="p-3 border rounded-lg bg-card flex flex-col gap-1"
+                      className="p-3 border  bg-card flex flex-col gap-1"
                     >
                       <div className="flex justify-between items-start">
                         <span className="font-medium">{d.contactName}</span>
@@ -139,7 +147,7 @@ export function CalendarDaySheet({
                   ))}
                 </div>
               ) : (
-                <div className="text-sm text-muted-foreground p-4 bg-muted/20 rounded-lg text-center">
+                <div className="text-sm text-muted-foreground p-4 bg-muted/20  text-center">
                   No debts recorded or due on this day.
                 </div>
               )}

@@ -12,7 +12,11 @@ interface VaultItemListProps {
   onSelect: (file: VaultFile) => void;
 }
 
-export function VaultItemList({ files, selectedFileId, onSelect }: VaultItemListProps) {
+export function VaultItemList({
+  files,
+  selectedFileId,
+  onSelect,
+}: VaultItemListProps) {
   return (
     <div className="min-w-full">
       <table className="w-full text-sm">
@@ -36,11 +40,11 @@ export function VaultItemList({ files, selectedFileId, onSelect }: VaultItemList
             >
               <td className="px-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded border bg-muted flex items-center justify-center shrink-0">
+                  <div className="w-10 h-10 border bg-muted flex items-center justify-center shrink-0">
                     {file.type.startsWith("image/") ? (
                       <img
                         src={file.url}
-                        className="w-full h-full object-cover rounded"
+                        className="w-full h-full object-cover"
                         alt={file.name}
                       />
                     ) : (
@@ -52,9 +56,7 @@ export function VaultItemList({ files, selectedFileId, onSelect }: VaultItemList
                   </span>
                 </div>
               </td>
-              <td className="px-4 text-primary font-medium">
-                {file.type}
-              </td>
+              <td className="px-4 text-primary font-medium">{file.type}</td>
               <td className="px-4 text-right tabular-nums">
                 {formatBytes(file.size)}
               </td>

@@ -25,7 +25,7 @@ import {
   type VaultFile,
 } from "@workspace/modules/vault/vault.action";
 import type { Transaction } from "@workspace/types";
-import { formatCurrency, formatBytes } from "@workspace/utils";
+import { formatBytes } from "@workspace/utils";
 import { format } from "date-fns";
 import { useAppStore } from "@/stores/app";
 
@@ -59,7 +59,7 @@ export function SearchDialog() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [debounceDelay, setDebounceDelay] = useState(200);
   const [isFetching, setIsFetching] = useState(false);
-  const { settings } = useAppStore();
+  const { settings, formatCurrency } = useAppStore();
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -246,7 +246,7 @@ export function SearchDialog() {
                                 : "text-blue-500",
                           )}
                         >
-                          {formatCurrency(amount, settings)}
+                          {formatCurrency(amount)}
                         </span>
                       </CommandItem>
                     );

@@ -19,21 +19,58 @@ export function VaultHeaderSkeleton() {
   );
 }
 
-export function VaultContentSkeleton() {
+export function VaultContentSkeleton({
+  view = "list",
+}: {
+  view?: "grid" | "list";
+}) {
   return (
-    <div className="flex-1 flex flex-col gap-6 overflow-hidden">
-      <div className="flex-1 border p-4 bg-card/10">
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
-          {Array.from({ length: 10 }).map((_, i) => (
-            <Skeleton key={i} className="aspect-square rounded-lg" />
+    <div className="flex-1 flex flex-col overflow-hidden h-full uppercase">
+      {view === "grid" ? (
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 h-full">
+          {Array.from({ length: 15 }).map((_, i) => (
+            <Skeleton key={i} className="aspect-square bg-muted/50" />
           ))}
         </div>
-      </div>
-
-      <div className="h-12 border-t flex justify-between items-center px-2">
-        <Skeleton className="h-4 w-48" />
-        <Skeleton className="h-8 w-64" />
-      </div>
+      ) : (
+        <div className="min-w-full h-full">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b text-xs text-muted-foreground font-medium h-10">
+                <th className="px-4 text-left font-medium w-1/2">Filename</th>
+                <th className="px-4 text-left font-medium">Format</th>
+                <th className="px-4 text-right font-medium">File Size</th>
+                <th className="px-4 text-right font-medium">Date Created</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {Array.from({ length: 12 }).map((_, i) => (
+                <tr key={i} className="h-14">
+                  <td className="px-4">
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="h-10 w-10 shrink-0" />
+                      <Skeleton className="h-4 w-32" />
+                    </div>
+                  </td>
+                  <td className="px-4">
+                    <Skeleton className="h-4 w-24" />
+                  </td>
+                  <td className="px-4 text-right">
+                    <div className="flex justify-end">
+                      <Skeleton className="h-4 w-16" />
+                    </div>
+                  </td>
+                  <td className="px-4 text-right">
+                    <div className="flex justify-end">
+                      <Skeleton className="h-4 w-20" />
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
@@ -75,12 +112,12 @@ export function VaultDetailSkeleton() {
   );
 }
 
-export function VaultSkeletonLoading() {
+export function VaultSkeletonLoading({ view }: { view?: "grid" | "list" }) {
   return (
     <div className="flex flex-col lg:flex-row gap-6 h-full flex-1 overflow-hidden">
       <div className="flex-1 flex flex-col gap-6 overflow-hidden">
         <VaultHeaderSkeleton />
-        <VaultContentSkeleton />
+        <VaultContentSkeleton view={view} />
       </div>
       <div className="hidden lg:flex w-[400px]">
         <VaultDetailSkeleton />

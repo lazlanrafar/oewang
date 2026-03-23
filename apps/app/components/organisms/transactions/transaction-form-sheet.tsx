@@ -129,7 +129,7 @@ export function TransactionFormSheet({
   );
   const [attachments, setAttachments] = useState<VaultFileRef[]>([]);
   const [vaultPickerOpen, setVaultPickerOpen] = useState(false);
-  const { settings, formatCurrency, user } = useAppStore();
+  const { settings, user } = useAppStore();
 
   const form = useForm<TransactionFormValues>({
     resolver: zodResolver(transactionSchema as any),

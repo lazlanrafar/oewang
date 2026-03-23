@@ -31,8 +31,6 @@ import { SelectCategory } from "@/components/molecules/select-category";
 import { SelectAccount } from "@/components/molecules/select-account";
 import { SelectUser } from "@/components/molecules/select-user";
 import { format } from "date-fns";
-import { formatCurrency as formatCurrencyUtil } from "@workspace/utils";
-import { useAppStore } from "@/stores/app";
 import { updateTransaction } from "@workspace/modules/transaction/transaction.action";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -122,8 +120,9 @@ export const transactionColumns = (
   {
     accessorKey: "name",
     header: "Description",
-    cell: ({ row }) => {
+    cell: ({ row, table }) => {
       const transaction = row.original;
+      const { getTransactionColor } = (table.options.meta as any) || {};
       const isIncome = transaction.type === "income";
       const isTransfer = transaction.type === "transfer";
       const isExpense = transaction.type === "expense";
@@ -147,25 +146,13 @@ export const transactionColumns = (
                 <Icon
                   className={cn(
                     "h-3 w-3 shrink-0",
-                    isIncome
-                      ? "text-emerald-500"
-                      : isExpense
-                        ? "text-red-500"
-                        : "text-blue-500",
+                    getTransactionColor(transaction.type),
                   )}
                 />
                 <p
                   className={cn(
                     "text-xs font-medium truncate",
-                    isIncome
-                      ? "text-emerald-500"
-                      : isExpense
-                        ? "text-red-500"
-                        : isTransfer
-                          ? "text-blue-500"
-                          : transaction.type === "transfer-in"
-                            ? "text-emerald-500"
-                            : "text-red-500",
+                    getTransactionColor(transaction.type),
                   )}
                 >
                   {label}
@@ -204,16 +191,17 @@ export const transactionColumns = (
       const isExpense = transaction.type === "expense";
       const isIncome = transaction.type === "income";
 
-      const { getTransactionColor, formatCurrency } = useAppStore.getState();
+      const { getTransactionColor, formatCurrency } =
+        (table.options.meta as any) || {};
 
       return (
         <div
           className={cn(
             "text-xs font-medium text-right",
-            getTransactionColor(transaction.type),
+            getTransactionColor?.(transaction.type),
           )}
         >
-          {formatCurrency(amount)}
+          {formatCurrency ? formatCurrency(amount) : amount}
         </div>
       );
     },

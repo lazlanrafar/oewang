@@ -18,7 +18,6 @@ import {
 import { useAppStore } from "@/stores/app";
 import { toast } from "sonner";
 import { ArrowDownLeft, ArrowUpRight, Calendar, Trash, Wallet as WalletIcon, CreditCard } from "lucide-react";
-import { formatCurrency } from "@workspace/utils";
 import { format } from "date-fns";
 import { PaymentFormSheet } from "./payment-form-sheet";
 
@@ -32,7 +31,7 @@ interface Props {
 
 export function DebtDetailSheet({ open, onOpenChange, debt, wallets, onDelete }: Props) {
   const [paymentFormOpen, setPaymentFormOpen] = useState(false);
-  const { settings } = useAppStore();
+  const { settings, formatCurrency } = useAppStore();
 
   if (!debt) return null;
 
@@ -66,7 +65,7 @@ export function DebtDetailSheet({ open, onOpenChange, debt, wallets, onDelete }:
             <div className="flex items-start justify-between">
               <div className="space-y-1">
                 <p className="text-4xl font-serif tracking-tight font-normal">
-                  {formatCurrency(remainingAmount, settings)}
+                  {formatCurrency(remainingAmount)}
                 </p>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   {isReceivable ? (
@@ -105,12 +104,12 @@ export function DebtDetailSheet({ open, onOpenChange, debt, wallets, onDelete }:
               <div className="grid grid-cols-2 gap-y-4 text-sm">
                 <div className="space-y-1">
                   <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">Original Amount</p>
-                  <p className="font-serif text-lg font-normal">{formatCurrency(amount, settings)}</p>
+                  <p className="font-serif text-lg font-normal">{formatCurrency(amount)}</p>
                 </div>
                 
                 <div className="space-y-1">
                   <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">Paid Amount</p>
-                  <p className="font-serif text-lg font-normal text-emerald-500">{formatCurrency(paidAmount, settings)}</p>
+                  <p className="font-serif text-lg font-normal text-emerald-500">{formatCurrency(paidAmount)}</p>
                 </div>
 
                 <div className="space-y-1">

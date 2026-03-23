@@ -47,7 +47,10 @@ import {
   createTransaction,
 } from "@workspace/modules/transaction/transaction.action";
 import { uploadVaultFile } from "@workspace/modules/vault/vault.action";
-import { parseReceipt, type ParsedReceipt } from "@workspace/modules/ai/ai.action";
+import {
+  parseReceipt,
+  type ParsedReceipt,
+} from "@workspace/modules/ai/ai.action";
 import { toast } from "sonner";
 import { useQueryState, parseAsString } from "nuqs";
 import { useEffect as useReactEffect } from "react";
@@ -65,7 +68,6 @@ import {
   TransactionGroupingSelector,
   type GroupByInterval,
 } from "./transaction-grouping-selector";
-import { formatCurrency } from "@workspace/utils";
 import { useConfirm } from "@/components/providers/confirm-modal-provider";
 import { TransactionReceiptConfirmationModal } from "./transaction-receipt-confirmation-modal";
 
@@ -95,14 +97,15 @@ export function TransactionsClient({
     Transaction | undefined
   >();
   const [isReceiptConfirmOpen, setIsReceiptConfirmOpen] = useState(false);
-  const [parsedReceiptData, setParsedReceiptData] = useState<ParsedReceipt | null>(
+  const [parsedReceiptData, setParsedReceiptData] =
+    useState<ParsedReceipt | null>(null);
+  const [uploadedReceiptId, setUploadedReceiptId] = useState<string | null>(
     null,
   );
-  const [uploadedReceiptId, setUploadedReceiptId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [columns, setColumns] = useState<any[]>([]);
-  const { settings } = useAppStore();
+  const { settings, formatCurrency, getTransactionColor } = useAppStore();
   const [activeTab, setActiveTab] = useState<"all" | "review">("all");
   const { rowSelection, setRowSelection } = useTransactionsStore();
   const confirm = useConfirm();
@@ -392,7 +395,9 @@ export function TransactionsClient({
     setIsFormOpen(true);
   };
 
-  const handleUploadReceipt = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUploadReceipt = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -403,7 +408,12 @@ export function TransactionsClient({
     }
 
     // Limit type to image or pdf
-    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+    const allowedTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "application/pdf",
+    ];
     if (!allowedTypes.includes(file.type)) {
       toast.error("Only images and PDFs are allowed");
       return;
@@ -456,7 +466,9 @@ export function TransactionsClient({
       toast.success("Receipt parsed successfully", { id: toastId });
     } catch (error: any) {
       console.error(error);
-      toast.error(error.message || "Failed to process receipt", { id: toastId });
+      toast.error(error.message || "Failed to process receipt", {
+        id: toastId,
+      });
     } finally {
       // Clear input
       if (fileInputRef.current) {
@@ -629,7 +641,8 @@ export function TransactionsClient({
               onDelete: async (id: string) => {
                 const ok = await confirm({
                   title: "Delete transaction?",
-                  description: "Are you sure you want to delete this transaction?",
+                  description:
+                    "Are you sure you want to delete this transaction?",
                   destructive: true,
                   confirmLabel: "Delete",
                 });
@@ -637,6 +650,8 @@ export function TransactionsClient({
                   deleteMutation.mutate(id);
                 }
               },
+              formatCurrency,
+              getTransactionColor,
               // Custom selection logic for grouped rows (proxy rows)
               isAllTransactionsSelected: () => {
                 const transactionIds = processedRows.flatMap((r: any) =>
@@ -713,11 +728,21 @@ export function TransactionsClient({
                           </span>
 
                           <div className="ml-auto flex items-center gap-4">
-                            <span className="text-[10px] font-bold text-emerald-500">
-                              {formatCurrency(item.income, settings)}
+                            <span
+                              className={cn(
+                                "text-[10px] font-bold",
+                                getTransactionColor("income"),
+                              )}
+                            >
+                              {formatCurrency(item.income)}
                             </span>
-                            <span className="text-[10px] font-bold text-rose-500">
-                              {formatCurrency(item.expense, settings)}
+                            <span
+                              className={cn(
+                                "text-[10px] font-bold",
+                                getTransactionColor("expense"),
+                              )}
+                            >
+                              {formatCurrency(item.expense)}
                             </span>
                           </div>
                         </div>

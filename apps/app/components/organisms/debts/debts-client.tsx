@@ -37,7 +37,7 @@ export function DebtsClient({ initialData, wallets, dictionary }: Props) {
   const [selectedDebt, setSelectedDebt] = useState<DebtWithContact | undefined>();
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   
-  const { settings } = useAppStore();
+  const { settings, formatCurrency } = useAppStore();
   const queryClient = useQueryClient();
   const confirm = useConfirm();
 
@@ -100,11 +100,10 @@ export function DebtsClient({ initialData, wallets, dictionary }: Props) {
             destructive: true,
           });
           if (ok) deleteMutation.mutate(id);
-        },
-        settings
+        }
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [settings]
+    []
   );
 
   const filteredData = useMemo(() => {
@@ -168,6 +167,7 @@ export function DebtsClient({ initialData, wallets, dictionary }: Props) {
           meta={{
             onRowClick: handleRowClick,
             onDelete: (id: string) => deleteMutation.mutate(id),
+            formatCurrency,
           }}
           emptyMessage={
             <DataTableEmptyState

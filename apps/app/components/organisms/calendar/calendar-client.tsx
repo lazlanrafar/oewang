@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useCallback, useRef } from "react";
+import { useMemo, useCallback, useRef, useState, useEffect } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import {
   format,
@@ -28,10 +28,10 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { getTransactions } from "@workspace/modules/transaction/transaction.action";
 import { getDebts } from "@workspace/modules/server";
-import { formatCurrency } from "@workspace/utils";
 import { cn, Button } from "@workspace/ui";
 import { CalendarDaySheet } from "./calendar-day-sheet";
-import { useState } from "react";
+import { useQueryState, parseAsString } from "nuqs";
+import { useAppStore } from "@/stores/app";
 
 type CalendarView = "month" | "week";
 
@@ -54,6 +54,10 @@ export function CalendarClient() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [calendarDate, setCalendarDate] = useQueryState(
+    "calendarDate",
+    parseAsString.withDefault("").withOptions({ shallow: true }),
+  );
   const weekScrollRef = useRef<HTMLDivElement>(null);
 
   // Derive state from URL
@@ -188,6 +192,40 @@ export function CalendarClient() {
     "text-black bg-[#e6e6e6] dark:text-white dark:bg-[#1d1d1d] mb-[-1px] z-10",
   );
 
+  // Synchronization with URL
+  useEffect(() => {
+    if (calendarDate) {
+      const d = parseISO(calendarDate);
+      if (!isNaN(d.getTime())) {
+        if (!selectedDate || !isSameDay(selectedDate, d)) {
+          setSelectedDate(d);
+        }
+      }
+    } else if (selectedDate) {
+      setSelectedDate(null);
+    }
+  }, [calendarDate]);
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!calendarDate || !selectedDate) return;
+
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        const next = addDays(selectedDate, 1);
+        setCalendarDate(format(next, "yyyy-MM-dd"));
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        const prev = addDays(selectedDate, -1);
+        setCalendarDate(format(prev, "yyyy-MM-dd"));
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [calendarDate, selectedDate, setCalendarDate]);
+
   return (
     <div className="h-[calc(100dvh-5rem)] md:h-[calc(100dvh-6rem)] flex flex-col bg-background overflow-hidden">
       {/* ─── Header ─── */}
@@ -202,26 +240,16 @@ export function CalendarClient() {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Today button */}
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-9 text-sm"
-            onClick={goToday}
-          >
-            Today
-          </Button>
-
           {/* Prev / Next */}
-          <div className="flex items-center border rounded-md overflow-hidden h-9">
+          <div className="flex items-center border overflow-hidden h-9">
             <button
-              className="h-full px-2.5 flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
+              className="cursor-pointer h-full px-2.5 flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
               onClick={goPrev}
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
             <button
-              className="h-full px-2.5 flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors border-l"
+              className="cursor-pointer h-full px-2.5 flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors border-l"
               onClick={goNext}
             >
               <ChevronRight className="h-4 w-4" />
@@ -255,7 +283,7 @@ export function CalendarClient() {
           monthDays={monthDays}
           dayDataForDate={dayDataForDate}
           isLoading={isLoading}
-          setSelectedDate={setSelectedDate}
+          setSelectedDate={(d) => setCalendarDate(format(d, "yyyy-MM-dd"))}
         />
       ) : (
         <WeekView
@@ -264,7 +292,7 @@ export function CalendarClient() {
           debts={debts}
           dayDataForDate={dayDataForDate}
           isLoading={isLoading}
-          setSelectedDate={setSelectedDate}
+          setSelectedDate={(d) => setCalendarDate(format(d, "yyyy-MM-dd"))}
           scrollRef={weekScrollRef}
         />
       )}
@@ -272,7 +300,9 @@ export function CalendarClient() {
       <CalendarDaySheet
         date={selectedDate}
         open={!!selectedDate}
-        onOpenChange={(op) => !op && setSelectedDate(null)}
+        onOpenChange={(op) => {
+          if (!op) setCalendarDate("");
+        }}
         transactions={transactions.filter(
           (t: any) =>
             selectedDate &&
@@ -307,6 +337,7 @@ function MonthView({
   isLoading: boolean;
   setSelectedDate: (d: Date) => void;
 }) {
+  const { formatCurrency } = useAppStore();
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Day-of-week header */}
@@ -406,6 +437,7 @@ function WeekView({
   setSelectedDate: (d: Date) => void;
   scrollRef: React.RefObject<HTMLDivElement | null>;
 }) {
+  const { formatCurrency } = useAppStore();
   const today = new Date();
   const nowHour = getHours(today);
   const nowMin = getMinutes(today);

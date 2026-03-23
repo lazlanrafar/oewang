@@ -21,14 +21,13 @@ import {
   Minus,
 } from "lucide-react";
 
+import { useAppStore } from "@/stores/app";
 import { useChatActions } from "@ai-sdk-tools/store";
 import {
   getCategoryBreakdown,
   getExpenseMetrics,
   getRevenueMetrics,
-  getTransactionSettings,
 } from "@workspace/modules/server";
-import { formatCurrency } from "@workspace/utils";
 
 const SUGGESTION_CHIPS = [
   {
@@ -71,6 +70,7 @@ function TrendSkeleton() {
 
 export function OverviewCards() {
   const { sendMessage } = useChatActions();
+  const { formatCurrency } = useAppStore();
 
   // —— Data fetching ——
   const { data: incomeResult, isLoading: loadingIncome } = useQuery({
@@ -91,21 +91,14 @@ export function OverviewCards() {
     staleTime: 5 * 60 * 1000,
   });
 
-  const { data: settingsResult } = useQuery({
-    queryKey: ["settings", "transaction"],
-    queryFn: getTransactionSettings,
-    staleTime: 10 * 60 * 1000,
-  });
-
   const isLoading = loadingIncome || loadingExpense;
 
   // —— Derived values ——
   const revenueData = incomeResult?.success ? incomeResult.data! : [];
   const expenseData = expenseResult?.success ? expenseResult.data! : [];
   const categoryData = categoryResult?.success ? categoryResult.data! : [];
-  const settings = settingsResult?.success ? settingsResult.data! : null;
 
-  const fmt = (v: number) => formatCurrency(v, settings);
+  const fmt = (v: number) => formatCurrency(v);
 
   const currentRevenue = revenueData[revenueData.length - 1]?.current ?? 0;
   const previousRevenue =

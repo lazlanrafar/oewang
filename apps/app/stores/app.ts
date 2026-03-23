@@ -1,5 +1,10 @@
 import { create } from "zustand";
-import type { User, Workspace, TransactionSettings, SubCurrency } from "@workspace/types";
+import type {
+  User,
+  Workspace,
+  TransactionSettings,
+  SubCurrency,
+} from "@workspace/types";
 import { INCOME_EXPENSES_COLOR_OPTIONS } from "@workspace/constants";
 import { formatCurrency as formatCurrencyUtil } from "@workspace/utils";
 import type { Dictionary } from "@workspace/dictionaries";
@@ -18,10 +23,13 @@ export interface AppState {
   setDictionary: (dictionary: Dictionary | null) => void;
   setIsLoading: (isLoading: boolean) => void;
   getTransactionColor: (type: string) => string;
-  formatCurrency: (amount: number) => string;
-  checkLimit: (feature: "vault_size" | "ai_tokens", currentUsage: number) => { 
-    allowed: boolean; 
-    limit: number; 
+  formatCurrency: (amount: number, options?: any) => string;
+  checkLimit: (
+    feature: "vault_size" | "ai_tokens",
+    currentUsage: number,
+  ) => {
+    allowed: boolean;
+    limit: number;
     usage: number;
     remaining: number;
     percent: number;
@@ -48,27 +56,27 @@ export const useAppStore = create<AppState>()((set, get) => ({
     );
 
     if (type === "income") {
-      return option?.incomeColor || "text-emerald-600 dark:text-emerald-400";
+      return option?.incomeColor as string;
     }
 
     if (type === "expense") {
-      return option?.expensesColor || "text-red-600 dark:text-red-400";
+      return option?.expensesColor as string;
     }
 
     if (type === "transfer") {
-      return "text-blue-600 dark:text-blue-400";
+      return "text-foreground";
     }
 
     return "text-muted-foreground";
   },
-  formatCurrency: (amount) => {
+  formatCurrency: (amount, options) => {
     const { settings } = get();
-    return formatCurrencyUtil(amount, settings);
+    return formatCurrencyUtil(amount, settings, options);
   },
   checkLimit: (feature, currentUsage) => {
     const { workspace } = get();
     const plan = workspace?.plan;
-    
+
     let limit = 0;
     if (feature === "vault_size") {
       limit = plan?.max_vault_size_mb || 0;

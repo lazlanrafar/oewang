@@ -13,14 +13,12 @@ import {
 } from "@workspace/ui";
 import { type DebtWithContact } from "@workspace/modules/client";
 import { ArrowDownLeft, ArrowUpRight, MoreHorizontal, Edit, Trash, ExternalLink } from "lucide-react";
-import { formatCurrency } from "@workspace/utils";
 
 export const debtColumns = (
   onRowClick: (debt: DebtWithContact) => void,
   onEdit: (debt: DebtWithContact) => void,
   onContactClick: (contactId: string) => void,
   onDelete: (id: string) => void,
-  settings: any,
 ): ColumnDef<DebtWithContact>[] => [
   {
     id: "select",
@@ -102,21 +100,22 @@ export const debtColumns = (
   {
     accessorKey: "amount",
     header: "Summary",
-    cell: ({ row }) => {
+    cell: ({ row, table }) => {
       const amount = Number.parseFloat(row.getValue("amount") as string);
       const remainingAmount = Number.parseFloat(
         row.original.remainingAmount as string,
       );
       const status = row.original.status;
+      const { formatCurrency } = (table.options.meta as any) || {};
 
       return (
         <div className="flex flex-col gap-1 text-right sm:text-left">
           <span className="text-sm font-medium">
-            {formatCurrency(remainingAmount, settings)}
+            {formatCurrency ? formatCurrency(remainingAmount) : remainingAmount}
           </span>
           {status !== "unpaid" && remainingAmount !== amount && (
             <span className="text-xs text-muted-foreground line-through">
-              {formatCurrency(amount, settings)}
+              {formatCurrency ? formatCurrency(amount) : amount}
             </span>
           )}
         </div>

@@ -32,7 +32,6 @@ interface OverviewClientProps {
   burnRateData: ChartDataPoint[];
   expenseCategoryData: CategoryBreakdownPoint[];
   incomeCategoryData: CategoryBreakdownPoint[];
-  settings?: TransactionSettings | null;
 }
 
 export function OverviewClient({
@@ -43,7 +42,6 @@ export function OverviewClient({
   burnRateData,
   expenseCategoryData,
   incomeCategoryData,
-  settings,
 }: OverviewClientProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -137,7 +135,6 @@ export function OverviewClient({
             burnRateData={burnRateData}
             expenseCategoryData={expenseCategoryData}
             incomeCategoryData={incomeCategoryData}
-            settings={settings}
           />
         </TabsContent>
       </div>

@@ -6,8 +6,7 @@ import type {
   CategoryBreakdownPoint,
   ChartDataPoint,
 } from "@workspace/modules/metrics/metrics.action";
-import { formatCurrency } from "@workspace/utils";
-import type { TransactionSettings } from "@workspace/types";
+import { useAppStore } from "@/stores/app";
 
 export function OverviewMetrics({
   incomeData,
@@ -15,18 +14,16 @@ export function OverviewMetrics({
   burnRateData,
   incomeCategoryData,
   expenseCategoryData,
-  settings,
 }: {
   incomeData: ChartDataPoint[];
   expenseData: ChartDataPoint[];
   burnRateData: ChartDataPoint[];
   incomeCategoryData: CategoryBreakdownPoint[];
   expenseCategoryData: CategoryBreakdownPoint[];
-  settings?: TransactionSettings | null;
 }) {
-  const fmt = (v: number) => formatCurrency(v, settings);
-  const fmtCompact = (v: number) =>
-    formatCurrency(v, settings, { compact: true });
+  const { formatCurrency } = useAppStore();
+  const fmt = (v: number) => formatCurrency(v);
+  const fmtCompact = (v: number) => formatCurrency(v, { compact: true });
 
   const latestIncome = incomeData[incomeData.length - 1]?.current ?? 0;
   const latestExpense = expenseData[expenseData.length - 1]?.current ?? 0;

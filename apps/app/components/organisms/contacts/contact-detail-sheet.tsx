@@ -38,7 +38,6 @@ import {
   Trash,
 } from "lucide-react";
 import { useAppStore } from "@/stores/app";
-import { formatCurrency } from "@workspace/utils";
 import { format } from "date-fns";
 import { useConfirm } from "@/components/providers/confirm-modal-provider";
 import { BulkPaySheet } from "../debts/bulk-pay-sheet";
@@ -65,7 +64,7 @@ export function ContactDetailSheet({
   onDebtClick,
 }: Props) {
   const queryClient = useQueryClient();
-  const { settings } = useAppStore();
+  const { settings, formatCurrency } = useAppStore();
   const [isEditing, setIsEditing] = useState(false);
   const [isBulkPayOpen, setIsBulkPayOpen] = useState(false);
   const confirm = useConfirm();
@@ -341,7 +340,7 @@ export function ContactDetailSheet({
                     Owed to you
                   </p>
                   <p className="text-2xl font-serif text-emerald-600 dark:text-emerald-400">
-                    {formatCurrency(totalReceivable, settings)}
+                    {formatCurrency(totalReceivable)}
                   </p>
                 </div>
                 <div className="space-y-1">
@@ -349,7 +348,7 @@ export function ContactDetailSheet({
                     You owe
                   </p>
                   <p className="text-2xl font-serif text-rose-600 dark:text-rose-400">
-                    {formatCurrency(totalPayable, settings)}
+                    {formatCurrency(totalPayable)}
                   </p>
                 </div>
               </div>
@@ -461,7 +460,7 @@ export function ContactDetailSheet({
                                   "text-muted-foreground line-through opacity-60",
                               )}
                             >
-                              {formatCurrency(amount, settings)}
+                              {formatCurrency(amount)}
                             </p>
 
                             {/* Description */}
@@ -487,10 +486,7 @@ export function ContactDetailSheet({
                                     Progress
                                   </p>
                                   <p className="text-[9px] font-medium text-primary">
-                                    {formatCurrency(
-                                      amount - remaining,
-                                      settings,
-                                    )}{" "}
+                                    {formatCurrency(amount - remaining)}{" "}
                                     settled
                                   </p>
                                 </div>

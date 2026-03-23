@@ -27,7 +27,6 @@ import { useAppStore } from "@/stores/app";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import * as z from "zod";
-import { formatCurrency } from "@workspace/utils";
 
 interface Props {
   open: boolean;
@@ -40,7 +39,7 @@ export function PaymentFormSheet({ open, onOpenChange, debt, wallets }: Props) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(false);
-  const { settings } = useAppStore();
+  const { settings, formatCurrency } = useAppStore();
 
   const remaining = debt ? Number.parseFloat(debt.remainingAmount as string) : 0;
 
@@ -116,7 +115,7 @@ export function PaymentFormSheet({ open, onOpenChange, debt, wallets }: Props) {
                 <p className="text-lg font-serif font-normal">{debt.contactName}</p>
                 <div className="pt-2 border-t border-border/50">
                   <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">Remaining balance</p>
-                  <p className="text-lg font-serif text-primary font-normal">{formatCurrency(remaining, settings)}</p>
+                  <p className="text-lg font-serif text-primary font-normal">{formatCurrency(remaining)}</p>
                 </div>
               </div>
 

@@ -11,11 +11,15 @@ interface VaultItemCardProps {
   onSelect: (file: VaultFile) => void;
 }
 
-export function VaultItemCard({ file, isSelected, onSelect }: VaultItemCardProps) {
+export function VaultItemCard({
+  file,
+  isSelected,
+  onSelect,
+}: VaultItemCardProps) {
   return (
     <div
       className={cn(
-        "group relative aspect-square rounded-lg border-2 overflow-hidden cursor-pointer transition-all hover:ring-2 hover:ring-primary/20",
+        "group relative aspect-square border overflow-hidden cursor-pointer transition-all hover:ring-1 hover:ring-primary/20",
         isSelected
           ? "border-primary ring-2 ring-primary/20 bg-primary/5"
           : "border-transparent hover:border-muted-foreground/30",

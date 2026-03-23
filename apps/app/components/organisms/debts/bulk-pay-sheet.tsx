@@ -15,7 +15,6 @@ import {
 import { type DebtWithContact, bulkPayDebt } from "@workspace/modules/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAppStore } from "@/stores/app";
-import { formatCurrency } from "@workspace/utils";
 import { format } from "date-fns";
 import { ArrowDownLeft, ArrowUpRight } from "lucide-react";
 import { SelectAccount } from "@/components/molecules/select-account";
@@ -31,7 +30,7 @@ interface Props {
 export function BulkPaySheet({ open, onOpenChange, debts, contactName }: Props) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { settings } = useAppStore();
+  const { settings, formatCurrency } = useAppStore();
 
   // Only show outstanding debts
   const outstanding = debts.filter((d) => d.status !== "paid");
@@ -214,11 +213,11 @@ export function BulkPaySheet({ open, onOpenChange, debts, contactName }: Props) 
                         </div>
 
                         <p className="text-lg font-serif font-normal">
-                          {formatCurrency(remaining, settings)}
+                          {formatCurrency(remaining)}
                         </p>
                         {remaining < amount && (
                           <p className="text-[10px] text-muted-foreground line-through opacity-60 mt-0.5">
-                            Original: {formatCurrency(amount, settings)}
+                            Original: {formatCurrency(amount)}
                           </p>
                         )}
                         {debt.description && (
@@ -256,7 +255,7 @@ export function BulkPaySheet({ open, onOpenChange, debts, contactName }: Props) 
                   Total to settle
                 </p>
                 <p className="text-2xl font-serif font-normal">
-                  {formatCurrency(totalToPay, settings)}
+                  {formatCurrency(totalToPay)}
                 </p>
                 <p className="text-[10px] text-muted-foreground">
                   {selectedDebts.length} debt{selectedDebts.length !== 1 ? "s" : ""} selected

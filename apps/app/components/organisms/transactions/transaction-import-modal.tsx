@@ -28,7 +28,6 @@ import {
   CheckCircle2,
   AlertCircle,
 } from "lucide-react";
-import { formatCurrency as formatCurrencyUtil } from "@workspace/utils";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
@@ -59,7 +58,7 @@ export function ImportModal({
   wallets,
   onSuccess,
 }: ImportModalProps) {
-  const { settings, subCurrencies, formatCurrency } = useAppStore();
+  const { settings, subCurrencies } = useAppStore();
   const [step, setStep] = useState<
     | "select"
     | "mapping"
