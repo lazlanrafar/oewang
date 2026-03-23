@@ -20,26 +20,28 @@ import { useQueryClient } from "@tanstack/react-query";
 const CellActions = ({
   row,
   onEdit,
+  dictionary,
 }: {
   row: { original: Wallet };
   onEdit: (wallet: Wallet) => void;
+  dictionary: any;
 }) => {
   const wallet = row.original;
   const queryClient = useQueryClient();
 
   const handleDelete = async () => {
-    if (!confirm("Are you sure you want to delete this account?")) return;
+    if (!confirm(dictionary.accounts.confirmations.delete)) return;
 
     try {
       const result = await deleteWallet(wallet.id);
       if (result.success) {
-        toast.success("Account deleted successfully");
+        toast.success(dictionary.accounts.toasts.deleted);
         queryClient.invalidateQueries({ queryKey: ["wallets"] });
       } else {
-        toast.error(result.error || "Failed to delete account");
+        toast.error(result.error || dictionary.accounts.toasts.delete_failed);
       }
     } catch (error) {
-      toast.error("An unexpected error occurred");
+      toast.error(dictionary.settings.common.error);
     }
   };
 
@@ -47,20 +49,24 @@ const CellActions = ({
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="h-8 w-8 p-0">
-          <span className="sr-only">Open menu</span>
+          <span className="sr-only">
+            {dictionary.settings.common.open_menu}
+          </span>
           <MoreHorizontal className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+        <DropdownMenuLabel>
+          {dictionary.accounts.table.actions}
+        </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => onEdit(wallet)}>
           <Pencil className="mr-2 h-4 w-4" />
-          <span>Edit</span>
+          <span>{dictionary.transactions.edit}</span>
         </DropdownMenuItem>
         <DropdownMenuItem onClick={handleDelete} className="text-destructive">
           <Trash2 className="mr-2 h-4 w-4" />
-          <span>Delete</span>
+          <span>{dictionary.transactions.delete}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -70,21 +76,23 @@ const CellActions = ({
 const GroupCell = ({
   wallet,
   updateWalletInCache,
+  dictionary,
 }: {
   wallet: Wallet;
   updateWalletInCache: (updatedWallet: Wallet) => void;
+  dictionary: any;
 }) => {
   const handleGroupChange = async (groupId: string) => {
     try {
       const res = await updateWallet(wallet.id, { groupId });
       if (res.success && res.data) {
         updateWalletInCache(res.data);
-        toast.success("Account group updated");
+        toast.success(dictionary.accounts.toasts.group_updated);
       } else {
-        toast.error(res.error || "Failed to update account group");
+        toast.error(res.error || dictionary.accounts.toasts.group_update_failed);
       }
     } catch (error) {
-      toast.error("An unexpected error occurred");
+      toast.error(dictionary.settings.common.error);
     }
   };
 
@@ -95,6 +103,7 @@ const GroupCell = ({
         onChange={handleGroupChange}
         variant="ghost"
         className="h-8 w-full justify-start font-normal"
+        placeholder={dictionary.accounts.group_placeholder}
       />
     </div>
   );
@@ -103,10 +112,11 @@ const GroupCell = ({
 export const accountColumns = (
   onEdit: (wallet: Wallet) => void,
   updateWalletInCache: (updatedWallet: Wallet) => void,
+  dictionary: any,
 ): ColumnDef<Wallet>[] => [
   {
     accessorKey: "name",
-    header: "Name",
+    header: dictionary.accounts.table.name,
     size: 200,
     minSize: 120,
     maxSize: 400,
@@ -114,43 +124,44 @@ export const accountColumns = (
     enableHiding: false,
     meta: {
       sticky: true,
-      headerLabel: "Name",
+      headerLabel: dictionary.accounts.table.name,
       className:
         "w-[200px] min-w-[120px] md:sticky md:left-[var(--stick-left)] bg-background group-hover:bg-[#F2F1EF] group-hover:dark:bg-[#0f0f0f] z-10",
     },
     cell: ({ getValue }) => (
       <span className="truncate font-medium font-sans px-2">
-        {getValue<string>() || "N/A"}
+        {getValue<string>() || (dictionary?.settings?.common?.na ?? "N/A")}
       </span>
     ),
   },
   {
     accessorKey: "groupId",
-    header: "Group",
+    header: dictionary.accounts.table.group,
     size: 150,
     minSize: 100,
     maxSize: 300,
     enableResizing: true,
     meta: {
-      headerLabel: "Group",
+      headerLabel: dictionary.accounts.table.group,
       className: "w-[150px] min-w-[100px]",
     },
     cell: ({ row }) => (
       <GroupCell
         wallet={row.original}
         updateWalletInCache={updateWalletInCache}
+        dictionary={dictionary}
       />
     ),
   },
   {
     accessorKey: "balance",
-    header: "Balance",
+    header: dictionary.accounts.table.balance,
     size: 150,
     minSize: 100,
     maxSize: 250,
     enableResizing: true,
     meta: {
-      headerLabel: "Balance",
+      headerLabel: dictionary.accounts.table.balance,
       className: "w-[150px] min-w-[100px] text-right",
     },
     cell: ({ getValue, table }) => {
@@ -166,21 +177,21 @@ export const accountColumns = (
   },
   {
     accessorKey: "createdAt",
-    header: "Created At",
+    header: dictionary.accounts.table.created_at,
     size: 160,
     minSize: 120,
     maxSize: 220,
     enableResizing: true,
     meta: {
-      headerLabel: "Created At",
+      headerLabel: dictionary.accounts.table.created_at,
       className: "w-[160px] min-w-[120px]",
     },
     cell: ({ getValue }) => {
       const val = getValue<string>();
-      if (!val) return "N/A";
+      if (!val) return dictionary?.settings?.common?.na ?? "N/A";
       return (
         <span className="font-sans text-muted-foreground px-2">
-          {new Date(val).toLocaleDateString("en-US", {
+          {new Date(val).toLocaleDateString(dictionary?.language?.locale || "en-US", {
             year: "numeric",
             month: "short",
             day: "numeric",
@@ -194,8 +205,10 @@ export const accountColumns = (
     size: 90,
     enableHiding: false,
     meta: {
-      headerLabel: "Actions",
+      headerLabel: dictionary.accounts.table.actions,
     },
-    cell: ({ row }) => <CellActions row={row} onEdit={onEdit} />,
+    cell: ({ row }) => (
+      <CellActions row={row} onEdit={onEdit} dictionary={dictionary} />
+    ),
   },
 ];

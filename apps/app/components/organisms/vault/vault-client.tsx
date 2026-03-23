@@ -81,7 +81,12 @@ const SUGGESTED_TAGS = [
 ];
 
 export function VaultClient() {
+  const { dictionary } = useAppStore();
   const queryClient = useQueryClient();
+
+  if (!dictionary) return <VaultSkeletonLoading />;
+
+  const t = dictionary.vault;
   const [view, setView] = useQueryState(
     "view",
     parseAsString.withDefault("list").withOptions({ shallow: true }),
@@ -150,7 +155,7 @@ export function VaultClient() {
     mutationFn: async (file: File) => {
       if (!ALLOWED_TYPES.includes(file.type)) {
         throw new Error(
-          `Invalid file type for ${file.name}. Only documents and images are allowed.`,
+          t.toasts.invalid_type.replace("{name}", file.name),
         );
       }
       const formData = new FormData();
@@ -165,7 +170,7 @@ export function VaultClient() {
       setSelectedFile(data);
     },
     onError: (error: any) => {
-      toast.error(error.message || "Upload failed");
+      toast.error(error.message || t.toasts.upload_failed);
     },
   });
 
@@ -180,7 +185,7 @@ export function VaultClient() {
       setSelectedFile(data);
     },
     onError: (error: any) => {
-      toast.error(error.message || "Failed to update tags");
+      toast.error(error.message || t.toasts.tags_update_failed);
     },
   });
 
@@ -188,15 +193,15 @@ export function VaultClient() {
     const filesArray = Array.from(selectedFiles);
     if (filesArray.length === 0) return;
 
-    const toastId = toast.loading(`Uploading ${filesArray.length} file(s)...`);
+    const toastId = toast.loading(t.toasts.uploading.replace("{count}", filesArray.length.toString()));
 
     try {
       await Promise.all(
         filesArray.map((file) => uploadMutation.mutateAsync(file)),
       );
-      toast.success("All files uploaded successfully", { id: toastId });
+      toast.success(t.toasts.upload_success, { id: toastId });
     } catch (error) {
-      toast.error("Some files failed to upload", { id: toastId });
+      toast.error(t.toasts.upload_failed_some, { id: toastId });
     }
   };
 
@@ -233,10 +238,10 @@ export function VaultClient() {
       queryClient.invalidateQueries({ queryKey: ["vault-files"] });
       queryClient.invalidateQueries({ queryKey: ["workspace", "active"] });
       setSelectedFile(null);
-      toast.success("File deleted");
+      toast.success(t.toasts.delete_success);
     },
     onError: (error: any) => {
-      toast.error(error.message || "Failed to delete file");
+      toast.error(error.message || t.toasts.delete_failed);
     },
   });
 
@@ -283,10 +288,10 @@ export function VaultClient() {
               <UploadCloud className="h-12 w-12 text-primary animate-bounce" />
             </div>
             <p className="text-xl font-bold text-primary">
-              Drop to upload your documents
+              {t.drop_zone.title}
             </p>
             <p className="text-sm text-muted-foreground mt-2">
-              Images, PDFs, or Excel files only
+              {t.drop_zone.description}
             </p>
           </div>
         )}
@@ -294,17 +299,17 @@ export function VaultClient() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shrink-0">
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl tracking-tight">Vaults</h1>
+              <h1 className="text-2xl tracking-tight">{t.title}</h1>
             </div>
             <p className="text-muted-foreground text-sm">
-              Manage your documents and invoices securely.
+              {t.description}
             </p>
           </div>
           <div className="flex items-center gap-2">
             <div className="relative">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search files..."
+                placeholder={t.search_placeholder}
                 className="pl-9 w-[200px] md:w-[250px] h-9"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -329,7 +334,7 @@ export function VaultClient() {
               </Button>
             </div>
             <Button size="sm" onClick={() => fileInputRef.current?.click()}>
-              <Plus className="h-4 w-4" /> Upload
+              <Plus className="h-4 w-4" /> {t.upload_button}
             </Button>
           </div>
         </div>
@@ -347,11 +352,11 @@ export function VaultClient() {
               <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-4">
                 <Search className="h-6 w-6 text-muted-foreground/40" />
               </div>
-              <h3 className="font-semibold">No files found</h3>
+              <h3 className="font-semibold">{t.empty.title}</h3>
               <p className="text-sm text-muted-foreground mt-1 max-w-[250px]">
                 {search
-                  ? `No results for "${search}". Try another keyword.`
-                  : "Upload your first file to get started."}
+                  ? t.empty.no_results.replace("{search}", search)
+                  : t.empty.get_started}
               </p>
               {search && (
                 <Button
@@ -359,7 +364,7 @@ export function VaultClient() {
                   className="mt-2 text-xs"
                   onClick={() => setSearch("")}
                 >
-                  Clear search
+                  {t.empty.clear_search}
                 </Button>
               )}
             </div>
@@ -368,6 +373,7 @@ export function VaultClient() {
               files={files}
               selectedFileId={selectedFile?.id}
               onSelect={setSelectedFile}
+              dictionary={dictionary}
             />
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
@@ -377,6 +383,7 @@ export function VaultClient() {
                   file={file}
                   isSelected={selectedFile?.id === file.id}
                   onSelect={setSelectedFile}
+                  dictionary={dictionary}
                 />
               ))}
             </div>
@@ -390,7 +397,7 @@ export function VaultClient() {
             {isFetchingNextPage && (
               <div className="flex items-center gap-2 text-muted-foreground text-xs">
                 <div className="h-4 w-4 border-2 border-primary border-t-transparent animate-spin rounded-full" />
-                Loading more...
+                {dictionary.common?.loading_more || "Loading more..."}
               </div>
             )}
           </div>
@@ -406,7 +413,7 @@ export function VaultClient() {
           "w-full lg:w-[400px] h-full flex flex-col shrink-0 transition-all overflow-hidden",
         )}
       >
-        <HeaderStorageUsage />
+        <HeaderStorageUsage dictionary={dictionary} />
 
         <div
           className={cn(
@@ -418,7 +425,7 @@ export function VaultClient() {
           {selectedFile ? (
             <>
               <div className="p-4 border-b flex justify-between items-center bg-muted/20">
-                <h2 className="font-semibold text-sm">File Details</h2>
+                <h2 className="font-semibold text-sm">{t.details.title}</h2>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -461,20 +468,20 @@ export function VaultClient() {
 
                         <div className="grid grid-cols-[120px,1fr] gap-x-4 gap-y-3 text-sm">
                           <span className="text-muted-foreground">
-                            Date Created
+                            {t.details.date_created}
                           </span>
                           <span className="font-medium">
                             {new Date(selectedFile.createdAt).toLocaleString()}
                           </span>
 
-                          <span className="text-muted-foreground">Format</span>
+                          <span className="text-muted-foreground">{t.details.format}</span>
                           <span className="font-medium text-primary uppercase">
                             {selectedFile.type.split("/")[1] ||
                               selectedFile.type}
                           </span>
 
                           <span className="text-muted-foreground">
-                            File Size
+                            {t.details.file_size}
                           </span>
                           <span className="font-medium">
                             {formatBytes(selectedFile.size)}
@@ -483,7 +490,7 @@ export function VaultClient() {
                           {selectedFile.type.startsWith("image/") && (
                             <>
                               <span className="text-muted-foreground">
-                                Dimensions
+                                {t.details.dimensions}
                               </span>
                               <span className="font-medium">N/A</span>
                             </>
@@ -519,14 +526,14 @@ export function VaultClient() {
                             {(!selectedFile.tags ||
                               selectedFile.tags.length === 0) && (
                               <p className="text-xs text-muted-foreground italic">
-                                No tags added
+                                {t.details.no_tags}
                               </p>
                             )}
                           </div>
 
                           <div className="space-y-2">
                             <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
-                              Suggested Tags
+                              {t.details.suggested_tags}
                             </p>
                             <div className="flex flex-wrap gap-1.5">
                               {SUGGESTED_TAGS.filter(
@@ -545,7 +552,7 @@ export function VaultClient() {
 
                           <div className="relative mt-2">
                             <Input
-                              placeholder="Add custom tag..."
+                              placeholder={t.details.add_custom_tag}
                               className="h-8 text-xs pr-12 focus-visible:ring-1"
                               value={tagInput}
                               onChange={(e) => setTagInput(e.target.value)}
@@ -559,7 +566,7 @@ export function VaultClient() {
                               className="absolute right-1 top-1 h-6 w-10 text-[10px] p-0"
                               onClick={() => handleAddTag(tagInput)}
                             >
-                              Add
+                              {t.details.add_tag_button}
                             </Button>
                           </div>
                         </div>
@@ -574,7 +581,7 @@ export function VaultClient() {
                         className="flex-1 rounded-r-none h-9 text-xs"
                         onClick={() => window.open(selectedFile.url, "_blank")}
                       >
-                        <Download className="mr-2 h-4 w-4" /> View full
+                        <Download className="mr-2 h-4 w-4" /> {t.details.view_full}
                       </Button>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -591,8 +598,7 @@ export function VaultClient() {
                               window.open(selectedFile.url, "_blank")
                             }
                           >
-                            <ExternalLink className="mr-2 h-4 w-4" /> Open
-                            Original
+                            <ExternalLink className="mr-2 h-4 w-4" /> {t.details.open_original}
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => {
@@ -602,7 +608,7 @@ export function VaultClient() {
                               link.click();
                             }}
                           >
-                            <Download className="mr-2 h-4 w-4" /> Download Local
+                            <Download className="mr-2 h-4 w-4" /> {t.details.download_local}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -612,7 +618,7 @@ export function VaultClient() {
                       className="h-9 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50"
                       onClick={() => deleteMutation.mutate(selectedFile.id)}
                     >
-                      <Trash2 className="mr-2 h-4 w-4" /> Delete
+                      <Trash2 className="mr-2 h-4 w-4" /> {t.details.delete}
                     </Button>
                   </div>
                 </>
@@ -624,9 +630,9 @@ export function VaultClient() {
                 <FileText className="h-10 w-10" />
               </div>
               <div>
-                <p className="font-semibold text-sm">No file selected</p>
+                <p className="font-semibold text-sm">{t.details.no_file_selected}</p>
                 <p className="text-[10px]">
-                  Select a file to view its details, size, and manage tags.
+                  {t.details.no_file_selected_desc}
                 </p>
               </div>
             </div>
@@ -637,19 +643,20 @@ export function VaultClient() {
   );
 }
 
-function HeaderStorageUsage() {
+function HeaderStorageUsage({ dictionary }: { dictionary: any }) {
   const { workspace, checkLimit } = useAppStore();
 
   if (!workspace) return null;
 
   const usage = workspace.vault_size_used_bytes || 0;
   const { limit, percent } = checkLimit("vault_size", usage / (1024 * 1024)); // checkLimit expects MB
+  const t = dictionary.vault;
 
   return (
     <div className="flex flex-col gap-1 min-w-[120px]">
       <div className="flex justify-between items-center text-[10px]">
         <span className="text-muted-foreground">
-          {formatBytes(usage)} / {limit} MB
+          {t.storage.usage.replace("{used}", formatBytes(usage)).replace("{limit}", limit.toString())}
         </span>
         <span
           className={cn(

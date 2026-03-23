@@ -61,24 +61,24 @@ export function DebtsClient({ initialData, wallets, dictionary }: Props) {
         setSelectedContact(result.data);
         setIsContactDetailOpen(true);
       } else {
-        toast.error("Failed to fetch contact details");
+        toast.error(dictionary.debts.toasts.fetch_contact_error);
       }
     } catch (error) {
-      toast.error("An error occurred while fetching contact details");
+      toast.error(dictionary.debts.toasts.fetch_contact_error_desc);
     }
   };
 
   const deleteMutation = useMutation({
     mutationFn: deleteDebt,
     onSuccess: () => {
-      toast.success("Debt deleted successfully");
+      toast.success(dictionary.debts.toasts.deleted);
       queryClient.invalidateQueries({ queryKey: ["debts"] });
       router.refresh();
       setIsDetailOpen(false);
       setSelectedDebt(undefined);
     },
     onError: (err: any) => {
-      toast.error(err.message || "Failed to delete debt");
+      toast.error(err.message || dictionary.debts.toasts.delete_failed);
     },
   });
 
@@ -93,17 +93,18 @@ export function DebtsClient({ initialData, wallets, dictionary }: Props) {
         handleContactClick,
         async (id) => {
           const ok = await confirm({
-            title: "Delete this debt?",
-            description: "This action cannot be undone. The debt record will be permanently removed.",
-            confirmLabel: "Delete",
-            cancelLabel: "Cancel",
+            title: dictionary.debts.confirmations.delete_title,
+            description: dictionary.debts.confirmations.delete_description,
+            confirmLabel: dictionary.debts.actions.delete,
+            cancelLabel: dictionary.debts.form.cancel,
             destructive: true,
           });
           if (ok) deleteMutation.mutate(id);
-        }
+        },
+        dictionary
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
+    [dictionary]
   );
 
   const filteredData = useMemo(() => {
@@ -124,9 +125,9 @@ export function DebtsClient({ initialData, wallets, dictionary }: Props) {
   }, [initialData, filters]);
 
   const statusOptions = [
-    { id: "unpaid", name: "Unpaid" },
-    { id: "partial", name: "Partial" },
-    { id: "paid", name: "Paid" },
+    { id: "unpaid", name: dictionary.debts.statuses.unpaid },
+    { id: "partial", name: dictionary.debts.statuses.partial },
+    { id: "paid", name: dictionary.debts.statuses.paid },
   ];
 
   const nonClickableColumns = useMemo(() => new Set(["select", "actions"]), []);
@@ -138,12 +139,12 @@ export function DebtsClient({ initialData, wallets, dictionary }: Props) {
           <DataTableFilter
             filters={filters}
             onFilterChange={handleFilterChange as any}
-            placeholder="Search debts..."
+            placeholder={dictionary.debts.search_placeholder}
             showDateFilter={false}
             showAmountFilter={false}
             statusOptions={statusOptions}
             statusKey="status"
-            statusLabel="Status"
+            statusLabel={dictionary.debts.status_label}
             className="w-full bg-transparent border-none p-0 focus-visible:ring-0"
           />
         </div>
@@ -203,14 +204,15 @@ export function DebtsClient({ initialData, wallets, dictionary }: Props) {
         wallets={wallets}
         onDelete={async (id) => {
           const ok = await confirm({
-            title: "Delete this debt?",
-            description: "This action cannot be undone. The debt record will be permanently removed.",
-            confirmLabel: "Delete",
-            cancelLabel: "Cancel",
+            title: dictionary.debts.confirmations.delete_title,
+            description: dictionary.debts.confirmations.delete_description,
+            confirmLabel: dictionary.debts.actions.delete,
+            cancelLabel: dictionary.debts.form.cancel,
             destructive: true,
           });
           if (ok) deleteMutation.mutate(id);
         }}
+        dictionary={dictionary}
       />
 
       <ContactDetailSheet
@@ -221,6 +223,7 @@ export function DebtsClient({ initialData, wallets, dictionary }: Props) {
           setSelectedContact(null);
         }}
         onDebtClick={handleRowClick}
+        dictionary={dictionary}
       />
     </div>
   );

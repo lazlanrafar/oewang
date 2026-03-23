@@ -28,14 +28,15 @@ import type { Wallet } from "@workspace/types";
 import { useAppStore } from "@/stores/app";
 import { SelectAccountGroup } from "@/components/molecules/select-account-group";
 
-const accountSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  groupId: z.string().optional().nullable(),
-  balance: z.coerce.number().default(0),
-  isIncludedInTotals: z.boolean().default(true),
-});
+const getAccountSchema = (dictionary: any) =>
+  z.object({
+    name: z.string().min(1, dictionary?.accounts?.form?.name?.error_required ?? "Name is required"),
+    groupId: z.string().optional().nullable(),
+    balance: z.coerce.number().default(0),
+    isIncludedInTotals: z.boolean().default(true),
+  });
 
-type AccountFormValues = z.infer<typeof accountSchema>;
+type AccountFormValues = z.infer<ReturnType<typeof getAccountSchema>>;
 
 interface AccountSheetProps {
   open: boolean;
@@ -51,10 +52,10 @@ export function AccountFormSheet({
   onSuccess,
 }: AccountSheetProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const { settings } = useAppStore();
+  const { settings, dictionary } = useAppStore();
 
   const form = useForm<AccountFormValues>({
-    resolver: zodResolver(accountSchema as any),
+    resolver: zodResolver(getAccountSchema(dictionary) as any),
     defaultValues: {
       name: "",
       groupId: null,
@@ -76,6 +77,7 @@ export function AccountFormSheet({
   }, [open, wallet, form]);
 
   async function onSubmit(data: AccountFormValues) {
+    if (!dictionary) return;
     setIsLoading(true);
     try {
       const payload = {
@@ -86,41 +88,45 @@ export function AccountFormSheet({
       if (wallet?.id) {
         const res = await updateWallet(wallet.id, payload);
         if (res.success && res.data) {
-          toast.success("Account updated successfully");
+          toast.success(dictionary.accounts.toasts.updated);
           onSuccess?.(res.data);
           onOpenChange(false);
         } else {
-          toast.error(res.error || "Failed to update account");
+          toast.error(res.error || dictionary.accounts.toasts.update_failed);
         }
       } else {
         const res = await createWallet(payload);
         if (res.success && res.data) {
-          toast.success("Account created successfully");
-          // For creation, we might want to invalidate the whole query instead of just surgical update if it's a new item
-          // But AccountsClient can also handle it via onSuccess if we want to prepend/append
+          toast.success(dictionary.accounts.toasts.created);
           onSuccess?.(res.data);
           onOpenChange(false);
         } else {
-          toast.error(res.error || "Failed to create account");
+          toast.error(res.error || dictionary.accounts.toasts.create_failed);
         }
       }
     } catch (error) {
       console.error(error);
-      toast.error("An unexpected error occurred");
+      toast.error(dictionary.settings.common.error);
     } finally {
       setIsLoading(false);
     }
   }
 
+  if (!dictionary) return null;
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent>
         <SheetHeader className="mb-0">
-          <SheetTitle>{wallet ? "Edit Account" : "Add Account"}</SheetTitle>
+          <SheetTitle>
+            {wallet
+              ? dictionary.accounts.edit_account
+              : dictionary.accounts.add_account}
+          </SheetTitle>
           <SheetDescription>
             {wallet
-              ? "Update your account details below."
-              : "Create a new financial account to track your balance."}
+              ? dictionary.accounts.update_details
+              : dictionary.accounts.create_description}
           </SheetDescription>
         </SheetHeader>
 
@@ -136,10 +142,12 @@ export function AccountFormSheet({
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Account Name</FormLabel>
+                      <FormLabel>{dictionary.accounts.account_name}</FormLabel>
                       <FormControl>
                         <Input
-                          placeholder="e.g. Personal Savings, Business..."
+                          placeholder={
+                            dictionary.accounts.account_name_placeholder
+                          }
                           {...field}
                         />
                       </FormControl>
@@ -153,12 +161,12 @@ export function AccountFormSheet({
                   name="groupId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Group</FormLabel>
+                      <FormLabel>{dictionary.accounts.group_label}</FormLabel>
                       <FormControl>
                         <SelectAccountGroup
                           value={field.value || undefined}
                           onChange={field.onChange}
-                          placeholder="Select account group"
+                          placeholder={dictionary.accounts.group_placeholder}
                         />
                       </FormControl>
                       <FormMessage />
@@ -171,7 +179,7 @@ export function AccountFormSheet({
                   name="balance"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Initial Balance</FormLabel>
+                      <FormLabel>{dictionary.accounts.initial_balance}</FormLabel>
                       <FormControl>
                         <div className="relative">
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">
@@ -198,10 +206,10 @@ export function AccountFormSheet({
                     <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                       <div className="space-y-0.5">
                         <FormLabel className="mb-2">
-                          Include in Totals
+                          {dictionary.accounts.include_in_totals_label}
                         </FormLabel>
                         <div className="text-sm text-muted-foreground">
-                          Show this account's balance in net worth calculations.
+                          {dictionary.accounts.include_in_totals_description}
                         </div>
                       </div>
                       <FormControl>
@@ -219,10 +227,10 @@ export function AccountFormSheet({
             <div className="mt-8 shrink-0">
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading
-                  ? "Saving..."
+                  ? dictionary.accounts.saving
                   : wallet
-                    ? "Update Account"
-                    : "Create Account"}
+                    ? dictionary.accounts.update_account
+                    : dictionary.accounts.create_account}
               </Button>
             </div>
           </form>

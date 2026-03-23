@@ -27,6 +27,8 @@ import { ChevronRight, MailIcon, PlusCircleIcon } from "lucide-react";
 
 import type { NavGroup, NavMainItem } from "@/navigation/sidebar/sidebar-items";
 
+import { useAppStore } from "@/stores/app";
+
 interface NavMainProps {
   readonly items: readonly NavGroup[];
 }
@@ -34,9 +36,9 @@ interface NavMainProps {
 import { useLocalizedRoute } from "@/utils/localized-route";
 import { i18n } from "@/i18n-config";
 
-const IsComingSoon = () => (
+const IsComingSoon = ({ dictionary }: { dictionary: any }) => (
   <span className="ml-auto rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground uppercase tracking-wider whitespace-nowrap">
-    Coming Soon
+    {dictionary.sidebar.coming_soon}
   </span>
 );
 
@@ -44,26 +46,46 @@ const NavItemExpanded = ({
   item,
   isActive,
   isSubmenuOpen,
+  dictionary,
 }: {
   item: NavMainItem;
   isActive: (url: string, subItems?: NavMainItem["subItems"]) => boolean;
   isSubmenuOpen: (subItems?: NavMainItem["subItems"]) => boolean;
+  dictionary: any;
 }) => {
   const { getLocalizedUrl } = useLocalizedRoute();
 
+  const t = (key: string) => {
+    if (!key || !key.includes(".") || !dictionary) return key;
+    const keys = key.split(".");
+    let result: any = dictionary;
+    for (const k of keys) {
+      if (!result?.[k]) return key;
+      result = result[k];
+    }
+    return typeof result === "string" ? result : key;
+  };
+
+  const title = t(item.title);
+
   return (
-    <Collapsible key={item.title} asChild defaultOpen={isSubmenuOpen(item.subItems)} className="group/collapsible">
+    <Collapsible
+      key={item.title}
+      asChild
+      defaultOpen={isSubmenuOpen(item.subItems)}
+      className="group/collapsible"
+    >
       <SidebarMenuItem>
         <CollapsibleTrigger asChild>
           {item.subItems ? (
             <SidebarMenuButton
               disabled={item.comingSoon}
               isActive={isActive(item.url, item.subItems)}
-              tooltip={item.title}
+              tooltip={title}
             >
               {item.icon && <item.icon />}
-              <span>{item.title}</span>
-              {item.comingSoon && <IsComingSoon />}
+              <span>{title}</span>
+              {item.comingSoon && <IsComingSoon dictionary={dictionary} />}
               <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
             </SidebarMenuButton>
           ) : (
@@ -71,18 +93,20 @@ const NavItemExpanded = ({
               asChild
               disabled={item.comingSoon}
               isActive={isActive(item.url)}
-              tooltip={item.title}
+              tooltip={title}
             >
-              <Link 
-                prefetch={false} 
-                href={item.comingSoon ? "#" : getLocalizedUrl(item.url)} 
+              <Link
+                prefetch={false}
+                href={item.comingSoon ? "#" : getLocalizedUrl(item.url)}
                 target={item.newTab ? "_blank" : undefined}
-                className={item.comingSoon ? "pointer-events-none opacity-50" : ""}
+                className={
+                  item.comingSoon ? "pointer-events-none opacity-50" : ""
+                }
                 tabIndex={item.comingSoon ? -1 : undefined}
               >
                 {item.icon && <item.icon />}
-                <span>{item.title}</span>
-                {item.comingSoon && <IsComingSoon />}
+                <span>{title}</span>
+                {item.comingSoon && <IsComingSoon dictionary={dictionary} />}
               </Link>
             </SidebarMenuButton>
           )}
@@ -92,15 +116,21 @@ const NavItemExpanded = ({
             <SidebarMenuSub>
               {item.subItems.map((subItem) => (
                 <SidebarMenuSubItem key={subItem.title}>
-                  <SidebarMenuSubButton aria-disabled={subItem.comingSoon} isActive={isActive(subItem.url)} asChild>
+                  <SidebarMenuSubButton
+                    aria-disabled={subItem.comingSoon}
+                    isActive={isActive(subItem.url)}
+                    asChild
+                  >
                     <Link
                       prefetch={false}
                       href={getLocalizedUrl(subItem.url)}
                       target={subItem.newTab ? "_blank" : undefined}
                     >
                       {subItem.icon && <subItem.icon />}
-                      <span>{subItem.title}</span>
-                      {subItem.comingSoon && <IsComingSoon />}
+                      <span>{t(subItem.title)}</span>
+                      {subItem.comingSoon && (
+                        <IsComingSoon dictionary={dictionary} />
+                      )}
                     </Link>
                   </SidebarMenuSubButton>
                 </SidebarMenuSubItem>
@@ -116,11 +146,26 @@ const NavItemExpanded = ({
 const NavItemCollapsed = ({
   item,
   isActive,
+  dictionary,
 }: {
   item: NavMainItem;
   isActive: (url: string, subItems?: NavMainItem["subItems"]) => boolean;
+  dictionary: any;
 }) => {
   const { getLocalizedUrl } = useLocalizedRoute();
+
+  const t = (key: string) => {
+    if (!key || !key.includes(".") || !dictionary) return key;
+    const keys = key.split(".");
+    let result: any = dictionary;
+    for (const k of keys) {
+      if (!result?.[k]) return key;
+      result = result[k];
+    }
+    return typeof result === "string" ? result : key;
+  };
+
+  const title = t(item.title);
 
   return (
     <SidebarMenuItem key={item.title}>
@@ -128,15 +173,19 @@ const NavItemCollapsed = ({
         <DropdownMenuTrigger asChild>
           <SidebarMenuButton
             disabled={item.comingSoon}
-            tooltip={item.title}
+            tooltip={title}
             isActive={isActive(item.url, item.subItems)}
           >
             {item.icon && <item.icon />}
-            <span>{item.title}</span>
+            <span>{title}</span>
             <ChevronRight />
           </SidebarMenuButton>
         </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-50 space-y-1" side="right" align="start">
+        <DropdownMenuContent
+          className="w-50 space-y-1"
+          side="right"
+          align="start"
+        >
           {item.subItems?.map((subItem) => (
             <DropdownMenuItem key={subItem.title} asChild>
               <SidebarMenuSubButton
@@ -151,9 +200,13 @@ const NavItemCollapsed = ({
                   href={getLocalizedUrl(subItem.url)}
                   target={subItem.newTab ? "_blank" : undefined}
                 >
-                  {subItem.icon && <subItem.icon className="[&>svg]:text-sidebar-foreground" />}
-                  <span>{subItem.title}</span>
-                  {subItem.comingSoon && <IsComingSoon />}
+                  {subItem.icon && (
+                    <subItem.icon className="[&>svg]:text-sidebar-foreground" />
+                  )}
+                  <span>{t(subItem.title)}</span>
+                  {subItem.comingSoon && (
+                    <IsComingSoon dictionary={dictionary} />
+                  )}
                 </Link>
               </SidebarMenuSubButton>
             </DropdownMenuItem>
@@ -168,6 +221,20 @@ export function NavMain({ items }: NavMainProps) {
   const path = usePathname();
   const { state, isMobile } = useSidebar();
   const { getLocalizedUrl } = useLocalizedRoute();
+  const { dictionary } = useAppStore();
+
+  if (!dictionary) return null;
+
+  const t = (key: string) => {
+    if (!key || !key.includes(".") || !dictionary) return key;
+    const keys = key.split(".");
+    let result: any = dictionary;
+    for (const k of keys) {
+      if (!result?.[k]) return key;
+      result = result[k];
+    }
+    return typeof result === "string" ? result : key;
+  };
 
   // Strip locale from pathname to match sidebar items
   const activePathSegments = path.split("/").filter(Boolean);
@@ -191,10 +258,14 @@ export function NavMain({ items }: NavMainProps) {
     <>
       {items.map((group) => (
         <SidebarGroup key={group.id}>
-          {group.label && <SidebarGroupLabel>{group.label}</SidebarGroupLabel>}
+          {group.label && (
+            <SidebarGroupLabel>{t(group.label)}</SidebarGroupLabel>
+          )}
           <SidebarGroupContent className="flex flex-col gap-2">
             <SidebarMenu>
               {group.items.map((item) => {
+                const title = t(item.title);
+
                 if (state === "collapsed" && !isMobile) {
                   // If no subItems, just render the button as a link
                   if (!item.subItems) {
@@ -203,29 +274,46 @@ export function NavMain({ items }: NavMainProps) {
                         <SidebarMenuButton
                           asChild
                           disabled={item.comingSoon}
-                          tooltip={item.title}
+                          tooltip={title}
                           isActive={isItemActive(item.url)}
                         >
                           <Link
                             prefetch={false}
-                            href={item.comingSoon ? "#" : getLocalizedUrl(item.url)}
+                            href={
+                              item.comingSoon ? "#" : getLocalizedUrl(item.url)
+                            }
                             target={item.newTab ? "_blank" : undefined}
-                            className={item.comingSoon ? "pointer-events-none opacity-50" : ""}
+                            className={
+                              item.comingSoon ? "pointer-events-none opacity-50" : ""
+                            }
                             tabIndex={item.comingSoon ? -1 : undefined}
                           >
                             {item.icon && <item.icon />}
-                            <span>{item.title}</span>
+                            <span>{title}</span>
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     );
                   }
                   // Otherwise, render the dropdown as before
-                  return <NavItemCollapsed key={item.title} item={item} isActive={isItemActive} />;
+                  return (
+                    <NavItemCollapsed
+                      key={item.title}
+                      item={item}
+                      isActive={isItemActive}
+                      dictionary={dictionary}
+                    />
+                  );
                 }
                 // Expanded view
                 return (
-                  <NavItemExpanded key={item.title} item={item} isActive={isItemActive} isSubmenuOpen={isSubmenuOpen} />
+                  <NavItemExpanded
+                    key={item.title}
+                    item={item}
+                    isActive={isItemActive}
+                    isSubmenuOpen={isSubmenuOpen}
+                    dictionary={dictionary}
+                  />
                 );
               })}
             </SidebarMenu>

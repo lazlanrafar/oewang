@@ -69,7 +69,7 @@ export function BillingView({ initialPlans }: { initialPlans: Pricing[] }) {
     settings,
     dictionary,
     isLoading: isDictLoading,
-  } = useAppStore();
+  } = useAppStore() as any;
   const [billingCycle, setBillingCycle] = React.useState<"monthly" | "annual">(
     "monthly",
   );
@@ -141,7 +141,11 @@ export function BillingView({ initialPlans }: { initialPlans: Pricing[] }) {
     return <BillingSkeleton />;
   }
 
-  const dict = dictionary.settings.billing;
+  const dict = dictionary?.settings?.billing || dictionary?.billing;
+  
+  if (!dict || !dict.history) {
+    return <BillingSkeleton />;
+  }
 
   const currentPlanId = workspace?.plan_id;
   const vaultUsed = workspace?.vault_size_used_bytes || 0;
@@ -451,7 +455,7 @@ export function BillingView({ initialPlans }: { initialPlans: Pricing[] }) {
       <div className="space-y-6">
         <div className="border-b pb-2">
           <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-            {dict.history.title}
+            {dict.history?.title}
           </p>
         </div>
         <Card className="rounded-none shadow-none border overflow-hidden bg-background">

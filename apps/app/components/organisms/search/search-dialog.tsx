@@ -28,28 +28,8 @@ import type { Transaction } from "@workspace/types";
 import { formatBytes } from "@workspace/utils";
 import { format } from "date-fns";
 import { useAppStore } from "@/stores/app";
+import { useLocalizedRoute } from "@/utils/localized-route";
 
-const SHORTCUTS = [
-  { label: "Overview", icon: Icons.Overview, href: "/en/overview" },
-  { label: "Transactions", icon: Icons.Transactions, href: "/en/transactions" },
-  { label: "Invoices", icon: Icons.Invoice, href: "/en/invoices" },
-  { label: "Accounts", icon: Icons.Accounts, href: "/en/accounts" },
-  { label: "Customers", icon: Icons.Customers, href: "/en/customers" },
-  { label: "Vault", icon: Icons.Vault, href: "/en/vault" },
-];
-
-const SETTINGS_ITEMS = [
-  {
-    label: "Profile Settings",
-    icon: Icons.Settings,
-    href: "/en/settings/profile",
-  },
-  {
-    label: "Appearance",
-    icon: Icons.Settings,
-    href: "/en/settings/appearance",
-  },
-];
 
 export function SearchDialog() {
   const { isOpen, setOpen } = useSearchStore();
@@ -59,7 +39,47 @@ export function SearchDialog() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [debounceDelay, setDebounceDelay] = useState(200);
   const [isFetching, setIsFetching] = useState(false);
-  const { settings, formatCurrency } = useAppStore();
+  const { settings, formatCurrency, dictionary } = useAppStore();
+  const { getLocalizedUrl } = useLocalizedRoute();
+
+
+  const t = (key: string) => {
+    if (!key || !key.includes(".") || !dictionary) return key;
+    const keys = key.split(".");
+    let result: any = dictionary;
+    for (const k of keys) {
+      if (!result?.[k]) return key;
+      result = result[k];
+    }
+    return typeof result === "string" ? result : key;
+  };
+
+  const SHORTCUTS = [
+    { label: t("sidebar.overview"), icon: Icons.Overview, href: getLocalizedUrl("/overview") },
+    {
+      label: t("sidebar.transactions"),
+      icon: Icons.Transactions,
+      href: getLocalizedUrl("/transactions"),
+    },
+    { label: t("sidebar.calendar"), icon: Icons.CalendarMonth, href: getLocalizedUrl("/calendar") },
+    { label: t("sidebar.accounts"), icon: Icons.Accounts, href: getLocalizedUrl("/accounts") },
+    { label: t("sidebar.debts"), icon: Icons.Currency, href: getLocalizedUrl("/debts") },
+    { label: t("sidebar.contacts"), icon: Icons.Customers, href: getLocalizedUrl("/contacts") },
+    { label: t("sidebar.vault"), icon: Icons.Vault, href: getLocalizedUrl("/vault") },
+  ];
+
+  const SETTINGS_ITEMS = [
+    {
+      label: t("settings.account.title"),
+      icon: Icons.Settings,
+      href: getLocalizedUrl("/settings/profile"),
+    },
+    {
+      label: t("settings.appearance.title"),
+      icon: Icons.Settings,
+      href: getLocalizedUrl("/settings/appearance"),
+    },
+  ];
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -111,11 +131,11 @@ export function SearchDialog() {
   };
 
   const filteredShortcuts = SHORTCUTS.filter((s) =>
-    s.label.toLowerCase().includes(debouncedSearch.toLowerCase()),
+    String(s.label || "").toLowerCase().includes(debouncedSearch.toLowerCase()),
   );
 
   const filteredSettings = SETTINGS_ITEMS.filter((s) =>
-    s.label.toLowerCase().includes(debouncedSearch.toLowerCase()),
+    String(s.label || "").toLowerCase().includes(debouncedSearch.toLowerCase()),
   );
 
   const hasResults =
@@ -123,6 +143,8 @@ export function SearchDialog() {
     filteredSettings.length > 0 ||
     transactions.length > 0 ||
     vaultFiles.length > 0;
+
+  if (!dictionary) return null;
 
   return (
     <>
@@ -133,7 +155,7 @@ export function SearchDialog() {
       >
         <span className="inline-flex items-center">
           <Icons.Search className="mr-2 h-4 w-4" />
-          Find anything...
+          {t("search.placeholder")}
         </span>
         <Kbd className="pointer-events-none absolute right-[0.3rem] top-[0.3rem] hidden h-6 select-none items-center gap-1 px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
           <span>⌘</span>K
@@ -145,9 +167,9 @@ export function SearchDialog() {
           className="overflow-hidden p-0 max-w-full w-full md:max-w-[740px] h-[535px] m-0 select-text border-none shadow-2xl flex flex-col bg-background/80 backdrop-blur-xl"
           showCloseButton={false}
         >
-          <DialogTitle className="sr-only">Search</DialogTitle>
+          <DialogTitle className="sr-only">{t("search.shortcuts")}</DialogTitle>
           <DialogDescription className="sr-only">
-            Search for transactions, vault files, and more.
+            {t("search.input_placeholder")}
           </DialogDescription>
           <Command
             shouldFilter={false}
@@ -155,7 +177,7 @@ export function SearchDialog() {
           >
             <div className="border-b border-border relative">
               <CommandInput
-                placeholder="Type a command or search..."
+                placeholder={t("search.input_placeholder")}
                 onValueChange={(value: string) => {
                   setDebouncedSearch(value);
 
@@ -176,12 +198,12 @@ export function SearchDialog() {
             </div>
             <CommandList className="max-h-full h-full pb-2 scrollbar-thin scrollbar-thumb-muted-foreground/20">
               {!hasResults && !isFetching && (
-                <CommandEmpty>No results found.</CommandEmpty>
+                <CommandEmpty>{t("search.no_results")}</CommandEmpty>
               )}
 
               {filteredShortcuts.length > 0 && (
                 <CommandGroup
-                  heading="Shortcuts"
+                  heading={t("search.shortcuts")}
                   className="px-2 **:[[cmdk-group-heading]]:px-3 **:[[cmdk-group-heading]]:py-2 **:[[cmdk-group-heading]]:text-[10px] **:[[cmdk-group-heading]]:font-semibold **:[[cmdk-group-heading]]:uppercase **:[[cmdk-group-heading]]:tracking-wider **:[[cmdk-group-heading]]:text-muted-foreground"
                 >
                   {filteredShortcuts.map((shortcut) => (
@@ -202,7 +224,7 @@ export function SearchDialog() {
 
               {transactions.length > 0 && (
                 <CommandGroup
-                  heading="Transactions"
+                  heading={t("search.transactions")}
                   className="px-2 **:[[cmdk-group-heading]]:px-3 **:[[cmdk-group-heading]]:py-2 **:[[cmdk-group-heading]]:text-[10px] **:[[cmdk-group-heading]]:font-semibold **:[[cmdk-group-heading]]:uppercase **:[[cmdk-group-heading]]:tracking-wider **:[[cmdk-group-heading]]:text-muted-foreground"
                 >
                   {transactions.map((transaction) => {
@@ -213,7 +235,7 @@ export function SearchDialog() {
                     return (
                       <CommandItem
                         key={transaction.id}
-                        onSelect={() => onSelect("/en/transactions")}
+                        onSelect={() => onSelect(getLocalizedUrl("/transactions"))}
                         className="px-3 py-2.5 rounded-md cursor-pointer flex items-center justify-between"
                       >
                         <div className="flex items-center">
@@ -252,24 +274,24 @@ export function SearchDialog() {
                     );
                   })}
                   <CommandItem
-                    onSelect={() => onSelect("/en/transactions")}
+                    onSelect={() => onSelect(getLocalizedUrl("/transactions"))}
                     className="px-3 py-2.5 rounded-md cursor-pointer text-muted-foreground"
                   >
                     <Icons.Settings size={14} className="mr-3 ml-0.5" />
-                    <span className="text-xs">View transactions</span>
+                    <span className="text-xs">{t("search.view_transactions")}</span>
                   </CommandItem>
                 </CommandGroup>
               )}
 
               {vaultFiles.length > 0 && (
                 <CommandGroup
-                  heading="Vault"
+                  heading={t("search.vault")}
                   className="px-2 **:[[cmdk-group-heading]]:px-3 **:[[cmdk-group-heading]]:py-2 **:[[cmdk-group-heading]]:text-[10px] **:[[cmdk-group-heading]]:font-semibold **:[[cmdk-group-heading]]:uppercase **:[[cmdk-group-heading]]:tracking-wider **:[[cmdk-group-heading]]:text-muted-foreground"
                 >
                   {vaultFiles.map((file) => (
                     <CommandItem
                       key={file.id}
-                      onSelect={() => onSelect("/en/vault")}
+                      onSelect={() => onSelect(getLocalizedUrl("/vault"))}
                       className="px-3 py-2.5 rounded-md cursor-pointer flex items-center justify-between"
                     >
                       <div className="flex items-center">
@@ -287,18 +309,18 @@ export function SearchDialog() {
                     </CommandItem>
                   ))}
                   <CommandItem
-                    onSelect={() => onSelect("/en/vault")}
+                    onSelect={() => onSelect(getLocalizedUrl("/vault"))}
                     className="px-3 py-2.5 rounded-md cursor-pointer text-muted-foreground"
                   >
                     <Icons.Settings size={14} className="mr-3 ml-0.5" />
-                    <span className="text-xs">View vault</span>
+                    <span className="text-xs">{t("search.view_vault")}</span>
                   </CommandItem>
                 </CommandGroup>
               )}
 
               {filteredSettings.length > 0 && (
                 <CommandGroup
-                  heading="Settings"
+                  heading={t("search.settings")}
                   className="px-2 **:[[cmdk-group-heading]]:px-3 **:[[cmdk-group-heading]]:py-2 **:[[cmdk-group-heading]]:text-[10px] **:[[cmdk-group-heading]]:font-semibold **:[[cmdk-group-heading]]:uppercase **:[[cmdk-group-heading]]:tracking-wider **:[[cmdk-group-heading]]:text-muted-foreground"
                 >
                   {filteredSettings.map((item) => (
@@ -337,7 +359,7 @@ export function SearchDialog() {
                   />
                 </div>
                 <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-tight">
-                  Navigate
+                  {t("search.navigate")}
                 </span>
               </div>
 
@@ -351,7 +373,7 @@ export function SearchDialog() {
                   />
                 </div>
                 <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-tight">
-                  Open
+                  {t("search.open")}
                 </span>
               </div>
             </div>

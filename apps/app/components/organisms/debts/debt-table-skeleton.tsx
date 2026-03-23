@@ -1,12 +1,18 @@
 import { TableSkeleton } from "@workspace/ui";
 import { debtColumns } from "./debts-columns";
+import { useAppStore } from "@/stores/app";
 
 export function DebtTableSkeleton() {
+  const { dictionary } = useAppStore();
+
+  if (!dictionary) return null;
+
   const columns = debtColumns(
     () => {},
     () => {},
     () => {},
     () => {},
+    dictionary,
   );
 
   return (

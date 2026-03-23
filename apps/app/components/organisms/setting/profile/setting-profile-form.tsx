@@ -68,7 +68,7 @@ import {
 } from "@workspace/modules/user/user.action";
 
 export function SettingProfileForm() {
-  const { dictionary, isLoading: isDictLoading } = useAppStore();
+  const { dictionary, isLoading: isDictLoading } = useAppStore() as any;
   const { data: meData, isLoading: isMeLoading } = useQuery({
     queryKey: ["me"],
     queryFn: async () => {
@@ -233,10 +233,10 @@ function ProfileFormInner({ profile, user }: { profile: any; user: any }) {
             name="username"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>{profile.username.label}</FormLabel>
+                <FormLabel>{profile.form.username_label}</FormLabel>
                 <FormControl>
                   <Input
-                    placeholder={profile.username.placeholder}
+                    placeholder={profile.form.username_placeholder}
                     {...field}
                     className="rounded-none max-w-md"
                   />
@@ -253,7 +253,7 @@ function ProfileFormInner({ profile, user }: { profile: any; user: any }) {
             name="email"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>{profile.email.label}</FormLabel>
+                <FormLabel>{profile.form.email_label || profile.email.label}</FormLabel>
                 <FormControl>
                   <Input
                     disabled

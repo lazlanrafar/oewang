@@ -25,12 +25,20 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   debts: DebtWithContact[];
   contactName: string;
+  dictionary: any;
 }
 
-export function BulkPaySheet({ open, onOpenChange, debts, contactName }: Props) {
+export function BulkPaySheet({
+  open,
+  onOpenChange,
+  debts,
+  contactName,
+  dictionary,
+}: Props) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { settings, formatCurrency } = useAppStore();
+  const { settings, formatCurrency, dictionary: global_dict, isLoading: isDictLoading } = useAppStore() as any;
+  const dict = dictionary || global_dict?.debts;
 
   // Only show outstanding debts
   const outstanding = debts.filter((d) => d.status !== "paid");
@@ -68,16 +76,16 @@ export function BulkPaySheet({ open, onOpenChange, debts, contactName }: Props) 
 
   const totalToPay = selectedDebts.reduce(
     (acc, d) => acc + Number.parseFloat(d.remainingAmount as string),
-    0
+    0,
   );
 
   const handleSubmit = async () => {
     if (!walletId) {
-      toast.error("Please select an account");
+      toast.error(dict.bulk_settlement.select_account_toast);
       return;
     }
     if (selectedDebts.length === 0) {
-      toast.error("Please select at least one debt");
+      toast.error(dict.bulk_settlement.select_at_least_one_toast);
       return;
     }
 
@@ -94,17 +102,19 @@ export function BulkPaySheet({ open, onOpenChange, debts, contactName }: Props) 
       const result = await bulkPayDebt(payload);
 
       if (result.success) {
-        toast.success(`Successfully settled ${selectedDebts.length} debt${selectedDebts.length > 1 ? "s" : ""}`);
+        toast.success(dict.bulk_settlement.success_toast);
         queryClient.invalidateQueries({ queryKey: ["debts"] });
         queryClient.invalidateQueries({ queryKey: ["wallets"] });
         queryClient.invalidateQueries({ queryKey: ["transactions"] });
         router.refresh();
         onOpenChange(false);
       } else {
-        toast.error(result.error || "Failed to settle debts. Please try again.");
+        toast.error(
+          result.error || dict.bulk_settlement.error_toast,
+        );
       }
     } catch {
-      toast.error("Unexpected error. Please try again.");
+      toast.error(dict.bulk_settlement.error_toast);
     } finally {
       setIsLoading(false);
     }
@@ -114,7 +124,9 @@ export function BulkPaySheet({ open, onOpenChange, debts, contactName }: Props) 
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="flex flex-col h-full p-0 rounded-none shadow-none border-l sm:max-w-[540px]">
         <SheetHeader className="px-6 py-6 border-b shrink-0 bg-muted/5 text-left">
-          <SheetTitle className="font-serif text-xl font-normal">Bulk Settlement</SheetTitle>
+          <SheetTitle className="font-serif text-xl font-normal">
+            {dict.bulk_settlement.title}
+          </SheetTitle>
           <p className="text-xs text-muted-foreground uppercase tracking-widest">
             {contactName}
           </p>
@@ -123,7 +135,7 @@ export function BulkPaySheet({ open, onOpenChange, debts, contactName }: Props) 
         <div className="flex-1 overflow-y-auto no-scrollbar">
           {outstanding.length === 0 ? (
             <div className="flex items-center justify-center h-40 text-sm text-muted-foreground px-6">
-              No outstanding debts for this contact.
+              {dict.bulk_settlement.no_outstanding}
             </div>
           ) : (
             <>
@@ -144,7 +156,8 @@ export function BulkPaySheet({ open, onOpenChange, debts, contactName }: Props) 
                   htmlFor="select-all"
                   className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground cursor-pointer"
                 >
-                  Select all ({outstanding.length})
+                  {dict.bulk_settlement.select_all} (
+                  {outstanding.length})
                 </label>
               </div>
 
@@ -152,7 +165,9 @@ export function BulkPaySheet({ open, onOpenChange, debts, contactName }: Props) 
               <div className="divide-y divide-border/50">
                 {outstanding.map((debt) => {
                   const amount = Number.parseFloat(debt.amount as string);
-                  const remaining = Number.parseFloat(debt.remainingAmount as string);
+                  const remaining = Number.parseFloat(
+                    debt.remainingAmount as string,
+                  );
                   const isReceivable = debt.type === "receivable";
                   const isSelected = selectedIds.has(debt.id);
 
@@ -161,7 +176,7 @@ export function BulkPaySheet({ open, onOpenChange, debts, contactName }: Props) 
                       key={debt.id}
                       className={cn(
                         "px-6 py-4 flex items-start gap-4 transition-colors cursor-pointer",
-                        isSelected ? "bg-muted/5" : "opacity-60"
+                        isSelected ? "bg-muted/5" : "opacity-60",
                       )}
                       onClick={() => toggle(debt.id)}
                     >
@@ -176,7 +191,7 @@ export function BulkPaySheet({ open, onOpenChange, debts, contactName }: Props) 
                       <div
                         className={cn(
                           "mt-0.5 shrink-0",
-                          isReceivable ? "text-emerald-500" : "text-rose-500"
+                          isReceivable ? "text-emerald-500" : "text-rose-500",
                         )}
                       >
                         {isReceivable ? (
@@ -195,16 +210,21 @@ export function BulkPaySheet({ open, onOpenChange, debts, contactName }: Props) 
                                 "text-[10px] font-medium uppercase tracking-widest",
                                 isReceivable
                                   ? "text-emerald-600 dark:text-emerald-400"
-                                  : "text-rose-600 dark:text-rose-400"
+                                  : "text-rose-600 dark:text-rose-400",
                               )}
                             >
-                              {isReceivable ? "Owed to you" : "You owe"}
+                              {isReceivable
+                                ? dict.bulk_settlement.owed_to_you ||
+                                  "Owed to you"
+                                : dict.bulk_settlement.you_owe ||
+                                  "You owe"}
                             </span>
                             <Badge
                               variant="outline"
                               className="h-4 px-1.5 text-[9px] uppercase font-medium tracking-widest rounded-none shadow-none"
                             >
-                              {debt.status}
+                              {dict.statuses[debt.status] ||
+                                debt.status}
                             </Badge>
                           </div>
                           <span className="text-[10px] text-muted-foreground">
@@ -217,7 +237,8 @@ export function BulkPaySheet({ open, onOpenChange, debts, contactName }: Props) 
                         </p>
                         {remaining < amount && (
                           <p className="text-[10px] text-muted-foreground line-through opacity-60 mt-0.5">
-                            Original: {formatCurrency(amount)}
+                            {dict.details.original_amount}:{" "}
+                            {formatCurrency(amount)}
                           </p>
                         )}
                         {debt.description && (
@@ -240,7 +261,7 @@ export function BulkPaySheet({ open, onOpenChange, debts, contactName }: Props) 
             {/* Account selector */}
             <div className="space-y-2">
               <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
-                Pay from account
+                {dict.bulk_settlement.pay_from_account}
               </p>
               <SelectAccount
                 value={walletId || undefined}
@@ -252,13 +273,17 @@ export function BulkPaySheet({ open, onOpenChange, debts, contactName }: Props) 
             <div className="flex items-center justify-between gap-4 pt-2 border-t border-border/50">
               <div>
                 <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
-                  Total to settle
+                  {dict.bulk_settlement.total_to_settle}
                 </p>
                 <p className="text-2xl font-serif font-normal">
                   {formatCurrency(totalToPay)}
                 </p>
                 <p className="text-[10px] text-muted-foreground">
-                  {selectedDebts.length} debt{selectedDebts.length !== 1 ? "s" : ""} selected
+                  {selectedDebts.length}{" "}
+                  {selectedDebts.length === 1
+                    ? dict.columns.debt || "debt"
+                    : dict.title.toLowerCase() || "debts"}{" "}
+                  selected
                 </p>
               </div>
               <Button
@@ -266,7 +291,9 @@ export function BulkPaySheet({ open, onOpenChange, debts, contactName }: Props) 
                 disabled={isLoading || selectedDebts.length === 0 || !walletId}
                 onClick={handleSubmit}
               >
-                {isLoading ? "Settling…" : "Settle All"}
+                {isLoading
+                  ? dict.bulk_settlement.settling
+                  : dict.bulk_settlement.settle_button}
               </Button>
             </div>
           </div>

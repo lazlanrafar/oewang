@@ -10,17 +10,20 @@ import { Grid2X2, LineChart } from "lucide-react";
 import { OverviewCards } from "./overview-cards";
 import { OverviewMetrics } from "./overview-metrics";
 
+import { useAppStore } from "@/stores/app";
+
 import type {
   ChartDataPoint,
   CategoryBreakdownPoint,
 } from "@workspace/modules/metrics/metrics.action";
 import type { TransactionSettings } from "@workspace/types";
 
-function getGreeting() {
+function getGreeting(dict: any) {
   const hour = new Date().getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  return "Good evening";
+  const greetings = dict.overview.greetings;
+  if (hour < 12) return greetings.morning;
+  if (hour < 17) return greetings.afternoon;
+  return greetings.evening;
 }
 
 interface OverviewClientProps {
@@ -32,6 +35,7 @@ interface OverviewClientProps {
   burnRateData: ChartDataPoint[];
   expenseCategoryData: CategoryBreakdownPoint[];
   incomeCategoryData: CategoryBreakdownPoint[];
+  settings?: any;
 }
 
 export function OverviewClient({
@@ -46,6 +50,7 @@ export function OverviewClient({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { dictionary } = useAppStore();
 
   const activeTab = searchParams.get("tab") || defaultTab;
 
@@ -59,6 +64,8 @@ export function OverviewClient({
     params.set("tab", value);
     router.push(`${pathname}?${params.toString()}`, { scroll: false });
   };
+
+  if (!dictionary) return null;
 
   return (
     <Tabs
@@ -78,10 +85,10 @@ export function OverviewClient({
         <div className="flex justify-between items-end">
           <div>
             <h1 className="text-2xl font-serif">
-              {getGreeting()} {displayName},
+              {getGreeting(dictionary)} {displayName},
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              here&apos;s a quick look at how things are going.
+              {dictionary.overview.descriptions[activeTab as keyof typeof dictionary.overview.descriptions]}
             </p>
           </div>
 
@@ -96,7 +103,7 @@ export function OverviewClient({
                 )}
               >
                 <Grid2X2 className="w-4 h-4" />
-                Overview
+                {dictionary.overview.tabs.overview}
               </TabsTrigger>
               <TabsTrigger
                 value="metrics"
@@ -107,7 +114,7 @@ export function OverviewClient({
                 )}
               >
                 <LineChart className="w-4 h-4" />
-                Metrics
+                {dictionary.overview.tabs.metrics}
               </TabsTrigger>
             </TabsList>
           </div>

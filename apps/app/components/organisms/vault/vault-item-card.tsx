@@ -9,12 +9,14 @@ interface VaultItemCardProps {
   file: VaultFile;
   isSelected: boolean;
   onSelect: (file: VaultFile) => void;
+  dictionary: any;
 }
 
 export function VaultItemCard({
   file,
   isSelected,
   onSelect,
+  dictionary,
 }: VaultItemCardProps) {
   return (
     <div

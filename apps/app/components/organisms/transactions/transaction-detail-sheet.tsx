@@ -81,25 +81,27 @@ export function TransactionDetailSheet({
   onNext,
   onPrevious,
 }: Props) {
-  const { getTransactionColor, formatCurrency } = useAppStore();
+  const { getTransactionColor, formatCurrency, dictionary } = useAppStore();
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewFile, setPreviewFile] = useState<FilePreview | null>(null);
   const [vaultPickerOpen, setVaultPickerOpen] = useState(false);
   const queryClient = useQueryClient();
+
+  if (!dictionary) return null;
 
   const updateMutation = useMutation({
     mutationFn: (data: Partial<Transaction>) =>
       updateTransaction(transaction!.id, data),
     onSuccess: (res) => {
       if (res.success) {
-        toast.success("Transaction updated");
+        toast.success(dictionary.transactions.toasts.updated);
         queryClient.invalidateQueries({ queryKey: ["transactions"] });
       } else {
-        toast.error(res.error || "Failed to update transaction");
+        toast.error(res.error || dictionary.transactions.errors.save_failed);
       }
     },
     onError: (error: any) => {
-      toast.error(error.message || "An unexpected error occurred");
+      toast.error(error.message || dictionary.settings.common.error);
     },
   });
 
@@ -125,7 +127,7 @@ export function TransactionDetailSheet({
       });
       setPreviewOpen(true);
     } else {
-      toast.error("Failed to load file preview");
+      toast.error(dictionary.transactions.errors.preview_failed);
     }
   };
 
@@ -151,7 +153,7 @@ export function TransactionDetailSheet({
             </div>
 
             <h2 className="mt-6 mb-3">
-              {transaction.description || "No description"}
+              {transaction.name || dictionary.transactions.no_description}
             </h2>
 
             {/* Type & Title & Amount */}
@@ -179,7 +181,7 @@ export function TransactionDetailSheet({
             {transaction.type !== "transfer" && (
               <div className="flex flex-col gap-2">
                 <Label className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest">
-                  Category
+                  {dictionary.transactions.category}
                 </Label>
                 <SelectCategory
                   value={transaction.categoryId || undefined}
@@ -196,7 +198,7 @@ export function TransactionDetailSheet({
             )}
             <div className="flex flex-col gap-2">
               <Label className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest">
-                Assign
+                {dictionary.transactions.assign}
               </Label>
               <SelectUser
                 value={transaction.assignedUserId || undefined}
@@ -215,7 +217,7 @@ export function TransactionDetailSheet({
           >
             <div className="flex flex-col gap-2">
               <Label className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest">
-                Account
+                {dictionary.transactions.account}
               </Label>
               <SelectAccount
                 value={transaction.walletId}
@@ -227,13 +229,13 @@ export function TransactionDetailSheet({
             {transaction.type === "transfer" && (
               <div className="flex flex-col gap-2">
                 <Label className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest">
-                  To Account
+                  {dictionary.transactions.to_account}
                 </Label>
                 <SelectAccount
                   value={transaction.toWalletId || undefined}
                   onChange={(id) => handleUpdate({ toWalletId: id })}
                   className="w-full text-sm font-medium"
-                  placeholder="Select destination account"
+                  placeholder={dictionary.transactions.select_destination}
                 />
               </div>
             )}
@@ -246,7 +248,9 @@ export function TransactionDetailSheet({
             className="w-full mt-6"
           >
             <AccordionItem value="attachments" className="border-none">
-              <AccordionTrigger className="">Attachments</AccordionTrigger>
+              <AccordionTrigger className="">
+                {dictionary.transactions.attachments}
+              </AccordionTrigger>
               <AccordionContent className="flex flex-col gap-4 pt-1">
                 {/* Add from Vault Button */}
 
@@ -302,7 +306,7 @@ export function TransactionDetailSheet({
                     onClick={() => setVaultPickerOpen(true)}
                   >
                     <Plus className="h-3.5 w-3.5" />
-                    Add or upload files
+                    {dictionary.transactions.add_or_upload}
                   </Button>
                 </div>
               </AccordionContent>
@@ -311,12 +315,12 @@ export function TransactionDetailSheet({
             {relatedDebts.length > 0 && (
               <AccordionItem value="debts" className="border-none">
                 <AccordionTrigger className="hover:no-underline py-4 text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.2em]">
-                  Related Debts
+                  {dictionary.transactions.related_debts}
                 </AccordionTrigger>
                 <AccordionContent className="space-y-3 pt-1">
                   {isDebtsLoading ? (
                     <div className="text-xs text-muted-foreground animate-pulse">
-                      Loading debts...
+                      {dictionary.transactions.loading_debts}
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 gap-2 mb-2">
@@ -327,7 +331,8 @@ export function TransactionDetailSheet({
                         >
                           <div className="flex items-center justify-between">
                             <span className="font-medium truncate max-w-[200px]">
-                              {item.contact?.name || "Unknown"}
+                              {item.contact?.name ||
+                                dictionary.transactions.unknown}
                             </span>
                             <span
                               className={cn(
@@ -356,10 +361,14 @@ export function TransactionDetailSheet({
             )}
 
             <AccordionItem value="general" className="border-none">
-              <AccordionTrigger>Details</AccordionTrigger>
+              <AccordionTrigger>
+                {dictionary.transactions.details}
+              </AccordionTrigger>
               <AccordionContent className="flex flex-col pt-2 border-t pt-4 space-y-5">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">Type</span>
+                  <span className="text-xs text-muted-foreground">
+                    {dictionary.transactions.type_label}
+                  </span>
                   <span
                     className={cn(
                       "text-xs font-medium capitalize",
@@ -370,16 +379,19 @@ export function TransactionDetailSheet({
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">Account</span>
+                  <span className="text-xs text-muted-foreground">
+                    {dictionary.transactions.account}
+                  </span>
                   <span className="text-xs font-medium truncate max-w-[150px]">
-                    {transaction.wallet?.name || "No Account"}
+                    {transaction.wallet?.name ||
+                      dictionary.transactions.no_account}
                   </span>
                 </div>
                 {transaction.type === "transfer" &&
                   transaction.toWallet?.name && (
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-muted-foreground">
-                        To Account
+                        {dictionary.transactions.to_account}
                       </span>
                       <span className="text-xs font-medium truncate max-w-[150px]">
                         {transaction.toWallet.name}
@@ -389,17 +401,21 @@ export function TransactionDetailSheet({
                 {transaction.type !== "transfer" && (
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-muted-foreground">
-                      Category
+                      {dictionary.transactions.category}
                     </span>
                     <span className="text-xs font-medium truncate max-w-[150px]">
-                      {transaction.category?.name || "Uncategorized"}
+                      {transaction.category?.name ||
+                        dictionary.transactions.uncategorized}
                     </span>
                   </div>
                 )}
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">Assign</span>
+                  <span className="text-xs text-muted-foreground">
+                    {dictionary.transactions.assign}
+                  </span>
                   <span className="text-xs font-medium truncate max-w-[150px]">
-                    {transaction.user?.name || "Unassigned"}
+                    {transaction.user?.name ||
+                      dictionary.transactions.unassigned}
                   </span>
                 </div>
               </AccordionContent>
@@ -408,7 +424,7 @@ export function TransactionDetailSheet({
             {transaction.description && (
               <AccordionItem value="note" className="border-none">
                 <AccordionTrigger className="hover:no-underline py-4 text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.2em]">
-                  Note
+                  {dictionary.transactions.notes_label}
                 </AccordionTrigger>
                 <AccordionContent className="pt-1">
                   <div className="text-sm leading-relaxed max-w-[90%] wrap-break-word">
@@ -424,10 +440,10 @@ export function TransactionDetailSheet({
         <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[calc(100%-3rem)] bg-background/70 backdrop-blur-xl py-2 flex items-center justify-between z-50 shadow-2xl shadow-black/20 border-t">
           <div className="flex items-center gap-4">
             <p className="text-[10px] text-muted-foreground/60">
-              Created{" "}
+              {dictionary.transactions.created_at}{" "}
               {format(
                 new Date(transaction.createdAt || transaction.date),
-                "MMM d, yyyy 'at' h:mm a",
+                `MMM d, yyyy '${dictionary.transactions.at}' h:mm a`,
               )}
             </p>
           </div>
@@ -458,7 +474,7 @@ export function TransactionDetailSheet({
               className="px-3 hover:bg-muted/40 transition-colors group border grid place-items-center h-7"
             >
               <span className="text-[10px] font-bold text-muted-foreground group-hover:text-foreground uppercase tracking-widest">
-                Esc
+                {dictionary.transactions.esc}
               </span>
             </button>
           </div>

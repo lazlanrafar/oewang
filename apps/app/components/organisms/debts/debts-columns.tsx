@@ -19,6 +19,7 @@ export const debtColumns = (
   onEdit: (debt: DebtWithContact) => void,
   onContactClick: (contactId: string) => void,
   onDelete: (id: string) => void,
+  dictionary: any,
 ): ColumnDef<DebtWithContact>[] => [
   {
     id: "select",
@@ -46,7 +47,7 @@ export const debtColumns = (
   },
   {
     accessorKey: "type",
-    header: "Type",
+    header: dictionary.debts.columns.type,
     cell: ({ row }) => {
       const type = row.getValue("type") as string;
       const isReceivable = type === "receivable";
@@ -63,7 +64,7 @@ export const debtColumns = (
             </div>
           )}
           <span className="text-sm capitalize hidden sm:inline-block">
-            {isReceivable ? "receivable" : "payable"}
+            {isReceivable ? dictionary.debts.types.receivable : dictionary.debts.types.payable}
           </span>
         </div>
       );
@@ -71,7 +72,7 @@ export const debtColumns = (
   },
   {
     accessorKey: "contactName",
-    header: "Contact",
+    header: dictionary.debts.columns.contact,
     cell: ({ row }) => {
       return (
         <span
@@ -88,7 +89,7 @@ export const debtColumns = (
   },
   {
     accessorKey: "description",
-    header: "Description",
+    header: dictionary.debts.columns.description,
     cell: ({ row }) => {
       return (
         <span className="text-sm text-foreground/80 max-w-[200px] truncate block text-left">
@@ -99,7 +100,7 @@ export const debtColumns = (
   },
   {
     accessorKey: "amount",
-    header: "Summary",
+    header: dictionary.debts.columns.summary,
     cell: ({ row, table }) => {
       const amount = Number.parseFloat(row.getValue("amount") as string);
       const remainingAmount = Number.parseFloat(
@@ -124,7 +125,7 @@ export const debtColumns = (
   },
   {
     accessorKey: "status",
-    header: "Status",
+    header: dictionary.debts.columns.status,
     cell: ({ row }) => {
       const status = row.getValue("status") as string;
       return (
@@ -138,14 +139,14 @@ export const debtColumns = (
           }
           className="capitalize shadow-none"
         >
-          {status}
+          {dictionary.debts.statuses[status] || status}
         </Badge>
       );
     },
   },
   {
     accessorKey: "dueDate",
-    header: "Due Date",
+    header: dictionary.debts.columns.due_date,
     cell: ({ row }) => {
       const dueDateStr = row.getValue("dueDate") as string;
       if (!dueDateStr) return <span className="text-sm text-muted-foreground">-</span>;
@@ -168,7 +169,7 @@ export const debtColumns = (
               variant="ghost"
               className="h-8 w-8 p-0 hover:bg-transparent"
             >
-              <span className="sr-only">Open menu</span>
+              <span className="sr-only">{dictionary.debts.actions.open_menu}</span>
               <MoreHorizontal className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -181,7 +182,7 @@ export const debtColumns = (
               className="gap-2 cursor-pointer"
             >
               <ExternalLink className="h-4 w-4" />
-              View details
+              {dictionary.debts.actions.view_details}
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={(e) => {
@@ -191,7 +192,7 @@ export const debtColumns = (
               className="gap-2 cursor-pointer"
             >
               <Edit className="h-4 w-4" />
-              Edit
+              {dictionary.debts.actions.edit}
             </DropdownMenuItem>
             <div className="h-px bg-muted my-1" />
             <DropdownMenuItem
@@ -202,7 +203,7 @@ export const debtColumns = (
               className="gap-2 cursor-pointer text-destructive focus:text-destructive"
             >
               <Trash className="h-4 w-4" />
-              Delete
+              {dictionary.debts.actions.delete}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

@@ -105,10 +105,11 @@ export function TransactionsClient({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [columns, setColumns] = useState<any[]>([]);
-  const { settings, formatCurrency, getTransactionColor } = useAppStore();
-  const [activeTab, setActiveTab] = useState<"all" | "review">("all");
+  const { settings, formatCurrency, getTransactionColor, dictionary } = useAppStore();
+  const [activeTab, setActiveTab] = useState<"all" | "review" | "none">("all");
   const { rowSelection, setRowSelection } = useTransactionsStore();
   const confirm = useConfirm();
+
 
   const [transactionId, setTransactionId] = useQueryState(
     "transactionId",
@@ -223,12 +224,12 @@ export function TransactionsClient({
   const deleteMutation = useMutation({
     mutationFn: deleteTransaction,
     onSuccess: () => {
-      toast.success("Transaction deleted");
+      toast.success(dictionary?.transactions?.toasts?.deleted || "Transaction deleted");
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
       refetch();
     },
     onError: (error: any) => {
-      toast.error(error.message || "Failed to delete transaction");
+      toast.error(error.message || dictionary?.transactions?.toasts?.delete_failed || "Failed to delete transaction");
     },
   });
 
@@ -332,8 +333,8 @@ export function TransactionsClient({
   }, []);
 
   const columnsWithActions = useMemo(
-    () => transactionColumns(handleEdit),
-    [handleEdit],
+    () => dictionary ? transactionColumns(handleEdit, dictionary, formatCurrency, getTransactionColor) : [],
+    [handleEdit, dictionary, formatCurrency, getTransactionColor],
   );
 
   const handleRowClick = (transaction: Transaction) => {
@@ -403,7 +404,7 @@ export function TransactionsClient({
 
     // Limit size to 3MB
     if (file.size > 3 * 1024 * 1024) {
-      toast.error("File size exceeds 3MB limit");
+      toast.error(dictionary?.transactions?.errors?.file_size_limit || "File size too large");
       return;
     }
 
@@ -415,11 +416,11 @@ export function TransactionsClient({
       "application/pdf",
     ];
     if (!allowedTypes.includes(file.type)) {
-      toast.error("Only images and PDFs are allowed");
+      toast.error(dictionary?.transactions?.errors?.file_type_limit || "File type not supported");
       return;
     }
 
-    const toastId = toast.loading("Uploading and parsing receipt...");
+    const toastId = toast.loading(dictionary?.transactions?.toasts?.parsing_receipt || "Parsing receipt...");
 
     try {
       // 1. Upload to Vault
@@ -428,7 +429,7 @@ export function TransactionsClient({
       const uploadResult = await uploadVaultFile(formData);
 
       if (!uploadResult.success || !uploadResult.data) {
-        throw new Error(uploadResult.error || "Upload failed");
+        throw new Error(uploadResult.error || dictionary?.transactions?.errors?.upload_failed || "Upload failed");
       }
 
       const vaultFileId = uploadResult.data.id;
@@ -458,15 +459,15 @@ export function TransactionsClient({
       });
 
       if (!parseResult.success || !parseResult.data) {
-        throw new Error(parseResult.error || "AI parsing failed");
+        throw new Error(parseResult.error || dictionary?.transactions?.errors?.parse_failed || "Parsing failed");
       }
 
       setParsedReceiptData(parseResult.data);
       setIsReceiptConfirmOpen(true);
-      toast.success("Receipt parsed successfully", { id: toastId });
+      toast.success(dictionary?.transactions?.toasts?.parse_success || "Receipt parsed successfully", { id: toastId });
     } catch (error: any) {
       console.error(error);
-      toast.error(error.message || "Failed to process receipt", {
+      toast.error(error.message || dictionary?.transactions?.errors?.process_failed || "Failed to process receipt", {
         id: toastId,
       });
     } finally {
@@ -477,16 +478,18 @@ export function TransactionsClient({
     }
   };
 
-  const typeOptions = [
-    { id: "income", name: "Income" },
-    { id: "expense", name: "Expense" },
-    { id: "transfer", name: "Transfer" },
-  ];
+  const typeOptions = useMemo(() => [
+    { id: "income", name: dictionary?.transactions?.types?.income || "Income" },
+    { id: "expense", name: dictionary?.transactions?.types?.expense || "Expense" },
+    { id: "transfer", name: dictionary?.transactions?.types?.transfer || "Transfer" },
+  ], [dictionary]);
 
   const nonClickableColumns = useMemo(
     () => new Set(["select", "actions", "category", "assignee", "account"]),
     [],
   );
+
+  if (!dictionary) return <TransactionTableSkeleton hideHeader />;
 
   return (
     <div className="flex w-full flex-col h-full gap-4">
@@ -496,12 +499,12 @@ export function TransactionsClient({
           <DataTableFilter
             filters={filters}
             onFilterChange={handleFilterChange as any}
-            placeholder="Search transactions..."
+            placeholder={dictionary.transactions.search_placeholder}
             showDateFilter={false}
             showAmountFilter={false}
             statusOptions={typeOptions}
             statusKey="type"
-            statusLabel="Type"
+            statusLabel={dictionary.transactions.type_label}
             excludeKeys={["startDate", "endDate"]}
             className="w-full bg-transparent border-none p-0 focus-visible:ring-0"
           />
@@ -531,7 +534,7 @@ export function TransactionsClient({
             <DropdownMenuTrigger asChild>
               <Button variant="outline">
                 <Plus className="h-4 w-4" />
-                <span className="text-sm">Add</span>
+                <span className="text-sm">{dictionary.transactions.add_button}</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48 ">
@@ -540,21 +543,21 @@ export function TransactionsClient({
                 onClick={() => setIsImportOpen(true)}
               >
                 <FileUp className="h-4 w-4" />
-                <span>Import/backfill</span>
+                <span>{dictionary.transactions.import_backfill}</span>
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="gap-2 cursor-pointer"
                 onClick={handleCreate}
               >
                 <Receipt className="h-4 w-4" />
-                <span>Create transaction</span>
+                <span>{dictionary.transactions.create_transaction}</span>
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="gap-2 cursor-pointer"
                 onClick={() => fileInputRef.current?.click()}
               >
                 <Upload className="h-4 w-4" />
-                <span>Upload receipts</span>
+                <span>{dictionary.transactions.upload_receipts}</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -613,7 +616,7 @@ export function TransactionsClient({
               startFromColumn: 0,
             }}
             nonClickableColumns={nonClickableColumns}
-            emptyMessage="No transactions found."
+            emptyMessage={dictionary.transactions.empty_message}
             infiniteScroll={true}
             fetchNextPage={fetchNextPage}
             hasNextPage={hasNextPage}
@@ -640,11 +643,10 @@ export function TransactionsClient({
               onRowClick: handleRowClick,
               onDelete: async (id: string) => {
                 const ok = await confirm({
-                  title: "Delete transaction?",
-                  description:
-                    "Are you sure you want to delete this transaction?",
+                  title: dictionary?.transactions?.delete_title || "Delete transaction",
+                  description: dictionary?.transactions?.delete_description || "Are you sure you want to delete this transaction?",
                   destructive: true,
-                  confirmLabel: "Delete",
+                  confirmLabel: dictionary?.transactions?.delete_confirm || "Delete",
                 });
                 if (ok) {
                   deleteMutation.mutate(id);

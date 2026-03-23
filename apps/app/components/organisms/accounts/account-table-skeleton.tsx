@@ -2,9 +2,14 @@
 
 import { TableSkeleton, Skeleton } from "@workspace/ui";
 import { accountColumns } from "./account-columns";
+import { useAppStore } from "@/stores/app";
 
 export function AccountTableSkeleton() {
-  const columns = accountColumns(() => {}, () => {});
+  const { dictionary } = useAppStore();
+
+  if (!dictionary) return null;
+
+  const columns = accountColumns(() => {}, () => {}, dictionary);
 
   return (
     <div className="flex w-full flex-col h-full space-y-4">

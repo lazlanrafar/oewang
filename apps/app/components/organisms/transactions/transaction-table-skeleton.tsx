@@ -2,9 +2,14 @@
 
 import { TableSkeleton } from "@workspace/ui";
 import { transactionColumns } from "./transaction-columns";
+import { useAppStore } from "@/stores/app";
 
 export function TransactionTableSkeleton({ hideHeader = false }: { hideHeader?: boolean }) {
-  const columns = transactionColumns(() => {});
+  const { dictionary, formatCurrency, getTransactionColor } = useAppStore();
+
+  if (!dictionary) return null;
+
+  const columns = transactionColumns(() => {}, dictionary, formatCurrency, getTransactionColor);
 
   return (
     <div className="flex w-full flex-col h-full space-y-4">

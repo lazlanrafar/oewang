@@ -103,7 +103,7 @@ export function MembersClient({ members, invitations }: MembersClientProps) {
     return <MembersSkeleton />;
   }
 
-  const dict = dictionary.settings.members;
+  const dict = (dictionary as any).settings.members;
 
   const handleRefresh = () => {
     router.refresh();
@@ -119,7 +119,7 @@ export function MembersClient({ members, invitations }: MembersClientProps) {
     }
   };
 
-  const common = dictionary?.settings?.common;
+  const common = (dictionary as any)?.settings?.common;
 
   return (
     <div className="space-y-8">

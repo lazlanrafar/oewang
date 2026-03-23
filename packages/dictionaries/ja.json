@@ -6,14 +6,60 @@
   },
   "home": {
     "welcome": "Okaneへようこそ",
-    "description": "あなたの家計を管理するための最高のアプリ。"
+    "description": "あなたの財務を管理するための最高のアプリ。"
   },
   "accounts": {
     "title": "アカウント",
-    "assets": "資産",
-    "liabilities": "負債",
-    "total": "合計",
-    "empty": "アカウントが見つかりません。設定から追加してください。"
+    "total_balance": "総残高",
+    "active": "有効",
+    "search_placeholder": "アカウントを検索...",
+    "add_account": "アカウントを追加",
+    "edit_account": "アカウントを編集",
+    "new_account": "新規アカウント",
+    "update_account": "アカウントを更新",
+    "create_account": "アカウントを作成",
+    "saving": "保存中...",
+    "update_details": "以下のアカウント詳細を更新してください。",
+    "create_description": "残高を追跡するための新しい財務アカウントを作成します。",
+    "account_name": "アカウント名",
+    "account_name_placeholder": "例：個人貯蓄、ビジネス...",
+    "form": {
+      "name": {
+        "error_required": "名前は必須です"
+      }
+    },
+    "group_label": "グループ",
+    "group_placeholder": "アカウントグループを選択",
+    "initial_balance": "初期残高",
+    "include_in_totals_label": "合計に含める",
+    "include_in_totals_description": "純資産計算にこのアカウントの残高を表示します。",
+    "included_in_totals": "合計に含まれる",
+    "excluded_from_totals": "合計から除外",
+    "created_date": "作成日",
+    "created_date_description": "このアカウントがシステムで最初に作成された日付。",
+    "updated": "更新済み",
+    "empty_message": "アカウントが見つかりません。",
+    "table": {
+      "name": "名前",
+      "group": "グループ",
+      "balance": "残高",
+      "created_at": "作成日時",
+      "actions": "アクション"
+    },
+    "toasts": {
+      "updated": "アカウントが正常に更新されました",
+      "update_failed": "アカウントの更新に失敗しました",
+      "created": "アカウントが正常に作成されました",
+      "create_failed": "アカウントの作成に失敗しました",
+      "deleted": "アカウントが正常に削除されました",
+      "delete_failed": "アカウントの削除に失敗しました",
+      "group_updated": "アカウントグループが更新されました",
+      "group_update_failed": "アカウントグループの更新に失敗しました",
+      "balance_updated": "残高が更新されました"
+    },
+    "confirmations": {
+      "delete": "このアカウントを削除してもよろしいですか？"
+    }
   },
   "settings": {
     "common": {
@@ -21,7 +67,7 @@
       "search_currency": "通貨を検索...",
       "no_currency_found": "通貨が見つかりません。",
       "change": "変更",
-      "active": "アクティブ",
+      "active": "有効",
       "processing": "処理中...",
       "connecting": "接続中...",
       "current": "現在",
@@ -31,16 +77,22 @@
       "cancel": "キャンセル",
       "save": "保存",
       "delete": "削除",
-      "opening": "開いています...",
+      "opening": "開始中...",
       "view_pdf": "PDFを表示",
       "used": "使用済み",
       "remaining": "残り",
       "open_menu": "メニューを開く",
-      "error": "エラー"
+      "error": "エラー",
+      "form": {
+        "balance": {
+           "label": "現在の残高",
+           "placeholder": "0.00"
+        }
+      }
     },
     "language": {
       "title": "言語",
-      "description": "好みの言語を選択してください",
+      "description": "希望する言語を選択してください",
       "options": {
         "en": "英語",
         "ja": "日本語",
@@ -48,17 +100,21 @@
       },
       "placeholder": "言語を選択"
     },
+    "account": {
+      "title": "アカウント",
+      "description": "アカウント設定と環境設定を管理します。"
+    },
     "sidebar": {
       "profile": "プロフィール",
       "account": "アカウント",
       "appearance": "外観",
       "notifications": "通知",
-      "display": "表示",
+      "display": "表示設定",
       "transaction": "取引設定",
-      "category_accounts": "カテゴリとアカウント",
-      "income_category": "収入カテゴリ設定",
-      "expenses_category": "支出カテゴリ設定",
-      "accounts": "ウォレットと銀行",
+      "category_accounts": "カテゴリ & アカウント",
+      "income_category": "収入手順",
+      "expenses_category": "支出手順",
+      "accounts": "ウォレット & 銀行",
       "budget": "予算設定",
       "general": "一般設定",
       "backup": "バックアップ",
@@ -66,47 +122,16 @@
       "currency": "通貨設定",
       "alarm": "アラーム設定",
       "language": "言語設定",
-      "billing": "請求とサブスクリプション",
+      "billing": "請求 & サブスクリプション",
+      "members": "メンバー",
       "soon": "まもなく"
-    },
-    "billing": {
-      "title": "請求とサブスクリプション",
-      "description": "ワークスペースのプランとリソースの使用状況を管理します。",
-      "vault_storage": "Vaultストレージ",
-      "ai_tokens": "AIトークン",
-      "current_plan": "現在のプラン",
-      "manage_subscription": "サブスクリプションを管理",
-      "upgrade": "アップグレード",
-      "active_plan": "アクティブなプラン",
-      "monthly": "月額",
-      "annual": "年額",
-      "mo": "月",
-      "yr": "年",
-      "available_plans": "利用可能なプラン",
-      "free_plan": "無料プラン",
-      "starter_plan": "スターター",
-      "monthly_toggle": "月払い",
-      "annual_toggle": "年払い",
-      "no_plans": "利用可能なプランはありません。",
-      "downgrade_confirm": "本当にダウングレードしますか？追加のリソースは失われます。",
-      "get_started": "今すぐ始める",
-      "history": {
-        "title": "請求履歴",
-        "date": "日付",
-        "invoice": "請求書",
-        "amount": "金額",
-        "status": "ステータス",
-        "action": "アクション",
-        "no_history": "請求履歴はありません",
-        "no_history_description": "サブスクリプションを開始すると、ここに請求履歴が表示されます。"
-      }
     },
     "appearance": {
       "title": "外観",
-      "description": "アプリケーションの外観と操作感をカスタマイズします。デイモードとナイトモードを自動的に切り替えます。",
+      "description": "アプリケーションのルックアンドフィールをカスタマイズします。昼と夜のテーマを自動的に切り替えます。",
       "theme": {
         "title": "テーマ設定",
-        "description": "UIのテーマと色をカスタマイズします。",
+        "description": "UIテーマと色をカスタマイズします。",
         "preset": "テーマプリセット",
         "preset_placeholder": "プリセット",
         "mode": "テーマモード",
@@ -116,17 +141,17 @@
       },
       "layout": {
         "title": "レイアウト設定",
-        "description": "間隔とナビゲーションの動作を調整します。",
+        "description": "間隔とナビゲーション動作を調整します。",
         "page_layout": "ページレイアウト",
         "centered": "中央揃え",
-        "full_width": "全幅",
+        "full_width": "フル幅",
         "navbar_behavior": "ナビゲーションバーの動作",
-        "sticky": "固定",
+        "sticky": "スティッキー",
         "scroll": "スクロール"
       },
       "sidebar": {
         "title": "サイドバー設定",
-        "description": "サイドバーのスタイルと折りたたみ動作を設定します。",
+        "description": "サイドバースタイルと折りたたみ動作を構成します。",
         "style": "サイドバースタイル",
         "inset": "インセット",
         "sidebar": "サイドバー",
@@ -137,75 +162,104 @@
       },
       "typography": {
         "title": "タイポグラフィ",
-        "description": "スタイルに合ったフォントを選択してください。",
+        "description": "あなたのスタイルに合ったフォントを選択してください。",
         "font_family": "フォントファミリー",
-        "font_placeholder": "フォントを選択"
+        "font_placeholder": "フォントを選択",
+        "save": "外観を更新",
+        "success": "外観が更新されました"
       },
       "restore_defaults": "デフォルトに戻す"
     },
+    "billing": {
+      "title": "請求",
+      "description": "サブスクリプションと請求情報を管理します。",
+      "current_plan": "現在のプラン",
+      "manage_subscription": "サブスクリプションを管理",
+      "free_plan": "無料プラン",
+      "vault_storage": "保管庫ストレージ",
+      "ai_tokens": "AIトークン",
+      "available_plans": "利用可能なプラン",
+      "monthly_toggle": "月払い",
+      "annual_toggle": "年払い",
+      "no_plans": "利用可能なプランはありません",
+      "mo": "月",
+      "yr": "年",
+      "downgrade_confirm": "本当にダウングレードしますか？",
+      "upgrade": "アップグレード",
+      "get_started": "始める",
+      "history": {
+        "title": "請求履歴",
+        "date": "日付",
+        "invoice": "請求書",
+        "amount": "金額",
+        "status": "ステータス",
+        "action": "アクション",
+        "no_history": "請求履歴はありません",
+        "no_history_description": "まだ購入履歴がありません。"
+      }
+    },
     "profile": {
       "title": "プロフィール",
-      "description": "これはサイト上で他のユーザーに表示される情報です。",
+      "description": "これは、サイト上で他の人があなたをどのように見るかです。",
       "username": {
         "label": "ユーザー名",
         "placeholder": "shadcn",
-        "description": "これは公開表示名です。本名または仮名を使用できます。30日に1回のみ変更可能です。",
-        "error_min": "ユーザー名は2文字以上である必要があります。",
-        "error_max": "ユーザー名は30文字以内である必要があります。"
+        "description": "これはあなたの公開表示名です。本名でもペンネームでも構いません。30日間に1回のみ変更できます。",
+        "error_min": "ユーザー名は少なくとも2文字である必要があります。",
+        "error_max": "ユーザー名は30文字を超えてはいけません。"
       },
       "email": {
         "label": "メールアドレス",
-        "placeholder": "表示する確認済みメールアドレスを選択",
-        "description": "確認済みメールアドレスはメール設定で管理できます。",
-        "error_required": "表示するメールアドレスを選択してください。"
+        "placeholder": "表示する確認済みのメールを選択してください",
+        "description": "確認済みのメールアドレスはメール設定で管理できます。",
+        "error_required": "表示するメールを選択してください。"
       },
       "bio": {
-        "label": "自己紹介",
-        "placeholder": "あなた自身について少し教えてください",
+        "label": "略歴",
+        "placeholder": "自分自身について少し教えてください",
         "description": "他のユーザーや組織を@メンションしてリンクできます。"
       },
       "urls": {
         "label": "URL",
-        "description": "ウェブサイト、ブログ、ソーシャルメディアのプロフィールへのリンクを追加します。",
+        "description": "ウェブサイト、ブログ、またはソーシャルメディアプロフィールへのリンクを追加します。",
         "add_url": "URLを追加",
         "error_invalid": "有効なURLを入力してください。"
       },
       "update_profile": "プロフィールを更新",
       "toast_success": "プロフィールが正常に更新されました",
-      "toast_submitted": "以下の値を送信しました：",
+      "toast_submitted": "次の値を送信しました：",
       "avatar": {
         "label": "プロフィール写真",
         "upload_new": "新規アップロード",
         "allowed_formats": "JPG、GIF、またはPNG。最大10MB。",
-        "error_size": "ファイルサイズが10MBの上限を超えています",
+        "error_size": "ファイルサイズが10MBの制限を超えています",
         "toast_success": "プロフィール写真が自動的に更新されました",
         "error_upload": "写真のアップロードに失敗しました"
-      }
-    },
-    "account": {
-      "title": "アカウント",
-      "description": "アカウント設定を管理し、好みの言語やタイムゾーンを設定します。",
-      "no_providers": "連携されているプロバイダーはありません。",
-      "logged_in_via": "ログイン方法：",
-      "providers": {
-        "title": "連携済みのアカウント",
-        "description": "現在Okaneアカウントにリンクされているアカウントです。",
-        "disconnect": "解除する",
-        "disconnect_confirm": "このアカウントの連携を解除してもよろしいですか？",
-        "disconnect_success": "アカウントの連携を解除しました",
-        "primary_label": "プライマリ"
+      },
+      "form": {
+        "name_label": "表示名",
+        "name_placeholder": "名前を入力してください",
+        "username_label": "ユーザー名",
+        "username_placeholder": "ユニークなユーザー名を選択してください",
+        "bio_label": "略歴",
+        "bio_placeholder": "自分自身について教えてください",
+        "website_label": "ウェブサイト",
+        "website_placeholder": "https://example.com",
+        "save": "プロフィールを更新",
+        "saving": "更新中...",
+        "success": "プロフィールが正常に更新されました"
       }
     },
     "currency": {
-      "title": "主要通貨",
-      "description": "すべての取引に使用する主要通貨を設定します。",
-      "unit_position": "単位の表示位置",
+      "title": "メイン通貨",
+      "description": "すべての取引のプライマリ通貨を設定します。",
+      "unit_position": "単位の位置",
       "decimal_point": "小数点",
-      "toast_updated": "主要通貨の設定が更新されました",
+      "toast_updated": "メイン通貨設定が更新されました",
       "label": "通貨",
       "positions": {
         "Front": "前",
-        "Back": "後ろ"
+        "Back": "後"
       }
     },
     "members": {
@@ -231,7 +285,7 @@
           "placeholder": "colleague@company.com"
         },
         "role": {
-          "label": "役割",
+          "label": "ワークスペースの役割",
           "placeholder": "役割を選択",
           "options": {
             "admin": "管理者",
@@ -241,8 +295,8 @@
         },
         "submit": "招待を送信",
         "cancel": "キャンセル",
-        "success": "招待を送信しました！",
-        "description": "{email} に間もなく招待が届きます。"
+        "success": "招待が送信されました！",
+        "description": "{email} はまもなく招待を受け取ります。"
       }
     },
     "transaction": {
@@ -254,14 +308,14 @@
       "inc": "収入",
       "date_time": {
         "title": "日付と時刻",
-        "description": "取引における日付と時刻の処理方法を設定します。",
+        "description": "取引での日付と時刻の処理方法を構成します。",
         "monthly_start_date": {
-          "label": "月次開始日",
-          "description": "追跡期間が開始する月の日付。",
+          "label": "毎月の開始日",
+          "description": "追跡期間が始まる月の日。",
           "placeholder": "日付を選択"
         },
         "weekend_handling": {
-          "label": "月次開始日が週末の場合、",
+          "label": "毎月の開始日が週末の場合、",
           "options": {
             "no-changes": "変更なし",
             "previous-friday": "前の金曜日",
@@ -269,8 +323,8 @@
           }
         },
         "weekly_start_day": {
-          "label": "週次開始曜日",
-          "description": "週次追跡が開始する曜日。",
+          "label": "毎週の開始日",
+          "description": "毎週の追跡が始まる曜日。",
           "placeholder": "曜日を選択",
           "options": {
             "sunday": "日曜日",
@@ -285,48 +339,48 @@
       },
       "general": {
         "title": "一般設定",
-        "description": "一般的な動作と表示オプションをカスタマイズします。",
+        "description": "一般的な動作と表示オプションを調整します。",
         "default_period": {
           "label": "デフォルト期間",
           "description": "取引のデフォルト表示期間。",
           "placeholder": "期間を選択",
           "options": {
-            "monthly": "月次",
-            "weekly": "週次",
-            "daily": "日次",
-            "yearly": "年次"
+            "monthly": "毎月",
+            "weekly": "毎週",
+            "daily": "毎日",
+            "yearly": "毎年"
           }
         },
         "start_screen": {
           "label": "開始画面",
-          "description": "取引ビューを開いたときに最初に表示される画面。",
+          "description": "取引ビューを開いたときに表示される初期画面。",
           "placeholder": "開始画面を選択",
           "options": {
-            "daily": "日次",
+            "daily": "毎日",
             "calendar": "カレンダー",
-            "weekly": "週次",
-            "monthly": "月次",
-            "summary": "サマリー"
+            "weekly": "毎週",
+            "monthly": "毎月",
+            "summary": "概要"
           }
         },
         "income_expense_color": {
-          "description": "デフォルトでは、収入は「青」、支出は「赤」で表示されます。これを逆にカスタマイズできます。",
+          "description": "デフォルトでは、収入は「青」、支出は「赤」で表示されます。これをカスタマイズできます。",
           "options": {
-            "blue-red": "収入: 青, 支出: 赤",
-            "red-blue": "収入: 赤, 支出: 青"
+            "blue-red": "収入：青、支出：赤",
+            "red-blue": "収入：赤、支出：青"
           }
         }
       },
       "input_interaction": {
-        "title": "入力と操作",
-        "description": "取引とのやり取り方法を微調整します。",
+        "title": "入力とインタラクション",
+        "description": "取引とのやり取り方法をカスタマイズします。",
         "carry_over": {
-          "label": "残高繰り越し",
+          "label": "残高の繰り越し",
           "description": "残りの残高を次の期間に繰り越します。"
         },
         "autocomplete": {
           "label": "オートコンプリート",
-          "description": "入力時に過去の値を提案します。"
+          "description": "入力時に値を提案します。"
         },
         "time_input": {
           "label": "時間入力",
@@ -334,7 +388,7 @@
           "placeholder": "時間入力を選択",
           "options": {
             "none": "なし",
-            "none-desc": "なし, 説明",
+            "none-desc": "なし、説明。",
             "time": "時間"
           }
         },
@@ -343,7 +397,7 @@
           "description": "取引をスワイプしたときのアクション。",
           "placeholder": "スワイプアクションを選択",
           "options": {
-            "change-date": "日付変更",
+            "change-date": "日付を変更",
             "delete": "削除",
             "none": "なし"
           }
@@ -363,7 +417,7 @@
         },
         "quick_note_button": {
           "label": "クイックノートボタン",
-          "description": "メモを素早く追加するボタンを表示します。"
+          "description": "メモをすばやく追加するためのボタンを表示します。"
         }
       }
     },
@@ -429,17 +483,17 @@
     },
     "sub_currencies": {
       "title": "補助通貨",
-      "description": "ワークスペースのセカンダリ通貨を管理します。",
+      "description": "ワークスペースの補助通貨を管理します。",
       "add_button": "通貨を追加",
       "toast_added": "{code} が補助通貨に追加されました",
-      "toast_removed": "{code} を削除しました",
-      "workspace_label": "ワークスペース通貨",
+      "toast_removed": "{code} が削除されました",
+      "workspace_label": "ワークスペースの通貨",
       "rate_now": "現在のレート",
       "empty": "補助通貨はまだ追加されていません。"
     },
     "wallets": {
-      "title": "ウォレットと銀行",
-      "description": "ウォレット、銀行、その他の金融アカウントを管理します。",
+      "title": "ウォレット & 銀行",
+      "description": "ウォレット、銀行、その他の財務アカウントを管理します。",
       "add_button": "ウォレットを追加",
       "add_group_button": "グループを追加",
       "empty": "ウォレットが見つかりません",
@@ -448,7 +502,7 @@
         "add": "グループを追加",
         "edit": "グループを編集",
         "delete": "グループを削除",
-        "delete_confirm": "このグループを削除してもよろしいですか？中のウォレットはすべてグループ解除されます。",
+        "delete_confirm": "このグループを削除してもよろしいですか？中のすべてのウォレットは切り離されます。",
         "form": {
           "name": {
             "label": "名前",
@@ -487,43 +541,512 @@
     }
   },
   "debts": {
-    "title": "貸借管理",
-    "description": "貸し借りを管理し、返済状況を追跡します。",
-    "add_button": "データを追加",
+    "title": "貸し借り",
+    "description": "借金、債権、割り勘を管理します。",
+    "add_button": "貸し借りを追加",
+    "search_placeholder": "貸し借りを検索...",
+    "status_label": "ステータス",
+    "group_label": "グループ",
+    "total_debt": "総借金額",
+    "active_debts": "有効な貸し借り",
+    "overdue": "期限切れ",
     "empty": {
-      "title": "データが見つかりません",
-      "description": "最初の貸借データを記録して追跡を開始しましょう。",
-      "action": "最初のデータを追加"
+      "title": "貸し借りが見つかりません",
+      "description": "借りているお金や貸しているお金を追跡します。最初の貸し借りを追加して始めましょう。",
+      "action": "最初の貸し借りを追加"
+    },
+    "columns": {
+      "contact": "連絡先",
+      "amount": "金額",
+      "due_date": "期日",
+      "status": "ステータス",
+      "type": "タイプ",
+      "description": "説明",
+      "summary": "概要",
+      "debt": "借金"
+    },
+    "statuses": {
+      "unpaid": "未払い",
+      "partial": "一部支払い済み",
+      "paid": "支払い済み"
+    },
+    "types": {
+      "receivable": "債権",
+      "payable": "借金",
+      "you_owe": "あなたの借り",
+      "you_are_owed": "あなたの貸し"
+    },
+    "actions": {
+      "view_details": "詳細を表示",
+      "edit": "編集",
+      "delete": "削除",
+      "open_menu": "メニューを開く"
+    },
+    "toasts": {
+      "deleted": "貸し借りが正常に削除されました",
+      "delete_failed": "貸し借りの削除に失敗しました",
+      "fetch_contact_error": "連絡先詳細の取得に失敗しました",
+      "fetch_contact_error_desc": "連絡先詳細の取得中にエラーが発生しました",
+      "created": "貸し借りが正常に作成されました",
+      "updated": "貸し借りが正常に更新されました",
+      "create_failed": "貸し借りの作成に失敗しました",
+      "update_failed": "貸し借りの更新に失敗しました",
+      "payment_recorded": "支払いが記録されました",
+      "payment_failed": "支払いの記録に失敗しました"
+    },
+    "bulk_settlement": {
+      "title": "一括精算",
+      "no_outstanding": "この連絡先に未払いの貸し借りはありません。",
+      "select_all": "すべて選択",
+      "pay_from_account": "アカウントから支払う",
+      "total_to_settle": "精算総額",
+      "settle_button": "すべて精算",
+      "settling": "精算中...",
+      "success_toast": "貸し借りを正常に精算しました",
+      "error_toast": "貸し借りの精算に失敗しました。もう一度お試しください。",
+      "select_account_toast": "アカウントを選択してください",
+      "select_at_least_one_toast": "少なくとも1つの貸し借りを選択してください"
+    },
+    "confirmations": {
+      "delete_title": "この貸し借りを削除しますか？",
+      "delete_description": "この操作は取り消せません。貸し借りの記録は完全に削除されます。"
+    },
+    "details": {
+      "title": "貸し借りの詳細",
+      "summary": "概要",
+      "original_amount": "元の金額",
+      "paid_amount": "支払い済みの金額",
+      "due_date": "期日",
+      "no_due_date": "期日なし",
+      "from_transaction": "取引から",
+      "notes": "ノート",
+      "settled": "精算済み",
+      "record_payment": "支払いを記録",
+      "settle_all": "すべて精算"
     },
     "form": {
+      "add_title": "新規貸し借り",
+      "edit_title": "貸し借りを編集",
       "contact": {
         "label": "連絡先",
         "placeholder": "連絡先を選択",
+        "description": "この貸し借りに関わっているのは誰ですか？",
         "error_required": "連絡先は必須です"
       },
       "type": {
         "label": "タイプ",
-        "payable": "借りたお金 (Payable)",
-        "receivable": "貸したお金 (Receivable)"
+        "payable": "借金",
+        "receivable": "債権"
       },
+      "type_payable": "あなたの借り",
+      "type_receivable": "あなたの貸し",
       "amount": {
         "label": "金額",
         "placeholder": "0.00",
-        "error_required": "金額は必須です"
+        "description": "貸し借りの総額。",
+        "error_required": "金額は必須です",
+        "error_positive": "金額は正である必要があります",
+        "error_max_remaining": "支払額は残りの貸し借額を超えてはいけません"
       },
-      "description": {
+      "notes": {
         "label": "説明",
-        "placeholder": "この貸借の説明を入力"
+        "placeholder": "この貸し借りは何のためですか？"
       },
       "due_date": {
         "label": "期日",
-        "placeholder": "日付を選択"
+        "placeholder": "日付を選択",
+        "description": "精算のオプションの期限。"
+      },
+      "account": {
+        "label": "アカウント",
+        "placeholder": "アカウントを選択",
+        "error_required": "アカウントは必須です",
+        "description": "取引が発生するアカウントを選択してください。"
+      },
+      "payment": {
+        "title": "支払いを記録",
+        "paying_to_from": "支払い先/元",
+        "remaining_balance": "残り残高",
+        "amount_to_pay": "支払額",
+        "amount_to_pay_description": "精算される金額。",
+        "submit": "支払いを保存"
       },
       "submit": "保存",
       "cancel": "キャンセル",
-      "create_success": "データを記録しました",
-      "update_success": "データを更新しました",
-      "delete_success": "データを削除しました"
+      "saving": "保存中..."
     }
+  },
+  "overview": {
+    "greetings": {
+      "morning": "おはようございます",
+      "afternoon": "こんにちは",
+      "evening": "こんばんは"
+    },
+    "tabs": {
+      "overview": "概要",
+      "metrics": "メトリクス"
+    },
+    "descriptions": {
+      "overview": "毎月の財務概要",
+      "metrics": "詳細な財務メトリクスとチャート"
+    },
+    "metrics": {
+      "income_title": "毎月の収入",
+      "income_description": "カテゴリ別の毎月の収入内訳。",
+      "expense_title": "毎月の支出",
+      "expense_description": "カテゴリ別の毎月の支出内訳。",
+      "category_title": "カテゴリ内訳",
+      "category_description": "すべてのカテゴリにわたる支出の分布。",
+      "income_total_title": "総収入",
+      "income_total_desc": "時間の経過に伴う収入",
+      "expense_total_title": "総支出",
+      "expense_total_desc": "時間の経過に伴う支出",
+      "income_breakdown_title": "収入内訳",
+      "expense_breakdown_title": "支出内訳",
+      "current_month_desc": "今月",
+      "total_income": "総収入",
+      "total_expenses": "総支出",
+      "net_income": "純利益",
+      "top_expense": "最大の支出",
+      "this_month": "今月",
+      "vs_last_month": "対先月",
+      "no_prior_data": "以前のデータなし",
+      "no_expenses": "記録された支出なし"
+    },
+    "chips": {
+      "wallet_balances": "ウォレット残高",
+      "spending_analysis": "支出分析",
+      "latest_transactions": "最新の取引",
+      "monthly_summary": "毎月の概要",
+      "top_expenses": "主な支出",
+      "wallet_balances_msg": "現在のウォレット残高はいくらですか？",
+      "spending_analysis_msg": "過去30日間の支出分析を表示して。",
+      "latest_transactions_msg": "最近の取引を表示して。",
+      "monthly_summary_msg": "過去3ヶ月間の収入対支出の概要を教えて。",
+      "top_expenses_msg": "どのカテゴリで一番お金を使っていますか？"
+    }
+  },
+  "transactions": {
+    "title": "取引",
+    "description": "すべての財務の動きを管理および追跡します。",
+    "search_placeholder": "取引を検索...",
+    "type_label": "タイプ",
+    "add_button": "追加",
+    "import_backfill": "インポート/バックフィル",
+    "create_transaction": "取引を作成",
+    "new_transaction": "新規取引",
+    "edit_transaction": "取引を編集",
+    "save_transaction": "取引を保存",
+    "upload_receipts": "レシートをアップロード",
+    "empty_message": "取引が見つかりません。",
+    "delete_title": "取引を削除しますか？",
+    "delete_description": "この取引を削除してもよろしいですか？",
+    "delete_confirm": "削除",
+    "mark_ready": "準備完了としてマーク",
+    "mark_exported": "エクスポート済みとしてマーク",
+    "reset_status": "ステータスをリセット",
+    "reset_export": "エクスポートをリセット",
+    "copy_link": "リンクをコピー",
+    "view_details": "詳細を表示",
+    "edit": "編集",
+    "save": "保存",
+    "saving": "保存中...",
+    "category": "カテゴリ",
+    "assign": "割り当て",
+    "account": "アカウント",
+    "to_account": "先のアカウント",
+    "description_label": "説明",
+    "amount_label": "金額",
+    "currency_label": "通貨",
+    "date_label": "日付",
+    "notes_label": "ノート",
+    "attachments": "添付ファイル",
+    "related_debts": "関連する貸し借り",
+    "details": "詳細",
+    "created_at": "作成日時",
+    "at": "、",
+    "esc": "Esc",
+    "no_description": "説明なし",
+    "unknown": "不明",
+    "unassigned": "未割り当て",
+    "uncategorized": "未分類",
+    "no_account": "アカウントなし",
+    "select_destination": "宛先を選択",
+    "select_member": "メンバーを選択",
+    "add_or_upload": "ファイルを追加またはアップロード",
+    "click_to_browse": "クリックして参照",
+    "drag_drop": "またはここにファイルをドラッグ＆ドロップ",
+    "upload_hint": "コンピューターまたは保管庫からの画像、PDF、スプレッドシート",
+    "loading_debts": "貸し借りを読み込み中...",
+    "types": {
+      "income": "収入",
+      "expense": "支出",
+      "transfer": "振替",
+      "transfer_in": "振替（入）",
+      "transfer_out": "振替（出）",
+      "transaction": "取引"
+    },
+    "placeholders": {
+      "description": "例：食料品、給与...",
+      "notes": "追加のメモ、リンク、詳細を追加...",
+      "search": "取引を検索...",
+      "destination": "宛先を選択",
+      "member": "メンバーを選択"
+    },
+    "hints": {
+      "type": "お金が入ってくる（収入）か出ていく（支出）かを選択します",
+      "description": "この取引の簡単な説明",
+      "amount": "取引金額を入力してください",
+      "currency": "この取引の通貨",
+      "account": "この取引が存在するアカウント",
+      "date": "取引が発生した日時",
+      "category": "取引の整理と追跡に役立ちます",
+      "to_account": "この振替のターゲットアカウント",
+      "assign": "この取引をチームメンバーに割り当てます",
+      "notes": "取引に関する詳細やコンテキストを追加します"
+    },
+    "errors": {
+      "amount_positive": "金額は正である必要があります",
+      "invalid_date": "無効な日付",
+      "wallet_required": "ウォレットは必須です",
+      "load_failed": "フォームデータの読み込みに失敗しました",
+      "save_failed": "取引の保存に失敗しました",
+      "file_size_limit": "ファイルサイズが3MBの制限を超えています",
+      "file_type_limit": "画像とPDFのみが許可されています",
+      "upload_failed": "アップロードに失敗しました",
+      "parse_failed": "AI解析に失敗しました",
+      "process_failed": "レシートの処理に失敗しました",
+      "invalid_file_type": "{name} のファイルタイプが無効です。ドキュメントと画像のみが許可されています。",
+      "some_uploads_failed": "一部のファイルのアップロードに失敗しました",
+      "preview_failed": "ファイルプレビューの読み込みに失敗しました"
+    },
+    "group_by": {
+      "placeholder": "グループ化...",
+      "none": "なし",
+      "daily": "毎日",
+      "weekly": "毎週",
+      "monthly": "毎月"
+    },
+    "toasts": {
+      "deleted": "取引を削除しました",
+      "delete_failed": "取引の削除に失敗しました",
+      "updated": "取引を更新しました",
+      "created": "取引を作成しました",
+      "category_updated": "カテゴリを更新しました",
+      "account_updated": "アカウントを更新しました",
+      "assignee_updated": "担当者を更新しました",
+      "link_copied": "リンクをクリップボードにコピーしました",
+      "marked_pending": "保留としてマークしました",
+      "marked_ready": "準備完了としてマークしました",
+      "marked_exported": "エクスポート済としてマークしました",
+      "unmarked_exported": "エクスポート済マークを解除しました",
+      "parsing_receipt": "レシートをアップロードして処理中...",
+      "parse_success": "レシートの解析に成功しました",
+      "uploading_files": "{count} 個のファイルをアップロード中...",
+      "all_uploads_success": "すべてのファイルのアップロードに成功しました"
+    }
+  },
+  "contacts": {
+    "title": "連絡先",
+    "description": "連絡先を管理し、債務履歴を追跡します。",
+    "add_button": "新規連絡先",
+    "search_placeholder": "連絡先を検索...",
+    "empty": {
+      "title": "連絡先がまだありません",
+      "description": "最初の連絡先を追加して始めましょう。",
+      "action": "最初の連絡先を追加"
+    },
+    "summary": {
+      "total": "総連絡先数",
+      "added_this_month": "今月追加",
+      "most_active": "最もアクティブなクライアント",
+      "top_revenue": "最高収益クライアント",
+      "no_activity": "アクティビティデータなし",
+      "no_revenue": "収益データなし"
+    },
+    "columns": {
+      "name": "名前",
+      "email": "メールアドレス",
+      "phone": "電話番号",
+      "address": "住所",
+      "created_at": "登録日"
+    },
+    "details": {
+      "title": "連絡先詳細",
+      "quick_edit": "クイック編集",
+      "view_details": "詳細を表示",
+      "no_email": "メールアドレスなし",
+      "activity_history": "アクティビティ履歴",
+      "no_history": "取引履歴なし",
+      "progress": "進捗",
+      "settled": "清算済み",
+      "notes": "メモ",
+      "edit_contact": "連絡先を編集",
+      "delete_contact": "連絡先を削除",
+      "delete_confirm_title": "連絡先を削除しますか？",
+      "delete_confirm_desc": "この操作により、この連絡先は永久に削除され、元に戻すことはできません。"
+    },
+    "form": {
+      "name_label": "名前",
+      "name_placeholder": "山田 太郎",
+      "email_label": "メールアドレス",
+      "email_placeholder": "yamada@example.com",
+      "phone_label": "電話番号",
+      "phone_placeholder": "090-1234-5678",
+      "address_label": "住所",
+      "address_placeholder": "東京都千代田区1-2-3",
+      "notes_label": "メモ",
+      "notes_placeholder": "追加情報...",
+      "save": "変更を保存",
+      "saving": "保存中...",
+      "create": "連絡先を作成",
+      "creating": "作成中...",
+      "cancel": "キャンセル",
+      "errors": {
+        "name_required": "名前は必須です",
+        "invalid_email": "無効なメールアドレスです"
+      }
+    },
+    "toasts": {
+      "created": "連絡先を作成しました",
+      "updated": "連絡先を更新しました",
+      "deleted": "連絡先を削除しました",
+      "create_failed": "連絡先の作成に失敗しました",
+      "update_failed": "連絡先の更新に失敗しました",
+      "delete_failed": "連絡先の削除に失敗しました"
+    }
+  },
+  "common": {
+    "loading_more": "さらに読み込み中..."
+  },
+  "vault": {
+    "title": "保管庫",
+    "description": "ドキュメントや請求書を安全に管理します。",
+    "upload_button": "アップロード",
+    "search_placeholder": "ファイルを検索...",
+    "drop_zone": {
+      "title": "ドキュメントをドロップしてアップロード",
+      "description": "画像、PDF、またはExcelファイルのみ"
+    },
+    "empty": {
+      "title": "ファイルが見つかりません",
+      "no_results": "\"{search}\" の結果はありません。別のキーワードを試してください。",
+      "get_started": "最初のファイルをアップロードして始めましょう。",
+      "clear_search": "検索をクリア"
+    },
+    "storage": {
+      "usage": "{used} / {limit} MB",
+      "title": "ストレージ使用量",
+      "used": "使用済み",
+      "remaining": "残り"
+    },
+    "details": {
+      "title": "ファイル詳細",
+      "no_file_selected": "ファイルが選択されていません",
+      "no_file_selected_desc": "ファイルを選択して、詳細やサイズを確認し、タグを管理します。",
+      "date_created": "作成日",
+      "format": "フォーマット",
+      "file_size": "ファイルサイズ",
+      "dimensions": "寸法",
+      "tags": "タグ",
+      "no_tags": "タグなし",
+      "suggested_tags": "提案されたタグ",
+      "add_custom_tag": "カスタムタグを追加...",
+      "add_tag_button": "追加",
+      "view_full": "全画面表示",
+      "open_original": "オリジナルを開く",
+      "download_local": "ローカルにダウンロード",
+      "delete": "削除"
+    },
+    "columns": {
+      "filename": "ファイル名",
+      "format": "フォーマット",
+      "size": "ファイルサイズ",
+      "date": "作成日"
+    },
+    "toasts": {
+      "uploading": "{count} 個のファイルをアップロード中...",
+      "upload_success": "すべてのファイルのアップロードに成功しました",
+      "upload_failed_some": "一部のファイルのアップロードに失敗しました",
+      "upload_failed": "アップロードに失敗しました",
+      "delete_success": "ファイルを削除しました",
+      "delete_failed": "ファイルの削除に失敗しました",
+      "tags_update_success": "タグを更新しました",
+      "tags_update_failed": "タグの更新に失敗しました",
+      "invalid_type": "{name} のファイルタイプが無効です。ドキュメントと画像のみが許可されています。"
+    }
+  },
+  "calendar": {
+    "title": "カレンダー",
+    "description": "財務イベントを時系列で可視化します。",
+    "view": {
+      "month": "月",
+      "week": "週",
+      "today": "今日"
+    },
+    "tabs": {
+      "week": "週",
+      "month": "月"
+    },
+    "days": {
+      "short": {
+        "sun": "日",
+        "mon": "月",
+        "tue": "火",
+        "wed": "水",
+        "thu": "木",
+        "fri": "金",
+        "sat": "土"
+      }
+    },
+    "activity": {
+      "debt": "{count} 件の債務",
+      "debts": "{count} 件の債務"
+    },
+    "summary": {
+      "income": "総収入",
+      "expense": "総支出"
+    },
+    "sheet": {
+      "income_total": "総収入",
+      "expense_total": "総支出",
+      "transactions_title": "取引 ({count})",
+      "debts_title": "債務 要件/発生 ({count})",
+      "no_transactions": "今日の取引はありません。",
+      "no_debts": "今日記録された債務や期限の債務はありません。",
+      "unknown_transaction": "不明"
+    }
+  },
+  "sidebar": {
+    "dashboard": "ダッシュボード",
+    "finance": "財務",
+    "people": "ピープル",
+    "workspace": "ワークスペース",
+    "system": "システム",
+    "overview": "概要",
+    "transactions": "取引",
+    "calendar": "カレンダー",
+    "accounts": "アカウント",
+    "debts": "借金",
+    "contacts": "連絡先",
+    "vault": "保管庫",
+    "apps": "アプリ",
+    "settings": "設定",
+    "invoices": "請求書",
+    "customers": "顧客",
+    "coming_soon": "まもなく"
+  },
+  "search": {
+    "placeholder": "何でも探す...",
+    "input_placeholder": "コマンドを入力または検索...",
+    "no_results": "結果が見つかりません。",
+    "shortcuts": "ショートカット",
+    "transactions": "取引",
+    "vault": "保管庫",
+    "settings": "設定",
+    "view_transactions": "取引を表示",
+    "view_vault": "保管庫を表示",
+    "navigate": "ナビゲート",
+    "open": "開く"
   }
 }

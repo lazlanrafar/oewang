@@ -6,14 +6,60 @@
   },
   "home": {
     "welcome": "Welcome to Okane",
-    "description": "The best app for managing your finances."
+    "description": "The best app to manage your finances."
   },
   "accounts": {
     "title": "Accounts",
-    "assets": "Assets",
-    "liabilities": "Liabilities",
-    "total": "Total",
-    "empty": "No accounts found. Start by adding one in settings."
+    "total_balance": "Total Balance",
+    "active": "Active",
+    "search_placeholder": "Search accounts...",
+    "add_account": "Add Account",
+    "edit_account": "Edit Account",
+    "new_account": "New Account",
+    "update_account": "Update Account",
+    "create_account": "Create Account",
+    "saving": "Saving...",
+    "update_details": "Update your account details below.",
+    "create_description": "Create a new financial account to track your balance.",
+    "account_name": "Account Name",
+    "account_name_placeholder": "e.g., Personal Savings, Business...",
+    "form": {
+      "name": {
+        "error_required": "Name is required"
+      }
+    },
+    "group_label": "Group",
+    "group_placeholder": "Select account group",
+    "initial_balance": "Initial Balance",
+    "include_in_totals_label": "Include in Totals",
+    "include_in_totals_description": "Show this account's balance in net worth calculations.",
+    "included_in_totals": "Included in totals",
+    "excluded_from_totals": "Excluded from totals",
+    "created_date": "Created Date",
+    "created_date_description": "The date this account was first created in the system.",
+    "updated": "Updated",
+    "empty_message": "No accounts found.",
+    "table": {
+      "name": "Name",
+      "group": "Group",
+      "balance": "Balance",
+      "created_at": "Created At",
+      "actions": "Actions"
+    },
+    "toasts": {
+      "updated": "Account updated successfully",
+      "update_failed": "Failed to update account",
+      "created": "Account created successfully",
+      "create_failed": "Failed to create account",
+      "deleted": "Account deleted successfully",
+      "delete_failed": "Failed to delete account",
+      "group_updated": "Account group updated",
+      "group_update_failed": "Failed to update account group",
+      "balance_updated": "Balance updated"
+    },
+    "confirmations": {
+      "delete": "Are you sure you want to delete this account?"
+    }
   },
   "settings": {
     "common": {
@@ -36,7 +82,13 @@
       "used": "used",
       "remaining": "remaining",
       "open_menu": "Open menu",
-      "error": "Error"
+      "error": "Trouble",
+      "form": {
+        "balance": {
+           "label": "Current Balance",
+           "placeholder": "0.00"
+        }
+      }
     },
     "language": {
       "title": "Language",
@@ -48,58 +100,31 @@
       },
       "placeholder": "Select language"
     },
+    "account": {
+      "title": "Account",
+      "description": "Manage your account settings and preferences."
+    },
     "sidebar": {
       "profile": "Profile",
       "account": "Account",
       "appearance": "Appearance",
       "notifications": "Notifications",
-      "display": "Display",
+      "display": "Display Settings",
       "transaction": "Transaction Settings",
-      "category_accounts": "Category & Accounts",
-      "income_category": "Income Category Setting",
-      "expenses_category": "Expenses Category Setting",
+      "category_accounts": "Categories & Accounts",
+      "income_category": "Income Categories",
+      "expenses_category": "Expense Categories",
       "accounts": "Wallets & Banks",
-      "budget": "Budget Setting",
+      "budget": "Budget Settings",
       "general": "General Settings",
       "backup": "Backup",
       "passcode": "Passcode",
-      "currency": "Currency Setting",
-      "alarm": "Alarm Setting",
-      "language": "Language Setting",
+      "currency": "Currency Settings",
+      "alarm": "Alarm Settings",
+      "language": "Language Settings",
       "billing": "Billing & Subscription",
+      "members": "Members",
       "soon": "Soon"
-    },
-    "billing": {
-      "title": "Billing & Subscription",
-      "description": "Manage your workspace plan and resource usage.",
-      "vault_storage": "Vault Storage",
-      "ai_tokens": "AI Tokens",
-      "current_plan": "Current Plan",
-      "manage_subscription": "Manage Subscription",
-      "upgrade": "Upgrade",
-      "active_plan": "Active Plan",
-      "monthly": "per month",
-      "annual": "per year",
-      "mo": "mo",
-      "yr": "yr",
-      "available_plans": "Available Plans",
-      "free_plan": "Free Plan",
-      "starter_plan": "Starter",
-      "monthly_toggle": "Monthly",
-      "annual_toggle": "Annual",
-      "no_plans": "No plans available.",
-      "downgrade_confirm": "Are you sure you want to downgrade? Your extra resources will be lost.",
-      "get_started": "Get Started",
-      "history": {
-        "title": "Billing History",
-        "date": "Date",
-        "invoice": "Invoice",
-        "amount": "Amount",
-        "status": "Status",
-        "action": "Action",
-        "no_history": "No billing history",
-        "no_history_description": "Historical invoices will appear here once you start a subscription."
-      }
     },
     "appearance": {
       "title": "Appearance",
@@ -126,7 +151,7 @@
       },
       "sidebar": {
         "title": "Sidebar Settings",
-        "description": "Configure the sidebar style and collapse behavior.",
+        "description": "Configure sidebar style and collapse behavior.",
         "style": "Sidebar Style",
         "inset": "Inset",
         "sidebar": "Sidebar",
@@ -137,11 +162,41 @@
       },
       "typography": {
         "title": "Typography",
-        "description": "Choose the font that suits your style.",
+        "description": "Select a font that suits your style.",
         "font_family": "Font Family",
-        "font_placeholder": "Select font"
+        "font_placeholder": "Select font",
+        "save": "Update appearance",
+        "success": "Appearance updated"
       },
       "restore_defaults": "Restore Defaults"
+    },
+    "billing": {
+      "title": "Billing",
+      "description": "Manage your subscription and billing information.",
+      "current_plan": "Current Plan",
+      "manage_subscription": "Manage Subscription",
+      "free_plan": "Free Plan",
+      "vault_storage": "Vault Storage",
+      "ai_tokens": "AI Tokens",
+      "available_plans": "Available Plans",
+      "monthly_toggle": "Monthly",
+      "annual_toggle": "Annual",
+      "no_plans": "No plans available",
+      "mo": "mo",
+      "yr": "yr",
+      "downgrade_confirm": "Are you sure you want to downgrade?",
+      "upgrade": "Upgrade",
+      "get_started": "Get started",
+      "history": {
+        "title": "Billing History",
+        "date": "Date",
+        "invoice": "Invoice",
+        "amount": "Amount",
+        "status": "Status",
+        "action": "Action",
+        "no_history": "No billing history",
+        "no_history_description": "You haven't made any purchases yet."
+      }
     },
     "profile": {
       "title": "Profile",
@@ -171,29 +226,28 @@
         "error_invalid": "Please enter a valid URL."
       },
       "update_profile": "Update profile",
-      "toast_success": "Profile updated successfully",
+      "toast_success": "Profile successfully updated",
       "toast_submitted": "You submitted the following values:",
       "avatar": {
-        "label": "Profile Photo",
+        "label": "Profile Picture",
         "upload_new": "Upload New",
-        "allowed_formats": "JPG, GIF or PNG. 10MB max.",
+        "allowed_formats": "JPG, GIF or PNG. Max 10MB.",
         "error_size": "File size exceeds 10MB limit",
         "toast_success": "Profile picture updated automatically",
         "error_upload": "Failed to upload photo"
-      }
-    },
-    "account": {
-      "title": "Account",
-      "description": "Manage your account settings and set your preferred language and timezone.",
-      "no_providers": "No providers linked.",
-      "logged_in_via": "Logged in via",
-      "providers": {
-        "title": "Connected Accounts",
-        "description": "The accounts currently linked to your Okane account.",
-        "disconnect": "Disconnect",
-        "disconnect_confirm": "Are you sure you want to disconnect this account?",
-        "disconnect_success": "Account disconnected successfully",
-        "primary_label": "Primary"
+      },
+      "form": {
+        "name_label": "Display Name",
+        "name_placeholder": "Enter your name",
+        "username_label": "Username",
+        "username_placeholder": "Choose a unique username",
+        "bio_label": "Bio",
+        "bio_placeholder": "Tell us about yourself",
+        "website_label": "Website",
+        "website_placeholder": "https://example.com",
+        "save": "Update profile",
+        "saving": "Updating...",
+        "success": "Profile successfully updated"
       }
     },
     "currency": {
@@ -232,7 +286,7 @@
         },
         "role": {
           "label": "Workspace Role",
-          "placeholder": "Select a role",
+          "placeholder": "Select role",
           "options": {
             "admin": "Admin",
             "member": "Member",
@@ -242,7 +296,7 @@
         "submit": "Send Invitation",
         "cancel": "Cancel",
         "success": "Invitation sent!",
-        "description": "{email} will receive an invite shortly."
+        "description": "{email} will receive an invitation shortly."
       }
     },
     "transaction": {
@@ -261,7 +315,7 @@
           "placeholder": "Select date"
         },
         "weekend_handling": {
-          "label": "If monthly start date is weekend,",
+          "label": "If monthly start date is a weekend,",
           "options": {
             "no-changes": "No changes",
             "previous-friday": "Previous Friday",
@@ -285,10 +339,10 @@
       },
       "general": {
         "title": "General Preferences",
-        "description": "Customize general behavior and display options.",
+        "description": "Adjust general behavior and display options.",
         "default_period": {
           "label": "Default Period",
-          "description": "The default view period for your transactions.",
+          "description": "The default display period for your transactions.",
           "placeholder": "Select period",
           "options": {
             "monthly": "Monthly",
@@ -299,7 +353,7 @@
         },
         "start_screen": {
           "label": "Start Screen",
-          "description": "The initial screen shown when opening the transaction view.",
+          "description": "The initial screen shown when opening transaction view.",
           "placeholder": "Select start screen",
           "options": {
             "daily": "Daily",
@@ -310,22 +364,22 @@
           }
         },
         "income_expense_color": {
-          "description": "By default, income is shown in 'Blue' color and expenses in 'Red' color. You can customize it to the other way around.",
+          "description": "By default, income is shown in 'Blue' and expenses in 'Red'. You can customize this otherwise.",
           "options": {
-            "blue-red": "Income: Blue, Expenses: Red",
-            "red-blue": "Income: Red, Expenses: Blue"
+            "blue-red": "Income: Blue, Expense: Red",
+            "red-blue": "Income: Red, Expense: Blue"
           }
         }
       },
       "input_interaction": {
         "title": "Input & Interaction",
-        "description": "Fine-tune how you interact with transactions.",
+        "description": "Customize how you interact with transactions.",
         "carry_over": {
-          "label": "Carry-over Balance",
+          "label": "Carry Over Balance",
           "description": "Carry over remaining balance to the next period."
         },
         "autocomplete": {
-          "label": "Autocomplete",
+          "label": "Auto-complete",
           "description": "Suggest values as you type."
         },
         "time_input": {
@@ -340,7 +394,7 @@
         },
         "swipe_action": {
           "label": "Swipe Action",
-          "description": "Action when swiping on a transaction.",
+          "description": "Actions when swiping a transaction.",
           "placeholder": "Select swipe action",
           "options": {
             "change-date": "Change Date",
@@ -350,7 +404,7 @@
         },
         "input_order": {
           "label": "Input Order",
-          "description": "Order of fields when adding a transaction.",
+          "description": "The order of fields when adding transactions.",
           "placeholder": "Select input order",
           "options": {
             "amount": "From Amount",
@@ -359,11 +413,11 @@
         },
         "show_description": {
           "label": "Show Description",
-          "description": "Show transaction descriptions in lists."
+          "description": "Show transaction description in the list."
         },
         "quick_note_button": {
           "label": "Quick Note Button",
-          "description": "Show a button to quickly add notes."
+          "description": "Show buttons to add notes quickly."
         }
       }
     },
@@ -431,11 +485,11 @@
       "title": "Sub Currencies",
       "description": "Manage secondary currencies for your workspace.",
       "add_button": "Add Currency",
-      "toast_added": "{code} added to sub-currencies",
+      "toast_added": "{code} added to sub currencies",
       "toast_removed": "{code} removed",
-      "workspace_label": "Workspace Currency",
+      "workspace_label": "Workspace Currencies",
       "rate_now": "RATE NOW",
-      "empty": "No sub-currencies added yet."
+      "empty": "No sub currencies added yet."
     },
     "wallets": {
       "title": "Wallets & Banks",
@@ -448,7 +502,7 @@
         "add": "Add Group",
         "edit": "Edit Group",
         "delete": "Delete Group",
-        "delete_confirm": "Are you sure you want to delete this group? All wallets inside will be ungrouped.",
+        "delete_confirm": "Are you sure you want to delete this group? All wallets inside will be detached.",
         "form": {
           "name": {
             "label": "Name",
@@ -487,18 +541,96 @@
     }
   },
   "debts": {
-    "title": "Debts",
-    "description": "Manage your debts, receivables, and bill splits.",
+    "title": "Debts & Receivables",
+    "description": "Manage your debts, receivables, and split bills.",
     "add_button": "Add Debt",
+    "search_placeholder": "Search debts...",
+    "status_label": "Status",
+    "group_label": "Group",
+    "total_debt": "Total Debt",
+    "active_debts": "Active Debts",
+    "overdue": "Overdue",
     "empty": {
       "title": "No debts found",
-      "description": "Keep track of your debts and receivables. Add your first debt to get started.",
-      "action": "Add Your First Debt"
+      "description": "Keep track of money you owe or are owed. Add your first debt to get started.",
+      "action": "Add First Debt"
+    },
+    "columns": {
+      "contact": "Contact",
+      "amount": "Amount",
+      "due_date": "Due Date",
+      "status": "Status",
+      "type": "Type",
+      "description": "Description",
+      "summary": "Summary",
+      "debt": "debt"
+    },
+    "statuses": {
+      "unpaid": "Unpaid",
+      "partial": "Partial",
+      "paid": "Paid"
+    },
+    "types": {
+      "receivable": "Receivable",
+      "payable": "Payable",
+      "you_owe": "You owe",
+      "you_are_owed": "You are owed"
+    },
+    "actions": {
+      "view_details": "View details",
+      "edit": "Edit",
+      "delete": "Delete",
+      "open_menu": "Open menu"
+    },
+    "toasts": {
+      "deleted": "Debt deleted successfully",
+      "delete_failed": "Failed to delete debt",
+      "fetch_contact_error": "Failed to fetch contact details",
+      "fetch_contact_error_desc": "An error occurred while fetching contact details",
+      "created": "Debt created successfully",
+      "updated": "Debt updated successfully",
+      "create_failed": "Failed to create debt",
+      "update_failed": "Failed to update debt",
+      "payment_recorded": "Payment recorded",
+      "payment_failed": "Failed to record payment"
+    },
+    "bulk_settlement": {
+      "title": "Bulk Settlement",
+      "no_outstanding": "No outstanding debts for this contact.",
+      "select_all": "Select all",
+      "pay_from_account": "Pay from account",
+      "total_to_settle": "Total to settle",
+      "settle_button": "Settle All",
+      "settling": "Settling...",
+      "success_toast": "Successfully settled debts",
+      "error_toast": "Failed to settle debts. Please try again.",
+      "select_account_toast": "Please select an account",
+      "select_at_least_one_toast": "Please select at least one debt"
+    },
+    "confirmations": {
+      "delete_title": "Delete this debt?",
+      "delete_description": "This action cannot be undone. The debt record will be permanently removed."
+    },
+    "details": {
+      "title": "Debt Details",
+      "summary": "Summary",
+      "original_amount": "Original Amount",
+      "paid_amount": "Paid Amount",
+      "due_date": "Due Date",
+      "no_due_date": "No due date",
+      "from_transaction": "From Transaction",
+      "notes": "Notes",
+      "settled": "Settled",
+      "record_payment": "Record Payment",
+      "settle_all": "Settle all"
     },
     "form": {
+      "add_title": "New Debt",
+      "edit_title": "Edit Debt",
       "contact": {
         "label": "Contact",
         "placeholder": "Select contact",
+        "description": "Who is involved in this debt?",
         "error_required": "Contact is required"
       },
       "type": {
@@ -506,24 +638,415 @@
         "payable": "Payable",
         "receivable": "Receivable"
       },
+      "type_payable": "You Owe",
+      "type_receivable": "You Are Owed",
       "amount": {
         "label": "Amount",
         "placeholder": "0.00",
-        "error_required": "Amount is required"
+        "description": "The total amount of the debt.",
+        "error_required": "Amount is required",
+        "error_positive": "Amount must be positive",
+        "error_max_remaining": "Payment cannot exceed remaining debt"
       },
-      "description": {
+      "notes": {
         "label": "Description",
         "placeholder": "What is this debt for?"
       },
       "due_date": {
         "label": "Due Date",
-        "placeholder": "Select date"
+        "placeholder": "Select date",
+        "description": "Optional deadline for settlement."
+      },
+      "account": {
+        "label": "Account",
+        "placeholder": "Select account",
+        "error_required": "Account is required",
+        "description": "Select the account where the transaction occurs."
+      },
+      "payment": {
+        "title": "Record Payment",
+        "paying_to_from": "Paying to/from",
+        "remaining_balance": "Remaining balance",
+        "amount_to_pay": "Amount to Pay",
+        "amount_to_pay_description": "The amount being settled.",
+        "submit": "Save Payment"
       },
       "submit": "Save",
       "cancel": "Cancel",
-      "create_success": "Debt created successfully",
-      "update_success": "Debt updated successfully",
-      "delete_success": "Debt deleted successfully"
+      "saving": "Saving..."
     }
+  },
+  "overview": {
+    "greetings": {
+      "morning": "Good morning",
+      "afternoon": "Good afternoon",
+      "evening": "Good evening"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "metrics": "Metrics"
+    },
+    "descriptions": {
+      "overview": "Monthly financial overview",
+      "metrics": "Detailed financial metrics and charts"
+    },
+    "metrics": {
+      "income_title": "Monthly Income",
+      "income_description": "Your monthly income breakdown by category.",
+      "expense_title": "Monthly Expenses",
+      "expense_description": "Your monthly expense breakdown by category.",
+      "category_title": "Category Breakdown",
+      "category_description": "Distribution of spending across all categories.",
+      "income_total_title": "Total Income",
+      "income_total_desc": "Income over time",
+      "expense_total_title": "Total Expenses",
+      "expense_total_desc": "Expenses over time",
+      "income_breakdown_title": "Income Breakdown",
+      "expense_breakdown_title": "Expense Breakdown",
+      "current_month_desc": "Current Month",
+      "total_income": "Total Income",
+      "total_expenses": "Total Expenses",
+      "net_income": "Net Income",
+      "top_expense": "Top Expense",
+      "this_month": "This month",
+      "vs_last_month": "vs last month",
+      "no_prior_data": "No prior data",
+      "no_expenses": "No recorded expenses"
+    },
+    "chips": {
+      "wallet_balances": "Wallet balances",
+      "spending_analysis": "Spending analysis",
+      "latest_transactions": "Latest transactions",
+      "monthly_summary": "Monthly summary",
+      "top_expenses": "Top expenses",
+      "wallet_balances_msg": "What are my current wallet balances?",
+      "spending_analysis_msg": "Show my spending analysis over the last 30 days.",
+      "latest_transactions_msg": "Show my recent transactions.",
+      "monthly_summary_msg": "Give a summary of my income vs expenses over the last 3 months.",
+      "top_expenses_msg": "Which category do I spend the most in?"
+    }
+  },
+  "transactions": {
+    "title": "Transactions",
+    "description": "Manage and track all your financial movements.",
+    "search_placeholder": "Search transactions...",
+    "type_label": "Type",
+    "add_button": "Add",
+    "import_backfill": "Import/backfill",
+    "create_transaction": "Create transaction",
+    "new_transaction": "New Transaction",
+    "edit_transaction": "Edit Transaction",
+    "save_transaction": "Save Transaction",
+    "upload_receipts": "Upload receipts",
+    "empty_message": "No transactions found.",
+    "delete_title": "Delete transaction?",
+    "delete_description": "Are you sure you want to delete this transaction?",
+    "delete_confirm": "Delete",
+    "mark_ready": "Mark ready",
+    "mark_exported": "Mark exported",
+    "reset_status": "Reset status",
+    "reset_export": "Reset export",
+    "copy_link": "Copy link",
+    "view_details": "View details",
+    "edit": "Edit",
+    "save": "Save",
+    "saving": "Saving...",
+    "category": "Category",
+    "assign": "Assign",
+    "account": "Account",
+    "to_account": "To Account",
+    "description_label": "Description",
+    "amount_label": "Amount",
+    "currency_label": "Currency",
+    "date_label": "Date",
+    "notes_label": "Notes",
+    "attachments": "Attachments",
+    "related_debts": "Related Debts",
+    "details": "Details",
+    "created_at": "Created",
+    "at": "at",
+    "esc": "Esc",
+    "no_description": "No description",
+    "unknown": "Unknown",
+    "unassigned": "Unassigned",
+    "uncategorized": "Uncategorized",
+    "no_account": "No Account",
+    "select_destination": "Select destination",
+    "select_member": "Select member",
+    "add_or_upload": "Add or upload files",
+    "click_to_browse": "Click to browse",
+    "drag_drop": "or drag and drop files here",
+    "upload_hint": "Images, PDFs, and spreadsheets from your computer or Vault",
+    "loading_debts": "Loading debts...",
+    "types": {
+      "income": "Income",
+      "expense": "Expense",
+      "transfer": "Transfer",
+      "transfer_in": "Transfer-In",
+      "transfer_out": "Transfer-Out",
+      "transaction": "Transaction"
+    },
+    "placeholders": {
+      "description": "e.g., Grocery shopping, Salary...",
+      "notes": "Add any additional notes, links, or details...",
+      "search": "Search transactions...",
+      "destination": "Select destination",
+      "member": "Select member"
+    },
+    "hints": {
+      "type": "Choose whether this is money coming in (Income) or going out (Expense)",
+      "description": "A brief description of this transaction",
+      "amount": "Enter the amount of the transaction",
+      "currency": "The currency for this transaction",
+      "account": "The account where this transaction resides",
+      "date": "When the transaction occurred",
+      "category": "Helps organize and track your transactions",
+      "to_account": "The target account for this transfer",
+      "assign": "Assign this transaction to a team member",
+      "notes": "Add extra details or context about this transaction"
+    },
+    "errors": {
+      "amount_positive": "Amount must be positive",
+      "invalid_date": "Invalid date",
+      "wallet_required": "Wallet is required",
+      "load_failed": "Failed to load form data",
+      "save_failed": "Failed to save transaction",
+      "file_size_limit": "File size exceeds 3MB limit",
+      "file_type_limit": "Only images and PDFs are allowed",
+      "upload_failed": "Upload failed",
+      "parse_failed": "AI parsing failed",
+      "process_failed": "Failed to process receipt",
+      "invalid_file_type": "Invalid file type for {name}. Only documents and images are allowed.",
+      "some_uploads_failed": "Some files failed to upload",
+      "preview_failed": "Failed to load file preview"
+    },
+    "group_by": {
+      "placeholder": "Group by...",
+      "none": "None",
+      "daily": "Daily",
+      "weekly": "Weekly",
+      "monthly": "Monthly"
+    },
+    "toasts": {
+      "deleted": "Transaction deleted",
+      "delete_failed": "Failed to delete transaction",
+      "updated": "Transaction updated",
+      "created": "Transaction created",
+      "category_updated": "Category updated",
+      "account_updated": "Account updated",
+      "assignee_updated": "Assignee updated",
+      "link_copied": "Link copied to clipboard",
+      "marked_pending": "Marked as pending",
+      "marked_ready": "Marked as ready",
+      "marked_exported": "Marked as exported",
+      "unmarked_exported": "Unmarked as exported",
+      "parsing_receipt": "Uploading and processing receipt...",
+      "parse_success": "Receipt parsed successfully",
+      "uploading_files": "Uploading {count} files...",
+      "all_uploads_success": "All files uploaded successfully"
+    }
+  },
+  "contacts": {
+    "title": "Contacts",
+    "description": "Manage your contacts and track their debt history.",
+    "add_button": "New Contact",
+    "search_placeholder": "Search contacts...",
+    "empty": {
+      "title": "No contacts yet",
+      "description": "Add your first contact to get started.",
+      "action": "Add First Contact"
+    },
+    "summary": {
+      "total": "Total Contacts",
+      "added_this_month": "Added This Month",
+      "most_active": "Most Active Client",
+      "top_revenue": "Top Revenue Client",
+      "no_activity": "No activity data",
+      "no_revenue": "No revenue data"
+    },
+    "columns": {
+      "name": "Name",
+      "email": "Email",
+      "phone": "Phone",
+      "address": "Address",
+      "created_at": "Joined At"
+    },
+    "details": {
+      "title": "Contact Details",
+      "quick_edit": "Quick Edit",
+      "view_details": "View Details",
+      "no_email": "No email available",
+      "activity_history": "Activity History",
+      "no_history": "No transaction history",
+      "progress": "Progress",
+      "settled": "settled",
+      "notes": "Notes",
+      "edit_contact": "Edit Contact",
+      "delete_contact": "Delete Contact",
+      "delete_confirm_title": "Delete contact?",
+      "delete_confirm_desc": "This action will permanently remove this contact and cannot be undone."
+    },
+    "form": {
+      "name_label": "Name",
+      "name_placeholder": "John Doe",
+      "email_label": "Email",
+      "email_placeholder": "john@example.com",
+      "phone_label": "Phone",
+      "phone_placeholder": "+1 234 567 890",
+      "address_label": "Address",
+      "address_placeholder": "123 Main St, City",
+      "notes_label": "Notes",
+      "notes_placeholder": "Additional information...",
+      "save": "Save Changes",
+      "saving": "Saving...",
+      "create": "Create Contact",
+      "creating": "Creating...",
+      "cancel": "Cancel",
+      "errors": {
+        "name_required": "Name is required",
+        "invalid_email": "Invalid email"
+      }
+    },
+    "toasts": {
+      "created": "Contact created successfully",
+      "updated": "Contact updated successfully",
+      "deleted": "Contact deleted successfully",
+      "create_failed": "Failed to create contact",
+      "update_failed": "Failed to update contact",
+      "delete_failed": "Failed to delete contact"
+    }
+  },
+  "common": {
+    "loading_more": "Loading more..."
+  },
+  "vault": {
+    "title": "Vault",
+    "description": "Manage your documents and invoices securely.",
+    "upload_button": "Upload",
+    "search_placeholder": "Search files...",
+    "drop_zone": {
+      "title": "Drop to upload your documents",
+      "description": "Images, PDFs, or Excel files only"
+    },
+    "empty": {
+      "title": "No files found",
+      "no_results": "No results for \"{search}\". Try different keywords.",
+      "get_started": "Upload your first file to get started.",
+      "clear_search": "Clear search"
+    },
+    "storage": {
+      "usage": "{used} / {limit} MB",
+      "title": "Vault Storage",
+      "used": "Used",
+      "remaining": "Remaining"
+    },
+    "details": {
+      "title": "File Details",
+      "no_file_selected": "No file selected",
+      "no_file_selected_desc": "Select a file to view its details, size, and manage tags.",
+      "date_created": "Date Created",
+      "format": "Format",
+      "file_size": "File Size",
+      "dimensions": "Dimensions",
+      "tags": "Tags",
+      "no_tags": "No tags added",
+      "suggested_tags": "Suggested Tags",
+      "add_custom_tag": "Add custom tag...",
+      "add_tag_button": "Add",
+      "view_full": "View full",
+      "open_original": "Open Original",
+      "download_local": "Download Local",
+      "delete": "Delete"
+    },
+    "columns": {
+      "filename": "Filename",
+      "format": "Format",
+      "size": "File Size",
+      "date": "Date Created"
+    },
+    "toasts": {
+      "uploading": "Uploading {count} files...",
+      "upload_success": "All files uploaded successfully",
+      "upload_failed_some": "Some files failed to upload",
+      "upload_failed": "Upload failed",
+      "delete_success": "File deleted",
+      "delete_failed": "Failed to delete file",
+      "tags_update_success": "Tags updated",
+      "tags_update_failed": "Failed to update tags",
+      "invalid_type": "Invalid file type for {name}. Only documents and images are allowed."
+    }
+  },
+  "calendar": {
+    "title": "Calendar",
+    "description": "Visualize your financial events over time.",
+    "view": {
+      "month": "Month",
+      "week": "Week",
+      "today": "Today"
+    },
+    "tabs": {
+      "week": "Week",
+      "month": "Month"
+    },
+    "days": {
+      "short": {
+        "sun": "SUN",
+        "mon": "MON",
+        "tue": "TUE",
+        "wed": "WED",
+        "thu": "THU",
+        "fri": "FRI",
+        "sat": "SAT"
+      }
+    },
+    "activity": {
+      "debt": "{count} debt",
+      "debts": "{count} debts"
+    },
+    "summary": {
+      "income": "Total Income",
+      "expense": "Total Expense"
+    },
+    "sheet": {
+      "income_total": "Total Income",
+      "expense_total": "Total Expense",
+      "transactions_title": "Transactions ({count})",
+      "debts_title": "Debts Required/Occurred ({count})",
+      "no_transactions": "No transactions for today.",
+      "no_debts": "No debts recorded or due today.",
+      "unknown_transaction": "Unknown"
+    }
+  },
+  "sidebar": {
+    "dashboard": "Dashboard",
+    "finance": "Finance",
+    "people": "People",
+    "workspace": "Workspace",
+    "system": "System",
+    "overview": "Overview",
+    "transactions": "Transactions",
+    "calendar": "Calendar",
+    "accounts": "Accounts",
+    "debts": "Debts",
+    "contacts": "Contacts",
+    "vault": "Vault",
+    "apps": "Apps",
+    "settings": "Settings",
+    "invoices": "Invoices",
+    "customers": "Customers",
+    "coming_soon": "Coming Soon"
+  },
+  "search": {
+    "placeholder": "Find anything...",
+    "input_placeholder": "Type a command or search...",
+    "no_results": "No results found.",
+    "shortcuts": "Shortcuts",
+    "transactions": "Transactions",
+    "vault": "Vault",
+    "settings": "Settings",
+    "view_transactions": "View transactions",
+    "view_vault": "View vault",
+    "navigate": "Navigate",
+    "open": "Open"
   }
 }

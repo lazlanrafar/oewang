@@ -27,11 +27,20 @@ interface Props {
   debt?: DebtWithContact;
   wallets: Wallet[];
   onDelete: (id: string) => void;
+  dictionary: any;
 }
 
-export function DebtDetailSheet({ open, onOpenChange, debt, wallets, onDelete }: Props) {
+export function DebtDetailSheet({
+  open,
+  onOpenChange,
+  debt,
+  wallets,
+  onDelete,
+  dictionary,
+}: Props) {
   const [paymentFormOpen, setPaymentFormOpen] = useState(false);
-  const { settings, formatCurrency } = useAppStore();
+  const { settings, formatCurrency, dictionary: global_dict, isLoading: isDictLoading } = useAppStore() as any;
+  const dict = dictionary || global_dict?.debts;
 
   if (!debt) return null;
 
@@ -45,7 +54,9 @@ export function DebtDetailSheet({ open, onOpenChange, debt, wallets, onDelete }:
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent className="flex flex-col h-full p-0 rounded-none shadow-none border-l sm:max-w-[540px]">
           <SheetHeader className="px-6 py-6 border-b shrink-0 flex flex-row items-center justify-between bg-muted/5 text-left">
-            <SheetTitle className="font-serif text-xl font-normal">Debt Details</SheetTitle>
+            <SheetTitle className="font-serif text-xl font-normal">
+              {dictionary.debts.details.title}
+            </SheetTitle>
             <div className="flex gap-2">
               <Button
                 variant="ghost"
@@ -74,7 +85,9 @@ export function DebtDetailSheet({ open, onOpenChange, debt, wallets, onDelete }:
                     <ArrowUpRight className="h-4 w-4 text-rose-500" />
                   )}
                   <span className="text-[10px] font-medium uppercase tracking-widest">
-                    {isReceivable ? "You are owed by" : "You owe"}
+                    {isReceivable
+                      ? dictionary.debts.types.you_are_owed
+                      : dictionary.debts.types.you_owe}
                   </span>
                   <span className="text-[10px] font-medium uppercase tracking-widest text-foreground">
                     {debt.contactName}
@@ -92,33 +105,45 @@ export function DebtDetailSheet({ open, onOpenChange, debt, wallets, onDelete }:
                 }
                 className="capitalize rounded-none shadow-none text-[10px] font-medium tracking-widest"
               >
-                {debt.status}
+                {dictionary.debts.statuses[debt.status] || debt.status}
               </Badge>
             </div>
 
             <Separator />
 
             <div className="space-y-6">
-              <h3 className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">Summary</h3>
-              
+              <h3 className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
+                {dictionary.debts.details.summary}
+              </h3>
+
               <div className="grid grid-cols-2 gap-y-4 text-sm">
                 <div className="space-y-1">
-                  <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">Original Amount</p>
-                  <p className="font-serif text-lg font-normal">{formatCurrency(amount)}</p>
+                  <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
+                    {dictionary.debts.details.original_amount}
+                  </p>
+                  <p className="font-serif text-lg font-normal">
+                    {formatCurrency(amount)}
+                  </p>
                 </div>
-                
+
                 <div className="space-y-1">
-                  <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">Paid Amount</p>
-                  <p className="font-serif text-lg font-normal text-emerald-500">{formatCurrency(paidAmount)}</p>
+                  <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
+                    {dictionary.debts.details.paid_amount}
+                  </p>
+                  <p className="font-serif text-lg font-normal text-emerald-500">
+                    {formatCurrency(paidAmount)}
+                  </p>
                 </div>
 
                 <div className="space-y-1">
                   <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
                     <Calendar className="w-3.5 h-3.5" />
-                    Due Date
+                    {dictionary.debts.details.due_date}
                   </p>
                   <p className="font-serif text-lg font-normal">
-                    {debt.dueDate ? format(new Date(debt.dueDate), "MMM d, yyyy") : "No due date"}
+                    {debt.dueDate
+                      ? format(new Date(debt.dueDate), "MMM d, yyyy")
+                      : dictionary.debts.details.no_due_date}
                   </p>
                 </div>
 
@@ -126,7 +151,7 @@ export function DebtDetailSheet({ open, onOpenChange, debt, wallets, onDelete }:
                   <div className="space-y-1">
                     <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
                       <CreditCard className="w-3.5 h-3.5" />
-                      From Transaction
+                      {dictionary.debts.details.from_transaction}
                     </p>
                     <p className="font-serif text-lg hover:underline cursor-pointer line-clamp-1 italic text-muted-foreground font-normal">
                       {debt.sourceTransactionName}
@@ -138,7 +163,9 @@ export function DebtDetailSheet({ open, onOpenChange, debt, wallets, onDelete }:
 
             {debt.description && (
               <div className="space-y-2">
-                <h3 className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">Notes</h3>
+                <h3 className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
+                  {dictionary.debts.details.notes}
+                </h3>
                 <div className="text-sm text-foreground/80 whitespace-pre-wrap rounded-none bg-muted/10 p-4 border border-border/50 italic font-normal">
                   {debt.description}
                 </div>
@@ -152,7 +179,9 @@ export function DebtDetailSheet({ open, onOpenChange, debt, wallets, onDelete }:
               disabled={debt.status === "paid"}
               onClick={() => setPaymentFormOpen(true)}
             >
-              {debt.status === "paid" ? "Settled" : "Record Payment"}
+              {debt.status === "paid"
+                ? dict.details.settled
+                : dict.details.record_payment}
             </Button>
           </div>
         </SheetContent>
@@ -163,6 +192,7 @@ export function DebtDetailSheet({ open, onOpenChange, debt, wallets, onDelete }:
         onOpenChange={setPaymentFormOpen}
         debt={debt}
         wallets={wallets}
+        dictionary={dictionary}
       />
     </>
   );

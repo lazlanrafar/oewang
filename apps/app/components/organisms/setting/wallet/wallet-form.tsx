@@ -34,6 +34,7 @@ import {
   createWallet,
   updateWallet,
 } from "@workspace/modules/wallet/wallet.action";
+import { useAppStore } from "@/stores/app";
 import { getWalletGroups } from "@workspace/modules/wallet-group/wallet-group.action";
 
 interface WalletFormProps {
@@ -42,11 +43,14 @@ interface WalletFormProps {
   dictionary: any;
 }
 
-export function WalletForm({ wallet, onClose, dictionary }: WalletFormProps) {
+export function WalletForm({ wallet, onClose, dictionary: dictionary_prop }: WalletFormProps) {
+  const { dictionary, isLoading: isDictLoading } = useAppStore() as any;
   const queryClient = useQueryClient();
 
-  const { form: walletForm } = dictionary.wallets;
-  const { form: commonForm } = dictionary; // Assuming dictionary is dict.settings
+  if (isDictLoading || !dictionary) return null;
+
+  const { form: walletForm } = dictionary.settings.wallets;
+  const common = dictionary.settings.common;
 
   const formSchema = z.object({
     name: z.string().min(1, { message: walletForm.name.error_required }),
@@ -93,7 +97,7 @@ export function WalletForm({ wallet, onClose, dictionary }: WalletFormProps) {
       onClose();
     },
     onError: (error) => {
-      toast.error(`${dictionary.common.error}: ${(error as Error).message}`);
+      toast.error(`${common.error}: ${(error as Error).message}`);
     },
   });
 
@@ -192,12 +196,12 @@ export function WalletForm({ wallet, onClose, dictionary }: WalletFormProps) {
           name="balance"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{dictionary.form.balance.label}</FormLabel>
+              <FormLabel>{common.form.balance.label}</FormLabel>
               <FormControl>
                 <Input
                   type="number"
                   step="0.01"
-                  placeholder={dictionary.form.balance.placeholder}
+                  placeholder={common.form.balance.placeholder}
                   {...field}
                   className="rounded-none border"
                 />
@@ -238,11 +242,11 @@ export function WalletForm({ wallet, onClose, dictionary }: WalletFormProps) {
             disabled={isSubmitting}
             className="rounded-none h-8 text-xs"
           >
-            {dictionary.common.cancel}
+            {common.cancel}
           </Button>
           <Button type="submit" disabled={isSubmitting} className="rounded-none h-8 text-xs">
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {dictionary.common.save}
+            {common.save}
           </Button>
         </div>
       </form>

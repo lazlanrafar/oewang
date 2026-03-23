@@ -2,6 +2,7 @@
 
 import type { ColumnDef } from "@tanstack/react-table";
 import type { Transaction } from "@workspace/types";
+import type { Dictionary } from "@workspace/dictionaries";
 import {
   Landmark,
   Receipt,
@@ -39,6 +40,9 @@ import { useQueryClient } from "@tanstack/react-query";
 
 export const transactionColumns = (
   onEdit: (transaction: Transaction) => void,
+  dictionary: Dictionary,
+  formatCurrency: (amount: number, options?: any) => string,
+  getTransactionColor: (type: string) => string,
 ): ColumnDef<Transaction>[] => [
   {
     id: "select",
@@ -61,7 +65,7 @@ export const transactionColumns = (
               table.toggleAllPageRowsSelected(!!value);
             }
           }}
-          aria-label="Select all"
+          aria-label={dictionary.settings.common.open_menu}
         />
       );
     },
@@ -69,7 +73,7 @@ export const transactionColumns = (
       <Checkbox
         checked={row.getIsSelected()}
         onCheckedChange={(value) => row.toggleSelected(!!value)}
-        aria-label="Select row"
+        aria-label={dictionary.settings.common.open_menu}
         className="translate-y-[2px]"
       />
     ),
@@ -88,7 +92,7 @@ export const transactionColumns = (
   },
   {
     accessorKey: "date",
-    header: "Date",
+    header: dictionary.transactions.date_label,
     cell: ({ row }) => {
       const date = row.getValue("date") as string;
 
@@ -119,7 +123,7 @@ export const transactionColumns = (
   },
   {
     accessorKey: "name",
-    header: "Description",
+    header: dictionary.transactions.description_label,
     cell: ({ row, table }) => {
       const transaction = row.original;
       const { getTransactionColor } = (table.options.meta as any) || {};
@@ -130,12 +134,12 @@ export const transactionColumns = (
       const label =
         transaction.name ||
         (isTransfer
-          ? "Transfer"
+          ? dictionary.transactions.types.transfer
           : transaction.type === "transfer-in"
-            ? "Transfer-In"
+            ? dictionary.transactions.types.transfer_in
             : transaction.type === "transfer-out"
-              ? "Transfer-Out"
-              : (transaction.category?.name ?? "Transaction"));
+              ? dictionary.transactions.types.transfer_out
+              : (transaction.category?.name ?? dictionary.transactions.types.transaction));
       const Icon = transaction.name ? Landmark : Receipt;
 
       return (
@@ -184,7 +188,7 @@ export const transactionColumns = (
   },
   {
     accessorKey: "amount",
-    header: "Amount",
+    header: dictionary.transactions.amount_label,
     cell: ({ row, table }) => {
       const amount = Number(row.getValue("amount"));
       const transaction = row.original;
@@ -218,9 +222,9 @@ export const transactionColumns = (
   {
     id: "account",
     accessorKey: "wallet.name",
-    header: "Account",
+    header: dictionary.transactions.account,
     cell: ({ row, table }) => (
-      <AccountCell transaction={row.original} table={table} />
+      <AccountCell transaction={row.original} table={table} dictionary={dictionary} />
     ),
     size: 200,
     minSize: 120,
@@ -235,9 +239,9 @@ export const transactionColumns = (
   {
     id: "category",
     accessorKey: "category.name",
-    header: "Category",
+    header: dictionary.transactions.category,
     cell: ({ row, table }) => (
-      <CategoryCell transaction={row.original} table={table} />
+      <CategoryCell transaction={row.original} table={table} dictionary={dictionary} />
     ),
     size: 250,
     minSize: 150,
@@ -252,9 +256,9 @@ export const transactionColumns = (
   {
     id: "assignee",
     accessorKey: "user.name",
-    header: "Assignee",
+    header: dictionary.transactions.assign,
     cell: ({ row, table }) => (
-      <UserCell transaction={row.original} table={table} />
+      <UserCell transaction={row.original} table={table} dictionary={dictionary} />
     ),
     size: 200,
     minSize: 120,
@@ -268,7 +272,7 @@ export const transactionColumns = (
   },
   {
     id: "actions",
-    header: "Actions",
+    header: dictionary.settings.common.actions,
     cell: ({ row, table }) => {
       const transaction = row.original;
       const meta = table.options.meta as any;
@@ -281,7 +285,7 @@ export const transactionColumns = (
               variant="ghost"
               className="h-8 w-8 p-0 hover:bg-transparent"
             >
-              <span className="sr-only">Open menu</span>
+              <span className="sr-only">{dictionary.settings.common.open_menu}</span>
               <MoreHorizontal className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -291,25 +295,25 @@ export const transactionColumns = (
               className="gap-2 cursor-pointer"
             >
               <ExternalLink className="h-4 w-4" />
-              View details
+              {dictionary.transactions.view_details}
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => onEdit(transaction)}
               className="gap-2 cursor-pointer"
             >
               <Edit className="h-4 w-4" />
-              Edit
+              {dictionary.transactions.edit}
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => {
                 const url = `${window.location.origin}${window.location.pathname}?transactionId=${transaction.id}`;
                 navigator.clipboard.writeText(url);
-                toast.success("Link copied to clipboard");
+                toast.success(dictionary.transactions.toasts.link_copied);
               }}
               className="gap-2 cursor-pointer"
             >
               <Copy className="h-4 w-4" />
-              Copy link
+              {dictionary.transactions.copy_link}
             </DropdownMenuItem>
 
             <div className="h-px bg-muted my-1" />
@@ -322,8 +326,8 @@ export const transactionColumns = (
                 if (res.success) {
                   toast.success(
                     transaction.isReady
-                      ? "Marked as pending"
-                      : "Marked as ready",
+                      ? dictionary.transactions.toasts.marked_pending
+                      : dictionary.transactions.toasts.marked_ready,
                   );
                   queryClient.invalidateQueries({ queryKey: ["transactions"] });
                 }
@@ -331,7 +335,7 @@ export const transactionColumns = (
               className="gap-2 cursor-pointer"
             >
               <Check className="h-4 w-4" />
-              {transaction.isReady ? "Reset status" : "Mark ready"}
+              {transaction.isReady ? dictionary.transactions.reset_status : dictionary.transactions.mark_ready}
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={async () => {
@@ -341,8 +345,8 @@ export const transactionColumns = (
                 if (res.success) {
                   toast.success(
                     transaction.isExported
-                      ? "Unmarked as exported"
-                      : "Marked as exported",
+                      ? dictionary.transactions.toasts.unmarked_exported
+                      : dictionary.transactions.toasts.marked_exported,
                   );
                   queryClient.invalidateQueries({ queryKey: ["transactions"] });
                 }
@@ -350,7 +354,7 @@ export const transactionColumns = (
               className="gap-2 cursor-pointer"
             >
               <FileCheck className="h-4 w-4" />
-              {transaction.isExported ? "Reset export" : "Mark exported"}
+              {transaction.isExported ? dictionary.transactions.reset_export : dictionary.transactions.mark_exported}
             </DropdownMenuItem>
 
             <div className="h-px bg-muted my-1" />
@@ -360,7 +364,7 @@ export const transactionColumns = (
               className="gap-2 cursor-pointer text-destructive focus:text-destructive"
             >
               <Trash className="h-4 w-4" />
-              Delete
+              {dictionary.settings.common.delete}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -383,9 +387,11 @@ export const transactionColumns = (
 function CategoryCell({
   transaction,
   table,
+  dictionary,
 }: {
   transaction: Transaction;
   table: any;
+  dictionary: Dictionary;
 }) {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -401,11 +407,11 @@ function CategoryCell({
     });
 
     if (res.success) {
-      toast.success("Category updated");
+      toast.success(dictionary.transactions.toasts.category_updated);
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
       router.refresh();
     } else {
-      toast.error(res.error || "Failed to update category");
+      toast.error(res.error || dictionary.transactions.errors.save_failed);
     }
     setUpdating(false);
   };
@@ -441,9 +447,11 @@ function CategoryCell({
 function AccountCell({
   transaction,
   table,
+  dictionary,
 }: {
   transaction: Transaction;
   table: any;
+  dictionary: Dictionary;
 }) {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -459,11 +467,11 @@ function AccountCell({
     });
 
     if (res.success) {
-      toast.success("Account updated");
+      toast.success(dictionary.transactions.toasts.account_updated);
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
       router.refresh();
     } else {
-      toast.error(res.error || "Failed to update account");
+      toast.error(res.error || dictionary.transactions.errors.save_failed);
     }
     setUpdating(false);
   };
@@ -486,7 +494,14 @@ function AccountCell({
   );
 }
 
-function UserCell({ transaction }: { transaction: Transaction; table: any }) {
+function UserCell({
+  transaction,
+  dictionary,
+}: {
+  transaction: Transaction;
+  table: any;
+  dictionary: Dictionary;
+}) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [updating, setUpdating] = useState(false);
@@ -500,11 +515,11 @@ function UserCell({ transaction }: { transaction: Transaction; table: any }) {
     });
 
     if (res.success) {
-      toast.success("Assignee updated");
+      toast.success(dictionary.transactions.toasts.assignee_updated);
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
       router.refresh();
     } else {
-      toast.error(res.error || "Failed to update assignee");
+      toast.error(res.error || dictionary.transactions.errors.save_failed);
     }
     setUpdating(false);
   };

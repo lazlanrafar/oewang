@@ -16,12 +16,14 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { getContacts } from "@workspace/modules/client";
 import { useDataTableFilter } from "@/hooks/use-data-table-filter";
 import { useContactsStore } from "@/stores/contacts";
+import { useAppStore } from "@/stores/app";
 
 interface Props {
   initialData: Contact[];
 }
 
 export function ContactsClient({ initialData }: Props) {
+  const { dictionary } = useAppStore();
   const [isFormSheetOpen, setIsFormSheetOpen] = useState(false);
   const [isDetailSheetOpen, setIsDetailSheetOpen] = useState(false);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(
@@ -54,6 +56,8 @@ export function ContactsClient({ initialData }: Props) {
     refetchOnWindowFocus: false,
   });
 
+  if (!dictionary) return null;
+
   const allContacts = data?.pages.flatMap((p) => p.data ?? []) ?? [];
 
   const now = new Date();
@@ -76,7 +80,7 @@ export function ContactsClient({ initialData }: Props) {
     setIsDetailSheetOpen(true);
   }, []);
 
-  const tableColumns = getContactColumns(handleEdit);
+  const tableColumns = getContactColumns(handleEdit, dictionary);
 
   return (
     <div className="flex w-full flex-col h-full space-y-4">
@@ -84,7 +88,7 @@ export function ContactsClient({ initialData }: Props) {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="p-6 flex flex-col gap-1 border border-border bg-muted/5">
           <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-[0.2em]">
-            Total Contacts
+            {dictionary.contacts.summary.total}
           </span>
           <span className="text-3xl font-serif font-medium tracking-tight">
             {allContacts.length}
@@ -93,7 +97,7 @@ export function ContactsClient({ initialData }: Props) {
 
         <div className="p-6 flex flex-col gap-1 border border-border">
           <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-[0.2em]">
-            Added This Month
+            {dictionary.contacts.summary.added_this_month}
           </span>
           <span className="text-3xl font-serif font-medium tracking-tight text-emerald-600 dark:text-emerald-400">
             {addedThisMonth}
@@ -102,25 +106,25 @@ export function ContactsClient({ initialData }: Props) {
 
         <div className="p-6 flex flex-col gap-1 border border-border bg-muted/5">
           <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-[0.2em]">
-            Most Active Client
+            {dictionary.contacts.summary.most_active}
           </span>
           <span className="text-lg font-serif font-medium tracking-tight truncate">
             {allContacts.length > 0 ? (allContacts[0]?.name ?? "–") : "–"}
           </span>
           <span className="text-[10px] text-muted-foreground">
-            No activity data
+            {dictionary.contacts.summary.no_activity}
           </span>
         </div>
 
         <div className="p-6 flex flex-col gap-1 border border-border bg-muted/5">
           <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-[0.2em]">
-            Top Revenue Client
+            {dictionary.contacts.summary.top_revenue}
           </span>
           <span className="text-lg font-serif font-medium tracking-tight truncate">
             {allContacts.length > 0 ? (allContacts[0]?.name ?? "–") : "–"}
           </span>
           <span className="text-[10px] text-muted-foreground">
-            No revenue data
+            {dictionary.contacts.summary.no_revenue}
           </span>
         </div>
       </div>
@@ -131,7 +135,7 @@ export function ContactsClient({ initialData }: Props) {
           <DataTableFilter
             filters={filters}
             onFilterChange={handleFilterChange as any}
-            placeholder="Search contacts..."
+            placeholder={dictionary.contacts.search_placeholder}
             showDateFilter={false}
             showAmountFilter={false}
             className="w-full bg-transparent border-none p-0 focus-visible:ring-0"
@@ -148,7 +152,7 @@ export function ContactsClient({ initialData }: Props) {
             }}
           >
             <Plus className="h-4 w-4 mr-2" />
-            New Contact
+            {dictionary.contacts.add_button}
           </Button>
         </div>
       </div>
@@ -161,7 +165,7 @@ export function ContactsClient({ initialData }: Props) {
           setColumns={setColumns}
           tableId="contacts"
           hFull
-          emptyMessage="No contacts yet. Add your first contact to get started."
+          emptyMessage={dictionary.contacts.empty.description}
           meta={{
             onRowClick: handleRowClick,
           }}
@@ -175,6 +179,7 @@ export function ContactsClient({ initialData }: Props) {
           setEditContact(null);
         }}
         contact={editContact}
+        dictionary={dictionary}
       />
 
       <ContactDetailSheet
@@ -184,6 +189,7 @@ export function ContactsClient({ initialData }: Props) {
           setIsDetailSheetOpen(false);
           setSelectedContact(null);
         }}
+        dictionary={dictionary}
       />
     </div>
   );

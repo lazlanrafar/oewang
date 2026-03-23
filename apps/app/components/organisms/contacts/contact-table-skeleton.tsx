@@ -2,9 +2,14 @@
 
 import { TableSkeleton, Skeleton } from "@workspace/ui";
 import { getContactColumns } from "./contact-columns";
+import { useAppStore } from "@/stores/app";
 
 export function ContactTableSkeleton() {
-  const columns = getContactColumns(() => {});
+  const { dictionary } = useAppStore();
+
+  if (!dictionary) return null;
+
+  const columns = getContactColumns(() => {}, dictionary);
 
   return (
     <div className="flex w-full flex-col h-full space-y-4">

@@ -46,17 +46,17 @@ export const sidebarItems: NavGroup[] = [
     // label: "Dashboard",
     items: [
       {
-        title: "Overview",
+        title: "sidebar.overview",
         url: "/overview",
         icon: LayoutDashboard,
       },
       {
-        title: "Transactions",
+        title: "sidebar.transactions",
         url: "/transactions",
         icon: Banknote,
       },
       {
-        title: "Calendar",
+        title: "sidebar.calendar",
         url: "/calendar",
         icon: Calendar,
       },
@@ -64,15 +64,15 @@ export const sidebarItems: NavGroup[] = [
   },
   {
     id: 2,
-    label: "Finance",
+    label: "sidebar.finance",
     items: [
       {
-        title: "Accounts",
+        title: "sidebar.accounts",
         url: "/accounts",
         icon: IdCard,
       },
       {
-        title: "Debts",
+        title: "sidebar.debts",
         url: "/debts",
         icon: HandCoins,
       },
@@ -80,10 +80,10 @@ export const sidebarItems: NavGroup[] = [
   },
   {
     id: 3,
-    label: "People",
+    label: "sidebar.people",
     items: [
       {
-        title: "Contacts",
+        title: "sidebar.contacts",
         url: "/contacts",
         icon: Users,
       },
@@ -91,15 +91,15 @@ export const sidebarItems: NavGroup[] = [
   },
   {
     id: 4,
-    label: "Workspace",
+    label: "sidebar.workspace",
     items: [
       {
-        title: "Vault",
+        title: "sidebar.vault",
         url: "/vault",
         icon: Box,
       },
       {
-        title: "Apps",
+        title: "sidebar.apps",
         url: "/apps",
         icon: DotSquare,
       },
@@ -107,10 +107,10 @@ export const sidebarItems: NavGroup[] = [
   },
   {
     id: 5,
-    label: "System",
+    label: "sidebar.system",
     items: [
       {
-        title: "Settings",
+        title: "sidebar.settings",
         url: "/settings",
         icon: Settings,
       },

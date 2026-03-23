@@ -41,7 +41,7 @@ function SettingAccountSkeleton() {
 }
 
 export function AccountForm() {
-  const { dictionary, isLoading: isDictLoading } = useAppStore();
+  const { dictionary, isLoading: isDictLoading } = useAppStore() as any;
   const account = dictionary?.settings?.account;
   const providers_t = account?.providers;
 
@@ -114,7 +114,7 @@ export function AccountForm() {
                     {provider}
                   </p>
                   <p className="text-[11px] text-muted-foreground tracking-tight">
-                    {account.logged_in_via} {provider}
+                    {account.form.logged_in_via} {provider}
                   </p>
                 </div>
               </div>

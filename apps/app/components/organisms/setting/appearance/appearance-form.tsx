@@ -76,7 +76,7 @@ function SettingAppearanceSkeleton() {
 }
 
 export function AppearanceForm() {
-  const { dictionary, isLoading: isDictLoading } = useAppStore();
+  const { dictionary, isLoading: isDictLoading } = useAppStore() as any;
   const themeMode = usePreferencesStore((s) => s.themeMode);
   const resolvedThemeMode = usePreferencesStore((s) => s.resolvedThemeMode);
   const setThemeMode = usePreferencesStore((s) => s.setThemeMode);

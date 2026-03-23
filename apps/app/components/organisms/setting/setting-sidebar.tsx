@@ -47,6 +47,7 @@ interface SidebarNavProps extends React.HTMLAttributes<HTMLElement> {
       alarm: string;
       language: string;
       billing: string;
+      members: string;
       soon: string;
     };
   };
@@ -71,7 +72,7 @@ export function SettingSidebar({
       icon: User,
     },
     {
-      title: "Members",
+      title: sidebar.members,
       href: "/settings/members",
       icon: Users,
     },

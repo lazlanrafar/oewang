@@ -10,10 +10,56 @@
   },
   "accounts": {
     "title": "Akun",
-    "assets": "Aset",
-    "liabilities": "Kewajiban",
-    "total": "Total",
-    "empty": "Akun tidak ditemukan. Mulailah dengan menambahkan satu di pengaturan."
+    "total_balance": "Total Saldo",
+    "active": "Aktif",
+    "search_placeholder": "Cari akun...",
+    "add_account": "Tambah Akun",
+    "edit_account": "Edit Akun",
+    "new_account": "Akun Baru",
+    "update_account": "Perbarui Akun",
+    "create_account": "Buat Akun",
+    "saving": "Menyimpan...",
+    "update_details": "Perbarui detail akun Anda di bawah ini.",
+    "create_description": "Buat akun keuangan baru untuk melacak saldo Anda.",
+    "account_name": "Nama Akun",
+    "account_name_placeholder": "misal: Tabungan Pribadi, Bisnis...",
+    "form": {
+      "name": {
+        "error_required": "Nama wajib diisi"
+      }
+    },
+    "group_label": "Grup",
+    "group_placeholder": "Pilih grup akun",
+    "initial_balance": "Saldo Awal",
+    "include_in_totals_label": "Sertakan dalam Total",
+    "include_in_totals_description": "Tampilkan saldo akun ini dalam perhitungan kekayaan bersih.",
+    "included_in_totals": "Disertakan dalam total",
+    "excluded_from_totals": "Dikecualikan dari total",
+    "created_date": "Tanggal Dibuat",
+    "created_date_description": "Tanggal akun ini pertama kali dibuat dalam sistem.",
+    "updated": "Diperbarui",
+    "empty_message": "Tidak ada akun ditemukan.",
+    "table": {
+      "name": "Nama",
+      "group": "Grup",
+      "balance": "Saldo",
+      "created_at": "Dibuat Pada",
+      "actions": "Aksi"
+    },
+    "toasts": {
+      "updated": "Akun berhasil diperbarui",
+      "update_failed": "Gagal memperbarui akun",
+      "created": "Akun berhasil dibuat",
+      "create_failed": "Gagal membuat akun",
+      "deleted": "Akun berhasil dihapus",
+      "delete_failed": "Gagal menghapus akun",
+      "group_updated": "Grup akun diperbarui",
+      "group_update_failed": "Gagal memperbarui grup akun",
+      "balance_updated": "Saldo diperbarui"
+    },
+    "confirmations": {
+      "delete": "Apakah Anda yakin ingin menghapus akun ini?"
+    }
   },
   "settings": {
     "common": {
@@ -36,7 +82,13 @@
       "used": "terpakai",
       "remaining": "tersisa",
       "open_menu": "Buka menu",
-      "error": "Masalah"
+      "error": "Masalah",
+      "form": {
+        "balance": {
+           "label": "Saldo Saat Ini",
+           "placeholder": "0.00"
+        }
+      }
     },
     "language": {
       "title": "Bahasa",
@@ -47,6 +99,10 @@
         "id": "Indonesia"
       },
       "placeholder": "Pilih bahasa"
+    },
+    "account": {
+      "title": "Akun",
+      "description": "Kelola pengaturan dan preferensi akun Anda."
     },
     "sidebar": {
       "profile": "Profil",
@@ -67,39 +123,8 @@
       "alarm": "Pengaturan Alarm",
       "language": "Pengaturan Bahasa",
       "billing": "Penagihan & Langganan",
+      "members": "Anggota",
       "soon": "Segera"
-    },
-    "billing": {
-      "title": "Penagihan & Langganan",
-      "description": "Kelola paket workspace Anda dan penggunaan sumber daya.",
-      "vault_storage": "Penyimpanan Vault",
-      "ai_tokens": "Token AI",
-      "current_plan": "Paket Saat Ini",
-      "manage_subscription": "Kelola Langganan",
-      "upgrade": "Upgrade",
-      "active_plan": "Paket Aktif",
-      "monthly": "per bulan",
-      "annual": "per tahun",
-      "mo": "bln",
-      "yr": "thn",
-      "available_plans": "Paket yang Tersedia",
-      "free_plan": "Paket Gratis",
-      "starter_plan": "Starter",
-      "monthly_toggle": "Bulanan",
-      "annual_toggle": "Tahunan",
-      "no_plans": "Tidak ada paket yang tersedia.",
-      "downgrade_confirm": "Apakah Anda yakin ingin downgrade? Sumber daya tambahan Anda akan hilang.",
-      "get_started": "Mulai Sekarang",
-      "history": {
-        "title": "Riwayat Penagihan",
-        "date": "Tanggal",
-        "invoice": "Faktur",
-        "amount": "Jumlah",
-        "status": "Status",
-        "action": "Aksi",
-        "no_history": "Tidak ada riwayat penagihan",
-        "no_history_description": "Faktur riwayat akan muncul di sini setelah Anda memulai langganan."
-      }
     },
     "appearance": {
       "title": "Tampilan",
@@ -139,9 +164,39 @@
         "title": "Tipografi",
         "description": "Pilih font yang sesuai dengan gaya Anda.",
         "font_family": "Keluarga Font",
-        "font_placeholder": "Pilih font"
+        "font_placeholder": "Pilih font",
+        "save": "Perbarui tampilan",
+        "success": "Tampilan diperbarui"
       },
       "restore_defaults": "Kembalikan Default"
+    },
+    "billing": {
+      "title": "Penagihan",
+      "description": "Kelola langganan dan informasi penagihan Anda.",
+      "current_plan": "Paket Saat Ini",
+      "manage_subscription": "Kelola Langganan",
+      "free_plan": "Paket Gratis",
+      "vault_storage": "Penyimpanan Brankas",
+      "ai_tokens": "Token AI",
+      "available_plans": "Paket yang Tersedia",
+      "monthly_toggle": "Bulanan",
+      "annual_toggle": "Tahunan",
+      "no_plans": "Tidak ada paket yang tersedia",
+      "mo": "bln",
+      "yr": "thn",
+      "downgrade_confirm": "Apakah Anda yakin ingin menurunkan paket?",
+      "upgrade": "Tingkatkan",
+      "get_started": "Mulai",
+      "history": {
+        "title": "Riwayat Penagihan",
+        "date": "Tanggal",
+        "invoice": "Faktur",
+        "amount": "Jumlah",
+        "status": "Status",
+        "action": "Aksi",
+        "no_history": "Tidak ada riwayat penagihan",
+        "no_history_description": "Anda belum melakukan pembelian apa pun."
+      }
     },
     "profile": {
       "title": "Profil",
@@ -180,20 +235,19 @@
         "error_size": "Ukuran file melebihi batas 10MB",
         "toast_success": "Foto profil diperbarui secara otomatis",
         "error_upload": "Gagal mengunggah foto"
-      }
-    },
-    "account": {
-      "title": "Akun",
-      "description": "Kelola pengaturan akun Anda dan atur bahasa serta zona waktu pilihan Anda.",
-      "no_providers": "Tidak ada penyedia yang ditautkan.",
-      "logged_in_via": "Masuk melalui",
-      "providers": {
-        "title": "Akun Terhubung",
-        "description": "Akun yang saat ini tertaut ke akun Okane Anda.",
-        "disconnect": "Putuskan",
-        "disconnect_confirm": "Apakah Anda yakin ingin memutuskan akun ini?",
-        "disconnect_success": "Akun berhasil diputuskan",
-        "primary_label": "Utama"
+      },
+      "form": {
+        "name_label": "Nama Tampilan",
+        "name_placeholder": "Masukkan nama Anda",
+        "username_label": "Nama Pengguna",
+        "username_placeholder": "Pilih nama pengguna yang unik",
+        "bio_label": "Bio",
+        "bio_placeholder": "Ceritakan tentang diri Anda",
+        "website_label": "Situs Web",
+        "website_placeholder": "https://contoh.com",
+        "save": "Perbarui profil",
+        "saving": "Memperbarui...",
+        "success": "Profil berhasil diperbarui"
       }
     },
     "currency": {
@@ -490,12 +544,89 @@
     "title": "Hutang & Piutang",
     "description": "Kelola hutang, piutang, dan bagi tagihan Anda.",
     "add_button": "Tambah Hutang",
+    "search_placeholder": "Cari hutang...",
+    "status_label": "Status",
+    "group_label": "Grup",
+    "total_debt": "Total Hutang",
+    "active_debts": "Hutang Aktif",
+    "overdue": "Terlambat",
     "empty": {
       "title": "Hutang tidak ditemukan",
       "description": "Pantau hutang dan piutang Anda. Tambahkan hutang pertama Anda untuk memulai.",
       "action": "Tambah Hutang Pertama"
     },
+    "columns": {
+      "contact": "Kontak",
+      "amount": "Jumlah",
+      "due_date": "Jatuh Tempo",
+      "status": "Status",
+      "type": "Tipe",
+      "description": "Deskripsi",
+      "summary": "Ringkasan",
+      "debt": "Hutang"
+    },
+    "statuses": {
+      "unpaid": "Belum Bayar",
+      "partial": "Sebagian",
+      "paid": "Lunas"
+    },
+    "types": {
+      "receivable": "Piutang",
+      "payable": "Hutang",
+      "you_owe": "Anda berhutang",
+      "you_are_owed": "Anda dipinjam oleh"
+    },
+    "actions": {
+      "view_details": "Lihat detail",
+      "edit": "Edit",
+      "delete": "Hapus",
+      "open_menu": "Buka menu"
+    },
+    "toasts": {
+      "deleted": "Hutang berhasil dihapus",
+      "delete_failed": "Gagal menghapus hutang",
+      "fetch_contact_error": "Gagal mengambil detail kontak",
+      "fetch_contact_error_desc": "Terjadi kesalahan saat mengambil detail kontak",
+      "created": "Hutang berhasil dibuat",
+      "updated": "Hutang berhasil diperbarui",
+      "create_failed": "Gagal membuat hutang",
+      "update_failed": "Gagal memperbarui hutang",
+      "payment_recorded": "Pembayaran dicatat",
+      "payment_failed": "Gagal mencatat pembayaran"
+    },
+    "bulk_settlement": {
+      "title": "Pelunasan Massal",
+      "no_outstanding": "Tidak ada hutang terhutang untuk kontak ini.",
+      "select_all": "Pilih semua",
+      "pay_from_account": "Bayar dari akun",
+      "total_to_settle": "Total untuk dilunasi",
+      "settle_button": "Lunasi Semua",
+      "settling": "Melunasi...",
+      "success_toast": "Berhasil melunasi hutang",
+      "error_toast": "Gagal melunasi hutang. Silakan coba lagi.",
+      "select_account_toast": "Silakan pilih akun",
+      "select_at_least_one_toast": "Silakan pilih setidaknya satu hutang"
+    },
+    "confirmations": {
+      "delete_title": "Hapus hutang ini?",
+      "delete_description": "Tindakan ini tidak dapat dibatalkan. Catatan hutang akan dihapus secara permanen."
+    },
+    "details": {
+      "title": "Detail Hutang",
+      "summary": "Ringkasan",
+      "original_amount": "Jumlah Asli",
+      "paid_amount": "Jumlah Dibayar",
+      "due_date": "Jatuh Tempo",
+      "no_due_date": "Tidak ada jatuh tempo",
+      "from_transaction": "Dari Transaksi",
+      "notes": "Catatan",
+      "settled": "Lunas",
+      "record_payment": "Catat Pembayaran",
+      "settle_all": "Lunasi semua"
+    },
     "form": {
+      "new_title": "Hutang Baru",
+      "update_title": "Edit Hutang",
       "contact": {
         "label": "Kontak",
         "placeholder": "Pilih kontak",
@@ -503,13 +634,15 @@
       },
       "type": {
         "label": "Tipe",
-        "payable": "Hutang (Payable)",
-        "receivable": "Piutang (Receivable)"
+        "payable": "Hutang",
+        "receivable": "Piutang"
       },
       "amount": {
         "label": "Jumlah",
         "placeholder": "0.00",
-        "error_required": "Jumlah wajib diisi"
+        "error_required": "Jumlah wajib diisi",
+        "error_positive": "Jumlah harus positif",
+        "error_max_remaining": "Pembayaran tidak boleh melebihi sisa hutang"
       },
       "description": {
         "label": "Deskripsi",
@@ -519,11 +652,396 @@
         "label": "Jatuh Tempo",
         "placeholder": "Pilih tanggal"
       },
+      "account": {
+        "label": "Akun",
+        "placeholder": "Pilih akun",
+        "error_required": "Akun wajib diisi",
+        "description": "Pilih akun tempat transaksi terjadi."
+      },
+      "payment": {
+        "title": "Catat Pembayaran",
+        "paying_to_from": "Membayar ke/dari",
+        "remaining_balance": "Sisa saldo",
+        "amount_to_pay": "Jumlah yang Dibayar",
+        "amount_to_pay_description": "Jumlah yang dilunasi.",
+        "submit": "Simpan Pembayaran"
+      },
       "submit": "Simpan",
       "cancel": "Batal",
-      "create_success": "Hutang berhasil dibuat",
-      "update_success": "Hutang berhasil diperbarui",
-      "delete_success": "Hutang berhasil dihapus"
+      "saving": "Menyimpan..."
     }
+  },
+  "overview": {
+    "greetings": {
+      "morning": "Selamat pagi",
+      "afternoon": "Selamat siang",
+      "evening": "Selamat malam"
+    },
+    "tabs": {
+      "overview": "Ringkasan",
+      "metrics": "Metrik"
+    },
+    "descriptions": {
+      "overview": "Ringkasan keuangan bulanan",
+      "metrics": "Metrik dan grafik keuangan terperinci"
+    },
+    "metrics": {
+      "income_title": "Pemasukan Bulanan",
+      "income_description": "Rincian pemasukan bulanan Anda berdasarkan kategori.",
+      "expense_title": "Pengeluaran Bulanan",
+      "expense_description": "Rincian pengeluaran bulanan Anda berdasarkan kategori.",
+      "category_title": "Rincian Kategori",
+      "category_description": "Distribusi pengeluaran di semua kategori.",
+      "income_total_title": "Total Pemasukan",
+      "income_total_desc": "Pemasukan dari waktu ke waktu",
+      "expense_total_title": "Total Pengeluaran",
+      "expense_total_desc": "Pengeluaran dari waktu ke waktu",
+      "income_breakdown_title": "Rincian Pemasukan",
+      "expense_breakdown_title": "Rincian Pengeluaran",
+      "current_month_desc": "Bulan Ini",
+      "total_income": "Total Pemasukan",
+      "total_expenses": "Total Pengeluaran",
+      "net_income": "Pemasukan Bersih",
+      "top_expense": "Pengeluaran Terbesar",
+      "this_month": "Bulan ini",
+      "vs_last_month": "vs bulan lalu",
+      "no_prior_data": "Tidak ada data sebelumnya",
+      "no_expenses": "Tidak ada pengeluaran tercatat"
+    },
+    "chips": {
+      "wallet_balances": "Saldo dompet",
+      "spending_analysis": "Analisis pengeluaran",
+      "latest_transactions": "Transaksi terbaru",
+      "monthly_summary": "Ringkasan bulanan",
+      "top_expenses": "Pengeluaran teratas",
+      "wallet_balances_msg": "Berapa saldo dompet saya saat ini?",
+      "spending_analysis_msg": "Berikan analisis pengeluaran saya selama 30 hari terakhir.",
+      "latest_transactions_msg": "Tunjukkan transaksi terbaru saya.",
+      "monthly_summary_msg": "Berikan ringkasan pemasukan vs pengeluaran saya selama 3 bulan terakhir.",
+      "top_expenses_msg": "Kategori apa yang paling banyak saya habiskan?"
+    }
+  },
+  "transactions": {
+    "title": "Transaksi",
+    "description": "Kelola dan lacak semua pergerakan keuangan Anda.",
+    "search_placeholder": "Cari transaksi...",
+    "type_label": "Tipe",
+    "add_button": "Tambah",
+    "import_backfill": "Impor/backfill",
+    "create_transaction": "Buat transaksi",
+    "new_transaction": "Transaksi Baru",
+    "edit_transaction": "Edit Transaksi",
+    "save_transaction": "Simpan Transaksi",
+    "upload_receipts": "Unggah struk",
+    "empty_message": "Tidak ada transaksi ditemukan.",
+    "delete_title": "Hapus transaksi?",
+    "delete_description": "Apakah Anda yakin ingin menghapus transaksi ini?",
+    "delete_confirm": "Hapus",
+    "mark_ready": "Tandai siap",
+    "mark_exported": "Tandai diekspor",
+    "reset_status": "Atur ulang status",
+    "reset_export": "Atur ulang ekspor",
+    "copy_link": "Salin tautan",
+    "view_details": "Lihat detail",
+    "edit": "Edit",
+    "save": "Simpan",
+    "saving": "Menyimpan...",
+    "category": "Kategori",
+    "assign": "Tugaskan",
+    "account": "Akun",
+    "to_account": "Ke Akun",
+    "description_label": "Deskripsi",
+    "amount_label": "Jumlah",
+    "currency_label": "Mata Uang",
+    "date_label": "Tanggal",
+    "notes_label": "Catatan",
+    "attachments": "Lampiran",
+    "related_debts": "Hutang Terkait",
+    "details": "Detail",
+    "created_at": "Dibuat",
+    "at": "pada",
+    "esc": "Esc",
+    "no_description": "Tidak ada deskripsi",
+    "unknown": "Tidak diketahui",
+    "unassigned": "Tidak ditugaskan",
+    "uncategorized": "Tanpa kategori",
+    "no_account": "Tanpa Akun",
+    "select_destination": "Pilih tujuan",
+    "select_member": "Pilih anggota",
+    "add_or_upload": "Tambah atau unggah file",
+    "click_to_browse": "Klik untuk menelusuri",
+    "drag_drop": "atau seret dan lepas file di sini",
+    "upload_hint": "Gambar, PDF, dan spreadsheet dari komputer atau Vault Anda",
+    "loading_debts": "Memuat hutang...",
+    "types": {
+      "income": "Pemasukan",
+      "expense": "Pengeluaran",
+      "transfer": "Transfer",
+      "transfer_in": "Transfer-Masuk",
+      "transfer_out": "Transfer-Keluar",
+      "transaction": "Transaksi"
+    },
+    "placeholders": {
+      "description": "misal: Belanja bulanan, Gaji...",
+      "notes": "Tambah catatan, tautan, atau detail apa pun...",
+      "search": "Cari transaksi...",
+      "destination": "Pilih tujuan",
+      "member": "Pilih anggota"
+    },
+    "hints": {
+      "type": "Pilih apakah ini uang masuk (Pemasukan) atau uang keluar (Pengeluaran)",
+      "description": "Deskripsi singkat tentang transaksi ini",
+      "amount": "Masukkan jumlah transaksi",
+      "currency": "Mata uang untuk transaksi ini",
+      "account": "Akun tempat transaksi ini berada",
+      "date": "Kapan transaksi ini terjadi",
+      "category": "Membantu mengatur dan melacak transaksi Anda",
+      "to_account": "Akun tujuan untuk transfer ini",
+      "assign": "Tugaskan transaksi ini ke anggota tim",
+      "notes": "Tambahkan detail tambahan atau konteks tentang transaksi ini"
+    },
+    "errors": {
+      "amount_positive": "Jumlah harus positif",
+      "invalid_date": "Tanggal tidak valid",
+      "wallet_required": "Akun wajib diisi",
+      "load_failed": "Gagal memuat data formulir",
+      "save_failed": "Gagal menyimpan transaksi",
+      "file_size_limit": "Ukuran file melebihi batas 3MB",
+      "file_type_limit": "Hanya gambar dan PDF yang diperbolehkan",
+      "upload_failed": "Unggah gagal",
+      "parse_failed": "Gagal memproses AI",
+      "process_failed": "Gagal memproses struk",
+      "invalid_file_type": "Tipe file tidak valid untuk {name}. Hanya dokumen dan gambar yang diperbolehkan.",
+      "some_uploads_failed": "Beberapa file gagal diunggah",
+      "preview_failed": "Gagal memuat pratinjau file"
+    },
+    "group_by": {
+      "placeholder": "Kelompokkan berdasarkan",
+      "none": "Tanpa pengelompokan",
+      "daily": "Harian",
+      "weekly": "Mingguan",
+      "monthly": "Bulanan"
+    },
+    "toasts": {
+      "deleted": "Transaksi dihapus",
+      "delete_failed": "Gagal menghapus transaksi",
+      "updated": "Transaksi diperbarui",
+      "created": "Transaksi dibuat",
+      "category_updated": "Kategori diperbarui",
+      "account_updated": "Akun diperbarui",
+      "assignee_updated": "Penerima tugas diperbarui",
+      "link_copied": "Tautan disalin ke papan klip",
+      "marked_pending": "Ditandai sebagai tertunda",
+      "marked_ready": "Ditandai sebagai siap",
+      "marked_exported": "Ditandai sebagai diekspor",
+      "unmarked_exported": "Batal ditandai sebagai diekspor",
+      "parsing_receipt": "Mengunggah dan memproses struk...",
+      "parse_success": "Struk berhasil diproses",
+      "uploading_files": "Mengunggah {count} file...",
+      "all_uploads_success": "Semua file berhasil diunggah"
+    }
+  },
+  "contacts": {
+    "title": "Kontak",
+    "description": "Kelola kontak Anda dan pantau riwayat hutang mereka.",
+    "add_button": "Kontak Baru",
+    "search_placeholder": "Cari kontak...",
+    "empty": {
+      "title": "Belum ada kontak",
+      "description": "Tambahkan kontak pertama Anda untuk memulai.",
+      "action": "Tambah Kontak Pertama"
+    },
+    "summary": {
+      "total": "Total Kontak",
+      "added_this_month": "Ditambahkan Bulan Ini",
+      "most_active": "Klien Paling Aktif",
+      "top_revenue": "Klien Pendapatan Tertinggi",
+      "no_activity": "Tidak ada data aktivitas",
+      "no_revenue": "Tidak ada data pendapatan"
+    },
+    "columns": {
+      "name": "Nama",
+      "email": "Email",
+      "phone": "Telepon",
+      "address": "Alamat",
+      "created_at": "Bergabung Pada"
+    },
+    "details": {
+      "title": "Detail Kontak",
+      "quick_edit": "Edit Cepat",
+      "view_details": "Lihat Detail",
+      "no_email": "Email tidak tersedia",
+      "activity_history": "Riwayat Aktivitas",
+      "no_history": "Tidak ada riwayat transaksi",
+      "progress": "Progres",
+      "settled": "dilunasi",
+      "notes": "Catatan",
+      "edit_contact": "Edit Kontak",
+      "delete_contact": "Hapus Kontak",
+      "delete_confirm_title": "Hapus kontak?",
+      "delete_confirm_desc": "Tindakan ini akan menghapus kontak ini secara permanen dan tidak dapat dibatalkan."
+    },
+    "form": {
+      "name_label": "Nama",
+      "name_placeholder": "John Doe",
+      "email_label": "Email",
+      "email_placeholder": "john@example.com",
+      "phone_label": "Telepon",
+      "phone_placeholder": "+62 812 3456 7890",
+      "address_label": "Alamat",
+      "address_placeholder": "Jl. Utama No. 123",
+      "notes_label": "Catatan",
+      "notes_placeholder": "Informasi tambahan...",
+      "save": "Simpan Perubahan",
+      "saving": "Menyimpan...",
+      "create": "Buat Kontak",
+      "creating": "Membuat...",
+      "cancel": "Batal",
+      "errors": {
+        "name_required": "Nama wajib diisi",
+        "invalid_email": "Email tidak valid"
+      }
+    },
+    "toasts": {
+      "created": "Kontak berhasil dibuat",
+      "updated": "Kontak berhasil diperbarui",
+      "deleted": "Kontak berhasil dihapus",
+      "create_failed": "Gagal membuat kontak",
+      "update_failed": "Gagal memperbarui kontak",
+      "delete_failed": "Gagal menghapus kontak"
+    }
+  },
+  "common": {
+    "loading_more": "Memuat lebih banyak..."
+  },
+  "vault": {
+    "title": "Brankas",
+    "description": "Kelola dokumen dan faktur Anda dengan aman.",
+    "upload_button": "Unggah",
+    "search_placeholder": "Cari file...",
+    "drop_zone": {
+      "title": "Lepaskan untuk mengunggah dokumen Anda",
+      "description": "Hanya gambar, PDF, atau file Excel"
+    },
+    "empty": {
+      "title": "Tidak ada file ditemukan",
+      "no_results": "Tidak ada hasil untuk \"{search}\". Coba kata kunci lain.",
+      "get_started": "Unggah file pertama Anda untuk memulai.",
+      "clear_search": "Hapus pencarian"
+    },
+    "storage": {
+      "usage": "{used} / {limit} MB",
+      "title": "Penyimpanan Vault",
+      "used": "Terpakai",
+      "remaining": "Tersisa"
+    },
+    "details": {
+      "title": "Detail File",
+      "no_file_selected": "Tidak ada file terpilih",
+      "no_file_selected_desc": "Pilih file untuk melihat detailnya, ukurannya, dan kelola tag.",
+      "date_created": "Tanggal Dibuat",
+      "format": "Format",
+      "file_size": "Ukuran File",
+      "dimensions": "Dimensi",
+      "tags": "Tag",
+      "no_tags": "Tidak ada tag ditambahkan",
+      "suggested_tags": "Tag yang Disarankan",
+      "add_custom_tag": "Tambah tag khusus...",
+      "add_tag_button": "Tambah",
+      "view_full": "Lihat penuh",
+      "open_original": "Buka Asli",
+      "download_local": "Unduh Lokal",
+      "delete": "Hapus"
+    },
+    "columns": {
+      "filename": "Nama File",
+      "format": "Format",
+      "size": "Ukuran File",
+      "date": "Tanggal Dibuat"
+    },
+    "toasts": {
+      "uploading": "Mengunggah {count} file...",
+      "upload_success": "Semua file berhasil diunggah",
+      "upload_failed_some": "Beberapa file gagal diunggah",
+      "upload_failed": "Unggahan gagal",
+      "delete_success": "File dihapus",
+      "delete_failed": "Gagal menghapus file",
+      "tags_update_success": "Tag diperbarui",
+      "tags_update_failed": "Gagal memperbarui tag",
+      "invalid_type": "Tipe file tidak valid untuk {name}. Hanya dokumen dan gambar yang diizinkan."
+    }
+  },
+  "calendar": {
+    "title": "Kalender",
+    "description": "Visualisasikan peristiwa keuangan Anda dari waktu ke waktu.",
+    "view": {
+      "month": "Bulan",
+      "week": "Minggu",
+      "today": "Hari Ini"
+    },
+    "tabs": {
+      "week": "Minggu",
+      "month": "Bulan"
+    },
+    "days": {
+      "short": {
+        "sun": "MIN",
+        "mon": "SEN",
+        "tue": "SEL",
+        "wed": "RAB",
+        "thu": "KAM",
+        "fri": "JUM",
+        "sat": "SAB"
+      }
+    },
+    "activity": {
+      "debt": "{count} hutang",
+      "debts": "{count} hutang"
+    },
+    "summary": {
+      "income": "Total Pemasukan",
+      "expense": "Total Pengeluaran"
+    },
+    "sheet": {
+      "income_total": "Total Pemasukan",
+      "expense_total": "Total Pengeluaran",
+      "transactions_title": "Transaksi ({count})",
+      "debts_title": "Hutang Diperlukan/Terjadi ({count})",
+      "no_transactions": "Tidak ada transaksi untuk hari ini.",
+      "no_debts": "Tidak ada hutang yang tercatat atau jatuh tempo pada hari ini.",
+      "unknown_transaction": "Tidak Diketahui"
+    }
+  },
+  "sidebar": {
+    "dashboard": "Dasbor",
+    "finance": "Keuangan",
+    "people": "Orang",
+    "workspace": "Ruang Kerja",
+    "system": "Sistem",
+    "overview": "Ringkasan",
+    "transactions": "Transaksi",
+    "calendar": "Kalender",
+    "accounts": "Akun",
+    "debts": "Hutang",
+    "contacts": "Kontak",
+    "vault": "Brankas",
+    "apps": "Aplikasi",
+    "settings": "Pengaturan",
+    "invoices": "Tagihan",
+    "customers": "Pelanggan",
+    "coming_soon": "Segera Hadir"
+  },
+  "search": {
+    "placeholder": "Cari apa saja...",
+    "input_placeholder": "Ketik perintah atau cari...",
+    "no_results": "Tidak ada hasil ditemukan.",
+    "shortcuts": "Pintasan",
+    "transactions": "Transaksi",
+    "vault": "Brankas",
+    "settings": "Pengaturan",
+    "view_transactions": "Lihat transaksi",
+    "view_vault": "Lihat brankas",
+    "navigate": "Navigasi",
+    "open": "Buka"
   }
 }

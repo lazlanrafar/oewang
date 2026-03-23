@@ -86,6 +86,12 @@ export function TransactionSettingsForm() {
     },
   });
 
+  if (isLoading || isDictLoading || !settings || !dictionary) {
+    return <SettingTransactionSkeleton />;
+  }
+
+  const { transaction } = dictionary.settings;
+
   const mutation = useMutation({
     mutationFn: async (vars: Partial<TransactionSettings>) => {
       const result = await updateTransactionSettings(vars);
@@ -104,12 +110,6 @@ export function TransactionSettingsForm() {
   const updateSetting = (key: keyof TransactionSettings, value: any) => {
     mutation.mutate({ [key]: value });
   };
-
-  if (isLoading || isDictLoading || !settings || !dictionary) {
-    return <SettingTransactionSkeleton />;
-  }
-
-  const { transaction } = dictionary.settings;
 
   return (
     <div className="space-y-8">

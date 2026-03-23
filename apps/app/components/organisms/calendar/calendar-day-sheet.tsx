@@ -22,7 +22,10 @@ export function CalendarDaySheet({
   debts,
 }: CalendarDaySheetProps) {
   const router = useRouter();
-  const { formatCurrency, getTransactionColor } = useAppStore();
+  const { formatCurrency, getTransactionColor, dictionary } = useAppStore();
+
+  if (!dictionary) return null;
+  const t = dictionary.calendar.sheet;
 
   const handleTransactionClick = (id: string) => {
     onOpenChange(false);
@@ -48,7 +51,7 @@ export function CalendarDaySheet({
             <div className="grid grid-cols-2 gap-4">
               <div className="p-4 border bg-muted/20">
                 <p className="text-sm text-muted-foreground mb-1">
-                  Total Income
+                  {t.income_total}
                 </p>
                 <p className="text-lg font-semibold text-emerald-600 dark:text-emerald-400">
                   {formatCurrency(
@@ -60,7 +63,7 @@ export function CalendarDaySheet({
               </div>
               <div className="p-4 border bg-muted/20">
                 <p className="text-sm text-muted-foreground mb-1">
-                  Total Expense
+                  {t.expense_total}
                 </p>
                 <p className="text-lg font-semibold text-red-600 dark:text-red-400">
                   {formatCurrency(
@@ -75,25 +78,25 @@ export function CalendarDaySheet({
             {/* Transactions List */}
             <div>
               <h3 className="text-sm tracking-wider mb-4">
-                Transactions ({transactions.length})
+                {t.transactions_title.replace("{count}", transactions.length.toString())}
               </h3>
               {transactions.length > 0 ? (
                 <div className="space-y-4">
-                  {transactions.map((t) => (
+                  {transactions.map((tx) => (
                     <div
-                      key={t.id}
-                      onClick={() => handleTransactionClick(t.id)}
+                      key={tx.id}
+                      onClick={() => handleTransactionClick(tx.id)}
                       className="p-3 border flex flex-col gap-1 cursor-pointer hover:bg-muted/30 transition-colors group"
                     >
                       <div className="flex justify-between items-start">
                         <span className="font-medium text-sm group-hover:text-primary transition-colors">
-                          {t.name || "Unknown"}
+                          {tx.name || t.unknown_transaction}
                         </span>
                         <span
-                          className={`font-serif tracking-tight ${getTransactionColor(t.type)}`}
+                          className={`font-serif tracking-tight ${getTransactionColor(tx.type)}`}
                         >
-                          {t.type === "income" ? "+" : "-"}
-                          {formatCurrency(Number(t.amount))}
+                          {tx.type === "income" ? "+" : "-"}
+                          {formatCurrency(Number(tx.amount))}
                         </span>
                       </div>
                     </div>
@@ -101,7 +104,7 @@ export function CalendarDaySheet({
                 </div>
               ) : (
                 <div className="text-sm text-muted-foreground p-4 bg-muted/20  text-center">
-                  No transactions for this day.
+                  {t.no_transactions}
                 </div>
               )}
             </div>
@@ -109,7 +112,7 @@ export function CalendarDaySheet({
             {/* Debts List */}
             <div>
               <h3 className="text-sm tracking-wider mb-4">
-                Debts Required/Incurred ({debts.length})
+                {t.debts_title.replace("{count}", debts.length.toString())}
               </h3>
               {debts.length > 0 ? (
                 <div className="space-y-3">
@@ -148,7 +151,7 @@ export function CalendarDaySheet({
                 </div>
               ) : (
                 <div className="text-sm text-muted-foreground p-4 bg-muted/20  text-center">
-                  No debts recorded or due on this day.
+                  {t.no_debts}
                 </div>
               )}
             </div>

@@ -185,7 +185,7 @@ function CategorySkeleton() {
 }
 
 export function CategoryForm({ type }: { type: "income" | "expense" }) {
-  const { dictionary, isLoading: isDictLoading } = useAppStore();
+  const { dictionary, isLoading: isDictLoading } = useAppStore() as any;
   const dictionary_t =
     type === "income"
       ? dictionary?.settings?.category?.income
@@ -288,7 +288,7 @@ export function CategoryForm({ type }: { type: "income" | "expense" }) {
     },
     onError: (error) => {
       toast.error(
-        `${dictionary?.settings.common.error || "Error"}: ${
+        `${dictionary?.settings?.common?.error || "Error"}: ${
           (error as Error).message
         }`,
       );
@@ -313,7 +313,7 @@ export function CategoryForm({ type }: { type: "income" | "expense" }) {
     },
     onError: (error) => {
       toast.error(
-        `${dictionary?.settings.common.error || "Error"}: ${
+        `${dictionary?.settings?.common?.error || "Error"}: ${
           (error as Error).message
         }`,
       );
@@ -334,7 +334,7 @@ export function CategoryForm({ type }: { type: "income" | "expense" }) {
     },
     onError: (error) => {
       toast.error(
-        `${dictionary?.settings.common.error || "Error"}: ${
+        `${dictionary?.settings?.common?.error || "Error"}: ${
           (error as Error).message
         }`,
       );

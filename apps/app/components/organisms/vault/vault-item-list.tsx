@@ -10,22 +10,26 @@ interface VaultItemListProps {
   files: VaultFile[];
   selectedFileId?: string;
   onSelect: (file: VaultFile) => void;
+  dictionary: any;
 }
 
 export function VaultItemList({
   files,
   selectedFileId,
   onSelect,
+  dictionary,
 }: VaultItemListProps) {
+  const t = dictionary.vault;
+
   return (
     <div className="min-w-full">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b text-xs text-muted-foreground uppercase h-10">
-            <th className="px-4 text-left font-medium">Filename</th>
-            <th className="px-4 text-left font-medium">Format</th>
-            <th className="px-4 text-right font-medium">File Size</th>
-            <th className="px-4 text-right font-medium">Date Created</th>
+            <th className="px-4 text-left font-medium">{t.columns.filename}</th>
+            <th className="px-4 text-left font-medium">{t.columns.format}</th>
+            <th className="px-4 text-right font-medium">{t.columns.size}</th>
+            <th className="px-4 text-right font-medium">{t.columns.date}</th>
           </tr>
         </thead>
         <tbody className="divide-y">

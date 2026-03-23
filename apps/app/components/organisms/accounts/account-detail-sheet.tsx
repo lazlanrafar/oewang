@@ -43,7 +43,7 @@ export function AccountDetailSheet({
   groups = [],
   onEdit,
 }: AccountDetailSheetProps) {
-  const { settings, formatCurrency } = useAppStore();
+  const { settings, formatCurrency, dictionary } = useAppStore();
   const [name, setName] = useState("");
   const [balance, setBalance] = useState(0);
   const [isIncludedInTotals, setIsIncludedInTotals] = useState(true);
@@ -78,7 +78,7 @@ export function AccountDetailSheet({
 
   // Real-time update for Name
   useEffect(() => {
-    if (!wallet) return;
+    if (!wallet || !dictionary) return;
 
     if (debouncedName === wallet.name || debouncedName === "") return;
 
@@ -93,9 +93,9 @@ export function AccountDetailSheet({
     };
 
     update();
-  }, [debouncedName, wallet?.id]);
+  }, [debouncedName, wallet?.id, dictionary]);
 
-  if (!wallet) return null;
+  if (!wallet || !dictionary) return null;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -105,10 +105,11 @@ export function AccountDetailSheet({
           <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-2 text-[10px] font-medium text-muted-foreground uppercase tracking-widest">
               <Landmark className="h-3 w-3 text-muted-foreground/60" />
-              <span>Account</span>
+              <span>{dictionary.accounts.title}</span>
             </div>
             <span className="text-[11px] text-muted-foreground tracking-tight">
-              Updated {format(new Date(wallet.updatedAt), "MMM d, yyyy")}
+              {dictionary.accounts.updated}{" "}
+              {format(new Date(wallet.updatedAt), "MMM d, yyyy")}
             </span>
           </div>
 
@@ -135,7 +136,7 @@ export function AccountDetailSheet({
                         });
                         if (res.success && res.data) {
                           updateWalletInCache(res.data);
-                          toast.success("Balance updated");
+                          toast.success(dictionary.accounts.toasts.balance_updated);
                         }
                       }
                     }}
@@ -159,7 +160,7 @@ export function AccountDetailSheet({
           <div className="grid grid-cols-2 gap-4 pt-2">
             <div className="space-y-2">
               <Label className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest px-1">
-                Group
+                {dictionary.accounts.group_label}
               </Label>
               <SelectAccountGroup
                 value={wallet.groupId || undefined}
@@ -169,19 +170,20 @@ export function AccountDetailSheet({
                   });
                   if (res.success && res.data) {
                     updateWalletInCache(res.data);
-                    toast.success("Group updated");
+                    toast.success(dictionary.accounts.toasts.group_updated);
                   }
                 }}
                 className=""
+                placeholder={dictionary.accounts.group_placeholder}
               />
             </div>
             <div className="space-y-2">
               <Label className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest px-1">
-                Status
+                {dictionary.transactions.type_label}
               </Label>
               <div className="flex items-center justify-between border px-3 h-10 bg-background/50">
                 <span className="text-[11px] font-medium">
-                  Included in totals
+                  {dictionary.accounts.include_in_totals_label}
                 </span>
                 <Switch
                   checked={isIncludedInTotals}
@@ -193,7 +195,9 @@ export function AccountDetailSheet({
                     if (res.success && res.data) {
                       updateWalletInCache(res.data);
                       toast.success(
-                        checked ? "Included in totals" : "Excluded from totals",
+                        checked
+                          ? dictionary.accounts.included_in_totals
+                          : dictionary.accounts.excluded_from_totals,
                       );
                     }
                   }}
@@ -205,12 +209,12 @@ export function AccountDetailSheet({
           {/* Name Input Row */}
           <div className="space-y-2">
             <Label className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest px-1">
-              Account Name
+              {dictionary.accounts.account_name}
             </Label>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Account name"
+              placeholder={dictionary.accounts.account_name_placeholder}
               className="font-sans font-medium"
             />
           </div>
@@ -222,10 +226,10 @@ export function AccountDetailSheet({
             <div className="flex items-center justify-between group">
               <div className="space-y-1">
                 <Label className="text-sm font-medium text-foreground/90 group-hover:text-foreground transition-colors cursor-pointer">
-                  Created Date
+                  {dictionary.accounts.created_date}
                 </Label>
                 <p className="text-[11px] text-muted-foreground leading-relaxed max-w-[280px]">
-                  The date this account was first created in the system.
+                  {dictionary.accounts.created_date_description}
                 </p>
               </div>
               <span className="text-[11px] font-medium">
@@ -247,7 +251,7 @@ export function AccountDetailSheet({
               className="px-3 py-2 hover:bg-muted/40 transition-colors group"
             >
               <span className="text-[10px] font-bold text-muted-foreground group-hover:text-foreground uppercase tracking-widest">
-                Esc
+                {dictionary.transactions.esc}
               </span>
             </button>
           </div>

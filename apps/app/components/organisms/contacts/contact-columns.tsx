@@ -19,22 +19,29 @@ import { useQueryClient } from "@tanstack/react-query";
 const CellActions = ({
   row,
   onEdit,
+  dictionary,
 }: {
   row: { original: Contact };
   onEdit: (contact: Contact) => void;
+  dictionary: any;
 }) => {
   const contact = row.original;
   const queryClient = useQueryClient();
 
   const handleDelete = async () => {
-    if (!confirm(`Are you sure you want to delete ${contact.name}?`)) return;
+    if (
+      !confirm(
+        `${dictionary.contacts.details.delete_confirm_title}\n\n${dictionary.contacts.details.delete_confirm_desc}`,
+      )
+    )
+      return;
     try {
       const result = await deleteContact(contact.id);
       if (result.success) {
-        toast.success("Contact deleted successfully");
+        toast.success(dictionary.contacts.toasts.deleted);
         queryClient.invalidateQueries({ queryKey: ["contacts"] });
       } else {
-        toast.error(result.error || "Failed to delete contact");
+        toast.error(result.error || dictionary.contacts.toasts.delete_failed);
       }
     } catch {
       toast.error("An unexpected error occurred");
@@ -50,15 +57,17 @@ const CellActions = ({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+        <DropdownMenuLabel>
+          {dictionary.transactions.actions.title}
+        </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => onEdit(contact)}>
           <Pencil className="mr-2 h-4 w-4" />
-          <span>Edit</span>
+          <span>{dictionary.contacts.details.edit_contact}</span>
         </DropdownMenuItem>
         <DropdownMenuItem onClick={handleDelete} className="text-destructive">
           <Trash2 className="mr-2 h-4 w-4" />
-          <span>Delete</span>
+          <span>{dictionary.contacts.details.delete_contact}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -67,15 +76,16 @@ const CellActions = ({
 
 export const getContactColumns = (
   onEdit: (contact: Contact) => void,
+  dictionary: any,
 ): ColumnDef<Contact>[] => [
   {
     accessorKey: "name",
-    header: "Name",
+    header: dictionary.contacts.columns.name,
     cell: ({ row }) => <div className="font-medium">{row.original.name}</div>,
   },
   {
     accessorKey: "email",
-    header: "Email",
+    header: dictionary.contacts.columns.email,
     cell: ({ row }) => (
       <a
         href={`mailto:${row.original.email}`}
@@ -88,7 +98,7 @@ export const getContactColumns = (
   },
   {
     accessorKey: "phone",
-    header: "Phone",
+    header: dictionary.contacts.columns.phone,
     cell: ({ row }) => (
       <span className="text-muted-foreground">{row.original.phone ?? "—"}</span>
     ),
@@ -125,16 +135,18 @@ export const getContactColumns = (
     },
   },
   {
-    accessorKey: "contact",
-    header: "Contact",
+    accessorKey: "addressLine1",
+    header: dictionary.contacts.columns.address,
     cell: ({ row }) => (
       <span className="text-muted-foreground">
-        {row.original.contact ?? "—"}
+        {row.original.addressLine1 ?? "—"}
       </span>
     ),
   },
   {
     id: "actions",
-    cell: ({ row }) => <CellActions row={row} onEdit={onEdit} />,
+    cell: ({ row }) => (
+      <CellActions row={row} onEdit={onEdit} dictionary={dictionary} />
+    ),
   },
 ];

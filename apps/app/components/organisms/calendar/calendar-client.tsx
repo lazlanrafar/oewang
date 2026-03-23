@@ -36,7 +36,6 @@ import { useAppStore } from "@/stores/app";
 type CalendarView = "month" | "week";
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
-const DAY_LABELS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 
 /** Parse a yyyy-MM-dd string safely; fallback to today */
 function parseDateParam(value: string | null): Date {
@@ -50,6 +49,9 @@ function parseDateParam(value: string | null): Date {
 }
 
 export function CalendarClient() {
+  const { dictionary } = useAppStore();
+  if (!dictionary) return null;
+  const t = dictionary.calendar;
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -234,8 +236,8 @@ export function CalendarClient() {
           <h1 className="text-2xl font-serif tracking-tight">{headerLabel}</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
             {view === "month"
-              ? "Monthly financial overview"
-              : "Weekly financial overview"}
+              ? (t as any).description.month
+              : (t as any).description.week}
           </p>
         </div>
 
@@ -263,14 +265,14 @@ export function CalendarClient() {
               className={cn(tabClass, view === "week" && activeTabClass)}
             >
               <CalendarDays className="w-4 h-4" />
-              Week
+              {t.tabs.week}
             </button>
             <button
               onClick={() => setView("month")}
               className={cn(tabClass, view === "month" && activeTabClass)}
             >
               <LayoutGrid className="w-4 h-4" />
-              Month
+              {t.tabs.month}
             </button>
           </div>
         </div>
@@ -284,6 +286,7 @@ export function CalendarClient() {
           dayDataForDate={dayDataForDate}
           isLoading={isLoading}
           setSelectedDate={(d) => setCalendarDate(format(d, "yyyy-MM-dd"))}
+          t={t}
         />
       ) : (
         <WeekView
@@ -294,6 +297,7 @@ export function CalendarClient() {
           isLoading={isLoading}
           setSelectedDate={(d) => setCalendarDate(format(d, "yyyy-MM-dd"))}
           scrollRef={weekScrollRef}
+          t={t}
         />
       )}
 
@@ -328,21 +332,32 @@ function MonthView({
   currentDate,
   monthDays,
   dayDataForDate,
-  isLoading,
   setSelectedDate,
+  t,
 }: {
   currentDate: Date;
   monthDays: Date[];
   dayDataForDate: (d: Date) => any;
   isLoading: boolean;
   setSelectedDate: (d: Date) => void;
+  t: any;
 }) {
   const { formatCurrency } = useAppStore();
+  const DAY_LABELS = [
+    t.days.short.sun,
+    t.days.short.mon,
+    t.days.short.tue,
+    t.days.short.wed,
+    t.days.short.thu,
+    t.days.short.fri,
+    t.days.short.sat,
+  ];
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Day-of-week header */}
       <div className="grid grid-cols-7 border-b bg-background shrink-0">
-        {DAY_LABELS.map((d) => (
+        {DAY_LABELS.map((d: string) => (
           <div
             key={d}
             className="px-4 py-2.5 text-xs font-semibold text-muted-foreground tracking-wider"
@@ -404,7 +419,9 @@ function MonthView({
                   )}
                   {dayDebts.length > 0 && (
                     <div className="text-[10px] sm:text-[11px] font-medium px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 truncate">
-                      {dayDebts.length} debt{dayDebts.length > 1 ? "s" : ""}
+                      {dayDebts.length === 1
+                        ? t.activity.debt.replace("{count}", "1")
+                        : t.activity.debts.replace("{count}", dayDebts.length.toString())}
                     </div>
                   )}
                 </div>
@@ -428,6 +445,7 @@ function WeekView({
   isLoading,
   setSelectedDate,
   scrollRef,
+  t,
 }: {
   weekDays: Date[];
   transactions: any[];
@@ -436,6 +454,7 @@ function WeekView({
   isLoading: boolean;
   setSelectedDate: (d: Date) => void;
   scrollRef: React.RefObject<HTMLDivElement | null>;
+  t: any;
 }) {
   const { formatCurrency } = useAppStore();
   const today = new Date();
@@ -474,7 +493,15 @@ function WeekView({
               onClick={() => setSelectedDate(day)}
             >
               <span className="text-[11px] font-semibold tracking-wider text-muted-foreground">
-                {format(day, "EEE").toUpperCase()}
+                {[
+                  t.days.short.sun,
+                  t.days.short.mon,
+                  t.days.short.tue,
+                  t.days.short.wed,
+                  t.days.short.thu,
+                  t.days.short.fri,
+                  t.days.short.sat,
+                ][day.getDay()]}
               </span>
               <span
                 className={cn(

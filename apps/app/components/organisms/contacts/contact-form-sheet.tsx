@@ -53,6 +53,7 @@ interface Props {
   open: boolean;
   onClose: () => void;
   contact?: Contact | null;
+  dictionary: any;
 }
 
 /** Simple email tag-chip input — no extra dependency needed */
@@ -133,7 +134,12 @@ function BillingEmailsInput({
   );
 }
 
-export function ContactFormSheet({ open, onClose, contact }: Props) {
+export function ContactFormSheet({
+  open,
+  onClose,
+  contact,
+  dictionary,
+}: Props) {
   const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [billingEmails, setBillingEmails] = useState<string[]>(
@@ -229,11 +235,18 @@ export function ContactFormSheet({ open, onClose, contact }: Props) {
         : await createContact(payload as any);
 
       if (result.success) {
-        toast.success(isEdit ? "Contact updated" : "Contact created");
+        toast.success(
+          isEdit ? dictionary.contacts.toasts.updated : dictionary.contacts.toasts.created,
+        );
         queryClient.invalidateQueries({ queryKey: ["contacts"] });
         handleClose();
       } else {
-        toast.error(result.error || "Something went wrong");
+        toast.error(
+          result.error ||
+            (isEdit
+              ? dictionary.contacts.toasts.update_failed
+              : dictionary.contacts.toasts.create_failed),
+        );
       }
     } catch {
       toast.error("An unexpected error occurred");
@@ -246,7 +259,11 @@ export function ContactFormSheet({ open, onClose, contact }: Props) {
     <Sheet open={open} onOpenChange={handleClose}>
       <SheetContent className="sm:max-w-[520px] p-0 flex flex-col">
         <SheetHeader className="p-6 pb-0 shrink-0">
-          <SheetTitle>{isEdit ? "Edit Contact" : "New Contact"}</SheetTitle>
+          <SheetTitle>
+            {isEdit
+              ? dictionary.contacts.details.edit_contact
+              : dictionary.contacts.add_button}
+          </SheetTitle>
         </SheetHeader>
 
         <Form {...form}>
@@ -264,7 +281,7 @@ export function ContactFormSheet({ open, onClose, contact }: Props) {
                 {/* General */}
                 <AccordionItem value="general" className="border-none">
                   <AccordionTrigger className="text-sm font-medium py-2">
-                    General
+                    {dictionary.overview.general.title}
                   </AccordionTrigger>
                   <AccordionContent>
                     <div className="space-y-4 pt-2">
@@ -274,12 +291,12 @@ export function ContactFormSheet({ open, onClose, contact }: Props) {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="text-xs text-muted-foreground font-normal">
-                              Name
+                              {dictionary.contacts.form.name_label}
                             </FormLabel>
                             <FormControl>
                               <Input
                                 {...field}
-                                placeholder="Acme Inc"
+                                placeholder={dictionary.contacts.form.name_placeholder}
                                 autoFocus
                               />
                             </FormControl>
@@ -293,13 +310,13 @@ export function ContactFormSheet({ open, onClose, contact }: Props) {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="text-xs text-muted-foreground font-normal">
-                              Email
+                              {dictionary.contacts.form.email_label}
                             </FormLabel>
                             <FormControl>
                               <Input
                                 {...field}
                                 type="email"
-                                placeholder="acme@example.com"
+                                placeholder={dictionary.contacts.form.email_placeholder}
                               />
                             </FormControl>
                             <FormMessage />
@@ -317,8 +334,8 @@ export function ContactFormSheet({ open, onClose, contact }: Props) {
                           onChange={setBillingEmails}
                         />
                         <p className="text-[10px] text-muted-foreground">
-                          Additional emails to BCC when sending invoices. Press
-                          Enter or comma to add.
+                          {dictionary.contacts.form.email_placeholder_details ||
+                            "Additional emails to BCC when sending invoices. Press Enter or comma to add."}
                         </p>
                       </div>
 
@@ -328,13 +345,13 @@ export function ContactFormSheet({ open, onClose, contact }: Props) {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="text-xs text-muted-foreground font-normal">
-                              Phone
+                              {dictionary.contacts.form.phone_label}
                             </FormLabel>
                             <FormControl>
                               <Input
                                 {...field}
                                 type="tel"
-                                placeholder="+1 (555) 123-4567"
+                                placeholder={dictionary.contacts.form.phone_placeholder}
                               />
                             </FormControl>
                             <FormMessage />
@@ -378,7 +395,7 @@ export function ContactFormSheet({ open, onClose, contact }: Props) {
                 {/* Details */}
                 <AccordionItem value="details" className="border-none">
                   <AccordionTrigger className="text-sm font-medium py-2">
-                    Details
+                    {dictionary.transactions.details.title}
                   </AccordionTrigger>
                   <AccordionContent>
                     <div className="space-y-4 pt-2">
@@ -388,10 +405,13 @@ export function ContactFormSheet({ open, onClose, contact }: Props) {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="text-xs text-muted-foreground font-normal">
-                              Address Line 1
+                              {dictionary.contacts.form.address_label}
                             </FormLabel>
                             <FormControl>
-                              <Input {...field} placeholder="123 Main St" />
+                              <Input
+                                {...field}
+                                placeholder={dictionary.contacts.form.address_placeholder}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -497,13 +517,13 @@ export function ContactFormSheet({ open, onClose, contact }: Props) {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="text-xs text-muted-foreground font-normal">
-                              Note
+                              {dictionary.contacts.form.notes_label}
                             </FormLabel>
                             <FormControl>
                               <Textarea
                                 {...field}
                                 className="min-h-[80px] resize-none"
-                                placeholder="Additional information..."
+                                placeholder={dictionary.contacts.form.notes_placeholder}
                               />
                             </FormControl>
                             <FormMessage />
@@ -519,10 +539,16 @@ export function ContactFormSheet({ open, onClose, contact }: Props) {
             {/* Fixed bottom actions */}
             <div className="border-t px-6 py-4 flex justify-end gap-3 shrink-0">
               <Button type="button" variant="outline" onClick={handleClose}>
-                Cancel
+                {dictionary.contacts.form.cancel}
               </Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Saving..." : isEdit ? "Update" : "Create"}
+                {isSubmitting
+                  ? isEdit
+                    ? dictionary.contacts.form.saving
+                    : dictionary.contacts.form.creating
+                  : isEdit
+                    ? dictionary.contacts.form.save
+                    : dictionary.contacts.form.create}
               </Button>
             </div>
           </form>

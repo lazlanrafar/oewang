@@ -21,7 +21,10 @@ export function OverviewMetrics({
   incomeCategoryData: CategoryBreakdownPoint[];
   expenseCategoryData: CategoryBreakdownPoint[];
 }) {
-  const { formatCurrency } = useAppStore();
+  const { formatCurrency, dictionary } = useAppStore();
+
+  if (!dictionary) return null;
+
   const fmt = (v: number) => formatCurrency(v);
   const fmtCompact = (v: number) => formatCurrency(v, { compact: true });
 
@@ -33,8 +36,8 @@ export function OverviewMetrics({
       {/* Top: Income and Expense Line Charts side-by-side */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <LineMetricChart
-          title="Total Income"
-          description="Income over time"
+          title={dictionary.overview.metrics.income_total_title}
+          description={dictionary.overview.metrics.income_total_desc}
           value={fmt(latestIncome)}
           data={incomeData}
           chartHeight={140}
@@ -42,8 +45,8 @@ export function OverviewMetrics({
           formatYTick={fmtCompact}
         />
         <LineMetricChart
-          title="Total Expenses"
-          description="Expenses over time"
+          title={dictionary.overview.metrics.expense_total_title}
+          description={dictionary.overview.metrics.expense_total_desc}
           value={fmt(latestExpense)}
           data={expenseData}
           chartHeight={140}
@@ -55,8 +58,8 @@ export function OverviewMetrics({
       {/* Bottom: Income and Expense Breakdown Bar Charts side-by-side */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <BarMetricChart
-          title="Income Breakdown"
-          description="Current Month"
+          title={dictionary.overview.metrics.income_breakdown_title}
+          description={dictionary.overview.metrics.current_month_desc}
           data={incomeCategoryData.map((c) => ({
             name: c.name,
             value: c.value,
@@ -66,8 +69,8 @@ export function OverviewMetrics({
           formatYTick={fmtCompact}
         />
         <BarMetricChart
-          title="Expense Breakdown"
-          description="Current Month"
+          title={dictionary.overview.metrics.expense_breakdown_title}
+          description={dictionary.overview.metrics.current_month_desc}
           data={expenseCategoryData.map((c) => ({
             name: c.name,
             value: c.value,

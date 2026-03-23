@@ -40,7 +40,7 @@ export function AccountsClient({
   const [selectedWalletId, setSelectedWalletId] = useState<
     string | undefined
   >();
-  const { settings, formatCurrency } = useAppStore();
+  const { settings, formatCurrency, dictionary } = useAppStore();
   const queryClient = useQueryClient();
 
   const { filters, handleFilterChange, pagination, handlePaginationChange } =
@@ -130,8 +130,9 @@ export function AccountsClient({
   };
 
   const columnsWithActions = useMemo(() => {
-    return accountColumns(handleEdit, updateWalletInCache);
-  }, [handleEdit, updateWalletInCache]);
+    if (!dictionary) return [];
+    return accountColumns(handleEdit, updateWalletInCache, dictionary);
+  }, [handleEdit, updateWalletInCache, dictionary]);
 
   const groupOptions = useMemo(() => {
     return initialGroups.map((g) => ({
@@ -140,13 +141,15 @@ export function AccountsClient({
     }));
   }, [initialGroups]);
 
+  if (!dictionary) return null;
+
   return (
     <div className="flex w-full flex-col h-full space-y-4">
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="p-6 flex flex-col gap-1 border border-border">
           <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-[0.2em]">
-            Total Balance
+            {dictionary.accounts.total_balance}
           </span>
           <span className="text-3xl font-serif font-medium tracking-tight">
             {formatCurrency(totalBalance)}
@@ -154,7 +157,7 @@ export function AccountsClient({
         </div>
         <div className="p-6 flex flex-col gap-1 border border-border">
           <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-[0.2em]">
-            Accounts
+            {dictionary.accounts.title}
           </span>
           <span className="text-3xl font-serif font-medium tracking-tight">
             {wallets.length}
@@ -162,7 +165,7 @@ export function AccountsClient({
         </div>
         <div className="p-6 flex flex-col gap-1 border border-border">
           <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-[0.2em]">
-            Active
+            {dictionary.accounts.active}
           </span>
           <span className="text-3xl font-serif font-medium tracking-tight text-emerald-600 dark:text-emerald-400">
             {activeAccounts}
@@ -176,12 +179,12 @@ export function AccountsClient({
           <DataTableFilter
             filters={filters}
             onFilterChange={handleFilterChange as any}
-            placeholder="Search accounts..."
+            placeholder={dictionary.accounts.search_placeholder}
             showDateFilter={false}
             showAmountFilter={false}
             statusOptions={groupOptions}
             statusKey="groupId"
-            statusLabel="Group"
+            statusLabel={dictionary.accounts.group_label}
             className="w-full bg-transparent border-none p-0 focus-visible:ring-0"
           />
         </div>
@@ -190,7 +193,7 @@ export function AccountsClient({
           <DataTableColumnsVisibility columns={columns} />
           <Button onClick={handleCreate} variant="outline" size="sm">
             <Plus className="h-4 w-4 mr-2" />
-            Add Account
+            {dictionary.accounts.add_account}
           </Button>
         </div>
       </div>
@@ -205,7 +208,7 @@ export function AccountsClient({
             columns: ["name"],
             startFromColumn: 0,
           }}
-          emptyMessage="No accounts found."
+          emptyMessage={dictionary.accounts.empty_message}
           manualPagination
           pagination={pagination}
           onPaginationChange={handlePaginationChange}
