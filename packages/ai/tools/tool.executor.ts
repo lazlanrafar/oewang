@@ -3,6 +3,7 @@ import { log } from "../utils/logger";
 export interface ToolServices {
     executeTransactionAction: (name: string, args: any) => Promise<any>;
     executeDebtAction: (name: string, args: any) => Promise<any>;
+    executeAnalysisAction: (name: string, args: any) => Promise<any>;
 }
 
 export abstract class ToolExecutor {
@@ -22,6 +23,11 @@ export abstract class ToolExecutor {
       case "create_debt":
       case "split_bill":
         return await services.executeDebtAction(toolName, args);
+
+      case "getRevenueSummary":
+      case "getBurnRate":
+      case "getSpendingAnalysis":
+        return await services.executeAnalysisAction(toolName, args);
 
       default:
         throw new Error(`Tool ${toolName} not implemented in ToolExecutor.`);

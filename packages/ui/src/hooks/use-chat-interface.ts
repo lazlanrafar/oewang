@@ -30,19 +30,27 @@ export function useChatInterface() {
 
   // Clear artifact-type and reset title when navigating away from chat pages
   const handleNavigateAway = () => {
-    setSelectedType(null);
-    document.title = "Overview | Midday";
+    // Only clear if we are NOT on a chat page according to the actual URL
+    const currentId = extractChatId(window.location.pathname);
+    if (!currentId) {
+      setSelectedType(null);
+      document.title = "Overview | Midday";
+    }
   };
 
   // Extract chatId from pathname when it changes
   useEffect(() => {
     const id = extractChatId(pathname);
-    setChatIdState(id);
-
-    if (!id) {
+    
+    // If we transition to Home from a Chat, clean up
+    if (!id && chatId) {
       handleNavigateAway();
     }
-  }, [pathname, setSelectedType]);
+
+    if (id !== chatId) {
+      setChatIdState(id);
+    }
+  }, [pathname, chatId]);
 
   // Listen to popstate events for browser back/forward
   useEffect(() => {
@@ -62,21 +70,25 @@ export function useChatInterface() {
   const isHome = !chatId;
   const isChatPage = Boolean(chatId);
 
-  const setChatId = (id: string) => {
+  const setChatId = (id: string, type?: string | null) => {
     // Preserve query parameters when updating the URL
-    const currentSearch = window.location.search;
-    const segments = pathname.split("/").filter(Boolean);
-
-    // Check if first segment is a locale (2 chars like 'en', 'sv', etc.)
-    const hasLocale = segments[0]?.length === 2;
-    const locale = hasLocale ? segments[0] : null;
+    const locale = pathname.split("/")[1];
+    
+    // Create new URL search params
+    const searchParams = new URLSearchParams(window.location.search);
+    if (type) {
+      searchParams.set("artifact-type", type);
+    }
+    const searchString = searchParams.toString();
+    const currentSearch = searchString ? `?${searchString}` : "";
 
     const newPath = locale
       ? `/${locale}/chat/${id}${currentSearch}`
       : `/chat/${id}${currentSearch}`;
 
-    // Use router.push for proper Next.js navigation
-    router.push(newPath);
+    // Use pushState for silent URL updates to avoid Next.js router overhead/reloads
+    // during the critical Home -> Chat transition or subsequent updates.
+    window.history.pushState({}, "", newPath);
     setChatIdState(id);
   };
 

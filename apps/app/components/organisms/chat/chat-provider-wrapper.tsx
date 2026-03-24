@@ -6,6 +6,10 @@ import {
   createChatStore, 
   type StoreState 
 } from "@ai-sdk-tools/store";
+import { 
+  extractArtifactTypeFromMessage,
+  getArtifactSectionMessageForStatus 
+} from "@workspace/constants";
 import { sendChatMessage } from "@workspace/modules/ai/ai.action";
 import { useMemo, useEffect, type ReactNode } from "react";
 import type { UIMessage } from "ai";
@@ -20,6 +24,15 @@ export function ChatProviderWrapper({ children, initialMessages }: Props) {
   
   // Create a stable store instance
   const store = useMemo(() => createChatStore(initialMessages || []), [initialMessages]);
+
+  useEffect(() => {
+    if (chatId) {
+      const state = store.getState() as any;
+      if (state.setId) {
+        state.setId(chatId);
+      }
+    }
+  }, [store, chatId]);
 
   useEffect(() => {
     // Inject our custom sendMessage into the store
@@ -75,10 +88,38 @@ export function ChatProviderWrapper({ children, initialMessages }: Props) {
             );
 
             if (response.success && response.data) {
+              const parts: any[] = [{ type: "text", text: response.data.reply }];
+              
+              // If backend returned an artifact, add it as a message part
+              // This format is required by @ai-sdk-tools/artifacts/client
+              const artifact = (response.data as any).artifact;
+              if (artifact) {
+                parts.push({
+                  type: `data-artifact-${artifact.type}`,
+                  id: artifact.type,
+                  artifactType: artifact.type,
+                  data: {
+                    id: artifact.type,
+                    type: artifact.type,
+                    status: "complete",
+                    version: 1,
+                    createdAt: Date.now(),
+                    updatedAt: Date.now(),
+                    payload: artifact.payload,
+                    progress: 1,
+                  },
+                  artifact: {
+                    id: artifact.type,
+                    type: artifact.type,
+                    payload: artifact.payload,
+                  }
+                });
+              }
+
               const assistantMessage: UIMessage = {
                 id: (Date.now() + 1).toString(),
                 role: "assistant",
-                parts: [{ type: "text", text: response.data.reply }],
+                parts,
                 createdAt: new Date(),
               } as UIMessage;
 
@@ -86,6 +127,7 @@ export function ChatProviderWrapper({ children, initialMessages }: Props) {
               state.setStatus("ready");
 
               if (!chatId && response.data.sessionId) {
+                state.setId(response.data.sessionId);
                 setChatId(response.data.sessionId);
               }
             } else {

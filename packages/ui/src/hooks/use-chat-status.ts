@@ -6,10 +6,12 @@ import {
   extractBankAccountRequired,
   extractInsightData,
   hasInsightToolRunning,
+  extractArtifactTypeFromMessage,
 } from "@workspace/constants";
 import type { AgentStatus } from "@workspace/types";
 import { useArtifacts } from "@ai-sdk-tools/artifacts/client";
 import { useDataPart } from "@ai-sdk-tools/store";
+import { getStatusMessage, getToolMessage } from "@workspace/utils";
 import type { ChatStatus, ToolUIPart, UIMessage } from "ai";
 import { useMemo } from "react";
 
@@ -22,6 +24,8 @@ interface ChatStatusResult {
   artifactType: ArtifactType | null;
   currentSection: string | null;
   bankAccountRequired: boolean;
+  statusMessage: string | null;
+  toolMessage: string | null;
 }
 
 /**
@@ -37,7 +41,7 @@ export function useChatStatus(
   status: ChatStatus,
 ): ChatStatusResult {
   const [agentStatusData] = useDataPart<AgentStatus>("agent-status");
-  const [{ current }] = useArtifacts({
+  const [{ current, latestArtifactType }] = useArtifacts({
     exclude: ["chat-title", "suggestions"],
   });
 
@@ -47,16 +51,35 @@ export function useChatStatus(
     let artifactType: ArtifactType | null = null;
     let currentSection: string | null = null;
 
-    // Check if current artifact has a stage property
+    // Check for artifacts in the current/latest store state
     if (current?.type) {
       artifactType = current.type as ArtifactType;
-      const stage = (current.payload as { stage?: ArtifactStage })?.stage;
+      const stage = current.payload 
+        ? (current.payload as { stage?: ArtifactStage })?.stage 
+        : null;
       if (stage) {
         artifactStage = stage;
-        // Map stage to current section using generic mapping
         currentSection = getSectionFromStage(stage);
       }
     }
+
+    // If no active artifact found, search through message history for the latest one
+    if (!artifactType && messages?.length > 0) {
+      for (let i = messages.length - 1; i >= 0; i--) {
+        const msgParts = messages[i]?.parts;
+        if (msgParts) {
+          const type = extractArtifactTypeFromMessage(msgParts);
+          if (type) {
+            artifactType = type;
+            artifactStage = "analysis_ready";
+            break;
+          }
+        }
+      }
+    }
+
+    const msg =
+      messages.length > 0 ? messages[messages.length - 1] : null;
 
     if (messages.length === 0) {
       return {
@@ -68,11 +91,12 @@ export function useChatStatus(
         artifactType,
         currentSection,
         bankAccountRequired: false,
+        statusMessage: null,
+        toolMessage: null,
       };
     }
 
-    const lastMessage = messages[messages.length - 1];
-    if (lastMessage?.role !== "assistant") {
+    if (msg?.role !== "assistant") {
       return {
         agentStatus: agentStatusData,
         currentToolCall: null,
@@ -82,27 +106,29 @@ export function useChatStatus(
         artifactType,
         currentSection,
         bankAccountRequired: false,
+        statusMessage: null,
+        toolMessage: null,
       };
     }
 
     // Check if we have text content streaming
-    const textParts = lastMessage?.parts?.filter(
+    const textParts = msg?.parts?.filter(
       (part) => part.type === "text",
     );
 
-    const hasTextContent = textParts.some((part) => {
+    const hasTextContent = textParts?.some((part) => {
       const textPart = part as { text?: string };
       return textPart.text?.trim();
-    });
+    }) || false;
 
     // Check if we have insight data (should hide loading indicator when insight is rendering)
-    const hasInsightData = extractInsightData(lastMessage.parts) !== null;
+    const hasInsightData = extractInsightData(msg?.parts || []) !== null;
 
     // Check if insight tool is running (hide agent status as soon as tool starts)
-    const isInsightToolActive = hasInsightToolRunning(lastMessage.parts);
+    const isInsightToolActive = hasInsightToolRunning(msg?.parts || []);
 
     // Find active tool calls - check ALL tool-related parts
-    const allParts = lastMessage.parts;
+    const allParts = msg?.parts || [];
 
     // Check if bank account is required
     const bankAccountRequired = extractBankAccountRequired(allParts);
@@ -183,6 +209,8 @@ export function useChatStatus(
       artifactType,
       currentSection,
       bankAccountRequired,
+      statusMessage: getStatusMessage(agentStatus) ?? null,
+      toolMessage: getToolMessage(finalToolCall) ?? null,
     };
   }, [messages, status, agentStatusData, current]);
 

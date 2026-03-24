@@ -5,7 +5,8 @@
   "main": "./index.ts",
   "types": "./index.ts",
   "exports": {
-    ".": "./index.ts"
+    ".": "./index.ts",
+    "./artifacts": "./artifacts/index.ts"
   },
   "dependencies": {
     "openai": "^4.103.0",

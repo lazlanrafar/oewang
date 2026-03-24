@@ -93,11 +93,18 @@ export abstract class AiService {
       {
           executeTransactionAction: (name, args) => executeAiTool(name, args, workspaceId, userId),
           executeDebtAction: (name, args) => executeAiTool(name, args, workspaceId, userId),
+          executeAnalysisAction: (name, args) => executeAiTool(name, args, workspaceId, userId),
       }
     );
 
     // 5. Save Response & Token Usage
-    await AiRepository.saveMessage(currentSessionId, workspaceId, "assistant", response.reply);
+    await AiRepository.saveMessage(
+      currentSessionId, 
+      workspaceId, 
+      "assistant", 
+      response.reply,
+      response.artifact ? { artifact: response.artifact } : undefined
+    );
     
     const tokensSpent = (response.usage?.input_tokens ?? 250) + (response.usage?.output_tokens ?? 250);
     await AiRepository.incrementAiTokens(workspaceId, currentTokens, tokensSpent);
@@ -106,6 +113,7 @@ export abstract class AiService {
       sessionId: currentSessionId,
       reply: response.reply,
       usage: response.usage,
+      artifact: response.artifact,
     };
   }
 

@@ -73,4 +73,39 @@ export const aiToolDefinitions = [
       required: ["amount", "name", "walletId", "contactNames"],
     },
   },
+  {
+    name: "getRevenueSummary",
+    description: "Analyze revenue (income/sales) - totals, trends, and growth rates.",
+    input_schema: {
+      type: "object",
+      properties: {
+        period: { type: "string", enum: ["3-months", "6-months", "this-year", "1-year"], description: "Historical period for analysis." },
+        currency: { type: "string", description: "Currency code (e.g., USD, IDR)." },
+        showCanvas: { type: "boolean", description: "Whether to show a visual chart/canvas for this analysis." },
+      },
+    },
+  },
+  {
+    name: "getBurnRate",
+    description: "Calculate and analyze business burn rate and runway.",
+    input_schema: {
+      type: "object",
+      properties: {
+        currency: { type: "string", description: "Currency code (e.g., USD, IDR)." },
+        showCanvas: { type: "boolean", description: "Whether to show a visual chart/canvas for this analysis." },
+      },
+    },
+  },
+  {
+    name: "getSpendingAnalysis",
+    description: "Analyze spending patterns and category breakdowns.",
+    input_schema: {
+      type: "object",
+      properties: {
+        period: { type: "string", enum: ["this-month", "last-month", "last-3-months"], description: "Time period for analysis." },
+        currency: { type: "string", description: "Currency code (e.g., USD, IDR)." },
+        showCanvas: { type: "boolean", description: "Whether to show a visual chart/canvas for this analysis." },
+      },
+    },
+  },
 ];

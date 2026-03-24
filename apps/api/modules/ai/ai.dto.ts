@@ -41,6 +41,10 @@ export type ChatResponse = {
     input_tokens: number;
     output_tokens: number;
   };
+  artifact?: {
+    type: string;
+    payload: any;
+  };
 };
 
 export const ParseReceiptDto = t.Object({

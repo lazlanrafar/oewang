@@ -106,7 +106,7 @@ export function ChatInput() {
     prevHistoryOpen.current = isHistoryOpen;
   }, [showCommands, isHistoryOpen, setHistoryOpen, setShowCommands]);
 
-  const MAX_SCROLL = 150;
+  const MAX_SCROLL = 400;
   const baseMinimizationFactor = Math.max(0, Math.min(1, scrollY / MAX_SCROLL));
 
   // Override to full size (factor = 0) when:
@@ -178,19 +178,19 @@ export function ChatInput() {
 
   const containerMaxWidth = useTransform(
     minimizationFactor,
-    (factor) => `${650 - factor * (650 - 240)}px`, // More narrow when compact: 240px
+    (factor) => `${770 - factor * (770 - 400)}px`,
   );
 
   const containerBorderRadius = "0"; // Fixed subtle rounding
 
   const containerBg = useTransform(
     minimizationFactor,
-    (factor) => `rgba(255, 255, 255, ${0.8 - factor * 0.4})`, // Lighter and more transparent
+    (factor) => `rgba(247, 247, 247, ${0.85 - factor * 0.45})`,
   );
 
   const containerDarkBg = useTransform(
     minimizationFactor,
-    (factor) => `rgba(10, 10, 10, ${0.7 - factor * 0.4})`,
+    (factor) => `rgba(19, 19, 19, ${0.7 - factor * 0.4})`,
   );
 
   const containerShadow = useTransform(minimizationFactor, (factor) => {
@@ -375,12 +375,10 @@ export function ChatInput() {
               : mounted && document.documentElement.classList.contains("dark")
                 ? containerDarkBg
                 : containerBg,
-            boxShadow: containerShadow,
           }}
           className={cn(
-            "backdrop-blur-lg flex relative border border-black/5 dark:border-white/5 transition-colors duration-200",
-            isFocused &&
-              "bg-[rgba(247,247,247,0.95)]! dark:bg-[rgba(19,19,19,0.85)]! border-black/10 dark:border-white/10 shadow-lg",
+            "bg-[rgba(247,247,247,0.85)]! dark:bg-[rgba(19,19,19,0.7)]! backdrop-blur-lg flex relative p-0 border border-border/50 rounded-3xl overflow-hidden transition-all shadow-none!",
+            isFocused && "border-black/20 dark:border-white/20",
           )}
         >
           {/* <AudioPlayer /> */}

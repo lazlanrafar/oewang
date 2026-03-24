@@ -243,7 +243,14 @@
       "version": "0.0.0",
       "dependencies": {
         "@anthropic-ai/sdk": "^0.40.0",
+        "@google/generative-ai": "^0.24.1",
+        "@workspace/constants": "workspace:*",
+        "@workspace/database": "workspace:*",
+        "@workspace/logger": "workspace:*",
+        "@workspace/redis": "workspace:*",
+        "@workspace/utils": "workspace:*",
         "openai": "^4.103.0",
+        "pdf.js-extract": "^0.2.1",
         "xlsx": "^0.18.5",
       },
       "devDependencies": {

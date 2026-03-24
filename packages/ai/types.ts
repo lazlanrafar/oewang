@@ -29,6 +29,10 @@ export interface ChatResponse {
     input_tokens: number;
     output_tokens: number;
   };
+  artifact?: {
+    type: string;
+    payload: any;
+  };
 }
 
 export interface ParsedReceipt {

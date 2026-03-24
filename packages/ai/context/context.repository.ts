@@ -10,9 +10,23 @@ import {
   categories,
   debts,
   contacts,
+  workspaceSettings,
 } from "@workspace/database";
 
 export abstract class ContextRepository {
+  static async getWorkspaceSettings(workspaceId: string) {
+    const results = await db
+      .select({
+        mainCurrencyCode: workspaceSettings.mainCurrencyCode,
+        mainCurrencySymbol: workspaceSettings.mainCurrencySymbol,
+      })
+      .from(workspaceSettings)
+      .where(eq(workspaceSettings.workspaceId, workspaceId))
+      .limit(1);
+    
+    return results[0];
+  }
+
   static async getRecentTransactions(workspaceId: string, limit = 10) {
     return await db
       .select({

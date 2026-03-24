@@ -35,13 +35,41 @@ export default async function ChatPage(props: Props) {
   // but initialMessages usually expects AI SDK Message type.
   // The backend ChatMessage is { role: "user" | "assistant", content: string }
   // We'll add IDs to them for the store.
-  const initialMessages = response.data.map((m, i) => ({
-    id: `${id}-${i}`,
-    role: m.role,
-    content: m.content,
-    parts: [{ type: "text", text: m.content } as any],
-    createdAt: new Date(),
-  })) as any;
+  const initialMessages = response.data.map((m, i) => {
+    const parts: any[] = [{ type: "text", text: m.content }];
+    const artifact = m.attachments?.[0]?.artifact;
+    
+    if (artifact) {
+      parts.push({
+        type: `data-artifact-${artifact.type}`,
+        id: artifact.type,
+        artifactType: artifact.type,
+        data: {
+          id: artifact.type,
+          type: artifact.type,
+          status: "complete",
+          version: 1,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          payload: artifact.payload,
+          progress: 1,
+        },
+        artifact: {
+          id: artifact.type,
+          type: artifact.type,
+          payload: artifact.payload,
+        }
+      });
+    }
+
+    return {
+      id: `${id}-${i}`,
+      role: m.role,
+      content: m.content,
+      parts,
+      createdAt: new Date(),
+    };
+  }) as any;
 
   return (
     <ChatProviderWrapper initialMessages={initialMessages}>

@@ -116,6 +116,15 @@ export function extractArtifactTypeFromMessage(
 ): ArtifactType | null {
   for (const part of parts) {
     const type = part.type as string;
+
+    if (type === "artifact" || type.startsWith("data-artifact-")) {
+      const artifactPart = part as unknown as { 
+        artifactType?: ArtifactType;
+        data?: { type?: ArtifactType };
+      };
+      return artifactPart.artifactType || artifactPart.data?.type || null;
+    }
+
     if (type.startsWith("tool-")) {
       const toolPart = part as Record<string, unknown>;
 

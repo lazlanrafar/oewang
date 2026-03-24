@@ -7,7 +7,8 @@ import {
 import * as Sentry from "@sentry/bun";
 
 // We import the same exact tools Okane uses for WhatsApp / Chat
-import { aiTools, executeAiTool } from "./modules/ai/ai.tools";
+import { aiToolDefinitions } from "@workspace/ai";
+import { executeAiTool } from "./modules/ai/ai.tools";
 import { TransactionsService } from "./modules/transactions/transactions.service";
 import { db } from "@workspace/database";
 // Initialize Sentry just like the main API, though optional for local MCP
@@ -61,7 +62,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         },
       },
     },
-    ...aiTools.map((t) => ({
+    ...aiToolDefinitions.map((t) => ({
       name: t.name,
       description: t.description,
       inputSchema: t.input_schema,

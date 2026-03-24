@@ -215,7 +215,7 @@ export function getArtifactTypeFromTool(
 /**
  * Get stage message for an artifact type and stage
  */
-export function getArtifactStageMessage(
+export function getArtifactStageMessageForStatus(
   artifactType: ArtifactType | null,
   stage: ArtifactStage | null,
 ): string | null {
@@ -234,7 +234,7 @@ export function getArtifactStageMessage(
 /**
  * Get section message for an artifact type and section
  */
-export function getArtifactSectionMessage(
+export function getArtifactSectionMessageForStatus(
   artifactType: ArtifactType | null,
   section: string | null,
 ): string | null {

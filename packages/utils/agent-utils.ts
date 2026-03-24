@@ -1,9 +1,4 @@
 import type { AgentStatus } from "@workspace/types";
-import type { ArtifactStage, ArtifactType } from "./artifact-config";
-import {
-  getArtifactSectionMessage,
-  getArtifactStageMessage,
-} from "./artifact-config";
 
 // Generate user-friendly status messages
 export const getStatusMessage = (status?: AgentStatus | null) => {
@@ -18,21 +13,26 @@ export const getStatusMessage = (status?: AgentStatus | null) => {
   }
 
   if (state === "executing") {
-    const messages: Record<AgentStatus["agent"], string> = {
+    const messages: Record<string, string> = {
       triage: "Thinking...",
       orchestrator: "Coordinating your request...",
       general: "Getting information for you...",
-      reports: "Generating your financial reports...",
-      transactions: "Retrieving your transaction history...",
-      invoices: "Checking your invoice status...",
-      timeTracking: "Reviewing your time entries...",
-      customers: "Looking up customer information...",
-      analytics: "Running business intelligence analysis...",
-      operations: "Accessing your account data...",
-      research: "Researching and analyzing your options...",
+      reports: "Generating analysis...",
+      transactions: "Analyzing transactions...",
+      invoices: "Analyzing invoices...",
+      timeTracking: "Analyzing time entries...",
+      customers: "Analyzing customer data...",
+      analytics: "Generating insights...",
+      operations: "Processing your request...",
+      research: "Generating analysis...",
     };
 
-    return messages[agent];
+    return messages[agent] || "Thinking...";
+  }
+
+  // Handle a possible "completing" or "rendering" state if sent by the backend
+  if (state as string === "completing" || state as string === "rendering") {
+    return "Generating analysis...";
   }
 
   return null;
@@ -60,7 +60,7 @@ export const getToolMessage = (toolName: string | null) => {
     runway: "Calculating your cash runway...",
     getRunway: "Calculating your cash runway...",
     spending: "Analyzing your spending trends...",
-    getSpending: "Analyzing your spending patterns...",
+    getSpendingAnalysis: "Analyzing your spending patterns...",
     taxSummary: "Preparing your tax summary...",
     getTaxSummary: "Preparing your tax summary...",
     getForecast: "Generating your revenue forecast...",
@@ -127,21 +127,5 @@ export const getToolMessage = (toolName: string | null) => {
     handoff_to_agent: "Connecting you with the right specialist...",
   };
 
-  return toolMessages[toolName];
-};
-
-// Generate user-friendly artifact stage messages (generic)
-export const getArtifactStageMessageForStatus = (
-  artifactType: ArtifactType | null,
-  stage: ArtifactStage | null,
-): string | null => {
-  return getArtifactStageMessage(artifactType, stage);
-};
-
-// Generate section-specific status messages (generic)
-export const getArtifactSectionMessageForStatus = (
-  artifactType: ArtifactType | null,
-  section: string | null,
-): string | null => {
-  return getArtifactSectionMessage(artifactType, section);
+  return toolMessages[toolName] || null;
 };

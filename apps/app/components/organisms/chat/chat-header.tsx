@@ -57,7 +57,7 @@ export function ChatHeader() {
   if (isHome) return null;
 
   return (
-    <div className="flex items-center justify-center relative h-8">
+    <div className="flex items-center justify-center relative h-10">
       <div className="absolute left-0">
         <Button
           type="button"

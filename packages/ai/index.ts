@@ -7,5 +7,7 @@ export * from "./receipt/receipt.service";
 export * from "./providers/provider.factory";
 export * from "./tools/tool.executor";
 export * from "./tools/tool.definitions";
+export * from "./artifacts/revenue";
+export * from "./artifacts/spending-burn";
 export * from "./utils/file-parser";
 export * from "./utils/logger";

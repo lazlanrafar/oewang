@@ -2,33 +2,28 @@
 
 import {
   BaseCanvas,
+  CanvasHeader,
+  CanvasContent,
   CanvasChart,
   CanvasGrid,
-  CanvasHeader,
   CanvasSection,
-  CanvasContent,
-  formatCurrencyAmount,
   shouldShowChart,
   shouldShowMetricsSkeleton,
   shouldShowSummarySkeleton,
 } from "@workspace/ui";
-const useUserQuery = () => ({ data: { locale: "en-US" } });
-const revenueArtifact: any = {};
-const RevenueTrendChart = (props: any) => <div />;
-const useQueryState = (key: string, def: any) => [0];
-const parseAsInteger = { withDefault: (d: any) => d };
-const useArtifact = (art: any, opts: any): [any] => [{ data: { stage: "complete", currency: "USD", metrics: {}, chart: { monthlyData: [] }, analysis: { summary: "" } }, status: "success" }];
+import { useAppStore } from "../../../../stores/app";
+import { ArtifactTabs, useStaticArtifactData } from "./chat-canvas";
+import { RevenueTrendChart } from "../charts/revenue-trend-chart";
+import { formatAmount } from "../charts/format-amount";
 
 export function RevenueCanvas() {
-  const [version] = useQueryState("version", parseAsInteger.withDefault(0));
-  const [artifact] = useArtifact(revenueArtifact, { version });
-  const { data, status } = artifact;
-  const { data: user } = useUserQuery();
+  const data = useStaticArtifactData("revenue-canvas");
+  const user = useAppStore((state) => state.user) as any;
+  const locale = user?.locale || "en-US";
   const stage = data?.stage;
   const currency = data?.currency || "USD";
-  const locale = user?.locale ?? undefined;
 
-  // Use artifact data or fallback to empty/default values
+  // Map monthly data if available (Okane may return flat metrics, not chart data)
   const revenueData =
     data?.chart?.monthlyData?.map((item: any) => ({
       month: item.month,
@@ -42,52 +37,54 @@ export function RevenueCanvas() {
         {
           id: "total-revenue",
           title: "Total Revenue",
-          value: formatCurrencyAmount(
-            data.metrics.totalRevenue || 0,
+          value: formatAmount({
+            amount: data.metrics.totalRevenue || 0,
             currency,
             locale,
-          ),
+            maximumFractionDigits: 0,
+          }),
           subtitle: "All periods combined",
         },
         {
           id: "average-monthly-revenue",
-          title: "Average Monthly Revenue",
-          value: formatCurrencyAmount(
-            data.metrics.averageMonthlyRevenue || 0,
+          title: "Avg Monthly Revenue",
+          value: formatAmount({
+            amount: data.metrics.averageMonthlyRevenue || 0,
             currency,
             locale,
-          ),
+            maximumFractionDigits: 0,
+          }),
           subtitle: "Over last 12 months",
         },
         {
           id: "current-month-revenue",
-          title: "Current Month Revenue",
-          value: formatCurrencyAmount(
-            data.metrics.currentMonthRevenue || 0,
+          title: "Current Month",
+          value: formatAmount({
+            amount: data.metrics.currentMonthRevenue || 0,
             currency,
             locale,
-          ),
-          subtitle: "Latest month",
+            maximumFractionDigits: 0,
+          }),
+          subtitle: "Latest period",
         },
         {
           id: "revenue-growth",
           title: "Revenue Growth",
           value: `${data.metrics.revenueGrowth || 0}%`,
-          subtitle: "Year-over-year increase",
+          subtitle: "Year-over-year",
         },
       ]
     : [];
 
-  const showChart = shouldShowChart(stage);
-  const showSummarySkeleton = shouldShowSummarySkeleton(stage);
+  const showChart = shouldShowChart(stage) && revenueData.length > 0;
 
   return (
     <BaseCanvas>
-      <CanvasHeader title="Revenue Analysis" />
+      <CanvasHeader tabs={<ArtifactTabs />} />
 
       <CanvasContent>
-        <div className="space-y-8">
-          {/* Show chart as soon as we have revenue data */}
+        <div className="space-y-8 pb-20">
+          {/* Revenue Trend Chart */}
           {showChart && (
             <CanvasChart
               title="Monthly Revenue Trend"
@@ -98,7 +95,7 @@ export function RevenueCanvas() {
                   { label: "Average", type: "pattern" },
                 ],
               }}
-              isLoading={stage === ("loading" as any)}
+              isLoading={!data || !stage}
               height="20rem"
             >
               <RevenueTrendChart
@@ -111,15 +108,18 @@ export function RevenueCanvas() {
             </CanvasChart>
           )}
 
-          {/* Always show metrics section */}
+          {/* Revenue grid metrics */}
           <CanvasGrid
             items={revenueMetrics}
             layout="2/2"
             isLoading={shouldShowMetricsSkeleton(stage)}
           />
 
-          {/* Always show summary section */}
-          <CanvasSection title="Summary" isLoading={showSummarySkeleton}>
+          {/* Summary */}
+          <CanvasSection
+            title="Summary"
+            isLoading={shouldShowSummarySkeleton(stage)}
+          >
             {data?.analysis?.summary}
           </CanvasSection>
         </div>

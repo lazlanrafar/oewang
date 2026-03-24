@@ -30,8 +30,24 @@ export abstract class AiOrchestrator {
     const systemPrompt = `${SYSTEM_PROMPT_BASE}\n\n${context}`;
 
     // 3. Preparation for Tool Execution
+    let capturedArtifact: { type: string; payload: any } | undefined;
+
     const onToolCall = async (name: string, args: any) => {
-        return await ToolExecutor.execute(name, args, services);
+        const result = await ToolExecutor.execute(name, args, services);
+        
+        // Unwrap result.data so canvas components can read payload.stage, payload.currency, etc. directly
+        const payload = result?.data ?? result;
+        
+        // Map tool names to artifact types
+        if (name === "getRevenueSummary") {
+            capturedArtifact = { type: "revenue-canvas", payload };
+        } else if (name === "getBurnRate") {
+            capturedArtifact = { type: "burn-rate-canvas", payload };
+        } else if (name === "getSpendingAnalysis") {
+            capturedArtifact = { type: "spending-canvas", payload };
+        }
+        
+        return result;
     };
 
     // 4. Call Provider Factory
@@ -43,7 +59,10 @@ export abstract class AiOrchestrator {
         onToolCall
     );
 
-    return response;
+    return {
+        ...response,
+        artifact: capturedArtifact,
+    };
   }
 
   static async generateTitle(message: string, options: ProviderOptions): Promise<string> {

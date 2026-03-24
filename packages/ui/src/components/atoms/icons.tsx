@@ -849,4 +849,5 @@ export const Icons = {
       />
     </svg>
   ),
+  Download: MdDownloading,
 };

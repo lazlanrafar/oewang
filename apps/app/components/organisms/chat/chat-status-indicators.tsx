@@ -4,16 +4,15 @@ import { AnimatedStatus } from "@workspace/ui";
 import {
   getArtifactSectionMessageForStatus,
   getArtifactStageMessageForStatus,
-  getStatusMessage,
-  getToolMessage,
 } from "@workspace/constants";
 import {
   type ArtifactStage,
   type ArtifactType,
   TOOL_TO_ARTIFACT_MAP,
   getArtifactTypeFromTool,
+  getToolIcon,
 } from "@workspace/constants";
-import { getToolIcon } from "@workspace/constants";
+import { getStatusMessage, getToolMessage } from "@workspace/utils";
 import type { AgentStatus } from "@workspace/types";
 import { Loader } from "@workspace/ui";
 
@@ -44,6 +43,15 @@ export function ChatStatusIndicators({
   if (bankAccountRequired || hasInsightData) {
     return null;
   }
+  
+  if (status === "error") {
+    return (
+      <div className="h-8 flex items-center gap-2 text-destructive">
+        <span className="text-xs font-normal">Message failed to send. Please try again.</span>
+      </div>
+    );
+  }
+
   const statusMessage = getStatusMessage(agentStatus);
   const toolMessage = getToolMessage(currentToolCall);
 
@@ -65,15 +73,13 @@ export function ChatStatusIndicators({
   let displayMessage: string | null = null;
   if (shouldShowArtifactStatus) {
     // Show section message if available, otherwise show stage message
-    const sectionMessage = getArtifactSectionMessageForStatus(
+    displayMessage = getArtifactSectionMessageForStatus(
       resolvedArtifactType,
       currentSection ?? null,
-    );
-    const stageMessage = getArtifactStageMessageForStatus(
+    ) || getArtifactStageMessageForStatus(
       resolvedArtifactType,
       artifactStage,
     );
-    displayMessage = sectionMessage || stageMessage;
   } else {
     // Default behavior: prioritize tool message over agent status
     displayMessage = toolMessage || statusMessage;

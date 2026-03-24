@@ -5,6 +5,7 @@ import { axiosInstance as api } from "../lib/axios.server";
 export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
+  attachments?: any;
 }
 
 export interface ChatData {
@@ -13,6 +14,10 @@ export interface ChatData {
   usage?: {
     input_tokens: number;
     output_tokens: number;
+  };
+  artifact?: {
+    type: string;
+    payload: any;
   };
 }
 
