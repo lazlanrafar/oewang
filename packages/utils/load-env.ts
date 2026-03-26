@@ -7,8 +7,8 @@ import fs from "fs";
  * Only use this in Node.js environments (Server, Scripts, Configs).
  */
 export function loadEnv() {
-  // If strict env vars are already present, skip loading/overwriting
-  if (process.env.DATABASE_URL && process.env.SUPABASE_URL) return;
+  // Always try to load .env from parent directories if possible.
+  // dotenv.config() will NOT overwrite existing process.env variables by default.
 
   let current = process.cwd();
   // Traverse up up to 3 levels to find .env

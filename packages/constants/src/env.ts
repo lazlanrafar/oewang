@@ -9,20 +9,20 @@ const serverSchema = z.object({
   NODE_ENV: z
     .enum(["development", "test", "production"])
     .default("development"),
-  APP_URL: z.string().url().optional(),
-  ADMIN_URL: z.string().url().optional(),
-  API_URL: z.string().url().optional(),
-  WEBSITE_URL: z.string().url().optional(),
+  APP_URL: z.string().min(1).optional(),
+  ADMIN_URL: z.string().min(1).optional(),
+  API_URL: z.string().min(1).optional(),
+  WEBSITE_URL: z.string().min(1).optional(),
 
   // API
   API_PORT: z.string().optional().default("3002"),
-  API_BASE_URL: z.string().url().optional(),
+  API_BASE_URL: z.string().min(1).optional(),
 
   // Database
-  DATABASE_URL: z.string().url(),
+  DATABASE_URL: z.string().min(1),
 
   // Auth
-  SUPABASE_URL: z.string().url(),
+  SUPABASE_URL: z.string().min(1),
   SUPABASE_ANON_KEY: z.string().min(1),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
 
@@ -43,8 +43,8 @@ const serverSchema = z.object({
   ENCRYPTION_KEY: z.string().length(32),
 
   // Redis
-  REDIS_URL: z.string().url().optional(),
-  UPSTASH_REDIS_REST_URL: z.string().url().optional(),
+  REDIS_URL: z.string().min(1).optional(),
+  UPSTASH_REDIS_REST_URL: z.string().min(1).optional(),
   UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
 
   // External Services
@@ -61,7 +61,7 @@ const serverSchema = z.object({
   TWILIO_WHATSAPP_NUMBER: z.string().optional(),
 
   // R2 Storage
-  R2_ENDPOINT: z.string().url().optional(),
+  R2_ENDPOINT: z.string().min(1).optional(),
   R2_ACCESS_KEY_ID: z.string().optional(),
   R2_SECRET_ACCESS_KEY: z.string().optional(),
   R2_BUCKET_NAME: z.string().optional(),
@@ -84,12 +84,12 @@ const serverSchema = z.object({
  * These variables will be available on both the client and server.
  */
 const clientSchema = z.object({
-  NEXT_PUBLIC_APP_URL: z.string().url(),
-  NEXT_PUBLIC_ADMIN_URL: z.string().url(),
-  NEXT_PUBLIC_API_URL: z.string().url(),
-  NEXT_PUBLIC_WEBSITE_URL: z.string().url().optional(),
+  NEXT_PUBLIC_APP_URL: z.string().min(1),
+  NEXT_PUBLIC_ADMIN_URL: z.string().min(1),
+  NEXT_PUBLIC_API_URL: z.string().min(1),
+  NEXT_PUBLIC_WEBSITE_URL: z.string().min(1).optional(),
   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().optional(),
-  NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
+  NEXT_PUBLIC_SUPABASE_URL: z.string().min(1),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
   NEXT_PUBLIC_SENTRY_DSN: z.string().optional(),
   NEXT_PUBLIC_SESSION_COOKIE_NAME: z
@@ -129,10 +129,46 @@ export const getEnv = () => {
   if (_env) {
     return _env;
   }
-
   const isServer = typeof window === "undefined";
-
+  const isSkipValidation =
+    process.env.npm_lifecycle_event === "build" ||
+    process.env.NEXT_PHASE !== undefined ||
+    process.env.NODE_ENV === "test";
+  
   if (isServer) {
+    try {
+      // Use require for Node.js-only modules inside the isServer block to avoid client bundle crashes
+      const dotenv = require("dotenv");
+      const fs = require("fs");
+      const path = require("path");
+
+      // Inline loadEnv logic to ensure it's ALWAYS available even if require fails
+      let current = process.cwd();
+      let loaded = false;
+      for (let i = 0; i < 3; i++) {
+        const envPath = path.join(current, ".env");
+        if (!isSkipValidation) {
+           console.log(`🔍 getEnv: Searching for .env at: ${envPath}`);
+        }
+        if (fs.existsSync(envPath)) {
+          dotenv.config({ path: envPath });
+          if (!isSkipValidation) {
+            console.log(`✅ getEnv: Loaded env from ${envPath}`);
+          }
+          loaded = true;
+          break;
+        }
+        current = path.dirname(current);
+      }
+      if (!loaded && !isSkipValidation) {
+        console.warn("⚠️ getEnv: Could not find .env file within 3 levels of process.cwd()");
+      }
+    } catch (e) {
+      if (!isSkipValidation) {
+        console.warn("⚠️ getEnv: Inline loadEnv() failed.", e);
+      }
+    }
+
     // Validate both client and server schemas on the server
     const parsedServer = serverSchema.safeParse(process.env);
     const parsedClient = clientSchema.safeParse(clientEnv);
@@ -140,26 +176,42 @@ export const getEnv = () => {
     if (!parsedServer.success || !parsedClient.success) {
       // In Next.js static builds, we might not have the full server environment.
       // Skip strict server validation if it fails during the build step, unless we actually want to fail.
-      const isSkipValidation =
-        process.env.npm_lifecycle_event === "build" ||
-        process.env.NEXT_PHASE !== undefined ||
-        process.env.NODE_ENV === "test";
+      
+      const serverErrors = !parsedServer.success ? (parsedServer as any).error.format() : null;
+      const clientErrors = !parsedClient.success ? (parsedClient as any).error.format() : null;
 
       console.error(
         "❌ Invalid environment variables:",
         JSON.stringify(
           {
-            server: parsedServer.success
-              ? undefined
-              : parsedServer.error.format(),
-            client: parsedClient.success
-              ? undefined
-              : parsedClient.error.format(),
+            server: serverErrors,
+            client: clientErrors,
           },
           null,
           2,
         ),
       );
+      
+      // LOG ALL KEYS PRESENT IN process.env FOR DEBUG
+      console.log("🔍 getEnv: process.env keys:", Object.keys(process.env).filter(k => k.includes("URL") || k.includes("KEY") || k.includes("SECRET") || k.includes("NEXT_PUBLIC")).join(", "));
+      console.log("🔍 getEnv: clientEnv keys:", Object.keys(clientEnv).join(", "));
+      
+      // LOG ACTUAL MISSING FIELDS ONE BY ONE
+      if (serverErrors) {
+        Object.keys(serverErrors).forEach(key => {
+          if (key !== '_errors') {
+            console.error(`  - SERVER: ${key} is invalid!`);
+          }
+        });
+      }
+      if (clientErrors) {
+        Object.keys(clientErrors).forEach(key => {
+          if (key !== '_errors') {
+            console.error(`  - CLIENT: ${key} is invalid!`);
+          }
+        });
+      }
+
       if (!isSkipValidation) {
         throw new Error("Invalid environment variables");
       } else {
