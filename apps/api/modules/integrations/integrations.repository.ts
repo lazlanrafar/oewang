@@ -30,14 +30,14 @@ export abstract class IntegrationsRepository {
       );
   }
 
-  static async findByWhatsAppNumber(phoneNumber: string) {
+  static async findByWhatsAppNumber(phoneNumber: string, provider = "whatsapp") {
     // Find the workspace tied to this specific WhatsApp phone number
     const records = await db
       .select()
       .from(workspaceIntegrations)
       .where(
         and(
-          eq(workspaceIntegrations.provider, "whatsapp"),
+          eq(workspaceIntegrations.provider, provider),
           eq(workspaceIntegrations.isActive, true),
           isNull(workspaceIntegrations.deletedAt),
           sql`${workspaceIntegrations.settings}->>'phoneNumber' = ${phoneNumber}`,

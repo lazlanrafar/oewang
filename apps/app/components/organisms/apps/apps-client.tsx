@@ -9,6 +9,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getIntegrationsAction } from "@workspace/modules/integrations/integrations.action";
 import { AppsCard } from "./apps-card";
 import { ConnectTelegram } from "./connect-telegram";
+import { ConnectWhatsApp } from "./connect-whatsapp";
 
 export function AppsClient() {
   const router = useRouter();
@@ -84,7 +85,19 @@ export function AppsClient() {
 
   // Since Oewang doesn't have OAuth Applications currently, we use an empty array.
   // In the future, this is where transformedExternalApps will go.
-  const transformedExternalApps: any[] = [];
+  const transformedExternalApps: any[] = [
+    {
+      id: "oewang-app",
+      name: "Oewang App",
+      category: "Mobile",
+      active: false, // Coming soon
+      logo: undefined,
+      short_description: "Manage your finances on the go with the Oewang mobile app.",
+      description: "The Oewang mobile app will allow you to track expenses, scan receipts, and manage your budget directly from your smartphone.\n\n**Coming Soon**\nWe are currently developing our mobile application for both iOS and Android. Stay tuned for updates!",
+      installed: false,
+      type: "official",
+    },
+  ];
 
   // Combine all apps
   const allApps = [...transformedOfficialApps, ...transformedExternalApps];
@@ -167,6 +180,7 @@ export function AppsClient() {
         )}
       </div>
       <ConnectTelegram />
+      <ConnectWhatsApp />
     </div>
   );
 }

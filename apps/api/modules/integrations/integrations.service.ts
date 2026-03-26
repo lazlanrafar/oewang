@@ -25,6 +25,23 @@ export abstract class IntegrationsService {
     return buildSuccess(integration, "WhatsApp connected successfully");
   }
 
+  static async connectTwilioWhatsApp(
+    workspaceId: string,
+    userId: string,
+    phoneNumber: string,
+  ) {
+    const cleaned = phoneNumber.replace(/[^0-9+]/g, "");
+
+    const integration = await IntegrationsRepository.upsert({
+      workspaceId,
+      provider: "whatsapp-twilio",
+      settings: { phoneNumber: cleaned, connectedByUserId: userId },
+      isActive: true,
+    });
+
+    return buildSuccess(integration, "WhatsApp (Twilio) connected successfully");
+  }
+
   static async connectTelegram(
     workspaceId: string,
     userId: string,
@@ -97,7 +114,7 @@ export abstract class IntegrationsService {
     }
 
     const integration =
-      await IntegrationsRepository.findByWhatsAppNumber(fromUserNumber);
+      await IntegrationsRepository.findByWhatsAppNumber(fromUserNumber, "whatsapp");
 
     if (!integration) return "Unauthorized / unknown number";
 
@@ -486,5 +503,123 @@ export abstract class IntegrationsService {
     if (!response.ok) {
       console.error("[WhatsApp] Failed to send reply:", await response.text());
     }
+  }
+
+  static async handleTwilioWhatsAppWebhook(payload: Record<string, any>) {
+    const fromUserNumber = payload.From?.replace("whatsapp:", "");
+    const text = payload.Body?.trim();
+    const mediaUrl = payload.MediaUrl0;
+    const mediaType = payload.ContentType0;
+
+    if (!fromUserNumber) return "OK";
+
+    // Linking command
+    if (text) {
+      const match = text.match(/^Connect Oewang\s+([a-f0-9-]{36})$/i);
+      if (match) {
+        const targetWorkspaceId = match[1];
+        const targetUserId = await IntegrationsRepository.findFirstMemberId(targetWorkspaceId);
+
+        if (!targetUserId) {
+          await IntegrationsService.sendTwilioWhatsAppMessage(fromUserNumber, "❌ Could not find a valid user to link with this workspace. Please use the link from the Oewang app.");
+          return "OK";
+        }
+
+        await IntegrationsService.connectTwilioWhatsApp(targetWorkspaceId, targetUserId, fromUserNumber);
+        await IntegrationsService.sendTwilioWhatsAppMessage(fromUserNumber, "✅ Your WhatsApp is now connected to Oewang (via Twilio)! You can now send me your expenses or upload receipts anytime.");
+        return "OK";
+      }
+    }
+
+    const integration = await IntegrationsRepository.findByWhatsAppNumber(fromUserNumber, "whatsapp-twilio");
+    if (!integration) return "Unauthorized";
+
+    const { workspaceId, settings } = integration;
+    let userId = (settings as any)?.connectedByUserId;
+
+    if (!userId || userId === "00000000-0000-0000-0000-000000000000") {
+      userId = await IntegrationsRepository.findFirstMemberId(workspaceId);
+      if (!userId) return "Need a valid user";
+    }
+
+    try {
+      if (mediaUrl) {
+        // Handle media (image/pdf)
+        const response = await fetch(mediaUrl);
+        if (!response.ok) throw new Error("Failed to download media from Twilio");
+        
+        const arrayBuffer = await response.arrayBuffer();
+        const base64Image = Buffer.from(arrayBuffer).toString("base64");
+        const mimeType = mediaType || "image/jpeg";
+
+        const vaultFile = await vaultService.uploadFile(workspaceId, userId, {
+          name: `receipt-${Date.now()}.${mimeType === "application/pdf" ? "pdf" : "jpg"}`,
+          type: mimeType,
+          size: Buffer.byteLength(base64Image, "base64"),
+          buffer: Buffer.from(base64Image, "base64"),
+        });
+
+        const parsedReceipt = await AiService.parseReceipt(workspaceId, userId, base64Image, mimeType);
+
+        if (parsedReceipt && parsedReceipt.amount) {
+          const walletsResult = await walletsRepository.findMany(workspaceId);
+          if (walletsResult.rows.length > 0) {
+            const defaultWallet = walletsResult.rows[0];
+            await TransactionsService.create(workspaceId, userId, {
+              walletId: defaultWallet.id,
+              amount: parsedReceipt.amount,
+              date: parsedReceipt.date || new Date().toISOString(),
+              type: "expense",
+              name: parsedReceipt.name || "Expense",
+              description: "Parsed automatically from WhatsApp (Twilio) Receipt",
+              categoryId: parsedReceipt.categoryId,
+              attachmentIds: vaultFile ? [vaultFile.id] : undefined,
+            });
+
+            await IntegrationsService.sendTwilioWhatsAppMessage(fromUserNumber, `✅ Added expense: ${parsedReceipt.name || "Receipt"} for ${Number(parsedReceipt.amount).toLocaleString()}.`);
+          }
+        }
+      } else if (text) {
+        // AI Chat
+        const chatSessionId = (settings as any)?.chatSessionId;
+        const chatResponse = await AiService.chat([{ role: "user", content: text }], workspaceId, userId, chatSessionId);
+
+        if (chatResponse?.reply) {
+          if (chatResponse.sessionId && chatResponse.sessionId !== chatSessionId) {
+            await IntegrationsRepository.updateSettings(integration.id, workspaceId, {
+              ...((settings as any) || {}),
+              chatSessionId: chatResponse.sessionId,
+            });
+          }
+          await IntegrationsService.sendTwilioWhatsAppMessage(fromUserNumber, chatResponse.reply);
+        }
+      }
+    } catch (err) {
+      console.error("[Twilio WhatsApp Error]", err);
+    }
+
+    return "OK";
+  }
+
+  static async sendTwilioWhatsAppMessage(to: string, body: string) {
+    const accountSid = Env.TWILIO_ACCOUNT_SID;
+    const authToken = Env.TWILIO_AUTH_TOKEN;
+    const from = Env.TWILIO_WHATSAPP_NUMBER;
+
+    if (!accountSid || !authToken || !from) return;
+
+    const auth = Buffer.from(`${accountSid}:${authToken}`).toString("base64");
+    await fetch(`https://api.twilio.org/2010-04-01/Accounts/${accountSid}/Messages.json`, {
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${auth}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        To: `whatsapp:${to}`,
+        From: from,
+        Body: body,
+      }).toString(),
+    });
   }
 }

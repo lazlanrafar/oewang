@@ -14,9 +14,11 @@ import { Check, Copy, QrCode } from "lucide-react";
 import * as QRCode from "qrcode";
 import { useQuery } from "@tanstack/react-query";
 import { getMe } from "@workspace/modules/user/user.action";
+import { Env } from "@workspace/constants";
 
 export function ConnectWhatsApp() {
   const [open, setOpen] = useState(false);
+  const [type, setType] = useState<"meta" | "twilio">("meta");
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("");
   const [copied, setCopied] = useState(false);
 
@@ -31,7 +33,9 @@ export function ConnectWhatsApp() {
   const workspaceId = me?.user.workspace_id;
   // Use a fallback if the env var is not set to ensure the dialog at least opens
   const whatsappNumber =
-    process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "+1234567890";
+    type === "meta"
+      ? Env.NEXT_PUBLIC_WHATSAPP_NUMBER
+      : Env.NEXT_PUBLIC_TWILIO_WHATSAPP_NUMBER;
   const message = `Connect Oewang ${workspaceId}`;
   const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
 
@@ -42,9 +46,22 @@ export function ConnectWhatsApp() {
   }, [open, workspaceId, whatsappNumber]);
 
   useEffect(() => {
-    const handleOpen = () => setOpen(true);
-    window.addEventListener("openWhatsAppConnect", handleOpen);
-    return () => window.removeEventListener("openWhatsAppConnect", handleOpen);
+    const handleOpenMeta = () => {
+      setType("meta");
+      setOpen(true);
+    };
+    const handleOpenTwilio = () => {
+      setType("twilio");
+      setOpen(true);
+    };
+
+    window.addEventListener("openWhatsAppConnect", handleOpenMeta);
+    window.addEventListener("openWhatsAppTwilioConnect", handleOpenTwilio);
+
+    return () => {
+      window.removeEventListener("openWhatsAppConnect", handleOpenMeta);
+      window.removeEventListener("openWhatsAppTwilioConnect", handleOpenTwilio);
+    };
   }, []);
 
   const generateQRCode = async () => {
@@ -83,7 +100,7 @@ export function ConnectWhatsApp() {
         <div className="p-8">
           <DialogHeader>
             <DialogTitle className="text-xl tracking-tight">
-              Connect WhatsApp
+              Connect WhatsApp {type === "twilio" && "(Twilio)"}
             </DialogTitle>
             <DialogDescription className="text-muted-foreground pt-2">
               Scan the QR code or open WhatsApp to connect your account to

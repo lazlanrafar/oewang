@@ -41,6 +41,22 @@ export const integrationsController = new Elysia({ prefix: "/integrations" })
     },
   )
   .post(
+    "/whatsapp/twilio/webhook",
+    async ({ body }) => {
+      // Twilio sends form-urlencoded data, Elysia parses it if configured or using t.Any()
+      IntegrationsService.handleTwilioWhatsAppWebhook(body).catch((error) => logger.error("Twilio WhatsApp webhook error", { error }));
+      return "OK";
+    },
+    {
+      body: t.Any(),
+      detail: {
+        summary: "WhatsApp Webhook (Twilio)",
+        description: "Receives incoming messages and events from the Twilio WhatsApp API.",
+        tags: ["Integrations"],
+      },
+    },
+  )
+  .post(
     "/whatsapp/webhook",
     async ({ body }) => {
       // Meta payload is deeply nested under entry > changes > value
