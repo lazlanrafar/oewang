@@ -8,6 +8,11 @@ import { getTransactions } from "@workspace/modules/server";
 import { getWallets } from "@workspace/modules/server";
 import { TransactionsClient } from "@/components/organisms/transactions/transaction-client";
 import { TransactionTableSkeleton } from "@/components/organisms/transactions/transaction-table-skeleton";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Transactions",
+};
 
 export const dynamic = "force-dynamic";
 

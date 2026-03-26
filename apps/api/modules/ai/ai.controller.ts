@@ -49,6 +49,20 @@ export const aiController = new Elysia({ prefix: "/ai" })
     },
   )
   .get(
+    "/sessions/:id/metadata",
+    async ({ params: { id }, workspaceId }) => {
+      const session = await AiService.getSession(id, workspaceId!);
+      return buildSuccess(session, "Session metadata retrieved");
+    },
+    {
+      detail: {
+        summary: "Get Session Metadata",
+        description: "Retrieves metadata for a specific AI chat session.",
+        tags: ["AI"],
+      },
+    },
+  )
+  .get(
     "/quota",
     async ({ workspaceId }) => {
       const quota = await AiService.getUsageAndQuota(workspaceId!);

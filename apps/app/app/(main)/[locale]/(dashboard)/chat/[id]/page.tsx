@@ -4,16 +4,27 @@ import { headers } from "next/headers";
 import { geolocation } from "@vercel/functions";
 import { redirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "Chat | Okane",
-};
-
-import { getChatSessionMessages } from "@workspace/modules/ai/ai.action";
+import { getChatSessionMessages, getChatSession } from "@workspace/modules/ai/ai.action";
 import { notFound } from "next/navigation";
 
 type Props = {
   params: Promise<{ id: string }>;
 };
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { id } = await params;
+  const response = await getChatSession(id);
+
+  if (!response.success || !response.data) {
+    return {
+      title: "Chat",
+    };
+  }
+
+  return {
+    title: response.data.title,
+  };
+}
 
 import { ChatProviderWrapper } from "@/components/organisms/chat/chat-provider-wrapper";
 

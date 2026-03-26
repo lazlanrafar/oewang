@@ -28,7 +28,7 @@ export function FieldMapping() {
           </div>
           <div className="w-10" />
           <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider w-[45%]">
-            Okane Field
+            Oewang Field
           </div>
         </div>
 

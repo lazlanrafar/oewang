@@ -147,7 +147,7 @@ export async function loginWithOAuth(
 export async function logout() {
   const supabase = await createClient();
   await supabase.auth.signOut();
-  (await cookies()).delete("okane-session");
+  (await cookies()).delete("oewang-session");
   redirect("/login");
 }
 
@@ -215,7 +215,7 @@ export async function exchangeSupabaseToken(supabase_token: string): Promise<
 
     // Set the cookie so the proxy can detect it
     if (result.token) {
-      (await cookies()).set("okane-session", result.token, {
+      (await cookies()).set("oewang-session", result.token, {
         path: "/",
         httpOnly: true,
         secure: Env.NODE_ENV === "production",

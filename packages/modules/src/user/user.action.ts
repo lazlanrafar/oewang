@@ -91,7 +91,7 @@ export const switchWorkspaceAction = async (
       const exchangeResult = await exchangeSupabaseToken(session.access_token);
 
       if (exchangeResult.success && exchangeResult.data) {
-        (await cookies()).set("okane-session", exchangeResult.data.token, {
+        (await cookies()).set("oewang-session", exchangeResult.data.token, {
           path: "/",
           httpOnly: true,
           secure: Env.NODE_ENV === "production",

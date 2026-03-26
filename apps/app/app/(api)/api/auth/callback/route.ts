@@ -45,7 +45,7 @@ export async function GET(request: Request) {
             );
             if (exchangeResult.success && exchangeResult.data) {
               (await cookies()).set(
-                "okane-session",
+                "oewang-session",
                 exchangeResult.data.token,
                 {
                   path: "/",

@@ -6,7 +6,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import * as Sentry from "@sentry/bun";
 
-// We import the same exact tools Okane uses for WhatsApp / Chat
+// We import the same exact tools Oewang uses for WhatsApp / Chat
 import { aiToolDefinitions } from "@workspace/ai";
 import { executeAiTool } from "./modules/ai/ai.tools";
 import { TransactionsService } from "./modules/transactions/transactions.service";
@@ -16,7 +16,7 @@ import "./instrument";
 
 const server = new Server(
   {
-    name: "okane-mcp",
+    name: "oewang-mcp",
     version: "1.0.0",
   },
   {
@@ -129,7 +129,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("🚀 Okane MCP Server running on stdio");
+  console.error("🚀 Oewang MCP Server running on stdio");
 }
 
 main().catch((error) => {

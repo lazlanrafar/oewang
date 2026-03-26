@@ -1,8 +1,12 @@
 import { Separator } from "@workspace/ui";
-
 import { AccountForm } from "@/components/organisms/setting/account/account-form";
 import { getDictionary } from "@/get-dictionary";
 import type { Locale } from "@/i18n-config";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Account | Settings",
+};
 
 interface Props {
   params: Promise<{

@@ -82,7 +82,7 @@ export function AppsClient() {
     };
   });
 
-  // Since Okane doesn't have OAuth Applications currently, we use an empty array.
+  // Since Oewang doesn't have OAuth Applications currently, we use an empty array.
   // In the future, this is where transformedExternalApps will go.
   const transformedExternalApps: any[] = [];
 

@@ -11,7 +11,7 @@ export default function LoginV2() {
         <div className="flex flex-col items-center justify-center text-center space-y-4">
           <div className="space-y-3">
             <h1 className="text-2xl tracking-tight font-serif">
-              Welcome to Okane Admin
+              Welcome to Oewang Admin
             </h1>
           </div>
         </div>

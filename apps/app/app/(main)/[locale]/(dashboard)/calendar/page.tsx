@@ -1,6 +1,11 @@
 import { Suspense } from "react";
 import { CalendarClient } from "@/components/organisms/calendar/calendar-client";
 import { Locale } from "@/i18n-config";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Calendar",
+};
 
 interface PageProps {
   params: Promise<{ locale: Locale }>;

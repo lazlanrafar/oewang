@@ -22,7 +22,7 @@ export function BurnRateCanvas() {
   const currency = data?.currency || "USD";
   const stage = data?.stage;
 
-  // Map the okane chart data format to what BurnRateChart expects
+  // Map the oewang chart data format to what BurnRateChart expects
   const burnRateData =
     data?.chart?.map((item: any) => ({
       month: item.label,

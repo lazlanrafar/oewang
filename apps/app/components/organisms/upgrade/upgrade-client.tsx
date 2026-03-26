@@ -118,7 +118,7 @@ export function UpgradeClient({ dictionary }: UpgradeClientProps) {
           Special Launch Pricing
         </div>
         <h1 className="text-4xl md:text-6xl font-black tracking-tight text-foreground">
-          Scale your finances with Okane
+          Scale your finances with Oewang
         </h1>
         <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
           Choose the plan that fits your current needs. Start small and grow as

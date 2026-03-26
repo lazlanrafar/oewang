@@ -27,8 +27,12 @@ const FONT_VALUES_PREF = Object.keys(fontRegistry) as any;
 // import { i18n } from "@/i18n-config";
 
 export const metadata: Metadata = {
-  title: APP_CONFIG.meta.title,
-  description: APP_CONFIG.meta.description,
+  title: {
+    default: "Oewang - Financial OS",
+    template: "%s | Oewang",
+  },
+  description:
+    "Oewang is a modern financial OS for businesses. Manage spending, send invoices, track transactions, and gain real-time visibility into your finances.",
 };
 
 // export async function generateStaticParams() {

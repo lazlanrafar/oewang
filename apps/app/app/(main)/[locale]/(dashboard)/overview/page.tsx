@@ -10,6 +10,11 @@ import {
 import { ChatProviderWrapper } from "@/components/organisms/chat/chat-provider-wrapper";
 import ChatInterface from "@/components/organisms/chat/chat-interface";
 import { OverviewClient } from "@/components/organisms/overview/overview-client";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Overview",
+};
 
 export default async function OverviewPage(props: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;

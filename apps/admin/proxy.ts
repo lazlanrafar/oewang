@@ -73,11 +73,11 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getSession();
 
   // Get app session from cookie
-  const okane_session = request.cookies.get("okane-admin-session")?.value;
+  const oewang_session = request.cookies.get("oewang-admin-session")?.value;
 
   // Protect dashboard routes
   if (pathAfterLocale.startsWith("/overview") || pathAfterLocale === "/") {
-    if (!session || !okane_session) {
+    if (!session || !oewang_session) {
       return NextResponse.redirect(new URL(`/${locale}/login`, request.url));
     }
 
@@ -93,7 +93,7 @@ export async function proxy(request: NextRequest) {
   if (
     (pathAfterLocale === "/login" || pathAfterLocale === "/register") &&
     session &&
-    okane_session
+    oewang_session
   ) {
     if (session.user.app_metadata?.is_super_admin === true) {
       return NextResponse.redirect(new URL(`/${locale}/overview`, request.url));

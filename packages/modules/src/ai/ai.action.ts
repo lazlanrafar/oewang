@@ -88,6 +88,25 @@ export async function getChatSessions(): Promise<{
   }
 }
 
+export async function getChatSession(
+  sessionId: string,
+): Promise<{ success: boolean; data?: ChatSession; error?: string }> {
+  try {
+    const response = await api.get(`/ai/sessions/${sessionId}/metadata`);
+    const apiResponse = (response as any)._api_response;
+    return {
+      success: true,
+      data: (apiResponse?.data ?? response.data?.data) as ChatSession,
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      error:
+        error.response?.data?.message ?? "Failed to fetch session metadata",
+    };
+  }
+}
+
 export async function getChatSessionMessages(
   sessionId: string,
 ): Promise<{ success: boolean; data?: ChatMessage[]; error?: string }> {

@@ -184,7 +184,7 @@ export abstract class AiService {
 
     if (parsed) {
         if (parsed.name && parsed.categoryId) {
-            const cacheKey = `okane:category-cache:${workspaceId}:${parsed.name.toLowerCase().trim()}`;
+            const cacheKey = `oewang:category-cache:${workspaceId}:${parsed.name.toLowerCase().trim()}`;
             await redis.set(cacheKey, parsed.categoryId, { ex: 60 * 60 * 24 * 30 });
         }
 
@@ -207,6 +207,10 @@ export abstract class AiService {
 
   static async getSessionMessages(sessionId: string, workspaceId: string) {
     return AiRepository.getSessionMessages(sessionId, workspaceId);
+  }
+
+  static async getSession(sessionId: string, workspaceId: string) {
+    return AiRepository.getSession(sessionId, workspaceId);
   }
 
   static async getUsageAndQuota(workspaceId: string) {

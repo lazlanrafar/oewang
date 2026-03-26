@@ -180,7 +180,7 @@ export function AppsCard({
                     {app.category || "Integration"} •{" "}
                     {app.type === "external"
                       ? `By ${app.developerName || "Partner"}`
-                      : "By Okane"}
+                      : "By Oewang"}
                   </span>
                 </div>
               </div>
@@ -289,12 +289,12 @@ export function AppsCard({
 
               <div className="pt-8 mt-6 border-t border-border">
                 <p className="text-[10px] text-muted-foreground">
-                  All apps on the Okane App Store are open-source and
-                  peer-reviewed. Okane Labs maintains high standards but doesn't
+                  All apps on the Oewang App Store are open-source and
+                  peer-reviewed. Oewang Labs maintains high standards but doesn't
                   endorse third-party apps unless officially certified.
                 </p>
                 <a
-                  href="mailto:support@okane.dev"
+                  href="mailto:support@oewang.dev"
                   className="text-[10px] text-red-500 hover:underline mt-1 inline-block"
                 >
                   Report app

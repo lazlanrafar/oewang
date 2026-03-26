@@ -2,6 +2,11 @@ import Link from "next/link";
 
 import { OAuthButton } from "@/components/organisms/auth/oauth-button";
 import { RegisterForm } from "@/components/organisms/auth/register-form";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Register",
+};
 
 export default function RegisterV2() {
   return (
@@ -10,7 +15,7 @@ export default function RegisterV2() {
         <div className="flex flex-col items-center justify-center text-center space-y-4">
           <div className="space-y-3">
             <h1 className="text-2xl tracking-tight font-sans">
-              Welcome to Okane
+              Welcome to Oewang
             </h1>
           </div>
         </div>

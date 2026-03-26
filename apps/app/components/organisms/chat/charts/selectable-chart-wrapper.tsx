@@ -19,7 +19,7 @@ export function SelectableChartWrapper({
   children,
   enableSelection = false,
 }: SelectableChartWrapperProps) {
-  // Chart selection is not enabled in Okane canvas - just render children
+  // Chart selection is not enabled in Oewang canvas - just render children
   if (!enableSelection) {
     return <>{children}</>;
   }

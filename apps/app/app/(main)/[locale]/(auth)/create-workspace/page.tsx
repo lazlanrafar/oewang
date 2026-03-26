@@ -4,6 +4,11 @@
 import { WorkspaceForm } from "@/components/organisms/auth/workspace-form";
 import { getPricing } from "@workspace/modules/server";
 import type { Pricing } from "@workspace/types";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Create Workspace",
+};
 
 export default async function CreateWorkspacePage() {
   let plans: Pricing[] = [];

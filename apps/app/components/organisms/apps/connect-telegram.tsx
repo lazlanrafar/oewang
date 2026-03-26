@@ -31,7 +31,7 @@ export function ConnectTelegram() {
 
   const workspaceId = me?.user.workspace_id;
   const userId = me?.user.id;
-  const botUsername = Env.NEXT_PUBLIC_TELEGRAM_BOT_USER || "OkaneBot";
+  const botUsername = Env.NEXT_PUBLIC_TELEGRAM_BOT_USER || "OewangBot";
   const telegramUrl = workspaceId && userId
     ? `https://t.me/${botUsername}?start=${workspaceId}___${userId}`
     : `https://t.me/${botUsername}`;
@@ -85,7 +85,7 @@ export function ConnectTelegram() {
             </DialogTitle>
             <DialogDescription className="text-muted-foreground pt-2">
               Scan the QR code or open Telegram to connect your account to
-              Okane.
+              Oewang.
             </DialogDescription>
           </DialogHeader>
         </div>

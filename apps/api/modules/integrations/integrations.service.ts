@@ -67,7 +67,7 @@ export abstract class IntegrationsService {
 
     // Check for linking command
     if (type === "text" && text) {
-      const match = text.match(/^Connect Okane\s+([a-f0-9-]{36})$/i);
+      const match = text.match(/^Connect Oewang\s+([a-f0-9-]{36})$/i);
       if (match) {
         const targetWorkspaceId = match[1];
 
@@ -77,7 +77,7 @@ export abstract class IntegrationsService {
         if (!targetUserId) {
           await IntegrationsService.sendWhatsAppMessage(
             fromUserNumber,
-            "❌ Could not find a valid user to link with this workspace. Please use the link from the Okane app.",
+            "❌ Could not find a valid user to link with this workspace. Please use the link from the Oewang app.",
           );
           return "OK";
         }
@@ -90,7 +90,7 @@ export abstract class IntegrationsService {
 
         await IntegrationsService.sendWhatsAppMessage(
           fromUserNumber,
-          "✅ Your WhatsApp is now connected to Okane! You can now send me your expenses or upload receipts anytime.",
+          "✅ Your WhatsApp is now connected to Oewang! You can now send me your expenses or upload receipts anytime.",
         );
         return "OK";
       }
@@ -255,7 +255,7 @@ export abstract class IntegrationsService {
     if (text) {
       const startMatch =
         text.match(/^\/start\s+([a-f0-9-]{36})(?:___([a-f0-9-]{36}))?$/i) ||
-        text.match(/^Connect Okane\s+([a-f0-9-]{36})(?:___([a-f0-9-]{36}))?$/i);
+        text.match(/^Connect Oewang\s+([a-f0-9-]{36})(?:___([a-f0-9-]{36}))?$/i);
 
       if (startMatch) {
         const targetWorkspaceId = startMatch[1];
@@ -271,7 +271,7 @@ export abstract class IntegrationsService {
         if (!targetUserId) {
           await IntegrationsService.sendTelegramMessage(
             chatId,
-            "❌ Could not find a valid user to link with this workspace. Please use the link from the Okane app.",
+            "❌ Could not find a valid user to link with this workspace. Please use the link from the Oewang app.",
           );
           return "OK";
         }
@@ -284,7 +284,7 @@ export abstract class IntegrationsService {
 
         await IntegrationsService.sendTelegramMessage(
           chatId,
-          "✅ Your Telegram is now connected to Okane! You can now send me your expenses or upload receipts anytime.",
+          "✅ Your Telegram is now connected to Oewang! You can now send me your expenses or upload receipts anytime.",
         );
         return "OK";
       }
@@ -297,7 +297,7 @@ export abstract class IntegrationsService {
     if (!integration) {
       await IntegrationsService.sendTelegramMessage(
         chatId,
-        "👋 Welcome to Okane! To connect your account, please use the 'Connect Telegram' button in your Okane dashboard or type `Connect Okane <your-workspace-id>`.",
+        "👋 Welcome to Oewang! To connect your account, please use the 'Connect Telegram' button in your Oewang dashboard or type `Connect Oewang <your-workspace-id>`.",
       );
       return "OK";
     }

@@ -88,10 +88,10 @@ const clientSchema = z.object({
   NEXT_PUBLIC_SESSION_COOKIE_NAME: z
     .string()
     .optional()
-    .default("okane-session"),
+    .default("oewang-session"),
   NEXT_PUBLIC_SUPABASE_COOKIE_NAME: z.string().optional(),
   NEXT_PUBLIC_WHATSAPP_NUMBER: z.string().optional().default("+1234567890"),
-  NEXT_PUBLIC_TELEGRAM_BOT_USER: z.string().optional().default("OkaneBot"),
+  NEXT_PUBLIC_TELEGRAM_BOT_USER: z.string().optional().default("OewangBot"),
 });
 
 // Create the combined env object manually for Next.js bundle resolution.

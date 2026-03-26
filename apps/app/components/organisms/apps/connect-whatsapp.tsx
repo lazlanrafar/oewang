@@ -32,7 +32,7 @@ export function ConnectWhatsApp() {
   // Use a fallback if the env var is not set to ensure the dialog at least opens
   const whatsappNumber =
     process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "+1234567890";
-  const message = `Connect Okane ${workspaceId}`;
+  const message = `Connect Oewang ${workspaceId}`;
   const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
 
   useEffect(() => {
@@ -87,7 +87,7 @@ export function ConnectWhatsApp() {
             </DialogTitle>
             <DialogDescription className="text-muted-foreground pt-2">
               Scan the QR code or open WhatsApp to connect your account to
-              Okane.
+              Oewang.
             </DialogDescription>
           </DialogHeader>
         </div>

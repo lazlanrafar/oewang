@@ -23,7 +23,7 @@ export function RevenueCanvas() {
   const stage = data?.stage;
   const currency = data?.currency || "USD";
 
-  // Map monthly data if available (Okane may return flat metrics, not chart data)
+  // Map monthly data if available (Oewang may return flat metrics, not chart data)
   const revenueData =
     data?.chart?.monthlyData?.map((item: any) => ({
       month: item.month,

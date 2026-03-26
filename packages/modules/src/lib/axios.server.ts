@@ -15,7 +15,7 @@ export const axiosInstance = axios.create({
 axiosInstance.interceptors.request.use(async (config) => {
   let token: string | undefined;
 
-  const cookieName = Env.NEXT_PUBLIC_SESSION_COOKIE_NAME || "okane-session";
+  const cookieName = Env.NEXT_PUBLIC_SESSION_COOKIE_NAME || "oewang-session";
 
   // Server-side: Try to get token from Next.js cookies
   try {

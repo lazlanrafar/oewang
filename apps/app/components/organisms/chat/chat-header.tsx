@@ -25,7 +25,7 @@ export function ChatHeader() {
   const [dataPartTitle] = useDataPart<ChatTitleData>("chat-title", {
     onData: (dataPart) => {
       if (dataPart.data.title) {
-        document.title = `${dataPart.data.title} - Okane`;
+        document.title = `${dataPart.data.title} - Oewang`;
       }
     },
   });

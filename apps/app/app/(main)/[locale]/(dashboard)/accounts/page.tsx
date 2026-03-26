@@ -2,6 +2,11 @@ import { Suspense } from "react";
 import { getWallets, getWalletGroups } from "@workspace/modules/server";
 import { AccountsClient } from "@/components/organisms/accounts/accounts-client";
 import { AccountTableSkeleton } from "@/components/organisms/accounts/account-table-skeleton";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Accounts",
+};
 
 export default async function AccountsPage(props: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;

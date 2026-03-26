@@ -1,5 +1,10 @@
 import { UpgradeView } from "@/components/organisms/setting/upgrade/upgrade-view";
 import { getPricing } from "@workspace/modules/pricing/pricing.action";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Upgrade",
+};
 
 export default async function UpgradePage({
   params,

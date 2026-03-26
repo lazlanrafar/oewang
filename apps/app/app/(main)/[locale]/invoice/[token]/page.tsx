@@ -199,7 +199,7 @@ export default function PublicInvoicePage() {
               )}
             </div>
             <span className="font-semibold text-sm tracking-tight text-foreground/80">
-              {workspace?.name || "Okane"}
+              {workspace?.name || "Oewang"}
             </span>
           </div>
           <Badge
@@ -255,7 +255,7 @@ export default function PublicInvoicePage() {
 
       <div className="no-print text-center pb-12 text-foreground/30 select-none">
         <p className="text-[9px] uppercase font-bold tracking-[0.4em]">
-          Powered by Okane
+          Powered by Oewang
         </p>
       </div>
     </div>

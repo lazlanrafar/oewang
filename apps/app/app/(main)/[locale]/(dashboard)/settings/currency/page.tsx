@@ -1,5 +1,4 @@
 import { Separator } from "@workspace/ui";
-
 import {
   getSubCurrencies,
   getTransactionSettings,
@@ -8,6 +7,11 @@ import { MainCurrencyForm } from "@/components/organisms/setting/main-currency/m
 import { SubCurrencyList } from "@/components/organisms/setting/sub-currency/sub-currency-list";
 import { getDictionary } from "@/get-dictionary";
 import type { Locale } from "@/i18n-config";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Currency | Settings",
+};
 
 interface CurrencyPageProps {
   params: Promise<{

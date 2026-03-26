@@ -24,7 +24,7 @@ function renderTemplate(templateName: string, variables: Record<string, string>)
     // Minimal fallback for critical cases
     return Object.entries(variables).reduce(
       (acc, [key, val]) => acc.replace(new RegExp(`{{${key}}}`, "g"), val),
-      "<p>Okane Notification: " + templateName + "</p>"
+      "<p>Oewang Notification: " + templateName + "</p>"
     );
   }
 
@@ -87,7 +87,7 @@ export async function sendPackageExpiredEmail(
     upgradeUrl,
   });
 
-  return sendEmail(to, "Your Okane Trial Has Ended", html);
+  return sendEmail(to, "Your Oewang Trial Has Ended", html);
 }
 
 /**
@@ -101,7 +101,7 @@ async function sendEmail(to: string, subject: string, html: string) {
 
   try {
     const data = await resend.emails.send({
-      from: "Okane <noreply@lazlanrafar.com>",
+      from: "Oewang <noreply@lazlanrafar.com>",
       to,
       subject,
       html,

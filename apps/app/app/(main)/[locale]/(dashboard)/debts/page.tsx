@@ -1,4 +1,9 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Debts",
+};
 import type { Wallet } from "@workspace/types";
 import { getWallets, getDebts, type DebtWithContact } from "@workspace/modules/server";
 import { DebtsClient } from "@/components/organisms/debts/debts-client";
