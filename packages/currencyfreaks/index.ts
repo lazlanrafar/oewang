@@ -53,7 +53,13 @@ export async function fetchAndCacheRates(): Promise<CurrencyRatesResponse> {
     params: { apikey: API_TOKEN },
   });
 
-  await redis.set(CACHE_KEY, response.data, {
+  // If redis is ioredis, we should stringify the object
+  const dataToStore =
+    typeof (redis as any).status === "string"
+      ? JSON.stringify(response.data)
+      : response.data;
+
+  await redis.set(CACHE_KEY, dataToStore, {
     ex: ONE_DAY_SECONDS,
   });
 
@@ -67,10 +73,14 @@ export async function fetchAndCacheRates(): Promise<CurrencyRatesResponse> {
 ======================= */
 
 export async function getRates(): Promise<CurrencyRatesResponse> {
-  const cached = await redis.get<CurrencyRatesResponse>(CACHE_KEY);
+  const rawData = await redis.get(CACHE_KEY);
 
-  if (cached) {
-    return cached;
+  if (rawData) {
+    // If it's a string (likely from ioredis), parse it.
+    // If it's already an object (from Upstash), return it.
+    return typeof rawData === "string"
+      ? (JSON.parse(rawData) as CurrencyRatesResponse)
+      : (rawData as CurrencyRatesResponse);
   }
 
   return fetchAndCacheRates();

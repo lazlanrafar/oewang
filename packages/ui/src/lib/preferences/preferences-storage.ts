@@ -1,6 +1,6 @@
 "use client";
 
-import { setValueToCookie } from "@repo/admin/server/server-actions";
+import { setValueToCookie } from "../server-actions";
 
 import { setClientCookie } from "../cookie.client";
 import { setLocalStorageValue } from "../local-storage.client";
