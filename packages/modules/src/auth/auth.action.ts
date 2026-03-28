@@ -70,7 +70,7 @@ export async function login(
 export async function signup(
   form_data: FormData,
 ): Promise<ActionResponse<void>> {
-  const origin = (await headers()).get("origin");
+  const origin = Env.NEXT_PUBLIC_APP_URL;
   const email = form_data.get("email") as string;
   const password = form_data.get("password") as string;
   const name = form_data.get("name") as string | undefined;
@@ -124,7 +124,7 @@ export async function signup(
 export async function loginWithOAuth(
   provider: "google" | "github",
 ): Promise<ActionResponse<void>> {
-  const origin = (await headers()).get("origin");
+  const origin = Env.NEXT_PUBLIC_APP_URL;
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider,
