@@ -8,6 +8,8 @@
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "typecheck": "turbo run typecheck",
     "migrate": "turbo run migrate",
+    "db:push": "bun run --cwd packages/database push",
+    "db:seed": "bun run --cwd packages/database seed",
     "mcp": "bun run --cwd apps/api mcp.ts",
     "setup:stripe": "bun run --cwd packages/database setup:stripe"
   },

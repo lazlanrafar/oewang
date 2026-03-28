@@ -12,6 +12,7 @@
     "generate": "drizzle-kit generate",
     "migrate": "drizzle-kit migrate",
     "studio": "drizzle-kit studio",
+    "seed": "bun --env-file=../../.env scripts/seed-pricing.ts",
     "seed:pricing": "bun --env-file=../../.env scripts/seed-pricing.ts",
     "setup:stripe": "bun --env-file=../../.env scripts/setup-stripe.ts",
     "typecheck": "tsc --noEmit"
