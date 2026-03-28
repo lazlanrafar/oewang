@@ -71,9 +71,13 @@ export async function signup(
   form_data: FormData,
 ): Promise<ActionResponse<void>> {
   const headersList = await headers();
-  const host = headersList.get("host");
-  const protocol = headersList.get("x-forwarded-proto") || "http";
-  const origin = host ? `${protocol}://${host}` : Env.NEXT_PUBLIC_APP_URL;
+  // In Railway (and most reverse proxies), 'host' is the internal service address
+  // (e.g. localhost:3000). The real public domain is in 'x-forwarded-host'.
+  const forwardedHost = headersList.get("x-forwarded-host");
+  const protocol = headersList.get("x-forwarded-proto") || "https";
+  const origin = forwardedHost
+    ? `${protocol}://${forwardedHost}`
+    : Env.NEXT_PUBLIC_APP_URL;
 
   const email = form_data.get("email") as string;
   const password = form_data.get("password") as string;
@@ -129,9 +133,13 @@ export async function loginWithOAuth(
   provider: "google" | "github",
 ): Promise<ActionResponse<void>> {
   const headersList = await headers();
-  const host = headersList.get("host");
-  const protocol = headersList.get("x-forwarded-proto") || "http";
-  const origin = host ? `${protocol}://${host}` : Env.NEXT_PUBLIC_APP_URL;
+  // In Railway (and most reverse proxies), 'host' is the internal service address
+  // (e.g. localhost:3000). The real public domain is in 'x-forwarded-host'.
+  const forwardedHost = headersList.get("x-forwarded-host");
+  const protocol = headersList.get("x-forwarded-proto") || "https";
+  const origin = forwardedHost
+    ? `${protocol}://${forwardedHost}`
+    : Env.NEXT_PUBLIC_APP_URL;
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signInWithOAuth({
