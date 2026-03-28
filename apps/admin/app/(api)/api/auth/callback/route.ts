@@ -12,13 +12,13 @@ export async function GET(request: Request) {
   const code = searchParams.get("code");
   const next = searchParams.get("next") ?? "/overview";
 
-  // In Railway, request.url resolves to the internal address (localhost:3000).
-  // The real public domain is in x-forwarded-host set by Railway's reverse proxy.
+  // Priority: x-forwarded-host (Railway proxy) → request.url origin (localhost dev)
   const forwardedHost = request.headers.get("x-forwarded-host");
-  const forwardedProto = request.headers.get("x-forwarded-proto") || "https";
+  const forwardedProto = request.headers.get("x-forwarded-proto") || "http";
+  const { origin: requestOrigin } = new URL(request.url);
   const origin = forwardedHost
     ? `${forwardedProto}://${forwardedHost}`
-    : Env.NEXT_PUBLIC_ADMIN_URL ?? Env.NEXT_PUBLIC_APP_URL;
+    : requestOrigin;
 
   if (code) {
     const supabase = await createClient();
