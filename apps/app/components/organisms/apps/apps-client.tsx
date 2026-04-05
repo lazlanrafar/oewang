@@ -2,8 +2,8 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Input } from "@workspace/ui";
-import { Search } from "lucide-react";
+import { cn, Input, Tabs, TabsList, TabsTrigger } from "@workspace/ui";
+import { Search, Grid2X2, Link as LinkIcon } from "lucide-react";
 import { apps as appStoreApps } from "@workspace/integrations";
 import { useQuery } from "@tanstack/react-query";
 import { getIntegrationsAction } from "@workspace/modules/integrations/integrations.action";
@@ -129,30 +129,45 @@ export function AppsClient() {
   return (
     <div className="space-y-8 w-full">
       <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
-        <div>
-          <h1 className="text-2xl font-bold">Integrations</h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Connect your third-party services to enhance your experience.
-          </p>
+        {/* Search on left */}
+        <div className="relative w-full sm:max-w-[280px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Filter apps..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 bg-background/50 border-border h-9"
+          />
         </div>
-        <div className="flex gap-4 w-full sm:w-auto">
-          <div className="relative w-full sm:max-w-xs">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Filter apps..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 bg-background/50 border-border"
-            />
-          </div>
-          <select
-            value={filter}
-            onChange={(e) => setFilter(e.target.value as any)}
-            className="bg-background border border-border text-sm rounded-md px-3 py-2 w-full sm:w-auto h-10 outline-none focus:ring-2 focus:ring-ring focus:border-input"
-          >
-            <option value="all">All Apps</option>
-            <option value="connected">Connected</option>
-          </select>
+
+        {/* Filter Toggle on right */}
+        <div className="flex items-stretch bg-[#f7f7f7] dark:bg-[#131313] w-fit">
+          <Tabs value={filter} onValueChange={(v) => setFilter(v as any)}>
+            <TabsList className="flex items-stretch h-auto p-0 bg-transparent">
+              <TabsTrigger
+                value="all"
+                className={cn(
+                  "group relative flex items-center gap-1.5 px-3 py-1.5 text-[14px] transition-all whitespace-nowrap border border-transparent h-9 min-h-9",
+                  "text-[#707070] hover:text-black bg-[#f7f7f7] dark:text-[#666666] dark:hover:text-white dark:bg-[#131313] mb-0 relative z-1",
+                  "data-[state=active]:text-black data-[state=active]:bg-[#e6e6e6] dark:data-[state=active]:text-white dark:data-[state=active]:bg-[#1d1d1d] data-[state=active]:-mb-px data-[state=active]:z-10",
+                )}
+              >
+                <Grid2X2 className="w-4 h-4" />
+                All Apps
+              </TabsTrigger>
+              <TabsTrigger
+                value="connected"
+                className={cn(
+                  "group relative flex items-center gap-1.5 px-3 py-1.5 text-[14px] transition-all whitespace-nowrap border border-transparent h-9 min-h-9",
+                  "text-[#707070] hover:text-black bg-[#f7f7f7] dark:text-[#666666] dark:hover:text-white dark:bg-[#131313] mb-0 relative z-1",
+                  "data-[state=active]:text-black data-[state=active]:bg-[#e6e6e6] dark:data-[state=active]:text-white dark:data-[state=active]:bg-[#1d1d1d] data-[state=active]:-mb-px data-[state=active]:z-10",
+                )}
+              >
+                <LinkIcon className="w-4 h-4" />
+                Connected
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
       </div>
 
