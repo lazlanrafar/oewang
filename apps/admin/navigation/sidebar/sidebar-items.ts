@@ -1,6 +1,7 @@
 import {
   Banknote,
   LayoutDashboard,
+  LayoutGrid,
   type LucideIcon,
   Users,
 } from "lucide-react";
@@ -54,6 +55,11 @@ export const sidebarItems: NavGroup[] = [
         title: "Users",
         url: "/users",
         icon: Users,
+      },
+      {
+        title: "Workspaces",
+        url: "/workspaces",
+        icon: LayoutGrid,
       },
       {
         title: "Pricing",

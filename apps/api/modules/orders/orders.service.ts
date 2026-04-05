@@ -8,32 +8,27 @@ import {
 import { ErrorCode } from "@workspace/types";
 
 export abstract class OrdersService {
-  static async createOrderFromStripe(
+  static async createOrder(
     data: {
       workspace_id: string;
       user_id?: string;
-      stripe_payment_intent_id?: string;
-      stripe_invoice_id?: string;
-      stripe_subscription_id?: string;
+      xendit_payment_id?: string;
+      xendit_invoice_id?: string;
+      xendit_subscription_id?: string;
       amount: number;
       currency: string;
       status: string;
     },
     tx?: any,
   ) {
-    // If invoice ID exists, try updatng first, otherwise create
-    if (data.stripe_invoice_id) {
-      const existing = await OrdersRepository.findByInvoiceId(
-        data.stripe_invoice_id,
-      );
+    // If invoice ID exists (Xendit), try updating first
+    const invoiceId = data.xendit_invoice_id;
+    if (invoiceId) {
+      const existing = await OrdersRepository.findByInvoiceId(invoiceId);
       if (existing) {
-        const updated = await OrdersRepository.updateByStripeInvoiceId(
-          data.stripe_invoice_id,
-          {
-            status: data.status,
-            amount: data.amount,
-            currency: data.currency,
-          },
+        const updated = await OrdersRepository.updateByXenditInvoiceId(
+          invoiceId,
+          { status: data.status, amount: data.amount, currency: data.currency }
         );
         return buildSuccess(updated, "Order updated");
       }
@@ -43,15 +38,13 @@ export abstract class OrdersService {
     return buildSuccess(order, "Order created");
   }
 
-  static async updateOrderFromStripe(stripeInvoiceId: string, status: string) {
-    const order = await OrdersRepository.updateByStripeInvoiceId(
-      stripeInvoiceId,
-      { status },
-    );
-    if (!order) {
+  static async updateOrderFromInvoiceId(invoiceId: string, status: string) {
+    const updated = await OrdersRepository.updateByXenditInvoiceId(invoiceId, { status });
+
+    if (!updated) {
       return buildError(ErrorCode.NOT_FOUND, "Order not found");
     }
-    return buildSuccess(order, "Order updated");
+    return buildSuccess(updated, "Order updated");
   }
 
   static async getAllOrders(

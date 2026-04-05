@@ -148,7 +148,7 @@ export abstract class WorkspacesService {
         // Audit log moved outside transaction
 
         // F. Record initial free order
-        OrdersService.createOrderFromStripe(
+        OrdersService.createOrder(
           {
             workspace_id: workspace.id,
             user_id,

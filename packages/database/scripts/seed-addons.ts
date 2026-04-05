@@ -25,9 +25,9 @@ async function seedAddons() {
       max_ai_tokens: 500000,
       max_vault_size_mb: 0,
       prices: [
-        { currency: "usd", monthly: 10, yearly: 100, stripe_monthly_id: "price_ai_500k_usd", stripe_yearly_id: "price_ai_500k_usd_yr" },
-        { currency: "idr", monthly: 150000, yearly: 1500000, stripe_monthly_id: "price_ai_500k_idr", stripe_yearly_id: "price_ai_500k_idr_yr" },
-        { currency: "jpy", monthly: 1500, yearly: 15000, stripe_monthly_id: "price_ai_500k_jpy", stripe_yearly_id: "price_ai_500k_jpy_yr" },
+        { currency: "usd", monthly: 10, yearly: 100, xendit_product_id: "AI_500K_PROD_USD" },
+        { currency: "idr", monthly: 150000, yearly: 1500000, xendit_product_id: "AI_500K_PROD_IDR" },
+        { currency: "jpy", monthly: 1500, yearly: 15000, xendit_product_id: "AI_500K_PROD_JPY" },
       ],
     },
     {
@@ -37,9 +37,9 @@ async function seedAddons() {
       max_ai_tokens: 1000000,
       max_vault_size_mb: 0,
       prices: [
-        { currency: "usd", monthly: 18, yearly: 180, stripe_monthly_id: "price_ai_1m_usd", stripe_yearly_id: "price_ai_1m_usd_yr" },
-        { currency: "idr", monthly: 270000, yearly: 2700000, stripe_monthly_id: "price_ai_1m_idr", stripe_yearly_id: "price_ai_1m_idr_yr" },
-        { currency: "jpy", monthly: 2700, yearly: 27000, stripe_monthly_id: "price_ai_1m_jpy", stripe_yearly_id: "price_ai_1m_jpy_yr" },
+        { currency: "usd", monthly: 18, yearly: 180, xendit_product_id: "AI_1M_PROD_USD" },
+        { currency: "idr", monthly: 270000, yearly: 2700000, xendit_product_id: "AI_1M_PROD_IDR" },
+        { currency: "jpy", monthly: 2700, yearly: 27000, xendit_product_id: "AI_1M_PROD_JPY" },
       ],
     },
     {
@@ -49,9 +49,9 @@ async function seedAddons() {
       max_ai_tokens: 0,
       max_vault_size_mb: 5120,
       prices: [
-        { currency: "usd", monthly: 5, yearly: 50, stripe_monthly_id: "price_vault_5gb_usd", stripe_yearly_id: "price_vault_5gb_usd_yr" },
-        { currency: "idr", monthly: 75000, yearly: 750000, stripe_monthly_id: "price_vault_5gb_idr", stripe_yearly_id: "price_vault_5gb_idr_yr" },
-        { currency: "jpy", monthly: 750, yearly: 7500, stripe_monthly_id: "price_vault_5gb_jpy", stripe_yearly_id: "price_vault_5gb_jpy_yr" },
+        { currency: "usd", monthly: 5, yearly: 50, xendit_product_id: "VAULT_5GB_PROD_USD" },
+        { currency: "idr", monthly: 75000, yearly: 750000, xendit_product_id: "VAULT_5GB_PROD_IDR" },
+        { currency: "jpy", monthly: 750, yearly: 7500, xendit_product_id: "VAULT_5GB_PROD_JPY" },
       ],
     },
     {
@@ -61,9 +61,9 @@ async function seedAddons() {
       max_ai_tokens: 0,
       max_vault_size_mb: 20480,
       prices: [
-        { currency: "usd", monthly: 15, yearly: 150, stripe_monthly_id: "price_vault_20gb_usd", stripe_yearly_id: "price_vault_20gb_usd_yr" },
-        { currency: "idr", monthly: 225000, yearly: 2250000, stripe_monthly_id: "price_vault_20gb_idr", stripe_yearly_id: "price_vault_20gb_idr_yr" },
-        { currency: "jpy", monthly: 2250, yearly: 22500, stripe_monthly_id: "price_vault_20gb_jpy", stripe_yearly_id: "price_vault_20gb_jpy_yr" },
+        { currency: "usd", monthly: 15, yearly: 150, xendit_product_id: "VAULT_20GB_PROD_USD" },
+        { currency: "idr", monthly: 225000, yearly: 2250000, xendit_product_id: "VAULT_20GB_PROD_IDR" },
+        { currency: "jpy", monthly: 2250, yearly: 22500, xendit_product_id: "VAULT_20GB_PROD_JPY" },
       ],
     },
   ];

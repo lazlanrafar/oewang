@@ -278,7 +278,7 @@ export abstract class AiRepository {
         used: workspaces.ai_tokens_used,
         maxTokens: pricing.max_ai_tokens,
         extraTokens: workspaces.extra_ai_tokens,
-        stripe_current_period_end: workspaces.stripe_current_period_end,
+        xendit_current_period_end: workspaces.xendit_current_period_end,
         created_at: workspaces.created_at,
       })
       .from(workspaces)

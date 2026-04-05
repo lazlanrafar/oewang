@@ -38,7 +38,7 @@ export interface ChatSession {
 export interface AiQuota {
   used: number;
   maxTokens: number;
-  stripe_current_period_end: string | null;
+  xendit_current_period_end: string | null;
   created_at: string;
 }
 

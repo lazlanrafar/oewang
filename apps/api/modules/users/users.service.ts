@@ -124,6 +124,7 @@ export abstract class UsersService {
         email: user.email,
         name: user.name,
         profile_picture,
+        mobile: user.mobile,
         workspace_id: user.workspace_id,
       },
       workspaces,
@@ -158,7 +159,10 @@ export abstract class UsersService {
   /**
    * Update user profile.
    */
-  static async updateProfile(user_id: string, data: { name?: string; profile_picture?: string }) {
+  static async updateProfile(
+    user_id: string,
+    data: { name?: string; profile_picture?: string | null; mobile?: string | null },
+  ) {
     await UsersRepository.update(user_id, data);
   }
 

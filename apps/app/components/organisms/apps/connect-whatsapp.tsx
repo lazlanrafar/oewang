@@ -18,7 +18,10 @@ import { Env } from "@workspace/constants";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 
+import { useAppStore } from "@/stores/app";
+
 export function ConnectWhatsApp() {
+  const { dictionary } = useAppStore();
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<"meta" | "twilio">("meta");
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("");
@@ -123,14 +126,12 @@ export function ConnectWhatsApp() {
               <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
                 <Lock className="h-8 w-8 text-primary" />
               </div>
-              <h4 className="text-lg font-bold">Pro Plan Required</h4>
+              <h4 className="text-lg font-bold">WhatsApp Integration</h4>
               <p className="text-sm text-muted-foreground text-center mt-2 mb-6">
-                WhatsApp integration is a premium feature available on Pro and Business plans.
+                WhatsApp integration is a premium feature. We are currently setting up our payment gateway to enable upgrades.
               </p>
-              <Button asChild className="w-full">
-                <Link href={`/${locale}/settings/billing`}>
-                  Upgrade to Pro
-                </Link>
+              <Button disabled className="w-full">
+                {dictionary?.settings?.common?.coming_soon || "Coming Soon"}
               </Button>
             </div>
           ) : (

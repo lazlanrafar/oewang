@@ -19,9 +19,9 @@ export const orders = pgTable(
     sequence_number: serial("sequence_number").notNull(),
     workspace_id: uuid("workspace_id").references(() => workspaces.id),
     user_id: uuid("user_id").references(() => users.id),
-    stripe_payment_intent_id: text("stripe_payment_intent_id"),
-    stripe_invoice_id: text("stripe_invoice_id"),
-    stripe_subscription_id: text("stripe_subscription_id"),
+    xendit_payment_id: text("xendit_payment_id"),
+    xendit_invoice_id: text("xendit_invoice_id"),
+    xendit_subscription_id: text("xendit_subscription_id"),
     amount: integer("amount").notNull(),
     currency: text("currency").notNull(),
     status: text("status").notNull(),
@@ -31,6 +31,6 @@ export const orders = pgTable(
     deleted_at: timestamp("deleted_at"),
   },
   (table) => [
-    uniqueIndex("orders_stripe_invoice_id_unique").on(table.stripe_invoice_id),
+    uniqueIndex("orders_xendit_invoice_id_unique").on(table.xendit_invoice_id),
   ],
 );

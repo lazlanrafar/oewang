@@ -1,4 +1,5 @@
-import { db, users } from "@workspace/database";
+import { db, users, workspaces, pricing } from "@workspace/database";
+import { isNull } from "drizzle-orm";
 import {
   ilike,
   or,
@@ -88,5 +89,105 @@ export abstract class SystemAdminsRepository {
     const totalResult = Number(countQuery[0]?.count || 0);
 
     return { rows, total: totalResult };
+  }
+
+  /**
+   * List all workspaces with pagination and search
+   */
+  static async findAllWorkspaces(params: {
+    page: number;
+    limit: number;
+    search?: string;
+    sortBy?: string;
+    sortOrder?: "asc" | "desc";
+  }) {
+    const conditions: (SQL | undefined)[] = [isNull(workspaces.deleted_at)];
+
+    if (params.search) {
+      conditions.push(
+        or(
+          ilike(workspaces.name, `%${params.search}%`),
+          ilike(workspaces.slug, `%${params.search}%`),
+        ),
+      );
+    }
+
+    const whereClause = and(...conditions);
+    let orderByParams: any[] = [desc(workspaces.created_at)];
+
+    if (params.sortBy) {
+      const col = (workspaces as any)[params.sortBy];
+      if (col) {
+        orderByParams = params.sortOrder === "asc" ? [asc(col)] : [desc(col)];
+      }
+    }
+
+    const rows = await db
+      .select({
+        id: workspaces.id,
+        name: workspaces.name,
+        slug: workspaces.slug,
+        plan_id: workspaces.plan_id,
+        plan_status: workspaces.plan_status,
+        plan_name: pricing.name,
+        created_at: workspaces.created_at,
+        ai_tokens_used: workspaces.ai_tokens_used,
+        vault_size_used_bytes: workspaces.vault_size_used_bytes,
+      })
+      .from(workspaces)
+      .leftJoin(pricing, eq(workspaces.plan_id, pricing.id))
+      .where(whereClause)
+      .orderBy(...orderByParams)
+      .limit(params.limit)
+      .offset((params.page - 1) * params.limit);
+
+    const countResult = await db
+      .select({ count: sql`count(*)` })
+      .from(workspaces)
+      .where(whereClause);
+    const total = Number(countResult[0]?.count || 0);
+
+    return { rows, total };
+  }
+
+  /**
+   * Update a workspace's pricing plan
+   */
+  static async updateWorkspacePlan(workspaceId: string, planId: string) {
+    // Also fetch the plan to set plan_status properly (e.g., active)
+    const [plan] = await db
+      .select()
+      .from(pricing)
+      .where(eq(pricing.id, planId))
+      .limit(1);
+    
+    if (!plan) throw new Error("Plan not found");
+
+    const [updated] = await db
+      .update(workspaces)
+      .set({
+        plan_id: planId,
+        plan_status: "active", // Manually activated by admin
+        updated_at: new Date(),
+      })
+      .where(eq(workspaces.id, workspaceId))
+      .returning();
+
+    return updated;
+  }
+
+  /**
+   * List all available plans
+   */
+  static async findAllPlans() {
+    return db
+      .select({
+        id: pricing.id,
+        name: pricing.name,
+        is_active: pricing.is_active,
+      })
+      .from(pricing)
+      .where(and(eq(pricing.is_addon, false), isNull(pricing.deleted_at)))
+      .orderBy(asc(pricing.name));
   }
 }

@@ -18,13 +18,14 @@ export const pricing = pgTable("pricing", {
         currency: string;
         monthly: number;
         yearly: number;
-        stripe_monthly_id?: string;
-        stripe_yearly_id?: string;
+        xendit_monthly_id?: string;
+        xendit_yearly_id?: string;
+        xendit_product_id?: string;
       }[]
     >()
     .default([])
     .notNull(),
-  stripe_product_id: text("stripe_product_id"),
+  xendit_product_id: text("xendit_product_id"),
   max_vault_size_mb: integer("max_vault_size_mb").default(100).notNull(),
   max_ai_tokens: integer("max_ai_tokens").default(100).notNull(),
   max_workspaces: integer("max_workspaces").default(1).notNull(),

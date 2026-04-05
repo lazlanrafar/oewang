@@ -79,4 +79,58 @@ export const systemAdminsController = new Elysia({ prefix: "/system-admins" })
         tags: ["System Admins"],
       },
     },
+  )
+  .get(
+    "/workspaces",
+    async ({ query }) => {
+      const results = await SystemAdminsService.getAllWorkspaces({
+        page: query.page ?? 1,
+        limit: query.limit ?? 50,
+        search: query.search,
+        sortBy: query.sortBy,
+        sortOrder: query.sortOrder as "asc" | "desc" | undefined,
+      });
+
+      return results;
+    },
+    {
+      query: SystemAdminModel.workspaceListQuery,
+      detail: {
+        summary: "List All Workspaces",
+        description: "Retrieves a paginated list of all workspaces. Restricted to system owners and finance administrators.",
+        tags: ["System Admins"],
+      },
+    },
+  )
+  .get(
+    "/plans",
+    async () => {
+      const results = await SystemAdminsService.getAllPlans();
+      return results;
+    },
+    {
+      detail: {
+        summary: "List All Plans",
+        description: "Retrieves all available pricing plans.",
+        tags: ["System Admins"],
+      },
+    },
+  )
+  .patch(
+    "/workspaces/:id/plan",
+    async ({ params: { id }, body: { planId }, set }) => {
+      const result = await SystemAdminsService.changeWorkspacePlan(id, planId);
+      if (!result.success) {
+        set.status = 400;
+      }
+      return result;
+    },
+    {
+      body: SystemAdminModel.updatePlanBody,
+      detail: {
+        summary: "Update Workspace Plan",
+        description: "Manually updates a workspace's pricing plan. Restricted to system owners.",
+        tags: ["System Admins"],
+      },
+    },
   );

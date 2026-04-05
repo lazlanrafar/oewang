@@ -18,18 +18,22 @@ export function annualSavingsPct(
   );
 }
 
-export function getStripePrice(
+export function getGatewayPrice(
   plan: Pricing,
-  billing: "monthly" | "annual",
+  billing: "monthly" | "annual" | "addon",
   currency: string = "usd",
 ): string | null {
-  if (isFree(plan)) return null;
+  if (isFree(plan) && billing !== "addon") return null;
   const price = plan.prices?.find((p) => p.currency === currency);
   if (!price) return null;
-  if (billing === "annual" && price.stripe_yearly_id)
-    return price.stripe_yearly_id;
-  if (billing === "monthly" && price.stripe_monthly_id)
-    return price.stripe_monthly_id;
+  
+  if (billing === "annual" && price.xendit_yearly_id)
+    return price.xendit_yearly_id;
+  if (billing === "monthly" && price.xendit_monthly_id)
+    return price.xendit_monthly_id;
+  if (billing === "addon" && price.xendit_product_id)
+    return price.xendit_product_id;
+
   return null;
 }
 

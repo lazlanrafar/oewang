@@ -10,8 +10,8 @@ mock.module("@workspace/constants", () => ({
     ENCRYPTION_KEY: "test-key-12345678901234567890123456789012",
     APP_URL: "http://localhost:3000",
     API_BASE_URL: "http://localhost:3000",
-    STRIPE_SECRET_KEY: "sk_test_123",
-    STRIPE_WEBHOOK_SECRET: "whsec_123",
+    XENDIT_SECRET_KEY: "xnd_sk_123",
+    XENDIT_CALLBACK_TOKEN: "whsec_123",
     R2_ENDPOINT: "http://localhost:4566",
     R2_ACCESS_KEY_ID: "test",
     R2_SECRET_ACCESS_KEY: "test",
@@ -174,12 +174,13 @@ mock.module("../modules/system-admins/system-admins.controller", () => ({
   requireAdminAccess: new Elysia({ name: "mock.admin" }).derive(() => ({ isAdmin: true })),
 }));
 
-// Mock Stripe library
-const mockStripeInstance = {
-  webhooks: { constructEventAsync: mock(() => Promise.resolve({ type: "checkout.session.completed", data: { object: { id: "s1" } } })) },
-  checkout: { sessions: { create: mock(() => Promise.resolve({ url: "http://stripe.url" })) } },
+// Mock Xendit Service
+const mockXenditService = {
+  createCheckoutSession: mock(() => Promise.resolve({ success: true, url: "http://checkout.xendit.co" })),
+  handleWebhook: mock(() => Promise.resolve({ success: true })),
+  processEvent: mock(() => Promise.resolve({ success: true })),
 };
-mock.module("stripe", () => ({ default: mock(() => mockStripeInstance) }));
+mock.module("../modules/xendit/xendit.service", () => ({ XenditService: mockXenditService }));
 
 // Mock database singleton
 mock.module("@workspace/database", () => ({
@@ -199,6 +200,11 @@ mock.module("@workspace/database", () => ({
     transaction: mock(async (cb: any) => await cb({
       insert: () => ({ values: () => ({ returning: () => ({ then: (fn: any) => fn([{ id: "w1", name: "WS", slug: "ws" }]) }) }) }),
       update: () => ({ set: () => ({ where: () => ({ returning: () => Promise.resolve([]) }) }) }),
+    })),
+    insert: mock(() => ({
+      values: mock(() => ({
+        returning: mock(() => Promise.resolve([{ id: "1" }])),
+      })),
     })),
   },
   eq: mock((a: any, b: any) => ({ a, b })),
@@ -239,8 +245,8 @@ import { ordersController } from "../modules/orders/orders.controller";
 import { UsersService } from "../modules/users/users.service";
 import { usersController } from "../modules/users/users.controller";
 import { authController } from "../modules/auth/auth.controller";
-import { StripeService } from "../modules/stripe/stripe.service";
-import { stripeController } from "../modules/stripe/stripe.controller";
+import { XenditService } from "../modules/xendit/xendit.service";
+import { xenditController } from "../modules/xendit/xendit.controller";
 import { SettingsService } from "../modules/settings/settings.service";
 import { settingsController } from "../modules/settings/settings.controller";
 import { RatesService } from "../modules/settings/rates/rates.service";
@@ -261,7 +267,7 @@ const app = new Elysia()
   .use(ordersController)
   .use(usersController)
   .use(authController)
-  .use(stripeController)
+  .use(xenditController)
   .use(settingsController);
 
 // --- 4. THE UNIFIED TEST SUITE ---
@@ -309,7 +315,7 @@ describe("Unified Production Readiness Suite", () => {
     });
   });
 
-  describe("Finance Domain (Wallets, Categories, Transactions, Settings, Stripe)", () => {
+  describe("Finance Domain (Wallets, Categories, Transactions, Settings, Xendit)", () => {
     it("should create category", async () => {
       const result = await CategoriesService.createCategory("ws1", "u1", { name: "Food", type: "expense" } as any);
       expect(result.success).toBe(true);
@@ -325,8 +331,8 @@ describe("Unified Production Readiness Suite", () => {
       expect(result.success).toBe(true);
     });
 
-    it("should handle stripe webhook", async () => {
-      const resp = await app.handle(new Request("http://localhost/stripe/webhook", { method: "POST", headers: { "stripe-signature": "sig" }, body: "raw" }));
+    it("should handle xendit webhook", async () => {
+      const resp = await app.handle(new Request("http://localhost/xendit/webhook", { method: "POST", headers: { "x-callback-token": "whsec_123" }, body: JSON.stringify({ event: "invoice.paid" }) }));
       expect(resp.status).toBe(200);
     });
   });

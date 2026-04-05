@@ -13,11 +13,11 @@ export const workspaces = pgTable("workspaces", {
   name: text("name").notNull(),
   slug: text("slug").notNull().unique(),
   country: text("country"),
-  stripe_customer_id: text("stripe_customer_id").unique(),
-  stripe_subscription_id: text("stripe_subscription_id").unique(),
   plan_id: uuid("plan_id").references(() => pricing.id),
   plan_status: text("plan_status").default("free").notNull(),
-  stripe_current_period_end: timestamp("stripe_current_period_end"),
+  xendit_customer_id: text("xendit_customer_id").unique(),
+  xendit_subscription_id: text("xendit_subscription_id").unique(),
+  xendit_current_period_end: timestamp("xendit_current_period_end"),
   ai_tokens_used: integer("ai_tokens_used").default(0).notNull(),
   vault_size_used_bytes: bigint("vault_size_used_bytes", { mode: "number" })
     .default(0)

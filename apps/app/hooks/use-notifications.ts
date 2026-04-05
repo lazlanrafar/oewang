@@ -10,18 +10,24 @@ import {
 } from "@/actions/notification.actions";
 import type { Notification } from "@workspace/database"; // Added type import
 
+import { useAppStore } from "../stores/app";
+
 export function useNotifications() {
   const queryClient = useQueryClient();
+  const user = useAppStore((state) => state.user);
+  const workspace = useAppStore((state) => state.workspace);
 
   const notificationsQuery = useQuery({
-    queryKey: ["notifications"],
+    queryKey: ["notifications", workspace?.id],
     queryFn: () => getNotifications({ page: 1, limit: 20 }),
     refetchInterval: 30000, // Refetch every 30 seconds
+    enabled: !!user?.id && !!workspace?.id,
   });
 
   const settingsQuery = useQuery({
-    queryKey: ["notification-settings"],
+    queryKey: ["notification-settings", workspace?.id],
     queryFn: () => getNotificationSettings(),
+    enabled: !!user?.id && !!workspace?.id,
   });
 
   const markReadMutation = useMutation({

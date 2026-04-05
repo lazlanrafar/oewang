@@ -22,7 +22,7 @@
     "./wallet-group/wallet-group.action": "./src/wallet-group/wallet-group.action.ts",
     "./workspace/workspace.action": "./src/workspace/workspace.action.ts",
     "./pricing/pricing.action": "./src/pricing/pricing.action.ts",
-    "./stripe/stripe.action": "./src/stripe/stripe.action.ts",
+    "./xendit/xendit.action": "./src/xendit/xendit.action.ts",
     "./invoice/invoice.action": "./src/invoice/invoice.action.ts",
     "./orders/orders.action": "./src/orders/orders.action.ts",
     "./debt/debt.action": "./src/debt/debt.action.ts"

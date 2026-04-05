@@ -10,8 +10,7 @@
     "migrate": "turbo run migrate",
     "db:push": "bun run --cwd packages/database push",
     "db:seed": "bun run --cwd packages/database seed",
-    "mcp": "bun run --cwd apps/api mcp.ts",
-    "setup:stripe": "bun run --cwd packages/database setup:stripe"
+    "mcp": "bun run --cwd apps/api mcp.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",

@@ -104,7 +104,8 @@ export abstract class PricingService {
       description: plan.description,
       prices: plan.prices,
       features: plan.features,
-      is_highlighted: plan.name === "Pro",
+      is_highlighted: plan.name.toLowerCase() === "pro",
+      comingSoon: plan.name.toLowerCase() !== "starter",
     }));
 
     return buildSuccess(formattedPlans, "Pricing plans retrieved");

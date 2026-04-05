@@ -107,6 +107,7 @@ function ProfileFormInner({ profile, user }: { profile: any; user: any }) {
       } as any)
       .email(),
     profile_picture: z.string().optional(),
+    mobile: z.string().optional().nullable(),
   });
 
   type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -117,6 +118,7 @@ function ProfileFormInner({ profile, user }: { profile: any; user: any }) {
       username: user.name || "",
       email: user.email,
       profile_picture: user.profile_picture || "",
+      mobile: user.mobile || "",
     },
     mode: "onChange",
   });
@@ -126,6 +128,7 @@ function ProfileFormInner({ profile, user }: { profile: any; user: any }) {
       const result = await updateProfileAction({
         name: data.username,
         profile_picture: data.profile_picture,
+        mobile: data.mobile || undefined,
       });
       if (!result.success) throw new Error(result.error);
       return result.data;
@@ -262,6 +265,28 @@ function ProfileFormInner({ profile, user }: { profile: any; user: any }) {
                   />
                 </FormControl>
                 <FormDescription>{profile.email.description}</FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="mobile"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{profile.form.mobile_label}</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder={profile.form.mobile_placeholder}
+                    {...field}
+                    value={field.value || ""}
+                    className="rounded-none max-w-md"
+                  />
+                </FormControl>
+                <FormDescription>
+                  {profile.form.mobile_description}
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}

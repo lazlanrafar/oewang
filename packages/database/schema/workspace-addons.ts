@@ -16,7 +16,7 @@ export const workspaceAddons = pgTable("workspace_addons", {
   addon_id: uuid("addon_id")
     .references(() => pricing.id)
     .notNull(),
-  stripe_subscription_id: text("stripe_subscription_id").unique().notNull(),
+  xendit_subscription_id: text("xendit_subscription_id").unique(),
   status: text("status").$type<"active" | "cancelled" | "past_due" | "unpaid">().default("active").notNull(),
   amount: integer("amount").notNull(),
   created_at: timestamp("created_at").defaultNow().notNull(),

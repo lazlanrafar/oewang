@@ -130,33 +130,33 @@ export function OrdersDetailSheet() {
 
             <div className="mt-6 mb-2">
               <Label className="mb-4 block font-medium text-md">
-                Stripe Information
+                Xendit Information
               </Label>
               <div className="grid grid-cols-1 gap-4">
                 <div>
                   <Label className="mb-2 block text-muted-foreground">
-                    Stripe Invoice ID
+                    Xendit Invoice ID
                   </Label>
                   <div className="h-[36px] flex items-center text-sm font-mono bg-muted/10 px-2 overflow-x-auto whitespace-nowrap scrollbar-hide">
-                    {selectedOrder.stripe_invoice_id || "N/A"}
+                    {selectedOrder.xendit_invoice_id || "N/A"}
                   </div>
                 </div>
 
                 <div>
                   <Label className="mb-2 block text-muted-foreground">
-                    Stripe Subscription ID
+                    Xendit Subscription ID
                   </Label>
                   <div className="h-[36px] flex items-center text-sm font-mono bg-muted/10 px-2 overflow-x-auto whitespace-nowrap scrollbar-hide">
-                    {selectedOrder.stripe_subscription_id || "N/A"}
+                    {selectedOrder.xendit_subscription_id || "N/A"}
                   </div>
                 </div>
 
                 <div>
                   <Label className="mb-2 block text-muted-foreground">
-                    Stripe Payment Intent ID
+                    Xendit Payment ID
                   </Label>
                   <div className="h-[36px] flex items-center text-sm font-mono bg-muted/10 px-2 overflow-x-auto whitespace-nowrap scrollbar-hide">
-                    {selectedOrder.stripe_payment_intent_id || "N/A"}
+                    {selectedOrder.xendit_payment_id || "N/A"}
                   </div>
                 </div>
               </div>

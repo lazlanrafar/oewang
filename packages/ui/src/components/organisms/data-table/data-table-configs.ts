@@ -22,6 +22,7 @@ export const STICKY_COLUMNS: Record<TableId, StickyColumnConfig[]> = {
     { id: "contactName", width: 200 },
     { id: "actions", width: 100 },
   ],
+  workspaces: [{ id: "name", width: 220 }],
 };
 
 
@@ -79,6 +80,13 @@ export const SORT_FIELD_MAPS: Record<TableId, Record<string, string>> = {
     dueDate: "dueDate",
     status: "status",
   },
+  workspaces: {
+    name: "name",
+    slug: "slug",
+    plan_name: "plan_id",
+    ai_tokens_used: "ai_tokens_used",
+    created_at: "created_at",
+  },
 };
 
 
@@ -94,6 +102,7 @@ export const NON_REORDERABLE_COLUMNS: Record<TableId, Set<string>> = {
   invoices: new Set(["invoiceNumber", "actions"]),
   transactions: new Set(["select", "date", "name", "actions"]),
   debts: new Set(["select", "contactName", "actions"]),
+  workspaces: new Set(["name", "actions"]),
 };
 
 
@@ -109,6 +118,7 @@ export const ROW_HEIGHTS: Record<TableId, number> = {
   invoices: 45,
   transactions: 45,
   debts: 45,
+  workspaces: 45,
 };
 
 
@@ -176,6 +186,13 @@ export const TABLE_CONFIGS: Record<TableId, TableConfig> = {
     sortFieldMap: SORT_FIELD_MAPS.debts,
     nonReorderableColumns: NON_REORDERABLE_COLUMNS.debts,
     rowHeight: ROW_HEIGHTS.debts,
+  },
+  workspaces: {
+    tableId: "workspaces",
+    stickyColumns: STICKY_COLUMNS.workspaces,
+    sortFieldMap: SORT_FIELD_MAPS.workspaces,
+    nonReorderableColumns: NON_REORDERABLE_COLUMNS.workspaces,
+    rowHeight: ROW_HEIGHTS.workspaces,
   },
 };
 

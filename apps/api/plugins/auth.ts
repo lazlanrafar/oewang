@@ -127,6 +127,14 @@ export const authPlugin = new Elysia({ name: "auth" })
       const workspace_id =
         db_user?.workspace_id ?? membership?.workspace_id ?? null;
 
+      if (!workspace_id) {
+        const log = (await import("@workspace/logger")).createLogger("auth");
+        log.warn("Auth fallback successful but no workspace_id found", {
+          user_id: user.id,
+          email: user.email,
+        });
+      }
+
       return {
         auth: {
           user_id: user.id,

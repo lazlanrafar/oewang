@@ -18,3 +18,9 @@ export const UpdateAvatarBody = t.Object({
     maxSize: "10m",
   }),
 });
+
+export const UpdateProfileBody = t.Object({
+  name: t.Optional(t.String()),
+  profile_picture: t.Optional(t.Nullable(t.String())),
+  mobile: t.Optional(t.Nullable(t.String())),
+});

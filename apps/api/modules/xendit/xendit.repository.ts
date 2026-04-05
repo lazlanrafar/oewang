@@ -10,9 +10,10 @@ import {
   isNull,
   or,
   sql,
+  workspaceAddons,
 } from "@workspace/database";
 
-export abstract class StripeRepository {
+export abstract class XenditRepository {
   static async isEventProcessed(eventId: string): Promise<boolean> {
     const [existing] = await db
       .select({ id: webhook_events.id })
@@ -26,15 +27,15 @@ export abstract class StripeRepository {
     await db.insert(webhook_events).values({ id: eventId }).onConflictDoNothing();
   }
 
-  static async findPlanByStripePriceId(priceId: string) {
+  static async findPlanByXenditProductId(productId: string) {
     const [plan] = await db
       .select()
       .from(pricing)
       .where(
         and(
           or(
-            sql`${pricing.prices} @> ${JSON.stringify([{ stripe_monthly_id: priceId }])}::jsonb`,
-            sql`${pricing.prices} @> ${JSON.stringify([{ stripe_yearly_id: priceId }])}::jsonb`,
+            sql`${pricing.prices} @> ${JSON.stringify([{ xendit_monthly_id: productId }])}::jsonb`,
+            sql`${pricing.prices} @> ${JSON.stringify([{ xendit_yearly_id: productId }])}::jsonb`
           ),
           isNull(pricing.deleted_at),
         ),
@@ -61,7 +62,7 @@ export abstract class StripeRepository {
       .set(data)
       .where(
         and(
-          eq(workspaces.stripe_customer_id, customerId),
+          eq(workspaces.xendit_customer_id, customerId),
           isNull(workspaces.deleted_at),
         ),
       );
@@ -82,7 +83,7 @@ export abstract class StripeRepository {
       .from(workspaces)
       .where(
         and(
-          eq(workspaces.stripe_customer_id, customerId),
+          eq(workspaces.xendit_customer_id, customerId),
           isNull(workspaces.deleted_at),
         ),
       )
@@ -96,6 +97,7 @@ export abstract class StripeRepository {
         id: users.id,
         email: users.email,
         name: users.name,
+        mobile: users.mobile,
       })
       .from(users)
       .innerJoin(user_workspaces, eq(users.id, user_workspaces.user_id))
@@ -109,6 +111,7 @@ export abstract class StripeRepository {
       .limit(1);
     return owner;
   }
+
   static async findPlanById(id: string) {
     const [plan] = await db
       .select()
@@ -124,11 +127,22 @@ export abstract class StripeRepository {
       .from(workspaces)
       .where(
         and(
-          eq(workspaces.stripe_subscription_id, subscriptionId),
+          eq(workspaces.xendit_subscription_id, subscriptionId),
           isNull(workspaces.deleted_at),
         ),
       )
       .limit(1);
     return workspace;
+  }
+  static async upsertWorkspaceAddon(data: typeof workspaceAddons.$inferInsert) {
+    const [addon] = await db
+      .insert(workspaceAddons)
+      .values(data)
+      .onConflictDoUpdate({
+        target: workspaceAddons.xendit_subscription_id,
+        set: { ...data, updated_at: new Date() },
+      })
+      .returning();
+    return addon;
   }
 }

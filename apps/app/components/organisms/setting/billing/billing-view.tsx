@@ -22,7 +22,7 @@ import {
   createCustomerPortal,
   cancelSubscription,
   getInvoiceUrl,
-} from "@workspace/modules/stripe/stripe.action";
+} from "@workspace/modules/xendit/xendit.action";
 import { getBillingHistory } from "@workspace/modules/orders/orders.action";
 import { toast } from "sonner";
 import { useAppStore } from "@/stores/app";
@@ -31,7 +31,7 @@ import {
   formatBytes,
   displayPrice,
   getPlanLimits,
-  getStripePrice,
+  getGatewayPrice,
 } from "@workspace/utils";
 import Link from "next/link";
 import { useLocalizedRoute } from "@/utils/localized-route";
@@ -102,7 +102,7 @@ export function BillingView({
 
   const checkoutMutation = useMutation({
     mutationFn: async (params: {
-      priceId: string;
+      priceId?: string | null;
       type?: "subscription" | "payment";
       addonId?: string;
       addonType?: "ai" | "vault";
@@ -225,7 +225,7 @@ export function BillingView({
                 <h3 className="text-2xl font-medium tracking-tight">
                   {currentPlan.name}
                 </h3>
-                {workspace?.stripe_subscription_id && (
+                {workspace?.xendit_subscription_id && (
                   <Badge
                     variant="secondary"
                     className="rounded-none text-[9px] h-4 px-1.5 font-medium tracking-wide uppercase bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
@@ -268,7 +268,7 @@ export function BillingView({
               </ul>
             </div>
             <div className="flex flex-col justify-end gap-3 sm:flex-row h-fit self-end">
-              {workspace?.stripe_subscription_id ? (
+              {workspace?.xendit_subscription_id ? (
                 <>
                   <Button
                     variant="outline"
@@ -393,7 +393,7 @@ export function BillingView({
               currency,
               compact: true,
             });
-            const priceId = getStripePrice(addon, "monthly", currency);
+            const priceId = getGatewayPrice(addon, "addon", currency);
             const isActive = workspace?.active_addons?.some((a: any) => a.id === addon.id);
 
             return (
@@ -455,16 +455,9 @@ export function BillingView({
                       size="sm" 
                       variant={isActive ? "outline" : "default"}
                       className="rounded-none text-[10px] uppercase tracking-widest h-8 px-5"
-                      disabled={checkoutMutation.isPending || isActive}
-                      onClick={() => checkoutMutation.mutate({ 
-                        priceId: priceId!, 
-                        type: "subscription",
-                        addonId: addon.id,
-                        addonType: addon.addon_type as any,
-                        amount: addon.addon_type === "ai" ? addon.max_ai_tokens : addon.max_vault_size_mb
-                      })}
+                      disabled={true}
                     >
-                      {isActive ? (dictionary?.settings?.common?.active || "Active") : (dict.buy_now || "Buy Now")}
+                      {isActive ? (dictionary?.settings?.common?.active || "Active") : (dictionary?.settings?.common?.coming_soon || "Coming Soon")}
                     </Button>
                   </div>
                 </div>
@@ -550,21 +543,21 @@ export function BillingView({
                           </Badge>
                         </td>
                         <td className="p-4 text-right">
-                          {order.stripe_invoice_id && (
+                          {order.xendit_invoice_id && (
                             <Button
                               variant="outline"
                               size="sm"
                               className="h-7 px-3 text-[10px] uppercase tracking-widest rounded-none border font-medium hover:bg-foreground hover:text-background transition-all"
                               onClick={() =>
                                 downloadMutation.mutate(
-                                  order.stripe_invoice_id!,
+                                  order.xendit_invoice_id!,
                                 )
                               }
                               disabled={downloadMutation.isPending}
                             >
                               {downloadMutation.isPending &&
                               downloadMutation.variables ===
-                                order.stripe_invoice_id
+                                order.xendit_invoice_id
                                 ? "..."
                                 : (dictionary?.settings?.common?.view_pdf || "View PDF")}
                             </Button>

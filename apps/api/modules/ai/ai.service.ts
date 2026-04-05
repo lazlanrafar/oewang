@@ -99,7 +99,7 @@ export abstract class AiService {
       workspaceId !== "b45ad588-6758-43a4-8c26-1d80f3b0ab9f"
     ) {
       // Calculate reset date
-      let resetAt = usageData.stripe_current_period_end;
+      let resetAt = usageData.xendit_current_period_end;
 
       if (!resetAt) {
         // Default to same day next month

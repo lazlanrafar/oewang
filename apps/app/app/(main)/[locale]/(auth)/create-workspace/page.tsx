@@ -15,6 +15,7 @@ export default async function CreateWorkspacePage() {
 
   const result = await getPricing({
     is_active: "true",
+    is_addon: "false",
     limit: "10",
     sortBy: "price_monthly",
     sortOrder: "asc",

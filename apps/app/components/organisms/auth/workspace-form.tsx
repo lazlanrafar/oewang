@@ -15,12 +15,12 @@ import {
 } from "@workspace/ui";
 import type { Pricing } from "@workspace/types";
 import { onboardingCreateWorkspaceAction } from "@workspace/modules/auth/auth.action";
-import { createCheckoutSession } from "@workspace/modules/stripe/stripe.action";
+import { createCheckoutSession } from "@workspace/modules/xendit/xendit.action";
 import { Check, ArrowLeft, Loader2 } from "lucide-react";
 import {
   isFree,
   annualSavingsPct,
-  getStripePrice,
+  getGatewayPrice,
   displayPrice,
 } from "@workspace/utils";
 import { BusinessDetailsForm } from "./business-details-form";
@@ -146,11 +146,11 @@ export function WorkspaceForm({ plans }: WorkspaceFormProps) {
       return;
     }
 
-    // Step 3: Paid plan — get the Stripe price ID and open checkout
-    const stripePrice = getStripePrice(selectedPlan, billing, billingCurrency);
+    // Step 3: Paid plan — get the Xendit price ID and open checkout
+    const gatewayPrice = getGatewayPrice(selectedPlan, billing, billingCurrency);
 
-    if (!stripePrice) {
-      // Plan chosen but no Stripe price ID configured yet — skip checkout gracefully
+    if (!gatewayPrice) {
+      // Plan chosen but no Xendit price ID configured yet — skip checkout gracefully
       setLoadingMsg("Redirecting…");
       router.push(`/${locale}/overview`);
       return;
@@ -158,9 +158,10 @@ export function WorkspaceForm({ plans }: WorkspaceFormProps) {
 
     setLoadingMsg("Redirecting to checkout…");
     const checkoutResult = await createCheckoutSession(
-      stripePrice,
+      gatewayPrice,
       createResult.data.id,
       `/${locale}/overview`,
+      "subscription",
     );
 
     if (!checkoutResult.success || !checkoutResult.data?.url) {
@@ -172,7 +173,7 @@ export function WorkspaceForm({ plans }: WorkspaceFormProps) {
       return;
     }
 
-    // Redirect to Stripe-hosted checkout
+    // Redirect to Xendit-hosted checkout
     window.location.href = checkoutResult.data.url;
   };
 
@@ -308,7 +309,7 @@ export function WorkspaceForm({ plans }: WorkspaceFormProps) {
                         : "Rp",
                 });
                 const savings = annualSavingsPct(plan, billingCurrency);
-                const hasPriceId = !!getStripePrice(
+                const hasPriceId = !!getGatewayPrice(
                   plan,
                   billing,
                   billingCurrency,

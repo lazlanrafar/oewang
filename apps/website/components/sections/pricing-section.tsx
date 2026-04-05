@@ -11,6 +11,7 @@ interface Plan {
   cta: string;
   note: string;
   highlighted: boolean;
+  comingSoon?: boolean;
 }
 
 const DEFAULT_PLANS: Plan[] = [
@@ -48,6 +49,7 @@ const DEFAULT_PLANS: Plan[] = [
     cta: "Start free trial",
     note: "14-day free trial · Cancel anytime",
     highlighted: true,
+    comingSoon: true,
   },
   {
     name: "Business",
@@ -66,6 +68,7 @@ const DEFAULT_PLANS: Plan[] = [
     cta: "Start free trial",
     note: "14-day free trial · Cancel anytime",
     highlighted: false,
+    comingSoon: true,
   },
 ];
 
@@ -143,14 +146,18 @@ export function PricingSection({ appUrl, plans }: PricingSectionProps) {
                   ))}
                 </div>
 
-                {/* CTA */}
                 <div className="space-y-2">
                   <Button
-                    asChild
+                    asChild={!plan.comingSoon}
                     variant={plan.highlighted ? "default" : "outline"}
                     className="w-full"
+                    disabled={plan.comingSoon}
                   >
-                    <Link href={`${appUrl}/register`}>{plan.cta}</Link>
+                    {plan.comingSoon ? (
+                      <span>Coming Soon</span>
+                    ) : (
+                      <Link href={`${appUrl}/register`}>{plan.cta}</Link>
+                    )}
                   </Button>
                   <p className="text-xs text-muted-foreground text-center">
                     {plan.note}

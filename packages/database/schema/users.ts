@@ -6,6 +6,7 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   name: text("name"),
   profile_picture: text("profile_picture"),
+  mobile: text("mobile"),
   oauth_provider: text("oauth_provider"),
   providers: text("providers").array(),
   workspace_id: uuid("workspace_id").references(() => workspaces.id),

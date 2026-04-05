@@ -39,7 +39,7 @@ async function fulfillAddon() {
           addon_id, 
           amount, 
           status, 
-          stripe_subscription_id
+          xendit_subscription_id
         ) VALUES (
           gen_random_uuid(),
           ${workspaceId},

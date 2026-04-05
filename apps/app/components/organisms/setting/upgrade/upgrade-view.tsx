@@ -18,11 +18,11 @@ import type { Pricing } from "@workspace/types";
 import {
   createCheckoutSession,
   cancelSubscription,
-} from "@workspace/modules/stripe/stripe.action";
+} from "@workspace/modules/xendit/xendit.action";
 import { toast } from "sonner";
 import { useAppStore } from "@/stores/app";
 import { Separator } from "@workspace/ui";
-import { displayPrice, getStripePrice } from "@workspace/utils";
+import { displayPrice, getGatewayPrice } from "@workspace/utils";
 
 export function UpgradeView({ initialPlans }: { initialPlans: Pricing[] }) {
   const { workspace, settings, dictionary } = useAppStore() as any;
@@ -129,13 +129,13 @@ export function UpgradeView({ initialPlans }: { initialPlans: Pricing[] }) {
               const isCurrent = currentPlanId === plan.id;
               const isStarter = plan.name.toLowerCase() === "starter";
               const canDowngrade =
-                isStarter && workspace?.stripe_subscription_id;
+                isStarter && workspace?.xendit_subscription_id;
 
               const price = displayPrice(plan, billingCycle, {
                 currency,
                 compact: true,
               });
-              const priceId = getStripePrice(plan, billingCycle, currency);
+              const priceId = getGatewayPrice(plan, billingCycle, currency);
 
               return (
                 <Card
@@ -203,6 +203,7 @@ export function UpgradeView({ initialPlans }: { initialPlans: Pricing[] }) {
                         isCurrent && !canDowngrade ? "secondary" : "default"
                       }
                       disabled={
+                        plan.name.toLowerCase() !== "starter" ||
                         (isCurrent && !canDowngrade) ||
                         checkoutMutation.isPending ||
                         downgradeMutation.isPending ||
@@ -214,25 +215,31 @@ export function UpgradeView({ initialPlans }: { initialPlans: Pricing[] }) {
                             downgradeMutation.mutate();
                           }
                         } else if (!isCurrent && priceId) {
-                          checkoutMutation.mutate({ priceId });
+                          checkoutMutation.mutate({ priceId, type: "subscription" });
                         }
                       }}
                     >
-                      {isCurrent
-                        ? canDowngrade
-                          ? dict.upgrade
-                          : dict.current_plan
-                        : canDowngrade
-                          ? downgradeMutation.isPending
-                            ? dictionary?.settings?.common?.processing ||
-                              "Processing..."
-                            : dict.upgrade
-                          : checkoutMutation.isPending
-                            ? dictionary?.settings?.common?.connecting ||
-                              "Connecting..."
-                            : isStarter
-                              ? dict.free_plan
-                              : dict.get_started}
+                      {plan.name.toLowerCase() !== "starter" ? (
+                        <span>{dictionary?.settings?.common?.coming_soon || "Coming Soon"}</span>
+                      ) : isCurrent ? (
+                        canDowngrade ? (
+                          dict.upgrade
+                        ) : (
+                          dict.current_plan
+                        )
+                      ) : canDowngrade ? (
+                        downgradeMutation.isPending ? (
+                          dictionary?.settings?.common?.processing || "Processing..."
+                        ) : (
+                          dict.upgrade
+                        )
+                      ) : checkoutMutation.isPending ? (
+                        dictionary?.settings?.common?.connecting || "Connecting..."
+                      ) : isStarter ? (
+                        dict.free_plan
+                      ) : (
+                        dict.get_started
+                      )}
                     </Button>
                   </CardFooter>
                 </Card>

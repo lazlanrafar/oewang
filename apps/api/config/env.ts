@@ -25,9 +25,25 @@ const apiEnvSchema = z.object({
   UPSTASH_REDIS_REST_URL: z.string().min(1).optional(),
   UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
 
-  // Stripe
-  STRIPE_SECRET_KEY: z.string().optional(),
-  STRIPE_WEBHOOK_SECRET: z.string().optional(),
+  // Xendit
+  XENDIT_SECRET_KEY: z.string().superRefine((val, ctx) => {
+    if (process.env.NODE_ENV === "production" && !val) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "XENDIT_SECRET_KEY is required in production",
+        path: ["XENDIT_SECRET_KEY"],
+      });
+    }
+  }).optional(),
+  XENDIT_CALLBACK_TOKEN: z.string().superRefine((val, ctx) => {
+    if (process.env.NODE_ENV === "production" && !val) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "XENDIT_CALLBACK_TOKEN is required in production",
+        path: ["XENDIT_CALLBACK_TOKEN"],
+      });
+    }
+  }).optional(),
 
   // AI
   OPENAI_API_KEY: z.string().min(1).optional(),

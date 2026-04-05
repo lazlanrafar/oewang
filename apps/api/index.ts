@@ -31,7 +31,7 @@ import { ordersController } from "./modules/orders/orders.controller";
 import { pricingController } from "./modules/pricing/pricing.controller";
 import { publicPricingController } from "./modules/pricing/public-pricing.controller";
 import { settingsController } from "./modules/settings/settings.controller";
-import { stripeController } from "./modules/stripe/stripe.controller";
+import { xenditController } from "./modules/xendit/xendit.controller";
 import { systemAdminsController } from "./modules/system-admins/system-admins.controller";
 import { systemMetricsController } from "./modules/system-metrics/system-metrics.controller";
 import { transactions } from "./modules/transactions/transactions.controller";
@@ -115,7 +115,7 @@ const app = new Elysia()
       .use(integrationsController)
       .use(systemAdminsController)
       .use(pricingController)
-      .use(stripeController)
+      .use(xenditController)
       .use(ordersController)
       .use(systemMetricsController)
       .use(invoicesController)
@@ -129,8 +129,12 @@ const app = new Elysia()
   .use(publicPricingController)
   // Global error handler — sanitizes and logs all unhandled exceptions
   .onError(({ error, code, set, path }) => {
+    const numericCode = typeof code === "string" ? parseInt(code, 10) : NaN;
+    const isClientError =
+      !isNaN(numericCode) && (numericCode === 401 || numericCode === 403);
+
     // Log fatal errors to Sentry
-    if (code !== "NOT_FOUND") {
+    if (code !== "NOT_FOUND" && !isClientError) {
       Sentry.captureException(error);
       const message =
         error instanceof Error ? error.message : "Handled response";
@@ -163,7 +167,6 @@ const app = new Elysia()
     }
 
     // 3. Handle explicit status() calls (number strings) or Error with status property
-    const numericCode = typeof code === 'string' ? parseInt(code, 10) : NaN;
     if (!isNaN(numericCode) && numericCode >= 400 && numericCode < 600) {
       set.status = numericCode;
       

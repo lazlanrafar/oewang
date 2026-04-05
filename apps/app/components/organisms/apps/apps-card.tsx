@@ -21,6 +21,7 @@ import {
   TooltipTrigger,
 } from "@workspace/ui";
 import { Lock } from "lucide-react";
+import { useAppStore } from "@/stores/app";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 
@@ -49,6 +50,7 @@ export function AppsCard({
   isDisconnecting,
   userPlan = "Starter",
 }: AppsCardProps) {
+  const { dictionary } = useAppStore();
   const params = useParams();
   const locale = (params?.locale as string) || "en";
 
@@ -135,11 +137,9 @@ export function AppsCard({
             </Button>
 
             {isLocked ? (
-              <Button asChild variant="outline" className="w-full group">
-                <Link href={`/${locale}/settings/billing`}>
-                  <Lock className="mr-2 h-3 w-3 text-muted-foreground group-hover:text-primary transition-colors" />
-                  Upgrade
-                </Link>
+              <Button disabled variant="outline" className="w-full group">
+                <Lock className="mr-2 h-3 w-3 text-muted-foreground transition-colors" />
+                {dictionary?.settings?.common?.coming_soon || "Coming Soon"}
               </Button>
             ) : app.installUrl ? (
               <Button
@@ -226,11 +226,9 @@ export function AppsCard({
 
               <div>
                 {isLocked ? (
-                  <Button asChild variant="default" className="w-full font-medium">
-                    <Link href={`/${locale}/settings/billing`}>
-                      <Lock className="mr-2 h-4 w-4" />
-                      Upgrade to {app.requires_plan}
-                    </Link>
+                  <Button disabled variant="default" className="w-full font-medium">
+                    <Lock className="mr-2 h-4 w-4" />
+                    {dictionary?.settings?.common?.coming_soon || "Coming Soon"}
                   </Button>
                 ) : app.installed ? (
                   <Button

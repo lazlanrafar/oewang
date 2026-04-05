@@ -22,11 +22,11 @@ import {
 } from "@workspace/ui";
 import { Check, Info, Sparkles, Rocket, Zap, ShieldCheck } from "lucide-react";
 import { getPricing } from "@workspace/modules/pricing/pricing.action";
-import { createCheckoutSession } from "@workspace/modules/stripe/stripe.action";
+import { createCheckoutSession } from "@workspace/modules/xendit/xendit.action";
 import { toast } from "sonner";
 import {
   displayPrice,
-  getStripePrice,
+  getGatewayPrice,
   annualSavingsPct,
 } from "@workspace/utils";
 import { useAppStore } from "@/stores/app";
@@ -67,8 +67,13 @@ export function UpgradeClient({ dictionary }: UpgradeClientProps) {
   });
 
   const checkoutMutation = useMutation({
-    mutationFn: async (priceId: string) => {
-      const result = await createCheckoutSession(priceId);
+    mutationFn: async (priceId?: string | null) => {
+      const result = await createCheckoutSession(
+        priceId,
+        workspace?.id,
+        "/settings/billing",
+        "subscription",
+      );
       if (!result.success) throw new Error(result.error);
       return result.data;
     },
@@ -180,7 +185,7 @@ export function UpgradeClient({ dictionary }: UpgradeClientProps) {
             const isCurrent = workspace?.plan_id === plan.id;
             const price = displayPrice(plan, billingCycle, { currency });
             const savings = annualSavingsPct(plan, currency);
-            const priceId = getStripePrice(plan, billingCycle, currency);
+            const priceId = getGatewayPrice(plan, billingCycle, currency);
 
             return (
               <motion.div
@@ -302,7 +307,7 @@ export function UpgradeClient({ dictionary }: UpgradeClientProps) {
                         ? "Connecting..."
                         : plan.name.toLowerCase() === "starter"
                           ? "Selected Plan"
-                          : "Get Started"}
+                          : (dictionary?.settings?.common?.coming_soon || "Coming Soon")}
                   </Button>
                 </div>
               </motion.div>
@@ -318,7 +323,7 @@ export function UpgradeClient({ dictionary }: UpgradeClientProps) {
             <ShieldCheck className="h-8 w-8 mx-auto text-primary" />
             <h4 className="font-bold">Secure Checkout</h4>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              Encrypted payments processed via Stripe.
+              Encrypted payments processed via Xendit.
             </p>
           </div>
           <div className="space-y-2">

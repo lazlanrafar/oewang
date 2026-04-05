@@ -34,7 +34,7 @@ export function OAuthButton({
       }}
       {...props}
     >
-      <SimpleIcon icon={icon} className="size-4" />
+      <SimpleIcon icon={icon} className="size-4 me-2" />
       {label ?? defaultLabel}
     </Button>
   );

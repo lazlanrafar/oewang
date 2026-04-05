@@ -1,7 +1,7 @@
 export function TransactionsWireframe() {
   const transactions = [
     {
-      name: "Stripe Payment",
+      name: "Xendit Payment",
       amount: "+$2,450.00",
       type: "Income",
       color: "bg-green-500",

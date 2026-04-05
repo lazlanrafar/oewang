@@ -36,7 +36,7 @@
     "jose": "^6.0.11",
     "openai": "^6.27.0",
     "pdf.js-extract": "^0.2.1",
-    "stripe": "^20.4.0",
+
     "zod": "catalog:"
   },
   "devDependencies": {

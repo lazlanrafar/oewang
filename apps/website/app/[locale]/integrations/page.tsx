@@ -100,7 +100,7 @@ export default async function IntegrationsPage({
                 "Outlook",
                 "QuickBooks",
                 "Xero",
-                "Stripe",
+                "Xendit",
                 "Google Drive",
               ].map((name) => (
                 <div

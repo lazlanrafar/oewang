@@ -41,8 +41,9 @@ const pricingSchema = z.object({
         currency: z.string().min(1, "Currency is required"),
         monthly: z.coerce.number().min(0, "Price must be at least 0"),
         yearly: z.coerce.number().min(0, "Price must be at least 0"),
-        stripe_monthly_id: z.string().optional(),
-        stripe_yearly_id: z.string().optional(),
+        xendit_monthly_id: z.string().optional(),
+        xendit_yearly_id: z.string().optional(),
+        xendit_product_id: z.string().optional(),
       }),
     )
     .min(1, "At least one currency price is required"),
@@ -85,22 +86,25 @@ export function PricingForm({ initialData, onSuccess }: PricingFormProps) {
                 currency: "usd",
                 monthly: 0,
                 yearly: 0,
-                stripe_monthly_id: "",
-                stripe_yearly_id: "",
+                xendit_monthly_id: "",
+                xendit_yearly_id: "",
+                xendit_product_id: "",
               },
               {
                 currency: "eur",
                 monthly: 0,
                 yearly: 0,
-                stripe_monthly_id: "",
-                stripe_yearly_id: "",
+                xendit_monthly_id: "",
+                xendit_yearly_id: "",
+                xendit_product_id: "",
               },
               {
                 currency: "idr",
                 monthly: 0,
                 yearly: 0,
-                stripe_monthly_id: "",
-                stripe_yearly_id: "",
+                xendit_monthly_id: "",
+                xendit_yearly_id: "",
+                xendit_product_id: "",
               },
             ],
       max_vault_size_mb: initialData?.max_vault_size_mb ?? 100,
@@ -231,14 +235,14 @@ export function PricingForm({ initialData, onSuccess }: PricingFormProps) {
                     />
                     <FormField
                       control={form.control}
-                      name={`prices.${index}.stripe_monthly_id`}
+                      name={`prices.${index}.xendit_monthly_id`}
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-xs text-muted-foreground">
-                            Stripe Monthly ID (Optional)
+                            Xendit Monthly ID (Optional)
                           </FormLabel>
                           <FormControl>
-                            <Input placeholder="price_..." {...field} />
+                            <Input placeholder="plan_..." {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -246,14 +250,29 @@ export function PricingForm({ initialData, onSuccess }: PricingFormProps) {
                     />
                     <FormField
                       control={form.control}
-                      name={`prices.${index}.stripe_yearly_id`}
+                      name={`prices.${index}.xendit_yearly_id`}
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-xs text-muted-foreground">
-                            Stripe Yearly ID (Optional)
+                            Xendit Yearly ID (Optional)
                           </FormLabel>
                           <FormControl>
-                            <Input placeholder="price_..." {...field} />
+                            <Input placeholder="plan_..." {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name={`prices.${index}.xendit_product_id`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs text-muted-foreground">
+                            Xendit Product ID (Addons)
+                          </FormLabel>
+                          <FormControl>
+                            <Input placeholder="prod_..." {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>

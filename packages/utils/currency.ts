@@ -79,10 +79,11 @@ export function formatSubunits(
     symbol: currencyCode.toUpperCase(),
     position: "Front",
     decimals: 2,
+    divisor: 100,
   };
 
   return formatCurrency(
-    amount / 100, // Stripe subunits are always 100 for all supported currencies here
+    amount / (config.divisor ?? 100),
     {
       mainCurrencySymbol: config.symbol,
       mainCurrencySymbolPosition: config.position,

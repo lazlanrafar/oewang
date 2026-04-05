@@ -6,10 +6,11 @@ export interface Pricing {
     currency: string;
     monthly: number;
     yearly: number;
-    stripe_monthly_id?: string;
-    stripe_yearly_id?: string;
+    xendit_monthly_id?: string;
+    xendit_yearly_id?: string;
+    xendit_product_id?: string;
   }[];
-  stripe_product_id: string | null;
+  xendit_product_id: string | null;
   max_vault_size_mb: number;
   max_ai_tokens: number;
   max_workspaces: number;
@@ -29,10 +30,11 @@ export interface CreatePricingInput {
     currency: string;
     monthly: number;
     yearly: number;
-    stripe_monthly_id?: string;
-    stripe_yearly_id?: string;
+    xendit_monthly_id?: string;
+    xendit_yearly_id?: string;
+    xendit_product_id?: string;
   }[];
-  stripe_product_id?: string;
+  xendit_product_id?: string;
   max_vault_size_mb?: number;
   max_ai_tokens?: number;
   max_workspaces?: number;
@@ -41,3 +43,9 @@ export interface CreatePricingInput {
 }
 
 export type UpdatePricingInput = Partial<CreatePricingInput>;
+
+export type SystemAdminPlan = {
+  id: string;
+  name: string;
+  is_active: boolean;
+};

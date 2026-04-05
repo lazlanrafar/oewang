@@ -70,7 +70,17 @@ export async function login(
 export async function signup(
   form_data: FormData,
 ): Promise<ActionResponse<void>> {
-  const origin = Env.NEXT_PUBLIC_APP_URL;
+  const headersList = await headers();
+  // Priority: x-forwarded-host (Railway proxy) → host (localhost dev) → env var fallback
+  const forwardedHost = headersList.get("x-forwarded-host");
+  const host = headersList.get("host");
+  const protocol = headersList.get("x-forwarded-proto") || "http";
+  const origin = forwardedHost
+    ? `${protocol}://${forwardedHost}`
+    : host
+      ? `${protocol}://${host}`
+      : Env.NEXT_PUBLIC_APP_URL;
+
   const email = form_data.get("email") as string;
   const password = form_data.get("password") as string;
   const name = form_data.get("name") as string | undefined;
@@ -124,7 +134,17 @@ export async function signup(
 export async function loginWithOAuth(
   provider: "google" | "github",
 ): Promise<ActionResponse<void>> {
-  const origin = Env.NEXT_PUBLIC_APP_URL;
+  const headersList = await headers();
+  // Priority: x-forwarded-host (Railway proxy) → host (localhost dev) → env var fallback
+  const forwardedHost = headersList.get("x-forwarded-host");
+  const host = headersList.get("host");
+  const protocol = headersList.get("x-forwarded-proto") || "http";
+  const origin = forwardedHost
+    ? `${protocol}://${forwardedHost}`
+    : host
+      ? `${protocol}://${host}`
+      : Env.NEXT_PUBLIC_APP_URL;
+
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider,

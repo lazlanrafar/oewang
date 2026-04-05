@@ -114,6 +114,7 @@ export const switchWorkspaceAction = async (
 export const updateProfileAction = async (data: {
   name: string;
   profile_picture?: string;
+  mobile?: string;
 }): Promise<ActionResponse<void>> => {
   try {
     await axiosInstance.patch("users/me", data);

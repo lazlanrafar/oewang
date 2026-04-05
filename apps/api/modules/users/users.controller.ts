@@ -2,7 +2,7 @@ import { Elysia } from "elysia";
 import { ErrorCode } from "@workspace/types";
 import { buildSuccess, buildError } from "@workspace/utils";
 import { UsersService } from "./users.service";
-import { SyncUserBody, UpdateAvatarBody } from "./users.model";
+import { SyncUserBody, UpdateAvatarBody, UpdateProfileBody } from "./users.model";
 import { authPlugin } from "../../plugins/auth";
 import { encryptionPlugin } from "../../plugins/encryption";
 import { logger } from "@workspace/logger";
@@ -99,7 +99,7 @@ export const usersController = new Elysia({ prefix: "/users" })
   )
   .patch(
     "/me",
-    async ({ body, set, auth }: any) => {
+    async ({ body, set, auth }) => {
       if (!auth) {
         set.status = 401;
         return buildError(ErrorCode.UNAUTHORIZED, "Unauthorized");
@@ -114,6 +114,7 @@ export const usersController = new Elysia({ prefix: "/users" })
       }
     },
     {
+      body: UpdateProfileBody,
       detail: {
         summary: "Update Profile",
         description: "Updates the authenticated user's profile information.",

@@ -85,4 +85,50 @@ export abstract class SystemAdminsService {
 
     return buildSuccess(undefined);
   }
+
+  static async getAllWorkspaces(params: {
+    page: number;
+    limit: number;
+    search?: string;
+    sortBy?: string;
+    sortOrder?: "asc" | "desc";
+  }) {
+    try {
+      const { rows, total } =
+        await SystemAdminsRepository.findAllWorkspaces(params);
+      return buildPaginatedSuccess(
+        rows,
+        buildPagination(total, params.page, params.limit),
+      );
+    } catch (error: any) {
+      console.error("Error fetching workspaces:", error);
+      return buildError(ErrorCode.INTERNAL_ERROR, "Failed to fetch workspaces");
+    }
+  }
+
+  static async changeWorkspacePlan(workspaceId: string, planId: string) {
+    try {
+      const updated = await SystemAdminsRepository.updateWorkspacePlan(
+        workspaceId,
+        planId,
+      );
+      return buildSuccess(updated, "Workspace plan updated successfully");
+    } catch (error: any) {
+      console.error("Error updating workspace plan:", error);
+      return buildError(
+        ErrorCode.VALIDATION_ERROR,
+        error.message || "Failed to update workspace plan",
+      );
+    }
+  }
+
+  static async getAllPlans() {
+    try {
+      const plans = await SystemAdminsRepository.findAllPlans();
+      return buildSuccess(plans);
+    } catch (error: any) {
+      console.error("Error fetching plans:", error);
+      return buildError(ErrorCode.INTERNAL_ERROR, "Failed to fetch plans");
+    }
+  }
 }
