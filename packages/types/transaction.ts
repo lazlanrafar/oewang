@@ -1,3 +1,21 @@
+export interface TransactionItem {
+  id: string;
+  workspaceId: string;
+  transactionId: string;
+  name: string;
+  brand?: string | null;
+  quantity?: string | null;
+  unit?: string | null;
+  unitPrice?: string | null;
+  amount: string;
+  categoryId?: string | null;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string | null;
+  category?: { id: string; name: string } | null;
+}
+
 export interface Transaction {
   id: string;
   workspaceId: string;
@@ -31,4 +49,6 @@ export interface Transaction {
     email: string;
     profile_picture: string | null;
   } | null;
+  items?: TransactionItem[];
 }
+

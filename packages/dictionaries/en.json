@@ -852,6 +852,15 @@
       "parse_success": "Receipt parsed successfully",
       "uploading_files": "Uploading {count} files...",
       "all_uploads_success": "All files uploaded successfully"
+    },
+    "items": {
+      "section_title": "Items",
+      "empty": "No items recorded for this transaction.",
+      "loading": "Loading items...",
+      "delete_item": "Delete item",
+      "item_deleted": "Item removed",
+      "delete_failed": "Failed to remove item",
+      "qty_unit": "{qty} {unit}"
     }
   },
   "contacts": {

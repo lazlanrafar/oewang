@@ -12,7 +12,7 @@ import {
   AccordionTrigger,
   Badge,
 } from "@workspace/ui";
-import type { Transaction } from "@workspace/types";
+import type { Transaction, TransactionItem, ActionResponse } from "@workspace/types";
 import { format } from "date-fns";
 import {
   Landmark,
@@ -24,12 +24,18 @@ import {
   ArrowUp,
   ArrowDown,
   Plus,
+  Trash2,
+  ShoppingBag,
 } from "lucide-react";
 import { useState } from "react";
 import {
   getTransactionDebts,
   updateTransaction,
 } from "@workspace/modules/transaction/transaction.action";
+import {
+  getTransactionItems,
+  deleteTransactionItem,
+} from "@workspace/modules/transaction/transaction-items.action";
 import {
   getVaultDownloadUrl,
   uploadVaultFile,
@@ -115,6 +121,28 @@ export function TransactionDetailSheet({
     enabled: !!transaction?.id && open,
   });
   const relatedDebts = debtsResponse?.data || [];
+
+  const { data: itemsResponse, isLoading: isItemsLoading } = useQuery({
+    queryKey: ["transaction-items", transaction?.id],
+    queryFn: () => getTransactionItems(transaction!.id),
+    enabled: !!transaction?.id && open,
+  });
+  const transactionItems: TransactionItem[] = itemsResponse?.data || [];
+
+  const deleteItemMutation = useMutation({
+    mutationFn: (itemId: string) =>
+      deleteTransactionItem(transaction!.id, itemId),
+    onSuccess: (res: ActionResponse<void>) => {
+      if (res.success) {
+        toast.success(dictionary!.transactions.items.item_deleted);
+        queryClient.invalidateQueries({
+          queryKey: ["transaction-items", transaction?.id],
+        });
+      } else {
+        toast.error(res.error || dictionary!.transactions.items.delete_failed);
+      }
+    },
+  });
 
   const handlePreview = async (file: any) => {
     const res = await getVaultDownloadUrl(file.id);
@@ -352,6 +380,73 @@ export function TransactionDetailSheet({
                               {item.debt.description}
                             </span>
                           )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </AccordionContent>
+              </AccordionItem>
+            )}
+
+            {transactionItems.length > 0 && (
+              <AccordionItem value="items" className="border-none">
+                <AccordionTrigger className="hover:no-underline py-4 text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.2em]">
+                  <span className="flex items-center gap-2">
+                    <ShoppingBag className="h-3.5 w-3.5" />
+                    {dictionary.transactions.items.section_title}
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 font-mono">
+                      {transactionItems.length}
+                    </Badge>
+                  </span>
+                </AccordionTrigger>
+                <AccordionContent className="pt-1 pb-2">
+                  {isItemsLoading ? (
+                    <div className="text-xs text-muted-foreground animate-pulse py-2">
+                      {dictionary.transactions.items.loading}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-2 mb-2">
+                      {transactionItems.map((item) => (
+                        <div
+                          key={item.id}
+                          className="flex items-start justify-between gap-3 px-3 py-2.5 rounded-md border border-muted/20 bg-muted/5 group"
+                        >
+                          <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-sm font-medium truncate">
+                                {item.name}
+                              </span>
+                              {item.brand && (
+                                <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 shrink-0 font-normal">
+                                  {item.brand}
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                              {item.category && (
+                                <span className="truncate max-w-[100px]">{item.category.name}</span>
+                              )}
+                              {item.quantity && (
+                                <span className="tabular-nums shrink-0">
+                                  {item.quantity}{item.unit ? ` ${item.unit}` : ""}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-sm font-serif tabular-nums">
+                              {formatCurrency(Number(item.amount))}
+                            </span>
+                            <button
+                              type="button"
+                              title={dictionary.transactions.items.delete_item}
+                              onClick={() => deleteItemMutation.mutate(item.id)}
+                              disabled={deleteItemMutation.isPending}
+                              className="opacity-0 group-hover:opacity-100 p-1 hover:text-destructive transition-all"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>

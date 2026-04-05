@@ -15,6 +15,7 @@
     "./setting/setting.action": "./src/setting/setting.action.ts",
     "./system-admin/system-admin.action": "./src/system-admin/system-admin.action.ts",
     "./transaction/transaction.action": "./src/transaction/transaction.action.ts",
+    "./transaction/transaction-items.action": "./src/transaction/transaction-items.action.ts",
     "./user/user.action": "./src/user/user.action.ts",
     "./vault/vault.action": "./src/vault/vault.action.ts",
     "./wallet/wallet.action": "./src/wallet/wallet.action.ts",

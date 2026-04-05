@@ -4,6 +4,7 @@ import { AiService } from "../ai/ai.service";
 import { TransactionsService } from "../transactions/transactions.service";
 import { VaultService as vaultService } from "../vault/vault.service";
 import { WalletsRepository as walletsRepository } from "../wallets/wallets.repository";
+import { TransactionItemsService } from "../transactions/items/transaction-items.service";
 import { IntegrationsRepository } from "./integrations.repository";
 import { WorkspacesService } from "../workspaces/workspaces.service";
 
@@ -384,7 +385,7 @@ export abstract class IntegrationsService {
               const defaultWallet = wallets[0];
               if (!defaultWallet) return "OK";
 
-              await TransactionsService.create(workspaceId, userId, {
+              const transactionRes = await TransactionsService.create(workspaceId, userId, {
                 walletId: defaultWallet.id,
                 amount: parsedReceipt.amount,
                 date: parsedReceipt.date || new Date().toISOString(),
@@ -395,8 +396,20 @@ export abstract class IntegrationsService {
                 attachmentIds: vaultFile ? [vaultFile.id] : undefined,
               });
 
+              // Save items if extracted
+              if (parsedReceipt.items && parsedReceipt.items.length > 0) {
+                const transactionId = (transactionRes as any).data.id;
+                await TransactionItemsService.bulkCreate(
+                  workspaceId,
+                  userId,
+                  transactionId,
+                  parsedReceipt.items as any,
+                );
+              }
+
               const amountStr = Number(parsedReceipt.amount).toLocaleString();
-              const replyBody = `✅ Added expense: ${parsedReceipt.name || "Receipt"} for ${amountStr}. Includes attached receipt file!`;
+              const itemsCount = parsedReceipt.items?.length || 0;
+              const replyBody = `✅ Added expense: ${parsedReceipt.name || "Receipt"} for ${amountStr}.${itemsCount > 0 ? ` Included ${itemsCount} line items!` : ""} Includes attached receipt file!`;
               await IntegrationsService.sendTelegramMessage(chatId, replyBody);
             }
           } else {

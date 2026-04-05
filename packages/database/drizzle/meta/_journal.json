@@ -148,6 +148,13 @@
       "when": 1774439433994,
       "tag": "0020_faithful_thunderbolt",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1775394646632,
+      "tag": "0021_burly_mariko_yashida",
+      "breakpoints": true
     }
   ]
 }

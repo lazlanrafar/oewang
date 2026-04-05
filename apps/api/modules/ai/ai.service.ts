@@ -11,7 +11,7 @@ import { redis } from "@workspace/redis";
 import { buildError } from "@workspace/utils";
 import { status } from "elysia";
 import { ErrorCode } from "@workspace/types";
-import { Env } from "@workspace/constants";
+import { Env, API_CONFIG } from "@workspace/constants";
 import { createLogger } from "@workspace/logger";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import type { ChatMessage, ChatResponse } from "./ai.dto";
@@ -94,6 +94,7 @@ export abstract class AiService {
     const currentTokens = Number(usageData.used);
 
     if (
+      !API_CONFIG.mockAiQuota &&
       currentTokens >= maxTokens &&
       workspaceId !== "b45ad588-6758-43a4-8c26-1d80f3b0ab9f"
     ) {
@@ -118,6 +119,10 @@ export abstract class AiService {
       );
     }
 
+    if (API_CONFIG.mockAiQuota) {
+      console.log("[DEV] mockAiQuota=true — quota check bypassed");
+    }
+
     // 4. Orchestrate
     let response;
     try {
@@ -136,6 +141,8 @@ export abstract class AiService {
           executeDebtAction: (name, args) =>
             executeAiTool(name, args, workspaceId, userId),
           executeAnalysisAction: (name, args) =>
+            executeAiTool(name, args, workspaceId, userId),
+          executeItemsAction: (name, args) =>
             executeAiTool(name, args, workspaceId, userId),
         }
       );
@@ -194,6 +201,7 @@ export abstract class AiService {
           action: "ai.receipt_parsed",
           entity: "vault_file", // Receipt parsing is conceptually linked to storage/vault
           entity_id: "00000000-0000-0000-0000-000000000000",
+          before: null,
           after: parsed,
         });
     }

@@ -4,10 +4,22 @@ import { ContactsService } from "../contacts/contacts.service";
 import { DebtsService } from "../debts/debts.service";
 import { TransactionsService } from "../transactions/transactions.service";
 import { TransactionsRepository } from "../transactions/transactions.repository";
+import { TransactionItemsService } from "../transactions/items/transaction-items.service";
+import { TransactionItemsRepository } from "../transactions/items/transaction-items.repository";
 import { WalletsRepository as walletsRepository } from "../wallets/wallets.repository";
 import { SettingsRepository } from "../settings/settings.repository";
+import { API_CONFIG } from "@workspace/constants";
 
 // Tool definitions are now managed in @workspace/ai/tools/tool.definitions.ts
+
+/** Verbose dev logger — no-op in production */
+function devLog(toolName: string, phase: "IN" | "OUT", data: unknown) {
+  if (!API_CONFIG.verboseToolLogs) return;
+  console.log(
+    `[AI Tool ${phase}] ${toolName}:`,
+    JSON.stringify(data, null, 2),
+  );
+}
 
 // Helper to check if string is a UUID
 const isUuid = (id: string) => /^[a-f0-9-]{36}$/i.test(id);
@@ -207,6 +219,8 @@ export async function executeAiTool(
   workspaceId: string,
   userId: string,
 ): Promise<any> {
+  devLog(toolName, "IN", input);
+  let result: any;
   try {
     switch (toolName) {
       case "create_transaction": {
@@ -244,30 +258,48 @@ export async function executeAiTool(
           description: input.description,
         };
 
-        const result = await TransactionsService.create(
+        // DRY-RUN: return preview without writing to the database
+        if (API_CONFIG.receiptDryRun) {
+          result = {
+            success: true,
+            dryRun: true,
+            preview: {
+              ...body,
+              id: "[dry-run-id]",
+              workspace_id: workspaceId,
+              note: "[DRY RUN] Transaction NOT saved. Set receiptDryRun=false in api.config.ts to persist.",
+            },
+          };
+          break;
+        }
+
+        const txResult = await TransactionsService.create(
           workspaceId,
           userId,
           body,
         );
-        return { success: true, data: result.data };
+        result = { success: true, data: txResult.data };
+        break;
       }
       case "update_transaction": {
         const { id, ...body } = input;
-        const result = await TransactionsService.update(
+        const updateRes = await TransactionsService.update(
           workspaceId,
           userId,
           id,
           body,
         );
-        return { success: true, data: result.data };
+        result = { success: true, data: updateRes.data };
+        break;
       }
       case "delete_transaction": {
-        const result = await TransactionsService.delete(
+        const deleteRes = await TransactionsService.delete(
           workspaceId,
           userId,
           input.id,
         );
-        return { success: true, data: result.data };
+        result = { success: true, data: deleteRes.data };
+        break;
       }
       case "create_debt": {
         let contact = await ContactsRepository.findByName(
@@ -284,10 +316,12 @@ export async function executeAiTool(
             contact = res.data;
           }
         }
-        if (!contact)
-          return { success: false, error: "Failed to resolve contact." };
+        if (!contact) {
+          result = { success: false, error: "Failed to resolve contact." };
+          break;
+        }
 
-        const body = {
+        const debtBody = {
           contactId: contact.id,
           type: input.type,
           amount: input.amount,
@@ -295,8 +329,9 @@ export async function executeAiTool(
           dueDate: input.dueDate,
         };
 
-        const result = await DebtsService.createDebt(workspaceId, userId, body);
-        return { success: true, data: result.data };
+        const debtRes = await DebtsService.createDebt(workspaceId, userId, debtBody);
+        result = { success: true, data: debtRes.data };
+        break;
       }
       case "split_bill": {
         let walletId = input.walletId;
@@ -319,7 +354,7 @@ export async function executeAiTool(
           if (match) categoryId = match.id;
         }
 
-        const body = {
+        const splitBody = {
           amount: input.amount,
           name: input.name,
           walletId,
@@ -327,26 +362,70 @@ export async function executeAiTool(
           contactNames: input.contactNames,
         };
 
-        const result = await DebtsService.splitBill(workspaceId, userId, body);
-        return { success: true, data: result.data };
+        const splitRes = await DebtsService.splitBill(workspaceId, userId, splitBody);
+        result = { success: true, data: splitRes.data };
+        break;
       }
       case "getRevenueSummary": {
-        const data = await buildRevenuePayload(workspaceId, input);
-        return { success: true, data };
+        const revenueData = await buildRevenuePayload(workspaceId, input);
+        result = { success: true, data: revenueData };
+        break;
       }
       case "getBurnRate": {
-        const data = await buildBurnRatePayload(workspaceId, input);
-        return { success: true, data };
+        const burnData = await buildBurnRatePayload(workspaceId, input);
+        result = { success: true, data: burnData };
+        break;
       }
       case "getSpendingAnalysis": {
-        const data = await buildSpendingPayload(workspaceId, input);
-        return { success: true, data };
+        const spendData = await buildSpendingPayload(workspaceId, input);
+        result = { success: true, data: spendData };
+        break;
+      }
+      case "add_transaction_items": {
+        // DRY-RUN: return preview without writing items to the database
+        if (API_CONFIG.receiptDryRun) {
+          result = {
+            success: true,
+            dryRun: true,
+            preview: {
+              transactionId: input.transactionId ?? "[dry-run-id]",
+              items: (input.items ?? []).map((item: any, i: number) => ({
+                ...item,
+                id: `[dry-run-item-${i}]`,
+                note: "[DRY RUN] Item NOT saved.",
+              })),
+              note: "[DRY RUN] Items NOT saved. Set receiptDryRun=false in api.config.ts to persist.",
+            },
+          };
+          break;
+        }
+
+        const itemsResult = await TransactionItemsService.bulkCreate(
+          workspaceId,
+          userId,
+          input.transactionId,
+          input.items ?? [],
+        );
+        result = { success: true, data: itemsResult.data };
+        break;
+      }
+      case "search_transaction_items": {
+        const items = await TransactionItemsRepository.search(
+          workspaceId,
+          input.query,
+          input.limit ?? 10,
+        );
+        result = { success: true, data: items };
+        break;
       }
       default:
-        return { success: false, error: `Unknown tool: ${toolName}` };
+        result = { success: false, error: `Unknown tool: ${toolName}` };
     }
   } catch (error: any) {
     console.error(`[AI Tool Error] ${toolName}:`, error);
-    return { success: false, error: error.message || String(error) };
+    result = { success: false, error: error.message || String(error) };
   }
+
+  devLog(toolName, "OUT", result);
+  return result;
 }

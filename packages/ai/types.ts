@@ -35,11 +35,22 @@ export interface ChatResponse {
   };
 }
 
+export interface ParsedReceiptItem {
+  name: string;
+  brand?: string;
+  quantity?: number;
+  unit?: string;
+  unitPrice?: number;
+  amount: number;
+  categoryId?: string;
+}
+
 export interface ParsedReceipt {
   amount: number;
   date: string;
   name: string;
   categoryId: string;
+  items?: ParsedReceiptItem[];
 }
 
 /** Shape the AI is expected to return for each transaction extraction */
