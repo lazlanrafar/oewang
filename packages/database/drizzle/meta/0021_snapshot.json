@@ -1,5 +1,9 @@
 {
+<<<<<<< HEAD
+  "id": "5aee9d36-f18f-4a55-a916-0081ebc9bc3d",
+=======
   "id": "54ff2a39-a3e9-407e-8339-eb56dbfbc7c1",
+>>>>>>> f68388a01f7178802054155babe94e5af315afbf
   "prevId": "46125cb8-0f90-4ac4-b107-2aadf67c821d",
   "version": "7",
   "dialect": "postgresql",
@@ -1279,20 +1283,35 @@
           "primaryKey": false,
           "notNull": false
         },
+<<<<<<< HEAD
+        "stripe_payment_intent_id": {
+          "name": "stripe_payment_intent_id",
+=======
         "mayar_payment_id": {
           "name": "mayar_payment_id",
+>>>>>>> f68388a01f7178802054155babe94e5af315afbf
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
+<<<<<<< HEAD
+        "stripe_invoice_id": {
+          "name": "stripe_invoice_id",
+=======
         "mayar_invoice_id": {
           "name": "mayar_invoice_id",
+>>>>>>> f68388a01f7178802054155babe94e5af315afbf
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
+<<<<<<< HEAD
+        "stripe_subscription_id": {
+          "name": "stripe_subscription_id",
+=======
         "mayar_subscription_id": {
           "name": "mayar_subscription_id",
+>>>>>>> f68388a01f7178802054155babe94e5af315afbf
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -1344,11 +1363,19 @@
         }
       },
       "indexes": {
+<<<<<<< HEAD
+        "orders_stripe_invoice_id_unique": {
+          "name": "orders_stripe_invoice_id_unique",
+          "columns": [
+            {
+              "expression": "stripe_invoice_id",
+=======
         "orders_mayar_invoice_id_unique": {
           "name": "orders_mayar_invoice_id_unique",
           "columns": [
             {
               "expression": "mayar_invoice_id",
+>>>>>>> f68388a01f7178802054155babe94e5af315afbf
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1424,8 +1451,13 @@
           "notNull": true,
           "default": "'[]'::jsonb"
         },
+<<<<<<< HEAD
+        "stripe_product_id": {
+          "name": "stripe_product_id",
+=======
         "mayar_product_id": {
           "name": "mayar_product_id",
+>>>>>>> f68388a01f7178802054155babe94e5af315afbf
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -1598,6 +1630,180 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+<<<<<<< HEAD
+    "public.transaction_items": {
+      "name": "transaction_items",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "transaction_id": {
+          "name": "transaction_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "brand": {
+          "name": "brand",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "quantity": {
+          "name": "quantity",
+          "type": "numeric(10, 3)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "unit": {
+          "name": "unit",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "unit_price": {
+          "name": "unit_price",
+          "type": "numeric(19, 4)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "amount": {
+          "name": "amount",
+          "type": "numeric(19, 4)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "category_id": {
+          "name": "category_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "transaction_items_workspace_id_idx": {
+          "name": "transaction_items_workspace_id_idx",
+          "columns": [
+            {
+              "expression": "workspace_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "transaction_items_transaction_id_idx": {
+          "name": "transaction_items_transaction_id_idx",
+          "columns": [
+            {
+              "expression": "transaction_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "transaction_items_workspace_id_workspaces_id_fk": {
+          "name": "transaction_items_workspace_id_workspaces_id_fk",
+          "tableFrom": "transaction_items",
+          "tableTo": "workspaces",
+          "columnsFrom": [
+            "workspace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "transaction_items_transaction_id_transactions_id_fk": {
+          "name": "transaction_items_transaction_id_transactions_id_fk",
+          "tableFrom": "transaction_items",
+          "tableTo": "transactions",
+          "columnsFrom": [
+            "transaction_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "transaction_items_category_id_categories_id_fk": {
+          "name": "transaction_items_category_id_categories_id_fk",
+          "tableFrom": "transaction_items",
+          "tableTo": "categories",
+          "columnsFrom": [
+            "category_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+=======
+>>>>>>> f68388a01f7178802054155babe94e5af315afbf
     "public.transactions": {
       "name": "transactions",
       "schema": "",
@@ -2302,8 +2508,13 @@
           "primaryKey": false,
           "notNull": true
         },
+<<<<<<< HEAD
+        "stripe_subscription_id": {
+          "name": "stripe_subscription_id",
+=======
         "mayar_subscription_id": {
           "name": "mayar_subscription_id",
+>>>>>>> f68388a01f7178802054155babe94e5af315afbf
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -2373,11 +2584,19 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
+<<<<<<< HEAD
+        "workspace_addons_stripe_subscription_id_unique": {
+          "name": "workspace_addons_stripe_subscription_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "stripe_subscription_id"
+=======
         "workspace_addons_mayar_subscription_id_unique": {
           "name": "workspace_addons_mayar_subscription_id_unique",
           "nullsNotDistinct": false,
           "columns": [
             "mayar_subscription_id"
+>>>>>>> f68388a01f7178802054155babe94e5af315afbf
           ]
         }
       },
@@ -2873,14 +3092,24 @@
           "primaryKey": false,
           "notNull": false
         },
+<<<<<<< HEAD
+        "stripe_customer_id": {
+          "name": "stripe_customer_id",
+=======
         "mayar_customer_id": {
           "name": "mayar_customer_id",
+>>>>>>> f68388a01f7178802054155babe94e5af315afbf
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
+<<<<<<< HEAD
+        "stripe_subscription_id": {
+          "name": "stripe_subscription_id",
+=======
         "mayar_subscription_id": {
           "name": "mayar_subscription_id",
+>>>>>>> f68388a01f7178802054155babe94e5af315afbf
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -2898,8 +3127,13 @@
           "notNull": true,
           "default": "'free'"
         },
+<<<<<<< HEAD
+        "stripe_current_period_end": {
+          "name": "stripe_current_period_end",
+=======
         "mayar_current_period_end": {
           "name": "mayar_current_period_end",
+>>>>>>> f68388a01f7178802054155babe94e5af315afbf
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false
@@ -2978,6 +3212,20 @@
             "slug"
           ]
         },
+<<<<<<< HEAD
+        "workspaces_stripe_customer_id_unique": {
+          "name": "workspaces_stripe_customer_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "stripe_customer_id"
+          ]
+        },
+        "workspaces_stripe_subscription_id_unique": {
+          "name": "workspaces_stripe_subscription_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "stripe_subscription_id"
+=======
         "workspaces_mayar_customer_id_unique": {
           "name": "workspaces_mayar_customer_id_unique",
           "nullsNotDistinct": false,
@@ -2990,6 +3238,7 @@
           "nullsNotDistinct": false,
           "columns": [
             "mayar_subscription_id"
+>>>>>>> f68388a01f7178802054155babe94e5af315afbf
           ]
         }
       },

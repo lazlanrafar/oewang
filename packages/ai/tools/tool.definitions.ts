@@ -108,4 +108,46 @@ export const aiToolDefinitions = [
       },
     },
   },
+  {
+    name: "add_transaction_items",
+    description:
+      "Add individual purchased items (line items) to an existing transaction after parsing a receipt. ALWAYS call this immediately after create_transaction when the receipt contains an items array. Never skip this step when items are available.",
+    input_schema: {
+      type: "object",
+      properties: {
+        transactionId: { type: "string", description: "The ID of the transaction to add items to." },
+        items: {
+          type: "array",
+          description: "List of purchased products from the receipt.",
+          items: {
+            type: "object",
+            properties: {
+              name: { type: "string", description: "Product name (e.g. 'Dove Soap 200ml')" },
+              brand: { type: "string", description: "Brand name (e.g. 'Dove')" },
+              quantity: { type: "number", description: "Quantity purchased" },
+              unit: { type: "string", description: "Unit of measure: pcs, kg, g, ml, L" },
+              unitPrice: { type: "number", description: "Price per unit" },
+              amount: { type: "number", description: "Total line amount for this item" },
+              categoryId: { type: "string", description: "Category ID for this item" },
+            },
+            required: ["name", "amount"],
+          },
+        },
+      },
+      required: ["transactionId", "items"],
+    },
+  },
+  {
+    name: "search_transaction_items",
+    description:
+      "Search for purchased items across all transactions. Use when the user asks about a specific product, brand, or item purchase history (e.g. 'when did I last buy Dove soap?' or 'how much do I spend on shampoo?').",
+    input_schema: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: "Item name or brand to search for (e.g. 'Dove Soap', 'shampoo', 'Indomie')" },
+        limit: { type: "number", description: "Max results to return (default: 10)" },
+      },
+      required: ["query"],
+    },
+  },
 ];

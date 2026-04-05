@@ -66,5 +66,6 @@ export const MONTHLY_START_DATE_WEEKEND_HANDLING_OPTIONS = [
   { label: "Following Monday", value: "following-monday" },
 ] as const;
 
+export * from "./api.config";
 export * from "./app-config";
 export * from "./env";

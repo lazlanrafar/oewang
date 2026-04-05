@@ -20,16 +20,33 @@ export abstract class ReceiptService {
   ): Promise<ParsedReceipt | null> {
     const systemPrompt = `You are an AI receipt parser. Extract the relevant financial data exactly as JSON with these keys:
 {
-  "amount": number, // total amount
+  "amount": number, // total amount paid
   "date": "YYYY-MM-DDTHH:mm:ss.000Z", // iso string date
-  "name": string, // name of merchant or item
-  "categoryId": string // The ID of the most appropriate category
+  "name": string, // name of merchant or store
+  "categoryId": string, // The ID of the most appropriate category for the overall transaction
+  "items": [ // Array of individual products/line items found on the receipt
+    {
+      "name": string, // Product/item name (e.g. "Dove Soap 200ml")
+      "brand": string | null, // Brand name if identifiable (e.g. "Dove"), otherwise null
+      "quantity": number | null, // Quantity purchased (e.g. 2), null if not shown
+      "unit": string | null, // Unit of measure: "pcs", "kg", "g", "ml", "L", etc. null if not shown
+      "unitPrice": number | null, // Price per unit, null if not shown
+      "amount": number, // Total line amount for this item (required)
+      "categoryId": string | null // ID of the best matching category for this specific item, or null
+    }
+  ]
 }
 
-Available Expense Categories:
+Available Expense Categories (use these IDs for both the transaction and individual items):
 ${categoryContext || "No categories found. Return null for categoryId."}
 
-Return ONLY the JSON object.`;
+Rules:
+- Extract EVERY distinct line item from the receipt into the "items" array
+- If a line item has no quantity shown, set quantity to null and unitPrice to null
+- The "amount" field in items is the total for that line (quantity * unitPrice if both shown, or the line total as printed)
+- Handle Currency Scale: Look for numerical consistency. In currencies like IDR/VND (e.g., merchant is in Indonesia), item prices are often shorthand (e.g., "39" for 39,000). If the items sum up to roughly the total when multiplied by 1000, do so. In USD/EUR, keep the small numbers. Use dots/commas as scale hints (209.055 is likely 209,055 in IDR, but 209.05 in USD). The final item sum + taxes must roughly match the total.
+- If no line items can be identified (e.g. blurry image or total-only receipt), return an empty "items" array []
+- Return ONLY the JSON object, no markdown, no extra text`;
 
     let pdfText = "";
     if (mimeType === "application/pdf") {
@@ -118,7 +135,7 @@ Return ONLY the JSON object.`;
 
         const response = await client.messages.create({
           model: "claude-3-haiku-20240307",
-          max_tokens: 500,
+          max_tokens: 2000,
           system: systemPrompt,
           messages: [{ role: "user", content: messagesContent }],
         });

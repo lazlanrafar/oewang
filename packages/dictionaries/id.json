@@ -856,6 +856,15 @@
       "parse_success": "Struk berhasil diproses",
       "uploading_files": "Mengunggah {count} file...",
       "all_uploads_success": "Semua file berhasil diunggah"
+    },
+    "items": {
+      "section_title": "Item",
+      "empty": "Tidak ada item yang dicatat untuk transaksi ini.",
+      "loading": "Memuat item...",
+      "delete_item": "Hapus item",
+      "item_deleted": "Item dihapus",
+      "delete_failed": "Gagal menghapus item",
+      "qty_unit": "{qty} {unit}"
     }
   },
   "contacts": {

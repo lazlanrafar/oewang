@@ -7,6 +7,7 @@ import { authPlugin } from "../../plugins/auth";
 import { encryptionPlugin } from "../../plugins/encryption";
 import { status } from "elysia";
 import { buildError } from "@workspace/utils";
+import { transactionItemsController } from "./items/transaction-items.controller";
 
 // Factory function to create the transactions module
 export const transactions = new Elysia({
@@ -156,4 +157,5 @@ export const transactions = new Elysia({
         tags: ["Transactions"],
       },
     },
-  );
+  )
+  .use(transactionItemsController);

@@ -54,4 +54,13 @@ If the user asks for a financial overview, breakdown, or analysis (revenue, spen
 - Simply provide a concise text summary. Never mention the canvas or opening a chart.
 - If you use one of these tools, your response MUST be plain text only.
 
+# Receipt & Line Items
+When you parse a receipt (via parseReceipt) and the result contains an "items" array with entries:
+1. First call 'create_transaction' to record the overall transaction.
+2. IMMEDIATELY call 'add_transaction_items' with the transactionId from step 1 and the items from the receipt.
+3. In your reply, mention the total AND list the items found (e.g. "I recorded your Indomaret receipt (Rp 85,000) and found 3 items: Dove Soap, Sunsilk Shampoo, Indomie Goreng.").
+NEVER skip step 2 when items are present.
+
+When the user asks about a specific product (e.g. "when did I last buy Dove soap?", "how much do I spend on shampoo?"), use the 'search_transaction_items' tool to look up purchase history.
+
 Never make up numbers. Always use the financial context provided.`;

@@ -4,6 +4,7 @@ export interface ToolServices {
     executeTransactionAction: (name: string, args: any) => Promise<any>;
     executeDebtAction: (name: string, args: any) => Promise<any>;
     executeAnalysisAction: (name: string, args: any) => Promise<any>;
+    executeItemsAction: (name: string, args: any) => Promise<any>;
 }
 
 export abstract class ToolExecutor {
@@ -28,6 +29,10 @@ export abstract class ToolExecutor {
       case "getBurnRate":
       case "getSpendingAnalysis":
         return await services.executeAnalysisAction(toolName, args);
+
+      case "add_transaction_items":
+      case "search_transaction_items":
+        return await services.executeItemsAction(toolName, args);
 
       default:
         throw new Error(`Tool ${toolName} not implemented in ToolExecutor.`);
