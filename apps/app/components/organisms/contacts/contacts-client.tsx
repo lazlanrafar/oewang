@@ -24,7 +24,11 @@ interface Props {
 }
 
 export function ContactsClient({ initialData }: Props) {
+  const queryClient = useQueryClient();
   const { dictionary } = useAppStore();
+
+  if (!dictionary) return null;
+
   const [isFormSheetOpen, setIsFormSheetOpen] = useState(false);
   const [isDetailSheetOpen, setIsDetailSheetOpen] = useState(false);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(

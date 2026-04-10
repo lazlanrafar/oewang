@@ -121,6 +121,10 @@ export function TransactionsClient({
   const [activeGroupIndex, setActiveGroupIndex] = useState<number | null>(null);
 
   const queryClient = useQueryClient();
+  const { settings: appSettings, formatCurrency: appFormatCurrency, dictionary: appDictionary } = useAppStore();
+
+  if (!appDictionary) return null;
+
   const [groupBy, setGroupBy] = useQueryState(
     "groupBy",
     parseAsString.withDefault("daily"),

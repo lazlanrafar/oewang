@@ -49,6 +49,8 @@ export function AccountsClient({
   const { settings, formatCurrency, dictionary } = useAppStore();
   const queryClient = useQueryClient();
 
+  if (!dictionary) return null;
+
   const { filters, handleFilterChange, pagination, handlePaginationChange } =
     useDataTableFilter({
       initialFilters: initialFilters || {

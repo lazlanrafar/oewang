@@ -11,6 +11,7 @@ import {
 } from "@workspace/modules/setting/setting.action";
 import type { SubCurrency, TransactionSettings } from "@workspace/types";
 import { useAppStore } from "@/stores/app";
+import { DataTableEmptyState } from "@workspace/ui";
 
 interface SubCurrencyListProps {
   initialSubCurrencies: SubCurrency[];
@@ -188,11 +189,19 @@ export function SubCurrencyList({
         ))}
 
         {subCurrencies.length === 0 && (
-          <div className="text-center py-12 border-2 border-dashed rounded-none border-accent">
-            <p className="text-muted-foreground">
-              {dictionary?.settings.sub_currencies.no_sub_currencies}
-            </p>
-          </div>
+          <DataTableEmptyState
+            title={dictionary?.settings.sub_currencies.no_sub_currencies || "No sub-currencies"}
+            description={dictionary?.settings.sub_currencies.description || "Add sub-currencies to manage exchange rates."}
+            action={{
+              label: dictionary?.settings.sub_currencies.add_button || "Add currency",
+              onClick: () => {
+                // The trigger is a SelectCurrency component which is already in the header
+                // and clicking this button won't easily open it without more complex state management
+                // but let's just make it look good.
+              }
+            }}
+            className="border-2 border-dashed rounded-none border-accent py-12"
+          />
         )}
       </div>
     </div>

@@ -745,10 +745,14 @@
   },
   "transactions": {
     "title": "Transaksi",
-    "description": "Kelola dan lacak semua pergerakan keuangan Anda.",
+    "description": "Pantau pendapatan, pengeluaran, dan transfer Anda di semua akun.",
+    "add_button": "Tambah Transaksi",
     "search_placeholder": "Cari transaksi...",
-    "type_label": "Tipe",
-    "add_button": "Tambah",
+    "empty": {
+      "title": "Belum ada transaksi",
+      "description": "Perjalanan finansial Anda dimulai di sini. Tambahkan transaksi pertama Anda untuk melihatnya di daftar.",
+      "action": "Tambah Transaksi Pertama"
+    },
     "import_backfill": "Impor/backfill",
     "create_transaction": "Buat transaksi",
     "new_transaction": "Transaksi Baru",
