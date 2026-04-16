@@ -32,7 +32,7 @@ export const mayarController = new Elysia({
     async ({ body, auth, status }) => {
       if (!auth) return status(401, buildError(ErrorCode.UNAUTHORIZED, "Unauthorized"));
 
-      const { priceId, workspaceId, returnPath, type, addonType, amount, addonId } = body;
+      const { priceId, workspaceId, returnPath, type, addonType, amount, addonId, billing } = body;
 
       return MayarService.createCheckoutSession(
         workspaceId || auth.workspace_id,
@@ -45,6 +45,7 @@ export const mayarController = new Elysia({
             addonType,
             amount,
             addonId,
+            billing,
           },
         },
       );

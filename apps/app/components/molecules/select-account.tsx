@@ -1,8 +1,5 @@
-import {
-  Combobox,
-  Spinner,
-  cn,
-} from "@workspace/ui";
+"use client";
+import { Combobox, Spinner, cn } from "@workspace/ui";
 import { Landmark } from "lucide-react";
 import { getWallets, createWallet } from "@workspace/modules/client";
 import { useState } from "react";
@@ -18,6 +15,7 @@ export interface SelectAccountProps {
   headless?: boolean;
   hideLoading?: boolean;
   variant?: React.ComponentProps<typeof Combobox>["variant"];
+  inDataTable?: boolean;
 }
 
 export function SelectAccount({
@@ -29,6 +27,7 @@ export function SelectAccount({
   headless,
   hideLoading,
   variant,
+  inDataTable,
 }: SelectAccountProps) {
   const queryClient = useQueryClient();
 
@@ -93,7 +92,13 @@ export function SelectAccount({
       onSelect={(item) => {
         onChange(item.id);
       }}
-      className={cn("rounded-none", className)}
+      triggerClassName={cn(
+        "rounded-none",
+        inDataTable && "max-w-[280px]",
+        className,
+      )}
+      showChevron={!inDataTable}
+      className="rounded-none"
       onCreate={(value) => {
         createMutation.mutate(value);
       }}
@@ -101,7 +106,7 @@ export function SelectAccount({
         <div className="flex items-center space-x-2">
           <Landmark className="h-3 w-3 text-muted-foreground shrink-0" />
           <span className="text-left truncate max-w-[90%] text-sm font-medium">
-            {item.label}
+            {!Array.isArray(item) ? item.label : ""}
           </span>
         </div>
       )}
@@ -114,7 +119,7 @@ export function SelectAccount({
       renderListItem={({ item }) => (
         <div className="flex items-center space-x-2 py-1">
           <Landmark className="h-3 w-3 text-muted-foreground shrink-0" />
-          <span className="line-clamp-1 text-sm">{item.label}</span>
+          <span className="line-clamp-1 text-sm font-medium">{item.label}</span>
         </div>
       )}
     />

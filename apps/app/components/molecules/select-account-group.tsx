@@ -103,7 +103,7 @@ export function SelectAccountGroup({
         <div className="flex items-center space-x-2">
           <Layers className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
           <span className="text-left truncate max-w-[90%]">
-            {item.label}
+            {!Array.isArray(item) ? item.label : ""}
           </span>
         </div>
       )}
@@ -116,7 +116,7 @@ export function SelectAccountGroup({
       renderListItem={({ item }) => (
         <div className="flex items-center space-x-2">
           <Layers className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-          <span className="line-clamp-1">{item.label}</span>
+          <span className="line-clamp-1 font-medium">{item.label}</span>
         </div>
       )}
     />

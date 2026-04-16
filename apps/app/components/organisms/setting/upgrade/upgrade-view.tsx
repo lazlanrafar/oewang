@@ -45,6 +45,10 @@ export function UpgradeView({ initialPlans }: { initialPlans: Pricing[] }) {
         workspaceId,
         "/settings/billing",
         params.type,
+        undefined, // addonType
+        undefined, // amount
+        undefined, // addonId
+        billingCycle,
       );
       if (!result.success) throw new Error(result.error);
       return result.data;
@@ -203,7 +207,6 @@ export function UpgradeView({ initialPlans }: { initialPlans: Pricing[] }) {
                         isCurrent && !canDowngrade ? "secondary" : "default"
                       }
                       disabled={
-                        plan.name.toLowerCase() !== "starter" ||
                         (isCurrent && !canDowngrade) ||
                         checkoutMutation.isPending ||
                         downgradeMutation.isPending ||
@@ -219,9 +222,7 @@ export function UpgradeView({ initialPlans }: { initialPlans: Pricing[] }) {
                         }
                       }}
                     >
-                      {plan.name.toLowerCase() !== "starter" ? (
-                        <span>{dictionary?.settings?.common?.coming_soon || "Coming Soon"}</span>
-                      ) : isCurrent ? (
+                      {isCurrent ? (
                         canDowngrade ? (
                           dict.upgrade
                         ) : (

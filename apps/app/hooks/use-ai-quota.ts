@@ -1,41 +1,29 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { getAiQuota, type AiQuota } from "@workspace/modules/ai/ai.action";
+import { useAppStore } from "@/stores/app";
+import { useEffect, useState } from "react";
 
 export function useAiQuota() {
-  const [quota, setQuota] = useState<AiQuota | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchQuota = useCallback(async () => {
-    try {
-      setLoading(true);
-      const response = await getAiQuota();
-      if (response.success && response.data) {
-        setQuota(response.data);
-        setError(null);
-      } else {
-        setError(response.error || "Failed to fetch AI quota");
-      }
-    } catch (err: any) {
-      setError(err.message || "An unexpected error occurred");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const { aiQuota, fetchAiQuota, checkLimit } = useAppStore();
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    fetchQuota();
-  }, [fetchQuota]);
+    if (!aiQuota) {
+      setLoading(true);
+      fetchAiQuota().finally(() => setLoading(false));
+    }
+  }, [aiQuota, fetchAiQuota]);
 
-  const isExceeded = quota ? Number(quota.used) >= Number(quota.maxTokens) : false;
+  const { allowed, usage, limit, remaining, percent } = checkLimit("ai_tokens", 0);
 
   return {
-    quota,
+    isExceeded: !allowed,
+    usage,
+    limit,
+    remaining,
+    percent,
     loading,
-    error,
-    isExceeded,
-    refetch: fetchQuota,
+    quota: aiQuota,
+    refresh: fetchAiQuota,
   };
 }

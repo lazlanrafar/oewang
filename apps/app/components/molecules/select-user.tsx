@@ -31,6 +31,7 @@ export interface SelectUserProps {
   headless?: boolean;
   hideLoading?: boolean;
   variant?: React.ComponentProps<typeof Combobox>["variant"];
+  inDataTable?: boolean;
 }
 
 export function SelectUser({
@@ -42,6 +43,7 @@ export function SelectUser({
   headless,
   hideLoading,
   variant,
+  inDataTable,
 }: SelectUserProps) {
   // Handle internal fetching
   const { data: members = [], isLoading } = useQuery<Member[]>({
@@ -97,7 +99,9 @@ export function SelectUser({
       onSelect={(item) => {
         onChange(item.id);
       }}
-      className={className}
+      triggerClassName={cn(inDataTable && "max-w-[280px]", className)}
+      showChevron={!inDataTable}
+      className="rounded-none"
       renderSelectedItem={(item: any) => (
         <div className="flex items-center space-x-2">
           <Avatar className="w-6 h-6">

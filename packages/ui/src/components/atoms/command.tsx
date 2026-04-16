@@ -56,6 +56,10 @@ const CommandInput = React.forwardRef<
         "px-3",
         className,
       )}
+      onFocus={(e) => e.stopPropagation()}
+      onKeyDown={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
       {...props}
     />
   </div>

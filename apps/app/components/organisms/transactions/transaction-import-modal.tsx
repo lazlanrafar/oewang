@@ -310,7 +310,7 @@ export function ImportModal({
                   </button>
                 )}
                 <DialogTitle className="font-medium">
-                  {step === "select" && "Select CSV File"}
+                  {step === "select" && "Select File"}
                   {step === "mapping" && "Field Mapping"}
                   {step === "mapping-values" && "Value Mapping"}
                   {step === "summary" && "Import Summary"}
@@ -323,9 +323,9 @@ export function ImportModal({
                 {step === "select" &&
                   "Upload your transaction file to get started."}
                 {step === "mapping" &&
-                  "Map your CSV columns to the appropriate transaction fields."}
+                  "Map your file columns to the appropriate transaction fields."}
                 {step === "mapping-values" &&
-                  "Match CSV values to your accounts and categories."}
+                  "Match values from your file to your accounts and categories."}
                 {step === "summary" &&
                   "Review your import settings and confirm."}
               </DialogDescription>

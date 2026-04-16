@@ -226,7 +226,7 @@ export function TransactionsClient({
     refetchOnWindowFocus: false,
   });
 
-  const reviewCount = reviewCountData?.pages[0]?.meta?.pagination?.total ?? 0;
+  const reviewCount = reviewCountData?.pages?.[0]?.meta?.pagination?.total ?? 0;
 
   const deleteMutation = useMutation({
     mutationFn: deleteTransaction,
@@ -257,7 +257,7 @@ export function TransactionsClient({
   const transactions = useMemo(
     () =>
       (data?.pages
-        .flatMap((page) => page.data)
+        .flatMap((page) => page?.data ?? [])
         .filter(Boolean) as Transaction[]) ?? [],
     [data],
   );
@@ -762,7 +762,7 @@ export function TransactionsClient({
                 const transactionIds = processedRows.flatMap((r: any) =>
                   r._isGroup
                     ? (r.transactions || []).map((t: any) => t.id)
-                    : [r.id],
+                    : r.id ? [r.id] : [],
                 );
                 if (transactionIds.length === 0) return false;
                 return transactionIds.every((id) => !!rowSelection[id]);

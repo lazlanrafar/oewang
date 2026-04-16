@@ -1,6 +1,7 @@
 "use client";
 
 import Papa from "papaparse";
+import * as XLSX from "xlsx";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Dropzone, { type FileRejection } from "react-dropzone";
 import { Controller } from "react-hook-form";
@@ -18,31 +19,82 @@ export function SelectFile() {
       setIsLoading(true);
       setError(null);
 
-      // Read first few lines to parse header and sample rows
+      // Detect file type
+      const isExcel =
+        file.type ===
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+        file.type === "application/vnd.ms-excel" ||
+        file.name.endsWith(".xlsx") ||
+        file.name.endsWith(".xls");
+
       const reader = new FileReader();
-      reader.onload = (e) => {
-        const text = e.target?.result as string;
-        Papa.parse(text, {
-          header: true,
-          skipEmptyLines: true,
-          complete: (results: Papa.ParseResult<any>) => {
-            if (results.data.length < 1) {
-              setError("CSV file looks empty.");
+
+      if (isExcel) {
+        reader.onload = (e) => {
+          try {
+            const data = new Uint8Array(e.target?.result as ArrayBuffer);
+            const workbook = XLSX.read(data, { type: "array" });
+            const firstSheetName = workbook.SheetNames[0];
+            if (!firstSheetName) {
+              setError("Excel file has no sheets.");
+              setIsLoading(false);
+              return;
+            }
+            const worksheet = workbook.Sheets[firstSheetName];
+            if (!worksheet) {
+              setError("Excel worksheet is empty or invalid.");
               setIsLoading(false);
               return;
             }
 
-            setFileColumns(results.meta.fields || []);
-            setFirstRows(results.data as any[]);
+            // Convert to JSON with headers
+            const jsonData = XLSX.utils.sheet_to_json(worksheet, {
+              defval: "",
+            });
+
+            if (jsonData.length < 1) {
+              setError("Excel file looks empty.");
+              setIsLoading(false);
+              return;
+            }
+
+            // Extract headers from the first row of JSON
+            const headers = Object.keys(jsonData[0] as object);
+
+            setFileColumns(headers);
+            setFirstRows(jsonData as Record<string, string>[]);
             setIsLoading(false);
-          },
-          error: (err: Error) => {
-            setError("Failed to parse CSV: " + err.message);
+          } catch (err: any) {
+            setError("Failed to parse Excel: " + err.message);
             setIsLoading(false);
-          },
-        });
-      };
-      reader.readAsText(file);
+          }
+        };
+        reader.readAsArrayBuffer(file);
+      } else {
+        reader.onload = (e) => {
+          const text = e.target?.result as string;
+          Papa.parse(text, {
+            header: true,
+            skipEmptyLines: true,
+            complete: (results: Papa.ParseResult<any>) => {
+              if (results.data.length < 1) {
+                setError("CSV file looks empty.");
+                setIsLoading(false);
+                return;
+              }
+
+              setFileColumns(results.meta.fields || []);
+              setFirstRows(results.data as any[]);
+              setIsLoading(false);
+            },
+            error: (err: Error) => {
+              setError("Failed to parse CSV: " + err.message);
+              setIsLoading(false);
+            },
+          });
+        };
+        reader.readAsText(file);
+      }
     },
     [setFileColumns, setFirstRows],
   );
@@ -64,7 +116,9 @@ export function SelectFile() {
             maxFiles={1}
             accept={{
               "text/csv": [".csv"],
-              "application/vnd.ms-excel": [".csv"],
+              "application/vnd.ms-excel": [".csv", ".xls"],
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
+                [".xlsx"],
             }}
             maxSize={5000000}
           >
@@ -88,10 +142,10 @@ export function SelectFile() {
                   <p className="font-medium text-sm">
                     {isLoading
                       ? "Processing file..."
-                      : "Drop your CSV here, or click to browse"}
+                      : "Drop your CSV or Excel here, or click to browse"}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Max 5MB. CSV format only.
+                    Max 5MB. CSV or Excel format (.xlsx, .xls).
                   </p>
                 </div>
                 {error && (

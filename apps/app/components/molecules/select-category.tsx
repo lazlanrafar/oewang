@@ -1,8 +1,5 @@
-import {
-  Combobox,
-  Spinner,
-  cn,
-} from "@workspace/ui";
+"use client";
+import { Combobox, Spinner, cn } from "@workspace/ui";
 import { getCategories, createCategory } from "@workspace/modules/client";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -18,13 +15,18 @@ export interface SelectCategoryProps {
   headless?: boolean;
   hideLoading?: boolean;
   variant?: React.ComponentProps<typeof Combobox>["variant"];
+  inDataTable?: boolean;
 }
 
 const CategoryColor = ({ type, color }: { type: string; color?: string }) => (
   <div
     className={cn(
       "w-2.5 h-2.5 rounded-[2px] shrink-0",
-      color ? `bg-${color}` : type === "income" ? "bg-emerald-500" : "bg-red-500",
+      color
+        ? `bg-${color}`
+        : type === "income"
+          ? "bg-emerald-500"
+          : "bg-red-500",
     )}
   />
 );
@@ -39,8 +41,8 @@ export function SelectCategory({
   headless,
   hideLoading,
   variant,
+  inDataTable,
 }: SelectCategoryProps) {
-  const [searchValue, setSearchValue] = useState("");
   const queryClient = useQueryClient();
 
   // Handle internal fetching
@@ -62,8 +64,9 @@ export function SelectCategory({
     onSuccess: (data) => {
       if (data) {
         onChange(data.id);
-        setSearchValue("");
-        queryClient.invalidateQueries({ queryKey: ["categories", type || "all"] });
+        queryClient.invalidateQueries({
+          queryKey: ["categories", type || "all"],
+        });
         toast.success(`Category "${data.name}" created`);
       }
     },
@@ -105,15 +108,17 @@ export function SelectCategory({
       onSelect={(item) => {
         onChange(item.id);
       }}
-      className={className}
+      triggerClassName={cn(inDataTable && "max-w-[280px]", className)}
+      showChevron={!inDataTable}
+      className="rounded-none"
       onCreate={(value) => {
         createMutation.mutate(value);
       }}
       renderSelectedItem={(item) => (
         <div className="flex items-center space-x-2">
           <CategoryColor type={selectedCategory?.type || type || "expense"} />
-          <span className="text-left truncate max-w-[90%]">
-            {item.label}
+          <span className="text-left truncate max-w-[90%] font-medium">
+            {!Array.isArray(item) ? item.label : ""}
           </span>
         </div>
       )}
@@ -126,9 +131,9 @@ export function SelectCategory({
       renderListItem={({ item }) => {
         const cat = categories.find((c) => c.id === item.id);
         return (
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 py-1">
             <CategoryColor type={cat?.type || type || "expense"} />
-            <span className="line-clamp-1">{item.label}</span>
+            <span className="line-clamp-1 font-medium">{item.label}</span>
           </div>
         );
       }}

@@ -51,7 +51,7 @@ export abstract class AiService {
         user_id: userId,
         action: "ai.session_created",
         entity: "ai_session",
-        entity_id: currentSessionId,
+        entity_id: currentSessionId as string,
         after: newSession,
       });
 
@@ -74,8 +74,8 @@ export abstract class AiService {
     );
 
     // 2. Load History
-    const history = await AiRepository.getSessionMessages(currentSessionId, workspaceId);
-    const consolidatedMessages: RepoChatMessage[] = history.map(m => ({
+    const history = await AiRepository.getSessionMessages(currentSessionId as string, workspaceId);
+    const consolidatedMessages: RepoChatMessage[] = history.map((m: any) => ({
       role: m.role as any,
       content: m.content as string,
       attachments: m.attachments as any
@@ -90,22 +90,25 @@ export abstract class AiService {
       );
     }
 
-    const maxTokens = usageData.maxTokens ?? 5000;
-    const currentTokens = Number(usageData.used);
+    const maxTokens = (usageData.maxTokens && usageData.maxTokens > 0) ? usageData.maxTokens : 50;
+    const currentTokens = Number(usageData.used || 0);
 
     if (
       !API_CONFIG.mockAiQuota &&
+      maxTokens > 0 &&
       currentTokens >= maxTokens &&
       workspaceId !== "b45ad588-6758-43a4-8c26-1d80f3b0ab9f"
     ) {
       // Calculate reset date
-      let resetAt = usageData.plan_current_period_end;
+      let resetAt: Date;
 
-      if (!resetAt) {
+      if (!usageData.plan_current_period_end) {
         // Default to same day next month
         const now = new Date();
-        const createdAt = new Date(usageData.created_at);
+        const createdAt = usageData.created_at ? new Date(usageData.created_at) : now;
         resetAt = new Date(now.getFullYear(), now.getMonth() + 1, createdAt.getDate());
+      } else {
+        resetAt = new Date(usageData.plan_current_period_end);
       }
 
       throw status(

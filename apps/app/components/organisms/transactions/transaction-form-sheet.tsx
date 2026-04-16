@@ -209,21 +209,31 @@ export function TransactionFormSheet({
       };
 
       if (transaction?.id) {
-        await updateTransaction(transaction.id, payload);
+        const result = await updateTransaction(transaction.id, payload);
+        if (!result.success) {
+          throw new Error(result.error || dictionary.transactions.errors.save_failed);
+        }
         toast.success(dictionary.transactions.toasts.updated);
       } else {
-        await createTransaction(payload);
+        const result = await createTransaction(payload);
+        if (!result.success) {
+          throw new Error(result.error || dictionary.transactions.errors.save_failed);
+        }
         toast.success(dictionary.transactions.toasts.created);
       }
 
-      await queryClient.invalidateQueries({ queryKey: ["transactions"] });
-
       form.reset();
+      setAttachments([]);
       onOpenChange(false);
       onSuccess?.();
+      void queryClient.invalidateQueries({ queryKey: ["transactions"] });
     } catch (error) {
       console.error(error);
-      toast.error(dictionary.transactions.errors.save_failed);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : dictionary.transactions.errors.save_failed,
+      );
     } finally {
       setIsLoading(false);
     }

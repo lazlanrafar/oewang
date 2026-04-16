@@ -69,6 +69,8 @@ interface Props {
   manualFilters?: FilterOption[];
   tags?: { id: string; name: string; slug?: string }[];
   amountRange?: [number, number];
+  excludeKeys?: string[];
+  showDateFilter?: boolean;
 }
 
 const formatDateRange = (start: Date, end: Date) => {
@@ -96,6 +98,8 @@ export function FilterList({
   attachmentsFilters,
   recurringFilters,
   manualFilters,
+  excludeKeys,
+  showDateFilter = true,
 }: Props) {
   const renderFilter = (key: string, value: any) => {
     // Check facets first for compatibility
@@ -236,16 +240,27 @@ export function FilterList({
 
   const activeFilters = useMemo(() => {
     return Object.entries(filters).filter(
-      ([key, value]) =>
-        value !== null &&
-        value !== undefined &&
-        value !== "" &&
-        key !== "end" &&
-        key !== "q" &&
-        key !== "page" &&
-        key !== "limit",
+      ([key, value]) => {
+        if (value === null || value === undefined || value === "") return false;
+        
+        // Handle explicit excluded keys
+        if (excludeKeys?.includes(key)) return false;
+        
+        // Handle date hiding
+        if (!showDateFilter && (key === "start" || key === "end" || key === "startDate" || key === "endDate")) {
+          return false;
+        }
+
+        return (
+          key !== "end" &&
+          key !== "endDate" &&
+          key !== "q" &&
+          key !== "page" &&
+          key !== "limit"
+        );
+      }
     );
-  }, [filters]);
+  }, [filters, excludeKeys, showDateFilter]);
 
   if (activeFilters.length === 0 && !loading) return null;
 

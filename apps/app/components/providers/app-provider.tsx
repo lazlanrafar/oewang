@@ -22,9 +22,14 @@ export function AppProvider({
   const setSubCurrencies = useAppStore((state: AppState) => state.setSubCurrencies);
   const setDictionary = useAppStore((state: AppState) => state.setDictionary);
   const setIsLoading = useAppStore((state: AppState) => state.setIsLoading);
+  const fetchAiQuota = useAppStore((state: AppState) => state.fetchAiQuota);
   
   // Initialize Realtime Sync
   useRealtime();
+
+  useEffect(() => {
+    fetchAiQuota();
+  }, [fetchAiQuota]);
 
   const { data: userData, isLoading: isUserLoading } = useQuery({
     queryKey: ["user", "me"],

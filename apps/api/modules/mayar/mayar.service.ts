@@ -106,6 +106,7 @@ export abstract class MayarService {
       const workspaceId = extraData.workspaceId;
       const paymentType = extraData.type; // "subscription" | "addon"
       const addonId = extraData.addonId;
+      const billing = extraData.billing; // "monthly" | "annual"
 
       if (!workspaceId) {
         logger.warn(
@@ -165,15 +166,27 @@ export abstract class MayarService {
         logger.info(
           `[Mayar Webhook] Updating subscription for workspace ${targetWorkspaceId}`,
         );
-        const workspace =
-          await MayarRepository.findWorkspaceById(targetWorkspaceId);
+        // Calculate proper period end: 30 days for monthly, 365 for annual
+        const periodDays = billing === "annual" ? 365 : 30;
+        const periodEnd = new Date();
+        periodEnd.setDate(periodEnd.getDate() + periodDays);
+
         await MayarRepository.updateWorkspaceSubscription(targetWorkspaceId, {
           plan_status: "active",
           mayar_transaction_id: transactionId,
           mayar_customer_email: customerEmail || null,
-          plan_current_period_end:
-            workspace?.plan_current_period_end ?? new Date(),
+          plan_current_period_end: periodEnd,
         });
+      }
+    }
+
+    // payment.failed — mark order as failed
+    if (event.event?.received === "payment.failed") {
+      const data = event.data;
+      const transactionId = data?.id;
+      if (transactionId) {
+        logger.warn("[Mayar Webhook] Payment failed", { transactionId });
+        await OrdersService.updateOrderFromInvoiceId(transactionId, "failed");
       }
     }
 
@@ -270,6 +283,7 @@ export abstract class MayarService {
           type: options?.metadata?.type || "subscription",
           addonId: options?.metadata?.addonId,
           addonType: options?.metadata?.addonType,
+          billing: options?.metadata?.billing || "monthly",
         },
       };
 

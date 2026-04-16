@@ -490,6 +490,8 @@ export function DataTableFilter({
         recurringFilters={recurringFilters}
         manualFilters={manualFilters}
         amountRange={amountRange}
+        excludeKeys={excludeKeys}
+        showDateFilter={showDateFilter}
       />
     </div>
   );

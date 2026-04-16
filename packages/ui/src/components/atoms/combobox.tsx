@@ -41,9 +41,11 @@ type Props<T> = {
   onCreate?: (value: string) => void;
   headless?: boolean;
   className?: string;
+  triggerClassName?: string;
   modal?: boolean;
   variant?: React.ComponentProps<typeof Button>["variant"];
   trigger?: React.ReactNode;
+  showChevron?: boolean;
 };
 
 export function Combobox<T extends ComboboxItem>({
@@ -55,7 +57,8 @@ export function Combobox<T extends ComboboxItem>({
   selectedItem: incomingSelectedItem,
   selectedItems: incomingSelectedItems,
   multiple,
-  renderSelectedItem = (item) => (Array.isArray(item) ? item.map(i => i.label).join(", ") : item.label),
+  renderSelectedItem = (item) =>
+    Array.isArray(item) ? item.map((i) => i.label).join(", ") : item.label,
   renderListItem,
   renderOnCreate,
   emptyResults,
@@ -63,9 +66,11 @@ export function Combobox<T extends ComboboxItem>({
   disabled,
   onCreate,
   className,
-  modal = true,
+  triggerClassName,
+  modal = false,
   variant = "outline",
   trigger,
+  showChevron = true,
 }: Props<T>) {
   const [open, setOpen] = React.useState(false);
   const [internalSelectedItem, setInternalSelectedItem] = React.useState<
@@ -75,8 +80,17 @@ export function Combobox<T extends ComboboxItem>({
     [],
   );
   const [inputValue, setInputValue] = React.useState("");
+  const inputRef = React.useRef<HTMLInputElement>(null);
   const selectedItem = incomingSelectedItem ?? internalSelectedItem;
   const selectedItems = incomingSelectedItems ?? internalSelectedItems;
+
+  React.useEffect(() => {
+    if (open) {
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 0);
+    }
+  }, [open]);
 
   const filteredItems = items.filter((item) =>
     item.label.toLowerCase().includes(inputValue.toLowerCase()),
@@ -85,17 +99,24 @@ export function Combobox<T extends ComboboxItem>({
   const showCreate =
     onCreate && Boolean(inputValue) && filteredItems.length === 0;
 
-  const Component = (
+  const searchContent = React.useMemo(() => (
     <Command loop shouldFilter={false}>
       <CommandInput
+        ref={inputRef}
+        autoFocus
         value={inputValue}
         onValueChange={setInputValue}
         placeholder={searchPlaceholder ?? "Search item..."}
         className="px-3"
       />
 
-      <CommandGroup>
-        <CommandList className="max-h-[225px] overflow-auto">
+      <CommandList
+        className="max-h-[300px] overflow-y-auto overflow-x-hidden"
+        onWheel={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
+      >
+        <CommandEmpty>{emptyResults ?? "No item found"}</CommandEmpty>
+        <CommandGroup>
           {filteredItems.map((item) => {
             const isChecked = multiple
               ? selectedItems.some((i) => i.id === item.id)
@@ -151,8 +172,6 @@ export function Combobox<T extends ComboboxItem>({
             );
           })}
 
-          <CommandEmpty>{emptyResults ?? "No item found"}</CommandEmpty>
-
           {showCreate && (
             <CommandItem
               key={`create-${inputValue}`}
@@ -170,13 +189,28 @@ export function Combobox<T extends ComboboxItem>({
               {renderOnCreate ? renderOnCreate(inputValue) : null}
             </CommandItem>
           )}
-        </CommandList>
-      </CommandGroup>
+        </CommandGroup>
+      </CommandList>
     </Command>
-  );
+  ), [
+    inputValue,
+    filteredItems,
+    searchPlaceholder,
+    emptyResults,
+    multiple,
+    selectedItems,
+    selectedItem,
+    className,
+    items,
+    onSelect,
+    renderListItem,
+    showCreate,
+    onCreate,
+    renderOnCreate,
+  ]);
 
   if (headless) {
-    return Component;
+    return searchContent;
   }
 
   return (
@@ -190,18 +224,23 @@ export function Combobox<T extends ComboboxItem>({
       }}
       modal={modal}
     >
-      <PopoverTrigger asChild disabled={disabled} className="w-full">
+      <PopoverTrigger asChild disabled={disabled}>
         {trigger ?? (
           <Button
             variant={variant}
             aria-expanded={open}
-            className="w-full justify-between relative font-normal"
+            className={cn(
+              "w-full justify-between relative font-normal",
+              triggerClassName,
+            )}
           >
             <span className="truncate text-ellipsis pr-3">
               {multiple ? (
                 selectedItems.length > 0 ? (
                   <span className="items-center overflow-hidden whitespace-nowrap text-ellipsis block">
-                    {renderSelectedItem ? renderSelectedItem(selectedItems) : null}
+                    {renderSelectedItem
+                      ? renderSelectedItem(selectedItems)
+                      : null}
                   </span>
                 ) : (
                   (placeholder ?? "Select items...")
@@ -216,20 +255,24 @@ export function Combobox<T extends ComboboxItem>({
                 (placeholder ?? "Select item...")
               )}
             </span>
-            <ChevronsUpDown className="size-4 opacity-50 absolute right-2" />
+            {showChevron && (
+              <ChevronsUpDown className="size-4 opacity-50 absolute right-2" />
+            )}
           </Button>
         )}
       </PopoverTrigger>
 
       <PopoverContent
         {...popoverProps}
-        className={cn("p-0 min-w-50", popoverProps?.className)}
+        portal={popoverProps?.portal ?? false}
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        className={cn("p-0 min-w-50 pointer-events-auto", popoverProps?.className)}
         style={{
           width: "var(--radix-popover-trigger-width)",
           ...popoverProps?.style,
         }}
       >
-        {Component}
+        {searchContent}
       </PopoverContent>
     </Popover>
   );

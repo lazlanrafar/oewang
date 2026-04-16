@@ -3,6 +3,7 @@ export interface Wallet {
   workspaceId: string;
   groupId?: string | null;
   name: string;
+  currency: string;
   balance: number;
   isIncludedInTotals: boolean;
   sortOrder: number;

@@ -13,7 +13,7 @@ import { ContactDetailSheet } from "./contact-detail-sheet";
 import { getContactColumns } from "./contact-columns";
 import type { Contact } from "@workspace/types";
 import { Plus } from "lucide-react";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { getContacts } from "@workspace/modules/client";
 import { useDataTableFilter } from "@/hooks/use-data-table-filter";
 import { useContactsStore } from "@/stores/contacts";

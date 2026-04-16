@@ -116,6 +116,7 @@ export function BillingView({
         params.addonType,
         params.amount,
         params.addonId,
+        billingCycle,
       );
       if (!result.success) throw new Error(result.error);
       return result.data;
@@ -455,9 +456,24 @@ export function BillingView({
                       size="sm" 
                       variant={isActive ? "outline" : "default"}
                       className="rounded-none text-[10px] uppercase tracking-widest h-8 px-5"
-                      disabled={true}
+                      disabled={isActive || checkoutMutation.isPending || !priceId}
+                      onClick={() => {
+                        if (!isActive && priceId) {
+                          checkoutMutation.mutate({
+                            priceId,
+                            type: "payment",
+                            addonId: addon.id,
+                            addonType: addon.addon_type as "ai" | "vault",
+                            amount: addon.prices?.find((p) => p.currency === currency)?.monthly,
+                          });
+                        }
+                      }}
                     >
-                      {isActive ? (dictionary?.settings?.common?.active || "Active") : (dictionary?.settings?.common?.coming_soon || "Coming Soon")}
+                      {isActive 
+                        ? (dictionary?.settings?.common?.active || "Active") 
+                        : checkoutMutation.isPending 
+                          ? (dictionary?.settings?.common?.processing || "Processing...") 
+                          : (dict.purchase || dict.get_started || "Purchase")}
                     </Button>
                   </div>
                 </div>
