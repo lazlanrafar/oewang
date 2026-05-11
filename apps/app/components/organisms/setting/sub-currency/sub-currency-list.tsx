@@ -2,9 +2,19 @@
 
 import { useCallback, useEffect, useState, useTransition } from "react";
 
-import { addSubCurrency, getExchangeRates, removeSubCurrency } from "@workspace/modules/setting/setting.action";
+import {
+  addSubCurrency,
+  getExchangeRates,
+  removeSubCurrency,
+} from "@workspace/modules/setting/setting.action";
 import type { SubCurrency, TransactionSettings } from "@workspace/types";
-import { Button, DataTableEmptyState, SelectCurrency, Separator, Skeleton } from "@workspace/ui";
+import {
+  Button,
+  DataTableEmptyState,
+  SelectCurrency,
+  Separator,
+  Skeleton,
+} from "@workspace/ui";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -49,7 +59,11 @@ function SubCurrencySkeleton() {
   );
 }
 
-export function SubCurrencyList({ initialSubCurrencies, settings, dictionary }: SubCurrencyListProps) {
+export function SubCurrencyList({
+  initialSubCurrencies,
+  settings,
+  dictionary,
+}: SubCurrencyListProps) {
   const [subCurrencies, setSubCurrencies] = useState(initialSubCurrencies);
   const [rates, setRates] = useState<Record<string, string>>({});
   const [isLoadingRates, setIsLoadingRates] = useState(false);
@@ -80,7 +94,9 @@ export function SubCurrencyList({ initialSubCurrencies, settings, dictionary }: 
       const result = await addSubCurrency({ currencyCode: c.code });
       if (result.success) {
         setSubCurrencies((prev) => [...prev, result.data]);
-        toast.success(`${c.code} ${dictionary.settings.sub_currencies.toast_added || "added to sub-currencies"}`);
+        toast.success(
+          `${c.code} ${dictionary.settings.sub_currencies.toast_added || "added to sub-currencies"}`,
+        );
       } else {
         toast.error(result.error);
       }
@@ -92,7 +108,9 @@ export function SubCurrencyList({ initialSubCurrencies, settings, dictionary }: 
       const result = await removeSubCurrency(id);
       if (result.success) {
         setSubCurrencies((prev) => prev.filter((item) => item.id !== id));
-        toast.success(`${code} ${dictionary.settings.sub_currencies.toast_removed || "removed"}`);
+        toast.success(
+          `${code} ${dictionary.settings.sub_currencies.toast_removed || "removed"}`,
+        );
       } else {
         toast.error(result.error);
       }
@@ -105,8 +123,12 @@ export function SubCurrencyList({ initialSubCurrencies, settings, dictionary }: 
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="font-medium text-lg">{dictionary.settings.sub_currencies.title}</h3>
-          <p className="text-muted-foreground text-sm">{dictionary.settings.sub_currencies.description}</p>
+          <h3 className="font-medium text-lg">
+            {dictionary.settings.sub_currencies.title}
+          </h3>
+          <p className="text-muted-foreground text-sm">
+            {dictionary.settings.sub_currencies.description}
+          </p>
         </div>
         <SelectCurrency
           onSelect={handleAdd}
@@ -124,7 +146,10 @@ export function SubCurrencyList({ initialSubCurrencies, settings, dictionary }: 
         {subCurrencies.map((sc) => {
           const rate = rates[sc.currencyCode];
           return (
-            <div key={sc.id} className="flex items-center justify-between rounded-none border p-4">
+            <div
+              key={sc.id}
+              className="flex items-center justify-between rounded-none border p-4"
+            >
               <div className="flex flex-col">
                 <span className="font-semibold text-lg">{sc.currencyCode}</span>
                 <span className="text-muted-foreground text-xs uppercase">
@@ -140,7 +165,11 @@ export function SubCurrencyList({ initialSubCurrencies, settings, dictionary }: 
                     <div className="flex flex-col">
                       <span className="font-medium text-sm">
                         1 {settings?.mainCurrencyCode} ={" "}
-                        {rate ? parseFloat(rate).toLocaleString(undefined, { maximumFractionDigits: 4 }) : "---"}{" "}
+                        {rate
+                          ? parseFloat(rate).toLocaleString(undefined, {
+                              maximumFractionDigits: 4,
+                            })
+                          : "---"}{" "}
                         {sc.currencyCode}
                       </span>
                       <span className="text-[10px] text-muted-foreground uppercase">
@@ -166,19 +195,15 @@ export function SubCurrencyList({ initialSubCurrencies, settings, dictionary }: 
 
         {subCurrencies.length === 0 && (
           <DataTableEmptyState
-            title={dictionary.settings.sub_currencies.no_sub_currencies || "No sub-currencies"}
-            description={
-              dictionary.settings.sub_currencies.description || "Add sub-currencies to manage exchange rates."
+            title={
+              dictionary.settings.sub_currencies.no_sub_currencies ||
+              "No sub-currencies"
             }
-            action={{
-              label: dictionary.settings.sub_currencies.add_button || "Add currency",
-              onClick: () => {
-                // The trigger is a SelectCurrency component which is already in the header
-                // and clicking this button won't easily open it without more complex state management
-                // but let's just make it look good.
-              },
-            }}
-            className="rounded-none border-2 border-accent border-dashed py-12"
+            description={
+              dictionary.settings.sub_currencies.description ||
+              "Add sub-currencies to manage exchange rates."
+            }
+            className="rounded-none border-2 border-accent border-dashed"
           />
         )}
       </div>
