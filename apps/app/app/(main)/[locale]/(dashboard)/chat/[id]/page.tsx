@@ -52,6 +52,17 @@ export default async function ChatPage(props: Props) {
   const initialMessages: Message[] = response.data.map((m, i) => {
     const parts: Array<Record<string, unknown>> = [{ type: "text", text: m.content }];
     const attachment = m.attachments;
+    const fileAttachments = Array.isArray(attachment) ? attachment : [];
+    for (const file of fileAttachments) {
+      if (!file?.data || !file?.type) continue;
+      parts.push({
+        type: "file",
+        url: `data:${file.type};base64,${file.data}`,
+        mediaType: file.type,
+        filename: file.name || "attachment",
+      });
+    }
+
     const artifact = Array.isArray(attachment) ? attachment[0]?.artifact : attachment?.artifact;
 
     if (artifact) {

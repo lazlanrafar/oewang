@@ -98,7 +98,7 @@ export function ChatHistoryDropdown() {
     if (isOpen && searchInputRef.current) {
       // Small delay to ensure the dropdown is rendered
       setTimeout(() => {
-        searchInputRef.current.focus();
+        searchInputRef.current?.focus();
       }, 100);
       // Reset selected index when opening
       setSelectedIndex(-1);

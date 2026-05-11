@@ -48,10 +48,22 @@ export async function sendChatMessage(
   attachments?: { name: string; type: string; data: string }[],
 ): Promise<AiChatResponse> {
   try {
+    const messagesWithAttachments = [...messages];
+    if (attachments && attachments.length > 0) {
+      for (let i = messagesWithAttachments.length - 1; i >= 0; i--) {
+        if (messagesWithAttachments[i]?.role === "user") {
+          messagesWithAttachments[i] = {
+            ...messagesWithAttachments[i]!,
+            attachments,
+          };
+          break;
+        }
+      }
+    }
+
     const response = await api.post("/ai/chat", {
-      messages,
+      messages: messagesWithAttachments,
       sessionId,
-      attachments,
     });
     const apiResponse = (response as any)._api_response;
     const data = (apiResponse?.data ??

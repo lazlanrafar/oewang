@@ -20,7 +20,7 @@ export function ChatProviderWrapper({ children, initialMessages }: Props) {
 
   useEffect(() => {
     if (chatId) {
-      const state = store.getState() as Record<string, unknown>;
+      const state = store.getState() as any;
       if (state.setId) {
         state.setId(chatId);
       }
@@ -29,7 +29,7 @@ export function ChatProviderWrapper({ children, initialMessages }: Props) {
 
   useEffect(() => {
     // Inject our custom sendMessage into the store
-    const state = store.getState() as Record<string, unknown>;
+    const state = store.getState() as any;
     if (state._syncState) {
       state._syncState({
         sendMessage: async (
@@ -46,20 +46,27 @@ export function ChatProviderWrapper({ children, initialMessages }: Props) {
               id: Date.now().toString(),
               role: "user",
               parts: [{ type: "text", text: input }],
-            } as UIMessage;
+            } as any;
           } else if (input && typeof input === "object" && "text" in input) {
             const inputObj = input as Record<string, unknown>;
+            const files = (inputObj.files as Record<string, unknown>[] | undefined) ?? [];
+            const fileParts = files.map((file) => ({
+              type: "file",
+              url: file.url as string,
+              mediaType: file.mediaType as string,
+              filename: file.filename as string,
+            }));
             userMessage = {
               id: (inputObj.messageId as string) || Date.now().toString(),
               role: "user",
-              parts: [{ type: "text", text: input.text as string }],
+              parts: [{ type: "text", text: (input as any).text as string }, ...fileParts],
               metadata: inputObj.metadata as Record<string, unknown>,
-            } as unknown as UIMessage;
+            } as any;
 
             const metadata = inputObj.metadata as Record<string, unknown>;
             attachments = attachments || (metadata?.attachments as Record<string, unknown>[]);
           } else {
-            userMessage = input as UIMessage;
+            userMessage = input as any;
           }
 
           const updatedMessages = [...messages, userMessage];
@@ -69,28 +76,33 @@ export function ChatProviderWrapper({ children, initialMessages }: Props) {
 
           try {
             const backendMessages = updatedMessages.map((m) => {
+              const mAny = m as any;
               const textContent =
-                (m as Record<string, unknown>).parts && Array.isArray((m as Record<string, unknown>).parts)
-                  ? ((m as Record<string, unknown>).parts as Record<string, unknown>[])
-                      .filter((p: Record<string, unknown>) => p.type === "text")
-                      .map((p: Record<string, unknown>) => p.text as string)
+                mAny.parts && Array.isArray(mAny.parts)
+                  ? mAny.parts
+                      .filter((p: any) => p.type === "text")
+                      .map((p: any) => p.text as string)
                       .join("\n")
-                  : ((m as Record<string, unknown>).content as string) || "";
+                  : (mAny.content as string) || "";
 
               return {
                 role: m.role as "user" | "assistant",
                 content: textContent,
+                attachments:
+                  m.role === "user"
+                    ? (mAny.metadata?.attachments as Record<string, unknown>[] | undefined)
+                    : undefined,
               };
             });
 
-            const response = await sendChatMessage(backendMessages, chatId || undefined, attachments);
+            const response = await sendChatMessage(backendMessages, chatId || undefined, attachments as any);
 
             if (response.success && response.data) {
-              const parts: Record<string, unknown>[] = [{ type: "text", text: response.data.reply }];
+              const parts: any[] = [{ type: "text", text: response.data.reply }];
 
               // If backend returned an artifact, add it as a message part
               // This format is required by @ai-sdk-tools/artifacts/client
-              const artifact = (response.data as Record<string, unknown>).artifact as Record<string, unknown>;
+              const artifact = (response.data as any).artifact;
               if (artifact) {
                 parts.push({
                   type: `data-artifact-${artifact.type}`,
@@ -119,7 +131,7 @@ export function ChatProviderWrapper({ children, initialMessages }: Props) {
                 role: "assistant",
                 parts,
                 createdAt: new Date(),
-              } as UIMessage;
+              } as any;
 
               state.setMessages([...updatedMessages, assistantMessage]);
               state.setStatus("ready");
@@ -147,5 +159,5 @@ export function ChatProviderWrapper({ children, initialMessages }: Props) {
     }
   }, [store, chatId, setChatId]);
 
-  return <ChatProvider store={store as Record<string, unknown>}>{children}</ChatProvider>;
+  return <ChatProvider store={store as any}>{children}</ChatProvider>;
 }

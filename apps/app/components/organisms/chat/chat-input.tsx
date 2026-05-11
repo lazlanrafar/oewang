@@ -58,6 +58,7 @@ export function ChatInput({ dictionary }: { dictionary: Dictionary }) {
   const [mounted, setMounted] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const [isInteractingWithButtons, setIsInteractingWithButtons] = useState(false);
+  const [promptInputKey, setPromptInputKey] = useState(0);
 
   useEffect(() => {
     setMounted(true);
@@ -297,6 +298,7 @@ export function ChatInput({ dictionary }: { dictionary: Dictionary }) {
 
     setInput("");
     resetCommandState();
+    setPromptInputKey((prev) => prev + 1);
   };
 
   const handleStopClick = (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -360,6 +362,7 @@ export function ChatInput({ dictionary }: { dictionary: Dictionary }) {
         >
           {/* <AudioPlayer /> */}
           <PromptInput
+            key={promptInputKey}
             onSubmit={handleSubmit}
             globalDrop
             multiple

@@ -2615,3 +2615,869 @@ $ bun run --watch index.ts
     [35mpath[39m: "/v1/notifications"
     [35mstatus[39m: 200
     [35mduration[39m: 2187
+[32mINFO[39m [05:35:22]: [36m[http] GET /v1/notifications 200 - 2183ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2183
+[32mINFO[39m [05:35:55]: [36m[http] GET /v1/notifications 200 - 2712ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2712
+[32mINFO[39m [05:36:11]: [36m[http] GET /v1/ai/sessions 200 - 1046ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/sessions"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1046
+[32mINFO[39m [05:36:26]: [36m[http] GET /v1/notifications 200 - 1430ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1430
+[32mINFO[39m [05:36:59]: [36m[http] GET /v1/notifications 200 - 2393ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2393
+[32mINFO[39m [05:37:34]: [36m[http] GET /v1/notifications 200 - 4923ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 4923
+[32mINFO[39m [05:38:06]: [36m[http] GET /v1/notifications 200 - 1867ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1867
+[32mINFO[39m [05:38:38]: [36m[http] GET /v1/notifications 200 - 1962ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1962
+[32mINFO[39m [05:39:10]: [36m[http] GET /v1/notifications 200 - 1971ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1971
+[32mINFO[39m [05:39:42]: [36m[http] GET /v1/notifications 200 - 2383ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2383
+[32mINFO[39m [05:40:14]: [36m[http] GET /v1/notifications 200 - 2066ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2066
+[32mINFO[39m [05:40:46]: [36m[http] GET /v1/notifications 200 - 1974ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1974
+[32mINFO[39m [05:41:19]: [36m[http] GET /v1/notifications 200 - 2489ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2489
+[32mINFO[39m [05:41:51]: [36m[http] GET /v1/notifications 200 - 2502ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2502
+[32mINFO[39m [05:42:23]: [36m[http] GET /v1/notifications 200 - 1962ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1962
+[32mINFO[39m [05:42:55]: [36m[http] GET /v1/notifications 200 - 1981ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1981
+[32mINFO[39m [05:43:27]: [36m[http] GET /v1/notifications 200 - 1970ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1970
+[32mINFO[39m [05:43:59]: [36m[http] GET /v1/notifications 200 - 2381ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2381
+[32mINFO[39m [05:44:32]: [36m[http] GET /v1/notifications 200 - 2080ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2080
+[32mINFO[39m [05:45:04]: [36m[http] GET /v1/notifications 200 - 1962ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1962
+[32mINFO[39m [05:45:36]: [36m[http] GET /v1/notifications 200 - 1969ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1969
+[32mINFO[39m [05:46:08]: [36m[http] GET /v1/notifications 200 - 2283ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2283
+[32mINFO[39m [05:46:40]: [36m[http] GET /v1/notifications 200 - 2089ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2089
+[32mINFO[39m [05:47:12]: [36m[http] GET /v1/notifications 200 - 2272ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2272
+[32mINFO[39m [05:47:44]: [36m[http] GET /v1/notifications 200 - 2076ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2076
+[32mINFO[39m [05:48:17]: [36m[http] GET /v1/notifications 200 - 2499ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2499
+[32mINFO[39m [05:48:49]: [36m[http] GET /v1/notifications 200 - 2082ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2082
+[32mINFO[39m [05:49:21]: [36m[http] GET /v1/notifications 200 - 1982ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1982
+[32mINFO[39m [05:49:53]: [36m[http] GET /v1/notifications 200 - 1960ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1960
+[32mINFO[39m [05:50:25]: [36m[http] GET /v1/notifications 200 - 2269ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2269
+[32mINFO[39m [05:50:57]: [36m[http] GET /v1/notifications 200 - 1971ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1971
+[32mINFO[39m [05:51:29]: [36m[http] GET /v1/notifications 200 - 2073ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2073
+[32mINFO[39m [05:52:01]: [36m[http] GET /v1/notifications 200 - 1985ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1985
+[32mINFO[39m [05:52:33]: [36m[http] GET /v1/notifications 200 - 2283ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2283
+[32mINFO[39m [05:53:05]: [36m[http] GET /v1/notifications 200 - 1973ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1973
+[32mINFO[39m [05:53:37]: [36m[http] GET /v1/notifications 200 - 1882ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1882
+[32mINFO[39m [05:54:10]: [36m[http] GET /v1/notifications 200 - 2362ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2362
+[32mINFO[39m [05:54:13]: [36m[http] GET /v1/users/me 200 - 1314ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1314
+[32mINFO[39m [05:54:14]: [36m[http] GET /v1/ai/sessions/bbaeagq3cbcoo21dhhae52po/metadata 200 - 955ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/sessions/bbaeagq3cbcoo21dhhae52po/metadata"
+    [35mstatus[39m: 200
+    [35mduration[39m: 955
+[32mINFO[39m [05:54:14]: [36m[http] GET /v1/notification-settings 200 - 2098ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notification-settings"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2098
+[32mINFO[39m [05:54:14]: [36m[http] GET /v1/notifications 200 - 2103ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2103
+[32mINFO[39m [05:54:15]: [36m[http] GET /v1/ai/sessions/bbaeagq3cbcoo21dhhae52po 200 - 1594ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/sessions/bbaeagq3cbcoo21dhhae52po"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1594
+[32mINFO[39m [05:54:15]: [36m[http] GET /v1/users/me 200 - 1881ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1881
+[32mINFO[39m [05:54:15]: [36m[http] GET /v1/workspaces/active 200 - 1959ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/workspaces/active"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1959
+[32mINFO[39m [05:54:16]: [36m[http] GET /v1/ai/sessions 200 - 1001ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/sessions"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1001
+[32mINFO[39m [05:54:41]: [36m[http] GET /v1/notifications 200 - 1556ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1556
+[32mINFO[39m [05:54:46]: [36m[http] GET /v1/notifications 200 - 1335ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1335
+[32mINFO[39m [05:55:13]: [36m[http] GET /v1/notifications 200 - 1414ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1414
+[32mINFO[39m [05:55:45]: [36m[http] GET /v1/notifications 200 - 1979ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1979
+[32mINFO[39m [05:56:17]: [36m[http] GET /v1/notifications 200 - 1971ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1971
+[32mINFO[39m [05:56:17]: [36m[http] GET /v1/ai/sessions 200 - 1551ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/sessions"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1551
+[32mINFO[39m [05:56:17]: [36m[http] GET /v1/notifications 200 - 1944ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1944
+[32mINFO[39m [05:56:18]: [36m[http] GET /v1/notification-settings 200 - 2158ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notification-settings"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2158
+[32mINFO[39m [05:56:49]: [36m[http] GET /v1/notifications 200 - 1740ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1740
+[32mINFO[39m [05:56:49]: [36m[http] GET /v1/notifications 200 - 1244ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1244
+[32mINFO[39m [05:57:21]: [36m[http] GET /v1/notifications 200 - 2080ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2080
+[32mINFO[39m [05:57:21]: [36m[http] GET /v1/notifications 200 - 2085ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2085
+[32mINFO[39m [05:57:54]: [36m[http] GET /v1/notifications 200 - 2079ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2079
+[32mINFO[39m [05:58:27]: [36m[http] GET /v1/notifications 200 - 2169ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2169
+[32mINFO[39m [05:58:59]: [36m[http] GET /v1/notifications 200 - 2300ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2300
+[32mINFO[39m [05:59:31]: [36m[http] GET /v1/notifications 200 - 2069ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2069
+[32mINFO[39m [06:00:03]: [36m[api] [WS] Client disconnected from workspace: lu8xic75wdklstdni3lbnat7[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [06:00:03]: [36m[http] GET /v1/notifications 200 - 2155ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2155
+[32mINFO[39m [06:00:03]: [36m[api] [WS] Client disconnected from workspace: lu8xic75wdklstdni3lbnat7[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [06:00:04]: [36m[api] [WS] Authenticated connection from unknown (User: 639d8fd3-0eae-4231-85d9-a01c10f1f634)[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [06:00:04]: [36m[api] [WS] Client connected and subscribed to workspace: lu8xic75wdklstdni3lbnat7[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [06:00:04]: [36m[http] GET /v1/realtime 200 - 812ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 200
+    [35mduration[39m: 812
+[32mINFO[39m [06:00:05]: [36m[api] [WS] Authenticated connection from unknown (User: 639d8fd3-0eae-4231-85d9-a01c10f1f634)[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [06:00:05]: [36m[api] [WS] Client connected and subscribed to workspace: lu8xic75wdklstdni3lbnat7[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [06:00:05]: [36m[http] GET /v1/realtime 200 - 1492ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1492
+[32mINFO[39m [06:00:05]: [36m[http] GET /v1/notification-settings 200 - 1873ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notification-settings"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1873
+[32mINFO[39m [06:00:05]: [36m[api] [WS] Authenticated connection from unknown (User: 639d8fd3-0eae-4231-85d9-a01c10f1f634)[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [06:00:05]: [36m[api] [WS] Client connected and subscribed to workspace: lu8xic75wdklstdni3lbnat7[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [06:00:05]: [36m[http] GET /v1/realtime 200 - 811ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 200
+    [35mduration[39m: 811
+[32mINFO[39m [06:00:05]: [36m[http] GET /v1/notification-settings 200 - 2123ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notification-settings"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2123
+[32mINFO[39m [06:00:06]: [36m[http] GET /v1/notifications 200 - 2322ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2322
+[32mINFO[39m [06:00:10]: [36m[http] GET /v1/ai/sessions/bbaeagq3cbcoo21dhhae52po 200 - 2585ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/sessions/bbaeagq3cbcoo21dhhae52po"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2585
+[32mINFO[39m [06:00:10]: [36m[http] GET /v1/ai/sessions/bbaeagq3cbcoo21dhhae52po/metadata 200 - 2589ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/sessions/bbaeagq3cbcoo21dhhae52po/metadata"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2589
+[32mINFO[39m [06:00:11]: [36m[http] GET /v1/users/me 200 - 3337ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 3337
+[32mINFO[39m [06:00:11]: [36m[http] GET /v1/metrics/expenses 200 - 3141ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/expenses"
+    [35mstatus[39m: 200
+    [35mduration[39m: 3141
+[32mINFO[39m [06:00:12]: [36m[http] GET /v1/ai/sessions/bbaeagq3cbcoo21dhhae52po/metadata 200 - 3367ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/sessions/bbaeagq3cbcoo21dhhae52po/metadata"
+    [35mstatus[39m: 200
+    [35mduration[39m: 3367
+[32mINFO[39m [06:00:12]: [36m[http] GET /v1/metrics/revenue 200 - 3541ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/revenue"
+    [35mstatus[39m: 200
+    [35mduration[39m: 3541
+[32mINFO[39m [06:00:12]: [36m[http] GET /v1/metrics/category-breakdown 200 - 3374ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/category-breakdown"
+    [35mstatus[39m: 200
+    [35mduration[39m: 3374
+[32mINFO[39m [06:00:12]: [36m[http] GET /v1/settings/transaction 200 - 3480ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/transaction"
+    [35mstatus[39m: 200
+    [35mduration[39m: 3480
+[32mINFO[39m [06:00:12]: [36m[http] GET /v1/metrics/category-breakdown 200 - 3481ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/category-breakdown"
+    [35mstatus[39m: 200
+    [35mduration[39m: 3481
+[32mINFO[39m [06:00:12]: [36m[http] GET /v1/metrics/burn-rate 200 - 3776ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/burn-rate"
+    [35mstatus[39m: 200
+    [35mduration[39m: 3776
+[32mINFO[39m [06:00:12]: [36m[http] GET /v1/metrics/expenses 200 - 3777ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/expenses"
+    [35mstatus[39m: 200
+    [35mduration[39m: 3777
+[32mINFO[39m [06:00:12]: [36m[http] GET /v1/metrics/revenue 200 - 3778ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/revenue"
+    [35mstatus[39m: 200
+    [35mduration[39m: 3778
+[32mINFO[39m [06:00:12]: [36m[http] GET /v1/ai/sessions/bbaeagq3cbcoo21dhhae52po 200 - 3882ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/sessions/bbaeagq3cbcoo21dhhae52po"
+    [35mstatus[39m: 200
+    [35mduration[39m: 3882
+[32mINFO[39m [06:00:12]: [36m[http] GET /v1/metrics/category-breakdown 200 - 4059ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/category-breakdown"
+    [35mstatus[39m: 200
+    [35mduration[39m: 4059
+[32mINFO[39m [06:00:12]: [36m[http] GET /v1/metrics/category-breakdown 200 - 4063ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/category-breakdown"
+    [35mstatus[39m: 200
+    [35mduration[39m: 4063
+[32mINFO[39m [06:00:12]: [36m[http] GET /v1/settings/transaction 200 - 4167ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/transaction"
+    [35mstatus[39m: 200
+    [35mduration[39m: 4167
+[32mINFO[39m [06:00:12]: [36m[http] GET /v1/metrics/burn-rate 200 - 4169ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/burn-rate"
+    [35mstatus[39m: 200
+    [35mduration[39m: 4169
+[32mINFO[39m [06:00:12]: [36m[http] GET /v1/users/me 200 - 4273ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 4273
+[32mINFO[39m [06:00:13]: [36m[http] GET /v1/metrics/category-breakdown 200 - 4026ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/category-breakdown"
+    [35mstatus[39m: 200
+    [35mduration[39m: 4026
+[32mINFO[39m [06:00:13]: [36m[http] GET /v1/settings/transaction 200 - 4128ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/transaction"
+    [35mstatus[39m: 200
+    [35mduration[39m: 4128
+[32mINFO[39m [06:00:13]: [36m[http] GET /v1/metrics/expenses 200 - 4128ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/expenses"
+    [35mstatus[39m: 200
+    [35mduration[39m: 4128
+[32mINFO[39m [06:00:13]: [36m[http] GET /v1/ai/sessions/bbaeagq3cbcoo21dhhae52po/metadata 200 - 4449ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/sessions/bbaeagq3cbcoo21dhhae52po/metadata"
+    [35mstatus[39m: 200
+    [35mduration[39m: 4449
+[32mINFO[39m [06:00:13]: [36m[http] GET /v1/metrics/revenue 200 - 4452ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/revenue"
+    [35mstatus[39m: 200
+    [35mduration[39m: 4452
+[32mINFO[39m [06:00:13]: [36m[http] GET /v1/metrics/burn-rate 200 - 4453ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/burn-rate"
+    [35mstatus[39m: 200
+    [35mduration[39m: 4453
+[32mINFO[39m [06:00:13]: [36m[http] GET /v1/metrics/category-breakdown 200 - 4563ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/category-breakdown"
+    [35mstatus[39m: 200
+    [35mduration[39m: 4563
+[32mINFO[39m [06:00:13]: [36m[http] GET /v1/users/me 200 - 4941ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 4941
+[32mINFO[39m [06:00:13]: [36m[http] GET /v1/ai/sessions/bbaeagq3cbcoo21dhhae52po 200 - 4313ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/sessions/bbaeagq3cbcoo21dhhae52po"
+    [35mstatus[39m: 200
+    [35mduration[39m: 4313
+[32mINFO[39m [06:00:13]: [36m[http] GET /v1/ai/sessions 200 - 4225ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/sessions"
+    [35mstatus[39m: 200
+    [35mduration[39m: 4225
+[32mINFO[39m [06:00:13]: [36m[http] GET /v1/metrics/revenue 200 - 4222ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/revenue"
+    [35mstatus[39m: 200
+    [35mduration[39m: 4222
+[32mINFO[39m [06:00:13]: [36m[http] GET /v1/users/me 200 - 5222ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 5222
+[32mINFO[39m [06:00:13]: [36m[http] GET /v1/users/me 200 - 5052ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 5052
+[32mINFO[39m [06:00:13]: [36m[http] GET /v1/users/me 200 - 5056ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 5056
+[32mINFO[39m [06:00:13]: [36m[http] GET /v1/metrics/burn-rate 200 - 4250ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/burn-rate"
+    [35mstatus[39m: 200
+    [35mduration[39m: 4250
+[32mINFO[39m [06:00:13]: [36m[http] GET /v1/ai/sessions/bbaeagq3cbcoo21dhhae52po/metadata 200 - 4257ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/sessions/bbaeagq3cbcoo21dhhae52po/metadata"
+    [35mstatus[39m: 200
+    [35mduration[39m: 4257
+[32mINFO[39m [06:00:13]: [36m[http] GET /v1/ai/sessions/bbaeagq3cbcoo21dhhae52po 200 - 4252ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/sessions/bbaeagq3cbcoo21dhhae52po"
+    [35mstatus[39m: 200
+    [35mduration[39m: 4252
+[32mINFO[39m [06:00:14]: [36m[http] GET /v1/metrics/expenses 200 - 4353ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/expenses"
+    [35mstatus[39m: 200
+    [35mduration[39m: 4353
+[32mINFO[39m [06:00:14]: [36m[http] GET /v1/settings/transaction 200 - 4358ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/transaction"
+    [35mstatus[39m: 200
+    [35mduration[39m: 4358
+[32mINFO[39m [06:00:14]: [36m[http] GET /v1/metrics/revenue 200 - 4359ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/revenue"
+    [35mstatus[39m: 200
+    [35mduration[39m: 4359
+[32mINFO[39m [06:00:14]: [36m[http] GET /v1/metrics/category-breakdown 200 - 4360ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/category-breakdown"
+    [35mstatus[39m: 200
+    [35mduration[39m: 4360
+[32mINFO[39m [06:00:14]: [36m[http] GET /v1/users/me 200 - 5077ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 5077
+[32mINFO[39m [06:00:14]: [36m[http] GET /v1/metrics/category-breakdown 200 - 4470ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/category-breakdown"
+    [35mstatus[39m: 200
+    [35mduration[39m: 4470
+[32mINFO[39m [06:00:14]: [36m[http] GET /v1/users/me 200 - 5384ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 5384
+[32mINFO[39m [06:00:14]: [36m[http] GET /v1/users/me 200 - 4875ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 4875
+[32mINFO[39m [06:00:14]: [36m[http] GET /v1/users/me 200 - 4881ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 4881
+[32mINFO[39m [06:00:14]: [36m[http] GET /v1/users/me 200 - 4876ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 4876
+[32mINFO[39m [06:00:14]: [36m[http] GET /v1/users/me 200 - 5484ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 5484
+[32mINFO[39m [06:00:15]: [36m[http] GET /v1/metrics/revenue 200 - 2713ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/revenue"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2713
+[32mINFO[39m [06:00:15]: [36m[http] GET /v1/metrics/burn-rate 200 - 2720ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/burn-rate"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2720
+[32mINFO[39m [06:00:15]: [36m[http] GET /v1/metrics/expenses 200 - 2720ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/expenses"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2720
+[32mINFO[39m [06:00:15]: [36m[http] GET /v1/metrics/category-breakdown 200 - 2823ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/category-breakdown"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2823
+[32mINFO[39m [06:00:15]: [36m[http] GET /v1/settings/transaction 200 - 2933ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/transaction"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2933
+[32mINFO[39m [06:00:15]: [36m[http] GET /v1/ai/sessions/bbaeagq3cbcoo21dhhae52po/metadata 200 - 2884ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/sessions/bbaeagq3cbcoo21dhhae52po/metadata"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2884
+[32mINFO[39m [06:00:15]: [36m[http] GET /v1/metrics/category-breakdown 200 - 2936ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/category-breakdown"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2936
+[32mINFO[39m [06:00:15]: [36m[http] GET /v1/users/me 200 - 2938ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2938
+[32mINFO[39m [06:00:15]: [36m[http] GET /v1/ai/sessions/bbaeagq3cbcoo21dhhae52po 200 - 2874ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/sessions/bbaeagq3cbcoo21dhhae52po"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2874
+[32mINFO[39m [06:00:15]: [36m[http] GET /v1/users/me 200 - 3047ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 3047
+[32mINFO[39m [06:00:15]: [36m[http] GET /v1/users/me 200 - 3176ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 3176
+[32mINFO[39m [06:00:15]: [36m[http] GET /v1/metrics/expenses 200 - 1378ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/expenses"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1378
+[32mINFO[39m [06:00:15]: [36m[http] GET /v1/ai/sessions/bbaeagq3cbcoo21dhhae52po/metadata 200 - 1189ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/sessions/bbaeagq3cbcoo21dhhae52po/metadata"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1189
+[32mINFO[39m [06:00:15]: [36m[api] [WS] Client disconnected from workspace: lu8xic75wdklstdni3lbnat7[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [06:00:15]: [36m[api] [WS] Client disconnected from workspace: lu8xic75wdklstdni3lbnat7[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [06:00:15]: [36m[http] GET /v1/ai/quota 200 - 1499ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/quota"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1499
+[32mINFO[39m [06:00:16]: [36m[api] [WS] Client disconnected from workspace: lu8xic75wdklstdni3lbnat7[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [06:00:16]: [36m[http] GET /v1/ai/sessions/bbaeagq3cbcoo21dhhae52po/metadata 200 - 1034ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/sessions/bbaeagq3cbcoo21dhhae52po/metadata"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1034
+[32mINFO[39m [06:00:20]: [36m[api] [WS] Authenticated connection from unknown (User: 639d8fd3-0eae-4231-85d9-a01c10f1f634)[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [06:00:20]: [36m[api] [WS] Client connected and subscribed to workspace: lu8xic75wdklstdni3lbnat7[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [06:00:20]: [36m[http] GET /v1/realtime 200 - 1261ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1261
+[32mINFO[39m [06:00:21]: [36m[http] GET /v1/metrics/revenue 200 - 1149ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/revenue"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1149
+[32mINFO[39m [06:00:22]: [36m[api] [WS] Authenticated connection from unknown (User: 639d8fd3-0eae-4231-85d9-a01c10f1f634)[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [06:00:22]: [36m[api] [WS] Client connected and subscribed to workspace: lu8xic75wdklstdni3lbnat7[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [06:00:22]: [36m[http] GET /v1/realtime 200 - 787ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 200
+    [35mduration[39m: 787
+🔍 getEnv: Searching for .env at: /Users/boneconsulting/Developer/oewang/apps/api/.env
+✅ getEnv: Loaded env from /Users/boneconsulting/Developer/oewang/apps/api/.env
+🚀 Using Upstash Redis (REST)
+[33mWARN[39m [06:00:25]: [36m[sentry] SENTRY_DSN not set — Sentry disabled[39m
+    [35mcontext[39m: "sentry"
+[32mINFO[39m [06:00:25]: [36m[api] 🚀 oewang API running at http://localhost:3002[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [06:00:25]: [36m[api] 📖 Swagger docs at http://localhost:3002/swagger[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [06:00:25]: [36m[api] 🔗 API v1 at http://localhost:3002/v1[39m
+    [35mcontext[39m: "api"
+🔍 getEnv: Searching for .env at: /Users/boneconsulting/Developer/oewang/apps/api/.env
+✅ getEnv: Loaded env from /Users/boneconsulting/Developer/oewang/apps/api/.env
+🚀 Using Upstash Redis (REST)
+[33mWARN[39m [06:00:30]: [36m[sentry] SENTRY_DSN not set — Sentry disabled[39m
+    [35mcontext[39m: "sentry"
+[32mINFO[39m [06:00:30]: [36m[api] 🚀 oewang API running at http://localhost:3002[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [06:00:30]: [36m[api] 📖 Swagger docs at http://localhost:3002/swagger[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [06:00:30]: [36m[api] 🔗 API v1 at http://localhost:3002/v1[39m
+    [35mcontext[39m: "api"
+🔍 getEnv: Searching for .env at: /Users/boneconsulting/Developer/oewang/apps/api/.env
+✅ getEnv: Loaded env from /Users/boneconsulting/Developer/oewang/apps/api/.env
+🚀 Using Upstash Redis (REST)
+[33mWARN[39m [06:07:12]: [36m[sentry] SENTRY_DSN not set — Sentry disabled[39m
+    [35mcontext[39m: "sentry"
+[32mINFO[39m [06:07:12]: [36m[api] 🚀 oewang API running at http://localhost:3002[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [06:07:12]: [36m[api] 📖 Swagger docs at http://localhost:3002/swagger[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [06:07:12]: [36m[api] 🔗 API v1 at http://localhost:3002/v1[39m
+    [35mcontext[39m: "api"
+🔍 getEnv: Searching for .env at: /Users/boneconsulting/Developer/oewang/apps/api/.env
+✅ getEnv: Loaded env from /Users/boneconsulting/Developer/oewang/apps/api/.env
+🚀 Using Upstash Redis (REST)
+[33mWARN[39m [06:07:22]: [36m[sentry] SENTRY_DSN not set — Sentry disabled[39m
+    [35mcontext[39m: "sentry"
+[32mINFO[39m [06:07:22]: [36m[api] 🚀 oewang API running at http://localhost:3002[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [06:07:22]: [36m[api] 📖 Swagger docs at http://localhost:3002/swagger[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [06:07:22]: [36m[api] 🔗 API v1 at http://localhost:3002/v1[39m
+    [35mcontext[39m: "api"
