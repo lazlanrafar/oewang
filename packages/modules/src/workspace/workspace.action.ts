@@ -63,7 +63,7 @@ export const getWorkspaceMembers = async (): Promise<ActionResponse<any>> => {
 
 export const inviteMember = async (
   email: string,
-  role: "admin" | "member",
+  role: "admin" | "editor" | "viewer",
 ): Promise<ActionResponse<any>> => {
   try {
     const response = await axiosInstance.post("workspaces/invitations", {

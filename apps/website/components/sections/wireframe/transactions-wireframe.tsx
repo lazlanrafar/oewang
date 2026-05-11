@@ -1,33 +1,33 @@
 export function TransactionsWireframe() {
   const transactions = [
     {
-      name: "Xendit Payment",
-      amount: "+$2,450.00",
+      name: "Monthly Salary",
+      amount: "+$3,200.00",
       type: "Income",
       color: "bg-green-500",
     },
     {
-      name: "AWS",
-      amount: "-$299.00",
-      type: "Infrastructure",
+      name: "Apartment Rent",
+      amount: "-$980.00",
+      type: "Housing",
       color: "bg-muted-foreground/20",
     },
     {
-      name: "Figma",
-      amount: "-$24.00",
-      type: "Software",
+      name: "Groceries",
+      amount: "-$84.00",
+      type: "Food",
       color: "bg-muted-foreground/20",
     },
     {
-      name: "Client Invoice",
-      amount: "+$8,500.00",
+      name: "Freelance Project",
+      amount: "+$620.00",
       type: "Income",
       color: "bg-green-500",
     },
     {
-      name: "Adobe",
-      amount: "-$649.00",
-      type: "Software",
+      name: "Gym Membership",
+      amount: "-$39.00",
+      type: "Health",
       color: "bg-muted-foreground/20",
     },
   ];

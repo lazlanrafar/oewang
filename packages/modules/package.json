@@ -25,7 +25,8 @@
     "./mayar/mayar.action": "./src/mayar/mayar.action.ts",
     "./invoice/invoice.action": "./src/invoice/invoice.action.ts",
     "./orders/orders.action": "./src/orders/orders.action.ts",
-    "./debt/debt.action": "./src/debt/debt.action.ts"
+    "./debt/debt.action": "./src/debt/debt.action.ts",
+    "./budget/budget.action": "./src/budget/budget.action.ts"
   },
   "scripts": {
     "lint": "biome lint",

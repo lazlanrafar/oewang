@@ -24,6 +24,98 @@ function devLog(toolName: string, phase: "IN" | "OUT", data: unknown) {
 // Helper to check if string is a UUID
 const isUuid = (id: string) => /^[a-f0-9-]{36}$/i.test(id);
 
+function parseInputDate(value: unknown): Date | null {
+  if (typeof value !== "string" || !value.trim()) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function toDateOnly(date: Date): string {
+  return date.toISOString().split("T")[0]!;
+}
+
+function startOfMonth(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+function endOfMonth(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth() + 1, 0);
+}
+
+function resolveDateRange(
+  input: any,
+  defaultPeriod: "this-month" | "last-6-months" | "1-year" = "this-month",
+): { startDate: string; endDate: string; label: string } {
+  const now = new Date();
+  const parsedFrom = parseInputDate(input?.from);
+  const parsedTo = parseInputDate(input?.to);
+
+  if (parsedFrom || parsedTo) {
+    const from = parsedFrom ?? parsedTo ?? now;
+    const to = parsedTo ?? now;
+    const start = from <= to ? from : to;
+    const end = from <= to ? to : from;
+    return {
+      startDate: toDateOnly(start),
+      endDate: toDateOnly(end),
+      label: "custom-range",
+    };
+  }
+
+  const period = String(input?.period || defaultPeriod).toLowerCase();
+  switch (period) {
+    case "this-month":
+      return {
+        startDate: toDateOnly(startOfMonth(now)),
+        endDate: toDateOnly(now),
+        label: "this-month",
+      };
+    case "last-month": {
+      const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      return {
+        startDate: toDateOnly(startOfMonth(lastMonthDate)),
+        endDate: toDateOnly(endOfMonth(lastMonthDate)),
+        label: "last-month",
+      };
+    }
+    case "last-3-months":
+    case "3-months":
+      return {
+        startDate: toDateOnly(new Date(now.getFullYear(), now.getMonth() - 2, 1)),
+        endDate: toDateOnly(now),
+        label: "last-3-months",
+      };
+    case "6-months":
+    case "last-6-months":
+      return {
+        startDate: toDateOnly(new Date(now.getFullYear(), now.getMonth() - 5, 1)),
+        endDate: toDateOnly(now),
+        label: "last-6-months",
+      };
+    case "this-year":
+    case "year-to-date":
+      return {
+        startDate: toDateOnly(new Date(now.getFullYear(), 0, 1)),
+        endDate: toDateOnly(now),
+        label: "this-year",
+      };
+    case "last-year":
+      return {
+        startDate: toDateOnly(new Date(now.getFullYear() - 1, 0, 1)),
+        endDate: toDateOnly(new Date(now.getFullYear() - 1, 11, 31)),
+        label: "last-year",
+      };
+    case "last-12-months":
+    case "1-year":
+    default:
+      return {
+        startDate: toDateOnly(new Date(now.getFullYear(), now.getMonth() - 11, 1)),
+        endDate: toDateOnly(now),
+        label: "last-12-months",
+      };
+  }
+}
+
 /** Get workspace currency from settings, with USD fallback */
 async function getWorkspaceCurrency(workspaceId: string): Promise<string> {
   try {
@@ -35,15 +127,9 @@ async function getWorkspaceCurrency(workspaceId: string): Promise<string> {
 }
 
 /** Build spending analysis payload from real transaction data */
-async function buildSpendingPayload(workspaceId: string, input: any) {  
+async function buildSpendingPayload(workspaceId: string, input: any) {
   const currency = await getWorkspaceCurrency(workspaceId);
-  
-  // Get current month date range
-  const now = new Date();
-  const startDate = new Date(now.getFullYear(), now.getMonth() - (input.months || 1) + 1, 1)
-    .toISOString()
-    .split("T")[0]!;
-  const endDate = now.toISOString().split("T")[0]!;
+  const { startDate, endDate, label } = resolveDateRange(input, "this-month");
 
   // Fetch expense transactions sorted by amount desc
   const { data: txList } = await TransactionsRepository.list(workspaceId, {
@@ -97,10 +183,14 @@ async function buildSpendingPayload(workspaceId: string, input: any) {
 
   return {
     stage: "analysis_ready",
+    period: label,
+    from: startDate,
+    to: endDate,
     currency,
     transactions,
     metrics: {
       totalSpending,
+      currentPeriodSpending: totalSpending,
       currentMonthSpending: totalSpending,
       topCategory: topCategory
         ? { name: topCategory.name, amount: topCategory.amount }
@@ -113,13 +203,8 @@ async function buildSpendingPayload(workspaceId: string, input: any) {
 /** Build revenue analysis payload from real transaction data */
 async function buildRevenuePayload(workspaceId: string, input: any) {
   const currency = await getWorkspaceCurrency(workspaceId);
-
-  // Fetch last 12 months of income transactions
   const now = new Date();
-  const startDate = new Date(now.getFullYear() - 1, now.getMonth(), 1)
-    .toISOString()
-    .split("T")[0]!;
-  const endDate = now.toISOString().split("T")[0]!;
+  const { startDate, endDate, label } = resolveDateRange(input, "1-year");
 
   const { data: txList } = await TransactionsRepository.list(workspaceId, {
     page: 1,
@@ -151,6 +236,9 @@ async function buildRevenuePayload(workspaceId: string, input: any) {
 
   return {
     stage: "analysis_ready",
+    period: label,
+    from: startDate,
+    to: endDate,
     currency,
     metrics: {
       totalRevenue,
@@ -165,18 +253,22 @@ async function buildRevenuePayload(workspaceId: string, input: any) {
 /** Build burn rate payload from real expense data */
 async function buildBurnRatePayload(workspaceId: string, input: any) {
   const currency = await getWorkspaceCurrency(workspaceId);
-
-  // Last 6 months
   const now = new Date();
+  const { startDate, endDate, label } = resolveDateRange(input, "last-6-months");
+  const start = new Date(startDate);
+  const end = new Date(endDate);
   const months: { label: string; start: string; end: string }[] = [];
-  for (let i = 5; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+  let current = new Date(start.getFullYear(), start.getMonth(), 1);
+  const endMonth = new Date(end.getFullYear(), end.getMonth(), 1);
+  while (current <= endMonth) {
+    const d = new Date(current.getFullYear(), current.getMonth(), 1);
     const endD = new Date(d.getFullYear(), d.getMonth() + 1, 0);
     months.push({
       label: d.toLocaleDateString("en-US", { month: "short" }),
       start: d.toISOString().split("T")[0]!,
       end: endD.toISOString().split("T")[0]!,
     });
+    current = new Date(current.getFullYear(), current.getMonth() + 1, 1);
   }
 
   const chart: { label: string; value: number }[] = [];
@@ -203,6 +295,9 @@ async function buildBurnRatePayload(workspaceId: string, input: any) {
 
   return {
     stage: "analysis_ready",
+    period: label,
+    from: startDate,
+    to: endDate,
     currency,
     chart,
     metrics: {

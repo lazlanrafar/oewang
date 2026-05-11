@@ -45,7 +45,7 @@ export const walletSchema = t.Object({
 
 export const createWalletBody = t.Object({
   name: t.String({ minLength: 1 }),
-  groupId: t.Optional(t.String()),
+  groupId: t.Optional(t.Union([t.String(), t.Null()])),
   balance: t.Optional(t.String()), // Input as string "100.00"
   isIncludedInTotals: t.Optional(t.Boolean()),
 });

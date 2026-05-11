@@ -1,16 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter, useParams } from "next/navigation";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@workspace/ui";
-import { toast } from "sonner";
+
+import { useParams, useRouter } from "next/navigation";
+
+import { COUNTRIES } from "@workspace/constants";
 import { onboardingCreateWorkspaceAction } from "@workspace/modules/auth/auth.action";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@workspace/ui";
+import { toast } from "sonner";
+
 import { BusinessDetailsForm } from "../auth/business-details-form";
 
 interface CreateWorkspaceDialogProps {
@@ -18,10 +16,7 @@ interface CreateWorkspaceDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export function CreateWorkspaceDialog({
-  open,
-  onOpenChange,
-}: CreateWorkspaceDialogProps) {
+export function CreateWorkspaceDialog({ open, onOpenChange }: CreateWorkspaceDialogProps) {
   const router = useRouter();
   const params = useParams();
   const locale = params.locale as string;
@@ -36,8 +31,7 @@ export function CreateWorkspaceDialog({
     setCountry(countryName);
     // Auto-update currency based on country if possible
     // Note: In a real app we'd share this logic more formally
-    const countries = require("@workspace/constants").COUNTRIES as any[];
-    const countryData = countries.find((c) => c.name === countryName);
+    const countryData = COUNTRIES.find((c) => c.name === countryName);
     if (countryData?.currency) {
       setCurrency({
         code: countryData.currency.code,
@@ -76,9 +70,7 @@ export function CreateWorkspaceDialog({
       <DialogContent className="sm:max-w-[450px]">
         <DialogHeader>
           <DialogTitle>Create new workspace</DialogTitle>
-          <DialogDescription>
-            Add a new business or project to your account.
-          </DialogDescription>
+          <DialogDescription>Add a new business or project to your account.</DialogDescription>
         </DialogHeader>
 
         <div className="py-4">
@@ -95,9 +87,7 @@ export function CreateWorkspaceDialog({
           />
         </div>
 
-        {error && (
-          <p className="text-sm text-destructive mt-2">{error}</p>
-        )}
+        {error && <p className="mt-2 text-destructive text-sm">{error}</p>}
       </DialogContent>
     </Dialog>
   );

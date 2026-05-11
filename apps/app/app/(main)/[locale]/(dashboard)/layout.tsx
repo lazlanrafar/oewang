@@ -1,24 +1,26 @@
 import type { ReactNode } from "react";
 
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+
+import { getMe } from "@workspace/modules/server";
 import {
   cn,
   Separator,
+  SIDEBAR_COLLAPSIBLE_VALUES,
+  SIDEBAR_VARIANT_VALUES,
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
 } from "@workspace/ui";
 
-import { getMe } from "@workspace/modules/server";
 import { AccountSwitcher } from "@/components/organisms/layout/account-switcher";
 import { AppSidebar } from "@/components/organisms/layout/app-sidebar";
-import {
-  SIDEBAR_COLLAPSIBLE_VALUES,
-  SIDEBAR_VARIANT_VALUES,
-} from "@workspace/ui";
-import { getPreference } from "@/server/server-actions";
-import { SearchDialog } from "@/components/organisms/search/search-dialog";
 import { NotificationBell } from "@/components/organisms/layout/notification-bell";
+import { SearchDialog } from "@/components/organisms/search/search-dialog";
+import { getDictionary } from "@/get-dictionary";
+import type { Locale } from "@/i18n-config";
+import { getPreference } from "@/server/server-actions";
 
 async function getUserAndWorkspaces() {
   const result = await getMe();
@@ -30,17 +32,30 @@ async function getUserAndWorkspaces() {
 
 export default async function Layout({
   children,
-}: Readonly<{ children: ReactNode }>) {
+  params,
+}: Readonly<{
+  children: ReactNode;
+  params: Promise<{ locale: Locale }>;
+}>) {
   const cookie_store = await cookies();
   const default_open = cookie_store.get("sidebar_state")?.value !== "false";
-  const [variant, collapsible, me_data] = await Promise.all([
+  const { locale } = await params;
+
+  const [variant, collapsible, me_data, dictionary] = await Promise.all([
     getPreference("sidebar_variant", SIDEBAR_VARIANT_VALUES, "inset"),
     getPreference("sidebar_collapsible", SIDEBAR_COLLAPSIBLE_VALUES, "icon"),
     getUserAndWorkspaces(),
+    getDictionary(locale),
   ]);
 
-  const current_user = me_data?.user ?? null;
-  const user_workspaces = me_data?.workspaces ?? [];
+  if (!me_data) {
+    // If app JWT is missing/expired but Supabase session still exists,
+    // routing to sync prevents login/overview redirect loops.
+    redirect(`/${locale}/sync`);
+  }
+
+  const current_user = me_data.user;
+  const user_workspaces = me_data.workspaces;
 
   return (
     <SidebarProvider defaultOpen={default_open}>
@@ -49,10 +64,11 @@ export default async function Layout({
         collapsible={collapsible}
         currentUser={current_user}
         workspaces={user_workspaces}
+        dictionary={dictionary}
       />
       <SidebarInset
         className={cn(
-          "min-w-0 h-svh overflow-hidden",
+          "h-svh min-w-0 overflow-hidden",
           "[html[data-content-layout=centered]_&]:mx-auto! [html[data-content-layout=centered]_&]:max-w-screen-2xl!",
           "max-[113rem]:peer-data-[variant=inset]:mr-2! min-[101rem]:peer-data-[variant=inset]:peer-data-[state=collapsed]:mr-auto!",
         )}
@@ -63,18 +79,15 @@ export default async function Layout({
             "sticky top-0 z-50 overflow-hidden rounded-t-[inherit] bg-background/50 backdrop-blur-md",
           )}
         >
-          <div className="flex w-full items-center justify-between px-4 lg:px-6 gap-3">
-            <div className="flex items-center gap-1 lg:gap-2 flex-1">
+          <div className="flex w-full items-center justify-between gap-3 px-4 lg:px-6">
+            <div className="flex flex-1 items-center gap-1 lg:gap-2">
               <SidebarTrigger className="-ml-1" />
-              <Separator
-                orientation="vertical"
-                className="mx-2 data-[orientation=vertical]:h-4"
-              />
-              <SearchDialog />
+              <Separator orientation="vertical" className="mx-2 data-[orientation=vertical]:h-4" />
+              <SearchDialog dictionary={dictionary} />
             </div>
             {current_user && (
               <>
-                <NotificationBell />
+                <NotificationBell dictionary={dictionary} />
                 <AccountSwitcher
                   user={{
                     id: current_user.id,
@@ -82,14 +95,13 @@ export default async function Layout({
                     email: current_user.email,
                     avatar: current_user.profile_picture || "",
                   }}
+                  dictionary={dictionary}
                 />
               </>
             )}
           </div>
         </header>
-        <div className="flex flex-col flex-1 min-h-0 p-4 md:p-6 relative overflow-y-auto">
-          {children}
-        </div>
+        <div className="relative flex min-h-0 flex-1 flex-col overflow-y-auto p-4 md:p-6">{children}</div>
       </SidebarInset>
     </SidebarProvider>
   );

@@ -9,22 +9,17 @@ interface DownloadInvoiceOptions {
   onFinish?: () => void;
 }
 
-export async function downloadInvoiceAsPdf({
-  element,
-  filename,
-  onStart,
-  onFinish,
-}: DownloadInvoiceOptions) {
+export async function downloadInvoiceAsPdf({ element, filename, onStart, onFinish }: DownloadInvoiceOptions) {
   if (!element) return;
 
   onStart?.();
 
   // Temporarily adjust styles for cleaner print
-  const originalBoxShadow = element.style.boxShadow;
-  const originalBorder = element.style.border;
-  
+  const _originalBoxShadow = element.style.boxShadow;
+  const _originalBorder = element.style.border;
+
   // Try to find the inner card if it exists, otherwise use the element itself
-  const targetElement = element.querySelector('.invoice-card') as HTMLElement || element;
+  const targetElement = (element.querySelector(".invoice-card") as HTMLElement) || element;
   const targetOriginalBoxShadow = targetElement.style.boxShadow;
   const targetOriginalBorder = targetElement.style.border;
 
@@ -35,7 +30,7 @@ export async function downloadInvoiceAsPdf({
       document.documentElement.classList.remove("dark");
       document.documentElement.classList.add("light");
       // Wait for React/Tailwind to apply light variables
-      await new Promise(r => setTimeout(r, 100));
+      await new Promise((r) => setTimeout(r, 100));
     }
 
     targetElement.style.boxShadow = "none";
@@ -48,7 +43,7 @@ export async function downloadInvoiceAsPdf({
       quality: 1,
       pixelRatio: 2,
       style: {
-        background: "white", 
+        background: "white",
       },
     });
 
@@ -58,16 +53,7 @@ export async function downloadInvoiceAsPdf({
       format: [element.offsetWidth, element.offsetHeight],
     });
 
-    pdf.addImage(
-      dataUrl,
-      "PNG",
-      0,
-      0,
-      element.offsetWidth,
-      element.offsetHeight,
-      undefined,
-      "FAST"
-    );
+    pdf.addImage(dataUrl, "PNG", 0, 0, element.offsetWidth, element.offsetHeight, undefined, "FAST");
     pdf.save(`${filename}.pdf`);
     toast.success("Invoice downloaded as PDF");
   } catch (error) {

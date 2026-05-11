@@ -12,10 +12,7 @@ interface CanvasErrorBoundaryState {
   hasError: boolean;
 }
 
-export class CanvasErrorBoundary extends Component<
-  CanvasErrorBoundaryProps,
-  CanvasErrorBoundaryState
-> {
+export class CanvasErrorBoundary extends Component<CanvasErrorBoundaryProps, CanvasErrorBoundaryState> {
   constructor(props: CanvasErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false };
@@ -50,11 +47,7 @@ export class CanvasErrorBoundary extends Component<
       }
 
       // Default minimal error fallback
-      return (
-        <div className="text-xs text-[#707070] dark:text-[#666666] p-2">
-          Error loading content
-        </div>
-      );
+      return <div className="p-2 text-[#707070] text-xs dark:text-[#666666]">Error loading content</div>;
     }
 
     return this.props.children;

@@ -4,18 +4,12 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { Dictionary } from "@workspace/dictionaries";
 
 import { AppProvider } from "./app-provider";
 import { ConfirmModalProvider } from "./confirm-modal-provider";
-import type { Dictionary } from "@workspace/dictionaries";
 
-export function Providers({ 
-  children,
-  dictionary
-}: { 
-  children: ReactNode,
-  dictionary: Dictionary
-}) {
+export function Providers({ children, dictionary }: { children: ReactNode; dictionary: Dictionary }) {
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -30,9 +24,7 @@ export function Providers({
   return (
     <QueryClientProvider client={queryClient}>
       <AppProvider dictionary={dictionary}>
-        <ConfirmModalProvider>
-          {children}
-        </ConfirmModalProvider>
+        <ConfirmModalProvider>{children}</ConfirmModalProvider>
       </AppProvider>
     </QueryClientProvider>
   );

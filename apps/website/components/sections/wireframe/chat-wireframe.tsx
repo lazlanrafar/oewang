@@ -1,11 +1,11 @@
 export function ChatWireframe() {
   const messages = [
-    { role: "user", text: "What were my top expenses this month?" },
+    { role: "user", text: "Where did I overspend this month?" },
     {
       role: "assistant",
-      text: "Your top expenses this month were: Marketing ($2,500), Software ($1,200), and Infrastructure ($850).",
+      text: "You overspent in Food (+$96), Transport (+$44), and Entertainment (+$38).",
     },
-    { role: "user", text: "Show me the breakdown by category" },
+    { role: "user", text: "Show me what to adjust next week" },
   ];
 
   return (

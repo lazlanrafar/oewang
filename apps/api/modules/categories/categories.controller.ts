@@ -6,6 +6,7 @@ import { CategoriesService } from "./categories.service";
 import { CategoryModel } from "./categories.model";
 import { buildError } from "@workspace/utils";
 import { status } from "elysia";
+import { assertCanEditWorkspaceData } from "../workspaces/workspace-permissions";
 
 export const categoriesController = new Elysia({
   prefix: "/categories",
@@ -39,6 +40,7 @@ export const categoriesController = new Elysia({
       if (!auth?.workspace_id) {
         throw status(401, buildError(ErrorCode.UNAUTHORIZED, "Unauthorized"));
       }
+      assertCanEditWorkspaceData(auth.workspace_role);
       return CategoriesService.createCategory(
         auth.workspace_id,
         auth.user_id,
@@ -60,6 +62,7 @@ export const categoriesController = new Elysia({
       if (!auth?.workspace_id) {
         throw status(401, buildError(ErrorCode.UNAUTHORIZED, "Unauthorized"));
       }
+      assertCanEditWorkspaceData(auth.workspace_role);
       return CategoriesService.updateCategory(
         auth.workspace_id,
         auth.user_id,
@@ -85,6 +88,7 @@ export const categoriesController = new Elysia({
       if (!auth?.workspace_id) {
         throw status(401, buildError(ErrorCode.UNAUTHORIZED, "Unauthorized"));
       }
+      assertCanEditWorkspaceData(auth.workspace_role);
       return CategoriesService.reorderCategories(
         auth.workspace_id,
         auth.user_id,
@@ -106,6 +110,7 @@ export const categoriesController = new Elysia({
       if (!auth?.workspace_id) {
         throw status(401, buildError(ErrorCode.UNAUTHORIZED, "Unauthorized"));
       }
+      assertCanEditWorkspaceData(auth.workspace_role);
       return CategoriesService.deleteCategory(
         auth.workspace_id,
         auth.user_id,

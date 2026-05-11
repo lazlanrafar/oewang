@@ -1,31 +1,25 @@
-import {
-  pgTable,
-  text,
-  timestamp,
-  uuid,
-  decimal,
-  boolean,
-} from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
+import { pgTable, text, timestamp, decimal, boolean } from "drizzle-orm/pg-core";
 import { workspaces } from "./workspaces";
 import { wallets } from "./wallets";
 import { categories } from "./categories";
 import { users } from "./users";
 
 export const transactions = pgTable("transactions", {
-  id: uuid("id").defaultRandom().primaryKey().notNull(),
-  workspaceId: uuid("workspace_id")
+  id: text("id").$defaultFn(createId).primaryKey().notNull(),
+  workspaceId: text("workspace_id")
     .notNull()
     .references(() => workspaces.id, { onDelete: "cascade" }),
-  walletId: uuid("wallet_id")
+  walletId: text("wallet_id")
     .notNull()
     .references(() => wallets.id, { onDelete: "cascade" }),
-  toWalletId: uuid("to_wallet_id").references(() => wallets.id, {
+  toWalletId: text("to_wallet_id").references(() => wallets.id, {
     onDelete: "set null",
   }),
-  categoryId: uuid("category_id").references(() => categories.id, {
+  categoryId: text("category_id").references(() => categories.id, {
     onDelete: "set null",
   }),
-  assignedUserId: uuid("assigned_user_id").references(() => users.id, {
+  assignedUserId: text("assigned_user_id").references(() => users.id, {
     onDelete: "set null",
   }),
   amount: decimal("amount", { precision: 19, scale: 4 }).notNull(),

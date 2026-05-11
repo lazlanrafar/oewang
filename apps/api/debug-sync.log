@@ -1,1 +1,17 @@
 
+[2026-04-20T07:40:23.080Z] Sync Error: Failed query: insert into "users" ("id", "email", "name", "profile_picture", "mobile", "oauth_provider", "providers", "workspace_id", "system_role", "created_at", "updated_at") values ($1, $2, default, default, default, $3, $4, default, default, default, default) on conflict ("id") do update set "email" = $5, "providers" = $6, "updated_at" = $7
+params: 9eb423de-6997-4a37-9381-6490601c8e71,oewang@example.com,email,{"email"},oewang@example.com,{"email"},2026-04-20T07:40:22.980Z
+Stack: Error: Failed query: insert into "users" ("id", "email", "name", "profile_picture", "mobile", "oauth_provider", "providers", "workspace_id", "system_role", "created_at", "updated_at") values ($1, $2, default, default, default, $3, $4, default, default, default, default) on conflict ("id") do update set "email" = $5, "providers" = $6, "updated_at" = $7
+params: 9eb423de-6997-4a37-9381-6490601c8e71,oewang@example.com,email,{"email"},oewang@example.com,{"email"},2026-04-20T07:40:22.980Z
+    at queryWithCache (/Users/boneconsulting/Developer/oewang/node_modules/.bun/drizzle-orm@0.45.1+34d8391e6949b427/node_modules/drizzle-orm/pg-core/session.js:41:19)
+    at processTicksAndRejections (native:7:39)
+Data: {"id":"9eb423de-6997-4a37-9381-6490601c8e71","email":"oewang@example.com","oauth_provider":"email","providers":["email"]}
+
+[2026-04-20T08:05:01.661Z] Sync Error: Failed query: insert into "users" ("id", "email", "name", "profile_picture", "mobile", "oauth_provider", "providers", "workspace_id", "system_role", "created_at", "updated_at") values ($1, $2, default, default, default, $3, $4, default, default, default, default) on conflict ("id") do update set "email" = $5, "providers" = $6, "updated_at" = $7
+params: 9eb423de-6997-4a37-9381-6490601c8e71,oewang@example.com,email,{"email"},oewang@example.com,{"email"},2026-04-20T08:05:01.578Z
+Stack: Error: Failed query: insert into "users" ("id", "email", "name", "profile_picture", "mobile", "oauth_provider", "providers", "workspace_id", "system_role", "created_at", "updated_at") values ($1, $2, default, default, default, $3, $4, default, default, default, default) on conflict ("id") do update set "email" = $5, "providers" = $6, "updated_at" = $7
+params: 9eb423de-6997-4a37-9381-6490601c8e71,oewang@example.com,email,{"email"},oewang@example.com,{"email"},2026-04-20T08:05:01.578Z
+    at queryWithCache (/Users/boneconsulting/Developer/oewang/node_modules/.bun/drizzle-orm@0.45.1+34d8391e6949b427/node_modules/drizzle-orm/pg-core/session.js:41:19)
+    at processTicksAndRejections (native:7:39)
+Data: {"id":"9eb423de-6997-4a37-9381-6490601c8e71","email":"oewang@example.com","oauth_provider":"email","providers":["email"]}
+

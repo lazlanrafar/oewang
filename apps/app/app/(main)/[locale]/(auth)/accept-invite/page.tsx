@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+
 import { AcceptInviteClient } from "@/components/organisms/auth/accept-invite-client";
 
 export const metadata: Metadata = {

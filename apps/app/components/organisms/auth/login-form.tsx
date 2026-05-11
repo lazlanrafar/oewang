@@ -3,36 +3,35 @@
 import { useTransition } from "react";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  Button,
-  Checkbox,
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-  Input,
-} from "@workspace/ui";
+import type { Dictionary } from "@workspace/dictionaries";
+import { login } from "@workspace/modules/auth/auth.action";
+import { Button, Checkbox, Form, FormControl, FormField, FormItem, FormLabel, FormMessage, Input } from "@workspace/ui";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
-import { login } from "@workspace/modules/auth/auth.action";
+const getFormSchema = (dictionary: Dictionary) => {
+  if (!dictionary) {
+    return z.object({
+      email: z.string().email(),
+      password: z.string().min(6),
+      remember: z.boolean().optional(),
+    });
+  }
+  return z.object({
+    email: z.string().email({ message: dictionary.auth.form.validation.email_invalid }),
+    password: z.string().min(6, { message: dictionary.auth.form.validation.password_min }),
+    remember: z.boolean().optional(),
+  });
+};
 
-const FormSchema = z.object({
-  email: z.string().email({ message: "Please enter a valid email address." }),
-  password: z
-    .string()
-    .min(6, { message: "Password must be at least 6 characters." }),
-  remember: z.boolean().optional(),
-});
-
-export function LoginForm() {
+export function LoginForm({ dictionary }: { dictionary: Dictionary }) {
   const [is_pending, start_transition] = useTransition();
 
-  const form = useForm<z.infer<typeof FormSchema>>({
-    resolver: zodResolver(FormSchema as any),
+  const auth_form = dictionary.auth.form;
+
+  const form = useForm<z.infer<ReturnType<typeof getFormSchema>>>({
+    resolver: zodResolver(getFormSchema(dictionary)),
     defaultValues: {
       email: "",
       password: "",
@@ -40,7 +39,9 @@ export function LoginForm() {
     },
   });
 
-  const onSubmit = async (data: z.infer<typeof FormSchema>) => {
+  if (!dictionary || !auth_form) return null;
+
+  const onSubmit = async (data: z.infer<ReturnType<typeof getFormSchema>>) => {
     start_transition(async () => {
       const form_data = new FormData();
       form_data.append("email", data.email);
@@ -48,7 +49,7 @@ export function LoginForm() {
 
       const result = await login(form_data);
       if (result.success) {
-        toast.success("Logged in successfully");
+        toast.success(auth_form.toasts.login_success || "Logged in");
       } else {
         toast.error(result.error);
       }
@@ -63,12 +64,11 @@ export function LoginForm() {
           name="email"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Email Address</FormLabel>
+              <FormLabel>{auth_form.email_label}</FormLabel>
               <FormControl>
                 <Input
-                  id="email"
                   type="email"
-                  placeholder="you@example.com"
+                  placeholder={auth_form.email_placeholder}
                   autoComplete="email"
                   disabled={is_pending}
                   {...field}
@@ -83,12 +83,11 @@ export function LoginForm() {
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Password</FormLabel>
+              <FormLabel>{auth_form.password_label}</FormLabel>
               <FormControl>
                 <Input
-                  id="password"
                   type="password"
-                  placeholder="••••••••"
+                  placeholder={auth_form.password_placeholder}
                   autoComplete="current-password"
                   disabled={is_pending}
                   {...field}
@@ -112,17 +111,14 @@ export function LoginForm() {
                   disabled={is_pending}
                 />
               </FormControl>
-              <FormLabel
-                htmlFor="login-remember"
-                className="ml-1 font-medium text-muted-foreground text-sm"
-              >
-                Remember me for 30 days
+              <FormLabel htmlFor="login-remember" className="ml-1 font-medium text-muted-foreground text-sm">
+                {auth_form.remember_me}
               </FormLabel>
             </FormItem>
           )}
         />
         <Button className="w-full" type="submit" disabled={is_pending}>
-          {is_pending ? "Logging in..." : "Login"}
+          {is_pending ? auth_form.logging_in : auth_form.login_button}
         </Button>
       </form>
     </Form>

@@ -1,10 +1,11 @@
 // Server wrapper — fetches pricing server-side (ENCRYPTION_KEY is available)
 // then passes plans as a prop to the client form.
 
-import { WorkspaceForm } from "@/components/organisms/auth/workspace-form";
 import { getPricing } from "@workspace/modules/server";
 import type { Pricing } from "@workspace/types";
 import type { Metadata } from "next";
+
+import { WorkspaceForm } from "@/components/organisms/auth/workspace-form";
 
 export const metadata: Metadata = {
   title: "Create Workspace",

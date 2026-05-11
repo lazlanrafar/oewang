@@ -1,15 +1,8 @@
-import {
-  boolean,
-  integer,
-  jsonb,
-  pgTable,
-  text,
-  timestamp,
-  uuid,
-} from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
+import { boolean, integer, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
 export const pricing = pgTable("pricing", {
-  id: uuid("id").primaryKey().defaultRandom(),
+  id: text("id").primaryKey().$defaultFn(createId),
   name: text("name").notNull(),
   description: text("description"),
   prices: jsonb("prices")

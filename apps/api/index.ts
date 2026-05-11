@@ -8,8 +8,6 @@ import { getApiEnv } from "./config/env";
 import { createLogger } from "@workspace/logger";
 import { sql } from "drizzle-orm";
 import { Elysia } from "elysia";
-
-// Validate API environment variables early
 getApiEnv();
 
 import { ErrorCode } from "@workspace/types";
@@ -19,6 +17,7 @@ import { Env } from "@workspace/constants";
 import { db } from "@workspace/database";
 import { aiController } from "./modules/ai/ai.controller";
 import { authController } from "./modules/auth/auth.controller";
+import { budgets } from "./modules/budgets/budgets.controller";
 import { categoriesController } from "./modules/categories/categories.controller";
 import { contactsController } from "./modules/contacts/contacts.controller";
 import { debtsController } from "./modules/debts/debts.controller";
@@ -30,6 +29,7 @@ import { metricsController } from "./modules/metrics/metrics.controller";
 import { ordersController } from "./modules/orders/orders.controller";
 import { pricingController } from "./modules/pricing/pricing.controller";
 import { publicPricingController } from "./modules/pricing/public-pricing.controller";
+import { privacyController } from "./modules/privacy/privacy.controller";
 import { settingsController } from "./modules/settings/settings.controller";
 import { mayarController } from "./modules/mayar/mayar.controller";
 import { systemAdminsController } from "./modules/system-admins/system-admins.controller";
@@ -86,9 +86,9 @@ const app = new Elysia()
   .use(staticPlugin({ assets: "public", prefix: "" }))
   .get("/", () => Bun.file("public/index.html"))
   .use(loggerPlugin)
-  .use(encryptionPlugin)
   .use(authPlugin)
   .use(rateLimitPlugin)
+  .use(encryptionPlugin)
   .use(
     swagger({
       documentation: {
@@ -109,6 +109,7 @@ const app = new Elysia()
       .use(authController)
       .use(settingsController)
       .use(categoriesController)
+      .use(budgets)
       .use(walletsController)
       .use(vaultController)
       .use(transactions)
@@ -120,30 +121,53 @@ const app = new Elysia()
       .use(mayarController)
       .use(ordersController)
       .use(systemMetricsController)
+      .use(privacyController)
       .use(invoicesController)
       .use(publicInvoicesController)
       .use(contactsController)
       .use(debtsController)
       .use(notificationsController)
       .use(notificationSettingsController)
-      .derive(async ({ query, auth }) => {
-        // If already authenticated via header from authPlugin, use it
-        if (auth) return { wsAuth: auth };
+      .derive(async ({ query, auth, request }) => {
+        // Log basic info about the incoming connection attempt
+        const ip = request.headers.get("x-forwarded-for")?.split(",")[0] ?? "unknown";
+        
+        // If already authenticated via header/cookie from authPlugin, use it
+        if (auth) {
+          log.info(`[WS] Authenticated connection from ${ip} (User: ${auth.user_id})`);
+          return { wsAuth: auth };
+        }
         
         const token = query.token;
-        if (!token) return { wsAuth: null };
+        if (!token) {
+          log.warn(`[WS] Missing token and cookie for connection from ${ip}`);
+          return { wsAuth: null };
+        }
+
+        if (process.env.NODE_ENV === "production") {
+          log.warn(
+            `[WS] Query-token auth blocked in production from ${ip}`,
+          );
+          return { wsAuth: null };
+        }
         
-        return { wsAuth: await getAuth(token) };
+        const ws_auth = await getAuth(token);
+        if (!ws_auth) {
+          log.warn(`[WS] Invalid token provided from ${ip}`);
+        }
+        
+        return { wsAuth: ws_auth };
       })
       .ws("/realtime", {
-        beforeHandle({ wsAuth }) {
+        beforeHandle({ wsAuth, set }) {
           if (!wsAuth) {
-            log.warn("[WS] Attempted connection with missing or invalid token");
-            return new Response("Unauthorized", { status: 401 });
+            log.warn("[WS] Handshake rejected: No valid session or token found");
+            set.status = 401;
+            return "Unauthorized";
           }
         },
         open(ws) {
-          const workspace_id = ws.data.wsAuth?.workspace_id;
+          const workspace_id = ws.data.wsAuth?.workspaceId;
           if (workspace_id) {
             ws.subscribe(workspace_id);
             log.info(
@@ -159,7 +183,7 @@ const app = new Elysia()
           }
         },
         close(ws) {
-          const workspace_id = ws.data.wsAuth?.workspace_id;
+          const workspace_id = ws.data.wsAuth?.workspaceId;
           if (workspace_id) {
             ws.unsubscribe(workspace_id);
             log.info(

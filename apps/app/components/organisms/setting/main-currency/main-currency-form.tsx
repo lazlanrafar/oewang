@@ -1,43 +1,45 @@
 "use client";
 
 import { useState, useTransition } from "react";
+
+import type { Dictionary } from "@workspace/dictionaries";
+import { updateTransactionSettings } from "@workspace/modules/setting/setting.action";
+import type { TransactionSettings } from "@workspace/types";
+import { getCurrencyDisplayUnit } from "@workspace/utils";
 import {
   Button,
   Label,
   Select,
   SelectContent,
+  SelectCurrency,
   SelectItem,
   SelectTrigger,
   SelectValue,
   Separator,
   Skeleton,
-  SelectCurrency,
 } from "@workspace/ui";
 import { toast } from "sonner";
-import { updateTransactionSettings } from "@workspace/modules/setting/setting.action";
-import type { TransactionSettings } from "@workspace/types";
-import { useAppStore } from "@/stores/app";
 
 interface MainCurrencyFormProps {
   settings: TransactionSettings;
-  dictionary: any;
+  dictionary: Dictionary;
 }
 
-function MainCurrencySkeleton() {
+function _MainCurrencySkeleton() {
   return (
-    <div className="space-y-8 animate-pulse">
+    <div className="animate-pulse space-y-8">
       <div className="space-y-2">
         <Skeleton className="h-6 w-48" />
         <Skeleton className="h-4 w-72" />
       </div>
       <Separator className="my-6" />
-      <div className="flex flex-col items-center justify-center py-8 space-y-4">
+      <div className="flex flex-col items-center justify-center space-y-4 py-8">
         <Skeleton className="h-4 w-32" />
         <Skeleton className="h-10 w-48" />
         <Skeleton className="h-8 w-24 rounded-none" />
       </div>
       <Separator />
-      <div className="space-y-4 max-w-sm mx-auto">
+      <div className="mx-auto max-w-sm space-y-4">
         <div className="flex items-center justify-between">
           <Skeleton className="h-4 w-24" />
           <Skeleton className="h-8 w-32 rounded-none" />
@@ -56,10 +58,8 @@ export function MainCurrencyForm({
   dictionary,
 }: MainCurrencyFormProps) {
   const [data, setData] = useState(settings);
-  const [isPending, startTransition] = useTransition();
-  const { isLoading } = useAppStore();
+  const [_isPending, startTransition] = useTransition();
 
-  if (isLoading) return <MainCurrencySkeleton />;
   if (!data) return null;
 
   const handleUpdate = (updates: Partial<TransactionSettings>) => {
@@ -83,10 +83,14 @@ export function MainCurrencyForm({
 
   const formatPreview = () => {
     const amount = (1).toFixed(data.mainCurrencyDecimalPlaces);
+    const currencyUnit = getCurrencyDisplayUnit(
+      data.mainCurrencyCode,
+      data.mainCurrencySymbol,
+    );
     if (data.mainCurrencySymbolPosition === "Front") {
-      return `${data.mainCurrencySymbol} ${amount}`;
+      return `${currencyUnit} ${amount}`;
     }
-    return `${amount} ${data.mainCurrencySymbol}`;
+    return `${amount} ${currencyUnit}`;
   };
 
   const dict = dictionary.settings.currency;
@@ -94,16 +98,16 @@ export function MainCurrencyForm({
   return (
     <div className="space-y-8">
       <div>
-        <h3 className="text-lg font-medium">{dict.title}</h3>
-        <p className="text-sm text-muted-foreground">{dict.description}</p>
+        <h3 className="font-medium text-lg">{dict.title}</h3>
+        <p className="text-muted-foreground text-sm">{dict.description}</p>
       </div>
       <Separator className="my-6" />
 
-      <div className="flex flex-col items-center justify-center py-8 space-y-2">
-        <p className="text-sm text-muted-foreground uppercase tracking-widest">
+      <div className="flex flex-col items-center justify-center space-y-2 py-8">
+        <p className="text-muted-foreground text-sm uppercase tracking-widest font-serif">
           {data.mainCurrencyCode} - {dict.label} ({data.mainCurrencySymbol})
         </p>
-        <p className="text-4xl font-semibold">{formatPreview()}</p>
+        <p className="text-4xl font-serif">{formatPreview()}</p>
         <div className="pt-4">
           <SelectCurrency
             onSelect={(c) => {
@@ -116,9 +120,9 @@ export function MainCurrencyForm({
               <Button
                 variant="outline"
                 size="sm"
-                className="rounded-none h-8 text-xs"
+                className="h-8 rounded-none text-xs"
               >
-                {dictionary?.settings?.common?.change || "Change"}
+                {dictionary.settings.common.change || "Change"}
               </Button>
             }
           />
@@ -127,7 +131,7 @@ export function MainCurrencyForm({
 
       <Separator />
 
-      <div className="space-y-4 max-w-sm mx-auto">
+      <div className="mx-auto max-w-sm space-y-4">
         <div className="flex items-center justify-between">
           <Label className="text-sm">{dict.unit_position}</Label>
           <Select
@@ -136,12 +140,16 @@ export function MainCurrencyForm({
               handleUpdate({ mainCurrencySymbolPosition: v })
             }
           >
-            <SelectTrigger className="w-[120px] rounded-none h-8 text-xs">
+            <SelectTrigger className="h-8 w-[120px] rounded-none text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="rounded-none">
-              <SelectItem value="Front">{dict.positions?.Front || "Front"}</SelectItem>
-              <SelectItem value="Back">{dict.positions?.Back || "Back"}</SelectItem>
+              <SelectItem value="Front">
+                {dict.positions.Front || "Front"}
+              </SelectItem>
+              <SelectItem value="Back">
+                {dict.positions.Back || "Back"}
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -151,10 +159,10 @@ export function MainCurrencyForm({
           <Select
             value={data.mainCurrencyDecimalPlaces.toString()}
             onValueChange={(v) =>
-              handleUpdate({ mainCurrencyDecimalPlaces: parseInt(v) })
+              handleUpdate({ mainCurrencyDecimalPlaces: parseInt(v, 10) })
             }
           >
-            <SelectTrigger className="w-[120px] rounded-none h-8 text-xs">
+            <SelectTrigger className="h-8 w-[120px] rounded-none text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="rounded-none">

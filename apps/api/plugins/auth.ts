@@ -1,9 +1,10 @@
 import { Elysia } from "elysia";
 import { createClient } from "@workspace/supabase/admin";
-import { db, eq } from "@workspace/database";
-import { users, user_workspaces } from "@workspace/database";
+import { db, eq, and, isNull } from "@workspace/database";
+import { users, user_workspaces, workspaces } from "@workspace/database";
 import * as jose from "jose";
 import { Env } from "@workspace/constants";
+import { normalizeWorkspaceRole } from "../modules/workspaces/workspace-permissions";
 
 const JWT_SECRET_KEY = () => new TextEncoder().encode(Env.JWT_SECRET!);
 
@@ -14,6 +15,9 @@ export type AuthContext = {
   auth: {
     user_id: string;
     workspace_id: string;
+    workspaceId: string;
+    workspace_role: import("@workspace/types").WorkspaceRole;
+    workspaceRole: import("@workspace/types").WorkspaceRole;
     email: string;
     system_role: import("@workspace/constants").SystemRole;
   } | null;
@@ -21,14 +25,14 @@ export type AuthContext = {
 
 async function generateJwt(
   user_id: string,
-  workspace_id: string,
+  workspaceId: string,
   email: string,
   system_role: import("@workspace/constants").SystemRole = "user",
 ): Promise<string> {
   const expires_in = Env.JWT_EXPIRES_IN ?? "7d";
   const jwt = await new jose.SignJWT({
     user_id,
-    workspace_id,
+    workspace_id: workspaceId,
     email,
     system_role,
   })
@@ -52,7 +56,10 @@ async function verifyJwt(token: string): Promise<{
   try {
     const { payload } = await jose.jwtVerify(token, JWT_SECRET_KEY());
     const user_id = payload.user_id as string;
-    const workspace_id = payload.workspace_id as string;
+    const workspace_id =
+      (payload.workspace_id as string | undefined) ??
+      (payload.workspaceId as string | undefined) ??
+      "";
     const email = payload.email as string;
     const system_role = payload.system_role as
       | import("@workspace/constants").SystemRole
@@ -63,6 +70,56 @@ async function verifyJwt(token: string): Promise<{
   } catch {
     return null;
   }
+}
+
+async function getActiveMembershipWorkspaceIds(user_id: string) {
+  const memberships = await db
+    .select({ workspace_id: user_workspaces.workspace_id })
+    .from(user_workspaces)
+    .innerJoin(workspaces, eq(user_workspaces.workspace_id, workspaces.id))
+    .where(
+      and(
+        eq(user_workspaces.user_id, user_id),
+        isNull(user_workspaces.deleted_at),
+        isNull(workspaces.deleted_at),
+      ),
+    );
+
+  return memberships.map((m) => m.workspace_id);
+}
+
+async function getMembershipRole(user_id: string, workspace_id: string) {
+  if (!workspace_id) {
+    return normalizeWorkspaceRole(null);
+  }
+
+  const [membership] = await db
+    .select({ role: user_workspaces.role })
+    .from(user_workspaces)
+    .where(
+      and(
+        eq(user_workspaces.user_id, user_id),
+        eq(user_workspaces.workspace_id, workspace_id),
+        isNull(user_workspaces.deleted_at),
+      ),
+    )
+    .limit(1);
+
+  return normalizeWorkspaceRole(membership?.role);
+}
+
+function resolveWorkspaceId(
+  preferredWorkspaceId: string | null | undefined,
+  membershipWorkspaceIds: string[],
+) {
+  if (
+    preferredWorkspaceId &&
+    membershipWorkspaceIds.includes(preferredWorkspaceId)
+  ) {
+    return preferredWorkspaceId;
+  }
+
+  return membershipWorkspaceIds[0] ?? "";
 }
 
 /**
@@ -76,7 +133,49 @@ export async function getAuth(token: string) {
   // Try app JWT first
   const jwt_payload = await verifyJwt(token);
   if (jwt_payload) {
-    return jwt_payload;
+    const [db_user] = await db
+      .select({
+        email: users.email,
+        workspace_id: users.workspace_id,
+        system_role: users.system_role,
+      })
+      .from(users)
+      .where(eq(users.id, jwt_payload.user_id))
+      .limit(1);
+
+    if (!db_user) return null;
+
+    const membershipWorkspaceIds = await getActiveMembershipWorkspaceIds(
+      jwt_payload.user_id,
+    );
+
+    // Enforce workspace-scoped access: if token requests a workspace,
+    // the user must still be an active member of that workspace.
+    if (
+      jwt_payload.workspace_id &&
+      !membershipWorkspaceIds.includes(jwt_payload.workspace_id)
+    ) {
+      return null;
+    }
+
+    const workspace_id = resolveWorkspaceId(
+      jwt_payload.workspace_id || db_user.workspace_id,
+      membershipWorkspaceIds,
+    );
+    const workspace_role = await getMembershipRole(
+      jwt_payload.user_id,
+      workspace_id,
+    );
+
+    return {
+      user_id: jwt_payload.user_id,
+      workspace_id,
+      workspaceId: workspace_id,
+      workspace_role,
+      workspaceRole: workspace_role,
+      email: jwt_payload.email || db_user.email,
+      system_role: db_user.system_role || jwt_payload.system_role || "user",
+    } as const;
   }
 
   // Fallback: try Supabase token
@@ -92,16 +191,12 @@ export async function getAuth(token: string) {
       return null;
     }
 
-    // Look up workspace membership
-    const [membership] = await db
-      .select()
-      .from(user_workspaces)
-      .where(eq(user_workspaces.user_id, user.id))
-      .limit(1);
+    const membershipWorkspaceIds = await getActiveMembershipWorkspaceIds(user.id);
 
-    // Look up user record for workspace_id and is_super_admin
+    // Look up user record for workspace_id and system role
     const [db_user] = await db
       .select({
+        email: users.email,
         workspace_id: users.workspace_id,
         system_role: users.system_role,
       })
@@ -109,15 +204,22 @@ export async function getAuth(token: string) {
       .where(eq(users.id, user.id))
       .limit(1);
 
-    const workspace_id = db_user?.workspace_id ?? membership?.workspace_id ?? null;
+    const workspace_id = resolveWorkspaceId(
+      db_user?.workspace_id,
+      membershipWorkspaceIds,
+    );
+    const workspace_role = await getMembershipRole(user.id, workspace_id);
 
     return {
       user_id: user.id,
-      workspace_id: workspace_id ?? "",
-      email: user.email!,
+      workspace_id,
+      workspaceId: workspace_id,
+      workspace_role,
+      workspaceRole: workspace_role,
+      email: db_user?.email || user.email || "",
       system_role: db_user?.system_role || user.app_metadata?.system_role || "user",
     } as const;
-  } catch (e) {
+  } catch {
     return null;
   }
 }

@@ -1,14 +1,15 @@
-import { boolean, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
+import { boolean, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { users } from "./users";
 import { workspaces } from "./workspaces";
 
 export const articles = pgTable("articles", {
-  id: uuid("id").primaryKey().defaultRandom(),
+  id: text("id").primaryKey().$defaultFn(createId),
   title: text("title").notNull(),
   content: text("content"),
   published: boolean("published").default(false),
-  author_id: uuid("author_id").references(() => users.id),
-  workspace_id: uuid("workspace_id")
+  author_id: text("author_id").references(() => users.id),
+  workspace_id: text("workspace_id")
     .notNull()
     .references(() => workspaces.id, { onDelete: "cascade" }),
   deleted_at: timestamp("deleted_at"),

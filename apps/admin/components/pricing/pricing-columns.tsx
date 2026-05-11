@@ -196,10 +196,10 @@ export const pricingColumns: ColumnDef<Pricing>[] = [
 
       return (
         <span className="flex flex-col gap-0.5">
-          <span className="text-sm">
+          <span className="font-serif text-sm">
             {formatPrice(basePrice.monthly, basePrice.currency)} / mo
           </span>
-          <span className="text-xs text-muted-foreground">
+          <span className="font-serif text-xs text-muted-foreground">
             {formatPrice(basePrice.yearly, basePrice.currency)} / yr
           </span>
         </span>

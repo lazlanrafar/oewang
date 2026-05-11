@@ -1,14 +1,15 @@
 "use client";
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { Notification } from "@workspace/database"; // Added type import
+
 import {
-  getNotifications,
-  markNotificationsRead,
   deleteNotification,
   getNotificationSettings,
+  getNotifications,
+  markNotificationsRead,
   updateNotificationSettings,
 } from "@/actions/notification.actions";
-import type { Notification } from "@workspace/database"; // Added type import
 
 import { useAppStore } from "../stores/app";
 

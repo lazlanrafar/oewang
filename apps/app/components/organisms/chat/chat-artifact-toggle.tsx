@@ -1,26 +1,20 @@
 "use client";
 
-import type { ArtifactType } from "@workspace/constants";
-import { useArtifacts } from "@ai-sdk-tools/artifacts/client";
-import { Icons } from "@workspace/ui";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@workspace/ui";
-import { parseAsString, useQueryState } from "nuqs";
 import { useCallback } from "react";
+
+import { useArtifacts } from "@ai-sdk-tools/artifacts/client";
+import type { ArtifactType } from "@workspace/constants";
+import type { Dictionary } from "@workspace/dictionaries";
+import { Icons, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@workspace/ui";
+import { parseAsString, useQueryState } from "nuqs";
 
 interface ChatArtifactToggleProps {
   artifactType: ArtifactType;
+  dictionary: Dictionary;
 }
 
-export function ChatArtifactToggle({ artifactType }: ChatArtifactToggleProps) {
-  const [selectedType, setSelectedType] = useQueryState(
-    "artifact-type",
-    parseAsString,
-  );
+export function ChatArtifactToggle({ artifactType, dictionary }: ChatArtifactToggleProps) {
+  const [selectedType, setSelectedType] = useQueryState("artifact-type", parseAsString);
 
   const [data, actions] = useArtifacts({
     value: selectedType ?? undefined,
@@ -30,8 +24,7 @@ export function ChatArtifactToggle({ artifactType }: ChatArtifactToggleProps) {
 
   const { available, activeType } = data;
   const isArtifactAvailable = available.includes(artifactType);
-  const isCurrentlyOpen =
-    activeType === artifactType || selectedType === artifactType;
+  const isCurrentlyOpen = activeType === artifactType || selectedType === artifactType;
 
   const handleToggle = useCallback(() => {
     if (isCurrentlyOpen) {
@@ -58,14 +51,22 @@ export function ChatArtifactToggle({ artifactType }: ChatArtifactToggleProps) {
             <button
               type="button"
               onClick={handleToggle}
-              className="flex items-center justify-center w-6 h-6 transition-colors duration-200 hover:bg-muted"
-              aria-label={isCurrentlyOpen ? "Close artifact" : "Open artifact"}
+              className="flex h-6 w-6 items-center justify-center transition-colors duration-200 hover:bg-muted"
+              aria-label={
+                isCurrentlyOpen
+                  ? dictionary.chat.actions.close_artifact || "Close artifact"
+                  : dictionary.chat.actions.open_artifact || "Open artifact"
+              }
             >
               <Icons.Sidebar className="size-3.5 text-muted-foreground hover:text-foreground" />
             </button>
           </TooltipTrigger>
           <TooltipContent className="px-2 py-1 text-xs">
-            <p>{isCurrentlyOpen ? "Close artifact" : "Open artifact"}</p>
+            <p>
+              {isCurrentlyOpen
+                ? dictionary.chat.actions.close_artifact || "Close artifact"
+                : dictionary.chat.actions.open_artifact || "Open artifact"}
+            </p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>

@@ -1,12 +1,13 @@
-import { jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
+import { jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { aiSessions } from "./ai-sessions";
 
 export const aiMessages = pgTable("ai_messages", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  session_id: uuid("session_id")
+  id: text("id").primaryKey().$defaultFn(createId),
+  session_id: text("session_id")
     .references(() => aiSessions.id, { onDelete: "cascade" })
     .notNull(),
-  workspace_id: uuid("workspace_id").notNull(),
+  workspace_id: text("workspace_id").notNull(),
   role: text("role", { enum: ["user", "assistant", "system"] }).notNull(),
   content: text("content").notNull(),
   attachments: jsonb("attachments"),

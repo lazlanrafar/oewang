@@ -1,14 +1,9 @@
 "use client";
 
-import {
-  Combobox,
-  Spinner,
-  cn,
-} from "@workspace/ui";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createWalletGroup, getWalletGroups } from "@workspace/modules/client";
+import { Combobox, Spinner } from "@workspace/ui";
 import { Layers } from "lucide-react";
-import { getWalletGroups, createWalletGroup } from "@workspace/modules/client";
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 export interface SelectAccountGroupProps {
@@ -20,6 +15,7 @@ export interface SelectAccountGroupProps {
   headless?: boolean;
   hideLoading?: boolean;
   variant?: React.ComponentProps<typeof Combobox>["variant"];
+  popoverProps?: React.ComponentProps<typeof Combobox>["popoverProps"];
 }
 
 export function SelectAccountGroup({
@@ -31,6 +27,7 @@ export function SelectAccountGroup({
   variant,
   headless,
   hideLoading,
+  popoverProps,
 }: SelectAccountGroupProps) {
   const queryClient = useQueryClient();
 
@@ -57,7 +54,7 @@ export function SelectAccountGroup({
         toast.success(`Group "${data.name}" created`);
       }
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(error.message || "Failed to create group");
     },
   });
@@ -77,7 +74,7 @@ export function SelectAccountGroup({
 
   if (!selectedValue && isLoading && !hideLoading) {
     return (
-      <div className="w-full h-full flex items-center justify-center min-h-[40px]">
+      <div className="flex h-full min-h-[40px] w-full items-center justify-center">
         <Spinner />
       </div>
     );
@@ -96,26 +93,25 @@ export function SelectAccountGroup({
         onChange(item.id);
       }}
       className={className}
+      popoverProps={popoverProps}
       onCreate={(value) => {
         createMutation.mutate(value);
       }}
       renderSelectedItem={(item) => (
         <div className="flex items-center space-x-2">
-          <Layers className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-          <span className="text-left truncate max-w-[90%]">
-            {!Array.isArray(item) ? item.label : ""}
-          </span>
+          <Layers className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          <span className="max-w-[90%] truncate text-left">{!Array.isArray(item) ? item.label : ""}</span>
         </div>
       )}
       renderOnCreate={(value) => (
         <div className="flex items-center space-x-2">
-          <Layers className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+          <Layers className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
           <span>{`Create "${value}"`}</span>
         </div>
       )}
       renderListItem={({ item }) => (
         <div className="flex items-center space-x-2">
-          <Layers className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+          <Layers className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
           <span className="line-clamp-1 font-medium">{item.label}</span>
         </div>
       )}

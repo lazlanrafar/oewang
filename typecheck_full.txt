@@ -1,0 +1,329 @@
+• turbo 2.8.5
+• Packages in scope: app
+• Running typecheck in 1 packages
+• Remote caching disabled
+@workspace/logger:typecheck: cache hit, replaying logs bb84a79f1491bf42
+@workspace/types:typecheck: cache hit, replaying logs c2166ccc30095d0f
+@workspace/logger:typecheck: 
+@workspace/logger:typecheck: [0m[2m[35m$[0m [2m[1mtsc --noEmit[0m
+@workspace/supabase:typecheck: cache hit, replaying logs b9a9003655da2c03
+@workspace/types:typecheck: 
+@workspace/types:typecheck: [0m[2m[35m$[0m [2m[1mtsc --noEmit[0m
+@workspace/supabase:typecheck: 
+@workspace/supabase:typecheck: [0m[2m[35m$[0m [2m[1mtsc --noEmit[0m
+@workspace/encryption:typecheck: cache hit, replaying logs bf3a9ad4c1a2e31e
+@workspace/encryption:typecheck: 
+@workspace/encryption:typecheck: [0m[2m[35m$[0m [2m[1mtsc --noEmit[0m
+@workspace/utils:typecheck: cache hit, replaying logs 73480a7b4017f954
+@workspace/utils:typecheck: 
+@workspace/utils:typecheck: [0m[2m[35m$[0m [2m[1mtsc --noEmit[0m
+@workspace/modules:typecheck: cache hit, replaying logs c7707e9c7a4e97b9
+@workspace/modules:typecheck: 
+@workspace/modules:typecheck: [0m[2m[35m$[0m [2m[1mtsc --noEmit[0m
+app:typecheck: cache miss, executing b202975a90b3e297
+app:typecheck: $ NODE_OPTIONS='--max-old-space-size=4096' tsc --noEmit
+app:typecheck: .next/dev/types/validator.ts(400,31): error TS2344: Type 'typeof import("/Users/boneconsulting/Developer/oewang/apps/app/app/(main)/[locale]/(dashboard)/layout")' does not satisfy the constraint 'LayoutConfig<"/[locale]">'.
+app:typecheck:   Types of property 'default' are incompatible.
+app:typecheck:     Type '({ children, params, }: Readonly<{ children: ReactNode; params: Promise<{ locale: "en" | "ja" | "id"; }>; }>) => Promise<Element>' is not assignable to type 'ComponentType<LayoutProps<"/[locale]">> | ((props: LayoutProps<"/[locale]">) => void | Promise<void> | ReactNode | Promise<...>)'.
+app:typecheck:       Type '({ children, params, }: Readonly<{ children: ReactNode; params: Promise<{ locale: "en" | "ja" | "id"; }>; }>) => Promise<Element>' is not assignable to type 'FunctionComponent<LayoutProps<"/[locale]">>'.
+app:typecheck:         Types of parameters '__0' and 'props' are incompatible.
+app:typecheck:           Type 'LayoutProps<"/[locale]">' is not assignable to type 'Readonly<{ children: ReactNode; params: Promise<{ locale: "en" | "ja" | "id"; }>; }>'.
+app:typecheck:             Types of property 'params' are incompatible.
+app:typecheck:               Type 'Promise<{ locale: string; }>' is not assignable to type 'Promise<{ locale: "en" | "ja" | "id"; }>'.
+app:typecheck:                 Type '{ locale: string; }' is not assignable to type '{ locale: "en" | "ja" | "id"; }'.
+app:typecheck:                   Types of property 'locale' are incompatible.
+app:typecheck:                     Type 'string' is not assignable to type '"en" | "ja" | "id"'.
+app:typecheck: .next/types/validator.ts(391,31): error TS2344: Type 'typeof import("/Users/boneconsulting/Developer/oewang/apps/app/app/(main)/[locale]/(dashboard)/layout")' does not satisfy the constraint 'LayoutConfig<"/[locale]">'.
+app:typecheck:   Types of property 'default' are incompatible.
+app:typecheck:     Type '({ children, params, }: Readonly<{ children: ReactNode; params: Promise<{ locale: "en" | "ja" | "id"; }>; }>) => Promise<Element>' is not assignable to type 'ComponentType<LayoutProps<"/[locale]">> | ((props: LayoutProps<"/[locale]">) => void | Promise<void> | ReactNode | Promise<...>)'.
+app:typecheck:       Type '({ children, params, }: Readonly<{ children: ReactNode; params: Promise<{ locale: "en" | "ja" | "id"; }>; }>) => Promise<Element>' is not assignable to type 'FunctionComponent<LayoutProps<"/[locale]">>'.
+app:typecheck:         Types of parameters '__0' and 'props' are incompatible.
+app:typecheck:           Type 'LayoutProps<"/[locale]">' is not assignable to type 'Readonly<{ children: ReactNode; params: Promise<{ locale: "en" | "ja" | "id"; }>; }>'.
+app:typecheck:             Types of property 'params' are incompatible.
+app:typecheck:               Type 'Promise<{ locale: string; }>' is not assignable to type 'Promise<{ locale: "en" | "ja" | "id"; }>'.
+app:typecheck:                 Type '{ locale: string; }' is not assignable to type '{ locale: "en" | "ja" | "id"; }'.
+app:typecheck:                   Types of property 'locale' are incompatible.
+app:typecheck:                     Type 'string' is not assignable to type '"en" | "ja" | "id"'.
+app:typecheck: app/(main)/[locale]/(auth)/login/page.tsx(8,24): error TS2304: Cannot find name 'Metadata'.
+app:typecheck: app/(main)/[locale]/(dashboard)/calendar/page.tsx(26,12): error TS2741: Property 'settings' is missing in type '{ dictionary: { navigation: { home: string; dashboard: string; settings: string; }; auth: { welcome: string; login_title: string; register_title: string; show_other_options: string; or: string; terms_privacy_agreement: string; terms_of_service: string; privacy_policy: string; form: { ...; }; social: { ...; }; }; ......' but required in type 'Props'.
+app:typecheck: app/(main)/[locale]/(dashboard)/chat/[id]/page.tsx(88,8): error TS2741: Property 'dictionary' is missing in type '{ geo: Geo; }' but required in type 'Props'.
+app:typecheck: app/(main)/[locale]/(dashboard)/contacts/page.tsx(41,70): error TS2322: Type 'TransactionSettings | null' is not assignable to type 'TransactionSettings'.
+app:typecheck:   Type 'null' is not assignable to type 'TransactionSettings'.
+app:typecheck: app/(main)/[locale]/(dashboard)/invoices/page.tsx(36,23): error TS2322: Type '{ initialData: any; dictionary: { navigation: { home: string; dashboard: string; settings: string; }; auth: { welcome: string; login_title: string; register_title: string; show_other_options: string; ... 5 more ...; social: { ...; }; }; ... 15 more ...; invoices: { ...; }; }; }' is not assignable to type 'IntrinsicAttributes & Props'.
+app:typecheck:   Property 'initialData' does not exist on type 'IntrinsicAttributes & Props'.
+app:typecheck: app/(main)/[locale]/(dashboard)/transactions/page.tsx(8,37): error TS2307: Cannot find module '@/actions/category.actions' or its corresponding type declarations.
+app:typecheck: app/(main)/[locale]/(dashboard)/transactions/page.tsx(9,39): error TS2307: Cannot find module '@/actions/transaction.actions' or its corresponding type declarations.
+app:typecheck: app/(main)/[locale]/(dashboard)/transactions/page.tsx(10,34): error TS2307: Cannot find module '@/actions/wallet.actions' or its corresponding type declarations.
+app:typecheck: app/(main)/[locale]/invoice/[token]/page.tsx(199,12): error TS2741: Property 'dictionary' is missing in type '{ ref: RefObject<HTMLDivElement | null>; invoice: any; workspace: any; }' but required in type 'InvoiceA4Props'.
+app:typecheck: components/molecules/select-category.tsx(116,32): error TS18048: 'selectedCategory' is possibly 'undefined'.
+app:typecheck: components/molecules/select-category.tsx(130,34): error TS18048: 'cat' is possibly 'undefined'.
+app:typecheck: components/organisms/accounts/account-detail-sheet.tsx(74,7): error TS18048: 'wallet' is possibly 'undefined'.
+app:typecheck: components/organisms/accounts/account-detail-sheet.tsx(77,10): error TS18048: 'wallet' is possibly 'undefined'.
+app:typecheck: components/organisms/accounts/account-detail-sheet.tsx(84,53): error TS18048: 'wallet' is possibly 'undefined'.
+app:typecheck: components/organisms/accounts/account-detail-sheet.tsx(107,22): error TS18048: 'wallet' is possibly 'undefined'.
+app:typecheck: components/organisms/accounts/account-form-sheet.tsx(74,13): error TS18048: 'wallet' is possibly 'undefined'.
+app:typecheck: components/organisms/accounts/account-form-sheet.tsx(75,16): error TS18048: 'wallet' is possibly 'undefined'.
+app:typecheck: components/organisms/accounts/account-form-sheet.tsx(76,16): error TS18048: 'wallet' is possibly 'undefined'.
+app:typecheck: components/organisms/accounts/account-form-sheet.tsx(76,40): error TS18048: 'wallet' is possibly 'undefined'.
+app:typecheck: components/organisms/accounts/account-form-sheet.tsx(77,27): error TS18048: 'wallet' is possibly 'undefined'.
+app:typecheck: components/organisms/accounts/account-form-sheet.tsx(199,17): error TS18048: 'wallet' is possibly 'undefined'.
+app:typecheck: components/organisms/accounts/account-form-sheet.tsx(224,3): error TS2339: Property 'dictionary' does not exist on type 'AccountSheetProps'.
+app:typecheck: components/organisms/accounts/accounts-client.tsx(87,15): error TS2769: No overload matches this call.
+app:typecheck:   Overload 1 of 3, '(options: DefinedInitialDataInfiniteOptions<ApiResponse<Wallet[]>, Error, InfiniteData<ApiResponse<Wallet[]>, unknown>, any[], number>, queryClient?: QueryClient | undefined): DefinedUseInfiniteQueryResult<...>', gave the following error.
+app:typecheck:     Object literal may only specify known properties, and 'count' does not exist in type 'PaginationMeta'.
+app:typecheck:   Overload 2 of 3, '(options: UndefinedInitialDataInfiniteOptions<ApiResponse<Wallet[]>, Error, InfiniteData<ApiResponse<Wallet[]>, unknown>, any[], number>, queryClient?: QueryClient | undefined): UseInfiniteQueryResult<...>', gave the following error.
+app:typecheck:     Object literal may only specify known properties, and 'count' does not exist in type 'PaginationMeta'.
+app:typecheck:   Overload 3 of 3, '(options: UseInfiniteQueryOptions<ApiResponse<Wallet[]>, Error, InfiniteData<ApiResponse<Wallet[]>, unknown>, any[], number>, queryClient?: QueryClient | undefined): UseInfiniteQueryResult<...>', gave the following error.
+app:typecheck:     Object literal may only specify known properties, and 'count' does not exist in type 'PaginationMeta'.
+app:typecheck: components/organisms/apps/apps-client.tsx(57,9): error TS18048: 'installedApps' is possibly 'undefined'.
+app:typecheck: components/organisms/apps/apps-client.tsx(84,12): error TS18048: 'installedApps' is possibly 'undefined'.
+app:typecheck: components/organisms/apps/apps-client.tsx(117,27): error TS18049: 'me' is possibly 'null' or 'undefined'.
+app:typecheck: components/organisms/apps/apps-client.tsx(117,62): error TS18049: 'me' is possibly 'null' or 'undefined'.
+app:typecheck: components/organisms/apps/apps-client.tsx(118,20): error TS18048: 'activeWorkspace' is possibly 'undefined'.
+app:typecheck: components/organisms/apps/connect-telegram.tsx(27,23): error TS18049: 'me' is possibly 'null' or 'undefined'.
+app:typecheck: components/organisms/apps/connect-telegram.tsx(28,18): error TS18049: 'me' is possibly 'null' or 'undefined'.
+app:typecheck: components/organisms/apps/connect-whatsapp.tsx(33,23): error TS18049: 'me' is possibly 'null' or 'undefined'.
+app:typecheck: components/organisms/apps/connect-whatsapp.tsx(35,27): error TS18049: 'me' is possibly 'null' or 'undefined'.
+app:typecheck: components/organisms/apps/connect-whatsapp.tsx(36,20): error TS18048: 'activeWorkspace' is possibly 'undefined'.
+app:typecheck: components/organisms/auth/workspace-form.tsx(61,25): error TS2532: Object is possibly 'undefined'.
+app:typecheck: components/organisms/calendar/calendar-client.tsx(119,25): error TS18048: 'txResponse' is possibly 'undefined'.
+app:typecheck: components/organisms/calendar/calendar-client.tsx(119,57): error TS18048: 'txResponse' is possibly 'undefined'.
+app:typecheck: components/organisms/chat/canvas/chat-canvas.tsx(38,12): error TS18048: 'msg' is possibly 'undefined'.
+app:typecheck: components/organisms/chat/canvas/chat-canvas.tsx(40,26): error TS18048: 'msg' is possibly 'undefined'.
+app:typecheck: components/organisms/chat/charts/revenue-forecast-chart.tsx(82,29): error TS18048: 'data' is possibly 'undefined'.
+app:typecheck: components/organisms/chat/charts/revenue-forecast-chart.tsx(85,18): error TS18048: 'data' is possibly 'undefined'.
+app:typecheck: components/organisms/chat/charts/revenue-forecast-chart.tsx(85,46): error TS18048: 'data' is possibly 'undefined'.
+app:typecheck: components/organisms/chat/charts/revenue-forecast-chart.tsx(97,39): error TS18048: 'data' is possibly 'undefined'.
+app:typecheck: components/organisms/chat/charts/revenue-forecast-chart.tsx(98,23): error TS18048: 'data' is possibly 'undefined'.
+app:typecheck: components/organisms/chat/charts/revenue-forecast-chart.tsx(99,24): error TS18048: 'data' is possibly 'undefined'.
+app:typecheck: components/organisms/chat/charts/revenue-forecast-chart.tsx(100,24): error TS18048: 'data' is possibly 'undefined'.
+app:typecheck: components/organisms/chat/charts/revenue-forecast-chart.tsx(101,25): error TS18048: 'data' is possibly 'undefined'.
+app:typecheck: components/organisms/chat/charts/revenue-forecast-chart.tsx(113,12): error TS18048: 'data' is possibly 'undefined'.
+app:typecheck: components/organisms/chat/charts/revenue-forecast-chart.tsx(206,11): error TS2532: Object is possibly 'undefined'.
+app:typecheck: components/organisms/chat/charts/revenue-forecast-chart.tsx(206,48): error TS2532: Object is possibly 'undefined'.
+app:typecheck: components/organisms/chat/charts/revenue-forecast-chart.tsx(215,7): error TS2532: Object is possibly 'undefined'.
+app:typecheck: components/organisms/chat/charts/revenue-forecast-chart.tsx(216,7): error TS2532: Object is possibly 'undefined'.
+app:typecheck: components/organisms/chat/chat-artifact-toggle.tsx(56,56): error TS2339: Property 'chat' does not exist on type '{ navigation: { home: string; dashboard: string; settings: string; }; auth: { welcome: string; login_title: string; register_title: string; show_other_options: string; or: string; terms_privacy_agreement: string; terms_of_service: string; privacy_policy: string; form: { ...; }; social: { ...; }; }; ... 15 more ...; ...'.
+app:typecheck: components/organisms/chat/chat-artifact-toggle.tsx(56,117): error TS2339: Property 'chat' does not exist on type '{ navigation: { home: string; dashboard: string; settings: string; }; auth: { welcome: string; login_title: string; register_title: string; show_other_options: string; or: string; terms_privacy_agreement: string; terms_of_service: string; privacy_policy: string; form: { ...; }; social: { ...; }; }; ... 15 more ...; ...'.
+app:typecheck: components/organisms/chat/chat-artifact-toggle.tsx(62,46): error TS2339: Property 'chat' does not exist on type '{ navigation: { home: string; dashboard: string; settings: string; }; auth: { welcome: string; login_title: string; register_title: string; show_other_options: string; or: string; terms_privacy_agreement: string; terms_of_service: string; privacy_policy: string; form: { ...; }; social: { ...; }; }; ... 15 more ...; ...'.
+app:typecheck: components/organisms/chat/chat-artifact-toggle.tsx(62,107): error TS2339: Property 'chat' does not exist on type '{ navigation: { home: string; dashboard: string; settings: string; }; auth: { welcome: string; login_title: string; register_title: string; show_other_options: string; or: string; terms_privacy_agreement: string; terms_of_service: string; privacy_policy: string; form: { ...; }; social: { ...; }; }; ... 15 more ...; ...'.
+app:typecheck: components/organisms/chat/chat-favicon-stack.tsx(79,40): error TS18047: 'parent' is possibly 'null'.
+app:typecheck: components/organisms/chat/chat-header.tsx(16,15): error TS2305: Module '"@workspace/types"' has no exported member 'ChatSession'.
+app:typecheck: components/organisms/chat/chat-header.tsx(44,21): error TS18048: 'sessionsResponse' is possibly 'undefined'.
+app:typecheck: components/organisms/chat/chat-header.tsx(47,24): error TS18047: 'dataPartTitle' is possibly 'null'.
+app:typecheck: components/organisms/chat/chat-header.tsx(92,31): error TS2339: Property 'chat' does not exist on type '{ navigation: { home: string; dashboard: string; settings: string; }; auth: { welcome: string; login_title: string; register_title: string; show_other_options: string; or: string; terms_privacy_agreement: string; terms_of_service: string; privacy_policy: string; form: { ...; }; social: { ...; }; }; ... 15 more ...; ...'.
+app:typecheck: components/organisms/chat/chat-history.tsx(101,9): error TS18047: 'searchInputRef.current' is possibly 'null'.
+app:typecheck: components/organisms/chat/chat-history.tsx(113,31): error TS18047: 'clickedButton' is possibly 'null'.
+app:typecheck: components/organisms/chat/chat-history.tsx(154,18): error TS18048: 'sessionsResponse' is possibly 'undefined'.
+app:typecheck: components/organisms/chat/chat-input.tsx(228,36): error TS18048: 'message.files' is possibly 'undefined'.
+app:typecheck: components/organisms/chat/chat-input.tsx(251,27): error TS2345: Argument of type '(file: File) => Promise<{ name: string; type: string; data: string; }>' is not assignable to parameter of type '(value: FileUIPart, index: number, array: FileUIPart[]) => Promise<{ name: string; type: string; data: string; }>'.
+app:typecheck:   Types of parameters 'file' and 'value' are incompatible.
+app:typecheck:     Type 'FileUIPart' is missing the following properties from type 'File': lastModified, name, webkitRelativePath, size, and 7 more.
+app:typecheck: components/organisms/chat/chat-input.tsx(282,22): error TS18048: 'message.metadata' is possibly 'undefined'.
+app:typecheck: components/organisms/chat/chat-input.tsx(283,21): error TS18048: 'message.metadata' is possibly 'undefined'.
+app:typecheck: components/organisms/chat/chat-input.tsx(327,77): error TS18047: 'textareaRef.current' is possibly 'null'.
+app:typecheck: components/organisms/chat/chat-insight-message.tsx(196,26): error TS18049: 'content' is possibly 'null' or 'undefined'.
+app:typecheck: components/organisms/chat/chat-insight-message.tsx(208,37): error TS18048: 'selectedMetrics' is possibly 'undefined'.
+app:typecheck: components/organisms/chat/chat-insight-message.tsx(213,31): error TS18048: 'selectedMetrics' is possibly 'undefined'.
+app:typecheck: components/organisms/chat/chat-insight-message.tsx(217,31): error TS18049: 'content' is possibly 'null' or 'undefined'.
+app:typecheck: components/organisms/chat/chat-insight-message.tsx(222,33): error TS18049: 'content' is possibly 'null' or 'undefined'.
+app:typecheck: components/organisms/chat/chat-insight-message.tsx(232,13): error TS18049: 'content' is possibly 'null' or 'undefined'.
+app:typecheck: components/organisms/chat/chat-insight-message.tsx(235,23): error TS18049: 'content' is possibly 'null' or 'undefined'.
+app:typecheck: components/organisms/chat/chat-insight-message.tsx(284,23): error TS18049: 'content' is possibly 'null' or 'undefined'.
+app:typecheck: components/organisms/chat/chat-insight-message.tsx(290,34): error TS18049: 'content' is possibly 'null' or 'undefined'.
+app:typecheck: components/organisms/chat/chat-insight-message.tsx(297,25): error TS18049: 'content' is possibly 'null' or 'undefined'.
+app:typecheck: components/organisms/chat/chat-insight-message.tsx(297,44): error TS18049: 'content' is possibly 'null' or 'undefined'.
+app:typecheck: components/organisms/chat/chat-insight-message.tsx(301,16): error TS18049: 'content' is possibly 'null' or 'undefined'.
+app:typecheck: components/organisms/chat/chat-insight-message.tsx(353,25): error TS18048: 'insight.activity' is possibly 'undefined'.
+app:typecheck: components/organisms/chat/chat-insight-message.tsx(353,69): error TS18048: 'insight.activity' is possibly 'undefined'.
+app:typecheck: components/organisms/chat/chat-insight-message.tsx(357,16): error TS18048: 'insight.activity' is possibly 'undefined'.
+app:typecheck: components/organisms/chat/chat-insight-message.tsx(358,16): error TS18048: 'insight.activity' is possibly 'undefined'.
+app:typecheck: components/organisms/chat/chat-insight-message.tsx(359,16): error TS18048: 'insight.activity' is possibly 'undefined'.
+app:typecheck: components/organisms/chat/chat-insight-message.tsx(359,58): error TS18048: 'insight.activity' is possibly 'undefined'.
+app:typecheck: components/organisms/chat/chat-insight-message.tsx(364,29): error TS18048: 'insight.activity' is possibly 'undefined'.
+app:typecheck: components/organisms/chat/chat-insight-message.tsx(424,25): error TS18048: 'predictions' is possibly 'undefined'.
+app:typecheck: components/organisms/chat/chat-insight-message.tsx(424,52): error TS18048: 'predictions' is possibly 'undefined'.
+app:typecheck: components/organisms/chat/chat-insight-message.tsx(428,16): error TS18048: 'predictions' is possibly 'undefined'.
+app:typecheck: components/organisms/chat/chat-insight-message.tsx(429,16): error TS18048: 'predictions' is possibly 'undefined'.
+app:typecheck: components/organisms/chat/chat-insight-message.tsx(431,25): error TS18048: 'predictions' is possibly 'undefined'.
+app:typecheck: components/organisms/chat/chat-insight-message.tsx(432,27): error TS18048: 'predictions' is possibly 'undefined'.
+app:typecheck: components/organisms/chat/chat-message-actions.tsx(167,66): error TS2339: Property 'chat' does not exist on type '{ navigation: { home: string; dashboard: string; settings: string; }; auth: { welcome: string; login_title: string; register_title: string; show_other_options: string; or: string; terms_privacy_agreement: string; terms_of_service: string; privacy_policy: string; form: { ...; }; social: { ...; }; }; ... 15 more ...; ...'.
+app:typecheck: components/organisms/chat/chat-message-actions.tsx(187,30): error TS2339: Property 'chat' does not exist on type '{ navigation: { home: string; dashboard: string; settings: string; }; auth: { welcome: string; login_title: string; register_title: string; show_other_options: string; or: string; terms_privacy_agreement: string; terms_of_service: string; privacy_policy: string; form: { ...; }; social: { ...; }; }; ... 15 more ...; ...'.
+app:typecheck: components/organisms/chat/chat-message-actions.tsx(221,32): error TS2339: Property 'chat' does not exist on type '{ navigation: { home: string; dashboard: string; settings: string; }; auth: { welcome: string; login_title: string; register_title: string; show_other_options: string; or: string; terms_privacy_agreement: string; terms_of_service: string; privacy_policy: string; form: { ...; }; social: { ...; }; }; ... 15 more ...; ...'.
+app:typecheck: components/organisms/chat/chat-message-actions.tsx(222,32): error TS2339: Property 'chat' does not exist on type '{ navigation: { home: string; dashboard: string; settings: string; }; auth: { welcome: string; login_title: string; register_title: string; show_other_options: string; or: string; terms_privacy_agreement: string; terms_of_service: string; privacy_policy: string; form: { ...; }; social: { ...; }; }; ... 15 more ...; ...'.
+app:typecheck: components/organisms/chat/chat-message-actions.tsx(257,32): error TS2339: Property 'chat' does not exist on type '{ navigation: { home: string; dashboard: string; settings: string; }; auth: { welcome: string; login_title: string; register_title: string; show_other_options: string; or: string; terms_privacy_agreement: string; terms_of_service: string; privacy_policy: string; form: { ...; }; social: { ...; }; }; ... 15 more ...; ...'.
+app:typecheck: components/organisms/chat/chat-message-actions.tsx(258,32): error TS2339: Property 'chat' does not exist on type '{ navigation: { home: string; dashboard: string; settings: string; }; auth: { welcome: string; login_title: string; register_title: string; show_other_options: string; or: string; terms_privacy_agreement: string; terms_of_service: string; privacy_policy: string; form: { ...; }; social: { ...; }; }; ... 15 more ...; ...'.
+app:typecheck: components/organisms/chat/chat-messages.tsx(44,11): error TS18048: 'output' is possibly 'undefined'.
+app:typecheck: components/organisms/chat/chat-messages.tsx(45,25): error TS18048: 'output' is possibly 'undefined'.
+app:typecheck: components/organisms/chat/chat-messages.tsx(142,39): error TS18048: 'file.mediaType' is possibly 'undefined'.
+app:typecheck: components/organisms/chat/chat-messages.tsx(212,32): error TS18047: 'insightData' is possibly 'null'.
+app:typecheck: components/organisms/chat/chat-provider-wrapper.tsx(40,29): error TS18048: 'options' is possibly 'undefined'.
+app:typecheck: components/organisms/chat/chat-suggestion-button.tsx(22,9): error TS2531: Object is possibly 'null'.
+app:typecheck: components/organisms/contacts/contact-detail-sheet.tsx(42,49): error TS2339: Property 'errors' does not exist on type '{ title: string; description: string; add_button: string; search_placeholder: string; empty: { title: string; description: string; action: string; }; summary: { total: string; added_this_month: string; most_active: string; top_revenue: string; no_activity: string; no_revenue: string; }; columns: { ...; }; details: {...'.
+app:typecheck: components/organisms/contacts/contact-detail-sheet.tsx(45,34): error TS2339: Property 'errors' does not exist on type '{ title: string; description: string; add_button: string; search_placeholder: string; empty: { title: string; description: string; action: string; }; summary: { total: string; added_this_month: string; most_active: string; top_revenue: string; no_activity: string; no_revenue: string; }; columns: { ...; }; details: {...'.
+app:typecheck: components/organisms/contacts/contact-detail-sheet.tsx(82,36): error TS18047: 'contact' is possibly 'null'.
+app:typecheck: components/organisms/contacts/contact-detail-sheet.tsx(84,12): error TS18047: 'contact' is possibly 'null'.
+app:typecheck: components/organisms/contacts/contact-detail-sheet.tsx(85,50): error TS18047: 'contact' is possibly 'null'.
+app:typecheck: components/organisms/contacts/contact-detail-sheet.tsx(88,16): error TS18047: 'contact' is possibly 'null'.
+app:typecheck: components/organisms/contacts/contact-detail-sheet.tsx(153,5): error TS18049: 'debts' is possibly 'null' or 'undefined'.
+app:typecheck: components/organisms/contacts/contact-detail-sheet.tsx(157,5): error TS18049: 'debts' is possibly 'null' or 'undefined'.
+app:typecheck: components/organisms/contacts/contact-detail-sheet.tsx(314,39): error TS2339: Property 'summary' does not exist on type '{ title: string; description: string; add_button: string; search_placeholder: string; status_label: string; group_label: string; total_debt: string; active_debts: string; overdue: string; empty: { ...; }; ... 8 more ...; form: { ...; }; }'.
+app:typecheck: components/organisms/contacts/contact-detail-sheet.tsx(322,39): error TS2339: Property 'summary' does not exist on type '{ title: string; description: string; add_button: string; search_placeholder: string; status_label: string; group_label: string; total_debt: string; active_debts: string; overdue: string; empty: { ...; }; ... 8 more ...; form: { ...; }; }'.
+app:typecheck: components/organisms/contacts/contact-detail-sheet.tsx(394,56): error TS2339: Property 'summary' does not exist on type '{ title: string; description: string; add_button: string; search_placeholder: string; status_label: string; group_label: string; total_debt: string; active_debts: string; overdue: string; empty: { ...; }; ... 8 more ...; form: { ...; }; }'.
+app:typecheck: components/organisms/contacts/contact-detail-sheet.tsx(395,56): error TS2339: Property 'summary' does not exist on type '{ title: string; description: string; add_button: string; search_placeholder: string; status_label: string; group_label: string; total_debt: string; active_debts: string; overdue: string; empty: { ...; }; ... 8 more ...; form: { ...; }; }'.
+app:typecheck: components/organisms/contacts/contact-form-sheet.tsx(40,35): error TS2339: Property 'errors' does not exist on type '{ title: string; description: string; add_button: string; search_placeholder: string; empty: { title: string; description: string; action: string; }; summary: { total: string; added_this_month: string; most_active: string; top_revenue: string; no_activity: string; no_revenue: string; }; columns: { ...; }; details: {...'.
+app:typecheck: components/organisms/contacts/contact-form-sheet.tsx(42,49): error TS2339: Property 'errors' does not exist on type '{ title: string; description: string; add_button: string; search_placeholder: string; empty: { title: string; description: string; action: string; }; summary: { total: string; added_this_month: string; most_active: string; top_revenue: string; no_activity: string; no_revenue: string; }; columns: { ...; }; details: {...'.
+app:typecheck: components/organisms/contacts/contact-form-sheet.tsx(101,22): error TS18047: 'inputRef.current' is possibly 'null'.
+app:typecheck: components/organisms/contacts/contact-form-sheet.tsx(146,13): error TS18049: 'contact' is possibly 'null' or 'undefined'.
+app:typecheck: components/organisms/contacts/contact-form-sheet.tsx(147,14): error TS18049: 'contact' is possibly 'null' or 'undefined'.
+app:typecheck: components/organisms/contacts/contact-form-sheet.tsx(148,14): error TS18049: 'contact' is possibly 'null' or 'undefined'.
+app:typecheck: components/organisms/contacts/contact-form-sheet.tsx(149,16): error TS18049: 'contact' is possibly 'null' or 'undefined'.
+app:typecheck: components/organisms/contacts/contact-form-sheet.tsx(151,21): error TS18049: 'contact' is possibly 'null' or 'undefined'.
+app:typecheck: components/organisms/contacts/contact-form-sheet.tsx(152,21): error TS18049: 'contact' is possibly 'null' or 'undefined'.
+app:typecheck: components/organisms/contacts/contact-form-sheet.tsx(153,13): error TS18049: 'contact' is possibly 'null' or 'undefined'.
+app:typecheck: components/organisms/contacts/contact-form-sheet.tsx(154,14): error TS18049: 'contact' is possibly 'null' or 'undefined'.
+app:typecheck: components/organisms/contacts/contact-form-sheet.tsx(155,16): error TS18049: 'contact' is possibly 'null' or 'undefined'.
+app:typecheck: components/organisms/contacts/contact-form-sheet.tsx(156,12): error TS18049: 'contact' is possibly 'null' or 'undefined'.
+app:typecheck: components/organisms/contacts/contact-form-sheet.tsx(157,13): error TS18049: 'contact' is possibly 'null' or 'undefined'.
+app:typecheck: components/organisms/contacts/contact-form-sheet.tsx(158,18): error TS18049: 'contact' is possibly 'null' or 'undefined'.
+app:typecheck: components/organisms/contacts/contacts-client.tsx(128,40): error TS2532: Object is possibly 'undefined'.
+app:typecheck: components/organisms/contacts/contacts-client.tsx(138,40): error TS2532: Object is possibly 'undefined'.
+app:typecheck: components/organisms/debts/debt-form-sheet.tsx(63,6): error TS18048: 'debt' is possibly 'undefined'.
+app:typecheck: components/organisms/debts/debt-form-sheet.tsx(109,11): error TS18048: 'debt' is possibly 'undefined'.
+app:typecheck: components/organisms/debts/debt-form-sheet.tsx(110,27): error TS18048: 'debt' is possibly 'undefined'.
+app:typecheck: components/organisms/debts/debts-client.tsx(175,13): error TS2322: Type '(newFilters: { q: string; status: string; }) => void' is not assignable to type '(filters: Record<string, any>) => void'.
+app:typecheck:   Types of parameters 'newFilters' and 'filters' are incompatible.
+app:typecheck:     Type 'Record<string, any>' is missing the following properties from type '{ q: string; status: string; }': q, status
+app:typecheck: components/organisms/debts/debts-client.tsx(186,39): error TS2322: Type 'string[]' is not assignable to type 'Column<any, unknown>[]'.
+app:typecheck:   Type 'string' is not assignable to type 'Column<any, unknown>'.
+app:typecheck: components/organisms/debts/debts-client.tsx(198,11): error TS2322: Type 'Dispatch<SetStateAction<string[]>>' is not assignable to type '(columns: Column<any, unknown>[]) => void'.
+app:typecheck:   Types of parameters 'value' and 'columns' are incompatible.
+app:typecheck:     Type 'Column<any, unknown>[]' is not assignable to type 'SetStateAction<string[]>'.
+app:typecheck:       Type 'Column<any, unknown>[]' is not assignable to type 'string[]'.
+app:typecheck:         Type 'Column<any, unknown>' is not assignable to type 'string'.
+app:typecheck: components/organisms/debts/debts-columns.tsx(138,12): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ unpaid: string; partial: string; paid: string; }'.
+app:typecheck:   No index signature with a parameter of type 'string' was found on type '{ unpaid: string; partial: string; paid: string; }'.
+app:typecheck: components/organisms/debts/debts-columns.tsx(149,41): error TS2552: Cannot find name 'format'. Did you mean 'FormData'?
+app:typecheck: components/organisms/debts/payment-form-sheet.tsx(85,12): error TS18048: 'debt' is possibly 'undefined'.
+app:typecheck: components/organisms/debts/payment-form-sheet.tsx(86,22): error TS18048: 'debt' is possibly 'undefined'.
+app:typecheck: components/organisms/invoices/invoice-activity.tsx(24,36): error TS18048: 'response' is possibly 'undefined'.
+app:typecheck: components/organisms/invoices/invoice-columns.tsx(55,28): error TS2339: Property 'invoice_number' does not exist on type '{ contact: string; issue_date: string; due_date: string; description: string; qty: string; rate: string; tax: string; amount: string; }'.
+app:typecheck: components/organisms/invoices/invoice-columns.tsx(62,28): error TS2339: Property 'status' does not exist on type '{ contact: string; issue_date: string; due_date: string; description: string; qty: string; rate: string; tax: string; amount: string; }'.
+app:typecheck: components/organisms/invoices/invoice-columns.tsx(79,22): error TS18049: 'row.original.contact' is possibly 'null' or 'undefined'.
+app:typecheck: components/organisms/invoices/invoice-columns.tsx(106,28): error TS2339: Property 'actions' does not exist on type '{ contact: string; issue_date: string; due_date: string; description: string; qty: string; rate: string; tax: string; amount: string; }'.
+app:typecheck: components/organisms/invoices/invoice-columns.tsx(122,31): error TS2339: Property 'delete' does not exist on type '{ copy: string; copied: string; edit: string; add_item: string; rename_template: string; duplicate_template: string; delete_template: string; }'.
+app:typecheck: components/organisms/invoices/invoice-form-sheet.tsx(184,80): error TS18047: 'internalRef.current' is possibly 'null'.
+app:typecheck: components/organisms/invoices/invoice-form-sheet.tsx(191,26): error TS18047: 'internalRef.current' is possibly 'null'.
+app:typecheck: components/organisms/invoices/invoice-form-sheet.tsx(340,58): error TS2769: No overload matches this call.
+app:typecheck:   The last overload gave the following error.
+app:typecheck:     Type 'string' is not assignable to type 'readonly ("status" | "amount" | "contactId" | "invoiceNumber" | "issueDate" | "dueDate" | "vat" | "tax" | "currency" | "internalNote" | "noteDetails" | "paymentDetails" | "logoUrl" | "lineItems" | ... 18 more ... | "invoiceSettings.units")[]'.
+app:typecheck: components/organisms/invoices/invoice-form-sheet.tsx(386,20): error TS18047: 'invoice.issueDate' is possibly 'null'.
+app:typecheck: components/organisms/invoices/invoice-form-sheet.tsx(387,18): error TS18047: 'invoice.dueDate' is possibly 'null'.
+app:typecheck: components/organisms/invoices/invoice-form-sheet.tsx(669,33): error TS2532: Object is possibly 'undefined'.
+app:typecheck: components/organisms/invoices/invoice-form-sheet.tsx(670,33): error TS2532: Object is possibly 'undefined'.
+app:typecheck: components/organisms/invoices/invoice-form-sheet.tsx(785,45): error TS2353: Object literal may only specify known properties, and 'description' does not exist in type '{ name: string; quantity: number; price: number; } | { name: string; quantity: number; price: number; }[]'.
+app:typecheck: components/organisms/invoices/invoice-form-sheet.tsx(863,29): error TS2322: Type '"discount"' is not assignable to type '"status" | "amount" | "contactId" | "invoiceNumber" | "issueDate" | "dueDate" | "vat" | "tax" | "currency" | "internalNote" | "noteDetails" | "paymentDetails" | "logoUrl" | "lineItems" | ... 18 more ... | "invoiceSettings.units"'.
+app:typecheck: components/organisms/invoices/invoice-form-sheet.tsx(867,36): error TS2322: Type '{ onChange: (e: ChangeEvent<HTMLInputElement, HTMLInputElement>) => void; onBlur: Noop; value: string | number | boolean | ... 4 more ... | undefined; ... 6 more ...; className: string; }' is not assignable to type 'HashInputProps'.
+app:typecheck:   Types of property 'value' are incompatible.
+app:typecheck:     Type 'string | number | boolean | { name: string; quantity: number; price: number; } | { name: string; quantity: number; price: number; }[] | { vat: boolean; decimals: boolean; qrCode: boolean; salesTax: boolean; lineItemTax: boolean; discount: boolean; units: boolean; } | null | undefined' is not assignable to type 'string | number | readonly string[] | undefined'.
+app:typecheck:       Type 'null' is not assignable to type 'string | number | readonly string[] | undefined'.
+app:typecheck: components/organisms/invoices/invoice-settings.tsx(176,32): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ due_on_receipt: string; net_7: string; net_10: string; net_15: string; net_30: string; net_45: string; net_60: string; net_90: string; }'.
+app:typecheck:   No index signature with a parameter of type 'string' was found on type '{ due_on_receipt: string; net_7: string; net_10: string; net_15: string; net_30: string; net_45: string; net_60: string; net_90: string; }'.
+app:typecheck: components/organisms/invoices/invoice-settings.tsx(251,38): error TS2339: Property 'email' does not exist on type '{ loading_more: string; select_currency: string; search_currency: string; no_currency_found: string; change: string; active: string; processing: string; connecting: string; loading: string; ... 20 more ...; form: { ...; }; }'.
+app:typecheck: components/organisms/invoices/invoice-settings.tsx(297,37): error TS2339: Property 'access_code_description' does not exist on type '{ title: string; total_amount: string; currency: string; public_sharing: string; public_sharing_description: string; code_protected: string; generating_link: string; protection_code: string; ... 15 more ...; subtotal: string; }'.
+app:typecheck: components/organisms/invoices/invoices-client.tsx(52,5): error TS2769: No overload matches this call.
+app:typecheck:   Overload 1 of 3, '(options: DefinedInitialDataInfiniteOptions<ApiResponse<PaginatedList<InvoiceRow>>, Error, InfiniteData<ApiResponse<PaginatedList<InvoiceRow>>, unknown>, string[], number>, queryClient?: QueryClient | undefined): DefinedUseInfiniteQueryResult<...>', gave the following error.
+app:typecheck:     Type '({ pageParam }: { client: QueryClient; queryKey: string[]; signal: AbortSignal; pageParam: number; direction: FetchDirection; meta: Record<string, unknown> | undefined; }) => Promise<...>' is not assignable to type 'unique symbol | QueryFunction<ApiResponse<PaginatedList<InvoiceRow>>, string[], number> | undefined'.
+app:typecheck:       Type '({ pageParam }: { client: QueryClient; queryKey: string[]; signal: AbortSignal; pageParam: number; direction: FetchDirection; meta: Record<string, unknown> | undefined; }) => Promise<...>' is not assignable to type 'QueryFunction<ApiResponse<PaginatedList<InvoiceRow>>, string[], number>'.
+app:typecheck:         Type 'Promise<{ success: true; data: any; error?: undefined; }>' is not assignable to type 'ApiResponse<PaginatedList<InvoiceRow>> | Promise<ApiResponse<PaginatedList<InvoiceRow>>>'.
+app:typecheck:           Type 'Promise<{ success: true; data: any; error?: undefined; }>' is not assignable to type 'Promise<ApiResponse<PaginatedList<InvoiceRow>>>'.
+app:typecheck:             Type '{ success: true; data: any; error?: undefined; }' is missing the following properties from type 'ApiResponse<PaginatedList<InvoiceRow>>': code, message, meta
+app:typecheck:   Overload 2 of 3, '(options: UndefinedInitialDataInfiniteOptions<ApiResponse<PaginatedList<InvoiceRow>>, Error, InfiniteData<ApiResponse<PaginatedList<InvoiceRow>>, unknown>, string[], number>, queryClient?: QueryClient | undefined): UseInfiniteQueryResult<...>', gave the following error.
+app:typecheck:     Type '({ pageParam }: { client: QueryClient; queryKey: string[]; signal: AbortSignal; pageParam: number; direction: FetchDirection; meta: Record<string, unknown> | undefined; }) => Promise<...>' is not assignable to type 'unique symbol | QueryFunction<ApiResponse<PaginatedList<InvoiceRow>>, string[], number> | undefined'.
+app:typecheck:       Type '({ pageParam }: { client: QueryClient; queryKey: string[]; signal: AbortSignal; pageParam: number; direction: FetchDirection; meta: Record<string, unknown> | undefined; }) => Promise<...>' is not assignable to type 'QueryFunction<ApiResponse<PaginatedList<InvoiceRow>>, string[], number>'.
+app:typecheck:         Type 'Promise<{ success: true; data: any; error?: undefined; }>' is not assignable to type 'ApiResponse<PaginatedList<InvoiceRow>> | Promise<ApiResponse<PaginatedList<InvoiceRow>>>'.
+app:typecheck:           Type 'Promise<{ success: true; data: any; error?: undefined; }>' is not assignable to type 'Promise<ApiResponse<PaginatedList<InvoiceRow>>>'.
+app:typecheck:             Type '{ success: true; data: any; error?: undefined; }' is missing the following properties from type 'ApiResponse<PaginatedList<InvoiceRow>>': code, message, meta
+app:typecheck:   Overload 3 of 3, '(options: UseInfiniteQueryOptions<ApiResponse<PaginatedList<InvoiceRow>>, Error, InfiniteData<ApiResponse<PaginatedList<InvoiceRow>>, unknown>, string[], number>, queryClient?: QueryClient | undefined): UseInfiniteQueryResult<...>', gave the following error.
+app:typecheck:     Type '({ pageParam }: { client: QueryClient; queryKey: string[]; signal: AbortSignal; pageParam: number; direction: FetchDirection; meta: Record<string, unknown> | undefined; }) => Promise<...>' is not assignable to type 'unique symbol | QueryFunction<ApiResponse<PaginatedList<InvoiceRow>>, string[], number> | undefined'.
+app:typecheck:       Type '({ pageParam }: { client: QueryClient; queryKey: string[]; signal: AbortSignal; pageParam: number; direction: FetchDirection; meta: Record<string, unknown> | undefined; }) => Promise<...>' is not assignable to type 'QueryFunction<ApiResponse<PaginatedList<InvoiceRow>>, string[], number>'.
+app:typecheck:         Type 'Promise<{ success: true; data: any; error?: undefined; }>' is not assignable to type 'ApiResponse<PaginatedList<InvoiceRow>> | Promise<ApiResponse<PaginatedList<InvoiceRow>>>'.
+app:typecheck:           Type 'Promise<{ success: true; data: any; error?: undefined; }>' is not assignable to type 'Promise<ApiResponse<PaginatedList<InvoiceRow>>>'.
+app:typecheck:             Type '{ success: true; data: any; error?: undefined; }' is missing the following properties from type 'ApiResponse<PaginatedList<InvoiceRow>>': code, message, meta
+app:typecheck: components/organisms/invoices/invoices-client.tsx(132,43): error TS2345: Argument of type 'Partial<Invoice>' is not assignable to parameter of type 'UpdateInvoiceData'.
+app:typecheck:   Types of property 'issueDate' are incompatible.
+app:typecheck:     Type 'string | null | undefined' is not assignable to type 'string | undefined'.
+app:typecheck:       Type 'null' is not assignable to type 'string | undefined'.
+app:typecheck: components/organisms/invoices/invoices-client.tsx(135,28): error TS2345: Argument of type '(prev: InvoiceRow | null) => { id?: string | undefined; workspaceId?: string | undefined; contactId?: string | undefined; invoiceNumber?: string | undefined; status?: "draft" | ... 4 more ... | undefined; ... 16 more ...; contact?: { ...; } | ... 1 more ... | undefined; } | null' is not assignable to parameter of type 'SetStateAction<InvoiceRow | null>'.
+app:typecheck:   Type '(prev: InvoiceRow | null) => { id?: string | undefined; workspaceId?: string | undefined; contactId?: string | undefined; invoiceNumber?: string | undefined; status?: "draft" | ... 4 more ... | undefined; ... 16 more ...; contact?: { ...; } | ... 1 more ... | undefined; } | null' is not assignable to type '(prevState: InvoiceRow | null) => InvoiceRow | null'.
+app:typecheck:     Type '{ id?: string | undefined; workspaceId?: string | undefined; contactId?: string | undefined; invoiceNumber?: string | undefined; status?: "draft" | "unpaid" | "paid" | "overdue" | "canceled" | undefined; ... 16 more ...; contact?: { ...; } | ... 1 more ... | undefined; } | null' is not assignable to type 'InvoiceRow | null'.
+app:typecheck:       Type '{ id?: string | undefined; workspaceId?: string | undefined; contactId?: string | undefined; invoiceNumber?: string | undefined; status?: "draft" | "unpaid" | "paid" | "overdue" | "canceled" | undefined; ... 16 more ...; contact?: { name?: string; email?: string; } | null; }' is not assignable to type 'InvoiceRow'.
+app:typecheck:         Type '{ id?: string | undefined; workspaceId?: string | undefined; contactId?: string | undefined; invoiceNumber?: string | undefined; status?: "draft" | "unpaid" | "paid" | "overdue" | "canceled" | undefined; ... 16 more ...; contact?: { name?: string; email?: string; } | null; }' is not assignable to type 'Invoice'.
+app:typecheck:           Types of property 'id' are incompatible.
+app:typecheck:             Type 'string | undefined' is not assignable to type 'string'.
+app:typecheck:               Type 'undefined' is not assignable to type 'string'.
+app:typecheck: components/organisms/invoices/invoices-client.tsx(135,39): error TS18047: 'prev' is possibly 'null'.
+app:typecheck: components/organisms/invoices/invoices-client.tsx(146,11): error TS18047: 'editInvoice' is possibly 'null'.
+app:typecheck: components/organisms/invoices/invoices-client.tsx(147,41): error TS18047: 'editInvoice' is possibly 'null'.
+app:typecheck: components/organisms/invoices/invoices-client.tsx(220,13): error TS2322: Type '(newFilters: { q: string; status: string; }) => void' is not assignable to type '(filters: Record<string, any>) => void'.
+app:typecheck:   Types of parameters 'newFilters' and 'filters' are incompatible.
+app:typecheck:     Type 'Record<string, any>' is missing the following properties from type '{ q: string; status: string; }': q, status
+app:typecheck: components/organisms/layout/app-sidebar.tsx(55,30): error TS18047: 'currentUser' is possibly 'null'.
+app:typecheck: components/organisms/layout/nav-main.tsx(158,12): error TS18048: 'item.subItems' is possibly 'undefined'.
+app:typecheck: components/organisms/layout/nav-main.tsx(211,9): error TS18048: 'subItems' is possibly 'undefined'.
+app:typecheck: components/organisms/layout/nav-main.tsx(212,14): error TS18048: 'subItems' is possibly 'undefined'.
+app:typecheck: components/organisms/layout/nav-main.tsx(218,12): error TS18048: 'subItems' is possibly 'undefined'.
+app:typecheck: components/organisms/layout/workspace-switcher.tsx(84,27): error TS18047: 'activeWorkspace' is possibly 'null'.
+app:typecheck: components/organisms/layout/workspace-switcher.tsx(180,91): error TS2322: Type '{ open: boolean; onOpenChange: Dispatch<SetStateAction<boolean>>; dictionary: any; }' is not assignable to type 'IntrinsicAttributes & CreateWorkspaceDialogProps'.
+app:typecheck:   Property 'dictionary' does not exist on type 'IntrinsicAttributes & CreateWorkspaceDialogProps'.
+app:typecheck: components/organisms/overview/overview-cards.tsx(77,23): error TS18048: 'incomeResult' is possibly 'undefined'.
+app:typecheck: components/organisms/overview/overview-cards.tsx(77,46): error TS18048: 'incomeResult' is possibly 'undefined'.
+app:typecheck: components/organisms/overview/overview-cards.tsx(78,23): error TS18048: 'expenseResult' is possibly 'undefined'.
+app:typecheck: components/organisms/overview/overview-cards.tsx(78,47): error TS18048: 'expenseResult' is possibly 'undefined'.
+app:typecheck: components/organisms/overview/overview-cards.tsx(79,24): error TS18048: 'categoryResult' is possibly 'undefined'.
+app:typecheck: components/organisms/overview/overview-cards.tsx(79,49): error TS18048: 'categoryResult' is possibly 'undefined'.
+app:typecheck: components/organisms/overview/overview-cards.tsx(83,26): error TS2532: Object is possibly 'undefined'.
+app:typecheck: components/organisms/overview/overview-cards.tsx(85,5): error TS2532: Object is possibly 'undefined'.
+app:typecheck: components/organisms/overview/overview-cards.tsx(85,53): error TS2532: Object is possibly 'undefined'.
+app:typecheck: components/organisms/overview/overview-cards.tsx(87,26): error TS2532: Object is possibly 'undefined'.
+app:typecheck: components/organisms/overview/overview-cards.tsx(89,5): error TS2532: Object is possibly 'undefined'.
+app:typecheck: components/organisms/overview/overview-cards.tsx(89,53): error TS2532: Object is possibly 'undefined'.
+app:typecheck: components/organisms/overview/overview-metrics.tsx(30,24): error TS2532: Object is possibly 'undefined'.
+app:typecheck: components/organisms/overview/overview-metrics.tsx(31,25): error TS2532: Object is possibly 'undefined'.
+app:typecheck: components/organisms/setting/account/account-form.tsx(80,21): error TS18048: 'data' is possibly 'undefined'.
+app:typecheck: components/organisms/setting/billing/billing-view.tsx(530,37): error TS2532: Object is possibly 'undefined'.
+app:typecheck: components/organisms/setting/category/category-form.tsx(220,23): error TS18047: 'over' is possibly 'null'.
+app:typecheck: components/organisms/setting/category/category-form.tsx(223,64): error TS18047: 'over' is possibly 'null'.
+app:typecheck: components/organisms/setting/category/category-form.tsx(329,11): error TS18048: 'context' is possibly 'undefined'.
+app:typecheck: components/organisms/setting/category/category-form.tsx(330,44): error TS18048: 'context' is possibly 'undefined'.
+app:typecheck: components/organisms/setting/language/language-settings-form.tsx(67,41): error TS2322: Type 'unknown' is not assignable to type 'ReactNode'.
+app:typecheck: components/organisms/setting/members/invite-member-dialog.tsx(50,11): error TS2339: Property 'dictionary' does not exist on type 'AppState'.
+app:typecheck: components/organisms/setting/profile/setting-profile-form.tsx(85,72): error TS18048: 'meData' is possibly 'undefined'.
+app:typecheck: components/organisms/setting/profile/setting-profile-form.tsx(89,52): error TS18048: 'meData' is possibly 'undefined'.
+app:typecheck: components/organisms/setting/profile/setting-profile-form.tsx(210,34): error TS2531: Object is possibly 'null'.
+app:typecheck: components/organisms/setting/setting-sidebar.tsx(183,18): error TS18048: 'item.items' is possibly 'undefined'.
+app:typecheck: components/organisms/setting/wallet/wallet-client.tsx(36,30): error TS2339: Property 'error' does not exist on type 'ApiResponse<Wallet[]>'.
+app:typecheck: components/organisms/setting/wallet/wallet-form.tsx(67,13): error TS18049: 'wallet' is possibly 'null' or 'undefined'.
+app:typecheck: components/organisms/setting/wallet/wallet-form.tsx(68,16): error TS18049: 'wallet' is possibly 'null' or 'undefined'.
+app:typecheck: components/organisms/setting/wallet/wallet-form.tsx(69,16): error TS18049: 'wallet' is possibly 'null' or 'undefined'.
+app:typecheck: components/organisms/setting/wallet/wallet-form.tsx(70,27): error TS18049: 'wallet' is possibly 'null' or 'undefined'.
+app:typecheck: components/organisms/setting/wallet/wallet-form.tsx(197,24): error TS18048: 'groups' is possibly 'undefined'.
+app:typecheck: components/organisms/setting/wallet/wallet-group-form.tsx(51,13): error TS18049: 'group' is possibly 'null' or 'undefined'.
+app:typecheck: components/organisms/transactions/transaction-client.tsx(193,7): error TS2552: Cannot find name 'queryClient'. Did you mean 'useQueryClient'?
+app:typecheck: components/organisms/transactions/transaction-client.tsx(525,9): error TS2779: The left-hand side of an assignment expression may not be an optional property access.
+app:typecheck: components/organisms/transactions/transaction-client.tsx(567,28): error TS18048: 'range' is possibly 'undefined'.
+app:typecheck: components/organisms/transactions/transaction-client.tsx(567,28): error TS18048: 'range.from' is possibly 'undefined'.
+app:typecheck: components/organisms/transactions/transaction-client.tsx(568,26): error TS18048: 'range' is possibly 'undefined'.
+app:typecheck: components/organisms/transactions/transaction-client.tsx(568,26): error TS18048: 'range.to' is possibly 'undefined'.
+app:typecheck: components/organisms/transactions/transaction-client.tsx(958,9): error TS2322: Type '{ open: boolean; onOpenChange: Dispatch<SetStateAction<boolean>>; wallets: Wallet[]; dictionary: any; onSuccess: () => void; }' is not assignable to type 'IntrinsicAttributes & ImportModalProps'.
+app:typecheck:   Property 'dictionary' does not exist on type 'IntrinsicAttributes & ImportModalProps'.
+app:typecheck: ERROR: command finished with error: command (/Users/boneconsulting/Developer/oewang/apps/app) /private/tmp/bun-node-274e01c73/bun run typecheck exited (2)
+app#typecheck: command (/Users/boneconsulting/Developer/oewang/apps/app) /private/tmp/bun-node-274e01c73/bun run typecheck exited (2)
+
+ Tasks:    6 successful, 7 total
+Cached:    6 cached, 7 total
+  Time:    9.84s 
+Failed:    app#typecheck
+
+ ERROR  run failed: command  exited (2)
+error: "turbo" exited with code 2

@@ -1,14 +1,13 @@
+import type { Metadata } from "next";
+
 import { AuthSync } from "@/components/organisms/auth/auth-sync";
 import type { Locale } from "@/i18n-config";
-import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Sync Session",
 };
 
-export default async function SyncPage(props: {
-  params: Promise<{ locale: Locale }>;
-}) {
+export default async function SyncPage(props: { params: Promise<{ locale: Locale }> }) {
   const { locale } = await props.params;
 
   return (

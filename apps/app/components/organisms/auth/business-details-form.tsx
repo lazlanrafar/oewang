@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  Button,
-  Input,
-  Label,
-  SelectCountry,
-  SelectCurrency,
-} from "@workspace/ui";
+import { Button, Input, Label, SelectCountry, SelectCurrency } from "@workspace/ui";
 import { Loader2 } from "lucide-react";
 
 interface BusinessDetailsFormProps {
@@ -43,7 +37,6 @@ export function BusinessDetailsForm({
           onChange={(e) => setName(e.target.value)}
           placeholder="Ex: Acme Marketing or Acme Co"
           required
-          // biome-ignore lint/a11y/noAutofocus: UX requirement
           autoFocus
         />
       </div>
@@ -55,13 +48,8 @@ export function BusinessDetailsForm({
 
       <div className="space-y-2">
         <Label>Base currency</Label>
-        <SelectCurrency
-          value={currencyCode}
-          onSelect={onCurrencySelect}
-        />
-        <p className="text-xs leading-relaxed text-muted-foreground">
-          You can change this later from settings.
-        </p>
+        <SelectCurrency value={currencyCode} onSelect={onCurrencySelect} />
+        <p className="text-muted-foreground text-xs leading-relaxed">You can change this later from settings?.</p>
       </div>
 
       <div className="pt-2">

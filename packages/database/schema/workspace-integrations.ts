@@ -1,16 +1,10 @@
-import {
-  boolean,
-  jsonb,
-  pgTable,
-  text,
-  timestamp,
-  uuid,
-} from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
+import { boolean, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { workspaces } from "./workspaces";
 
 export const workspaceIntegrations = pgTable("workspace_integrations", {
-  id: uuid("id").defaultRandom().primaryKey().notNull(),
-  workspaceId: uuid("workspace_id")
+  id: text("id").$defaultFn(createId).primaryKey().notNull(),
+  workspaceId: text("workspace_id")
     .notNull()
     .references(() => workspaces.id, { onDelete: "cascade" }),
   provider: text("provider").notNull(), // e.g., 'whatsapp'

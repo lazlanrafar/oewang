@@ -1,23 +1,15 @@
-import {
-  pgTable,
-  text,
-  timestamp,
-  uuid,
-  integer,
-  decimal,
-  boolean,
-  jsonb,
-} from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
+import { pgTable, text, timestamp, integer, decimal, boolean, jsonb } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { workspaces } from "./workspaces";
 import { walletGroups } from "./wallet-groups";
 
 export const wallets = pgTable("wallets", {
-  id: uuid("id").defaultRandom().primaryKey().notNull(),
-  workspaceId: uuid("workspace_id")
+  id: text("id").$defaultFn(createId).primaryKey().notNull(),
+  workspaceId: text("workspace_id")
     .notNull()
     .references(() => workspaces.id, { onDelete: "cascade" }),
-  groupId: uuid("group_id").references(() => walletGroups.id, {
+  groupId: text("group_id").references(() => walletGroups.id, {
     onDelete: "set null",
   }),
   name: text("name").notNull(),

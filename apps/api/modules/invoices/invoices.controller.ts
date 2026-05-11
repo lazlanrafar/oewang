@@ -11,6 +11,7 @@ import {
 } from "./invoices.dto";
 import { generateInvoiceToken } from "./invoices.utils";
 import { buildSuccess } from "@workspace/utils";
+import { assertCanEditWorkspaceData } from "../workspaces/workspace-permissions";
 
 export const invoicesController = new Elysia({ prefix: "/invoices" })
   .use(authPlugin)
@@ -41,7 +42,8 @@ export const invoicesController = new Elysia({ prefix: "/invoices" })
   )
   .post(
     "/",
-    async ({ workspaceId, userId, body, set }) => {
+    async ({ auth, workspaceId, userId, body, set }) => {
+      assertCanEditWorkspaceData(auth?.workspace_role);
       set.status = 201;
       return InvoicesService.create(body, workspaceId!, userId!);
     },
@@ -96,7 +98,8 @@ export const invoicesController = new Elysia({ prefix: "/invoices" })
   )
   .patch(
     "/:id",
-    async ({ workspaceId, userId, params: { id }, body }) => {
+    async ({ auth, workspaceId, userId, params: { id }, body }) => {
+      assertCanEditWorkspaceData(auth?.workspace_role);
       return InvoicesService.update(id, workspaceId!, userId!, body);
     },
     {
@@ -110,7 +113,8 @@ export const invoicesController = new Elysia({ prefix: "/invoices" })
   )
   .delete(
     "/:id",
-    async ({ workspaceId, userId, params: { id } }) => {
+    async ({ auth, workspaceId, userId, params: { id } }) => {
+      assertCanEditWorkspaceData(auth?.workspace_role);
       return InvoicesService.delete(id, workspaceId!, userId!);
     },
     {

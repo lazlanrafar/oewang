@@ -1,9 +1,10 @@
 "use client";
 
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createContact, getContacts } from "@workspace/modules/client";
+import type { Contact } from "@workspace/types";
 import { Combobox, Spinner } from "@workspace/ui";
 import { User } from "lucide-react";
-import { getContacts, createContact } from "@workspace/modules/client";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 export interface SelectContactProps {
@@ -52,7 +53,7 @@ export function SelectContact({
         toast.success(`Contact "${data.name}" created`);
       }
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(error.message || "Failed to create contact");
     },
   });
@@ -66,7 +67,7 @@ export function SelectContact({
       }
     : undefined;
 
-  const items = contacts.map((c: any) => ({
+  const items = contacts.map((c: Contact) => ({
     id: c.id,
     label: c.name,
     email: c.email,
@@ -74,7 +75,7 @@ export function SelectContact({
 
   if (!selectedValue && isLoading && !hideLoading) {
     return (
-      <div className="w-full h-full flex items-center justify-center min-h-[40px]">
+      <div className="flex h-full min-h-[40px] w-full items-center justify-center">
         <Spinner />
       </div>
     );
@@ -96,36 +97,30 @@ export function SelectContact({
       onCreate={(value) => {
         createMutation.mutate(value);
       }}
-      renderSelectedItem={(item: any) => (
+      renderSelectedItem={(item: Record<string, string>) => (
         <div className="flex items-center space-x-2">
-          <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center shrink-0">
+          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted">
             <User className="h-3 w-3 text-muted-foreground" />
           </div>
-          <span className="text-left truncate max-w-[90%] font-medium text-xs">
-            {item.label}
-          </span>
+          <span className="max-w-[90%] truncate text-left font-medium text-xs">{item.label}</span>
         </div>
       )}
       renderOnCreate={(value) => (
         <div className="flex items-center space-x-2">
-          <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center shrink-0">
+          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted">
             <User className="h-3 w-3 text-muted-foreground" />
           </div>
           <span className="text-xs">{`Create "${value}"`}</span>
         </div>
       )}
-      renderListItem={({ item }: { item: any }) => (
+      renderListItem={({ item }: { item: Record<string, string> }) => (
         <div className="flex items-center gap-2 overflow-hidden">
-          <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center shrink-0">
+          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted">
             <User className="h-3 w-3 text-muted-foreground" />
           </div>
           <div className="flex flex-col truncate">
-            <span className="font-medium truncate text-xs">{item.label}</span>
-            {item.email && (
-              <span className="text-[10px] text-muted-foreground truncate">
-                {item.email}
-              </span>
-            )}
+            <span className="truncate font-medium text-xs">{item.label}</span>
+            {item.email && <span className="truncate text-[10px] text-muted-foreground">{item.email}</span>}
           </div>
         </div>
       )}

@@ -5,6 +5,9 @@ import { PDFExtract } from "pdf.js-extract";
 import { ParsedReceipt } from "../types";
 import { log } from "../utils/logger";
 
+const OPENAI_RECEIPT_MODEL =
+  process.env.OPENAI_RECEIPT_MODEL || process.env.OPENAI_CHAT_MODEL || "gpt-5.4-mini";
+
 export interface ReceiptProviderOptions {
   geminiKey?: string;
   openaiKey?: string;
@@ -92,23 +95,73 @@ Rules:
     // 2. OpenAI
     if (options.openaiKey) {
       try {
-        const openai = new OpenAI({ apiKey: options.openaiKey });
-        const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
-          { role: "system", content: systemPrompt },
-          {
-            role: "user",
-            content: pdfText ? prompt : [
-              { type: "text", text: prompt },
-              { type: "image_url", image_url: { url: `data:${mimeType};base64,${base64}` } }
-            ]
-          }
-        ];
-        const response = await openai.chat.completions.create({
-          model: "gpt-4o-mini",
-          messages,
-          response_format: { type: "json_object" },
+        const openai = new OpenAI({
+          apiKey: options.openaiKey,
+          timeout: 45_000,
+          maxRetries: 2,
         });
-        const parsed = JSON.parse(response.choices[0]?.message.content || "{}");
+
+        const input: OpenAI.Responses.ResponseInput = [
+          {
+            type: "message",
+            role: "user",
+            content: pdfText
+              ? [{ type: "input_text", text: prompt }]
+              : [
+                  { type: "input_text", text: prompt },
+                  {
+                    type: "input_image",
+                    image_url: `data:${mimeType};base64,${base64}`,
+                    detail: "auto",
+                  },
+                ],
+          },
+        ];
+
+        const response = await openai.responses.create({
+          model: OPENAI_RECEIPT_MODEL,
+          instructions: systemPrompt,
+          input,
+          truncation: "auto",
+          max_output_tokens: 2500,
+          text: {
+            format: {
+              type: "json_schema",
+              name: "parsed_receipt",
+              strict: true,
+              schema: {
+                type: "object",
+                additionalProperties: false,
+                properties: {
+                  amount: { type: "number" },
+                  date: { type: "string" },
+                  name: { type: "string" },
+                  categoryId: { type: ["string", "null"] },
+                  items: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      additionalProperties: false,
+                      properties: {
+                        name: { type: "string" },
+                        brand: { type: ["string", "null"] },
+                        quantity: { type: ["number", "null"] },
+                        unit: { type: ["string", "null"] },
+                        unitPrice: { type: ["number", "null"] },
+                        amount: { type: "number" },
+                        categoryId: { type: ["string", "null"] },
+                      },
+                      required: ["name", "brand", "quantity", "unit", "unitPrice", "amount", "categoryId"],
+                    },
+                  },
+                },
+                required: ["amount", "date", "name", "categoryId", "items"],
+              },
+            },
+          },
+          store: false,
+        });
+        const parsed = JSON.parse(response.output_text || "{}");
         return parsed;
       } catch (e: any) {
         log.error("OpenAI parseReceipt failed", { error: e.message || e });

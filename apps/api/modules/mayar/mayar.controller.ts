@@ -1,9 +1,12 @@
 import { Elysia } from "elysia";
 import { MayarService } from "./mayar.service";
+import { MayarRepository } from "./mayar.repository";
 import { CreateMayarCheckoutDto, MayarWebhookDto, CancelAddonDto } from "./mayar.dto";
 import { authPlugin } from "../../plugins/auth";
 import { buildError } from "@workspace/utils";
 import { ErrorCode } from "@workspace/types";
+import { WorkspacesRepository } from "../workspaces/workspaces.repository";
+import { assertCanManageSensitiveWorkspace } from "../workspaces/workspace-permissions";
 
 export const mayarController = new Elysia({
   prefix: "/mayar",
@@ -13,16 +16,21 @@ export const mayarController = new Elysia({
     "/webhook",
     async ({ body, headers }) => {
       try {
-
+        const rawAuthorization = headers["authorization"];
+        const bearerToken =
+          typeof rawAuthorization === "string" &&
+          rawAuthorization.toLowerCase().startsWith("bearer ")
+            ? rawAuthorization.slice(7).trim()
+            : rawAuthorization;
         const token =
           headers["x-mayar-token"] ||
           headers["x-callback-token"] ||
-          headers["authorization"];
+          bearerToken;
         await MayarService.handleWebhook(body, token);
         return { success: true };
       } catch (err: any) {
         console.error("[Mayar Webhook Error]", err.stack || err.message);
-        return { success: false, error: err.message };
+        return { success: false, error: "Webhook processing failed" };
       }
     },
     {
@@ -33,10 +41,18 @@ export const mayarController = new Elysia({
   .use(authPlugin)
   .post(
     "/portal/magic-link",
-    async ({ jwt_payload }) => {
+    async ({ auth, status }) => {
+      if (!auth) {
+        throw status(
+          401,
+          buildError(ErrorCode.UNAUTHORIZED, "Unauthorized"),
+        );
+      }
+      assertCanManageSensitiveWorkspace(auth.workspace_role);
+
       // Find workspace owner or customer email from workspace context
       const workspace = await MayarRepository.findWorkspaceById(
-        jwt_payload.workspace_id,
+        auth.workspaceId,
       );
       const email = workspace?.mayar_customer_email;
 
@@ -55,6 +71,7 @@ export const mayarController = new Elysia({
     async ({ body, auth, status }) => {
       if (!auth)
         return status(401, buildError(ErrorCode.UNAUTHORIZED, "Unauthorized"));
+      assertCanManageSensitiveWorkspace(auth.workspace_role);
 
       const {
         priceId,
@@ -68,8 +85,20 @@ export const mayarController = new Elysia({
         locale,
       } = body;
 
+      if (workspaceId && workspaceId !== auth.workspaceId) {
+        const membership = await WorkspacesRepository.getMembership(
+          auth.user_id,
+          workspaceId,
+        );
+        if (!membership) {
+          return status(403, buildError(ErrorCode.FORBIDDEN, "Forbidden"));
+        }
+      }
+
+      const targetWorkspaceId = workspaceId || auth.workspaceId;
+
       return MayarService.createCheckoutSession(
-        workspaceId || auth.workspace_id,
+        targetWorkspaceId,
         auth.user_id,
         priceId,
         returnPath,
@@ -95,6 +124,7 @@ export const mayarController = new Elysia({
     async ({ auth, status }) => {
       if (!auth)
         return status(401, buildError(ErrorCode.UNAUTHORIZED, "Unauthorized"));
+      assertCanManageSensitiveWorkspace(auth.workspace_role);
       
       return MayarService.createCustomerPortal(auth.email);
     },
@@ -105,15 +135,19 @@ export const mayarController = new Elysia({
     async ({ auth, status }) => {
       if (!auth)
         return status(401, buildError(ErrorCode.UNAUTHORIZED, "Unauthorized"));
+      assertCanManageSensitiveWorkspace(auth.workspace_role);
       
-      await MayarService.syncWorkspaceInvoices(auth.workspace_id, auth.email || "");
+      await MayarService.syncWorkspaceInvoices(auth.workspaceId, auth.email || "");
       return { success: true };
     },
     { detail: { summary: "Sync Workspace Invoices", tags: ["Mayar"] } },
   )
   .get(
     "/invoices/:id",
-    async ({ params }) => {
+    async ({ params, auth, status }) => {
+      if (!auth) {
+        return status(401, buildError(ErrorCode.UNAUTHORIZED, "Unauthorized"));
+      }
       return MayarService.getInvoiceUrl(params.id);
     },
     { detail: { summary: "Get Invoice URL", tags: ["Mayar"] } },
@@ -123,7 +157,8 @@ export const mayarController = new Elysia({
     async ({ auth, status }) => {
       if (!auth)
         return status(401, buildError(ErrorCode.UNAUTHORIZED, "Unauthorized"));
-      return MayarService.cancelSubscription(auth.workspace_id);
+      assertCanManageSensitiveWorkspace(auth.workspace_role);
+      return MayarService.cancelSubscription(auth.workspaceId);
     },
     { detail: { summary: "Cancel Subscription", tags: ["Mayar"] } },
   )
@@ -135,8 +170,9 @@ export const mayarController = new Elysia({
           401,
           buildError(ErrorCode.UNAUTHORIZED, "Unauthorized"),
         );
+      assertCanManageSensitiveWorkspace(auth.workspace_role);
       return MayarService.cancelAddon(
-        auth.workspace_id,
+        auth.workspaceId,
         body.addonId,
         auth.user_id,
       );

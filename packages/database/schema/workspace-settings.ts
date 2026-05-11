@@ -1,16 +1,10 @@
-import {
-  boolean,
-  integer,
-  pgTable,
-  text,
-  timestamp,
-  uuid,
-} from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
+import { boolean, integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { workspaces } from "./workspaces";
 
 export const workspaceSettings = pgTable("workspace_settings", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  workspaceId: uuid("workspace_id")
+  id: text("id").$defaultFn(createId).primaryKey(),
+  workspaceId: text("workspace_id")
     .references(() => workspaces.id)
     .notNull(),
   monthlyStartDate: integer("monthly_start_date").default(1).notNull(),

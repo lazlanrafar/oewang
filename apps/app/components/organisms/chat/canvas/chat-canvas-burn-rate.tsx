@@ -2,54 +2,62 @@
 
 import {
   BaseCanvas,
-  CanvasHeader,
-  CanvasContent,
   CanvasChart,
+  CanvasContent,
   CanvasGrid,
+  CanvasHeader,
   CanvasSection,
   shouldShowMetricsSkeleton,
   shouldShowSummarySkeleton,
 } from "@workspace/ui";
-import { useAppStore } from "../../../../stores/app";
-import { ArtifactTabs, useStaticArtifactData } from "./chat-canvas";
+
+import { useAppStore } from "@/stores/app";
+import { getDictionaryText } from "../chat-i18n";
 import { BurnRateChart } from "../charts/burn-rate-chart";
 import { formatAmount } from "../charts/format-amount";
+import { ArtifactTabs, useStaticArtifactData } from "./chat-canvas";
 
-export function BurnRateCanvas() {
-  const data = useStaticArtifactData("burn-rate-canvas");
-  const user = useAppStore((state) => state.user) as any;
-  const locale = user?.locale || "en-US";
-  const currency = data?.currency || "USD";
-  const stage = data?.stage;
+export function BurnRateCanvas({ dataOverride }: { dataOverride?: Record<string, unknown> | null } = {}) {
+  const data = (dataOverride ?? (useStaticArtifactData("burn-rate-canvas") as Record<string, unknown> | null) ?? {});
+  const dictionary = useAppStore((state) => state.dictionary);
+  const t = (key: string, fallback: string) => getDictionaryText(dictionary, key, fallback);
+  const locale = typeof navigator !== "undefined" ? navigator.language : "en-US";
+  const currency = (data.currency as string) || "USD";
+  const stage = data.stage as string | undefined;
+  const chartData = Array.isArray(data.chart) ? (data.chart as Record<string, unknown>[]) : [];
+  const metrics = (data.metrics as Record<string, unknown> | undefined) ?? {};
+  const analysis = (data.analysis as Record<string, unknown> | undefined) ?? {};
 
   // Map the oewang chart data format to what BurnRateChart expects
-  const burnRateData =
-    data?.chart?.map((item: any) => ({
-      month: item.label,
-      amount: item.value,
-      average: data.metrics?.avgMonthlyBurn || 0,
-      currentBurn: item.value,
-      averageBurn: data.metrics?.avgMonthlyBurn || 0,
-    })) || [];
+  const burnRateData = chartData.map((item) => {
+    const amount = Number(item.value) || 0;
+    return {
+      month: String(item.label ?? ""),
+      amount,
+      average: Number(metrics.avgMonthlyBurn) || 0,
+      currentBurn: amount,
+      averageBurn: Number(metrics.avgMonthlyBurn) || 0,
+    };
+  });
 
-  const burnMetrics = data?.metrics
+  const burnMetrics = Object.keys(metrics).length
     ? [
         {
           id: "avg-burn",
-          title: "Avg Monthly Burn",
+          title: t("chat.canvas.burn_rate.avg_monthly_burn", "Avg Monthly Burn"),
           value: formatAmount({
-            amount: data.metrics.avgMonthlyBurn || 0,
+            amount: Number(metrics.avgMonthlyBurn) || 0,
             currency,
             locale,
             maximumFractionDigits: 0,
           }),
-          subtitle: "Based on last 6 months",
+          subtitle: t("chat.canvas.burn_rate.based_last_6_months", "Based on last 6 months"),
         },
         {
           id: "runway",
-          title: "Estimated Runway",
-          value: data.metrics.runway || "—",
-          subtitle: "At current burn rate",
+          title: t("chat.canvas.burn_rate.estimated_runway", "Estimated Runway"),
+          value: String(metrics.runway ?? "—"),
+          subtitle: t("chat.canvas.burn_rate.at_current_burn_rate", "At current burn rate"),
         },
       ]
     : [];
@@ -65,36 +73,26 @@ export function BurnRateCanvas() {
           {/* Monthly Burn Rate Chart */}
           {showChart && burnRateData.length > 0 && (
             <CanvasChart
-              title="Monthly Burn Rate"
+              title={t("chat.canvas.burn_rate.monthly_burn_rate", "Monthly Burn Rate")}
               legend={{
                 items: [
-                  { label: "Current", type: "solid" },
-                  { label: "Average", type: "pattern" },
+                  { label: t("chat.canvas.common.current", "Current"), type: "solid" },
+                  { label: t("chat.canvas.common.average", "Average"), type: "pattern" },
                 ],
               }}
               isLoading={stage === "loading"}
               height="20rem"
             >
-              <BurnRateChart
-                data={burnRateData}
-                height={320}
-                showLegend={false}
-                currency={currency}
-                locale={locale}
-              />
+              <BurnRateChart data={burnRateData} height={320} showLegend={false} currency={currency} locale={locale} />
             </CanvasChart>
           )}
 
           {/* Metric cards */}
-          <CanvasGrid
-            items={burnMetrics}
-            layout="2/2"
-            isLoading={shouldShowMetricsSkeleton(stage)}
-          />
+          <CanvasGrid items={burnMetrics} layout="2/2" isLoading={shouldShowMetricsSkeleton(stage)} />
 
           {/* Summary */}
-          <CanvasSection title="Summary" isLoading={shouldShowSummarySkeleton(stage)}>
-            {data?.analysis?.summary}
+          <CanvasSection title={t("chat.canvas.common.summary", "Summary")} isLoading={shouldShowSummarySkeleton(stage)}>
+            {String(analysis.summary ?? "")}
           </CanvasSection>
         </div>
       </CanvasContent>

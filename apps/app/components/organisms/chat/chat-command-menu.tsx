@@ -1,13 +1,12 @@
 "use client";
 
-import { useChatInterface } from "@workspace/ui/hooks";
-import { useChatStore } from "@/stores/chat";
-import { useChatActions, useChatId } from "@ai-sdk-tools/store";
-import { AnimatedSizeContainer } from "@workspace/ui";
-import { cn } from "@workspace/ui";
-import { Icons } from "@workspace/ui";
 import { type RefObject, useEffect, useRef } from "react";
+
+import { useChatActions, useChatId } from "@ai-sdk-tools/store";
+import { AnimatedSizeContainer, cn, Icons } from "@workspace/ui";
 import { useOnClickOutside } from "usehooks-ts";
+
+import { useChatStore } from "@/stores/chat";
 
 export function ChatCommandMenu() {
   const commandListRef = useRef<HTMLDivElement>(null);
@@ -15,15 +14,14 @@ export function ChatCommandMenu() {
     filteredCommands,
     selectedCommandIndex,
     showCommands,
-    handleCommandSelect,
+
     resetCommandState,
     setInput,
     setShowCommands,
   } = useChatStore();
 
   const { sendMessage } = useChatActions();
-  const chatId = useChatId();
-  const { setChatId } = useChatInterface();
+  const _chatId = useChatId();
 
   // Close command menu when clicking outside (but not on the toggle button or input toolbar buttons)
   useOnClickOutside(commandListRef as RefObject<HTMLElement>, (event) => {
@@ -35,9 +33,7 @@ export function ChatCommandMenu() {
       const clickedButton = target.closest("button");
       const isToolbarButton =
         clickedButton !== null &&
-        (clickedButton.closest("form") !== null ||
-          clickedButton.type === "button" ||
-          clickedButton.type === "submit");
+        (clickedButton.closest("form") !== null || clickedButton.type === "button" || clickedButton.type === "submit");
 
       // Only close if it's not the toggle button or toolbar buttons
       if (!isToggleButton && !isToolbarButton) {
@@ -46,14 +42,14 @@ export function ChatCommandMenu() {
     }
   });
 
-  const handleCommandExecution = (command: any) => {
+  const handleCommandExecution = (command: Record<string, unknown>) => {
     sendMessage({
       role: "user",
-      parts: [{ type: "text", text: command.title }],
+      parts: [{ type: "text", text: String(command.title) }],
       metadata: {
         toolCall: {
-          toolName: command.toolName,
-          toolParams: command.toolParams,
+          toolName: String(command.toolName),
+          toolParams: command.toolParams as Record<string, unknown>,
         },
       },
     });
@@ -65,9 +61,7 @@ export function ChatCommandMenu() {
   // Scroll selected command into view
   useEffect(() => {
     if (commandListRef.current && showCommands) {
-      const selectedElement = commandListRef.current.querySelector(
-        `[data-index="${selectedCommandIndex}"]`,
-      );
+      const selectedElement = commandListRef.current.querySelector(`[data-index="${selectedCommandIndex}"]`);
       if (selectedElement) {
         selectedElement.scrollIntoView({ block: "nearest" });
       }
@@ -77,14 +71,10 @@ export function ChatCommandMenu() {
   if (!showCommands || filteredCommands.length === 0) return null;
 
   return (
-    <div
-      ref={commandListRef}
-      data-command-menu
-      className="absolute bottom-full left-0 right-0 mb-2 w-full z-30"
-    >
+    <div ref={commandListRef} data-command-menu className="absolute right-0 bottom-full left-0 z-30 mb-2 w-full">
       <AnimatedSizeContainer
         height
-        className="bg-[#f7f7f7]/85 dark:bg-[#171717]/85 backdrop-blur-lg max-h-80 overflow-y-auto"
+        className="max-h-80 overflow-y-auto bg-[#f7f7f7]/85 backdrop-blur-lg dark:bg-[#171717]/85"
         transition={{
           type: "spring",
           duration: 0.2,
@@ -99,30 +89,29 @@ export function ChatCommandMenu() {
           {filteredCommands.map((command, index) => {
             const isActive = selectedCommandIndex === index;
             return (
-              <div
+              <button
+                type="button"
                 key={`${command.command}-${index}`}
                 className={cn(
-                  "px-2 py-2 text-sm cursor-pointer transition-colors flex items-center justify-between group",
-                  isActive
-                    ? "bg-black/5 dark:bg-white/5"
-                    : "hover:bg-black/5 dark:hover:bg-white/5",
+                  "group m-0 flex w-full cursor-pointer appearance-none items-center justify-between border-none bg-transparent px-2 py-2 text-left text-sm transition-colors",
+                  isActive ? "bg-black/5 dark:bg-white/5" : "hover:bg-black/5 dark:hover:bg-white/5",
                 )}
                 onMouseDown={(e) => {
                   // Prevent input from losing focus when clicking on command
                   e.preventDefault();
                 }}
-                onClick={() => handleCommandExecution(command)}
+                onClick={() => handleCommandExecution(command as Record<string, unknown>)}
                 data-index={index}
               >
                 <div>
-                  <span className="text-[#666] ml-2">{command.title}</span>
+                  <span className="ml-2 text-[#666]">{String(command.title)}</span>
                 </div>
                 {isActive && (
-                  <span className="material-icons-outlined text-sm opacity-50 group-hover:opacity-100 text-gray-600 dark:text-gray-400 group-hover:text-black dark:group-hover:text-white">
+                  <span className="material-icons-outlined text-gray-600 text-sm opacity-50 group-hover:text-black group-hover:opacity-100 dark:text-gray-400 dark:group-hover:text-white">
                     <Icons.ArrowForward />
                   </span>
                 )}
-              </div>
+              </button>
             );
           })}
         </div>

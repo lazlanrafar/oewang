@@ -1,8 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  getVaultFiles,
+  uploadVaultFile,
+  type VaultFile,
+} from "@workspace/modules/vault/vault.action";
 import {
   Button,
   cn,
@@ -15,7 +20,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   Input,
-  ScrollArea,
 } from "@workspace/ui";
 import {
   ArrowUpDown,
@@ -29,16 +33,9 @@ import {
   Grid,
   Image as ImageIcon,
   List as ListIcon,
-  Paperclip,
   Search,
-  UploadCloud,
 } from "lucide-react";
 import { toast } from "sonner";
-
-import {
-  getVaultFiles,
-  uploadVaultFile,
-} from "@workspace/modules/vault/vault.action";
 
 const ALLOWED_TYPES = [
   "image/jpeg",
@@ -50,14 +47,6 @@ const ALLOWED_TYPES = [
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   "text/csv",
 ];
-
-interface VaultFile {
-  id: string;
-  name: string;
-  size: number;
-  type: string;
-  url: string; // added url for image preview
-}
 
 interface VaultPickerModalProps {
   open: boolean;
@@ -74,11 +63,22 @@ function formatBytes(bytes: number) {
 
 function FileIcon({ type }: { type: string }) {
   if (type.startsWith("image/"))
-    return <ImageIcon className="w-4 h-4 shrink-0" />;
-  if (type.startsWith("video/")) return <Film className="w-4 h-4 shrink-0" />;
+    return <ImageIcon className="h-4 w-4 shrink-0" />;
+  if (type.startsWith("video/")) return <Film className="h-4 w-4 shrink-0" />;
   if (type === "application/pdf")
-    return <FileText className="w-4 h-4 shrink-0" />;
-  return <FileIconLucide className="w-4 h-4 shrink-0" />;
+    return <FileText className="h-4 w-4 shrink-0" />;
+  return <FileIconLucide className="h-4 w-4 shrink-0" />;
+}
+
+function getFileOrientation(metadata: VaultFile["metadata"]) {
+  if (!metadata) return "Landscape";
+
+  try {
+    const parsed = JSON.parse(metadata) as { orientation?: string };
+    return parsed.orientation || "Landscape";
+  } catch {
+    return "Landscape";
+  }
 }
 
 export function VaultPickerModal({
@@ -94,7 +94,7 @@ export function VaultPickerModal({
   const [isLoading, setIsLoading] = useState(false);
 
   // New State additions
-  const [view, setView] = useState<"list" | "grid">("list");
+  const [view, setView] = useState<"list" | "grid">("grid");
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState<string>("all");
   const [filterSize, setFilterSize] = useState<string>("all");
@@ -155,24 +155,24 @@ export function VaultPickerModal({
   // Sync pending selection when parent selectedIds change (e.g. edit mode)
   useEffect(() => {
     setPending(new Set(selectedIds));
-  }, [selectedIds.join(",")]);
+  }, [selectedIds]);
 
-  const loadFiles = () => {
+  const loadFiles = useCallback(() => {
     setIsLoading(true);
     getVaultFiles(page, LIMIT)
       .then((res) => {
-        if (res?.success && res.data) {
+        if (res.success && res.data) {
           setFiles(res.data.files);
-          setTotalPages(res.data.pagination.total_pages);
+          setTotalPages(res.data?.pagination?.total_pages);
         }
       })
       .finally(() => setIsLoading(false));
-  };
+  }, [page]);
 
   useEffect(() => {
     if (!open) return;
     loadFiles();
-  }, [open, page]);
+  }, [open, loadFiles]);
 
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
@@ -187,14 +187,14 @@ export function VaultPickerModal({
       if (result.success) return result.data;
       throw new Error(result.error);
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data: VaultFile) => {
       queryClient.invalidateQueries({ queryKey: ["vault-files"] });
 
       // Auto-select the newly uploaded file and append it locally without reloading immediately
       setFiles((prev) => [data, ...prev]);
       setPending((prev) => new Set(prev).add(data.id));
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(error.message || "Upload failed");
     },
   });
@@ -210,7 +210,7 @@ export function VaultPickerModal({
         filesArray.map((file) => uploadMutation.mutateAsync(file)),
       );
       toast.success("All files uploaded successfully", { id: toastId });
-    } catch (error) {
+    } catch (_error) {
       toast.error("Some files failed to upload", { id: toastId });
     }
   };
@@ -225,18 +225,18 @@ export function VaultPickerModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[900px] max-h-[70vh] flex flex-col">
-        <DialogHeader className="flex flex-row items-center  py-4 border-b sr-only">
+      <DialogContent className="flex max-h-[85vh] flex-col sm:max-w-[900px]">
+        <DialogHeader className="sr-only flex flex-row items-center border-b py-4">
           <DialogTitle>Select file</DialogTitle>
         </DialogHeader>
 
-        <div className="flex flex-col gap-4  pt-6 shrink-0">
+        <div className="flex shrink-0 flex-col gap-4 pt-6">
           <div className="flex items-center justify-between gap-4">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute top-2.5 left-3 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search files..."
-                className="pl-9 h-10 w-full rounded-lg bg-transparent"
+                className="h-8 w-full bg-transparent pl-9"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -245,8 +245,8 @@ export function VaultPickerModal({
             <div className="flex items-center gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="hidden sm:flex">
-                    <ArrowUpDown className="w-4 h-4 mr-2" />
+                  <Button variant="outline" className="hidden sm:flex h-8">
+                    <ArrowUpDown className="mr-2 h-4 w-4" />
                     Sort
                   </Button>
                 </DropdownMenuTrigger>
@@ -254,50 +254,50 @@ export function VaultPickerModal({
                   <DropdownMenuItem onClick={() => setSortBy("newest")}>
                     Newest first{" "}
                     {sortBy === "newest" && (
-                      <Check className="w-4 h-4 ml-auto" />
+                      <Check className="ml-auto h-4 w-4" />
                     )}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setSortBy("name_asc")}>
                     Name (A-Z){" "}
                     {sortBy === "name_asc" && (
-                      <Check className="w-4 h-4 ml-auto" />
+                      <Check className="ml-auto h-4 w-4" />
                     )}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setSortBy("name_desc")}>
                     Name (Z-A){" "}
                     {sortBy === "name_desc" && (
-                      <Check className="w-4 h-4 ml-auto" />
+                      <Check className="ml-auto h-4 w-4" />
                     )}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setSortBy("size_desc")}>
                     Size (Largest){" "}
                     {sortBy === "size_desc" && (
-                      <Check className="w-4 h-4 ml-auto" />
+                      <Check className="ml-auto h-4 w-4" />
                     )}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setSortBy("size_asc")}>
                     Size (Smallest){" "}
                     {sortBy === "size_asc" && (
-                      <Check className="w-4 h-4 ml-auto" />
+                      <Check className="ml-auto h-4 w-4" />
                     )}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="h-10 rounded-lg px-3">
+                  <Button variant="outline" className="h-8 px-3">
                     {view === "list" ? (
                       <>
-                        <ListIcon className="w-4 h-4 mr-2 text-muted-foreground" />
+                        <ListIcon className="mr-2 h-4 w-4 text-muted-foreground" />
                         List view
                       </>
                     ) : (
                       <>
-                        <Grid className="w-4 h-4 mr-2 text-muted-foreground" />
+                        <Grid className="mr-2 h-4 w-4 text-muted-foreground" />
                         Grid view
                       </>
                     )}
-                    <ChevronDown className="w-4 h-4 ml-2 text-muted-foreground" />
+                    <ChevronDown className="ml-2 h-4 w-4 text-muted-foreground" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-40">
@@ -306,27 +306,27 @@ export function VaultPickerModal({
                     className="justify-between"
                   >
                     <span className="flex items-center">
-                      <ListIcon className="w-4 h-4 mr-2 text-muted-foreground" />{" "}
+                      <ListIcon className="mr-2 h-4 w-4 text-muted-foreground" />{" "}
                       List view
                     </span>
-                    {view === "list" && <Check className="w-4 h-4" />}
+                    {view === "list" && <Check className="h-4 w-4" />}
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => setView("grid")}
                     className="justify-between"
                   >
                     <span className="flex items-center">
-                      <Grid className="w-4 h-4 mr-2 text-muted-foreground" />{" "}
+                      <Grid className="mr-2 h-4 w-4 text-muted-foreground" />{" "}
                       Grid view
                     </span>
-                    {view === "grid" && <Check className="w-4 h-4" />}
+                    {view === "grid" && <Check className="h-4 w-4" />}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
+          <div className="scrollbar-hide flex items-center gap-2 overflow-x-auto pb-1">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm">
@@ -334,32 +334,32 @@ export function VaultPickerModal({
                     ? "File type"
                     : filterType.charAt(0).toUpperCase() +
                       filterType.slice(1)}{" "}
-                  <ChevronDown className="w-3 h-3 ml-1" />
+                  <ChevronDown className="ml-1 h-3 w-3" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
                 <DropdownMenuItem onClick={() => setFilterType("all")}>
                   All types{" "}
                   {filterType === "all" && (
-                    <Check className="w-4 h-4 ml-auto" />
+                    <Check className="ml-auto h-4 w-4" />
                   )}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setFilterType("image")}>
                   Images{" "}
                   {filterType === "image" && (
-                    <Check className="w-4 h-4 ml-auto" />
+                    <Check className="ml-auto h-4 w-4" />
                   )}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setFilterType("document")}>
                   Documents{" "}
                   {filterType === "document" && (
-                    <Check className="w-4 h-4 ml-auto" />
+                    <Check className="ml-auto h-4 w-4" />
                   )}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setFilterType("video")}>
                   Videos{" "}
                   {filterType === "video" && (
-                    <Check className="w-4 h-4 ml-auto" />
+                    <Check className="ml-auto h-4 w-4" />
                   )}
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -375,40 +375,41 @@ export function VaultPickerModal({
                       : filterSize === "medium"
                         ? "1-5MB"
                         : "> 5MB"}{" "}
-                  <ChevronDown className="w-3 h-3 ml-1" />
+                  <ChevronDown className="ml-1 h-3 w-3" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
                 <DropdownMenuItem onClick={() => setFilterSize("all")}>
                   Any size{" "}
                   {filterSize === "all" && (
-                    <Check className="w-4 h-4 ml-auto" />
+                    <Check className="ml-auto h-4 w-4" />
                   )}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setFilterSize("small")}>
                   Under 1MB{" "}
                   {filterSize === "small" && (
-                    <Check className="w-4 h-4 ml-auto" />
+                    <Check className="ml-auto h-4 w-4" />
                   )}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setFilterSize("medium")}>
                   1MB - 5MB{" "}
                   {filterSize === "medium" && (
-                    <Check className="w-4 h-4 ml-auto" />
+                    <Check className="ml-auto h-4 w-4" />
                   )}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setFilterSize("large")}>
                   Over 5MB{" "}
                   {filterSize === "large" && (
-                    <Check className="w-4 h-4 ml-auto" />
+                    <Check className="ml-auto h-4 w-4" />
                   )}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
 
+          {/* biome-ignore lint/a11y/noStaticElementInteractions: Dropzone area */}
           <div
-            className="border border-dashed rounded-xl p-8 flex flex-col items-center justify-center text-center gap-2 transition-colors hover:bg-muted/50 py-10"
+            className="flex flex-col items-center justify-center gap-2 border border-dashed p-8 py-10 text-center transition-colors hover:bg-muted/50"
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => {
               e.preventDefault();
@@ -430,22 +431,22 @@ export function VaultPickerModal({
               onClick={() => fileInputRef.current?.click()}
               disabled={uploadMutation.isPending}
             >
-              Add media <ChevronDown className="w-4 h-4 ml-2" />
+              Add media <ChevronDown className="ml-2 h-4 w-4" />
             </Button>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               Drag and drop images, videos, 3D models, and files
             </p>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto min-h-0">
+        <div className="min-h-0 flex-1 overflow-y-auto">
           {isLoading && (
-            <p className="py-8 text-center text-sm text-muted-foreground">
+            <p className="py-8 text-center text-muted-foreground text-sm">
               Loading vault…
             </p>
           )}
           {!isLoading && files.length === 0 && (
-            <p className="py-8 text-center text-sm text-muted-foreground">
+            <p className="py-8 text-center text-muted-foreground text-sm">
               No vault files found. Upload files in the Vault section first.
             </p>
           )}
@@ -458,54 +459,57 @@ export function VaultPickerModal({
                     return (
                       <div
                         key={file.id}
-                        className="flex items-center gap-4 py-3 px-2 border-b hover:bg-muted/30 transition-colors group"
+                        className="group flex items-center gap-4 border-b px-2 py-3 transition-colors hover:bg-muted/30"
                       >
-                        <div className="flex items-center shrink-0">
+                        <div className="flex shrink-0 items-center">
                           <button
                             type="button"
                             onClick={() => toggle(file.id)}
                             className={cn(
-                              "w-5 h-5 rounded border flex items-center justify-center transition-colors shadow-sm cursor-pointer",
+                              "flex h-5 w-5 cursor-pointer items-center justify-center border shadow-sm transition-colors",
                               selected
-                                ? "bg-primary border-primary text-primary-foreground"
-                                : "bg-background border-input hover:border-foreground",
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : "border-input bg-background hover:border-foreground",
                             )}
                           >
                             {selected && (
-                              <Check className="w-3.5 h-3.5" strokeWidth={3} />
+                              <Check className="h-3.5 w-3.5" strokeWidth={3} />
                             )}
                           </button>
                         </div>
-                        <div className="w-10 h-10 rounded shrink-0 overflow-hidden bg-muted flex items-center justify-center border">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden border bg-muted">
                           {file.type.startsWith("image/") && file.url ? (
-                            <img
-                              src={file.url}
-                              alt={file.name}
-                              className="w-full h-full object-cover"
-                            />
+                            <>
+                              {/* biome-ignore lint/performance/noImgElement: external url */}
+                              <img
+                                src={file.url}
+                                alt={file.name}
+                                className="h-full w-full object-cover"
+                              />
+                            </>
                           ) : (
                             <FileIcon type={file.type} />
                           )}
                         </div>
-                        <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div className="flex min-w-0 flex-1 flex-col justify-between gap-2 sm:flex-row sm:items-center">
                           <div className="flex-1 truncate pr-4">
+                            {/* biome-ignore lint/a11y/useKeyWithClickEvents: non-critical file toggle */}
                             <p
-                              className="text-sm font-medium truncate cursor-pointer"
+                              className="cursor-pointer truncate font-medium text-sm"
                               onClick={() => toggle(file.id)}
                             >
                               {file.name}
                             </p>
                           </div>
 
-                          <div className="flex items-center justify-between sm:justify-start gap-4 sm:gap-8 text-sm text-muted-foreground w-full sm:w-[320px] shrink-0">
-                            <span className="w-16 truncate uppercase text-xs font-semibold">
+                          <div className="flex w-full shrink-0 items-center justify-between gap-4 text-muted-foreground text-sm sm:w-[320px] sm:justify-start sm:gap-8">
+                            <span className="w-16 truncate font-semibold text-xs uppercase">
                               {file.type.split("/")[1] || file.type}
                             </span>
                             <span className="w-24 truncate">
-                              {(file as any).metadata?.orientation ||
-                                "Landscape"}
+                              {getFileOrientation(file.metadata)}
                             </span>
-                            <span className="w-20 text-right truncate">
+                            <span className="w-20 truncate text-right">
                               {formatBytes(file.size)}
                             </span>
                           </div>
@@ -515,26 +519,31 @@ export function VaultPickerModal({
                   })}
                 </div>
               ) : (
-                <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4">
+                <div className="grid grid-cols-2 xs:grid-cols-3 gap-4 sm:grid-cols-4 md:grid-cols-5">
                   {processedFiles.map((file) => {
                     const selected = pending.has(file.id);
                     return (
                       <div
                         key={file.id}
-                        className="group relative flex flex-col gap-2 rounded-xl bg-muted/20 pb-3"
+                        className="group relative flex flex-col gap-2 bg-muted/20 pb-3"
                       >
+                        {/* biome-ignore lint/a11y/noStaticElementInteractions: parent container click */}
+                        {/* biome-ignore lint/a11y/useKeyWithClickEvents: parent container click */}
                         <div
-                          className="w-full aspect-square bg-muted rounded-t-xl rounded-b-md overflow-hidden relative cursor-pointer border"
+                          className="relative aspect-square w-full cursor-pointer overflow-hidden border bg-muted"
                           onClick={() => toggle(file.id)}
                         >
                           {file.type.startsWith("image/") && file.url ? (
-                            <img
-                              src={file.url}
-                              alt={file.name}
-                              className="object-cover w-full h-full transition-transform group-hover:scale-105"
-                            />
+                            <>
+                              {/* biome-ignore lint/performance/noImgElement: external url */}
+                              <img
+                                src={file.url}
+                                alt={file.name}
+                                className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                              />
+                            </>
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center">
+                            <div className="flex h-full w-full items-center justify-center">
                               <FileIcon type={file.type} />
                             </div>
                           )}
@@ -547,14 +556,14 @@ export function VaultPickerModal({
                                 toggle(file.id);
                               }}
                               className={cn(
-                                "w-5 h-5 rounded border shadow-sm flex items-center justify-center transition-all",
+                                "flex h-5 w-5 items-center justify-center border shadow-sm transition-all",
                                 selected
-                                  ? "bg-primary border-primary text-primary-foreground opacity-100"
-                                  : "bg-background/80 border-input opacity-0 group-hover:opacity-100 backdrop-blur-sm",
+                                  ? "border-primary bg-primary text-primary-foreground opacity-100"
+                                  : "border-input bg-background/80 opacity-0 backdrop-blur-sm group-hover:opacity-100",
                               )}
                             >
                               {selected && (
-                                <Check className="w-3 h-3" strokeWidth={3} />
+                                <Check className="h-3 w-3" strokeWidth={3} />
                               )}
                             </button>
                           </div>
@@ -562,14 +571,14 @@ export function VaultPickerModal({
                           {/* Dark gradient overlay at bottom of image if selected, to match reference somewhat but not required since names are outside now */}
                         </div>
 
-                        <div className="px-3 flex flex-col text-center">
+                        <div className="flex flex-col px-3 text-center">
                           <span
-                            className="text-sm font-medium truncate"
+                            className="truncate font-medium text-sm"
                             title={file.name}
                           >
                             {file.name}
                           </span>
-                          <span className="text-xs text-muted-foreground uppercase mt-0.5">
+                          <span className="mt-0.5 text-muted-foreground text-xs uppercase">
                             {file.type.split("/")[1] || file.type}
                           </span>
                         </div>
@@ -583,11 +592,11 @@ export function VaultPickerModal({
         </div>
 
         {/* Pagination & Footer Controls */}
-        <div className="flex flex-col sm:flex-row justify-between items-center  py-4 border-t shrink-0 gap-4 mt-auto">
-          <div className="flex items-center w-full sm:w-auto justify-between sm:justify-start">
+        <div className="mt-auto flex shrink-0 flex-col items-center justify-between gap-4 border-t py-4 sm:flex-row">
+          <div className="flex w-full items-center justify-between sm:w-auto sm:justify-start">
             <Button
               variant="link"
-              className="text-primary p-0 h-auto font-medium"
+              className="h-auto p-0 font-medium text-primary"
               onClick={() => setPending(new Set())}
             >
               Clear selection
@@ -604,7 +613,7 @@ export function VaultPickerModal({
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
-                <span className="text-xs px-2">
+                <span className="px-2 text-xs">
                   Page {page} of {totalPages}
                 </span>
                 <Button
@@ -618,7 +627,7 @@ export function VaultPickerModal({
               </div>
             )}
           </div>
-          <div className="flex gap-2 w-full sm:w-auto ml-auto">
+          <div className="ml-auto flex w-full gap-2 sm:w-auto">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>

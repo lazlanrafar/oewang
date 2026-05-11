@@ -8,6 +8,7 @@ const nextConfig = {
     "@workspace/ui",
     "@workspace/utils",
     "@workspace/dictionaries",
+    "@workspace/integrations",
   ],
 };
 

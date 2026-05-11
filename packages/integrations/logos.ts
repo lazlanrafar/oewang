@@ -23,6 +23,6 @@ export { Logo as SlackLogo } from "./slack/assets/logo";
 export { Logo as StripeLogo } from "./stripe/assets/logo";
 export { Logo as StripePaymentsLogo } from "./stripe-payments/assets/logo";
 export { Logo as TelegramLogo } from "./telegram/assets/logo";
-export { Logo as WhatsAppLogo } from "./whatsapp/assets/logo";
+export { Logo as WhatsAppLogo } from "./whatsapp-twilio/assets/logo";
 export { Logo as XeroLogo } from "./xero/assets/logo";
 export { Logo as ZapierMcpLogo } from "./zapier-mcp/assets/logo";

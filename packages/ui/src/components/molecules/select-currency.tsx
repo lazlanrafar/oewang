@@ -40,7 +40,7 @@ export function SelectCurrency({
     return (COUNTRIES as Currency[])
       .filter((c) => c.currency !== null)
       .map((c) => ({
-        id: c.currency!.code,
+        id: `${c.currency!.code}-${c.name}`,
         label: `${c.currency!.code} - ${c.name} (${c.currency!.symbol})`,
         code: c.currency!.code,
         symbol: c.currency!.symbol,
@@ -49,7 +49,9 @@ export function SelectCurrency({
       }));
   }, []);
 
-  const selectedItem = items.find((item) => item.id === value);
+  const selectedItem = items.find(
+    (item) => item.id === value || item.code === value,
+  );
 
   return (
     <Combobox

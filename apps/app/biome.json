@@ -31,7 +31,20 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "includes": ["**", "!.github", "!.husky", "!node_modules", "!.next", "!dist", "!out", "!src/components/ui"]
+    "includes": [
+      "**",
+      "!.github",
+      "!.husky",
+      "!node_modules",
+      "!.next",
+      "!dist",
+      "!out",
+      "!src/components/ui",
+      "!playwright-report",
+      "!test-results",
+      "!*.log",
+      "!*errors*.txt"
+    ]
   },
   "formatter": {
     "enabled": true,

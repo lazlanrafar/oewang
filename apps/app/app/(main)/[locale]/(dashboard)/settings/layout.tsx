@@ -1,5 +1,3 @@
-import { Separator } from "@workspace/ui";
-
 import { SettingSidebar } from "@/components/organisms/setting/setting-sidebar";
 import { getDictionary } from "@/get-dictionary";
 import type { Locale } from "@/i18n-config";

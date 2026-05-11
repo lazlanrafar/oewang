@@ -1,27 +1,17 @@
 "use client";
 
-import { Bell, Check, Trash2 } from "lucide-react";
-import {
-  Button,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-  ScrollArea,
-  Badge,
-  cn,
-} from "@workspace/ui";
-import { useNotifications } from "@/hooks/use-notifications";
-import { formatDistanceToNow } from "date-fns";
 import { useRouter } from "next/navigation";
 
-export function NotificationBell() {
-  const {
-    notifications,
-    unreadCount,
-    markAsRead,
-    deleteNotification,
-    isLoading,
-  } = useNotifications();
+import type { Notification } from "@workspace/database";
+import { Badge, Button, cn, Popover, PopoverContent, PopoverTrigger, ScrollArea } from "@workspace/ui";
+import { formatDistanceToNow } from "date-fns";
+import { Bell, Trash2 } from "lucide-react";
+
+import { useNotifications } from "@/hooks/use-notifications";
+import type { AppDictionary } from "@/modules/types/dictionary";
+
+export function NotificationBell({ dictionary }: { dictionary: AppDictionary }) {
+  const { notifications, unreadCount, markAsRead, deleteNotification, isLoading } = useNotifications();
   const router = useRouter();
 
   const handleMarkAllRead = () => {
@@ -31,7 +21,7 @@ export function NotificationBell() {
     }
   };
 
-  const handleNotificationClick = (notification: any) => {
+  const handleNotificationClick = (notification: Notification) => {
     if (!notification.is_read) {
       markAsRead([notification.id]);
     }
@@ -43,15 +33,11 @@ export function NotificationBell() {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          size="icon"
-          className="relative rounded-full h-8 w-8 hover:bg-accent"
-        >
+        <Button variant="ghost" size="icon" className="relative h-8 w-8 hover:bg-accent">
           <Bell className="h-4 w-4" />
           {unreadCount > 0 && (
             <Badge
-              className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center bg-destructive text-destructive-foreground text-[10px]"
+              className="-top-1 -right-1 absolute flex h-4 w-4 items-center justify-center bg-destructive p-0 text-[10px] text-destructive-foreground"
               variant="destructive"
             >
               {unreadCount > 9 ? "9+" : unreadCount}
@@ -60,32 +46,32 @@ export function NotificationBell() {
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-80 p-0" align="end">
-        <div className="flex items-center justify-between p-4 border-b">
-          <h4 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-            Notifications
+        <div className="flex items-center justify-between border-b p-4">
+          <h4 className="font-semibold text-muted-foreground text-sm uppercase tracking-wider">
+            {dictionary.notifications.title || "Notifications"}
           </h4>
           {unreadCount > 0 && (
             <Button
               variant="ghost"
               size="sm"
-              className="h-auto p-0 text-xs text-primary hover:bg-transparent"
+              className="h-auto p-0 text-primary text-xs hover:bg-transparent"
               onClick={handleMarkAllRead}
             >
-              Mark all as read
+              {dictionary.notifications.mark_all_read || "Mark all as read"}
             </Button>
           )}
         </div>
         <ScrollArea className="h-80">
           {isLoading ? (
-            <div className="flex items-center justify-center h-full p-4">
-              <p className="text-xs text-muted-foreground">Loading...</p>
+            <div className="flex h-full items-center justify-center p-4">
+              <p className="text-muted-foreground text-xs">{dictionary.common.loading || "Loading..."}</p>
             </div>
           ) : notifications.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full p-8 text-center text-muted-foreground">
-              <Bell className="h-8 w-8 mb-2 opacity-20" />
-              <p className="text-sm font-medium">No notifications yet</p>
+            <div className="flex h-full flex-col items-center justify-center p-8 text-center text-muted-foreground">
+              <Bell className="mb-2 h-8 w-8 opacity-20" />
+              <p className="font-medium text-sm">{dictionary.notifications.empty?.title || "No notifications yet"}</p>
               <p className="text-xs opacity-60">
-                We'll notify you when something happens.
+                {dictionary.notifications.empty?.description || "We'll notify you when something happens."}
               </p>
             </div>
           ) : (
@@ -94,13 +80,21 @@ export function NotificationBell() {
                 <div
                   key={n.id}
                   className={cn(
-                    "flex flex-col gap-1 p-4 border-b cursor-pointer transition-colors hover:bg-accent/50",
-                    !n.is_read && "bg-accent/30 border-l-2 border-l-primary",
+                    "flex cursor-pointer flex-col gap-1 border-b p-4 transition-colors hover:bg-accent/50",
+                    !n.is_read && "border-l-2 border-l-primary bg-accent/30",
                   )}
                   onClick={() => handleNotificationClick(n)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      handleNotificationClick(n);
+                    }
+                  }}
+                  role="option"
+                  tabIndex={0}
                 >
                   <div className="flex items-start justify-between">
-                    <span className="text-sm font-semibold">{n.title}</span>
+                    <span className="font-semibold text-sm">{n.title}</span>
                     <Button
                       variant="ghost"
                       size="icon"
@@ -113,10 +107,8 @@ export function NotificationBell() {
                       <Trash2 className="h-3 w-3 text-muted-foreground" />
                     </Button>
                   </div>
-                  <p className="text-xs text-muted-foreground line-clamp-2">
-                    {n.message}
-                  </p>
-                  <span className="text-[10px] text-muted-foreground/60 mt-1">
+                  <p className="line-clamp-2 text-muted-foreground text-xs">{n.message}</p>
+                  <span className="mt-1 text-[10px] text-muted-foreground/60">
                     {formatDistanceToNow(new Date(n.created_at), {
                       addSuffix: true,
                     })}
@@ -126,14 +118,14 @@ export function NotificationBell() {
             </div>
           )}
         </ScrollArea>
-        <div className="p-2 border-t text-center">
+        <div className="border-t p-2 text-center">
           <Button
             variant="ghost"
             size="sm"
-            className="w-full text-xs text-muted-foreground hover:text-primary"
+            className="w-full text-muted-foreground text-xs hover:text-primary"
             onClick={() => router.push("/settings/notifications")}
           >
-            View notification settings
+            {dictionary.notifications.view_settings || "View notification settings"}
           </Button>
         </div>
       </PopoverContent>

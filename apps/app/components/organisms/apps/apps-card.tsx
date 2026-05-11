@@ -1,31 +1,45 @@
-import * as React from "react";
+import { useParams } from "next/navigation";
+
+import type { Dictionary } from "@workspace/dictionaries";
 import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+  Badge,
   Button,
   Card,
   CardContent,
   CardHeader,
   CardTitle,
+  Markdown,
+  ScrollArea,
   Sheet,
   SheetContent,
   SheetHeader,
-  Accordion,
-  AccordionItem,
-  AccordionTrigger,
-  AccordionContent,
-  ScrollArea,
-  Badge,
-  Markdown,
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
 } from "@workspace/ui";
 import { Lock } from "lucide-react";
-import { useAppStore } from "@/stores/app";
-import Link from "next/link";
-import { useParams } from "next/navigation";
 
-type App = any;
+interface App {
+  id: string;
+  name: string;
+  category?: string;
+  requires_plan?: string;
+  active: boolean;
+  beta?: boolean;
+  logo?: React.ElementType | string;
+  short_description?: string;
+  description?: string;
+  images?: Array<string | { src?: string; default?: { src: string } }>;
+  installed: boolean;
+  type: "official" | "external";
+  installUrl?: string;
+  developerName?: string;
+  website?: string;
+  scopes?: string[];
+  settings?: Record<string, unknown>[];
+  overview?: string;
+}
 
 export interface AppsCardProps {
   app: App & { requires_plan?: string };
@@ -37,6 +51,7 @@ export interface AppsCardProps {
   onDisconnect?: () => void;
   isInstalling?: boolean;
   isDisconnecting?: boolean;
+  dictionary: Dictionary;
 }
 
 export function AppsCard({
@@ -49,10 +64,10 @@ export function AppsCard({
   isInstalling,
   isDisconnecting,
   userPlan = "Starter",
+  dictionary,
 }: AppsCardProps) {
-  const { dictionary } = useAppStore();
   const params = useParams();
-  const locale = (params?.locale as string) || "en";
+  const _locale = (params.locale as string) || "en";
 
   const planLevels: Record<string, number> = {
     Starter: 0,
@@ -62,164 +77,130 @@ export function AppsCard({
   };
 
   const currentLevel = planLevels[userPlan] ?? 0;
-  const requiredLevel = app.requires_plan
-    ? planLevels[app.requires_plan] ?? 1
-    : 0;
+  const requiredLevel = app.requires_plan ? (planLevels[app.requires_plan] ?? 1) : 0;
   const isLocked = currentLevel < requiredLevel;
   return (
-    <Card className="w-full flex flex-col">
+    <Card className="flex w-full flex-col">
       <Sheet open={isExpanded} onOpenChange={(open) => !open && onClose()}>
-        <div className="pt-6 px-6 h-16 flex items-center justify-between">
-          {app.type === "official" &&
-          app.logo &&
-          typeof app.logo !== "string" ? (
+        <div className="flex h-16 items-center justify-between px-6 pt-6">
+          {app.type === "official" && app.logo && typeof app.logo !== "string" ? (
             <app.logo />
           ) : app.logo ? (
-            <img
-              src={app.logo as string}
-              alt={app.name}
-              className="w-8 h-8 rounded"
-            />
+            <>
+              {/* biome-ignore lint/performance/noImgElement: App logo is a dynamic external image */}
+              <img src={app.logo as string} alt={app.name} className="h-8 w-8 rounded" />
+            </>
           ) : (
-            <div className="w-8 h-8 rounded bg-secondary flex items-center justify-center font-bold text-xs uppercase">
+            <div className="flex h-8 w-8 items-center justify-center rounded bg-secondary font-bold text-xs uppercase">
               {app.name.charAt(0)}
             </div>
           )}
 
           <div className="flex items-center gap-2">
             {app.installed && (
-              <div className="text-green-600 bg-green-100 dark:bg-green-900/30 dark:text-green-400 text-[10px] px-3 py-1 rounded-full font-mono uppercase tracking-wider font-semibold">
+              <div className="rounded-full bg-green-100 px-3 py-1 font-mono font-semibold text-[10px] text-green-600 uppercase tracking-wider dark:bg-green-900/30 dark:text-green-400">
                 Installed
               </div>
             )}
           </div>
         </div>
 
-        <CardHeader className="pb-0 pt-2">
+        <CardHeader className="pt-2 pb-0">
           <div className="flex items-center space-x-2 pb-4">
-            <CardTitle className="text-md font-medium leading-none p-0 m-0">
-              {app.name}
-            </CardTitle>
+            <CardTitle className="m-0 p-0 font-medium text-md leading-none">{app.name}</CardTitle>
             {!app.active && (
-              <span className="text-muted-foreground bg-secondary text-[10px] px-2 py-0.5 rounded-full font-mono">
+              <span className="rounded-full bg-secondary px-2 py-0.5 font-mono text-[10px] text-muted-foreground">
                 Coming soon
               </span>
             )}
             {app.active && app.beta && (
-              <span className="text-foreground bg-secondary text-[10px] px-2 py-0.5 rounded-full font-mono">
-                Beta
-              </span>
+              <span className="rounded-full bg-secondary px-2 py-0.5 font-mono text-[10px] text-foreground">Beta</span>
             )}
             {app.requires_plan && (
               <Badge
                 variant="outline"
-                className="text-[10px] uppercase font-mono py-0 px-2 border-primary/30 text-primary bg-primary/5"
+                className="border-primary/30 bg-primary/5 px-2 py-0 font-mono text-[10px] text-primary uppercase"
               >
                 {app.requires_plan}
               </Badge>
             )}
           </div>
         </CardHeader>
-        <CardContent className="text-xs text-muted-foreground pb-4 flex-1">
-          <p className="line-clamp-2">
-            {app.short_description || app.description || ""}
-          </p>
+        <CardContent className="flex-1 pb-4 text-muted-foreground text-xs">
+          <p className="line-clamp-2">{app.short_description || app.description || ""}</p>
         </CardContent>
 
-        <div className="px-6 pb-6 grid grid-cols-2 gap-2 mt-auto">
+        <div className="mt-auto grid grid-cols-2 gap-2 px-6 pb-6">
+          <Button variant="outline" className="w-full" disabled={!app.active} onClick={onExpand}>
+            Details
+          </Button>
+
+          {isLocked ? (
+            <Button disabled variant="outline" className="group w-full">
+              <Lock className="mr-2 h-3 w-3 text-muted-foreground transition-colors" />
+              {dictionary.common.coming_soon || "Coming Soon"}
+            </Button>
+          ) : app.installUrl ? (
+            <Button variant="outline" className="w-full" onClick={onInstall} disabled={!app.active}>
+              {app.id === "midday-desktop" ? "Download" : "Install"}
+            </Button>
+          ) : app.installed ? (
             <Button
               variant="outline"
-              className="w-full"
-              disabled={!app.active}
-              onClick={onExpand}
+              className="w-full border-primary/20 bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary"
+              onClick={onDisconnect}
+              disabled={isDisconnecting}
             >
-              Details
+              Disconnect
             </Button>
+          ) : (
+            <Button variant="outline" className="w-full" onClick={onInstall} disabled={!app.active || isInstalling}>
+              Install
+            </Button>
+          )}
+        </div>
 
-            {isLocked ? (
-              <Button disabled variant="outline" className="w-full group">
-                <Lock className="mr-2 h-3 w-3 text-muted-foreground transition-colors" />
-                {dictionary?.settings?.common?.coming_soon || "Coming Soon"}
-              </Button>
-            ) : app.installUrl ? (
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={onInstall}
-                disabled={!app.active}
-              >
-                {app.id === "midday-desktop" ? "Download" : "Install"}
-              </Button>
-            ) : app.installed ? (
-              <Button
-                variant="outline"
-                className="w-full bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary border-primary/20"
-                onClick={onDisconnect}
-                disabled={isDisconnecting}
-              >
-                Disconnect
-              </Button>
-            ) : (
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={onInstall}
-                disabled={!app.active || isInstalling}
-              >
-                Install
-              </Button>
-            )}
-          </div>
-
-        <SheetContent className="sm:max-w-[465px] h-full overflow-y-auto w-full p-0">
+        <SheetContent className="h-full w-full overflow-y-auto p-0 sm:max-w-[465px]">
           <SheetHeader className="p-6 text-left">
             {app.images && app.images.length > 0 && (
               <div className="mb-4">
+                {/* biome-ignore lint/performance/noImgElement: App screenshot is a dynamic external image */}
                 <img
                   src={
                     typeof app.images[0] === "string"
                       ? app.images[0]
-                      : (app.images[0] as any)?.default?.src ||
-                        (app.images[0] as any)?.src
+                      : (app.images[0] as { default?: { src: string }; src?: string }).default?.src ||
+                        (app.images[0] as { src?: string }).src
                   }
                   alt={app.name}
-                  className="w-full h-auto rounded-lg object-cover"
+                  className="h-auto w-full rounded-lg object-cover"
                 />
               </div>
             )}
 
-            <div className="flex items-center justify-between border-b border-border pb-4 mt-2">
+            <div className="mt-2 flex items-center justify-between border-border border-b pb-4">
               <div className="flex items-center space-x-3">
-                {app.type === "official" &&
-                app.logo &&
-                typeof app.logo !== "string" ? (
+                {app.type === "official" && app.logo && typeof app.logo !== "string" ? (
                   <app.logo />
                 ) : app.logo ? (
-                  <img
-                    src={app.logo as string}
-                    alt={app.name}
-                    className="w-10 h-10 rounded"
-                  />
+                  <>
+                    {/* biome-ignore lint/performance/noImgElement: App logo is a dynamic external image */}
+                    <img src={app.logo as string} alt={app.name} className="h-10 w-10 rounded" />
+                  </>
                 ) : (
-                  <div className="w-10 h-10 rounded bg-secondary flex items-center justify-center font-bold uppercase">
+                  <div className="flex h-10 w-10 items-center justify-center rounded bg-secondary font-bold uppercase">
                     {app.name.charAt(0)}
                   </div>
                 )}
                 <div>
                   <div className="flex items-center space-x-2">
-                    <h3 className="text-xl font-bold leading-none">
-                      {app.name}
-                    </h3>
-                    {app.installed && (
-                      <div className="bg-green-500 rounded-full w-2 h-2" />
-                    )}
+                    <h3 className="font-bold text-xl leading-none">{app.name}</h3>
+                    {app.installed && <div className="h-2 w-2 rounded-full bg-green-500" />}
                   </div>
 
-                  <span className="text-xs text-muted-foreground mt-2 block">
+                  <span className="mt-2 block text-muted-foreground text-xs">
                     {app.category || "Integration"} •{" "}
-                    {app.type === "external"
-                      ? `By ${app.developerName || "Partner"}`
-                      : "By Oewang"}
+                    {app.type === "external" ? `By ${app.developerName || "Partner"}` : "By Oewang"}
                   </span>
                 </div>
               </div>
@@ -228,7 +209,7 @@ export function AppsCard({
                 {isLocked ? (
                   <Button disabled variant="default" className="w-full font-medium">
                     <Lock className="mr-2 h-4 w-4" />
-                    {dictionary?.settings?.common?.coming_soon || "Coming Soon"}
+                    {dictionary.common.coming_soon || "Coming Soon"}
                   </Button>
                 ) : app.installed ? (
                   <Button
@@ -254,22 +235,13 @@ export function AppsCard({
 
             <div className="mt-4">
               <ScrollArea className="h-full pt-2">
-                <Accordion
-                  type="multiple"
-                  defaultValue={["description"]}
-                  className="mt-4"
-                >
+                <Accordion type="multiple" defaultValue={["description"]} className="mt-4">
                   <AccordionItem value="description" className="border-none">
-                    <AccordionTrigger className="hover:no-underline font-semibold">
-                      How it works
-                    </AccordionTrigger>
+                    <AccordionTrigger className="font-semibold hover:no-underline">How it works</AccordionTrigger>
                     <AccordionContent>
                       <Markdown
                         content={
-                          app.description ||
-                          app.overview ||
-                          app.short_description ||
-                          "No description available."
+                          app.description || app.overview || app.short_description || "No description available."
                         }
                       />
                     </AccordionContent>
@@ -279,15 +251,13 @@ export function AppsCard({
                     <>
                       {app.website && (
                         <AccordionItem value="website" className="border-none">
-                          <AccordionTrigger className="hover:no-underline font-semibold">
-                            Website
-                          </AccordionTrigger>
+                          <AccordionTrigger className="font-semibold hover:no-underline">Website</AccordionTrigger>
                           <AccordionContent>
                             <a
                               href={app.website}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-sm hover:underline text-primary"
+                              className="text-primary text-sm hover:underline"
                             >
                               {app.website}
                             </a>
@@ -296,13 +266,8 @@ export function AppsCard({
                       )}
 
                       {app.scopes && app.scopes.length > 0 && (
-                        <AccordionItem
-                          value="permissions"
-                          className="border-none"
-                        >
-                          <AccordionTrigger className="hover:no-underline font-semibold">
-                            Permissions
-                          </AccordionTrigger>
+                        <AccordionItem value="permissions" className="border-none">
+                          <AccordionTrigger className="font-semibold hover:no-underline">Permissions</AccordionTrigger>
                           <AccordionContent>
                             <div className="flex flex-wrap gap-2">
                               {app.scopes.map((scope: string) => (
@@ -320,26 +285,22 @@ export function AppsCard({
 
                 {(!app.type || app.type !== "external") && app.settings && (
                   <div className="mt-8 mb-4">
-                    <h4 className="font-semibold text-lg mb-2">
-                      Settings & Configuration
-                    </h4>
-                    <p className="text-sm text-muted-foreground">
-                      Configuration options will appear here once the
-                      integration is installed.
+                    <h4 className="mb-2 font-semibold text-lg">Settings & Configuration</h4>
+                    <p className="text-muted-foreground text-sm">
+                      Configuration options will appear here once the integration is installed.
                     </p>
                   </div>
                 )}
               </ScrollArea>
 
-              <div className="pt-8 mt-6 border-t border-border">
+              <div className="mt-6 border-border border-t pt-8">
                 <p className="text-[10px] text-muted-foreground">
-                  All apps on the Oewang App Store are open-source and
-                  peer-reviewed. Oewang Labs maintains high standards but doesn't
-                  endorse third-party apps unless officially certified.
+                  All apps on the Oewang App Store are open-source and peer-reviewed. Oewang Labs maintains high
+                  standards but doesn't endorse third-party apps unless officially certified.
                 </p>
                 <a
                   href="mailto:support@oewang.dev"
-                  className="text-[10px] text-red-500 hover:underline mt-1 inline-block"
+                  className="mt-1 inline-block text-[10px] text-red-500 hover:underline"
                 >
                   Report app
                 </a>

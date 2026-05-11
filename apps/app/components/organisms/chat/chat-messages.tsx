@@ -1,23 +1,23 @@
 "use client";
 
-import {
-  extractArtifactTypeFromMessage,
-  extractBankAccountRequired,
-  extractInsightData,
-} from "@workspace/constants";
-import { Message, MessageAvatar, MessageContent } from "@workspace/ui";
-import { Response } from "@workspace/ui";
+import Image from "next/image";
+
+import { extractArtifactTypeFromMessage, extractInsightData } from "@workspace/constants";
+import type { Dictionary } from "@workspace/dictionaries";
+import { Message, MessageAvatar, MessageContent, Response } from "@workspace/ui";
 import type { UIMessage } from "ai";
 import { PaperclipIcon } from "lucide-react";
-import Image from "next/image";
+
+import { getDictionaryText } from "./chat-i18n";
 import { ChatArtifactToggle } from "./chat-artifact-toggle";
-import { ChatMessageActions } from "./chat-message-actions";
-import { ChatInsightMessage } from "./chat-insight-message";
 import { ChatFaviconStack } from "./chat-favicon-stack";
+import { ChatInsightMessage } from "./chat-insight-message";
+import { ChatMessageActions } from "./chat-message-actions";
 
 interface ChatMessagesProps {
   messages: UIMessage[];
   isStreaming?: boolean;
+  dictionary: Dictionary;
 }
 
 interface SourceItem {
@@ -76,24 +76,22 @@ function extractFileParts(parts: UIMessage["parts"]) {
   return parts.filter((part) => part.type === "file");
 }
 
-export function ChatMessages({
-  messages,
-  isStreaming = false,
-}: ChatMessagesProps) {
+export function ChatMessages({ messages, isStreaming = false, dictionary }: ChatMessagesProps) {
   const user = {
     avatarUrl: "",
     fullName: "",
     email: "",
   };
 
+  const attachmentAlt = getDictionaryText(dictionary as Record<string, unknown>, "chat.messages.attachment_alt", "attachment");
+  const unknownFile = getDictionaryText(dictionary as Record<string, unknown>, "chat.messages.unknown_file", "Unknown file");
+
   return (
     <>
       {messages.map(({ parts, ...message }, index) => {
         // Extract text parts
         const textParts = parts.filter((part) => part.type === "text");
-        const textContent = textParts
-          .map((part) => (part.type === "text" ? part.text : ""))
-          .join("");
+        const textContent = textParts.map((part) => (part.type === "text" ? part.text : "")).join("");
 
         // Extract file parts
         const fileParts = extractFileParts(parts);
@@ -107,19 +105,14 @@ export function ChatMessages({
         // Combine sources and deduplicate between AI SDK and webSearch sources
         const allSources = [...aiSdkSources, ...webSearchSources];
         const uniqueSources = allSources.filter(
-          (source, index, self) =>
-            index === self.findIndex((s) => s.url === source.url),
+          (source, index, self) => index === self.findIndex((s) => s.url === source.url),
         );
 
         // Check if this is an insight response
-        const insightData =
-          message.role === "assistant" ? extractInsightData(parts) : null;
+        const insightData = message.role === "assistant" ? extractInsightData(parts) : null;
 
         // Extract artifact type from message parts
-        const artifactType =
-          message.role === "assistant"
-            ? extractArtifactTypeFromMessage(parts)
-            : null;
+        const artifactType = message.role === "assistant" ? extractArtifactTypeFromMessage(parts) : null;
 
         // Check if this is the last (currently streaming) message
         const isLastMessage = index === messages.length - 1;
@@ -128,10 +121,7 @@ export function ChatMessages({
         const isMessageFinished = !isLastMessage || !isStreaming;
 
         // Show sources only after response is finished (not on the currently streaming message)
-        const shouldShowSources =
-          uniqueSources.length > 0 &&
-          message.role === "assistant" &&
-          isMessageFinished;
+        const shouldShowSources = uniqueSources.length > 0 && message.role === "assistant" && isMessageFinished;
 
         return (
           <div key={`${message.id}-${index}`} className="group">
@@ -139,7 +129,7 @@ export function ChatMessages({
             {fileParts.length > 0 && (
               <Message from={message.role}>
                 <MessageContent className="max-w-[80%]">
-                  <div className="flex flex-wrap gap-2 mb-2">
+                  <div className="mb-2 flex flex-wrap gap-2">
                     {fileParts.map((part) => {
                       if (part.type !== "file") return null;
 
@@ -152,18 +142,15 @@ export function ChatMessages({
 
                       // Create a unique key from file properties
                       const fileKey = `${file.url}-${file.filename}-${fileParts.indexOf(part)}`;
-                      const isImage = file.mediaType?.startsWith("image/");
+                      const isImage = file.mediaType?.startsWith("image/") ?? false;
 
                       if (isImage && file.url) {
                         return (
-                          <div
-                            key={fileKey}
-                            className="relative rounded-lg border overflow-hidden"
-                          >
+                          <div key={fileKey} className="relative overflow-hidden rounded-lg border">
                             <Image
                               src={file.url}
-                              alt={file.filename || "attachment"}
-                              className="max-w-xs max-h-48 object-cover"
+                              alt={file.filename || attachmentAlt}
+                              className="max-h-48 max-w-xs object-cover"
                               width={300}
                               height={192}
                               unoptimized
@@ -173,13 +160,10 @@ export function ChatMessages({
                       }
 
                       return (
-                        <div
-                          key={fileKey}
-                          className="flex items-center gap-2 px-3 py-2 rounded-lg border bg-muted/50"
-                        >
+                        <div key={fileKey} className="flex items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2">
                           <PaperclipIcon className="size-4 shrink-0 text-muted-foreground" />
-                          <span className="text-sm font-medium">
-                            {file.filename || "Unknown file"}
+                          <span className="font-medium text-sm">
+                            {file.filename || dictionary.common.na || unknownFile}
                           </span>
                         </div>
                       );
@@ -187,10 +171,7 @@ export function ChatMessages({
                   </div>
                 </MessageContent>
                 {message.role === "user" && user && (
-                  <MessageAvatar
-                    src={user.avatarUrl || ""}
-                    name={user.fullName || user.email || ""}
-                  />
+                  <MessageAvatar src={user?.avatarUrl || ""} name={user?.fullName || user?.email || ""} />
                 )}
               </Message>
             )}
@@ -198,8 +179,8 @@ export function ChatMessages({
             {/* Render insight as a dedicated component - full width */}
             {insightData && message.role === "assistant" && (
               <Message from={message.role}>
-                <MessageContent className="max-w-full! w-full">
-                  <ChatInsightMessage insight={insightData} />
+                <MessageContent className="w-full max-w-full!">
+                  <ChatInsightMessage insight={insightData} dictionary={dictionary} />
                 </MessageContent>
               </Message>
             )}
@@ -211,10 +192,7 @@ export function ChatMessages({
                   <Response>{textContent}</Response>
                 </MessageContent>
                 {message.role === "user" && user && (
-                  <MessageAvatar
-                    src={user.avatarUrl || ""}
-                    name={user.fullName || user.email || ""}
-                  />
+                  <MessageAvatar src={user?.avatarUrl || ""} name={user?.fullName || user?.email || ""} />
                 )}
               </Message>
             )}
@@ -227,24 +205,21 @@ export function ChatMessages({
             )}
 
             {/* Render message actions and artifact toggle for assistant messages when finished */}
-            {message.role === "assistant" &&
-              isMessageFinished &&
-              (textContent || insightData) && (
-                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                  <div className="flex items-center gap-1 mt-3">
-                    {/* Message actions */}
-                    <ChatMessageActions
-                      messageContent={textContent}
-                      messageId={message.id}
-                      insightId={insightData?.id}
-                    />
-                    {/* Artifact toggle icon */}
-                    {artifactType && (
-                      <ChatArtifactToggle artifactType={artifactType} />
-                    )}
-                  </div>
+            {message.role === "assistant" && isMessageFinished && (textContent || insightData) && (
+              <div className="opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                <div className="mt-3 flex items-center gap-1">
+                  {/* Message actions */}
+                  <ChatMessageActions
+                    messageContent={textContent}
+                    messageId={message.id}
+                    insightId={insightData?.id}
+                    dictionary={dictionary}
+                  />
+                  {/* Artifact toggle icon */}
+                  {artifactType && <ChatArtifactToggle artifactType={artifactType} dictionary={dictionary} />}
                 </div>
-              )}
+              </div>
+            )}
           </div>
         );
       })}

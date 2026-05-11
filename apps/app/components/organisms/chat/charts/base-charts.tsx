@@ -1,84 +1,95 @@
 "use client";
 
 import type * as React from "react";
+
 import * as RechartsPrimitive from "recharts";
+
 import { commonChartConfig } from "./chart-utils";
 
 // Base Chart Wrapper with common styling
-export function BaseChart({
+export function BaseChart<T extends object>({
   data,
+  height = 320,
   margin = { top: 6, right: 6, left: -20, bottom: 6 },
   children,
 }: {
-  data: any[];
+  data: T[];
   height?: number;
   margin?: { top: number; right: number; left: number; bottom: number };
   children: React.ReactNode;
-  config?: any;
+  config?: Record<string, unknown>;
 }) {
   return (
-    <RechartsPrimitive.ComposedChart data={data} margin={margin}>
-      <RechartsPrimitive.CartesianGrid
-        strokeDasharray="3 3"
-        stroke="var(--chart-grid-stroke)"
-      />
-      {children}
-    </RechartsPrimitive.ComposedChart>
-  );
-}
+    <div style={{ height }}>
+      <RechartsPrimitive.ResponsiveContainer width="100%" height="100%" debounce={1}>
+        <RechartsPrimitive.ComposedChart data={data} margin={margin}>
+          <defs>
+            {/* Standard Income/Revenue Pattern */}
+            <pattern id="incomePattern" x="0" y="0" width="8" height="8" patternUnits="userSpaceOnUse">
+              <rect width="8" height="8" fill="var(--chart-pattern-bg)" />
+              <path
+                d="M0,0 L8,8 M-2,6 L6,14 M-4,4 L4,12 M6,-2 L14,6 M4,-4 L12,4"
+                stroke="var(--chart-pattern-stroke)"
+                strokeWidth="1"
+                opacity="0.6"
+              />
+            </pattern>
 
-// Styled XAxis
-export function StyledXAxis(props: any) {
-  return (
-    <RechartsPrimitive.XAxis
-      axisLine={false}
-      tickLine={false}
-      tick={{ fill: "var(--chart-axis-text)", fontSize: 10 }}
-      {...props}
-    />
-  );
-}
+            {/* Standard Expense/Outflow Pattern */}
+            <pattern id="expensePattern" x="0" y="0" width="8" height="8" patternUnits="userSpaceOnUse">
+              <rect width="8" height="8" fill="var(--chart-pattern-bg)" />
+              <path
+                d="M0,0 L8,8 M-2,6 L6,14 M-4,4 L4,12 M6,-2 L14,6 M4,-4 L12,4"
+                stroke="var(--chart-pattern-stroke)"
+                strokeWidth="1"
+                opacity="0.4"
+              />
+            </pattern>
 
-// Styled YAxis
-export function StyledYAxis(props: any) {
-  return (
-    <RechartsPrimitive.YAxis
-      axisLine={false}
-      tickLine={false}
-      tick={{ fill: "var(--chart-axis-text)", fontSize: 10 }}
-      {...props}
-    />
+            {/* Legacy patterns for compatibility (aliased to income/expense) */}
+            <pattern id="chartAreaPattern" x="0" y="0" width="8" height="8" patternUnits="userSpaceOnUse">
+              <rect width="8" height="8" fill="var(--chart-pattern-bg)" />
+              <path
+                d="M0,0 L8,8 M-2,6 L6,14 M-4,4 L4,12 M6,-2 L14,6 M4,-4 L12,4"
+                stroke="var(--chart-pattern-stroke)"
+                strokeWidth="1"
+                opacity="0.6"
+              />
+            </pattern>
+            <pattern id="chartBarPattern" x="0" y="0" width="8" height="8" patternUnits="userSpaceOnUse">
+              <rect width="8" height="8" fill="var(--chart-pattern-bg)" />
+              <path
+                d="M0,0 L8,8 M-2,6 L6,14 M-4,4 L4,12 M6,-2 L14,6 M4,-4 L12,4"
+                stroke="var(--chart-pattern-stroke)"
+                strokeWidth="1"
+                opacity="0.35"
+              />
+            </pattern>
+            <pattern id="outflowPattern" x="0" y="0" width="8" height="8" patternUnits="userSpaceOnUse">
+              <rect width="8" height="8" fill="var(--chart-pattern-bg)" />
+              <path
+                d="M0,0 L8,8 M-2,6 L6,14 M-4,4 L4,12 M6,-2 L14,6 M4,-4 L12,4"
+                stroke="var(--chart-pattern-stroke)"
+                strokeWidth="1"
+                opacity="0.6"
+              />
+            </pattern>
+            <pattern id="chartAreaGradient" x="0" y="0" width="8" height="8" patternUnits="userSpaceOnUse">
+              <rect width="8" height="8" fill="var(--chart-pattern-bg)" />
+              <path
+                d="M0,0 L8,8 M-2,6 L6,14 M-4,4 L4,12 M6,-2 L14,6 M4,-4 L12,4"
+                stroke="var(--chart-pattern-stroke)"
+                strokeWidth="1"
+                opacity="0.6"
+              />
+            </pattern>
+          </defs>
+          <RechartsPrimitive.CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid-stroke)" />
+          {children}
+        </RechartsPrimitive.ComposedChart>
+      </RechartsPrimitive.ResponsiveContainer>
+    </div>
   );
-}
-
-// Styled Area
-export function StyledArea(props: any) {
-  return (
-    <RechartsPrimitive.Area
-      type="monotone"
-      strokeWidth={2}
-      isAnimationActive={false}
-      {...props}
-    />
-  );
-}
-
-// Styled Line
-export function StyledLine(props: any) {
-  return (
-    <RechartsPrimitive.Line
-      type="monotone"
-      strokeWidth={2}
-      dot={false}
-      isAnimationActive={false}
-      {...props}
-    />
-  );
-}
-
-// Styled Bar
-export function StyledBar(props: any) {
-  return <RechartsPrimitive.Bar {...props} />;
 }
 
 // Styled Tooltip
@@ -87,38 +98,42 @@ export function StyledTooltip({
   payload,
   label,
   formatter,
+  labelFormatter,
+  extraContent,
 }: {
   active?: boolean;
   payload?: any[];
-  label?: string;
-  formatter?: (value: any, name: string) => [string, string];
+  label?: any;
+  formatter?: (value: number | string, name: string, entry: any) => [string, string];
+  labelFormatter?: (label: any) => string;
+  extraContent?: (payload: any[]) => React.ReactNode;
 }) {
   if (active && payload && payload.length) {
+    const displayLabel = labelFormatter ? labelFormatter(label) : label;
     return (
       <div
-        className="p-2 text-[10px] font-sans border bg-white dark:bg-[#0c0c0c] border-gray-200 dark:border-[#1d1d1d] text-black dark:text-white"
+        className="border border-gray-200 bg-white p-2 font-sans text-[10px] text-black dark:border-[#1d1d1d] dark:bg-[#0c0c0c] dark:text-white"
         style={{
           borderRadius: "0px",
           fontFamily: commonChartConfig.fontFamily,
           boxShadow: "0 2px 6px rgba(0, 0, 0, 0.1)",
         }}
       >
-        <p className="mb-1 text-gray-500 dark:text-[#666666]">{label}</p>
+        <p className="mb-1 text-gray-500 dark:text-[#666666]">{displayLabel}</p>
         {payload.map((entry, index) => {
           const value = typeof entry.value === "number" ? entry.value : 0;
+          const dataKeyStr = String(entry.dataKey ?? "");
           const [formattedValue, name] = formatter
-            ? formatter(value, entry.dataKey)
-            : [`${value.toLocaleString()}`, entry.dataKey];
+            ? formatter(value, dataKeyStr, entry)
+            : [`${value.toLocaleString()}`, dataKeyStr];
 
           return (
-            <p
-              key={`${entry.dataKey}-${index}`}
-              className="text-black dark:text-white"
-            >
+            <p key={`${dataKeyStr}-${index}`} className="text-black dark:text-white">
               {name}: {formattedValue}
             </p>
           );
         })}
+        {extraContent && extraContent(payload)}
       </div>
     );
   }
@@ -143,18 +158,18 @@ export function ChartLegend({
       className={`flex items-center ${title ? "justify-between" : "justify-end"} mb-4`}
     >
       {title && (
-        <h4 className="text-[18px] font-normal font-serif text-black dark:text-white">
+        <h4 className="font-normal font-serif text-[18px] text-black dark:text-white">
           {title}
         </h4>
       )}
-      <div className="flex gap-4 items-center">
+      <div className="flex items-center gap-4">
         {items.map((item, index) => (
           <div
             key={`legend-${item.label}-${index}`}
-            className="flex gap-2 items-center"
+            className="flex items-center gap-2"
           >
             <div
-              className="w-2 h-2"
+              className="h-2 w-2"
               style={{
                 background:
                   item.type === "solid"

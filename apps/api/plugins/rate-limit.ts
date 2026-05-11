@@ -116,21 +116,22 @@ async function checkRateLimit(
 
 export const rateLimitPlugin = new Elysia({
   name: "rate-limit",
-}).onBeforeHandle(async ({ request, set, headers }) => {
-  const auth = (headers as any)?.auth ?? null;
+}).onBeforeHandle(async (ctx: any) => {
+  const { request, set, auth } = ctx;
+  const account = auth as { workspace_id?: string; user_id?: string } | null;
   const path = new URL(request.url).pathname;
 
   let config: RateLimitConfig;
 
   if (isAuthEndpoint(path)) {
     config = AUTH_ENDPOINT_LIMIT;
-  } else if (auth?.workspace_id) {
+  } else if (account?.workspace_id) {
     config = AUTHENTICATED_LIMIT;
   } else {
     config = UNAUTHENTICATED_LIMIT;
   }
 
-  const key = getClientKey(request, auth);
+  const key = getClientKey(request, account);
   const result = await checkRateLimit(key, config);
 
   set.headers["X-RateLimit-Limit"] = String(config.max_requests);

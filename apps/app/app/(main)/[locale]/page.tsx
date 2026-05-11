@@ -1,11 +1,8 @@
 import { redirect } from "next/navigation";
+
 import type { Locale } from "@/i18n-config";
 
-export default async function IndexPage({
-  params,
-}: {
-  params: Promise<{ locale: Locale }>;
-}) {
+export default async function IndexPage({ params }: { params: Promise<{ locale: Locale }> }) {
   const { locale } = await params;
   redirect(`/${locale}/overview`);
 }

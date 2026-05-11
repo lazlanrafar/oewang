@@ -1,16 +1,10 @@
-import {
-  pgTable,
-  text,
-  timestamp,
-  uuid,
-  bigint,
-  jsonb,
-} from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
+import { pgTable, text, timestamp, bigint, jsonb } from "drizzle-orm/pg-core";
 import { workspaces } from "./workspaces";
 
 export const vaultFiles = pgTable("vault_files", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  workspaceId: uuid("workspace_id")
+  id: text("id").$defaultFn(createId).primaryKey(),
+  workspaceId: text("workspace_id")
     .references(() => workspaces.id)
     .notNull(),
   name: text("name").notNull(),

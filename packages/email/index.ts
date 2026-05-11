@@ -90,6 +90,42 @@ export async function sendPackageExpiredEmail(
   return sendEmail(to, "Your Oewang Trial Has Ended", html);
 }
 
+export async function sendSubscriptionPaymentReminderEmail(
+  to: string,
+  userName: string,
+  workspaceName: string,
+  dueDate: Date,
+) {
+  const billingUrl = `${Env.NEXT_PUBLIC_APP_URL || "https://app.oewang.com"}/en/settings/billing`;
+  const html = renderTemplate("subscription-payment-reminder", {
+    userName,
+    workspaceName,
+    dueDate: dueDate.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    }),
+    billingUrl,
+  });
+
+  return sendEmail(to, "Payment overdue for your Oewang subscription", html);
+}
+
+export async function sendSubscriptionDowngradedEmail(
+  to: string,
+  userName: string,
+  workspaceName: string,
+) {
+  const billingUrl = `${Env.NEXT_PUBLIC_APP_URL || "https://app.oewang.com"}/en/settings/billing`;
+  const html = renderTemplate("subscription-downgraded", {
+    userName,
+    workspaceName,
+    billingUrl,
+  });
+
+  return sendEmail(to, "Your Oewang workspace has been downgraded", html);
+}
+
 /**
  * Internal helper to send email via Resend.
  */

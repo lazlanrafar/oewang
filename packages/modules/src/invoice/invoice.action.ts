@@ -1,27 +1,19 @@
 "use server";
 
-import type { ActionResponse, Invoice } from "@workspace/types";
+import type {
+  ActionResponse,
+  ApiResponse,
+  Invoice,
+  InvoiceActivityItem,
+  InvoiceCreateData,
+  PublicInvoiceData,
+  InvoiceUpdateData,
+} from "@workspace/types";
+import type { AxiosResponse } from "axios";
 import { axiosInstance as api } from "../lib/axios.server";
 
-export interface CreateInvoiceData {
-  contactId: string;
-  invoiceNumber: string;
-  issueDate?: string;
-  dueDate?: string;
-  amount: number;
-  vat?: number;
-  tax?: number;
-  currency: string;
-  internalNote?: string;
-  noteDetails?: string;
-  paymentDetails?: string;
-  logoUrl?: string;
-  lineItems: Array<{ name: string; quantity: number; price: number }>;
-  isPublic?: boolean;
-  accessCode?: string;
-}
-
-export interface UpdateInvoiceData extends Partial<CreateInvoiceData> {}
+export type CreateInvoiceData = InvoiceCreateData;
+export type UpdateInvoiceData = InvoiceUpdateData;
 
 export interface GetInvoicesParams {
   page?: number;
@@ -30,30 +22,89 @@ export interface GetInvoicesParams {
   status?: string;
 }
 
+type ErrorWithResponse = {
+  response?: {
+    data?: {
+      message?: string;
+    };
+  };
+};
+
+const getErrorMessage = (
+  error: Error | ErrorWithResponse | null | undefined,
+  fallback: string,
+) => {
+  if (!error) return fallback;
+  if (error instanceof Error && error.message) return error.message;
+  if ("response" in error) {
+    return error.response?.data?.message || fallback;
+  }
+  return fallback;
+};
+
+type ApiEnvelopeResponse<T> = AxiosResponse<ApiResponse<T>> & {
+  _api_response?: ApiResponse<T>;
+};
+
 export const getInvoices = async (
   params?: GetInvoicesParams,
-): Promise<ActionResponse<any>> => {
+): Promise<ApiResponse<Invoice[]>> => {
   try {
-    const res = await api.get("/invoices", { params });
-    return { success: true, data: res.data?.data };
-  } catch (error: any) {
+    const response = (await api.get("/invoices", {
+      params,
+    })) as ApiEnvelopeResponse<Invoice[]>;
+
+    const apiResponse = response._api_response ?? response.data;
+    if (apiResponse) {
+      return apiResponse;
+    }
+
+    return {
+      success: true,
+      code: "OK",
+      message: "Invoices retrieved",
+      data: [],
+      meta: {
+        timestamp: Date.now(),
+        pagination: {
+          total: 0,
+          page: params?.page || 1,
+          limit: params?.limit || 50,
+          total_pages: 1,
+        },
+      },
+    };
+  } catch (error) {
+    const typedError = error as Error | ErrorWithResponse | null | undefined;
     return {
       success: false,
-      error: error.response?.data?.message || "Failed to fetch invoices",
+      code: "FETCH_INVOICES_FAILED",
+      message: getErrorMessage(typedError, "Failed to fetch invoices"),
+      data: [],
+      meta: {
+        timestamp: Date.now(),
+        pagination: {
+          total: 0,
+          page: params?.page || 1,
+          limit: params?.limit || 50,
+          total_pages: 0,
+        },
+      },
     };
   }
 };
 
 export const getInvoiceById = async (
   id: string,
-): Promise<ActionResponse<any>> => {
+): Promise<ActionResponse<Invoice>> => {
   try {
     const res = await api.get(`/invoices/${id}`);
     return { success: true, data: res.data?.data };
-  } catch (error: any) {
+  } catch (error) {
+    const typedError = error as Error | ErrorWithResponse | null | undefined;
     return {
       success: false,
-      error: error.response?.data?.message || "Failed to fetch invoice",
+      error: getErrorMessage(typedError, "Failed to fetch invoice"),
     };
   }
 };
@@ -64,10 +115,11 @@ export const createInvoice = async (
   try {
     const res = await api.post("/invoices", data);
     return { success: true, data: res.data?.data };
-  } catch (error: any) {
+  } catch (error) {
+    const typedError = error as Error | ErrorWithResponse | null | undefined;
     return {
       success: false,
-      error: error.response?.data?.message || "Failed to create invoice",
+      error: getErrorMessage(typedError, "Failed to create invoice"),
     };
   }
 };
@@ -79,10 +131,11 @@ export const updateInvoice = async (
   try {
     const res = await api.patch(`/invoices/${id}`, data);
     return { success: true, data: res.data?.data };
-  } catch (error: any) {
+  } catch (error) {
+    const typedError = error as Error | ErrorWithResponse | null | undefined;
     return {
       success: false,
-      error: error.response?.data?.message || "Failed to update invoice",
+      error: getErrorMessage(typedError, "Failed to update invoice"),
     };
   }
 };
@@ -93,10 +146,11 @@ export const deleteInvoice = async (
   try {
     await api.delete(`/invoices/${id}`);
     return { success: true, data: undefined };
-  } catch (error: any) {
+  } catch (error) {
+    const typedError = error as Error | ErrorWithResponse | null | undefined;
     return {
       success: false,
-      error: error.response?.data?.message || "Failed to delete invoice",
+      error: getErrorMessage(typedError, "Failed to delete invoice"),
     };
   }
 };
@@ -107,24 +161,26 @@ export const getInvoiceToken = async (
   try {
     const res = await api.get(`/invoices/${id}/token`);
     return { success: true, data: res.data?.data };
-  } catch (error: any) {
+  } catch (error) {
+    const typedError = error as Error | ErrorWithResponse | null | undefined;
     return {
       success: false,
-      error: error.response?.data?.message || "Failed to fetch invoice token",
+      error: getErrorMessage(typedError, "Failed to fetch invoice token"),
     };
   }
 };
 
 export const getInvoiceActivity = async (
   id: string,
-): Promise<ActionResponse<any[]>> => {
+): Promise<ActionResponse<InvoiceActivityItem[]>> => {
   try {
     const res = await api.get(`/invoices/${id}/activity`);
     return { success: true, data: res.data?.data };
-  } catch (error: any) {
+  } catch (error) {
+    const typedError = error as Error | ErrorWithResponse | null | undefined;
     return {
       success: false,
-      error: error.response?.data?.message || "Failed to fetch invoice activity",
+      error: getErrorMessage(typedError, "Failed to fetch invoice activity"),
     };
   }
 };
@@ -132,16 +188,17 @@ export const getInvoiceActivity = async (
 export const getPublicInvoice = async (
   token: string,
   code?: string,
-): Promise<ActionResponse<any>> => {
+): Promise<ActionResponse<PublicInvoiceData>> => {
   try {
     const res = await api.get(`/public/invoices/${token}`, {
       params: { code },
     });
     return { success: true, data: res.data?.data };
-  } catch (error: any) {
+  } catch (error) {
+    const typedError = error as Error | ErrorWithResponse | null | undefined;
     return {
       success: false,
-      error: error.response?.data?.message || "Failed to fetch public invoice",
+      error: getErrorMessage(typedError, "Failed to fetch public invoice"),
     };
   }
 };

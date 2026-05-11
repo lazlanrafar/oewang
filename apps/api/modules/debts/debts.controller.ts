@@ -5,6 +5,7 @@ import { authPlugin } from "../../plugins/auth";
 import { encryptionPlugin } from "../../plugins/encryption";
 import { buildError, buildSuccess } from "@workspace/utils";
 import { ErrorCode } from "@workspace/types";
+import { assertCanEditWorkspaceData } from "../workspaces/workspace-permissions";
 
 export const debtsController = new Elysia({ prefix: "/debts" })
   .use(authPlugin)
@@ -40,7 +41,8 @@ export const debtsController = new Elysia({ prefix: "/debts" })
   // Create a debt
   .post(
     "/",
-    async ({ workspaceId, userId, body, set }) => {
+    async ({ auth, workspaceId, userId, body, set }) => {
+      assertCanEditWorkspaceData(auth?.workspace_role);
       const data = await DebtsService.createDebt(
         workspaceId!,
         userId!,
@@ -62,7 +64,8 @@ export const debtsController = new Elysia({ prefix: "/debts" })
   // Update a debt
   .patch(
     "/:id",
-    async ({ workspaceId, userId, params, body }) => {
+    async ({ auth, workspaceId, userId, params, body }) => {
+      assertCanEditWorkspaceData(auth?.workspace_role);
       const data = await DebtsService.updateDebt(
         workspaceId!,
         userId!,
@@ -85,7 +88,8 @@ export const debtsController = new Elysia({ prefix: "/debts" })
   // Pay a debt
   .post(
     "/:id/pay",
-    async ({ workspaceId, userId, params, body, set }) => {
+    async ({ auth, workspaceId, userId, params, body, set }) => {
+      assertCanEditWorkspaceData(auth?.workspace_role);
       const data = await DebtsService.payDebt(
         workspaceId!,
         userId!,
@@ -109,7 +113,8 @@ export const debtsController = new Elysia({ prefix: "/debts" })
   // Bulk pay debts
   .post(
     "/bulk-pay",
-    async ({ workspaceId, userId, body, set }) => {
+    async ({ auth, workspaceId, userId, body, set }) => {
+      assertCanEditWorkspaceData(auth?.workspace_role);
       const data = await DebtsService.bulkPayDebt(
         workspaceId!,
         userId!,
@@ -131,7 +136,8 @@ export const debtsController = new Elysia({ prefix: "/debts" })
   // Delete a debt
   .delete(
     "/:id",
-    async ({ workspaceId, userId, params }) => {
+    async ({ auth, workspaceId, userId, params }) => {
+      assertCanEditWorkspaceData(auth?.workspace_role);
       const data = await DebtsService.deleteDebt(
         workspaceId!,
         userId!,
@@ -152,7 +158,8 @@ export const debtsController = new Elysia({ prefix: "/debts" })
   // Split bill
   .post(
     "/split",
-    async ({ workspaceId, userId, body, set }) => {
+    async ({ auth, workspaceId, userId, body, set }) => {
+      assertCanEditWorkspaceData(auth?.workspace_role);
       const data = await DebtsService.splitBill(
         workspaceId!,
         userId!,

@@ -108,7 +108,7 @@ export const CurrencyInput = React.forwardRef<
         onChange={handleChange}
         onBlur={handleBlur}
         ref={ref}
-        className={cn("text-right font-mono", className)}
+        className={cn("text-right font-serif tabular-nums", className)}
       />
     );
   },

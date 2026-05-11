@@ -109,6 +109,14 @@ export abstract class WalletsService {
   }
 
   // --- Wallets ---
+  
+  static async getById(workspaceId: string, id: string) {
+    const wallet = await WalletsRepository.findById(workspaceId, id);
+    if (!wallet) {
+      throw status(404, buildError(ErrorCode.NOT_FOUND, "Wallet not found"));
+    }
+    return wallet;
+  }
 
   static async getWallets(
     workspaceId: string,

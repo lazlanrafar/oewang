@@ -52,3 +52,23 @@ export interface Transaction {
   items?: TransactionItem[];
 }
 
+export type TransactionQueryParams = {
+  page?: number;
+  limit?: number;
+  type?: string | string[];
+  walletId?: string | string[];
+  categoryId?: string | string[];
+  startDate?: string;
+  endDate?: string;
+  minAmount?: number;
+  maxAmount?: number;
+  hasAttachments?: boolean;
+  search?: string;
+  uncategorized?: boolean;
+};
+
+export type TransactionImportValueMappings = {
+  categories: Record<string, string>;
+  wallets: Record<string, string>;
+  types: Record<string, string>;
+};

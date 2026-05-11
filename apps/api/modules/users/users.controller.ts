@@ -16,12 +16,29 @@ export const usersController = new Elysia({ prefix: "/users" })
   .use(encryptionPlugin)
   .post(
     "/sync",
-    async ({ body, set }) => {
+    async ({ body, set, auth }) => {
+      if (!auth) {
+        set.status = 401;
+        return buildError(ErrorCode.UNAUTHORIZED, "Unauthorized");
+      }
+
+      if (
+        auth.user_id !== body.id &&
+        auth.system_role !== "owner" &&
+        auth.system_role !== "finance"
+      ) {
+        set.status = 403;
+        return buildError(ErrorCode.FORBIDDEN, "Forbidden");
+      }
+
       try {
         const result = await UsersService.syncUser(body);
         return buildSuccess(result, "User synced successfully");
       } catch (error) {
-        logger.error("Error in syncUser", { error, body });
+        logger.error("Error in syncUser", {
+          error,
+          userId: body.id,
+        });
         set.status = 500;
         return buildError(ErrorCode.INTERNAL_ERROR, "Failed to sync user");
       }
@@ -81,7 +98,7 @@ export const usersController = new Elysia({ prefix: "/users" })
       try {
         await UsersService.updateActiveWorkspace(
           auth.user_id,
-          body.workspace_id,
+          body.workspaceId,
         );
         return buildSuccess(null, "Workspace switched successfully");
       } catch (error: any) {

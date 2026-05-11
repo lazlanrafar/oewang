@@ -38,13 +38,18 @@ export abstract class AiOrchestrator {
         // Unwrap result.data so canvas components can read payload.stage, payload.currency, etc. directly
         const payload = result?.data ?? result;
         
-        // Map tool names to artifact types
+        // Map tool names to artifact types — only open a canvas when there is actual data.
+        // If totalSpending / totalRevenue / avgMonthlyBurn are all zero the AI reply
+        // already says "no data found", so we skip the canvas entirely.
         if (name === "getRevenueSummary") {
-            capturedArtifact = { type: "revenue-canvas", payload };
+            const hasData = Number(payload?.metrics?.totalRevenue ?? 0) > 0;
+            if (hasData) capturedArtifact = { type: "revenue-canvas", payload };
         } else if (name === "getBurnRate") {
-            capturedArtifact = { type: "burn-rate-canvas", payload };
+            const hasData = Number(payload?.metrics?.avgMonthlyBurn ?? 0) > 0;
+            if (hasData) capturedArtifact = { type: "burn-rate-canvas", payload };
         } else if (name === "getSpendingAnalysis") {
-            capturedArtifact = { type: "spending-canvas", payload };
+            const hasData = Number(payload?.metrics?.totalSpending ?? 0) > 0;
+            if (hasData) capturedArtifact = { type: "spending-canvas", payload };
         }
         
         return result;

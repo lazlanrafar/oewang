@@ -57,7 +57,7 @@ export function PricingDetailSheet() {
             </div>
 
             {selectedPricing.description && (
-              <div className="border dark:bg-[#1A1A1A]/95 px-4 py-3 text-sm text-popover-foreground select-text mb-6 rounded-md bg-muted/20">
+              <div className="border dark:bg-[#1A1A1A]/95 px-4 py-3 text-sm text-popover-foreground select-text mb-6  bg-muted/20">
                 {selectedPricing.description}
               </div>
             )}
@@ -71,7 +71,7 @@ export function PricingDetailSheet() {
                 {selectedPricing.prices.map((price, i) => (
                   <div
                     key={i}
-                    className="border border-border/60 rounded-md p-3 bg-muted/10"
+                    className="border border-border/60 p-3 bg-muted/10"
                   >
                     <div className="flex items-center justify-between mb-2">
                       <span className="font-semibold uppercase tracking-wider text-sm">
@@ -83,7 +83,7 @@ export function PricingDetailSheet() {
                         <span className="text-muted-foreground text-xs">
                           Monthly
                         </span>
-                        <span>
+                        <span className="font-serif">
                           {formatPrice(price.monthly, price.currency)}
                         </span>
                       </div>
@@ -91,7 +91,7 @@ export function PricingDetailSheet() {
                         <span className="text-muted-foreground text-xs">
                           Yearly
                         </span>
-                        <span>
+                        <span className="font-serif">
                           {formatPrice(price.yearly, price.currency)}
                         </span>
                       </div>
@@ -100,7 +100,7 @@ export function PricingDetailSheet() {
                 ))}
               </div>
             ) : (
-              <div className="border border-border/60 rounded-md p-3 bg-muted/10 mb-6 text-sm italic text-muted-foreground">
+              <div className="border border-border/60 p-3 bg-muted/10 mb-6 text-sm italic text-muted-foreground">
                 Free Plan (No pricing defined)
               </div>
             )}
@@ -110,7 +110,7 @@ export function PricingDetailSheet() {
                 Quotas & Limits
               </Label>
               <div className="mt-3 grid grid-cols-2 gap-4">
-                <div className="flex flex-col gap-2 p-3 bg-muted/10 border border-border/60 rounded-md">
+                <div className="flex flex-col gap-2 p-3 bg-muted/10 border border-border/60 ">
                   <div className="flex items-center gap-2 text-muted-foreground text-xs uppercase tracking-wider font-semibold">
                     <Cloud className="h-3 w-3" />
                     Vault Storage
@@ -121,7 +121,7 @@ export function PricingDetailSheet() {
                       : `${selectedPricing.max_vault_size_mb} MB`}
                   </div>
                 </div>
-                <div className="flex flex-col gap-2 p-3 bg-muted/10 border border-border/60 rounded-md">
+                <div className="flex flex-col gap-2 p-3 bg-muted/10 border border-border/60 ">
                   <div className="flex items-center gap-2 text-muted-foreground text-xs uppercase tracking-wider font-semibold">
                     <Bot className="h-3 w-3" />
                     AI Tokens

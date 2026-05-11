@@ -1,49 +1,45 @@
 "use client";
 
-import {
-  Sheet,
-  SheetContent,
-  Button,
-  Separator,
-  Label,
-  Switch,
-  CurrencyInput,
-  Input,
-} from "@workspace/ui";
-import type { Wallet } from "@workspace/types";
-import {
-  Landmark,
-  CheckCircle2,
-  Pencil,
-  XCircle,
-  Layers,
-  X,
-} from "lucide-react";
-import { useAppStore } from "@/stores/app";
-import { useState, useEffect } from "react";
-import { useDebounce } from "@/hooks/use-debounce";
-import { updateWallet } from "@workspace/modules/client";
+import { useCallback, useEffect, useState } from "react";
+
 import { useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
-import { SelectAccountGroup } from "@/components/molecules/select-account-group";
+import type { Dictionary } from "@workspace/dictionaries";
+import { updateWallet } from "@workspace/modules/client";
+import type { Wallet } from "@workspace/types";
+import { CurrencyInput, Input, Label, Separator, Sheet, SheetContent, Switch } from "@workspace/ui";
+import { getCurrencyDisplayUnit } from "@workspace/utils";
 import { format } from "date-fns";
+import { Landmark } from "lucide-react";
+import { toast } from "sonner";
+
+import { SelectAccountGroup } from "@/components/molecules/select-account-group";
+import { useDebounce } from "@/hooks/use-debounce";
+import { useAppStore } from "@/stores/app";
 
 interface AccountDetailSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  wallet?: Wallet;
-  groups?: any[];
-  onEdit: () => void;
+  walletId?: string;
+  onEdit?: (wallet: Wallet) => void;
+  onDelete?: (wallet: Wallet) => void;
+  dictionary: Dictionary;
+  locale?: string;
 }
 
 export function AccountDetailSheet({
   open,
   onOpenChange,
-  wallet,
-  groups = [],
-  onEdit,
+  walletId,
+  dictionary,
+  locale = "en-US",
 }: AccountDetailSheetProps) {
-  const { settings, formatCurrency, dictionary } = useAppStore();
+  const [mounted, setMounted] = useState(false);
+  const { settings, formatCurrency } = useAppStore();
+  const currencyUnit = getCurrencyDisplayUnit(
+    settings?.mainCurrencyCode,
+    settings?.mainCurrencySymbol,
+  );
+  const [wallet, setWallet] = useState<Wallet | undefined>();
   const [name, setName] = useState("");
   const [balance, setBalance] = useState(0);
   const [isIncludedInTotals, setIsIncludedInTotals] = useState(true);
@@ -53,32 +49,55 @@ export function AccountDetailSheet({
   const queryClient = useQueryClient();
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (open && walletId) {
+      const fetchWallet = async () => {
+        const { getWallet } = await import("@workspace/modules/client");
+        const res = await getWallet(walletId);
+        if (res.success && res.data) {
+          setWallet(res.data as Wallet);
+        }
+      };
+      fetchWallet();
+    } else if (!open) {
+      setWallet(undefined);
+    }
+  }, [open, walletId]);
+
+  useEffect(() => {
     if (wallet) {
       setName(wallet.name || "");
       setBalance(Number(wallet.balance) || 0);
       setIsIncludedInTotals(wallet.isIncludedInTotals ?? true);
     }
-  }, [wallet?.id]);
+  }, [wallet?.id, wallet?.balance, wallet?.isIncludedInTotals, wallet]);
 
-  const updateWalletInCache = (updatedData: Partial<Wallet>) => {
-    if (!wallet?.id) return;
-    queryClient.setQueriesData({ queryKey: ["wallets"] }, (old: any) => {
-      if (!old) return old;
-      return {
-        ...old,
-        pages: old.pages.map((page: any) => ({
-          ...page,
-          data: page.data.map((w: any) =>
-            w.id === wallet.id ? { ...w, ...updatedData } : w,
-          ),
-        })),
-      };
-    });
-  };
+  const updateWalletInCache = useCallback(
+    (updatedData: Partial<Wallet>) => {
+      if (!wallet?.id) return;
+      queryClient.setQueriesData(
+        { queryKey: ["wallets"] },
+        (old: { pages?: Array<{ data: Wallet[] }> } | undefined) => {
+          if (!old) return old;
+          return {
+            ...old,
+            pages: old.pages?.map((page: { data: Wallet[] }) => ({
+              ...page,
+              data: page.data.map((w: Wallet) => (w.id === wallet.id ? { ...w, ...updatedData } : w)),
+            })),
+          };
+        },
+      );
+    },
+    [wallet?.id, queryClient],
+  );
 
   // Real-time update for Name
   useEffect(() => {
-    if (!wallet || !dictionary) return;
+    if (!wallet) return;
 
     if (debouncedName === wallet.name || debouncedName === "") return;
 
@@ -93,23 +112,25 @@ export function AccountDetailSheet({
     };
 
     update();
-  }, [debouncedName, wallet?.id, dictionary]);
+  }, [debouncedName, wallet?.id, updateWalletInCache, wallet]);
 
-  if (!wallet || !dictionary) return null;
+  if (!mounted || !wallet) return null;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="flex flex-col h-full p-0">
-        <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-8 pb-32">
+      <SheetContent className="flex h-full flex-col p-0">
+        <div className="no-scrollbar flex-1 space-y-8 overflow-y-auto p-6 pb-32">
           {/* Header Bar */}
-          <div className="flex items-center justify-between mb-5">
-            <div className="flex items-center gap-2 text-[10px] font-medium text-muted-foreground uppercase tracking-widest">
+          <div className="mb-5 flex items-center justify-between">
+            <div className="flex items-center gap-2 font-medium text-[10px] text-muted-foreground uppercase tracking-widest">
               <Landmark className="h-3 w-3 text-muted-foreground/60" />
               <span>{dictionary.accounts.title}</span>
             </div>
             <span className="text-[11px] text-muted-foreground tracking-tight">
               {dictionary.accounts.updated}{" "}
-              {format(new Date(wallet.updatedAt), "MMM d, yyyy")}
+              {wallet.updatedAt && !Number.isNaN(new Date(wallet.updatedAt).getTime())
+                ? format(new Date(wallet.updatedAt), "MMM d, yyyy")
+                : "N/A"}
             </span>
           </div>
 
@@ -118,15 +139,15 @@ export function AccountDetailSheet({
             <div className="flex items-baseline justify-start gap-3 pt-1">
               {isEditingBalance ? (
                 <div className="flex items-center gap-2">
-                  <span className="text-3xl font-serif font-medium text-foreground/90">
-                    {settings?.mainCurrencySymbol}
+                  <span className="font-medium font-serif text-3xl text-foreground/90">
+                    {currencyUnit}
                   </span>
                   <CurrencyInput
                     value={balance}
                     onChange={(val) => setBalance(val)}
                     currencySymbol={settings?.mainCurrencySymbol}
                     decimalPlaces={settings?.mainCurrencyDecimalPlaces}
-                    className="text-5xl tracking-tighter font-medium font-serif bg-transparent border-none p-0 h-auto focus:ring-0 w-full"
+                    className="h-auto w-full border-none bg-transparent p-0 font-medium font-serif text-5xl tracking-tighter focus:ring-0"
                     autoFocus
                     onBlur={async () => {
                       setIsEditingBalance(false);
@@ -146,12 +167,13 @@ export function AccountDetailSheet({
                   />
                 </div>
               ) : (
-                <h1
-                  className="text-5xl tracking-tighter font-medium font-serif cursor-pointer hover:opacity-80 transition-opacity"
+                <button
+                  type="button"
+                  className="cursor-pointer border-none bg-transparent p-0 font-medium font-serif text-5xl tracking-tighter transition-opacity hover:opacity-80"
                   onClick={() => setIsEditingBalance(true)}
                 >
-                  {formatCurrency(Number(wallet.balance))}
-                </h1>
+                  {formatCurrency(Number(wallet.balance), { locale })}
+                </button>
               )}
             </div>
           </div>
@@ -159,7 +181,7 @@ export function AccountDetailSheet({
           {/* Inline Selection Grid */}
           <div className="grid grid-cols-2 gap-4 pt-2">
             <div className="space-y-2">
-              <Label className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest px-1">
+              <Label className="px-1 font-medium text-[10px] text-muted-foreground uppercase tracking-widest">
                 {dictionary.accounts.group_label}
               </Label>
               <SelectAccountGroup
@@ -178,13 +200,11 @@ export function AccountDetailSheet({
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest px-1">
+              <Label className="px-1 font-medium text-[10px] text-muted-foreground uppercase tracking-widest">
                 {dictionary.transactions.type_label}
               </Label>
-              <div className="flex items-center justify-between border px-3 h-10 bg-background/50">
-                <span className="text-[11px] font-medium">
-                  {dictionary.accounts.include_in_totals_label}
-                </span>
+              <div className="flex h-10 items-center justify-between border bg-background/50 px-3">
+                <span className="font-medium text-[11px]">{dictionary.accounts.include_in_totals_label}</span>
                 <Switch
                   checked={isIncludedInTotals}
                   onCheckedChange={async (checked) => {
@@ -195,9 +215,7 @@ export function AccountDetailSheet({
                     if (res.success && res.data) {
                       updateWalletInCache(res.data);
                       toast.success(
-                        checked
-                          ? dictionary.accounts.included_in_totals
-                          : dictionary.accounts.excluded_from_totals,
+                        checked ? dictionary.accounts.included_in_totals : dictionary.accounts.excluded_from_totals,
                       );
                     }
                   }}
@@ -208,14 +226,14 @@ export function AccountDetailSheet({
 
           {/* Name Input Row */}
           <div className="space-y-2">
-            <Label className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest px-1">
+            <Label className="px-1 font-medium text-[10px] text-muted-foreground uppercase tracking-widest">
               {dictionary.accounts.account_name}
             </Label>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder={dictionary.accounts.account_name_placeholder}
-              className="font-sans font-medium"
+              className="font-medium font-sans"
             />
           </div>
 
@@ -223,34 +241,31 @@ export function AccountDetailSheet({
 
           {/* Additional Info Section */}
           <div className="space-y-4">
-            <div className="flex items-center justify-between group">
+            <div className="group flex items-center justify-between">
               <div className="space-y-1">
-                <Label className="text-sm font-medium text-foreground/90 group-hover:text-foreground transition-colors cursor-pointer">
+                <Label className="cursor-pointer font-medium text-foreground/90 text-sm transition-colors group-hover:text-foreground">
                   {dictionary.accounts.created_date}
                 </Label>
-                <p className="text-[11px] text-muted-foreground leading-relaxed max-w-[280px]">
+                <p className="max-w-[280px] text-[11px] text-muted-foreground leading-relaxed">
                   {dictionary.accounts.created_date_description}
                 </p>
               </div>
-              <span className="text-[11px] font-medium">
-                {format(new Date(wallet.createdAt), "MMMM d, yyyy")}
-              </span>
+              <span className="font-medium text-[11px]">{format(new Date(wallet.createdAt), "MMMM d, yyyy")}</span>
             </div>
           </div>
         </div>
 
         {/* Footer Toolbar */}
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-3rem)] bg-background/70 backdrop-blur-xl border px-4 py-1 flex items-center justify-between z-50 shadow-2xl shadow-black/20">
-          <div className="flex items-center gap-4">
-            {/* Future account actions could go here */}
-          </div>
+        <div className="-translate-x-1/2 absolute bottom-6 left-1/2 z-50 flex w-[calc(100%-3rem)] items-center justify-between border bg-background/70 px-4 py-1 shadow-2xl shadow-black/20 backdrop-blur-xl">
+          <div className="flex items-center gap-4">{/* Future account actions could go here */}</div>
 
           <div className="flex items-center gap-2">
             <button
+              type="button"
               onClick={() => onOpenChange(false)}
-              className="px-3 py-2 hover:bg-muted/40 transition-colors group"
+              className="group px-3 py-2 transition-colors hover:bg-muted/40"
             >
-              <span className="text-[10px] font-bold text-muted-foreground group-hover:text-foreground uppercase tracking-widest">
+              <span className="font-bold text-[10px] text-muted-foreground uppercase tracking-widest group-hover:text-foreground">
                 {dictionary.transactions.esc}
               </span>
             </button>

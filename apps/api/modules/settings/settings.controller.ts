@@ -8,6 +8,7 @@ import { encryptionPlugin } from "../../plugins/encryption";
 import { ErrorCode } from "@workspace/types";
 import { buildError } from "@workspace/utils";
 import { status } from "elysia";
+import { assertCanEditWorkspaceData } from "../workspaces/workspace-permissions";
 
 export const settingsController = new Elysia({
   prefix: "/settings",
@@ -38,6 +39,7 @@ export const settingsController = new Elysia({
       if (!auth?.workspace_id) {
         throw status(401, buildError(ErrorCode.UNAUTHORIZED, "Unauthorized"));
       }
+      assertCanEditWorkspaceData(auth.workspace_role);
       return SettingsService.updateTransactionSettings(
         auth.workspace_id,
         auth.user_id,

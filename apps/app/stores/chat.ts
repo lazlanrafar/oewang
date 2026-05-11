@@ -1,372 +1,58 @@
-import {
-  endOfMonth,
-  startOfMonth,
-  startOfYear,
-  subDays,
-  subMonths,
-} from "date-fns";
+import { endOfMonth, startOfMonth, startOfYear, subDays, subMonths } from "date-fns";
+import { CHAT_SHORTCUT_TEMPLATES, type ShortcutDateRangePreset } from "@workspace/constants";
 import { create } from "zustand";
-
-// Command system with / prefix - natural language suggestions
-const COMMAND_SUGGESTIONS = [
-  {
-    command: "/show",
-    title: "Show latest transactions",
-    toolName: "getTransactions",
-    toolParams: { pageSize: 10, sort: ["date", "desc"] },
-    keywords: ["show", "latest", "transactions", "recent"],
-  },
-  {
-    command: "/show",
-    title: "Show cash burn and top 3 vendor increases",
-    toolName: "getBurnRate",
-    toolParams: { showCanvas: true },
-    keywords: ["show", "burn", "cash", "vendor", "increases", "analysis"],
-  },
-  {
-    command: "/show",
-    title: "Show where we're spending the most this month",
-    toolName: "getSpending",
-    toolParams: {
-      from: startOfMonth(new Date()).toISOString(),
-      to: endOfMonth(new Date()).toISOString(),
-      showCanvas: true,
-    },
-    keywords: ["show", "spending", "most", "this month", "where"],
-  },
-  {
-    command: "/show",
-    title: "Show weekly trends and insights",
-    toolName: "getBurnRate",
-    toolParams: {
-      from: subDays(new Date(), 7).toISOString(),
-      to: new Date().toISOString(),
-      showCanvas: true,
-    },
-    keywords: ["show", "weekly", "trends", "insights"],
-  },
-  {
-    command: "/show",
-    title: "Show revenue performance",
-    toolName: "getRevenueSummary",
-    toolParams: {
-      from: startOfYear(new Date()).toISOString(),
-      to: endOfMonth(new Date()).toISOString(),
-      showCanvas: true,
-    },
-    keywords: ["show", "revenue", "performance", "analyze"],
-  },
-  {
-    command: "/show",
-    title: "Show expense breakdown by category",
-    toolName: "getSpending",
-    toolParams: { showCanvas: true },
-    keywords: ["show", "expense", "breakdown", "category"],
-  },
-  {
-    command: "/show",
-    title: "Show profit margins",
-    toolName: "getProfitAnalysis",
-    toolParams: { showCanvas: true },
-    keywords: ["show", "profit", "margins"],
-  },
-  {
-    command: "/show",
-    title: "Show cash runway",
-    toolName: "getRunway",
-    toolParams: { showCanvas: true },
-    keywords: ["show", "runway", "cash", "left"],
-  },
-  {
-    command: "/show",
-    title: "Show cash flow stress test",
-    toolName: "getCashFlowStressTest",
-    toolParams: { showCanvas: true },
-    keywords: ["show", "stress", "test", "scenario", "resilience", "financial"],
-  },
-  {
-    command: "/find",
-    title: "Find untagged transactions from last month",
-    toolName: "getTransactions",
-    toolParams: {
-      from: subMonths(new Date(), 1).toISOString(),
-      to: new Date().toISOString(),
-      statuses: ["pending"],
-    },
-    keywords: ["find", "untagged", "transactions", "last month", "clean"],
-  },
-  {
-    command: "/find",
-    title: "Find recurring payments",
-    toolName: "getTransactions",
-    toolParams: { recurring: true },
-    keywords: ["find", "recurring", "payments", "subscriptions"],
-  },
-  {
-    command: "/analyze",
-    title: "Analyze burn rate trends",
-    toolName: "getBurnRate",
-    toolParams: { showCanvas: true },
-    keywords: ["analyze", "burn", "rate", "trends"],
-  },
-  {
-    command: "/analyze",
-    title: "Analyze spending patterns",
-    toolName: "getSpending",
-    toolParams: { showCanvas: true },
-    keywords: ["analyze", "spending", "patterns"],
-  },
-  {
-    command: "/analyze",
-    title: "Analyze financial resilience",
-    toolName: "getCashFlowStressTest",
-    toolParams: { showCanvas: true },
-    keywords: [
-      "analyze",
-      "stress",
-      "test",
-      "resilience",
-      "scenarios",
-      "financial",
-    ],
-  },
-  // Balance Sheet
-  {
-    command: "/show",
-    title: "Show balance sheet",
-    toolName: "getBalanceSheet",
-    toolParams: { showCanvas: true },
-    keywords: ["show", "balance", "sheet", "assets", "liabilities", "equity"],
-  },
-  // Growth Rate
-  {
-    command: "/show",
-    title: "Show growth rate analysis",
-    toolName: "getGrowthRate",
-    toolParams: { showCanvas: true },
-    keywords: ["show", "growth", "rate", "revenue", "profit", "trends"],
-  },
-  {
-    command: "/analyze",
-    title: "Analyze revenue growth trends",
-    toolName: "getGrowthRate",
-    toolParams: { showCanvas: true, type: "revenue" },
-    keywords: ["analyze", "revenue", "growth", "trends", "period"],
-  },
-  // Invoice Payment Analysis
-  {
-    command: "/show",
-    title: "Show invoice payment analysis",
-    toolName: "getInvoicePaymentAnalysis",
-    toolParams: { showCanvas: true },
-    keywords: ["show", "invoice", "payment", "analysis", "days", "overdue"],
-  },
-  {
-    command: "/analyze",
-    title: "Analyze customer payment patterns",
-    toolName: "getInvoicePaymentAnalysis",
-    toolParams: { showCanvas: true },
-    keywords: ["analyze", "customer", "payment", "patterns", "invoices"],
-  },
-  // Tax Summary
-  {
-    command: "/show",
-    title: "Show tax summary",
-    toolName: "getTaxSummary",
-    toolParams: { showCanvas: true },
-    keywords: ["show", "tax", "summary", "deductions", "year"],
-  },
-  {
-    command: "/show",
-    title: "Show tax breakdown by category",
-    toolName: "getTaxSummary",
-    toolParams: { showCanvas: true },
-    keywords: ["show", "tax", "breakdown", "category", "deductions"],
-  },
-  // Business Health Score
-  {
-    command: "/show",
-    title: "Show business health score",
-    toolName: "getBusinessHealthScore",
-    toolParams: { showCanvas: true },
-    keywords: ["show", "business", "health", "score", "metrics"],
-  },
-  {
-    command: "/analyze",
-    title: "Analyze business health metrics",
-    toolName: "getBusinessHealthScore",
-    toolParams: { showCanvas: true },
-    keywords: ["analyze", "business", "health", "metrics", "performance"],
-  },
-  // Forecast
-  {
-    command: "/show",
-    title: "Show revenue forecast",
-    toolName: "getForecast",
-    toolParams: { showCanvas: true },
-    keywords: ["show", "revenue", "forecast", "projection", "future"],
-  },
-  {
-    command: "/analyze",
-    title: "Analyze revenue projections",
-    toolName: "getForecast",
-    toolParams: { showCanvas: true },
-    keywords: ["analyze", "revenue", "projections", "forecast", "trends"],
-  },
-  // Expenses Breakdown
-  {
-    command: "/show",
-    title: "Show expenses breakdown",
-    toolName: "getExpensesBreakdown",
-    toolParams: { showCanvas: true },
-    keywords: ["show", "expenses", "breakdown", "category", "analysis"],
-  },
-  {
-    command: "/analyze",
-    title: "Analyze expense categories",
-    toolName: "getExpensesBreakdown",
-    toolParams: { showCanvas: true },
-    keywords: ["analyze", "expense", "categories", "breakdown"],
-  },
-  // Revenue Summary
-  {
-    command: "/show",
-    title: "Show revenue summary",
-    toolName: "getRevenueSummary",
-    toolParams: { showCanvas: true },
-    keywords: ["show", "revenue", "summary", "income", "earnings"],
-  },
-  {
-    command: "/show",
-    title: "Show revenue trends this year",
-    toolName: "getRevenueSummary",
-    toolParams: {
-      from: startOfYear(new Date()).toISOString(),
-      to: endOfMonth(new Date()).toISOString(),
-      showCanvas: true,
-    },
-    keywords: ["show", "revenue", "trends", "year", "this year"],
-  },
-  // Profit Analysis
-  {
-    command: "/show",
-    title: "Show profit and loss statement",
-    toolName: "getProfitAnalysis",
-    toolParams: { showCanvas: true },
-    keywords: ["show", "profit", "loss", "statement", "p&l"],
-  },
-  {
-    command: "/analyze",
-    title: "Analyze profit margins",
-    toolName: "getProfitAnalysis",
-    toolParams: { showCanvas: true },
-    keywords: ["analyze", "profit", "margins", "profitability"],
-  },
-  // Account Balances
-  {
-    command: "/show",
-    title: "Show account balances",
-    toolName: "getAccountBalances",
-    toolParams: {},
-    keywords: ["show", "account", "balances", "bank", "accounts"],
-  },
-  // Invoices
-  {
-    command: "/show",
-    title: "Show latest invoices",
-    toolName: "getInvoices",
-    toolParams: { pageSize: 10, sort: ["createdAt", "desc"] },
-    keywords: ["show", "latest", "invoices", "recent"],
-  },
-  {
-    command: "/find",
-    title: "Find unpaid invoices",
-    toolName: "getInvoices",
-    toolParams: { statuses: ["unpaid"], pageSize: 20 },
-    keywords: ["find", "unpaid", "invoices", "outstanding"],
-  },
-  {
-    command: "/find",
-    title: "Find overdue invoices",
-    toolName: "getInvoices",
-    toolParams: { statuses: ["overdue"], pageSize: 20 },
-    keywords: ["find", "overdue", "invoices", "late"],
-  },
-  // Customers
-  {
-    command: "/show",
-    title: "Show contacts",
-    toolName: "getContacts",
-    toolParams: { pageSize: 10 },
-    keywords: ["show", "contacts", "clients", "list"],
-  },
-  {
-    command: "/find",
-    title: "Find top contacts",
-    toolName: "getContacts",
-    toolParams: { pageSize: 10 },
-    keywords: ["find", "top", "contacts", "clients"],
-  },
-  // Cash Flow
-  {
-    command: "/show",
-    title: "Show cash flow",
-    toolName: "getCashFlow",
-    toolParams: { showCanvas: true },
-    keywords: ["show", "cash", "flow", "income", "expenses"],
-  },
-  {
-    command: "/show",
-    title: "Show cash flow this month",
-    toolName: "getCashFlow",
-    toolParams: {
-      from: startOfMonth(new Date()).toISOString(),
-      to: endOfMonth(new Date()).toISOString(),
-      showCanvas: true,
-    },
-    keywords: ["show", "cash", "flow", "month", "this month"],
-  },
-  {
-    command: "/analyze",
-    title: "Analyze cash flow trends",
-    toolName: "getCashFlow",
-    toolParams: { showCanvas: true },
-    keywords: ["analyze", "cash", "flow", "trends", "patterns"],
-  },
-  // Expenses
-  {
-    command: "/show",
-    title: "Show expenses",
-    toolName: "getExpenses",
-    toolParams: { showCanvas: true },
-    keywords: ["show", "expenses", "costs", "spending"],
-  },
-  {
-    command: "/show",
-    title: "Show expenses this month",
-    toolName: "getExpenses",
-    toolParams: {
-      from: startOfMonth(new Date()).toISOString(),
-      to: endOfMonth(new Date()).toISOString(),
-      showCanvas: true,
-    },
-    keywords: ["show", "expenses", "month", "this month"],
-  },
-  {
-    command: "/analyze",
-    title: "Analyze expense trends",
-    toolName: "getExpenses",
-    toolParams: { showCanvas: true },
-    keywords: ["analyze", "expense", "trends", "patterns"],
-  },
-];
+import { getDictionaryText } from "@/modules/types/dictionary";
+import { useAppStore } from "./app";
 
 export interface CommandSuggestion {
   command: string;
   title: string;
   toolName: string;
-  toolParams: Record<string, any>;
+  toolParams: Record<string, unknown>;
   keywords: string[];
+}
+
+function getDateRangeFromPreset(preset?: ShortcutDateRangePreset): { from?: string; to?: string } {
+  const now = new Date();
+
+  switch (preset) {
+    case "last7Days":
+      return {
+        from: subDays(now, 7).toISOString(),
+        to: now.toISOString(),
+      };
+    case "lastMonthToNow":
+      return {
+        from: subMonths(now, 1).toISOString(),
+        to: now.toISOString(),
+      };
+    case "thisMonth":
+      return {
+        from: startOfMonth(now).toISOString(),
+        to: endOfMonth(now).toISOString(),
+      };
+    case "yearToDate":
+      return {
+        from: startOfYear(now).toISOString(),
+        to: endOfMonth(now).toISOString(),
+      };
+    default:
+      return {};
+  }
+}
+
+function getCommandSuggestions(): CommandSuggestion[] {
+  const dictionary = useAppStore.getState().dictionary as import("@workspace/dictionaries").Dictionary | null;
+  return CHAT_SHORTCUT_TEMPLATES.map((suggestion) => ({
+    command: suggestion.command,
+    title: getDictionaryText(dictionary, suggestion.titleKey, suggestion.titleDefault),
+    toolName: suggestion.toolName,
+    toolParams: {
+      ...suggestion.toolParams,
+      ...getDateRangeFromPreset(suggestion.dateRangePreset),
+    },
+    keywords: suggestion.keywords,
+  }));
 }
 
 interface ChatState {
@@ -431,7 +117,7 @@ export const useChatStore = create<ChatState>()((set, get) => ({
   selectedCommandIndex: 0,
   commandQuery: "",
   cursorPosition: 0,
-  filteredCommands: COMMAND_SUGGESTIONS,
+  filteredCommands: getCommandSuggestions(),
   scrollY: 0,
 
   // Basic setters
@@ -441,9 +127,12 @@ export const useChatStore = create<ChatState>()((set, get) => ({
   setIsUploading: (isUploading) => set({ isUploading }),
   setIsRecording: (isRecording) => set({ isRecording }),
   setIsProcessing: (isProcessing) => set({ isProcessing }),
-  setShowCommands: (showCommands) => set({ showCommands }),
-  setSelectedCommandIndex: (selectedCommandIndex) =>
-    set({ selectedCommandIndex }),
+  setShowCommands: (showCommands) =>
+    set((state) => ({
+      showCommands,
+      filteredCommands: showCommands && !state.commandQuery ? getCommandSuggestions() : state.filteredCommands,
+    })),
+  setSelectedCommandIndex: (selectedCommandIndex) => set({ selectedCommandIndex }),
   setCommandQuery: (commandQuery) => set({ commandQuery }),
   setCursorPosition: (cursorPosition) => set({ cursorPosition }),
   setScrollY: (scrollY) => set({ scrollY }),
@@ -461,15 +150,14 @@ export const useChatStore = create<ChatState>()((set, get) => ({
 
     if (lastSlashIndex !== -1) {
       const textAfterSlash = textBeforeCursor.substring(lastSlashIndex + 1);
+      const suggestions = getCommandSuggestions();
 
       // Filter commands based on the query
       const query = textAfterSlash.toLowerCase().trim();
-      const filtered = COMMAND_SUGGESTIONS.filter((command) => {
+      const filtered = suggestions.filter((command) => {
         const matchesCommand = command.command.toLowerCase().includes(query);
         const matchesTitle = command.title.toLowerCase().includes(query);
-        const matchesKeywords = command.keywords.some((keyword) =>
-          keyword.toLowerCase().includes(query),
-        );
+        const matchesKeywords = command.keywords.some((keyword) => keyword.toLowerCase().includes(query));
         return matchesCommand || matchesTitle || matchesKeywords;
       });
 
@@ -486,7 +174,7 @@ export const useChatStore = create<ChatState>()((set, get) => ({
     set({
       showCommands: false,
       commandQuery: "",
-      filteredCommands: COMMAND_SUGGESTIONS,
+      filteredCommands: getCommandSuggestions(),
     });
   },
 
@@ -517,10 +205,7 @@ export const useChatStore = create<ChatState>()((set, get) => ({
       case "ArrowDown":
         e.preventDefault();
         set({
-          selectedCommandIndex: Math.min(
-            selectedCommandIndex + 1,
-            filteredCommands.length - 1,
-          ),
+          selectedCommandIndex: Math.min(selectedCommandIndex + 1, filteredCommands.length - 1),
         });
         break;
       case "ArrowUp":
@@ -553,7 +238,7 @@ export const useChatStore = create<ChatState>()((set, get) => ({
   },
 
   navigateCommandUp: () => {
-    const { selectedCommandIndex, filteredCommands } = get();
+    const { selectedCommandIndex } = get();
     set({
       selectedCommandIndex: Math.max(selectedCommandIndex - 1, 0),
     });
@@ -562,10 +247,7 @@ export const useChatStore = create<ChatState>()((set, get) => ({
   navigateCommandDown: () => {
     const { selectedCommandIndex, filteredCommands } = get();
     set({
-      selectedCommandIndex: Math.min(
-        selectedCommandIndex + 1,
-        filteredCommands.length - 1,
-      ),
+      selectedCommandIndex: Math.min(selectedCommandIndex + 1, filteredCommands.length - 1),
     });
   },
 

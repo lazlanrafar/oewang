@@ -1,13 +1,14 @@
-import { pgTable, boolean, timestamp, uuid } from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
+import { pgTable, boolean, timestamp, text } from "drizzle-orm/pg-core";
 import { users } from "./users";
 import { workspaces } from "./workspaces";
 
 export const notification_settings = pgTable("notification_settings", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  user_id: uuid("user_id")
+  id: text("id").primaryKey().$defaultFn(createId),
+  user_id: text("user_id")
     .references(() => users.id)
     .notNull(),
-  workspace_id: uuid("workspace_id")
+  workspace_id: text("workspace_id")
     .references(() => workspaces.id)
     .notNull(),
   email_enabled: boolean("email_enabled").default(true).notNull(),

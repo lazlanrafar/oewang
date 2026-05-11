@@ -9,16 +9,16 @@ export const websiteEn = {
     signOut: "Sign out",
   },
   hero: {
-    badge: "Open-source financial OS",
-    title: "Run your business finances without manual work.",
+    badge: "Personal finance OS",
+    title: "Your money, finally clear in one place.",
     subtitle:
-      "oewang is the financial OS for modern businesses. AI-powered insights, automatic categorization, real-time sync.",
+      "oewang helps you track spending, understand cash flow, and stay ahead of bills with AI-assisted categorization.",
     ctaStartFree: "Start free trial",
     ctaSeeHow: "See how it works",
     ctaGetStarted: "Get started free",
     ctaGoToDashboard: "Go to Dashboard",
     ctaViewDemo: "View demo",
-    trialNote: "14-day free trial · Cancel anytime",
+    trialNote: "14-day free trial · No credit card required",
     noCreditCard: "No credit card required",
   },
   howItWorks: {
@@ -158,7 +158,7 @@ export const websiteEn = {
     contactEmail: "Email us",
   },
   footer: {
-    tagline: "Run your company. Not the admin.",
+    tagline: "Money clarity for real life.",
     rights: "All rights reserved.",
     lightMode: "Light mode",
     darkMode: "Dark mode",
@@ -171,9 +171,9 @@ export const websiteEn = {
     goToApp: "Go to app",
   },
   cta: {
-    title: "Ready to take control?",
+    title: "Ready for calmer money decisions?",
     subtitle:
-      "Join hundreds of businesses already using oewang to manage their finances.",
+      "Join people using oewang to track spending, understand cash flow, and stay ahead of bills.",
     getStarted: "Get started free",
     viewPricing: "View pricing",
   },

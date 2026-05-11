@@ -4,13 +4,17 @@ import { encryptionPlugin } from "../../plugins/encryption";
 import { SystemAdminModel } from "./system-admins.model";
 import { SystemAdminsService } from "./system-admins.service";
 import { ErrorCode } from "@workspace/types";
+import { buildError } from "@workspace/utils";
 
 // Admin Guard Plugin
 export const requireAdminAccess = new Elysia({ name: "guard.admin-access" })
   .use(authPlugin)
-  .derive(({ auth, status }) => {
+  .onBeforeHandle(({ auth, status }) => {
     if (!auth) {
-      return status(401, { success: false, code: ErrorCode.UNAUTHORIZED });
+      return status(
+        401,
+        buildError(ErrorCode.UNAUTHORIZED, "Unauthorized"),
+      );
     }
     if (auth.system_role !== "owner" && auth.system_role !== "finance") {
       return status(403, {
@@ -19,7 +23,6 @@ export const requireAdminAccess = new Elysia({ name: "guard.admin-access" })
         message: "Owner or Finance access required.",
       });
     }
-    return {}; // Passed validation
   });
 
 export const systemAdminsController = new Elysia({ prefix: "/system-admins" })

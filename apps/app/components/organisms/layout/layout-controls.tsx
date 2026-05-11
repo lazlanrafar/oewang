@@ -1,22 +1,5 @@
 "use client";
 
-import {
-  Button,
-  Label,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  ToggleGroup,
-  ToggleGroupItem,
-} from "@workspace/ui";
-import { Settings } from "lucide-react";
-
-import { type FontKey, fontOptions } from "@workspace/ui";
 import type { ContentLayout, NavbarStyle, SidebarCollapsible, SidebarVariant } from "@workspace/ui";
 import {
   applyContentLayout,
@@ -24,12 +7,29 @@ import {
   applyNavbarStyle,
   applySidebarCollapsible,
   applySidebarVariant,
+  applyThemePreset,
+  Button,
+  type FontKey,
+  fontOptions,
+  Label,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  PREFERENCE_DEFAULTS,
+  persistPreference,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  THEME_PRESET_OPTIONS,
+  type ThemeMode,
+  type ThemePreset,
+  ToggleGroup,
+  ToggleGroupItem,
+  usePreferencesStore,
 } from "@workspace/ui";
-import { PREFERENCE_DEFAULTS } from "@workspace/ui";
-import { persistPreference } from "@workspace/ui";
-import { THEME_PRESET_OPTIONS, type ThemeMode, type ThemePreset } from "@workspace/ui";
-import { applyThemePreset } from "@workspace/ui";
-import { usePreferencesStore } from "@workspace/ui";
+import { Settings } from "lucide-react";
 
 export function LayoutControls() {
   const themeMode = usePreferencesStore((s) => s.themeMode);

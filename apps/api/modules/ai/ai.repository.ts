@@ -92,7 +92,10 @@ export abstract class AiRepository {
         used: workspaces.ai_tokens_used,
         extra: workspaces.extra_ai_tokens,
         maxTokens: pricing.max_ai_tokens,
+        plan_status: workspaces.plan_status,
+        plan_billing_interval: workspaces.plan_billing_interval,
         plan_current_period_end: workspaces.plan_current_period_end,
+        ai_tokens_reset_at: workspaces.ai_tokens_reset_at,
         created_at: workspaces.created_at,
       })
       .from(workspaces)
@@ -126,7 +129,10 @@ export abstract class AiRepository {
     return {
       used: row.used,
       maxTokens: (row.maxTokens || 0) + row.extra + recurringExtraAi,
+      plan_status: row.plan_status,
+      plan_billing_interval: row.plan_billing_interval,
       plan_current_period_end: row.plan_current_period_end,
+      ai_tokens_reset_at: row.ai_tokens_reset_at,
       created_at: row.created_at,
     };
   }
@@ -140,6 +146,17 @@ export abstract class AiRepository {
       .update(workspaces)
       .set({
         ai_tokens_used: currentTokens + tokensSpent,
+        updated_at: new Date(),
+      })
+      .where(eq(workspaces.id, workspaceId));
+  }
+
+  static async resetAiTokens(workspaceId: string, resetAt: Date) {
+    return db
+      .update(workspaces)
+      .set({
+        ai_tokens_used: 0,
+        ai_tokens_reset_at: resetAt,
         updated_at: new Date(),
       })
       .where(eq(workspaces.id, workspaceId));

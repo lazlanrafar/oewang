@@ -1,24 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import type { Wallet } from "@workspace/types";
-import { type DebtWithContact, payDebt } from "@workspace/modules/client";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  Button,
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  Badge,
-  Alert,
-  AlertDescription,
-  Separator,
-} from "@workspace/ui";
-import { useAppStore } from "@/stores/app";
-import { toast } from "sonner";
-import { ArrowDownLeft, ArrowUpRight, Calendar, Trash, Wallet as WalletIcon, CreditCard } from "lucide-react";
+
+import type { Dictionary } from "@workspace/dictionaries";
+import type { DebtWithContact } from "@workspace/modules/client";
+import type { TransactionSettings, Wallet } from "@workspace/types";
+import { Badge, Button, Separator, Sheet, SheetContent, SheetHeader, SheetTitle } from "@workspace/ui";
+import { formatCurrency as formatCurrencyUtil } from "@workspace/utils";
 import { format } from "date-fns";
+import { ArrowDownLeft, ArrowUpRight, Calendar, CreditCard, Trash } from "lucide-react";
+
 import { PaymentFormSheet } from "./payment-form-sheet";
 
 interface Props {
@@ -27,20 +18,16 @@ interface Props {
   debt?: DebtWithContact;
   wallets: Wallet[];
   onDelete: (id: string) => void;
-  dictionary: any;
+  dictionary: Dictionary;
+  settings: TransactionSettings;
 }
 
-export function DebtDetailSheet({
-  open,
-  onOpenChange,
-  debt,
-  wallets,
-  onDelete,
-  dictionary,
-}: Props) {
+export function DebtDetailSheet({ open, onOpenChange, debt, wallets, onDelete, dictionary, settings }: Props) {
   const [paymentFormOpen, setPaymentFormOpen] = useState(false);
-  const { settings, formatCurrency, dictionary: global_dict, isLoading: isDictLoading } = useAppStore() as any;
-  const dict = (dictionary?.debts || global_dict?.debts) as any;
+  const dict = dictionary.debts;
+
+  const formatCurrency = (amount: number, options?: Parameters<typeof formatCurrencyUtil>[2]) =>
+    formatCurrencyUtil(amount, settings, options);
 
   if (!debt) return null;
 
@@ -52,11 +39,9 @@ export function DebtDetailSheet({
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent className="flex flex-col h-full p-0 rounded-none shadow-none border-l sm:max-w-[540px]">
-          <SheetHeader className="px-6 py-6 border-b shrink-0 flex flex-row items-center justify-between bg-muted/5 text-left">
-            <SheetTitle className="font-serif text-xl font-normal">
-              {dict.details.title}
-            </SheetTitle>
+        <SheetContent className="flex h-full flex-col rounded-none border-l p-0 shadow-none sm:max-w-[540px]">
+          <SheetHeader className="flex shrink-0 flex-row items-center justify-between border-b bg-muted/5 px-6 py-6 text-left">
+            <SheetTitle className="font-normal font-serif text-xl">{dict.details.title}</SheetTitle>
             <div className="flex gap-2">
               <Button
                 variant="ghost"
@@ -67,43 +52,33 @@ export function DebtDetailSheet({
                   onOpenChange(false);
                 }}
               >
-                <Trash className="w-4 h-4" />
+                <Trash className="h-4 w-4" />
               </Button>
             </div>
           </SheetHeader>
 
-          <div className="flex-1 overflow-y-auto px-6 py-6 no-scrollbar relative space-y-8">
+          <div className="no-scrollbar relative flex-1 space-y-8 overflow-y-auto px-6 py-6">
             <div className="flex items-start justify-between">
               <div className="space-y-1">
-                <p className="text-4xl font-serif tracking-tight font-normal">
-                  {formatCurrency(remainingAmount)}
-                </p>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <p className="font-normal font-serif text-4xl tracking-tight">{formatCurrency(remainingAmount)}</p>
+                <div className="flex items-center gap-2 text-muted-foreground text-sm">
                   {isReceivable ? (
                     <ArrowDownLeft className="h-4 w-4 text-emerald-500" />
                   ) : (
                     <ArrowUpRight className="h-4 w-4 text-rose-500" />
                   )}
-                  <span className="text-[10px] font-medium uppercase tracking-widest">
-                    {isReceivable
-                      ? dict.types.you_are_owed
-                      : dict.types.you_owe}
+                  <span className="font-medium text-[10px] uppercase tracking-widest">
+                    {isReceivable ? dict.types.you_are_owed : dict.types.you_owe}
                   </span>
-                  <span className="text-[10px] font-medium uppercase tracking-widest text-foreground">
+                  <span className="font-medium text-[10px] text-foreground uppercase tracking-widest">
                     {debt.contactName}
                   </span>
                 </div>
               </div>
 
               <Badge
-                variant={
-                  debt.status === "paid"
-                    ? "default"
-                    : debt.status === "partial"
-                      ? "secondary"
-                      : "outline"
-                }
-                className="capitalize rounded-none shadow-none text-[10px] font-medium tracking-widest"
+                variant={debt.status === "paid" ? "default" : debt.status === "partial" ? "secondary" : "outline"}
+                className="rounded-none font-medium text-[10px] capitalize tracking-widest shadow-none"
               >
                 {dict.statuses[debt.status] || debt.status}
               </Badge>
@@ -112,48 +87,42 @@ export function DebtDetailSheet({
             <Separator />
 
             <div className="space-y-6">
-              <h3 className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
+              <h3 className="font-medium text-[10px] text-muted-foreground uppercase tracking-widest">
                 {dict.details.summary}
               </h3>
 
               <div className="grid grid-cols-2 gap-y-4 text-sm">
                 <div className="space-y-1">
-                  <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
+                  <p className="font-medium text-[10px] text-muted-foreground uppercase tracking-widest">
                     {dict.details.original_amount}
                   </p>
-                  <p className="font-serif text-lg font-normal">
-                    {formatCurrency(amount)}
-                  </p>
+                  <p className="font-normal font-serif text-lg">{formatCurrency(amount)}</p>
                 </div>
 
                 <div className="space-y-1">
-                  <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
+                  <p className="font-medium text-[10px] text-muted-foreground uppercase tracking-widest">
                     {dict.details.paid_amount}
                   </p>
-                  <p className="font-serif text-lg font-normal text-emerald-500">
-                    {formatCurrency(paidAmount)}
-                  </p>
+                  <p className="font-normal font-serif text-emerald-500 text-lg">{formatCurrency(paidAmount)}</p>
                 </div>
 
                 <div className="space-y-1">
-                  <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
-                    <Calendar className="w-3.5 h-3.5" />
+                  <p className="flex items-center gap-1.5 font-medium text-[10px] text-muted-foreground uppercase tracking-widest">
+                    <Calendar className="h-3.5 w-3.5" />
                     {dict.details.due_date}
                   </p>
-                  <p className="font-serif text-lg font-normal">
-                    {debt.dueDate
-                      ? format(new Date(debt.dueDate), "MMM d, yyyy")
-                      : dict.details.no_due_date}
+                  <p className="font-normal font-serif text-lg">
+                    {debt.dueDate ? format(new Date(debt.dueDate), "MMM d, yyyy") : dict.details.no_due_date}
                   </p>
                 </div>
 
                 {debt.sourceTransactionName && (
                   <div className="space-y-1">
-                    <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
-                      <CreditCard className="w-3.5 h-3.5" />
+                    <p className="flex items-center gap-1.5 font-medium text-[10px] text-muted-foreground uppercase tracking-widest">
+                      <CreditCard className="h-3.5 w-3.5" />
                       {dict.details.from_transaction}
                     </p>
-                    <p className="font-serif text-lg hover:underline cursor-pointer line-clamp-1 italic text-muted-foreground font-normal">
+                    <p className="line-clamp-1 cursor-pointer font-normal font-serif text-lg text-muted-foreground italic hover:underline">
                       {debt.sourceTransactionName}
                     </p>
                   </div>
@@ -163,25 +132,23 @@ export function DebtDetailSheet({
 
             {debt.description && (
               <div className="space-y-2">
-                <h3 className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
+                <h3 className="font-medium text-[10px] text-muted-foreground uppercase tracking-widest">
                   {dict.details.notes}
                 </h3>
-                <div className="text-sm text-foreground/80 whitespace-pre-wrap rounded-none bg-muted/10 p-4 border border-border/50 italic font-normal">
+                <div className="whitespace-pre-wrap rounded-none border border-border/50 bg-muted/10 p-4 font-normal text-foreground/80 text-sm italic">
                   {debt.description}
                 </div>
               </div>
             )}
           </div>
 
-          <div className="p-6 border-t bg-background shrink-0 mt-auto">
+          <div className="mt-auto shrink-0 border-t bg-background p-6">
             <Button
-              className="w-full rounded-none h-12 uppercase tracking-widest font-medium text-xs"
+              className="h-12 w-full rounded-none font-medium text-xs uppercase tracking-widest"
               disabled={debt.status === "paid"}
               onClick={() => setPaymentFormOpen(true)}
             >
-              {debt.status === "paid"
-                ? dict.details.settled
-                : dict.details.record_payment}
+              {debt.status === "paid" ? dict.details.settled : dict.details.record_payment}
             </Button>
           </div>
         </SheetContent>
@@ -193,6 +160,7 @@ export function DebtDetailSheet({
         debt={debt}
         wallets={wallets}
         dictionary={dictionary}
+        settings={settings}
       />
     </>
   );

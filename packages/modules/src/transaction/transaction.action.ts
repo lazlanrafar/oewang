@@ -14,24 +14,14 @@ import type {
   ActionResponse,
   ApiResponse,
   Transaction,
+  TransactionQueryParams,
 } from "@workspace/types";
 
 import { axiosInstance as api } from "../lib/axios.server";
 
-export const getTransactions = async (params: {
-  page?: number;
-  limit?: number;
-  type?: string | string[];
-  walletId?: string | string[];
-  categoryId?: string | string[];
-  startDate?: string;
-  endDate?: string;
-  minAmount?: number;
-  maxAmount?: number;
-  hasAttachments?: boolean;
-  search?: string;
-  uncategorized?: boolean;
-}): Promise<ApiResponse<Transaction[]>> => {
+export const getTransactions = async (
+  params: TransactionQueryParams,
+): Promise<ApiResponse<Transaction[]>> => {
   try {
     const response = await api.get("/transactions", {
       params,
@@ -92,7 +82,7 @@ export const createTransaction = async (
     );
     const result = response.data.data as Transaction;
     revalidatePath("/transactions");
-    revalidateTag("transactions", "profile");
+    revalidateTag("transactions", "max");
     return { success: true, data: result };
   } catch (error: any) {
     return {
@@ -133,7 +123,7 @@ export const bulkCreateTransactions = async (
     }
 
     revalidatePath("/transactions");
-    revalidateTag("transactions", "profile");
+    revalidateTag("transactions", "max");
 
     return {
       success: true,
@@ -161,7 +151,7 @@ export const updateTransaction = async (
       ._api_response as ApiResponse<Transaction>;
     const transaction = apiResponse?.data ?? response.data?.data;
     revalidatePath("/transactions");
-    revalidateTag("transactions", "profile");
+    revalidateTag("transactions", "max");
     return { success: true, data: transaction as Transaction };
   } catch (error: any) {
     return {
@@ -177,7 +167,7 @@ export const deleteTransaction = async (
   try {
     await api.delete(`/transactions/${id}`);
     revalidatePath("/transactions");
-    revalidateTag("transactions", "profile");
+    revalidateTag("transactions", "max");
     return { success: true, data: undefined };
   } catch (error: any) {
     return {
@@ -200,7 +190,7 @@ export const bulkDeleteTransactions = async (
     }>;
     const result = apiResponse?.data ?? response.data?.data;
     revalidatePath("/transactions");
-    revalidateTag("transactions", "profile");
+    revalidateTag("transactions", "max");
     return { success: true, data: result || { deleted: 0 } };
   } catch (error: any) {
     return {
@@ -227,3 +217,22 @@ export const getTransactionDebts = async (
   }
 };
 
+export const exportTransactions = async (params: {
+  startDate?: string;
+  endDate?: string;
+  allData?: string;
+}): Promise<ActionResponse<string>> => {
+  try {
+    const response = await api.get("/transactions/export", {
+      params,
+      responseType: "text",
+    });
+    
+    return { success: true, data: response.data };
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.response?.data?.message || "Failed to export transactions",
+    };
+  }
+};

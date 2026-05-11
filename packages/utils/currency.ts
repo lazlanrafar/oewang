@@ -1,3 +1,5 @@
+import type { CurrencyFormatOptions } from "@workspace/types";
+
 export const CURRENCY_CONFIG: Record<
   string,
   { divisor: number; decimals: number; symbol: string; position: "Front" | "Back" }
@@ -10,16 +12,16 @@ export const CURRENCY_CONFIG: Record<
 export function formatCurrency(
   amount: number,
   settings?: {
+    mainCurrencyCode?: string;
     mainCurrencySymbol?: string;
     mainCurrencySymbolPosition?: string;
     mainCurrencyDecimalPlaces?: number;
   } | null,
-  options?: {
-    compact?: boolean;
-  },
+  options?: CurrencyFormatOptions,
 ) {
   if (!settings) {
-    return amount.toLocaleString("en-US", {
+    if (isNaN(amount)) return "—";
+    return amount.toLocaleString(options?.locale || "en-US", {
       style: "currency",
       currency: "USD",
       notation: options?.compact ? "compact" : "standard",
@@ -27,30 +29,35 @@ export function formatCurrency(
   }
 
   const {
+    mainCurrencyCode,
     mainCurrencySymbol = "$",
     mainCurrencySymbolPosition = "Front",
     mainCurrencyDecimalPlaces = 2,
   } = settings;
 
-  const formattedAmount = Math.abs(amount).toLocaleString(undefined, {
+  if (isNaN(amount)) return "—";
+
+  const formattedAmount = Math.abs(amount).toLocaleString(options?.locale || "en-US", {
     minimumFractionDigits: options?.compact ? 0 : mainCurrencyDecimalPlaces,
     maximumFractionDigits: options?.compact ? 1 : mainCurrencyDecimalPlaces,
     notation: options?.compact ? "compact" : "standard",
   });
 
   const sign = amount < 0 ? "-" : "";
+  const currencyUnit = getCurrencyDisplayUnit(mainCurrencyCode, mainCurrencySymbol);
+  const separator = shouldUseCurrencySpacing(currencyUnit) ? " " : "";
 
   if (mainCurrencySymbolPosition === "Front") {
-    return `${sign}${mainCurrencySymbol}${formattedAmount}`;
+    return `${sign}${currencyUnit}${separator}${formattedAmount}`;
   }
 
-  return `${sign}${formattedAmount}${mainCurrencySymbol}`;
+  return `${sign}${formattedAmount}${separator}${currencyUnit}`;
 }
 
 export function formatPrice(
   amount: number,
   currencyCode: string,
-  options?: { compact?: boolean },
+  options?: CurrencyFormatOptions,
 ) {
   const config = CURRENCY_CONFIG[currencyCode.toLowerCase()] || {
     divisor: 100,
@@ -62,6 +69,7 @@ export function formatPrice(
   return formatCurrency(
     amount / config.divisor,
     {
+      mainCurrencyCode: currencyCode.toUpperCase(),
       mainCurrencySymbol: config.symbol,
       mainCurrencySymbolPosition: config.position,
       mainCurrencyDecimalPlaces: config.decimals,
@@ -73,7 +81,7 @@ export function formatPrice(
 export function formatSubunits(
   amount: number,
   currencyCode: string,
-  options?: { compact?: boolean },
+  options?: CurrencyFormatOptions,
 ) {
   const config = CURRENCY_CONFIG[currencyCode.toLowerCase()] || {
     symbol: currencyCode.toUpperCase(),
@@ -85,10 +93,22 @@ export function formatSubunits(
   return formatCurrency(
     amount / (config.divisor ?? 100),
     {
+      mainCurrencyCode: currencyCode.toUpperCase(),
       mainCurrencySymbol: config.symbol,
       mainCurrencySymbolPosition: config.position,
       mainCurrencyDecimalPlaces: config.decimals,
     },
     options,
   );
+}
+
+export function getCurrencyDisplayUnit(
+  currencyCode?: string | null,
+  currencySymbol?: string | null,
+) {
+  return currencyCode?.toUpperCase() || currencySymbol || "$";
+}
+
+function shouldUseCurrencySpacing(currencyUnit: string) {
+  return /[A-Za-z]/.test(currencyUnit);
 }

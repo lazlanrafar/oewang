@@ -11,6 +11,7 @@ import {
 import { authPlugin } from "../../plugins/auth";
 import { encryptionPlugin } from "../../plugins/encryption";
 import { logger } from "@workspace/logger";
+import { assertCanManageSensitiveWorkspace } from "./workspace-permissions";
 
 /**
  * Workspaces controller — route definitions + validation + call service.
@@ -37,6 +38,7 @@ export const workspacesController = new Elysia({ prefix: "/workspaces" })
         const workspace = await WorkspacesService.createWorkspace(
           auth.user_id,
           body,
+          auth.email,
         );
         set.status = 201;
         return buildSuccess(workspace, "Workspace created successfully");
@@ -135,6 +137,7 @@ export const workspacesController = new Elysia({ prefix: "/workspaces" })
         set.status = 401;
         return buildError(ErrorCode.UNAUTHORIZED, "Unauthorized");
       }
+      assertCanManageSensitiveWorkspace(auth.workspace_role);
       try {
         const members = await WorkspacesService.getMembers(auth.workspace_id);
         return buildSuccess(members, "Members retrieved");
@@ -158,6 +161,7 @@ export const workspacesController = new Elysia({ prefix: "/workspaces" })
         set.status = 401;
         return buildError(ErrorCode.UNAUTHORIZED, "Unauthorized");
       }
+      assertCanManageSensitiveWorkspace(auth.workspace_role);
 
       try {
         const invitation = await WorkspacesService.inviteMember(
@@ -190,6 +194,7 @@ export const workspacesController = new Elysia({ prefix: "/workspaces" })
         set.status = 401;
         return buildError(ErrorCode.UNAUTHORIZED, "Unauthorized");
       }
+      assertCanManageSensitiveWorkspace(auth.workspace_role);
 
       try {
         // ideally check if user is member of workspace first
@@ -217,6 +222,7 @@ export const workspacesController = new Elysia({ prefix: "/workspaces" })
         set.status = 401;
         return buildError(ErrorCode.UNAUTHORIZED, "Unauthorized");
       }
+      assertCanManageSensitiveWorkspace(auth.workspace_role);
 
       try {
         await WorkspacesService.cancelInvitation(
@@ -275,6 +281,7 @@ export const workspacesController = new Elysia({ prefix: "/workspaces" })
         set.status = 401;
         return buildError(ErrorCode.UNAUTHORIZED, "Unauthorized");
       }
+      assertCanManageSensitiveWorkspace(auth.workspace_role);
 
       try {
         return await OrdersService.getWorkspaceOrders(auth.workspace_id);

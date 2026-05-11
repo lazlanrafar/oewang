@@ -11,12 +11,29 @@ import type { PaginationQuery } from "@workspace/types";
 import { ErrorCode } from "@workspace/types";
 import { status } from "elysia";
 import { Env } from "@workspace/constants";
+import { logger } from "@workspace/logger";
+import { createHash } from "node:crypto";
 
 export abstract class VaultService {
+  private static bucketClientCache = new Map<string, BucketClient>();
+
+  private static buildBucketCacheKey(workspaceId: string, settings: any) {
+    return JSON.stringify({
+      workspaceId,
+      endpoint: settings?.r2Endpoint || Env.R2_ENDPOINT || "",
+      accessKeyId: settings?.r2AccessKeyId || Env.R2_ACCESS_KEY_ID || "",
+      secretAccessKey: settings?.r2SecretAccessKey || Env.R2_SECRET_ACCESS_KEY || "",
+      bucketName: settings?.r2BucketName || Env.R2_BUCKET_NAME || "",
+    });
+  }
+
   private static async getBucketClient(workspaceId: string) {
     const settings = await VaultRepository.getWorkspaceSettings(workspaceId);
 
     const secret = Env.ENCRYPTION_KEY || "";
+    const cacheKey = VaultService.buildBucketCacheKey(workspaceId, settings);
+    const cached = VaultService.bucketClientCache.get(cacheKey);
+    if (cached) return cached;
 
     // If custom R2 settings exist, use them
     if (
@@ -25,12 +42,14 @@ export abstract class VaultService {
       settings?.r2SecretAccessKey &&
       settings?.r2BucketName
     ) {
-      return new BucketClient({
+      const client = new BucketClient({
         endpoint: settings.r2Endpoint,
         accessKeyId: decrypt(settings.r2AccessKeyId, secret),
         secretAccessKey: decrypt(settings.r2SecretAccessKey, secret),
         bucketName: settings.r2BucketName,
       });
+      VaultService.bucketClientCache.set(cacheKey, client);
+      return client;
     }
 
     // Fallback to system bucket (from env)
@@ -48,12 +67,18 @@ export abstract class VaultService {
       throw new Error("R2 storage not configured");
     }
 
-    return new BucketClient({
+    const client = new BucketClient({
       endpoint: systemEndpoint,
       accessKeyId: systemAccessKeyId,
       secretAccessKey: systemSecretAccessKey,
       bucketName: systemBucketName,
     });
+    VaultService.bucketClientCache.set(cacheKey, client);
+    return client;
+  }
+
+  private static computeSha256(buffer: Buffer) {
+    return createHash("sha256").update(buffer).digest("hex");
   }
 
   static async uploadFile(
@@ -73,7 +98,21 @@ export abstract class VaultService {
     const usedBytes = Number(usageData.used);
     const maxBytes = maxVaultMb * 1024 * 1024;
 
-    if (usedBytes + file.size > maxBytes) {
+    const bucket = await VaultService.getBucketClient(workspaceId);
+    const sha256 = VaultService.computeSha256(file.buffer);
+    const existingFile = await VaultRepository.findExistingByFingerprint(
+      workspaceId,
+      {
+        sha256,
+        size: file.size,
+        type: file.type,
+      },
+    );
+
+    const isDeduplicated = !!existingFile;
+    const additionalBytes = isDeduplicated ? 0 : file.size;
+
+    if (usedBytes + additionalBytes > maxBytes) {
       throw status(
         422,
         buildError(
@@ -83,14 +122,13 @@ export abstract class VaultService {
       );
     }
 
-    const bucket = await VaultService.getBucketClient(workspaceId);
-
     // Generate unique key
-    const timestamp = Date.now();
     const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, "-");
-    const key = `vault/${workspaceId}/${timestamp}-${safeName}`;
+    const key = existingFile?.key || `vault/${workspaceId}/${sha256}-${safeName}`;
 
-    await bucket.upload(key, file.buffer, file.type);
+    if (!existingFile) {
+      await bucket.upload(key, file.buffer, file.type);
+    }
 
     const vaultEntry = await VaultRepository.create({
       workspaceId,
@@ -98,6 +136,11 @@ export abstract class VaultService {
       key,
       size: file.size,
       type: file.type,
+      metadata: {
+        sha256,
+        deduplicated: isDeduplicated,
+        originalName: file.name,
+      },
     });
 
     if (!vaultEntry) {
@@ -110,8 +153,9 @@ export abstract class VaultService {
       );
     }
 
-    // Increment vault size safely in DB
-    await VaultRepository.updateVaultSize(workspaceId, usedBytes + file.size);
+    if (additionalBytes > 0) {
+      await VaultRepository.incrementVaultSize(workspaceId, additionalBytes);
+    }
 
     // Reset storage violation if it was set
     if (usageData.storage_violation_at) {
@@ -169,17 +213,15 @@ export abstract class VaultService {
     if (!file) throw new Error("File not found");
 
     const bucket = await VaultService.getBucketClient(workspaceId);
-    await bucket.delete(file.key);
-
     const deletedFile = await VaultRepository.delete(fileId, workspaceId);
+    const activeReferences = await VaultRepository.countActiveReferencesByKey(
+      workspaceId,
+      file.key,
+    );
 
-    // Decrement the vault size usage safely in DB
-    const workspaceSync = await VaultRepository.getUsageAndQuota(workspaceId);
-
-    if (workspaceSync) {
-      const currentUsed = Number(workspaceSync.used);
-      const newUsed = Math.max(0, currentUsed - Number(file.size));
-      await VaultRepository.updateVaultSize(workspaceId, newUsed);
+    if (activeReferences === 0) {
+      await bucket.delete(file.key);
+      await VaultRepository.incrementVaultSize(workspaceId, -Number(file.size));
     }
 
     await AuditLogsService.log({

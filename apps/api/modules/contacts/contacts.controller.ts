@@ -5,6 +5,7 @@ import { authPlugin } from "../../plugins/auth";
 import { encryptionPlugin } from "../../plugins/encryption";
 import { buildError, buildSuccess } from "@workspace/utils";
 import { ErrorCode } from "@workspace/types";
+import { assertCanEditWorkspaceData } from "../workspaces/workspace-permissions";
 
 export const contactsController = new Elysia({ prefix: "/contacts" })
   .use(authPlugin)
@@ -57,7 +58,8 @@ export const contactsController = new Elysia({ prefix: "/contacts" })
   )
   .post(
     "/",
-    async ({ workspaceId, userId, body, set }) => {
+    async ({ auth, workspaceId, userId, body, set }) => {
+      assertCanEditWorkspaceData(auth?.workspace_role);
       const data = await ContactsService.createContact(
         workspaceId!,
         userId!,
@@ -79,7 +81,8 @@ export const contactsController = new Elysia({ prefix: "/contacts" })
   // Update a contact
   .patch(
     "/:id",
-    async ({ workspaceId, userId, params, body }) => {
+    async ({ auth, workspaceId, userId, params, body }) => {
+      assertCanEditWorkspaceData(auth?.workspace_role);
       const data = await ContactsService.updateContact(
         workspaceId!,
         userId!,
@@ -102,7 +105,8 @@ export const contactsController = new Elysia({ prefix: "/contacts" })
   // Delete a contact
   .delete(
     "/:id",
-    async ({ workspaceId, userId, params }) => {
+    async ({ auth, workspaceId, userId, params }) => {
+      assertCanEditWorkspaceData(auth?.workspace_role);
       const data = await ContactsService.deleteContact(
         workspaceId!,
         userId!,

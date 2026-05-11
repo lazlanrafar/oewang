@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+
 import { Button, Input } from "@workspace/ui";
 import { ArrowRight, HardHat, Mail } from "lucide-react";
 import { toast } from "sonner";
@@ -20,16 +21,16 @@ export function ComingSoonClient() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-140px)] w-full p-4 text-center">
-      <div className="max-w-md w-full space-y-6">
+    <div className="flex min-h-[calc(100vh-140px)] w-full flex-col items-center justify-center p-4 text-center">
+      <div className="w-full max-w-md space-y-6">
         {/* Simple Icon */}
-        <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-2">
+        <div className="mx-auto mb-2 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
           <HardHat className="h-8 w-8 text-primary" />
         </div>
 
         {/* Content */}
         <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight">Coming Soon</h1>
+          <h1 className="font-bold text-3xl tracking-tight">Coming Soon</h1>
           <p className="text-muted-foreground text-sm">
             We're currently working hard on this feature. <br />
             Sign up below to get notified when it's ready.
@@ -39,18 +40,18 @@ export function ComingSoonClient() {
         {/* Simplified Form */}
         <form onSubmit={handleNotify} className="space-y-3">
           <div className="relative">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Mail className="-translate-y-1/2 absolute top-1/2 left-3 h-4 w-4 text-muted-foreground" />
             <Input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Enter your email"
-              className="pl-10 h-10 bg-background/50 focus-visible:ring-primary"
+              className="h-10 bg-background/50 pl-10 focus-visible:ring-primary"
             />
           </div>
-          <Button type="submit" className="w-full h-10 group font-medium">
+          <Button type="submit" className="group h-10 w-full font-medium">
             Notify Me
-            <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
+            <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
           </Button>
         </form>
 

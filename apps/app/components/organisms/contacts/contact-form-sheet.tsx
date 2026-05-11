@@ -1,16 +1,18 @@
 "use client";
 
-import { useState, useRef, KeyboardEvent } from "react";
-import { useForm } from "react-hook-form";
+import { type KeyboardEvent, useEffect, useRef, useState } from "react";
+
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { useEffect } from "react";
-import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
+import type { Dictionary } from "@workspace/dictionaries";
+import { createContact, updateContact } from "@workspace/modules/client";
+import type { Contact } from "@workspace/types";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+  Badge,
   Button,
   Form,
   FormControl,
@@ -19,51 +21,48 @@ import {
   FormLabel,
   FormMessage,
   Input,
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
   Textarea,
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-  Badge,
 } from "@workspace/ui";
-import { createContact, updateContact } from "@workspace/modules/client";
-import { useQueryClient } from "@tanstack/react-query";
-import type { Contact } from "@workspace/types";
 import { X } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
+import { z } from "zod";
 
-const formSchema = z.object({
-  name: z.string().min(1, "Name is required").max(200),
-  email: z.string().email("Invalid email"),
-  phone: z.string().optional(),
-  website: z.string().optional(),
-  contact: z.string().optional(),
-  addressLine1: z.string().optional(),
-  addressLine2: z.string().optional(),
-  city: z.string().optional(),
-  state: z.string().optional(),
-  country: z.string().optional(),
-  zip: z.string().optional(),
-  note: z.string().optional(),
-  vatNumber: z.string().optional(),
-});
+const getContactSchema = (dictionary: Dictionary) =>
+  z.object({
+    name: z
+      .string()
+      .min(1, dictionary.contacts?.errors?.name_required || "Name is required")
+      .max(200),
+    email: z.string().email(dictionary.contacts?.errors?.invalid_email || "Invalid email"),
+    phone: z.string().optional(),
+    website: z.string().optional(),
+    contact: z.string().optional(),
+    addressLine1: z.string().optional(),
+    addressLine2: z.string().optional(),
+    city: z.string().optional(),
+    state: z.string().optional(),
+    country: z.string().optional(),
+    zip: z.string().optional(),
+    note: z.string().optional(),
+    vatNumber: z.string().optional(),
+  });
 
-type FormValues = z.infer<typeof formSchema>;
+type FormValues = z.infer<ReturnType<typeof getContactSchema>>;
 
 interface Props {
   open: boolean;
   onClose: () => void;
   contact?: Contact | null;
-  dictionary: any;
+  dictionary: Dictionary;
 }
 
 /** Simple email tag-chip input — no extra dependency needed */
-function BillingEmailsInput({
-  value,
-  onChange,
-}: {
-  value: string[];
-  onChange: (emails: string[]) => void;
-}) {
+function BillingEmailsInput({ value, onChange }: { value: string[]; onChange: (emails: string[]) => void }) {
   const [inputValue, setInputValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -71,9 +70,7 @@ function BillingEmailsInput({
     const emails = raw
       .split(",")
       .map((e) => e.trim().toLowerCase())
-      .filter(
-        (e) => e && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e) && !value.includes(e),
-      );
+      .filter((e) => e && /^[^\s@]+@[^\s@]+\[^\s@]+$/.test(e) && !value.includes(e));
     if (emails.length) {
       onChange([...value, ...emails]);
     }
@@ -98,16 +95,18 @@ function BillingEmailsInput({
   };
 
   return (
-    <div
-      className="min-h-9 w-full border border-input bg-transparent px-3 py-1.5 text-sm flex flex-wrap gap-1.5 cursor-text"
+    <label
+      htmlFor="billing-emails-input"
+      className="flex min-h-9 w-full cursor-text flex-wrap gap-1.5 border border-input bg-transparent px-3 py-1.5 text-sm"
       onClick={() => inputRef.current?.focus()}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          inputRef.current?.focus();
+        }
+      }}
     >
       {value.map((email) => (
-        <Badge
-          key={email}
-          variant="secondary"
-          className="flex items-center gap-1 pl-2 pr-1 py-0.5 text-xs font-normal"
-        >
+        <Badge key={email} variant="secondary" className="flex items-center gap-1 py-0.5 pr-1 pl-2 font-normal text-xs">
           {email}
           <button
             type="button"
@@ -115,48 +114,50 @@ function BillingEmailsInput({
               e.stopPropagation();
               removeEmail(email);
             }}
-            className="ml-0.5 rounded-sm hover:bg-muted-foreground/20 p-0.5"
+            className="ml-0.5 rounded-sm p-0.5 hover:bg-muted-foreground/20"
           >
             <X className="h-3 w-3" />
           </button>
         </Badge>
       ))}
       <input
+        id="billing-emails-input"
         ref={inputRef}
         value={inputValue}
         onChange={(e) => setInputValue(e.target.value)}
         onKeyDown={handleKeyDown}
         onBlur={handleBlur}
         placeholder={value.length === 0 ? "email@example.com" : ""}
-        className="flex-1 min-w-[120px] bg-transparent outline-none placeholder:text-muted-foreground/60 text-sm"
+        className="min-w-[120px] flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/60"
       />
-    </div>
+    </label>
   );
 }
 
-export function ContactFormSheet({
-  open,
-  onClose,
-  contact,
-  dictionary,
-}: Props) {
+export function ContactFormSheet({ open, onClose, contact, dictionary }: Props) {
+  const [mounted, setMounted] = useState(false);
   const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const [billingEmails, setBillingEmails] = useState<string[]>(
-    (contact as any)?.billingEmails ?? [],
+    contact?.billingEmails ? contact.billingEmails.split(",").map((e) => e.trim()) : [],
   );
   const isEdit = !!contact;
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema as any),
+    resolver: zodResolver(getContactSchema(dictionary)),
     defaultValues: {
       name: contact?.name ?? "",
       email: contact?.email ?? "",
       phone: contact?.phone ?? "",
       website: contact?.website ?? "",
-      contact: (contact as any)?.contact ?? "",
+      contact: contact?.contact ?? "",
       addressLine1: contact?.addressLine1 ?? "",
-      addressLine2: contact?.addressLine2 ?? "",
+      addressLine2: contact?.addressLine2 ?? "" ,
       city: contact?.city ?? "",
       state: contact?.state ?? "",
       country: contact?.country ?? "",
@@ -173,7 +174,7 @@ export function ContactFormSheet({
         email: contact.email ?? "",
         phone: contact.phone ?? "",
         website: contact.website ?? "",
-        contact: (contact as any).contact ?? "",
+        contact: contact.contact ?? "",
         addressLine1: contact.addressLine1 ?? "",
         addressLine2: contact.addressLine2 ?? "",
         city: contact.city ?? "",
@@ -183,7 +184,7 @@ export function ContactFormSheet({
         note: contact.note ?? "",
         vatNumber: contact.vatNumber ?? "",
       });
-      setBillingEmails((contact as any).billingEmails ?? []);
+      setBillingEmails(contact.billingEmails ? contact.billingEmails.split(",").map((e) => e.trim()) : []);
     } else {
       form.reset({
         name: "",
@@ -231,56 +232,43 @@ export function ContactFormSheet({
       };
 
       const result = isEdit
-        ? await updateContact(contact!.id, payload)
-        : await createContact(payload as any);
+        ? await updateContact(contact?.id || "", payload)
+        : await createContact(payload);
 
       if (result.success) {
-        toast.success(
-          isEdit ? dictionary.contacts.toasts.updated : dictionary.contacts.toasts.created,
-        );
+        toast.success(isEdit ? dictionary.contacts.toasts.updated : dictionary.contacts.toasts.created);
         queryClient.invalidateQueries({ queryKey: ["contacts"] });
         handleClose();
       } else {
         toast.error(
           result.error ||
-            (isEdit
-              ? dictionary.contacts.toasts.update_failed
-              : dictionary.contacts.toasts.create_failed),
+            (isEdit ? dictionary.contacts.toasts.update_failed : dictionary.contacts.toasts.create_failed),
         );
       }
     } catch {
-      toast.error("An unexpected error occurred");
+      toast.error(dictionary.common.error);
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  if (!mounted || !dictionary) return null;
+
   return (
     <Sheet open={open} onOpenChange={handleClose}>
-      <SheetContent className="sm:max-w-[520px] p-0 flex flex-col">
-        <SheetHeader className="p-6 pb-0 shrink-0">
-          <SheetTitle>
-            {isEdit
-              ? dictionary.contacts.details.edit_contact
-              : dictionary.contacts.add_button}
-          </SheetTitle>
+      <SheetContent className="flex flex-col p-0 sm:max-w-[520px]">
+        <SheetHeader className="shrink-0 p-6 pb-0">
+          <SheetTitle>{isEdit ? dictionary.contacts.details.edit_contact : dictionary.contacts.add_button}</SheetTitle>
         </SheetHeader>
 
         <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(onSubmit)}
-            className="flex flex-col flex-1 min-h-0"
-          >
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex min-h-0 flex-1 flex-col">
             {/* Scrollable body */}
             <div className="flex-1 overflow-y-auto p-6">
-              <Accordion
-                type="multiple"
-                defaultValue={["general"]}
-                className="space-y-4"
-              >
+              <Accordion type="multiple" defaultValue={["general"]} className="space-y-4">
                 {/* General */}
                 <AccordionItem value="general" className="border-none">
-                  <AccordionTrigger className="text-sm font-medium py-2">
+                  <AccordionTrigger className="py-2 font-medium text-sm">
                     {dictionary.settings.sidebar.general}
                   </AccordionTrigger>
                   <AccordionContent>
@@ -290,15 +278,11 @@ export function ContactFormSheet({
                         name="name"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-xs text-muted-foreground font-normal">
+                            <FormLabel className="font-normal text-muted-foreground text-xs">
                               {dictionary.contacts.form.name_label}
                             </FormLabel>
                             <FormControl>
-                              <Input
-                                {...field}
-                                placeholder={dictionary.contacts.form.name_placeholder}
-                                autoFocus
-                              />
+                              <Input {...field} placeholder={dictionary.contacts.form.name_placeholder} autoFocus />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -309,15 +293,11 @@ export function ContactFormSheet({
                         name="email"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-xs text-muted-foreground font-normal">
+                            <FormLabel className="font-normal text-muted-foreground text-xs">
                               {dictionary.contacts.form.email_label}
                             </FormLabel>
                             <FormControl>
-                              <Input
-                                {...field}
-                                type="email"
-                                placeholder={dictionary.contacts.form.email_placeholder}
-                              />
+                              <Input {...field} type="email" placeholder={dictionary.contacts.form.email_placeholder} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -325,17 +305,13 @@ export function ContactFormSheet({
                       />
 
                       {/* Billing Emails */}
-                      <div className="space-y-1.5">
-                        <label className="text-xs text-muted-foreground font-normal">
-                          Billing Emails (BCC)
+                      <div className="space-y-1">
+                        <label htmlFor="billing-emails-input" className="font-normal text-muted-foreground text-xs">
+                          {dictionary.contacts.form.billing_emails_label}
                         </label>
-                        <BillingEmailsInput
-                          value={billingEmails}
-                          onChange={setBillingEmails}
-                        />
+                        <BillingEmailsInput value={billingEmails} onChange={setBillingEmails} />
                         <p className="text-[10px] text-muted-foreground">
-                          {dictionary.contacts.form.email_placeholder_details ||
-                            "Additional emails to BCC when sending invoices. Press Enter or comma to add."}
+                          {dictionary.contacts.form.billing_emails_desc}
                         </p>
                       </div>
 
@@ -344,15 +320,11 @@ export function ContactFormSheet({
                         name="phone"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-xs text-muted-foreground font-normal">
+                            <FormLabel className="font-normal text-muted-foreground text-xs">
                               {dictionary.contacts.form.phone_label}
                             </FormLabel>
                             <FormControl>
-                              <Input
-                                {...field}
-                                type="tel"
-                                placeholder={dictionary.contacts.form.phone_placeholder}
-                              />
+                              <Input {...field} type="tel" placeholder={dictionary.contacts.form.phone_placeholder} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -363,11 +335,11 @@ export function ContactFormSheet({
                         name="website"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-xs text-muted-foreground font-normal">
-                              Website
+                            <FormLabel className="font-normal text-muted-foreground text-xs">
+                              {dictionary.contacts.form.website_label}
                             </FormLabel>
                             <FormControl>
-                              <Input {...field} placeholder="acme.com" />
+                              <Input {...field} placeholder={dictionary.contacts.form.website_placeholder} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -378,11 +350,11 @@ export function ContactFormSheet({
                         name="contact"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-xs text-muted-foreground font-normal">
-                              Contact Person
+                            <FormLabel className="font-normal text-muted-foreground text-xs">
+                              {dictionary.contacts.form.contact_person_label}
                             </FormLabel>
                             <FormControl>
-                              <Input {...field} placeholder="John Doe" />
+                              <Input {...field} placeholder={dictionary.contacts.form.contact_person_placeholder} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -394,7 +366,7 @@ export function ContactFormSheet({
 
                 {/* Details */}
                 <AccordionItem value="details" className="border-none">
-                  <AccordionTrigger className="text-sm font-medium py-2">
+                  <AccordionTrigger className="py-2 font-medium text-sm">
                     {dictionary.transactions.details}
                   </AccordionTrigger>
                   <AccordionContent>
@@ -404,14 +376,11 @@ export function ContactFormSheet({
                         name="addressLine1"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-xs text-muted-foreground font-normal">
+                            <FormLabel className="font-normal text-muted-foreground text-xs">
                               {dictionary.contacts.form.address_label}
                             </FormLabel>
                             <FormControl>
-                              <Input
-                                {...field}
-                                placeholder={dictionary.contacts.form.address_placeholder}
-                              />
+                              <Input {...field} placeholder={dictionary.contacts.form.address_placeholder} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -422,11 +391,11 @@ export function ContactFormSheet({
                         name="addressLine2"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-xs text-muted-foreground font-normal">
-                              Address Line 2
+                            <FormLabel className="font-normal text-muted-foreground text-xs">
+                              {dictionary.contacts.form.address_line_2_label}
                             </FormLabel>
                             <FormControl>
-                              <Input {...field} placeholder="Suite 100" />
+                              <Input {...field} placeholder={dictionary.contacts.form.address_line_2_placeholder} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -438,11 +407,11 @@ export function ContactFormSheet({
                           name="city"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-xs text-muted-foreground font-normal">
-                                City
+                              <FormLabel className="font-normal text-muted-foreground text-xs">
+                                {dictionary.contacts.form.city_label}
                               </FormLabel>
                               <FormControl>
-                                <Input {...field} placeholder="New York" />
+                                <Input {...field} placeholder={dictionary.contacts.form.city_placeholder} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -453,11 +422,11 @@ export function ContactFormSheet({
                           name="state"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-xs text-muted-foreground font-normal">
-                                State
+                              <FormLabel className="font-normal text-muted-foreground text-xs">
+                                {dictionary.contacts.form.state_label}
                               </FormLabel>
                               <FormControl>
-                                <Input {...field} placeholder="NY" />
+                                <Input {...field} placeholder={dictionary.contacts.form.state_placeholder} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -470,11 +439,11 @@ export function ContactFormSheet({
                           name="country"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-xs text-muted-foreground font-normal">
-                                Country
+                              <FormLabel className="font-normal text-muted-foreground text-xs">
+                                {dictionary.contacts.form.country_label}
                               </FormLabel>
                               <FormControl>
-                                <Input {...field} placeholder="United States" />
+                                <Input {...field} placeholder={dictionary.contacts.form.country_placeholder} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -485,11 +454,11 @@ export function ContactFormSheet({
                           name="zip"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-xs text-muted-foreground font-normal">
-                                ZIP Code
+                              <FormLabel className="font-normal text-muted-foreground text-xs">
+                                {dictionary.contacts.form.zip_code_label}
                               </FormLabel>
                               <FormControl>
-                                <Input {...field} placeholder="10001" />
+                                <Input {...field} placeholder={dictionary.contacts.form.zip_code_placeholder} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -501,11 +470,11 @@ export function ContactFormSheet({
                         name="vatNumber"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-xs text-muted-foreground font-normal">
-                              Tax ID / VAT Number
+                            <FormLabel className="font-normal text-muted-foreground text-xs">
+                              {dictionary.contacts.form.tax_id_label}
                             </FormLabel>
                             <FormControl>
-                              <Input {...field} placeholder="US123456789" />
+                              <Input {...field} placeholder={dictionary.contacts.form.tax_id_placeholder} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -516,7 +485,7 @@ export function ContactFormSheet({
                         name="note"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-xs text-muted-foreground font-normal">
+                            <FormLabel className="font-normal text-muted-foreground text-xs">
                               {dictionary.contacts.form.notes_label}
                             </FormLabel>
                             <FormControl>
@@ -537,7 +506,7 @@ export function ContactFormSheet({
             </div>
 
             {/* Fixed bottom actions */}
-            <div className="border-t px-6 py-4 flex justify-end gap-3 shrink-0">
+            <div className="flex shrink-0 justify-end gap-3 border-t px-6 py-4">
               <Button type="button" variant="outline" onClick={handleClose}>
                 {dictionary.contacts.form.cancel}
               </Button>

@@ -12,12 +12,12 @@ import {
   DropdownMenuSubContent,
   DropdownMenuPortal,
   Icons,
-  type IconType,
 } from "../../atoms";
 import { Combobox, type ComboboxItem } from "../../atoms/combobox";
 import { cn } from "../../../lib/utils";
 import { useState, useMemo, useRef, useEffect } from "react";
 import { FilterList, type FilterOption } from "./filter-list";
+import type { FilterRecord } from "@workspace/types";
 import {
   DateRangePicker,
   DateRangePickerContent,
@@ -28,15 +28,15 @@ import type { DateRange } from "react-day-picker";
 export interface DataTableFilterFacet {
   id: string;
   label: string;
-  icon?: IconType;
+  icon?: React.ComponentType<{ size?: number; className?: string }>;
   options: { id: string; name: string; colorClass?: string }[];
   multiple?: boolean;
 }
 
-interface DataTableFilterProps {
+interface DataTableFilterProps<TFilters extends FilterRecord> {
   placeholder?: string;
-  filters: Record<string, any>;
-  onFilterChange: (filters: Record<string, any>) => void;
+  filters: TFilters;
+  onFilterChange: (filters: TFilters) => void;
   facets?: DataTableFilterFacet[];
   statusOptions?: FilterOption[];
   statusKey?: string;
@@ -64,7 +64,7 @@ function FilterMenuItem({
   label,
   children,
 }: {
-  icon: any;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
   label: string;
   children: React.ReactNode;
 }) {
@@ -90,7 +90,7 @@ function FilterMenuItem({
   );
 }
 
-export function DataTableFilter({
+export function DataTableFilter<TFilters extends FilterRecord>({
   placeholder = "Search...",
   filters,
   onFilterChange,
@@ -114,8 +114,20 @@ export function DataTableFilter({
   manualFilters,
   tags,
   amountRange,
-}: DataTableFilterProps) {
-  const [searchValue, setSearchValue] = useState(filters.q || "");
+}: DataTableFilterProps<TFilters>) {
+  const getStringFilter = (key: string): string | null | undefined => {
+    const value = filters[key];
+    return typeof value === "string" || value === null || value === undefined
+      ? value
+      : undefined;
+  };
+
+  const getArrayFilter = (key: string): string[] => {
+    const value = filters[key];
+    return Array.isArray(value) ? value.filter((v): v is string => typeof v === "string") : [];
+  };
+
+  const [searchValue, setSearchValue] = useState(getStringFilter("q") || "");
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLFormElement>(null);
   const [triggerWidth, setTriggerWidth] = useState<number | null>(null);
@@ -152,12 +164,14 @@ export function DataTableFilter({
   };
 
   const dateRange: DateRange | undefined = useMemo(() => {
-    if (!filters.start && !filters.end) return undefined;
+    const start = getStringFilter("start");
+    const end = getStringFilter("end");
+    if (!start && !end) return undefined;
     return {
-      from: filters.start ? parseISO(filters.start) : undefined,
-      to: filters.end ? parseISO(filters.end) : undefined,
+      from: start ? parseISO(start) : undefined,
+      to: end ? parseISO(end) : undefined,
     };
-  }, [filters.start, filters.end]);
+  }, [filters]);
 
   const handleRemoveFilter = (removedFilters: { [key: string]: null }) => {
     onFilterChange({ ...filters, ...removedFilters });
@@ -249,7 +263,7 @@ export function DataTableFilter({
                         type="number"
                         placeholder="0.00"
                         className="h-8 text-xs rounded-none border-secondary/50 focus:border-foreground transition-colors"
-                        value={filters.minAmount || ""}
+                        value={getStringFilter("minAmount") || ""}
                         onChange={(e) =>
                           onFilterChange({
                             ...filters,
@@ -266,7 +280,7 @@ export function DataTableFilter({
                         type="number"
                         placeholder="Unlimited"
                         className="h-8 text-xs rounded-none border-secondary/50 focus:border-foreground transition-colors"
-                        value={filters.maxAmount || ""}
+                        value={getStringFilter("maxAmount") || ""}
                         onChange={(e) =>
                           onFilterChange({
                             ...filters,
@@ -282,7 +296,7 @@ export function DataTableFilter({
               {facets?.map((facet) => (
                 <FilterMenuItem
                   key={facet.id}
-                  icon={facet.icon}
+                  icon={facet.icon || Icons.Filter}
                   label={facet.label}
                 >
                    <div className="p-0 min-w-[200px]">
@@ -302,7 +316,7 @@ export function DataTableFilter({
                                 label: o.name,
                                 colorClass: o.colorClass,
                               }))
-                              .find((o) => o.id === filters[facet.id]) ||
+                              .find((o) => o.id === getStringFilter(facet.id)) ||
                             undefined
                           : undefined
                       }
@@ -310,10 +324,7 @@ export function DataTableFilter({
                         facet.multiple
                           ? facet.options
                               .filter((o) =>
-                                (Array.isArray(filters[facet.id])
-                                  ? filters[facet.id]
-                                  : []
-                                ).includes(o.id),
+                                getArrayFilter(facet.id).includes(o.id),
                               )
                               .map((o) => ({
                                 id: o.id,
@@ -324,9 +335,7 @@ export function DataTableFilter({
                       }
                       onSelect={(item) => {
                         if (facet.multiple) {
-                          const currentValues = Array.isArray(filters[facet.id])
-                            ? [...filters[facet.id]]
-                            : [];
+                          const currentValues = [...getArrayFilter(facet.id)];
                           const index = currentValues.indexOf(item.id);
                           if (index > -1) {
                             currentValues.splice(index, 1);
@@ -356,11 +365,14 @@ export function DataTableFilter({
                               isChecked ? "opacity-100" : "opacity-0",
                             )}
                           />
-                          {(item as any).colorClass && (
+                          {(
+                            item as ComboboxItem & { colorClass?: string }
+                          ).colorClass && (
                             <div
                               className={cn(
                                 "w-2.5 h-2.5 rounded-[2px] shrink-0 mr-2",
-                                (item as any).colorClass,
+                                (item as ComboboxItem & { colorClass?: string })
+                                  .colorClass,
                               )}
                             />
                           )}
@@ -464,7 +476,16 @@ export function DataTableFilter({
                   variant="ghost"
                   size="sm"
                   className="w-full justify-start text-[10px] h-8 font-normal text-muted-foreground hover:text-foreground rounded-none px-3"
-                  onClick={() => onFilterChange({ q: filters.q })}
+                  onClick={() => {
+                    const resetFilters = Object.keys(filters).reduce(
+                      (acc, key) => ({
+                        ...acc,
+                        [key]: key === "q" ? getStringFilter("q") || null : null,
+                      }),
+                      {} as TFilters,
+                    );
+                    onFilterChange(resetFilters);
+                  }}
                   disabled={!hasActiveFilters}
                 >
                   Clear all filters

@@ -1,10 +1,11 @@
 "use client";
 
+import { INCOME_EXPENSES_COLOR_OPTIONS } from "@workspace/constants";
+import type { Dictionary } from "@workspace/dictionaries";
+import type { Debt, Transaction, TransactionSettings } from "@workspace/types";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@workspace/ui";
-import { useRouter } from "next/navigation";
-import { format, startOfMonth, endOfMonth } from "date-fns";
-import { Transaction, Debt } from "@workspace/types";
-import { useAppStore } from "@/stores/app";
+import { formatCurrency as formatCurrencyUtil } from "@workspace/utils";
+import { format } from "date-fns";
 
 interface CalendarDaySheetProps {
   date: Date | null;
@@ -12,6 +13,9 @@ interface CalendarDaySheetProps {
   onOpenChange: (open: boolean) => void;
   transactions: Transaction[];
   debts: (Debt & { contactName: string })[];
+  dictionary: Dictionary;
+  settings: TransactionSettings;
+  onTransactionClick: (transaction: Transaction) => void;
 }
 
 export function CalendarDaySheet({
@@ -20,56 +24,64 @@ export function CalendarDaySheet({
   onOpenChange,
   transactions,
   debts,
+  dictionary,
+  settings,
+  onTransactionClick,
 }: CalendarDaySheetProps) {
-  const router = useRouter();
-  const { formatCurrency, getTransactionColor, dictionary } = useAppStore();
+  const formatCurrency = (amount: number, options?: Parameters<typeof formatCurrencyUtil>[2]) =>
+    formatCurrencyUtil(amount, settings, options);
+
+  const getTransactionColor = (type: string) => {
+    const option =
+      INCOME_EXPENSES_COLOR_OPTIONS.find((o) => o.value === settings?.incomeExpensesColor) ||
+      INCOME_EXPENSES_COLOR_OPTIONS[0];
+
+    const normalizedType = type.toLowerCase();
+
+    if (normalizedType === "income" || normalizedType === "transfer-in") {
+      return (option.incomeColor as string) || "text-blue-600 dark:text-blue-400";
+    }
+
+    if (normalizedType === "expense" || normalizedType === "transfer-out") {
+      return (option.expensesColor as string) || "text-red-600 dark:text-red-400";
+    }
+
+    if (normalizedType === "transfer") {
+      return "text-foreground";
+    }
+
+    return "text-muted-foreground";
+  };
 
   if (!dictionary) return null;
   const t = dictionary.calendar.sheet;
-
-  const handleTransactionClick = (id: string) => {
-    onOpenChange(false);
-    const start = startOfMonth(date || new Date()).toISOString();
-    const end = endOfMonth(date || new Date()).toISOString();
-    router.push(
-      `/transactions?transactionId=${id}&startDate=${start}&endDate=${end}&page=1`,
-    );
-  };
 
   if (!date) return null;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="p-0">
-        <div className="flex flex-col h-full bg-background">
-          <SheetHeader className="px-6 py-4 border-b sticky top-0 bg-background/95 backdrop-blur z-10 flex flex-row items-center justify-between transition-all">
+        <div className="flex h-full flex-col bg-background">
+          <SheetHeader className="sticky top-0 z-10 flex flex-row items-center justify-between border-b bg-background/95 px-6 py-4 backdrop-blur transition-all">
             <SheetTitle>{format(date, "EEEE, MMMM do, yyyy")}</SheetTitle>
           </SheetHeader>
 
-          <div className="flex-1 overflow-y-auto px-6 py-8 space-y-8">
+          <div className="flex-1 space-y-8 overflow-y-auto px-6 py-8">
             {/* Summary */}
             <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 border bg-muted/20">
-                <p className="text-sm text-muted-foreground mb-1">
-                  {t.income_total}
-                </p>
-                <p className="text-lg font-semibold text-emerald-600 dark:text-emerald-400">
+              <div className="border bg-muted/20 p-4">
+                <p className="mb-1 text-muted-foreground text-sm">{t.income_total}</p>
+                <p className="font-semibold text-emerald-600 text-lg dark:text-emerald-400">
                   {formatCurrency(
-                    transactions
-                      .filter((t) => t.type === "income")
-                      .reduce((acc, t) => acc + Number(t.amount), 0),
+                    transactions.filter((t) => t.type === "income").reduce((acc, t) => acc + Number(t.amount), 0),
                   )}
                 </p>
               </div>
-              <div className="p-4 border bg-muted/20">
-                <p className="text-sm text-muted-foreground mb-1">
-                  {t.expense_total}
-                </p>
-                <p className="text-lg font-semibold text-red-600 dark:text-red-400">
+              <div className="border bg-muted/20 p-4">
+                <p className="mb-1 text-muted-foreground text-sm">{t.expense_total}</p>
+                <p className="font-semibold text-lg text-red-600 dark:text-red-400">
                   {formatCurrency(
-                    transactions
-                      .filter((t) => t.type === "expense")
-                      .reduce((acc, t) => acc + Number(t.amount), 0),
+                    transactions.filter((t) => t.type === "expense").reduce((acc, t) => acc + Number(t.amount), 0),
                   )}
                 </p>
               </div>
@@ -77,60 +89,54 @@ export function CalendarDaySheet({
 
             {/* Transactions List */}
             <div>
-              <h3 className="text-sm tracking-wider mb-4">
+              <h3 className="mb-4 text-sm tracking-wider">
                 {t.transactions_title.replace("{count}", transactions.length.toString())}
               </h3>
               {transactions.length > 0 ? (
                 <div className="space-y-4">
-                  {transactions.map((tx) => (
-                    <div
-                      key={tx.id}
-                      onClick={() => handleTransactionClick(tx.id)}
-                      className="p-3 border flex flex-col gap-1 cursor-pointer hover:bg-muted/30 transition-colors group"
-                    >
-                      <div className="flex justify-between items-start">
-                        <span className="font-medium text-sm group-hover:text-primary transition-colors">
-                          {tx.name || t.unknown_transaction}
-                        </span>
-                        <span
-                          className={`font-serif tracking-tight ${getTransactionColor(tx.type)}`}
-                        >
-                          {tx.type === "income" ? "+" : "-"}
-                          {formatCurrency(Number(tx.amount))}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
+                  {transactions.map((tx) => {
+                    return (
+                      <button
+                        type="button"
+                        key={tx.id}
+                        onClick={() => onTransactionClick(tx)}
+                        className="group flex w-full cursor-pointer flex-col gap-1 border p-3 text-left transition-colors hover:bg-muted/30"
+                      >
+                        <div className="flex items-start justify-between">
+                          <span className="font-medium text-sm transition-colors group-hover:text-primary">
+                            {tx.name || t.unknown_transaction}
+                          </span>
+                          <span className={`font-serif tracking-tight ${getTransactionColor(tx.type)}`}>
+                            {tx.type === "income" ? "+" : "-"}
+                            {formatCurrency(Number(tx.amount))}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               ) : (
-                <div className="text-sm text-muted-foreground p-4 bg-muted/20  text-center">
-                  {t.no_transactions}
-                </div>
+                <div className="bg-muted/20 p-4 text-center text-muted-foreground text-sm">{t.no_transactions}</div>
               )}
             </div>
 
             {/* Debts List */}
             <div>
-              <h3 className="text-sm tracking-wider mb-4">
+              <h3 className="mb-4 text-sm tracking-wider">
                 {t.debts_title.replace("{count}", debts.length.toString())}
               </h3>
               {debts.length > 0 ? (
                 <div className="space-y-3">
                   {debts.map((d) => (
-                    <div
-                      key={d.id}
-                      className="p-3 border  bg-card flex flex-col gap-1"
-                    >
-                      <div className="flex justify-between items-start">
+                    <div key={d.id} className="flex flex-col gap-1 border bg-card p-3">
+                      <div className="flex items-start justify-between">
                         <span className="font-medium">{d.contactName}</span>
-                        <span className="font-medium">
-                          {formatCurrency(Number(d.amount))}
-                        </span>
+                        <span className="font-medium">{formatCurrency(Number(d.amount))}</span>
                       </div>
-                      <div className="flex justify-between items-center text-xs text-muted-foreground">
+                      <div className="flex items-center justify-between text-muted-foreground text-xs">
                         <span className="capitalize">{d.type}</span>
                         <span
-                          className={`px-1.5 py-0.5 rounded-sm capitalize ${
+                          className={`rounded-sm px-1.5 py-0.5 capitalize ${
                             d.status === "paid"
                               ? "bg-emerald-500/10 text-emerald-600"
                               : d.status === "partial"
@@ -142,17 +148,13 @@ export function CalendarDaySheet({
                         </span>
                       </div>
                       {d.description && (
-                        <div className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                          {d.description}
-                        </div>
+                        <div className="mt-1 line-clamp-2 text-muted-foreground text-xs">{d.description}</div>
                       )}
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="text-sm text-muted-foreground p-4 bg-muted/20  text-center">
-                  {t.no_debts}
-                </div>
+                <div className="bg-muted/20 p-4 text-center text-muted-foreground text-sm">{t.no_debts}</div>
               )}
             </div>
           </div>

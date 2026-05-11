@@ -10,6 +10,7 @@
     "migrate": "turbo run migrate",
     "db:push": "bun run --cwd packages/database push",
     "db:seed": "bun run --cwd packages/database seed",
+    "db:reset": "bun run --cwd packages/database reset && bun run db:push && bun run db:seed",
     "mcp": "bun run --cwd apps/api mcp.ts",
     "test:e2e": "turbo run test:e2e"
   },

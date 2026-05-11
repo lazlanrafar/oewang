@@ -24,3 +24,4 @@ export * from "./orders/orders.action";
 export * from "./invoice/invoice.action";
 export * from "./contact/contact.action";
 export * from "./debt/debt.action";
+export * from "./budget/budget.action";

@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import type { Metadata } from "next";
 import { Providers } from "@/components/providers";
 import { Toaster } from "@workspace/ui/atoms";
+import { fontVars } from "@workspace/ui";
 import "@workspace/ui/globals.css";
 
 import { WEBSITE_CONFIG } from "@workspace/constants";
@@ -53,7 +54,7 @@ export default async function RootLayout({
 
   return (
     <html lang={locale} suppressHydrationWarning>
-      <body className="min-h-screen antialiased">
+      <body className={`${fontVars} min-h-screen antialiased`}>
         <Providers>
           {children}
           <Toaster />

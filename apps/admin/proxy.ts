@@ -7,6 +7,13 @@ import Negotiator from "negotiator";
 
 import { i18n } from "./i18n-config";
 
+const ADMIN_ROLES = new Set(["owner", "finance"]);
+
+function hasAdminAccess(session: any) {
+  const systemRole = session?.user?.app_metadata?.system_role;
+  return typeof systemRole === "string" && ADMIN_ROLES.has(systemRole);
+}
+
 function getLocale(request: NextRequest): string | undefined {
   const negotiatorHeaders: Record<string, string> = {};
   request.headers.forEach((value, key) => {
@@ -75,14 +82,20 @@ export async function proxy(request: NextRequest) {
   // Get app session from cookie
   const oewang_session = request.cookies.get("oewang-admin-session")?.value;
 
-  // Protect dashboard routes
-  if (pathAfterLocale.startsWith("/overview") || pathAfterLocale === "/") {
+  const isAuthRoute =
+    pathAfterLocale === "/login" ||
+    pathAfterLocale === "/register" ||
+    pathAfterLocale.startsWith("/api/auth");
+  const isUnauthorizedRoute = pathAfterLocale === "/unauthorized";
+  const isDashboardRoute = !isAuthRoute && !isUnauthorizedRoute;
+
+  // Protect all dashboard routes
+  if (isDashboardRoute) {
     if (!session || !oewang_session) {
       return NextResponse.redirect(new URL(`/${locale}/login`, request.url));
     }
 
-    // Admin Auth Logic
-    if (session.user.app_metadata?.is_super_admin !== true) {
+    if (!hasAdminAccess(session)) {
       return NextResponse.redirect(
         new URL(`/${locale}/unauthorized`, request.url),
       );
@@ -95,7 +108,7 @@ export async function proxy(request: NextRequest) {
     session &&
     oewang_session
   ) {
-    if (session.user.app_metadata?.is_super_admin === true) {
+    if (hasAdminAccess(session)) {
       return NextResponse.redirect(new URL(`/${locale}/overview`, request.url));
     }
     return NextResponse.redirect(

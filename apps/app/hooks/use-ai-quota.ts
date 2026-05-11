@@ -1,7 +1,8 @@
 "use client";
 
-import { useAppStore } from "@/stores/app";
 import { useEffect, useState } from "react";
+
+import { useAppStore } from "@/stores/app";
 
 export function useAiQuota() {
   const { aiQuota, fetchAiQuota, checkLimit } = useAppStore();

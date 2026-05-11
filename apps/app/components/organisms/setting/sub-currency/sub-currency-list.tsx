@@ -1,27 +1,35 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
-import { Button, Separator, Skeleton, SelectCurrency } from "@workspace/ui";
-import { Loader2, Plus, Trash2 } from "lucide-react";
-import { toast } from "sonner";
+import { useCallback, useEffect, useState, useTransition } from "react";
+
 import {
   addSubCurrency,
   getExchangeRates,
   removeSubCurrency,
 } from "@workspace/modules/setting/setting.action";
 import type { SubCurrency, TransactionSettings } from "@workspace/types";
+import {
+  Button,
+  DataTableEmptyState,
+  SelectCurrency,
+  Separator,
+  Skeleton,
+} from "@workspace/ui";
+import { Loader2, Plus, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+
+import type { AppDictionary } from "@/modules/types/dictionary";
 import { useAppStore } from "@/stores/app";
-import { DataTableEmptyState } from "@workspace/ui";
 
 interface SubCurrencyListProps {
   initialSubCurrencies: SubCurrency[];
   settings: TransactionSettings;
-  dictionary: any;
+  dictionary: AppDictionary;
 }
 
 function SubCurrencySkeleton() {
   return (
-    <div className="space-y-8 animate-pulse">
+    <div className="animate-pulse space-y-8">
       <div className="space-y-2">
         <Skeleton className="h-6 w-48" />
         <Skeleton className="h-4 w-72" />
@@ -32,7 +40,7 @@ function SubCurrencySkeleton() {
       </div>
       <div className="space-y-4">
         {[1, 2].map((i) => (
-          <div key={i} className="border rounded-none p-4 flex justify-between">
+          <div key={i} className="flex justify-between rounded-none border p-4">
             <div className="space-y-2">
               <Skeleton className="h-5 w-16" />
               <Skeleton className="h-3 w-24" />
@@ -62,11 +70,11 @@ export function SubCurrencyList({
   const [isPending, startTransition] = useTransition();
   const { isLoading: isAppLoading } = useAppStore();
 
-  const fetchRates = async () => {
+  const fetchRates = useCallback(async () => {
     if (!settings?.mainCurrencyCode) return;
     setIsLoadingRates(true);
     try {
-      const result = await getExchangeRates(settings.mainCurrencyCode);
+      const result = await getExchangeRates(settings?.mainCurrencyCode);
       if (result.success) {
         setRates(result.data || {});
       }
@@ -75,11 +83,11 @@ export function SubCurrencyList({
     } finally {
       setIsLoadingRates(false);
     }
-  };
+  }, [settings?.mainCurrencyCode]);
 
   useEffect(() => {
     fetchRates();
-  }, [settings?.mainCurrencyCode]);
+  }, [fetchRates]);
 
   const handleAdd = (c: { code: string }) => {
     startTransition(async () => {
@@ -87,10 +95,7 @@ export function SubCurrencyList({
       if (result.success) {
         setSubCurrencies((prev) => [...prev, result.data]);
         toast.success(
-          `${c.code} ${
-            dictionary?.settings.sub_currencies.toast_added ||
-            "added to sub-currencies"
-          }`,
+          `${c.code} ${dictionary.settings.sub_currencies.toast_added || "added to sub-currencies"}`,
         );
       } else {
         toast.error(result.error);
@@ -104,9 +109,7 @@ export function SubCurrencyList({
       if (result.success) {
         setSubCurrencies((prev) => prev.filter((item) => item.id !== id));
         toast.success(
-          `${code} ${
-            dictionary?.settings.sub_currencies.toast_removed || "removed"
-          }`,
+          `${code} ${dictionary.settings.sub_currencies.toast_removed || "removed"}`,
         );
       } else {
         toast.error(result.error);
@@ -114,25 +117,25 @@ export function SubCurrencyList({
     });
   };
 
-  if (isAppLoading) return <SubCurrencySkeleton />;
+  if (!dictionary && isAppLoading) return <SubCurrencySkeleton />;
 
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-medium">
-            {dictionary?.settings.sub_currencies.title}
+          <h3 className="font-medium text-lg">
+            {dictionary.settings.sub_currencies.title}
           </h3>
-          <p className="text-sm text-muted-foreground">
-            {dictionary?.settings.sub_currencies.description}
+          <p className="text-muted-foreground text-sm">
+            {dictionary.settings.sub_currencies.description}
           </p>
         </div>
         <SelectCurrency
           onSelect={handleAdd}
           trigger={
-            <Button size="sm" className="rounded-none h-8 text-xs gap-2 w-30">
+            <Button size="sm" className="h-8 w-30 gap-2 rounded-none text-xs">
               <Plus className="h-4 w-4" />
-              {dictionary?.settings.sub_currencies.add_button}
+              {dictionary.settings.sub_currencies.add_button}
             </Button>
           }
         />
@@ -140,67 +143,67 @@ export function SubCurrencyList({
       <Separator className="my-6" />
 
       <div className="grid gap-4">
-        {subCurrencies.map((sc) => (
-          <div
-            key={sc.id}
-            className="border rounded-none p-4 flex items-center justify-between"
-          >
-            <div className="flex flex-col">
-              <span className="font-semibold text-lg">{sc.currencyCode}</span>
-              <span className="text-xs text-muted-foreground uppercase">
-                {dictionary?.settings.sub_currencies.workspace_currency}
-              </span>
-            </div>
-
-            <div className="flex items-center gap-6">
-              <div className="text-right">
-                {isLoadingRates ? (
-                  <Loader2 className="h-4 w-4 animate-spin opacity-50" />
-                ) : (
-                  <div className="flex flex-col">
-                    <span className="text-sm font-medium">
-                      1 {settings.mainCurrencyCode} ={" "}
-                      {rates[sc.currencyCode]
-                        ? parseFloat(rates[sc.currencyCode]!).toLocaleString(
-                            undefined,
-                            { maximumFractionDigits: 4 },
-                          )
-                        : "---"}{" "}
-                      {sc.currencyCode}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground uppercase">
-                      {dictionary?.settings.sub_currencies.rate_now}
-                    </span>
-                  </div>
-                )}
+        {subCurrencies.map((sc) => {
+          const rate = rates[sc.currencyCode];
+          return (
+            <div
+              key={sc.id}
+              className="flex items-center justify-between rounded-none border p-4"
+            >
+              <div className="flex flex-col">
+                <span className="font-semibold text-lg">{sc.currencyCode}</span>
+                <span className="text-muted-foreground text-xs uppercase">
+                  {dictionary.settings.sub_currencies.workspace_currency}
+                </span>
               </div>
 
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-muted-foreground hover:text-destructive transition-colors rounded-none"
-                onClick={() => handleRemove(sc.id, sc.currencyCode)}
-                disabled={isPending}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              <div className="flex items-center gap-6">
+                <div className="text-right">
+                  {isLoadingRates ? (
+                    <Loader2 className="h-4 w-4 animate-spin opacity-50" />
+                  ) : (
+                    <div className="flex flex-col">
+                      <span className="font-medium text-sm">
+                        1 {settings?.mainCurrencyCode} ={" "}
+                        {rate
+                          ? parseFloat(rate).toLocaleString(undefined, {
+                              maximumFractionDigits: 4,
+                            })
+                          : "---"}{" "}
+                        {sc.currencyCode}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground uppercase">
+                        {dictionary.settings.sub_currencies.rate_now}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="rounded-none text-muted-foreground transition-colors hover:text-destructive"
+                  onClick={() => handleRemove(sc.id, sc.currencyCode)}
+                  disabled={isPending}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
 
         {subCurrencies.length === 0 && (
           <DataTableEmptyState
-            title={dictionary?.settings.sub_currencies.no_sub_currencies || "No sub-currencies"}
-            description={dictionary?.settings.sub_currencies.description || "Add sub-currencies to manage exchange rates."}
-            action={{
-              label: dictionary?.settings.sub_currencies.add_button || "Add currency",
-              onClick: () => {
-                // The trigger is a SelectCurrency component which is already in the header
-                // and clicking this button won't easily open it without more complex state management
-                // but let's just make it look good.
-              }
-            }}
-            className="border-2 border-dashed rounded-none border-accent py-12"
+            title={
+              dictionary.settings.sub_currencies.no_sub_currencies ||
+              "No sub-currencies"
+            }
+            description={
+              dictionary.settings.sub_currencies.description ||
+              "Add sub-currencies to manage exchange rates."
+            }
+            className="rounded-none border-2 border-accent border-dashed"
           />
         )}
       </div>

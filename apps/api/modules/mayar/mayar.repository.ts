@@ -154,6 +154,59 @@ export abstract class MayarRepository {
       .where(isNull(pricing.deleted_at));
   }
 
+  static async findStarterPlan() {
+    const [plan] = await db
+      .select()
+      .from(pricing)
+      .where(
+        and(
+          eq(pricing.name, "Starter"),
+          isNull(pricing.deleted_at),
+        ),
+      )
+      .limit(1);
+    return plan ?? null;
+  }
+
+  static async findWorkspacesForBillingLifecycle() {
+    return db
+      .select({
+        workspaceId: workspaces.id,
+        workspaceName: workspaces.name,
+        plan_id: workspaces.plan_id,
+        plan_status: workspaces.plan_status,
+        plan_billing_interval: workspaces.plan_billing_interval,
+        plan_started_at: workspaces.plan_started_at,
+        plan_current_period_end: workspaces.plan_current_period_end,
+        plan_overdue_started_at: workspaces.plan_overdue_started_at,
+        plan_last_reminder_at: workspaces.plan_last_reminder_at,
+        mayar_customer_email: workspaces.mayar_customer_email,
+        owner_id: users.id,
+        owner_name: users.name,
+        owner_email: users.email,
+      })
+      .from(workspaces)
+      .leftJoin(
+        user_workspaces,
+        and(
+          eq(user_workspaces.workspace_id, workspaces.id),
+          eq(user_workspaces.role, "owner"),
+          isNull(user_workspaces.deleted_at),
+        ),
+      )
+      .leftJoin(users, eq(users.id, user_workspaces.user_id))
+      .where(
+        and(
+          isNull(workspaces.deleted_at),
+          or(
+            eq(workspaces.plan_status, "active"),
+            eq(workspaces.plan_status, "cancelled"),
+            eq(workspaces.plan_status, "past_due"),
+          ),
+        ),
+      );
+  }
+
   static async findAddon(workspaceId: string, addonId: string) {
     const [addon] = await db
       .select()

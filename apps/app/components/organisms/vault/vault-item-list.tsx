@@ -1,31 +1,28 @@
 "use client";
 
-import * as React from "react";
+import Image from "next/image";
+
+import type { Dictionary } from "@workspace/dictionaries";
+import type { VaultFile } from "@workspace/modules/vault/vault.action";
 import { cn } from "@workspace/ui";
-import { FileText } from "lucide-react";
-import { type VaultFile } from "@workspace/modules/vault/vault.action";
 import { formatBytes } from "@workspace/utils";
+import { FileText } from "lucide-react";
 
 interface VaultItemListProps {
   files: VaultFile[];
   selectedFileId?: string;
   onSelect: (file: VaultFile) => void;
-  dictionary: any;
+  dictionary: Dictionary;
 }
 
-export function VaultItemList({
-  files,
-  selectedFileId,
-  onSelect,
-  dictionary,
-}: VaultItemListProps) {
+export function VaultItemList({ files, selectedFileId, onSelect, dictionary }: VaultItemListProps) {
   const t = dictionary.vault;
 
   return (
     <div className="min-w-full">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b text-xs text-muted-foreground uppercase h-10">
+          <tr className="h-10 border-b text-muted-foreground text-xs uppercase">
             <th className="px-4 text-left font-medium">{t.columns.filename}</th>
             <th className="px-4 text-left font-medium">{t.columns.format}</th>
             <th className="px-4 text-right font-medium">{t.columns.size}</th>
@@ -44,29 +41,21 @@ export function VaultItemList({
             >
               <td className="px-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 border bg-muted flex items-center justify-center shrink-0">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center border bg-muted">
                     {file.type.startsWith("image/") ? (
-                      <img
-                        src={file.url}
-                        className="w-full h-full object-cover"
-                        alt={file.name}
-                      />
+                      <div className="relative h-full w-full">
+                        <Image src={file.url} alt={file.name} fill unoptimized sizes="40px" className="object-cover" />
+                      </div>
                     ) : (
                       <FileText className="h-5 w-5 text-muted-foreground" />
                     )}
                   </div>
-                  <span className="font-medium truncate max-w-[200px]">
-                    {file.name}
-                  </span>
+                  <span className="max-w-[200px] truncate font-medium">{file.name}</span>
                 </div>
               </td>
-              <td className="px-4 text-primary font-medium">{file.type}</td>
-              <td className="px-4 text-right tabular-nums">
-                {formatBytes(file.size)}
-              </td>
-              <td className="px-4 text-right text-muted-foreground">
-                {new Date(file.createdAt).toLocaleDateString()}
-              </td>
+              <td className="px-4 font-medium text-primary">{file.type}</td>
+              <td className="px-4 text-right tabular-nums">{formatBytes(file.size)}</td>
+              <td className="px-4 text-right text-muted-foreground">{new Date(file.createdAt).toLocaleDateString()}</td>
             </tr>
           ))}
         </tbody>

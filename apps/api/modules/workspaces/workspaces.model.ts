@@ -12,7 +12,11 @@ export const CreateWorkspaceBody = t.Object({
 
 export const CreateInvitationBody = t.Object({
   email: t.String({ format: "email" }),
-  role: t.Union([t.Literal("admin"), t.Literal("member")]),
+  role: t.Union([
+    t.Literal("admin"),
+    t.Literal("editor"),
+    t.Literal("viewer"),
+  ]),
 });
 
 export const InvitationParams = t.Object({

@@ -20,7 +20,7 @@ const INTEGRATIONS = [
   { label: "Security", icon: ShieldCheck },
   { label: "Notifications", icon: Bell },
   { label: "Documents", icon: FileText },
-  { label: "Team Members", icon: Users },
+  { label: "Shared Access", icon: Users },
   { label: "Fast Sync", icon: Zap },
 ];
 
@@ -30,10 +30,10 @@ export function FeaturesGridSection() {
       <div className="max-w-[1400px] mx-auto px-4 sm:px-8">
         <div className="text-center mb-16">
           <h2 className="font-serif text-3xl sm:text-4xl tracking-tight text-foreground mb-4">
-            Everything connected
+            Everything in one place
           </h2>
           <p className="text-muted-foreground text-lg max-w-lg mx-auto">
-            All your financial data flows through a single, secure platform.
+            One connected home for your accounts, categories, and money habits.
           </p>
         </div>
 

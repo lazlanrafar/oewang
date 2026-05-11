@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 
 import {
   cn,
@@ -11,6 +12,7 @@ import {
 } from "@workspace/ui";
 
 import { getMe } from "@workspace/modules/user/user.action";
+import { createClient } from "@workspace/supabase/server";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import {
   SIDEBAR_COLLAPSIBLE_VALUES,
@@ -18,6 +20,25 @@ import {
 } from "@workspace/ui";
 import { getPreference } from "@/server/server-actions";
 import { AccountSwitcher } from "@/components/layout/account-switcher";
+
+const ADMIN_ROLES = new Set(["owner", "finance"]);
+
+async function requireAdminAccess(locale: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect(`/${locale}/login`);
+  }
+
+  const systemRole = user.app_metadata?.system_role;
+
+  if (typeof systemRole !== "string" || !ADMIN_ROLES.has(systemRole)) {
+    redirect(`/${locale}/unauthorized`);
+  }
+}
 
 async function getUserAndWorkspaces() {
   const result = await getMe();
@@ -29,7 +50,15 @@ async function getUserAndWorkspaces() {
 
 export default async function Layout({
   children,
-}: Readonly<{ children: ReactNode }>) {
+  params,
+}: Readonly<{
+  children: ReactNode;
+  params: Promise<{ locale: string }>;
+}>) {
+  const { locale } = await params;
+
+  await requireAdminAccess(locale);
+
   const cookie_store = await cookies();
   const default_open = cookie_store.get("sidebar_state")?.value !== "false";
   const [variant, collapsible, me_data] = await Promise.all([

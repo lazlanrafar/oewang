@@ -1,9 +1,10 @@
-import { pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
+import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { workspaces } from "./workspaces";
 
 export const aiSessions = pgTable("ai_sessions", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  workspace_id: uuid("workspace_id")
+  id: text("id").primaryKey().$defaultFn(createId),
+  workspace_id: text("workspace_id")
     .references(() => workspaces.id)
     .notNull(),
   title: text("title").notNull(),

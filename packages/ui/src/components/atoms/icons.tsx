@@ -157,7 +157,7 @@ export const Icons = {
       />
     </SVGIcon>
   ),
-  Logo: (props: any) => (
+  Logo: (props: SVGIconProps) => (
     <svg
       xmlns="http://www.w3.org/2000/svg"
       width={113}
@@ -244,7 +244,7 @@ export const Icons = {
       <rect x="11" y="11" width="9" height="9" fill="#FFB900" />
     </SVGIcon>
   ),
-  InboxCustomize: (props: any) => (
+  InboxCustomize: (props: SVGIconProps) => (
     <svg
       xmlns="http://www.w3.org/2000/svg"
       width={17}
@@ -258,7 +258,7 @@ export const Icons = {
       />
     </svg>
   ),
-  Import: (props: any) => (
+  Import: (props: SVGIconProps) => (
     <svg
       xmlns="http://www.w3.org/2000/svg"
       width={props.size ?? 24}
@@ -305,7 +305,7 @@ export const Icons = {
       />
     </SVGIcon>
   ),
-  AlertCircle: (props: any) => (
+  AlertCircle: (props: SVGIconProps) => (
     <svg
       xmlns="http://www.w3.org/2000/svg"
       width={16}
@@ -319,7 +319,7 @@ export const Icons = {
       />
     </svg>
   ),
-  Transactions2: (props: any) => (
+  Transactions2: (props: SVGIconProps) => (
     <svg
       xmlns="http://www.w3.org/2000/svg"
       width={40}
@@ -333,7 +333,7 @@ export const Icons = {
       />
     </svg>
   ),
-  Info: (props: any) => (
+  Info: (props: SVGIconProps) => (
     <svg
       xmlns="http://www.w3.org/2000/svg"
       width={14}
@@ -361,7 +361,7 @@ export const Icons = {
       />
     </SVGIcon>
   ),
-  Sidebar: (props: any) => (
+  Sidebar: (props: SVGIconProps) => (
     <svg
       xmlns="http://www.w3.org/2000/svg"
       width={24}
@@ -373,7 +373,7 @@ export const Icons = {
       <path d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h640q33 0 56.5 23.5T880-720v480q0 33-23.5 56.5T800-160H160Zm240-80h400v-480H400v480Zm-80 0v-480H160v480h160Zm-160 0v-480 480Zm160 0h80-80Zm0-480h80-80Z" />
     </svg>
   ),
-  SidebarFilled: (props: any) => (
+  SidebarFilled: (props: SVGIconProps) => (
     <svg
       xmlns="http://www.w3.org/2000/svg"
       width={24}
@@ -385,7 +385,7 @@ export const Icons = {
       <path d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h160v640H160Zm240 0v-640h400q33 0 56.5 23.5T880-720v480q0 33-23.5 56.5T800-160H400Z" />
     </svg>
   ),
-  Reconnect: (props: any) => (
+  Reconnect: (props: SVGIconProps) => (
     <svg
       xmlns="http://www.w3.org/2000/svg"
       width={props.size}
@@ -397,7 +397,7 @@ export const Icons = {
       <path d="M760-120q-39 0-70-22.5T647-200H440q-66 0-113-47t-47-113q0-66 47-113t113-47h80q33 0 56.5-23.5T600-600q0-33-23.5-56.5T520-680H313q-13 35-43.5 57.5T200-600q-50 0-85-35t-35-85q0-50 35-85t85-35q39 0 69.5 22.5T313-760h207q66 0 113 47t47 113q0 66-47 113t-113 47h-80q-33 0-56.5 23.5T360-360q0 33 23.5 56.5T440-280h207q13-35 43.5-57.5T760-360q50 0 85 35t35 85q0 50-35 85t-85 35ZM200-680q17 0 28.5-11.5T240-720q0-17-11.5-28.5T200-760q-17 0-28.5 11.5T160-720q0 17 11.5 28.5T200-680Z" />
     </svg>
   ),
-  DotRaster: (props: any) => (
+  DotRaster: (props: SVGIconProps) => (
     <svg
       xmlns="http://www.w3.org/2000/svg"
       width={8}
@@ -423,7 +423,7 @@ export const Icons = {
       </g>
     </svg>
   ),
-  Gmail: (props: any) => (
+  Gmail: (props: SVGIconProps) => (
     <svg
       xmlns="http://www.w3.org/2000/svg"
       width={24}
@@ -453,7 +453,7 @@ export const Icons = {
       />
     </svg>
   ),
-  Outlook: (props: any) => (
+  Outlook: (props: SVGIconProps) => (
     <svg
       xmlns="http://www.w3.org/2000/svg"
       width={24}
@@ -541,7 +541,7 @@ export const Icons = {
       </g>
     </SVGIcon>
   ),
-  CreateTransaction: (props: any) => (
+  CreateTransaction: (props: SVGIconProps) => (
     <svg
       xmlns="http://www.w3.org/2000/svg"
       width={props.size ?? 24}
@@ -553,7 +553,7 @@ export const Icons = {
       <path d="M640-121v-120H520v-80h120v-120h80v120h120v80H720v120h-80ZM160-240v-80h283q-3 21-2.5 40t3.5 40H160Zm0-160v-80h386q-23 16-41.5 36T472-400H160Zm0-160v-80h600v80H160Zm0-160v-80h600v80H160Z" />
     </svg>
   ),
-  ArrowCoolDown: (props: any) => (
+  ArrowCoolDown: (props: SVGIconProps) => (
     <svg
       xmlns="http://www.w3.org/2000/svg"
       width={24}

@@ -11,7 +11,14 @@ const nextConfig = {
     // Disabling here prevents OOM during `next build`.
     ignoreBuildErrors: true,
   },
-  transpilePackages: ["@workspace/ui", "@workspace/supabase", "@workspace/utils", "@workspace/dictionaries"],
+  transpilePackages: [
+    "@workspace/ui",
+    "@workspace/supabase",
+    "@workspace/utils",
+    "@workspace/dictionaries",
+    "@workspace/constants",
+    "@workspace/redis",
+  ],
   // async redirects() {
   //   return [
   //     {

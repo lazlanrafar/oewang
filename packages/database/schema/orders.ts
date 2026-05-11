@@ -1,24 +1,16 @@
+import { createId } from "@paralleldrive/cuid2";
 import { sql } from "drizzle-orm";
-import {
-  boolean,
-  integer,
-  pgTable,
-  serial,
-  text,
-  timestamp,
-  uniqueIndex,
-  uuid,
-} from "drizzle-orm/pg-core";
+import { boolean, integer, pgTable, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { users } from "./users";
 import { workspaces } from "./workspaces";
 
 export const orders = pgTable(
   "orders",
   {
-    id: uuid("id").primaryKey().defaultRandom(),
+    id: text("id").primaryKey().$defaultFn(createId),
     sequence_number: serial("sequence_number").notNull(),
-    workspace_id: uuid("workspace_id").references(() => workspaces.id),
-    user_id: uuid("user_id").references(() => users.id),
+    workspace_id: text("workspace_id").references(() => workspaces.id),
+    user_id: text("user_id").references(() => users.id),
     mayar_payment_id: text("mayar_payment_id"),
     mayar_invoice_id: text("mayar_invoice_id"),
     mayar_transaction_id: text("mayar_transaction_id"),

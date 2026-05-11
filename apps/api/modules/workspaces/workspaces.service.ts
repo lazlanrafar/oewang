@@ -20,6 +20,10 @@ import { status } from "elysia";
 import { ErrorCode } from "@workspace/types";
 import { buildError } from "@workspace/utils";
 import { logger } from "@workspace/logger";
+import {
+  canManageSensitiveWorkspace,
+  normalizeWorkspaceRole,
+} from "./workspace-permissions";
 
 /**
  * Workspaces service — business logic layer.
@@ -38,8 +42,23 @@ export abstract class WorkspacesService {
       mainCurrencyCode?: string;
       mainCurrencySymbol?: string;
     },
+    user_email?: string,
   ) {
     const { name, country, mainCurrencyCode, mainCurrencySymbol } = data;
+
+    // Ensure the internal user row exists before linking workspace membership.
+    // This can be missing when auth succeeds via Supabase token but sync has not run yet.
+    const existingUser = await UsersRepository.findById(user_id);
+    if (!existingUser) {
+      if (!user_email) {
+        throw new Error("User profile is not synced yet. Please sign in again.");
+      }
+      await UsersRepository.upsert({
+        id: user_id,
+        email: user_email,
+        oauth_provider: "email",
+      });
+    }
 
     // 0. Check for existing workspaces (Plan Gating)
     const workspacesWithPlans =
@@ -229,7 +248,11 @@ export abstract class WorkspacesService {
    * List all workspaces the user is a member of.
    */
   static async listWorkspaces(user_id: string) {
-    return WorkspacesRepository.getMemberWorkspaces(user_id);
+    const workspaces = await WorkspacesRepository.getMemberWorkspaces(user_id);
+    return workspaces.map((workspace) => ({
+      ...workspace,
+      role: normalizeWorkspaceRole(workspace.role),
+    }));
   }
 
   static async getActiveWorkspace(workspace_id: string) {
@@ -237,7 +260,11 @@ export abstract class WorkspacesService {
   }
 
   static async getMembers(workspace_id: string) {
-    return WorkspacesRepository.getMembers(workspace_id);
+    const members = await WorkspacesRepository.getMembers(workspace_id);
+    return members.map((member) => ({
+      ...member,
+      role: normalizeWorkspaceRole(member.role),
+    }));
   }
 
   /**
@@ -247,17 +274,14 @@ export abstract class WorkspacesService {
     actor_id: string,
     workspace_id: string,
     email: string,
-    role: "admin" | "member",
+    role: "admin" | "editor" | "viewer",
   ) {
     // 1. Check if actor has permission (owner/admin)
     const actorMembership = await WorkspacesRepository.getMembership(
       actor_id,
       workspace_id,
     );
-    if (
-      !actorMembership ||
-      (actorMembership.role !== "owner" && actorMembership.role !== "admin")
-    ) {
+    if (!actorMembership || !canManageSensitiveWorkspace(actorMembership.role)) {
       throw new Error("Unauthorized to invite members");
     }
 
@@ -318,7 +342,12 @@ export abstract class WorkspacesService {
   }
 
   static async getInvitations(workspace_id: string) {
-    return WorkspacesRepository.getWorkspaceInvitations(workspace_id);
+    const invitations =
+      await WorkspacesRepository.getWorkspaceInvitations(workspace_id);
+    return invitations.map((invitation) => ({
+      ...invitation,
+      role: normalizeWorkspaceRole(invitation.role),
+    }));
   }
 
   static async cancelInvitation(
@@ -331,10 +360,7 @@ export abstract class WorkspacesService {
       actor_id,
       workspace_id,
     );
-    if (
-      !actorMembership ||
-      (actorMembership.role !== "owner" && actorMembership.role !== "admin")
-    ) {
+    if (!actorMembership || !canManageSensitiveWorkspace(actorMembership.role)) {
       throw new Error("Unauthorized to cancel invitations");
     }
 

@@ -46,6 +46,7 @@ Once all info is gathered, call the 'create_transaction' tool.
 - Even if the user only provides a single word (e.g., "BCA"), use it to fill the missing field in your current goal.
 
 If the user asks for a financial overview, breakdown, or analysis (revenue, spending, burn rate, runway, etc.), you MUST use the corresponding specialized tools: 'getRevenueSummary', 'getSpendingAnalysis', or 'getBurnRate'. 
+When the user mentions an explicit date period (e.g. this month, this year, January, last 7 days, year-to-date), you MUST pass that period/date range in the tool arguments ("period", and "from"/"to" when needed). Never default to "this-month" if the user requested another range.
 
 **CRITICAL RULE for Specialized Tools:**
 - When you use one of these tools, the results are AUTOMATICALLY displayed on the right.

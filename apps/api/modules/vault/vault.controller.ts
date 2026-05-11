@@ -10,6 +10,7 @@ import {
   updateTagsBody,
   getVaultFilesQuery,
 } from "./vault.dto";
+import { assertCanEditWorkspaceData } from "../workspaces/workspace-permissions";
 
 export const vaultController = new Elysia({ prefix: "/vault" })
   .use(authPlugin)
@@ -44,7 +45,8 @@ export const vaultController = new Elysia({ prefix: "/vault" })
   )
   .post(
     "/upload",
-    async ({ workspaceId, userId, body: { file }, set }) => {
+    async ({ auth, workspaceId, userId, body: { file }, set }) => {
+      assertCanEditWorkspaceData(auth?.workspace_role);
       try {
         const buffer = Buffer.from(await file.arrayBuffer());
         const data = await VaultService.uploadFile(workspaceId!, userId!, {
@@ -73,7 +75,8 @@ export const vaultController = new Elysia({ prefix: "/vault" })
   )
   .delete(
     "/:id",
-    async ({ workspaceId, userId, params: { id } }) => {
+    async ({ auth, workspaceId, userId, params: { id } }) => {
+      assertCanEditWorkspaceData(auth?.workspace_role);
       const data = await VaultService.deleteFile(workspaceId!, userId!, id);
       return buildSuccess(data, "File deleted successfully");
     },
@@ -101,7 +104,8 @@ export const vaultController = new Elysia({ prefix: "/vault" })
   )
   .patch(
     "/:id/tags",
-    async ({ workspaceId, userId, params: { id }, body: { tags } }) => {
+    async ({ auth, workspaceId, userId, params: { id }, body: { tags } }) => {
+      assertCanEditWorkspaceData(auth?.workspace_role);
       const data = await VaultService.updateTags(workspaceId!, userId!, id, tags);
       return buildSuccess(data, "Tags updated successfully");
     },

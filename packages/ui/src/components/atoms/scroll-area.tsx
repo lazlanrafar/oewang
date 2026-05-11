@@ -6,7 +6,7 @@ import * as React from "react";
 import { cn } from "../../lib/utils";
 
 const ScrollArea = React.forwardRef<
-  React.ComponentRef<typeof ScrollAreaPrimitive.Root>,
+  HTMLDivElement,
   React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root> & {
     hideScrollbar?: boolean;
   }

@@ -6,6 +6,7 @@ export * from "./pricing-features";
 export * from "./transaction-types";
 export * from "./artifact-config";
 export * from "./chat-utils";
+export * from "./chat-shortcuts";
 export * from "./tool-config";
 
 import countriesJson from "./json/countries.json";

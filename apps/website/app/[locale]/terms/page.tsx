@@ -6,7 +6,7 @@ export default function TermsPage() {
   return (
     <div className="mx-auto max-w-3xl px-6 py-16 sm:py-24">
       <Link
-        href="/"
+        href={`/`}
         className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-8 transition-colors"
       >
         <ArrowLeft className="mr-2 size-4" />

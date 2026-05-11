@@ -42,65 +42,59 @@ export const sidebarItems: NavGroup[] = [
     id: 1,
     items: [
       {
-        title: "sidebar.overview",
+        title: "sidebar.overview_label",
         url: "/overview",
         icon: LayoutDashboard,
       },
-    ],
-  },
-  {
-    id: 2,
-    label: "sidebar.finance",
-    items: [
       {
-        title: "sidebar.transactions",
-        url: "/transactions",
-        icon: Banknote,
-      },
-      {
-        title: "sidebar.accounts",
-        url: "/accounts",
-        icon: IdCard,
-      },
-      {
-        title: "sidebar.budget",
-        url: "/budget",
-        icon: PiggyBank,
-      },
-      {
-        title: "sidebar.debts",
-        url: "/debts",
-        icon: HandCoins,
-      },
-    ],
-  },
-  {
-    id: 3,
-    label: "sidebar.planning",
-    items: [
-      {
-        title: "sidebar.calendar",
+        title: "sidebar.calendar_label",
         url: "/calendar",
         icon: Calendar,
       },
     ],
   },
   {
-    id: 4,
-    label: "sidebar.workspace",
+    id: 2,
+    label: "sidebar.finance_label",
     items: [
       {
-        title: "sidebar.contacts",
+        title: "sidebar.transactions_label",
+        url: "/transactions",
+        icon: Banknote,
+      },
+      {
+        title: "sidebar.accounts_label",
+        url: "/accounts",
+        icon: IdCard,
+      },
+      {
+        title: "sidebar.budget_label",
+        url: "/budget",
+        icon: PiggyBank,
+      },
+      {
+        title: "sidebar.debts_label",
+        url: "/debts",
+        icon: HandCoins,
+      },
+    ],
+  },
+  {
+    id: 4,
+    label: "sidebar.workspace_label",
+    items: [
+      {
+        title: "sidebar.contacts_label",
         url: "/contacts",
         icon: Users,
       },
       {
-        title: "sidebar.vault",
+        title: "sidebar.vault_label",
         url: "/vault",
         icon: Box,
       },
       {
-        title: "sidebar.apps",
+        title: "sidebar.apps_label",
         url: "/apps",
         icon: DotSquare,
       },
@@ -108,10 +102,10 @@ export const sidebarItems: NavGroup[] = [
   },
   {
     id: 5,
-    label: "sidebar.system",
+    label: "sidebar.system_label",
     items: [
       {
-        title: "sidebar.settings",
+        title: "sidebar.settings_label",
         url: "/settings",
         icon: Settings,
       },

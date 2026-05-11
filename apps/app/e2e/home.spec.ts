@@ -1,15 +1,26 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from "./fixtures";
 
-test('homepage has correct title and renders', async ({ page }) => {
-  // Navigate to the base URL
-  await page.goto('/');
+// These tests are entirely public — no auth needed.
+test.use({ storageState: { cookies: [], origins: [] } });
 
-  // Expect a title "to contain" a substring. We don't know the exact title, 
-  // so we'll just check if the page loaded without a 404 or 500 error.
-  const pageTitle = await page.title();
-  expect(pageTitle).not.toBe('');
-  
-  // Basic validation that the page has a body
-  const body = page.locator('body');
-  await expect(body).toBeVisible();
+test.describe("Public: Home Page (Redirects)", () => {
+  test("should redirect unauthenticated users from overview to login", async ({ page, dictionary }) => {
+    // Try to visit protected route
+    await page.goto("/en/overview");
+    await page.waitForLoadState("domcontentloaded");
+
+    // Should be redirected to login
+    await expect(page).toHaveURL(/.*login/);
+    await expect(page.getByText(dictionary.auth.welcome)).toBeVisible();
+  });
+
+  test("should load the index route and redirect to login if unauthenticated", async ({ page }) => {
+    // Navigating to root / should redirect based on auth status
+    // Middleware handles this
+    await page.goto("/");
+    await page.waitForLoadState("domcontentloaded");
+
+    // It might redirect to /en/login or /login
+    await expect(page).toHaveURL(/.*login/);
+  });
 });

@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 
 interface ChartSelectionOverlayProps {
-  data: any[];
+  data: Record<string, unknown>[];
   selection: {
     startIndex: number | null;
     endIndex: number | null;
@@ -13,18 +13,9 @@ interface ChartSelectionOverlayProps {
   containerHeight: number;
 }
 
-export function ChartSelectionOverlay({
-  data,
-  selection,
-  containerWidth,
-  containerHeight,
-}: ChartSelectionOverlayProps) {
+export function ChartSelectionOverlay({ data, selection, containerWidth }: ChartSelectionOverlayProps) {
   const overlayStyles = useMemo(() => {
-    if (
-      selection.startIndex === null ||
-      selection.endIndex === null ||
-      data.length === 0
-    ) {
+    if (selection.startIndex === null || selection.endIndex === null || data.length === 0) {
       return null;
     }
 
@@ -46,13 +37,7 @@ export function ChartSelectionOverlay({
       endPos,
       width,
     };
-  }, [
-    data.length,
-    selection.startIndex,
-    selection.endIndex,
-    containerWidth,
-    containerHeight,
-  ]);
+  }, [data.length, selection.startIndex, selection.endIndex, containerWidth]);
 
   if (!overlayStyles) {
     return null;
@@ -62,7 +47,7 @@ export function ChartSelectionOverlay({
     <>
       {/* Selection overlay - shaded rectangle */}
       <div
-        className="absolute top-0 bottom-0 pointer-events-none chart-selection-overlay"
+        className="chart-selection-overlay pointer-events-none absolute top-0 bottom-0"
         style={{
           left: `${overlayStyles.startPos}px`,
           width: `${overlayStyles.width}px`,
@@ -72,7 +57,7 @@ export function ChartSelectionOverlay({
       />
       {/* Start line */}
       <div
-        className="absolute top-0 bottom-0 pointer-events-none chart-selection-border"
+        className="chart-selection-border pointer-events-none absolute top-0 bottom-0"
         style={{
           left: `${overlayStyles.startPos}px`,
           width: "1px",
@@ -82,7 +67,7 @@ export function ChartSelectionOverlay({
       />
       {/* End line */}
       <div
-        className="absolute top-0 bottom-0 pointer-events-none chart-selection-border"
+        className="chart-selection-border pointer-events-none absolute top-0 bottom-0"
         style={{
           left: `${overlayStyles.endPos}px`,
           width: "1px",

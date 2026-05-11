@@ -6,6 +6,7 @@ import { SubCurrenciesModel } from "./sub-currencies.model";
 import { ErrorCode } from "@workspace/types";
 import { buildError } from "@workspace/utils";
 import { status } from "elysia";
+import { assertCanEditWorkspaceData } from "../../workspaces/workspace-permissions";
 
 export const subCurrenciesController = new Elysia({
   prefix: "/sub-currencies",
@@ -34,6 +35,7 @@ export const subCurrenciesController = new Elysia({
       if (!auth?.workspace_id) {
         throw status(401, buildError(ErrorCode.UNAUTHORIZED, "Unauthorized"));
       }
+      assertCanEditWorkspaceData(auth.workspace_role);
       return SubCurrenciesService.create(auth.workspace_id, auth.user_id, body);
     },
     {
@@ -50,6 +52,7 @@ export const subCurrenciesController = new Elysia({
       if (!auth?.workspace_id) {
         throw status(401, buildError(ErrorCode.UNAUTHORIZED, "Unauthorized"));
       }
+      assertCanEditWorkspaceData(auth.workspace_role);
       return SubCurrenciesService.delete(
         auth.workspace_id,
         auth.user_id,

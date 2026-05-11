@@ -40,10 +40,17 @@ export type ChatResponse = {
   usage?: {
     input_tokens: number;
     output_tokens: number;
+    cached_input_tokens?: number;
+    reasoning_tokens?: number;
   };
   artifact?: {
     type: string;
     payload: any;
+  };
+  provider?: {
+    name: "openai" | "gemini" | "anthropic";
+    response_id?: string;
+    request_id?: string;
   };
 };
 

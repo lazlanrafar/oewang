@@ -4,6 +4,7 @@ import type {
   CreateTransactionInput,
   GetTransactionsQueryInput,
   UpdateTransactionInput,
+  ExportTransactionsQueryInput,
 } from "./transactions.model";
 import { WalletsRepository } from "../wallets/wallets.repository";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
@@ -245,6 +246,31 @@ export abstract class TransactionsService {
       },
       "Transactions retrieved successfully",
     );
+  }
+
+  static async export(workspaceId: string, query: ExportTransactionsQueryInput) {
+    const { data } = await TransactionsRepository.list(workspaceId, {
+      page: 1,
+      limit: 100000,
+      startDate: query.allData === true ? undefined : query.startDate,
+      endDate: query.allData === true ? undefined : query.endDate,
+    });
+
+    // Create CSV payload
+    const headers = ["Date", "Type", "Amount", "Category", "Wallet", "To Wallet", "Description"];
+    const rows = data.map((t: any) => {
+      return [
+        t.date ? new Date(t.date).toISOString().split("T")[0] : "",
+        t.type || "",
+        t.amount || "0",
+        t.category?.name || "",
+        t.wallet?.name || "",
+        t.toWallet?.name || "",
+        `"${(t.description || "").replace(/"/g, '""')}"`
+      ].join(",");
+    });
+
+    return [headers.join(","), ...rows].join("\n");
   }
 
   static async update(

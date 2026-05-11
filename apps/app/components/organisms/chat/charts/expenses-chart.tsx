@@ -1,102 +1,81 @@
 "use client";
 
-import { formatAmount } from "./format-amount";
 import {
+  Bar,
   Cell,
-  Legend,
   Pie,
   PieChart,
   ResponsiveContainer,
   Tooltip,
+  XAxis,
+  YAxis,
 } from "recharts";
-import {
-  BaseChart,
-  ChartLegend,
-  StyledBar,
-  StyledTooltip,
-  StyledXAxis,
-  StyledYAxis,
-} from "./base-charts";
+
+import type { CategoryData, ExpensesChartProps } from "@workspace/types";
+import { BaseChart, ChartLegend, StyledTooltip } from "./base-charts";
 import { createYAxisTickFormatter, useChartMargin } from "./chart-utils";
-import type { BaseChartProps } from "./chart-utils";
+import { formatAmount } from "./format-amount";
 import { SelectableChartWrapper } from "./selectable-chart-wrapper";
 
-interface ExpenseData {
-  month: string;
-  amount: number;
-  category: string;
-}
+function PatternBarShape(props: any) {
+  const { x, y, width, height, radius } = props;
 
-interface CategoryData {
-  name: string;
-  value: number;
-  color: string;
-}
-
-interface ExpensesChartProps extends BaseChartProps {
-  data: ExpenseData[];
-  categoryData?: CategoryData[];
-  chartType?: "bar" | "pie";
-  showLegend?: boolean;
-  currency?: string;
-  locale?: string;
-  enableSelection?: boolean;
-  onSelectionChange?: (
-    startDate: string | null,
-    endDate: string | null,
-  ) => void;
-  onSelectionComplete?: (
-    startDate: string,
-    endDate: string,
-    chartType: string,
-  ) => void;
-  onSelectionStateChange?: (isSelecting: boolean) => void;
-}
-
-// Custom formatter for expenses tooltip
-const expensesTooltipFormatter = (
-  value: any,
-  name: string,
-  currency = "USD",
-  locale?: string,
-): [string, string] => {
-  const formattedValue =
-    formatAmount({
-      amount: value,
-      currency,
-      locale: locale ?? undefined,
-      maximumFractionDigits: 0,
-    }) || `${currency}${value.toLocaleString()}`;
-  const displayName = name === "amount" ? "Expenses" : name;
-  return [formattedValue, displayName];
-};
-
-// Custom pie chart tooltip
-const pieTooltipFormatter = (
-  { active, payload }: any,
-  currency = "USD",
-  locale?: string,
-) => {
-  if (active && payload && payload.length) {
-    const data = payload[0];
-    const formattedValue =
-      formatAmount({
-        amount: data.value,
-        currency,
-        locale: locale ?? undefined,
-        maximumFractionDigits: 0,
-      }) || `${currency}${data.value.toLocaleString()}`;
-    return (
-      <div className="p-2 bg-white dark:bg-[#0c0c0c] border border-gray-200 dark:border-[#1d1d1d] text-black dark:text-white text-xs">
-        <p className="mb-1 text-gray-500 dark:text-[#666666]">
-          {data.payload.name}
-        </p>
-        <p>{formattedValue}</p>
-      </div>
-    );
+  if (
+    typeof x !== "number" ||
+    typeof y !== "number" ||
+    typeof width !== "number" ||
+    typeof height !== "number" ||
+    width <= 0 ||
+    height <= 0
+  ) {
+    return null;
   }
-  return null;
-};
+
+  const topRadius = Array.isArray(radius) ? (radius[0] ?? 0) : (radius ?? 0);
+
+  return (
+    <g>
+      <path
+        d={`
+          M ${x},${y + height}
+          L ${x},${y + topRadius}
+          Q ${x},${y} ${x + topRadius},${y}
+          L ${x + width - topRadius},${y}
+          Q ${x + width},${y} ${x + width},${y + topRadius}
+          L ${x + width},${y + height}
+          Z
+        `}
+        fill="hsl(var(--muted) / 0.5)"
+      />
+      <path
+        d={`
+          M ${x},${y + height}
+          L ${x},${y + topRadius}
+          Q ${x},${y} ${x + topRadius},${y}
+          L ${x + width - topRadius},${y}
+          Q ${x + width},${y} ${x + width},${y + topRadius}
+          L ${x + width},${y + height}
+          Z
+        `}
+        fill="url(#expensePattern)"
+      />
+      <path
+        d={`
+          M ${x},${y + height}
+          L ${x},${y + topRadius}
+          Q ${x},${y} ${x + topRadius},${y}
+          L ${x + width - topRadius},${y}
+          Q ${x + width},${y} ${x + width},${y + topRadius}
+          L ${x + width},${y + height}
+          Z
+        `}
+        fill="none"
+        stroke="var(--chart-actual-line)"
+        strokeWidth="1"
+      />
+    </g>
+  );
+}
 
 export function ExpensesChart({
   data,
@@ -107,11 +86,17 @@ export function ExpensesChart({
   showLegend = true,
   currency = "USD",
   locale,
+  valueLabel = "Expenses",
+  title = "Monthly Expenses",
   enableSelection = false,
   onSelectionChange,
   onSelectionComplete,
   onSelectionStateChange,
 }: ExpensesChartProps) {
+  const tickFormatter = createYAxisTickFormatter(currency, locale);
+  const maxValues = data.map((d) => ({ maxValue: d.amount }));
+  const { marginLeft } = useChartMargin(maxValues, "maxValue", tickFormatter);
+
   if (chartType === "pie" && categoryData) {
     return (
       <div className={`w-full ${className}`}>
@@ -135,20 +120,42 @@ export function ExpensesChart({
                 data={categoryData}
                 cx="50%"
                 cy="50%"
-                outerRadius={80}
+                outerRadius={height / 2 - 20}
                 fill="hsl(var(--foreground))"
                 dataKey="value"
+                isAnimationActive={false}
               >
-                {categoryData.map((entry) => (
-                  <Cell key={`cell-${entry.name}`} fill={entry.color} />
+                {categoryData.map((entry, index) => (
+                  <Cell
+                    key={`cell-${entry.name}-${index}`}
+                    fill={entry.color}
+                    stroke="none"
+                  />
                 ))}
               </Pie>
               <Tooltip
-                content={(props) =>
-                  pieTooltipFormatter(props, currency, locale)
+                content={
+                  <StyledTooltip
+                    formatter={(
+                      value: number | string,
+                      _: string,
+                      entry: any,
+                    ) => {
+                      const data = entry.payload as CategoryData;
+                      const numValue =
+                        typeof value === "number" ? value : Number(value);
+                      const formattedValue =
+                        formatAmount({
+                          amount: numValue,
+                          currency,
+                          locale,
+                          maximumFractionDigits: 0,
+                        }) || `${currency}${numValue.toLocaleString()}`;
+                      return [formattedValue, data.name];
+                    }}
+                  />
                 }
               />
-              <Legend />
             </PieChart>
           </ResponsiveContainer>
         </div>
@@ -156,17 +163,13 @@ export function ExpensesChart({
     );
   }
 
-  const tickFormatter = createYAxisTickFormatter(currency, locale);
-  const maxValues = data.map((d) => ({ maxValue: d.amount }));
-  const { marginLeft } = useChartMargin(maxValues, "maxValue", tickFormatter);
-
   const chartContent = (
     <div className={`w-full ${className}`}>
       {/* Legend */}
       {showLegend && (
         <ChartLegend
-          title="Monthly Expenses"
-          items={[{ label: "Expenses", type: "solid" }]}
+          title={title}
+          items={[{ label: valueLabel, type: "solid" }]}
         />
       )}
 
@@ -176,21 +179,46 @@ export function ExpensesChart({
         height={height}
         margin={{ top: 6, right: 6, left: -marginLeft, bottom: 6 }}
       >
-        <StyledXAxis dataKey="month" />
-        <StyledYAxis tickFormatter={tickFormatter} />
+        <XAxis
+          dataKey="month"
+          axisLine={false}
+          tickLine={false}
+          tick={{ fill: "var(--chart-axis-text)", fontSize: 10 }}
+        />
+        <YAxis
+          tickFormatter={tickFormatter}
+          axisLine={false}
+          tickLine={false}
+          tick={{ fill: "var(--chart-axis-text)", fontSize: 10 }}
+        />
 
         <Tooltip
           content={
             <StyledTooltip
-              formatter={(value: any, name: string) =>
-                expensesTooltipFormatter(value, name, currency, locale)
-              }
+              formatter={(value: number | string, name: string) => {
+                const numValue =
+                  typeof value === "number" ? value : Number(value);
+                const formattedValue =
+                  formatAmount({
+                    amount: numValue,
+                    currency,
+                    locale,
+                    maximumFractionDigits: 0,
+                  }) || `${currency}${numValue.toLocaleString()}`;
+                const displayName = name === "amount" ? valueLabel : name;
+                return [formattedValue, displayName];
+              }}
             />
           }
           wrapperStyle={{ zIndex: 9999 }}
         />
 
-        <StyledBar dataKey="amount" usePattern />
+        <Bar
+          dataKey="amount"
+          radius={[2, 2, 0, 0]}
+          shape={<PatternBarShape />}
+          isAnimationActive={false}
+        />
       </BaseChart>
     </div>
   );

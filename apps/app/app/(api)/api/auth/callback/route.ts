@@ -1,11 +1,9 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-import { createClient } from "@workspace/supabase/server";
-
-import { exchangeSupabaseToken } from "@workspace/modules/server";
-import { syncUser } from "@workspace/modules/server";
 import { Env } from "@workspace/constants";
+import { exchangeSupabaseToken, syncUser } from "@workspace/modules/server";
+import { createClient } from "@workspace/supabase/server";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -16,9 +14,7 @@ export async function GET(request: Request) {
   const forwardedHost = request.headers.get("x-forwarded-host");
   const forwardedProto = request.headers.get("x-forwarded-proto") || "http";
   const { origin: requestOrigin } = new URL(request.url);
-  const origin = forwardedHost
-    ? `${forwardedProto}://${forwardedHost}`
-    : requestOrigin;
+  const origin = forwardedHost ? `${forwardedProto}://${forwardedHost}` : requestOrigin;
 
   if (code) {
     const supabase = await createClient();
@@ -35,8 +31,7 @@ export async function GET(request: Request) {
             email: user.email ?? "",
             name: user.user_metadata?.full_name || user.user_metadata?.name,
             oauth_provider: user.app_metadata?.provider,
-            profile_picture:
-              user.user_metadata?.avatar_url || user.user_metadata?.picture,
+            profile_picture: user.user_metadata?.avatar_url || user.user_metadata?.picture,
             providers: user.app_metadata?.providers,
           });
 
@@ -48,21 +43,15 @@ export async function GET(request: Request) {
           // 2. Exchange for app JWT
           const { data: session_data } = await supabase.auth.getSession();
           if (session_data.session?.access_token) {
-            const exchangeResult = await exchangeSupabaseToken(
-              session_data.session.access_token,
-            );
+            const exchangeResult = await exchangeSupabaseToken(session_data.session.access_token);
             if (exchangeResult.success && exchangeResult.data) {
-              (await cookies()).set(
-                "oewang-session",
-                exchangeResult.data.token,
-                {
-                  path: "/",
-                  httpOnly: true,
-                  secure: Env.NODE_ENV === "production",
-                  sameSite: "lax",
-                  maxAge: 60 * 60 * 24 * 7, // 7 days
-                },
-              );
+              (await cookies()).set("oewang-session", exchangeResult.data.token, {
+                path: "/",
+                httpOnly: true,
+                secure: Env.NODE_ENV === "production",
+                sameSite: "lax",
+                maxAge: 60 * 60 * 24 * 7, // 7 days
+              });
             }
           }
         } catch (e) {

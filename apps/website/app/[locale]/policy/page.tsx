@@ -2,11 +2,16 @@ import React from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
-export default function PolicyPage() {
+export default async function PolicyPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
   return (
     <div className="mx-auto max-w-3xl px-6 py-16 sm:py-24">
       <Link
-        href="/"
+        href={`/`}
         className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-8 transition-colors"
       >
         <ArrowLeft className="mr-2 size-4" />
@@ -19,325 +24,227 @@ export default function PolicyPage() {
             Privacy Policy
           </h1>
           <p className="text-muted-foreground text-sm">
-            Last updated: {new Date().toLocaleDateString()}
+            Last updated: April 22, 2026
           </p>
         </div>
 
         <div className="h-px w-full bg-border my-8" />
 
-        <div className="space-y-4">
+        <section className="space-y-4">
           <p className="text-muted-foreground leading-6 text-sm">
-            We collect several different types of information for various
-            purposes to provide and improve our Service to you.
+            This Privacy Policy explains how oewang ("oewang", "we", "our",
+            or "us") collects, uses, stores, and protects personal data when
+            you use our product and website.
           </p>
-        </div>
+          <p className="text-muted-foreground leading-6 text-sm">
+            oewang is built to help founders and teams manage business
+            finances, including transactions, wallets, invoices, documents, and
+            AI-assisted workflows. Privacy and workspace data isolation are
+            core design principles in the product.
+          </p>
+        </section>
 
         <section className="space-y-4">
           <h2 className="text-lg tracking-tight mt-10">
-            Definitions
+            Data We Collect
           </h2>
+          <ul className="list-disc pl-6 space-y-2 text-muted-foreground leading-6 text-sm">
+            <li>
+              Account data: name, email, profile details, authentication
+              provider information.
+            </li>
+            <li>
+              Workspace data: workspace name, membership, role, and settings.
+            </li>
+            <li>
+              Financial data you provide: transactions, wallets, categories,
+              contacts, debts, invoices, and related records.
+            </li>
+            <li>
+              Files you upload: receipts, invoice files, and other documents
+              stored in vault features.
+            </li>
+            <li>
+              Integration data: data required to operate connected services
+              (for example messaging or email integrations you enable).
+            </li>
+            <li>
+              Technical and security data: request metadata, audit records,
+              operational logs, and abuse prevention signals.
+            </li>
+          </ul>
+        </section>
 
-          <h3 className="text-base mt-6">Service</h3>
-          <p className="text-muted-foreground leading-6 text-sm">
-            Service is the Oewang application operated by Oewang
-          </p>
+        <section className="space-y-4">
+          <h2 className="text-lg tracking-tight mt-10">
+            How We Use Data
+          </h2>
+          <ul className="list-disc pl-6 space-y-2 text-muted-foreground leading-6 text-sm">
+            <li>Deliver and maintain the product.</li>
+            <li>Authenticate users and protect accounts/workspaces.</li>
+            <li>Process financial workflows and generate reports/insights.</li>
+            <li>Provide support and troubleshoot service issues.</li>
+            <li>Improve reliability, security, and product quality.</li>
+            <li>Meet legal, tax, audit, and compliance obligations.</li>
+          </ul>
+        </section>
 
-          <h3 className="text-base mt-6">Personal Data</h3>
+        <section className="space-y-4">
+          <h2 className="text-lg tracking-tight mt-10">
+            Workspace Access and Visibility
+          </h2>
           <p className="text-muted-foreground leading-6 text-sm">
-            Personal Data means data about a living individual who can be
-            identified from those data (or from those and other information
-            either in our possession or likely to come into our possession).
+            oewang enforces workspace-scoped access controls. Authenticated
+            requests are validated against active workspace membership, and
+            access is limited by role and permission.
           </p>
+          <p className="text-muted-foreground leading-6 text-sm">
+            Users can only access data they own or data available inside
+            workspaces where they are active members. Access is revoked when
+            membership is removed.
+          </p>
+        </section>
 
-          <h3 className="text-base mt-6">Usage Data</h3>
+        <section className="space-y-4">
+          <h2 className="text-lg tracking-tight mt-10">
+            Legal Bases (GDPR)
+          </h2>
           <p className="text-muted-foreground leading-6 text-sm">
-            Usage Data is data collected automatically either generated by the
-            use of the Service or from the Service infrastructure itself (for
-            example, the duration of a page visit).
+            For users in the EEA/UK, we process personal data based on one or
+            more of the following:
           </p>
+          <ul className="list-disc pl-6 space-y-2 text-muted-foreground leading-6 text-sm">
+            <li>Contract necessity: to provide the oewang service.</li>
+            <li>Legitimate interests: security, fraud prevention, reliability.</li>
+            <li>Legal obligations: accounting, tax, and regulatory duties.</li>
+            <li>Consent: where required for optional processing activities.</li>
+          </ul>
+        </section>
 
-          <h3 className="text-base mt-6">Cookies</h3>
+        <section className="space-y-4">
+          <h2 className="text-lg tracking-tight mt-10">
+            Third-Party Processors and Integrations
+          </h2>
           <p className="text-muted-foreground leading-6 text-sm">
-            Cookies are small files stored on your device (computer or mobile
-            device).
+            We use third-party service providers to operate the product (for
+            example authentication/database infrastructure, payment processing,
+            cloud storage, messaging channels, and AI providers). These
+            providers process data on our behalf under contractual controls.
           </p>
+          <p className="text-muted-foreground leading-6 text-sm">
+            If you connect optional integrations, data is processed as required
+            to deliver that integration's functionality. We do not sell your
+            personal data.
+          </p>
+        </section>
 
-          <h3 className="text-base mt-6">Data Controller</h3>
+        <section className="space-y-4">
+          <h2 className="text-lg tracking-tight mt-10">
+            Google API Data
+          </h2>
           <p className="text-muted-foreground leading-6 text-sm">
-            Data Controller means the natural or legal person who (either alone
-            or jointly or in common with other persons) determines the purposes
-            for which and the manner in which any personal information are, or
-            are to be, processed.
+            If you connect Google services, oewang's use of data received from
+            Google APIs follows the Google API Services User Data Policy,
+            including Limited Use requirements.
           </p>
           <p className="text-muted-foreground leading-6 text-sm">
-            For the purpose of this Privacy Policy, we are a Data Controller of
-            your Personal Data.
+            Data obtained from Google Workspace APIs (including Gmail data) is
+            not used to train generalized AI/ML models.
+          </p>
+        </section>
+
+        <section className="space-y-4">
+          <h2 className="text-lg tracking-tight mt-10">
+            International Data Transfers
+          </h2>
+          <p className="text-muted-foreground leading-6 text-sm">
+            Your data may be processed in countries outside your place of
+            residence. Where required, we apply appropriate transfer safeguards
+            under applicable law.
+          </p>
+        </section>
+
+        <section className="space-y-4">
+          <h2 className="text-lg tracking-tight mt-10">
+            Data Retention
+          </h2>
+          <p className="text-muted-foreground leading-6 text-sm">
+            We keep personal data for as long as needed to provide the service,
+            maintain security, and comply with legal obligations. Retention
+            periods vary by data type and legal requirements.
+          </p>
+          <p className="text-muted-foreground leading-6 text-sm">
+            When retention is no longer required, we delete or anonymize data
+            according to our internal controls.
+          </p>
+        </section>
+
+        <section className="space-y-4">
+          <h2 className="text-lg tracking-tight mt-10">
+            Security
+          </h2>
+          <p className="text-muted-foreground leading-6 text-sm">
+            We apply technical and organizational security measures, including
+            encryption in transit, encrypted storage where supported,
+            authenticated access control, role-based authorization, and audit
+            logging.
+          </p>
+          <p className="text-muted-foreground leading-6 text-sm">
+            No system is 100% secure, but we continuously review and improve
+            our controls.
+          </p>
+        </section>
+
+        <section className="space-y-4">
+          <h2 className="text-lg tracking-tight mt-10">
+            Your Privacy Rights
+          </h2>
+          <p className="text-muted-foreground leading-6 text-sm">
+            Privacy rights vary by region. Depending on where you live, you may
+            have rights to access, correct, export, restrict, erase, or object
+            to certain uses of your personal data.
           </p>
 
           <h3 className="text-base mt-6">
-            Data Processors (or Service Providers)
+            Indonesia (UU PDP)
           </h3>
           <p className="text-muted-foreground leading-6 text-sm">
-            Data Processor (or Service Provider) means any natural or legal
-            person who processes the data on behalf of the Data Controller.
-          </p>
-          <p className="text-muted-foreground leading-6 text-sm">
-            We may use the services of various Service Providers in order to
-            process your data more effectively.
-          </p>
-
-          <h3 className="text-base mt-6">Data Subject (or User)</h3>
-          <p className="text-muted-foreground leading-6 text-sm">
-            Data Subject is any living individual who is using our Service and
-            is the subject of Personal Data.
-          </p>
-        </section>
-
-        <section className="space-y-4">
-          <h2 className="text-lg tracking-tight mt-10">
-            Use of Data
-          </h2>
-          <p className="text-muted-foreground leading-6 text-sm">
-            Oewang uses the collected data for various purposes:
-          </p>
-          <ul className="list-disc pl-6 space-y-2 text-muted-foreground leading-6 text-sm">
-            <li>To provide and maintain our Service</li>
-            <li>To notify you about changes to our Service</li>
-            <li>
-              To allow you to participate in interactive features of our Service
-              when you choose to do so
-            </li>
-            <li>To provide customer support</li>
-            <li>
-              To gather analysis or valuable information so that we can improve
-              our Service
-            </li>
-            <li>To monitor the usage of our Service</li>
-            <li>To detect, prevent and address technical issues</li>
-            <li>
-              To provide you with news, special offers and general information
-              about other goods, services and events which we offer that are
-              similar to those that you have already purchased or enquired about
-              unless you have opted not to receive such information
-            </li>
-          </ul>
-        </section>
-
-        <section className="space-y-4">
-          <h2 className="text-lg tracking-tight mt-10">
-            Use of Google User Data
-          </h2>
-          <p className="text-muted-foreground leading-6 text-sm">
-            Oewang's use of information received from Google APIs will adhere to
-            the Google API Services User Data Policy, including the Limited Use
-            requirements.
-          </p>
-          <p className="text-muted-foreground leading-6 text-sm">
-            We do not use any data obtained from Google Workspace APIs —
-            including Gmail data — to develop, improve, or train generalized
-            artificial intelligence (AI) or machine learning (ML) models.
-          </p>
-          <p className="text-muted-foreground leading-6 text-sm">
-            User data accessed via Gmail scopes is used strictly for the purpose
-            of reading and extracting relevant information from emails (such as
-            invoices and receipts) to help users automate and manage their
-            business finances. This data is never shared, sold, or used for
-            advertising purposes.
-          </p>
-        </section>
-
-        <section className="space-y-4">
-          <h2 className="text-lg tracking-tight mt-10">
-            Legal Basis for Processing Personal Data under the GDPR
-          </h2>
-          <p className="text-muted-foreground leading-6 text-sm">
-            If you are from the European Economic Area (EEA), Oewang legal basis
-            for collecting and using the personal information described in this
-            Privacy Policy depends on the Personal Data we collect and the
-            specific context in which we collect it.
-          </p>
-          <p className="text-muted-foreground leading-6 text-sm">
-            Oewang may process your Personal Data because:
-          </p>
-          <ul className="list-disc pl-6 space-y-2 text-muted-foreground leading-6 text-sm">
-            <li>We need to perform a contract with you</li>
-            <li>You have given us permission to do so</li>
-            <li>
-              The processing is in our legitimate interests and it is not
-              overridden by your rights
-            </li>
-            <li>For payment processing purposes</li>
-            <li>To comply with the law</li>
-          </ul>
-        </section>
-
-        <section className="space-y-4">
-          <h2 className="text-lg tracking-tight mt-10">
-            Retention of Data
-          </h2>
-          <p className="text-muted-foreground leading-6 text-sm">
-            Oewang will retain your Personal Data only for as long as is
-            necessary for the purposes set out in this Privacy Policy. We will
-            retain and use your Personal Data to the extent necessary to comply
-            with our legal obligations (for example, if we are required to
-            retain your data to comply with applicable laws), resolve disputes
-            and enforce our legal agreements and policies.
-          </p>
-          <p className="text-muted-foreground leading-6 text-sm">
-            Oewang will also retain Usage Data for internal analysis purposes.
-            Usage Data is generally retained for a shorter period of time,
-            except when this data is used to strengthen the security or to
-            improve the functionality of our Service, or we are legally
-            obligated to retain this data for longer periods.
-          </p>
-        </section>
-
-        <section className="space-y-4">
-          <h2 className="text-lg tracking-tight mt-10">
-            Transfer of Data
-          </h2>
-          <p className="text-muted-foreground leading-6 text-sm">
-            Your information, including Personal Data, may be transferred to -
-            and maintained on - computers located outside of your state,
-            province, country or other governmental jurisdiction where the data
-            protection laws may differ from those of your jurisdiction.
-          </p>
-          <p className="text-muted-foreground leading-6 text-sm">
-            If you are located outside your hosting provider's country and
-            choose to provide information to us, please note that we transfer
-            the data, including Personal Data, to that facility and process it
-            there.
-          </p>
-          <p className="text-muted-foreground leading-6 text-sm">
-            Your consent to this Privacy Policy followed by your submission of
-            such information represents your agreement to that transfer.
-          </p>
-          <p className="text-muted-foreground leading-6 text-sm">
-            Oewang will take all the steps reasonably necessary to ensure that
-            your data is treated securely and in accordance with this Privacy
-            Policy and no transfer of your Personal Data will take place to an
-            organisation or a country unless there are adequate controls in
-            place including the security of your data and other personal
-            information.
-          </p>
-        </section>
-
-        <section className="space-y-4">
-          <h2 className="text-lg tracking-tight mt-10">
-            Disclosure of Data
-          </h2>
-
-          <h3 className="text-base mt-6">Business Transaction</h3>
-          <p className="text-muted-foreground leading-6 text-sm">
-            If Oewang is involved in a merger, acquisition or asset sale, your
-            Personal Data may be transferred. We will provide notice before your
-            Personal Data is transferred and becomes subject to a different
-            Privacy Policy.
+            For users in Indonesia, we process personal data in line with
+            Indonesia's Personal Data Protection Law (UU PDP). Subject to legal
+            conditions, you may request access, correction, deletion,
+            restriction, and other rights recognized by applicable Indonesian
+            law.
           </p>
 
           <h3 className="text-base mt-6">
-            Disclosure for Law Enforcement
+            EEA / UK (GDPR)
           </h3>
           <p className="text-muted-foreground leading-6 text-sm">
-            Under certain circumstances, Oewang may be required to disclose your
-            Personal Data if required to do so by law or in response to valid
-            requests by public authorities (e.g. a court or a government
-            agency).
+            For users in the EEA/UK, GDPR-related rights may include access,
+            rectification, erasure, restriction, portability, objection, and
+            complaint rights with a supervisory authority, subject to legal
+            limitations.
           </p>
 
-          <h3 className="text-base mt-6">Legal Requirements</h3>
+          <h3 className="text-base mt-6">
+            United States (State Privacy Laws)
+          </h3>
           <p className="text-muted-foreground leading-6 text-sm">
-            Oewang may disclose your Personal Data in the good faith belief that
-            such action is necessary to:
+            For users in certain US states, you may have rights to know, access,
+            correct, delete, and request a portable copy of personal data, and
+            where applicable, rights to opt out of specific processing uses
+            defined by state law.
           </p>
-          <ul className="list-disc pl-6 space-y-2 text-muted-foreground leading-6 text-sm">
-            <li>To comply with a legal obligation</li>
-            <li>To protect and defend the rights or property of Oewang</li>
-            <li>
-              To prevent or investigate possible wrongdoing in connection with
-              the Service
-            </li>
-            <li>
-              To protect the personal safety of users of the Service or the
-              public
-            </li>
-            <li>To protect against legal liability</li>
-          </ul>
-        </section>
 
-        <section className="space-y-4">
-          <h2 className="text-lg tracking-tight mt-10">
-            Security of Data
-          </h2>
           <p className="text-muted-foreground leading-6 text-sm">
-            The security of your data is important to us but remember that no
-            method of transmission over the Internet or method of electronic
-            storage is 100% secure. While we strive to use commercially
-            acceptable means to protect your Personal Data, we cannot guarantee
-            its absolute security.
-          </p>
-        </section>
-
-        <section className="space-y-4">
-          <h2 className="text-lg tracking-tight mt-10">
-            Your Data Protection Rights under the GDPR
-          </h2>
-          <p className="text-muted-foreground leading-6 text-sm">
-            If you are a resident of the European Economic Area (EEA), you have
-            certain data protection rights. Oewang aims to take reasonable steps
-            to allow you to correct, amend, delete or limit the use of your
-            Personal Data.
+            oewang supports a structured privacy request workflow. Requests are
+            tracked through lifecycle states (received, in progress, completed,
+            rejected) and may require identity verification.
           </p>
           <p className="text-muted-foreground leading-6 text-sm">
-            If you wish to be informed about what Personal Data we hold about
-            you and if you want it to be removed from our systems, please
-            contact us.
-          </p>
-          <p className="text-muted-foreground leading-6 text-sm">
-            In certain circumstances, you have the following data protection
-            rights:
-          </p>
-          <ul className="list-disc pl-6 space-y-2 text-muted-foreground leading-6 text-sm">
-            <li>
-              The right to access, update or delete the information we have on
-              you. Whenever made possible, you can access, update or request
-              deletion of your Personal Data directly within your account
-              settings section. If you are unable to perform these actions
-              yourself, please contact us to assist you.
-            </li>
-            <li>
-              The right of rectification. You have the right to have your
-              information rectified if that information is inaccurate or
-              incomplete.
-            </li>
-            <li>
-              The right to object. You have the right to object to our
-              processing of your Personal Data.
-            </li>
-            <li>
-              The right of restriction. You have the right to request that we
-              restrict the processing of your personal information.
-            </li>
-            <li>
-              The right to data portability. You have the right to be provided
-              with a copy of the information we have on you in a structured,
-              machine-readable and commonly used format.
-            </li>
-            <li>
-              The right to withdraw consent. You also have the right to withdraw
-              your consent at any time where Oewang relied on your consent to
-              process your personal information.
-            </li>
-          </ul>
-          <p className="text-muted-foreground leading-6 text-sm">
-            Please note that we may ask you to verify your identity before
-            responding to such requests.
-          </p>
-          <p className="text-muted-foreground leading-6 text-sm">
-            You have the right to complain to a Data Protection Authority about
-            our collection and use of your Personal Data. For more information,
-            please contact your local data protection authority in the European
-            Economic Area (EEA).
+            Where required by law, we aim to respond within applicable
+            statutory deadlines (typically within 30 days, subject to
+            complexity and legal allowances).
           </p>
         </section>
 
@@ -346,46 +253,35 @@ export default function PolicyPage() {
             Children's Privacy
           </h2>
           <p className="text-muted-foreground leading-6 text-sm">
-            Our Service does not address anyone under the age of 18
-            ("Children").
-          </p>
-          <p className="text-muted-foreground leading-6 text-sm">
-            We do not knowingly collect personally identifiable information from
-            anyone under the age of 18. If you are a parent or guardian and you
-            are aware that your Child has provided us with Personal Data, please
-            contact us. If we become aware that we have collected Personal Data
-            from children without verification of parental consent, we take
-            steps to remove that information from our servers.
+            oewang is not intended for children under 18, and we do not
+            knowingly collect personal data from children under 18.
           </p>
         </section>
 
         <section className="space-y-4">
           <h2 className="text-lg tracking-tight mt-10">
-            Changes to This Privacy Policy
+            Changes to This Policy
           </h2>
           <p className="text-muted-foreground leading-6 text-sm">
-            We may update our Privacy Policy from time to time. We will notify
-            you of any changes by posting the new Privacy Policy on this page.
-          </p>
-          <p className="text-muted-foreground leading-6 text-sm">
-            We will let you know via email and/or a prominent notice on our
-            Service, prior to the change becoming effective and update the
-            "effective date" at the top of this Privacy Policy.
-          </p>
-          <p className="text-muted-foreground leading-6 text-sm">
-            You are advised to review this Privacy Policy periodically for any
-            changes. Changes to this Privacy Policy are effective when they are
-            posted on this page.
+            We may update this Privacy Policy from time to time. Material
+            updates will be posted on this page with a revised "Last updated"
+            date.
           </p>
         </section>
 
         <section className="space-y-4 mb-20">
           <h2 className="text-lg tracking-tight mt-10">
-            Contact Us
+            Contact
           </h2>
           <p className="text-muted-foreground leading-6 text-sm">
-            If you have any questions about this Privacy Policy, please contact
-            us through our administrative support channels.
+            For privacy questions or requests, contact us at{" "}
+            <a
+              className="underline hover:text-foreground transition-colors"
+              href="mailto:support@oewang.com"
+            >
+              support@oewang.com
+            </a>
+            .
           </p>
         </section>
       </div>

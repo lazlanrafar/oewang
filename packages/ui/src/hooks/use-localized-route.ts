@@ -21,7 +21,7 @@ export function createUseLocalizedRoute(locales: readonly string[]) {
 
     const currentLocale = locales.find(
       (locale) =>
-        pathname.startsWith(`/${locale}/`) || pathname === `/${locale}`,
+        pathname && (pathname.startsWith(`/${locale}/`) || pathname === `/${locale}`),
     );
 
     const prefix = currentLocale ? `/${currentLocale}` : "";

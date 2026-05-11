@@ -10,5 +10,5 @@ const dictionaries = {
 
 import type { Dictionary } from "@workspace/dictionaries";
 
-export const getDictionary = async (locale: Locale): Promise<Dictionary> => 
+export const getDictionary = async (locale: Locale): Promise<Dictionary> =>
   (dictionaries[locale]?.() ?? dictionaries.en()) as Promise<Dictionary>;

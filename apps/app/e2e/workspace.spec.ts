@@ -1,42 +1,78 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from "./fixtures";
 
-test.describe('Workspace Management', () => {
-  test('should navigate to overview by default', async ({ page }) => {
-    await page.goto('/');
+/**
+ * Workspace: Navigation, Sidebar, and Global UI
+ */
+test.describe("Workspace: Sidebar & Navigation", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto("/en/overview");
+    await page.waitForLoadState("domcontentloaded");
+  });
+
+  test("should display the sidebar", async ({ page }) => {
+    const sidebar = page.locator("aside").or(page.locator('[data-sidebar="sidebar"]'));
+    await expect(sidebar.first()).toBeVisible();
+  });
+
+  test("should navigate to Transactions page via sidebar", async ({ page, dictionary }) => {
+    // Navigate using the sidebar link
+    await page
+      .getByRole("link", { name: new RegExp(dictionary.sidebar.transactions_label, "i") })
+      .first()
+      .click();
+    await page.waitForLoadState("domcontentloaded");
+    await expect(page).toHaveURL(/.*transactions/);
+  });
+
+  test("should navigate back to Overview via sidebar", async ({ page, dictionary }) => {
+    // Go to Transactions first
+    await page
+      .getByRole("link", { name: new RegExp(dictionary.sidebar.transactions_label, "i") })
+      .first()
+      .click();
+    await page.waitForLoadState("domcontentloaded");
+
+    // Navigate back to Overview using the sidebar link
+    // Sidebar usually has 'Overview' as the first link
+    await page
+      .getByRole("link", { name: new RegExp(dictionary.sidebar.overview_label, "i") })
+      .first()
+      .click();
+    await page.waitForLoadState("domcontentloaded");
     await expect(page).toHaveURL(/.*overview/);
   });
 
-  test('should switch between workspaces', async ({ page }) => {
-    await page.goto('/en/overview');
-    
-    // Open workspace switcher
-    await page.getByRole('button', { name: /.+ Free/ }).first().click(); // Open the switcher button
-    
-    // Get all workspace items in the dropdown
-    const workspaceItems = page.getByRole('menuitem').filter({ hasText: /⌘/ });
-    const count = await workspaceItems.count();
-    
-    if (count > 1) {
-      const targetWorkspace = workspaceItems.nth(1);
-      const name = await targetWorkspace.innerText();
-      await targetWorkspace.click();
-      
-      // Verify switch success (toast or reload)
-      await expect(page.getByText(/Switched to/)).toBeVisible();
-    }
+  test("should navigate to Settings via sidebar", async ({ page, dictionary }) => {
+    await page
+      .getByRole("link", { name: new RegExp(dictionary.sidebar.settings_label, "i") })
+      .first()
+      .click();
+    await page.waitForLoadState("domcontentloaded");
+    await expect(page).toHaveURL(/.*settings/);
+  });
+});
+
+test.describe("Workspace: Switcher", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto("/en/overview");
+    await page.waitForLoadState("domcontentloaded");
   });
 
-  test('should open create workspace dialog from sidebar', async ({ page }) => {
-    await page.goto('/en/overview');
-    
-    // Open workspace switcher
-    await page.getByRole('button', { name: /.+ Free/ }).first().click();
-    
-    // Click "Add Workspace"
-    await page.getByText('Add Workspace').click();
-    
-    // Verify dialog is open
-    await expect(page.getByText('Create new workspace')).toBeVisible();
-    await expect(page.locator('#workspace-name')).toBeVisible();
+  test("should show the workspace switcher", async ({ page }) => {
+    // Workspace switcher is a button in the sidebar header showing workspace name and plan
+    const switcher = page
+      .getByRole("button")
+      .filter({ hasText: /Free|Pro/i })
+      .first();
+    await expect(switcher).toBeVisible();
+  });
+
+  test("should open workspace switcher menu", async ({ page }) => {
+    const switcher = page
+      .getByRole("button")
+      .filter({ hasText: /Free|Pro/i })
+      .first();
+    await switcher.click();
+    await expect(page.getByText(/Workspaces/i).first()).toBeVisible();
   });
 });

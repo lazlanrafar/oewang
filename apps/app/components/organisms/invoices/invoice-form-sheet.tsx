@@ -1,61 +1,33 @@
 "use client";
 
-import { useForm, useFieldArray, useWatch } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod/v3";
 import {
-  useState,
-  useEffect,
   forwardRef,
+  type InputHTMLAttributes,
+  type TextareaHTMLAttributes,
+  useCallback,
+  useEffect,
   useRef,
-  InputHTMLAttributes,
-  TextareaHTMLAttributes,
+  useState,
 } from "react";
-import { toast } from "sonner";
-import {
-  Sheet,
-  SheetContent,
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormMessage,
-  Button,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuCheckboxItem,
-  DropdownMenuTrigger,
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
-  DropdownMenuSubContent,
-  DropdownMenuSeparator,
-} from "@workspace/ui";
-import {
-  Plus,
-  Trash2,
-  X,
-  Settings,
-  FileText,
-  Landmark,
-  UploadCloud,
-  Loader2,
-} from "lucide-react";
-import type { Invoice } from "@workspace/types";
+
+import Image from "next/image";
+
+import { zodResolver } from "@hookform/resolvers/zod";
+import type { Dictionary } from "@workspace/dictionaries";
 import type { CreateInvoiceData } from "@workspace/modules/client";
-import { cn } from "@workspace/ui";
-import { format } from "date-fns";
-import { SelectContact } from "@/components/molecules/select-contact";
-import { InvoiceSettings } from "./invoice-settings";
+import { getTransactionSettings, updateTransactionSettings } from "@workspace/modules/client";
 import { uploadVaultFile } from "@workspace/modules/vault/vault.action";
-import {
-  getTransactionSettings,
-  updateTransactionSettings,
-} from "@workspace/modules/client";
+import type { Invoice } from "@workspace/types";
+import { Button, cn, Form, FormControl, FormField, FormItem, FormMessage, Sheet, SheetContent } from "@workspace/ui";
+import { format } from "date-fns";
+import { Loader2, Plus, UploadCloud, X } from "lucide-react";
+import { useFieldArray, useForm, useWatch } from "react-hook-form";
+import { toast } from "sonner";
+import { z } from "zod/v3";
+
+import { SelectContact } from "@/components/molecules/select-contact";
+
+import { InvoiceSettings } from "./invoice-settings";
 
 // --- Sub-Components for the "Hash" Empty States ---
 
@@ -74,12 +46,12 @@ const HashInput = forwardRef<HTMLInputElement, HashInputProps>(
     const showHash = !hasValue && !isFocused;
 
     return (
-      <div className={cn("relative group transition-all", wrapperClassName)}>
+      <div className={cn("group relative transition-all", wrapperClassName)}>
         <input
           ref={ref}
           autoComplete="off"
           className={cn(
-            "w-full bg-transparent border-0 p-1 text-sm border-b border-transparent focus:border-border outline-none transition-colors focus:ring-0",
+            "w-full border-0 border-transparent border-b bg-transparent p-1 text-sm outline-none transition-colors focus:border-border focus:ring-0",
             showHash ? "opacity-0" : "opacity-100",
             className,
           )}
@@ -94,8 +66,8 @@ const HashInput = forwardRef<HTMLInputElement, HashInputProps>(
           {...props}
         />
         {showHash && (
-          <div className="absolute inset-0 pointer-events-none p-1">
-            <div className={cn("w-full h-full rounded-[2px]", HASH_BG)} />
+          <div className="pointer-events-none absolute inset-0 p-1">
+            <div className={cn("h-full w-full rounded-[2px]", HASH_BG)} />
           </div>
         )}
       </div>
@@ -115,14 +87,12 @@ const HashTextarea = forwardRef<HTMLTextAreaElement, HashTextareaProps>(
     const showHash = !hasValue && !isFocused;
 
     return (
-      <div
-        className={cn("relative group transition-all h-full", wrapperClassName)}
-      >
+      <div className={cn("group relative h-full transition-all", wrapperClassName)}>
         <textarea
           ref={ref}
           autoComplete="off"
           className={cn(
-            "w-full h-full bg-transparent border-0 p-2 text-sm border-b border-transparent focus:border-border outline-none resize-none transition-colors focus:ring-0",
+            "h-full w-full resize-none border-0 border-transparent border-b bg-transparent p-2 text-sm outline-none transition-colors focus:border-border focus:ring-0",
             showHash ? "opacity-0" : "opacity-100",
             className,
           )}
@@ -137,8 +107,8 @@ const HashTextarea = forwardRef<HTMLTextAreaElement, HashTextareaProps>(
           {...props}
         />
         {showHash && (
-          <div className="absolute inset-0 pointer-events-none p-2">
-            <div className={cn("w-full h-full rounded-[2px]", HASH_BG)} />
+          <div className="pointer-events-none absolute inset-0 p-2">
+            <div className={cn("h-full w-full rounded-[2px]", HASH_BG)} />
           </div>
         )}
       </div>
@@ -156,7 +126,7 @@ const HashImage = forwardRef<
   }
 >(({ value, onChange, className }, ref) => {
   const [uploading, setUploading] = useState(false);
-  const fileInputRef = useState<HTMLInputElement | null>(null)[0];
+  const _fileInputRef = useState<HTMLInputElement | null>(null)[0];
   const internalRef = useRef<HTMLInputElement>(null);
 
   const onUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -174,7 +144,7 @@ const HashImage = forwardRef<
         // Also update default logo
         await updateTransactionSettings({
           invoiceLogoUrl: res.data.url,
-        } as any);
+        } as unknown);
       } else {
         toast.error("Upload failed");
       }
@@ -189,45 +159,41 @@ const HashImage = forwardRef<
     <div
       ref={ref}
       className={cn(
-        "relative rounded-lg border border-dashed flex items-center justify-center overflow-hidden group transition-all",
+        "group relative flex items-center justify-center overflow-hidden rounded-lg border border-dashed transition-all",
         !value && HASH_BG,
         className,
       )}
     >
       {value ? (
         <>
-          <img
-            src={value}
-            alt="Logo"
-            className="w-full h-full object-contain"
-          />
-          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => internalRef.current?.click()}
-            >
+          <Image src={value} alt="Logo" fill unoptimized sizes="100vw" className="object-contain" />
+          <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+            <Button type="button" variant="secondary" size="sm" onClick={() => internalRef.current.click()}>
               Change
             </Button>
           </div>
         </>
       ) : (
-        <div 
-          onClick={() => internalRef.current?.click()}
-          className="w-full h-full flex flex-col items-center justify-center cursor-pointer hover:bg-muted/50 transition-colors"
+        <button
+          type="button"
+          onClick={() => internalRef.current.click()}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              internalRef.current.click();
+            }
+          }}
+          className="flex h-full w-full cursor-pointer flex-col items-center justify-center transition-colors hover:bg-muted/50"
         >
           {uploading ? (
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           ) : (
             <>
-              <UploadCloud className="h-6 w-6 text-muted-foreground mb-1" />
-              <span className="text-[10px] text-muted-foreground">
-                Upload Logo
-              </span>
+              <UploadCloud className="mb-1 h-6 w-6 text-muted-foreground" />
+              <span className="text-[10px] text-muted-foreground">Upload Logo</span>
             </>
           )}
-        </div>
+        </button>
       )}
       <input
         ref={internalRef}
@@ -290,10 +256,8 @@ interface InvoiceFormSheetProps {
   onOpenChange: (open: boolean) => void;
   invoice?: Invoice | null;
   onSuccess?: () => void;
-  onSubmit: (
-    data: CreateInvoiceData,
-    isSilent?: boolean,
-  ) => Promise<Invoice | boolean>;
+  onSubmit: (data: CreateInvoiceData, isSilent?: boolean) => Promise<Invoice | boolean>;
+  dictionary: Dictionary;
 }
 
 export function InvoiceFormSheet({
@@ -302,21 +266,20 @@ export function InvoiceFormSheet({
   invoice,
   onSuccess,
   onSubmit,
+  dictionary,
 }: InvoiceFormSheetProps) {
+  const dict = dictionary.invoices;
   const [loading, setLoading] = useState(false);
   const isEditing = !!invoice;
 
-  const form = useForm<any>({
-    resolver: zodResolver(formSchema as any),
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
       contactId: "",
       invoiceNumber: "",
       currency: "USD",
       issueDate: format(new Date(), "yyyy-MM-dd"),
-      dueDate: format(
-        new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-        "yyyy-MM-dd",
-      ), // +30 days
+      dueDate: format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), "yyyy-MM-dd"), // +30 days
       amount: 0,
       vat: 0,
       tax: 0,
@@ -350,9 +313,9 @@ export function InvoiceFormSheet({
     name: "invoiceSettings",
   });
 
-  const showVat = invoiceSettings?.vat;
-  const showTax = invoiceSettings?.salesTax;
-  const showLineItemTax = invoiceSettings?.lineItemTax;
+  const showVat = invoiceSettings.vat;
+  const _showTax = invoiceSettings.salesTax;
+  const showLineItemTax = invoiceSettings.lineItemTax;
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
@@ -360,19 +323,17 @@ export function InvoiceFormSheet({
   });
 
   // Watch values for inline math
-  const watchedLineItems =
-    useWatch({
-      control: form.control,
-      name: "lineItems",
-    }) || [];
+  const watchedLineItems = useWatch({
+    control: form.control,
+    name: "lineItems",
+  }) as FormValues["lineItems"];
 
   const vatRate = useWatch({ control: form.control, name: "vat" }) || 0;
 
-  const discountRate =
-    useWatch({ control: form.control, name: "discount" }) || 0;
+  const discountRate = useWatch({ control: form.control, name: "discount" }) || 0;
 
   // Calculate Subtotal and Tax dynamically
-  const subtotal = watchedLineItems.reduce((acc: number, item: any) => {
+  const subtotal = (watchedLineItems || []).reduce((acc: number, item) => {
     const qty = Number(item.quantity) || 0;
     const price = Number(item.price) || 0;
     return acc + qty * price;
@@ -380,10 +341,10 @@ export function InvoiceFormSheet({
 
   // Calculate Line Item Tax if enabled
   const lineItemTaxAmount = showLineItemTax
-    ? watchedLineItems.reduce((acc: number, item: any) => {
+    ? (watchedLineItems || []).reduce((acc: number, item) => {
         const qty = Number(item.quantity) || 0;
         const price = Number(item.price) || 0;
-        const tax = Number(item.tax) || 0;
+        const tax = Number((item as unknown).tax) || 0;
         return acc + qty * price * (tax / 100);
       }, 0)
     : 0;
@@ -415,25 +376,23 @@ export function InvoiceFormSheet({
         contactId: invoice.contactId ?? "",
         invoiceNumber: invoice.invoiceNumber ?? "",
         currency: invoice.currency ?? "USD",
-        issueDate: invoice.issueDate?.slice(0, 10) ?? "",
-        dueDate: invoice.dueDate?.slice(0, 10) ?? "",
+        issueDate: invoice.issueDate.slice(0, 10) ?? "",
+        dueDate: invoice.dueDate.slice(0, 10) ?? "",
         amount: Number(invoice.amount ?? 0),
         vat: Number(invoice.vat ?? 0),
         tax: Number(invoice.tax ?? 0),
         internalNote: invoice.internalNote ?? "",
         noteDetails: invoice.noteDetails ?? "",
-        paymentDetails: (invoice as any).paymentDetails ?? "",
-        logoUrl: (invoice as any).logoUrl ?? "",
-        fromDetails: (invoice as any).fromDetails ?? "", // Assuming we might add this later
-        lineItems: (invoice.lineItems as any[]) ?? [
-          { name: "", quantity: 1, price: 0 },
-        ],
+        paymentDetails: (invoice as unknown).paymentDetails ?? "",
+        logoUrl: (invoice as unknown).logoUrl ?? "",
+        fromDetails: (invoice as unknown).fromDetails ?? "", // Assuming we might add this later
+        lineItems: (invoice.lineItems as unknown[]) ?? [{ name: "", quantity: 1, price: 0 }],
         status: invoice.status || "draft",
-        invoiceSize: (invoice as any).invoiceSize || "A4",
-        dateFormat: (invoice as any).dateFormat || "DD/MM/YYYY",
-        paymentTerms: (invoice as any).paymentTerms || "Due on Receipt",
-        templateName: (invoice as any).templateName || "Default",
-        invoiceSettings: (invoice as any).invoiceSettings || {
+        invoiceSize: (invoice as unknown).invoiceSize || "A4",
+        dateFormat: (invoice as unknown).dateFormat || "DD/MM/YYYY",
+        paymentTerms: (invoice as unknown).paymentTerms || "Due on Receipt",
+        templateName: (invoice as unknown).templateName || "Default",
+        invoiceSettings: (invoice as unknown).invoiceSettings || {
           salesTax: false,
           vat: false,
           lineItemTax: false,
@@ -443,7 +402,7 @@ export function InvoiceFormSheet({
           qrCode: true,
         },
         isPublic: invoice.isPublic ?? false,
-        accessCode: (invoice as any).accessCode ?? "",
+        accessCode: (invoice as unknown).accessCode ?? "",
       });
     } else if (open && !invoice) {
       const today = new Date();
@@ -485,50 +444,45 @@ export function InvoiceFormSheet({
     }
   }, [invoice, open, form]);
 
+  const onFormSubmit = useCallback(
+    async (values: FormValues, isSilent = false) => {
+      if (loading) return;
+      setLoading(true);
+      try {
+        // Re-calculate one last time before submit to be safe
+        const st = values.lineItems.reduce((acc, item) => acc + Number(item.quantity) * Number(item.price), 0);
+        const va = (st * Number(values.vat || 0)) / 100;
+        const finalAmt = st + va;
+
+        const payload = { ...values, amount: finalAmt };
+
+        const result = await onSubmit(payload as CreateInvoiceData, isSilent);
+        if (result) {
+          if (!isSilent) {
+            toast.success(isEditing ? "Invoice updated" : "Invoice created");
+            onSuccess?.();
+            onOpenChange(false);
+          }
+        }
+      } catch {
+        if (!isSilent) toast.error("Something went wrong");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [isEditing, loading, onOpenChange, onSubmit, onSuccess],
+  );
+
   // Auto-save as draft when contact is selected for a new invoice
   const contactId = useWatch({ control: form.control, name: "contactId" });
   useEffect(() => {
-    if (
-      open &&
-      !isEditing &&
-      contactId &&
-      form.getValues("status") === "draft"
-    ) {
+    if (open && !isEditing && contactId && form.getValues("status") === "draft") {
       const currentValues = form.getValues();
       if (currentValues.invoiceNumber) {
         onFormSubmit(currentValues, true);
       }
     }
-  }, [contactId, open, isEditing, form, onSubmit]);
-
-  const onFormSubmit = async (values: FormValues, isSilent = false) => {
-    if (loading) return;
-    setLoading(true);
-    try {
-      // Re-calculate one last time before submit to be safe
-      const st = values.lineItems.reduce(
-        (acc, item) => acc + Number(item.quantity) * Number(item.price),
-        0,
-      );
-      const va = (st * Number(values.vat || 0)) / 100;
-      const finalAmt = st + va;
-
-      const payload = { ...values, amount: finalAmt };
-
-      const result = await onSubmit(payload as CreateInvoiceData, isSilent);
-      if (result) {
-        if (!isSilent) {
-          toast.success(isEditing ? "Invoice updated" : "Invoice created");
-          onSuccess?.();
-          onOpenChange(false);
-        }
-      }
-    } catch {
-      if (!isSilent) toast.error("Something went wrong");
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [contactId, open, isEditing, form, onFormSubmit]);
 
   const handleSubmit = (values: FormValues) => onFormSubmit(values, false);
 
@@ -540,29 +494,25 @@ export function InvoiceFormSheet({
         Remove the default padding, handle scrolling internally.
         We make the background gray/black, and put an A4 sheet inside.
       */}
-      <SheetContent className="sm:max-w-[630px] w-[90vw] p-0 flex flex-col">
+      <SheetContent className="flex w-[90vw] flex-col p-0 sm:max-w-[630px]">
         {/* A4 Document Scrolling Area */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 flex justify-center pb-24">
-          <Form {...(form as any)}>
+        <div className="flex flex-1 justify-center overflow-y-auto p-4 pb-24 md:p-8">
+          <Form {...form}>
             <form
               id="invoice-form"
               onSubmit={form.handleSubmit(handleSubmit)}
-              className="w-full max-w-3xl bg-[#fcfcfc] dark:bg-[#0f0f0f] shadow-sm border p-6 md:p-8 pb-16 flex flex-col relative h-max min-h-[900px]"
+              className="relative flex h-max min-h-[900px] w-full max-w-3xl flex-col border bg-[#fcfcfc] p-6 pb-16 shadow-sm md:p-8 dark:bg-[#0f0f0f]"
             >
               {/* HEADER ROW */}
-              <div className="flex justify-between items-start mb-12">
+              <div className="mb-12 flex items-start justify-between">
                 {/* Meta block */}
-                <div className="flex flex-col gap-1 w-[240px]">
-                  <h1 className="text-3xl font-serif tracking-tight mb-4">
-                    Invoice
-                  </h1>
+                <div className="flex w-[240px] flex-col gap-1">
+                  <h1 className="mb-4 font-serif text-3xl tracking-tight">{dict.details.title || "Invoice"}</h1>
 
                   <div className="grid grid-cols-[80px_1fr] items-center gap-2">
-                    <span className="text-[11px] text-muted-foreground">
-                      Invoice No:
-                    </span>
+                    <span className="text-[11px] text-muted-foreground">{dict.details.number || "Invoice No"}:</span>
                     <FormField
-                      control={form.control as any}
+                      control={form.control as unknown}
                       name="invoiceNumber"
                       render={({ field }) => (
                         <FormItem>
@@ -580,11 +530,9 @@ export function InvoiceFormSheet({
                   </div>
 
                   <div className="grid grid-cols-[80px_1fr] items-center gap-2">
-                    <span className="text-[11px] text-muted-foreground">
-                      Issue Date:
-                    </span>
+                    <span className="text-[11px] text-muted-foreground">{dict.details.issued || "Issue Date"}:</span>
                     <FormField
-                      control={form.control as any}
+                      control={form.control as unknown}
                       name="issueDate"
                       render={({ field }) => (
                         <FormItem>
@@ -602,11 +550,9 @@ export function InvoiceFormSheet({
                   </div>
 
                   <div className="grid grid-cols-[80px_1fr] items-center gap-2">
-                    <span className="text-[11px] text-muted-foreground">
-                      Due Date:
-                    </span>
+                    <span className="text-[11px] text-muted-foreground">{dict.details.due || "Due Date"}:</span>
                     <FormField
-                      control={form.control as any}
+                      control={form.control as unknown}
                       name="dueDate"
                       render={({ field }) => (
                         <FormItem>
@@ -627,16 +573,12 @@ export function InvoiceFormSheet({
                 {/* Logo Section */}
                 <div className="flex flex-col items-end">
                   <FormField
-                    control={form.control as any}
+                    control={form.control as unknown}
                     name="logoUrl"
                     render={({ field }) => (
                       <FormItem>
                         <FormControl>
-                          <HashImage
-                            value={field.value}
-                            onChange={field.onChange}
-                            className="w-24 h-24"
-                          />
+                          <HashImage value={field.value} onChange={field.onChange} className="h-24 w-24" />
                         </FormControl>
                       </FormItem>
                     )}
@@ -645,21 +587,19 @@ export function InvoiceFormSheet({
               </div>
 
               {/* ADDRESSES ROW */}
-              <div className="grid grid-cols-2 gap-8 mb-8">
+              <div className="mb-8 grid grid-cols-2 gap-8">
                 {/* From Details */}
                 <div className="flex flex-col gap-2">
-                  <span className="text-[11px] text-muted-foreground">
-                    From
-                  </span>
+                  <span className="text-[11px] text-muted-foreground">{dict.details.from || "From"}</span>
                   <FormField
-                    control={form.control as any}
+                    control={form.control as unknown}
                     name="fromDetails"
                     render={({ field }) => (
                       <FormItem className="h-28">
                         <FormControl>
                           <HashTextarea
                             hasValue={!!field.value}
-                            placeholder="Your Company Details..."
+                            placeholder={dict.placeholders.from_details || "Your Company Details..."}
                             {...field}
                           />
                         </FormControl>
@@ -670,16 +610,16 @@ export function InvoiceFormSheet({
 
                 {/* To Details (Customer) */}
                 <div className="flex flex-col gap-2">
-                  <span className="text-[11px] text-muted-foreground">To</span>
+                  <span className="text-[11px] text-muted-foreground">{dict.details.bill_to || "To"}</span>
                   <FormField
-                    control={form.control as any}
+                    control={form.control as unknown}
                     name="contactId"
                     render={({ field }) => (
                       <FormItem>
                         <SelectContact
                           value={field.value}
                           onChange={field.onChange}
-                          placeholder="Select contact"
+                          placeholder={dict.placeholders.select_contact || "Select contact"}
                         />
                         <FormMessage />
                       </FormItem>
@@ -689,71 +629,63 @@ export function InvoiceFormSheet({
               </div>
 
               {/* LINE ITEMS TABLE */}
-              <div className="flex flex-col mb-12 flex-1">
+              <div className="mb-12 flex flex-1 flex-col">
                 {/* Header */}
                 <div
                   className={cn(
-                    "grid gap-2 items-end mb-2 pb-2 border-b",
+                    "mb-2 grid items-end gap-2 border-b pb-2",
                     showLineItemTax
                       ? "grid-cols-[1.5fr_80px_100px_80px_100px_30px]"
                       : "grid-cols-[1.5fr_100px_100px_100px_30px]",
                   )}
                 >
-                  <span className="text-[11px] text-muted-foreground">
-                    Description
+                  <span className="text-[11px] text-muted-foreground">{dict.columns.description || "Description"}</span>
+                  <span className="pr-2 text-right text-[11px] text-muted-foreground">
+                    {dict.columns.qty || "Quantity"}
                   </span>
-                  <span className="text-[11px] text-muted-foreground text-right pr-2">
-                    Quantity
-                  </span>
-                  <span className="text-[11px] text-muted-foreground text-right pr-2">
-                    Price
+                  <span className="pr-2 text-right text-[11px] text-muted-foreground">
+                    {dict.columns.rate || "Price"}
                   </span>
                   {showLineItemTax && (
-                    <span className="text-[11px] text-muted-foreground text-right pr-2">
-                      Tax (%)
+                    <span className="pr-2 text-right text-[11px] text-muted-foreground">
+                      {dict.columns.tax || "Tax"} (%)
                     </span>
                   )}
-                  <span className="text-[11px] text-muted-foreground text-right">
-                    Total
-                  </span>
-                  <span></span>
+                  <span className="text-right text-[11px] text-muted-foreground">{dict.columns.amount || "Total"}</span>
+                  <span />
                 </div>
 
                 {/* Rows */}
                 <div className="flex flex-col gap-2">
                   {fields.map((field, index) => {
-                    const qty = watchedLineItems[index]?.quantity || 0;
-                    const prc = watchedLineItems[index]?.price || 0;
+                    const qty = watchedLineItems[index].quantity || 0;
+                    const prc = watchedLineItems[index].price || 0;
                     const rowTotal = Number(qty) * Number(prc);
 
                     return (
                       <div
                         key={field.id}
                         className={cn(
-                          "grid gap-2 items-start group",
+                          "group grid items-start gap-2",
                           showLineItemTax
                             ? "grid-cols-[1.5fr_80px_100px_80px_100px_30px]"
                             : "grid-cols-[1.5fr_100px_100px_100px_30px]",
                         )}
                       >
                         <FormField
-                          control={form.control as any}
+                          control={form.control as unknown}
                           name={`lineItems.${index}.name`}
                           render={({ field }) => (
                             <FormItem className="space-y-0">
                               <FormControl>
-                                <HashInput
-                                  hasValue={!!field.value}
-                                  placeholder="Item description"
-                                  {...field}
-                                />
+                                <HashInput hasValue={!!field.value} placeholder="Item description" {...field} />
                               </FormControl>
                             </FormItem>
                           )}
                         />
 
                         <FormField
-                          control={form.control as any}
+                          control={form.control as unknown}
                           name={`lineItems.${index}.quantity`}
                           render={({ field }) => (
                             <FormItem className="space-y-0">
@@ -761,13 +693,9 @@ export function InvoiceFormSheet({
                                 <HashInput
                                   type="number"
                                   hasValue={!!field.value}
-                                  className="text-right tabular-nums pr-2"
+                                  className="pr-2 text-right tabular-nums"
                                   {...field}
-                                  onChange={(e) =>
-                                    field.onChange(
-                                      parseFloat(e.target.value) || 0,
-                                    )
-                                  }
+                                  onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                                 />
                               </FormControl>
                             </FormItem>
@@ -776,24 +704,18 @@ export function InvoiceFormSheet({
 
                         <div className="flex items-center">
                           <FormField
-                            control={form.control as any}
+                            control={form.control as unknown}
                             name={`lineItems.${index}.price`}
                             render={({ field }) => (
-                              <FormItem className="space-y-0 w-full">
+                              <FormItem className="w-full space-y-0">
                                 <FormControl>
                                   <HashInput
                                     type="number"
                                     step="0.01"
-                                    hasValue={
-                                      !!field.value || field.value === 0
-                                    }
-                                    className="text-right tabular-nums pr-2"
+                                    hasValue={!!field.value || field.value === 0}
+                                    className="pr-2 text-right tabular-nums"
                                     {...field}
-                                    onChange={(e) =>
-                                      field.onChange(
-                                        parseFloat(e.target.value) || 0,
-                                      )
-                                    }
+                                    onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                                   />
                                 </FormControl>
                               </FormItem>
@@ -804,24 +726,18 @@ export function InvoiceFormSheet({
                         {showLineItemTax && (
                           <div className="flex items-center">
                             <FormField
-                              control={form.control as any}
+                              control={form.control as unknown}
                               name={`lineItems.${index}.tax`}
                               render={({ field }) => (
-                                <FormItem className="space-y-0 w-full">
+                                <FormItem className="w-full space-y-0">
                                   <FormControl>
                                     <HashInput
                                       type="number"
                                       step="0.1"
-                                      hasValue={
-                                        !!field.value || field.value === 0
-                                      }
-                                      className="text-right tabular-nums pr-2"
+                                      hasValue={!!field.value || field.value === 0}
+                                      className="pr-2 text-right tabular-nums"
                                       {...field}
-                                      onChange={(e) =>
-                                        field.onChange(
-                                          parseFloat(e.target.value) || 0,
-                                        )
-                                      }
+                                      onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                                     />
                                   </FormControl>
                                 </FormItem>
@@ -830,7 +746,7 @@ export function InvoiceFormSheet({
                           </div>
                         )}
 
-                        <div className="text-right text-xs py-1 font-mono tracking-tight flex items-center justify-end">
+                        <div className="flex items-center justify-end py-1 text-right font-mono text-xs tracking-tight">
                           {new Intl.NumberFormat(undefined, {
                             style: "currency",
                             currency: selectedCurrency,
@@ -841,7 +757,7 @@ export function InvoiceFormSheet({
                           type="button"
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity self-center text-muted-foreground hover:text-destructive"
+                          className="h-7 w-7 self-center text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
                           onClick={() => remove(index)}
                           disabled={fields.length <= 1}
                         >
@@ -852,15 +768,17 @@ export function InvoiceFormSheet({
                   })}
                 </div>
 
+                {/* ADD ITEM BUTTON */}
                 <div className="mt-4">
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="gap-2 text-[11px] text-muted-foreground hover:text-foreground h-7 px-2 -ml-2 transition-colors"
-                    onClick={() => append({ name: "", quantity: 1, price: 0 })}
+                    onClick={() => append({ description: "", quantity: 1, rate: 0, tax: 0 })}
+                    className="h-8 gap-1.5 font-medium text-[11px] text-primary transition-colors hover:bg-primary/5 hover:text-primary"
                   >
-                    <Plus className="h-3 w-3" /> Add item
+                    <Plus className="h-3 w-3" />
+                    {dict.actions.add_item || "Add Item"}
                   </Button>
                 </div>
               </div>
@@ -869,29 +787,26 @@ export function InvoiceFormSheet({
               <div className="gap-12">
                 {/* Arithmetic Block */}
                 <div className="flex justify-end">
-                  <div className="w-[300px] flex flex-col pt-2">
-                    <div className="flex justify-between items-center py-1.5 border-b border-transparent">
-                      <span className="text-[11px] text-muted-foreground">
-                        Subtotal
-                      </span>
-                      <span className="text-xs text-muted-foreground tabular-nums font-mono">
+                  <div className="flex w-[300px] flex-col pt-2">
+                    <div className="flex items-center justify-between border-transparent border-b py-1.5">
+                      <span className="text-[11px] text-muted-foreground">{dict.details.subtotal || "Subtotal"}</span>
+                      <span className="font-mono text-muted-foreground text-xs tabular-nums">
                         {new Intl.NumberFormat(undefined, {
                           style: "currency",
                           currency: selectedCurrency,
                         }).format(subtotal)}
                       </span>
                     </div>
+
                     {showVat && (
-                      <div className="flex justify-between items-center py-1.5">
+                      <div className="flex items-center justify-between py-1.5">
                         <div className="flex items-center gap-2">
-                          <span className="text-[11px] text-muted-foreground">
-                            VAT (%)
-                          </span>
+                          <span className="text-[11px] text-muted-foreground">{dict.details.vat || "VAT"} (%)</span>
                           <FormField
                             control={form.control}
                             name="vat"
                             render={({ field }) => (
-                              <FormItem className="space-y-0 w-12">
+                              <FormItem className="w-12 space-y-0">
                                 <FormControl>
                                   <HashInput
                                     type="number"
@@ -899,18 +814,14 @@ export function InvoiceFormSheet({
                                     hasValue={field.value !== undefined}
                                     className="text-[11px] tabular-nums"
                                     {...field}
-                                    onChange={(e) =>
-                                      field.onChange(
-                                        parseFloat(e.target.value) || 0,
-                                      )
-                                    }
+                                    onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                                   />
                                 </FormControl>
                               </FormItem>
                             )}
                           />
                         </div>
-                        <span className="text-xs text-muted-foreground tabular-nums font-mono">
+                        <span className="font-mono text-muted-foreground text-xs tabular-nums">
                           {new Intl.NumberFormat(undefined, {
                             style: "currency",
                             currency: selectedCurrency,
@@ -920,11 +831,11 @@ export function InvoiceFormSheet({
                     )}
 
                     {showLineItemTax && (
-                      <div className="flex justify-between items-center py-1.5">
+                      <div className="flex items-center justify-between py-1.5">
                         <span className="text-[11px] text-muted-foreground">
-                          Line item tax
+                          {dict.settings.line_item_tax || "Line item tax"}
                         </span>
-                        <span className="text-xs text-muted-foreground tabular-nums font-mono">
+                        <span className="font-mono text-muted-foreground text-xs tabular-nums">
                           {new Intl.NumberFormat(undefined, {
                             style: "currency",
                             currency: selectedCurrency,
@@ -933,17 +844,17 @@ export function InvoiceFormSheet({
                       </div>
                     )}
 
-                    {invoiceSettings?.discount && (
-                      <div className="flex justify-between items-center py-1.5">
+                    {invoiceSettings.discount && (
+                      <div className="flex items-center justify-between py-1.5">
                         <div className="flex items-center gap-2">
                           <span className="text-[11px] text-muted-foreground">
-                            Discount (%)
+                            {dict.details.discount || "Discount"} (%)
                           </span>
                           <FormField
                             control={form.control}
                             name="discount"
                             render={({ field }) => (
-                              <FormItem className="space-y-0 w-12">
+                              <FormItem className="w-12 space-y-0">
                                 <FormControl>
                                   <HashInput
                                     type="number"
@@ -951,18 +862,14 @@ export function InvoiceFormSheet({
                                     hasValue={field.value !== undefined}
                                     className="text-[11px] tabular-nums"
                                     {...field}
-                                    onChange={(e) =>
-                                      field.onChange(
-                                        parseFloat(e.target.value) || 0,
-                                      )
-                                    }
+                                    onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                                   />
                                 </FormControl>
                               </FormItem>
                             )}
                           />
                         </div>
-                        <span className="text-xs text-muted-foreground tabular-nums font-mono text-red-500">
+                        <span className="font-mono text-muted-foreground text-red-500 text-xs tabular-nums">
                           -
                           {new Intl.NumberFormat(undefined, {
                             style: "currency",
@@ -972,9 +879,9 @@ export function InvoiceFormSheet({
                       </div>
                     )}
 
-                    <div className="flex justify-between items-center py-4 mt-2 border-t">
-                      <span className="text-[13px] font-medium">Total</span>
-                      <span className="text-xl font-medium font-serif tracking-tight">
+                    <div className="mt-2 flex items-center justify-between border-t py-4">
+                      <span className="font-medium text-[13px]">{dict.details.total || "Total"}</span>
+                      <span className="font-medium font-serif text-xl tracking-tight">
                         {new Intl.NumberFormat(undefined, {
                           style: "currency",
                           currency: selectedCurrency,
@@ -985,11 +892,11 @@ export function InvoiceFormSheet({
                 </div>
 
                 {/* Notes & Payment Block */}
-                <div className="flex-1 flex flex-col gap-6 mt-10">
+                <div className="mt-10 flex flex-1 flex-col gap-6">
                   <div className="grid grid-cols-2 gap-8">
                     <div className="flex flex-col gap-2">
                       <span className="text-[11px] text-muted-foreground">
-                        Payment Details
+                        {dict.details.payment_details || "Payment Details"}
                       </span>
                       <FormField
                         control={form.control}
@@ -999,7 +906,7 @@ export function InvoiceFormSheet({
                             <FormControl>
                               <HashTextarea
                                 hasValue={!!field.value}
-                                placeholder="Bank account, PayPal, etc..."
+                                placeholder={dict.placeholders.payment_details || "Bank account, PayPal, etc..."}
                                 {...field}
                               />
                             </FormControl>
@@ -1008,9 +915,7 @@ export function InvoiceFormSheet({
                       />
                     </div>
                     <div className="flex flex-col gap-2">
-                      <span className="text-[11px] text-muted-foreground">
-                        Note
-                      </span>
+                      <span className="text-[11px] text-muted-foreground">{dict.details.note || "Note"}</span>
                       <FormField
                         control={form.control}
                         name="noteDetails"
@@ -1019,7 +924,7 @@ export function InvoiceFormSheet({
                             <FormControl>
                               <HashTextarea
                                 hasValue={!!field.value}
-                                placeholder="Thank you for your business!"
+                                placeholder={dict.placeholders.note || "Thank you for your business!"}
                                 {...field}
                               />
                             </FormControl>
@@ -1035,39 +940,36 @@ export function InvoiceFormSheet({
         </div>
 
         {/* FIXED BOTTOM ACTIONS (Out of the scroll area) */}
-        <div className="border-t border-border bg-background py-4 px-10 flex justify-between items-center shrink-0">
+        <div className="flex shrink-0 items-center justify-between border-border border-t bg-background px-10 py-4">
           <div className="flex items-center gap-2">
             <InvoiceSettings
               settings={form.watch()}
-              onUpdate={(key, value) =>
-                form.setValue(key as any, value, { shouldDirty: true })
-              }
+              onUpdate={(key, value) => form.setValue(key as unknown, value, { shouldDirty: true })}
               onRename={() => {
                 const newName = prompt(
-                  "Enter template name:",
+                  dict.actions.rename_template || "Enter template name:",
                   form.getValues("templateName"),
                 );
                 if (newName) form.setValue("templateName", newName);
               }}
+              dictionary={dictionary}
             />
-            <div className="flex items-center gap-1.5 px-3 py-1.5 border rounded-md bg-muted/30">
-              <span className="text-xs font-medium">Template:</span>
-              <span className="text-xs text-muted-foreground">
-                {form.watch("templateName")}
-              </span>
+            <div className="flex items-center gap-1.5 rounded-md border bg-muted/30 px-3 py-1.5">
+              <span className="font-medium text-xs">{dict.details.template_label || "Template"}:</span>
+              <span className="text-muted-foreground text-xs">{form.watch("templateName")}</span>
             </div>
           </div>
 
           <div className="flex gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
-              Cancel
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              {dictionary.common.cancel || "Cancel"}
             </Button>
             <Button type="submit" form="invoice-form" disabled={loading}>
-              {loading ? "Saving..." : isEditing ? "Save" : "Create"}
+              {loading
+                ? dictionary.common.saving || "Saving..."
+                : isEditing
+                  ? dictionary.common.save || "Save"
+                  : dictionary.common.create || "Create"}
             </Button>
           </div>
         </div>

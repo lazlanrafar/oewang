@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+
 import { ComingSoonClient } from "@/components/organisms/shared/coming-soon-client";
 
 export const metadata: Metadata = {

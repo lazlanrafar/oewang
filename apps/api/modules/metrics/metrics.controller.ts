@@ -19,8 +19,12 @@ export const metricsController = new Elysia({ prefix: "/metrics" })
   })
   .get(
     "/revenue",
-    async ({ workspaceId }) => {
-      const response = await MetricsService.getRevenue(workspaceId!);
+    async ({ workspaceId, query }) => {
+      const response = await MetricsService.getRevenue(
+        workspaceId!,
+        typeof query?.startDate === "string" ? query.startDate : undefined,
+        typeof query?.endDate === "string" ? query.endDate : undefined,
+      );
       return response;
     },
     {
@@ -29,8 +33,12 @@ export const metricsController = new Elysia({ prefix: "/metrics" })
   )
   .get(
     "/expenses",
-    async ({ workspaceId }) => {
-      const response = await MetricsService.getExpenses(workspaceId!);
+    async ({ workspaceId, query }) => {
+      const response = await MetricsService.getExpenses(
+        workspaceId!,
+        typeof query?.startDate === "string" ? query.startDate : undefined,
+        typeof query?.endDate === "string" ? query.endDate : undefined,
+      );
       return response;
     },
     {
@@ -39,8 +47,12 @@ export const metricsController = new Elysia({ prefix: "/metrics" })
   )
   .get(
     "/burn-rate",
-    async ({ workspaceId }) => {
-      const response = await MetricsService.getBurnRate(workspaceId!);
+    async ({ workspaceId, query }) => {
+      const response = await MetricsService.getBurnRate(
+        workspaceId!,
+        typeof query?.startDate === "string" ? query.startDate : undefined,
+        typeof query?.endDate === "string" ? query.endDate : undefined,
+      );
       return response;
     },
     {
@@ -54,6 +66,8 @@ export const metricsController = new Elysia({ prefix: "/metrics" })
       const response = await MetricsService.getCategoryBreakdown(
         workspaceId!,
         type,
+        typeof query?.startDate === "string" ? query.startDate : undefined,
+        typeof query?.endDate === "string" ? query.endDate : undefined,
       );
       return response;
     },

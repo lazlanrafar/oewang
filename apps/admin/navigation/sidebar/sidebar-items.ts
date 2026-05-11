@@ -4,6 +4,7 @@ import {
   LayoutGrid,
   type LucideIcon,
   Users,
+  Smartphone,
 } from "lucide-react";
 
 export interface NavSubItem {
@@ -65,6 +66,11 @@ export const sidebarItems: NavGroup[] = [
         title: "Pricing",
         url: "/pricing",
         icon: Banknote,
+      },
+      {
+        title: "Apps",
+        url: "/apps",
+        icon: Smartphone,
       },
     ],
   },

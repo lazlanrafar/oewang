@@ -9,7 +9,6 @@ import { logger } from "@workspace/logger";
 
 export const aiController = new Elysia({ prefix: "/ai" })
   .use(authPlugin)
-  .use(encryptionPlugin)
   .derive(({ auth }) => ({
     workspaceId: auth?.workspace_id,
     userId: auth?.user_id,
@@ -78,6 +77,7 @@ export const aiController = new Elysia({ prefix: "/ai" })
   .post(
     "/chat",
     async ({ body, workspaceId, userId, set }) => {
+      console.log(`[AI Controller] /chat hit. Body type: ${typeof body}, Keys: ${Object.keys(body || {})}`);
       try {
         const response = await AiService.chat(
           body.messages,
@@ -93,7 +93,12 @@ export const aiController = new Elysia({ prefix: "/ai" })
           return error.response;
         }
 
-        logger.error("Error generating AI response", { error, userId, sessionId: body.sessionId });
+        logger.error("Error generating AI response", {
+          error: error?.message ?? String(error),
+          errorName: error?.name,
+          userId,
+          sessionId: body.sessionId,
+        });
 
         set.status = 500;
         return buildError(
@@ -123,7 +128,7 @@ export const aiController = new Elysia({ prefix: "/ai" })
         );
         return buildSuccess(result, "Receipt parsed successfully");
       } catch (error: any) {
-        logger.error("Error parsing receipt", { error, workspaceId });
+        logger.error("Error parsing receipt", { error: error?.message ?? String(error), errorName: error?.name, workspaceId });
         set.status = 500;
         return buildError(
           ErrorCode.INTERNAL_ERROR,

@@ -1,6 +1,9 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
+import type { Dictionary } from "@workspace/dictionaries";
+import { deleteWallet, updateWallet } from "@workspace/modules/client";
 import type { Wallet } from "@workspace/types";
 import {
   Button,
@@ -11,11 +14,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@workspace/ui";
+import { isValid } from "date-fns";
 import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { deleteWallet, updateWallet } from "@workspace/modules/client";
+
 import { SelectAccountGroup } from "@/components/molecules/select-account-group";
-import { useQueryClient } from "@tanstack/react-query";
+import { useConfirm } from "@/components/providers/confirm-modal-provider";
 
 const CellActions = ({
   row,
@@ -24,13 +28,21 @@ const CellActions = ({
 }: {
   row: { original: Wallet };
   onEdit: (wallet: Wallet) => void;
-  dictionary: any;
+  dictionary: Dictionary;
 }) => {
   const wallet = row.original;
   const queryClient = useQueryClient();
+  const confirm = useConfirm();
 
   const handleDelete = async () => {
-    if (!confirm(dictionary.accounts.confirmations.delete)) return;
+    const ok = await confirm({
+      title: dictionary.accounts.confirmations.delete,
+      description: "This action cannot be undone.",
+      confirmLabel: dictionary.common.delete,
+      cancelLabel: dictionary.common.cancel,
+      destructive: true,
+    });
+    if (!ok) return;
 
     try {
       const result = await deleteWallet(wallet.id);
@@ -40,8 +52,8 @@ const CellActions = ({
       } else {
         toast.error(result.error || dictionary.accounts.toasts.delete_failed);
       }
-    } catch (error) {
-      toast.error(dictionary.settings.common.error);
+    } catch (_error) {
+      toast.error(dictionary.common.error);
     }
   };
 
@@ -49,16 +61,12 @@ const CellActions = ({
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="h-8 w-8 p-0">
-          <span className="sr-only">
-            {dictionary.settings.common.open_menu}
-          </span>
+          <span className="sr-only">{dictionary.common.open_menu}</span>
           <MoreHorizontal className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuLabel>
-          {dictionary.accounts.table.actions}
-        </DropdownMenuLabel>
+        <DropdownMenuLabel>{dictionary.accounts.table.actions}</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => onEdit(wallet)}>
           <Pencil className="mr-2 h-4 w-4" />
@@ -66,7 +74,7 @@ const CellActions = ({
         </DropdownMenuItem>
         <DropdownMenuItem onClick={handleDelete} className="text-destructive">
           <Trash2 className="mr-2 h-4 w-4" />
-          <span>{dictionary.settings.common.delete}</span>
+          <span>{dictionary.common.delete}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -80,7 +88,7 @@ const GroupCell = ({
 }: {
   wallet: Wallet;
   updateWalletInCache: (updatedWallet: Wallet) => void;
-  dictionary: any;
+  dictionary: Dictionary;
 }) => {
   const handleGroupChange = async (groupId: string) => {
     try {
@@ -91,19 +99,31 @@ const GroupCell = ({
       } else {
         toast.error(res.error || dictionary.accounts.toasts.group_update_failed);
       }
-    } catch (error) {
-      toast.error(dictionary.settings.common.error);
+    } catch (_error) {
+      toast.error(dictionary.common.error);
     }
   };
 
   return (
-    <div onClick={(e) => e.stopPropagation()}>
+    // biome-ignore lint/a11y/useSemanticElements: wrapper to stop propagation without invalid HTML nesting
+    <div
+      onClick={(e) => e.stopPropagation()}
+      onKeyDown={(e) => e.key === "Enter" && e.stopPropagation()}
+      role="button"
+      tabIndex={-1}
+    >
       <SelectAccountGroup
         value={wallet.groupId || undefined}
         onChange={handleGroupChange}
         variant="ghost"
         className="h-8 w-full justify-start font-normal"
         placeholder={dictionary.accounts.group_placeholder}
+        popoverProps={{
+          portal: true,
+          align: "start",
+          side: "bottom",
+          sideOffset: 6,
+        }}
       />
     </div>
   );
@@ -112,7 +132,7 @@ const GroupCell = ({
 export const accountColumns = (
   onEdit: (wallet: Wallet) => void,
   updateWalletInCache: (updatedWallet: Wallet) => void,
-  dictionary: any,
+  dictionary: Dictionary,
 ): ColumnDef<Wallet>[] => [
   {
     accessorKey: "name",
@@ -129,8 +149,8 @@ export const accountColumns = (
         "w-[200px] min-w-[120px] md:sticky md:left-[var(--stick-left)] bg-background group-hover:bg-[#F2F1EF] group-hover:dark:bg-[#0f0f0f] z-10",
     },
     cell: ({ getValue }) => (
-      <span className="truncate font-medium font-sans px-2">
-        {getValue<string>() || (dictionary?.settings?.common?.na ?? "N/A")}
+      <span className="truncate px-2 font-medium font-sans">
+        {getValue<string>() || (dictionary.common.na ?? "N/A")}
       </span>
     ),
   },
@@ -146,11 +166,7 @@ export const accountColumns = (
       className: "w-[150px] min-w-[100px]",
     },
     cell: ({ row }) => (
-      <GroupCell
-        wallet={row.original}
-        updateWalletInCache={updateWalletInCache}
-        dictionary={dictionary}
-      />
+      <GroupCell wallet={row.original} updateWalletInCache={updateWalletInCache} dictionary={dictionary} />
     ),
   },
   {
@@ -166,10 +182,10 @@ export const accountColumns = (
     },
     cell: ({ getValue, table }) => {
       const balance = getValue<number>();
-      const { formatCurrency } = (table.options.meta as any) || {};
+      const { formatCurrency } = (table.options.meta || {}) as { formatCurrency?: (value: number) => string };
 
       return (
-        <span className="font-sans font-medium text-right block w-full text-sm px-2">
+        <span className="block w-full px-2 text-right font-medium font-sans text-sm">
           {formatCurrency ? formatCurrency(balance) : balance}
         </span>
       );
@@ -188,14 +204,17 @@ export const accountColumns = (
     },
     cell: ({ getValue }) => {
       const val = getValue<string>();
-      if (!val) return dictionary?.settings?.common?.na ?? "N/A";
+      if (!val) return dictionary.common.na ?? "N/A";
+      const date = new Date(val);
       return (
-        <span className="font-sans text-muted-foreground px-2">
-          {new Date(val).toLocaleDateString(dictionary?.language?.locale || "en-US", {
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-          })}
+        <span className="px-2 font-sans text-muted-foreground">
+          {isValid(date)
+            ? date.toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "short",
+                day: "numeric",
+              })
+            : (dictionary.common.na ?? "N/A")}
         </span>
       );
     },
@@ -207,8 +226,6 @@ export const accountColumns = (
     meta: {
       headerLabel: dictionary.accounts.table.actions,
     },
-    cell: ({ row }) => (
-      <CellActions row={row} onEdit={onEdit} dictionary={dictionary} />
-    ),
+    cell: ({ row }) => <CellActions row={row} onEdit={onEdit} dictionary={dictionary} />,
   },
 ];

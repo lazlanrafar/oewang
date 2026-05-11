@@ -26,7 +26,7 @@ const FAQS = [
   {
     question: "How is my data protected?",
     answer:
-      "All data in Oewang is encrypted end-to-end using AES-256 encryption. You control what gets connected and shared at all times. We never sell your data.",
+      "Oewang protects data with encryption in transit and at rest, strict authentication, and workspace-based access controls. Users can only access data they own or data shared in workspaces they actively belong to.",
   },
   {
     question: "Can I export my data?",

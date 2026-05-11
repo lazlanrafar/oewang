@@ -1,21 +1,14 @@
-import {
-  pgTable,
-  text,
-  timestamp,
-  uuid,
-  decimal,
-  jsonb,
-  boolean,
-} from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
+import { pgTable, text, timestamp, decimal, jsonb, boolean } from "drizzle-orm/pg-core";
 import { workspaces } from "./workspaces";
 import { contacts } from "./contacts";
 
 export const invoices = pgTable("invoices", {
-  id: uuid("id").defaultRandom().primaryKey().notNull(),
-  workspaceId: uuid("workspace_id")
+  id: text("id").$defaultFn(createId).primaryKey().notNull(),
+  workspaceId: text("workspace_id")
     .notNull()
     .references(() => workspaces.id, { onDelete: "cascade" }),
-  contactId: uuid("contact_id")
+  contactId: text("contact_id")
     .notNull()
     .references(() => contacts.id, { onDelete: "restrict" }),
   invoiceNumber: text("invoice_number").notNull(),

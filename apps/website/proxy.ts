@@ -20,13 +20,17 @@ function getLocale(request: NextRequest): string | undefined {
     negotiatorHeaders[key] = value;
   });
 
+  const rawLanguages = new Negotiator({ headers: negotiatorHeaders }).languages();
+  const normalizedLanguages = rawLanguages.map((lang) => {
+    const lower = lang.toLowerCase();
+    if (lower.startsWith("id")) return "id";
+    if (lower.startsWith("ja") || lower.startsWith("jp")) return "ja";
+    return "en";
+  });
+
   // @ts-expect-error locales are readonly
   const locales: string[] = i18n.locales;
-  const languages = new Negotiator({ headers: negotiatorHeaders }).languages(
-    locales,
-  );
-
-  return matchLocale(languages, locales, i18n.defaultLocale);
+  return matchLocale(normalizedLanguages, locales, i18n.defaultLocale);
 }
 
 export async function proxy(request: NextRequest) {
@@ -34,6 +38,14 @@ export async function proxy(request: NextRequest) {
 
   // Ignore static assets and ignored paths
   if (IGNORED_LOCALE_PATHS.some((path) => pathname.startsWith(path))) return;
+
+  // Support /jp alias and redirect to /ja.
+  if (pathname === "/jp" || pathname.startsWith("/jp/")) {
+    const normalized = pathname.replace(/^\/jp(?=\/|$)/, "/ja");
+    const url = new URL(normalized, request.url);
+    url.search = request.nextUrl.search;
+    return NextResponse.redirect(url);
+  }
 
   // Check if there is any supported locale in the pathname
   const pathnameIsMissingLocale = i18n.locales.every(

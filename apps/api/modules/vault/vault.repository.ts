@@ -50,6 +50,28 @@ export abstract class VaultRepository {
     return file ?? null;
   }
 
+  static async findExistingByFingerprint(
+    workspaceId: string,
+    fingerprint: { sha256: string; size: number; type: string },
+  ) {
+    const [file] = await db
+      .select()
+      .from(vaultFiles)
+      .where(
+        and(
+          eq(vaultFiles.workspaceId, workspaceId),
+          eq(vaultFiles.size, fingerprint.size),
+          eq(vaultFiles.type, fingerprint.type),
+          isNull(vaultFiles.deletedAt),
+          sql`(${vaultFiles.metadata})::jsonb ->> 'sha256' = ${fingerprint.sha256}`,
+        ),
+      )
+      .orderBy(desc(vaultFiles.createdAt))
+      .limit(1);
+
+    return file ?? null;
+  }
+
   static async delete(id: string, workspaceId: string) {
     const [file] = await db
       .update(vaultFiles)
@@ -159,6 +181,15 @@ export abstract class VaultRepository {
       .where(eq(workspaces.id, workspaceId));
   }
 
+  static async incrementVaultSize(workspaceId: string, deltaBytes: number) {
+    await db
+      .update(workspaces)
+      .set({
+        vault_size_used_bytes: sql`GREATEST(0, ${workspaces.vault_size_used_bytes} + ${deltaBytes})`,
+      })
+      .where(eq(workspaces.id, workspaceId));
+  }
+
   static async updateWorkspaceSubscription(workspaceId: string, data: any) {
     await db
       .update(workspaces)
@@ -218,5 +249,20 @@ export abstract class VaultRepository {
     }
 
     return results;
+  }
+
+  static async countActiveReferencesByKey(workspaceId: string, key: string) {
+    const [result] = await db
+      .select({ value: count() })
+      .from(vaultFiles)
+      .where(
+        and(
+          eq(vaultFiles.workspaceId, workspaceId),
+          eq(vaultFiles.key, key),
+          isNull(vaultFiles.deletedAt),
+        ),
+      );
+
+    return result?.value ?? 0;
   }
 }

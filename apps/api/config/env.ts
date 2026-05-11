@@ -36,7 +36,15 @@ const apiEnvSchema = z.object({
       });
     }
   }).optional(),
-  MAYAR_WEBHOOK_TOKEN: z.string().optional(),
+  MAYAR_WEBHOOK_TOKEN: z.string().superRefine((val, ctx) => {
+    if (process.env.NODE_ENV === "production" && !val) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "MAYAR_WEBHOOK_TOKEN is required in production",
+        path: ["MAYAR_WEBHOOK_TOKEN"],
+      });
+    }
+  }).optional(),
 
   // AI
   OPENAI_API_KEY: z.string().min(1).optional(),
@@ -50,10 +58,8 @@ const apiEnvSchema = z.object({
   CURRENCYFREAKS_API_KEY: z.string().optional(),
 
   // WhatsApp / Twilio / Telegram
-  WHATSAPP_ACCESS_TOKEN: z.string().optional(),
-  WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),
-  WHATSAPP_VERIFY_TOKEN: z.string().optional(),
   TELEGRAM_BOT_TOKEN: z.string().optional(),
+  TELEGRAM_WEBHOOK_SECRET: z.string().optional(),
   TWILIO_ACCOUNT_SID: z.string().optional(),
   TWILIO_AUTH_TOKEN: z.string().optional(),
   TWILIO_WHATSAPP_NUMBER: z.string().optional(),

@@ -43,10 +43,10 @@ export default async function OverviewPage({
     <ScrollArea className="flex flex-col min-h-full h-full relative space-y-8">
       <div className="dashboard-greeting flex flex-col md:flex-row items-start md:items-center justify-between">
         <div>
-          <h1 className="text-2xl font-regular tracking-tight text-foreground">
+          <h1 className="font-serif text-3xl tracking-tight text-foreground">
             {getGreeting()} {displayName},
           </h1>
-          <p className="mt-1 text-xm text-muted-foreground">
+          <p className="mt-1 text-muted-foreground text-xs">
             here's a quick look at how things are going.
           </p>
         </div>

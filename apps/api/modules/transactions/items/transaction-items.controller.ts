@@ -6,6 +6,7 @@ import { encryptionPlugin } from "../../../plugins/encryption";
 import { buildError } from "@workspace/utils";
 import { ErrorCode } from "@workspace/types";
 import { status } from "elysia";
+import { assertCanEditWorkspaceData } from "../../workspaces/workspace-permissions";
 
 export const transactionItemsController = new Elysia({
   prefix: "/:id/items",
@@ -37,6 +38,7 @@ export const transactionItemsController = new Elysia({
       if (!auth?.workspace_id) {
         throw status(401, buildError(ErrorCode.UNAUTHORIZED, "Unauthorized"));
       }
+      assertCanEditWorkspaceData(auth.workspace_role);
       return TransactionItemsService.bulkCreate(
         auth.workspace_id,
         auth.user_id,
@@ -60,6 +62,7 @@ export const transactionItemsController = new Elysia({
       if (!auth?.workspace_id) {
         throw status(401, buildError(ErrorCode.UNAUTHORIZED, "Unauthorized"));
       }
+      assertCanEditWorkspaceData(auth.workspace_role);
       return TransactionItemsService.bulkCreate(
         auth.workspace_id,
         auth.user_id,
@@ -83,6 +86,7 @@ export const transactionItemsController = new Elysia({
       if (!auth?.workspace_id) {
         throw status(401, buildError(ErrorCode.UNAUTHORIZED, "Unauthorized"));
       }
+      assertCanEditWorkspaceData(auth.workspace_role);
       return TransactionItemsService.delete(
         auth.workspace_id,
         auth.user_id,

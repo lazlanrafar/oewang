@@ -4,13 +4,13 @@ export default function Loading() {
   return (
     <div className="space-y-6">
       <div>
-        <Skeleton className="h-7 w-[150px] mb-2" />
+        <Skeleton className="mb-2 h-7 w-[150px]" />
         <Skeleton className="h-4 w-[300px]" />
       </div>
       <Separator />
       <Card>
         <CardHeader>
-          <Skeleton className="h-5 w-[200px] mb-2" />
+          <Skeleton className="mb-2 h-5 w-[200px]" />
           <Skeleton className="h-4 w-[350px]" />
         </CardHeader>
         <CardContent className="space-y-4">

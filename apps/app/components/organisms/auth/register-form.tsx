@@ -3,42 +3,42 @@
 import { useTransition } from "react";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  Button,
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-  Input,
-} from "@workspace/ui";
+import type { Dictionary } from "@workspace/dictionaries";
+import { signup } from "@workspace/modules/auth/auth.action";
+import { Button, Form, FormControl, FormField, FormItem, FormLabel, FormMessage, Input } from "@workspace/ui";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
-import { signup } from "@workspace/modules/auth/auth.action";
+const getFormSchema = (dictionary: Dictionary) => {
+  if (!dictionary) {
+    return z
+      .object({
+        email: z.string().email(),
+        password: z.string().min(6),
+        confirmPassword: z.string().min(6),
+      })
+      .refine((data) => data.password === data.confirmPassword, {
+        path: ["confirmPassword"],
+      });
+  }
+  return z
+    .object({
+      email: z.string().email({ message: dictionary.auth.form.validation.email_invalid }),
+      password: z.string().min(6, { message: dictionary.auth.form.validation.password_min }),
+      confirmPassword: z.string().min(6, { message: dictionary.auth.form.validation.password_min }),
+    })
+    .refine((data) => data.password === data.confirmPassword, {
+      message: dictionary.auth.form.validation.password_mismatch,
+      path: ["confirmPassword"],
+    });
+};
 
-const FormSchema = z
-  .object({
-    email: z.string().email({ message: "Please enter a valid email address." }),
-    password: z
-      .string()
-      .min(6, { message: "Password must be at least 6 characters." }),
-    confirmPassword: z
-      .string()
-      .min(6, { message: "Confirm Password must be at least 6 characters." }),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords do not match.",
-    path: ["confirmPassword"],
-  });
-
-export function RegisterForm() {
+export function RegisterForm({ dictionary }: { dictionary: Dictionary }) {
   const [is_pending, start_transition] = useTransition();
 
-  const form = useForm<z.infer<typeof FormSchema>>({
-    resolver: zodResolver(FormSchema as any),
+  const form = useForm<z.infer<ReturnType<typeof getFormSchema>>>({
+    resolver: zodResolver(getFormSchema(dictionary)),
     defaultValues: {
       email: "",
       password: "",
@@ -46,7 +46,9 @@ export function RegisterForm() {
     },
   });
 
-  const onSubmit = async (data: z.infer<typeof FormSchema>) => {
+  if (!dictionary) return null;
+
+  const onSubmit = async (data: z.infer<ReturnType<typeof getFormSchema>>) => {
     start_transition(async () => {
       const form_data = new FormData();
       form_data.append("email", data.email);
@@ -54,7 +56,7 @@ export function RegisterForm() {
 
       const result = await signup(form_data);
       if (result.success) {
-        toast.success("Account created successfully", {
+        toast.success(dictionary.auth.form.toasts.register_success, {
           description: "Please check your email to verify your account.",
         });
       } else {
@@ -71,12 +73,11 @@ export function RegisterForm() {
           name="email"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Email Address</FormLabel>
+              <FormLabel>{dictionary.auth.form.email_label}</FormLabel>
               <FormControl>
                 <Input
-                  id="email"
                   type="email"
-                  placeholder="you@example.com"
+                  placeholder={dictionary.auth.form.email_placeholder}
                   autoComplete="email"
                   disabled={is_pending}
                   {...field}
@@ -91,12 +92,11 @@ export function RegisterForm() {
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Password</FormLabel>
+              <FormLabel>{dictionary.auth.form.password_label}</FormLabel>
               <FormControl>
                 <Input
-                  id="password"
                   type="password"
-                  placeholder="••••••••"
+                  placeholder={dictionary.auth.form.password_placeholder}
                   autoComplete="new-password"
                   disabled={is_pending}
                   {...field}
@@ -111,12 +111,11 @@ export function RegisterForm() {
           name="confirmPassword"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Confirm Password</FormLabel>
+              <FormLabel>{dictionary.auth.form.confirm_password_label}</FormLabel>
               <FormControl>
                 <Input
-                  id="confirmPassword"
                   type="password"
-                  placeholder="••••••••"
+                  placeholder={dictionary.auth.form.password_placeholder}
                   autoComplete="new-password"
                   disabled={is_pending}
                   {...field}
@@ -127,7 +126,7 @@ export function RegisterForm() {
           )}
         />
         <Button className="w-full" type="submit" disabled={is_pending}>
-          {is_pending ? "Creating account..." : "Register"}
+          {is_pending ? dictionary.auth.form.registering : dictionary.auth.form.register_button}
         </Button>
       </form>
     </Form>

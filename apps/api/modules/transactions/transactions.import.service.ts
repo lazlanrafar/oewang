@@ -49,9 +49,9 @@ export abstract class TransactionsImportService {
         walletNames,
         categoryNames,
         {
-          geminiKey: process.env.GEMINI_API_KEY,
-          openaiKey: process.env.OPENAI_API_KEY,
-          anthropicKey: process.env.ANTHROPIC_API_KEY,
+          geminiKey: Env.GEMINI_API_KEY,
+          openaiKey: Env.OPENAI_API_KEY,
+          anthropicKey: Env.ANTHROPIC_API_KEY,
         }
       );
     } catch (err: any) {

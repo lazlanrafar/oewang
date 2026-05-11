@@ -1,9 +1,14 @@
 "use client";
 
-import { TableSkeleton } from "@workspace/ui";
+import type { ColumnDef } from "@tanstack/react-table";
+import { Skeleton, TableSkeleton } from "@workspace/ui";
 
-export function TransactionTableSkeleton({ hideHeader = false }: { hideHeader?: boolean }) {
-  const columns = [
+export function TransactionTableSkeleton({
+  hideHeader = false,
+}: {
+  hideHeader?: boolean;
+}) {
+  const columns: ColumnDef<Record<string, string>>[] = [
     { id: "select", header: "" },
     { id: "date", header: "Date" },
     { id: "type", header: "Type" },
@@ -15,21 +20,28 @@ export function TransactionTableSkeleton({ hideHeader = false }: { hideHeader?: 
   ];
 
   return (
-    <div className="flex w-full flex-col h-full space-y-4">
-      {/* Skeleton for Header (Search and Actions) */}
+    <div className="flex h-full w-full flex-col space-y-4">
+      {/* Skeleton toolbar — mirrors the actual transaction page header */}
       {!hideHeader && (
-        <div className="flex items-center justify-between gap-4 shrink-0">
-          <div className="flex items-center flex-1 max-w-sm h-10 bg-muted/30 animate-pulse rounded-md" />
+        <div className="flex shrink-0 items-center justify-between gap-3">
+          {/* Left: search + filter icon */}
+          <div className="flex flex-1 items-center gap-2">
+            <Skeleton className="h-9 max-w-sm flex-1" />
+          </div>
+          {/* Right: grouping selector + date range + columns + backup + add */}
           <div className="flex items-center gap-2">
-            <div className="w-24 h-9 bg-muted/30 animate-pulse rounded-md" />
-            <div className="w-24 h-9 bg-muted/30 animate-pulse rounded-md" />
+            <Skeleton className="h-9 w-[110px]" />
+            <Skeleton className="h-9 w-[180px]" />
+            <Skeleton className="h-9 w-9" />
+            <Skeleton className="h-9 w-[100px]" />
+            <Skeleton className="h-9 w-9" />
           </div>
         </div>
       )}
 
-      <div className="flex-1 min-h-0 relative">
+      <div className="relative min-h-0 flex-1">
         <TableSkeleton
-          columns={columns as any}
+          columns={columns}
           rowCount={20}
           stickyColumnIds={["select", "date", "name", "actions"]}
           actionsColumnId="actions"

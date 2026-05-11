@@ -1,4 +1,5 @@
-import { pgTable, text, timestamp, uuid, decimal, pgEnum } from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
+import { pgTable, text, timestamp, decimal, pgEnum } from "drizzle-orm/pg-core";
 import { workspaces } from "./workspaces";
 import { transactions } from "./transactions";
 import { contacts } from "./contacts";
@@ -8,14 +9,14 @@ export const debtOriginEnum = pgEnum("debt_origin", ["manual", "from_transaction
 export const debtStatusEnum = pgEnum("debt_status", ["unpaid", "partial", "paid"]);
 
 export const debts = pgTable("debts", {
-  id: uuid("id").defaultRandom().primaryKey().notNull(),
-  workspaceId: uuid("workspace_id")
+  id: text("id").$defaultFn(createId).primaryKey().notNull(),
+  workspaceId: text("workspace_id")
     .notNull()
     .references(() => workspaces.id, { onDelete: "cascade" }),
-  contactId: uuid("contact_id")
+  contactId: text("contact_id")
     .notNull()
     .references(() => contacts.id, { onDelete: "cascade" }),
-  sourceTransactionId: uuid("source_transaction_id")
+  sourceTransactionId: text("source_transaction_id")
     .references(() => transactions.id, { onDelete: "set null" }),
   type: debtTypeEnum("type").notNull(),
   origin: debtOriginEnum("origin").default("manual").notNull(),

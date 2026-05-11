@@ -7,7 +7,7 @@ export const DebtsModel = {
     endDate: t.Optional(t.String()),
     search: t.Optional(t.String()),
     page: t.Optional(t.Numeric({ minimum: 1 })),
-    limit: t.Optional(t.Numeric({ minimum: 1, maximum: 100 })),
+    limit: t.Optional(t.Numeric({ minimum: 1, maximum: 1000 })),
   }),
   create: t.Object({
     contactId: t.String(),

@@ -11,11 +11,18 @@ export interface ChartDataPoint {
   average?: number;
 }
 
-export const getRevenueMetrics = async (): Promise<
+export interface MetricsDateRangeParams {
+  startDate?: string;
+  endDate?: string;
+}
+
+export const getRevenueMetrics = async (
+  params?: MetricsDateRangeParams,
+): Promise<
   ActionResponse<ChartDataPoint[]>
 > => {
   try {
-    const res = await api.get("/metrics/revenue");
+    const res = await api.get("/metrics/revenue", { params });
     return { success: true, data: res.data?.data || [] };
   } catch (error: any) {
     return {
@@ -26,11 +33,13 @@ export const getRevenueMetrics = async (): Promise<
   }
 };
 
-export const getExpenseMetrics = async (): Promise<
+export const getExpenseMetrics = async (
+  params?: MetricsDateRangeParams,
+): Promise<
   ActionResponse<ChartDataPoint[]>
 > => {
   try {
-    const res = await api.get("/metrics/expenses");
+    const res = await api.get("/metrics/expenses", { params });
     return { success: true, data: res.data?.data || [] };
   } catch (error: any) {
     return {
@@ -41,11 +50,13 @@ export const getExpenseMetrics = async (): Promise<
   }
 };
 
-export const getBurnRateMetrics = async (): Promise<
+export const getBurnRateMetrics = async (
+  params?: MetricsDateRangeParams,
+): Promise<
   ActionResponse<ChartDataPoint[]>
 > => {
   try {
-    const res = await api.get("/metrics/burn-rate");
+    const res = await api.get("/metrics/burn-rate", { params });
     return { success: true, data: res.data?.data || [] };
   } catch (error: any) {
     return {
@@ -64,10 +75,11 @@ export interface CategoryBreakdownPoint {
 
 export const getCategoryBreakdown = async (
   type: "income" | "expense" = "expense",
+  params?: MetricsDateRangeParams,
 ): Promise<ActionResponse<CategoryBreakdownPoint[]>> => {
   try {
     const res = await api.get("/metrics/category-breakdown", {
-      params: { type },
+      params: { type, ...params },
     });
     return { success: true, data: res.data?.data || [] };
   } catch (error: any) {

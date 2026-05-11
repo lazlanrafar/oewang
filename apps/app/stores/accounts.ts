@@ -2,8 +2,8 @@ import type { Column, RowSelectionState, Updater } from "@tanstack/react-table";
 import { create } from "zustand";
 
 interface AccountsState {
-  columns: Column<any, unknown>[];
-  setColumns: (columns?: Column<any, unknown>[]) => void;
+  columns: Column<Record<string, unknown>, unknown>[];
+  setColumns: (columns?: Column<Record<string, unknown>, unknown>[]) => void;
   rowSelection: Record<string, boolean>;
   setRowSelection: (updater: Updater<RowSelectionState>) => void;
   clearRowSelection: () => void;
@@ -15,8 +15,7 @@ export const useAccountsStore = create<AccountsState>()((set) => ({
   setColumns: (columns) => set({ columns: columns || [] }),
   setRowSelection: (updater: Updater<RowSelectionState>) =>
     set((state) => {
-      const newSelection =
-        typeof updater === "function" ? updater(state.rowSelection) : updater;
+      const newSelection = typeof updater === "function" ? updater(state.rowSelection) : updater;
       return { rowSelection: newSelection };
     }),
   clearRowSelection: () => set({ rowSelection: {} }),

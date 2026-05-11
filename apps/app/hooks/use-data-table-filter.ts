@@ -1,17 +1,20 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
-import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import type { PaginationState } from "@tanstack/react-table";
+import { useEffect, useState, useTransition } from "react";
 
-interface UseDataTableFilterOptions<T extends Record<string, any>> {
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+
+import type { PaginationState, Updater } from "@tanstack/react-table";
+import type { FilterRecord, PrimitiveFilterValue } from "@workspace/types";
+
+interface UseDataTableFilterOptions<T extends FilterRecord> {
   initialFilters: T;
   pageSize?: number;
   initialPage?: number;
   debounceMs?: number;
 }
 
-export function useDataTableFilter<T extends Record<string, any>>({
+export function useDataTableFilter<T extends FilterRecord>({
   initialFilters,
   pageSize = 10,
   initialPage = 0,
@@ -29,16 +32,18 @@ export function useDataTableFilter<T extends Record<string, any>>({
 
   const [filters, setFilters] = useState<T>(() => {
     const currentFilters = { ...initialFilters };
-    for (const key in initialFilters) {
-      const paramKey = key === "q" ? "search" : key;
-      const isArrayDefault = Array.isArray(initialFilters[key]);
-      
+    for (const rawKey of Object.keys(initialFilters)) {
+      const key = rawKey as keyof T;
+      const paramKey = rawKey === "q" ? "search" : rawKey;
+      const initialValue = initialFilters[key];
+      const isArrayDefault = Array.isArray(initialValue);
+
       if (isArrayDefault) {
         const values = searchParams.getAll(paramKey);
-        currentFilters[key as keyof T] = (values.length > 0 ? values : initialFilters[key]) as any;
+        currentFilters[key] = (values.length > 0 ? values : initialValue) as T[keyof T];
       } else {
         const value = searchParams.get(paramKey);
-        currentFilters[key as keyof T] = (value || initialFilters[key]) as any;
+        currentFilters[key] = ((value || initialValue) as PrimitiveFilterValue) as T[keyof T];
       }
     }
     return currentFilters;
@@ -48,9 +53,8 @@ export function useDataTableFilter<T extends Record<string, any>>({
     setFilters(newFilters);
   };
 
-  const handlePaginationChange = (updater: any) => {
-    const nextValue =
-      typeof updater === "function" ? updater(pagination) : updater;
+  const handlePaginationChange = (updater: Updater<PaginationState>) => {
+    const nextValue = typeof updater === "function" ? updater(pagination) : updater;
 
     setPagination(nextValue);
 
@@ -68,9 +72,10 @@ export function useDataTableFilter<T extends Record<string, any>>({
       const params = new URLSearchParams(searchParams.toString());
       let hasChanges = false;
 
-      for (const key in filters) {
+      for (const rawKey of Object.keys(filters)) {
+        const key = rawKey as keyof T;
         const value = filters[key];
-        const paramKey = key === "q" ? "search" : key;
+        const paramKey = rawKey === "q" ? "search" : rawKey;
         const currentValue = params.get(paramKey);
 
         if (value !== undefined && value !== null && value !== "") {
@@ -78,7 +83,7 @@ export function useDataTableFilter<T extends Record<string, any>>({
             const currentValues = params.getAll(paramKey);
             if (JSON.stringify([...currentValues].sort()) !== JSON.stringify([...value].map(String).sort())) {
               params.delete(paramKey);
-              for (const v of value as any[]) {
+              for (const v of value) {
                 params.append(paramKey, String(v));
               }
               params.set("page", "1");

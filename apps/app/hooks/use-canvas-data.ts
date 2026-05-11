@@ -1,12 +1,13 @@
 "use client";
 
-import { useChatMessages } from "@ai-sdk-tools/store";
 import { useMemo } from "react";
+
+import { useChatMessages } from "@ai-sdk-tools/store";
 import type { ArtifactType } from "@workspace/constants";
 
-export function useCanvasData<T = any>(type: ArtifactType) {
+export function useCanvasData<T = unknown>(type: ArtifactType) {
   const chatData = useChatMessages();
-  const messages = Array.isArray(chatData) ? chatData : (chatData as any)?.messages || [];
+  const messages = Array.isArray(chatData) ? chatData : (chatData as unknown)?.messages || [];
 
   const data = useMemo<T | null>(() => {
     // Search backwards for the latest message with this artifact type
@@ -15,16 +16,16 @@ export function useCanvasData<T = any>(type: ArtifactType) {
       if (!msg || msg.role !== "assistant") continue;
 
       // First search in parts (AI SDK streaming format)
-      const artifactPart = (msg as any).parts?.find(
-        (p: any) => p.type === "artifact" && p.artifactType === type,
+      const artifactPart = (msg as unknown).parts?.find(
+        (p: unknown) => p.type === "artifact" && p.artifactType === type,
       );
 
       if (artifactPart) {
-        return (artifactPart as any).payload as T;
+        return (artifactPart as unknown).payload as T;
       }
 
       // Then check in attachments (where we save from server-side non-streaming response)
-      const attachmentArtifact = (msg as any).attachments?.artifact;
+      const attachmentArtifact = (msg as unknown).attachments?.artifact;
       if (attachmentArtifact && attachmentArtifact.type === type) {
         return attachmentArtifact.payload as T;
       }

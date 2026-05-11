@@ -6,22 +6,17 @@ import {
   eq,
   isNull,
   gte,
+  lte,
   sql,
 } from "@workspace/database";
-import { subMonths, startOfMonth } from "date-fns";
 
 export abstract class MetricsRepository {
-  /**
-   * Gets the total sum of transactions of a specific type
-   * grouped by month over the last 12 months.
-   */
   static async getMonthlyTotalsByType(
     workspaceId: string,
     type: "income" | "expense",
-    monthsAgo = 11,
+    startDate: Date,
+    endDate: Date,
   ) {
-    const startDate = startOfMonth(subMonths(new Date(), monthsAgo));
-
     const result = await db
       .select({
         month: sql<string>`to_char(date_trunc('month', ${transactions.date}::timestamp), 'Mon ''YY')`,
@@ -33,6 +28,7 @@ export abstract class MetricsRepository {
           eq(transactions.workspaceId, workspaceId),
           eq(transactions.type, type),
           gte(transactions.date, startDate.toISOString()),
+          lte(transactions.date, endDate.toISOString()),
           isNull(transactions.deletedAt),
         ),
       )
@@ -42,16 +38,12 @@ export abstract class MetricsRepository {
     return result;
   }
 
-  /**
-   * Gets total sum of transactions by category for a specific type (e.g., expense)
-   * over the current month (or a specified time period).
-   */
   static async getCategoryBreakdown(
     workspaceId: string,
     type: "income" | "expense",
+    startDate: Date,
+    endDate: Date,
   ) {
-    const startDate = startOfMonth(new Date());
-
     const result = await db
       .select({
         categoryId: transactions.categoryId,
@@ -65,6 +57,7 @@ export abstract class MetricsRepository {
           eq(transactions.workspaceId, workspaceId),
           eq(transactions.type, type),
           gte(transactions.date, startDate.toISOString()),
+          lte(transactions.date, endDate.toISOString()),
           isNull(transactions.deletedAt),
         ),
       )

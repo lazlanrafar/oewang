@@ -1,12 +1,9 @@
 "use client";
 
-import { useChatStore } from "@/stores/chat";
-import {
-  useChatActions,
-  useChatId,
-  useChatStatus,
-  useDataPart,
-} from "@ai-sdk-tools/store";
+import { useEffect, useRef, useState } from "react";
+
+import { useChatActions, useChatId, useChatStatus, useDataPart } from "@ai-sdk-tools/store";
+import type { Dictionary } from "@workspace/dictionaries";
 import {
   cn,
   PromptInput,
@@ -14,27 +11,23 @@ import {
   PromptInputAttachment,
   PromptInputAttachments,
   PromptInputBody,
-  PromptInputMessage,
+  type PromptInputMessage,
   PromptInputSubmit,
   PromptInputTextarea,
   PromptInputToolbar,
   PromptInputTools,
 } from "@workspace/ui";
 import { useChatInterface } from "@workspace/ui/hooks";
-
 import { animate, motion, useMotionValue, useTransform } from "framer-motion";
-import { useEffect, useRef, useState } from "react";
-import {
-  ChatHistoryButton,
-  ChatHistoryDropdown,
-  ChatHistoryProvider,
-  useChatHistoryContext,
-} from "./chat-history";
-import { ChatWebSearchButton } from "./chat-web-search-button";
-import { ChatCommandMenu } from "./chat-command-menu";
-import { ChatSuggestionButton } from "./chat-suggestion-button";
-import { sendChatMessage } from "@workspace/modules/ai/ai.action";
+
 import { useAiQuota } from "@/hooks/use-ai-quota";
+import { useChatStore } from "@/stores/chat";
+
+import { getDictionaryText } from "./chat-i18n";
+import { ChatCommandMenu } from "./chat-command-menu";
+import { ChatHistoryButton, ChatHistoryDropdown, useChatHistoryContext } from "./chat-history";
+import { ChatSuggestionButton } from "./chat-suggestion-button";
+import { ChatWebSearchButton } from "./chat-web-search-button";
 import { QuotaLimitCard } from "./quota-limit-card";
 
 export interface ChatInputMessage extends PromptInputMessage {
@@ -44,11 +37,28 @@ export interface ChatInputMessage extends PromptInputMessage {
   };
 }
 
-export function ChatInput() {
+export function ChatInput({ dictionary }: { dictionary: Dictionary }) {
+  const chatInputPlaceholder = getDictionaryText(dictionary as Record<string, unknown>, "chat.placeholder", "Ask anything...");
+  const webSearchPlaceholder = getDictionaryText(
+    dictionary as Record<string, unknown>,
+    "chat.search_placeholder",
+    "Search the web...",
+  );
+  const focusAriaLabel = getDictionaryText(
+    dictionary as Record<string, unknown>,
+    "chat.input.focus_aria",
+    "Focus chat input",
+  );
+  const attachmentFallbackText = getDictionaryText(
+    dictionary as Record<string, unknown>,
+    "chat.input.attachment_fallback_text",
+    "Sent with attachments",
+  );
+
   const [mounted, setMounted] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
-  const [isInteractingWithButtons, setIsInteractingWithButtons] =
-    useState(false);
+  const [isInteractingWithButtons, setIsInteractingWithButtons] = useState(false);
+  const [promptInputKey, setPromptInputKey] = useState(0);
 
   useEffect(() => {
     setMounted(true);
@@ -66,12 +76,9 @@ export function ChatInput() {
   const { setChatId } = useChatInterface();
   //   const { isMetricsTab } = useOverviewTab();
   const { sendMessage, stop } = useChatActions();
-  const { isOpen: isHistoryOpen, setIsOpen: setHistoryOpen } =
-    useChatHistoryContext();
+  const { isOpen: isHistoryOpen, setIsOpen: setHistoryOpen } = useChatHistoryContext();
 
-  const [, clearSuggestions] = useDataPart<{ prompts: string[] }>(
-    "suggestions",
-  );
+  const [, clearSuggestions] = useDataPart<{ prompts: string[] }>("suggestions");
 
   const {
     isHome,
@@ -91,7 +98,7 @@ export function ChatInput() {
     scrollY,
   } = useChatStore();
 
-  const { isExceeded, loading: quotaLoading } = useAiQuota();
+  const { isExceeded } = useAiQuota();
 
   const prevShowCommands = useRef(showCommands);
   const prevHistoryOpen = useRef(isHistoryOpen);
@@ -115,22 +122,15 @@ export function ChatInput() {
 
   // Override to full size (factor = 0) when:
   const shouldPreventMinimization =
-    isFocused ||
-    showCommands ||
-    isHistoryOpen ||
-    isInteractingWithButtons ||
-    input.trim();
+    isFocused || showCommands || isHistoryOpen || isInteractingWithButtons || input.trim();
 
-  const targetMinimizationFactor = shouldPreventMinimization
-    ? 0
-    : baseMinimizationFactor;
+  const targetMinimizationFactor = shouldPreventMinimization ? 0 : baseMinimizationFactor;
 
   const minimizationFactor = useMotionValue(targetMinimizationFactor);
   const prevShouldPreventMinimization = useRef(shouldPreventMinimization);
 
   useEffect(() => {
-    const focusStateChanged =
-      prevShouldPreventMinimization.current !== shouldPreventMinimization;
+    const focusStateChanged = prevShouldPreventMinimization.current !== shouldPreventMinimization;
     prevShouldPreventMinimization.current = shouldPreventMinimization;
 
     if (focusStateChanged) {
@@ -147,16 +147,12 @@ export function ChatInput() {
   }, [targetMinimizationFactor, shouldPreventMinimization, minimizationFactor]);
 
   // Transform reveal value to clipPath
-  const textClipPath = useTransform(
-    textReveal,
-    (value) => `inset(0 ${100 - value}% 0 0)`,
-  );
+  const textClipPath = useTransform(textReveal, (value) => `inset(0 ${100 - value}% 0 0)`);
 
   // Reveal animation when text is added externally (not by typing)
   useEffect(() => {
     // Only animate if input changed and it wasn't from typing
-    const wasExternalChange =
-      input !== prevInputRef.current && !isTypingRef.current && input;
+    const wasExternalChange = input !== prevInputRef.current && !isTypingRef.current && input;
 
     if (wasExternalChange) {
       // Set initial state - start hidden
@@ -180,24 +176,15 @@ export function ChatInput() {
     isTypingRef.current = false;
   }, [input, textReveal, textOpacity]);
 
-  const containerMaxWidth = useTransform(
-    minimizationFactor,
-    (factor) => `${770 - factor * (770 - 400)}px`,
-  );
+  const containerMaxWidth = useTransform(minimizationFactor, (factor) => `${770 - factor * (770 - 400)}px`);
 
   const containerBorderRadius = "0"; // Fixed subtle rounding
 
-  const containerBg = useTransform(
-    minimizationFactor,
-    (factor) => `rgba(247, 247, 247, ${0.85 - factor * 0.45})`,
-  );
+  const containerBg = useTransform(minimizationFactor, (factor) => `rgba(247, 247, 247, ${0.85 - factor * 0.45})`);
 
-  const containerDarkBg = useTransform(
-    minimizationFactor,
-    (factor) => `rgba(19, 19, 19, ${0.7 - factor * 0.4})`,
-  );
+  const containerDarkBg = useTransform(minimizationFactor, (factor) => `rgba(19, 19, 19, ${0.7 - factor * 0.4})`);
 
-  const containerShadow = useTransform(minimizationFactor, (factor) => {
+  const _containerShadow = useTransform(minimizationFactor, (factor) => {
     const opacity = 0.05 - factor * 0.05;
     return `0 4px 12px rgba(0,0,0,${opacity})`;
   });
@@ -215,9 +202,7 @@ export function ChatInput() {
     // Subtle scale from 1 to 0.95
     return 1 - factor * 0.05;
   });
-  const buttonPointerEvents = useTransform(minimizationFactor, (factor) =>
-    factor > 0.1 ? "none" : "auto",
-  );
+  const buttonPointerEvents = useTransform(minimizationFactor, (factor) => (factor > 0.1 ? "none" : "auto"));
 
   // Toolbar wrapper - simple linear collapse
   const toolbarMaxHeight = useTransform(minimizationFactor, (factor) => {
@@ -241,12 +226,8 @@ export function ChatInput() {
   );
 
   // Layout direction - use a lower threshold (0.15) for smoother transition
-  const containerFlexDirection = useTransform(minimizationFactor, (factor) =>
-    factor > 0.15 ? "row" : "column",
-  );
-  const bodyFlexDirection = useTransform(minimizationFactor, (factor) =>
-    factor > 0.15 ? "row" : "column",
-  );
+  const containerFlexDirection = useTransform(minimizationFactor, (factor) => (factor > 0.15 ? "row" : "column"));
+  const bodyFlexDirection = useTransform(minimizationFactor, (factor) => (factor > 0.15 ? "row" : "column"));
   // Height animation - expanded (55px) vs minimized (52px)
   const inputWrapperHeight = useTransform(minimizationFactor, (factor) => {
     // Expanded: 55px, Minimized: 52px
@@ -284,23 +265,13 @@ export function ChatInput() {
     let attachments: { name: string; type: string; data: string }[] = [];
     if (message.files && message.files.length > 0) {
       attachments = await Promise.all(
-        message.files.map(async (file: any) => {
-          return new Promise<{ name: string; type: string; data: string }>(
-            (resolve) => {
-              const reader = new FileReader();
-              reader.onloadend = () => {
-                const base64String = (reader.result as string)
-                  .split(",")
-                  .pop();
-                resolve({
-                  name: file.name,
-                  type: file.type,
-                  data: base64String || "",
-                });
-              };
-              reader.readAsDataURL(file);
-            },
-          );
+        message.files.map(async (file) => {
+          const base64String = file.url.split(",").pop() || "";
+          return {
+            name: file.filename || "attachment",
+            type: file.mediaType || "application/octet-stream",
+            data: base64String,
+          };
         }),
       );
     }
@@ -316,7 +287,7 @@ export function ChatInput() {
     // OR call our action if the store doesn't handle the API call.
 
     sendMessage({
-      text: message.text || "Sent with attachments",
+      text: message.text || attachmentFallbackText,
       files: message.files,
       metadata: {
         agentChoice: message.metadata?.agentChoice,
@@ -327,6 +298,7 @@ export function ChatInput() {
 
     setInput("");
     resetCommandState();
+    setPromptInputKey((prev) => prev + 1);
   };
 
   const handleStopClick = (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -345,7 +317,7 @@ export function ChatInput() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
       className={cn(
-        "mx-auto w-full max-w-full relative",
+        "relative mx-auto w-full max-w-full",
         !isHome && "transition-all duration-300 ease-in-out",
         // isCanvasVisible ? "right-0 md:right-[603px]" : "right-0",
         isHome && "chat-input-static",
@@ -353,20 +325,22 @@ export function ChatInput() {
     >
       <motion.div
         ref={containerRef}
-        className="mx-auto w-full max-w-full relative"
+        className="relative mx-auto w-full max-w-full"
         style={{
           maxWidth: containerMaxWidth,
         }}
       >
-        <QuotaLimitCard />
+        <QuotaLimitCard dictionary={dictionary} />
         <ChatCommandMenu />
         <ChatHistoryDropdown />
 
         {/* Overlay to capture clicks when minimized */}
         {targetMinimizationFactor > 0.1 && (
-          <div
-            className="absolute inset-0 z-10 cursor-text"
+          <button
+            type="button"
+            className="absolute inset-0 z-10 cursor-text border-none bg-transparent p-0"
             onClick={() => textareaRef.current?.focus()}
+            aria-label={focusAriaLabel}
           />
         )}
 
@@ -382,17 +356,18 @@ export function ChatInput() {
                 : containerBg,
           }}
           className={cn(
-            "bg-[rgba(247,247,247,0.85)]! dark:bg-[rgba(19,19,19,0.7)]! backdrop-blur-lg flex relative p-0 border border-border/50 rounded-3xl overflow-hidden transition-all shadow-none!",
+            "relative flex overflow-hidden rounded-3xl border border-border/50 bg-[rgba(247,247,247,0.85)]! p-0 shadow-none! backdrop-blur-lg transition-all dark:bg-[rgba(19,19,19,0.7)]!",
             isFocused && "border-black/20 dark:border-white/20",
           )}
         >
           {/* <AudioPlayer /> */}
           <PromptInput
+            key={promptInputKey}
             onSubmit={handleSubmit}
             globalDrop
             multiple
             accept="application/pdf,image/*"
-            className="bg-transparent! w-full"
+            className="w-full bg-transparent!"
           >
             <motion.div
               style={{
@@ -403,11 +378,7 @@ export function ChatInput() {
                 flexDirection: bodyFlexDirection,
               }}
             >
-              <PromptInputBody
-                className={cn(
-                  targetMinimizationFactor > 0.15 && "flex-row flex-1 pr-2",
-                )}
-              >
+              <PromptInputBody className={cn(targetMinimizationFactor > 0.15 && "flex-1 flex-row pr-2")}>
                 <PromptInputAttachments>
                   {(attachment) => <PromptInputAttachment data={attachment} />}
                 </PromptInputAttachments>
@@ -431,18 +402,15 @@ export function ChatInput() {
                     onBlur={() => setIsFocused(false)}
                     disabled={isExceeded}
                     className={cn(
-                      "w-full h-full border-none bg-transparent resize-none outline-none whitespace-nowrap overflow-hidden text-ellipsis transition-all duration-300",
-                      targetMinimizationFactor > 0.4 &&
-                        !input &&
-                        "text-center placeholder:text-center",
-                      isExceeded && "opacity-50 cursor-not-allowed",
+                      "h-full w-full resize-none overflow-hidden text-ellipsis whitespace-nowrap border-none bg-transparent outline-none transition-all duration-300",
+                      targetMinimizationFactor > 0.4 && !input && "text-center placeholder:text-center",
+                      isExceeded && "cursor-not-allowed opacity-50",
                     )}
                     onKeyDown={(e) => {
                       // Handle Enter key for commands
                       if (e.key === "Enter" && showCommands) {
                         e.preventDefault();
-                        const selectedCommand =
-                          filteredCommands[selectedCommandIndex];
+                        const selectedCommand = filteredCommands[selectedCommandIndex];
                         if (selectedCommand) {
                           // Execute command through the store
                           if (!chatId) return;
@@ -454,9 +422,7 @@ export function ChatInput() {
 
                           sendMessage({
                             role: "user",
-                            parts: [
-                              { type: "text", text: selectedCommand.title },
-                            ],
+                            parts: [{ type: "text", text: selectedCommand.title }],
                             metadata: {
                               toolCall: {
                                 toolName: selectedCommand.toolName,
@@ -490,9 +456,7 @@ export function ChatInput() {
                       handleKeyDown(e);
                     }}
                     value={input}
-                    placeholder={
-                      isWebSearch ? "Search the web" : "Ask anything"
-                    }
+                    placeholder={isWebSearch ? webSearchPlaceholder : chatInputPlaceholder}
                   />
                 </motion.div>
               </PromptInputBody>
@@ -555,18 +519,10 @@ export function ChatInput() {
                         // Enable button when streaming so user can stop
                         status === "streaming" || status === "submitted"
                           ? false
-                          : (!input && !status) ||
-                            isUploading ||
-                            isRecording ||
-                            isProcessing ||
-                            isExceeded
+                          : (!input && !status) || isUploading || isRecording || isProcessing || isExceeded
                       }
                       status={status}
-                      onClick={
-                        status === "streaming" || status === "submitted"
-                          ? handleStopClick
-                          : undefined
-                      }
+                      onClick={status === "streaming" || status === "submitted" ? handleStopClick : undefined}
                     />
                   </motion.div>
                 </PromptInputTools>

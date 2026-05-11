@@ -90,6 +90,11 @@ export const TransactionModel = {
     search: t.Optional(t.String()),
     uncategorized: t.Optional(t.Boolean()),
   }),
+  exportQuery: t.Object({
+    startDate: t.Optional(t.String()),
+    endDate: t.Optional(t.String()),
+    allData: t.Optional(t.BooleanString()),
+  }),
 } as const;
 
 export type CreateTransactionInput = UnwrapSchema<
@@ -101,3 +106,7 @@ export type UpdateTransactionInput = UnwrapSchema<
 export type GetTransactionsQueryInput = UnwrapSchema<
   typeof TransactionModel.listQuery
 >;
+export type ExportTransactionsQueryInput = UnwrapSchema<
+  typeof TransactionModel.exportQuery
+>;
+

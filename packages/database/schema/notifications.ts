@@ -1,19 +1,14 @@
-import {
-  boolean,
-  pgTable,
-  text,
-  timestamp,
-  uuid,
-} from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
+import { boolean, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { users } from "./users";
 import { workspaces } from "./workspaces";
 
 export const notifications = pgTable("notifications", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  user_id: uuid("user_id")
+  id: text("id").primaryKey().$defaultFn(createId),
+  user_id: text("user_id")
     .references(() => users.id)
     .notNull(),
-  workspace_id: uuid("workspace_id")
+  workspace_id: text("workspace_id")
     .references(() => workspaces.id)
     .notNull(),
   type: text("type").notNull(), // e.g., 'transaction.created', 'subscription.expiring'

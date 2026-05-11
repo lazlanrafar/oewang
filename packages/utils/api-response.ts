@@ -65,3 +65,25 @@ export function buildError(
     },
   };
 }
+/**
+ * Standard builder for API responses.
+ */
+export function buildApiResponse<T>(params: {
+  success: boolean;
+  code?: string;
+  message?: string;
+  data?: T;
+  meta?: any;
+  status?: number; // Included for convenience, but not part of the encrypted payload
+}): ApiResponse<T> {
+  return {
+    success: params.success,
+    code: params.code || (params.success ? "OK" : "ERROR"),
+    message: params.message || (params.success ? "Success" : "An error occurred"),
+    data: (params.data as T) || null,
+    meta: {
+      timestamp: Date.now(),
+      ...(params.meta || {}),
+    },
+  };
+}

@@ -1,0 +1,246 @@
+$ NODE_OPTIONS='--max-old-space-size=4096' tsc --noEmit
+.next/dev/types/validator.ts(409,31): error TS2344: Type 'typeof import("/Users/boneconsulting/Developer/oewang/apps/app/app/(main)/[locale]/(dashboard)/layout")' does not satisfy the constraint 'LayoutConfig<"/[locale]">'.
+  Types of property 'default' are incompatible.
+    Type '({ children, params, }: Readonly<{ children: ReactNode; params: Promise<{ locale: "en" | "ja" | "id"; }>; }>) => Promise<Element>' is not assignable to type 'ComponentType<LayoutProps<"/[locale]">> | ((props: LayoutProps<"/[locale]">) => void | Promise<void> | ReactNode | Promise<...>)'.
+      Type '({ children, params, }: Readonly<{ children: ReactNode; params: Promise<{ locale: "en" | "ja" | "id"; }>; }>) => Promise<Element>' is not assignable to type 'FunctionComponent<LayoutProps<"/[locale]">>'.
+        Types of parameters '__0' and 'props' are incompatible.
+          Type 'LayoutProps<"/[locale]">' is not assignable to type 'Readonly<{ children: ReactNode; params: Promise<{ locale: "en" | "ja" | "id"; }>; }>'.
+            Types of property 'params' are incompatible.
+              Type 'Promise<{ locale: string; }>' is not assignable to type 'Promise<{ locale: "en" | "ja" | "id"; }>'.
+                Type '{ locale: string; }' is not assignable to type '{ locale: "en" | "ja" | "id"; }'.
+                  Types of property 'locale' are incompatible.
+                    Type 'string' is not assignable to type '"en" | "ja" | "id"'.
+.next/types/validator.ts(400,31): error TS2344: Type 'typeof import("/Users/boneconsulting/Developer/oewang/apps/app/app/(main)/[locale]/(dashboard)/layout")' does not satisfy the constraint 'LayoutConfig<"/[locale]">'.
+  Types of property 'default' are incompatible.
+    Type '({ children, params, }: Readonly<{ children: ReactNode; params: Promise<{ locale: "en" | "ja" | "id"; }>; }>) => Promise<Element>' is not assignable to type 'ComponentType<LayoutProps<"/[locale]">> | ((props: LayoutProps<"/[locale]">) => void | Promise<void> | ReactNode | Promise<...>)'.
+      Type '({ children, params, }: Readonly<{ children: ReactNode; params: Promise<{ locale: "en" | "ja" | "id"; }>; }>) => Promise<Element>' is not assignable to type 'FunctionComponent<LayoutProps<"/[locale]">>'.
+        Types of parameters '__0' and 'props' are incompatible.
+          Type 'LayoutProps<"/[locale]">' is not assignable to type 'Readonly<{ children: ReactNode; params: Promise<{ locale: "en" | "ja" | "id"; }>; }>'.
+            Types of property 'params' are incompatible.
+              Type 'Promise<{ locale: string; }>' is not assignable to type 'Promise<{ locale: "en" | "ja" | "id"; }>'.
+                Type '{ locale: string; }' is not assignable to type '{ locale: "en" | "ja" | "id"; }'.
+                  Types of property 'locale' are incompatible.
+                    Type 'string' is not assignable to type '"en" | "ja" | "id"'.
+app/(main)/[locale]/(auth)/login/page.tsx(8,24): error TS2304: Cannot find name 'Metadata'.
+app/(main)/[locale]/(dashboard)/budget/page.tsx(51,48): error TS2322: Type '{ navigation: { home: string; dashboard: string; settings: string; }; auth: { welcome: string; login_title: string; register_title: string; show_other_options: string; or: string; terms_privacy_agreement: string; terms_of_service: string; privacy_policy: string; form: { ...; }; social: { ...; }; }; ... 19 more ...; ...' is not assignable to type 'Record<string, string>'.
+  Property '"navigation"' is incompatible with index signature.
+    Type '{ home: string; dashboard: string; settings: string; }' is not assignable to type 'string'.
+app/(main)/[locale]/(dashboard)/chat/[id]/page.tsx(6,15): error TS2724: '"ai"' has no exported member named 'Message'. Did you mean 'UIMessage'?
+app/(main)/[locale]/(dashboard)/chat/[id]/page.tsx(91,22): error TS2322: Type '{ geo: Geo; dictionary: { navigation: { home: string; dashboard: string; settings: string; }; auth: { welcome: string; login_title: string; register_title: string; show_other_options: string; ... 5 more ...; social: { ...; }; }; ... 19 more ...; wallets: { ...; }; }; }' is not assignable to type 'IntrinsicAttributes & Props'.
+  Property 'geo' does not exist on type 'IntrinsicAttributes & Props'.
+app/(main)/[locale]/(dashboard)/debts/page.tsx(56,94): error TS2322: Type 'TransactionSettings | null' is not assignable to type 'TransactionSettings'.
+  Type 'null' is not assignable to type 'TransactionSettings'.
+app/(main)/[locale]/(dashboard)/transactions/page.tsx(83,5): error TS2322: Type '{ navigation: { home: string; dashboard: string; settings: string; }; auth: { welcome: string; login_title: string; register_title: string; show_other_options: string; or: string; terms_privacy_agreement: string; terms_of_service: string; privacy_policy: string; form: { ...; }; social: { ...; }; }; ... 19 more ...; ...' is not assignable to type 'Record<string, string>'.
+  Property '"navigation"' is incompatible with index signature.
+    Type '{ home: string; dashboard: string; settings: string; }' is not assignable to type 'string'.
+app/(main)/[locale]/(dashboard)/transactions/page.tsx(113,9): error TS2322: Type 'Record<string, string> | null' is not assignable to type '{ navigation: { home: string; dashboard: string; settings: string; }; auth: { welcome: string; login_title: string; register_title: string; show_other_options: string; or: string; terms_privacy_agreement: string; terms_of_service: string; privacy_policy: string; form: { ...; }; social: { ...; }; }; ... 19 more ...; ...'.
+  Type 'null' is not assignable to type '{ navigation: { home: string; dashboard: string; settings: string; }; auth: { welcome: string; login_title: string; register_title: string; show_other_options: string; or: string; terms_privacy_agreement: string; terms_of_service: string; privacy_policy: string; form: { ...; }; social: { ...; }; }; ... 19 more ...; ...'.
+components/molecules/select-contact.tsx(100,7): error TS2322: Type '(item: Record<string, string>) => JSX.Element' is not assignable to type '(selectedItem: { id: string; label: string; email: string | null; } | { id: string; label: string; email: string | null; }[]) => ReactNode'.
+  Types of parameters 'item' and 'selectedItem' are incompatible.
+    Type '{ id: string; label: string; email: string | null; } | { id: string; label: string; email: string | null; }[]' is not assignable to type 'Record<string, string>'.
+      Type '{ id: string; label: string; email: string | null; }' is not assignable to type 'Record<string, string>'.
+        Property 'email' is incompatible with index signature.
+          Type 'string | null' is not assignable to type 'string'.
+            Type 'null' is not assignable to type 'string'.
+components/molecules/select-contact.tsx(116,7): error TS2322: Type '({ item }: { item: Record<string, string>; }) => JSX.Element' is not assignable to type '(listItem: { isChecked: boolean; item: { id: string; label: string; email: string | null; }; }) => ReactNode'.
+  Types of parameters '__0' and 'listItem' are incompatible.
+    Type '{ isChecked: boolean; item: { id: string; label: string; email: string | null; }; }' is not assignable to type '{ item: Record<string, string>; }'.
+      Types of property 'item' are incompatible.
+        Type '{ id: string; label: string; email: string | null; }' is not assignable to type 'Record<string, string>'.
+          Property 'email' is incompatible with index signature.
+            Type 'string | null' is not assignable to type 'string'.
+              Type 'null' is not assignable to type 'string'.
+components/organisms/auth/auth-sync.tsx(56,21): error TS18046: 'err' is of type 'unknown'.
+components/organisms/chat/charts/business-health-score-chart.tsx(16,64): error TS2322: Type 'unknown' is not assignable to type 'ReactNode'.
+components/organisms/chat/charts/cash-flow-chart.tsx(29,7): error TS2322: Type 'string | number' is not assignable to type 'number'.
+  Type 'string' is not assignable to type 'number'.
+components/organisms/chat/charts/category-expense-donut-chart.tsx(11,36): error TS2339: Property 'length' does not exist on type '{}'.
+components/organisms/chat/charts/category-expense-donut-chart.tsx(12,18): error TS7053: Element implicitly has an 'any' type because expression of type '0' can't be used to index type '{}'.
+  Property '0' does not exist on type '{}'.
+components/organisms/chat/charts/category-expense-donut-chart.tsx(19,13): error TS2322: Type 'unknown' is not assignable to type 'string | undefined'.
+components/organisms/chat/charts/category-expense-donut-chart.tsx(20,13): error TS2322: Type 'unknown' is not assignable to type 'string | undefined'.
+components/organisms/chat/charts/index.ts(7,3): error TS2305: Module '"./base-charts"' has no exported member 'StyledArea'.
+components/organisms/chat/charts/index.ts(8,3): error TS2305: Module '"./base-charts"' has no exported member 'StyledBar'.
+components/organisms/chat/charts/index.ts(9,3): error TS2305: Module '"./base-charts"' has no exported member 'StyledLine'.
+components/organisms/chat/charts/index.ts(11,3): error TS2305: Module '"./base-charts"' has no exported member 'StyledXAxis'.
+components/organisms/chat/charts/index.ts(12,3): error TS2305: Module '"./base-charts"' has no exported member 'StyledYAxis'.
+components/organisms/chat/charts/index.ts(22,8): error TS2459: Module '"./chart-utils"' declares 'BaseChartProps' locally, but it is not exported.
+components/organisms/chat/charts/monthly-revenue-chart.tsx(30,10): error TS2304: Cannot find name 'XAxis'.
+components/organisms/chat/charts/monthly-revenue-chart.tsx(40,10): error TS2304: Cannot find name 'YAxis'.
+components/organisms/chat/charts/monthly-revenue-chart.tsx(51,10): error TS2304: Cannot find name 'Tooltip'.
+components/organisms/chat/charts/monthly-revenue-chart.tsx(69,10): error TS2304: Cannot find name 'Bar'.
+components/organisms/chat/charts/monthly-revenue-chart.tsx(71,10): error TS2304: Cannot find name 'Bar'.
+components/organisms/chat/charts/monthly-revenue-chart.tsx(73,10): error TS2304: Cannot find name 'Line'.
+components/organisms/chat/charts/profit-chart.tsx(22,9): error TS2322: Type 'unknown' is not assignable to type 'string | undefined'.
+components/organisms/chat/charts/profit-chart.tsx(23,9): error TS2322: Type '{} | undefined' is not assignable to type 'string | undefined'.
+  Type '{}' is not assignable to type 'string'.
+components/organisms/chat/charts/profit-chart.tsx(29,64): error TS2322: Type 'unknown' is not assignable to type 'ReactNode'.
+components/organisms/chat/charts/revenue-forecast-chart.tsx(39,18): error TS2532: Object is possibly 'undefined'.
+components/organisms/chat/charts/revenue-forecast-chart.tsx(46,22): error TS18048: 'actualEntry' is possibly 'undefined'.
+components/organisms/chat/charts/revenue-forecast-chart.tsx(47,31): error TS18048: 'actualEntry' is possibly 'undefined'.
+components/organisms/chat/charts/revenue-forecast-chart.tsx(47,63): error TS18048: 'forecastedEntry' is possibly 'undefined'.
+components/organisms/chat/charts/revenue-forecast-chart.tsx(49,29): error TS18048: 'data' is possibly 'undefined'.
+components/organisms/chat/charts/revenue-forecast-chart.tsx(52,18): error TS18048: 'data' is possibly 'undefined'.
+components/organisms/chat/charts/revenue-forecast-chart.tsx(52,46): error TS18048: 'data' is possibly 'undefined'.
+components/organisms/chat/charts/revenue-forecast-chart.tsx(64,39): error TS18048: 'data' is possibly 'undefined'.
+components/organisms/chat/charts/revenue-forecast-chart.tsx(65,23): error TS18048: 'data' is possibly 'undefined'.
+components/organisms/chat/charts/revenue-forecast-chart.tsx(66,24): error TS18048: 'data' is possibly 'undefined'.
+components/organisms/chat/charts/revenue-forecast-chart.tsx(67,24): error TS18048: 'data' is possibly 'undefined'.
+components/organisms/chat/charts/revenue-forecast-chart.tsx(68,25): error TS18048: 'data' is possibly 'undefined'.
+components/organisms/chat/charts/revenue-forecast-chart.tsx(80,12): error TS18048: 'data' is possibly 'undefined'.
+components/organisms/chat/charts/revenue-forecast-chart.tsx(173,11): error TS2532: Object is possibly 'undefined'.
+components/organisms/chat/charts/revenue-forecast-chart.tsx(173,48): error TS2532: Object is possibly 'undefined'.
+components/organisms/chat/charts/revenue-forecast-chart.tsx(182,7): error TS2532: Object is possibly 'undefined'.
+components/organisms/chat/charts/revenue-forecast-chart.tsx(183,7): error TS2532: Object is possibly 'undefined'.
+components/organisms/chat/charts/revenue-trend-chart.tsx(29,10): error TS2304: Cannot find name 'XAxis'.
+components/organisms/chat/charts/revenue-trend-chart.tsx(39,10): error TS2304: Cannot find name 'YAxis'.
+components/organisms/chat/charts/revenue-trend-chart.tsx(50,10): error TS2304: Cannot find name 'Tooltip'.
+components/organisms/chat/charts/revenue-trend-chart.tsx(68,10): error TS2304: Cannot find name 'Bar'.
+components/organisms/chat/charts/revenue-trend-chart.tsx(70,10): error TS2304: Cannot find name 'Bar'.
+components/organisms/chat/charts/revenue-trend-chart.tsx(72,10): error TS2304: Cannot find name 'Line'.
+components/organisms/chat/charts/stacked-bar-chart.tsx(6,30): error TS2307: Cannot find module '@/hooks/use-user' or its corresponding type declarations.
+components/organisms/chat/charts/stress-test-chart.tsx(76,15): error TS2322: Type '{ formatter: (value: string | number, name: string) => [string, string]; labelFormatter: (label: any) => string; }' is not assignable to type 'IntrinsicAttributes & { active?: boolean | undefined; payload?: Record<string, unknown>[] | undefined; label?: string | undefined; formatter?: ((value: string | number, name: string) => [...]) | undefined; }'.
+  Property 'labelFormatter' does not exist on type 'IntrinsicAttributes & { active?: boolean | undefined; payload?: Record<string, unknown>[] | undefined; label?: string | undefined; formatter?: ((value: string | number, name: string) => [...]) | undefined; }'.
+components/organisms/chat/charts/stress-test-chart.tsx(76,32): error TS7006: Parameter 'label' implicitly has an 'any' type.
+components/organisms/chat/chat-command-menu.tsx(103,55): error TS2352: Conversion of type 'CommandSuggestion' to type 'Record<string, unknown>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Index signature for type 'string' is missing in type 'CommandSuggestion'.
+components/organisms/chat/chat-favicon-stack.tsx(84,40): error TS18047: 'parent' is possibly 'null'.
+components/organisms/chat/chat-history.tsx(101,9): error TS18047: 'searchInputRef.current' is possibly 'null'.
+components/organisms/chat/chat-history.tsx(113,31): error TS18047: 'clickedButton' is possibly 'null'.
+components/organisms/chat/chat-provider-wrapper.tsx(23,21): error TS2352: Conversion of type 'StoreState<UIMessage<unknown, UIDataTypes, UITools>>' to type 'Record<string, unknown>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Index signature for type 'string' is missing in type 'StoreState<UIMessage<unknown, UIDataTypes, UITools>>'.
+components/organisms/chat/chat-provider-wrapper.tsx(25,15): error TS2349: This expression is not callable.
+  Type '{}' has no call signatures.
+components/organisms/chat/chat-provider-wrapper.tsx(32,19): error TS2352: Conversion of type 'StoreState<UIMessage<unknown, UIDataTypes, UITools>>' to type 'Record<string, unknown>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Index signature for type 'string' is missing in type 'StoreState<UIMessage<unknown, UIDataTypes, UITools>>'.
+components/organisms/chat/chat-provider-wrapper.tsx(34,13): error TS2349: This expression is not callable.
+  Type '{}' has no call signatures.
+components/organisms/chat/chat-provider-wrapper.tsx(67,11): error TS18046: 'state.setMessages' is of type 'unknown'.
+components/organisms/chat/chat-provider-wrapper.tsx(68,11): error TS18046: 'state.setStatus' is of type 'unknown'.
+components/organisms/chat/chat-provider-wrapper.tsx(73,18): error TS2352: Conversion of type 'UIMessage<unknown, UIDataTypes, UITools>' to type 'Record<string, unknown>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Index signature for type 'string' is missing in type 'UIMessage<unknown, UIDataTypes, UITools>'.
+components/organisms/chat/chat-provider-wrapper.tsx(73,72): error TS2352: Conversion of type 'UIMessage<unknown, UIDataTypes, UITools>' to type 'Record<string, unknown>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Index signature for type 'string' is missing in type 'UIMessage<unknown, UIDataTypes, UITools>'.
+components/organisms/chat/chat-provider-wrapper.tsx(74,23): error TS2352: Conversion of type 'UIMessage<unknown, UIDataTypes, UITools>' to type 'Record<string, unknown>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Index signature for type 'string' is missing in type 'UIMessage<unknown, UIDataTypes, UITools>'.
+components/organisms/chat/chat-provider-wrapper.tsx(78,23): error TS2352: Conversion of type 'UIMessage<unknown, UIDataTypes, UITools>' to type 'Record<string, unknown>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Index signature for type 'string' is missing in type 'UIMessage<unknown, UIDataTypes, UITools>'.
+components/organisms/chat/chat-provider-wrapper.tsx(86,90): error TS2345: Argument of type 'Record<string, unknown>[]' is not assignable to parameter of type '{ name: string; type: string; data: string; }[]'.
+  Type 'Record<string, unknown>' is missing the following properties from type '{ name: string; type: string; data: string; }': name, type, data
+components/organisms/chat/chat-provider-wrapper.tsx(93,33): error TS2352: Conversion of type 'ChatData' to type 'Record<string, unknown>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Index signature for type 'string' is missing in type 'ChatData'.
+components/organisms/chat/chat-provider-wrapper.tsx(117,51): error TS2352: Conversion of type '{ id: string; role: "assistant"; parts: Record<string, unknown>[]; createdAt: Date; }' to type 'UIMessage<unknown, UIDataTypes, UITools>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Types of property 'parts' are incompatible.
+    Type 'Record<string, unknown>[]' is not comparable to type 'UIMessagePart<UIDataTypes, UITools>[]'.
+      Type 'Record<string, unknown>' is not comparable to type 'UIMessagePart<UIDataTypes, UITools>'.
+        Type 'Record<string, unknown>' is not comparable to type '{ type: "dynamic-tool"; toolName: string; toolCallId: string; title?: string | undefined; providerExecuted?: boolean | undefined; } & { state: "output-available"; input: unknown; output: unknown; errorText?: undefined; callProviderMetadata?: SharedV3ProviderMetadata | undefined; resultProviderMetadata?: SharedV3Prov...'.
+          Type 'Record<string, unknown>' is missing the following properties from type '{ type: "dynamic-tool"; toolName: string; toolCallId: string; title?: string | undefined; providerExecuted?: boolean | undefined; }': type, toolName, toolCallId
+components/organisms/chat/chat-provider-wrapper.tsx(124,15): error TS18046: 'state.setMessages' is of type 'unknown'.
+components/organisms/chat/chat-provider-wrapper.tsx(125,15): error TS18046: 'state.setStatus' is of type 'unknown'.
+components/organisms/chat/chat-provider-wrapper.tsx(128,17): error TS18046: 'state.setId' is of type 'unknown'.
+components/organisms/chat/chat-provider-wrapper.tsx(142,13): error TS18046: 'state.setError' is of type 'unknown'.
+components/organisms/chat/chat-provider-wrapper.tsx(143,13): error TS18046: 'state.setStatus' is of type 'unknown'.
+components/organisms/chat/chat-provider-wrapper.tsx(150,24): error TS2322: Type 'Record<string, unknown>' is not assignable to type 'CompatibleChatStoreApi<UIMessage<unknown, UIDataTypes, UITools>>'.
+  Type 'Record<string, unknown>' is missing the following properties from type 'Omit<Omit<Omit<StoreApi<StoreState<UIMessage<unknown, UIDataTypes, UITools>>>, "setState" | "devtools"> & { setState(partial: StoreState<...> | ... 1 more ... | ((state: StoreState<...>) => StoreState<...> | Partial<...>), replace?: false | undefined, action?: string | ... 1 more ... | undefined): void; setState(sta...': subscribe, getState, getInitialState, devtools
+components/organisms/chat/chat-suggestion-button.tsx(22,9): error TS2531: Object is possibly 'null'.
+components/organisms/contacts/contact-detail-sheet.tsx(115,21): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+components/organisms/contacts/contact-detail-sheet.tsx(134,37): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+components/organisms/contacts/contact-detail-sheet.tsx(151,5): error TS18049: 'debts' is possibly 'null' or 'undefined'.
+components/organisms/contacts/contact-detail-sheet.tsx(155,5): error TS18049: 'debts' is possibly 'null' or 'undefined'.
+components/organisms/contacts/contact-detail-sheet.tsx(312,39): error TS2339: Property 'summary' does not exist on type '{ title: string; description: string; add_button: string; search_placeholder: string; status_label: string; group_label: string; total_debt: string; active_debts: string; overdue: string; empty: { ...; }; ... 9 more ...; form: { ...; }; }'.
+components/organisms/contacts/contact-detail-sheet.tsx(320,39): error TS2339: Property 'summary' does not exist on type '{ title: string; description: string; add_button: string; search_placeholder: string; status_label: string; group_label: string; total_debt: string; active_debts: string; overdue: string; empty: { ...; }; ... 9 more ...; form: { ...; }; }'.
+components/organisms/contacts/contact-detail-sheet.tsx(403,56): error TS2339: Property 'summary' does not exist on type '{ title: string; description: string; add_button: string; search_placeholder: string; status_label: string; group_label: string; total_debt: string; active_debts: string; overdue: string; empty: { ...; }; ... 9 more ...; form: { ...; }; }'.
+components/organisms/contacts/contact-detail-sheet.tsx(404,56): error TS2339: Property 'summary' does not exist on type '{ title: string; description: string; add_button: string; search_placeholder: string; status_label: string; group_label: string; total_debt: string; active_debts: string; overdue: string; empty: { ...; }; ... 9 more ...; form: { ...; }; }'.
+components/organisms/contacts/contact-form-sheet.tsx(101,22): error TS18047: 'inputRef.current' is possibly 'null'.
+components/organisms/contacts/contact-form-sheet.tsx(104,11): error TS18047: 'inputRef.current' is possibly 'null'.
+components/organisms/contacts/contact-form-sheet.tsx(154,13): error TS18049: 'contact' is possibly 'null' or 'undefined'.
+components/organisms/contacts/contact-form-sheet.tsx(155,14): error TS18049: 'contact' is possibly 'null' or 'undefined'.
+components/organisms/contacts/contact-form-sheet.tsx(156,14): error TS18049: 'contact' is possibly 'null' or 'undefined'.
+components/organisms/contacts/contact-form-sheet.tsx(157,16): error TS18049: 'contact' is possibly 'null' or 'undefined'.
+components/organisms/contacts/contact-form-sheet.tsx(158,16): error TS18049: 'contact' is possibly 'null' or 'undefined'.
+components/organisms/contacts/contact-form-sheet.tsx(159,21): error TS18049: 'contact' is possibly 'null' or 'undefined'.
+components/organisms/contacts/contact-form-sheet.tsx(160,21): error TS18049: 'contact' is possibly 'null' or 'undefined'.
+components/organisms/contacts/contact-form-sheet.tsx(161,13): error TS18049: 'contact' is possibly 'null' or 'undefined'.
+components/organisms/contacts/contact-form-sheet.tsx(162,14): error TS18049: 'contact' is possibly 'null' or 'undefined'.
+components/organisms/contacts/contact-form-sheet.tsx(163,16): error TS18049: 'contact' is possibly 'null' or 'undefined'.
+components/organisms/contacts/contact-form-sheet.tsx(164,12): error TS18049: 'contact' is possibly 'null' or 'undefined'.
+components/organisms/contacts/contact-form-sheet.tsx(165,13): error TS18049: 'contact' is possibly 'null' or 'undefined'.
+components/organisms/contacts/contact-form-sheet.tsx(166,18): error TS18049: 'contact' is possibly 'null' or 'undefined'.
+components/organisms/contacts/contact-form-sheet.tsx(236,31): error TS2345: Argument of type 'Contact' is not assignable to parameter of type '{ name: string; email?: string | null | undefined; phone?: string | null | undefined; website?: string | null | undefined; contact?: string | null | undefined; addressLine1?: string | null | undefined; ... 7 more ...; billingEmails?: string[] | ... 1 more ... | undefined; }'.
+  Types of property 'billingEmails' are incompatible.
+    Type 'string | null | undefined' is not assignable to type 'string[] | null | undefined'.
+      Type 'string' is not assignable to type 'string[]'.
+components/organisms/debts/debts-client.tsx(193,39): error TS2322: Type 'string[]' is not assignable to type 'Column<any, unknown>[]'.
+  Type 'string' is not assignable to type 'Column<any, unknown>'.
+components/organisms/debts/debts-client.tsx(205,11): error TS2322: Type 'Dispatch<SetStateAction<string[]>>' is not assignable to type '(columns: Column<any, unknown>[]) => void'.
+  Types of parameters 'value' and 'columns' are incompatible.
+    Type 'Column<any, unknown>[]' is not assignable to type 'SetStateAction<string[]>'.
+      Type 'Column<any, unknown>[]' is not assignable to type 'string[]'.
+        Type 'Column<any, unknown>' is not assignable to type 'string'.
+components/organisms/debts/debts-columns.tsx(145,12): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ unpaid: string; partial: string; paid: string; }'.
+  No index signature with a parameter of type 'string' was found on type '{ unpaid: string; partial: string; paid: string; }'.
+components/organisms/debts/payment-form-sheet.tsx(91,12): error TS18048: 'debt' is possibly 'undefined'.
+components/organisms/debts/payment-form-sheet.tsx(92,22): error TS18048: 'debt' is possibly 'undefined'.
+components/organisms/invoices/invoice-columns.tsx(54,28): error TS2339: Property 'invoice_number' does not exist on type '{ contact: string; issue_date: string; due_date: string; description: string; qty: string; rate: string; tax: string; amount: string; }'.
+components/organisms/invoices/invoice-columns.tsx(61,28): error TS2339: Property 'status' does not exist on type '{ contact: string; issue_date: string; due_date: string; description: string; qty: string; rate: string; tax: string; amount: string; }'.
+components/organisms/invoices/invoice-columns.tsx(78,22): error TS18049: 'row.original.contact' is possibly 'null' or 'undefined'.
+components/organisms/invoices/invoice-columns.tsx(105,28): error TS2339: Property 'actions' does not exist on type '{ contact: string; issue_date: string; due_date: string; description: string; qty: string; rate: string; tax: string; amount: string; }'.
+components/organisms/invoices/invoice-columns.tsx(121,31): error TS2339: Property 'delete' does not exist on type '{ copy: string; copied: string; edit: string; add_item: string; rename_template: string; duplicate_template: string; delete_template: string; }'.
+components/organisms/invoices/invoice-detail-sheet.tsx(120,41): error TS18047: 'invoice' is possibly 'null'.
+components/organisms/invoices/invoice-detail-sheet.tsx(364,37): error TS2322: Type 'InvoiceRow' is not assignable to type 'InvoiceWithContact'.
+  Types of property 'contact' are incompatible.
+    Type '{ name?: string | undefined; email?: string | undefined; } | null | undefined' is not assignable to type 'InvoiceContact'.
+      Type 'undefined' is not assignable to type 'InvoiceContact'.
+components/organisms/invoices/invoice-form-sheet.tsx(145,41): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Partial<TransactionSettings>'.
+components/organisms/invoices/invoice-form-sheet.tsx(171,80): error TS18047: 'internalRef.current' is possibly 'null'.
+components/organisms/invoices/invoice-form-sheet.tsx(179,26): error TS18047: 'internalRef.current' is possibly 'null'.
+components/organisms/invoices/invoice-form-sheet.tsx(183,15): error TS18047: 'internalRef.current' is possibly 'null'.
+components/organisms/invoices/invoice-form-sheet.tsx(333,58): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Type 'string' is not assignable to type 'readonly ("status" | "issueDate" | "dueDate" | "internalNote" | "noteDetails" | "paymentDetails" | "logoUrl" | "accessCode" | "contactId" | "invoiceNumber" | "amount" | "vat" | "tax" | ... 19 more ... | "invoiceSettings.qrCode")[]'.
+components/organisms/invoices/invoice-form-sheet.tsx(347,28): error TS2571: Object is of type 'unknown'.
+components/organisms/invoices/invoice-form-sheet.tsx(375,18): error TS2345: Argument of type '{ contactId: string; invoiceNumber: string; currency: string; issueDate: string; dueDate: string; amount: number; vat: number; tax: number; internalNote: string; noteDetails: string; paymentDetails: any; ... 10 more ...; accessCode: any; }' is not assignable to parameter of type '{ contactId: string; invoiceNumber: string; amount: number; currency: string; lineItems: { name: string; quantity: number; price: number; }[]; isPublic: boolean; invoiceSize: string; dateFormat: string; ... 13 more ...; fromDetails?: string | undefined; } | { ...; } | ResetAction<...> | undefined'.
+  Types of property 'lineItems' are incompatible.
+    Type 'unknown[]' is not assignable to type '{ name: string; quantity: number; price: number; }[] | ({ name?: string | undefined; quantity?: number | undefined; price?: number | undefined; } | undefined)[] | undefined'.
+      Type 'unknown[]' is not assignable to type '{ name: string; quantity: number; price: number; }[]'.
+        Type 'unknown' is not assignable to type '{ name: string; quantity: number; price: number; }'.
+components/organisms/invoices/invoice-form-sheet.tsx(379,20): error TS18047: 'invoice.issueDate' is possibly 'null'.
+components/organisms/invoices/invoice-form-sheet.tsx(380,18): error TS18047: 'invoice.dueDate' is possibly 'null'.
+components/organisms/invoices/invoice-form-sheet.tsx(386,25): error TS2571: Object is of type 'unknown'.
+components/organisms/invoices/invoice-form-sheet.tsx(387,18): error TS2571: Object is of type 'unknown'.
+components/organisms/invoices/invoice-form-sheet.tsx(388,22): error TS2571: Object is of type 'unknown'.
+components/organisms/invoices/invoice-form-sheet.tsx(391,22): error TS2571: Object is of type 'unknown'.
+components/organisms/invoices/invoice-form-sheet.tsx(392,21): error TS2571: Object is of type 'unknown'.
+components/organisms/invoices/invoice-form-sheet.tsx(393,23): error TS2571: Object is of type 'unknown'.
+components/organisms/invoices/invoice-form-sheet.tsx(394,23): error TS2571: Object is of type 'unknown'.
+components/organisms/invoices/invoice-form-sheet.tsx(395,26): error TS2571: Object is of type 'unknown'.
+components/organisms/invoices/invoice-form-sheet.tsx(405,21): error TS2571: Object is of type 'unknown'.
+components/organisms/invoices/invoice-form-sheet.tsx(515,23): error TS2322: Type 'unknown' is not assignable to type 'Control<FieldValues, any, FieldValues> | undefined'.
+components/organisms/invoices/invoice-form-sheet.tsx(535,23): error TS2322: Type 'unknown' is not assignable to type 'Control<FieldValues, any, FieldValues> | undefined'.
+components/organisms/invoices/invoice-form-sheet.tsx(555,23): error TS2322: Type 'unknown' is not assignable to type 'Control<FieldValues, any, FieldValues> | undefined'.
+components/organisms/invoices/invoice-form-sheet.tsx(576,21): error TS2322: Type 'unknown' is not assignable to type 'Control<FieldValues, any, FieldValues> | undefined'.
+components/organisms/invoices/invoice-form-sheet.tsx(595,21): error TS2322: Type 'unknown' is not assignable to type 'Control<FieldValues, any, FieldValues> | undefined'.
+components/organisms/invoices/invoice-form-sheet.tsx(615,21): error TS2322: Type 'unknown' is not assignable to type 'Control<FieldValues, any, FieldValues> | undefined'.
+components/organisms/invoices/invoice-form-sheet.tsx(661,33): error TS2532: Object is possibly 'undefined'.
+components/organisms/invoices/invoice-form-sheet.tsx(662,33): error TS2532: Object is possibly 'undefined'.
+components/organisms/invoices/invoice-form-sheet.tsx(676,27): error TS2322: Type 'unknown' is not assignable to type 'Control<FieldValues, any, FieldValues> | undefined'.
+components/organisms/invoices/invoice-form-sheet.tsx(688,27): error TS2322: Type 'unknown' is not assignable to type 'Control<FieldValues, any, FieldValues> | undefined'.
+components/organisms/invoices/invoice-form-sheet.tsx(707,29): error TS2322: Type 'unknown' is not assignable to type 'Control<FieldValues, any, FieldValues> | undefined'.
+components/organisms/invoices/invoice-form-sheet.tsx(729,31): error TS2322: Type 'unknown' is not assignable to type 'Control<FieldValues, any, FieldValues> | undefined'.
+components/organisms/invoices/invoice-form-sheet.tsx(777,45): error TS2353: Object literal may only specify known properties, and 'description' does not exist in type '{ name: string; quantity: number; price: number; } | { name: string; quantity: number; price: number; }[]'.
+components/organisms/invoices/invoice-form-sheet.tsx(855,29): error TS2322: Type '"discount"' is not assignable to type '"status" | "issueDate" | "dueDate" | "internalNote" | "noteDetails" | "paymentDetails" | "logoUrl" | "accessCode" | "contactId" | "invoiceNumber" | "amount" | "vat" | "tax" | ... 19 more ... | "invoiceSettings.qrCode"'.
+components/organisms/invoices/invoice-form-sheet.tsx(859,36): error TS2322: Type '{ onChange: (e: ChangeEvent<HTMLInputElement, HTMLInputElement>) => void; onBlur: Noop; value: string | number | boolean | ... 4 more ... | undefined; ... 6 more ...; className: string; }' is not assignable to type 'HashInputProps'.
+  Types of property 'value' are incompatible.
+    Type 'string | number | boolean | { name: string; quantity: number; price: number; } | { name: string; quantity: number; price: number; }[] | { vat: boolean; decimals: boolean; discount: boolean; salesTax: boolean; lineItemTax: boolean; units: boolean; qrCode: boolean; } | null | undefined' is not assignable to type 'string | number | readonly string[] | undefined'.
+      Type 'null' is not assignable to type 'string | number | readonly string[] | undefined'.
+components/organisms/invoices/invoice-form-sheet.tsx(947,55): error TS2345: Argument of type 'unknown' is not assignable to parameter of type '"status" | "issueDate" | "dueDate" | "internalNote" | "noteDetails" | "paymentDetails" | "logoUrl" | "accessCode" | "contactId" | "invoiceNumber" | "amount" | "vat" | "tax" | ... 19 more ... | "invoiceSettings.qrCode"'.
+components/organisms/invoices/invoice-settings.tsx(173,32): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ due_on_receipt: string; net_7: string; net_10: string; net_15: string; net_30: string; net_45: string; net_60: string; net_90: string; }'.
+  No index signature with a parameter of type 'string' was found on type '{ due_on_receipt: string; net_7: string; net_10: string; net_15: string; net_30: string; net_45: string; net_60: string; net_90: string; }'.
+hooks/use-canvas-data.ts(10,80): error TS2339: Property 'messages' does not exist on type '{}'.
+hooks/use-canvas-data.ts(19,28): error TS2571: Object is of type 'unknown'.
+hooks/use-canvas-data.ts(20,25): error TS18046: 'p' is of type 'unknown'.
+hooks/use-canvas-data.ts(20,50): error TS18046: 'p' is of type 'unknown'.
+hooks/use-canvas-data.ts(24,16): error TS2571: Object is of type 'unknown'.
+hooks/use-canvas-data.ts(28,34): error TS2571: Object is of type 'unknown'.

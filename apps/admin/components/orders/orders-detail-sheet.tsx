@@ -39,7 +39,7 @@ export function OrdersDetailSheet() {
                   <span className="text-[#606060] text-xs select-text flex items-center gap-2">
                     <div
                       className={cn(
-                        "w-2 h-2 rounded-full",
+                        "w-2 h-2",
                         selectedOrder.status === "paid"
                           ? "bg-green"
                           : selectedOrder.status === "pending"

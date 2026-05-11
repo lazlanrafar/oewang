@@ -1,29 +1,30 @@
 import type { ReactNode } from "react";
 
-import { Toaster } from "@workspace/ui";
-import type { Metadata } from "next";
-
-import { Providers } from "@/components/providers/root-provider";
-import { APP_CONFIG } from "@workspace/constants";
-import { fontRegistry, fontVars } from "@workspace/ui";
-import { PREFERENCE_DEFAULTS } from "@workspace/ui";
-import { ThemeBootScript } from "@/scripts/theme-boot";
-import { PreferencesStoreProvider } from "@workspace/ui";
-import { i18n, type Locale } from "@/i18n-config";
-import { getDictionary } from "@/get-dictionary";
-import { NuqsAdapter } from "nuqs/adapters/next/app";
-import { getPreference } from "@/server/server-actions";
 import {
+  CONTENT_LAYOUT_VALUES,
+  type FontKey,
+  fontRegistry,
+  fontVars,
+  NAVBAR_STYLE_VALUES,
+  PREFERENCE_DEFAULTS,
+  PreferencesStoreProvider,
+  SIDEBAR_COLLAPSIBLE_VALUES,
+  SIDEBAR_VARIANT_VALUES,
   THEME_MODE_VALUES,
   THEME_PRESET_VALUES,
-  CONTENT_LAYOUT_VALUES,
-  NAVBAR_STYLE_VALUES,
-  SIDEBAR_VARIANT_VALUES,
-  SIDEBAR_COLLAPSIBLE_VALUES,
+  Toaster,
 } from "@workspace/ui";
+import type { Metadata } from "next";
+import { NuqsAdapter } from "nuqs/adapters/next/app";
+
+import { Providers } from "@/components/providers/root-provider";
+import { getDictionary } from "@/get-dictionary";
+import type { Locale } from "@/i18n-config";
+import { ThemeBootScript } from "@/scripts/theme-boot";
+import { getPreference } from "@/server/server-actions";
 import "@workspace/ui/globals.css";
 
-const FONT_VALUES_PREF = Object.keys(fontRegistry) as any;
+const FONT_VALUES_PREF = Object.keys(fontRegistry) as FontKey[];
 // import { i18n } from "@/i18n-config";
 
 export const metadata: Metadata = {

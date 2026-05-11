@@ -1,14 +1,7 @@
 "use client";
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useRef,
-  useState,
-  useEffect,
-  type ReactNode,
-} from "react";
+import { createContext, type ReactNode, useCallback, useContext, useEffect, useRef, useState } from "react";
+
 import { Button } from "@workspace/ui";
 
 export interface ConfirmOptions {
@@ -60,26 +53,22 @@ export function ConfirmModalProvider({ children }: { children: ReactNode }) {
         // Backdrop — click outside = cancel
         <div
           className="fixed inset-0 z-9999 flex items-center justify-center bg-black/40 backdrop-blur-[2px]"
-          onMouseDown={() => settle(false)}
+          onPointerDown={() => settle(false)}
         >
           {/* Panel — stop propagation so clicks inside don't dismiss */}
           <div
-            className="bg-background border border-border w-full max-w-sm mx-4 p-6 space-y-4"
-            onMouseDown={(e) => e.stopPropagation()}
+            className="mx-4 w-full max-w-sm space-y-4 border border-border bg-background p-6"
+            onPointerDown={(e) => e.stopPropagation()}
           >
             <div className="space-y-1.5">
-              <h2 className="font-serif text-xl font-normal">
-                {opts.title ?? "Are you absolutely sure?"}
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                {opts.description ?? "This action cannot be undone."}
-              </p>
+              <h2 className="font-normal font-serif text-xl">{opts.title ?? "Are you absolutely sure?"}</h2>
+              <p className="text-muted-foreground text-sm">{opts.description ?? "This action cannot be undone."}</p>
             </div>
 
-            <div className="flex gap-2 justify-end pt-2">
+            <div className="flex justify-end gap-2 pt-2">
               <Button
                 variant="outline"
-                className="rounded-none h-10 uppercase text-xs tracking-widest font-medium"
+                className="h-10 rounded-none font-medium text-xs uppercase tracking-widest"
                 onClick={() => settle(false)}
               >
                 {opts.cancelLabel ?? "Cancel"}
@@ -87,8 +76,8 @@ export function ConfirmModalProvider({ children }: { children: ReactNode }) {
               <Button
                 className={
                   opts.destructive
-                    ? "rounded-none h-10 uppercase text-xs tracking-widest font-medium bg-destructive hover:bg-destructive/90 text-destructive-foreground"
-                    : "rounded-none h-10 uppercase text-xs tracking-widest font-medium"
+                    ? "h-10 rounded-none bg-destructive font-medium text-destructive-foreground text-xs uppercase tracking-widest hover:bg-destructive/90"
+                    : "h-10 rounded-none font-medium text-xs uppercase tracking-widest"
                 }
                 onClick={() => settle(true)}
               >

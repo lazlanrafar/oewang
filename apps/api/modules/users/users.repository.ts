@@ -106,6 +106,10 @@ export abstract class UsersRepository {
         role: user_workspaces.role,
         plan_name: pricing.name,
         max_workspaces: pricing.max_workspaces,
+        ai_tokens_used: workspaces.ai_tokens_used,
+        vault_size_used_bytes: workspaces.vault_size_used_bytes,
+        max_ai_tokens: pricing.max_ai_tokens,
+        max_vault_size_mb: pricing.max_vault_size_mb,
       })
       .from(user_workspaces)
       .innerJoin(workspaces, eq(user_workspaces.workspace_id, workspaces.id))

@@ -1,9 +1,10 @@
-import { pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
+import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { workspaces } from "./workspaces";
 
 export const workspaceSubCurrencies = pgTable("workspace_sub_currencies", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  workspaceId: uuid("workspace_id")
+  id: text("id").$defaultFn(createId).primaryKey(),
+  workspaceId: text("workspace_id")
     .references(() => workspaces.id)
     .notNull(),
   currencyCode: text("currency_code").notNull(),

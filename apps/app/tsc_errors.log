@@ -1,0 +1,239 @@
+.next/dev/types/validator.ts(400,31): error TS2344: Type 'typeof import("/Users/boneconsulting/Developer/oewang/apps/app/app/(main)/[locale]/(dashboard)/layout")' does not satisfy the constraint 'LayoutConfig<"/[locale]">'.
+  Types of property 'default' are incompatible.
+    Type '({ children, params, }: Readonly<{ children: ReactNode; params: Promise<{ locale: "en" | "ja" | "id"; }>; }>) => Promise<Element>' is not assignable to type 'ComponentType<LayoutProps<"/[locale]">> | ((props: LayoutProps<"/[locale]">) => void | Promise<void> | ReactNode | Promise<...>)'.
+      Type '({ children, params, }: Readonly<{ children: ReactNode; params: Promise<{ locale: "en" | "ja" | "id"; }>; }>) => Promise<Element>' is not assignable to type 'FunctionComponent<LayoutProps<"/[locale]">>'.
+        Types of parameters '__0' and 'props' are incompatible.
+          Type 'LayoutProps<"/[locale]">' is not assignable to type 'Readonly<{ children: ReactNode; params: Promise<{ locale: "en" | "ja" | "id"; }>; }>'.
+            Types of property 'params' are incompatible.
+              Type 'Promise<{ locale: string; }>' is not assignable to type 'Promise<{ locale: "en" | "ja" | "id"; }>'.
+                Type '{ locale: string; }' is not assignable to type '{ locale: "en" | "ja" | "id"; }'.
+                  Types of property 'locale' are incompatible.
+                    Type 'string' is not assignable to type '"en" | "ja" | "id"'.
+.next/types/validator.ts(391,31): error TS2344: Type 'typeof import("/Users/boneconsulting/Developer/oewang/apps/app/app/(main)/[locale]/(dashboard)/layout")' does not satisfy the constraint 'LayoutConfig<"/[locale]">'.
+  Types of property 'default' are incompatible.
+    Type '({ children, params, }: Readonly<{ children: ReactNode; params: Promise<{ locale: "en" | "ja" | "id"; }>; }>) => Promise<Element>' is not assignable to type 'ComponentType<LayoutProps<"/[locale]">> | ((props: LayoutProps<"/[locale]">) => void | Promise<void> | ReactNode | Promise<...>)'.
+      Type '({ children, params, }: Readonly<{ children: ReactNode; params: Promise<{ locale: "en" | "ja" | "id"; }>; }>) => Promise<Element>' is not assignable to type 'FunctionComponent<LayoutProps<"/[locale]">>'.
+        Types of parameters '__0' and 'props' are incompatible.
+          Type 'LayoutProps<"/[locale]">' is not assignable to type 'Readonly<{ children: ReactNode; params: Promise<{ locale: "en" | "ja" | "id"; }>; }>'.
+            Types of property 'params' are incompatible.
+              Type 'Promise<{ locale: string; }>' is not assignable to type 'Promise<{ locale: "en" | "ja" | "id"; }>'.
+                Type '{ locale: string; }' is not assignable to type '{ locale: "en" | "ja" | "id"; }'.
+                  Types of property 'locale' are incompatible.
+                    Type 'string' is not assignable to type '"en" | "ja" | "id"'.
+app/(main)/[locale]/(auth)/login/page.tsx(8,24): error TS2304: Cannot find name 'Metadata'.
+app/(main)/[locale]/(dashboard)/calendar/page.tsx(8,24): error TS2304: Cannot find name 'Metadata'.
+app/(main)/[locale]/(dashboard)/calendar/page.tsx(41,10): error TS2304: Cannot find name 'Suspense'.
+app/(main)/[locale]/(dashboard)/calendar/page.tsx(43,11): error TS2304: Cannot find name 'Suspense'.
+app/(main)/[locale]/(dashboard)/chat/[id]/page.tsx(42,19): error TS2304: Cannot find name 'locale'.
+app/(main)/[locale]/(dashboard)/invoices/page.tsx(36,23): error TS2322: Type '{ initialData: any; dictionary: { navigation: { home: string; dashboard: string; settings: string; }; auth: { welcome: string; login_title: string; register_title: string; show_other_options: string; ... 5 more ...; social: { ...; }; }; ... 16 more ...; chat: { ...; }; }; }' is not assignable to type 'IntrinsicAttributes & Props'.
+  Property 'initialData' does not exist on type 'IntrinsicAttributes & Props'.
+app/(main)/[locale]/invoice/[token]/page.tsx(199,12): error TS2741: Property 'dictionary' is missing in type '{ ref: RefObject<HTMLDivElement | null>; invoice: any; workspace: any; }' but required in type 'InvoiceA4Props'.
+components/organisms/accounts/account-form-sheet.tsx(74,13): error TS18048: 'wallet' is possibly 'undefined'.
+components/organisms/accounts/account-form-sheet.tsx(75,16): error TS18048: 'wallet' is possibly 'undefined'.
+components/organisms/accounts/account-form-sheet.tsx(76,16): error TS18048: 'wallet' is possibly 'undefined'.
+components/organisms/accounts/account-form-sheet.tsx(76,40): error TS18048: 'wallet' is possibly 'undefined'.
+components/organisms/accounts/account-form-sheet.tsx(77,27): error TS18048: 'wallet' is possibly 'undefined'.
+components/organisms/accounts/account-form-sheet.tsx(199,17): error TS18048: 'wallet' is possibly 'undefined'.
+components/organisms/accounts/account-form-sheet.tsx(224,3): error TS2339: Property 'dictionary' does not exist on type 'AccountSheetProps'.
+components/organisms/accounts/accounts-client.tsx(87,15): error TS2769: No overload matches this call.
+  Overload 1 of 3, '(options: DefinedInitialDataInfiniteOptions<ApiResponse<Wallet[]>, Error, InfiniteData<ApiResponse<Wallet[]>, unknown>, any[], number>, queryClient?: QueryClient | undefined): DefinedUseInfiniteQueryResult<...>', gave the following error.
+    Object literal may only specify known properties, and 'count' does not exist in type 'PaginationMeta'.
+  Overload 2 of 3, '(options: UndefinedInitialDataInfiniteOptions<ApiResponse<Wallet[]>, Error, InfiniteData<ApiResponse<Wallet[]>, unknown>, any[], number>, queryClient?: QueryClient | undefined): UseInfiniteQueryResult<...>', gave the following error.
+    Object literal may only specify known properties, and 'count' does not exist in type 'PaginationMeta'.
+  Overload 3 of 3, '(options: UseInfiniteQueryOptions<ApiResponse<Wallet[]>, Error, InfiniteData<ApiResponse<Wallet[]>, unknown>, any[], number>, queryClient?: QueryClient | undefined): UseInfiniteQueryResult<...>', gave the following error.
+    Object literal may only specify known properties, and 'count' does not exist in type 'PaginationMeta'.
+components/organisms/apps/apps-client.tsx(57,9): error TS18048: 'installedApps' is possibly 'undefined'.
+components/organisms/apps/apps-client.tsx(84,12): error TS18048: 'installedApps' is possibly 'undefined'.
+components/organisms/apps/apps-client.tsx(117,27): error TS18049: 'me' is possibly 'null' or 'undefined'.
+components/organisms/apps/apps-client.tsx(117,62): error TS18049: 'me' is possibly 'null' or 'undefined'.
+components/organisms/apps/apps-client.tsx(118,20): error TS18048: 'activeWorkspace' is possibly 'undefined'.
+components/organisms/apps/connect-telegram.tsx(27,23): error TS18049: 'me' is possibly 'null' or 'undefined'.
+components/organisms/apps/connect-telegram.tsx(28,18): error TS18049: 'me' is possibly 'null' or 'undefined'.
+components/organisms/apps/connect-whatsapp.tsx(33,23): error TS18049: 'me' is possibly 'null' or 'undefined'.
+components/organisms/apps/connect-whatsapp.tsx(35,27): error TS18049: 'me' is possibly 'null' or 'undefined'.
+components/organisms/apps/connect-whatsapp.tsx(36,20): error TS18048: 'activeWorkspace' is possibly 'undefined'.
+components/organisms/auth/workspace-form.tsx(61,25): error TS2532: Object is possibly 'undefined'.
+components/organisms/calendar/calendar-client.tsx(119,25): error TS18048: 'txResponse' is possibly 'undefined'.
+components/organisms/calendar/calendar-client.tsx(119,57): error TS18048: 'txResponse' is possibly 'undefined'.
+components/organisms/chat/canvas/chat-canvas.tsx(38,12): error TS18048: 'msg' is possibly 'undefined'.
+components/organisms/chat/canvas/chat-canvas.tsx(40,26): error TS18048: 'msg' is possibly 'undefined'.
+components/organisms/chat/charts/revenue-forecast-chart.tsx(82,29): error TS18048: 'data' is possibly 'undefined'.
+components/organisms/chat/charts/revenue-forecast-chart.tsx(85,18): error TS18048: 'data' is possibly 'undefined'.
+components/organisms/chat/charts/revenue-forecast-chart.tsx(85,46): error TS18048: 'data' is possibly 'undefined'.
+components/organisms/chat/charts/revenue-forecast-chart.tsx(97,39): error TS18048: 'data' is possibly 'undefined'.
+components/organisms/chat/charts/revenue-forecast-chart.tsx(98,23): error TS18048: 'data' is possibly 'undefined'.
+components/organisms/chat/charts/revenue-forecast-chart.tsx(99,24): error TS18048: 'data' is possibly 'undefined'.
+components/organisms/chat/charts/revenue-forecast-chart.tsx(100,24): error TS18048: 'data' is possibly 'undefined'.
+components/organisms/chat/charts/revenue-forecast-chart.tsx(101,25): error TS18048: 'data' is possibly 'undefined'.
+components/organisms/chat/charts/revenue-forecast-chart.tsx(113,12): error TS18048: 'data' is possibly 'undefined'.
+components/organisms/chat/charts/revenue-forecast-chart.tsx(206,11): error TS2532: Object is possibly 'undefined'.
+components/organisms/chat/charts/revenue-forecast-chart.tsx(206,48): error TS2532: Object is possibly 'undefined'.
+components/organisms/chat/charts/revenue-forecast-chart.tsx(215,7): error TS2532: Object is possibly 'undefined'.
+components/organisms/chat/charts/revenue-forecast-chart.tsx(216,7): error TS2532: Object is possibly 'undefined'.
+components/organisms/chat/chat-artifact-toggle.tsx(56,69): error TS2339: Property 'close_artifact' does not exist on type '{ copy: string; retry: string; positive: string; negative: string; remove_positive: string; remove_negative: string; }'.
+components/organisms/chat/chat-artifact-toggle.tsx(56,130): error TS2339: Property 'open_artifact' does not exist on type '{ copy: string; retry: string; positive: string; negative: string; remove_positive: string; remove_negative: string; }'.
+components/organisms/chat/chat-artifact-toggle.tsx(62,59): error TS2339: Property 'close_artifact' does not exist on type '{ copy: string; retry: string; positive: string; negative: string; remove_positive: string; remove_negative: string; }'.
+components/organisms/chat/chat-artifact-toggle.tsx(62,120): error TS2339: Property 'open_artifact' does not exist on type '{ copy: string; retry: string; positive: string; negative: string; remove_positive: string; remove_negative: string; }'.
+components/organisms/chat/chat-favicon-stack.tsx(79,40): error TS18047: 'parent' is possibly 'null'.
+components/organisms/chat/chat-header.tsx(16,15): error TS2305: Module '"@workspace/types"' has no exported member 'ChatSession'.
+components/organisms/chat/chat-header.tsx(44,21): error TS18048: 'sessionsResponse' is possibly 'undefined'.
+components/organisms/chat/chat-header.tsx(47,24): error TS18047: 'dataPartTitle' is possibly 'null'.
+components/organisms/chat/chat-history.tsx(101,9): error TS18047: 'searchInputRef.current' is possibly 'null'.
+components/organisms/chat/chat-history.tsx(113,31): error TS18047: 'clickedButton' is possibly 'null'.
+components/organisms/chat/chat-history.tsx(154,18): error TS18048: 'sessionsResponse' is possibly 'undefined'.
+components/organisms/chat/chat-input.tsx(228,36): error TS18048: 'message.files' is possibly 'undefined'.
+components/organisms/chat/chat-input.tsx(251,27): error TS2345: Argument of type '(file: File) => Promise<{ name: string; type: string; data: string; }>' is not assignable to parameter of type '(value: FileUIPart, index: number, array: FileUIPart[]) => Promise<{ name: string; type: string; data: string; }>'.
+  Types of parameters 'file' and 'value' are incompatible.
+    Type 'FileUIPart' is missing the following properties from type 'File': lastModified, name, webkitRelativePath, size, and 7 more.
+components/organisms/chat/chat-input.tsx(282,22): error TS18048: 'message.metadata' is possibly 'undefined'.
+components/organisms/chat/chat-input.tsx(283,21): error TS18048: 'message.metadata' is possibly 'undefined'.
+components/organisms/chat/chat-input.tsx(327,77): error TS18047: 'textareaRef.current' is possibly 'null'.
+components/organisms/chat/chat-insight-message.tsx(196,26): error TS18049: 'content' is possibly 'null' or 'undefined'.
+components/organisms/chat/chat-insight-message.tsx(208,37): error TS18048: 'selectedMetrics' is possibly 'undefined'.
+components/organisms/chat/chat-insight-message.tsx(213,31): error TS18048: 'selectedMetrics' is possibly 'undefined'.
+components/organisms/chat/chat-insight-message.tsx(217,31): error TS18049: 'content' is possibly 'null' or 'undefined'.
+components/organisms/chat/chat-insight-message.tsx(222,33): error TS18049: 'content' is possibly 'null' or 'undefined'.
+components/organisms/chat/chat-insight-message.tsx(232,13): error TS18049: 'content' is possibly 'null' or 'undefined'.
+components/organisms/chat/chat-insight-message.tsx(235,23): error TS18049: 'content' is possibly 'null' or 'undefined'.
+components/organisms/chat/chat-insight-message.tsx(284,23): error TS18049: 'content' is possibly 'null' or 'undefined'.
+components/organisms/chat/chat-insight-message.tsx(290,34): error TS18049: 'content' is possibly 'null' or 'undefined'.
+components/organisms/chat/chat-insight-message.tsx(297,25): error TS18049: 'content' is possibly 'null' or 'undefined'.
+components/organisms/chat/chat-insight-message.tsx(297,44): error TS18049: 'content' is possibly 'null' or 'undefined'.
+components/organisms/chat/chat-insight-message.tsx(301,16): error TS18049: 'content' is possibly 'null' or 'undefined'.
+components/organisms/chat/chat-insight-message.tsx(353,25): error TS18048: 'insight.activity' is possibly 'undefined'.
+components/organisms/chat/chat-insight-message.tsx(353,69): error TS18048: 'insight.activity' is possibly 'undefined'.
+components/organisms/chat/chat-insight-message.tsx(357,16): error TS18048: 'insight.activity' is possibly 'undefined'.
+components/organisms/chat/chat-insight-message.tsx(358,16): error TS18048: 'insight.activity' is possibly 'undefined'.
+components/organisms/chat/chat-insight-message.tsx(359,16): error TS18048: 'insight.activity' is possibly 'undefined'.
+components/organisms/chat/chat-insight-message.tsx(359,58): error TS18048: 'insight.activity' is possibly 'undefined'.
+components/organisms/chat/chat-insight-message.tsx(364,29): error TS18048: 'insight.activity' is possibly 'undefined'.
+components/organisms/chat/chat-insight-message.tsx(424,25): error TS18048: 'predictions' is possibly 'undefined'.
+components/organisms/chat/chat-insight-message.tsx(424,52): error TS18048: 'predictions' is possibly 'undefined'.
+components/organisms/chat/chat-insight-message.tsx(428,16): error TS18048: 'predictions' is possibly 'undefined'.
+components/organisms/chat/chat-insight-message.tsx(429,16): error TS18048: 'predictions' is possibly 'undefined'.
+components/organisms/chat/chat-insight-message.tsx(431,25): error TS18048: 'predictions' is possibly 'undefined'.
+components/organisms/chat/chat-insight-message.tsx(432,27): error TS18048: 'predictions' is possibly 'undefined'.
+components/organisms/chat/chat-messages.tsx(44,11): error TS18048: 'output' is possibly 'undefined'.
+components/organisms/chat/chat-messages.tsx(45,25): error TS18048: 'output' is possibly 'undefined'.
+components/organisms/chat/chat-messages.tsx(142,39): error TS18048: 'file.mediaType' is possibly 'undefined'.
+components/organisms/chat/chat-messages.tsx(212,32): error TS18047: 'insightData' is possibly 'null'.
+components/organisms/chat/chat-provider-wrapper.tsx(40,29): error TS18048: 'options' is possibly 'undefined'.
+components/organisms/chat/chat-suggestion-button.tsx(22,9): error TS2531: Object is possibly 'null'.
+components/organisms/contacts/contact-detail-sheet.tsx(42,49): error TS2339: Property 'errors' does not exist on type '{ title: string; description: string; add_button: string; search_placeholder: string; empty: { title: string; description: string; action: string; }; summary: { total: string; added_this_month: string; most_active: string; top_revenue: string; no_activity: string; no_revenue: string; }; columns: { ...; }; details: {...'.
+components/organisms/contacts/contact-detail-sheet.tsx(45,34): error TS2339: Property 'errors' does not exist on type '{ title: string; description: string; add_button: string; search_placeholder: string; empty: { title: string; description: string; action: string; }; summary: { total: string; added_this_month: string; most_active: string; top_revenue: string; no_activity: string; no_revenue: string; }; columns: { ...; }; details: {...'.
+components/organisms/contacts/contact-detail-sheet.tsx(82,36): error TS18047: 'contact' is possibly 'null'.
+components/organisms/contacts/contact-detail-sheet.tsx(84,12): error TS18047: 'contact' is possibly 'null'.
+components/organisms/contacts/contact-detail-sheet.tsx(85,50): error TS18047: 'contact' is possibly 'null'.
+components/organisms/contacts/contact-detail-sheet.tsx(88,16): error TS18047: 'contact' is possibly 'null'.
+components/organisms/contacts/contact-detail-sheet.tsx(153,5): error TS18049: 'debts' is possibly 'null' or 'undefined'.
+components/organisms/contacts/contact-detail-sheet.tsx(157,5): error TS18049: 'debts' is possibly 'null' or 'undefined'.
+components/organisms/contacts/contact-detail-sheet.tsx(314,39): error TS2339: Property 'summary' does not exist on type '{ title: string; description: string; add_button: string; search_placeholder: string; status_label: string; group_label: string; total_debt: string; active_debts: string; overdue: string; empty: { ...; }; ... 8 more ...; form: { ...; }; }'.
+components/organisms/contacts/contact-detail-sheet.tsx(322,39): error TS2339: Property 'summary' does not exist on type '{ title: string; description: string; add_button: string; search_placeholder: string; status_label: string; group_label: string; total_debt: string; active_debts: string; overdue: string; empty: { ...; }; ... 8 more ...; form: { ...; }; }'.
+components/organisms/contacts/contact-detail-sheet.tsx(394,56): error TS2339: Property 'summary' does not exist on type '{ title: string; description: string; add_button: string; search_placeholder: string; status_label: string; group_label: string; total_debt: string; active_debts: string; overdue: string; empty: { ...; }; ... 8 more ...; form: { ...; }; }'.
+components/organisms/contacts/contact-detail-sheet.tsx(395,56): error TS2339: Property 'summary' does not exist on type '{ title: string; description: string; add_button: string; search_placeholder: string; status_label: string; group_label: string; total_debt: string; active_debts: string; overdue: string; empty: { ...; }; ... 8 more ...; form: { ...; }; }'.
+components/organisms/contacts/contact-form-sheet.tsx(40,35): error TS2339: Property 'errors' does not exist on type '{ title: string; description: string; add_button: string; search_placeholder: string; empty: { title: string; description: string; action: string; }; summary: { total: string; added_this_month: string; most_active: string; top_revenue: string; no_activity: string; no_revenue: string; }; columns: { ...; }; details: {...'.
+components/organisms/contacts/contact-form-sheet.tsx(42,49): error TS2339: Property 'errors' does not exist on type '{ title: string; description: string; add_button: string; search_placeholder: string; empty: { title: string; description: string; action: string; }; summary: { total: string; added_this_month: string; most_active: string; top_revenue: string; no_activity: string; no_revenue: string; }; columns: { ...; }; details: {...'.
+components/organisms/contacts/contact-form-sheet.tsx(101,22): error TS18047: 'inputRef.current' is possibly 'null'.
+components/organisms/contacts/contact-form-sheet.tsx(146,13): error TS18049: 'contact' is possibly 'null' or 'undefined'.
+components/organisms/contacts/contact-form-sheet.tsx(147,14): error TS18049: 'contact' is possibly 'null' or 'undefined'.
+components/organisms/contacts/contact-form-sheet.tsx(148,14): error TS18049: 'contact' is possibly 'null' or 'undefined'.
+components/organisms/contacts/contact-form-sheet.tsx(149,16): error TS18049: 'contact' is possibly 'null' or 'undefined'.
+components/organisms/contacts/contact-form-sheet.tsx(151,21): error TS18049: 'contact' is possibly 'null' or 'undefined'.
+components/organisms/contacts/contact-form-sheet.tsx(152,21): error TS18049: 'contact' is possibly 'null' or 'undefined'.
+components/organisms/contacts/contact-form-sheet.tsx(153,13): error TS18049: 'contact' is possibly 'null' or 'undefined'.
+components/organisms/contacts/contact-form-sheet.tsx(154,14): error TS18049: 'contact' is possibly 'null' or 'undefined'.
+components/organisms/contacts/contact-form-sheet.tsx(155,16): error TS18049: 'contact' is possibly 'null' or 'undefined'.
+components/organisms/contacts/contact-form-sheet.tsx(156,12): error TS18049: 'contact' is possibly 'null' or 'undefined'.
+components/organisms/contacts/contact-form-sheet.tsx(157,13): error TS18049: 'contact' is possibly 'null' or 'undefined'.
+components/organisms/contacts/contact-form-sheet.tsx(158,18): error TS18049: 'contact' is possibly 'null' or 'undefined'.
+components/organisms/contacts/contacts-client.tsx(128,40): error TS2532: Object is possibly 'undefined'.
+components/organisms/contacts/contacts-client.tsx(138,40): error TS2532: Object is possibly 'undefined'.
+components/organisms/debts/debt-form-sheet.tsx(63,6): error TS18048: 'debt' is possibly 'undefined'.
+components/organisms/debts/debt-form-sheet.tsx(109,11): error TS18048: 'debt' is possibly 'undefined'.
+components/organisms/debts/debt-form-sheet.tsx(110,27): error TS18048: 'debt' is possibly 'undefined'.
+components/organisms/debts/debts-client.tsx(175,13): error TS2322: Type '(newFilters: { q: string; status: string; }) => void' is not assignable to type '(filters: Record<string, any>) => void'.
+  Types of parameters 'newFilters' and 'filters' are incompatible.
+    Type 'Record<string, any>' is missing the following properties from type '{ q: string; status: string; }': q, status
+components/organisms/debts/debts-client.tsx(186,39): error TS2322: Type 'string[]' is not assignable to type 'Column<any, unknown>[]'.
+  Type 'string' is not assignable to type 'Column<any, unknown>'.
+components/organisms/debts/debts-client.tsx(198,11): error TS2322: Type 'Dispatch<SetStateAction<string[]>>' is not assignable to type '(columns: Column<any, unknown>[]) => void'.
+  Types of parameters 'value' and 'columns' are incompatible.
+    Type 'Column<any, unknown>[]' is not assignable to type 'SetStateAction<string[]>'.
+      Type 'Column<any, unknown>[]' is not assignable to type 'string[]'.
+        Type 'Column<any, unknown>' is not assignable to type 'string'.
+components/organisms/debts/debts-columns.tsx(138,12): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ unpaid: string; partial: string; paid: string; }'.
+  No index signature with a parameter of type 'string' was found on type '{ unpaid: string; partial: string; paid: string; }'.
+components/organisms/debts/debts-columns.tsx(149,41): error TS2552: Cannot find name 'format'. Did you mean 'FormData'?
+components/organisms/debts/payment-form-sheet.tsx(85,12): error TS18048: 'debt' is possibly 'undefined'.
+components/organisms/debts/payment-form-sheet.tsx(86,22): error TS18048: 'debt' is possibly 'undefined'.
+components/organisms/invoices/invoice-activity.tsx(24,36): error TS18048: 'response' is possibly 'undefined'.
+components/organisms/invoices/invoice-columns.tsx(55,28): error TS2339: Property 'invoice_number' does not exist on type '{ contact: string; issue_date: string; due_date: string; description: string; qty: string; rate: string; tax: string; amount: string; }'.
+components/organisms/invoices/invoice-columns.tsx(62,28): error TS2339: Property 'status' does not exist on type '{ contact: string; issue_date: string; due_date: string; description: string; qty: string; rate: string; tax: string; amount: string; }'.
+components/organisms/invoices/invoice-columns.tsx(79,22): error TS18049: 'row.original.contact' is possibly 'null' or 'undefined'.
+components/organisms/invoices/invoice-columns.tsx(106,28): error TS2339: Property 'actions' does not exist on type '{ contact: string; issue_date: string; due_date: string; description: string; qty: string; rate: string; tax: string; amount: string; }'.
+components/organisms/invoices/invoice-columns.tsx(122,31): error TS2339: Property 'delete' does not exist on type '{ copy: string; copied: string; edit: string; add_item: string; rename_template: string; duplicate_template: string; delete_template: string; }'.
+components/organisms/invoices/invoice-form-sheet.tsx(184,80): error TS18047: 'internalRef.current' is possibly 'null'.
+components/organisms/invoices/invoice-form-sheet.tsx(191,26): error TS18047: 'internalRef.current' is possibly 'null'.
+components/organisms/invoices/invoice-form-sheet.tsx(340,58): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Type 'string' is not assignable to type 'readonly ("status" | "amount" | "contactId" | "invoiceNumber" | "issueDate" | "dueDate" | "vat" | "tax" | "currency" | "internalNote" | "noteDetails" | "paymentDetails" | "logoUrl" | "lineItems" | ... 18 more ... | "invoiceSettings.units")[]'.
+components/organisms/invoices/invoice-form-sheet.tsx(386,20): error TS18047: 'invoice.issueDate' is possibly 'null'.
+components/organisms/invoices/invoice-form-sheet.tsx(387,18): error TS18047: 'invoice.dueDate' is possibly 'null'.
+components/organisms/invoices/invoice-form-sheet.tsx(669,33): error TS2532: Object is possibly 'undefined'.
+components/organisms/invoices/invoice-form-sheet.tsx(670,33): error TS2532: Object is possibly 'undefined'.
+components/organisms/invoices/invoice-form-sheet.tsx(785,45): error TS2353: Object literal may only specify known properties, and 'description' does not exist in type '{ name: string; quantity: number; price: number; } | { name: string; quantity: number; price: number; }[]'.
+components/organisms/invoices/invoice-form-sheet.tsx(863,29): error TS2322: Type '"discount"' is not assignable to type '"status" | "amount" | "contactId" | "invoiceNumber" | "issueDate" | "dueDate" | "vat" | "tax" | "currency" | "internalNote" | "noteDetails" | "paymentDetails" | "logoUrl" | "lineItems" | ... 18 more ... | "invoiceSettings.units"'.
+components/organisms/invoices/invoice-form-sheet.tsx(867,36): error TS2322: Type '{ onChange: (e: ChangeEvent<HTMLInputElement, HTMLInputElement>) => void; onBlur: Noop; value: string | number | boolean | ... 4 more ... | undefined; ... 6 more ...; className: string; }' is not assignable to type 'HashInputProps'.
+  Types of property 'value' are incompatible.
+    Type 'string | number | boolean | { name: string; quantity: number; price: number; } | { name: string; quantity: number; price: number; }[] | { vat: boolean; decimals: boolean; qrCode: boolean; salesTax: boolean; lineItemTax: boolean; discount: boolean; units: boolean; } | null | undefined' is not assignable to type 'string | number | readonly string[] | undefined'.
+      Type 'null' is not assignable to type 'string | number | readonly string[] | undefined'.
+components/organisms/invoices/invoice-settings.tsx(176,32): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ due_on_receipt: string; net_7: string; net_10: string; net_15: string; net_30: string; net_45: string; net_60: string; net_90: string; }'.
+  No index signature with a parameter of type 'string' was found on type '{ due_on_receipt: string; net_7: string; net_10: string; net_15: string; net_30: string; net_45: string; net_60: string; net_90: string; }'.
+components/organisms/invoices/invoices-client.tsx(52,5): error TS2769: No overload matches this call.
+  Overload 1 of 3, '(options: DefinedInitialDataInfiniteOptions<ApiResponse<PaginatedList<InvoiceRow>>, Error, InfiniteData<ApiResponse<PaginatedList<InvoiceRow>>, unknown>, string[], number>, queryClient?: QueryClient | undefined): DefinedUseInfiniteQueryResult<...>', gave the following error.
+    Type '({ pageParam }: { client: QueryClient; queryKey: string[]; signal: AbortSignal; pageParam: number; direction: FetchDirection; meta: Record<string, unknown> | undefined; }) => Promise<...>' is not assignable to type 'unique symbol | QueryFunction<ApiResponse<PaginatedList<InvoiceRow>>, string[], number> | undefined'.
+      Type '({ pageParam }: { client: QueryClient; queryKey: string[]; signal: AbortSignal; pageParam: number; direction: FetchDirection; meta: Record<string, unknown> | undefined; }) => Promise<...>' is not assignable to type 'QueryFunction<ApiResponse<PaginatedList<InvoiceRow>>, string[], number>'.
+        Type 'Promise<{ success: true; data: any; error?: undefined; }>' is not assignable to type 'ApiResponse<PaginatedList<InvoiceRow>> | Promise<ApiResponse<PaginatedList<InvoiceRow>>>'.
+          Type 'Promise<{ success: true; data: any; error?: undefined; }>' is not assignable to type 'Promise<ApiResponse<PaginatedList<InvoiceRow>>>'.
+            Type '{ success: true; data: any; error?: undefined; }' is missing the following properties from type 'ApiResponse<PaginatedList<InvoiceRow>>': code, message, meta
+  Overload 2 of 3, '(options: UndefinedInitialDataInfiniteOptions<ApiResponse<PaginatedList<InvoiceRow>>, Error, InfiniteData<ApiResponse<PaginatedList<InvoiceRow>>, unknown>, string[], number>, queryClient?: QueryClient | undefined): UseInfiniteQueryResult<...>', gave the following error.
+    Type '({ pageParam }: { client: QueryClient; queryKey: string[]; signal: AbortSignal; pageParam: number; direction: FetchDirection; meta: Record<string, unknown> | undefined; }) => Promise<...>' is not assignable to type 'unique symbol | QueryFunction<ApiResponse<PaginatedList<InvoiceRow>>, string[], number> | undefined'.
+      Type '({ pageParam }: { client: QueryClient; queryKey: string[]; signal: AbortSignal; pageParam: number; direction: FetchDirection; meta: Record<string, unknown> | undefined; }) => Promise<...>' is not assignable to type 'QueryFunction<ApiResponse<PaginatedList<InvoiceRow>>, string[], number>'.
+        Type 'Promise<{ success: true; data: any; error?: undefined; }>' is not assignable to type 'ApiResponse<PaginatedList<InvoiceRow>> | Promise<ApiResponse<PaginatedList<InvoiceRow>>>'.
+          Type 'Promise<{ success: true; data: any; error?: undefined; }>' is not assignable to type 'Promise<ApiResponse<PaginatedList<InvoiceRow>>>'.
+            Type '{ success: true; data: any; error?: undefined; }' is missing the following properties from type 'ApiResponse<PaginatedList<InvoiceRow>>': code, message, meta
+  Overload 3 of 3, '(options: UseInfiniteQueryOptions<ApiResponse<PaginatedList<InvoiceRow>>, Error, InfiniteData<ApiResponse<PaginatedList<InvoiceRow>>, unknown>, string[], number>, queryClient?: QueryClient | undefined): UseInfiniteQueryResult<...>', gave the following error.
+    Type '({ pageParam }: { client: QueryClient; queryKey: string[]; signal: AbortSignal; pageParam: number; direction: FetchDirection; meta: Record<string, unknown> | undefined; }) => Promise<...>' is not assignable to type 'unique symbol | QueryFunction<ApiResponse<PaginatedList<InvoiceRow>>, string[], number> | undefined'.
+      Type '({ pageParam }: { client: QueryClient; queryKey: string[]; signal: AbortSignal; pageParam: number; direction: FetchDirection; meta: Record<string, unknown> | undefined; }) => Promise<...>' is not assignable to type 'QueryFunction<ApiResponse<PaginatedList<InvoiceRow>>, string[], number>'.
+        Type 'Promise<{ success: true; data: any; error?: undefined; }>' is not assignable to type 'ApiResponse<PaginatedList<InvoiceRow>> | Promise<ApiResponse<PaginatedList<InvoiceRow>>>'.
+          Type 'Promise<{ success: true; data: any; error?: undefined; }>' is not assignable to type 'Promise<ApiResponse<PaginatedList<InvoiceRow>>>'.
+            Type '{ success: true; data: any; error?: undefined; }' is missing the following properties from type 'ApiResponse<PaginatedList<InvoiceRow>>': code, message, meta
+components/organisms/invoices/invoices-client.tsx(132,43): error TS2345: Argument of type 'Partial<Invoice>' is not assignable to parameter of type 'UpdateInvoiceData'.
+  Types of property 'issueDate' are incompatible.
+    Type 'string | null | undefined' is not assignable to type 'string | undefined'.
+      Type 'null' is not assignable to type 'string | undefined'.
+components/organisms/invoices/invoices-client.tsx(135,28): error TS2345: Argument of type '(prev: InvoiceRow | null) => { id?: string | undefined; workspaceId?: string | undefined; contactId?: string | undefined; invoiceNumber?: string | undefined; status?: "draft" | ... 4 more ... | undefined; ... 16 more ...; contact?: { ...; } | ... 1 more ... | undefined; } | null' is not assignable to parameter of type 'SetStateAction<InvoiceRow | null>'.
+  Type '(prev: InvoiceRow | null) => { id?: string | undefined; workspaceId?: string | undefined; contactId?: string | undefined; invoiceNumber?: string | undefined; status?: "draft" | ... 4 more ... | undefined; ... 16 more ...; contact?: { ...; } | ... 1 more ... | undefined; } | null' is not assignable to type '(prevState: InvoiceRow | null) => InvoiceRow | null'.
+    Type '{ id?: string | undefined; workspaceId?: string | undefined; contactId?: string | undefined; invoiceNumber?: string | undefined; status?: "draft" | "unpaid" | "paid" | "overdue" | "canceled" | undefined; ... 16 more ...; contact?: { ...; } | ... 1 more ... | undefined; } | null' is not assignable to type 'InvoiceRow | null'.
+      Type '{ id?: string | undefined; workspaceId?: string | undefined; contactId?: string | undefined; invoiceNumber?: string | undefined; status?: "draft" | "unpaid" | "paid" | "overdue" | "canceled" | undefined; ... 16 more ...; contact?: { name?: string; email?: string; } | null; }' is not assignable to type 'InvoiceRow'.
+        Type '{ id?: string | undefined; workspaceId?: string | undefined; contactId?: string | undefined; invoiceNumber?: string | undefined; status?: "draft" | "unpaid" | "paid" | "overdue" | "canceled" | undefined; ... 16 more ...; contact?: { name?: string; email?: string; } | null; }' is not assignable to type 'Invoice'.
+          Types of property 'id' are incompatible.
+            Type 'string | undefined' is not assignable to type 'string'.
+              Type 'undefined' is not assignable to type 'string'.
+components/organisms/invoices/invoices-client.tsx(135,39): error TS18047: 'prev' is possibly 'null'.
+components/organisms/invoices/invoices-client.tsx(146,11): error TS18047: 'editInvoice' is possibly 'null'.
+components/organisms/invoices/invoices-client.tsx(147,41): error TS18047: 'editInvoice' is possibly 'null'.
+components/organisms/invoices/invoices-client.tsx(220,13): error TS2322: Type '(newFilters: { q: string; status: string; }) => void' is not assignable to type '(filters: Record<string, any>) => void'.
+  Types of parameters 'newFilters' and 'filters' are incompatible.
+    Type 'Record<string, any>' is missing the following properties from type '{ q: string; status: string; }': q, status
+components/organisms/layout/app-sidebar.tsx(55,30): error TS18047: 'currentUser' is possibly 'null'.
+components/organisms/layout/nav-main.tsx(218,12): error TS18048: 'subItems' is possibly 'undefined'.
+components/organisms/layout/workspace-switcher.tsx(199,9): error TS2322: Type '{ open: boolean; onOpenChange: Dispatch<SetStateAction<boolean>>; dictionary: any; }' is not assignable to type 'IntrinsicAttributes & CreateWorkspaceDialogProps'.
+  Property 'dictionary' does not exist on type 'IntrinsicAttributes & CreateWorkspaceDialogProps'.
+components/organisms/setting/wallet/wallet-client.tsx(35,31): error TS2339: Property 'error' does not exist on type 'ApiResponse<Wallet[]>'.
+components/organisms/transactions/transaction-client.tsx(569,28): error TS18048: 'range' is possibly 'undefined'.
+components/organisms/transactions/transaction-client.tsx(569,28): error TS18048: 'range.from' is possibly 'undefined'.
+components/organisms/transactions/transaction-client.tsx(570,26): error TS18048: 'range' is possibly 'undefined'.
+components/organisms/transactions/transaction-client.tsx(570,26): error TS18048: 'range.to' is possibly 'undefined'.
+components/organisms/transactions/transaction-client.tsx(960,9): error TS2322: Type '{ open: boolean; onOpenChange: Dispatch<SetStateAction<boolean>>; wallets: Wallet[]; dictionary: any; onSuccess: () => void; }' is not assignable to type 'IntrinsicAttributes & ImportModalProps'.
+  Property 'dictionary' does not exist on type 'IntrinsicAttributes & ImportModalProps'.

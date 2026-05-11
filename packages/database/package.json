@@ -14,10 +14,12 @@
     "studio": "drizzle-kit studio",
     "seed": "bun --env-file=../../.env scripts/seed-pricing.ts",
     "seed:pricing": "bun --env-file=../../.env scripts/seed-pricing.ts",
+    "reset": "bun --env-file=../../.env scripts/reset.ts",
 
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@paralleldrive/cuid2": "^2.2.2",
     "dotenv": "^16.4.7",
     "drizzle-orm": "catalog:",
     "postgres": "^3.4.5"

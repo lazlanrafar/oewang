@@ -1,45 +1,46 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
+
 import { useRouter } from "next/navigation";
-import type { Wallet, Contact } from "@workspace/types";
-import { type DebtWithContact, deleteDebt, getContact, getDebts } from "@workspace/modules/client";
-import {
-  Button,
-  DataTable,
-  DataTableColumnsVisibility,
-  DataTableFilter,
-  DataTableEmptyState,
-} from "@workspace/ui";
-import { Plus } from "lucide-react";
-import { debtColumns } from "./debts-columns";
-import { DebtFormSheet } from "./debt-form-sheet";
-import { DebtDetailSheet } from "./debt-detail-sheet";
-import { DebtBulkEditBar } from "./debt-bulk-edit-bar";
-import { ContactDetailSheet } from "../contacts/contact-detail-sheet";
-import { useAppStore } from "@/stores/app";
-import { useDebtsStore } from "@/stores/debts";
-import { useDataTableFilter } from "@/hooks/use-data-table-filter";
-import { useConfirm } from "@/components/providers/confirm-modal-provider";
-import { toast } from "sonner";
+
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import type { Dictionary } from "@workspace/dictionaries";
+import { type DebtWithContact, deleteDebt, getContact, getDebts } from "@workspace/modules/client";
+import type { Contact, TransactionSettings, Wallet } from "@workspace/types";
+import { Button, DataTable, DataTableColumnsVisibility, DataTableEmptyState, DataTableFilter } from "@workspace/ui";
+import { formatCurrency as formatCurrencyUtil } from "@workspace/utils";
+import { Plus } from "lucide-react";
+import { toast } from "sonner";
+
+import { useConfirm } from "@/components/providers/confirm-modal-provider";
+import { useDataTableFilter } from "@/hooks/use-data-table-filter";
+import { useDebtsStore } from "@/stores/debts";
+
+import { ContactDetailSheet } from "../contacts/contact-detail-sheet";
+import { DebtBulkEditBar } from "./debt-bulk-edit-bar";
+import { DebtDetailSheet } from "./debt-detail-sheet";
+import { DebtFormSheet } from "./debt-form-sheet";
+import { debtColumns } from "./debts-columns";
 
 interface Props {
   initialData: DebtWithContact[];
   wallets: Wallet[];
-  dictionary: any;
+  dictionary: Dictionary;
+  settings: TransactionSettings;
 }
 
-export function DebtsClient({ initialData, wallets, dictionary }: Props) {
+export function DebtsClient({ initialData, wallets, dictionary, settings }: Props) {
   const router = useRouter();
-  const [columns, setColumns] = useState<any[]>([]);
+  const [columns, setColumns] = useState<string[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isContactDetailOpen, setIsContactDetailOpen] = useState(false);
   const [selectedDebt, setSelectedDebt] = useState<DebtWithContact | undefined>();
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
-  
-  const { settings, formatCurrency } = useAppStore();
+
+  const formatCurrency = (amount: number, options?: Parameters<typeof formatCurrencyUtil>[2]) =>
+    formatCurrencyUtil(amount, settings, options);
   const { rowSelection, setRowSelection } = useDebtsStore();
   const queryClient = useQueryClient();
   const confirm = useConfirm();
@@ -52,24 +53,27 @@ export function DebtsClient({ initialData, wallets, dictionary }: Props) {
     debounceMs: 500,
   });
 
-  const handleRowClick = (debt: DebtWithContact) => {
+  const handleRowClick = useCallback((debt: DebtWithContact) => {
     setSelectedDebt(debt);
     setIsDetailOpen(true);
-  };
+  }, []);
 
-  const handleContactClick = async (contactId: string) => {
-    try {
-      const result = await getContact(contactId);
-      if (result.success && result.data) {
-        setSelectedContact(result.data);
-        setIsContactDetailOpen(true);
-      } else {
-        toast.error(dictionary.debts.toasts.fetch_contact_error);
+  const handleContactClick = useCallback(
+    async (contactId: string) => {
+      try {
+        const result = await getContact(contactId);
+        if (result.success && result.data) {
+          setSelectedContact(result.data);
+          setIsContactDetailOpen(true);
+        } else {
+          toast.error(dictionary.debts.toasts.fetch_contact_error);
+        }
+      } catch (_error) {
+        toast.error(dictionary.debts.toasts.fetch_contact_error_desc);
       }
-    } catch (error) {
-      toast.error(dictionary.debts.toasts.fetch_contact_error_desc);
-    }
-  };
+    },
+    [dictionary.debts.toasts],
+  );
 
   const deleteMutation = useMutation({
     mutationFn: deleteDebt,
@@ -80,7 +84,7 @@ export function DebtsClient({ initialData, wallets, dictionary }: Props) {
       setIsDetailOpen(false);
       setSelectedDebt(undefined);
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       toast.error(err.message || dictionary.debts.toasts.delete_failed);
     },
   });
@@ -104,15 +108,22 @@ export function DebtsClient({ initialData, wallets, dictionary }: Props) {
           });
           if (ok) deleteMutation.mutate(id);
         },
-        dictionary
+        dictionary,
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [dictionary]
+    [dictionary, confirm, deleteMutation.mutate, handleContactClick, handleRowClick],
   );
 
-  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
+  const {
+    data,
+    isLoading: _isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
     queryKey: ["debts", filters.q, filters.status],
-    queryFn: async ({ pageParam = 1 }) => {
+    initialPageParam: 1,
+    queryFn: async ({ pageParam }) => {
       const res = await getDebts({
         contactId: filters.q as string, // Search is handled by backend
         page: pageParam,
@@ -121,13 +132,10 @@ export function DebtsClient({ initialData, wallets, dictionary }: Props) {
       if (!res.success) throw new Error(res.message);
       return res;
     },
-    initialPageParam: 1,
     getNextPageParam: (lastPage) => {
       const pagination = lastPage.meta?.pagination;
       if (!pagination) return undefined;
-      return pagination.page < pagination.total_pages
-        ? pagination.page + 1
-        : undefined;
+      return pagination.page < pagination.total_pages ? pagination.page + 1 : undefined;
     },
     initialData: {
       pages: [
@@ -154,7 +162,7 @@ export function DebtsClient({ initialData, wallets, dictionary }: Props) {
   });
 
   const allDebts = useMemo(() => {
-    return data?.pages.flatMap((p: any) => p.data ?? []) ?? [];
+    return data.pages?.flatMap((p) => p.data ?? []) ?? [];
   }, [data]);
 
   const statusOptions = [
@@ -166,31 +174,31 @@ export function DebtsClient({ initialData, wallets, dictionary }: Props) {
   const nonClickableColumns = useMemo(() => new Set(["select", "actions"]), []);
 
   return (
-    <div className="flex w-full flex-col h-full gap-4">
-      <div className="flex items-center justify-between gap-4 shrink-0">
-        <div className="flex items-center flex-1">
+    <div className="flex h-full w-full flex-col gap-4">
+      <div className="flex shrink-0 items-center justify-between gap-4">
+        <div className="flex flex-1 items-center">
           <DataTableFilter
             filters={filters}
-            onFilterChange={handleFilterChange as any}
+            onFilterChange={handleFilterChange}
             placeholder={dictionary.debts.search_placeholder}
             showDateFilter={false}
             showAmountFilter={false}
             statusOptions={statusOptions}
             statusKey="status"
             statusLabel={dictionary.debts.status_label}
-            className="w-full bg-transparent border-none p-0 focus-visible:ring-0"
+            className="w-full border-none bg-transparent p-0 focus-visible:ring-0"
           />
         </div>
         <div className="flex items-center gap-2">
           <DataTableColumnsVisibility columns={columns} />
           <Button onClick={() => setIsFormOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="mr-2 h-4 w-4" />
             <span className="text-sm">{dictionary.debts.add_button}</span>
           </Button>
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 relative">
+      <div className="relative min-h-0 flex-1">
         <DataTable
           data={allDebts}
           columns={columnsWithActions}
@@ -199,7 +207,7 @@ export function DebtsClient({ initialData, wallets, dictionary }: Props) {
           sticky={{ columns: ["select", "contactName"] }}
           nonClickableColumns={nonClickableColumns}
           rowSelection={rowSelection}
-          onRowSelectionChange={setRowSelection as any}
+          onRowSelectionChange={setRowSelection}
           infiniteScroll={true}
           fetchNextPage={fetchNextPage}
           hasNextPage={hasNextPage}
@@ -221,7 +229,7 @@ export function DebtsClient({ initialData, wallets, dictionary }: Props) {
           }
           hFull
         />
-        <DebtBulkEditBar />
+        <DebtBulkEditBar dictionary={dictionary} />
       </div>
 
       <DebtFormSheet
@@ -232,6 +240,7 @@ export function DebtsClient({ initialData, wallets, dictionary }: Props) {
         }}
         debt={selectedDebt}
         dictionary={dictionary}
+        settings={settings}
       />
 
       <DebtDetailSheet
@@ -253,6 +262,7 @@ export function DebtsClient({ initialData, wallets, dictionary }: Props) {
           if (ok) deleteMutation.mutate(id);
         }}
         dictionary={dictionary}
+        settings={settings}
       />
 
       <ContactDetailSheet
@@ -264,6 +274,7 @@ export function DebtsClient({ initialData, wallets, dictionary }: Props) {
         }}
         onDebtClick={handleRowClick}
         dictionary={dictionary}
+        settings={settings}
       />
     </div>
   );

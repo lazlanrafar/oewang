@@ -1,50 +1,11 @@
 "use client";
 
-import { formatAmount } from "./format-amount";
-import { ReferenceLine, Tooltip } from "recharts";
-import {
-  BaseChart,
-  ChartLegend,
-  StyledArea,
-  StyledLine,
-  StyledTooltip,
-  StyledXAxis,
-  StyledYAxis,
-} from "./base-charts";
+import { Area, Line, Tooltip, XAxis, YAxis } from "recharts";
+
+import type { RevenueChartProps } from "@workspace/types";
+import { BaseChart, ChartLegend, StyledTooltip } from "./base-charts";
 import { createYAxisTickFormatter, useChartMargin } from "./chart-utils";
-import type { BaseChartProps } from "./chart-utils";
-
-interface RevenueData {
-  month: string;
-  revenue: number;
-  target?: number;
-}
-
-interface RevenueChartProps extends BaseChartProps {
-  data: RevenueData[];
-  showTarget?: boolean;
-  showLegend?: boolean;
-  currency?: string;
-  locale?: string;
-}
-
-// Custom formatter for revenue tooltip
-const revenueTooltipFormatter = (
-  value: any,
-  name: string,
-  currency = "USD",
-  locale?: string,
-): [string, string] => {
-  const formattedValue =
-    formatAmount({
-      amount: value,
-      currency,
-      locale: locale ?? undefined,
-      maximumFractionDigits: 0,
-    }) || `${currency}${value.toLocaleString()}`;
-  const displayName = name === "revenue" ? "Revenue" : "Target";
-  return [formattedValue, displayName];
-};
+import { formatAmount } from "./format-amount";
 
 export function RevenueChart({
   data,
@@ -54,6 +15,9 @@ export function RevenueChart({
   showLegend = true,
   currency = "USD",
   locale,
+  primaryLabel = "Revenue",
+  secondaryLabel = "Target",
+  title = "Revenue",
 }: RevenueChartProps) {
   const tickFormatter = createYAxisTickFormatter(currency, locale);
   const maxValues = data.map((d) => ({
@@ -66,46 +30,69 @@ export function RevenueChart({
       {/* Legend */}
       {showLegend && (
         <ChartLegend
-          title="Revenue"
+          title={title}
           items={[
-            { label: "Revenue", type: "solid" },
-            ...(showTarget
-              ? [{ label: "Target", type: "dashed" as const }]
-              : []),
+            { label: primaryLabel, type: "solid" },
+            ...(showTarget ? [{ label: secondaryLabel, type: "dashed" as const }] : []),
           ]}
         />
       )}
 
       {/* Chart */}
-      <BaseChart
-        data={data}
-        height={height}
-        margin={{ top: 6, right: 6, left: -marginLeft, bottom: 6 }}
-      >
-        <StyledXAxis dataKey="month" />
-        <StyledYAxis tickFormatter={tickFormatter} />
+      <BaseChart data={data} height={height} margin={{ top: 6, right: 6, left: -marginLeft, bottom: 6 }}>
+        <XAxis
+          dataKey="month"
+          axisLine={false}
+          tickLine={false}
+          tick={{ fill: "var(--chart-axis-text)", fontSize: 10 }}
+        />
+        <YAxis
+          tickFormatter={tickFormatter}
+          axisLine={false}
+          tickLine={false}
+          tick={{ fill: "var(--chart-axis-text)", fontSize: 10 }}
+        />
 
         <Tooltip
           content={
             <StyledTooltip
-              formatter={(value: any, name: string) =>
-                revenueTooltipFormatter(value, name, currency, locale)
-              }
+              formatter={(value: number | string, name: string) => {
+                const numValue = typeof value === "number" ? value : Number(value);
+                const formattedValue =
+                  formatAmount({
+                    amount: numValue,
+                    currency,
+                    locale,
+                    maximumFractionDigits: 0,
+                  }) || `${currency}${numValue.toLocaleString()}`;
+                const displayName = name === "revenue" ? primaryLabel : secondaryLabel;
+                return [formattedValue, displayName];
+              }}
             />
           }
           wrapperStyle={{ zIndex: 9999 }}
         />
 
-        <StyledArea dataKey="revenue" usePattern={false} useGradient />
-
-        {showTarget && <StyledLine dataKey="target" strokeDasharray="5 5" />}
-
-        {/* Reference line at zero */}
-        <ReferenceLine
-          y={0}
-          stroke="hsl(var(--border))"
-          strokeDasharray="2 2"
+        <Area
+          dataKey="revenue"
+          type="monotone"
+          stroke="var(--chart-actual-line)"
+          fill="url(#incomePattern)"
+          strokeWidth={2}
+          isAnimationActive={false}
         />
+
+        {showTarget && (
+          <Line
+            dataKey="target"
+            type="monotone"
+            stroke="var(--chart-line-secondary)"
+            strokeWidth={2}
+            dot={false}
+            isAnimationActive={false}
+            strokeDasharray="5 5"
+          />
+        )}
       </BaseChart>
     </div>
   );

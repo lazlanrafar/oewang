@@ -1,17 +1,11 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Separator,
-  Skeleton,
-} from "@workspace/ui";
+
+import type { Dictionary } from "@workspace/dictionaries";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Separator, Skeleton } from "@workspace/ui";
+
 import type { Locale } from "@/i18n-config";
-import { useAppStore } from "@/stores/app";
 
 function LanguageSkeleton() {
   return (
@@ -26,10 +20,13 @@ function LanguageSkeleton() {
   );
 }
 
-export function LanguageSettingsForm() {
+interface LanguageSettingsFormProps {
+  dictionary: Dictionary;
+}
+
+export function LanguageSettingsForm({ dictionary }: LanguageSettingsFormProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { dictionary, isLoading } = useAppStore();
 
   const currentLocale = pathname.split("/")[1] as Locale;
 
@@ -40,26 +37,26 @@ export function LanguageSettingsForm() {
     router.push(newPath);
   };
 
-  if (isLoading || !dictionary) {
+  if (!dictionary) {
     return <LanguageSkeleton />;
   }
 
-  const { title, description, options } = dictionary.settings.language;
+  const { title, description, options, placeholder } = dictionary.settings.language;
 
   return (
     <div className="space-y-8">
       <div className="space-y-1">
-        <h2 className="text-lg font-medium tracking-tight">{title}</h2>
-        <p className="text-xs text-muted-foreground">{description}</p>
+        <h2 className="font-medium text-lg tracking-tight">{title}</h2>
+        <p className="text-muted-foreground text-xs">{description}</p>
       </div>
       <Separator className="rounded-none" />
 
       <Select value={currentLocale} onValueChange={handleLanguageChange}>
-        <SelectTrigger className="w-[180px] rounded-none h-8 text-xs font-normal border bg-background">
-          <SelectValue placeholder={dictionary.settings.language.placeholder} />
+        <SelectTrigger className="h-8 w-[180px] rounded-none border bg-background font-normal text-xs">
+          <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent className="rounded-none border bg-background">
-          {Object.entries(options).map(([value, label]) => (
+          {Object.entries(options as Record<string, string>).map(([value, label]) => (
             <SelectItem
               key={value}
               value={value}

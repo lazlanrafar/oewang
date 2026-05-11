@@ -7,6 +7,7 @@ import { status } from "elysia";
 import { MayarRepository } from "./mayar.repository";
 import { OrdersService } from "../orders/orders.service";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
+import { calculatePeriodEnd, inferBillingInterval } from "./billing.utils";
 
 const MAYAR_BASE_URL =
   Env.MAYAR_API_URL ||
@@ -160,6 +161,16 @@ export abstract class MayarService {
   static async handleWebhook(event: any, receivedToken?: string) {
     // 1. Verify Webhook Token
     const configuredToken = Env.MAYAR_WEBHOOK_TOKEN;
+    if (process.env.NODE_ENV === "production" && !configuredToken) {
+      logger.error("[Mayar Webhook] Missing MAYAR_WEBHOOK_TOKEN in production");
+      throw status(
+        500,
+        buildError(
+          ErrorCode.INTERNAL_ERROR,
+          "Webhook configuration is missing",
+        ),
+      );
+    }
     if (configuredToken && receivedToken !== configuredToken) {
       logger.error("[Mayar Webhook] Unauthorized - Invalid or missing token", {
         receivedLen: receivedToken?.length,
@@ -305,7 +316,7 @@ export abstract class MayarService {
         }
       }
 
-      // Determine if we should handle as addon or subscription
+        // Determine if we should handle as addon or subscription
       // Priority: 1. Matched plan's is_addon property, 2. metadata.type hint
       const isAddon = matchedPlan
         ? matchedPlan.is_addon
@@ -336,19 +347,43 @@ export abstract class MayarService {
         );
 
         const finalPlanId = matchedPlan?.id || planId;
+        const billingInterval = inferBillingInterval({
+          billing,
+          planId: planId || finalPlanId,
+          matchedPlan,
+          amount: Number(amount),
+        });
 
-        // Calculate proper period end: 30 days for monthly, 365 for annual
-        const periodDays = billing === "annual" ? 365 : 30;
-        const periodEnd = new Date();
-        periodEnd.setDate(periodEnd.getDate() + periodDays);
+        const periodStart = new Date();
+        const periodEnd = calculatePeriodEnd(periodStart, billingInterval);
 
         await MayarRepository.updateWorkspaceSubscription(targetWorkspaceId, {
           plan_id: finalPlanId || null,
           plan_status: "active",
+          plan_billing_interval: billingInterval,
           mayar_transaction_id: transactionId,
           mayar_customer_email: customerEmail || null,
+          plan_started_at: periodStart,
           plan_current_period_end: periodEnd,
+          plan_overdue_started_at: null,
+          plan_last_reminder_at: null,
+          ai_tokens_used: 0,
+          ai_tokens_reset_at: periodStart,
+          updated_at: periodStart,
         });
+
+        const owner = await MayarRepository.findWorkspaceOwner(targetWorkspaceId);
+        const workspaceRecord = await MayarRepository.findWorkspaceById(
+          targetWorkspaceId,
+        );
+        if (owner?.email && matchedPlan?.name) {
+          await sendPurchaseSuccessEmail(
+            owner.email,
+            owner.name || "there",
+            workspaceRecord?.name || "Workspace",
+            matchedPlan.name,
+          );
+        }
       }
     }
 
@@ -393,6 +428,7 @@ export abstract class MayarService {
     const appUrl = Env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     const owner = await MayarRepository.findWorkspaceOwner(workspaceId);
     let amount = Number(options?.metadata?.amount || 0);
+    let resolvedPlan: any = null;
 
     const isUuid = (id: string) =>
       /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
@@ -405,6 +441,7 @@ export abstract class MayarService {
       const plan = isUuid(pid)
         ? await MayarRepository.findPlanById(pid)
         : await MayarRepository.findPlanByMayarProductId(pid);
+      resolvedPlan = plan;
 
       const prices = plan?.prices;
       if (prices) {
@@ -418,7 +455,11 @@ export abstract class MayarService {
             );
 
         if (matchingPrice) {
-          const billing = options?.metadata?.billing || "monthly";
+          const billing = inferBillingInterval({
+            billing: options?.metadata?.billing,
+            planId: pid,
+            matchedPlan: plan as any,
+          });
           amount =
             (billing === "annual"
               ? matchingPrice.yearly
@@ -448,6 +489,13 @@ export abstract class MayarService {
       );
     }
 
+    const resolvedBilling = inferBillingInterval({
+      billing: options?.metadata?.billing,
+      planId: priceId || null,
+      matchedPlan: resolvedPlan,
+      amount,
+    });
+
     const description =
       options?.metadata?.type === "addon"
         ? options?.metadata?.addonType === "ai"
@@ -456,7 +504,7 @@ export abstract class MayarService {
         : `Subscription for ${workspace?.name || "Workspace"}`;
 
     const redirectLocale = options?.metadata?.locale || "en";
-    const successUrl = `${appUrl}/${redirectLocale}/upgrade/success`;
+    const successUrl = `${appUrl}/${redirectLocale}/payment/success`;
     const cancelUrl = `${appUrl}/${redirectLocale}/upgrade/failed`;
 
     try {
@@ -488,7 +536,7 @@ export abstract class MayarService {
           type: options?.metadata?.type || "subscription",
           addonId: options?.metadata?.addonId,
           addonType: options?.metadata?.addonType,
-          billing: options?.metadata?.billing || "monthly",
+          billing: resolvedBilling,
           locale: redirectLocale,
         },
       };

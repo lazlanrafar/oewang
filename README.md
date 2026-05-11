@@ -50,6 +50,10 @@ bun run dev
 
 See `.env.example` for all required environment variables.
 
+For production webhook and third-party payment setup, see:
+
+- `docs/PRODUCTION_WEBHOOK_SETUP.md`
+
 ## Apps
 
 | App            | Description       | Port |

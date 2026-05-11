@@ -1,51 +1,40 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+
 import { useRouter } from "next/navigation";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  Button,
-  Checkbox,
-  Badge,
-  cn,
-} from "@workspace/ui";
-import { type DebtWithContact, bulkPayDebt } from "@workspace/modules/client";
+
 import { useQueryClient } from "@tanstack/react-query";
-import { useAppStore } from "@/stores/app";
+import type { Dictionary } from "@workspace/dictionaries";
+import { bulkPayDebt, type DebtWithContact } from "@workspace/modules/client";
+import { Badge, Button, Checkbox, cn, Sheet, SheetContent, SheetHeader, SheetTitle } from "@workspace/ui";
 import { format } from "date-fns";
 import { ArrowDownLeft, ArrowUpRight } from "lucide-react";
-import { SelectAccount } from "@/components/molecules/select-account";
 import { toast } from "sonner";
+
+import { SelectAccount } from "@/components/molecules/select-account";
+import { useAppStore } from "@/stores/app";
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   debts: DebtWithContact[];
   contactName: string;
-  dictionary: any;
+  dictionary: Dictionary;
 }
 
-export function BulkPaySheet({
-  open,
-  onOpenChange,
-  debts,
-  contactName,
-  dictionary,
-}: Props) {
+export function BulkPaySheet({ open, onOpenChange, debts, contactName, dictionary }: Props) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { settings, formatCurrency, dictionary: global_dict, isLoading: isDictLoading } = useAppStore() as any;
-  const dict = (dictionary?.debts || global_dict?.debts || {}) as any;
+  const { formatCurrency } = useAppStore();
+  const dict = dictionary.debts;
 
   // Defensive date formatter
   const formatDate = (date: string | null | undefined) => {
     if (!date) return "–";
     try {
       const d = new Date(date);
-      if (isNaN(d.getTime())) return "–";
+      if (Number.isNaN(d.getTime())) return "–";
       return format(d, "MMM d, yyyy");
     } catch {
       return "–";
@@ -65,7 +54,7 @@ export function BulkPaySheet({
       setSelectedIds(new Set(outstanding.map((d) => d.id)));
       setWalletId("");
     }
-  }, [open]);
+  }, [open, outstanding.map]);
 
   const toggle = (id: string) => {
     setSelectedIds((prev) => {
@@ -121,9 +110,7 @@ export function BulkPaySheet({
         router.refresh();
         onOpenChange(false);
       } else {
-        toast.error(
-          result.error || dict.bulk_settlement.error_toast,
-        );
+        toast.error(result.error || dict.bulk_settlement.error_toast);
       }
     } catch {
       toast.error(dict.bulk_settlement.error_toast);
@@ -134,42 +121,33 @@ export function BulkPaySheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="flex flex-col h-full p-0 rounded-none shadow-none border-l sm:max-w-[540px]">
-        <SheetHeader className="px-6 py-6 border-b shrink-0 bg-muted/5 text-left">
-          <SheetTitle className="font-serif text-xl font-normal">
-            {dict.bulk_settlement.title}
-          </SheetTitle>
-          <p className="text-xs text-muted-foreground uppercase tracking-widest">
-            {contactName || "Contact"}
-          </p>
+      <SheetContent className="flex h-full flex-col rounded-none border-l p-0 shadow-none sm:max-w-[540px]">
+        <SheetHeader className="shrink-0 border-b bg-muted/5 px-6 py-6 text-left">
+          <SheetTitle className="font-normal font-serif text-xl">{dict.bulk_settlement.title}</SheetTitle>
+          <p className="text-muted-foreground text-xs uppercase tracking-widest">{contactName || "Contact"}</p>
         </SheetHeader>
 
-        <div className="flex-1 overflow-y-auto no-scrollbar">
+        <div className="no-scrollbar flex-1 overflow-y-auto">
           {outstanding.length === 0 ? (
-            <div className="flex items-center justify-center h-40 text-sm text-muted-foreground px-6">
+            <div className="flex h-40 items-center justify-center px-6 text-muted-foreground text-sm">
               {dict.bulk_settlement.no_outstanding}
             </div>
           ) : (
             <>
               {/* Select all row */}
-              <div className="px-6 py-4 border-b flex items-center gap-3 bg-muted/5">
+              <div className="flex items-center gap-3 border-b bg-muted/5 px-6 py-4">
                 <Checkbox
                   checked={
-                    selectedIds.size === outstanding.length
-                      ? true
-                      : selectedIds.size > 0
-                        ? "indeterminate"
-                        : false
+                    selectedIds.size === outstanding.length ? true : selectedIds.size > 0 ? "indeterminate" : false
                   }
                   onCheckedChange={toggleAll}
                   id="select-all"
                 />
                 <label
                   htmlFor="select-all"
-                  className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground cursor-pointer"
+                  className="cursor-pointer font-medium text-[10px] text-muted-foreground uppercase tracking-widest"
                 >
-                  {dict.bulk_settlement.select_all} (
-                  {outstanding.length})
+                  {dict.bulk_settlement.select_all} ({outstanding.length})
                 </label>
               </div>
 
@@ -177,89 +155,70 @@ export function BulkPaySheet({
               <div className="divide-y divide-border/50">
                 {outstanding.map((debt) => {
                   const amount = Number.parseFloat((debt.amount ?? 0) as string) || 0;
-                  const remaining = Number.parseFloat(
-                    (debt.remainingAmount ?? 0) as string,
-                  ) || 0;
+                  const remaining = Number.parseFloat((debt.remainingAmount ?? 0) as string) || 0;
                   const isReceivable = debt.type === "receivable";
                   const isSelected = selectedIds.has(debt.id);
 
                   return (
-                    <div
+                    <label
                       key={debt.id}
+                      htmlFor={`debt-${debt.id}`}
                       className={cn(
-                        "px-6 py-4 flex items-start gap-4 transition-colors cursor-pointer",
+                        "flex cursor-pointer items-start gap-4 px-6 py-4 transition-colors",
                         isSelected ? "bg-muted/5" : "opacity-60",
                       )}
-                      onClick={() => toggle(debt.id)}
                     >
                       <Checkbox
+                        id={`debt-${debt.id}`}
                         checked={isSelected}
                         onCheckedChange={() => toggle(debt.id)}
                         className="mt-0.5 shrink-0"
-                        onClick={(e) => e.stopPropagation()}
                       />
 
                       {/* Type icon */}
-                      <div
-                        className={cn(
-                          "mt-0.5 shrink-0",
-                          isReceivable ? "text-emerald-500" : "text-rose-500",
-                        )}
-                      >
-                        {isReceivable ? (
-                          <ArrowDownLeft className="h-4 w-4" />
-                        ) : (
-                          <ArrowUpRight className="h-4 w-4" />
-                        )}
+                      <div className={cn("mt-0.5 shrink-0", isReceivable ? "text-emerald-500" : "text-rose-500")}>
+                        {isReceivable ? <ArrowDownLeft className="h-4 w-4" /> : <ArrowUpRight className="h-4 w-4" />}
                       </div>
 
                       {/* Content */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2 mb-1">
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-1 flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2">
                             <span
                               className={cn(
-                                "text-[10px] font-medium uppercase tracking-widest",
+                                "font-medium text-[10px] uppercase tracking-widest",
                                 isReceivable
                                   ? "text-emerald-600 dark:text-emerald-400"
                                   : "text-rose-600 dark:text-rose-400",
                               )}
                             >
                               {isReceivable
-                                ? dict.bulk_settlement.owed_to_you ||
-                                  "Owed to you"
-                                : dict.bulk_settlement.you_owe ||
-                                  "You owe"}
+                                ? dictionary.debts.types.you_are_owed || "Owed to you"
+                                : dictionary.debts.types.you_owe || "You owe"}
                             </span>
                             <Badge
                               variant="outline"
-                              className="h-4 px-1.5 text-[9px] uppercase font-medium tracking-widest rounded-none shadow-none"
+                              className="h-4 rounded-none px-1.5 font-medium text-[9px] uppercase tracking-widest shadow-none"
                             >
-                              {dict.statuses[debt.status] ||
-                                debt.status}
+                              {dict.statuses[debt.status] || debt.status}
                             </Badge>
                           </div>
-                          <span className="text-[10px] text-muted-foreground">
-                            {formatDate(debt.createdAt)}
-                          </span>
+                          <span className="text-[10px] text-muted-foreground">{formatDate(debt.createdAt)}</span>
                         </div>
 
-                        <p className="text-lg font-serif font-normal">
-                          {formatCurrency(remaining)}
-                        </p>
+                        <p className="font-normal font-serif text-lg">{formatCurrency(remaining)}</p>
                         {remaining < amount && (
-                          <p className="text-[10px] text-muted-foreground line-through opacity-60 mt-0.5">
-                            {dict.details.original_amount}:{" "}
-                            {formatCurrency(amount)}
+                          <p className="mt-0.5 text-[10px] text-muted-foreground line-through opacity-60">
+                            {dict.details.original_amount}: {formatCurrency(amount)}
                           </p>
                         )}
                         {debt.description && (
-                          <p className="text-[11px] text-muted-foreground italic opacity-70 truncate mt-0.5">
+                          <p className="mt-0.5 truncate text-[11px] text-muted-foreground italic opacity-70">
                             {debt.description}
                           </p>
                         )}
                       </div>
-                    </div>
+                    </label>
                   );
                 })}
               </div>
@@ -269,43 +228,34 @@ export function BulkPaySheet({
 
         {/* Footer */}
         {outstanding.length > 0 && (
-          <div className="p-6 border-t bg-background shrink-0 space-y-4">
+          <div className="shrink-0 space-y-4 border-t bg-background p-6">
             {/* Account selector */}
             <div className="space-y-2">
-              <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
+              <p className="font-medium text-[10px] text-muted-foreground uppercase tracking-widest">
                 {dict.bulk_settlement.pay_from_account}
               </p>
-              <SelectAccount
-                value={walletId || undefined}
-                onChange={setWalletId}
-              />
+              <SelectAccount value={walletId || undefined} onChange={setWalletId} />
             </div>
 
             {/* Total + submit */}
-            <div className="flex items-center justify-between gap-4 pt-2 border-t border-border/50">
+            <div className="flex items-center justify-between gap-4 border-border/50 border-t pt-2">
               <div>
-                <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
+                <p className="font-medium text-[10px] text-muted-foreground uppercase tracking-widest">
                   {dict.bulk_settlement.total_to_settle}
                 </p>
-                <p className="text-2xl font-serif font-normal">
-                  {formatCurrency(totalToPay)}
-                </p>
+                <p className="font-normal font-serif text-2xl">{formatCurrency(totalToPay)}</p>
                 <p className="text-[10px] text-muted-foreground">
                   {selectedDebts.length}{" "}
-                  {selectedDebts.length === 1
-                    ? dict.columns.debt || "debt"
-                    : dict.title.toLowerCase() || "debts"}{" "}
+                  {selectedDebts.length === 1 ? dict.columns.debt || "debt" : dict.title.toLowerCase() || "debts"}{" "}
                   selected
                 </p>
               </div>
               <Button
-                className="rounded-none h-12 px-8 uppercase tracking-widest font-medium text-xs"
+                className="h-12 rounded-none px-8 font-medium text-xs uppercase tracking-widest"
                 disabled={isLoading || selectedDebts.length === 0 || !walletId}
                 onClick={handleSubmit}
               >
-                {isLoading
-                  ? dict.bulk_settlement.settling
-                  : dict.bulk_settlement.settle_button}
+                {isLoading ? dict.bulk_settlement.settling : dict.bulk_settlement.settle_button}
               </Button>
             </div>
           </div>

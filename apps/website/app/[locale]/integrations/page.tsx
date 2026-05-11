@@ -2,8 +2,42 @@ import { cookies } from "next/headers";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { CTASection } from "@/components/sections/cta-section";
+import { IntegrationsDirectory } from "@/components/sections/integrations-directory";
 import { getDictionary } from "@/lib/translations";
-import { MessageCircle, Check, QrCode } from "lucide-react";
+import { getPublicIntegrations } from "@/lib/integrations-public";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+
+  const copy = {
+    en: {
+      title: "Integrations – oewang",
+      description:
+        "Connect Oewang with email, accounting, messaging, and storage tools to automate finance workflows.",
+    },
+    id: {
+      title: "Integrasi – oewang",
+      description:
+        "Hubungkan Oewang dengan email, accounting, messaging, dan storage untuk otomatisasi alur keuangan.",
+    },
+    ja: {
+      title: "連携 – oewang",
+      description:
+        "Oewangをメール、会計、メッセージ、ストレージツールと連携し、財務ワークフローを自動化します。",
+    },
+  };
+
+  const seo = copy[locale as keyof typeof copy] ?? copy.en;
+
+  return {
+    title: seo.title,
+    description: seo.description,
+  };
+}
 
 export default async function IntegrationsPage({
   params,
@@ -12,114 +46,51 @@ export default async function IntegrationsPage({
 }) {
   const { locale } = await params;
   const dictionary = getDictionary(locale);
+
   const cookieStore = await cookies();
   const isLoggedIn = cookieStore.has(
     process.env.NEXT_PUBLIC_SESSION_COOKIE_NAME ?? "oewang-session",
   );
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
+  const integrations = await getPublicIntegrations();
+
   return (
     <div className="flex flex-col min-h-screen">
-      <Header isLoggedIn={isLoggedIn} appUrl={appUrl} />
+      <Header
+        isLoggedIn={isLoggedIn}
+        appUrl={appUrl}
+        locale={locale}
+        dictionary={dictionary}
+      />
 
       <main className="flex-1 pt-24">
-        {/* Header */}
-        <section className="py-16 sm:py-24">
-          <div className="max-w-[800px] mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <h1 className="font-serif text-3xl sm:text-5xl tracking-tight text-foreground mb-6">
-              {dictionary.integrations.title}
+        <section className="py-16 sm:py-20 border-b border-border/70">
+          <div className="max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8">
+            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-3">
+              Integration Directory
+            </p>
+            <h1 className="font-serif text-4xl sm:text-6xl tracking-tight max-w-3xl">
+              Connect your finance workflow with the tools you already use
             </h1>
-            <p className="text-muted-foreground text-lg sm:text-xl max-w-2xl mx-auto">
-              {dictionary.integrations.subtitle}
+            <p className="text-muted-foreground text-base sm:text-lg mt-5 max-w-2xl">
+              Browse available integrations and open each detail page to learn capabilities,
+              setup steps, and how it fits personal or team workspaces.
             </p>
           </div>
         </section>
 
-        {/* Telegram Integration */}
-        <section className="py-16 bg-muted/30">
-          <div className="max-w-[1000px] mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-              {/* Left - Info */}
-              <div>
-                <div className="size-16 rounded-lg bg-[#229ED9] flex items-center justify-center mb-6">
-                  <MessageCircle className="size-8 text-white" />
-                </div>
-                <h2 className="font-serif text-2xl sm:text-3xl text-foreground mb-4">
-                  {dictionary.integrations.telegram.title}
-                </h2>
-                <p className="text-muted-foreground mb-8">
-                  {dictionary.integrations.telegram.description}
-                </p>
+        <IntegrationsDirectory locale={locale} integrations={integrations} />
 
-                {/* Setup Steps */}
-                <h3 className="font-medium text-foreground mb-4">
-                  {dictionary.integrations.telegram.setupTitle}
-                </h3>
-                <ol className="space-y-3">
-                  {dictionary.integrations.telegram.setupSteps.map(
-                    (step, index) => (
-                      <li key={index} className="flex items-start gap-3">
-                        <span className="size-6 rounded-full bg-foreground text-background flex items-center justify-center text-xs font-medium shrink-0 mt-0.5">
-                          {index + 1}
-                        </span>
-                        <span className="text-sm text-muted-foreground">
-                          {step}
-                        </span>
-                      </li>
-                    ),
-                  )}
-                </ol>
-              </div>
-
-              {/* Right - QR Code Placeholder */}
-              <div className="flex items-center justify-center">
-                <div className="w-64 h-64 border-2 border-dashed border-border flex flex-col items-center justify-center rounded-lg">
-                  <QrCode className="size-16 text-muted-foreground/30 mb-4" />
-                  <p className="text-sm text-muted-foreground/50 text-center px-8">
-                    QR Code will appear here after connecting
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Coming Soon */}
-        <section className="py-16">
-          <div className="max-w-[1000px] mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-12">
-              <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground bg-muted px-3 py-1 rounded-full">
-                <span className="size-1.5 rounded-full bg-yellow-500" />
-                {dictionary.integrations.comingSoon}
-              </span>
-            </div>
-
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-              {[
-                "Gmail",
-                "Outlook",
-                "QuickBooks",
-                "Xero",
-                "Xendit",
-                "Google Drive",
-              ].map((name) => (
-                <div
-                  key={name}
-                  className="p-4 border border-border text-center"
-                >
-                  <div className="size-10 rounded bg-muted mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground">{name}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* CTA */}
-        <CTASection isLoggedIn={isLoggedIn} appUrl={appUrl} />
+        <CTASection
+          isLoggedIn={isLoggedIn}
+          appUrl={appUrl}
+          locale={locale}
+          dictionary={dictionary}
+        />
       </main>
 
-      <Footer />
+      <Footer locale={locale} dictionary={dictionary} />
     </div>
   );
 }

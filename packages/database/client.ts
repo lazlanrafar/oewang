@@ -11,6 +11,7 @@ import * as debts from "./schema/debts";
 import * as invoices from "./schema/invoices";
 import * as orders from "./schema/orders";
 import * as pricing from "./schema/pricing";
+import * as privacy_requests from "./schema/privacy-requests";
 import * as transaction_attachments from "./schema/transaction-attachments";
 import * as transactions from "./schema/transactions";
 import * as user_workspaces from "./schema/user-workspaces";
@@ -45,6 +46,7 @@ const schema = {
   ...ai_messages,
   ...workspace_integrations,
   ...pricing,
+  ...privacy_requests,
   ...invoices,
   ...contacts,
   ...debts,

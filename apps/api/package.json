@@ -6,6 +6,8 @@
     "dev": "bun run --watch index.ts",
     "build": "bun build index.ts --outdir dist --target bun",
     "start": "bun run dist/index.js",
+    "billing:worker": "bun run scripts/billing-worker.ts",
+    "storage:worker": "bun run scripts/storage-worker.ts",
     "lint": "biome lint",
     "test": "bun test",
     "typecheck": "tsc --noEmit"
@@ -36,7 +38,9 @@
     "jose": "^6.0.11",
     "openai": "^6.27.0",
     "pdf.js-extract": "^0.2.1",
-
+    "qrcode": "^1.5.4",
+    "qrcode-terminal": "^0.12.0",
+    "whatsapp-web.js": "^1.34.7",
     "zod": "catalog:"
   },
   "devDependencies": {

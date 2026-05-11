@@ -3,6 +3,7 @@ import { formatCurrency } from "./utils";
 export function formatCurrencyAmount(amount: number, currency: string, locale?: string) {
   // Simple wrapper or implementation for canvas specific formatting
   return formatCurrency(amount, {
+    mainCurrencyCode: currency,
     mainCurrencySymbol: currency === "USD" ? "$" : currency,
     mainCurrencySymbolPosition: "Front",
     mainCurrencyDecimalPlaces: 2

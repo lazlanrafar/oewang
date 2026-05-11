@@ -5,25 +5,20 @@ import { usePathname } from "next/navigation";
 
 import { buttonVariants, cn } from "@workspace/ui";
 import {
-  AppWindow,
   Banknote,
   Bell,
-  Copy,
+  CreditCard,
   DatabaseBackup,
   FileText,
-  Landmark,
   Languages,
   Lock,
   Monitor,
   Palette,
   PencilRuler,
-  Repeat,
-  Settings,
   TrendingDown,
   User,
   Users,
   Wallet,
-  CreditCard,
 } from "lucide-react";
 
 interface SidebarNavProps extends React.HTMLAttributes<HTMLElement> {
@@ -53,29 +48,51 @@ interface SidebarNavProps extends React.HTMLAttributes<HTMLElement> {
   };
 }
 
-import { useLocalizedRoute } from "@/utils/localized-route";
 import { i18n } from "@/i18n-config";
+import { canManageSensitiveWorkspace } from "@/lib/workspace-permissions";
+import { useAppStore } from "@/stores/app";
+import { useLocalizedRoute } from "@/utils/localized-route";
 
-export function SettingSidebar({
-  className,
-  dictionary,
-  ...props
-}: SidebarNavProps) {
+type SidebarLinkItem = {
+  title: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  comingSoon?: boolean;
+};
+
+type SidebarGroupItem = {
+  groupLabel: string;
+  items: SidebarLinkItem[];
+};
+
+type SidebarItem = SidebarLinkItem | SidebarGroupItem;
+
+function isSidebarGroupItem(item: SidebarItem): item is SidebarGroupItem {
+  return "groupLabel" in item;
+}
+
+export function SettingSidebar({ className, dictionary, ...props }: SidebarNavProps) {
   const pathname = usePathname();
   const { sidebar } = dictionary;
   const { getLocalizedUrl } = useLocalizedRoute();
+  const workspaceRole = useAppStore((state) => state.workspace?.current_user_role);
+  const canManageSensitive = canManageSensitiveWorkspace(workspaceRole);
 
-  const sidebarNavItems = [
+  const sidebarNavItems: SidebarItem[] = [
     {
       title: sidebar.profile,
       href: "/settings/profile",
       icon: User,
     },
-    {
-      title: sidebar.members,
-      href: "/settings/members",
-      icon: Users,
-    },
+    ...(canManageSensitive
+      ? [
+          {
+            title: sidebar.members,
+            href: "/settings/members",
+            icon: Users,
+          } satisfies SidebarLinkItem,
+        ]
+      : []),
     // {
     //   title: sidebar.account,
     //   href: "/settings/account",
@@ -159,11 +176,15 @@ export function SettingSidebar({
           href: "/settings/language",
           icon: Languages,
         },
-        {
-          title: sidebar.billing,
-          href: "/settings/billing",
-          icon: CreditCard,
-        },
+        ...(canManageSensitive
+          ? [
+              {
+                title: sidebar.billing,
+                href: "/settings/billing",
+                icon: CreditCard,
+              } satisfies SidebarLinkItem,
+            ]
+          : []),
       ],
     },
   ];
@@ -176,23 +197,14 @@ export function SettingSidebar({
   const normalizedPath = `/${activePath.join("/")}`;
 
   return (
-    <nav
-      className={cn(
-        "flex flex-col overflow-y-auto max-h-[300px] lg:max-h-none space-y-1",
-        className,
-      )}
-      {...props}
-    >
-      {sidebarNavItems.map((item, index) => {
-        if ("groupLabel" in item) {
+    <nav className={cn("flex max-h-[300px] flex-col space-y-1 overflow-y-auto lg:max-h-none", className)} {...props}>
+      {sidebarNavItems.map((item) => {
+        if (isSidebarGroupItem(item)) {
           return (
-            <div key={index} className="mt-4 first:mt-0">
-              <h4 className="mb-2 text-xs font-semibold tracking-tight text-muted-foreground">
-                {item.groupLabel}
-              </h4>
+            <div key={item.groupLabel} className="mt-4 first:mt-0">
+              <h4 className="mb-2 font-semibold text-muted-foreground text-xs tracking-tight">{item.groupLabel}</h4>
               <div className="space-y-1">
-                {/* biome-ignore lint/suspicious/noExplicitAny: implicit any */}
-                {item.items?.map((subItem: any) => (
+                {item.items.map((subItem) => (
                   <Link
                     key={subItem.href}
                     href={getLocalizedUrl(subItem.href)}
@@ -201,18 +213,14 @@ export function SettingSidebar({
                       normalizedPath === subItem.href
                         ? "bg-muted hover:bg-muted"
                         : "hover:bg-transparent hover:underline",
-                      "justify-start w-full overflow-hidden",
-                      subItem.comingSoon && "opacity-60 pointer-events-none",
+                      "w-full justify-start overflow-hidden",
+                      subItem.comingSoon && "pointer-events-none opacity-60",
                     )}
                   >
-                    {subItem.icon && (
-                      <subItem.icon className="mr-2 size-4 shrink-0" />
-                    )}
-                    <span className="flex-1 min-w-0 text-left truncate">
-                      {subItem.title}
-                    </span>
+                    {subItem.icon && <subItem.icon className="mr-2 size-4 shrink-0" />}
+                    <span className="min-w-0 flex-1 truncate text-left">{subItem.title}</span>
                     {subItem.comingSoon && (
-                      <span className="ml-auto text-[10px] font-medium text-muted-foreground border px-1.5 py-0.5 rounded-md bg-muted/50">
+                      <span className="ml-auto rounded-md border bg-muted/50 px-1.5 py-0.5 font-medium text-[10px] text-muted-foreground">
                         {sidebar.soon}
                       </span>
                     )}
@@ -223,31 +231,22 @@ export function SettingSidebar({
           );
         }
 
-        // Handle flat items (backward compatibility or mixed use)
-        // We cast to any because TS doesn't know for sure it's not a group without a discriminating union type definition
-        // biome-ignore lint/suspicious/noExplicitAny: implicit any
-        const flatItem = item as any;
+        const flatItem = item;
         return (
           <Link
             key={flatItem.href}
             href={getLocalizedUrl(flatItem.href)}
             className={cn(
               buttonVariants({ variant: "ghost" }),
-              normalizedPath === flatItem.href
-                ? "bg-muted hover:bg-muted"
-                : "hover:bg-transparent hover:underline",
-              "justify-start w-full overflow-hidden",
-              flatItem.comingSoon && "opacity-60 pointer-events-none",
+              normalizedPath === flatItem.href ? "bg-muted hover:bg-muted" : "hover:bg-transparent hover:underline",
+              "w-full justify-start overflow-hidden",
+              flatItem.comingSoon && "pointer-events-none opacity-60",
             )}
           >
-            {flatItem.icon && (
-              <flatItem.icon className="mr-2 size-4 shrink-0" />
-            )}
-            <span className="flex-1 min-w-0 text-left truncate">
-              {flatItem.title}
-            </span>
+            {flatItem.icon && <flatItem.icon className="mr-2 size-4 shrink-0" />}
+            <span className="min-w-0 flex-1 truncate text-left">{flatItem.title}</span>
             {flatItem.comingSoon && (
-              <span className="ml-auto text-[10px] font-medium text-muted-foreground border px-1.5 py-0.5 rounded-md bg-muted/50">
+              <span className="ml-auto rounded-md border bg-muted/50 px-1.5 py-0.5 font-medium text-[10px] text-muted-foreground">
                 {sidebar.soon}
               </span>
             )}

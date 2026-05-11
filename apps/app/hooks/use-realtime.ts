@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
+
 import { useQueryClient } from "@tanstack/react-query";
 import { Env } from "@workspace/constants";
-import { createBrowserClient } from "@workspace/supabase/client";
 
 /**
  * useRealtime - Custom hook to listen for data change notifications via WebSockets.
- * 
+ *
  * It automatically reconnects on failure and invalidates React Query caches
  * when a notification is received for a specific data type.
  */
@@ -17,45 +17,15 @@ export function useRealtime() {
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttempts = useRef(0);
 
-  const connect = async () => {
-    // 1. Get Token (similar logic to axios.client.ts)
-    // For HttpOnly cookies, we won't be able to read it here, but the browser
-    // will automatically send it in the WebSocket headers.
-    let token: string | undefined;
-    const cookieName = Env.NEXT_PUBLIC_SESSION_COOKIE_NAME || "oewang-session";
-
-    const cookies = document.cookie.split(";");
-    token = cookies
-      .find((c) => c.trim().startsWith(`${cookieName}=`))
-      ?.split("=")[1];
-
-    if (!token) {
-      token = localStorage.getItem("auth-token") || localStorage.getItem("token") || undefined;
-    }
-
-    if (!token) {
-      try {
-        const { createBrowserClient } = await import("@workspace/supabase/client");
-        const supabase = createBrowserClient();
-        const { data: { session } } = await supabase.auth.getSession();
-        token = session?.access_token;
-      } catch (e) {
-        // Ignore
-      }
-    }
-
-    // 2. Establish Connection
+  const connect = useCallback(async () => {
+    // Browser automatically attaches cookies for same-site WebSocket requests.
+    // Avoid query-token transport in production to prevent token leakage via URLs/logs.
     const apiUrl = Env.NEXT_PUBLIC_API_URL ?? "http://localhost:3002";
     const baseWsUrl = apiUrl.replace(/^http/, "ws").replace(/\/$/, "");
-    
-    // Fallback: If we extracted a local token, pass it. 
-    // Otherwise, rely entirely on the browser sending the HttpOnly cookie.
-    const wsUrl = token 
-        ? `${baseWsUrl}/v1/realtime?token=${token}`
-        : `${baseWsUrl}/v1/realtime`;
+    const wsUrl = `${baseWsUrl}/v1/realtime`;
 
     console.log("[Realtime] Attempting connection to", wsUrl);
-    
+
     try {
       const ws = new WebSocket(wsUrl);
       socketRef.current = ws;
@@ -75,18 +45,18 @@ export function useRealtime() {
 
           if (data.type) {
             console.log(`[Realtime] 🔄 Invalidating queries for: ${data.type}`);
-            
-            // Invalidate the relevant query key (fuzzy match: any key starting with this type)
-            queryClient.invalidateQueries({ 
+
+            // Invalidate the relevant query key (fuzzy match: unknown key starting with this type)
+            queryClient.invalidateQueries({
               queryKey: [data.type],
-              refetchType: "all" 
+              refetchType: "all",
             });
 
             // If it's a critical type, we might want to invalidate others or global settings
             if (data.type === "transactions" || data.type === "wallets") {
-               queryClient.invalidateQueries({ queryKey: ["workspace", "active"] });
+              queryClient.invalidateQueries({ queryKey: ["workspace", "active"] });
             }
-            
+
             // Trigger a lightweight router refresh to update any server-side rendered data on the current page
             // This is safe to call from client components in Next.js 16
             // import { refresh } from "next/cache" is server only, but window.location or router.refresh works
@@ -97,21 +67,22 @@ export function useRealtime() {
       };
 
       ws.onclose = (event) => {
-        const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000);
-        console.log(`[Realtime] ⚠️ Disconnected (Reason: ${event.code}), retrying in ${delay/1000}s...`);
+        const delay = Math.min(1000 * 2 ** reconnectAttempts.current, 30000);
+        console.log(
+          `[Realtime] ⚠️ Disconnected (Code: ${event.code}, Reason: ${event.reason || "None"}), retrying in ${delay / 1000}s...`,
+        );
         reconnectAttempts.current++;
         reconnectTimeoutRef.current = setTimeout(connect, delay);
       };
 
       ws.onerror = (err) => {
-        console.error("[Realtime] 🛑 WebSocket Error:", err);
-        // Onerror is usually followed by onclose
+        console.error("[Realtime] 🛑 WebSocket Error Event:", err);
       };
     } catch (e) {
       console.error("[Realtime] ❌ Connection failed", e);
       reconnectTimeoutRef.current = setTimeout(connect, 5000);
     }
-  };
+  }, [queryClient]);
 
   useEffect(() => {
     connect();
@@ -124,7 +95,7 @@ export function useRealtime() {
         clearTimeout(reconnectTimeoutRef.current);
       }
     };
-  }, []);
+  }, [connect]);
 
   return null;
 }

@@ -1,10 +1,7 @@
 "use client";
 
-import { Button } from "@workspace/ui";
+import { Button, persistPreference, usePreferencesStore } from "@workspace/ui";
 import { Monitor, Moon, Sun } from "lucide-react";
-
-import { persistPreference } from "@workspace/ui";
-import { usePreferencesStore } from "@workspace/ui";
 
 const THEME_CYCLE = ["light", "dark", "system"] as const;
 

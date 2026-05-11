@@ -1,13 +1,15 @@
 "use client";
 
-import Papa from "papaparse";
-import * as XLSX from "xlsx";
-import { useCallback, useEffect, useRef, useState } from "react";
-import Dropzone, { type FileRejection } from "react-dropzone";
-import { Controller } from "react-hook-form";
-import { useCsvContext } from "./transaction-import-context";
-import { FileUp, Loader2 } from "lucide-react";
+import { useCallback, useState } from "react";
+
 import { cn } from "@workspace/ui";
+import { FileUp, Loader2 } from "lucide-react";
+import Papa from "papaparse";
+import Dropzone from "react-dropzone";
+import { Controller } from "react-hook-form";
+import * as XLSX from "xlsx";
+
+import { useCsvContext } from "./transaction-import-context";
 
 export function SelectFile() {
   const { control, setFileColumns, setFirstRows } = useCsvContext();
@@ -21,8 +23,7 @@ export function SelectFile() {
 
       // Detect file type
       const isExcel =
-        file.type ===
-          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+        file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
         file.type === "application/vnd.ms-excel" ||
         file.name.endsWith(".xlsx") ||
         file.name.endsWith(".xls");
@@ -51,7 +52,7 @@ export function SelectFile() {
             const jsonData = XLSX.utils.sheet_to_json(worksheet, {
               defval: "",
               raw: false,
-            });
+            }) as Record<string, string>[];
 
             if (jsonData.length < 1) {
               setError("Excel file looks empty.");
@@ -63,10 +64,11 @@ export function SelectFile() {
             const headers = Object.keys(jsonData[0] as object);
 
             setFileColumns(headers);
-            setFirstRows(jsonData as Record<string, string>[]);
+            setFirstRows(jsonData);
             setIsLoading(false);
-          } catch (err: any) {
-            setError("Failed to parse Excel: " + err.message);
+          } catch (err) {
+            const message = err instanceof Error ? err.message : "Unknown parsing error";
+            setError(`Failed to parse Excel: ${message}`);
             setIsLoading(false);
           }
         };
@@ -77,7 +79,7 @@ export function SelectFile() {
           Papa.parse(text, {
             header: true,
             skipEmptyLines: true,
-            complete: (results: Papa.ParseResult<any>) => {
+            complete: (results: Papa.ParseResult<Record<string, string>>) => {
               if (results.data.length < 1) {
                 setError("CSV file looks empty.");
                 setIsLoading(false);
@@ -85,11 +87,11 @@ export function SelectFile() {
               }
 
               setFileColumns(results.meta.fields || []);
-              setFirstRows(results.data as any[]);
+              setFirstRows(results.data);
               setIsLoading(false);
             },
             error: (err: Error) => {
-              setError("Failed to parse CSV: " + err.message);
+              setError(`Failed to parse CSV: ${err.message}`);
               setIsLoading(false);
             },
           });
@@ -118,8 +120,7 @@ export function SelectFile() {
             accept={{
               "text/csv": [".csv"],
               "application/vnd.ms-excel": [".csv", ".xls"],
-              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
-                [".xlsx"],
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"],
             }}
             maxSize={5000000}
           >
@@ -127,7 +128,7 @@ export function SelectFile() {
               <div
                 {...getRootProps()}
                 className={cn(
-                  "flex flex-col items-center justify-center gap-3 p-10 border border-dashed cursor-pointer transition-colors min-h-[240px]",
+                  "flex min-h-[240px] cursor-pointer flex-col items-center justify-center gap-3 border border-dashed p-10 transition-colors",
                   isDragActive
                     ? "border-primary bg-primary/5"
                     : "border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/30",
@@ -135,25 +136,17 @@ export function SelectFile() {
               >
                 <input {...getInputProps()} />
                 {isLoading ? (
-                  <Loader2 className="w-10 h-10 animate-spin text-primary" />
+                  <Loader2 className="h-10 w-10 animate-spin text-primary" />
                 ) : (
-                  <FileUp className="w-10 h-10 text-muted-foreground" />
+                  <FileUp className="h-10 w-10 text-muted-foreground" />
                 )}
                 <div className="text-center">
                   <p className="font-medium text-sm">
-                    {isLoading
-                      ? "Processing file..."
-                      : "Drop your CSV or Excel here, or click to browse"}
+                    {isLoading ? "Processing file..." : "Drop your CSV or Excel here, or click to browse"}
                   </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Max 5MB. CSV or Excel format (.xlsx, .xls).
-                  </p>
+                  <p className="mt-1 text-muted-foreground text-xs">Max 5MB. CSV or Excel format (.xlsx, .xls).</p>
                 </div>
-                {error && (
-                  <p className="text-sm text-destructive font-medium">
-                    {error}
-                  </p>
-                )}
+                {error && <p className="font-medium text-destructive text-sm">{error}</p>}
               </div>
             )}
           </Dropzone>

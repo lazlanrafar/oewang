@@ -1,9 +1,10 @@
 "use client";
 
-import { useChatStore } from "@/stores/chat";
-import { cn } from "@workspace/ui";
-import { Icons } from "@workspace/ui";
 import type React from "react";
+
+import { cn, Icons } from "@workspace/ui";
+
+import { useChatStore } from "@/stores/chat";
 
 export function ChatSuggestionButton() {
   const { showCommands, setShowCommands } = useChatStore();
@@ -18,7 +19,7 @@ export function ChatSuggestionButton() {
     // Focus textarea for keyboard navigation when opening
     if (!showCommands) {
       requestAnimationFrame(() => {
-        document.querySelector("textarea")?.focus();
+        document.querySelector("textarea").focus();
       });
     }
   };
@@ -27,7 +28,7 @@ export function ChatSuggestionButton() {
     <button
       type="button"
       onClick={handleClick}
-      className="flex items-center h-6 cursor-pointer transition-colors duration-200"
+      className="flex h-6 cursor-pointer items-center transition-colors duration-200"
       // Add data attribute to help identify this button for exclusion from outside clicks
       data-suggested-actions-toggle
     >

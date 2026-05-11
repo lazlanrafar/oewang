@@ -1,9 +1,10 @@
 import type { Column } from "@tanstack/react-table";
+import type { Invoice } from "@workspace/types";
 import { create } from "zustand";
 
 interface InvoicesState {
-  columns: Column<any, unknown>[];
-  setColumns: (columns?: Column<any, unknown>[]) => void;
+  columns: Column<Invoice, unknown>[];
+  setColumns: (columns?: Column<Invoice, unknown>[]) => void;
 }
 
 export const useInvoicesStore = create<InvoicesState>()((set) => ({

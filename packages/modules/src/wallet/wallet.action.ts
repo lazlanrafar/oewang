@@ -38,6 +38,18 @@ export const getWallets = async (filters?: {
   }
 };
 
+export const getWallet = async (id: string): Promise<ActionResponse<Wallet>> => {
+  try {
+    const res = await api.get(`/wallets/${id}`);
+    return { success: true, data: res.data?.data };
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.response?.data?.message || "Failed to fetch wallet",
+    };
+  }
+};
+
 export const createWallet = async (
   data: CreateWalletData,
 ): Promise<ActionResponse<Wallet>> => {

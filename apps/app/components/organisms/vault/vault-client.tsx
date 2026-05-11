@@ -2,11 +2,23 @@
 
 import * as React from "react";
 
-import { useMutation, useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import Image from "next/image";
+
+import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import type { Dictionary } from "@workspace/dictionaries";
+import {
+  deleteVaultFile,
+  getVaultFiles,
+  type PaginatedVaultFiles,
+  updateVaultFileTags,
+  uploadVaultFile,
+  type VaultFile,
+} from "@workspace/modules/vault/vault.action";
 import {
   Badge,
   Button,
   cn,
+  DataTableEmptyState,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -15,22 +27,16 @@ import {
   Progress,
   ScrollArea,
   Separator,
-  Skeleton,
-  DataTableEmptyState,
 } from "@workspace/ui";
-import { useAppStore } from "@/stores/app";
+import { formatBytes } from "@workspace/utils";
 import {
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
   Download,
   Edit3,
   ExternalLink,
   FileText,
-  Filter,
   Grid,
   List as ListIcon,
-  MoreVertical,
   Plus,
   Search,
   Tag,
@@ -38,28 +44,16 @@ import {
   UploadCloud,
   X,
 } from "lucide-react";
+import { parseAsString, useQueryState } from "nuqs";
 import { toast } from "sonner";
 
-import {
-  deleteVaultFile,
-  getVaultFiles,
-  updateVaultFileTags,
-  uploadVaultFile,
-} from "@workspace/modules/vault/vault.action";
-import { type VaultFile, type PaginatedVaultFiles } from "@workspace/modules/vault/vault.action";
+import { useAppStore } from "@/stores/app";
 
-import { useQueryState, parseAsString, parseAsInteger } from "nuqs";
-import { formatBytes } from "@workspace/utils";
-import {
-  VaultSkeletonLoading,
-  VaultContentSkeleton,
-  VaultDetailSkeleton,
-} from "./vault-skeleton-loading";
 import { VaultItemCard } from "./vault-item-card";
 import { VaultItemList } from "./vault-item-list";
+import { VaultContentSkeleton, VaultDetailSkeleton, VaultSkeletonLoading } from "./vault-skeleton-loading";
 
-// ... inside VaultClient component ...
-// Remove the top-level loading check from lines 218-220
+// Allowed file types for upload
 
 const ALLOWED_TYPES = [
   "image/jpeg",
@@ -72,49 +66,31 @@ const ALLOWED_TYPES = [
   "text/csv",
 ];
 
-const SUGGESTED_TAGS = [
-  "Invoice",
-  "Transaction",
-  "Receipt",
-  "Report",
-  "Contract",
-  "Document",
-];
+const SUGGESTED_TAGS = ["Invoice", "Transaction", "Receipt", "Report", "Contract", "Document"];
 
-export function VaultClient() {
-  const { dictionary } = useAppStore();
+interface Props {
+  dictionary: Dictionary;
+}
+
+export function VaultClient({ dictionary }: Props) {
   const queryClient = useQueryClient();
 
-  if (!dictionary) return <VaultSkeletonLoading />;
-
   const t = dictionary.vault;
-  const [view, setView] = useQueryState(
-    "view",
-    parseAsString.withDefault("list").withOptions({ shallow: true }),
-  );
-  const [search, setSearch] = useQueryState(
-    "search",
-    parseAsString.withDefault("").withOptions({ shallow: true }),
-  );
+  const [view, setView] = useQueryState("view", parseAsString.withDefault("grid").withOptions({ shallow: true }));
+  const [search, setSearch] = useQueryState("search", parseAsString.withDefault("").withOptions({ shallow: true }));
 
   const [isDragging, setIsDragging] = React.useState(false);
-  const [selectedFile, setSelectedFile] = React.useState<VaultFile | null>(
-    null,
-  );
+  const [selectedFile, setSelectedFile] = React.useState<VaultFile | null>(null);
   const [tagInput, setTagInput] = React.useState("");
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const scrollRef = React.useRef<any>(null);
+  const scrollRef = React.useRef<HTMLDivElement>(null);
   const loadMoreRef = React.useRef<HTMLDivElement>(null);
   const limit = 15;
 
-  const {
-    data,
-    isLoading,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    isRefetching,
-  } = useInfiniteQuery<PaginatedVaultFiles, Error>({
+  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage, isRefetching } = useInfiniteQuery<
+    PaginatedVaultFiles,
+    Error
+  >({
     queryKey: ["vault-files", search],
     queryFn: async ({ pageParam }) => {
       const result = await getVaultFiles(pageParam as number, limit, search || undefined);
@@ -122,18 +98,26 @@ export function VaultClient() {
       throw new Error(result.error);
     },
     initialPageParam: 1,
-    getNextPageParam: (lastPage: any) => {
-      const current = lastPage.pagination.page;
-      const total = lastPage.pagination.total_pages;
+    getNextPageParam: (lastPage) => {
+      const current = lastPage.pagination?.page;
+      const total = lastPage.pagination?.total_pages;
+      if (current === undefined || total === undefined) return undefined;
       return current < total ? current + 1 : undefined;
     },
   });
 
   const files = React.useMemo(() => {
-    return data?.pages.flatMap((page) => page.files) || [];
+    return data?.pages?.flatMap((page) => page.files) || [];
   }, [data]);
 
-  const pagination = data?.pages[0]?.pagination;
+  // Auto-select the first file when data loads and nothing is selected yet
+  React.useEffect(() => {
+    if (files.length > 0 && !selectedFile) {
+      setSelectedFile(files[0]);
+    }
+  }, [files, selectedFile]);
+
+  const _pagination = data?.pages?.[0]?.pagination;
 
   // Intersection Observer for Infinite Scroll
   React.useEffect(() => {
@@ -141,7 +125,7 @@ export function VaultClient() {
 
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0]?.isIntersecting && hasNextPage && !isFetchingNextPage) {
+        if (entries?.[0]?.isIntersecting && hasNextPage && !isFetchingNextPage) {
           fetchNextPage();
         }
       },
@@ -155,9 +139,7 @@ export function VaultClient() {
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
       if (!ALLOWED_TYPES.includes(file.type)) {
-        throw new Error(
-          t.toasts.invalid_type.replace("{name}", file.name),
-        );
+        throw new Error(t.toasts.invalid_type.replace("{name}", file.name));
       }
       const formData = new FormData();
       formData.append("file", file);
@@ -170,7 +152,7 @@ export function VaultClient() {
       queryClient.invalidateQueries({ queryKey: ["workspace", "active"] });
       setSelectedFile(data);
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(error.message || t.toasts.upload_failed);
     },
   });
@@ -185,7 +167,7 @@ export function VaultClient() {
       queryClient.invalidateQueries({ queryKey: ["vault-files"] });
       setSelectedFile(data);
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(error.message || t.toasts.tags_update_failed);
     },
   });
@@ -197,11 +179,9 @@ export function VaultClient() {
     const toastId = toast.loading(t.toasts.uploading.replace("{count}", filesArray.length.toString()));
 
     try {
-      await Promise.all(
-        filesArray.map((file) => uploadMutation.mutateAsync(file)),
-      );
+      await Promise.all(filesArray.map((file) => uploadMutation.mutateAsync(file)));
       toast.success(t.toasts.upload_success, { id: toastId });
-    } catch (error) {
+    } catch (_error) {
       toast.error(t.toasts.upload_failed_some, { id: toastId });
     }
   };
@@ -241,7 +221,7 @@ export function VaultClient() {
       setSelectedFile(null);
       toast.success(t.toasts.delete_success);
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(error.message || t.toasts.delete_failed);
     },
   });
@@ -250,25 +230,29 @@ export function VaultClient() {
     if (!selectedFile) return;
     const cleanTag = tag.trim();
     if (!cleanTag) return;
-    if (selectedFile.tags.includes(cleanTag)) return;
+    if (selectedFile?.tags.includes(cleanTag)) return;
 
     const newTags = [...selectedFile.tags, cleanTag];
-    tagsMutation.mutate({ id: selectedFile.id, tags: newTags });
+    tagsMutation.mutate({ id: selectedFile?.id, tags: newTags });
     setTagInput("");
   };
 
   const handleRemoveTag = (tag: string) => {
     if (!selectedFile) return;
-    const newTags = selectedFile.tags.filter((t) => t !== tag);
-    tagsMutation.mutate({ id: selectedFile.id, tags: newTags });
+    const newTags = selectedFile?.tags.filter((t) => t !== tag);
+    tagsMutation.mutate({ id: selectedFile?.id, tags: newTags });
   };
+
+  if (!dictionary || !t) return <VaultSkeletonLoading />;
 
   return (
     <div
-      className="flex flex-col lg:flex-row gap-6 flex-1 min-h-0 overflow-hidden"
+      className="flex min-h-0 flex-1 flex-col gap-6 overflow-hidden lg:flex-row"
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
+      role="application"
+      aria-label="Vault files"
     >
       <input
         type="file"
@@ -282,41 +266,35 @@ export function VaultClient() {
       />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col gap-6 overflow-hidden relative">
+      <div className="relative flex flex-1 flex-col gap-6 overflow-hidden">
         {isDragging && (
-          <div className="absolute inset-0 z-50 bg-primary/10 border-2 border-dashed border-primary  flex flex-col items-center justify-center backdrop-blur-sm transition-all animate-in fade-in zoom-in duration-200">
-            <div className="bg-background p-6 rounded-full shadow-xl mb-4">
-              <UploadCloud className="h-12 w-12 text-primary animate-bounce" />
+          <div className="fade-in zoom-in absolute inset-0 z-50 flex animate-in flex-col items-center justify-center border-2 border-primary border-dashed bg-primary/10 backdrop-blur-sm transition-all duration-200">
+            <div className="mb-4 rounded-full bg-background p-6 shadow-xl">
+              <UploadCloud className="h-12 w-12 animate-bounce text-primary" />
             </div>
-            <p className="text-xl font-bold text-primary">
-              {t.drop_zone.title}
-            </p>
-            <p className="text-sm text-muted-foreground mt-2">
-              {t.drop_zone.description}
-            </p>
+            <p className="font-bold text-primary text-xl">{t.drop_zone.title}</p>
+            <p className="mt-2 text-muted-foreground text-sm">{t.drop_zone.description}</p>
           </div>
         )}
 
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shrink-0">
+        <div className="flex shrink-0 flex-col items-start justify-between gap-4 md:flex-row md:items-center">
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-2xl tracking-tight">{t.title}</h1>
             </div>
-            <p className="text-muted-foreground text-sm">
-              {t.description}
-            </p>
+            <p className="text-muted-foreground text-sm">{t.description}</p>
           </div>
           <div className="flex items-center gap-2">
             <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder={t.search_placeholder}
-                className="pl-9 w-[200px] md:w-[250px] h-9"
+                className="h-9 w-[200px] pl-9 md:w-[250px]"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-            <div className="flex items-center border p-1 h-9">
+            <div className="flex h-9 items-center border p-1">
               <Button
                 variant={view === "list" ? "secondary" : "ghost"}
                 size="icon"
@@ -340,22 +318,15 @@ export function VaultClient() {
           </div>
         </div>
 
-        <ScrollArea
-          className="flex-1 h-full min-h-0 bg-card/10 border p-4"
-          ref={scrollRef}
-        >
+        <ScrollArea className="h-full min-h-0 flex-1 border bg-card/10 p-4" ref={scrollRef}>
           {isLoading && !isRefetching ? (
-            <VaultContentSkeleton view={view as any} />
+            <VaultContentSkeleton view={view === "grid" ? "grid" : "list"} />
           ) : (
             <>
               {files.length === 0 ? (
                 <DataTableEmptyState
                   title={t.empty.title}
-                  description={
-                    search
-                      ? t.empty.no_results.replace("{search}", search)
-                      : t.empty.get_started
-                  }
+                  description={search ? t.empty.no_results.replace("{search}", search) : t.empty.get_started}
                   action={
                     search
                       ? {
@@ -369,68 +340,55 @@ export function VaultClient() {
                   }
                 />
               ) : view === "list" ? (
-            <VaultItemList
-              files={files}
-              selectedFileId={selectedFile?.id}
-              onSelect={setSelectedFile}
-              dictionary={dictionary}
-            />
-          ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
-              {files.map((file: VaultFile) => (
-                <VaultItemCard
-                  key={file.id}
-                  file={file}
-                  isSelected={selectedFile?.id === file.id}
+                <VaultItemList
+                  files={files}
+                  selectedFileId={selectedFile?.id}
                   onSelect={setSelectedFile}
                   dictionary={dictionary}
                 />
-              ))}
-            </div>
-          )}
+              ) : (
+                <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+                  {files.map((file: VaultFile) => (
+                    <VaultItemCard
+                      key={file.id}
+                      file={file}
+                      isSelected={selectedFile?.id === file.id}
+                      onSelect={setSelectedFile}
+                      dictionary={dictionary}
+                    />
+                  ))}
+                </div>
+              )}
 
-          {/* Load More Trigger */}
-          <div
-            ref={loadMoreRef}
-            className="h-10 flex items-center justify-center mt-4"
-          >
-            {isFetchingNextPage && (
-              <div className="flex items-center gap-2 text-muted-foreground text-xs">
-                <div className="h-4 w-4 border-2 border-primary border-t-transparent animate-spin rounded-full" />
-                {dictionary.common?.loading_more || "Loading more..."}
+              {/* Load More Trigger */}
+              <div ref={loadMoreRef} className="mt-4 flex h-10 items-center justify-center">
+                {isFetchingNextPage && (
+                  <div className="flex items-center gap-2 text-muted-foreground text-xs">
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                    {dictionary.common.loading_more || "Loading more..."}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
             </>
           )}
         </ScrollArea>
-
       </div>
 
       {/* Detail Panel */}
-      <div
-        className={cn(
-          "w-full lg:w-[400px] h-full flex flex-col shrink-0 transition-all overflow-hidden",
-        )}
-      >
+      <div className={cn("flex h-full w-full shrink-0 flex-col overflow-hidden transition-all lg:w-[400px]")}>
         <HeaderStorageUsage dictionary={dictionary} />
 
         <div
           className={cn(
-            "border mt-4 w-full h-full flex flex-col transition-all overflow-hidden",
-            !selectedFile &&
-              "hidden lg:flex opacity-50 grayscale select-none pointer-events-none",
+            "mt-4 flex h-full w-full flex-col overflow-hidden border transition-all",
+            !selectedFile && "pointer-events-none hidden select-none opacity-50 grayscale lg:flex",
           )}
         >
           {selectedFile ? (
             <>
-              <div className="p-4 border-b flex justify-between items-center bg-muted/20">
+              <div className="flex items-center justify-between border-b bg-muted/20 p-4">
                 <h2 className="font-semibold text-sm">{t.details.title}</h2>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSelectedFile(null)}
-                >
+                <Button variant="ghost" size="sm" onClick={() => setSelectedFile(null)}>
                   <X className="h-4 w-4" />
                 </Button>
               </div>
@@ -439,59 +397,52 @@ export function VaultClient() {
                 <VaultDetailSkeleton />
               ) : (
                 <>
-                  <ScrollArea className="flex-1 h-full min-h-0 p-6">
+                  <ScrollArea className="h-full min-h-0 flex-1 p-6">
                     <div className="space-y-6">
-                      <div className="aspect-video border bg-muted/30 flex items-center justify-center overflow-hidden shadow-inner">
-                        {selectedFile.type.startsWith("image/") ? (
-                          <img
-                            src={selectedFile.url}
-                            className="max-w-full max-h-full object-contain"
-                          />
+                      <div className="flex aspect-video items-center justify-center overflow-hidden border bg-muted/30 shadow-inner">
+                        {selectedFile?.type.startsWith("image/") ? (
+                          <div className="relative h-full w-full">
+                            <Image
+                              src={selectedFile?.url || ""}
+                              alt={selectedFile?.name || "Selected vault file"}
+                              fill
+                              unoptimized
+                              sizes="(max-width: 768px) 100vw, 50vw"
+                              className="object-contain"
+                            />
+                          </div>
                         ) : (
                           <FileText className="h-16 w-16 text-muted-foreground" />
                         )}
                       </div>
 
                       <div className="space-y-4">
-                        <div className="flex items-start justify-between group">
-                          <h3 className="font-bold text-lg leading-tight break-all">
-                            {selectedFile.name}
-                          </h3>
+                        <div className="group flex items-start justify-between">
+                          <h3 className="break-all font-bold text-lg leading-tight">{selectedFile?.name}</h3>
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100"
                           >
                             <Edit3 className="h-4 w-4" />
                           </Button>
                         </div>
 
                         <div className="grid grid-cols-[120px,1fr] gap-x-4 gap-y-3 text-sm">
-                          <span className="text-muted-foreground">
-                            {t.details.date_created}
-                          </span>
-                          <span className="font-medium">
-                            {new Date(selectedFile.createdAt).toLocaleString()}
-                          </span>
+                          <span className="text-muted-foreground">{t.details.date_created}</span>
+                          <span className="font-medium">{new Date(selectedFile?.createdAt).toLocaleString()}</span>
 
                           <span className="text-muted-foreground">{t.details.format}</span>
                           <span className="font-medium text-primary uppercase">
-                            {selectedFile.type.split("/")[1] ||
-                              selectedFile.type}
+                            {selectedFile?.type.split("/")[1] || selectedFile?.type}
                           </span>
 
-                          <span className="text-muted-foreground">
-                            {t.details.file_size}
-                          </span>
-                          <span className="font-medium">
-                            {formatBytes(selectedFile.size)}
-                          </span>
+                          <span className="text-muted-foreground">{t.details.file_size}</span>
+                          <span className="font-medium">{formatBytes(selectedFile?.size)}</span>
 
-                          {selectedFile.type.startsWith("image/") && (
+                          {selectedFile?.type.startsWith("image/") && (
                             <>
-                              <span className="text-muted-foreground">
-                                {t.details.dimensions}
-                              </span>
+                              <span className="text-muted-foreground">{t.details.dimensions}</span>
                               <span className="font-medium">N/A</span>
                             </>
                           )}
@@ -501,48 +452,45 @@ export function VaultClient() {
 
                         <div className="space-y-3">
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2 text-sm font-semibold">
+                            <div className="flex items-center gap-2 font-semibold text-sm">
                               <Tag className="h-4 w-4" />
                               Tags
                             </div>
                           </div>
 
-                          <div className="flex flex-wrap gap-1.5 min-h-[32px]">
-                            {selectedFile.tags?.map((tag) => (
+                          <div className="flex min-h-[32px] flex-wrap gap-1.5">
+                            {selectedFile?.tags.map((tag) => (
                               <Badge
                                 key={tag}
                                 variant="secondary"
-                                className="px-2 py-0 text-[11px] h-6 flex items-center gap-1 group/tag bg-primary/10 text-primary border-primary/20"
+                                className="group/tag flex h-6 items-center gap-1 border-primary/20 bg-primary/10 px-2 py-0 text-[11px] text-primary"
                               >
                                 {tag}
                                 <button
+                                  type="button"
                                   onClick={() => handleRemoveTag(tag)}
-                                  className="hover:text-destructive shrink-0"
+                                  className="shrink-0 hover:text-destructive"
                                 >
                                   <X className="h-3 w-3" />
                                 </button>
                               </Badge>
                             ))}
-                            {(!selectedFile.tags ||
-                              selectedFile.tags.length === 0) && (
-                              <p className="text-xs text-muted-foreground italic">
-                                {t.details.no_tags}
-                              </p>
+                            {(!selectedFile?.tags || selectedFile?.tags.length === 0) && (
+                              <p className="text-muted-foreground text-xs italic">{t.details.no_tags}</p>
                             )}
                           </div>
 
                           <div className="space-y-2">
-                            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
+                            <p className="font-medium text-[10px] text-muted-foreground uppercase tracking-wider">
                               {t.details.suggested_tags}
                             </p>
                             <div className="flex flex-wrap gap-1.5">
-                              {SUGGESTED_TAGS.filter(
-                                (t) => !selectedFile.tags?.includes(t),
-                              ).map((tag) => (
+                              {SUGGESTED_TAGS.filter((t) => !selectedFile?.tags.includes(t)).map((tag) => (
                                 <button
                                   key={tag}
+                                  type="button"
                                   onClick={() => handleAddTag(tag)}
-                                  className="text-[10px] px-2 py-1 rounded-full border border-dashed hover:border-primary hover:text-primary transition-colors bg-muted/30"
+                                  className="rounded-full border border-dashed bg-muted/30 px-2 py-1 text-[10px] transition-colors hover:border-primary hover:text-primary"
                                 >
                                   + {tag}
                                 </button>
@@ -553,7 +501,7 @@ export function VaultClient() {
                           <div className="relative mt-2">
                             <Input
                               placeholder={t.details.add_custom_tag}
-                              className="h-8 text-xs pr-12 focus-visible:ring-1"
+                              className="h-8 pr-12 text-xs focus-visible:ring-1"
                               value={tagInput}
                               onChange={(e) => setTagInput(e.target.value)}
                               onKeyDown={(e) => {
@@ -563,7 +511,7 @@ export function VaultClient() {
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="absolute right-1 top-1 h-6 w-10 text-[10px] p-0"
+                              className="absolute top-1 right-1 h-6 w-10 p-0 text-[10px]"
                               onClick={() => handleAddTag(tagInput)}
                             >
                               {t.details.add_tag_button}
@@ -574,37 +522,30 @@ export function VaultClient() {
                     </div>
                   </ScrollArea>
 
-                  <div className="p-4 border-t bg-muted/5 grid grid-cols-2 gap-3 mt-auto">
-                    <div className="flex items-center gap-0.5 w-full">
+                  <div className="mt-auto grid grid-cols-2 gap-3 border-t bg-muted/5 p-4">
+                    <div className="flex w-full items-center gap-0.5">
                       <Button
                         variant="outline"
-                        className="flex-1 rounded-r-none h-9 text-xs"
-                        onClick={() => window.open(selectedFile.url, "_blank")}
+                        className="h-9 flex-1 rounded-r-none text-xs"
+                        onClick={() => window.open(selectedFile?.url, "_blank")}
                       >
                         <Download className="mr-2 h-4 w-4" /> {t.details.view_full}
                       </Button>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className="px-2 rounded-l-none border-l-0 h-9"
-                          >
+                          <Button variant="outline" className="h-9 rounded-l-none border-l-0 px-2">
                             <ChevronDown className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() =>
-                              window.open(selectedFile.url, "_blank")
-                            }
-                          >
+                          <DropdownMenuItem onClick={() => window.open(selectedFile?.url, "_blank")}>
                             <ExternalLink className="mr-2 h-4 w-4" /> {t.details.open_original}
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => {
                               const link = document.createElement("a");
-                              link.href = selectedFile.url;
-                              link.download = selectedFile.name;
+                              link.href = selectedFile?.url;
+                              link.download = selectedFile?.name;
                               link.click();
                             }}
                           >
@@ -615,8 +556,8 @@ export function VaultClient() {
                     </div>
                     <Button
                       variant="outline"
-                      className="h-9 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50"
-                      onClick={() => deleteMutation.mutate(selectedFile.id)}
+                      className="h-9 text-destructive text-xs hover:border-destructive/50 hover:bg-destructive/10 hover:text-destructive"
+                      onClick={() => deleteMutation.mutate(selectedFile?.id)}
                     >
                       <Trash2 className="mr-2 h-4 w-4" /> {t.details.delete}
                     </Button>
@@ -625,15 +566,13 @@ export function VaultClient() {
               )}
             </>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center p-10 text-center text-muted-foreground/60 space-y-4">
-              <div className="w-20 h-20 rounded-full border border-dashed flex items-center justify-center">
+            <div className="flex flex-1 flex-col items-center justify-center space-y-4 p-10 text-center text-muted-foreground/60">
+              <div className="flex h-20 w-20 items-center justify-center rounded-full border border-dashed">
                 <FileText className="h-10 w-10" />
               </div>
               <div>
                 <p className="font-semibold text-sm">{t.details.no_file_selected}</p>
-                <p className="text-[10px]">
-                  {t.details.no_file_selected_desc}
-                </p>
+                <p className="text-[10px]">{t.details.no_file_selected_desc}</p>
               </div>
             </div>
           )}
@@ -643,29 +582,25 @@ export function VaultClient() {
   );
 }
 
-function HeaderStorageUsage({ dictionary }: { dictionary: any }) {
+function HeaderStorageUsage({ dictionary }: { dictionary: Dictionary }) {
   const { workspace, checkLimit } = useAppStore();
 
   if (!workspace) return null;
 
-  const usage = workspace.vault_size_used_bytes || 0;
+  const usage = workspace?.vault_size_used_bytes || 0;
   const { limit, percent } = checkLimit("vault_size", usage / (1024 * 1024)); // checkLimit expects MB
   const t = dictionary.vault;
 
   return (
-    <div className="flex flex-col gap-1 min-w-[120px]">
-      <div className="flex justify-between items-center text-[10px]">
+    <div className="flex min-w-[120px] flex-col gap-1">
+      <div className="flex items-center justify-between text-[10px]">
         <span className="text-muted-foreground">
           {t.storage.usage.replace("{used}", formatBytes(usage)).replace("{limit}", limit.toString())}
         </span>
         <span
           className={cn(
             "font-bold",
-            percent > 90
-              ? "text-destructive"
-              : percent > 70
-                ? "text-amber-600"
-                : "text-primary",
+            percent > 90 ? "text-destructive" : percent > 70 ? "text-amber-600" : "text-primary",
           )}
         >
           {Math.round(percent)}%

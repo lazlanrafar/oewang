@@ -19,15 +19,18 @@ export default async function StoryPage({
 
   return (
     <div className="flex flex-col min-h-screen">
-      <Header isLoggedIn={isLoggedIn} appUrl={appUrl} />
+      <Header
+        isLoggedIn={isLoggedIn}
+        appUrl={appUrl}
+        locale={locale}
+        dictionary={dictionary}
+      />
 
       <main className="flex-1 pt-24">
-        {/* Story Content */}
         <section className="py-16 sm:py-24">
-          <div className="max-w-[800px] mx-auto px-4 sm:px-6 lg:px-8">
-            {/* Header */}
+          <div className="max-w-[840px] mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16">
-              <span className="text-xs text-muted-foreground uppercase tracking-wider">
+              <span className="text-xs uppercase tracking-[0.22em] text-muted-foreground">
                 {dictionary.story.title}
               </span>
               <h1 className="font-serif text-3xl sm:text-5xl tracking-tight text-foreground mt-4 mb-6">
@@ -35,68 +38,51 @@ export default async function StoryPage({
               </h1>
             </div>
 
-            {/* Problem */}
-            <div className="mb-16">
-              <h2 className="font-serif text-xl sm:text-2xl text-foreground mb-4">
-                {dictionary.story.problemTitle}
-              </h2>
-              <p className="text-muted-foreground leading-relaxed">
-                {dictionary.story.problemText}
-              </p>
+            <div className="space-y-10">
+              <article>
+                <h2 className="font-serif text-2xl mb-3">{dictionary.story.problemTitle}</h2>
+                <p className="text-muted-foreground leading-relaxed">{dictionary.story.problemText}</p>
+              </article>
+
+              <article>
+                <h2 className="font-serif text-2xl mb-3">{dictionary.story.solutionTitle}</h2>
+                <p className="text-muted-foreground leading-relaxed">{dictionary.story.solutionText}</p>
+              </article>
+
+              <article>
+                <h2 className="font-serif text-2xl mb-3">{dictionary.story.modernTitle}</h2>
+                <p className="text-muted-foreground leading-relaxed">{dictionary.story.modernText}</p>
+              </article>
+
+              <article>
+                <h2 className="font-serif text-2xl mb-3">{dictionary.story.focusTitle}</h2>
+                <ul className="space-y-2.5">
+                  {dictionary.story.focusItems.map((item) => (
+                    <li key={item} className="flex items-start gap-2.5">
+                      <span className="mt-1.5 size-1.5 rounded-full bg-foreground shrink-0" />
+                      <span className="text-muted-foreground">{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </article>
             </div>
 
-            {/* Solution */}
-            <div className="mb-16">
-              <h2 className="font-serif text-xl sm:text-2xl text-foreground mb-4">
-                {dictionary.story.solutionTitle}
-              </h2>
-              <p className="text-muted-foreground leading-relaxed">
-                {dictionary.story.solutionText}
-              </p>
-            </div>
-
-            {/* Modern Businesses */}
-            <div className="mb-16">
-              <h2 className="font-serif text-xl sm:text-2xl text-foreground mb-4">
-                {dictionary.story.modernTitle}
-              </h2>
-              <p className="text-muted-foreground leading-relaxed">
-                {dictionary.story.modernText}
-              </p>
-            </div>
-
-            {/* Focus */}
-            <div className="mb-16">
-              <h2 className="font-serif text-xl sm:text-2xl text-foreground mb-4">
-                {dictionary.story.focusTitle}
-              </h2>
-              <ul className="space-y-3">
-                {dictionary.story.focusItems.map((item, index) => (
-                  <li key={index} className="flex items-start gap-3">
-                    <span className="mt-1.5 size-1.5 rounded-full bg-foreground shrink-0" />
-                    <span className="text-muted-foreground">{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Founder */}
-            <div className="border-t border-border pt-12 text-center">
-              <p className="font-serif text-lg text-foreground">
-                — {dictionary.story.founder}
-              </p>
-              <p className="text-sm text-muted-foreground mt-1">
-                {dictionary.story.founderTitle}
-              </p>
+            <div className="border-t border-border pt-10 mt-14 text-center">
+              <p className="font-serif text-lg text-foreground">— {dictionary.story.founder}</p>
+              <p className="text-sm text-muted-foreground mt-1">{dictionary.story.founderTitle}</p>
             </div>
           </div>
         </section>
 
-        {/* CTA */}
-        <CTASection isLoggedIn={isLoggedIn} appUrl={appUrl} />
+        <CTASection
+          isLoggedIn={isLoggedIn}
+          appUrl={appUrl}
+          locale={locale}
+          dictionary={dictionary}
+        />
       </main>
 
-      <Footer />
+      <Footer locale={locale} dictionary={dictionary} />
     </div>
   );
 }

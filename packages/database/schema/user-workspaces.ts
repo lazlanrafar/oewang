@@ -1,21 +1,16 @@
-import {
-  pgTable,
-  text,
-  timestamp,
-  uuid,
-  uniqueIndex,
-} from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
+import { pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { users } from "./users";
 import { workspaces } from "./workspaces";
 
 export const user_workspaces = pgTable(
   "user_workspaces",
   {
-    id: uuid("id").primaryKey().defaultRandom(),
-    workspace_id: uuid("workspace_id")
+    id: text("id").primaryKey().$defaultFn(createId),
+    workspace_id: text("workspace_id")
       .notNull()
       .references(() => workspaces.id, { onDelete: "cascade" }),
-    user_id: uuid("user_id")
+    user_id: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     role: text("role").notNull(), // 'owner' | 'admin' | 'member'

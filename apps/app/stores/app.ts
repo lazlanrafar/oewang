@@ -1,33 +1,27 @@
-import { create } from "zustand";
-import type {
-  User,
-  Workspace,
-  TransactionSettings,
-  SubCurrency,
-} from "@workspace/types";
 import { INCOME_EXPENSES_COLOR_OPTIONS } from "@workspace/constants";
+import { type AiQuota, getAiQuota } from "@workspace/modules/ai/ai.action";
+import type { CurrencyFormatOptions, SubCurrency, TransactionSettings, User, Workspace } from "@workspace/types";
 import { formatCurrency as formatCurrencyUtil } from "@workspace/utils";
-import type { Dictionary } from "@workspace/dictionaries";
-import { getAiQuota, type AiQuota } from "@workspace/modules/ai/ai.action";
+import { create } from "zustand";
 
 export interface AppState {
   user: User | null;
   workspace: Workspace | null;
   settings: TransactionSettings | null;
   subCurrencies: SubCurrency[];
-  dictionary: Dictionary | null;
   isLoading: boolean;
   aiQuota: AiQuota | null;
+  dictionary: Record<string, unknown> | null;
   setUser: (user: User | null) => void;
   setWorkspace: (workspace: Workspace | null) => void;
   setSettings: (settings: TransactionSettings | null) => void;
   setSubCurrencies: (subCurrencies: SubCurrency[]) => void;
-  setDictionary: (dictionary: Dictionary | null) => void;
   setIsLoading: (isLoading: boolean) => void;
   setAiQuota: (aiQuota: AiQuota | null) => void;
+  setDictionary: (dictionary: Record<string, unknown> | null) => void;
   fetchAiQuota: () => Promise<void>;
   getTransactionColor: (type: string) => string;
-  formatCurrency: (amount: number, options?: any) => string;
+  formatCurrency: (amount: number, options?: CurrencyFormatOptions) => string;
   checkLimit: (
     feature: "vault_size" | "ai_tokens",
     currentUsage: number,
@@ -45,16 +39,16 @@ export const useAppStore = create<AppState>()((set, get) => ({
   workspace: null,
   settings: null,
   subCurrencies: [],
-  dictionary: null,
   isLoading: true,
   aiQuota: null,
+  dictionary: null,
   setUser: (user) => set({ user }),
   setWorkspace: (workspace) => set({ workspace }),
   setSettings: (settings) => set({ settings }),
   setSubCurrencies: (subCurrencies) => set({ subCurrencies }),
-  setDictionary: (dictionary) => set({ dictionary }),
   setIsLoading: (isLoading) => set({ isLoading }),
   setAiQuota: (aiQuota) => set({ aiQuota }),
+  setDictionary: (dictionary) => set({ dictionary }),
   fetchAiQuota: async () => {
     try {
       const result = await getAiQuota();
@@ -67,9 +61,9 @@ export const useAppStore = create<AppState>()((set, get) => ({
   },
   getTransactionColor: (type) => {
     const { settings } = get();
-    const option = INCOME_EXPENSES_COLOR_OPTIONS.find(
-      (o) => o.value === settings?.incomeExpensesColor,
-    ) || INCOME_EXPENSES_COLOR_OPTIONS[0];
+    const option =
+      INCOME_EXPENSES_COLOR_OPTIONS.find((o) => o.value === settings?.incomeExpensesColor) ||
+      INCOME_EXPENSES_COLOR_OPTIONS[0];
 
     const normalizedType = type?.toLowerCase();
 
@@ -101,10 +95,12 @@ export const useAppStore = create<AppState>()((set, get) => ({
     let actualUsage = currentUsage;
 
     if (feature === "vault_size") {
-      limit = plan?.max_vault_size_mb || 50; // Starter fallback
+      limit = (plan?.max_vault_size_mb || 50) + (workspace?.extra_vault_size_mb || 0);
       // Convert MB to bytes for comparison if currentUsage is in bytes
     } else if (feature === "ai_tokens") {
-      limit = aiQuota?.maxTokens || plan?.max_ai_tokens || 50;
+      limit =
+        aiQuota?.maxTokens ||
+        (plan?.max_ai_tokens || 50) + (workspace?.extra_ai_tokens || 0);
       actualUsage = aiQuota?.used ?? currentUsage;
     }
 
@@ -117,6 +113,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
       usage: actualUsage,
       remaining,
       percent,
+      total_usage: actualUsage,
     };
   },
 }));
