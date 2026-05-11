@@ -59,3 +59,10 @@ apps/native/**/*.freezed.dart
 .fvm/
 # Scripts
 scripts/test-*-token.ts
+
+# WhatsApp Web Session & Cache
+.test_wwebjs_auth/
+.wwebjs_auth/
+.wwebjs_cache/
+**/.wwebjs_auth/
+**/.wwebjs_cache/

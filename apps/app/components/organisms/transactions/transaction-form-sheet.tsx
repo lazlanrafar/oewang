@@ -3,13 +3,21 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type InfiniteData,
+} from "@tanstack/react-query";
 import type { Dictionary } from "@workspace/dictionaries";
 import {
   createTransaction,
   updateTransaction,
 } from "@workspace/modules/transaction/transaction.action";
-import { getVaultDownloadUrl, uploadVaultFile } from "@workspace/modules/vault/vault.action";
+import {
+  getVaultDownloadUrl,
+  uploadVaultFile,
+} from "@workspace/modules/vault/vault.action";
 import type { Transaction } from "@workspace/types";
 import {
   Button,
@@ -119,9 +127,7 @@ function AttachmentCard({
   const url = urlData?.success ? urlData.data.url : null;
 
   return (
-    <div
-      className="group relative aspect-square cursor-default overflow-hidden border bg-muted/10 transition-colors hover:bg-muted/20"
-    >
+    <div className="group relative aspect-square cursor-default overflow-hidden border bg-muted/10 transition-colors hover:bg-muted/20">
       {/* Thumbnail or icon */}
       {isImage ? (
         url ? (
@@ -146,7 +152,7 @@ function AttachmentCard({
       )}
 
       {/* Hover overlay with name + size */}
-      <div className="absolute inset-0 flex flex-col items-start justify-end bg-gradient-to-t from-black/70 to-transparent p-1.5 opacity-0 transition-opacity group-hover:opacity-100">
+      <div className="absolute inset-0 flex flex-col items-start justify-end bg-linear-to-t from-black/70 to-transparent p-1.5 opacity-0 transition-opacity group-hover:opacity-100">
         <p className="line-clamp-1 w-full text-[9px] font-medium text-white leading-tight">
           {file.name}
         </p>
@@ -291,6 +297,26 @@ export function TransactionFormSheet({
           );
         }
         toast.success(dictionary.transactions.toasts.updated);
+
+        // Optimistically patch the updated transaction in every matching cache
+        if (result.data) {
+          const updated = result.data as Transaction;
+          queryClient.setQueriesData<InfiniteData<any>>(
+            { queryKey: ["transactions"], exact: false },
+            (old) => {
+              if (!old) return old;
+              return {
+                ...old,
+                pages: old.pages.map((page: any) => ({
+                  ...page,
+                  data: (page.data ?? []).map((tx: Transaction) =>
+                    tx.id === updated.id ? { ...tx, ...updated } : tx,
+                  ),
+                })),
+              };
+            },
+          );
+        }
       } else {
         const result = await createTransaction(payload);
         if (!result.success) {
@@ -299,12 +325,37 @@ export function TransactionFormSheet({
           );
         }
         toast.success(dictionary.transactions.toasts.created);
+
+        // Optimistically prepend the new transaction to the first page of every
+        // matching cache so it appears instantly without waiting for refetch.
+        if (result.data) {
+          const created = result.data as Transaction;
+          queryClient.setQueriesData<InfiniteData<any>>(
+            { queryKey: ["transactions"], exact: false },
+            (old) => {
+              if (!old) return old;
+              const [firstPage, ...restPages] = old.pages;
+              if (!firstPage) return old;
+              return {
+                ...old,
+                pages: [
+                  {
+                    ...firstPage,
+                    data: [created, ...(firstPage.data ?? [])],
+                  },
+                  ...restPages,
+                ],
+              };
+            },
+          );
+        }
       }
 
       form.reset();
       setAttachments([]);
       onOpenChange(false);
       onSuccess?.();
+      // Background reconciliation — updates totals, pagination, etc.
       void queryClient.invalidateQueries({ queryKey: ["transactions"] });
     } catch (error) {
       console.error(error);
@@ -712,7 +763,7 @@ export function TransactionFormSheet({
 
                 <button
                   type="button"
-                  className="group relative mt-2 flex aspect-3/1 cursor-pointer flex-col items-center justify-center gap-3 overflow-hidden border-2 border-dashed bg-muted/5 transition-all hover:border-border/60 hover:bg-muted/10 sm:aspect-[4/1]"
+                  className="group relative mt-2 flex w-full cursor-pointer flex-col items-center justify-center gap-3 overflow-hidden border-2 border-dashed bg-muted/5 px-6 py-10 transition-all hover:border-border/60 hover:bg-muted/10"
                   onDragOver={(e) => {
                     e.preventDefault();
                     e.currentTarget.classList.add(
@@ -744,10 +795,10 @@ export function TransactionFormSheet({
                     }
                   }}
                 >
-                  <div className="rounded-full border border-border/20 bg-background p-2 shadow-sm transition-transform group-hover:scale-110">
-                    <Paperclip className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-primary" />
+                  <div className="rounded-full border border-border/20 bg-background p-2.5 shadow-sm transition-transform group-hover:scale-110">
+                    <Paperclip className="h-5 w-5 text-muted-foreground transition-colors group-hover:text-primary" />
                   </div>
-                  <p className="px-4 text-center text-[11px] text-muted-foreground leading-relaxed sm:px-8">
+                  <p className="text-center text-[11px] text-muted-foreground leading-relaxed">
                     <span className="font-medium text-foreground">
                       {dictionary.transactions.click_to_browse}
                     </span>{" "}

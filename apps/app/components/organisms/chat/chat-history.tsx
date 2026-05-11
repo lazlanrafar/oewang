@@ -110,7 +110,7 @@ export function ChatHistoryDropdown() {
     if (isOpen) {
       const target = event.target as Element;
       const clickedButton = target.closest("button");
-      const isHistoryButton = clickedButton.closest("[data-chat-history-button]");
+      const isHistoryButton = clickedButton?.closest("[data-chat-history-button]");
 
       // Don't close if clicking on the history button itself
       if (!isHistoryButton) {

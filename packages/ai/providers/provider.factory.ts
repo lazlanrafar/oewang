@@ -18,12 +18,16 @@ export abstract class ProviderFactory {
     tools?: any[],
     onToolCall?: (name: string, args: any) => Promise<any>
   ): Promise<ChatResponse> {
+    const errors: string[] = [];
+
     // 1. OpenAI
     if (options.openaiKey) {
       try {
         return await OpenAIProvider.chat(messages, systemPrompt, options.openaiKey, tools, onToolCall);
       } catch (e: any) {
-        log.error(`OpenAI failed: ${e.message}. Falling back to Gemini...`);
+        const msg = e.message ?? String(e);
+        errors.push(`OpenAI: ${msg}`);
+        log.error(`OpenAI failed: ${msg}. Falling back to Gemini...`);
       }
     }
 
@@ -32,7 +36,9 @@ export abstract class ProviderFactory {
       try {
         return await GeminiProvider.chat(messages, systemPrompt, options.geminiKey, tools, onToolCall);
       } catch (e: any) {
-        log.error(`OpenAI failed: ${e.message}. Falling back to Claude...`);
+        const msg = e.message ?? String(e);
+        errors.push(`Gemini: ${msg}`);
+        log.error(`Gemini failed: ${msg}. Falling back to Claude...`);
       }
     }
 
@@ -41,7 +47,10 @@ export abstract class ProviderFactory {
       return await ClaudeProvider.chat(messages, systemPrompt, options.anthropicKey, tools, onToolCall);
     }
 
-    throw new Error("No AI provider API keys available for chat.");
+    const summary = errors.length > 0
+      ? `All AI providers failed. ${errors.join(" | ")}`
+      : "No AI provider API keys configured.";
+    throw new Error(summary);
   }
 
   static async generateTitle(message: string, options: ProviderOptions): Promise<string> {

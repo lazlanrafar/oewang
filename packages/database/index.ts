@@ -30,3 +30,4 @@ export * from "./schema/workspace-settings";
 export * from "./schema/workspace-sub-currencies";
 export * from "./schema/workspace-addons";
 export * from "./schema/workspaces";
+export * from "./schema/system-settings";

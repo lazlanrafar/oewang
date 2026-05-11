@@ -15,6 +15,7 @@ import { Grid2X2, Link as LinkIcon, Search } from "lucide-react";
 import { AppsCard } from "./apps-card";
 import { ConnectTelegram } from "./connect-telegram";
 import { ConnectWhatsApp } from "./connect-whatsapp";
+import { ConnectWhatsAppWeb } from "./connect-whatsapp-web";
 
 interface Props {
   dictionary: Dictionary;
@@ -73,7 +74,7 @@ export function AppsClient({ dictionary }: Props) {
         id: app.id,
         name: app.name,
         category: "category" in app ? app.category : "Integration",
-        requires_plan: app.id.startsWith("whatsapp") ? "Pro" : undefined,
+        requires_plan: app.id === "whatsapp-twilio" ? "Pro" : undefined,
         active: app.active,
         beta: "beta" in app && typeof app.beta === "boolean" ? app.beta : undefined,
         logo: app.logo,
@@ -225,6 +226,7 @@ export function AppsClient({ dictionary }: Props) {
       </div>
       <ConnectTelegram dictionary={dictionary} />
       <ConnectWhatsApp dictionary={dictionary} />
+      <ConnectWhatsAppWeb dictionary={dictionary} />
     </div>
   );
 }

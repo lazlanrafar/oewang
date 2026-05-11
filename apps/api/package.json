@@ -38,7 +38,9 @@
     "jose": "^6.0.11",
     "openai": "^6.27.0",
     "pdf.js-extract": "^0.2.1",
-
+    "qrcode": "^1.5.4",
+    "qrcode-terminal": "^0.12.0",
+    "whatsapp-web.js": "^1.34.7",
     "zod": "catalog:"
   },
   "devDependencies": {

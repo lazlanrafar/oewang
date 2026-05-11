@@ -78,8 +78,7 @@ axiosInstance.interceptors.request.use(async (config) => {
         config.data = { data: encrypted };
         config.headers["x-encrypted"] = "true";
       } catch (e) {
-        // Log error but continue with plaintext if encryption fails in dev
-        console.error("Failed to encrypt request body", e);
+        console.error("[Axios Server] Failed to encrypt request body", e);
       }
     }
   }

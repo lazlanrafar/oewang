@@ -59,6 +59,9 @@ const serverSchema = z.object({
   TWILIO_AUTH_TOKEN: z.string().optional(),
   TWILIO_WHATSAPP_NUMBER: z.string().optional(),
 
+  // WhatsApp Web
+  WHATSAPP_WEB_SESSION_DATA_PATH: z.string().optional(),
+
   // R2 Storage
   R2_ENDPOINT: z.string().min(1).optional(),
   R2_ACCESS_KEY_ID: z.string().optional(),

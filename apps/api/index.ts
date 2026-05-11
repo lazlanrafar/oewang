@@ -8,8 +8,6 @@ import { getApiEnv } from "./config/env";
 import { createLogger } from "@workspace/logger";
 import { sql } from "drizzle-orm";
 import { Elysia } from "elysia";
-
-// Validate API environment variables early
 getApiEnv();
 
 import { ErrorCode } from "@workspace/types";
@@ -88,9 +86,9 @@ const app = new Elysia()
   .use(staticPlugin({ assets: "public", prefix: "" }))
   .get("/", () => Bun.file("public/index.html"))
   .use(loggerPlugin)
-  .use(encryptionPlugin)
   .use(authPlugin)
   .use(rateLimitPlugin)
+  .use(encryptionPlugin)
   .use(
     swagger({
       documentation: {

@@ -7,6 +7,7 @@ import type { AppDictionary } from "@/modules/types/dictionary";
 import { sidebarItems } from "@/navigation/sidebar/sidebar-items";
 
 import { NavMain } from "./nav-main";
+import { NavUsage } from "./nav-usage";
 import { NavUser } from "./nav-user";
 import { WorkspaceSwitcher } from "./workspace-switcher";
 
@@ -17,6 +18,10 @@ type WorkspaceData = {
   role?: string;
   plan_name?: string | null;
   max_workspaces?: number | null;
+  ai_tokens_used?: number;
+  vault_size_used_bytes?: number;
+  max_ai_tokens?: number | null;
+  max_vault_size_mb?: number | null;
 };
 
 type UserData = {
@@ -48,6 +53,8 @@ export function AppSidebar({
   const variant = isSynced ? sidebarVariant : rest.variant;
   const collapsible = isSynced ? sidebarCollapsible : rest.collapsible;
 
+  const activeWorkspace = workspaces.find((w) => w.id === currentUser?.workspace_id);
+
   return (
     <Sidebar {...rest} variant={variant} collapsible={collapsible}>
       <SidebarHeader>
@@ -61,6 +68,7 @@ export function AppSidebar({
         <NavMain items={sidebarItems} dictionary={dictionary} />
       </SidebarContent>
       <SidebarFooter>
+        <NavUsage workspace={activeWorkspace} dictionary={dictionary} />
         {currentUser && (
           <NavUser
             user={{

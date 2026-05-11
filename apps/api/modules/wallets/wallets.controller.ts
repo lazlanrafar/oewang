@@ -122,7 +122,7 @@ export const walletsController = new Elysia()
             search: t.Optional(t.String()),
             groupId: t.Optional(t.String()),
             page: t.Optional(t.Numeric({ minimum: 1 })),
-            limit: t.Optional(t.Numeric({ minimum: 1, maximum: 100 })),
+            limit: t.Optional(t.Numeric({ minimum: 1, maximum: 250 })),
           }),
           detail: {
             summary: "Get Wallets",
