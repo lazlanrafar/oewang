@@ -1,6 +1,7 @@
 import { Env } from "@workspace/constants";
 import { buildSuccess } from "@workspace/utils";
 import { AiService } from "../ai/ai.service";
+import { executeAiTool } from "../ai/ai.tools";
 import { TransactionsService } from "../transactions/transactions.service";
 import { VaultService as vaultService } from "../vault/vault.service";
 import { WalletsRepository as walletsRepository } from "../wallets/wallets.repository";
@@ -9,6 +10,157 @@ import { IntegrationsRepository } from "./integrations.repository";
 import { WorkspacesService } from "../workspaces/workspaces.service";
 
 export abstract class IntegrationsService {
+  private static extractLeadingJson(text: string): {
+    payload: Record<string, any>;
+    remaining: string;
+  } | null {
+    const source = text.trimStart();
+    if (!source.startsWith("{")) return null;
+
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+    let endIndex = -1;
+
+    for (let i = 0; i < source.length; i++) {
+      const ch = source[i];
+      if (!ch) continue;
+
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+
+      if (ch === "\\") {
+        escaped = true;
+        continue;
+      }
+
+      if (ch === "\"") {
+        inString = !inString;
+        continue;
+      }
+
+      if (inString) continue;
+
+      if (ch === "{") depth++;
+      if (ch === "}") {
+        depth--;
+        if (depth === 0) {
+          endIndex = i;
+          break;
+        }
+      }
+    }
+
+    if (endIndex < 0) return null;
+
+    const jsonChunk = source.slice(0, endIndex + 1);
+    try {
+      const payload = JSON.parse(jsonChunk);
+      if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+        return null;
+      }
+      return {
+        payload: payload as Record<string, any>,
+        remaining: source.slice(endIndex + 1).trim(),
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  private static isTransactionDraftPayload(payload: Record<string, any>): boolean {
+    const type = payload.type;
+    const amount = Number(payload.amount);
+    const walletId = payload.walletId;
+    const name = payload.name;
+
+    if (!["income", "expense", "transfer"].includes(type)) return false;
+    if (!Number.isFinite(amount) || amount <= 0) return false;
+    if (typeof walletId !== "string" || walletId.trim().length === 0) return false;
+    if (typeof name !== "string" || name.trim().length === 0) return false;
+    // If the payload already looks like a tool result wrapper, skip fallback execution.
+    if ("success" in payload || "data" in payload || "error" in payload) return false;
+    return true;
+  }
+
+  private static async normalizeAiReplyForChat(
+    rawReply: string,
+    workspaceId: string,
+    userId: string,
+  ): Promise<string> {
+    const extracted = IntegrationsService.extractLeadingJson(rawReply);
+    if (!extracted) return rawReply.trim();
+
+    const { payload, remaining } = extracted;
+    if (!IntegrationsService.isTransactionDraftPayload(payload)) {
+      return (remaining || rawReply).trim();
+    }
+
+    const createResult = await executeAiTool(
+      "create_transaction",
+      payload,
+      workspaceId,
+      userId,
+    );
+
+    if (createResult?.success && !createResult?.dryRun) {
+      const amount = Number(payload.amount || 0);
+      const amountStr = amount.toLocaleString("id-ID");
+      const wallet = String(payload.walletId || "").trim();
+      const name = String(payload.name || "Transaksi").trim();
+      return `✅ Sudah dicatat: ${name} Rp${amountStr} dari ${wallet}.`;
+    }
+
+    if (createResult?.success && createResult?.dryRun) {
+      const fallbackText = remaining || "⚠️ Mode dry-run aktif, transaksi belum disimpan.";
+      return `${fallbackText}\n\n⚠️ Mode dry-run aktif, transaksi belum masuk database.`.trim();
+    }
+
+    const errorMessage = createResult?.error
+      ? `\n\n⚠️ Gagal menyimpan transaksi: ${createResult.error}`
+      : "";
+    const fallbackText = remaining || "⚠️ Gagal menyimpan transaksi.";
+    return `${fallbackText}${errorMessage}`.trim();
+  }
+
+  private static isUuid(value: string): boolean {
+    return /^[a-f0-9-]{36}$/i.test(value);
+  }
+
+  private static parseTelegramConnectPayload(text: string): {
+    workspaceIdentifier: string;
+    userIdCandidate?: string;
+  } | null {
+    const startCommandMatch = text.match(/^\/start(?:\s+(.+))?$/i);
+    const legacyConnectMatch = text.match(/^Connect Oewang\s+(.+)$/i);
+    const rawPayload = (startCommandMatch?.[1] || legacyConnectMatch?.[1] || "").trim();
+
+    if (!rawPayload) return null;
+
+    const firstToken = rawPayload.split(/\s+/)[0] || "";
+    if (!firstToken) return null;
+
+    const decodedToken = (() => {
+      try {
+        return decodeURIComponent(firstToken);
+      } catch {
+        return firstToken;
+      }
+    })();
+
+    const [workspaceRaw, userIdRaw] = decodedToken.split("___", 2);
+    const workspaceIdentifier = workspaceRaw?.trim();
+
+    if (!workspaceIdentifier) return null;
+
+    return {
+      workspaceIdentifier,
+      userIdCandidate: userIdRaw?.trim() || undefined,
+    };
+  }
+
   static async connectWhatsApp(
     workspaceId: string,
     userId: string,
@@ -50,6 +202,19 @@ export abstract class IntegrationsService {
     return buildSuccess(integrations, "Integrations retrieved successfully");
   }
 
+  static async disconnectIntegration(workspaceId: string, provider: string) {
+    const disconnected = await IntegrationsRepository.disconnectByProvider(
+      workspaceId,
+      provider,
+    );
+
+    if (!disconnected) {
+      return buildSuccess(null, `${provider} is already disconnected`);
+    }
+
+    return buildSuccess(disconnected, `${provider} disconnected successfully`);
+  }
+
   static async handleTelegramWebhook(payload: Record<string, any>) {
     console.log("[Telegram Webhook] Received payload:", JSON.stringify(payload));
     const message = payload.message;
@@ -63,18 +228,32 @@ export abstract class IntegrationsService {
 
     // 1. Check for linking command
     if (text) {
-      const startMatch =
-        text.match(/^\/start\s+([a-f0-9-]{36})(?:___([a-f0-9-]{36}))?$/i) ||
-        text.match(/^Connect Oewang\s+([a-f0-9-]{36})(?:___([a-f0-9-]{36}))?$/i);
+      const connectPayload = IntegrationsService.parseTelegramConnectPayload(text);
 
-      if (startMatch) {
-        const targetWorkspaceId = startMatch[1];
-        let targetUserId = startMatch[2];
+      if (connectPayload) {
+        const { workspaceIdentifier, userIdCandidate } = connectPayload;
+        const targetWorkspaceId = IntegrationsService.isUuid(workspaceIdentifier)
+          ? workspaceIdentifier
+          : await IntegrationsRepository.findWorkspaceIdBySlug(
+              workspaceIdentifier.toLowerCase(),
+            );
+        let targetUserId = IntegrationsService.isUuid(userIdCandidate || "")
+          ? userIdCandidate
+          : undefined;
+
+        if (!targetWorkspaceId) {
+          await IntegrationsService.sendTelegramMessage(
+            chatId,
+            "❌ I couldn't find that workspace. Please reconnect from your Oewang dashboard.",
+          );
+          return "OK";
+        }
 
         // If userId is missing, try to find the first member of the workspace
         if (!targetUserId) {
           targetUserId =
-            await IntegrationsRepository.findFirstMemberId(targetWorkspaceId);
+            (await IntegrationsRepository.findFirstMemberId(targetWorkspaceId)) ||
+            undefined;
         }
 
         // If still no userId, we can't link safely
@@ -231,9 +410,14 @@ export abstract class IntegrationsService {
               );
             }
 
+            const replyText = await IntegrationsService.normalizeAiReplyForChat(
+              chatResponse.reply,
+              workspaceId,
+              userId,
+            );
             await IntegrationsService.sendTelegramMessage(
               chatId,
-              chatResponse.reply,
+              replyText,
             );
           }
         } catch (chatErr) {
@@ -369,7 +553,12 @@ export abstract class IntegrationsService {
               chatSessionId: chatResponse.sessionId,
             });
           }
-          await IntegrationsService.sendTwilioWhatsAppMessage(fromUserNumber, chatResponse.reply);
+          const replyText = await IntegrationsService.normalizeAiReplyForChat(
+            chatResponse.reply,
+            workspaceId,
+            userId,
+          );
+          await IntegrationsService.sendTwilioWhatsAppMessage(fromUserNumber, replyText);
         }
       }
     } catch (err) {

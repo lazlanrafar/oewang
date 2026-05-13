@@ -31,6 +31,20 @@ export async function getIntegrationsAction(): Promise<ActionResponse<any[]>> {
   }
 }
 
+export async function disconnectIntegrationAction(
+  provider: string,
+): Promise<ActionResponse<any>> {
+  try {
+    const res = await api.post(`/integrations/${provider}/disconnect`);
+    return { success: true, data: res.data?.data };
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.response?.data?.message || "Failed to disconnect integration",
+    };
+  }
+}
+
 export async function getWhatsAppWebStatusAction(): Promise<ActionResponse<{
   status: string;
   qrCode?: string;

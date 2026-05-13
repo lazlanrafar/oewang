@@ -25,9 +25,14 @@ import {
 import { ChevronRight } from "lucide-react";
 
 import { i18n } from "@/i18n-config";
-import { type AppDictionary, getDictionaryText } from "@/modules/types/dictionary";
+import {
+  type AppDictionary,
+  getDictionaryText,
+} from "@/modules/types/dictionary";
 import type { NavGroup, NavMainItem } from "@/navigation/sidebar/sidebar-items";
 import { useLocalizedRoute } from "@/utils/localized-route";
+
+const activeSidebarItemClass = "";
 
 interface NavMainProps {
   readonly items: readonly NavGroup[];
@@ -57,23 +62,41 @@ const NavItemExpanded = ({
   const title = t(item.title);
 
   return (
-    <Collapsible key={item.title} asChild defaultOpen={isSubmenuOpen(item.subItems)} className="group/collapsible">
+    <Collapsible
+      key={item.title}
+      asChild
+      defaultOpen={isSubmenuOpen(item.subItems)}
+      className="group/collapsible"
+    >
       <SidebarMenuItem>
         <CollapsibleTrigger asChild>
           {item.subItems ? (
-            <SidebarMenuButton disabled={item.comingSoon} isActive={isActive(item.url, item.subItems)} tooltip={title}>
+            <SidebarMenuButton
+              disabled={item.comingSoon}
+              isActive={isActive(item.url, item.subItems)}
+              tooltip={title}
+              className={activeSidebarItemClass}
+            >
               {item.icon && <item.icon />}
               <span>{title}</span>
               {item.comingSoon && <IsComingSoon dictionary={dictionary} />}
               <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
             </SidebarMenuButton>
           ) : (
-            <SidebarMenuButton asChild disabled={item.comingSoon} isActive={isActive(item.url)} tooltip={title}>
+            <SidebarMenuButton
+              asChild
+              disabled={item.comingSoon}
+              isActive={isActive(item.url)}
+              tooltip={title}
+              className={activeSidebarItemClass}
+            >
               <Link
                 prefetch={false}
                 href={item.comingSoon ? "#" : getLocalizedUrl(item.url)}
                 target={item.newTab ? "_blank" : undefined}
-                className={item.comingSoon ? "pointer-events-none opacity-50" : ""}
+                className={
+                  item.comingSoon ? "pointer-events-none opacity-50" : ""
+                }
                 tabIndex={item.comingSoon ? -1 : undefined}
               >
                 {item.icon && <item.icon />}
@@ -88,7 +111,12 @@ const NavItemExpanded = ({
             <SidebarMenuSub>
               {item.subItems.map((subItem) => (
                 <SidebarMenuSubItem key={subItem.title}>
-                  <SidebarMenuSubButton aria-disabled={subItem.comingSoon} isActive={isActive(subItem.url)} asChild>
+                  <SidebarMenuSubButton
+                    aria-disabled={subItem.comingSoon}
+                    isActive={isActive(subItem.url)}
+                    asChild
+                    className={activeSidebarItemClass}
+                  >
                     <Link
                       prefetch={false}
                       href={getLocalizedUrl(subItem.url)}
@@ -96,7 +124,9 @@ const NavItemExpanded = ({
                     >
                       {subItem.icon && <subItem.icon />}
                       <span>{t(subItem.title)}</span>
-                      {subItem.comingSoon && <IsComingSoon dictionary={dictionary} />}
+                      {subItem.comingSoon && (
+                        <IsComingSoon dictionary={dictionary} />
+                      )}
                     </Link>
                   </SidebarMenuSubButton>
                 </SidebarMenuSubItem>
@@ -127,19 +157,28 @@ const NavItemCollapsed = ({
     <SidebarMenuItem key={item.title}>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <SidebarMenuButton disabled={item.comingSoon} tooltip={title} isActive={isActive(item.url, item.subItems)}>
+          <SidebarMenuButton
+            disabled={item.comingSoon}
+            tooltip={title}
+            isActive={isActive(item.url, item.subItems)}
+            className={activeSidebarItemClass}
+          >
             {item.icon && <item.icon />}
             <span>{title}</span>
             <ChevronRight />
           </SidebarMenuButton>
         </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-50 space-y-1" side="right" align="start">
+        <DropdownMenuContent
+          className="w-50 space-y-1"
+          side="right"
+          align="start"
+        >
           {item.subItems?.map((subItem) => (
             <DropdownMenuItem key={subItem.title} asChild>
               <SidebarMenuSubButton
                 key={subItem.title}
                 asChild
-                className="focus-visible:ring-0"
+                className={`focus-visible:ring-0 ${activeSidebarItemClass}`}
                 aria-disabled={subItem.comingSoon}
                 isActive={isActive(subItem.url)}
               >
@@ -148,9 +187,13 @@ const NavItemCollapsed = ({
                   href={getLocalizedUrl(subItem.url)}
                   target={subItem.newTab ? "_blank" : undefined}
                 >
-                  {subItem.icon && <subItem.icon className="[&>svg]:text-sidebar-foreground" />}
+                  {subItem.icon && (
+                    <subItem.icon className="[&>svg]:text-sidebar-foreground" />
+                  )}
                   <span>{t(subItem.title)}</span>
-                  {subItem.comingSoon && <IsComingSoon dictionary={dictionary} />}
+                  {subItem.comingSoon && (
+                    <IsComingSoon dictionary={dictionary} />
+                  )}
                 </Link>
               </SidebarMenuSubButton>
             </DropdownMenuItem>
@@ -191,7 +234,9 @@ export function NavMain({ items, dictionary }: NavMainProps) {
     <>
       {items.map((group) => (
         <SidebarGroup key={group.id}>
-          {group.label && <SidebarGroupLabel>{t(group.label)}</SidebarGroupLabel>}
+          {group.label && (
+            <SidebarGroupLabel>{t(group.label)}</SidebarGroupLabel>
+          )}
           <SidebarGroupContent className="flex flex-col gap-2">
             <SidebarMenu>
               {group.items.map((item) => {
@@ -207,12 +252,19 @@ export function NavMain({ items, dictionary }: NavMainProps) {
                           disabled={item.comingSoon}
                           tooltip={title}
                           isActive={isItemActive(item.url)}
+                          className={activeSidebarItemClass}
                         >
                           <Link
                             prefetch={false}
-                            href={item.comingSoon ? "#" : getLocalizedUrl(item.url)}
+                            href={
+                              item.comingSoon ? "#" : getLocalizedUrl(item.url)
+                            }
                             target={item.newTab ? "_blank" : undefined}
-                            className={item.comingSoon ? "pointer-events-none opacity-50" : ""}
+                            className={
+                              item.comingSoon
+                                ? "pointer-events-none opacity-50"
+                                : ""
+                            }
                             tabIndex={item.comingSoon ? -1 : undefined}
                           >
                             {item.icon && <item.icon />}
@@ -224,7 +276,12 @@ export function NavMain({ items, dictionary }: NavMainProps) {
                   }
                   // Otherwise, render the dropdown as before
                   return (
-                    <NavItemCollapsed key={item.title} item={item} isActive={isItemActive} dictionary={dictionary} />
+                    <NavItemCollapsed
+                      key={item.title}
+                      item={item}
+                      isActive={isItemActive}
+                      dictionary={dictionary}
+                    />
                   );
                 }
                 // Expanded view

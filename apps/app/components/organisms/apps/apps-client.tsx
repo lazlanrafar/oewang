@@ -4,13 +4,18 @@ import * as React from "react";
 
 import { useRouter } from "next/navigation";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Dictionary } from "@workspace/dictionaries";
 import { apps as appStoreApps } from "@workspace/integrations";
-import { getIntegrationsAction } from "@workspace/modules/integrations/integrations.action";
+import {
+  disconnectIntegrationAction,
+  getIntegrationsAction,
+} from "@workspace/modules/integrations/integrations.action";
 import { getMe } from "@workspace/modules/user/user.action";
 import { cn, Input, Tabs, TabsList, TabsTrigger } from "@workspace/ui";
 import { Grid2X2, Link as LinkIcon, Search } from "lucide-react";
+import { toast } from "sonner";
+import { useConfirm } from "../../providers/confirm-modal-provider";
 
 import { AppsCard } from "./apps-card";
 import { ConnectTelegram } from "./connect-telegram";
@@ -39,11 +44,16 @@ type AppCardModel = React.ComponentProps<typeof AppsCard>["app"] & {
 
 export function AppsClient({ dictionary }: Props) {
   const t = dictionary.apps;
+  const confirm = useConfirm();
+  const queryClient = useQueryClient();
 
   const _router = useRouter();
   const [search, setSearch] = React.useState("");
   const [filter, setFilter] = React.useState<"all" | "connected">("all");
   const [expandedApp, setExpandedApp] = React.useState<string | null>(null);
+  const [disconnectingAppId, setDisconnectingAppId] = React.useState<
+    string | null
+  >(null);
 
   // Fetch real integrations from the API
   const { data: installedApps = [], isLoading } = useQuery<InstalledIntegration[]>({
@@ -61,6 +71,27 @@ export function AppsClient({ dictionary }: Props) {
       const result = await getMe();
       return result.success ? (result.data as CurrentUser) : null;
     },
+  });
+
+  const disconnectMutation = useMutation({
+    mutationFn: async (provider: string) => {
+      const result = await disconnectIntegrationAction(provider);
+      if (!result.success) {
+        throw new Error(result.error || "Failed to disconnect integration");
+      }
+      return result.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["integrations"] });
+      queryClient.invalidateQueries({ queryKey: ["integrations", "telegram-connect"] });
+      toast.success("Integration disconnected");
+    },
+    onError: (error: unknown) => {
+      const message =
+        error instanceof Error ? error.message : "Failed to disconnect integration";
+      toast.error(message);
+    },
+    onSettled: () => setDisconnectingAppId(null),
   });
 
   // Transform official apps
@@ -207,9 +238,24 @@ export function AppsClient({ dictionary }: Props) {
               }
             }}
             onDisconnect={() => {
-              // placeholder
-              console.log("Disconnect", app.id);
+              (async () => {
+                const ok = await confirm({
+                  title: `Disconnect ${app.name}?`,
+                  description:
+                    "This will stop syncing messages from this app to your workspace.",
+                  confirmLabel: "Disconnect",
+                  cancelLabel: "Cancel",
+                  destructive: true,
+                });
+                if (!ok) return;
+
+                setDisconnectingAppId(app.id);
+                disconnectMutation.mutate(app.id);
+              })();
             }}
+            isDisconnecting={
+              disconnectMutation.isPending && disconnectingAppId === app.id
+            }
           />
         ))}
 

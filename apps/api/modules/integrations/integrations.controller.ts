@@ -84,7 +84,7 @@ export const integrationsController = new Elysia({ prefix: "/integrations" })
   )
   .post(
     "/telegram/webhook",
-    async ({ request, set }) => {
+    async ({ request, set, body }) => {
       const expectedSecret = Env.TELEGRAM_WEBHOOK_SECRET;
       const receivedSecret = request.headers.get(
         "x-telegram-bot-api-secret-token",
@@ -107,12 +107,18 @@ export const integrationsController = new Elysia({ prefix: "/integrations" })
         }
       }
 
-      const rawBody = await request.text();
       let parsedBody: Record<string, any>;
 
-      try {
-        parsedBody = JSON.parse(rawBody);
-      } catch {
+      if (body && typeof body === "object") {
+        parsedBody = body as Record<string, any>;
+      } else if (typeof body === "string") {
+        try {
+          parsedBody = JSON.parse(body);
+        } catch {
+          set.status = 400;
+          return "Invalid JSON payload";
+        }
+      } else {
         set.status = 400;
         return "Invalid JSON payload";
       }
@@ -191,6 +197,29 @@ export const integrationsController = new Elysia({ prefix: "/integrations" })
         summary: "Connect Telegram",
         description:
           "Links a Telegram chat ID to the workspace for AI-powered chat and notifications.",
+        tags: ["Integrations"],
+      },
+    },
+  )
+  .post(
+    "/:provider/disconnect",
+    async ({ params, auth }) => {
+      if (!auth?.workspaceId) {
+        throw status(401, buildError(ErrorCode.UNAUTHORIZED, "Unauthorized"));
+      }
+      assertCanManageSensitiveWorkspace(auth.workspace_role);
+
+      return await IntegrationsService.disconnectIntegration(
+        auth.workspaceId,
+        params.provider,
+      );
+    },
+    {
+      params: t.Object({ provider: t.String() }),
+      detail: {
+        summary: "Disconnect Integration",
+        description:
+          "Disconnects an installed integration from the current workspace.",
         tags: ["Integrations"],
       },
     },

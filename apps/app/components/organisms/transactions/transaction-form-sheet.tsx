@@ -207,10 +207,6 @@ export function TransactionFormSheet({
     settings?.mainCurrencySymbol,
   );
 
-  if (!canEdit) {
-    return null;
-  }
-
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -462,7 +458,7 @@ export function TransactionFormSheet({
     }
   };
 
-  if (!mounted || !dictionary) return null;
+  if (!mounted || !dictionary || !canEdit) return null;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>

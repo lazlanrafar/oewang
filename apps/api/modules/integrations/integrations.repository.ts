@@ -1,5 +1,10 @@
 import { eq, and, sql, isNull } from "drizzle-orm";
-import { db, workspaceIntegrations, user_workspaces } from "@workspace/database";
+import {
+  db,
+  workspaceIntegrations,
+  user_workspaces,
+  workspaces,
+} from "@workspace/database";
 import type { NewWorkspaceIntegration } from "@workspace/database";
 
 export abstract class IntegrationsRepository {
@@ -122,5 +127,34 @@ export abstract class IntegrationsRepository {
       )
       .limit(1);
     return membership?.userId || null;
+  }
+
+  static async findWorkspaceIdBySlug(slug: string) {
+    const [workspace] = await db
+      .select({ id: workspaces.id })
+      .from(workspaces)
+      .where(and(eq(workspaces.slug, slug), isNull(workspaces.deleted_at)))
+      .limit(1);
+    return workspace?.id || null;
+  }
+
+  static async disconnectByProvider(workspaceId: string, provider: string) {
+    const [disconnected] = await db
+      .update(workspaceIntegrations)
+      .set({
+        isActive: false,
+        deletedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      })
+      .where(
+        and(
+          eq(workspaceIntegrations.workspaceId, workspaceId),
+          eq(workspaceIntegrations.provider, provider),
+          isNull(workspaceIntegrations.deletedAt),
+        ),
+      )
+      .returning();
+
+    return disconnected || null;
   }
 }

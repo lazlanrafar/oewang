@@ -3481,3 +3481,1146 @@ $ bun run --watch index.ts
     [35mcontext[39m: "api"
 [32mINFO[39m [06:07:22]: [36m[api] 🔗 API v1 at http://localhost:3002/v1[39m
     [35mcontext[39m: "api"
+🔍 getEnv: Searching for .env at: /Users/boneconsulting/Developer/oewang/apps/api/.env
+✅ getEnv: Loaded env from /Users/boneconsulting/Developer/oewang/apps/api/.env
+🚀 Using Upstash Redis (REST)
+[33mWARN[39m [07:16:05]: [36m[sentry] SENTRY_DSN not set — Sentry disabled[39m
+    [35mcontext[39m: "sentry"
+[32mINFO[39m [07:16:05]: [36m[api] 🚀 oewang API running at http://localhost:3002[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [07:16:05]: [36m[api] 📖 Swagger docs at http://localhost:3002/swagger[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [07:16:05]: [36m[api] 🔗 API v1 at http://localhost:3002/v1[39m
+    [35mcontext[39m: "api"
+🔍 getEnv: Searching for .env at: /Users/boneconsulting/Developer/oewang/apps/api/.env
+✅ getEnv: Loaded env from /Users/boneconsulting/Developer/oewang/apps/api/.env
+🚀 Using Upstash Redis (REST)
+[33mWARN[39m [07:19:40]: [36m[sentry] SENTRY_DSN not set — Sentry disabled[39m
+    [35mcontext[39m: "sentry"
+[32mINFO[39m [07:19:40]: [36m[api] 🚀 oewang API running at http://localhost:3002[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [07:19:40]: [36m[api] 📖 Swagger docs at http://localhost:3002/swagger[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [07:19:40]: [36m[api] 🔗 API v1 at http://localhost:3002/v1[39m
+    [35mcontext[39m: "api"
+🔍 getEnv: Searching for .env at: /Users/boneconsulting/Developer/oewang/apps/api/.env
+✅ getEnv: Loaded env from /Users/boneconsulting/Developer/oewang/apps/api/.env
+🚀 Using Upstash Redis (REST)
+[33mWARN[39m [07:19:49]: [36m[sentry] SENTRY_DSN not set — Sentry disabled[39m
+    [35mcontext[39m: "sentry"
+[32mINFO[39m [07:19:49]: [36m[api] 🚀 oewang API running at http://localhost:3002[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [07:19:49]: [36m[api] 📖 Swagger docs at http://localhost:3002/swagger[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [07:19:49]: [36m[api] 🔗 API v1 at http://localhost:3002/v1[39m
+    [35mcontext[39m: "api"
+🔍 getEnv: Searching for .env at: /Users/boneconsulting/Developer/oewang/apps/api/.env
+✅ getEnv: Loaded env from /Users/boneconsulting/Developer/oewang/apps/api/.env
+🚀 Using Upstash Redis (REST)
+[33mWARN[39m [07:20:11]: [36m[sentry] SENTRY_DSN not set — Sentry disabled[39m
+    [35mcontext[39m: "sentry"
+[32mINFO[39m [07:20:11]: [36m[api] 🚀 oewang API running at http://localhost:3002[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [07:20:11]: [36m[api] 📖 Swagger docs at http://localhost:3002/swagger[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [07:20:11]: [36m[api] 🔗 API v1 at http://localhost:3002/v1[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [07:20:16]: [36m[http] GET /v1/notifications 200 - 2004ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2004
+[33mWARN[39m [07:20:19]: [36m[api] [WS] Missing token and cookie for connection from 59.153.128.96[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:20:19]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:20:19]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[Telegram Webhook] Received payload: {"update_id":2,"message":{"chat":{"id":123},"text":"/start demo-workspace"}}
+[32mINFO[39m [07:20:27]: [36m[http] POST /v1/integrations/telegram/webhook 200 - 3ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "POST"
+    [35mpath[39m: "/v1/integrations/telegram/webhook"
+    [35mstatus[39m: 200
+    [35mduration[39m: 3
+[Telegram] Failed to send message: {"ok":false,"error_code":400,"description":"Bad Request: chat not found"}
+[32mINFO[39m [07:20:41]: [36m[http] GET /v1/users/me 200 - 1320ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1320
+[33mWARN[39m [07:20:42]: [36m[api] [WS] Missing token and cookie for connection from 59.153.128.96[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:20:42]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:20:42]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[32mINFO[39m [07:20:43]: [36m[http] GET /v1/ai/quota 200 - 1158ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/quota"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1158
+[33mWARN[39m [07:20:43]: [36m[api] [WS] Missing token and cookie for connection from 59.153.128.96[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:20:43]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:20:43]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[32mINFO[39m [07:20:44]: [36m[http] GET /v1/users/me 200 - 1239ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1239
+[33mWARN[39m [07:20:45]: [36m[api] [WS] Missing token and cookie for connection from 59.153.128.96[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:20:45]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:20:45]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[32mINFO[39m [07:20:46]: [36m[http] GET /v1/workspaces/active 200 - 1168ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/workspaces/active"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1168
+[32mINFO[39m [07:20:47]: [36m[http] GET /v1/settings/transaction 200 - 1038ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/transaction"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1038
+[32mINFO[39m [07:20:48]: [36m[http] GET /v1/notification-settings 200 - 2065ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notification-settings"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2065
+[32mINFO[39m [07:20:48]: [36m[http] GET /v1/notifications 200 - 2171ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2171
+[32mINFO[39m [07:20:48]: [36m[http] GET /v1/settings/sub-currencies 200 - 1037ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/sub-currencies"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1037
+[32mINFO[39m [07:20:49]: [36m[http] GET /v1/users/me 200 - 1263ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1263
+[33mWARN[39m [07:20:50]: [36m[api] [WS] Missing token and cookie for connection from 59.153.128.96[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:20:50]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:20:50]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[32mINFO[39m [07:20:51]: [36m[http] GET /v1/integrations/whatsapp-web/public-info 200 - 944ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/integrations/whatsapp-web/public-info"
+    [35mstatus[39m: 200
+    [35mduration[39m: 944
+[32mINFO[39m [07:20:52]: [36m[http] GET /v1/integrations 200 - 954ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/integrations"
+    [35mstatus[39m: 200
+    [35mduration[39m: 954
+[Telegram Webhook] Received payload: {"update_id":314754043,"message":{"message_id":17,"from":{"id":1802096539,"is_bot":false,"first_name":"L","last_name":"Azlan Rafar","username":"lazlanrafar","language_code":"en"},"chat":{"id":1802096539,"first_name":"L","last_name":"Azlan Rafar","username":"lazlanrafar","type":"private"},"date":1778656853,"text":"/start l-azlan-rafar-or5vn","entities":[{"offset":0,"length":6,"type":"bot_command"}]}}
+[32mINFO[39m [07:20:54]: [36m[http] POST /v1/integrations/telegram/webhook 200 - 1ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "POST"
+    [35mpath[39m: "/v1/integrations/telegram/webhook"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1
+[33mWARN[39m [07:20:59]: [36m[api] [WS] Missing token and cookie for connection from 59.153.128.96[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:20:59]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:20:59]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[33mWARN[39m [07:21:16]: [36m[api] [WS] Missing token and cookie for connection from 59.153.128.96[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:21:16]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:21:16]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[32mINFO[39m [07:21:20]: [36m[http] GET /v1/notifications 200 - 1636ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1636
+[Telegram Webhook] Received payload: {"update_id":314754044,"message":{"message_id":19,"from":{"id":1802096539,"is_bot":false,"first_name":"L","last_name":"Azlan Rafar","username":"lazlanrafar","language_code":"en"},"chat":{"id":1802096539,"first_name":"L","last_name":"Azlan Rafar","username":"lazlanrafar","type":"private"},"date":1778656886,"text":"what my latest transaction"}}
+[32mINFO[39m [07:21:26]: [36m[http] POST /v1/integrations/telegram/webhook 200 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "POST"
+    [35mpath[39m: "/v1/integrations/telegram/webhook"
+    [35mstatus[39m: 200
+    [35mduration[39m: 0
+[DEV] mockAiQuota=true — quota check bypassed
+[32mINFO[39m [07:21:30]: [36m[repo-ai] [AiOrchestrator] Detected Intent: transaction_query[39m
+    [35mcontext[39m: "repo-ai"
+[33mWARN[39m [07:21:46]: [36m[api] [WS] Missing token and cookie for connection from 59.153.128.96[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:21:46]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:21:46]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[32mINFO[39m [07:21:51]: [36m[http] GET /v1/notifications 200 - 1479ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1479
+[33mWARN[39m [07:22:16]: [36m[api] [WS] Missing token and cookie for connection from 59.153.128.96[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:22:16]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:22:16]: [36m[http] GET /v1/realtime 401 - 1ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 1
+[32mINFO[39m [07:22:23]: [36m[http] GET /v1/notifications 200 - 2018ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2018
+[33mWARN[39m [07:22:47]: [36m[api] [WS] Missing token and cookie for connection from 59.153.128.96[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:22:47]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:22:47]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[32mINFO[39m [07:22:56]: [36m[http] GET /v1/notifications 200 - 2151ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2151
+[33mWARN[39m [07:23:17]: [36m[api] [WS] Missing token and cookie for connection from 59.153.128.96[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:23:17]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:23:17]: [36m[http] GET /v1/realtime 401 - 2ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 2
+[32mINFO[39m [07:23:20]: [36m[http] GET /v1/users/me 200 - 1247ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1247
+[32mINFO[39m [07:23:27]: [36m[http] GET /v1/notifications 200 - 1384ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1384
+[32mINFO[39m [07:23:40]: [36m[http] GET /v1/integrations 200 - 867ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/integrations"
+    [35mstatus[39m: 200
+    [35mduration[39m: 867
+[33mWARN[39m [07:23:47]: [36m[api] [WS] Missing token and cookie for connection from 59.153.128.96[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:23:47]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:23:47]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[32mINFO[39m [07:23:48]: [36m[http] GET /v1/users/me 200 - 1246ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1246
+[33mWARN[39m [07:23:49]: [36m[api] [WS] Missing token and cookie for connection from 59.153.128.96[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:23:49]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:23:49]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[32mINFO[39m [07:23:50]: [36m[http] GET /v1/ai/quota 200 - 1161ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/quota"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1161
+[33mWARN[39m [07:23:50]: [36m[api] [WS] Missing token and cookie for connection from 59.153.128.96[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:23:50]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:23:50]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[32mINFO[39m [07:23:51]: [36m[http] GET /v1/users/me 200 - 1136ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1136
+[33mWARN[39m [07:23:53]: [36m[api] [WS] Missing token and cookie for connection from 59.153.128.96[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:23:53]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:23:53]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[32mINFO[39m [07:23:53]: [36m[http] GET /v1/workspaces/active 200 - 1242ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/workspaces/active"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1242
+[32mINFO[39m [07:23:54]: [36m[http] GET /v1/settings/transaction 200 - 947ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/transaction"
+    [35mstatus[39m: 200
+    [35mduration[39m: 947
+[32mINFO[39m [07:23:55]: [36m[http] GET /v1/notification-settings 200 - 1871ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notification-settings"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1871
+[32mINFO[39m [07:23:55]: [36m[http] GET /v1/settings/sub-currencies 200 - 924ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/sub-currencies"
+    [35mstatus[39m: 200
+    [35mduration[39m: 924
+[32mINFO[39m [07:23:55]: [36m[http] GET /v1/notifications 200 - 2176ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2176
+[32mINFO[39m [07:23:56]: [36m[http] GET /v1/users/me 200 - 1241ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1241
+[33mWARN[39m [07:23:57]: [36m[api] [WS] Missing token and cookie for connection from 59.153.128.96[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:23:57]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:23:57]: [36m[http] GET /v1/realtime 401 - 1ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 1
+[32mINFO[39m [07:23:57]: [36m[http] GET /v1/integrations/whatsapp-web/public-info 200 - 958ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/integrations/whatsapp-web/public-info"
+    [35mstatus[39m: 200
+    [35mduration[39m: 958
+[32mINFO[39m [07:23:59]: [36m[http] GET /v1/integrations 200 - 1045ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/integrations"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1045
+[32mINFO[39m [07:24:00]: [36m[http] GET /v1/integrations 200 - 1024ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/integrations"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1024
+[Telegram Webhook] Received payload: {"update_id":314754045,"message":{"message_id":21,"from":{"id":1802096539,"is_bot":false,"first_name":"L","last_name":"Azlan Rafar","username":"lazlanrafar","language_code":"en"},"chat":{"id":1802096539,"first_name":"L","last_name":"Azlan Rafar","username":"lazlanrafar","type":"private"},"date":1778657040,"text":"/start l-azlan-rafar-or5vn","entities":[{"offset":0,"length":6,"type":"bot_command"}]}}
+[32mINFO[39m [07:24:01]: [36m[http] POST /v1/integrations/telegram/webhook 200 - 1ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "POST"
+    [35mpath[39m: "/v1/integrations/telegram/webhook"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1
+[32mINFO[39m [07:24:01]: [36m[http] GET /v1/integrations 200 - 1019ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/integrations"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1019
+[32mINFO[39m [07:24:02]: [36m[http] GET /v1/integrations 200 - 949ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/integrations"
+    [35mstatus[39m: 200
+    [35mduration[39m: 949
+[33mWARN[39m [07:24:05]: [36m[api] [WS] Missing token and cookie for connection from 59.153.128.96[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:24:05]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:24:05]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[33mWARN[39m [07:24:22]: [36m[api] [WS] Missing token and cookie for connection from 59.153.128.96[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:24:22]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:24:22]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[32mINFO[39m [07:24:26]: [36m[http] GET /v1/notifications 200 - 1391ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1391
+[33mWARN[39m [07:24:52]: [36m[api] [WS] Missing token and cookie for connection from 59.153.128.96[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:24:52]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:24:52]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[32mINFO[39m [07:24:59]: [36m[http] GET /v1/notifications 200 - 2314ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2314
+[33mWARN[39m [07:25:22]: [36m[api] [WS] Missing token and cookie for connection from 59.153.128.96[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:25:22]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:25:22]: [36m[http] GET /v1/realtime 401 - 1ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 1
+[32mINFO[39m [07:25:32]: [36m[http] GET /v1/notifications 200 - 2107ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2107
+[33mWARN[39m [07:25:52]: [36m[api] [WS] Missing token and cookie for connection from 59.153.128.96[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:25:52]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:25:52]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+🔍 getEnv: Searching for .env at: /Users/boneconsulting/Developer/oewang/apps/api/.env
+✅ getEnv: Loaded env from /Users/boneconsulting/Developer/oewang/apps/api/.env
+🚀 Using Upstash Redis (REST)
+[33mWARN[39m [07:26:05]: [36m[sentry] SENTRY_DSN not set — Sentry disabled[39m
+    [35mcontext[39m: "sentry"
+[32mINFO[39m [07:26:05]: [36m[api] 🚀 oewang API running at http://localhost:3002[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [07:26:05]: [36m[api] 📖 Swagger docs at http://localhost:3002/swagger[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [07:26:05]: [36m[api] 🔗 API v1 at http://localhost:3002/v1[39m
+    [35mcontext[39m: "api"
+🔍 getEnv: Searching for .env at: /Users/boneconsulting/Developer/oewang/apps/api/.env
+✅ getEnv: Loaded env from /Users/boneconsulting/Developer/oewang/apps/api/.env
+🚀 Using Upstash Redis (REST)
+[33mWARN[39m [07:26:09]: [36m[sentry] SENTRY_DSN not set — Sentry disabled[39m
+    [35mcontext[39m: "sentry"
+[32mINFO[39m [07:26:10]: [36m[api] 🚀 oewang API running at http://localhost:3002[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [07:26:10]: [36m[api] 📖 Swagger docs at http://localhost:3002/swagger[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [07:26:10]: [36m[api] 🔗 API v1 at http://localhost:3002/v1[39m
+    [35mcontext[39m: "api"
+🔍 getEnv: Searching for .env at: /Users/boneconsulting/Developer/oewang/apps/api/.env
+✅ getEnv: Loaded env from /Users/boneconsulting/Developer/oewang/apps/api/.env
+🚀 Using Upstash Redis (REST)
+[33mWARN[39m [07:26:15]: [36m[sentry] SENTRY_DSN not set — Sentry disabled[39m
+    [35mcontext[39m: "sentry"
+[32mINFO[39m [07:26:15]: [36m[api] 🚀 oewang API running at http://localhost:3002[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [07:26:15]: [36m[api] 📖 Swagger docs at http://localhost:3002/swagger[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [07:26:15]: [36m[api] 🔗 API v1 at http://localhost:3002/v1[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:26:23]: [36m[api] [WS] Missing token and cookie for connection from 59.153.128.96[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:26:23]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:26:23]: [36m[http] GET /v1/realtime 401 - 1ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 1
+[32mINFO[39m [07:26:23]: [36m[http] GET /v1/users/me 200 - 1977ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1977
+[32mINFO[39m [07:26:23]: [36m[http] GET /v1/users/me 200 - 2004ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2004
+[Telegram Webhook] Received payload: {"update_id":314754046,"message":{"message_id":23,"from":{"id":1802096539,"is_bot":false,"first_name":"L","last_name":"Azlan Rafar","username":"lazlanrafar","language_code":"en"},"chat":{"id":1802096539,"first_name":"L","last_name":"Azlan Rafar","username":"lazlanrafar","type":"private"},"date":1778657184,"text":"Saya baru membeli kopi kenangan menu kopi americano harga 15.000"}}
+[32mINFO[39m [07:26:24]: [36m[http] GET /v1/integrations/whatsapp-web/public-info 200 - 1047ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/integrations/whatsapp-web/public-info"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1047
+[32mINFO[39m [07:26:24]: [36m[http] POST /v1/integrations/telegram/webhook 200 - 1ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "POST"
+    [35mpath[39m: "/v1/integrations/telegram/webhook"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1
+[32mINFO[39m [07:26:25]: [36m[http] GET /v1/integrations 200 - 1026ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/integrations"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1026
+[DEV] mockAiQuota=true — quota check bypassed
+[32mINFO[39m [07:26:28]: [36m[repo-ai] [AiOrchestrator] Detected Intent: general[39m
+    [35mcontext[39m: "repo-ai"
+[32mINFO[39m [07:26:35]: [36m[http] GET /v1/users/me 200 - 1323ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1323
+[32mINFO[39m [07:26:39]: [36m[http] GET /v1/notifications 200 - 1446ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1446
+[33mWARN[39m [07:26:53]: [36m[api] [WS] Missing token and cookie for connection from 59.153.128.96[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:26:53]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:26:53]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[32mINFO[39m [07:26:57]: [36m[http] GET /v1/settings/transaction 200 - 1048ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/transaction"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1048
+[32mINFO[39m [07:26:58]: [36m[http] GET /v1/contacts 200 - 1346ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/contacts"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1346
+[32mINFO[39m [07:27:01]: [36m[http] GET /v1/wallet-groups 200 - 1025ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/wallet-groups"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1025
+[32mINFO[39m [07:27:01]: [36m[http] GET /v1/wallets 200 - 1228ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/wallets"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1228
+[32mINFO[39m [07:27:02]: [36m[http] GET /v1/wallet-groups 200 - 996ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/wallet-groups"
+    [35mstatus[39m: 200
+    [35mduration[39m: 996
+[Telegram Webhook] Received payload: {"update_id":314754047,"message":{"message_id":25,"from":{"id":1802096539,"is_bot":false,"first_name":"L","last_name":"Azlan Rafar","username":"lazlanrafar","language_code":"en"},"chat":{"id":1802096539,"first_name":"L","last_name":"Azlan Rafar","username":"lazlanrafar","type":"private"},"date":1778657226,"text":"Akun BCA"}}
+[32mINFO[39m [07:27:06]: [36m[http] POST /v1/integrations/telegram/webhook 200 - 1ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "POST"
+    [35mpath[39m: "/v1/integrations/telegram/webhook"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1
+[DEV] mockAiQuota=true — quota check bypassed
+[32mINFO[39m [07:27:08]: [36m[repo-ai] [AiOrchestrator] Detected Intent: wallet_query[39m
+    [35mcontext[39m: "repo-ai"
+[32mINFO[39m [07:27:11]: [36m[http] GET /v1/notifications 200 - 1544ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1544
+[Encryption] onTransform: path=/v1/wallets/r7zlfxzue0pus5agt7xi7pqc, decrypting body...
+[32mINFO[39m [07:27:13]: [36m[api] [Realtime] Publishing event 'wallets' to workspace 'lu8xic75wdklstdni3lbnat7'[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [07:27:13]: [36m[api] [Realtime] Publish result (subscribers count): 0[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [07:27:13]: [36m[http] PUT /v1/wallets/r7zlfxzue0pus5agt7xi7pqc 200 - 2212ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "PUT"
+    [35mpath[39m: "/v1/wallets/r7zlfxzue0pus5agt7xi7pqc"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2212
+[Encryption] onTransform: path=/v1/wallets/ofg8ku5iyybpkxk3ujvd61aq, decrypting body...
+[32mINFO[39m [07:27:14]: [36m[api] [Realtime] Publishing event 'wallets' to workspace 'lu8xic75wdklstdni3lbnat7'[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [07:27:14]: [36m[api] [Realtime] Publish result (subscribers count): 0[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [07:27:14]: [36m[http] PUT /v1/wallets/ofg8ku5iyybpkxk3ujvd61aq 200 - 1573ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "PUT"
+    [35mpath[39m: "/v1/wallets/ofg8ku5iyybpkxk3ujvd61aq"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1573
+[Encryption] onTransform: path=/v1/wallets/qm0xqskreihgkpog06zlju1l, decrypting body...
+[32mINFO[39m [07:27:16]: [36m[api] [Realtime] Publishing event 'wallets' to workspace 'lu8xic75wdklstdni3lbnat7'[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [07:27:16]: [36m[api] [Realtime] Publish result (subscribers count): 0[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [07:27:16]: [36m[http] PUT /v1/wallets/qm0xqskreihgkpog06zlju1l 200 - 1468ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "PUT"
+    [35mpath[39m: "/v1/wallets/qm0xqskreihgkpog06zlju1l"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1468
+[Encryption] onTransform: path=/v1/wallets/m4abn7j48otveom2vv8pmh8t, decrypting body...
+[32mINFO[39m [07:27:18]: [36m[api] [Realtime] Publishing event 'wallets' to workspace 'lu8xic75wdklstdni3lbnat7'[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [07:27:18]: [36m[api] [Realtime] Publish result (subscribers count): 0[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [07:27:18]: [36m[http] PUT /v1/wallets/m4abn7j48otveom2vv8pmh8t 200 - 1486ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "PUT"
+    [35mpath[39m: "/v1/wallets/m4abn7j48otveom2vv8pmh8t"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1486
+[33mWARN[39m [07:27:23]: [36m[api] [WS] Missing token and cookie for connection from 59.153.128.96[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:27:23]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:27:23]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[32mINFO[39m [07:27:37]: [36m[http] GET /v1/categories 200 - 1082ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/categories"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1082
+[32mINFO[39m [07:27:37]: [36m[http] GET /v1/wallets 200 - 1290ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/wallets"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1290
+[32mINFO[39m [07:27:37]: [36m[http] GET /v1/transactions 200 - 1537ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/transactions"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1537
+[32mINFO[39m [07:27:39]: [36m[http] GET /v1/transactions 200 - 1526ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/transactions"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1526
+[32mINFO[39m [07:27:39]: [36m[http] GET /v1/wallets 200 - 1272ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/wallets"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1272
+[32mINFO[39m [07:27:40]: [36m[http] GET /v1/transactions 200 - 1665ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/transactions"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1665
+[32mINFO[39m [07:27:40]: [36m[http] GET /v1/categories 200 - 1529ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/categories"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1529
+[32mINFO[39m [07:27:40]: [36m[http] GET /v1/wallets 200 - 1793ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/wallets"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1793
+[32mINFO[39m [07:27:40]: [36m[http] GET /v1/categories 200 - 916ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/categories"
+    [35mstatus[39m: 200
+    [35mduration[39m: 916
+[32mINFO[39m [07:27:43]: [36m[http] GET /v1/notifications 200 - 1390ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1390
+[32mINFO[39m [07:27:43]: [36m[http] GET /v1/notifications 200 - 1278ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1278
+[32mINFO[39m [07:27:54]: [36m[http] GET /v1/categories 200 - 955ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/categories"
+    [35mstatus[39m: 200
+    [35mduration[39m: 955
+[33mWARN[39m [07:27:54]: [36m[api] [WS] Missing token and cookie for connection from 59.153.128.96[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:27:54]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:27:54]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[32mINFO[39m [07:27:54]: [36m[http] GET /v1/wallets 200 - 1244ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/wallets"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1244
+[32mINFO[39m [07:27:54]: [36m[http] GET /v1/users/me 200 - 1339ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1339
+[32mINFO[39m [07:27:54]: [36m[http] GET /v1/transactions 200 - 1427ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/transactions"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1427
+[33mWARN[39m [07:27:55]: [36m[api] [WS] Missing token and cookie for connection from 59.153.128.96[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:27:55]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:27:55]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[32mINFO[39m [07:27:56]: [36m[http] GET /v1/ai/quota 200 - 1144ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/quota"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1144
+[33mWARN[39m [07:27:57]: [36m[api] [WS] Missing token and cookie for connection from 59.153.128.96[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:27:57]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:27:57]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[32mINFO[39m [07:27:58]: [36m[http] GET /v1/users/me 200 - 1132ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1132
+[32mINFO[39m [07:27:59]: [36m[http] GET /v1/workspaces/active 200 - 1144ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/workspaces/active"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1144
+[33mWARN[39m [07:27:59]: [36m[api] [WS] Missing token and cookie for connection from 59.153.128.96[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:27:59]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:27:59]: [36m[http] GET /v1/realtime 401 - 1ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 1
+[32mINFO[39m [07:28:00]: [36m[http] GET /v1/settings/transaction 200 - 916ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/transaction"
+    [35mstatus[39m: 200
+    [35mduration[39m: 916
+[32mINFO[39m [07:28:01]: [36m[http] GET /v1/notification-settings 200 - 1132ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notification-settings"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1132
+[32mINFO[39m [07:28:01]: [36m[http] GET /v1/notifications 200 - 1338ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1338
+[32mINFO[39m [07:28:01]: [36m[http] GET /v1/settings/sub-currencies 200 - 938ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/sub-currencies"
+    [35mstatus[39m: 200
+    [35mduration[39m: 938
+[32mINFO[39m [07:28:03]: [36m[http] GET /v1/transactions 200 - 1428ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/transactions"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1428
+[33mWARN[39m [07:28:04]: [36m[api] [WS] Missing token and cookie for connection from 59.153.128.96[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:28:04]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:28:04]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[32mINFO[39m [07:28:04]: [36m[http] GET /v1/wallets 200 - 1124ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/wallets"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1124
+[32mINFO[39m [07:28:05]: [36m[http] GET /v1/categories 200 - 891ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/categories"
+    [35mstatus[39m: 200
+    [35mduration[39m: 891
+[33mWARN[39m [07:28:12]: [36m[api] [WS] Missing token and cookie for connection from 59.153.128.96[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:28:12]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:28:12]: [36m[http] GET /v1/realtime 401 - 1ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 1
+[33mWARN[39m [07:28:28]: [36m[api] [WS] Missing token and cookie for connection from 59.153.128.96[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:28:28]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:28:28]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[32mINFO[39m [07:28:32]: [36m[http] GET /v1/notifications 200 - 1471ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1471
+[33mWARN[39m [07:28:59]: [36m[api] [WS] Missing token and cookie for connection from 59.153.128.96[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:28:59]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:28:59]: [36m[http] GET /v1/realtime 401 - 1ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 1
+[32mINFO[39m [07:29:05]: [36m[http] GET /v1/notifications 200 - 2216ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2216
+[33mWARN[39m [07:29:29]: [36m[api] [WS] Missing token and cookie for connection from 59.153.128.96[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:29:29]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:29:29]: [36m[http] GET /v1/realtime 401 - 1ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 1
+[32mINFO[39m [07:29:37]: [36m[http] GET /v1/notifications 200 - 1940ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1940
+[33mWARN[39m [07:29:59]: [36m[api] [WS] Missing token and cookie for connection from 59.153.128.96[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:29:59]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:29:59]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[32mINFO[39m [07:30:09]: [36m[http] GET /v1/notifications 200 - 2001ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2001
+[33mWARN[39m [07:30:30]: [36m[api] [WS] Missing token and cookie for connection from 59.153.128.96[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:30:30]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:30:30]: [36m[http] GET /v1/realtime 401 - 1ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 1
+[32mINFO[39m [07:30:42]: [36m[http] GET /v1/notifications 200 - 2058ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2058
+[33mWARN[39m [07:31:00]: [36m[api] [WS] Missing token and cookie for connection from 59.153.128.96[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:31:00]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:31:00]: [36m[http] GET /v1/realtime 401 - 1ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 1
+[32mINFO[39m [07:31:14]: [36m[http] GET /v1/notifications 200 - 2204ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2204
+[33mWARN[39m [07:31:30]: [36m[api] [WS] Missing token and cookie for connection from 59.153.128.96[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:31:30]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:31:30]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+🔍 getEnv: Searching for .env at: /Users/boneconsulting/Developer/oewang/apps/api/.env
+✅ getEnv: Loaded env from /Users/boneconsulting/Developer/oewang/apps/api/.env
+🚀 Using Upstash Redis (REST)
+[33mWARN[39m [07:31:46]: [36m[sentry] SENTRY_DSN not set — Sentry disabled[39m
+    [35mcontext[39m: "sentry"
+[32mINFO[39m [07:31:46]: [36m[api] 🚀 oewang API running at http://localhost:3002[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [07:31:46]: [36m[api] 📖 Swagger docs at http://localhost:3002/swagger[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [07:31:46]: [36m[api] 🔗 API v1 at http://localhost:3002/v1[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [07:31:48]: [36m[http] GET /v1/notifications 200 - 2080ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2080
+[33mWARN[39m [07:32:01]: [36m[api] [WS] Missing token and cookie for connection from 59.153.128.96[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:32:01]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:32:01]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+🔍 getEnv: Searching for .env at: /Users/boneconsulting/Developer/oewang/apps/api/.env
+✅ getEnv: Loaded env from /Users/boneconsulting/Developer/oewang/apps/api/.env
+🚀 Using Upstash Redis (REST)
+[33mWARN[39m [07:32:21]: [36m[sentry] SENTRY_DSN not set — Sentry disabled[39m
+    [35mcontext[39m: "sentry"
+[32mINFO[39m [07:32:21]: [36m[api] 🚀 oewang API running at http://localhost:3002[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [07:32:21]: [36m[api] 📖 Swagger docs at http://localhost:3002/swagger[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [07:32:21]: [36m[api] 🔗 API v1 at http://localhost:3002/v1[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [07:32:23]: [36m[http] GET /v1/notifications 200 - 2184ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2184
+[33mWARN[39m [07:32:31]: [36m[api] [WS] Missing token and cookie for connection from 59.153.128.96[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:32:31]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:32:31]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[32mINFO[39m [07:32:56]: [36m[http] GET /v1/notifications 200 - 2035ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2035
+[33mWARN[39m [07:33:01]: [36m[api] [WS] Missing token and cookie for connection from 59.153.128.96[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:33:01]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:33:01]: [36m[http] GET /v1/realtime 401 - 1ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 1
+[32mINFO[39m [07:33:28]: [36m[http] GET /v1/notifications 200 - 2195ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2195
+[33mWARN[39m [07:33:32]: [36m[api] [WS] Missing token and cookie for connection from 59.153.128.96[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:33:32]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [07:33:32]: [36m[http] GET /v1/realtime 401 - 1ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 1
+🔍 getEnv: Searching for .env at: /Users/boneconsulting/Developer/oewang/apps/api/.env
+✅ getEnv: Loaded env from /Users/boneconsulting/Developer/oewang/apps/api/.env
+🚀 Using Upstash Redis (REST)
+[33mWARN[39m [07:33:44]: [36m[sentry] SENTRY_DSN not set — Sentry disabled[39m
+    [35mcontext[39m: "sentry"
+[32mINFO[39m [07:33:44]: [36m[api] 🚀 oewang API running at http://localhost:3002[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [07:33:44]: [36m[api] 📖 Swagger docs at http://localhost:3002/swagger[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [07:33:44]: [36m[api] 🔗 API v1 at http://localhost:3002/v1[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [07:33:46]: [36m[http] GET /v1/notification-settings 200 - 1714ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notification-settings"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1714
+[32mINFO[39m [07:33:46]: [36m[http] GET /v1/ai/quota 200 - 1913ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/quota"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1913
+[32mINFO[39m [07:33:48]: [36m[http] GET /v1/transactions 200 - 1415ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/transactions"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1415
+🔍 getEnv: Searching for .env at: /Users/boneconsulting/Developer/oewang/apps/api/.env
+✅ getEnv: Loaded env from /Users/boneconsulting/Developer/oewang/apps/api/.env
+🚀 Using Upstash Redis (REST)
+[33mWARN[39m [07:33:52]: [36m[sentry] SENTRY_DSN not set — Sentry disabled[39m
+    [35mcontext[39m: "sentry"
+[32mINFO[39m [07:33:52]: [36m[api] 🚀 oewang API running at http://localhost:3002[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [07:33:52]: [36m[api] 📖 Swagger docs at http://localhost:3002/swagger[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [07:33:52]: [36m[api] 🔗 API v1 at http://localhost:3002/v1[39m
+    [35mcontext[39m: "api"
