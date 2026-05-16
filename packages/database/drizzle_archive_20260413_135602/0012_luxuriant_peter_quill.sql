@@ -1,1 +1,0 @@
-CREATE INDEX "categories_workspace_id_idx" ON "categories" USING btree ("workspace_id");

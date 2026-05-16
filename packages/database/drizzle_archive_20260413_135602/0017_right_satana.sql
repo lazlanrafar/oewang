@@ -1,1 +1,0 @@
-ALTER TABLE "ai_messages" ALTER COLUMN "workspace_id" SET NOT NULL;

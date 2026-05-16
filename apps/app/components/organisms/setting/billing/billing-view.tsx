@@ -11,8 +11,8 @@ import {
   cancelAddonAction,
   cancelSubscription,
   createCheckoutSession,
-  createCustomerPortal,
   getInvoiceUrl,
+  sendMagicLinkAction,
 } from "@workspace/modules/mayar/mayar.action";
 import { getBillingHistory } from "@workspace/modules/orders/orders.action";
 import type { Order, Pricing } from "@workspace/types";
@@ -32,7 +32,7 @@ import {
   Skeleton,
 } from "@workspace/ui";
 import { displayPrice, formatBytes, getGatewayPrice, getPlanLimits } from "@workspace/utils";
-import { AlertCircle, Check, CreditCard, Shield, Zap } from "lucide-react";
+import { AlertCircle, Check, CreditCard, Minus, Plus, Shield, Zap } from "lucide-react";
 import { toast } from "sonner";
 
 import { useConfirm } from "@/components/providers/confirm-modal-provider";
@@ -80,6 +80,7 @@ export function BillingView({
   const [mounted, setMounted] = React.useState(false);
   const { workspace, settings } = useAppStore();
   const [billingCycle, _setBillingCycle] = React.useState<"monthly" | "annual">("monthly");
+  const [addonQty, setAddonQty] = React.useState<Record<string, number>>({});
   const [history, setHistory] = React.useState<Order[]>([]);
   const [loadingHistory, setLoadingHistory] = React.useState(true);
 
@@ -113,6 +114,7 @@ export function BillingView({
       addonId?: string;
       addonType?: "ai" | "vault";
       amount?: number;
+      qty?: number;
     }) => {
       const result = await createCheckoutSession(
         params.priceId,
@@ -123,6 +125,8 @@ export function BillingView({
         params.amount,
         params.addonId,
         billingCycle,
+        undefined,
+        params.qty,
       );
       if (!result.success) throw new Error(result.error);
       return result.data;
@@ -135,12 +139,15 @@ export function BillingView({
 
   const portalMutation = useMutation({
     mutationFn: async () => {
-      const result = await createCustomerPortal();
+      const result = await sendMagicLinkAction();
       if (!result.success) throw new Error(result.error);
       return result.data;
     },
-    onSuccess: (data) => {
-      if (data.url) window.open(data.url, "_blank", "noopener,noreferrer");
+    onSuccess: () => {
+      toast.success(
+        billingDict.magic_link_sent ||
+          "A secure login link has been sent to your billing email. Click it to manage your subscription on Mayar.",
+      );
     },
     onError: (error: Error) => toast.error(error.message),
   });
@@ -310,7 +317,7 @@ export function BillingView({
                   >
                     <CreditCard className="mr-2 h-3.5 w-3.5" />
                     {portalMutation.isPending
-                      ? dictionary.common.opening || "Opening..."
+                      ? dictionary.common.loading || "Sending..."
                       : billingDict.manage_subscription}
                   </Button>
                   <Button asChild className="h-9 rounded-none px-6 font-medium text-xs shadow-sm">
@@ -394,7 +401,145 @@ export function BillingView({
         </Card>
       </div>
 
-      {/* Add-ons List (Horizontal Rows) */}
+      {/* Active Add-ons Section — only shown when user has at least one add-on row */}
+      {(() => {
+        const allRows = workspace?.active_addons ?? [];
+        if (allRows.length === 0) return null;
+
+        // Group rows by pricing ID
+        const grouped = new Map<string, { plan: (typeof initialAddons)[0]; rows: typeof allRows }>();
+        for (const row of allRows) {
+          const plan = initialAddons.find((a) => a.id === row.id);
+          if (!plan) continue;
+          if (!grouped.has(row.id)) grouped.set(row.id, { plan, rows: [] });
+          grouped.get(row.id)!.rows.push(row);
+        }
+        if (grouped.size === 0) return null;
+
+        return (
+          <div className="space-y-4">
+            <div className="border-b pb-2">
+              <p className="font-semibold text-[10px] text-muted-foreground uppercase tracking-widest">
+                Active Add-ons
+              </p>
+            </div>
+            <div className="flex flex-col gap-3">
+              {Array.from(grouped.entries()).map(([addonId, { plan, rows }]) => {
+                const activeRows = rows.filter((r) => r.status === "active");
+                const cancelledRows = rows.filter((r) => r.status === "cancelled");
+                const totalQty = activeRows.reduce((s, r) => s + (r.qty || 1), 0);
+                const totalQuota = rows.reduce((s, r) => {
+                  const q = r.qty || 1;
+                  return s + (plan.addon_type === "ai" ? (r.max_ai_tokens || 0) * q : (r.max_vault_size_mb || 0) * q);
+                }, 0);
+                const unitPrice = plan.prices.find((p) => p.currency === currency)?.monthly || 0;
+
+                return (
+                  <Card key={addonId} className="rounded-none border bg-background p-4 shadow-none">
+                    <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+                      <div className="flex items-center gap-4">
+                        <div
+                          className={cn(
+                            "flex size-10 shrink-0 items-center justify-center border",
+                            plan.addon_type === "ai"
+                              ? "border-amber-500/20 bg-amber-500/5 text-amber-500"
+                              : "border-emerald-500/20 bg-emerald-500/5 text-emerald-500",
+                          )}
+                        >
+                          {plan.addon_type === "ai" ? <Zap className="h-5 w-5" /> : <Shield className="h-5 w-5" />}
+                        </div>
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-sm tracking-tight">{plan.name}</span>
+                            {activeRows.length > 0 && (
+                              <Badge
+                                variant="secondary"
+                                className={cn(
+                                  "h-3.5 rounded-none px-1 font-mono text-[8px] uppercase",
+                                  plan.addon_type === "ai"
+                                    ? "bg-amber-500/10 text-amber-600"
+                                    : "bg-emerald-500/10 text-emerald-600",
+                                )}
+                              >
+                                {dictionary.common.active || "Active"} ×{totalQty}
+                              </Badge>
+                            )}
+                            {cancelledRows.length > 0 && activeRows.length === 0 && (
+                              <Badge
+                                variant="secondary"
+                                className="h-3.5 rounded-none bg-muted px-1 font-mono text-[8px] uppercase text-muted-foreground"
+                              >
+                                {dictionary.common.cancelled || "Cancelled"}
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-[10px] text-muted-foreground">
+                            {plan.addon_type === "ai"
+                              ? `+${totalQuota.toLocaleString()} tokens / month`
+                              : `+${totalQuota >= 1024 ? `${(totalQuota / 1024).toFixed(0)} GB` : `${totalQuota} MB`} / month`}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-6">
+                        {activeRows.length > 0 && (
+                          <div className="whitespace-nowrap text-right">
+                            <p className="mb-0.5 font-medium text-[9px] text-muted-foreground uppercase tracking-widest">
+                              Monthly
+                            </p>
+                            <p className="font-medium font-serif text-xs">
+                              {totalQty} × {displayPrice(plan, "monthly", { currency, compact: true })?.label}
+                            </p>
+                          </div>
+                        )}
+                        {cancelledRows.length > 0 && activeRows.length > 0 && (
+                          <div className="whitespace-nowrap text-right">
+                            <p className="mb-0.5 font-medium text-[9px] text-destructive uppercase tracking-widest">
+                              {billingDict.deactivating_at || "Deactivating at"}
+                            </p>
+                            <p className="font-medium text-destructive text-xs">
+                              {(() => {
+                                const d = new Date(cancelledRows[0]!.created_at);
+                                d.setMonth(d.getMonth() + 1);
+                                return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+                              })()}
+                            </p>
+                          </div>
+                        )}
+                        {activeRows.length > 0 && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 rounded-none px-3 text-[10px] uppercase tracking-widest text-destructive hover:bg-destructive/5 hover:text-destructive"
+                            disabled={cancelAddonMutation.isPending}
+                            onClick={async () => {
+                              const ok = await confirm({
+                                title: dictionary.settings.billing.deactivate_addon_title || "Deactivate Add-on",
+                                description:
+                                  dictionary.settings.billing.deactivate_addon_desc ||
+                                  "Are you sure you want to deactivate this add-on? It will remain active until the end of your current billing cycle.",
+                                confirmLabel: billingDict.deactivate || "Deactivate",
+                                destructive: true,
+                              });
+                              if (ok) cancelAddonMutation.mutate(addonId);
+                            }}
+                          >
+                            {cancelAddonMutation.isPending && cancelAddonMutation.variables === addonId
+                              ? "..."
+                              : billingDict.deactivate || "Deactivate All"}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Add-ons Catalog */}
       <div className="space-y-4">
         <div className="border-b pb-2">
           <p className="font-semibold text-[10px] text-muted-foreground uppercase tracking-widest">
@@ -403,22 +548,17 @@ export function BillingView({
         </div>
         <div className="flex flex-col gap-3">
           {initialAddons.map((addon) => {
-            const price = displayPrice(addon, "monthly", {
-              currency,
-              compact: true,
-            });
+            const unitPrice = addon.prices.find((p) => p.currency === currency)?.monthly || 0;
+            const price = displayPrice(addon, "monthly", { currency, compact: true });
             const priceId = getGatewayPrice(addon, "addon", currency);
-            const activeAddons = workspace?.active_addons ?? [];
-            const addonData = activeAddons.find((a) => a.id === addon.id);
-            const isActive = addonData !== undefined;
+            const qty = addonQty[addon.id] ?? 1;
+            const totalAmount = unitPrice * qty;
+            const hasOwned = (workspace?.active_addons ?? []).some((a) => a.id === addon.id && a.status === "active");
 
             return (
               <Card
                 key={addon.id}
-                className={cn(
-                  "rounded-none border bg-background p-4 shadow-none transition-all hover:bg-accent/5",
-                  isActive && "opacity-80",
-                )}
+                className="rounded-none border bg-background p-4 shadow-none transition-all hover:bg-accent/5"
               >
                 <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
                   <div className="flex items-center gap-4">
@@ -433,59 +573,18 @@ export function BillingView({
                       {addon.addon_type === "ai" ? <Zap className="h-5 w-5" /> : <Shield className="h-5 w-5" />}
                     </div>
                     <div className="space-y-0.5">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-sm tracking-tight">{addon.name}</span>
-                        {isActive && (
-                          <Badge
-                            variant="secondary"
-                            className={cn(
-                              "h-3.5 rounded-none px-1 font-mono text-[8px] uppercase",
-                              addon.addon_type === "ai"
-                                ? "bg-amber-500/10 text-amber-600"
-                                : "bg-emerald-500/10 text-emerald-600",
-                            )}
-                          >
-                            {dictionary.common.active || "Active"}
-                          </Badge>
-                        )}
-                      </div>
+                      <span className="font-medium text-sm tracking-tight">{addon.name}</span>
                       <p className="line-clamp-1 max-w-md text-[10px] text-muted-foreground">{addon.description}</p>
+                      <p className="font-medium text-[10px] text-muted-foreground/70">
+                        {addon.addon_type === "ai"
+                          ? `+${addon.max_ai_tokens.toLocaleString()} tokens / pack`
+                          : `+${addon.max_vault_size_mb >= 1024 ? `${(addon.max_vault_size_mb / 1024).toFixed(0)} GB` : `${addon.max_vault_size_mb} MB`} / pack`}
+                      </p>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between gap-6 sm:justify-end sm:gap-10">
-                    <div className="whitespace-nowrap text-right">
-                      <p className="mb-0.5 font-medium text-[9px] text-muted-foreground uppercase tracking-widest">
-                        {addon.addon_type === "ai" ? "Quota" : "Storage"}
-                      </p>
-                      <p className="font-medium font-serif text-xs">
-                        {addon.addon_type === "ai"
-                          ? `+${addon.max_ai_tokens.toLocaleString()}`
-                          : `+${addon.max_vault_size_mb} MB`}
-                      </p>
-                    </div>
-
-                    {addonData?.status === "cancelled" && (
-                        <div className="whitespace-nowrap text-right">
-                          <p className="mb-0.5 font-medium text-[9px] text-destructive uppercase tracking-widest">
-                            {billingDict.deactivating_at || "Deactivating at"}
-                          </p>
-                          <p className="font-medium text-destructive text-xs">
-                            {(() => {
-                              if (!addonData?.created_at) return null;
-                              const date = new Date(addonData.created_at);
-                              date.setMonth(date.getMonth() + 1);
-                              return date.toLocaleDateString(undefined, {
-                                month: "short",
-                                day: "numeric",
-                                year: "numeric",
-                              });
-                            })()}
-                          </p>
-                        </div>
-                      )}
-
-                    <div className="min-w-[80px] whitespace-nowrap text-right">
+                  <div className="flex items-center justify-between gap-4 sm:justify-end sm:gap-6">
+                    <div className="min-w-[70px] whitespace-nowrap text-right">
                       <p className="mb-0.5 font-medium text-[9px] text-muted-foreground uppercase tracking-widest">
                         {billingDict.price || "Price"}
                       </p>
@@ -495,48 +594,57 @@ export function BillingView({
                       </p>
                     </div>
 
-                    <Button
-                      size="sm"
-                      variant={isActive ? "outline" : "default"}
-                      className="h-8 rounded-none px-5 text-[10px] uppercase tracking-widest"
-                      disabled={checkoutMutation.isPending || cancelAddonMutation.isPending}
-                      onClick={async () => {
-                        if (isActive) {
-                          if (addonData?.status === "active") {
-                            const ok = await confirm({
-                              title: dictionary.settings.billing.deactivate_addon_title || "Deactivate Add-on",
-                              description:
-                                dictionary.settings.billing.deactivate_addon_desc ||
-                                "Are you sure you want to deactivate this add-on? It will remain active until the end of your current billing cycle.",
-                              confirmLabel: billingDict.deactivate || "Deactivate",
-                              destructive: true,
-                            });
-
-                            if (ok) {
-                              cancelAddonMutation.mutate(addon.id);
-                            }
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center border">
+                        <button
+                          type="button"
+                          className="flex h-8 w-7 items-center justify-center text-muted-foreground transition-colors hover:bg-accent/10 disabled:opacity-40"
+                          disabled={qty <= 1}
+                          onClick={() =>
+                            setAddonQty((prev) => ({ ...prev, [addon.id]: Math.max(1, (prev[addon.id] ?? 1) - 1) }))
                           }
-                        } else if (priceId) {
+                        >
+                          <Minus className="h-3 w-3" />
+                        </button>
+                        <span className="flex h-8 min-w-[2rem] items-center justify-center border-x px-1 font-mono text-xs">
+                          {qty}
+                        </span>
+                        <button
+                          type="button"
+                          className="flex h-8 w-7 items-center justify-center text-muted-foreground transition-colors hover:bg-accent/10 disabled:opacity-40"
+                          disabled={qty >= 10}
+                          onClick={() =>
+                            setAddonQty((prev) => ({ ...prev, [addon.id]: Math.min(10, (prev[addon.id] ?? 1) + 1) }))
+                          }
+                        >
+                          <Plus className="h-3 w-3" />
+                        </button>
+                      </div>
+
+                      <Button
+                        size="sm"
+                        variant="default"
+                        className="h-8 rounded-none px-4 text-[10px] uppercase tracking-widest"
+                        disabled={checkoutMutation.isPending || !priceId}
+                        onClick={() => {
+                          if (!priceId) return;
                           checkoutMutation.mutate({
                             priceId,
                             type: "payment",
                             addonId: addon.id,
                             addonType: addon.addon_type as "ai" | "vault",
-                            amount: addon.prices.find((p) => p.currency === currency)?.monthly || 0,
+                            amount: totalAmount,
+                            qty,
                           });
-                        }
-                      }}
-                    >
-                      {isActive
-                        ? addonData?.status === "cancelled"
-                          ? dictionary.common.cancelled || "Cancelled"
-                          : cancelAddonMutation.isPending && cancelAddonMutation.variables === addon.id
-                            ? "..."
-                            : billingDict.deactivate || "Deactivate"
-                        : checkoutMutation.isPending
+                        }}
+                      >
+                        {checkoutMutation.isPending && checkoutMutation.variables?.addonId === addon.id
                           ? dictionary.common.processing || "Processing..."
-                          : billingDict.purchase || billingDict.get_started || "Purchase"}
-                    </Button>
+                          : hasOwned
+                            ? "Add More"
+                            : billingDict.purchase || "Purchase"}
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </Card>

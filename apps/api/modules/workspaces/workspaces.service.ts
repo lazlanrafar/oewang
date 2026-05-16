@@ -92,7 +92,7 @@ export abstract class WorkspacesService {
       db
         .select({ id: pricing.id })
         .from(pricing)
-        .where(eq(pricing.name, "Free Tier"))
+        .where(eq(pricing.name, "Starter"))
         .limit(1)
         .then((res) => res[0]),
     ]);

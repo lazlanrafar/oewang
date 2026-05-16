@@ -86,4 +86,9 @@ export abstract class OrdersService {
     const orders = await OrdersRepository.findByWorkspaceId(workspaceId);
     return buildSuccess(orders, "Workspace orders fetched");
   }
+
+  static async orderExistsForInvoice(invoiceId: string): Promise<boolean> {
+    const order = await OrdersRepository.findByInvoiceId(invoiceId);
+    return !!order;
+  }
 }

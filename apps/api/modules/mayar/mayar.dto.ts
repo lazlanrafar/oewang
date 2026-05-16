@@ -8,6 +8,7 @@ export const CreateMayarCheckoutDto = t.Object({
   addonType: t.Optional(t.Enum({ ai: "ai", vault: "vault" })),
   amount: t.Optional(t.Number()),
   addonId: t.Optional(t.String()),
+  qty: t.Optional(t.Number()),
   billing: t.Optional(t.Enum({ monthly: "monthly", annual: "annual" })),
   locale: t.Optional(t.String()),
 });

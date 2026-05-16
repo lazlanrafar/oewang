@@ -9,13 +9,11 @@
   },
   "scripts": {
     "push": "drizzle-kit push",
-    "generate": "drizzle-kit generate",
-    "migrate": "drizzle-kit migrate",
     "studio": "drizzle-kit studio",
-    "seed": "bun --env-file=../../.env scripts/seed-pricing.ts",
-    "seed:pricing": "bun --env-file=../../.env scripts/seed-pricing.ts",
+    "seed": "bun --env-file=../../.env scripts/seeders/index.ts",
+    "seed:plans": "bun --env-file=../../.env scripts/seeders/01-plans.ts",
+    "seed:addons": "bun --env-file=../../.env scripts/seeders/02-addons.ts",
     "reset": "bun --env-file=../../.env scripts/reset.ts",
-
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

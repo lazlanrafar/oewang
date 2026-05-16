@@ -47,11 +47,13 @@ export abstract class WorkspacesRepository {
     // Fetch active recurring add-ons with their quotas
     const activeAddons = await db
       .select({
+        row_id: workspaceAddons.id,
         id: pricing.id,
         addon_type: pricing.addon_type,
         max_ai_tokens: pricing.max_ai_tokens,
         max_vault_size_mb: pricing.max_vault_size_mb,
         amount: workspaceAddons.amount,
+        qty: workspaceAddons.qty,
         status: workspaceAddons.status,
         created_at: workspaceAddons.created_at,
       })
@@ -65,14 +67,14 @@ export abstract class WorkspacesRepository {
         ),
       );
 
-    // Sum up extra quotas from active recurring add-ons
+    // Sum up extra quotas from active recurring add-ons (qty-aware)
     const recurringExtraAi = activeAddons
       .filter((a) => a.addon_type === "ai")
-      .reduce((sum, a) => sum + (a.max_ai_tokens || 0), 0);
-      
+      .reduce((sum, a) => sum + (a.max_ai_tokens || 0) * (a.qty || 1), 0);
+
     const recurringExtraVault = activeAddons
       .filter((a) => a.addon_type === "vault")
-      .reduce((sum, a) => sum + (a.max_vault_size_mb || 0), 0);
+      .reduce((sum, a) => sum + (a.max_vault_size_mb || 0) * (a.qty || 1), 0);
 
     return {
       ...result.workspace,

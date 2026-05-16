@@ -5,6 +5,9 @@ import { MayarRepository } from "./mayar.repository";
 
 const log = createLogger("billing-lifecycle");
 const GRACE_PERIOD_DAYS = 7;
+// How often (in days) to re-send payment reminders during the grace period.
+// e.g. remind at day 0, day 3, day 6 → downgrade at day 7.
+const REMINDER_INTERVAL_DAYS = 3;
 
 function daysBetween(from: Date, to: Date) {
   return (to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24);
@@ -120,21 +123,33 @@ export abstract class BillingLifecycleService {
           ? new Date(workspace.plan_overdue_started_at)
           : currentPeriodEnd;
 
-        if (
-          !workspace.plan_last_reminder_at &&
-          daysBetween(overdueStartedAt, now) < GRACE_PERIOD_DAYS
-        ) {
+        const daysOverdue = daysBetween(overdueStartedAt, now);
+
+        if (daysOverdue >= GRACE_PERIOD_DAYS) {
+          // Grace period expired — downgrade immediately.
+          await this.downgradeWorkspace(workspace, "past_due");
+          log.warn("Downgraded past due workspace after grace period", {
+            workspaceId: workspace.workspaceId,
+          });
+          continue;
+        }
+
+        // Send escalating reminders every REMINDER_INTERVAL_DAYS within the grace period.
+        // The first reminder was sent when transitioning active → past_due, so
+        // plan_last_reminder_at is always set. We re-send when enough time has passed.
+        const daysSinceLastReminder = workspace.plan_last_reminder_at
+          ? daysBetween(new Date(workspace.plan_last_reminder_at), now)
+          : REMINDER_INTERVAL_DAYS; // treat as overdue so we send immediately if never reminded
+
+        if (daysSinceLastReminder >= REMINDER_INTERVAL_DAYS) {
           await MayarRepository.updateWorkspaceSubscription(workspace.workspaceId, {
             plan_last_reminder_at: now,
             updated_at: now,
           });
           await this.sendPastDueReminder(workspace, overdueStartedAt);
-        }
-
-        if (daysBetween(overdueStartedAt, now) >= GRACE_PERIOD_DAYS) {
-          await this.downgradeWorkspace(workspace, "past_due");
-          log.warn("Downgraded past due workspace after grace period", {
+          log.info("Sent escalating payment reminder", {
             workspaceId: workspace.workspaceId,
+            daysOverdue,
           });
         }
       }

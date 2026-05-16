@@ -3,8 +3,9 @@ import { MayarService } from "./mayar.service";
 import { MayarRepository } from "./mayar.repository";
 import { CreateMayarCheckoutDto, MayarWebhookDto, CancelAddonDto } from "./mayar.dto";
 import { authPlugin } from "../../plugins/auth";
-import { buildError } from "@workspace/utils";
+import { buildError, buildSuccess } from "@workspace/utils";
 import { ErrorCode } from "@workspace/types";
+import { logger } from "@workspace/logger";
 import { WorkspacesRepository } from "../workspaces/workspaces.repository";
 import { assertCanManageSensitiveWorkspace } from "../workspaces/workspace-permissions";
 
@@ -81,6 +82,7 @@ export const mayarController = new Elysia({
         addonType,
         amount,
         addonId,
+        qty,
         billing,
         locale,
       } = body;
@@ -97,22 +99,31 @@ export const mayarController = new Elysia({
 
       const targetWorkspaceId = workspaceId || auth.workspaceId;
 
-      return MayarService.createCheckoutSession(
-        targetWorkspaceId,
-        auth.user_id,
-        priceId,
-        returnPath,
-        {
-          metadata: {
-            type,
-            addonType,
-            amount,
-            addonId,
-            billing,
-            locale,
+      try {
+        return await MayarService.createCheckoutSession(
+          targetWorkspaceId,
+          auth.user_id,
+          priceId,
+          returnPath,
+          {
+            metadata: {
+              type,
+              addonType,
+              amount,
+              addonId,
+              qty,
+              billing,
+              locale,
+            },
           },
-        },
-      );
+        );
+      } catch (err: any) {
+        // Re-throw Elysia status() errors as-is; wrap plain errors with the actual message
+        if (err?.status !== undefined || err?._check !== undefined) throw err;
+        const message = err?.message || "Checkout failed";
+        logger.error("[Checkout] Error creating session", { message, stack: err?.stack });
+        throw status(500, buildError(ErrorCode.INTERNAL_ERROR, message));
+      }
     },
     {
       body: CreateMayarCheckoutDto,

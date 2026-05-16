@@ -1,4 +1,10 @@
-import { sendPurchaseSuccessEmail } from "@workspace/email";
+import {
+  sendAddonPurchaseSuccessEmail,
+  sendInvoiceSentEmail,
+  sendPaymentFailedEmail,
+  sendPurchaseSuccessEmail,
+} from "@workspace/email";
+import { NotificationsService } from "../notifications/notifications.service";
 import { Env } from "@workspace/constants";
 import { logger } from "@workspace/logger";
 import { ErrorCode } from "@workspace/types";
@@ -56,31 +62,26 @@ export abstract class MayarService {
             meta.workspaceId === workspaceId ||
             invoice.customer?.email === email
           ) {
-            // Generate a deterministic event ID out of the invoice so we don't repeat this
-            const eventId = `v5_sync_${invoice.id}`;
-            const isProcessed = await MayarRepository.isEventProcessed(eventId);
-            if (!isProcessed) {
-              logger.info("[Mayar] Manually syncing invoice via mock event", {
-                invoiceId: invoice.id,
-              });
-              await this.asyncProcessEvent({
-                event: "payment.received",
-                data: {
-                  ...invoice,
-                  id: eventId, // Pass the deterministic event ID to the webhook processor
-                  original_id: invoice.id,
-                  // Explicitly inject workspaceId in case it's missing in the list view response
-                  // Do NOT override type — preserve what's in extraData so addons are handled correctly
-                  extraData: {
-                    ...(invoice.extraData || {}),
-                    workspaceId,
-                  },
+            // Use invoice.id as the claim key — the same key a real webhook would use.
+            // This prevents the same invoice being processed once by webhook and again by sync.
+            logger.info("[Mayar] Manually syncing invoice via mock event", {
+              invoiceId: invoice.id,
+            });
+            await this.asyncProcessEvent({
+              event: "payment.received",
+              _skipNotifications: true,
+              data: {
+                ...invoice,
+                original_id: invoice.id,
+                extraData: {
+                  ...(invoice.extraData || {}),
+                  workspaceId,
                 },
-              }).catch((err) => {
-                logger.error("[Mayar] Sync error processing invoice", err);
-              });
-              synced = true;
-            }
+              },
+            }).catch((err) => {
+              logger.error("[Mayar] Sync error processing invoice", err);
+            });
+            synced = true;
           }
         }
       }
@@ -214,6 +215,9 @@ export abstract class MayarService {
   }
 
   private static async asyncProcessEvent(event: any) {
+    // Sync events reconcile subscription state only — emails are the webhook's job.
+    const skipNotifications = !!(event._skipNotifications);
+
     const eventType = MayarService.getEventType(event);
 
     // Skip processing if it's a testing event
@@ -229,10 +233,11 @@ export abstract class MayarService {
       return;
     }
 
-    if (await MayarRepository.isEventProcessed(eventId)) {
-      logger.info("[Mayar Webhook] Event already processed, skipping", {
-        eventId,
-      });
+    // Atomically claim the event — INSERT first, skip if conflict.
+    // This prevents duplicate processing when Mayar retries the webhook concurrently.
+    const claimed = await MayarRepository.tryClaimEvent(eventId);
+    if (!claimed) {
+      logger.info("[Mayar Webhook] Event already claimed by another process, skipping", { eventId });
       return;
     }
 
@@ -254,6 +259,7 @@ export abstract class MayarService {
       const planId = metadata.planId;
       const paymentType = metadata.type; // "subscription" | "addon"
       const addonId = metadata.addonId;
+      const addonQty = Number(metadata.qty) || 1;
       const billing = metadata.billing; // "monthly" | "annual"
 
       if (!workspaceId) {
@@ -278,11 +284,14 @@ export abstract class MayarService {
           customerEmail,
           transactionId,
         });
-        await MayarRepository.markEventProcessed(eventId);
         return;
       }
 
-      // 1. Create Order Record
+      // 1. Create Order Record — check first so we know if this is a genuinely new purchase
+      const isNewOrder = transactionId
+        ? !(await OrdersService.orderExistsForInvoice(transactionId))
+        : true;
+
       await OrdersService.createOrder({
         workspace_id: targetWorkspaceId,
         mayar_invoice_id: transactionId,
@@ -332,9 +341,26 @@ export abstract class MayarService {
             workspace_id: targetWorkspaceId,
             addon_id: finalAddonId,
             amount,
+            qty: addonQty,
             status: "active",
             mayar_transaction_id: transactionId,
           });
+
+          // Email only from real webhook, only for a new order (not a retry)
+          if (!skipNotifications && isNewOrder) {
+            const addonOwner = await MayarRepository.findWorkspaceOwner(targetWorkspaceId);
+            const addonWorkspace = await MayarRepository.findWorkspaceById(targetWorkspaceId);
+            if (addonOwner?.email && matchedPlan?.name) {
+              await sendAddonPurchaseSuccessEmail(
+                addonOwner.email,
+                addonOwner.name || "there",
+                addonWorkspace?.name || "Workspace",
+                matchedPlan.name,
+              ).catch((err) =>
+                logger.warn("[Mayar Webhook] Addon email failed", { err }),
+              );
+            }
+          }
         } else {
           logger.warn(
             `[Mayar Webhook] Addon payment received but could not match addon ID for amount ${amount}`,
@@ -372,32 +398,56 @@ export abstract class MayarService {
           updated_at: periodStart,
         });
 
-        const owner = await MayarRepository.findWorkspaceOwner(targetWorkspaceId);
-        const workspaceRecord = await MayarRepository.findWorkspaceById(
-          targetWorkspaceId,
-        );
-        if (owner?.email && matchedPlan?.name) {
-          await sendPurchaseSuccessEmail(
-            owner.email,
-            owner.name || "there",
-            workspaceRecord?.name || "Workspace",
-            matchedPlan.name,
-          );
+        // Email only from real webhook, only for a new order (not a retry)
+        if (!skipNotifications && isNewOrder) {
+          const owner = await MayarRepository.findWorkspaceOwner(targetWorkspaceId);
+          const workspaceRecord = await MayarRepository.findWorkspaceById(targetWorkspaceId);
+          if (owner?.email && matchedPlan?.name) {
+            await sendPurchaseSuccessEmail(
+              owner.email,
+              owner.name || "there",
+              workspaceRecord?.name || "Workspace",
+              matchedPlan.name,
+            );
+          }
         }
       }
     }
 
-    // payment.failed — mark order as failed
+    // payment.failed — mark order as failed, notify workspace owner
     if (eventType === "payment.failed") {
       const data = event.data;
       const transactionId = data?.id;
       if (transactionId) {
         logger.warn("[Mayar Webhook] Payment failed", { transactionId });
         await OrdersService.updateOrderFromInvoiceId(transactionId, "failed");
+
+        // Look up the workspace and notify the owner
+        const failedWorkspace = await MayarRepository.findWorkspaceByTransactionId(transactionId);
+        if (failedWorkspace) {
+          const failedOwner = await MayarRepository.findWorkspaceOwner(failedWorkspace.id);
+          if (failedOwner) {
+            await Promise.allSettled([
+              NotificationsService.create({
+                workspace_id: failedWorkspace.id,
+                user_id: failedOwner.id,
+                type: "subscription.payment_due",
+                title: "Payment failed",
+                message:
+                  "Your recent payment could not be processed. Please update your payment method to avoid a downgrade.",
+                link: "/settings/billing",
+              }),
+              sendPaymentFailedEmail(
+                failedOwner.email,
+                failedOwner.name || "there",
+                failedWorkspace.name,
+              ),
+            ]);
+          }
+        }
       }
     }
 
-    await MayarRepository.markEventProcessed(eventId);
   }
 
   private static async processEvent(event: any) {
@@ -428,6 +478,7 @@ export abstract class MayarService {
     const appUrl = Env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     const owner = await MayarRepository.findWorkspaceOwner(workspaceId);
     let amount = Number(options?.metadata?.amount || 0);
+    const qty = Number(options?.metadata?.qty) || 1;
     let resolvedPlan: any = null;
 
     const isUuid = (id: string) =>
@@ -435,19 +486,19 @@ export abstract class MayarService {
         id,
       );
 
-    // Resolve amount from DB plan if not provided
-    if (!amount && priceId) {
+    // Always resolve plan from priceId — needed for name/description even when amount is known
+    if (priceId) {
       const pid = priceId as string;
       const plan = isUuid(pid)
         ? await MayarRepository.findPlanById(pid)
         : await MayarRepository.findPlanByMayarProductId(pid);
       resolvedPlan = plan;
 
-      const prices = plan?.prices;
-      if (prices) {
+      // Only derive amount from plan when the client didn't supply one
+      if (!amount && plan?.prices) {
         const matchingPrice = isUuid(pid)
-          ? prices[0] // Default to first price if internal ID used
-          : prices.find(
+          ? plan.prices[0]
+          : plan.prices.find(
               (p) =>
                 p.mayar_monthly_id === pid ||
                 p.mayar_yearly_id === pid ||
@@ -496,15 +547,18 @@ export abstract class MayarService {
       amount,
     });
 
-    const description =
-      options?.metadata?.type === "addon"
-        ? options?.metadata?.addonType === "ai"
-          ? "AI Tokens Addon"
-          : "Vault Storage Addon"
-        : `Subscription for ${workspace?.name || "Workspace"}`;
+    const isAddonPurchase = !!options?.metadata?.addonId;
+    const description = isAddonPurchase
+      ? resolvedPlan?.name ||
+        (options?.metadata?.addonType === "ai" ? "AI Token Add-on" : "Storage Add-on")
+      : resolvedPlan
+        ? `${resolvedPlan.name} – ${resolvedBilling === "annual" ? "Annual" : "Monthly"} Plan`
+        : "Oewang Subscription";
 
     const redirectLocale = options?.metadata?.locale || "en";
-    const successUrl = `${appUrl}/${redirectLocale}/payment/success`;
+    const successUrl = returnPath
+      ? `${appUrl}${returnPath.startsWith("/") ? returnPath : `/${returnPath}`}`
+      : `${appUrl}/${redirectLocale}/payment/success`;
     const cancelUrl = `${appUrl}/${redirectLocale}/upgrade/failed`;
 
     try {
@@ -516,7 +570,7 @@ export abstract class MayarService {
       });
 
       const payload = {
-        name: workspace?.name || "Customer",
+        name: owner?.name || workspace?.name || "Customer",
         email: owner.email,
         mobile: owner?.mobile || "08123456789",
         redirectUrl: successUrl,
@@ -533,9 +587,10 @@ export abstract class MayarService {
         extraData: {
           workspaceId,
           planId: priceId,
-          type: options?.metadata?.type || "subscription",
+          type: options?.metadata?.addonId ? "addon" : (options?.metadata?.type || "subscription"),
           addonId: options?.metadata?.addonId,
           addonType: options?.metadata?.addonType,
+          qty: qty > 1 ? qty : undefined,
           billing: resolvedBilling,
           locale: redirectLocale,
         },
@@ -560,6 +615,29 @@ export abstract class MayarService {
         mayar_customer_email: owner.email,
         mayar_transaction_id: response.data.id,
       });
+
+      // Send the invoice/bill email to the owner
+      const billingLabel = resolvedBilling === "annual" ? "Annual" : "Monthly";
+      const displayAmount = amount
+        ? new Intl.NumberFormat("en-US", {
+            style: "currency",
+            currency: (options?.metadata?.currency || "USD").toUpperCase(),
+            minimumFractionDigits: 0,
+          }).format(amount / 100)
+        : "";
+      if (displayAmount) {
+        await sendInvoiceSentEmail(
+          owner.email,
+          owner.name || "there",
+          workspace.name,
+          resolvedPlan?.name || description,
+          billingLabel,
+          displayAmount,
+          response.data.link,
+        ).catch((err) =>
+          logger.warn("[Mayar] Invoice email failed (non-fatal)", { err }),
+        );
+      }
 
       return buildSuccess(
         { url: response.data.link },
@@ -657,15 +735,25 @@ export abstract class MayarService {
     );
   }
 
-  static async getInvoiceUrl(transactionId: string) {
-    // If it's a UUID, it's likely a checkout ID or transaction detail ID
-    // If it starts with inv_, it's an invoice ID
-    const path = transactionId.startsWith("inv_") ? "invoice" : "transactions";
+  static async getInvoiceUrl(invoiceId: string) {
+    try {
+      // Fetch invoice list from Mayar and find the matching invoice link
+      const response = await this.mayarRequest("GET", "/invoice?pageSize=100", undefined, "v1");
+      if (response.data && Array.isArray(response.data)) {
+        const invoice = response.data.find((inv: any) => inv.id === invoiceId);
+        if (invoice?.link) {
+          return buildSuccess({ url: invoice.link }, "Invoice URL retrieved");
+        }
+      }
+    } catch (error) {
+      logger.warn("[Mayar] Failed to fetch invoice link from API, falling back to member portal", {
+        invoiceId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
 
-    return buildSuccess(
-      { url: `${MAYAR_WEB_URL}/${path}/${transactionId}` },
-      "Invoice URL retrieved",
-    );
+    // Fallback: direct to member portal where customer can view all purchases
+    return buildSuccess({ url: MAYAR_MEMBER_URL }, "Invoice URL retrieved");
   }
 
   static async cancelAddon(workspaceId: string, addonId: string, userId: string) {
