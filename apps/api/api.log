@@ -4624,3 +4624,2250 @@ $ bun run --watch index.ts
     [35mcontext[39m: "api"
 [32mINFO[39m [07:33:52]: [36m[api] 🔗 API v1 at http://localhost:3002/v1[39m
     [35mcontext[39m: "api"
+🔍 getEnv: Searching for .env at: /Users/boneconsulting/Developer/oewang/apps/api/.env
+✅ getEnv: Loaded env from /Users/boneconsulting/Developer/oewang/apps/api/.env
+🚀 Using Upstash Redis (REST)
+[33mWARN[39m [13:00:52]: [36m[sentry] SENTRY_DSN not set — Sentry disabled[39m
+    [35mcontext[39m: "sentry"
+[32mINFO[39m [13:00:52]: [36m[api] 🚀 oewang API running at http://localhost:3002[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [13:00:52]: [36m[api] 📖 Swagger docs at http://localhost:3002/swagger[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [13:00:52]: [36m[api] 🔗 API v1 at http://localhost:3002/v1[39m
+    [35mcontext[39m: "api"
+🔍 getEnv: Searching for .env at: /Users/boneconsulting/Developer/oewang/apps/api/.env
+✅ getEnv: Loaded env from /Users/boneconsulting/Developer/oewang/apps/api/.env
+🚀 Using Upstash Redis (REST)
+[33mWARN[39m [13:00:57]: [36m[sentry] SENTRY_DSN not set — Sentry disabled[39m
+    [35mcontext[39m: "sentry"
+[32mINFO[39m [13:00:57]: [36m[api] 🚀 oewang API running at http://localhost:3002[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [13:00:57]: [36m[api] 📖 Swagger docs at http://localhost:3002/swagger[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [13:00:57]: [36m[api] 🔗 API v1 at http://localhost:3002/v1[39m
+    [35mcontext[39m: "api"
+🔍 getEnv: Searching for .env at: /Users/boneconsulting/Developer/oewang/apps/api/.env
+✅ getEnv: Loaded env from /Users/boneconsulting/Developer/oewang/apps/api/.env
+🚀 Using Upstash Redis (REST)
+[33mWARN[39m [13:00:58]: [36m[sentry] SENTRY_DSN not set — Sentry disabled[39m
+    [35mcontext[39m: "sentry"
+[32mINFO[39m [13:00:58]: [36m[api] 🚀 oewang API running at http://localhost:3002[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [13:00:58]: [36m[api] 📖 Swagger docs at http://localhost:3002/swagger[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [13:00:58]: [36m[api] 🔗 API v1 at http://localhost:3002/v1[39m
+    [35mcontext[39m: "api"
+🔍 getEnv: Searching for .env at: /Users/boneconsulting/Developer/oewang/apps/api/.env
+✅ getEnv: Loaded env from /Users/boneconsulting/Developer/oewang/apps/api/.env
+🚀 Using Upstash Redis (REST)
+[33mWARN[39m [13:01:03]: [36m[sentry] SENTRY_DSN not set — Sentry disabled[39m
+    [35mcontext[39m: "sentry"
+[32mINFO[39m [13:01:03]: [36m[api] 🚀 oewang API running at http://localhost:3002[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [13:01:03]: [36m[api] 📖 Swagger docs at http://localhost:3002/swagger[39m
+    [35mcontext[39m: "api"
+[32mINFO[39m [13:01:03]: [36m[api] 🔗 API v1 at http://localhost:3002/v1[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:01:21]: [36m[api] [WS] Missing token and cookie for connection from 202.58.204.69[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:01:21]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:01:21]: [36m[http] GET /v1/realtime 401 - 1ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 1
+[33mWARN[39m [13:01:42]: [36m[api] [WS] Missing token and cookie for connection from 202.58.204.69[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:01:42]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:01:42]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[33mWARN[39m [13:01:43]: [36m[api] [WS] Missing token and cookie for connection from 202.58.204.69[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:01:43]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:01:43]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[32mINFO[39m [13:01:44]: [36m[http] GET /v1/ai/quota 200 - 1714ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/quota"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1714
+[32mINFO[39m [13:01:45]: [36m[http] GET /v1/users/me 200 - 1181ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1181
+[33mWARN[39m [13:01:46]: [36m[api] [WS] Missing token and cookie for connection from 202.58.204.69[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:01:46]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:01:46]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[32mINFO[39m [13:01:46]: [36m[http] GET /v1/workspaces/active 200 - 1146ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/workspaces/active"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1146
+[32mINFO[39m [13:01:47]: [36m[http] GET /v1/settings/transaction 200 - 923ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/transaction"
+    [35mstatus[39m: 200
+    [35mduration[39m: 923
+[32mINFO[39m [13:01:48]: [36m[http] GET /v1/settings/sub-currencies 200 - 896ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/sub-currencies"
+    [35mstatus[39m: 200
+    [35mduration[39m: 896
+[Encryption] onTransform: path=/v1/auth/token, decrypting body...
+[32mINFO[39m [13:01:50]: [36m[http] POST /v1/auth/token 200 - 1106ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "POST"
+    [35mpath[39m: "/v1/auth/token"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1106
+[33mWARN[39m [13:01:50]: [36m[api] [WS] Missing token and cookie for connection from 202.58.204.69[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:01:50]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:01:50]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[32mINFO[39m [13:01:51]: [36m[http] GET /v1/users/me 200 - 1202ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1202
+[32mINFO[39m [13:01:51]: [36m[http] GET /v1/metrics/category-breakdown 200 - 1570ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/category-breakdown"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1570
+[32mINFO[39m [13:01:51]: [36m[http] GET /v1/metrics/burn-rate 200 - 1578ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/burn-rate"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1578
+[32mINFO[39m [13:01:51]: [36m[http] GET /v1/metrics/revenue 200 - 1632ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/revenue"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1632
+[32mINFO[39m [13:01:51]: [36m[http] GET /v1/settings/transaction 200 - 1579ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/transaction"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1579
+[32mINFO[39m [13:01:52]: [36m[http] GET /v1/metrics/category-breakdown 200 - 1717ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/category-breakdown"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1717
+[32mINFO[39m [13:01:52]: [36m[http] GET /v1/users/me 200 - 1866ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1866
+[32mINFO[39m [13:01:53]: [36m[http] GET /v1/metrics/expenses 200 - 3055ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/expenses"
+    [35mstatus[39m: 200
+    [35mduration[39m: 3055
+[32mINFO[39m [13:01:54]: [36m[http] GET /v1/notification-settings 200 - 1053ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notification-settings"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1053
+[32mINFO[39m [13:01:55]: [36m[http] GET /v1/workspaces/active 200 - 1471ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/workspaces/active"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1471
+[32mINFO[39m [13:01:55]: [36m[http] GET /v1/notifications 200 - 1656ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1656
+[32mINFO[39m [13:01:56]: [36m[http] GET /v1/ai/quota 200 - 1164ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/quota"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1164
+[32mINFO[39m [13:01:57]: [36m[http] GET /v1/metrics/revenue 200 - 886ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/revenue"
+    [35mstatus[39m: 200
+    [35mduration[39m: 886
+[32mINFO[39m [13:01:58]: [36m[http] GET /v1/metrics/expenses 200 - 905ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/expenses"
+    [35mstatus[39m: 200
+    [35mduration[39m: 905
+[33mWARN[39m [13:01:58]: [36m[api] [WS] Missing token and cookie for connection from 202.58.204.69[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:01:58]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:01:58]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[32mINFO[39m [13:01:59]: [36m[http] GET /v1/metrics/category-breakdown 200 - 909ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/category-breakdown"
+    [35mstatus[39m: 200
+    [35mduration[39m: 909
+[32mINFO[39m [13:02:00]: [36m[http] GET /v1/metrics/burn-rate 200 - 894ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/burn-rate"
+    [35mstatus[39m: 200
+    [35mduration[39m: 894
+[32mINFO[39m [13:02:01]: [36m[http] GET /v1/budgets/status 200 - 889ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/budgets/status"
+    [35mstatus[39m: 200
+    [35mduration[39m: 889
+[32mINFO[39m [13:02:02]: [36m[http] GET /v1/debts 200 - 1155ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/debts"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1155
+[32mINFO[39m [13:02:03]: [36m[http] GET /v1/wallets 200 - 1110ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/wallets"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1110
+[32mINFO[39m [13:02:05]: [36m[http] GET /v1/ai/quota 200 - 1112ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/quota"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1112
+[32mINFO[39m [13:02:07]: [36m[http] GET /v1/users/me 200 - 1106ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1106
+[32mINFO[39m [13:02:09]: [36m[http] GET /v1/ai/quota 200 - 1437ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/quota"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1437
+[32mINFO[39m [13:02:11]: [36m[http] GET /v1/workspaces/active 200 - 1129ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/workspaces/active"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1129
+[33mWARN[39m [13:02:14]: [36m[api] [WS] Missing token and cookie for connection from 202.58.204.69[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:02:14]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:02:14]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[32mINFO[39m [13:02:24]: [36m[http] GET /v1/ai/quota 200 - 1110ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/quota"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1110
+[32mINFO[39m [13:02:27]: [36m[http] GET /v1/workspaces/active 200 - 1107ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/workspaces/active"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1107
+[32mINFO[39m [13:02:27]: [36m[http] GET /v1/notifications 200 - 1271ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1271
+[32mINFO[39m [13:02:39]: [36m[http] GET /v1/ai/quota 200 - 1107ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/quota"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1107
+[32mINFO[39m [13:02:43]: [36m[http] GET /v1/workspaces/active 200 - 1123ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/workspaces/active"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1123
+[33mWARN[39m [13:02:44]: [36m[api] [WS] Missing token and cookie for connection from 202.58.204.69[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:02:44]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:02:44]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[32mINFO[39m [13:02:54]: [36m[http] GET /v1/ai/quota 200 - 1110ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/quota"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1110
+[32mINFO[39m [13:02:59]: [36m[http] GET /v1/notifications 200 - 1798ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1798
+[32mINFO[39m [13:03:00]: [36m[http] GET /v1/workspaces/active 200 - 1109ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/workspaces/active"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1109
+[32mINFO[39m [13:03:10]: [36m[http] GET /v1/ai/quota 200 - 1520ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/quota"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1520
+[33mWARN[39m [13:03:16]: [36m[api] [WS] Missing token and cookie for connection from 202.58.204.69[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:03:16]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:03:16]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[32mINFO[39m [13:03:16]: [36m[http] GET /v1/workspaces/active 200 - 1106ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/workspaces/active"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1106
+[32mINFO[39m [13:03:24]: [36m[http] GET /v1/ai/quota 200 - 1115ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/quota"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1115
+[32mINFO[39m [13:03:32]: [36m[http] GET /v1/notifications 200 - 1571ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1571
+[32mINFO[39m [13:03:32]: [36m[http] GET /v1/workspaces/active 200 - 1109ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/workspaces/active"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1109
+[32mINFO[39m [13:03:39]: [36m[http] GET /v1/ai/quota 200 - 1110ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/quota"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1110
+[33mWARN[39m [13:03:46]: [36m[api] [WS] Missing token and cookie for connection from 202.58.204.69[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:03:46]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:03:46]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[32mINFO[39m [13:03:49]: [36m[http] GET /v1/workspaces/active 200 - 1109ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/workspaces/active"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1109
+[32mINFO[39m [13:03:54]: [36m[http] GET /v1/ai/quota 200 - 1115ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/quota"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1115
+[32mINFO[39m [13:04:04]: [36m[http] GET /v1/notifications 200 - 1278ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1278
+[32mINFO[39m [13:04:05]: [36m[http] GET /v1/workspaces/active 200 - 1107ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/workspaces/active"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1107
+[32mINFO[39m [13:04:09]: [36m[http] GET /v1/ai/quota 200 - 1111ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/quota"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1111
+[33mWARN[39m [13:04:16]: [36m[api] [WS] Missing token and cookie for connection from 202.58.204.69[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:04:16]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:04:16]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[32mINFO[39m [13:04:21]: [36m[http] GET /v1/workspaces/active 200 - 1113ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/workspaces/active"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1113
+[32mINFO[39m [13:04:24]: [36m[http] GET /v1/ai/quota 200 - 1106ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/quota"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1106
+[32mINFO[39m [13:04:35]: [36m[http] GET /v1/notifications 200 - 1256ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1256
+[32mINFO[39m [13:04:38]: [36m[http] GET /v1/workspaces/active 200 - 1107ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/workspaces/active"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1107
+[32mINFO[39m [13:04:39]: [36m[http] GET /v1/ai/quota 200 - 1108ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/quota"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1108
+[33mWARN[39m [13:04:47]: [36m[api] [WS] Missing token and cookie for connection from 202.58.204.69[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:04:47]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:04:47]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[32mINFO[39m [13:04:54]: [36m[http] GET /v1/workspaces/active 200 - 1452ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/workspaces/active"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1452
+[32mINFO[39m [13:04:56]: [36m[http] GET /v1/ai/quota 200 - 1104ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/quota"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1104
+[32mINFO[39m [13:05:08]: [36m[http] GET /v1/notifications 200 - 1691ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1691
+[32mINFO[39m [13:05:10]: [36m[http] GET /v1/ai/quota 200 - 1421ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/quota"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1421
+[32mINFO[39m [13:05:11]: [36m[http] GET /v1/workspaces/active 200 - 1118ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/workspaces/active"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1118
+[33mWARN[39m [13:05:17]: [36m[api] [WS] Missing token and cookie for connection from 202.58.204.69[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:05:17]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:05:17]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[32mINFO[39m [13:05:24]: [36m[http] GET /v1/ai/quota 200 - 1115ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/quota"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1115
+[32mINFO[39m [13:05:27]: [36m[http] GET /v1/workspaces/active 200 - 1110ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/workspaces/active"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1110
+[32mINFO[39m [13:05:39]: [36m[http] GET /v1/ai/quota 200 - 1190ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/quota"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1190
+[32mINFO[39m [13:05:39]: [36m[http] GET /v1/notifications 200 - 1277ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1277
+[32mINFO[39m [13:05:43]: [36m[http] GET /v1/workspaces/active 200 - 1119ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/workspaces/active"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1119
+[33mWARN[39m [13:05:47]: [36m[api] [WS] Missing token and cookie for connection from 202.58.204.69[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:05:47]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:05:47]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[32mINFO[39m [13:05:54]: [36m[http] GET /v1/ai/quota 200 - 1113ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/quota"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1113
+[32mINFO[39m [13:06:00]: [36m[http] GET /v1/workspaces/active 200 - 1117ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/workspaces/active"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1117
+[32mINFO[39m [13:06:09]: [36m[http] GET /v1/ai/quota 200 - 1103ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/quota"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1103
+[32mINFO[39m [13:06:10]: [36m[http] GET /v1/users/me 200 - 1112ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1112
+[32mINFO[39m [13:06:11]: [36m[http] GET /v1/pricing 200 - 905ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/pricing"
+    [35mstatus[39m: 200
+    [35mduration[39m: 905
+[32mINFO[39m [13:06:12]: [36m[http] GET /v1/notifications 200 - 1669ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1669
+[32mINFO[39m [13:06:13]: [36m[http] GET /v1/pricing 200 - 1211ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/pricing"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1211
+[32mINFO[39m [13:06:14]: [36m[http] GET /v1/workspaces/billing/history 200 - 946ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/workspaces/billing/history"
+    [35mstatus[39m: 200
+    [35mduration[39m: 946
+[32mINFO[39m [13:06:15]: [36m[http] GET /v1/workspaces/billing/history 200 - 890ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/workspaces/billing/history"
+    [35mstatus[39m: 200
+    [35mduration[39m: 890
+[32mINFO[39m [13:06:16]: [36m[http] GET /v1/workspaces/active 200 - 1124ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/workspaces/active"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1124
+[33mWARN[39m [13:06:17]: [36m[api] [WS] Missing token and cookie for connection from 202.58.204.69[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:06:17]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:06:17]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[32mINFO[39m [13:06:24]: [36m[http] GET /v1/ai/quota 200 - 1112ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/quota"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1112
+[Encryption] onTransform: path=/v1/mayar/cancel-addon, decrypting body...
+[32mINFO[39m [13:06:30]: [36m[http] POST /v1/mayar/cancel-addon 200 - 1380ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "POST"
+    [35mpath[39m: "/v1/mayar/cancel-addon"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1380
+[32mINFO[39m [13:06:31]: [36m[http] GET /v1/workspaces/active 200 - 1112ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/workspaces/active"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1112
+[32mINFO[39m [13:06:32]: [36m[http] GET /v1/users/me 200 - 1110ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1110
+[32mINFO[39m [13:06:32]: [36m[http] GET /v1/users/me 200 - 1110ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1110
+[32mINFO[39m [13:06:33]: [36m[http] GET /v1/pricing 200 - 894ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/pricing"
+    [35mstatus[39m: 200
+    [35mduration[39m: 894
+[32mINFO[39m [13:06:34]: [36m[http] GET /v1/pricing 200 - 923ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/pricing"
+    [35mstatus[39m: 200
+    [35mduration[39m: 923
+[Encryption] onTransform: path=/v1/mayar/cancel-addon, decrypting body...
+[32mINFO[39m [13:06:37]: [36m[http] POST /v1/mayar/cancel-addon 200 - 1350ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "POST"
+    [35mpath[39m: "/v1/mayar/cancel-addon"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1350
+[32mINFO[39m [13:06:38]: [36m[http] GET /v1/workspaces/active 200 - 1109ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/workspaces/active"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1109
+[32mINFO[39m [13:06:39]: [36m[http] GET /v1/users/me 200 - 1102ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1102
+[32mINFO[39m [13:06:39]: [36m[http] GET /v1/ai/quota 200 - 1106ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/quota"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1106
+[32mINFO[39m [13:06:39]: [36m[http] GET /v1/users/me 200 - 1113ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1113
+[Encryption] onTransform: path=/v1/mayar/cancel-addon, decrypting body...
+[32mINFO[39m [13:06:40]: [36m[http] GET /v1/pricing 200 - 886ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/pricing"
+    [35mstatus[39m: 200
+    [35mduration[39m: 886
+[32mINFO[39m [13:06:41]: [36m[http] POST /v1/mayar/cancel-addon 200 - 1355ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "POST"
+    [35mpath[39m: "/v1/mayar/cancel-addon"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1355
+[32mINFO[39m [13:06:41]: [36m[http] GET /v1/pricing 200 - 893ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/pricing"
+    [35mstatus[39m: 200
+    [35mduration[39m: 893
+[32mINFO[39m [13:06:43]: [36m[http] GET /v1/workspaces/active 200 - 1467ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/workspaces/active"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1467
+[Encryption] onTransform: path=/v1/mayar/cancel-addon, decrypting body...
+[32mINFO[39m [13:06:44]: [36m[http] GET /v1/notifications 200 - 1418ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1418
+[32mINFO[39m [13:06:44]: [36m[http] GET /v1/users/me 200 - 1122ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1122
+[32mINFO[39m [13:06:44]: [36m[http] GET /v1/users/me 200 - 1127ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1127
+[32mINFO[39m [13:06:44]: [36m[http] POST /v1/mayar/cancel-addon 200 - 1371ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "POST"
+    [35mpath[39m: "/v1/mayar/cancel-addon"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1371
+[32mINFO[39m [13:06:45]: [36m[http] GET /v1/pricing 200 - 904ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/pricing"
+    [35mstatus[39m: 200
+    [35mduration[39m: 904
+[32mINFO[39m [13:06:46]: [36m[http] GET /v1/workspaces/active 200 - 1444ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/workspaces/active"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1444
+[32mINFO[39m [13:06:46]: [36m[http] GET /v1/pricing 200 - 917ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/pricing"
+    [35mstatus[39m: 200
+    [35mduration[39m: 917
+[32mINFO[39m [13:06:47]: [36m[http] GET /v1/users/me 200 - 1194ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1194
+[32mINFO[39m [13:06:47]: [36m[http] GET /v1/users/me 200 - 1197ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1197
+[33mWARN[39m [13:06:48]: [36m[api] [WS] Missing token and cookie for connection from 202.58.204.69[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:06:48]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:06:48]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[32mINFO[39m [13:06:48]: [36m[http] GET /v1/pricing 200 - 938ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/pricing"
+    [35mstatus[39m: 200
+    [35mduration[39m: 938
+[32mINFO[39m [13:06:49]: [36m[http] GET /v1/pricing 200 - 935ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/pricing"
+    [35mstatus[39m: 200
+    [35mduration[39m: 935
+[32mINFO[39m [13:06:54]: [36m[http] GET /v1/ai/quota 200 - 1202ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/quota"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1202
+[32mINFO[39m [13:07:03]: [36m[http] GET /v1/workspaces/active 200 - 1461ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/workspaces/active"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1461
+[32mINFO[39m [13:07:09]: [36m[http] GET /v1/ai/quota 200 - 1109ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/quota"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1109
+[32mINFO[39m [13:07:11]: [36m[http] GET /v1/settings/transaction 200 - 893ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/transaction"
+    [35mstatus[39m: 200
+    [35mduration[39m: 893
+[32mINFO[39m [13:07:12]: [36m[http] GET /v1/settings/sub-currencies 200 - 897ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/sub-currencies"
+    [35mstatus[39m: 200
+    [35mduration[39m: 897
+[32mINFO[39m [13:07:16]: [36m[http] GET /v1/notifications 200 - 1549ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1549
+[31mERROR[39m [13:07:18]: [36m[http] ERROR GET /v1/settings/rates 500 - 5066ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/rates"
+    [35mstatus[39m: 500
+    [35mduration[39m: 5066
+    [35mcode[39m: "FailedToOpenSocket"
+    [35merrorCode[39m: "FailedToOpenSocket"
+    error: "Was there a typo in the url or port?"
+[31mERROR[39m [13:07:18]: [36m[api] [API] Unhandled Error [FailedToOpenSocket][39m
+    [35mcontext[39m: "api"
+    [35mmessage[39m: "Was there a typo in the url or port?"
+[33mWARN[39m [13:07:18]: [36m[api] [WS] Missing token and cookie for connection from 202.58.204.69[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:07:18]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:07:18]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[31mERROR[39m [13:07:23]: [36m[http] ERROR GET /v1/settings/rates 500 - 5296ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/rates"
+    [35mstatus[39m: 500
+    [35mduration[39m: 5296
+    [35mcode[39m: "FailedToOpenSocket"
+    [35merrorCode[39m: "FailedToOpenSocket"
+    error: "Was there a typo in the url or port?"
+[31mERROR[39m [13:07:23]: [36m[api] [API] Unhandled Error [FailedToOpenSocket][39m
+    [35mcontext[39m: "api"
+    [35mmessage[39m: "Was there a typo in the url or port?"
+[32mINFO[39m [13:07:24]: [36m[http] GET /v1/workspaces/active 200 - 1110ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/workspaces/active"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1110
+[32mINFO[39m [13:07:26]: [36m[http] GET /v1/ai/quota 200 - 1105ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/quota"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1105
+[32mINFO[39m [13:07:38]: [36m[http] GET /v1/users/me 200 - 1112ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1112
+[32mINFO[39m [13:07:39]: [36m[http] GET /v1/ai/quota 200 - 1106ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/quota"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1106
+[32mINFO[39m [13:07:41]: [36m[http] GET /v1/workspaces/active 200 - 1103ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/workspaces/active"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1103
+[32mINFO[39m [13:07:43]: [36m[http] GET /v1/users/me 200 - 1115ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1115
+[32mINFO[39m [13:07:44]: [36m[http] GET /v1/workspaces/members 200 - 906ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/workspaces/members"
+    [35mstatus[39m: 200
+    [35mduration[39m: 906
+[32mINFO[39m [13:07:44]: [36m[http] GET /v1/workspaces/invitations 200 - 1233ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/workspaces/invitations"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1233
+[32mINFO[39m [13:07:47]: [36m[http] GET /v1/notifications 200 - 1255ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1255
+[33mWARN[39m [13:07:48]: [36m[api] [WS] Missing token and cookie for connection from 202.58.204.69[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:07:48]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:07:48]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[32mINFO[39m [13:07:54]: [36m[http] GET /v1/ai/quota 200 - 1110ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/quota"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1110
+[32mINFO[39m [13:07:57]: [36m[http] GET /v1/workspaces/active 200 - 1114ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/workspaces/active"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1114
+[32mINFO[39m [13:08:04]: [36m[http] GET /v1/settings/transaction 200 - 896ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/transaction"
+    [35mstatus[39m: 200
+    [35mduration[39m: 896
+[32mINFO[39m [13:08:04]: [36m[http] GET /v1/metrics/category-breakdown 200 - 914ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/category-breakdown"
+    [35mstatus[39m: 200
+    [35mduration[39m: 914
+[32mINFO[39m [13:08:04]: [36m[http] GET /v1/metrics/category-breakdown 200 - 921ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/category-breakdown"
+    [35mstatus[39m: 200
+    [35mduration[39m: 921
+[32mINFO[39m [13:08:04]: [36m[http] GET /v1/metrics/expenses 200 - 920ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/expenses"
+    [35mstatus[39m: 200
+    [35mduration[39m: 920
+[32mINFO[39m [13:08:04]: [36m[http] GET /v1/metrics/burn-rate 200 - 926ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/burn-rate"
+    [35mstatus[39m: 200
+    [35mduration[39m: 926
+[32mINFO[39m [13:08:04]: [36m[http] GET /v1/users/me 200 - 1122ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1122
+[32mINFO[39m [13:08:04]: [36m[http] GET /v1/metrics/revenue 200 - 905ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/revenue"
+    [35mstatus[39m: 200
+    [35mduration[39m: 905
+[32mINFO[39m [13:08:06]: [36m[http] GET /v1/metrics/revenue 200 - 888ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/revenue"
+    [35mstatus[39m: 200
+    [35mduration[39m: 888
+[32mINFO[39m [13:08:07]: [36m[http] GET /v1/metrics/expenses 200 - 893ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/expenses"
+    [35mstatus[39m: 200
+    [35mduration[39m: 893
+[32mINFO[39m [13:08:08]: [36m[http] GET /v1/metrics/category-breakdown 200 - 896ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/category-breakdown"
+    [35mstatus[39m: 200
+    [35mduration[39m: 896
+[32mINFO[39m [13:08:10]: [36m[http] GET /v1/metrics/burn-rate 200 - 892ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/burn-rate"
+    [35mstatus[39m: 200
+    [35mduration[39m: 892
+[32mINFO[39m [13:08:11]: [36m[http] GET /v1/budgets/status 200 - 894ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/budgets/status"
+    [35mstatus[39m: 200
+    [35mduration[39m: 894
+[32mINFO[39m [13:08:12]: [36m[http] GET /v1/debts 200 - 1113ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/debts"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1113
+[32mINFO[39m [13:08:14]: [36m[http] GET /v1/wallets 200 - 1120ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/wallets"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1120
+[32mINFO[39m [13:08:14]: [36m[http] GET /v1/workspaces/active 200 - 1111ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/workspaces/active"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1111
+[32mINFO[39m [13:08:14]: [36m[http] GET /v1/ai/quota 200 - 1109ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/quota"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1109
+[33mWARN[39m [13:08:18]: [36m[api] [WS] Missing token and cookie for connection from 202.58.204.69[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:08:18]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:08:18]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[32mINFO[39m [13:08:19]: [36m[http] GET /v1/notifications 200 - 1288ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1288
+[32mINFO[39m [13:08:24]: [36m[http] GET /v1/ai/quota 200 - 1113ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/quota"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1113
+[32mINFO[39m [13:08:26]: [36m[http] GET /v1/settings/transaction 200 - 887ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/transaction"
+    [35mstatus[39m: 200
+    [35mduration[39m: 887
+[32mINFO[39m [13:08:26]: [36m[http] GET /v1/metrics/category-breakdown 200 - 893ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/category-breakdown"
+    [35mstatus[39m: 200
+    [35mduration[39m: 893
+[32mINFO[39m [13:08:26]: [36m[http] GET /v1/metrics/category-breakdown 200 - 887ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/category-breakdown"
+    [35mstatus[39m: 200
+    [35mduration[39m: 887
+[32mINFO[39m [13:08:26]: [36m[http] GET /v1/metrics/revenue 200 - 888ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/revenue"
+    [35mstatus[39m: 200
+    [35mduration[39m: 888
+[32mINFO[39m [13:08:26]: [36m[http] GET /v1/metrics/burn-rate 200 - 889ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/burn-rate"
+    [35mstatus[39m: 200
+    [35mduration[39m: 889
+[32mINFO[39m [13:08:26]: [36m[http] GET /v1/metrics/expenses 200 - 887ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/expenses"
+    [35mstatus[39m: 200
+    [35mduration[39m: 887
+[32mINFO[39m [13:08:26]: [36m[http] GET /v1/users/me 200 - 1115ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1115
+[32mINFO[39m [13:08:30]: [36m[http] GET /v1/settings/transaction 200 - 894ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/transaction"
+    [35mstatus[39m: 200
+    [35mduration[39m: 894
+[32mINFO[39m [13:08:31]: [36m[http] GET /v1/workspaces/active 200 - 1450ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/workspaces/active"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1450
+[32mINFO[39m [13:08:32]: [36m[http] GET /v1/transactions 200 - 1369ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/transactions"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1369
+[32mINFO[39m [13:08:34]: [36m[http] GET /v1/debts 200 - 1130ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/debts"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1130
+[32mINFO[39m [13:08:40]: [36m[http] GET /v1/ai/quota 200 - 1731ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/quota"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1731
+[32mINFO[39m [13:08:42]: [36m[http] GET /v1/users/me 200 - 1111ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1111
+[32mINFO[39m [13:08:42]: [36m[http] GET /v1/users/me 200 - 1112ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1112
+[32mINFO[39m [13:08:42]: [36m[http] GET /v1/users/me 200 - 1113ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1113
+[32mINFO[39m [13:08:42]: [36m[http] GET /v1/users/me 200 - 1114ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1114
+[32mINFO[39m [13:08:42]: [36m[http] GET /v1/users/me 200 - 1110ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1110
+[32mINFO[39m [13:08:42]: [36m[http] GET /v1/users/me 200 - 1419ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1419
+[32mINFO[39m [13:08:43]: [36m[http] GET /v1/users/me 200 - 1112ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1112
+[32mINFO[39m [13:08:43]: [36m[http] GET /v1/users/me 200 - 1108ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1108
+[32mINFO[39m [13:08:43]: [36m[http] GET /v1/users/me 200 - 1111ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1111
+[32mINFO[39m [13:08:43]: [36m[http] GET /v1/users/me 200 - 1119ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1119
+[32mINFO[39m [13:08:43]: [36m[http] GET /v1/users/me 200 - 1111ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1111
+[32mINFO[39m [13:08:44]: [36m[http] GET /v1/users/me 200 - 1421ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1421
+[32mINFO[39m [13:08:45]: [36m[http] GET /v1/users/me 200 - 1113ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1113
+[32mINFO[39m [13:08:47]: [36m[http] GET /v1/workspaces/active 200 - 1112ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/workspaces/active"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1112
+[33mWARN[39m [13:08:48]: [36m[api] [WS] Missing token and cookie for connection from 202.58.204.69[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:08:48]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:08:48]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[32mINFO[39m [13:08:51]: [36m[http] GET /v1/notifications 200 - 1269ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1269
+[32mINFO[39m [13:08:59]: [36m[http] GET /v1/ai/quota 200 - 1115ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/quota"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1115
+[32mINFO[39m [13:09:01]: [36m[http] GET /v1/settings/transaction 200 - 1511ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/transaction"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1511
+[32mINFO[39m [13:09:01]: [36m[http] GET /v1/settings/sub-currencies 200 - 1508ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/sub-currencies"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1508
+[32mINFO[39m [13:09:01]: [36m[http] GET /v1/settings/transaction 200 - 1532ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/transaction"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1532
+[32mINFO[39m [13:09:01]: [36m[http] GET /v1/settings/transaction 200 - 1572ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/transaction"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1572
+[32mINFO[39m [13:09:01]: [36m[http] GET /v1/settings/sub-currencies 200 - 1525ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/sub-currencies"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1525
+[32mINFO[39m [13:09:01]: [36m[http] GET /v1/settings/transaction 200 - 1537ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/transaction"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1537
+[32mINFO[39m [13:09:01]: [36m[http] GET /v1/settings/sub-currencies 200 - 1653ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/sub-currencies"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1653
+[32mINFO[39m [13:09:02]: [36m[http] GET /v1/settings/sub-currencies 200 - 1685ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/sub-currencies"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1685
+[32mINFO[39m [13:09:02]: [36m[http] GET /v1/settings/transaction 200 - 1620ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/transaction"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1620
+[32mINFO[39m [13:09:02]: [36m[http] GET /v1/users/me 200 - 1860ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1860
+[32mINFO[39m [13:09:02]: [36m[http] GET /v1/users/me 200 - 1835ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1835
+[32mINFO[39m [13:09:02]: [36m[http] GET /v1/users/me 200 - 1860ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1860
+[32mINFO[39m [13:09:02]: [36m[http] GET /v1/users/me 200 - 1886ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1886
+[32mINFO[39m [13:09:02]: [36m[http] GET /v1/settings/sub-currencies 200 - 1522ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/sub-currencies"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1522
+[32mINFO[39m [13:09:02]: [36m[http] GET /v1/settings/transaction 200 - 1970ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/transaction"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1970
+[32mINFO[39m [13:09:02]: [36m[http] GET /v1/users/me 200 - 2060ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2060
+[32mINFO[39m [13:09:02]: [36m[http] GET /v1/users/me 200 - 2160ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2160
+[32mINFO[39m [13:09:02]: [36m[http] GET /v1/settings/sub-currencies 200 - 2261ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/sub-currencies"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2261
+[32mINFO[39m [13:09:03]: [36m[http] GET /v1/settings/sub-currencies 200 - 1138ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/sub-currencies"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1138
+[32mINFO[39m [13:09:03]: [36m[http] GET /v1/settings/transaction 200 - 1225ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/transaction"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1225
+[32mINFO[39m [13:09:03]: [36m[http] GET /v1/settings/sub-currencies 200 - 1262ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/sub-currencies"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1262
+[32mINFO[39m [13:09:03]: [36m[http] GET /v1/settings/transaction 200 - 1301ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/transaction"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1301
+[32mINFO[39m [13:09:03]: [36m[http] GET /v1/settings/transaction 200 - 1237ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/transaction"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1237
+[32mINFO[39m [13:09:03]: [36m[http] GET /v1/settings/sub-currencies 200 - 1275ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/sub-currencies"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1275
+[32mINFO[39m [13:09:03]: [36m[http] GET /v1/settings/sub-currencies 200 - 1298ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/sub-currencies"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1298
+[32mINFO[39m [13:09:03]: [36m[http] GET /v1/settings/transaction 200 - 1340ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/transaction"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1340
+[32mINFO[39m [13:09:03]: [36m[http] GET /v1/users/me 200 - 1547ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1547
+[32mINFO[39m [13:09:03]: [36m[http] GET /v1/users/me 200 - 1568ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1568
+[32mINFO[39m [13:09:03]: [36m[http] GET /v1/settings/transaction 200 - 1224ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/transaction"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1224
+[32mINFO[39m [13:09:03]: [36m[http] GET /v1/settings/sub-currencies 200 - 1248ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/sub-currencies"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1248
+[32mINFO[39m [13:09:03]: [36m[http] GET /v1/users/me 200 - 1552ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1552
+[32mINFO[39m [13:09:04]: [36m[http] GET /v1/users/me 200 - 1441ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1441
+[32mINFO[39m [13:09:04]: [36m[http] GET /v1/users/me 200 - 1804ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1804
+[32mINFO[39m [13:09:04]: [36m[http] GET /v1/workspaces/active 200 - 1829ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/workspaces/active"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1829
+[32mINFO[39m [13:09:04]: [36m[http] GET /v1/settings/sub-currencies 200 - 889ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/sub-currencies"
+    [35mstatus[39m: 200
+    [35mduration[39m: 889
+[32mINFO[39m [13:09:04]: [36m[http] GET /v1/settings/transaction 200 - 882ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/transaction"
+    [35mstatus[39m: 200
+    [35mduration[39m: 882
+[32mINFO[39m [13:09:04]: [36m[http] GET /v1/settings/sub-currencies 200 - 882ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/sub-currencies"
+    [35mstatus[39m: 200
+    [35mduration[39m: 882
+[32mINFO[39m [13:09:05]: [36m[http] GET /v1/users/me 200 - 1113ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1113
+[32mINFO[39m [13:09:05]: [36m[http] GET /v1/users/me 200 - 1110ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1110
+[32mINFO[39m [13:09:05]: [36m[http] GET /v1/settings/transaction 200 - 1192ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/transaction"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1192
+[33mWARN[39m [13:09:08]: [36m[api] [WS] Missing token and cookie for connection from 202.58.204.69[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:09:08]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:09:08]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[32mINFO[39m [13:09:08]: [36m[http] GET /v1/settings/sub-currencies 200 - 884ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/sub-currencies"
+    [35mstatus[39m: 200
+    [35mduration[39m: 884
+[32mINFO[39m [13:09:08]: [36m[http] GET /v1/settings/transaction 200 - 890ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/transaction"
+    [35mstatus[39m: 200
+    [35mduration[39m: 890
+[32mINFO[39m [13:09:08]: [36m[http] GET /v1/users/me 200 - 1105ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1105
+[33mWARN[39m [13:09:08]: [36m[api] [WS] Missing token and cookie for connection from 202.58.204.69[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:09:08]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:09:08]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[32mINFO[39m [13:09:09]: [36m[http] GET /v1/notification-settings 200 - 1224ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notification-settings"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1224
+[32mINFO[39m [13:09:09]: [36m[http] GET /v1/settings/transaction 200 - 1335ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/transaction"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1335
+[32mINFO[39m [13:09:09]: [36m[http] GET /v1/settings/sub-currencies 200 - 1349ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/sub-currencies"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1349
+[32mINFO[39m [13:09:09]: [36m[http] GET /v1/settings/transaction 200 - 1447ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/transaction"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1447
+[32mINFO[39m [13:09:10]: [36m[http] GET /v1/settings/transaction 200 - 1463ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/transaction"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1463
+[32mINFO[39m [13:09:10]: [36m[http] GET /v1/settings/transaction 200 - 1625ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/transaction"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1625
+[32mINFO[39m [13:09:10]: [36m[http] GET /v1/settings/sub-currencies 200 - 1668ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/sub-currencies"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1668
+[32mINFO[39m [13:09:10]: [36m[http] GET /v1/settings/sub-currencies 200 - 1677ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/sub-currencies"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1677
+[32mINFO[39m [13:09:10]: [36m[http] GET /v1/users/me 200 - 1881ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1881
+[32mINFO[39m [13:09:10]: [36m[http] GET /v1/settings/sub-currencies 200 - 1878ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/sub-currencies"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1878
+[32mINFO[39m [13:09:10]: [36m[http] GET /v1/users/me 200 - 1908ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1908
+[32mINFO[39m [13:09:10]: [36m[http] GET /v1/settings/sub-currencies 200 - 1711ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/sub-currencies"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1711
+[32mINFO[39m [13:09:10]: [36m[http] GET /v1/settings/transaction 200 - 1722ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/transaction"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1722
+[32mINFO[39m [13:09:10]: [36m[http] GET /v1/users/me 200 - 1894ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1894
+[32mINFO[39m [13:09:10]: [36m[http] GET /v1/settings/transaction 200 - 1586ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/transaction"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1586
+[33mWARN[39m [13:09:10]: [36m[api] [WS] Missing token and cookie for connection from 202.58.204.69[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:09:10]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:09:10]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[32mINFO[39m [13:09:10]: [36m[http] GET /v1/workspaces/active 200 - 1942ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/workspaces/active"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1942
+[32mINFO[39m [13:09:10]: [36m[http] GET /v1/users/me 200 - 1988ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1988
+[32mINFO[39m [13:09:10]: [36m[http] GET /v1/users/me 200 - 1848ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1848
+[32mINFO[39m [13:09:10]: [36m[http] GET /v1/users/me 200 - 1854ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1854
+[32mINFO[39m [13:09:10]: [36m[http] GET /v1/settings/sub-currencies 200 - 2020ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/sub-currencies"
+    [35mstatus[39m: 200
+    [35mduration[39m: 2020
+[32mINFO[39m [13:09:11]: [36m[http] GET /v1/settings/transaction 200 - 1229ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/transaction"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1229
+[32mINFO[39m [13:09:11]: [36m[http] GET /v1/settings/sub-currencies 200 - 1264ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/sub-currencies"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1264
+[32mINFO[39m [13:09:11]: [36m[http] GET /v1/users/me 200 - 1554ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1554
+[32mINFO[39m [13:09:12]: [36m[http] GET /v1/ai/quota 200 - 1412ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/quota"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1412
+[33mWARN[39m [13:09:12]: [36m[api] [WS] Missing token and cookie for connection from 202.58.204.69[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:09:12]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:09:12]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[32mINFO[39m [13:09:13]: [36m[http] GET /v1/workspaces/active 200 - 1112ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/workspaces/active"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1112
+[33mWARN[39m [13:09:13]: [36m[api] [WS] Missing token and cookie for connection from 202.58.204.69[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:09:13]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:09:13]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[33mWARN[39m [13:09:14]: [36m[api] [WS] Missing token and cookie for connection from 202.58.204.69[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:09:14]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:09:14]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[32mINFO[39m [13:09:14]: [36m[http] GET /v1/ai/quota 200 - 1106ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/quota"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1106
+[32mINFO[39m [13:09:16]: [36m[http] GET /v1/ai/quota 200 - 1106ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/quota"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1106
+[32mINFO[39m [13:09:17]: [36m[http] GET /v1/users/me 200 - 1108ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1108
+[33mWARN[39m [13:09:18]: [36m[api] [WS] Missing token and cookie for connection from 202.58.204.69[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:09:18]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:09:18]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[32mINFO[39m [13:09:19]: [36m[http] GET /v1/notification-settings 200 - 1068ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notification-settings"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1068
+[32mINFO[39m [13:09:19]: [36m[http] GET /v1/notifications 200 - 1332ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1332
+[33mWARN[39m [13:09:26]: [36m[api] [WS] Missing token and cookie for connection from 202.58.204.69[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:09:26]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:09:26]: [36m[http] GET /v1/realtime 401 - 1ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 1
+[33mWARN[39m [13:09:27]: [36m[api] [WS] Missing token and cookie for connection from 202.58.204.69[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:09:27]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:09:27]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[32mINFO[39m [13:09:28]: [36m[http] GET /v1/settings/sub-currencies 200 - 1121ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/sub-currencies"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1121
+[32mINFO[39m [13:09:28]: [36m[http] GET /v1/settings/transaction 200 - 1128ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/transaction"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1128
+[32mINFO[39m [13:09:28]: [36m[http] GET /v1/settings/transaction 200 - 1193ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/transaction"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1193
+[33mWARN[39m [13:09:28]: [36m[api] [WS] Missing token and cookie for connection from 202.58.204.69[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:09:28]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:09:28]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[32mINFO[39m [13:09:28]: [36m[http] GET /v1/settings/sub-currencies 200 - 1222ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/sub-currencies"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1222
+[32mINFO[39m [13:09:28]: [36m[http] GET /v1/settings/transaction 200 - 1238ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/transaction"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1238
+[32mINFO[39m [13:09:28]: [36m[http] GET /v1/settings/sub-currencies 200 - 1289ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/sub-currencies"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1289
+[32mINFO[39m [13:09:28]: [36m[http] GET /v1/settings/transaction 200 - 1273ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/transaction"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1273
+[32mINFO[39m [13:09:28]: [36m[http] GET /v1/settings/transaction 200 - 1283ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/transaction"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1283
+[32mINFO[39m [13:09:28]: [36m[http] GET /v1/settings/sub-currencies 200 - 1274ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/sub-currencies"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1274
+[32mINFO[39m [13:09:28]: [36m[http] GET /v1/users/me 200 - 1536ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1536
+[32mINFO[39m [13:09:28]: [36m[http] GET /v1/settings/sub-currencies 200 - 1291ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/sub-currencies"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1291
+[32mINFO[39m [13:09:28]: [36m[http] GET /v1/users/me 200 - 1518ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1518
+[32mINFO[39m [13:09:28]: [36m[http] GET /v1/users/me 200 - 1488ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1488
+[32mINFO[39m [13:09:28]: [36m[http] GET /v1/users/me 200 - 1464ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1464
+[32mINFO[39m [13:09:29]: [36m[http] GET /v1/users/me 200 - 1808ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1808
+[32mINFO[39m [13:09:29]: [36m[http] GET /v1/workspaces/active 200 - 1652ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/workspaces/active"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1652
+[32mINFO[39m [13:09:30]: [36m[http] GET /v1/settings/transaction 200 - 1121ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/transaction"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1121
+[32mINFO[39m [13:09:30]: [36m[http] GET /v1/settings/sub-currencies 200 - 1119ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/sub-currencies"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1119
+[32mINFO[39m [13:09:30]: [36m[http] GET /v1/settings/transaction 200 - 1135ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/transaction"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1135
+[32mINFO[39m [13:09:30]: [36m[http] GET /v1/settings/sub-currencies 200 - 1135ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/sub-currencies"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1135
+[32mINFO[39m [13:09:30]: [36m[http] GET /v1/settings/sub-currencies 200 - 1149ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/sub-currencies"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1149
+[32mINFO[39m [13:09:30]: [36m[http] GET /v1/settings/transaction 200 - 1224ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/transaction"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1224
+[32mINFO[39m [13:09:30]: [36m[http] GET /v1/users/me 200 - 1417ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1417
+[32mINFO[39m [13:09:30]: [36m[http] GET /v1/users/me 200 - 1387ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1387
+[32mINFO[39m [13:09:30]: [36m[http] GET /v1/users/me 200 - 1408ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1408
+[32mINFO[39m [13:09:30]: [36m[http] GET /v1/settings/sub-currencies 200 - 1237ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/sub-currencies"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1237
+[32mINFO[39m [13:09:30]: [36m[http] GET /v1/settings/transaction 200 - 1198ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/transaction"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1198
+[32mINFO[39m [13:09:30]: [36m[http] GET /v1/settings/sub-currencies 200 - 1194ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/sub-currencies"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1194
+[32mINFO[39m [13:09:30]: [36m[http] GET /v1/settings/transaction 200 - 1188ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/transaction"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1188
+[33mWARN[39m [13:09:30]: [36m[api] [WS] Missing token and cookie for connection from 202.58.204.69[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:09:30]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:09:30]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[32mINFO[39m [13:09:30]: [36m[http] GET /v1/users/me 200 - 1407ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1407
+[32mINFO[39m [13:09:30]: [36m[http] GET /v1/users/me 200 - 1496ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1496
+[32mINFO[39m [13:09:31]: [36m[http] GET /v1/ai/quota 200 - 1424ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/quota"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1424
+[32mINFO[39m [13:09:31]: [36m[http] GET /v1/settings/sub-currencies 200 - 883ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/sub-currencies"
+    [35mstatus[39m: 200
+    [35mduration[39m: 883
+[32mINFO[39m [13:09:31]: [36m[http] GET /v1/settings/transaction 200 - 884ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/transaction"
+    [35mstatus[39m: 200
+    [35mduration[39m: 884
+[32mINFO[39m [13:09:31]: [36m[http] GET /v1/settings/sub-currencies 200 - 897ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/sub-currencies"
+    [35mstatus[39m: 200
+    [35mduration[39m: 897
+[32mINFO[39m [13:09:31]: [36m[http] GET /v1/settings/transaction 200 - 893ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/transaction"
+    [35mstatus[39m: 200
+    [35mduration[39m: 893
+[32mINFO[39m [13:09:31]: [36m[http] GET /v1/users/me 200 - 1110ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1110
+[32mINFO[39m [13:09:31]: [36m[http] GET /v1/users/me 200 - 1425ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1425
+[32mINFO[39m [13:09:32]: [36m[http] GET /v1/ai/quota 200 - 1109ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/quota"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1109
+[33mWARN[39m [13:09:34]: [36m[api] [WS] Missing token and cookie for connection from 202.58.204.69[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:09:34]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:09:34]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[33mWARN[39m [13:09:43]: [36m[api] [WS] Missing token and cookie for connection from 202.58.204.69[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:09:43]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:09:43]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[32mINFO[39m [13:09:43]: [36m[http] GET /v1/ai/quota 200 - 1110ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/quota"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1110
+[32mINFO[39m [13:09:45]: [36m[http] GET /v1/workspaces/active 200 - 1110ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/workspaces/active"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1110
+[32mINFO[39m [13:09:58]: [36m[http] GET /v1/ai/quota 200 - 1109ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/quota"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1109
+[32mINFO[39m [13:09:58]: [36m[http] GET /v1/notifications 200 - 1259ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1259
+[33mWARN[39m [13:09:59]: [36m[api] [WS] Missing token and cookie for connection from 202.58.204.69[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:09:59]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:09:59]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[32mINFO[39m [13:10:01]: [36m[http] GET /v1/workspaces/active 200 - 1179ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/workspaces/active"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1179
+[32mINFO[39m [13:10:13]: [36m[http] GET /v1/ai/quota 200 - 1111ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/quota"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1111
+[32mINFO[39m [13:10:18]: [36m[http] GET /v1/workspaces/active 200 - 1123ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/workspaces/active"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1123
+[32mINFO[39m [13:10:28]: [36m[http] GET /v1/ai/quota 200 - 1112ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/ai/quota"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1112
+[33mWARN[39m [13:10:30]: [36m[api] [WS] Missing token and cookie for connection from 202.58.204.69[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:10:30]: [36m[api] [WS] Handshake rejected: No valid session or token found[39m
+    [35mcontext[39m: "api"
+[33mWARN[39m [13:10:30]: [36m[http] GET /v1/realtime 401 - 0ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/realtime"
+    [35mstatus[39m: 401
+    [35mduration[39m: 0
+[32mINFO[39m [13:10:30]: [36m[http] GET /v1/notifications 200 - 1291ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/notifications"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1291
+[32mINFO[39m [13:10:32]: [36m[http] GET /v1/categories 200 - 909ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/categories"
+    [35mstatus[39m: 200
+    [35mduration[39m: 909
+[32mINFO[39m [13:10:32]: [36m[http] GET /v1/transactions 200 - 1363ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/transactions"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1363
+[32mINFO[39m [13:10:32]: [36m[http] GET /v1/wallets 200 - 1443ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/wallets"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1443
+[32mINFO[39m [13:10:34]: [36m[http] GET /v1/transactions 200 - 1340ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/transactions"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1340
+[32mINFO[39m [13:10:34]: [36m[http] GET /v1/categories 200 - 912ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/categories"
+    [35mstatus[39m: 200
+    [35mduration[39m: 912
+[32mINFO[39m [13:10:34]: [36m[http] GET /v1/wallets 200 - 1139ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/wallets"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1139
+[32mINFO[39m [13:10:34]: [36m[http] GET /v1/wallets 200 - 1145ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/wallets"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1145
+[32mINFO[39m [13:10:34]: [36m[http] GET /v1/transactions 200 - 1415ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/transactions"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1415
+[32mINFO[39m [13:10:35]: [36m[http] GET /v1/categories 200 - 928ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/categories"
+    [35mstatus[39m: 200
+    [35mduration[39m: 928
+[32mINFO[39m [13:10:36]: [36m[http] GET /v1/workspaces/active 200 - 1463ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/workspaces/active"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1463
+[32mINFO[39m [13:10:38]: [36m[http] GET /v1/settings/transaction 200 - 888ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/settings/transaction"
+    [35mstatus[39m: 200
+    [35mduration[39m: 888
+[32mINFO[39m [13:10:38]: [36m[http] GET /v1/metrics/expenses 200 - 892ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/expenses"
+    [35mstatus[39m: 200
+    [35mduration[39m: 892
+[32mINFO[39m [13:10:38]: [36m[http] GET /v1/metrics/revenue 200 - 900ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/revenue"
+    [35mstatus[39m: 200
+    [35mduration[39m: 900
+[32mINFO[39m [13:10:38]: [36m[http] GET /v1/metrics/category-breakdown 200 - 889ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/category-breakdown"
+    [35mstatus[39m: 200
+    [35mduration[39m: 889
+[32mINFO[39m [13:10:38]: [36m[http] GET /v1/metrics/category-breakdown 200 - 894ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/category-breakdown"
+    [35mstatus[39m: 200
+    [35mduration[39m: 894
+[32mINFO[39m [13:10:38]: [36m[http] GET /v1/users/me 200 - 1113ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/users/me"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1113
+[32mINFO[39m [13:10:38]: [36m[http] GET /v1/metrics/burn-rate 200 - 1507ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/burn-rate"
+    [35mstatus[39m: 200
+    [35mduration[39m: 1507
+[32mINFO[39m [13:10:39]: [36m[http] GET /v1/metrics/revenue 200 - 891ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/revenue"
+    [35mstatus[39m: 200
+    [35mduration[39m: 891
+[32mINFO[39m [13:10:40]: [36m[http] GET /v1/metrics/expenses 200 - 883ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/expenses"
+    [35mstatus[39m: 200
+    [35mduration[39m: 883
+[32mINFO[39m [13:10:42]: [36m[http] GET /v1/metrics/category-breakdown 200 - 886ms[39m
+    [35mcontext[39m: "http"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/v1/metrics/category-breakdown"
+    [35mstatus[39m: 200
+    [35mduration[39m: 886

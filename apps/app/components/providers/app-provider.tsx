@@ -1,19 +1,21 @@
 "use client";
 
 import type * as React from "react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Dictionary } from "@workspace/dictionaries";
 import { getSubCurrencies, getTransactionSettings } from "@workspace/modules/setting/setting.action";
 import { getMe } from "@workspace/modules/user/user.action";
 import { getActiveWorkspace } from "@workspace/modules/workspace/workspace.action";
+import type { SubCurrency, TransactionSettings } from "@workspace/types";
 import { getActiveWorkspaceRole, normalizeWorkspaceRole } from "@/lib/workspace-permissions";
 
 import { useRealtime } from "../../hooks/use-realtime";
 import { type AppState, useAppStore } from "../../stores/app";
 
 export function AppProvider({ children, dictionary }: { children: React.ReactNode; dictionary: Dictionary }) {
+  const queryClient = useQueryClient();
   const setUser = useAppStore((state: AppState) => state.setUser);
   const setWorkspace = useAppStore((state: AppState) => state.setWorkspace);
   const setSettings = useAppStore((state: AppState) => state.setSettings);
@@ -21,6 +23,16 @@ export function AppProvider({ children, dictionary }: { children: React.ReactNod
   const setIsLoading = useAppStore((state: AppState) => state.setIsLoading);
   const fetchAiQuota = useAppStore((state: AppState) => state.fetchAiQuota);
   const setDictionary = useAppStore((state: AppState) => state.setDictionary);
+
+  // Seed Zustand synchronously from the TanStack cache on first render.
+  // HydrationBoundary (rendered above us) has already merged the server-prefetched
+  // data into the QueryClient by this point, so getQueryData returns immediately.
+  useState(() => {
+    const cached_settings = queryClient.getQueryData<TransactionSettings>(["settings", "transaction"]);
+    const cached_sub_currencies = queryClient.getQueryData<SubCurrency[]>(["settings", "sub-currencies"]);
+    if (cached_settings) useAppStore.getState().setSettings(cached_settings);
+    if (cached_sub_currencies) useAppStore.getState().setSubCurrencies(cached_sub_currencies);
+  });
 
   // Realtime Sync
   useRealtime();

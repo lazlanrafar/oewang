@@ -13,6 +13,7 @@ export const ROLE_OPTIONS = [
 ] as const;
 
 export const SYSTEM_ROLES = {
+  SUPERADMIN: "superadmin",
   OWNER: "owner",
   FINANCE: "finance",
   USER: "user",

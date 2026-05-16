@@ -3,6 +3,7 @@
 import * as React from "react";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useAppStore } from "@/stores/app";
 import {
   INCOME_EXPENSES_COLOR_OPTIONS,
   INPUT_ORDER_OPTIONS,
@@ -74,6 +75,7 @@ interface TransactionSettingsFormProps {
 
 export function TransactionSettingsForm({ dictionary }: TransactionSettingsFormProps) {
   const queryClient = useQueryClient();
+  const setSettings = useAppStore((s) => s.setSettings);
 
   const { data: settings, isLoading } = useQuery({
     queryKey: ["settings", "transaction"],
@@ -90,8 +92,13 @@ export function TransactionSettingsForm({ dictionary }: TransactionSettingsFormP
       if (!result.success) throw new Error(result.error);
       return result.data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["settings", "transaction"] });
+    onSuccess: (updated) => {
+      if (updated) {
+        // Update Zustand immediately so formatCurrency reflects the change
+        // across the whole app without waiting for a refetch.
+        setSettings(updated);
+        queryClient.setQueryData(["settings", "transaction"], updated);
+      }
       toast.success(dictionary.settings.transaction.toast_updated || "Settings updated");
     },
     onError: () => {

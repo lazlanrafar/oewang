@@ -2,10 +2,12 @@
 
 import { useState, useTransition } from "react";
 
+import { useQueryClient } from "@tanstack/react-query";
 import type { Dictionary } from "@workspace/dictionaries";
 import { updateTransactionSettings } from "@workspace/modules/setting/setting.action";
 import type { TransactionSettings } from "@workspace/types";
 import { getCurrencyDisplayUnit } from "@workspace/utils";
+import { useAppStore } from "@/stores/app";
 import {
   Button,
   Label,
@@ -59,19 +61,22 @@ export function MainCurrencyForm({
 }: MainCurrencyFormProps) {
   const [data, setData] = useState(settings);
   const [_isPending, startTransition] = useTransition();
+  const queryClient = useQueryClient();
+  const setAppSettings = useAppStore((s) => s.setSettings);
 
   if (!data) return null;
 
   const handleUpdate = (updates: Partial<TransactionSettings>) => {
-    // Optimistic update
-    setData((prev) => ({ ...prev, ...updates }));
+    const optimistic = { ...data, ...updates };
+    // Optimistic local update
+    setData(optimistic);
 
     startTransition(async () => {
-      const result = await updateTransactionSettings({
-        ...data,
-        ...updates,
-      });
-      if (result.success) {
+      const result = await updateTransactionSettings(optimistic);
+      if (result.success && result.data) {
+        // Sync Zustand and TanStack cache so formatCurrency updates everywhere
+        setAppSettings(result.data);
+        queryClient.setQueryData(["settings", "transaction"], result.data);
         toast.success(dict.toast_updated || "Main currency settings updated");
       } else {
         toast.error(result.error);

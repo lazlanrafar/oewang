@@ -16,11 +16,15 @@ export const requireAdminAccess = new Elysia({ name: "guard.admin-access" })
         buildError(ErrorCode.UNAUTHORIZED, "Unauthorized"),
       );
     }
-    if (auth.system_role !== "owner" && auth.system_role !== "finance") {
+    if (
+      auth.system_role !== "superadmin" &&
+      auth.system_role !== "owner" &&
+      auth.system_role !== "finance"
+    ) {
       return status(403, {
         success: false,
         code: ErrorCode.FORBIDDEN,
-        message: "Owner or Finance access required.",
+        message: "Superadmin access required.",
       });
     }
   });
@@ -71,6 +75,7 @@ export const systemAdminsController = new Elysia({ prefix: "/system-admins" })
     {
       body: t.Object({
         role: t.Union([
+          t.Literal("superadmin"),
           t.Literal("owner"),
           t.Literal("finance"),
           t.Literal("user"),
