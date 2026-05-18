@@ -7,6 +7,7 @@ import type {
   ExportTransactionsQueryInput,
 } from "./transactions.model";
 import { WalletsRepository } from "../wallets/wallets.repository";
+import { BudgetsRepository } from "../budgets/budgets.repository";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import {
   buildPaginatedSuccess,
@@ -80,7 +81,29 @@ export abstract class TransactionsService {
       message: `A new ${body.type} of ${amount} was recorded.`,
       link: "/transactions",
     });
-    
+
+    // Check if this expense exceeds an active budget
+    if (body.type === "expense" && categoryId) {
+      const budget = await BudgetsRepository.findByCategory(categoryId, workspaceId);
+      if (budget) {
+        const now = new Date();
+        const startDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+        const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
+        const budgetStatuses = await BudgetsRepository.getStatus(workspaceId, startDate, endDate);
+        const budgetStatus = budgetStatuses.find((s) => s.categoryId === categoryId);
+        if (budgetStatus && Number(budgetStatus.spent) >= Number(budgetStatus.amount)) {
+          await NotificationsService.create({
+            workspace_id: workspaceId,
+            user_id: userId,
+            type: "budget.exceeded",
+            title: "Budget Exceeded",
+            message: `Your ${budgetStatus.categoryName} budget of ${Number(budgetStatus.amount).toLocaleString()} has been exceeded this month.`,
+            link: "/budget",
+          });
+        }
+      }
+    }
+
     RealtimeService.notifyValueChange(workspaceId, "transactions");
     RealtimeService.notifyValueChange(workspaceId, "wallets");
 

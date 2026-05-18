@@ -50,7 +50,8 @@
       "title": "Belum ada notifikasi",
       "description": "Kami akan memberi tahu Anda saat ada sesuatu yang terjadi."
     },
-    "view_settings": "Lihat pengaturan notifikasi"
+    "view_settings": "Lihat pengaturan notifikasi",
+    "view_all": "Lihat semua notifikasi"
   },
   "accounts": {
     "title": "Akun",

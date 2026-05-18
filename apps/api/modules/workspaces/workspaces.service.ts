@@ -1,6 +1,7 @@
 import { WorkspacesRepository } from "./workspaces.repository";
 import { UsersRepository } from "../users/users.repository";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
+import { NotificationsService } from "../notifications/notifications.service";
 import {
   DEFAULT_INCOME_CATEGORIES,
   DEFAULT_EXPENSE_CATEGORIES,
@@ -338,6 +339,15 @@ export abstract class WorkspacesService {
       after: { email, role },
     });
 
+    NotificationsService.create({
+      workspace_id,
+      user_id: actor_id,
+      type: "workspace.invitation_sent",
+      title: "Invitation Sent",
+      message: `An invitation has been sent to ${email} as ${role}.`,
+      link: "/settings/members",
+    }).catch(() => {});
+
     return invitation;
   }
 
@@ -474,6 +484,32 @@ export abstract class WorkspacesService {
       entity: "invitation",
       entity_id: invitation.id,
     });
+
+    // Notify the new member and notify workspace owners
+    const joiningUser = await UsersRepository.findById(user_id);
+    const workspaceMembers = await WorkspacesRepository.getMembers(invitation.workspaceId);
+    const owners = workspaceMembers.filter((m) => m.role === "owner" || m.role === "admin");
+
+    NotificationsService.create({
+      workspace_id: invitation.workspaceId,
+      user_id,
+      type: "workspace.joined",
+      title: "Workspace Joined",
+      message: `You have joined the workspace as ${invitation.role}.`,
+      link: "/overview",
+    }).catch(() => {});
+
+    for (const owner of owners) {
+      if (owner.userId === user_id) continue;
+      NotificationsService.create({
+        workspace_id: invitation.workspaceId,
+        user_id: owner.userId,
+        type: "workspace.member_joined",
+        title: "New Member Joined",
+        message: `${joiningUser?.name || joiningUser?.email || invitation.email} has joined the workspace as ${invitation.role}.`,
+        link: "/settings/members",
+      }).catch(() => {});
+    }
 
     return invitation.workspaceId;
   }

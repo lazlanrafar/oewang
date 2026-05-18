@@ -36,16 +36,19 @@ export function ConnectTelegram({ dictionary }: { dictionary: Dictionary }) {
     },
   });
 
+  const userId = me?.user?.id;
   const workspaceId = me?.user?.workspace_id;
   const activeWorkspace = me?.workspaces?.find(
     (workspace) => workspace.id === workspaceId,
   );
   const workspaceIdentifier = activeWorkspace?.slug || workspaceId;
   const botUsername = Env.NEXT_PUBLIC_TELEGRAM_BOT_USER || "OewangBot";
-  const telegramUrl =
-    workspaceIdentifier
-      ? `https://t.me/${botUsername}?start=${encodeURIComponent(workspaceIdentifier)}`
-      : `https://t.me/${botUsername}`;
+  const telegramPayload = workspaceIdentifier && userId
+    ? `${workspaceIdentifier}___${userId}`
+    : workspaceIdentifier;
+  const telegramUrl = telegramPayload
+    ? `https://t.me/${botUsername}?start=${encodeURIComponent(telegramPayload)}`
+    : `https://t.me/${botUsername}`;
 
   const generateQRCode = useCallback(async () => {
     if (!workspaceIdentifier) return;

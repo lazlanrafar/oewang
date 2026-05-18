@@ -1,5 +1,6 @@
 import { Env } from "@workspace/constants";
 import { buildSuccess } from "@workspace/utils";
+import { logger } from "@workspace/logger";
 import { AiService } from "../ai/ai.service";
 import { executeAiTool } from "../ai/ai.tools";
 import { TransactionsService } from "../transactions/transactions.service";
@@ -8,6 +9,7 @@ import { WalletsRepository as walletsRepository } from "../wallets/wallets.repos
 import { TransactionItemsService } from "../transactions/items/transaction-items.service";
 import { IntegrationsRepository } from "./integrations.repository";
 import { WorkspacesService } from "../workspaces/workspaces.service";
+import { NotificationsService } from "../notifications/notifications.service";
 
 export abstract class IntegrationsService {
   private static extractLeadingJson(text: string): {
@@ -175,9 +177,19 @@ export abstract class IntegrationsService {
     const integration = await IntegrationsRepository.upsert({
       workspaceId,
       provider: "whatsapp-twilio",
-      settings: { phoneNumber: cleaned, connectedByUserId: userId },
+      settings: { phoneNumber: cleaned },
       isActive: true,
+      connectedBy: userId,
     });
+
+    NotificationsService.create({
+      workspace_id: workspaceId,
+      user_id: userId,
+      type: "integration.connected",
+      title: "WhatsApp Connected",
+      message: `WhatsApp has been connected to your workspace. You can now receive alerts on ${cleaned}.`,
+      link: "/apps",
+    }).catch((err) => logger.error("Failed to create WhatsApp connected notification", { err }));
 
     return buildSuccess(integration, "WhatsApp (Twilio) connected successfully");
   }
@@ -190,9 +202,19 @@ export abstract class IntegrationsService {
     const integration = await IntegrationsRepository.upsert({
       workspaceId,
       provider: "telegram",
-      settings: { telegramChatId, connectedByUserId: userId },
+      settings: { telegramChatId },
       isActive: true,
+      connectedBy: userId,
     });
+
+    NotificationsService.create({
+      workspace_id: workspaceId,
+      user_id: userId,
+      type: "integration.connected",
+      title: "Telegram Connected",
+      message: "Telegram has been connected to your workspace. You can now chat with your AI assistant via Telegram.",
+      link: "/apps",
+    }).catch((err) => logger.error("Failed to create Telegram connected notification", { err, workspaceId, userId }));
 
     return buildSuccess(integration, "Telegram connected successfully");
   }
@@ -202,7 +224,7 @@ export abstract class IntegrationsService {
     return buildSuccess(integrations, "Integrations retrieved successfully");
   }
 
-  static async disconnectIntegration(workspaceId: string, provider: string) {
+  static async disconnectIntegration(workspaceId: string, provider: string, userId?: string) {
     const disconnected = await IntegrationsRepository.disconnectByProvider(
       workspaceId,
       provider,
@@ -210,6 +232,18 @@ export abstract class IntegrationsService {
 
     if (!disconnected) {
       return buildSuccess(null, `${provider} is already disconnected`);
+    }
+
+    if (userId) {
+      const providerLabel = provider === "whatsapp-twilio" ? "WhatsApp" : provider.charAt(0).toUpperCase() + provider.slice(1);
+      NotificationsService.create({
+        workspace_id: workspaceId,
+        user_id: userId,
+        type: "integration.disconnected",
+        title: `${providerLabel} Disconnected`,
+        message: `${providerLabel} has been disconnected from your workspace.`,
+        link: "/apps",
+      }).catch(() => {});
     }
 
     return buildSuccess(disconnected, `${provider} disconnected successfully`);
@@ -291,10 +325,9 @@ export abstract class IntegrationsService {
       return "OK";
     }
 
-    const { workspaceId, settings } = integration;
-    let userId = (settings as any)?.connectedByUserId;
+    const { workspaceId, settings, connectedBy } = integration;
+    let userId = connectedBy || (settings as any)?.connectedByUserId;
 
-    // Resolve invalid zero UUID or missing userId to a valid workspace member
     if (!userId || userId === "00000000-0000-0000-0000-000000000000") {
       const fallbackId =
         await IntegrationsRepository.findFirstMemberId(workspaceId);
@@ -485,7 +518,7 @@ export abstract class IntegrationsService {
 
         await IntegrationsService.connectWhatsApp(
           targetWorkspaceId,
-          targetUserId,
+          targetUserId!,
           fromUserNumber,
         );
         await IntegrationsService.sendTwilioWhatsAppMessage(fromUserNumber, "✅ Your WhatsApp is now connected to Oewang (via Twilio)! You can now send me your expenses or upload receipts anytime.");
@@ -496,8 +529,8 @@ export abstract class IntegrationsService {
     const integration = await IntegrationsRepository.findByWhatsAppNumber(fromUserNumber, "whatsapp-twilio");
     if (!integration) return "Unauthorized";
 
-    const { workspaceId, settings } = integration;
-    let userId = (settings as any)?.connectedByUserId;
+    const { workspaceId, settings, connectedBy } = integration;
+    let userId = connectedBy || (settings as any)?.connectedByUserId;
 
     if (!userId || userId === "00000000-0000-0000-0000-000000000000") {
       userId = await IntegrationsRepository.findFirstMemberId(workspaceId);

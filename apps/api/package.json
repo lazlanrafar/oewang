@@ -40,11 +40,13 @@
     "pdf.js-extract": "^0.2.1",
     "qrcode": "^1.5.4",
     "qrcode-terminal": "^0.12.0",
+    "web-push": "^3.6.7",
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@types/bun": "^1.2.21",
+    "@types/web-push": "^3.6.4",
     "@workspace/typescript-config": "workspace:*",
-    "typescript": "catalog:",
-    "@types/bun": "^1.2.21"
+    "typescript": "catalog:"
   }
 }

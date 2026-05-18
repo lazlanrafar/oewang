@@ -37,6 +37,7 @@ import { systemMetricsController } from "./modules/system-metrics/system-metrics
 import { transactions } from "./modules/transactions/transactions.controller";
 import { notificationsController } from "./modules/notifications/notifications.controller";
 import { notificationSettingsController } from "./modules/notification-settings/notification-settings.controller";
+import { pushSubscriptionsController } from "./modules/push-subscriptions/push-subscriptions.controller";
 import { usersController } from "./modules/users/users.controller";
 import { vaultController } from "./modules/vault/vault.controller";
 import { walletsController } from "./modules/wallets/wallets.controller";
@@ -81,6 +82,38 @@ async function gracefulShutdown(signal: string) {
 process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
 process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 
+const apiControllers1 = new Elysia()
+  .use(healthController)
+  .use(usersController)
+  .use(workspacesController)
+  .use(authController)
+  .use(settingsController)
+  .use(categoriesController)
+  .use(budgets)
+  .use(walletsController)
+  .use(vaultController)
+  .use(transactions);
+
+const apiControllers2 = new Elysia()
+  .use(aiController)
+  .use(metricsController)
+  .use(integrationsController)
+  .use(systemAdminsController)
+  .use(pricingController)
+  .use(mayarController)
+  .use(ordersController)
+  .use(systemMetricsController)
+  .use(privacyController)
+  .use(invoicesController);
+
+const apiControllers3 = new Elysia()
+  .use(publicInvoicesController)
+  .use(contactsController)
+  .use(debtsController)
+  .use(notificationsController)
+  .use(notificationSettingsController)
+  .use(pushSubscriptionsController);
+
 const app = new Elysia()
   .use(cors())
   .use(staticPlugin({ assets: "public", prefix: "" }))
@@ -103,41 +136,22 @@ const app = new Elysia()
   // All routes grouped under /v1
   .group("/v1", (app) =>
     app
-      .use(healthController)
-      .use(usersController)
-      .use(workspacesController)
-      .use(authController)
-      .use(settingsController)
-      .use(categoriesController)
-      .use(budgets)
-      .use(walletsController)
-      .use(vaultController)
-      .use(transactions)
-      .use(aiController)
-      .use(metricsController)
-      .use(integrationsController)
-      .use(systemAdminsController)
-      .use(pricingController)
-      .use(mayarController)
-      .use(ordersController)
-      .use(systemMetricsController)
-      .use(privacyController)
-      .use(invoicesController)
-      .use(publicInvoicesController)
-      .use(contactsController)
-      .use(debtsController)
-      .use(notificationsController)
-      .use(notificationSettingsController)
+      .use(apiControllers1)
+      .use(apiControllers2)
+      .use(apiControllers3)
       .derive(async ({ query, auth, request }) => {
         // Log basic info about the incoming connection attempt
-        const ip = request.headers.get("x-forwarded-for")?.split(",")[0] ?? "unknown";
-        
+        const ip =
+          request.headers.get("x-forwarded-for")?.split(",")[0] ?? "unknown";
+
         // If already authenticated via header/cookie from authPlugin, use it
         if (auth) {
-          log.info(`[WS] Authenticated connection from ${ip} (User: ${auth.user_id})`);
+          log.info(
+            `[WS] Authenticated connection from ${ip} (User: ${auth.user_id})`,
+          );
           return { wsAuth: auth };
         }
-        
+
         const token = query.token;
         if (!token) {
           log.warn(`[WS] Missing token and cookie for connection from ${ip}`);
@@ -145,23 +159,23 @@ const app = new Elysia()
         }
 
         if (process.env.NODE_ENV === "production") {
-          log.warn(
-            `[WS] Query-token auth blocked in production from ${ip}`,
-          );
+          log.warn(`[WS] Query-token auth blocked in production from ${ip}`);
           return { wsAuth: null };
         }
-        
+
         const ws_auth = await getAuth(token);
         if (!ws_auth) {
           log.warn(`[WS] Invalid token provided from ${ip}`);
         }
-        
+
         return { wsAuth: ws_auth };
       })
       .ws("/realtime", {
         beforeHandle({ wsAuth, set }) {
           if (!wsAuth) {
-            log.warn("[WS] Handshake rejected: No valid session or token found");
+            log.warn(
+              "[WS] Handshake rejected: No valid session or token found",
+            );
             set.status = 401;
             return "Unauthorized";
           }
@@ -191,7 +205,7 @@ const app = new Elysia()
             );
           }
         },
-      })
+      }),
   )
   // Public routes (no auth required)
   .use(publicPricingController)
@@ -301,7 +315,9 @@ const app = new Elysia()
 
 // Initialize Realtime Brodcaster
 RealtimeService.onDataChanged(({ workspaceId, type }) => {
-  log.info(`[Realtime] Publishing event '${type}' to workspace '${workspaceId}'`);
+  log.info(
+    `[Realtime] Publishing event '${type}' to workspace '${workspaceId}'`,
+  );
   const published = app.server?.publish(
     workspaceId,
     JSON.stringify({ type, timestamp: Date.now() }),

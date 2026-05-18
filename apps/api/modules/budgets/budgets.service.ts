@@ -1,6 +1,7 @@
 import { BudgetsRepository } from "./budgets.repository";
 import { CategoriesRepository } from "../categories/categories.repository";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
+import { NotificationsService } from "../notifications/notifications.service";
 import { buildApiResponse } from "@workspace/utils";
 import { ErrorCode } from "@workspace/types";
 import type { CreateBudgetInput, UpdateBudgetInput } from "@workspace/types";
@@ -52,6 +53,15 @@ export abstract class BudgetsService {
       entity_id: budget.id,
       after: budget,
     });
+
+    NotificationsService.create({
+      workspace_id: workspaceId,
+      user_id: userId,
+      type: "budget.created",
+      title: "Budget Created",
+      message: `A budget of ${budget.amount} has been set for ${category.name}.`,
+      link: "/budget",
+    }).catch(() => {});
 
     return buildApiResponse({
       success: true,

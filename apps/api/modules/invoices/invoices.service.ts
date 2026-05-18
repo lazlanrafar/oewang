@@ -8,6 +8,7 @@ import type { CreateInvoiceInput, UpdateInvoiceInput } from "./invoices.dto";
 import { ErrorCode } from "@workspace/types";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { AuditLogsRepository } from "../audit-logs/audit-logs.repository";
+import { NotificationsService } from "../notifications/notifications.service";
 
 export abstract class InvoicesService {
   static async getAll(
@@ -66,6 +67,15 @@ export abstract class InvoicesService {
       after: result,
     });
 
+    NotificationsService.create({
+      workspace_id: workspaceId,
+      user_id: userId,
+      type: "invoice.created",
+      title: "Invoice Created",
+      message: `Invoice #${(result as any).invoice_number || result.id.slice(0, 8)} has been created.`,
+      link: "/invoices",
+    }).catch(() => {});
+
     return buildSuccess(result);
   }
 
@@ -95,6 +105,28 @@ export abstract class InvoicesService {
       before: before.invoice,
       after: result,
     });
+
+    const prevStatus = (before.invoice as any)?.status;
+    const newStatus = data.status;
+    if (newStatus && newStatus !== prevStatus) {
+      const statusMessages: Record<string, { title: string; message: string }> = {
+        sent: { title: "Invoice Sent", message: `Invoice #${(result as any).invoice_number || id.slice(0, 8)} has been sent to the client.` },
+        paid: { title: "Invoice Paid", message: `Invoice #${(result as any).invoice_number || id.slice(0, 8)} has been marked as paid.` },
+        overdue: { title: "Invoice Overdue", message: `Invoice #${(result as any).invoice_number || id.slice(0, 8)} is now overdue.` },
+        canceled: { title: "Invoice Canceled", message: `Invoice #${(result as any).invoice_number || id.slice(0, 8)} has been canceled.` },
+      };
+      const notif = statusMessages[newStatus];
+      if (notif) {
+        NotificationsService.create({
+          workspace_id: workspaceId,
+          user_id: userId,
+          type: `invoice.${newStatus}`,
+          title: notif.title,
+          message: notif.message,
+          link: `/invoices`,
+        }).catch(() => {});
+      }
+    }
 
     return buildSuccess(result);
   }

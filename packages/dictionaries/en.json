@@ -50,7 +50,8 @@
       "title": "No notifications yet",
       "description": "We'll notify you when something happens."
     },
-    "view_settings": "View notification settings"
+    "view_settings": "View notification settings",
+    "view_all": "View all notifications"
   },
   "accounts": {
     "title": "Accounts",

@@ -50,7 +50,8 @@
       "title": "まだ通知はありません",
       "description": "何かあればここに通知されます。"
     },
-    "view_settings": "通知設定を表示"
+    "view_settings": "通知設定を表示",
+    "view_all": "すべての通知を表示"
   },
   "accounts": {
     "title": "アカウント",

@@ -1,4 +1,4 @@
-import { eq, and, sql, isNull } from "drizzle-orm";
+import { eq, and, sql, isNull, desc } from "drizzle-orm";
 import {
   db,
   workspaceIntegrations,
@@ -16,9 +16,9 @@ export abstract class IntegrationsRepository {
         and(
           eq(workspaceIntegrations.workspaceId, workspace_id),
           eq(workspaceIntegrations.provider, provider),
-          isNull(workspaceIntegrations.deletedAt),
         ),
       )
+      .orderBy(desc(workspaceIntegrations.updatedAt))
       .limit(1);
     return records[0] || null;
   }
@@ -30,6 +30,7 @@ export abstract class IntegrationsRepository {
       .where(
         and(
           eq(workspaceIntegrations.workspaceId, workspace_id),
+          eq(workspaceIntegrations.isActive, true),
           isNull(workspaceIntegrations.deletedAt),
         ),
       );
@@ -69,7 +70,8 @@ export abstract class IntegrationsRepository {
     return records[0] || null;
   }
 
-  static async upsert(data: NewWorkspaceIntegration) {
+  static async upsert(data: NewWorkspaceIntegration & { connectedBy?: string }) {
+    const now = new Date().toISOString();
     const existing = await this.findByProvider(data.workspaceId, data.provider);
 
     if (existing) {
@@ -77,22 +79,25 @@ export abstract class IntegrationsRepository {
         .update(workspaceIntegrations)
         .set({
           settings: data.settings,
-          isActive: data.isActive,
-          updatedAt: new Date().toISOString(),
+          isActive: data.isActive ?? true,
+          connectedAt: data.isActive !== false ? now : existing.connectedAt,
+          connectedBy: data.connectedBy ?? existing.connectedBy,
+          deletedAt: null,
+          updatedAt: now,
         })
-        .where(
-          and(
-            eq(workspaceIntegrations.id, existing.id),
-            isNull(workspaceIntegrations.deletedAt),
-          ),
-        )
+        .where(eq(workspaceIntegrations.id, existing.id))
         .returning();
       return updated;
     }
 
     const [created] = await db
       .insert(workspaceIntegrations)
-      .values(data)
+      .values({
+        ...data,
+        isActive: data.isActive ?? true,
+        connectedAt: data.isActive !== false ? now : null,
+        connectedBy: data.connectedBy,
+      })
       .returning();
     return created;
   }
@@ -143,14 +148,13 @@ export abstract class IntegrationsRepository {
       .update(workspaceIntegrations)
       .set({
         isActive: false,
-        deletedAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       })
       .where(
         and(
           eq(workspaceIntegrations.workspaceId, workspaceId),
           eq(workspaceIntegrations.provider, provider),
-          isNull(workspaceIntegrations.deletedAt),
+          eq(workspaceIntegrations.isActive, true),
         ),
       )
       .returning();

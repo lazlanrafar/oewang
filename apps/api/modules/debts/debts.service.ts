@@ -2,6 +2,7 @@ import { DebtsRepository } from "./debts.repository";
 import { ContactsRepository } from "../contacts/contacts.repository";
 import { TransactionsRepository } from "../transactions/transactions.repository";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
+import { NotificationsService } from "../notifications/notifications.service";
 import { buildSuccess, buildError, buildPaginatedSuccess } from "@workspace/utils";
 import { status } from "elysia";
 import { ErrorCode } from "@workspace/types";
@@ -56,6 +57,16 @@ export abstract class DebtsService {
       entity_id: debt.id,
       after: debt,
     });
+
+    const debtLabel = debt.type === "payable" ? "You owe" : "Someone owes you";
+    NotificationsService.create({
+      workspace_id: workspaceId,
+      user_id: userId,
+      type: "debt.created",
+      title: debt.type === "payable" ? "New Payable Debt" : "New Receivable Debt",
+      message: `${debtLabel} ${contact.name} ${Number(data.amount).toLocaleString()}.`,
+      link: "/debts",
+    }).catch(() => {});
 
     return buildSuccess(debt, "Debt created successfully", "CREATED");
   }
@@ -203,6 +214,17 @@ export abstract class DebtsService {
         before: debt,
         after: updatedDebt,
       });
+
+      if (newStatus === "paid") {
+        NotificationsService.create({
+          workspace_id: workspaceId,
+          user_id: userId,
+          type: "debt.paid",
+          title: "Debt Fully Paid",
+          message: `The debt of ${Number(debt.amount).toLocaleString()} has been fully settled.`,
+          link: "/debts",
+        }).catch(() => {});
+      }
 
       return buildSuccess(payment, "Payment recorded successfully", "CREATED");
     });
@@ -376,6 +398,15 @@ export abstract class DebtsService {
         entity_id: sourceTxId || "00000000-0000-0000-0000-000000000000",
         after: { sourceTxId, splitAmount, createdDebts },
       });
+
+      NotificationsService.create({
+        workspace_id: workspaceId,
+        user_id: userId,
+        type: "debt.split_bill",
+        title: "Bill Split",
+        message: `"${data.name}" was split among ${data.contactNames.length + 1} people — each owes ${debtAmount.toLocaleString()}.`,
+        link: "/debts",
+      }).catch(() => {});
 
       return buildSuccess({ sourceTxId, createdDebts }, "Bill split successfully", "CREATED");
     });

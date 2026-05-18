@@ -359,6 +359,16 @@ export abstract class MayarService {
                 logger.warn("[Mayar Webhook] Addon email failed", { err }),
               );
             }
+            if (addonOwner?.id && matchedPlan?.name) {
+              NotificationsService.create({
+                workspace_id: targetWorkspaceId,
+                user_id: addonOwner.id,
+                type: "subscription.addon_purchased",
+                title: "Add-on Activated",
+                message: `${matchedPlan.name} has been added to your workspace.`,
+                link: "/settings/billing",
+              }).catch(() => {});
+            }
           }
         } else {
           logger.warn(
@@ -408,6 +418,16 @@ export abstract class MayarService {
               workspaceRecord?.name || "Workspace",
               matchedPlan.name,
             );
+          }
+          if (owner?.id && matchedPlan?.name) {
+            NotificationsService.create({
+              workspace_id: targetWorkspaceId,
+              user_id: owner.id,
+              type: "subscription.activated",
+              title: "Subscription Activated",
+              message: `Your ${matchedPlan.name} plan is now active. Enjoy your upgraded workspace!`,
+              link: "/settings/billing",
+            }).catch(() => {});
           }
         }
       }

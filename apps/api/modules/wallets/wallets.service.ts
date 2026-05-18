@@ -5,6 +5,7 @@ import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { status } from "elysia";
 import { ErrorCode } from "@workspace/types";
 import { RealtimeService } from "../realtime/realtime.service";
+import { NotificationsService } from "../notifications/notifications.service";
 
 export abstract class WalletsService {
   // --- Wallet Groups ---
@@ -167,6 +168,15 @@ export abstract class WalletsService {
       entity_id: wallet.id,
       after: wallet,
     });
+
+    NotificationsService.create({
+      workspace_id: workspaceId,
+      user_id: userId,
+      type: "wallet.created",
+      title: "Account Created",
+      message: `"${wallet.name}" has been added to your accounts.`,
+      link: "/accounts",
+    }).catch(() => {});
 
     RealtimeService.notifyValueChange(workspaceId, "wallets");
 

@@ -192,6 +192,7 @@ export const integrationsController = new Elysia({ prefix: "/integrations" })
       return await IntegrationsService.disconnectIntegration(
         auth.workspaceId,
         params.provider,
+        auth.user_id,
       );
     },
     {

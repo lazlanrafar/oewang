@@ -51,6 +51,11 @@ const apiEnvSchema = z.object({
   GEMINI_API_KEY: z.string().min(1).optional(),
   ANTHROPIC_API_KEY: z.string().min(1).optional(),
 
+  // Web Push (VAPID)
+  VAPID_PUBLIC_KEY: z.string().optional(),
+  VAPID_PRIVATE_KEY: z.string().optional(),
+  VAPID_SUBJECT: z.string().optional(),
+
   // Email
   RESEND_API_KEY: z.string().optional(),
 

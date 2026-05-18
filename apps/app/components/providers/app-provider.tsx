@@ -12,6 +12,7 @@ import type { SubCurrency, TransactionSettings } from "@workspace/types";
 import { getActiveWorkspaceRole, normalizeWorkspaceRole } from "@/lib/workspace-permissions";
 
 import { useRealtime } from "../../hooks/use-realtime";
+import { usePushNotifications } from "../../hooks/use-push-notifications";
 import { type AppState, useAppStore } from "../../stores/app";
 
 export function AppProvider({ children, dictionary }: { children: React.ReactNode; dictionary: Dictionary }) {
@@ -36,6 +37,7 @@ export function AppProvider({ children, dictionary }: { children: React.ReactNod
 
   // Realtime Sync
   useRealtime();
+  usePushNotifications();
 
   useEffect(() => {
     fetchAiQuota();
