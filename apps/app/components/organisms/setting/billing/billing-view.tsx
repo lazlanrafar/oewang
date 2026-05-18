@@ -692,10 +692,11 @@ export function BillingView({
                         </td>
                         <td className="p-4 font-medium tracking-tight">{order.code}</td>
                         <td className="p-4 font-serif text-xs">
-                          {(order.amount / 100).toLocaleString(undefined, {
-                            style: "currency",
-                            currency: order.currency,
-                          })}
+                          {(() => {
+                            const ZERO_DECIMAL = new Set(["IDR", "JPY", "KRW", "VND", "BIF", "CLP", "GNF", "MGA", "PYG", "RWF", "UGX", "VUV", "XAF", "XOF", "XPF"]);
+                            const amt = ZERO_DECIMAL.has((order.currency || "").toUpperCase()) ? order.amount : order.amount / 100;
+                            return amt.toLocaleString(undefined, { style: "currency", currency: order.currency });
+                          })()}
                         </td>
                         <td className="p-4">
                           <Badge

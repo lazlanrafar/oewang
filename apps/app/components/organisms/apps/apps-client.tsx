@@ -20,7 +20,6 @@ import { useConfirm } from "../../providers/confirm-modal-provider";
 import { AppsCard } from "./apps-card";
 import { ConnectTelegram } from "./connect-telegram";
 import { ConnectWhatsApp } from "./connect-whatsapp";
-import { ConnectWhatsAppWeb } from "./connect-whatsapp-web";
 
 interface Props {
   dictionary: Dictionary;
@@ -272,7 +271,6 @@ export function AppsClient({ dictionary }: Props) {
       </div>
       <ConnectTelegram dictionary={dictionary} />
       <ConnectWhatsApp dictionary={dictionary} />
-      <ConnectWhatsAppWeb dictionary={dictionary} />
     </div>
   );
 }

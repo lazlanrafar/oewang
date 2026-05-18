@@ -21,15 +21,14 @@ const MAYAR_BASE_URL =
     ? "https://api.mayar.club/hl/v1"
     : "https://api.mayar.id/hl/v1");
 
-const MAYAR_WEB_URL =
-  MAYAR_BASE_URL.includes("api.mayar.club")
-    ? "https://web.mayar.club"
-    : "https://web.mayar.id";
+// Payment page base — only production has a public-facing slug URL
+const MAYAR_WEB_URL = "https://mayar.id";
 
+// Customer portal — where customers can log in to view/download invoices
 const MAYAR_MEMBER_URL =
   MAYAR_BASE_URL.includes("api.mayar.club")
-    ? "https://member.mayar.club"
-    : "https://member.mayar.id";
+    ? "https://portal.mayar.club"
+    : "https://portal.mayar.id";
 
 export abstract class MayarService {
   private static getAuthHeader() {
@@ -590,7 +589,7 @@ export abstract class MayarService {
           type: options?.metadata?.addonId ? "addon" : (options?.metadata?.type || "subscription"),
           addonId: options?.metadata?.addonId,
           addonType: options?.metadata?.addonType,
-          qty: qty > 1 ? qty : undefined,
+          qty: qty > 1 ? String(qty) : undefined,
           billing: resolvedBilling,
           locale: redirectLocale,
         },
@@ -618,12 +617,15 @@ export abstract class MayarService {
 
       // Send the invoice/bill email to the owner
       const billingLabel = resolvedBilling === "annual" ? "Annual" : "Monthly";
+      const invoiceCurrency = (options?.metadata?.currency || "IDR").toUpperCase();
+      const ZERO_DECIMAL_CURRENCIES = new Set(["IDR", "JPY", "KRW", "VND", "BIF", "CLP", "GNF", "MGA", "PYG", "RWF", "UGX", "VUV", "XAF", "XOF", "XPF"]);
+      const displayRawAmount = ZERO_DECIMAL_CURRENCIES.has(invoiceCurrency) ? amount : amount / 100;
       const displayAmount = amount
         ? new Intl.NumberFormat("en-US", {
             style: "currency",
-            currency: (options?.metadata?.currency || "USD").toUpperCase(),
+            currency: invoiceCurrency,
             minimumFractionDigits: 0,
-          }).format(amount / 100)
+          }).format(displayRawAmount)
         : "";
       if (displayAmount) {
         await sendInvoiceSentEmail(
@@ -725,34 +727,43 @@ export abstract class MayarService {
     }
   }
 
-  static async createCustomerPortal(email?: string) {
-    // Mayar doesn't have a direct portal API, we redirect to their member portal
-    // Appendix of email helps the user log in faster
-    const url = email ? `${MAYAR_MEMBER_URL}/login?email=${encodeURIComponent(email)}` : MAYAR_MEMBER_URL;
-    return buildSuccess(
-      { url },
-      "Customer portal URL retrieved",
-    );
+  static async createCustomerPortal(_email?: string) {
+    return buildSuccess({ url: MAYAR_MEMBER_URL }, "Customer portal URL retrieved");
+  }
+
+  private static toAbsoluteUrl(link: string): string {
+    if (!link) return MAYAR_MEMBER_URL;
+    if (link.startsWith("http://") || link.startsWith("https://")) return link;
+    return `${MAYAR_WEB_URL}/${link.replace(/^\//, "")}`;
   }
 
   static async getInvoiceUrl(invoiceId: string) {
+    // 1. Try direct lookup by ID
     try {
-      // Fetch invoice list from Mayar and find the matching invoice link
+      const response = await this.mayarRequest("GET", `/invoice/${invoiceId}`, undefined, "v1");
+      const link = response.data?.link ?? response.link;
+      logger.info("[Mayar] Direct invoice lookup", { invoiceId, rawLink: link, responseKeys: Object.keys(response.data || response || {}) });
+      if (link) return buildSuccess({ url: this.toAbsoluteUrl(link) }, "Invoice URL retrieved");
+    } catch (err) {
+      logger.warn("[Mayar] Direct invoice lookup failed", { invoiceId, err: err instanceof Error ? err.message : String(err) });
+    }
+
+    // 2. Scan the invoice list (handles cases where direct GET isn't supported)
+    try {
       const response = await this.mayarRequest("GET", "/invoice?pageSize=100", undefined, "v1");
-      if (response.data && Array.isArray(response.data)) {
+      if (Array.isArray(response.data)) {
         const invoice = response.data.find((inv: any) => inv.id === invoiceId);
-        if (invoice?.link) {
-          return buildSuccess({ url: invoice.link }, "Invoice URL retrieved");
-        }
+        logger.info("[Mayar] Invoice list scan", { invoiceId, found: !!invoice, rawLink: invoice?.link });
+        if (invoice?.link) return buildSuccess({ url: this.toAbsoluteUrl(invoice.link) }, "Invoice URL retrieved");
       }
     } catch (error) {
-      logger.warn("[Mayar] Failed to fetch invoice link from API, falling back to member portal", {
+      logger.warn("[Mayar] Failed to fetch invoice link, falling back to member portal", {
         invoiceId,
         error: error instanceof Error ? error.message : String(error),
       });
     }
 
-    // Fallback: direct to member portal where customer can view all purchases
+    // 3. Last resort: member portal
     return buildSuccess({ url: MAYAR_MEMBER_URL }, "Invoice URL retrieved");
   }
 

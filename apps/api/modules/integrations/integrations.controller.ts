@@ -1,10 +1,7 @@
 import { Elysia, t } from "elysia";
 import { authPlugin } from "../../plugins/auth";
-import { encryptionPlugin } from "../../plugins/encryption";
 import { IntegrationsService } from "./integrations.service";
-import { IntegrationsRepository } from "./integrations.repository";
 import { ConnectWhatsAppDto } from "./integrations.dto";
-import { whatsappWebController } from "./whatsapp-web/whatsapp-web.controller";
 import { logger } from "@workspace/logger";
 import { Env } from "@workspace/constants";
 import { status } from "elysia";
@@ -17,11 +14,8 @@ import {
   verifyTwilioSignature,
 } from "./webhook-security";
 import { assertCanManageSensitiveWorkspace } from "../workspaces/workspace-permissions";
-import { SystemSettingsRepository } from "../system-settings/system-settings.repository";
 
 export const integrationsController = new Elysia({ prefix: "/integrations" })
-  // WhatsApp Web sub-controller (whatsapp-web.js library)
-  .use(whatsappWebController)
   // Public webhook route for Twilio WhatsApp
   .post(
     "/whatsapp/twilio/webhook",
@@ -64,20 +58,6 @@ export const integrationsController = new Elysia({ prefix: "/integrations" })
         summary: "WhatsApp Webhook (Twilio)",
         description:
           "Receives incoming messages and events from the Twilio WhatsApp API.",
-        tags: ["Integrations"],
-      },
-    },
-  )
-  .get(
-    "/whatsapp-web/public-info",
-    async () => {
-      const phoneNumber = await SystemSettingsRepository.getSetting("WHATSAPP_WEB_NUMBER");
-      return buildSuccess({ phoneNumber }, "WhatsApp Web public info retrieved");
-    },
-    {
-      detail: {
-        summary: "WhatsApp Web Public Info",
-        description: "Returns the global WhatsApp Web phone number for the connection QR code.",
         tags: ["Integrations"],
       },
     },
