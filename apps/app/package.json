@@ -15,6 +15,7 @@
     "typecheck": "NODE_OPTIONS='--max-old-space-size=4096' tsc --noEmit",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
     "test:e2e:login": "PLAYWRIGHT_MANUAL_AUTH=true playwright test e2e/auth.setup.ts --project=chromium --headed --timeout=0"
   },
   "lint-staged": {

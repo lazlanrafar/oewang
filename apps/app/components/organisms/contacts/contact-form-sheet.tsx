@@ -217,9 +217,9 @@ export function ContactFormSheet({ open, onClose, contact, dictionary }: Props) 
       const payload = {
         name: values.name,
         email: values.email,
-        phone: values.phone || null,
-        website: values.website || null,
-        contact: values.contact || null,
+        phone: values.phone || undefined,
+        website: values.website || undefined,
+        contact: values.contact || undefined,
         addressLine1: values.addressLine1 || undefined,
         addressLine2: values.addressLine2 || undefined,
         city: values.city || undefined,

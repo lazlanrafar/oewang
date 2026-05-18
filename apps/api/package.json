@@ -10,6 +10,9 @@
     "storage:worker": "bun run scripts/storage-worker.ts",
     "lint": "biome lint",
     "test": "bun test",
+    "test:integration": "NODE_ENV=test bun test --preload ./test/setup.ts test/integration/**/*.test.ts",
+    "test:watch": "bun test --watch",
+    "test:coverage": "bun test --coverage",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

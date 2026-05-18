@@ -12,11 +12,19 @@
     "db:seed": "bun run --cwd packages/database seed",
     "db:reset": "bun run --cwd packages/database reset && bun run db:push && bun run db:seed",
     "mcp": "bun run --cwd apps/api mcp.ts",
-    "test:e2e": "turbo run test:e2e"
+    "test": "bash -c 'cd apps/api && bun test modules/'",
+    "test:e2e": "turbo run test:e2e",
+    "test:e2e:ui": "cd apps/app && bun run test:e2e:ui",
+    "test:watch": "bash -c 'cd apps/api && bun test --watch modules/'",
+    "test:coverage": "bash -c 'cd apps/api && bun test --coverage modules/'"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.11.3",
     "@biomejs/biome": "catalog:",
+    "@faker-js/faker": "^10.4.0",
+    "pixelmatch": "^7.2.0",
     "prettier": "catalog:",
+    "tinybench": "^6.0.2",
     "turbo": "catalog:",
     "typescript": "catalog:"
   },

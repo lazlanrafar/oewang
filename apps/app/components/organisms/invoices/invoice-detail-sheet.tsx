@@ -117,7 +117,7 @@ export function InvoiceDetailSheet({
     if (invoice && debouncedAccessCode !== (invoice.accessCode || "")) {
       onUpdate?.(invoice.id, { accessCode: debouncedAccessCode });
     }
-  }, [debouncedAccessCode, invoice?.id, invoice.accessCode, invoice, onUpdate]);
+  }, [debouncedAccessCode, invoice?.id, invoice?.accessCode, invoice, onUpdate]);
 
   useEffect(() => {
     if (open && invoice?.id && invoice.isPublic && !publicToken) {

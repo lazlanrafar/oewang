@@ -1,0 +1,17 @@
+# Bun configuration
+[test]
+# Exclude Playwright E2E tests from bun test
+# These should only be run with `playwright test`
+exclude = [
+  "**/e2e/**/*.spec.ts",
+  "**/e2e/**/*.test.ts",
+  "**/.auth/**",
+  "**/playwright-report/**",
+  "**/test-results/**"
+]
+
+# Only include API and module tests
+include = [
+  "apps/api/**/*.test.ts",
+  "packages/**/*.test.ts"
+]

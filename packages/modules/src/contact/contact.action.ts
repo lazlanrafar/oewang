@@ -51,7 +51,11 @@ export const createContact = async (data: {
   billingEmails?: string[] | null;
 }): Promise<ActionResponse<Contact>> => {
   try {
-    const res = await api.post("/contacts", data);
+    const payload = {
+      ...data,
+      billingEmails: data.billingEmails ? data.billingEmails.join(",") : undefined,
+    };
+    const res = await api.post("/contacts", payload);
     return { success: true, data: res.data?.data };
   } catch (error: any) {
     return {
@@ -81,7 +85,11 @@ export const updateContact = async (
   }
 ): Promise<ActionResponse<Contact>> => {
   try {
-    const res = await api.patch(`/contacts/${id}`, data);
+    const payload = {
+      ...data,
+      billingEmails: data.billingEmails ? data.billingEmails.join(",") : undefined,
+    };
+    const res = await api.patch(`/contacts/${id}`, payload);
     return { success: true, data: res.data?.data };
   } catch (error: any) {
     return {

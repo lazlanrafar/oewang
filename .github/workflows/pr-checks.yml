@@ -1,0 +1,116 @@
+name: PR Checks (Fast)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+# Cancel previous runs for the same PR
+concurrency:
+  group: pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  NODE_ENV: test
+  BUN_VERSION: '1.3.3'
+
+jobs:
+  # Fast checks that run on every PR
+  quick-checks:
+    name: Quick Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Lint with Biome
+        run: bun run lint
+
+      - name: Type check
+        run: bun run typecheck
+
+      - name: Check formatting
+        run: bun run format --check
+
+  # Run critical path tests only
+  critical-tests:
+    name: Critical Path Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: oewang_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Set up test database
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/oewang_test
+        run: bun run db:push
+
+      - name: Run integration tests (critical)
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/oewang_test
+        run: |
+          # Run only critical tests (health, auth, transactions)
+          bun test --preload ./apps/api/test/setup.ts \
+            apps/api/test/integration/health.test.ts \
+            apps/api/test/integration/transactions.test.ts
+
+  # PR comment with test results
+  pr-comment:
+    name: Post PR Comment
+    runs-on: ubuntu-latest
+    needs: [quick-checks, critical-tests]
+    if: always() && github.event_name == 'pull_request'
+
+    steps:
+      - name: Generate comment body
+        id: comment
+        run: |
+          if [ "${{ needs.quick-checks.result }}" == "success" ] && \
+             [ "${{ needs.critical-tests.result }}" == "success" ]; then
+            echo "body=✅ All PR checks passed!" >> $GITHUB_OUTPUT
+          else
+            echo "body=❌ Some PR checks failed. Please review the workflow logs." >> $GITHUB_OUTPUT
+          fi
+
+      - name: Comment on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '${{ steps.comment.outputs.body }}'
+            })
