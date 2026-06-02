@@ -19,7 +19,21 @@ export function AuthSync({ locale, returnTo = "/overview" }: AuthSyncProps) {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
+    const SYNC_ATTEMPT_KEY = "oewang_sync_attempts";
+    const MAX_ATTEMPTS = 3;
+
     const performSync = async () => {
+      // Track how many times we've looped through sync in this browser session.
+      // If we exceed the limit, force a full logout to break the cycle.
+      const attempts = parseInt(sessionStorage.getItem(SYNC_ATTEMPT_KEY) || "0", 10);
+      if (attempts >= MAX_ATTEMPTS) {
+        sessionStorage.removeItem(SYNC_ATTEMPT_KEY);
+        // Hard redirect to login — clears server cookie state and forces fresh auth
+        window.location.href = `/${locale}/login?reason=sync_loop`;
+        return;
+      }
+      sessionStorage.setItem(SYNC_ATTEMPT_KEY, String(attempts + 1));
+
       try {
         const supabase = createBrowserClient();
         const {
@@ -28,6 +42,7 @@ export function AuthSync({ locale, returnTo = "/overview" }: AuthSyncProps) {
         } = await supabase.auth.getSession();
 
         if (sessionError || !session) {
+          sessionStorage.removeItem(SYNC_ATTEMPT_KEY);
           router.push(`/${locale}/login`);
           return;
         }
@@ -44,11 +59,13 @@ export function AuthSync({ locale, returnTo = "/overview" }: AuthSyncProps) {
 
         // 2. Check if we have a workspace
         if (!exchangeResult.data.workspace_id) {
+          sessionStorage.removeItem(SYNC_ATTEMPT_KEY);
           router.push(`/${locale}/create-workspace`);
           return;
         }
 
-        // 3. Perfect! Redirect to target
+        // 3. Perfect! Clear the attempt counter and redirect to target
+        sessionStorage.removeItem(SYNC_ATTEMPT_KEY);
         router.push(`/${locale}${returnTo}`);
       } catch (err: unknown) {
         console.error("Auth sync error:", err);
@@ -59,6 +76,7 @@ export function AuthSync({ locale, returnTo = "/overview" }: AuthSyncProps) {
 
     performSync();
   }, [locale, router, returnTo]);
+
 
   return (
     <div className="flex min-h-[400px] flex-col items-center justify-center space-y-4 p-6 text-center">
