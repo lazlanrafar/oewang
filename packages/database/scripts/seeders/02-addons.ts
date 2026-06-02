@@ -5,9 +5,15 @@ import * as dotenv from "dotenv";
 import * as path from "path";
 import { pricing } from "../../schema/pricing";
 
-dotenv.config({ path: path.resolve(__dirname, "../../../../.env") });
+if (!process.env.DATABASE_URL) {
+  dotenv.config({ path: path.resolve(__dirname, "../../../../.env") });
+}
 
-const ADDONS = [
+import type { InferInsertModel } from "drizzle-orm";
+
+type AddonInsert = InferInsertModel<typeof pricing>;
+
+const ADDONS: AddonInsert[] = [
   {
     name: "AI Token Pack (Small)",
     description: "Extra 1,500,000 AI tokens for your workspace every month.",
@@ -130,6 +136,7 @@ export async function seedAddons() {
   console.log("✅ Add-ons seeded.\n");
 }
 
+// @ts-ignore - Bun supports import.meta.main at runtime
 if (import.meta.main) {
   seedAddons().catch((err) => {
     console.error("❌ Failed:", err);

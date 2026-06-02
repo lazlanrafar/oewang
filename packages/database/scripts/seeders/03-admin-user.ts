@@ -6,7 +6,9 @@ import * as path from "path";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { users } from "../../schema/users";
 
-dotenv.config({ path: path.resolve(__dirname, "../../../../.env") });
+if (!process.env.DATABASE_URL) {
+  dotenv.config({ path: path.resolve(__dirname, "../../../../.env") });
+}
 
 const ADMIN_EMAIL = "lazlanrafar@gmail.com";
 
@@ -116,6 +118,7 @@ export async function seedAdminUser() {
   console.log("✅ Admin user seeded.\n");
 }
 
+// @ts-ignore - Bun supports import.meta.main at runtime
 if (import.meta.main) {
   seedAdminUser().catch((err) => {
     console.error("❌ Failed:", err);

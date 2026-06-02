@@ -5,7 +5,9 @@ import * as dotenv from "dotenv";
 import * as path from "path";
 import { pricing } from "../../schema/pricing";
 
-dotenv.config({ path: path.resolve(__dirname, "../../../../.env") });
+if (!process.env.DATABASE_URL) {
+  dotenv.config({ path: path.resolve(__dirname, "../../../../.env") });
+}
 
 const PLANS = [
   {
@@ -142,6 +144,7 @@ export async function seedPlans() {
   console.log("✅ Plans seeded.\n");
 }
 
+// @ts-ignore - Bun supports import.meta.main at runtime
 if (import.meta.main) {
   seedPlans().catch((err) => {
     console.error("❌ Failed:", err);

@@ -40,8 +40,8 @@ async function main() {
   console.log("✅ Schema applied.\n");
 
   // 3. Seed reference data
-  const { seedPlans } = await import("./seeders/01-plans");
-  const { seedAddons } = await import("./seeders/02-addons");
+  const { seedPlans } = await import("./seeders/01-plans.js");
+  const { seedAddons } = await import("./seeders/02-addons.js");
   await seedPlans();
   await seedAddons();
 
