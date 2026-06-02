@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
 
 import { getMe } from "@workspace/modules/server";
 import {
@@ -52,15 +51,12 @@ export default async function Layout({
     getDictionary(locale),
   ]);
 
-  if (!me_data) {
-    // getMe() failed (API cold start, expired token, etc.)
-    // Redirect to /sync — it will mint a fresh token and retry.
-    // The retry counter in auth-sync.tsx prevents true infinite loops.
-    redirect(`/${locale}/sync`);
-  }
-
-  const current_user = me_data.user;
-  const user_workspaces = me_data.workspaces;
+  // getMe() may return null if the API is temporarily unavailable (cold start).
+  // The proxy already verified the JWT is valid — don't redirect here, that
+  // causes ERR_TOO_MANY_REDIRECTS when the API is sleeping.
+  // Render with null data; the header guards with `current_user &&`.
+  const current_user = me_data?.user ?? null;
+  const user_workspaces = me_data?.workspaces ?? [];
 
   return (
     <SidebarProvider defaultOpen={default_open}>
