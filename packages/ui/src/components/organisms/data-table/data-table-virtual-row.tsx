@@ -11,13 +11,13 @@ import { flexRender } from "@tanstack/react-table";
 import type React from "react";
 import type { CSSProperties } from "react";
 import { memo } from "react";
+import { cn } from "../../../lib/utils";
+import { TableCell, TableRow } from "../../atoms";
 import {
   ACTIONS_FULL_WIDTH_CELL_CLASS,
   ACTIONS_STICKY_CELL_CLASS,
-  TableColumnMeta,
+  type TableColumnMeta,
 } from "./data-table-types";
-import { TableCell, TableRow } from "../../atoms";
-import { cn } from "../../../lib/utils";
 
 interface VirtualRowProps<TData> {
   row: Row<TData>;
@@ -70,7 +70,9 @@ function VirtualRowInner<TData>({
         "group cursor-pointer select-text",
         "hover:bg-[#F2F1EF] hover:dark:bg-[#0f0f0f]",
         "flex items-center border-0",
-        strategy === "absolute" ? "absolute top-0 left-0 w-full min-w-full" : "w-full min-w-full relative",
+        strategy === "absolute"
+          ? "absolute top-0 left-0 w-full min-w-full"
+          : "w-full min-w-full relative",
       )}
       style={{
         height: rowHeight,

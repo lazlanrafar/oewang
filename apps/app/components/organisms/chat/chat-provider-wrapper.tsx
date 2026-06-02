@@ -89,9 +89,7 @@ export function ChatProviderWrapper({ children, initialMessages }: Props) {
                 role: m.role as "user" | "assistant",
                 content: textContent,
                 attachments:
-                  m.role === "user"
-                    ? (mAny.metadata?.attachments as Record<string, unknown>[] | undefined)
-                    : undefined,
+                  m.role === "user" ? (mAny.metadata?.attachments as Record<string, unknown>[] | undefined) : undefined,
               };
             });
 

@@ -12,6 +12,7 @@ export interface BucketConfig {
   accessKeyId: string;
   secretAccessKey: string;
   bucketName: string;
+  region?: string;    // e.g. "us-east-1" for MinIO, "auto" for Railway/R2
   publicUrl?: string; // For public assets, if any
 }
 
@@ -21,12 +22,14 @@ export class BucketClient {
 
   constructor(config: BucketConfig) {
     this.client = new S3Client({
-      region: "auto",
+      region: config.region ?? "auto",
       endpoint: config.endpoint,
       credentials: {
         accessKeyId: config.accessKeyId,
         secretAccessKey: config.secretAccessKey,
       },
+      // Required for path-style access with MinIO
+      forcePathStyle: true,
     });
     this.bucketName = config.bucketName;
   }

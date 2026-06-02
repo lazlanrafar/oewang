@@ -1,11 +1,11 @@
-import { Elysia, t, status } from "elysia";
-import { BudgetsService } from "./budgets.service";
-import { BudgetModel } from "./budgets.model";
-import { authPlugin } from "../../plugins/auth";
-import { encryptionPlugin } from "../../plugins/encryption";
 import { ErrorCode } from "@workspace/types";
 import { buildError } from "@workspace/utils";
+import { Elysia, status, t } from "elysia";
+import { authPlugin } from "../../plugins/auth";
+import { encryptionPlugin } from "../../plugins/encryption";
 import { assertCanEditWorkspaceData } from "../workspaces/workspace-permissions";
+import { BudgetModel } from "./budgets.model";
+import { BudgetsService } from "./budgets.service";
 
 export const budgets = new Elysia({
   prefix: "/budgets",
@@ -19,16 +19,21 @@ export const budgets = new Elysia({
       if (!auth?.workspace_id) {
         throw status(401, buildError(ErrorCode.UNAUTHORIZED, "Unauthorized"));
       }
-      return BudgetsService.getStatus(auth.workspace_id, query.month, query.year);
+      return BudgetsService.getStatus(
+        auth.workspace_id,
+        query.month,
+        query.year,
+      );
     },
     {
       query: BudgetModel.statusQuery,
       detail: {
         summary: "Get budget status",
-        description: "Returns the spent vs budget status for all categories in the active workspace for a given month and year.",
+        description:
+          "Returns the spent vs budget status for all categories in the active workspace for a given month and year.",
         tags: ["Budgets"],
       },
-    }
+    },
   )
   .post(
     "/",
@@ -43,10 +48,11 @@ export const budgets = new Elysia({
       body: BudgetModel.create,
       detail: {
         summary: "Create budget",
-        description: "Creates a new recurring monthly budget for a specific expense category.",
+        description:
+          "Creates a new recurring monthly budget for a specific expense category.",
         tags: ["Budgets"],
       },
-    }
+    },
   )
   .put(
     "/:id",
@@ -65,7 +71,7 @@ export const budgets = new Elysia({
         description: "Updates the monthly amount for an existing budget.",
         tags: ["Budgets"],
       },
-    }
+    },
   )
   .delete(
     "/:id",
@@ -83,5 +89,5 @@ export const budgets = new Elysia({
         description: "Deletes a budget record.",
         tags: ["Budgets"],
       },
-    }
+    },
   );

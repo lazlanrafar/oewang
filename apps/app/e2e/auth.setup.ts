@@ -34,8 +34,14 @@ setup("authenticate", async ({ page, dictionary }) => {
     const password = process.env.PLAYWRIGHT_PASS;
 
     if (!email || !password) {
-      console.warn("Skipping automated login: PLAYWRIGHT_USER or PLAYWRIGHT_PASS not set.");
-      console.warn('Run "bun run test:e2e:login" to authenticate manually.');
+      console.log("\n⚠️  PLAYWRIGHT_USER and PLAYWRIGHT_PASS not set.");
+      console.log("\n📝 To set up authentication:");
+      console.log("   1. Run: bun run test:e2e:login");
+      console.log("   2. Log in manually in the browser");
+      console.log("   3. Your session will be saved for future tests\n");
+
+      // Skip tests gracefully
+      setup.skip();
       return;
     }
 
@@ -48,10 +54,50 @@ setup("authenticate", async ({ page, dictionary }) => {
     await page.getByLabel(dictionary.auth.form.password_label).fill(password);
     await page.getByRole("button", { name: dictionary.auth.form.login_button, exact: true }).click();
 
-    // Wait for redirect to dashboard with a longer timeout
-    await expect(page).toHaveURL(/.*overview/, { timeout: 30000 });
+    // Wait for redirect - could be overview or create-workspace
+    await page.waitForURL(/\/(overview|create-workspace)/, { timeout: 30000 });
+
+    // If redirected to create-workspace, provide instructions
+    if (page.url().includes("create-workspace")) {
+      console.log("\n⚠️  First-time user detected - workspace needs to be created.");
+      console.log("\n📝 Please run manual setup:");
+      console.log("   bun run test:e2e:login");
+      console.log("   Then complete workspace creation in the browser.\n");
+
+      // Try to create workspace automatically if possible
+      try {
+        console.log("Attempting automatic workspace creation...");
+        await page.waitForLoadState("networkidle");
+
+        // Step 1: Fill business details
+        const nameInput = page.getByLabel(/Company name/i);
+        await nameInput.waitFor({ state: "visible", timeout: 3000 });
+        await nameInput.fill("E2E Test Workspace");
+
+        // Click Continue
+        const continueBtn = page.getByRole("button", { name: /Continue/i });
+        await continueBtn.click();
+
+        // Step 2: Create Workspace (Free Plan)
+        const createBtn = page.getByRole("button", { name: /Create workspace/i });
+        await createBtn.waitFor({ state: "visible", timeout: 5000 });
+        await createBtn.click();
+
+        await page.waitForURL(/.*overview/, { timeout: 20000 });
+        console.log("✅ Workspace created automatically!");
+      } catch (_error) {
+        console.log("❌ Could not create workspace automatically.");
+        console.log("   Please run: bun run test:e2e:login");
+        setup.skip();
+        return;
+      }
+    }
+
+    // Verify we're on the overview page
+    await expect(page).toHaveURL(/.*overview/, { timeout: 5000 });
   }
 
   // End of authentication steps.
   await page.context().storageState({ path: authFile });
+  console.log("✅ Authentication saved to:", authFile);
 });

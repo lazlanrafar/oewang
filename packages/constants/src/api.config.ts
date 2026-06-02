@@ -23,7 +23,7 @@ const DEV_FLAGS = {
    * Great for testing Telegram receipt uploads and inspecting what the AI
    * would have saved without polluting real data.
    */
-  receiptDryRun: true,
+  receiptDryRun: false,
 
   /**
    * VERBOSE TOOL LOGGING

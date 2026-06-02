@@ -1,12 +1,12 @@
 import {
+  and,
   db,
   eq,
-  and,
   isNull,
-  users,
-  user_workspaces,
-  workspaces,
   pricing,
+  user_workspaces,
+  users,
+  workspaces,
 } from "@workspace/database";
 
 /**
@@ -62,7 +62,10 @@ export abstract class UsersRepository {
       });
   }
 
-  static async update(user_id: string, data: Partial<typeof users.$inferInsert>) {
+  static async update(
+    user_id: string,
+    data: Partial<typeof users.$inferInsert>,
+  ) {
     await db
       .update(users)
       .set({ ...data, updated_at: new Date() })
@@ -78,7 +81,11 @@ export abstract class UsersRepository {
     return user?.workspace_id ?? null;
   }
 
-  static async setWorkspaceId(user_id: string, workspace_id: string, tx: any = db) {
+  static async setWorkspaceId(
+    user_id: string,
+    workspace_id: string,
+    tx: any = db,
+  ) {
     await tx
       .update(users)
       .set({ workspace_id, updated_at: new Date() })

@@ -17,6 +17,7 @@ export const createCheckoutSession = async (
   addonId?: string,
   billing?: "monthly" | "annual",
   locale?: string,
+  qty?: number,
 ): Promise<ActionResponse<{ url: string }>> => {
   try {
     const response = await api.post("/mayar/checkout", {
@@ -27,6 +28,7 @@ export const createCheckoutSession = async (
       addonType,
       amount,
       addonId,
+      qty,
       billing,
       locale,
     });

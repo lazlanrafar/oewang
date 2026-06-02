@@ -1,4 +1,12 @@
-import { db, audit_logs, and, eq, desc, users, isNull } from "@workspace/database";
+import {
+  and,
+  audit_logs,
+  db,
+  desc,
+  eq,
+  isNull,
+  users,
+} from "@workspace/database";
 
 /**
  * Audit logs repository — append-only.
@@ -25,33 +33,40 @@ export abstract class AuditLogsRepository {
     });
   }
 
-  static async createMany(data: {
-    workspace_id: string;
-    user_id: string;
-    action: string;
-    entity: string;
-    entity_id: string;
-    before?: unknown;
-    after?: unknown;
-  }[],
+  static async createMany(
+    data: {
+      workspace_id: string;
+      user_id: string;
+      action: string;
+      entity: string;
+      entity_id: string;
+      before?: unknown;
+      after?: unknown;
+    }[],
     tx: any = db,
   ) {
     if (data.length === 0) return;
-    
+
     // Batch inserts for safety or just pass the whole array depending on data size
     // For thousands of rows Drizzle handles it well, but let's just insert all inside values
-    await tx.insert(audit_logs).values(data.map(d => ({
-      workspace_id: d.workspace_id,
-      user_id: d.user_id,
-      action: d.action,
-      entity: d.entity,
-      entity_id: d.entity_id,
-      before: d.before ?? null,
-      after: d.after ?? null,
-    })));
+    await tx.insert(audit_logs).values(
+      data.map((d) => ({
+        workspace_id: d.workspace_id,
+        user_id: d.user_id,
+        action: d.action,
+        entity: d.entity,
+        entity_id: d.entity_id,
+        before: d.before ?? null,
+        after: d.after ?? null,
+      })),
+    );
   }
 
-  static async findByEntity(entity: string, entity_id: string, workspace_id: string) {
+  static async findByEntity(
+    entity: string,
+    entity_id: string,
+    workspace_id: string,
+  ) {
     return db
       .select({
         id: audit_logs.id,

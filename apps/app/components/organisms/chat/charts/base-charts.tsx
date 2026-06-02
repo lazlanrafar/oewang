@@ -133,7 +133,7 @@ export function StyledTooltip({
             </p>
           );
         })}
-        {extraContent && extraContent(payload)}
+        {extraContent?.(payload)}
       </div>
     );
   }
@@ -154,20 +154,11 @@ export function ChartLegend({
   }[];
 }) {
   return (
-    <div
-      className={`flex items-center ${title ? "justify-between" : "justify-end"} mb-4`}
-    >
-      {title && (
-        <h4 className="font-normal font-serif text-[18px] text-black dark:text-white">
-          {title}
-        </h4>
-      )}
+    <div className={`flex items-center ${title ? "justify-between" : "justify-end"} mb-4`}>
+      {title && <h4 className="font-normal font-serif text-[18px] text-black dark:text-white">{title}</h4>}
       <div className="flex items-center gap-4">
         {items.map((item, index) => (
-          <div
-            key={`legend-${item.label}-${index}`}
-            className="flex items-center gap-2"
-          >
+          <div key={`legend-${item.label}-${index}`} className="flex items-center gap-2">
             <div
               className="h-2 w-2"
               style={{
@@ -180,9 +171,7 @@ export function ChartLegend({
                 borderRadius: "0",
               }}
             />
-            <span className="text-[12px] text-gray-500 dark:text-[#666666]">
-              {item.label}
-            </span>
+            <span className="text-[12px] text-gray-500 dark:text-[#666666]">{item.label}</span>
           </div>
         ))}
       </div>

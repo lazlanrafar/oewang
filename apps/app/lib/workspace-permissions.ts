@@ -5,12 +5,7 @@ export function normalizeWorkspaceRole(role?: string | null): WorkspaceRole {
     return "editor";
   }
 
-  if (
-    role === "owner" ||
-    role === "admin" ||
-    role === "editor" ||
-    role === "viewer"
-  ) {
+  if (role === "owner" || role === "admin" || role === "editor" || role === "viewer") {
     return role;
   }
 
@@ -26,20 +21,14 @@ export function getActiveWorkspaceRole(input: {
     return normalizeWorkspaceRole(input.workspace.current_user_role);
   }
 
-  const activeWorkspace = input.workspaces?.find(
-    (workspace) => workspace.id === input.workspaceId,
-  );
+  const activeWorkspace = input.workspaces?.find((workspace) => workspace.id === input.workspaceId);
 
   return normalizeWorkspaceRole(activeWorkspace?.role);
 }
 
 export function canEditWorkspaceData(role?: string | null) {
   const normalizedRole = normalizeWorkspaceRole(role);
-  return (
-    normalizedRole === "owner" ||
-    normalizedRole === "admin" ||
-    normalizedRole === "editor"
-  );
+  return normalizedRole === "owner" || normalizedRole === "admin" || normalizedRole === "editor";
 }
 
 export function canManageSensitiveWorkspace(role?: string | null) {

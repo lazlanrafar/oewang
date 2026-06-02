@@ -5,17 +5,25 @@
   "main": "./index.ts",
   "types": "./index.ts",
   "exports": {
-    ".": "./index.ts"
+    ".": "./index.ts",
+    "./test/factories": "./test/factories/index.ts"
   },
   "scripts": {
     "push": "drizzle-kit push",
-    "generate": "drizzle-kit generate",
     "migrate": "drizzle-kit migrate",
     "studio": "drizzle-kit studio",
-    "seed": "bun --env-file=../../.env scripts/seed-pricing.ts",
-    "seed:pricing": "bun --env-file=../../.env scripts/seed-pricing.ts",
+    "seed": "bun --env-file=../../.env scripts/seeders/index.ts",
+    "seed:plans": "bun --env-file=../../.env scripts/seeders/01-plans.ts",
+    "seed:addons": "bun --env-file=../../.env scripts/seeders/02-addons.ts",
+    "seed:admin": "bun --env-file=../../.env scripts/seeders/03-admin-user.ts",
     "reset": "bun --env-file=../../.env scripts/reset.ts",
-
+    "prod:migrate": "bun --env-file=../../.env.production scripts/run-migrate.ts",
+    "prod:seed": "bun --env-file=../../.env.production scripts/seeders/index.ts",
+    "prod:seed:plans": "bun --env-file=../../.env.production scripts/seeders/01-plans.ts",
+    "prod:seed:addons": "bun --env-file=../../.env.production scripts/seeders/02-addons.ts",
+    "prod:seed:admin": "bun --env-file=../../.env.production scripts/seeders/03-admin-user.ts",
+    "stamp": "bun --env-file=../../.env scripts/stamp-migrations.ts",
+    "stamp:prod": "bun --env-file=../../.env.production scripts/stamp-migrations.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

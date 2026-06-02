@@ -1,29 +1,29 @@
-import { WorkspacesRepository } from "./workspaces.repository";
-import { UsersRepository } from "../users/users.repository";
-import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import {
-  DEFAULT_INCOME_CATEGORIES,
   DEFAULT_EXPENSE_CATEGORIES,
+  DEFAULT_INCOME_CATEGORIES,
   DEFAULT_WALLET_GROUPS,
   DEFAULT_WALLETS,
+  Env,
 } from "@workspace/constants";
+import { db, eq, pricing } from "@workspace/database";
 import { sendInvitationEmail } from "@workspace/email";
+import { logger } from "@workspace/logger";
+import { ErrorCode } from "@workspace/types";
+import { buildError, generateSlug } from "@workspace/utils";
+import { status } from "elysia";
+import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { CategoriesRepository } from "../categories/categories.repository";
+import { NotificationsService } from "../notifications/notifications.service";
+import { OrdersService } from "../orders/orders.service";
 import { SettingsRepository } from "../settings/settings.repository";
+import { UsersRepository } from "../users/users.repository";
 import { WalletGroupsRepository } from "../wallets/groups/groups.repository";
 import { WalletsRepository } from "../wallets/wallets.repository";
-import { db, pricing, eq } from "@workspace/database";
-import { Env } from "@workspace/constants";
-import { OrdersService } from "../orders/orders.service";
-import { generateSlug } from "@workspace/utils";
-import { status } from "elysia";
-import { ErrorCode } from "@workspace/types";
-import { buildError } from "@workspace/utils";
-import { logger } from "@workspace/logger";
 import {
   canManageSensitiveWorkspace,
   normalizeWorkspaceRole,
 } from "./workspace-permissions";
+import { WorkspacesRepository } from "./workspaces.repository";
 
 /**
  * Workspaces service — business logic layer.
@@ -51,7 +51,9 @@ export abstract class WorkspacesService {
     const existingUser = await UsersRepository.findById(user_id);
     if (!existingUser) {
       if (!user_email) {
-        throw new Error("User profile is not synced yet. Please sign in again.");
+        throw new Error(
+          "User profile is not synced yet. Please sign in again.",
+        );
       }
       await UsersRepository.upsert({
         id: user_id,
@@ -68,8 +70,10 @@ export abstract class WorkspacesService {
     // Actually, the limit should be based on the TOTAL workspaces a user is in, or just those they OWN?
     // User request: "maximum workspace".
     // Usually, this refers to ownership.
-    const ownedWorkspaces = workspacesWithPlans.filter(w => w.role === 'owner');
-    
+    const ownedWorkspaces = workspacesWithPlans.filter(
+      (w) => w.role === "owner",
+    );
+
     // Find the maximum limit from all plans the user is part of
     const maxAllowed = workspacesWithPlans.reduce((max, curr) => {
       const planLimit = curr.plan?.max_workspaces ?? 1; // Default to 1 if no plan
@@ -92,7 +96,7 @@ export abstract class WorkspacesService {
       db
         .select({ id: pricing.id })
         .from(pricing)
-        .where(eq(pricing.name, "Free Tier"))
+        .where(eq(pricing.name, "Starter"))
         .limit(1)
         .then((res) => res[0]),
     ]);
@@ -227,19 +231,19 @@ export abstract class WorkspacesService {
     });
 
     // E. Log action (after transaction commits to respect FK constraints)
-    AuditLogsService
-      .log({
-        workspace_id: workspaceResult.id,
-        user_id,
-        action: "workspace.created",
-        entity: "workspace",
-        entity_id: workspaceResult.id,
-        after: {
-          name: workspaceResult.name,
-          slug: workspaceResult.slug,
-        },
-      })
-      .catch((err) => logger.error("Failed to log workspace creation", { err }));
+    AuditLogsService.log({
+      workspace_id: workspaceResult.id,
+      user_id,
+      action: "workspace.created",
+      entity: "workspace",
+      entity_id: workspaceResult.id,
+      after: {
+        name: workspaceResult.name,
+        slug: workspaceResult.slug,
+      },
+    }).catch((err) =>
+      logger.error("Failed to log workspace creation", { err }),
+    );
 
     return workspaceResult;
   }
@@ -281,7 +285,10 @@ export abstract class WorkspacesService {
       actor_id,
       workspace_id,
     );
-    if (!actorMembership || !canManageSensitiveWorkspace(actorMembership.role)) {
+    if (
+      !actorMembership ||
+      !canManageSensitiveWorkspace(actorMembership.role)
+    ) {
       throw new Error("Unauthorized to invite members");
     }
 
@@ -338,6 +345,15 @@ export abstract class WorkspacesService {
       after: { email, role },
     });
 
+    NotificationsService.create({
+      workspace_id,
+      user_id: actor_id,
+      type: "workspace.invitation_sent",
+      title: "Invitation Sent",
+      message: `An invitation has been sent to ${email} as ${role}.`,
+      link: "/settings/members",
+    }).catch(() => {});
+
     return invitation;
   }
 
@@ -360,7 +376,10 @@ export abstract class WorkspacesService {
       actor_id,
       workspace_id,
     );
-    if (!actorMembership || !canManageSensitiveWorkspace(actorMembership.role)) {
+    if (
+      !actorMembership ||
+      !canManageSensitiveWorkspace(actorMembership.role)
+    ) {
       throw new Error("Unauthorized to cancel invitations");
     }
 
@@ -474,6 +493,36 @@ export abstract class WorkspacesService {
       entity: "invitation",
       entity_id: invitation.id,
     });
+
+    // Notify the new member and notify workspace owners
+    const joiningUser = await UsersRepository.findById(user_id);
+    const workspaceMembers = await WorkspacesRepository.getMembers(
+      invitation.workspaceId,
+    );
+    const owners = workspaceMembers.filter(
+      (m) => m.role === "owner" || m.role === "admin",
+    );
+
+    NotificationsService.create({
+      workspace_id: invitation.workspaceId,
+      user_id,
+      type: "workspace.joined",
+      title: "Workspace Joined",
+      message: `You have joined the workspace as ${invitation.role}.`,
+      link: "/overview",
+    }).catch(() => {});
+
+    for (const owner of owners) {
+      if (owner.userId === user_id) continue;
+      NotificationsService.create({
+        workspace_id: invitation.workspaceId,
+        user_id: owner.userId,
+        type: "workspace.member_joined",
+        title: "New Member Joined",
+        message: `${joiningUser?.name || joiningUser?.email || invitation.email} has joined the workspace as ${invitation.role}.`,
+        link: "/settings/members",
+      }).catch(() => {});
+    }
 
     return invitation.workspaceId;
   }

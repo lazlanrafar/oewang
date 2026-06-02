@@ -1,5 +1,5 @@
 import { db, workspaceSubCurrencies } from "@workspace/database";
-import { eq, and, isNull, sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import type { CreateSubCurrencyInput } from "./sub-currencies.model";
 
 type WorkspaceSubCurrency = typeof workspaceSubCurrencies.$inferSelect;

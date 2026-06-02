@@ -1,11 +1,11 @@
+import { ErrorCode } from "@workspace/types";
+import { buildError, buildSuccess } from "@workspace/utils";
 import { Elysia, t } from "elysia";
-import { DebtsService } from "./debts.service";
-import { DebtsModel } from "./debts.model";
 import { authPlugin } from "../../plugins/auth";
 import { encryptionPlugin } from "../../plugins/encryption";
-import { buildError, buildSuccess } from "@workspace/utils";
-import { ErrorCode } from "@workspace/types";
 import { assertCanEditWorkspaceData } from "../workspaces/workspace-permissions";
+import { DebtsModel } from "./debts.model";
+import { DebtsService } from "./debts.service";
 
 export const debtsController = new Elysia({ prefix: "/debts" })
   .use(authPlugin)
@@ -32,7 +32,8 @@ export const debtsController = new Elysia({ prefix: "/debts" })
       query: DebtsModel.listQuery,
       detail: {
         summary: "Get All Debts",
-        description: "Returns a paginated list of debts (loans and payables) for the active workspace.",
+        description:
+          "Returns a paginated list of debts (loans and payables) for the active workspace.",
         tags: ["Debts"],
       },
     },
@@ -43,11 +44,7 @@ export const debtsController = new Elysia({ prefix: "/debts" })
     "/",
     async ({ auth, workspaceId, userId, body, set }) => {
       assertCanEditWorkspaceData(auth?.workspace_role);
-      const data = await DebtsService.createDebt(
-        workspaceId!,
-        userId!,
-        body,
-      );
+      const data = await DebtsService.createDebt(workspaceId!, userId!, body);
       set.status = 201;
       return data;
     },
@@ -55,7 +52,8 @@ export const debtsController = new Elysia({ prefix: "/debts" })
       body: DebtsModel.create,
       detail: {
         summary: "Create Debt",
-        description: "Creates a new debt record (money owed to others or owed by others).",
+        description:
+          "Creates a new debt record (money owed to others or owed by others).",
         tags: ["Debts"],
       },
     },
@@ -79,7 +77,8 @@ export const debtsController = new Elysia({ prefix: "/debts" })
       body: DebtsModel.update,
       detail: {
         summary: "Update Debt",
-        description: "Updates an existing debt record's terms, amount, or contact details.",
+        description:
+          "Updates an existing debt record's terms, amount, or contact details.",
         tags: ["Debts"],
       },
     },
@@ -104,7 +103,8 @@ export const debtsController = new Elysia({ prefix: "/debts" })
       body: DebtsModel.pay,
       detail: {
         summary: "Pay Debt",
-        description: "Records a payment against a debt. If fully paid, the debt status is updated.",
+        description:
+          "Records a payment against a debt. If fully paid, the debt status is updated.",
         tags: ["Debts"],
       },
     },
@@ -115,11 +115,7 @@ export const debtsController = new Elysia({ prefix: "/debts" })
     "/bulk-pay",
     async ({ auth, workspaceId, userId, body, set }) => {
       assertCanEditWorkspaceData(auth?.workspace_role);
-      const data = await DebtsService.bulkPayDebt(
-        workspaceId!,
-        userId!,
-        body,
-      );
+      const data = await DebtsService.bulkPayDebt(workspaceId!, userId!, body);
       set.status = 201;
       return data;
     },
@@ -127,7 +123,8 @@ export const debtsController = new Elysia({ prefix: "/debts" })
       body: DebtsModel.bulkPay,
       detail: {
         summary: "Bulk Pay Debts",
-        description: "Records payments for multiple debts in a single transaction.",
+        description:
+          "Records payments for multiple debts in a single transaction.",
         tags: ["Debts"],
       },
     },
@@ -149,22 +146,19 @@ export const debtsController = new Elysia({ prefix: "/debts" })
       params: t.Object({ id: t.String() }),
       detail: {
         summary: "Delete Debt",
-        description: "Soft-deletes a debt record. Associated payments remain as transactions but the debt relationship is hidden.",
+        description:
+          "Soft-deletes a debt record. Associated payments remain as transactions but the debt relationship is hidden.",
         tags: ["Debts"],
       },
     },
   )
-  
+
   // Split bill
   .post(
     "/split",
     async ({ auth, workspaceId, userId, body, set }) => {
       assertCanEditWorkspaceData(auth?.workspace_role);
-      const data = await DebtsService.splitBill(
-        workspaceId!,
-        userId!,
-        body,
-      );
+      const data = await DebtsService.splitBill(workspaceId!, userId!, body);
       set.status = 201;
       return data;
     },
@@ -172,7 +166,8 @@ export const debtsController = new Elysia({ prefix: "/debts" })
       body: DebtsModel.splitBill,
       detail: {
         summary: "Split Bill",
-        description: "Creates multiple debt records from a single amount, distributed among multiple contacts.",
+        description:
+          "Creates multiple debt records from a single amount, distributed among multiple contacts.",
         tags: ["Debts"],
       },
     },

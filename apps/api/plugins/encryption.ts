@@ -1,9 +1,8 @@
 import { Env } from "@workspace/constants";
 import { decrypt, encrypt } from "@workspace/encryption";
-import { Elysia } from "elysia";
-
 import { ErrorCode } from "@workspace/types";
 import { buildError } from "@workspace/utils";
+import type { Elysia } from "elysia";
 
 import { appendFileSync } from "fs";
 
@@ -25,7 +24,9 @@ export const encryptionPlugin = (app: Elysia) =>
         typeof body === "object" &&
         "data" in body
       ) {
-        console.log(`[Encryption] onTransform: path=${path}, decrypting body...`);
+        console.log(
+          `[Encryption] onTransform: path=${path}, decrypting body...`,
+        );
         const secret = Env.ENCRYPTION_KEY;
         if (!secret) {
           console.error("[Encryption] ENCRYPTION_KEY missing in Env");
@@ -35,9 +36,9 @@ export const encryptionPlugin = (app: Elysia) =>
         try {
           const decrypted = decrypt((body as any).data, secret);
           const parsed = JSON.parse(decrypted);
-          
+
           // Mutate the body object for subsequent handlers and validation
-          Object.keys(body).forEach(key => delete (body as any)[key]);
+          Object.keys(body).forEach((key) => { delete (body as any)[key]; });
           Object.assign(body, parsed);
         } catch (error: any) {
           console.error(`[Encryption] Decrypt failed for ${path}:`, error);
@@ -72,7 +73,7 @@ export const encryptionPlugin = (app: Elysia) =>
           const encrypted = encrypt(JSON.stringify(response), secret);
           // Mark as encrypted to prevent double encryption in nested .use()
           const _result = { data: encrypted, _is_encrypted: true };
-          
+
           return new Response(JSON.stringify({ data: encrypted }), {
             status: typeof _set.status === "number" ? _set.status : 200,
             headers: {

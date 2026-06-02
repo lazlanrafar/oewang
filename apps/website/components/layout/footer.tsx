@@ -1,10 +1,13 @@
 "use client";
 
-import { useTheme } from "next-themes";
-import Link from "next/link";
 import { useEffect, useState } from "react";
+
+import Link from "next/link";
 import { usePathname } from "next/navigation";
+
 import { Moon, Sun } from "lucide-react";
+import { useTheme } from "next-themes";
+
 import type { WebsiteDictionary } from "@/lib/translations";
 
 const FOOTER_GROUPS = [
@@ -44,13 +47,7 @@ const LANGUAGE_OPTIONS = [
   { code: "ja", label: "JP" },
 ] as const;
 
-export function Footer({
-  locale,
-  dictionary,
-}: {
-  locale: string;
-  dictionary: WebsiteDictionary;
-}) {
+export function Footer({ locale, dictionary }: { locale: string; dictionary: WebsiteDictionary }) {
   const { resolvedTheme, setTheme } = useTheme();
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
@@ -78,9 +75,7 @@ export function Footer({
             <p className="text-sm text-muted-foreground mb-5">{dictionary.footer.tagline}</p>
             <button
               type="button"
-              onClick={() =>
-                setTheme(resolvedTheme === "dark" ? "light" : "dark")
-              }
+              onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
               className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
               aria-label="Toggle theme"
             >
@@ -105,9 +100,7 @@ export function Footer({
 
           {FOOTER_GROUPS.map((group) => (
             <div key={group.title}>
-              <h3 className="text-xs uppercase tracking-[0.18em] text-foreground/80 mb-3">
-                {group.title}
-              </h3>
+              <h3 className="text-xs uppercase tracking-[0.18em] text-foreground/80 mb-3">{group.title}</h3>
               <div className="space-y-2.5">
                 {group.links.map((item) => (
                   <Link

@@ -1,16 +1,20 @@
+import { logger } from "@workspace/logger";
+import { ErrorCode } from "@workspace/types";
+import {
+  buildError,
+  buildPaginatedSuccess,
+  buildSuccess,
+} from "@workspace/utils";
 import { Elysia, t } from "elysia";
-import { VaultService } from "./vault.service";
 import { authPlugin } from "../../plugins/auth";
 import { encryptionPlugin } from "../../plugins/encryption";
-import { buildPaginatedSuccess, buildSuccess, buildError } from "@workspace/utils";
-import { ErrorCode } from "@workspace/types";
-import { logger } from "@workspace/logger";
-import {
-  uploadFileBody,
-  updateTagsBody,
-  getVaultFilesQuery,
-} from "./vault.dto";
 import { assertCanEditWorkspaceData } from "../workspaces/workspace-permissions";
+import {
+  getVaultFilesQuery,
+  updateTagsBody,
+  uploadFileBody,
+} from "./vault.dto";
+import { VaultService } from "./vault.service";
 
 export const vaultController = new Elysia({ prefix: "/vault" })
   .use(authPlugin)
@@ -38,7 +42,8 @@ export const vaultController = new Elysia({ prefix: "/vault" })
       query: getVaultFilesQuery,
       detail: {
         summary: "List Vault Files",
-        description: "Returns a paginated list of files stored in the workspace vault.",
+        description:
+          "Returns a paginated list of files stored in the workspace vault.",
         tags: ["Vault"],
       },
     },
@@ -83,7 +88,8 @@ export const vaultController = new Elysia({ prefix: "/vault" })
     {
       detail: {
         summary: "Delete File",
-        description: "Permanently deletes a file from the vault and associated storage.",
+        description:
+          "Permanently deletes a file from the vault and associated storage.",
         tags: ["Vault"],
       },
     },
@@ -97,7 +103,8 @@ export const vaultController = new Elysia({ prefix: "/vault" })
     {
       detail: {
         summary: "Get Download URL",
-        description: "Generates a temporary signed URL for downloading a file from the vault.",
+        description:
+          "Generates a temporary signed URL for downloading a file from the vault.",
         tags: ["Vault"],
       },
     },
@@ -106,14 +113,20 @@ export const vaultController = new Elysia({ prefix: "/vault" })
     "/:id/tags",
     async ({ auth, workspaceId, userId, params: { id }, body: { tags } }) => {
       assertCanEditWorkspaceData(auth?.workspace_role);
-      const data = await VaultService.updateTags(workspaceId!, userId!, id, tags);
+      const data = await VaultService.updateTags(
+        workspaceId!,
+        userId!,
+        id,
+        tags,
+      );
       return buildSuccess(data, "Tags updated successfully");
     },
     {
       body: updateTagsBody,
       detail: {
         summary: "Update File Tags",
-        description: "Updates the organizational tags associated with a specific file.",
+        description:
+          "Updates the organizational tags associated with a specific file.",
         tags: ["Vault"],
       },
     },

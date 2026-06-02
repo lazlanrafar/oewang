@@ -15,7 +15,9 @@ describe("billing.utils", () => {
   } as any;
 
   it("prefers explicit annual billing", () => {
-    expect(inferBillingInterval({ billing: "annual", matchedPlan })).toBe("annual");
+    expect(inferBillingInterval({ billing: "annual", matchedPlan })).toBe(
+      "annual",
+    );
   });
 
   it("infers annual billing from yearly Mayar price id", () => {

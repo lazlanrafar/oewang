@@ -1,7 +1,7 @@
-import * as React from "react";
-import { Button } from "../../atoms/button";
 import { Plus } from "lucide-react";
+import type * as React from "react";
 import { cn } from "../../../lib/utils";
+import { Button } from "../../atoms/button";
 
 interface DataTableEmptyStateProps {
   title: string;

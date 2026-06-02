@@ -46,10 +46,7 @@ export function assertCanManageSensitiveWorkspace(role?: string | null) {
   if (!canManageSensitiveWorkspace(role)) {
     throw status(
       403,
-      buildError(
-        ErrorCode.FORBIDDEN,
-        "Admin or Owner access required.",
-      ),
+      buildError(ErrorCode.FORBIDDEN, "Admin or Owner access required."),
     );
   }
 }

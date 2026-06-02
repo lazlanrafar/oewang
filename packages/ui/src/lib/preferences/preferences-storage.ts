@@ -1,9 +1,8 @@
 "use client";
 
-import { setValueToCookie } from "../server-actions";
-
 import { setClientCookie } from "../cookie.client";
 import { setLocalStorageValue } from "../local-storage.client";
+import { setValueToCookie } from "../server-actions";
 import {
   PREFERENCE_PERSISTENCE,
   type PreferenceKey,

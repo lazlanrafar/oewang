@@ -1,9 +1,16 @@
-import { Elysia } from "elysia";
-import { createClient } from "@workspace/supabase/admin";
-import { db, eq, and, isNull } from "@workspace/database";
-import { users, user_workspaces, workspaces } from "@workspace/database";
-import * as jose from "jose";
 import { Env } from "@workspace/constants";
+import {
+  and,
+  db,
+  eq,
+  isNull,
+  user_workspaces,
+  users,
+  workspaces,
+} from "@workspace/database";
+import { createClient } from "@workspace/supabase/admin";
+import { Elysia } from "elysia";
+import * as jose from "jose";
 import { normalizeWorkspaceRole } from "../modules/workspaces/workspace-permissions";
 
 const JWT_SECRET_KEY = () => new TextEncoder().encode(Env.JWT_SECRET!);
@@ -191,7 +198,9 @@ export async function getAuth(token: string) {
       return null;
     }
 
-    const membershipWorkspaceIds = await getActiveMembershipWorkspaceIds(user.id);
+    const membershipWorkspaceIds = await getActiveMembershipWorkspaceIds(
+      user.id,
+    );
 
     // Look up user record for workspace_id and system role
     const [db_user] = await db
@@ -217,7 +226,8 @@ export async function getAuth(token: string) {
       workspace_role,
       workspaceRole: workspace_role,
       email: db_user?.email || user.email || "",
-      system_role: db_user?.system_role || user.app_metadata?.system_role || "user",
+      system_role:
+        db_user?.system_role || user.app_metadata?.system_role || "user",
     } as const;
   } catch {
     return null;

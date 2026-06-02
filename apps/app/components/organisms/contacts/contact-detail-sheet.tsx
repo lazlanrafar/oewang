@@ -404,9 +404,7 @@ export function ContactDetailSheet({ contact, open, onClose, onDebtClick, dictio
                                       : "text-rose-600 dark:text-rose-400",
                                   )}
                                 >
-                                  {isReceivable
-                                    ? dictionary.debts.types.receivable
-                                    : dictionary.debts.types.payable}
+                                  {isReceivable ? dictionary.debts.types.receivable : dictionary.debts.types.payable}
                                 </span>
                                 <Badge
                                   variant={debt.status === "paid" ? "default" : "outline"}

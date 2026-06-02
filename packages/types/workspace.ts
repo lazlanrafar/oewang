@@ -3,11 +3,13 @@ import type { Pricing } from "./pricing";
 export type WorkspaceRole = "owner" | "admin" | "editor" | "viewer";
 
 export type WorkspaceActiveAddon = {
+  row_id: string;
   id: string;
   addon_type: "ai" | "vault" | null;
   max_ai_tokens: number;
   max_vault_size_mb: number;
   amount: number;
+  qty: number;
   status: "active" | "cancelled";
   created_at: string | Date;
 };

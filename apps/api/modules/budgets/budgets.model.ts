@@ -1,5 +1,5 @@
-import { t } from "elysia";
 import { CreateBudgetDto, UpdateBudgetDto } from "@workspace/types";
+import { t } from "elysia";
 
 export const BudgetModel = {
   create: CreateBudgetDto,

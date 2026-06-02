@@ -1,30 +1,20 @@
 import { cookies } from "next/headers";
-import { Header } from "@/components/layout/header";
+
 import { Footer } from "@/components/layout/footer";
+import { Header } from "@/components/layout/header";
 import { CTASection } from "@/components/sections/cta-section";
 import { getDictionary } from "@/lib/translations";
 
-export default async function StoryPage({
-  params,
-}: {
-  params: Promise<{ locale: string }>;
-}) {
+export default async function StoryPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   const dictionary = getDictionary(locale);
   const cookieStore = await cookies();
-  const isLoggedIn = cookieStore.has(
-    process.env.NEXT_PUBLIC_SESSION_COOKIE_NAME ?? "oewang-session",
-  );
+  const isLoggedIn = cookieStore.has(process.env.NEXT_PUBLIC_SESSION_COOKIE_NAME ?? "oewang-session");
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
   return (
     <div className="flex flex-col min-h-screen">
-      <Header
-        isLoggedIn={isLoggedIn}
-        appUrl={appUrl}
-        locale={locale}
-        dictionary={dictionary}
-      />
+      <Header isLoggedIn={isLoggedIn} appUrl={appUrl} locale={locale} dictionary={dictionary} />
 
       <main className="flex-1 pt-24">
         <section className="py-16 sm:py-24">
@@ -74,12 +64,7 @@ export default async function StoryPage({
           </div>
         </section>
 
-        <CTASection
-          isLoggedIn={isLoggedIn}
-          appUrl={appUrl}
-          locale={locale}
-          dictionary={dictionary}
-        />
+        <CTASection isLoggedIn={isLoggedIn} appUrl={appUrl} locale={locale} dictionary={dictionary} />
       </main>
 
       <Footer locale={locale} dictionary={dictionary} />

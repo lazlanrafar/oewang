@@ -1,13 +1,12 @@
 "use client";
 
+import type { RevenueTrendChartProps } from "@workspace/types";
 import { Bar, Line, Tooltip, XAxis, YAxis } from "recharts";
 
 import { BaseChart, StyledTooltip } from "./base-charts";
 import { commonChartConfig, createCompactTickFormatter, useChartMargin } from "./chart-utils";
 import { formatAmount } from "./format-amount";
 import { SelectableChartWrapper } from "./selectable-chart-wrapper";
-
-import type { RevenueTrendChartProps } from "@workspace/types";
 
 export function RevenueTrendChart({
   data,
@@ -53,13 +52,15 @@ export function RevenueTrendChart({
           content={
             <StyledTooltip
               formatter={(value: number | string, name: string) => {
-                const formattedValue = formatAmount({
-                  amount: typeof value === "number" ? value : Number(value),
-                  currency,
-                  locale: locale ?? undefined,
-                  maximumFractionDigits: 0,
-                }) ?? `${currency}${value.toLocaleString()}`;
-                const displayName = name === "revenue" ? "This Year" : name === "lastYearRevenue" ? "Last Year" : "Average";
+                const formattedValue =
+                  formatAmount({
+                    amount: typeof value === "number" ? value : Number(value),
+                    currency,
+                    locale: locale ?? undefined,
+                    maximumFractionDigits: 0,
+                  }) ?? `${currency}${value.toLocaleString()}`;
+                const displayName =
+                  name === "revenue" ? "This Year" : name === "lastYearRevenue" ? "Last Year" : "Average";
                 return [formattedValue, displayName];
               }}
             />

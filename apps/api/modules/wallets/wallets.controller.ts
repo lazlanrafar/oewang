@@ -1,10 +1,10 @@
+import { ErrorCode } from "@workspace/types";
+import { buildError, buildSuccess } from "@workspace/utils";
 import { Elysia, t } from "elysia";
-import { WalletsService } from "./wallets.service";
 // ... (omitted for brevity, will use literal matches)
 import { authPlugin } from "../../plugins/auth";
 import { encryptionPlugin } from "../../plugins/encryption";
-import { buildSuccess, buildError } from "@workspace/utils";
-import { ErrorCode } from "@workspace/types";
+import { assertCanEditWorkspaceData } from "../workspaces/workspace-permissions";
 import {
   createWalletBody,
   createWalletGroupBody,
@@ -13,7 +13,7 @@ import {
   updateWalletBody,
   updateWalletGroupBody,
 } from "./wallets.dto";
-import { assertCanEditWorkspaceData } from "../workspaces/workspace-permissions";
+import { WalletsService } from "./wallets.service";
 
 export const walletsController = new Elysia()
   .use(authPlugin)
@@ -39,7 +39,8 @@ export const walletsController = new Elysia()
         {
           detail: {
             summary: "Get Wallet Groups",
-            description: "Returns all wallet groups for the active workspace, including their sorted order.",
+            description:
+              "Returns all wallet groups for the active workspace, including their sorted order.",
             tags: ["Wallets"],
           },
         },
@@ -48,7 +49,11 @@ export const walletsController = new Elysia()
         "/",
         async ({ auth, workspaceId, userId, body, set }) => {
           assertCanEditWorkspaceData(auth?.workspace_role);
-          const data = await WalletsService.createGroup(workspaceId!, userId!, body);
+          const data = await WalletsService.createGroup(
+            workspaceId!,
+            userId!,
+            body,
+          );
           set.status = 201;
           return buildSuccess(data, "Wallet group created");
         },
@@ -65,14 +70,19 @@ export const walletsController = new Elysia()
         "/reorder",
         async ({ auth, workspaceId, userId, body }) => {
           assertCanEditWorkspaceData(auth?.workspace_role);
-          await WalletsService.reorderGroups(workspaceId!, userId!, body.updates);
+          await WalletsService.reorderGroups(
+            workspaceId!,
+            userId!,
+            body.updates,
+          );
           return buildSuccess(null, "Wallet groups reordered");
         },
         {
           body: reorderWalletGroupsBody,
           detail: {
             summary: "Reorder Wallet Groups",
-            description: "Updates the sorting order for multiple wallet groups simultaneously.",
+            description:
+              "Updates the sorting order for multiple wallet groups simultaneously.",
             tags: ["Wallets"],
           },
         },
@@ -81,14 +91,20 @@ export const walletsController = new Elysia()
         "/:id",
         async ({ auth, workspaceId, userId, params: { id }, body }) => {
           assertCanEditWorkspaceData(auth?.workspace_role);
-          const data = await WalletsService.updateGroup(workspaceId!, userId!, id, body);
+          const data = await WalletsService.updateGroup(
+            workspaceId!,
+            userId!,
+            id,
+            body,
+          );
           return buildSuccess(data, "Wallet group updated");
         },
         {
           body: updateWalletGroupBody,
           detail: {
             summary: "Update Wallet Group",
-            description: "Updates the name or settings of an existing wallet group.",
+            description:
+              "Updates the name or settings of an existing wallet group.",
             tags: ["Wallets"],
           },
         },
@@ -97,13 +113,18 @@ export const walletsController = new Elysia()
         "/:id",
         async ({ auth, workspaceId, userId, params: { id } }) => {
           assertCanEditWorkspaceData(auth?.workspace_role);
-          const data = await WalletsService.deleteGroup(workspaceId!, userId!, id);
+          const data = await WalletsService.deleteGroup(
+            workspaceId!,
+            userId!,
+            id,
+          );
           return buildSuccess(data, "Wallet group deleted");
         },
         {
           detail: {
             summary: "Delete Wallet Group",
-            description: "Soft-deletes a wallet group. Wallets inside the group will be moved to 'Uncategorized'.",
+            description:
+              "Soft-deletes a wallet group. Wallets inside the group will be moved to 'Uncategorized'.",
             tags: ["Wallets"],
           },
         },
@@ -126,7 +147,8 @@ export const walletsController = new Elysia()
           }),
           detail: {
             summary: "Get Wallets",
-            description: "Returns a paginated list of wallets for the workspace, with optional filtering by group and search term.",
+            description:
+              "Returns a paginated list of wallets for the workspace, with optional filtering by group and search term.",
             tags: ["Wallets"],
           },
         },
@@ -149,7 +171,11 @@ export const walletsController = new Elysia()
         "/",
         async ({ auth, workspaceId, userId, body, set }) => {
           assertCanEditWorkspaceData(auth?.workspace_role);
-          const data = await WalletsService.createWallet(workspaceId!, userId!, body);
+          const data = await WalletsService.createWallet(
+            workspaceId!,
+            userId!,
+            body,
+          );
           set.status = 201;
           return buildSuccess(data, "Wallet created");
         },
@@ -157,7 +183,8 @@ export const walletsController = new Elysia()
           body: createWalletBody,
           detail: {
             summary: "Create Wallet",
-            description: "Creates a new wallet (bank account, cash, etc.) with an initial balance.",
+            description:
+              "Creates a new wallet (bank account, cash, etc.) with an initial balance.",
             tags: ["Wallets"],
           },
         },
@@ -166,14 +193,19 @@ export const walletsController = new Elysia()
         "/reorder",
         async ({ auth, workspaceId, userId, body }) => {
           assertCanEditWorkspaceData(auth?.workspace_role);
-          await WalletsService.reorderWallets(workspaceId!, userId!, body.updates);
+          await WalletsService.reorderWallets(
+            workspaceId!,
+            userId!,
+            body.updates,
+          );
           return buildSuccess(null, "Wallets reordered");
         },
         {
           body: reorderWalletsBody,
           detail: {
             summary: "Reorder Wallets",
-            description: "Updates the sorting order and group assignment for multiple wallets.",
+            description:
+              "Updates the sorting order and group assignment for multiple wallets.",
             tags: ["Wallets"],
           },
         },
@@ -194,7 +226,8 @@ export const walletsController = new Elysia()
           body: updateWalletBody,
           detail: {
             summary: "Update Wallet",
-            description: "Updates wallet details like name, group, or visibility in totals.",
+            description:
+              "Updates wallet details like name, group, or visibility in totals.",
             tags: ["Wallets"],
           },
         },
@@ -203,7 +236,11 @@ export const walletsController = new Elysia()
         "/:id",
         async ({ auth, workspaceId, userId, params: { id } }) => {
           assertCanEditWorkspaceData(auth?.workspace_role);
-          const data = await WalletsService.deleteWallet(workspaceId!, userId!, id);
+          const data = await WalletsService.deleteWallet(
+            workspaceId!,
+            userId!,
+            id,
+          );
           return buildSuccess(data, "Wallet deleted");
         },
         { detail: { summary: "Delete Wallet", tags: ["Wallets"] } },

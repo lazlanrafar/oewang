@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import { dehydrate, QueryClient } from "@tanstack/react-query";
+import { getSubCurrencies, getTransactionSettings } from "@workspace/modules/setting/setting.action";
 import {
   CONTENT_LAYOUT_VALUES,
   type FontKey,
@@ -46,6 +48,8 @@ export default async function RootLayout({
 }: Readonly<{ children: ReactNode; params: Promise<{ locale: string }> }>) {
   const { locale } = await params;
 
+  const settings_query_client = new QueryClient();
+
   const [
     theme_mode,
     theme_preset,
@@ -64,6 +68,24 @@ export default async function RootLayout({
     getPreference("sidebar_collapsible", SIDEBAR_COLLAPSIBLE_VALUES, PREFERENCE_DEFAULTS.sidebar_collapsible),
     getPreference("font", FONT_VALUES_PREF, PREFERENCE_DEFAULTS.font),
     getDictionary(locale as Locale),
+    // Prefetch workspace settings so they're in the TanStack cache before the
+    // client renders — eliminates the "$ 12.000" → "IDR 12.0000" flash.
+    settings_query_client.prefetchQuery({
+      queryKey: ["settings", "transaction"],
+      queryFn: async () => {
+        const result = await getTransactionSettings();
+        return result.success ? (result.data ?? null) : null;
+      },
+      staleTime: 60 * 60 * 1000,
+    }),
+    settings_query_client.prefetchQuery({
+      queryKey: ["settings", "sub-currencies"],
+      queryFn: async () => {
+        const result = await getSubCurrencies();
+        return result.success ? (result.data ?? []) : [];
+      },
+      staleTime: 60 * 60 * 1000,
+    }),
   ]);
 
   return (
@@ -93,7 +115,7 @@ export default async function RootLayout({
           font={font}
         >
           <NuqsAdapter>
-            <Providers dictionary={dictionary}>
+            <Providers dictionary={dictionary} dehydratedState={dehydrate(settings_query_client)}>
               {children}
               <Toaster />
             </Providers>

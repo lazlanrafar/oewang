@@ -2,27 +2,27 @@
 
 import * as React from "react";
 import {
+  CartesianGrid,
   Line,
   LineChart,
-  CartesianGrid,
+  ResponsiveContainer,
   XAxis,
   YAxis,
-  ResponsiveContainer,
 } from "recharts";
+import { cn } from "../../lib/utils";
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
-  CardDescription,
 } from "../atoms/card";
+import type { ChartConfig } from "../atoms/chart";
 import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
 } from "../atoms/chart";
-import type { ChartConfig } from "../atoms/chart";
-import { cn } from "../../lib/utils";
 
 export interface LineMetricDataPoint {
   name: string;

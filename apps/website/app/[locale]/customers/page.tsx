@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
-import { Header } from "@/components/layout/header";
+
 import { Footer } from "@/components/layout/footer";
+import { Header } from "@/components/layout/header";
 import { CTASection } from "@/components/sections/cta-section";
 import { getDictionary } from "@/lib/translations";
 
@@ -41,8 +42,12 @@ export default async function CustomersPage({ params }: { params: Promise<{ loca
       <main className="flex-1 pt-24">
         <section className="py-16 sm:py-20 border-b border-border/70">
           <div className="max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8">
-            <h1 className="font-serif text-4xl sm:text-6xl tracking-tight max-w-4xl">Customer management and revenue tracking</h1>
-            <p className="text-muted-foreground text-base sm:text-lg mt-5 max-w-3xl">Understand customer contribution and payment dynamics so finance actions are based on clear evidence.</p>
+            <h1 className="font-serif text-4xl sm:text-6xl tracking-tight max-w-4xl">
+              Customer management and revenue tracking
+            </h1>
+            <p className="text-muted-foreground text-base sm:text-lg mt-5 max-w-3xl">
+              Understand customer contribution and payment dynamics so finance actions are based on clear evidence.
+            </p>
           </div>
         </section>
 

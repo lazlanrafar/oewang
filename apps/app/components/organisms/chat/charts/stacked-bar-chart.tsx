@@ -1,9 +1,9 @@
 "use client";
 
+import type { StackedBarChartProps } from "@workspace/types";
 import { format, parseISO } from "date-fns";
 import { Bar, Line, Tooltip, XAxis, YAxis } from "recharts";
 
-import type { StackedBarChartProps } from "@workspace/types";
 import { BaseChart, StyledTooltip } from "./base-charts";
 import { commonChartConfig, createCompactTickFormatter, useChartMargin } from "./chart-utils";
 import { formatAmount } from "./format-amount";
@@ -84,7 +84,13 @@ export function StackedBarChart({
 
         <Bar barSize={16} dataKey="recurring" stackId="a" fill="url(#incomePattern)" isAnimationActive={false} />
 
-        <Bar barSize={16} dataKey="value" stackId="a" fill="var(--chart-bar-fill-secondary)" isAnimationActive={false} />
+        <Bar
+          barSize={16}
+          dataKey="value"
+          stackId="a"
+          fill="var(--chart-bar-fill-secondary)"
+          isAnimationActive={false}
+        />
 
         <Line
           type="monotone"

@@ -1,27 +1,20 @@
-import { Elysia, t } from "elysia";
-import { authPlugin } from "../../plugins/auth";
-import { encryptionPlugin } from "../../plugins/encryption";
-import { IntegrationsService } from "./integrations.service";
-import { IntegrationsRepository } from "./integrations.repository";
-import { ConnectWhatsAppDto } from "./integrations.dto";
-import { whatsappWebController } from "./whatsapp-web/whatsapp-web.controller";
-import { logger } from "@workspace/logger";
 import { Env } from "@workspace/constants";
-import { status } from "elysia";
+import { logger } from "@workspace/logger";
 import { ErrorCode } from "@workspace/types";
 import { buildError, buildSuccess } from "@workspace/utils";
+import { Elysia, status, t } from "elysia";
+import { authPlugin } from "../../plugins/auth";
+import { assertCanManageSensitiveWorkspace } from "../workspaces/workspace-permissions";
+import { ConnectWhatsAppDto } from "./integrations.dto";
+import { IntegrationsService } from "./integrations.service";
 import {
   getPublicRequestUrl,
   parseFormBody,
   verifyTelegramSecret,
   verifyTwilioSignature,
 } from "./webhook-security";
-import { assertCanManageSensitiveWorkspace } from "../workspaces/workspace-permissions";
-import { SystemSettingsRepository } from "../system-settings/system-settings.repository";
 
 export const integrationsController = new Elysia({ prefix: "/integrations" })
-  // WhatsApp Web sub-controller (whatsapp-web.js library)
-  .use(whatsappWebController)
   // Public webhook route for Twilio WhatsApp
   .post(
     "/whatsapp/twilio/webhook",
@@ -68,23 +61,9 @@ export const integrationsController = new Elysia({ prefix: "/integrations" })
       },
     },
   )
-  .get(
-    "/whatsapp-web/public-info",
-    async () => {
-      const phoneNumber = await SystemSettingsRepository.getSetting("WHATSAPP_WEB_NUMBER");
-      return buildSuccess({ phoneNumber }, "WhatsApp Web public info retrieved");
-    },
-    {
-      detail: {
-        summary: "WhatsApp Web Public Info",
-        description: "Returns the global WhatsApp Web phone number for the connection QR code.",
-        tags: ["Integrations"],
-      },
-    },
-  )
   .post(
     "/telegram/webhook",
-    async ({ request, set }) => {
+    async ({ request, set, body }) => {
       const expectedSecret = Env.TELEGRAM_WEBHOOK_SECRET;
       const receivedSecret = request.headers.get(
         "x-telegram-bot-api-secret-token",
@@ -107,12 +86,18 @@ export const integrationsController = new Elysia({ prefix: "/integrations" })
         }
       }
 
-      const rawBody = await request.text();
       let parsedBody: Record<string, any>;
 
-      try {
-        parsedBody = JSON.parse(rawBody);
-      } catch {
+      if (body && typeof body === "object") {
+        parsedBody = body as Record<string, any>;
+      } else if (typeof body === "string") {
+        try {
+          parsedBody = JSON.parse(body);
+        } catch {
+          set.status = 400;
+          return "Invalid JSON payload";
+        }
+      } else {
         set.status = 400;
         return "Invalid JSON payload";
       }
@@ -191,6 +176,30 @@ export const integrationsController = new Elysia({ prefix: "/integrations" })
         summary: "Connect Telegram",
         description:
           "Links a Telegram chat ID to the workspace for AI-powered chat and notifications.",
+        tags: ["Integrations"],
+      },
+    },
+  )
+  .post(
+    "/:provider/disconnect",
+    async ({ params, auth }) => {
+      if (!auth?.workspaceId) {
+        throw status(401, buildError(ErrorCode.UNAUTHORIZED, "Unauthorized"));
+      }
+      assertCanManageSensitiveWorkspace(auth.workspace_role);
+
+      return await IntegrationsService.disconnectIntegration(
+        auth.workspaceId,
+        params.provider,
+        auth.user_id,
+      );
+    },
+    {
+      params: t.Object({ provider: t.String() }),
+      detail: {
+        summary: "Disconnect Integration",
+        description:
+          "Disconnects an installed integration from the current workspace.",
         tags: ["Integrations"],
       },
     },

@@ -6,8 +6,8 @@ import {
   getRevenueMetrics,
   getTransactionSettings,
 } from "@workspace/modules/server";
-import type { Metadata } from "next";
 import { endOfMonth, startOfMonth, subMonths } from "date-fns";
+import type { Metadata } from "next";
 
 import ChatInterface from "@/components/organisms/chat/chat-interface";
 import { ChatProviderWrapper } from "@/components/organisms/chat/chat-provider-wrapper";
@@ -25,17 +25,13 @@ export default async function OverviewPage(props: {
 }) {
   const { locale } = await props.params;
   const searchParams = await props.searchParams;
-  const initialTab =
-    typeof searchParams.tab === "string" ? searchParams.tab : "overview";
+  const initialTab = typeof searchParams.tab === "string" ? searchParams.tab : "overview";
   const now = new Date();
   const startDate =
     typeof searchParams.startDate === "string"
       ? searchParams.startDate
       : startOfMonth(subMonths(now, 11)).toISOString();
-  const endDate =
-    typeof searchParams.endDate === "string"
-      ? searchParams.endDate
-      : endOfMonth(now).toISOString();
+  const endDate = typeof searchParams.endDate === "string" ? searchParams.endDate : endOfMonth(now).toISOString();
   const metricsParams = { startDate, endDate };
 
   const [
@@ -59,24 +55,14 @@ export default async function OverviewPage(props: {
   ]);
 
   const user = meResult.success ? meResult.data?.user : null;
-  const displayName = user?.name
-    ? user.name.split(" ")[0]
-    : (user?.email?.split("@")[0] ?? "there");
+  const displayName = user?.name ? user.name.split(" ")[0] : (user?.email?.split("@")[0] ?? "there");
 
   const incomeData = incomeResult.success ? (incomeResult.data ?? []) : [];
   const expenseData = expenseResult.success ? (expenseResult.data ?? []) : [];
-  const burnRateData = burnRateResult.success
-    ? (burnRateResult.data ?? [])
-    : [];
-  const expenseCategoryData = expenseCategoryResult.success
-    ? (expenseCategoryResult.data ?? [])
-    : [];
-  const incomeCategoryData = incomeCategoryResult.success
-    ? (incomeCategoryResult.data ?? [])
-    : [];
-  const settings = settingsResult.success
-    ? (settingsResult.data ?? null)
-    : null;
+  const burnRateData = burnRateResult.success ? (burnRateResult.data ?? []) : [];
+  const expenseCategoryData = expenseCategoryResult.success ? (expenseCategoryResult.data ?? []) : [];
+  const incomeCategoryData = incomeCategoryResult.success ? (incomeCategoryResult.data ?? []) : [];
+  const settings = settingsResult.success ? (settingsResult.data ?? null) : null;
 
   return (
     <ChatProviderWrapper key={"home"}>

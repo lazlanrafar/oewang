@@ -1,15 +1,15 @@
 import {
-  db,
-  eq,
-  and,
-  desc,
-  isNull,
-  aiSessions,
   aiMessages,
-  workspaces,
+  aiSessions,
+  and,
+  db,
+  desc,
+  eq,
+  isNull,
   pricing,
-  workspaceAddons,
   sql,
+  workspaceAddons,
+  workspaces,
 } from "@workspace/database";
 
 export abstract class AiRepository {

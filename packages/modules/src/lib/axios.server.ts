@@ -17,7 +17,7 @@ export const axiosInstance = axios.create({
         if (value === undefined || value === null || value === "") continue;
 
         if (Array.isArray(value)) {
-          value.forEach((v) => searchParams.append(key, String(v)));
+          value.forEach((v) => { searchParams.append(key, String(v)); });
         } else {
           searchParams.set(key, String(value));
         }

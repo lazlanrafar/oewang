@@ -21,7 +21,7 @@ import {
 import { getPreference } from "@/server/server-actions";
 import { AccountSwitcher } from "@/components/layout/account-switcher";
 
-const ADMIN_ROLES = new Set(["owner", "finance"]);
+const ADMIN_ROLES = new Set(["superadmin"]);
 
 async function requireAdminAccess(locale: string) {
   const supabase = await createClient();

@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { format } from "date-fns";
-import { Calendar as CalendarIcon, Download, Loader2 } from "lucide-react";
-import { toast } from "sonner";
+
+import { exportTransactions } from "@workspace/modules/transaction/transaction.action";
 import {
   Button,
+  Calendar,
   cn,
   Dialog,
   DialogContent,
@@ -13,16 +13,16 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  RadioGroup,
-  RadioGroupItem,
   Label,
   Popover,
   PopoverContent,
   PopoverTrigger,
-  Calendar,
+  RadioGroup,
+  RadioGroupItem,
 } from "@workspace/ui";
-
-import { exportTransactions } from "@workspace/modules/transaction/transaction.action";
+import { format } from "date-fns";
+import { Calendar as CalendarIcon, Download, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface ExportModalProps {
   open: boolean;
@@ -61,10 +61,7 @@ export function ExportModal({ open, onOpenChange }: ExportModalProps) {
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
-        link.setAttribute(
-          "download",
-          `transactions_export_${format(new Date(), "yyyy-MM-dd")}.csv`
-        );
+        link.setAttribute("download", `transactions_export_${format(new Date(), "yyyy-MM-dd")}.csv`);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -74,7 +71,7 @@ export function ExportModal({ open, onOpenChange }: ExportModalProps) {
       } else {
         toast.error(res.error || "Failed to export transactions.");
       }
-    } catch (error) {
+    } catch (_error) {
       toast.error("An unexpected error occurred during export.");
     } finally {
       setIsExporting(false);
@@ -120,15 +117,14 @@ export function ExportModal({ open, onOpenChange }: ExportModalProps) {
                     variant={"outline"}
                     className={cn(
                       "w-full justify-start text-left font-normal",
-                      !dateRange.from && "text-muted-foreground"
+                      !dateRange.from && "text-muted-foreground",
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {dateRange.from ? (
                       dateRange.to ? (
                         <>
-                          {format(dateRange.from, "LLL dd, y")} -{" "}
-                          {format(dateRange.to, "LLL dd, y")}
+                          {format(dateRange.from, "LLL dd, y")} - {format(dateRange.to, "LLL dd, y")}
                         </>
                       ) : (
                         format(dateRange.from, "LLL dd, y")

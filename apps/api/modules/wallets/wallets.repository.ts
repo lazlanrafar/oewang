@@ -1,14 +1,14 @@
 import {
-  db,
-  eq,
   and,
-  desc,
   asc,
-  isNull,
-  wallets,
-  sql,
+  db,
+  desc,
+  eq,
   inArray,
+  isNull,
   like,
+  sql,
+  wallets,
 } from "@workspace/database";
 
 export abstract class WalletsRepository {
@@ -91,7 +91,12 @@ export abstract class WalletsRepository {
 
   static async findMany(
     workspaceId: string,
-    filters?: { search?: string; groupId?: string; page?: number; limit?: number },
+    filters?: {
+      search?: string;
+      groupId?: string;
+      page?: number;
+      limit?: number;
+    },
   ): Promise<{ rows: any[]; total: number }> {
     const page = filters?.page ?? 1;
     const limit = filters?.limit ?? 20;

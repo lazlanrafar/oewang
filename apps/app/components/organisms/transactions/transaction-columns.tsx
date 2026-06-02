@@ -514,8 +514,7 @@ function UserCell({
   const router = useRouter();
   const queryClient = useQueryClient();
   const [updating, setUpdating] = useState(false);
-  const canEditWorkspaceData =
-    (table.options.meta as TransactionTableMeta | undefined)?.canEditWorkspaceData !== false;
+  const canEditWorkspaceData = (table.options.meta as TransactionTableMeta | undefined)?.canEditWorkspaceData !== false;
 
   const handleUserChange = async (userId: string) => {
     if (userId === transaction?.assignedUserId) return;

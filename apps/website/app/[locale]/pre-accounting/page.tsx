@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
-import { Header } from "@/components/layout/header";
+
 import { Footer } from "@/components/layout/footer";
+import { Header } from "@/components/layout/header";
 import { CTASection } from "@/components/sections/cta-section";
 import { getDictionary } from "@/lib/translations";
 
@@ -19,7 +20,10 @@ export default async function PreAccountingPage({ params }: { params: Promise<{ 
   const steps = [
     { title: "Collect", desc: "Sync account movements and import receipts from inbox, chat, and uploads." },
     { title: "Match", desc: "Map documents to transactions and surface missing attachments before month-end." },
-    { title: "Categorize", desc: "Keep categories and tax context consistent across personal and workspace operations." },
+    {
+      title: "Categorize",
+      desc: "Keep categories and tax context consistent across personal and workspace operations.",
+    },
     { title: "Export", desc: "Send accountant-ready records with clear status and clean reconciliation history." },
   ];
 
@@ -30,7 +34,10 @@ export default async function PreAccountingPage({ params }: { params: Promise<{ 
         <section className="py-16 sm:py-20 border-b border-border/70">
           <div className="max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8">
             <h1 className="font-serif text-4xl sm:text-6xl tracking-tight max-w-4xl">Pre-accounting, handled</h1>
-            <p className="text-muted-foreground text-base sm:text-lg mt-5 max-w-3xl">Keep your books operationally ready before accountant handoff, with fewer missing files and fewer manual checks.</p>
+            <p className="text-muted-foreground text-base sm:text-lg mt-5 max-w-3xl">
+              Keep your books operationally ready before accountant handoff, with fewer missing files and fewer manual
+              checks.
+            </p>
           </div>
         </section>
 

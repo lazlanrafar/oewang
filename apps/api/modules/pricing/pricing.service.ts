@@ -1,10 +1,10 @@
-import {
-  buildSuccess,
-  buildPaginatedSuccess,
-  buildError,
-  buildPagination,
-} from "@workspace/utils";
 import { ErrorCode } from "@workspace/types";
+import {
+  buildError,
+  buildPaginatedSuccess,
+  buildPagination,
+  buildSuccess,
+} from "@workspace/utils";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import type {
   CreatePricingInput,
@@ -31,11 +31,18 @@ export abstract class PricingService {
     return buildSuccess(pricing);
   }
 
-  static async create(dto: CreatePricingInput, userId: string, workspaceId: string) {
+  static async create(
+    dto: CreatePricingInput,
+    userId: string,
+    workspaceId: string,
+  ) {
     const p = await PricingRepository.create(dto);
 
     if (!p) {
-        return buildError(ErrorCode.INTERNAL_ERROR, "Failed to create pricing plan");
+      return buildError(
+        ErrorCode.INTERNAL_ERROR,
+        "Failed to create pricing plan",
+      );
     }
 
     await AuditLogsService.log({
@@ -47,14 +54,15 @@ export abstract class PricingService {
       after: p,
     });
 
-    return buildSuccess(
-      p,
-      "Pricing plan created successfully",
-      "CREATED",
-    );
+    return buildSuccess(p, "Pricing plan created successfully", "CREATED");
   }
 
-  static async update(id: string, dto: UpdatePricingInput, userId: string, workspaceId: string) {
+  static async update(
+    id: string,
+    dto: UpdatePricingInput,
+    userId: string,
+    workspaceId: string,
+  ) {
     const existing = await PricingRepository.findById(id);
     if (!existing) {
       return buildError(ErrorCode.NOT_FOUND, "Pricing plan not found");

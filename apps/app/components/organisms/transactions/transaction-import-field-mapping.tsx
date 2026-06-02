@@ -27,15 +27,15 @@ export function FieldMapping() {
 
         {(Object.entries(mappableFields) as Array<[MappableFieldKey, (typeof mappableFields)[MappableFieldKey]]>).map(
           ([key, field]) => (
-          <FieldRow
-            key={key}
-            fieldKey={key}
-            label={field.label}
-            required={field.required}
-            columns={fileColumns || []}
-            control={control}
-            firstRows={firstRows || []}
-          />
+            <FieldRow
+              key={key}
+              fieldKey={key}
+              label={field.label}
+              required={field.required}
+              columns={fileColumns || []}
+              control={control}
+              firstRows={firstRows || []}
+            />
           ),
         )}
       </div>

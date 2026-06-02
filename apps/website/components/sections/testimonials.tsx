@@ -62,9 +62,7 @@ export function TestimonialsSection() {
               key={t.name}
               className="border border-border p-6 flex flex-col gap-4 bg-background hover:border-foreground/20 transition-colors"
             >
-              <p className="text-sm text-muted-foreground leading-6 flex-1">
-                &ldquo;{t.quote}&rdquo;
-              </p>
+              <p className="text-sm text-muted-foreground leading-6 flex-1">&ldquo;{t.quote}&rdquo;</p>
               <div className="flex items-center gap-3 pt-4 border-t border-border">
                 <div className="size-9 rounded-full bg-muted flex items-center justify-center text-xs font-medium text-foreground shrink-0">
                   {t.initials}

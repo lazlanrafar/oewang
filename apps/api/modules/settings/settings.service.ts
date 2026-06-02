@@ -1,9 +1,9 @@
-import { SettingsRepository } from "./settings.repository";
-import type { TransactionSettingsInput } from "./settings.model";
+import { Env } from "@workspace/constants";
 import { encrypt } from "@workspace/encryption";
 import { buildSuccess } from "@workspace/utils";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
-import { Env } from "@workspace/constants";
+import type { TransactionSettingsInput } from "./settings.model";
+import { SettingsRepository } from "./settings.repository";
 
 export abstract class SettingsService {
   static async getTransactionSettings(workspaceId: string) {

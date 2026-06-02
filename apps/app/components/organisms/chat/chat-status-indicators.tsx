@@ -15,6 +15,7 @@ import { ErrorCode } from "@workspace/types";
 import { AnimatedStatus } from "@workspace/ui";
 import { getStatusMessage, getToolMessage } from "@workspace/utils";
 import { format } from "date-fns";
+
 import { getDictionaryText } from "./chat-i18n";
 
 interface ChatStatusIndicatorsProps {

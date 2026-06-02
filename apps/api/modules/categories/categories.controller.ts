@@ -1,12 +1,11 @@
-import { Elysia, t } from "elysia";
+import { ErrorCode } from "@workspace/types";
+import { buildError } from "@workspace/utils";
+import { Elysia, status, t } from "elysia";
 import { authPlugin } from "../../plugins/auth";
 import { encryptionPlugin } from "../../plugins/encryption";
-import { ErrorCode } from "@workspace/types";
-import { CategoriesService } from "./categories.service";
-import { CategoryModel } from "./categories.model";
-import { buildError } from "@workspace/utils";
-import { status } from "elysia";
 import { assertCanEditWorkspaceData } from "../workspaces/workspace-permissions";
+import { CategoryModel } from "./categories.model";
+import { CategoriesService } from "./categories.service";
 
 export const categoriesController = new Elysia({
   prefix: "/categories",
@@ -29,7 +28,8 @@ export const categoriesController = new Elysia({
       query: CategoryModel.listQuery,
       detail: {
         summary: "List Categories",
-        description: "Returns all transaction categories for the workspace, optionally filtered by type (income/expense).",
+        description:
+          "Returns all transaction categories for the workspace, optionally filtered by type (income/expense).",
         tags: ["Categories"],
       },
     },
@@ -99,7 +99,8 @@ export const categoriesController = new Elysia({
       body: CategoryModel.reorder,
       detail: {
         summary: "Reorder Categories",
-        description: "Updates the sorting order of multiple categories at once.",
+        description:
+          "Updates the sorting order of multiple categories at once.",
         tags: ["Categories"],
       },
     },
@@ -123,7 +124,8 @@ export const categoriesController = new Elysia({
       }),
       detail: {
         summary: "Delete Category",
-        description: "Soft-deletes a category. Transactions using this category will still exist but the category will be hidden.",
+        description:
+          "Soft-deletes a category. Transactions using this category will still exist but the category will be hidden.",
         tags: ["Categories"],
       },
     },

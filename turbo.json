@@ -1,6 +1,6 @@
 {
   "$schema": "https://turborepo.dev/schema.json",
-  "ui": "tui",
+  // "ui": "tui",
   "globalEnv": [
     "SUPABASE_URL",
     "SUPABASE_ANON_KEY",
@@ -19,7 +19,11 @@
     "NEXT_PUBLIC_API_URL",
     "NEXT_PUBLIC_APP_URL",
     "NEXT_PUBLIC_SUPABASE_URL",
-    "NEXT_PUBLIC_SUPABASE_ANON_KEY"
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    "NEXT_PUBLIC_VAPID_PUBLIC_KEY",
+    "VAPID_PUBLIC_KEY",
+    "VAPID_PRIVATE_KEY",
+    "VAPID_SUBJECT"
   ],
   "globalPassThroughEnv": ["NODE_ENV", "PLAYWRIGHT_*"],
   "tasks": {

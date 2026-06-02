@@ -1,6 +1,11 @@
-import { eq, and, sql, isNull } from "drizzle-orm";
-import { db, workspaceIntegrations, user_workspaces } from "@workspace/database";
 import type { NewWorkspaceIntegration } from "@workspace/database";
+import {
+  db,
+  user_workspaces,
+  workspaceIntegrations,
+  workspaces,
+} from "@workspace/database";
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
 
 export abstract class IntegrationsRepository {
   static async findByProvider(workspace_id: string, provider: string) {
@@ -11,9 +16,9 @@ export abstract class IntegrationsRepository {
         and(
           eq(workspaceIntegrations.workspaceId, workspace_id),
           eq(workspaceIntegrations.provider, provider),
-          isNull(workspaceIntegrations.deletedAt),
         ),
       )
+      .orderBy(desc(workspaceIntegrations.updatedAt))
       .limit(1);
     return records[0] || null;
   }
@@ -25,12 +30,16 @@ export abstract class IntegrationsRepository {
       .where(
         and(
           eq(workspaceIntegrations.workspaceId, workspace_id),
+          eq(workspaceIntegrations.isActive, true),
           isNull(workspaceIntegrations.deletedAt),
         ),
       );
   }
 
-  static async findByWhatsAppNumber(phoneNumber: string, provider = "whatsapp") {
+  static async findByWhatsAppNumber(
+    phoneNumber: string,
+    provider = "whatsapp",
+  ) {
     // Find the workspace tied to this specific WhatsApp phone number
     const records = await db
       .select()
@@ -64,30 +73,39 @@ export abstract class IntegrationsRepository {
     return records[0] || null;
   }
 
-  static async upsert(data: NewWorkspaceIntegration) {
-    const existing = await this.findByProvider(data.workspaceId, data.provider);
+  static async upsert(
+    data: NewWorkspaceIntegration & { connectedBy?: string },
+  ) {
+    const now = new Date().toISOString();
+    const existing = await IntegrationsRepository.findByProvider(
+      data.workspaceId,
+      data.provider,
+    );
 
     if (existing) {
       const [updated] = await db
         .update(workspaceIntegrations)
         .set({
           settings: data.settings,
-          isActive: data.isActive,
-          updatedAt: new Date().toISOString(),
+          isActive: data.isActive ?? true,
+          connectedAt: data.isActive !== false ? now : existing.connectedAt,
+          connectedBy: data.connectedBy ?? existing.connectedBy,
+          deletedAt: null,
+          updatedAt: now,
         })
-        .where(
-          and(
-            eq(workspaceIntegrations.id, existing.id),
-            isNull(workspaceIntegrations.deletedAt),
-          ),
-        )
+        .where(eq(workspaceIntegrations.id, existing.id))
         .returning();
       return updated;
     }
 
     const [created] = await db
       .insert(workspaceIntegrations)
-      .values(data)
+      .values({
+        ...data,
+        isActive: data.isActive ?? true,
+        connectedAt: data.isActive !== false ? now : null,
+        connectedBy: data.connectedBy,
+      })
       .returning();
     return created;
   }
@@ -122,5 +140,33 @@ export abstract class IntegrationsRepository {
       )
       .limit(1);
     return membership?.userId || null;
+  }
+
+  static async findWorkspaceIdBySlug(slug: string) {
+    const [workspace] = await db
+      .select({ id: workspaces.id })
+      .from(workspaces)
+      .where(and(eq(workspaces.slug, slug), isNull(workspaces.deleted_at)))
+      .limit(1);
+    return workspace?.id || null;
+  }
+
+  static async disconnectByProvider(workspaceId: string, provider: string) {
+    const [disconnected] = await db
+      .update(workspaceIntegrations)
+      .set({
+        isActive: false,
+        updatedAt: new Date().toISOString(),
+      })
+      .where(
+        and(
+          eq(workspaceIntegrations.workspaceId, workspaceId),
+          eq(workspaceIntegrations.provider, provider),
+          eq(workspaceIntegrations.isActive, true),
+        ),
+      )
+      .returning();
+
+    return disconnected || null;
   }
 }

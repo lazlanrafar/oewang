@@ -1,5 +1,12 @@
 "use client";
 
+import type {
+  ColumnDef,
+  ColumnSizingState,
+  VisibilityState,
+} from "@tanstack/react-table";
+import { useMemo } from "react";
+import { useStickyColumns } from "../../../hooks/use-sticky-columns";
 import { cn } from "../../../lib/utils";
 import { Skeleton } from "../../atoms/skeleton";
 import {
@@ -10,19 +17,12 @@ import {
   TableHeader,
   TableRow,
 } from "../../atoms/table";
-import type {
-  ColumnDef,
-  ColumnSizingState,
-  VisibilityState,
-} from "@tanstack/react-table";
-import { useMemo } from "react";
 import { SkeletonCell } from "./data-table-skeleton-cell";
 import {
-  type TableColumnMeta,
   getColumnId,
   getHeaderLabel,
+  type TableColumnMeta,
 } from "./data-table-types";
-import { useStickyColumns } from "../../../hooks/use-sticky-columns";
 
 interface TableSkeletonProps<TData> {
   /** Column definitions with skeleton config in meta */

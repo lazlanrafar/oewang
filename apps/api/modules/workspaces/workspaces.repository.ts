@@ -1,15 +1,15 @@
 import {
+  and,
   db,
   eq,
-  and,
-  isNull,
   inArray,
-  workspaces,
-  user_workspaces,
-  workspaceInvitations,
-  users,
+  isNull,
   pricing,
+  user_workspaces,
+  users,
   workspaceAddons,
+  workspaceInvitations,
+  workspaces,
 } from "@workspace/database";
 
 /**
@@ -39,7 +39,9 @@ export abstract class WorkspacesRepository {
       })
       .from(workspaces)
       .leftJoin(pricing, eq(workspaces.plan_id, pricing.id))
-      .where(and(eq(workspaces.id, workspace_id), isNull(workspaces.deleted_at)))
+      .where(
+        and(eq(workspaces.id, workspace_id), isNull(workspaces.deleted_at)),
+      )
       .limit(1);
 
     if (!result) return null;
@@ -47,11 +49,13 @@ export abstract class WorkspacesRepository {
     // Fetch active recurring add-ons with their quotas
     const activeAddons = await db
       .select({
+        row_id: workspaceAddons.id,
         id: pricing.id,
         addon_type: pricing.addon_type,
         max_ai_tokens: pricing.max_ai_tokens,
         max_vault_size_mb: pricing.max_vault_size_mb,
         amount: workspaceAddons.amount,
+        qty: workspaceAddons.qty,
         status: workspaceAddons.status,
         created_at: workspaceAddons.created_at,
       })
@@ -65,21 +69,23 @@ export abstract class WorkspacesRepository {
         ),
       );
 
-    // Sum up extra quotas from active recurring add-ons
+    // Sum up extra quotas from active recurring add-ons (qty-aware)
     const recurringExtraAi = activeAddons
       .filter((a) => a.addon_type === "ai")
-      .reduce((sum, a) => sum + (a.max_ai_tokens || 0), 0);
-      
+      .reduce((sum, a) => sum + (a.max_ai_tokens || 0) * (a.qty || 1), 0);
+
     const recurringExtraVault = activeAddons
       .filter((a) => a.addon_type === "vault")
-      .reduce((sum, a) => sum + (a.max_vault_size_mb || 0), 0);
+      .reduce((sum, a) => sum + (a.max_vault_size_mb || 0) * (a.qty || 1), 0);
 
     return {
       ...result.workspace,
       plan: result.plan,
       // Total extra tokens = one-time (from workspace columns) + recurring (from workspace_addons)
-      extra_ai_tokens: (result.workspace.extra_ai_tokens || 0) + recurringExtraAi,
-      extra_vault_size_mb: (result.workspace.extra_vault_size_mb || 0) + recurringExtraVault,
+      extra_ai_tokens:
+        (result.workspace.extra_ai_tokens || 0) + recurringExtraAi,
+      extra_vault_size_mb:
+        (result.workspace.extra_vault_size_mb || 0) + recurringExtraVault,
       active_addons: activeAddons,
     };
   }
@@ -226,7 +232,10 @@ export abstract class WorkspacesRepository {
       );
   }
 
-  static async updateInvitationStatus(id: string, status: "accepted" | "expired") {
+  static async updateInvitationStatus(
+    id: string,
+    status: "accepted" | "expired",
+  ) {
     await db
       .update(workspaceInvitations)
       .set({

@@ -3,10 +3,10 @@
 import { cookies } from "next/headers";
 import {
   type AllTableSettings,
+  mergeWithDefaults,
   TABLE_SETTINGS_COOKIE,
   type TableId,
   type TableSettings,
-  mergeWithDefaults,
 } from "./data-table-settings";
 
 /**

@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 
 import type { Dictionary } from "@workspace/dictionaries";
-import { getInvoiceToken } from "@workspace/modules/invoice/invoice.action";
 import type { UpdateInvoiceData } from "@workspace/modules/client";
+import { getInvoiceToken } from "@workspace/modules/invoice/invoice.action";
 import type { Invoice } from "@workspace/types";
 import {
   Accordion,
@@ -117,7 +117,7 @@ export function InvoiceDetailSheet({
     if (invoice && debouncedAccessCode !== (invoice.accessCode || "")) {
       onUpdate?.(invoice.id, { accessCode: debouncedAccessCode });
     }
-  }, [debouncedAccessCode, invoice?.id, invoice.accessCode, invoice, onUpdate]);
+  }, [debouncedAccessCode, invoice?.id, invoice?.accessCode, invoice, onUpdate]);
 
   useEffect(() => {
     if (open && invoice?.id && invoice.isPublic && !publicToken) {
@@ -361,7 +361,7 @@ export function InvoiceDetailSheet({
 
       {/* Hidden InvoiceA4 for PDF Generation */}
       <div className="-z-50 pointer-events-none fixed top-0 left-0 w-[800px] opacity-0">
-        <InvoiceA4 ref={invoiceRef} invoice={invoice} dictionary={dictionary} />
+        <InvoiceA4 ref={invoiceRef} invoice={invoice as any} dictionary={dictionary} />
       </div>
     </Sheet>
   );

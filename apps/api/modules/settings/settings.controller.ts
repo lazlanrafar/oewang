@@ -1,14 +1,13 @@
-import { Elysia } from "elysia";
-import { SettingsService } from "./settings.service";
-import { SettingsModel } from "./settings.model";
-import { subCurrenciesController } from "./sub-currencies/sub-currencies.controller";
-import { ratesController } from "./rates/rates.controller";
-import { authPlugin } from "../../plugins/auth";
-import { encryptionPlugin } from "../../plugins/encryption";
 import { ErrorCode } from "@workspace/types";
 import { buildError } from "@workspace/utils";
-import { status } from "elysia";
+import { Elysia, status } from "elysia";
+import { authPlugin } from "../../plugins/auth";
+import { encryptionPlugin } from "../../plugins/encryption";
 import { assertCanEditWorkspaceData } from "../workspaces/workspace-permissions";
+import { ratesController } from "./rates/rates.controller";
+import { SettingsModel } from "./settings.model";
+import { SettingsService } from "./settings.service";
+import { subCurrenciesController } from "./sub-currencies/sub-currencies.controller";
 
 export const settingsController = new Elysia({
   prefix: "/settings",

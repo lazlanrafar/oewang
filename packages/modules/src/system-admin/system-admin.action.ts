@@ -60,7 +60,7 @@ export const getSystemAdminUsers = async (params: {
 
 export const updateSystemRoleAction = async (
   userId: string,
-  role: "owner" | "finance" | "user",
+  role: "superadmin" | "owner" | "finance" | "user",
 ): Promise<ActionResponse<void>> => {
   try {
     await api.patch(`/system-admins/users/${userId}/role`, { role });

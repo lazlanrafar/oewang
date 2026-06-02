@@ -1,6 +1,8 @@
 "use client";
 
-import * as React from "react";
+import { useTheme } from "next-themes";
+import type * as React from "react";
+import { toast } from "sonner";
 import { cn } from "../../lib/utils";
 import {
   Button,
@@ -10,8 +12,6 @@ import {
   DropdownMenuTrigger,
   Icons,
 } from "../atoms";
-import { toast } from "sonner";
-import { useTheme } from "next-themes";
 import { Skeleton } from "./skeleton";
 
 // --- BaseCanvas ---

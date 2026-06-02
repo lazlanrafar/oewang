@@ -5,7 +5,7 @@ export const baseConfig = {
   id: "whatsapp-web",
   category: "capture",
   active: true,
-  hidden: false,
+  hidden: true,
   beta: true,
   logo: Logo,
   short_description:

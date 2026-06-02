@@ -1,5 +1,6 @@
 import {
   Banknote,
+  Bell,
   Box,
   Calendar,
   DotSquare,
@@ -104,6 +105,11 @@ export const sidebarItems: NavGroup[] = [
     id: 5,
     label: "sidebar.system_label",
     items: [
+      {
+        title: "sidebar.notifications_label",
+        url: "/notifications",
+        icon: Bell,
+      },
       {
         title: "sidebar.settings_label",
         url: "/settings",

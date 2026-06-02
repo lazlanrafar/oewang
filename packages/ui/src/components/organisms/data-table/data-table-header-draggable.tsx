@@ -4,8 +4,8 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical } from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
-import { TableHead } from "../../atoms";
 import { cn } from "../../../lib/utils";
+import { TableHead } from "../../atoms";
 
 interface DraggableHeaderProps {
   id: string;

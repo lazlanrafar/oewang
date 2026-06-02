@@ -1,12 +1,12 @@
+import { db, users } from "@workspace/database";
 import { createAdminClient } from "@workspace/supabase/admin";
 import { ErrorCode } from "@workspace/types";
 import {
   buildError,
   buildPaginatedSuccess,
-  buildSuccess,
   buildPagination,
+  buildSuccess,
 } from "@workspace/utils";
-import { db, users } from "@workspace/database";
 import { eq } from "drizzle-orm";
 import { SystemAdminsRepository } from "./system-admins.repository";
 
@@ -53,7 +53,11 @@ export abstract class SystemAdminsService {
     }
 
     // 2. Prevent demoting the root owner
-    if (dbUser.email === "lazlanrafar@gmail.com" && newRole !== "owner") {
+    if (
+      dbUser.email === "lazlanrafar@gmail.com" &&
+      newRole !== "superadmin" &&
+      newRole !== "owner"
+    ) {
       return buildError(ErrorCode.FORBIDDEN, "Cannot demote the root owner.");
     }
 

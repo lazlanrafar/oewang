@@ -1,22 +1,25 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo } from "react";
+
+import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ArrowRight } from "lucide-react";
-import type { PublicIntegration } from "@/lib/integrations-public";
+
 import {
+  DropboxLogo,
   GmailLogo,
+  GoogleDriveLogo,
   OutlookLogo,
   QuickBooksLogo,
-  XeroLogo,
-  TelegramLogo,
-  WhatsAppLogo,
-  GoogleDriveLogo,
-  DropboxLogo,
   SlackLogo,
   StripeLogo,
+  TelegramLogo,
+  WhatsAppLogo,
+  XeroLogo,
 } from "@workspace/integrations/logos";
+import { ArrowRight } from "lucide-react";
+
+import type { PublicIntegration } from "@/lib/integrations-public";
 
 const LOGOS = {
   gmail: GmailLogo,
@@ -49,13 +52,7 @@ function IntegrationLogo({ slug, name }: { slug: string; name: string }) {
   );
 }
 
-export function IntegrationsDirectory({
-  locale,
-  integrations,
-}: {
-  locale: string;
-  integrations: PublicIntegration[];
-}) {
+export function IntegrationsDirectory({ locale, integrations }: { locale: string; integrations: PublicIntegration[] }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -67,9 +64,7 @@ export function IntegrationsDirectory({
   const selectedCategory = searchParams.get("category") ?? "All";
 
   const filtered =
-    selectedCategory === "All"
-      ? integrations
-      : integrations.filter((item) => item.category === selectedCategory);
+    selectedCategory === "All" ? integrations : integrations.filter((item) => item.category === selectedCategory);
 
   const setFilter = (category: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -102,9 +97,7 @@ export function IntegrationsDirectory({
             </button>
 
             {categories.map((category) => {
-              const count = integrations.filter(
-                (item) => item.category === category,
-              ).length;
+              const count = integrations.filter((item) => item.category === category).length;
 
               return (
                 <button
@@ -135,9 +128,7 @@ export function IntegrationsDirectory({
                 <IntegrationLogo slug={item.slug} name={item.name} />
                 <span
                   className={`text-[10px] uppercase tracking-[0.16em] ${
-                    item.status === "available"
-                      ? "text-green-600"
-                      : "text-muted-foreground"
+                    item.status === "available" ? "text-green-600" : "text-muted-foreground"
                   }`}
                 >
                   {item.status === "available" ? "Available" : "Coming soon"}
@@ -145,9 +136,7 @@ export function IntegrationsDirectory({
               </div>
 
               <h3 className="font-medium text-lg mb-2">{item.name}</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed min-h-[60px]">
-                {item.description}
-              </p>
+              <p className="text-sm text-muted-foreground leading-relaxed min-h-[60px]">{item.description}</p>
 
               <div className="mt-5 inline-flex items-center gap-2 text-xs text-muted-foreground group-hover:text-foreground transition-colors">
                 View integration details
@@ -159,9 +148,7 @@ export function IntegrationsDirectory({
 
         {filtered.length === 0 && (
           <div className="border border-border p-8 text-center mt-4">
-            <p className="text-sm text-muted-foreground">
-              No integrations found for this filter.
-            </p>
+            <p className="text-sm text-muted-foreground">No integrations found for this filter.</p>
           </div>
         )}
       </div>
@@ -169,12 +156,6 @@ export function IntegrationsDirectory({
   );
 }
 
-export function IntegrationLogoBadge({
-  slug,
-  name,
-}: {
-  slug: string;
-  name: string;
-}) {
+export function IntegrationLogoBadge({ slug, name }: { slug: string; name: string }) {
   return <IntegrationLogo slug={slug} name={name} />;
 }

@@ -1,12 +1,12 @@
 import {
-  db,
-  eq,
   and,
-  desc,
-  isNull,
   contacts,
-  sql,
+  db,
+  desc,
+  eq,
   ilike,
+  isNull,
+  sql,
 } from "@workspace/database";
 import type { Contact } from "@workspace/types";
 

@@ -1,9 +1,9 @@
+import { ErrorCode } from "@workspace/types";
+import { buildError } from "@workspace/utils";
 import { Elysia } from "elysia";
 import { authPlugin } from "../../plugins/auth";
 import { encryptionPlugin } from "../../plugins/encryption";
 import { MetricsService } from "./metrics.service";
-import { buildError } from "@workspace/utils";
-import { ErrorCode } from "@workspace/types";
 
 export const metricsController = new Elysia({ prefix: "/metrics" })
   .use(authPlugin)

@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 
 import { geolocation } from "@vercel/functions";
 import { getChatSession, getChatSessionMessages } from "@workspace/modules/ai/ai.action";
-import type { Message } from "ai";
+import type { UIMessage as Message } from "ai";
 import type { Metadata } from "next";
 
 import ChatInterface from "@/components/organisms/chat/chat-interface";
@@ -49,7 +49,7 @@ export default async function ChatPage(props: Props) {
   // but initialMessages usually expects AI SDK Message type.
   // The backend ChatMessage is { role: "user" | "assistant", content: string }
   // We'll add IDs to them for the store.
-  const initialMessages: Message[] = response.data.map((m, i) => {
+  const initialMessages = response.data.map((m, i) => {
     const parts: Array<Record<string, unknown>> = [{ type: "text", text: m.content }];
     const attachment = m.attachments;
     const fileAttachments = Array.isArray(attachment) ? attachment : [];
@@ -98,8 +98,8 @@ export default async function ChatPage(props: Props) {
   });
 
   return (
-    <ChatProviderWrapper initialMessages={initialMessages}>
-      <ChatInterface geo={geo} dictionary={dictionary} />
+    <ChatProviderWrapper initialMessages={initialMessages as any}>
+      <ChatInterface dictionary={dictionary} />
     </ChatProviderWrapper>
   );
 }

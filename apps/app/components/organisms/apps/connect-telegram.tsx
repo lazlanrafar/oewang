@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Env } from "@workspace/constants";
 import type { Dictionary } from "@workspace/dictionaries";
+import { getIntegrationsAction } from "@workspace/modules/integrations/integrations.action";
 import { getMe } from "@workspace/modules/user/user.action";
 import { Button, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Icons } from "@workspace/ui";
 import { Check, Copy, QrCode } from "lucide-react";
@@ -14,6 +15,7 @@ export function ConnectTelegram({ dictionary }: { dictionary: Dictionary }) {
   const [open, setOpen] = useState(false);
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("");
   const [copied, setCopied] = useState(false);
+  const queryClient = useQueryClient();
 
   const { data: me, isLoading } = useQuery({
     queryKey: ["me"],
@@ -23,16 +25,28 @@ export function ConnectTelegram({ dictionary }: { dictionary: Dictionary }) {
     },
   });
 
-  const workspaceId = me?.user?.workspace_id;
+  const { data: integrations } = useQuery({
+    queryKey: ["integrations", "telegram-connect"],
+    enabled: open,
+    refetchInterval: open ? 2000 : false,
+    queryFn: async () => {
+      const result = await getIntegrationsAction();
+      return result.success ? result.data : [];
+    },
+  });
+
   const userId = me?.user?.id;
+  const workspaceId = me?.user?.workspace_id;
+  const activeWorkspace = me?.workspaces?.find((workspace) => workspace.id === workspaceId);
+  const workspaceIdentifier = activeWorkspace?.slug || workspaceId;
   const botUsername = Env.NEXT_PUBLIC_TELEGRAM_BOT_USER || "OewangBot";
-  const telegramUrl =
-    workspaceId && userId
-      ? `https://t.me/${botUsername}?start=${workspaceId}___${userId}`
-      : `https://t.me/${botUsername}`;
+  const telegramPayload = workspaceIdentifier && userId ? `${workspaceIdentifier}___${userId}` : workspaceIdentifier;
+  const telegramUrl = telegramPayload
+    ? `https://t.me/${botUsername}?start=${encodeURIComponent(telegramPayload)}`
+    : `https://t.me/${botUsername}`;
 
   const generateQRCode = useCallback(async () => {
-    if (!workspaceId) return;
+    if (!workspaceIdentifier) return;
     try {
       const url = await QRCode.toDataURL(telegramUrl, {
         width: 250,
@@ -46,19 +60,31 @@ export function ConnectTelegram({ dictionary }: { dictionary: Dictionary }) {
     } catch (error) {
       console.error("Error generating QR code:", error);
     }
-  }, [telegramUrl, workspaceId]);
+  }, [telegramUrl, workspaceIdentifier]);
 
   useEffect(() => {
-    if (open && workspaceId && botUsername) {
+    if (open && workspaceIdentifier && botUsername) {
       generateQRCode();
     }
-  }, [open, workspaceId, botUsername, generateQRCode]);
+  }, [open, workspaceIdentifier, botUsername, generateQRCode]);
 
   useEffect(() => {
     const handleOpen = () => setOpen(true);
     window.addEventListener("openTelegramConnect", handleOpen);
     return () => window.removeEventListener("openTelegramConnect", handleOpen);
   }, []);
+
+  useEffect(() => {
+    if (!open || !integrations) return;
+    type IntegrationStatus = { provider?: string; isActive?: boolean };
+    const isConnected = integrations.some(
+      (integration: IntegrationStatus) => integration?.provider === "telegram" && integration?.isActive,
+    );
+    if (!isConnected) return;
+
+    queryClient.invalidateQueries({ queryKey: ["integrations"] });
+    setOpen(false);
+  }, [integrations, open, queryClient]);
 
   const copyToClipboard = async () => {
     try {
@@ -85,7 +111,7 @@ export function ConnectTelegram({ dictionary }: { dictionary: Dictionary }) {
         <div className="flex flex-col items-center space-y-6 px-8">
           <div className="group relative">
             <div className="relative border bg-white p-3">
-              {!isLoading && workspaceId && qrCodeUrl ? (
+              {!isLoading && workspaceIdentifier && qrCodeUrl ? (
                 <>
                   {/* biome-ignore lint/performance/noImgElement: QR Code is a generated data URL */}
                   <img src={qrCodeUrl} alt="Telegram QR Code" className="h-[200px] w-[200px]" />
@@ -99,10 +125,10 @@ export function ConnectTelegram({ dictionary }: { dictionary: Dictionary }) {
           </div>
 
           <div className="grid w-full grid-cols-2 gap-4">
-            <Button asChild variant="default" disabled={isLoading || !workspaceId}>
+            <Button asChild variant="default" disabled={isLoading || !workspaceIdentifier}>
               <a
-                href={workspaceId ? telegramUrl : "#"}
-                target={workspaceId ? "_blank" : undefined}
+                href={workspaceIdentifier ? telegramUrl : "#"}
+                target={workspaceIdentifier ? "_blank" : undefined}
                 rel="noopener noreferrer"
                 className="flex items-center justify-center"
               >
@@ -113,7 +139,7 @@ export function ConnectTelegram({ dictionary }: { dictionary: Dictionary }) {
             <Button
               onClick={copyToClipboard}
               variant="outline"
-              disabled={isLoading || !workspaceId}
+              disabled={isLoading || !workspaceIdentifier}
               className="w-full border-border/50 transition-all hover:scale-[1.02] hover:bg-secondary/50"
             >
               {copied ? (

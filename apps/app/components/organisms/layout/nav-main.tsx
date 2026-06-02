@@ -29,6 +29,8 @@ import { type AppDictionary, getDictionaryText } from "@/modules/types/dictionar
 import type { NavGroup, NavMainItem } from "@/navigation/sidebar/sidebar-items";
 import { useLocalizedRoute } from "@/utils/localized-route";
 
+const activeSidebarItemClass = "";
+
 interface NavMainProps {
   readonly items: readonly NavGroup[];
   readonly dictionary: AppDictionary;
@@ -61,14 +63,25 @@ const NavItemExpanded = ({
       <SidebarMenuItem>
         <CollapsibleTrigger asChild>
           {item.subItems ? (
-            <SidebarMenuButton disabled={item.comingSoon} isActive={isActive(item.url, item.subItems)} tooltip={title}>
+            <SidebarMenuButton
+              disabled={item.comingSoon}
+              isActive={isActive(item.url, item.subItems)}
+              tooltip={title}
+              className={activeSidebarItemClass}
+            >
               {item.icon && <item.icon />}
               <span>{title}</span>
               {item.comingSoon && <IsComingSoon dictionary={dictionary} />}
               <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
             </SidebarMenuButton>
           ) : (
-            <SidebarMenuButton asChild disabled={item.comingSoon} isActive={isActive(item.url)} tooltip={title}>
+            <SidebarMenuButton
+              asChild
+              disabled={item.comingSoon}
+              isActive={isActive(item.url)}
+              tooltip={title}
+              className={activeSidebarItemClass}
+            >
               <Link
                 prefetch={false}
                 href={item.comingSoon ? "#" : getLocalizedUrl(item.url)}
@@ -88,7 +101,12 @@ const NavItemExpanded = ({
             <SidebarMenuSub>
               {item.subItems.map((subItem) => (
                 <SidebarMenuSubItem key={subItem.title}>
-                  <SidebarMenuSubButton aria-disabled={subItem.comingSoon} isActive={isActive(subItem.url)} asChild>
+                  <SidebarMenuSubButton
+                    aria-disabled={subItem.comingSoon}
+                    isActive={isActive(subItem.url)}
+                    asChild
+                    className={activeSidebarItemClass}
+                  >
                     <Link
                       prefetch={false}
                       href={getLocalizedUrl(subItem.url)}
@@ -127,7 +145,12 @@ const NavItemCollapsed = ({
     <SidebarMenuItem key={item.title}>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <SidebarMenuButton disabled={item.comingSoon} tooltip={title} isActive={isActive(item.url, item.subItems)}>
+          <SidebarMenuButton
+            disabled={item.comingSoon}
+            tooltip={title}
+            isActive={isActive(item.url, item.subItems)}
+            className={activeSidebarItemClass}
+          >
             {item.icon && <item.icon />}
             <span>{title}</span>
             <ChevronRight />
@@ -139,7 +162,7 @@ const NavItemCollapsed = ({
               <SidebarMenuSubButton
                 key={subItem.title}
                 asChild
-                className="focus-visible:ring-0"
+                className={`focus-visible:ring-0 ${activeSidebarItemClass}`}
                 aria-disabled={subItem.comingSoon}
                 isActive={isActive(subItem.url)}
               >
@@ -207,6 +230,7 @@ export function NavMain({ items, dictionary }: NavMainProps) {
                           disabled={item.comingSoon}
                           tooltip={title}
                           isActive={isItemActive(item.url)}
+                          className={activeSidebarItemClass}
                         >
                           <Link
                             prefetch={false}

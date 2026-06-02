@@ -1,8 +1,8 @@
 "use client";
 
+import type { BurnRateChartProps } from "@workspace/types";
 import { Area, Line, Tooltip, XAxis, YAxis } from "recharts";
 
-import type { BurnRateChartProps } from "@workspace/types";
 import { BaseChart, StyledTooltip } from "./base-charts";
 import { commonChartConfig, createCompactTickFormatter, useChartMargin } from "./chart-utils";
 import { formatAmount } from "./format-amount";

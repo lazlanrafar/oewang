@@ -86,7 +86,7 @@ export function OrdersDetailSheet() {
               </div>
             </div>
 
-            <div className="border-b border-b-border/40 my-6"></div>
+            <div className="border-b border-b-border/40 my-6" />
 
             <div className="grid grid-cols-2 gap-4 mt-6 mb-2">
               <div>
@@ -126,7 +126,7 @@ export function OrdersDetailSheet() {
               </div>
             </div>
 
-            <div className="border-b border-b-border/40 my-6"></div>
+            <div className="border-b border-b-border/40 my-6" />
 
             <div className="mt-6 mb-2">
               <Label className="mb-4 block font-medium text-md">
@@ -173,6 +173,7 @@ export function OrdersDetailSheet() {
                   </p>
                 </div>
                 <button
+                  type="button"
                   onClick={copyId}
                   className="flex items-center gap-2 hover:text-green transition-colors text-xs font-mono group"
                 >

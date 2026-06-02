@@ -31,6 +31,8 @@ import {
 } from "@workspace/ui";
 import { toast } from "sonner";
 
+import { useAppStore } from "@/stores/app";
+
 function SettingTransactionSkeleton() {
   return (
     <div className="space-y-8">
@@ -74,6 +76,7 @@ interface TransactionSettingsFormProps {
 
 export function TransactionSettingsForm({ dictionary }: TransactionSettingsFormProps) {
   const queryClient = useQueryClient();
+  const setSettings = useAppStore((s) => s.setSettings);
 
   const { data: settings, isLoading } = useQuery({
     queryKey: ["settings", "transaction"],
@@ -90,8 +93,13 @@ export function TransactionSettingsForm({ dictionary }: TransactionSettingsFormP
       if (!result.success) throw new Error(result.error);
       return result.data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["settings", "transaction"] });
+    onSuccess: (updated) => {
+      if (updated) {
+        // Update Zustand immediately so formatCurrency reflects the change
+        // across the whole app without waiting for a refetch.
+        setSettings(updated);
+        queryClient.setQueryData(["settings", "transaction"], updated);
+      }
       toast.success(dictionary.settings.transaction.toast_updated || "Settings updated");
     },
     onError: () => {

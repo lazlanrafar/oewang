@@ -1,11 +1,15 @@
-import { Elysia } from "elysia";
+import { logger } from "@workspace/logger";
 import { ErrorCode } from "@workspace/types";
-import { buildSuccess, buildError } from "@workspace/utils";
-import { UsersService } from "./users.service";
-import { SyncUserBody, UpdateAvatarBody, UpdateProfileBody } from "./users.model";
+import { buildError, buildSuccess } from "@workspace/utils";
+import { Elysia } from "elysia";
 import { authPlugin } from "../../plugins/auth";
 import { encryptionPlugin } from "../../plugins/encryption";
-import { logger } from "@workspace/logger";
+import {
+  SyncUserBody,
+  UpdateAvatarBody,
+  UpdateProfileBody,
+} from "./users.model";
+import { UsersService } from "./users.service";
 
 /**
  * Users controller — route definitions + TypeBox validation + call service.
@@ -209,14 +213,18 @@ export const usersController = new Elysia({ prefix: "/users" })
       } catch (error: any) {
         logger.error("Error in updateAvatar", { error, userId: auth.user_id });
         set.status = 500;
-        return buildError(ErrorCode.INTERNAL_ERROR, error.message || "Failed to update profile picture");
+        return buildError(
+          ErrorCode.INTERNAL_ERROR,
+          error.message || "Failed to update profile picture",
+        );
       }
     },
     {
       body: UpdateAvatarBody,
       detail: {
         summary: "Update Profile Picture",
-        description: "Uploads and automatically updates the authenticated user's profile picture. Deletes old avatar from storage.",
+        description:
+          "Uploads and automatically updates the authenticated user's profile picture. Deletes old avatar from storage.",
         tags: ["Users"],
       },
     },

@@ -1,6 +1,6 @@
 import { Extension } from "@tiptap/react";
-import Suggestion from "@tiptap/suggestion";
 import type { SuggestionOptions } from "@tiptap/suggestion";
+import Suggestion from "@tiptap/suggestion";
 import type { SlashCommandItem, SlashCommandSubItem } from "./types";
 
 export type SlashCommandOptions = {
@@ -32,6 +32,6 @@ export const SlashCommand = Extension.create<SlashCommandOptions>({
   },
 });
 
-export { SlashMenu } from "./slash-menu";
 export type { SlashMenuRef } from "./slash-menu";
+export { SlashMenu } from "./slash-menu";
 export type { SlashCommandItem, SlashCommandSubItem } from "./types";

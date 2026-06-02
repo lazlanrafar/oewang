@@ -1,8 +1,8 @@
 import type { VisibilityState } from "@tanstack/react-table";
 import { useCallback, useMemo } from "react";
-import { StickyColumnConfig } from "../components/organisms/data-table/data-table-types";
 import { STICKY_COLUMNS } from "../components/organisms/data-table/data-table-configs";
-import { TableId } from "../components/organisms/data-table/data-table-settings";
+import type { TableId } from "../components/organisms/data-table/data-table-settings";
+import type { StickyColumnConfig } from "../components/organisms/data-table/data-table-types";
 import { cn } from "../lib/utils";
 
 interface TableColumn {

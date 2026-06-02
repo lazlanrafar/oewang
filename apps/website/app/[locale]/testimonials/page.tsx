@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
-import { Header } from "@/components/layout/header";
+
 import { Footer } from "@/components/layout/footer";
+import { Header } from "@/components/layout/header";
 import { CTASection } from "@/components/sections/cta-section";
 import { getDictionary } from "@/lib/translations";
 
@@ -41,7 +42,10 @@ export default async function TestimonialsPage({ params }: { params: Promise<{ l
         <section className="py-16 sm:py-20 border-b border-border/70">
           <div className="max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8">
             <h1 className="font-serif text-4xl sm:text-6xl tracking-tight max-w-4xl">Customer stories</h1>
-            <p className="text-muted-foreground text-base sm:text-lg mt-5 max-w-3xl">Real usage patterns from founders and teams managing transactions, invoices, and collaboration in one workspace.</p>
+            <p className="text-muted-foreground text-base sm:text-lg mt-5 max-w-3xl">
+              Real usage patterns from founders and teams managing transactions, invoices, and collaboration in one
+              workspace.
+            </p>
           </div>
         </section>
 

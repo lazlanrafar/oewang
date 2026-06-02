@@ -1,5 +1,5 @@
-import { Elysia } from "elysia";
 import { createLogger } from "@workspace/logger";
+import type { Elysia } from "elysia";
 
 const log = createLogger("http");
 
@@ -47,7 +47,10 @@ export const loggerPlugin = (app: Elysia) =>
       } else if (typeof error === "string") {
         errorMessage = error;
       } else if (error && typeof error === "object") {
-        errorMessage = (error as any).message || (error as any).code || JSON.stringify(error);
+        errorMessage =
+          (error as any).message ||
+          (error as any).code ||
+          JSON.stringify(error);
       }
 
       const logData: any = {
@@ -67,7 +70,11 @@ export const loggerPlugin = (app: Elysia) =>
 
       // 401 and 403 are expected client-side auth state transitions - log as info to reduce noise
       const isAuthError = statusCode === 401 || statusCode === 403;
-      const logMethod = statusCode >= 500 ? "error" : isAuthError ? "info" : "warn";
+      const logMethod =
+        statusCode >= 500 ? "error" : isAuthError ? "info" : "warn";
 
-      log[logMethod](`ERROR ${method} ${path} ${statusCode} - ${duration}ms`, logData);
+      log[logMethod](
+        `ERROR ${method} ${path} ${statusCode} - ${duration}ms`,
+        logData,
+      );
     });

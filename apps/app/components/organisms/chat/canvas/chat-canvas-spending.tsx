@@ -16,9 +16,10 @@ import {
 } from "@workspace/ui";
 
 import { useAppStore } from "@/stores/app";
-import { getDictionaryText } from "../chat-i18n";
+
 import { CategoryExpenseDonutChart } from "../charts/category-expense-donut-chart";
 import { formatAmount } from "../charts/format-amount";
+import { getDictionaryText } from "../chat-i18n";
 import { ArtifactTabs, useStaticArtifactData } from "./chat-canvas";
 
 function SkeletonLine({ width = "100%" }: { width?: string }) {
@@ -34,7 +35,8 @@ function SkeletonCard({ children }: { children: React.ReactNode }) {
 }
 
 export function SpendingCanvas({ dataOverride }: { dataOverride?: Record<string, unknown> | null } = {}) {
-  const data = (dataOverride ?? (useStaticArtifactData("spending-canvas") as Record<string, unknown> | null) ?? {});
+  const artifactData = useStaticArtifactData("spending-canvas") as Record<string, unknown> | null;
+  const data = dataOverride ?? artifactData ?? {};
   const dictionary = useAppStore((state) => state.dictionary);
   const t = (key: string, fallback: string, params?: Record<string, string | number>) =>
     getDictionaryText(dictionary, key, fallback, params);
@@ -200,7 +202,9 @@ export function SpendingCanvas({ dataOverride }: { dataOverride?: Record<string,
                         typeof keyValue === "string" || typeof keyValue === "number" ? String(keyValue) : index;
                       const date = String(transaction.date ?? "-");
                       const vendor = String(transaction.vendor ?? transaction.name ?? "-");
-                      const category = String(transaction.category ?? t("chat.canvas.common.uncategorized", "Uncategorized"));
+                      const category = String(
+                        transaction.category ?? t("chat.canvas.common.uncategorized", "Uncategorized"),
+                      );
                       const amount = Number(transaction.amount) || 0;
                       const share = Number(transaction.share) || 0;
 

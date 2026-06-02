@@ -1,7 +1,5 @@
 "use client";
 
-import { format } from "date-fns";
-
 import { useChatActions } from "@ai-sdk-tools/store";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -14,7 +12,19 @@ import {
   getWallets,
 } from "@workspace/modules/server";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, cn, Skeleton } from "@workspace/ui";
-import { ArrowDownRight, ArrowUpRight, Flame, LineChart, Minus, PiggyBank, PieChart, Receipt, TrendingUp, Wallet } from "lucide-react";
+import { format } from "date-fns";
+import {
+  ArrowDownRight,
+  ArrowUpRight,
+  Flame,
+  LineChart,
+  Minus,
+  PieChart,
+  PiggyBank,
+  Receipt,
+  TrendingUp,
+  Wallet,
+} from "lucide-react";
 
 import type { AppDictionary } from "@/modules/types/dictionary";
 import { useAppStore } from "@/stores/app";
@@ -188,12 +198,16 @@ export function OverviewCards({
   const budgetUsage = totalBudgeted > 0 ? (totalBudgetSpent / totalBudgeted) * 100 : 0;
   const openDebts = debtsData.filter((debt) => debt.status !== "paid");
   const debtBalance = openDebts.reduce((acc, debt) => {
-    const remaining = typeof debt.remainingAmount === "number" ? debt.remainingAmount : Number(debt.remainingAmount) || 0;
+    const remaining =
+      typeof debt.remainingAmount === "number" ? debt.remainingAmount : Number(debt.remainingAmount) || 0;
     return acc + (debt.type === "receivable" ? remaining : -remaining);
   }, 0);
   const trackedBalance = walletsData
     .filter((wallet) => wallet.isIncludedInTotals)
-    .reduce((acc, wallet) => acc + (typeof wallet.balance === "number" ? wallet.balance : Number(wallet.balance) || 0), 0);
+    .reduce(
+      (acc, wallet) => acc + (typeof wallet.balance === "number" ? wallet.balance : Number(wallet.balance) || 0),
+      0,
+    );
 
   // —— Helpers ——
   const handleCardClick = (message: string) => {
@@ -353,7 +367,11 @@ export function OverviewCards({
             <CardDescription className="sr-only">Average monthly burn rate</CardDescription>
           </CardHeader>
           <CardContent className="p-4 pt-0">
-            {loadingBurnRate ? <ValueSkeleton /> : <div className="font-medium font-serif text-2xl tracking-tight">{fmt(averageBurn)}</div>}
+            {loadingBurnRate ? (
+              <ValueSkeleton />
+            ) : (
+              <div className="font-medium font-serif text-2xl tracking-tight">{fmt(averageBurn)}</div>
+            )}
             <div className="mt-1 text-muted-foreground text-xs">{rangeLabel}</div>
           </CardContent>
         </Card>
@@ -393,7 +411,11 @@ export function OverviewCards({
             <CardDescription className="sr-only">Net open debt balance</CardDescription>
           </CardHeader>
           <CardContent className="p-4 pt-0">
-            {loadingDebts ? <ValueSkeleton /> : <div className="font-medium font-serif text-2xl tracking-tight">{fmt(debtBalance)}</div>}
+            {loadingDebts ? (
+              <ValueSkeleton />
+            ) : (
+              <div className="font-medium font-serif text-2xl tracking-tight">{fmt(debtBalance)}</div>
+            )}
             <div className="mt-1 text-muted-foreground text-xs">
               {loadingDebts ? <TrendSkeleton /> : `${openDebts.length} open balances`}
             </div>
@@ -412,9 +434,17 @@ export function OverviewCards({
             <CardDescription className="sr-only">Included account balances</CardDescription>
           </CardHeader>
           <CardContent className="p-4 pt-0">
-            {loadingWallets ? <ValueSkeleton /> : <div className="font-medium font-serif text-2xl tracking-tight">{fmt(trackedBalance)}</div>}
+            {loadingWallets ? (
+              <ValueSkeleton />
+            ) : (
+              <div className="font-medium font-serif text-2xl tracking-tight">{fmt(trackedBalance)}</div>
+            )}
             <div className="mt-1 text-muted-foreground text-xs">
-              {loadingWallets ? <TrendSkeleton /> : `${walletsData.filter((wallet) => wallet.isIncludedInTotals).length} included accounts`}
+              {loadingWallets ? (
+                <TrendSkeleton />
+              ) : (
+                `${walletsData.filter((wallet) => wallet.isIncludedInTotals).length} included accounts`
+              )}
             </div>
           </CardContent>
         </Card>

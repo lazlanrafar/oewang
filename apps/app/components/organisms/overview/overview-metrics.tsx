@@ -12,7 +12,7 @@ import { RevenueChart } from "../chat/charts/revenue-chart";
 
 function ChartEmptyState({ label }: { label: string }) {
   return (
-    <div className="flex h-full items-center justify-center border border-dashed border-[#e6e6e6] text-[#707070] text-[12px] dark:border-[#1d1d1d] dark:text-[#666666]">
+    <div className="flex h-full items-center justify-center border border-[#e6e6e6] border-dashed text-[#707070] text-[12px] dark:border-[#1d1d1d] dark:text-[#666666]">
       {label}
     </div>
   );
@@ -91,7 +91,12 @@ export function OverviewMetrics({
       <div className="grid gap-8 xl:grid-cols-2">
         <CanvasChart
           title={dictionary.overview.metrics.income_total_desc}
-          legend={{ items: [{ label: dictionary.transactions.types.income, type: "solid" }, { label: averageLabel, type: "pattern" }] }}
+          legend={{
+            items: [
+              { label: dictionary.transactions.types.income, type: "solid" },
+              { label: averageLabel, type: "pattern" },
+            ],
+          }}
           height="20rem"
         >
           {incomeTrendData.length > 0 ? (
@@ -112,7 +117,12 @@ export function OverviewMetrics({
 
         <CanvasChart
           title={dictionary.overview.metrics.expense_total_desc}
-          legend={{ items: [{ label: dictionary.transactions.types.expense, type: "solid" }, { label: averageLabel, type: "pattern" }] }}
+          legend={{
+            items: [
+              { label: dictionary.transactions.types.expense, type: "solid" },
+              { label: averageLabel, type: "pattern" },
+            ],
+          }}
           height="20rem"
         >
           {expenseTrendData.length > 0 ? (
@@ -168,7 +178,12 @@ export function OverviewMetrics({
       <div>
         <CanvasChart
           title="Burn Rate"
-          legend={{ items: [{ label: "Current", type: "solid" }, { label: averageLabel, type: "pattern" }] }}
+          legend={{
+            items: [
+              { label: "Current", type: "solid" },
+              { label: averageLabel, type: "pattern" },
+            ],
+          }}
           height="20rem"
         >
           {burnTrendData.length > 0 ? (

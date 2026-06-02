@@ -1,59 +1,45 @@
 import { cookies } from "next/headers";
-import { Header } from "@/components/layout/header";
+
+import { Mail } from "lucide-react";
+
 import { Footer } from "@/components/layout/footer";
+import { Header } from "@/components/layout/header";
 import { CTASection } from "@/components/sections/cta-section";
 import { getDictionary } from "@/lib/translations";
-import { Mail } from "lucide-react";
 
 const FAQ_ITEMS = [
   {
     question: "Can I use Oewang as an individual and as a team?",
-    answer:
-      "Yes. You can keep personal tracking private and also run shared workspace finance with your team.",
+    answer: "Yes. You can keep personal tracking private and also run shared workspace finance with your team.",
   },
   {
     question: "How does multi-user workspace access work?",
-    answer:
-      "You can invite members and set role-based permissions so each person sees the right data and actions.",
+    answer: "You can invite members and set role-based permissions so each person sees the right data and actions.",
   },
   {
     question: "Can Oewang track recurring transactions and bills?",
-    answer:
-      "Yes. Oewang helps track recurring flows so you can see upcoming commitments and avoid surprises.",
+    answer: "Yes. Oewang helps track recurring flows so you can see upcoming commitments and avoid surprises.",
   },
   {
     question: "Does Oewang support multiple currencies?",
-    answer:
-      "Yes. You can monitor cash flow across currencies while keeping your reports and categories organized.",
+    answer: "Yes. You can monitor cash flow across currencies while keeping your reports and categories organized.",
   },
   {
     question: "Is my data secure?",
-    answer:
-      "Yes. We use encryption and workspace-scoped access controls so data is isolated and protected.",
+    answer: "Yes. We use encryption and workspace-scoped access controls so data is isolated and protected.",
   },
 ];
 
-export default async function SupportPage({
-  params,
-}: {
-  params: Promise<{ locale: string }>;
-}) {
+export default async function SupportPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   const dictionary = getDictionary(locale);
   const cookieStore = await cookies();
-  const isLoggedIn = cookieStore.has(
-    process.env.NEXT_PUBLIC_SESSION_COOKIE_NAME ?? "oewang-session",
-  );
+  const isLoggedIn = cookieStore.has(process.env.NEXT_PUBLIC_SESSION_COOKIE_NAME ?? "oewang-session");
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
   return (
     <div className="flex flex-col min-h-screen">
-      <Header
-        isLoggedIn={isLoggedIn}
-        appUrl={appUrl}
-        locale={locale}
-        dictionary={dictionary}
-      />
+      <Header isLoggedIn={isLoggedIn} appUrl={appUrl} locale={locale} dictionary={dictionary} />
 
       <main className="flex-1 pt-24">
         <section className="py-16 sm:py-20">
@@ -100,12 +86,7 @@ export default async function SupportPage({
           </div>
         </section>
 
-        <CTASection
-          isLoggedIn={isLoggedIn}
-          appUrl={appUrl}
-          locale={locale}
-          dictionary={dictionary}
-        />
+        <CTASection isLoggedIn={isLoggedIn} appUrl={appUrl} locale={locale} dictionary={dictionary} />
       </main>
 
       <Footer locale={locale} dictionary={dictionary} />

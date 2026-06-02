@@ -3,11 +3,7 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import { Skeleton, TableSkeleton } from "@workspace/ui";
 
-export function TransactionTableSkeleton({
-  hideHeader = false,
-}: {
-  hideHeader?: boolean;
-}) {
+export function TransactionTableSkeleton({ hideHeader = false }: { hideHeader?: boolean }) {
   const columns: ColumnDef<Record<string, string>>[] = [
     { id: "select", header: "" },
     { id: "date", header: "Date" },

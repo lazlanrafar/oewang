@@ -19,6 +19,7 @@ export * from "./schema/transactions";
 export * from "./schema/user-workspaces";
 export * from "./schema/notifications";
 export * from "./schema/notification-settings";
+export * from "./schema/push-subscriptions";
 export * from "./schema/users";
 export * from "./schema/vault-files";
 export * from "./schema/wallet-groups";

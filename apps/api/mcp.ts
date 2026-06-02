@@ -8,9 +8,9 @@ import * as Sentry from "@sentry/bun";
 
 // We import the same exact tools Oewang uses for WhatsApp / Chat
 import { aiToolDefinitions } from "@workspace/ai";
+import { db } from "@workspace/database";
 import { executeAiTool } from "./modules/ai/ai.tools";
 import { TransactionsService } from "./modules/transactions/transactions.service";
-import { db } from "@workspace/database";
 // Initialize Sentry just like the main API, though optional for local MCP
 import "./instrument";
 

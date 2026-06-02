@@ -1,7 +1,13 @@
-import { buildPaginatedSuccess, buildSuccess, buildPagination } from "@workspace/utils";
-import { NotificationsRepository } from "./notifications.repository";
-import type { NotificationListQuery } from "./notifications.dto";
 import type { InsertNotification } from "@workspace/database";
+import {
+  buildPaginatedSuccess,
+  buildPagination,
+  buildSuccess,
+} from "@workspace/utils";
+import { PushSubscriptionsService } from "../push-subscriptions/push-subscriptions.service";
+import { RealtimeService } from "../realtime/realtime.service";
+import type { NotificationListQuery } from "./notifications.dto";
+import { NotificationsRepository } from "./notifications.repository";
 
 export abstract class NotificationsService {
   static async getAll(
@@ -37,6 +43,20 @@ export abstract class NotificationsService {
   }
 
   static async create(data: InsertNotification) {
-    return await NotificationsRepository.create(data);
+    const notification = await NotificationsRepository.create(data);
+
+    // Broadcast realtime event so connected clients refresh immediately
+    RealtimeService.notifyValueChange(data.workspace_id, "notifications");
+
+    // Send browser push notification if user has subscriptions
+    PushSubscriptionsService.sendToUser(data.user_id, {
+      title: data.title,
+      body: data.message,
+      url: data.link ?? "/notifications",
+    }).catch(() => {
+      // Non-blocking: push failures should not break the main flow
+    });
+
+    return notification;
   }
 }

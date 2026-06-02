@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
-import type { Metadata } from "next";
-import { Providers } from "@/components/providers";
+
 import { WEBSITE_CONFIG } from "@workspace/constants";
-import { Toaster } from "@workspace/ui/atoms";
+import type { Metadata } from "next";
+
 import "@workspace/ui/globals.css";
 
 export const metadata: Metadata = {
@@ -10,8 +10,6 @@ export const metadata: Metadata = {
   description: WEBSITE_CONFIG.meta.description,
 };
 
-export default async function RootLayout({
-  children,
-}: Readonly<{ children: ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return children;
 }

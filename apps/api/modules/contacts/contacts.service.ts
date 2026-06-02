@@ -1,9 +1,13 @@
-import { ContactsRepository } from "./contacts.repository";
-import { AuditLogsService } from "../audit-logs/audit-logs.service";
-import { buildSuccess, buildError, buildPaginatedSuccess } from "@workspace/utils";
-import { status } from "elysia";
 import { ErrorCode } from "@workspace/types";
+import {
+  buildError,
+  buildPaginatedSuccess,
+  buildSuccess,
+} from "@workspace/utils";
+import { status } from "elysia";
+import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import type { CreateContactInput, UpdateContactInput } from "./contacts.model";
+import { ContactsRepository } from "./contacts.repository";
 
 export abstract class ContactsService {
   static async createContact(
@@ -11,7 +15,10 @@ export abstract class ContactsService {
     userId: string,
     data: CreateContactInput,
   ) {
-    const existing = await ContactsRepository.findByName(workspaceId, data.name);
+    const existing = await ContactsRepository.findByName(
+      workspaceId,
+      data.name,
+    );
     if (existing) {
       throw status(
         409,
@@ -55,7 +62,10 @@ export abstract class ContactsService {
     }
 
     if (data.name && data.name.toLowerCase() !== contact.name.toLowerCase()) {
-      const existing = await ContactsRepository.findByName(workspaceId, data.name);
+      const existing = await ContactsRepository.findByName(
+        workspaceId,
+        data.name,
+      );
       if (existing) {
         throw status(
           409,
@@ -109,8 +119,14 @@ export abstract class ContactsService {
     return buildSuccess(null, "Contact deleted successfully");
   }
 
-  static async getContacts(workspaceId: string, filters?: { search?: string; page?: number; limit?: number }) {
-    const { rows, total } = await ContactsRepository.findMany(workspaceId, filters);
+  static async getContacts(
+    workspaceId: string,
+    filters?: { search?: string; page?: number; limit?: number },
+  ) {
+    const { rows, total } = await ContactsRepository.findMany(
+      workspaceId,
+      filters,
+    );
     const page = filters?.page ?? 1;
     const limit = filters?.limit ?? 20;
 

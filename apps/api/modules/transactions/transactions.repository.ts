@@ -1,28 +1,28 @@
 import {
-  db,
-  transactions,
-  wallets,
   categories,
-  transactionAttachments,
-  vaultFiles,
-  users,
+  contacts,
+  db,
   debtPayments,
   debts,
-  contacts,
+  transactionAttachments,
+  transactions,
+  users,
+  vaultFiles,
+  wallets,
 } from "@workspace/database";
 import type { Transaction } from "@workspace/types";
 import {
+  aliasedTable,
   and,
   desc,
   eq,
   gte,
-  lte,
-  sql,
-  aliasedTable,
-  isNull,
-  inArray,
-  or,
   ilike,
+  inArray,
+  isNull,
+  lte,
+  or,
+  sql,
 } from "drizzle-orm";
 
 export abstract class TransactionsRepository {
@@ -330,7 +330,7 @@ export abstract class TransactionsRepository {
       .returning();
 
     if (transaction) {
-      return this.findById(workspaceId, id);
+      return TransactionsRepository.findById(workspaceId, id);
     }
 
     return undefined;
@@ -361,7 +361,7 @@ export abstract class TransactionsRepository {
     tx: any = db,
   ): Promise<Transaction[]> {
     if (ids.length === 0) return [];
-    
+
     const results = await tx
       .update(transactions)
       .set({ deletedAt: new Date().toISOString() })

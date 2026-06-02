@@ -1,11 +1,13 @@
 import { cookies } from "next/headers";
-import { Header } from "@/components/layout/header";
+
+import { WEBSITE_CONFIG } from "@workspace/constants";
+
 import { Footer } from "@/components/layout/footer";
+import { Header } from "@/components/layout/header";
+import { CTASection } from "@/components/sections/cta-section";
+import { FeatureShowcases } from "@/components/sections/feature-showcase";
 import { HeroSection } from "@/components/sections/hero";
 import { HowItWorksSection } from "@/components/sections/how-it-works";
-import { FeatureShowcases } from "@/components/sections/feature-showcase";
-import { CTASection } from "@/components/sections/cta-section";
-import { WEBSITE_CONFIG } from "@workspace/constants";
 import { getDictionary } from "@/lib/translations";
 
 const SEO_COPY = {
@@ -37,21 +39,11 @@ const SEO_COPY = {
     title: "個人とチームの取引を1つのワークスペースで管理",
     description:
       "Oewangは個人と企業が取引を追跡し、キャッシュフローを把握し、共有ワークスペースで安全に共同作業できるようにします。",
-    keywords: [
-      "取引管理",
-      "個人財務",
-      "チーム財務ソフト",
-      "マルチユーザー財務ワークスペース",
-      "キャッシュフロー管理",
-    ],
+    keywords: ["取引管理", "個人財務", "チーム財務ソフト", "マルチユーザー財務ワークスペース", "キャッシュフロー管理"],
   },
 };
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ locale: string }>;
-}) {
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   const seo = SEO_COPY[locale as keyof typeof SEO_COPY] ?? SEO_COPY.en;
 
@@ -75,18 +67,12 @@ export async function generateMetadata({
   };
 }
 
-export default async function Page({
-  params,
-}: {
-  params: Promise<{ locale: string }>;
-}) {
+export default async function Page({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   const dictionary = getDictionary(locale);
 
   const cookieStore = await cookies();
-  const isLoggedIn = cookieStore.has(
-    process.env.NEXT_PUBLIC_SESSION_COOKIE_NAME ?? "oewang-session",
-  );
+  const isLoggedIn = cookieStore.has(process.env.NEXT_PUBLIC_SESSION_COOKIE_NAME ?? "oewang-session");
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
   const seo = SEO_COPY[locale as keyof typeof SEO_COPY] ?? SEO_COPY.en;
@@ -140,25 +126,13 @@ export default async function Page({
 
   return (
     <div className="flex flex-col min-h-screen">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
+      {/* biome-ignore lint/security/noDangerouslySetInnerHtml: JSON-LD structured data requires dangerouslySetInnerHTML */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
 
-      <Header
-        isLoggedIn={isLoggedIn}
-        appUrl={appUrl}
-        locale={locale}
-        dictionary={dictionary}
-      />
+      <Header isLoggedIn={isLoggedIn} appUrl={appUrl} locale={locale} dictionary={dictionary} />
 
       <main className="flex-1">
-        <HeroSection
-          isLoggedIn={isLoggedIn}
-          appUrl={appUrl}
-          locale={locale}
-          dictionary={dictionary}
-        />
+        <HeroSection isLoggedIn={isLoggedIn} appUrl={appUrl} locale={locale} dictionary={dictionary} />
 
         <HowItWorksSection dictionary={dictionary} />
 
@@ -168,12 +142,7 @@ export default async function Page({
 
         <FeatureShowcases dictionary={dictionary} />
 
-        <CTASection
-          isLoggedIn={isLoggedIn}
-          appUrl={appUrl}
-          locale={locale}
-          dictionary={dictionary}
-        />
+        <CTASection isLoggedIn={isLoggedIn} appUrl={appUrl} locale={locale} dictionary={dictionary} />
       </main>
 
       <Footer locale={locale} dictionary={dictionary} />

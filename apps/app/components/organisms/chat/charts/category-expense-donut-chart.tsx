@@ -1,11 +1,10 @@
 "use client";
 
+import type { CategoryExpenseData, CategoryExpenseDonutChartProps } from "@workspace/types";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 
-import { formatAmount } from "./format-amount";
-
-import type { CategoryExpenseData, CategoryExpenseDonutChartProps } from "@workspace/types";
 import { StyledTooltip } from "./base-charts";
+import { formatAmount } from "./format-amount";
 
 // Gray shades for categories (always use these, ignore color from data)
 export const grayShades = [
@@ -72,7 +71,7 @@ export function CategoryExpenseDonutChart({
             <Tooltip
               content={
                 <StyledTooltip
-                  formatter={(value: number | string, name: string, entry: any) => {
+                  formatter={(value: number | string, _name: string, entry: any) => {
                     const data = entry.payload as CategoryExpenseData;
                     const numValue = typeof value === "number" ? value : Number(value);
                     const formattedValue =

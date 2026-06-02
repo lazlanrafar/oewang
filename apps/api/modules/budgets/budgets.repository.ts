@@ -1,6 +1,6 @@
-import { db, budgets, transactions, categories } from "@workspace/database";
-import { and, eq, isNull, sql, gte, lte } from "drizzle-orm";
+import { budgets, categories, db, transactions } from "@workspace/database";
 import type { BudgetStatus } from "@workspace/types";
+import { and, eq, gte, isNull, lte, sql } from "drizzle-orm";
 
 export abstract class BudgetsRepository {
   static async create(data: typeof budgets.$inferInsert) {
@@ -12,14 +12,22 @@ export abstract class BudgetsRepository {
     return db
       .select()
       .from(budgets)
-      .where(and(eq(budgets.workspaceId, workspaceId), isNull(budgets.deletedAt)));
+      .where(
+        and(eq(budgets.workspaceId, workspaceId), isNull(budgets.deletedAt)),
+      );
   }
 
   static async findById(id: string, workspaceId: string) {
     const [result] = await db
       .select()
       .from(budgets)
-      .where(and(eq(budgets.id, id), eq(budgets.workspaceId, workspaceId), isNull(budgets.deletedAt)));
+      .where(
+        and(
+          eq(budgets.id, id),
+          eq(budgets.workspaceId, workspaceId),
+          isNull(budgets.deletedAt),
+        ),
+      );
     return result;
   }
 
@@ -27,15 +35,31 @@ export abstract class BudgetsRepository {
     const [result] = await db
       .select()
       .from(budgets)
-      .where(and(eq(budgets.categoryId, categoryId), eq(budgets.workspaceId, workspaceId), isNull(budgets.deletedAt)));
+      .where(
+        and(
+          eq(budgets.categoryId, categoryId),
+          eq(budgets.workspaceId, workspaceId),
+          isNull(budgets.deletedAt),
+        ),
+      );
     return result;
   }
 
-  static async update(id: string, workspaceId: string, data: Partial<typeof budgets.$inferInsert>) {
+  static async update(
+    id: string,
+    workspaceId: string,
+    data: Partial<typeof budgets.$inferInsert>,
+  ) {
     const [result] = await db
       .update(budgets)
       .set({ ...data, updatedAt: new Date() })
-      .where(and(eq(budgets.id, id), eq(budgets.workspaceId, workspaceId), isNull(budgets.deletedAt)))
+      .where(
+        and(
+          eq(budgets.id, id),
+          eq(budgets.workspaceId, workspaceId),
+          isNull(budgets.deletedAt),
+        ),
+      )
       .returning();
     return result;
   }
@@ -44,12 +68,22 @@ export abstract class BudgetsRepository {
     const [result] = await db
       .update(budgets)
       .set({ deletedAt: new Date() })
-      .where(and(eq(budgets.id, id), eq(budgets.workspaceId, workspaceId), isNull(budgets.deletedAt)))
+      .where(
+        and(
+          eq(budgets.id, id),
+          eq(budgets.workspaceId, workspaceId),
+          isNull(budgets.deletedAt),
+        ),
+      )
       .returning();
     return result;
   }
 
-  static async getStatus(workspaceId: string, startDate: string, endDate: string): Promise<BudgetStatus[]> {
+  static async getStatus(
+    workspaceId: string,
+    startDate: string,
+    endDate: string,
+  ): Promise<BudgetStatus[]> {
     const results = await db
       .select({
         id: budgets.id,
@@ -71,7 +105,9 @@ export abstract class BudgetsRepository {
           isNull(transactions.deletedAt),
         ),
       )
-      .where(and(eq(budgets.workspaceId, workspaceId), isNull(budgets.deletedAt)))
+      .where(
+        and(eq(budgets.workspaceId, workspaceId), isNull(budgets.deletedAt)),
+      )
       .groupBy(budgets.id, categories.id);
 
     return results.map((row) => {

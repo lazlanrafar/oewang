@@ -1,11 +1,11 @@
+import { ErrorCode } from "@workspace/types";
+import { buildError, buildSuccess } from "@workspace/utils";
 import { Elysia, t } from "elysia";
-import { ContactsService } from "./contacts.service";
-import { ContactsModel } from "./contacts.model";
 import { authPlugin } from "../../plugins/auth";
 import { encryptionPlugin } from "../../plugins/encryption";
-import { buildError, buildSuccess } from "@workspace/utils";
-import { ErrorCode } from "@workspace/types";
 import { assertCanEditWorkspaceData } from "../workspaces/workspace-permissions";
+import { ContactsModel } from "./contacts.model";
+import { ContactsService } from "./contacts.service";
 
 export const contactsController = new Elysia({ prefix: "/contacts" })
   .use(authPlugin)
@@ -31,12 +31,13 @@ export const contactsController = new Elysia({ prefix: "/contacts" })
       query: ContactsModel.listQuery,
       detail: {
         summary: "Get Contacts",
-        description: "Returns a paginated list of contacts (debtors/creditors) for the active workspace.",
+        description:
+          "Returns a paginated list of contacts (debtors/creditors) for the active workspace.",
         tags: ["Contacts"],
       },
     },
   )
-  
+
   // Get contact by ID
   .get(
     "/:id",
@@ -51,7 +52,8 @@ export const contactsController = new Elysia({ prefix: "/contacts" })
       params: t.Object({ id: t.String() }),
       detail: {
         summary: "Get Contact by ID",
-        description: "Retrieves the full details and current balance for a specific contact.",
+        description:
+          "Retrieves the full details and current balance for a specific contact.",
         tags: ["Contacts"],
       },
     },
@@ -72,7 +74,8 @@ export const contactsController = new Elysia({ prefix: "/contacts" })
       body: ContactsModel.create,
       detail: {
         summary: "Create Contact",
-        description: "Creates a new contact for tracking debts and transactions.",
+        description:
+          "Creates a new contact for tracking debts and transactions.",
         tags: ["Contacts"],
       },
     },
@@ -96,7 +99,8 @@ export const contactsController = new Elysia({ prefix: "/contacts" })
       body: ContactsModel.update,
       detail: {
         summary: "Update Contact",
-        description: "Updates an existing contact's name, email, or phone number.",
+        description:
+          "Updates an existing contact's name, email, or phone number.",
         tags: ["Contacts"],
       },
     },
@@ -118,7 +122,8 @@ export const contactsController = new Elysia({ prefix: "/contacts" })
       params: t.Object({ id: t.String() }),
       detail: {
         summary: "Delete Contact",
-        description: "Soft-deletes a contact. Historical data linked to this contact is preserved but the contact is hidden.",
+        description:
+          "Soft-deletes a contact. Historical data linked to this contact is preserved but the contact is hidden.",
         tags: ["Contacts"],
       },
     },

@@ -9,6 +9,7 @@ import type { UIMessage } from "ai";
 import { parseAsString, useQueryState } from "nuqs";
 
 import { useAppStore } from "@/stores/app";
+
 import { getDictionaryText } from "../chat-i18n";
 import { BurnRateCanvas } from "./chat-canvas-burn-rate";
 import { CanvasErrorBoundary } from "./chat-canvas-error-boundary";
@@ -27,7 +28,7 @@ type ArtifactEntry = {
 function extractTextFromMessageParts(parts: UIMessage["parts"]): string {
   return parts
     .filter((part) => part.type === "text")
-    .map((part) => ((part as { text?: string }).text ?? ""))
+    .map((part) => (part as { text?: string }).text ?? "")
     .join(" ")
     .trim();
 }
@@ -86,7 +87,10 @@ function inferArtifactInstanceLabel(
 
   if (
     type === "spending-canvas" &&
-    (prompt.includes("tahun ini") || prompt.includes("this year") || prompt.includes("year to date") || prompt.includes("今年"))
+    (prompt.includes("tahun ini") ||
+      prompt.includes("this year") ||
+      prompt.includes("year to date") ||
+      prompt.includes("今年"))
   ) {
     return t("chat.canvas.tabs.expense_this_year", "Expense this year");
   }
@@ -167,7 +171,7 @@ export function useArtifactEntries(type: string): ArtifactEntry[] {
 
 export function useStaticArtifactData(type: string) {
   const entries = useArtifactEntries(type);
-  return entries.length > 0 ? entries[entries.length - 1]?.payload ?? null : null;
+  return entries.length > 0 ? (entries[entries.length - 1]?.payload ?? null) : null;
 }
 
 export function ArtifactTabs() {
@@ -304,44 +308,45 @@ export function ArtifactTabs() {
   return (
     <div className="h-10 max-h-10 min-h-10 overflow-x-auto overflow-y-hidden border-[#e6e6e6] border-b bg-[#fdfdfc] px-2 sm:px-4 dark:border-[#1d1d1d] dark:bg-[#0c0c0c]">
       <div className="flex h-full min-w-full items-center gap-1">
-      {tabItems.map((tab) => {
-        const typeEntries = entriesByType.get(tab.type) ?? [];
-        const hasInstances = typeEntries.length > 1;
-        const isActive =
-          tab.type === activeType && (hasInstances ? selectedInstance === tab.instanceId : !selectedInstance || tab.instanceId === null);
+        {tabItems.map((tab) => {
+          const typeEntries = entriesByType.get(tab.type) ?? [];
+          const hasInstances = typeEntries.length > 1;
+          const isActive =
+            tab.type === activeType &&
+            (hasInstances ? selectedInstance === tab.instanceId : !selectedInstance || tab.instanceId === null);
 
-        return (
-          <div
-            key={tab.key}
-            className={cn(
-              "group flex h-10 shrink-0 items-center whitespace-nowrap border-b-2 px-2.5 sm:px-3 font-medium text-[12px] sm:text-[13px] transition-all",
-              isActive
-                ? "border-black text-black dark:border-white dark:text-white"
-                : "border-transparent text-muted-foreground hover:text-foreground",
-            )}
-          >
-            <button
-              type="button"
-              onClick={() => {
-                actions.setValue(tab.type);
-                setSelectedType(tab.type);
-                setSelectedInstance(tab.instanceId);
-              }}
-              className="flex h-full items-center text-left"
+          return (
+            <div
+              key={tab.key}
+              className={cn(
+                "group flex h-10 shrink-0 items-center whitespace-nowrap border-b-2 px-2.5 font-medium text-[12px] transition-all sm:px-3 sm:text-[13px]",
+                isActive
+                  ? "border-black text-black dark:border-white dark:text-white"
+                  : "border-transparent text-muted-foreground hover:text-foreground",
+              )}
             >
-              {tab.label}
-            </button>
-            <button
-              type="button"
-              aria-label={t("chat.canvas.tabs.close_tab", "Close tab")}
-              className="ml-0 flex h-4 w-0 items-center justify-center overflow-hidden text-muted-foreground opacity-0 transition-all hover:text-primary focus:ml-1.5 focus:w-4 focus:opacity-100 focus:outline-none group-hover:ml-1.5 group-hover:w-4 group-hover:opacity-100"
-              onClick={(e) => handleDismiss(e, tab.type, tab.instanceId)}
-            >
-              <Icons.Close className="size-3" />
-            </button>
-          </div>
-        );
-      })}
+              <button
+                type="button"
+                onClick={() => {
+                  actions.setValue(tab.type);
+                  setSelectedType(tab.type);
+                  setSelectedInstance(tab.instanceId);
+                }}
+                className="flex h-full items-center text-left"
+              >
+                {tab.label}
+              </button>
+              <button
+                type="button"
+                aria-label={t("chat.canvas.tabs.close_tab", "Close tab")}
+                className="ml-0 flex h-4 w-0 items-center justify-center overflow-hidden text-muted-foreground opacity-0 transition-all hover:text-primary focus:ml-1.5 focus:w-4 focus:opacity-100 focus:outline-none group-hover:ml-1.5 group-hover:w-4 group-hover:opacity-100"
+                onClick={(e) => handleDismiss(e, tab.type, tab.instanceId)}
+              >
+                <Icons.Close className="size-3" />
+              </button>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -362,12 +367,15 @@ export function Canvas() {
 
   const activeType = selection.activeType;
   const available = selection.available;
-  const activeEntries = useMemo(() => allEntries.filter((entry) => entry.type === activeType), [allEntries, activeType]);
+  const activeEntries = useMemo(
+    () => allEntries.filter((entry) => entry.type === activeType),
+    [allEntries, activeType],
+  );
 
   const selectedPayload =
     selectedInstance && activeEntries.length > 0
-      ? activeEntries.find((entry) => entry.id === selectedInstance)?.payload ?? null
-      : activeEntries[activeEntries.length - 1]?.payload ?? null;
+      ? (activeEntries.find((entry) => entry.id === selectedInstance)?.payload ?? null)
+      : (activeEntries[activeEntries.length - 1]?.payload ?? null);
 
   useEffect(() => {
     if (selectedType && available.includes(selectedType) && activeType !== selectedType) {
@@ -403,14 +411,14 @@ export function Canvas() {
             <div className="flex h-full flex-col items-center justify-center space-y-4">
               <Loader className="size-8 animate-spin text-primary" />
               <p className="text-muted-foreground text-sm">
-                {t("chat.canvas.loading.generating_analysis", "Generating analysis...")}
+                {getDictionaryText(dictionary, "chat.canvas.loading.generating_analysis", "Generating analysis...")}
               </p>
             </div>
           );
         }
         return null;
     }
-  }, [activeType, selectedType, selectedPayload, t]);
+  }, [activeType, selectedType, selectedPayload, dictionary]);
 
   return (
     <div className="relative flex h-full w-full flex-col overflow-y-auto bg-[#fdfdfc] dark:bg-[#0c0c0c]">

@@ -1,6 +1,6 @@
 import { convertCurrency, getRates } from "@workspace/currencyfreaks";
-import { buildSuccess, buildError } from "@workspace/utils";
 import { ErrorCode } from "@workspace/types";
+import { buildError, buildSuccess } from "@workspace/utils";
 import { status } from "elysia";
 
 export abstract class RatesService {

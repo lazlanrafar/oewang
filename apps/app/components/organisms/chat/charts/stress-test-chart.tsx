@@ -1,8 +1,8 @@
 "use client";
 
+import type { ProjectedCashBalanceData, StressTestChartProps } from "@workspace/types";
 import { Line, ReferenceLine, Tooltip, XAxis, YAxis } from "recharts";
 
-import type { ProjectedCashBalanceData, StressTestChartProps } from "@workspace/types";
 import { BaseChart, StyledTooltip } from "./base-charts";
 import { commonChartConfig, createCompactTickFormatter, useChartMargin } from "./chart-utils";
 import { formatAmount } from "./format-amount";
@@ -64,13 +64,15 @@ export function CashBalanceProjectionChart({
           content={
             <StyledTooltip
               formatter={(value: number | string, name: string) => {
-                const formattedValue = formatAmount({
-                  amount: typeof value === "number" ? value : Number(value),
-                  currency,
-                  locale: locale ?? undefined,
-                  maximumFractionDigits: 0,
-                }) ?? `${currency}${value.toLocaleString()}`;
-                const displayName = name === "baseCase" ? "Base Case" : name === "worstCase" ? "Worst Case" : "Best Case";
+                const formattedValue =
+                  formatAmount({
+                    amount: typeof value === "number" ? value : Number(value),
+                    currency,
+                    locale: locale ?? undefined,
+                    maximumFractionDigits: 0,
+                  }) ?? `${currency}${value.toLocaleString()}`;
+                const displayName =
+                  name === "baseCase" ? "Base Case" : name === "worstCase" ? "Worst Case" : "Best Case";
                 return [formattedValue, displayName];
               }}
               labelFormatter={(label) => `Month ${label}`}

@@ -1,14 +1,14 @@
+import type { InsertNotification } from "@workspace/database";
 import {
-  db,
-  notifications,
   and,
-  eq,
-  isNull,
+  db,
   desc,
+  eq,
   inArray,
+  isNull,
+  notifications,
   sql,
 } from "@workspace/database";
-import type { InsertNotification } from "@workspace/database";
 
 export abstract class NotificationsRepository {
   static async findAll(
@@ -50,7 +50,11 @@ export abstract class NotificationsRepository {
     return row;
   }
 
-  static async markAsRead(workspace_id: string, user_id: string, ids: string[]) {
+  static async markAsRead(
+    workspace_id: string,
+    user_id: string,
+    ids: string[],
+  ) {
     await db
       .update(notifications)
       .set({ is_read: true })

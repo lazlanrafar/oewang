@@ -142,7 +142,7 @@ export const debtColumns = (
           variant={status === "paid" ? "default" : status === "partial" ? "secondary" : "outline"}
           className="capitalize shadow-none"
         >
-          {dictionary.debts.statuses[status] || status}
+          {(dictionary.debts.statuses as Record<string, string>)[status] || status}
         </Badge>
       );
     },

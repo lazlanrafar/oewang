@@ -1,10 +1,9 @@
-import { Elysia, t } from "elysia";
+import { ErrorCode } from "@workspace/types";
+import { buildError } from "@workspace/utils";
+import { Elysia, status, t } from "elysia";
 import { authPlugin } from "../../../plugins/auth";
 import { encryptionPlugin } from "../../../plugins/encryption";
 import { RatesService } from "./rates.service";
-import { ErrorCode } from "@workspace/types";
-import { buildError } from "@workspace/utils";
-import { status } from "elysia";
 
 export const ratesController = new Elysia({
   prefix: "/rates",

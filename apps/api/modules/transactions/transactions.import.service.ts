@@ -1,17 +1,17 @@
-import { 
-  ExtractionService, 
-  parseFileToAiInput, 
-  type ExtractedTransaction 
+import {
+  type ExtractedTransaction,
+  ExtractionService,
+  parseFileToAiInput,
 } from "@workspace/ai";
-import { WalletsRepository } from "../wallets/wallets.repository";
-import { TransactionsRepository } from "./transactions.repository";
-import { CategoriesRepository } from "../categories/categories.repository";
-import { AuditLogsService } from "../audit-logs/audit-logs.service";
-import { buildSuccess, buildError } from "@workspace/utils";
-import { ErrorCode } from "@workspace/types";
 import { Env } from "@workspace/constants";
 import { logger } from "@workspace/logger";
+import { ErrorCode } from "@workspace/types";
+import { buildError, buildSuccess } from "@workspace/utils";
 import { status } from "elysia";
+import { AuditLogsService } from "../audit-logs/audit-logs.service";
+import { CategoriesRepository } from "../categories/categories.repository";
+import { WalletsRepository } from "../wallets/wallets.repository";
+import { TransactionsRepository } from "./transactions.repository";
 
 export abstract class TransactionsImportService {
   static async importFromFile(
@@ -32,7 +32,9 @@ export abstract class TransactionsImportService {
     const walletNames = wallets.map((w: any) => w.name);
     const categoryNames = existingCategories.map((c: any) => c.name);
 
-    const walletMap = new Map<string, string>(wallets.map((w: any) => [w.name.toLowerCase(), w.id]));
+    const walletMap = new Map<string, string>(
+      wallets.map((w: any) => [w.name.toLowerCase(), w.id]),
+    );
     // category map: name → { id, type }
     const categoryMap = new Map<string, any>(
       existingCategories.map((c: any) => [c.name.toLowerCase(), c]),
@@ -52,7 +54,7 @@ export abstract class TransactionsImportService {
           geminiKey: Env.GEMINI_API_KEY,
           openaiKey: Env.OPENAI_API_KEY,
           anthropicKey: Env.ANTHROPIC_API_KEY,
-        }
+        },
       );
     } catch (err: any) {
       logger.error("[AI Import Error]", { err });

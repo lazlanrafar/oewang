@@ -12,13 +12,15 @@ import {
 } from "@workspace/ui";
 
 import { useAppStore } from "@/stores/app";
-import { getDictionaryText } from "../chat-i18n";
+
 import { BurnRateChart } from "../charts/burn-rate-chart";
 import { formatAmount } from "../charts/format-amount";
+import { getDictionaryText } from "../chat-i18n";
 import { ArtifactTabs, useStaticArtifactData } from "./chat-canvas";
 
 export function BurnRateCanvas({ dataOverride }: { dataOverride?: Record<string, unknown> | null } = {}) {
-  const data = (dataOverride ?? (useStaticArtifactData("burn-rate-canvas") as Record<string, unknown> | null) ?? {});
+  const artifactData = useStaticArtifactData("burn-rate-canvas") as Record<string, unknown> | null;
+  const data = dataOverride ?? artifactData ?? {};
   const dictionary = useAppStore((state) => state.dictionary);
   const t = (key: string, fallback: string) => getDictionaryText(dictionary, key, fallback);
   const locale = typeof navigator !== "undefined" ? navigator.language : "en-US";
@@ -91,7 +93,10 @@ export function BurnRateCanvas({ dataOverride }: { dataOverride?: Record<string,
           <CanvasGrid items={burnMetrics} layout="2/2" isLoading={shouldShowMetricsSkeleton(stage)} />
 
           {/* Summary */}
-          <CanvasSection title={t("chat.canvas.common.summary", "Summary")} isLoading={shouldShowSummarySkeleton(stage)}>
+          <CanvasSection
+            title={t("chat.canvas.common.summary", "Summary")}
+            isLoading={shouldShowSummarySkeleton(stage)}
+          >
             {String(analysis.summary ?? "")}
           </CanvasSection>
         </div>

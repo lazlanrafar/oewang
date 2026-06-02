@@ -1,22 +1,23 @@
-import { TransactionsRepository } from "./transactions.repository";
+import { db } from "@workspace/database";
 import { ErrorCode } from "@workspace/types";
-import type {
-  CreateTransactionInput,
-  GetTransactionsQueryInput,
-  UpdateTransactionInput,
-  ExportTransactionsQueryInput,
-} from "./transactions.model";
-import { WalletsRepository } from "../wallets/wallets.repository";
-import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import {
+  buildError,
   buildPaginatedSuccess,
   buildSuccess,
-  buildError,
 } from "@workspace/utils";
-import { db } from "@workspace/database";
+import { status } from "elysia";
+import { AuditLogsService } from "../audit-logs/audit-logs.service";
+import { BudgetsRepository } from "../budgets/budgets.repository";
 import { NotificationsService } from "../notifications/notifications.service";
 import { RealtimeService } from "../realtime/realtime.service";
-import { status } from "elysia";
+import { WalletsRepository } from "../wallets/wallets.repository";
+import type {
+  CreateTransactionInput,
+  ExportTransactionsQueryInput,
+  GetTransactionsQueryInput,
+  UpdateTransactionInput,
+} from "./transactions.model";
+import { TransactionsRepository } from "./transactions.repository";
 
 export abstract class TransactionsService {
   static async create(
@@ -80,7 +81,52 @@ export abstract class TransactionsService {
       message: `A new ${body.type} of ${amount} was recorded.`,
       link: "/transactions",
     });
-    
+
+    // Check if this expense exceeds an active budget
+    if (body.type === "expense" && categoryId) {
+      const budget = await BudgetsRepository.findByCategory(
+        categoryId,
+        workspaceId,
+      );
+      if (budget) {
+        const now = new Date();
+        const startDate = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          1,
+        ).toISOString();
+        const endDate = new Date(
+          now.getFullYear(),
+          now.getMonth() + 1,
+          0,
+          23,
+          59,
+          59,
+        ).toISOString();
+        const budgetStatuses = await BudgetsRepository.getStatus(
+          workspaceId,
+          startDate,
+          endDate,
+        );
+        const budgetStatus = budgetStatuses.find(
+          (s) => s.categoryId === categoryId,
+        );
+        if (
+          budgetStatus &&
+          Number(budgetStatus.spent) >= Number(budgetStatus.amount)
+        ) {
+          await NotificationsService.create({
+            workspace_id: workspaceId,
+            user_id: userId,
+            type: "budget.exceeded",
+            title: "Budget Exceeded",
+            message: `Your ${budgetStatus.categoryName} budget of ${Number(budgetStatus.amount).toLocaleString()} has been exceeded this month.`,
+            link: "/budget",
+          });
+        }
+      }
+    }
+
     RealtimeService.notifyValueChange(workspaceId, "transactions");
     RealtimeService.notifyValueChange(workspaceId, "wallets");
 
@@ -248,7 +294,10 @@ export abstract class TransactionsService {
     );
   }
 
-  static async export(workspaceId: string, query: ExportTransactionsQueryInput) {
+  static async export(
+    workspaceId: string,
+    query: ExportTransactionsQueryInput,
+  ) {
     const { data } = await TransactionsRepository.list(workspaceId, {
       page: 1,
       limit: 100000,
@@ -257,7 +306,15 @@ export abstract class TransactionsService {
     });
 
     // Create CSV payload
-    const headers = ["Date", "Type", "Amount", "Category", "Wallet", "To Wallet", "Description"];
+    const headers = [
+      "Date",
+      "Type",
+      "Amount",
+      "Category",
+      "Wallet",
+      "To Wallet",
+      "Description",
+    ];
     const rows = data.map((t: any) => {
       return [
         t.date ? new Date(t.date).toISOString().split("T")[0] : "",
@@ -266,7 +323,7 @@ export abstract class TransactionsService {
         t.category?.name || "",
         t.wallet?.name || "",
         t.toWallet?.name || "",
-        `"${(t.description || "").replace(/"/g, '""')}"`
+        `"${(t.description || "").replace(/"/g, '""')}"`,
       ].join(",");
     });
 
@@ -484,7 +541,10 @@ export abstract class TransactionsService {
           } else if (transaction.type === "income") {
             walletDeltas[transaction.walletId] =
               (walletDeltas[transaction.walletId] || 0) - val;
-          } else if (transaction.type === "transfer" && transaction.toWalletId) {
+          } else if (
+            transaction.type === "transfer" &&
+            transaction.toWalletId
+          ) {
             walletDeltas[transaction.walletId] =
               (walletDeltas[transaction.walletId] || 0) + val;
             walletDeltas[transaction.toWalletId] =

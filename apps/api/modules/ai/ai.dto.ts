@@ -7,11 +7,15 @@ export const ChatMessageDto = t.Object({
     t.Literal("system"),
   ]),
   content: t.String({ minLength: 1 }),
-  attachments: t.Optional(t.Array(t.Object({
-    name: t.String(),
-    type: t.String(),
-    data: t.String(), // Base64
-  }))),
+  attachments: t.Optional(
+    t.Array(
+      t.Object({
+        name: t.String(),
+        type: t.String(),
+        data: t.String(), // Base64
+      }),
+    ),
+  ),
 });
 
 export const ChatRequestDto = t.Object({

@@ -1,12 +1,11 @@
 "use client";
 
 import type { Dictionary } from "@workspace/dictionaries";
-import { Label, Separator, Switch, Tabs, TabsContent, TabsList, TabsTrigger } from "@workspace/ui";
+import { Label, Separator, Switch } from "@workspace/ui";
 import { toast } from "sonner";
 
+import { PushNotificationToggle } from "@/components/organisms/notification/push-notification-toggle";
 import { useNotifications } from "@/hooks/use-notifications";
-
-import { NotificationList } from "./notification-list";
 
 export function NotificationSettings({ dictionary }: { dictionary: Dictionary }) {
   const { settings, updateSettings, isLoading } = useNotifications();
@@ -51,92 +50,64 @@ export function NotificationSettings({ dictionary }: { dictionary: Dictionary })
         </p>
       </div>
 
-      <Tabs defaultValue="inbox" className="w-full">
-        <TabsList className="grid h-9 w-full grid-cols-2 rounded-none border-b bg-transparent p-0 lg:w-[400px]">
-          <TabsTrigger
-            value="inbox"
-            className="h-full rounded-none border-transparent border-b-2 font-semibold text-[10px] uppercase tracking-wider data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none"
-          >
-            {dict.inbox || "Inbox"}
-          </TabsTrigger>
-          <TabsTrigger
-            value="settings"
-            className="h-full rounded-none border-transparent border-b-2 font-semibold text-[10px] uppercase tracking-wider data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none"
-          >
-            {dict.settings || "Settings"}
-          </TabsTrigger>
-        </TabsList>
+      <Separator />
 
-        <TabsContent value="inbox" className="border-none pt-6 shadow-none focus-visible:ring-0">
-          <NotificationList dictionary={dictionary} />
-        </TabsContent>
+      <div className="grid gap-6">
+        <PushNotificationToggle
+          enabled={settings?.push_enabled ?? false}
+          onToggle={(value) => handleToggle("push_enabled", value)}
+          dict={dict}
+        />
 
-        <TabsContent value="settings" className="space-y-6 border-none pt-6 shadow-none focus-visible:ring-0">
-          <div className="grid gap-6">
-            <div className="flex items-center justify-between space-x-2">
-              <div className="space-y-0.5">
-                <Label className="font-medium text-sm">{dict.push_notifications || "Push Notifications"}</Label>
-                <p className="text-muted-foreground text-xs">
-                  {dict.push_description || "Receive real-time alerts in your browser."}
-                </p>
-              </div>
-              <Switch
-                checked={settings?.push_enabled}
-                onCheckedChange={(checked) => handleToggle("push_enabled", checked)}
-              />
-            </div>
-
-            <div className="flex items-center justify-between space-x-2">
-              <div className="space-y-0.5">
-                <Label className="font-medium text-sm">{dict.email_notifications || "Email Notifications"}</Label>
-                <p className="text-muted-foreground text-xs">
-                  {dict.email_description || "Get detailed updates and reports via email."}
-                </p>
-              </div>
-              <Switch
-                checked={settings?.email_enabled}
-                onCheckedChange={(checked) => handleToggle("email_enabled", checked)}
-              />
-            </div>
-
-            <div className="flex items-center justify-between space-x-2">
-              <div className="space-y-0.5">
-                <Label className="font-medium text-sm">{dict.whatsapp_notifications || "WhatsApp Notifications"}</Label>
-                <p className="text-muted-foreground text-xs">
-                  {dict.whatsapp_description || "Receive quick alerts on your WhatsApp."}
-                </p>
-              </div>
-              <Switch
-                checked={settings?.whatsapp_enabled}
-                onCheckedChange={(checked) => handleToggle("whatsapp_enabled", checked)}
-              />
-            </div>
-
-            <div className="flex items-center justify-between space-x-2">
-              <div className="space-y-0.5">
-                <Label className="font-medium text-sm">{dict.marketing_comms || "Marketing Communications"}</Label>
-                <p className="text-muted-foreground text-xs">
-                  {dict.marketing_description || "Receive news about new features and promotions."}
-                </p>
-              </div>
-              <Switch
-                checked={settings?.marketing_enabled}
-                onCheckedChange={(checked) => handleToggle("marketing_enabled", checked)}
-              />
-            </div>
-          </div>
-
-          <div className="rounded-lg border bg-accent/20 p-4">
-            <h4 className="mb-2 font-semibold text-muted-foreground text-xs uppercase tracking-wider">
-              {dict.pro_tip || "Pro Tip"}
-            </h4>
-            <p className="text-muted-foreground text-xs leading-relaxed">
-              {dict.pro_tip_description ||
-                "You can also configure specific alerts for budgets and large transactions in the Category settings?."}
+        <div className="flex items-center justify-between space-x-2">
+          <div className="space-y-0.5">
+            <Label className="font-medium text-sm">{dict.email_notifications || "Email Notifications"}</Label>
+            <p className="text-muted-foreground text-xs">
+              {dict.email_description || "Get detailed updates and reports via email."}
             </p>
           </div>
-        </TabsContent>
-      </Tabs>
+          <Switch
+            checked={settings?.email_enabled}
+            onCheckedChange={(checked) => handleToggle("email_enabled", checked)}
+          />
+        </div>
+
+        <div className="flex items-center justify-between space-x-2">
+          <div className="space-y-0.5">
+            <Label className="font-medium text-sm">{dict.whatsapp_notifications || "WhatsApp Notifications"}</Label>
+            <p className="text-muted-foreground text-xs">
+              {dict.whatsapp_description || "Receive quick alerts on your WhatsApp."}
+            </p>
+          </div>
+          <Switch
+            checked={settings?.whatsapp_enabled}
+            onCheckedChange={(checked) => handleToggle("whatsapp_enabled", checked)}
+          />
+        </div>
+
+        <div className="flex items-center justify-between space-x-2">
+          <div className="space-y-0.5">
+            <Label className="font-medium text-sm">{dict.marketing_comms || "Marketing Communications"}</Label>
+            <p className="text-muted-foreground text-xs">
+              {dict.marketing_description || "Receive news about new features and promotions."}
+            </p>
+          </div>
+          <Switch
+            checked={settings?.marketing_enabled}
+            onCheckedChange={(checked) => handleToggle("marketing_enabled", checked)}
+          />
+        </div>
+      </div>
+
+      <div className="rounded-lg border bg-accent/20 p-4">
+        <h4 className="mb-2 font-semibold text-muted-foreground text-xs uppercase tracking-wider">
+          {dict.pro_tip || "Pro Tip"}
+        </h4>
+        <p className="text-muted-foreground text-xs leading-relaxed">
+          {dict.pro_tip_description ||
+            "You can also configure specific alerts for budgets and large transactions in the Category settings."}
+        </p>
+      </div>
     </div>
   );
 }

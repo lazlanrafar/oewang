@@ -7,7 +7,7 @@ import Negotiator from "negotiator";
 
 import { i18n } from "./i18n-config";
 
-const ADMIN_ROLES = new Set(["owner", "finance"]);
+const ADMIN_ROLES = new Set(["superadmin"]);
 
 function hasAdminAccess(session: any) {
   const systemRole = session?.user?.app_metadata?.system_role;

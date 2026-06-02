@@ -41,7 +41,7 @@ export function useChatInterface() {
   // Extract chatId from pathname when it changes
   useEffect(() => {
     const id = extractChatId(pathname);
-    
+
     // If we transition to Home from a Chat, clean up
     if (!id && chatId) {
       handleNavigateAway();
@@ -73,7 +73,7 @@ export function useChatInterface() {
   const setChatId = (id: string, type?: string | null) => {
     // Preserve query parameters when updating the URL
     const locale = pathname.split("/")[1];
-    
+
     // Create new URL search params
     const searchParams = new URLSearchParams(window.location.search);
     if (type) {

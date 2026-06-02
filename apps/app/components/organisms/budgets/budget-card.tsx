@@ -61,7 +61,9 @@ export function BudgetCard({ budget, onEdit, onDelete, currencyCode = "USD", loc
       <CardContent className="flex flex-1 flex-col justify-between pt-2">
         <div className="space-y-3">
           <div className="flex items-baseline justify-between gap-1">
-            <span className="font-bold font-serif text-2xl">{formatCurrency(budget.spent, currencySettings, { locale })}</span>
+            <span className="font-bold font-serif text-2xl">
+              {formatCurrency(budget.spent, currencySettings, { locale })}
+            </span>
             <span className="whitespace-nowrap font-serif text-muted-foreground text-sm">
               of {formatCurrency(budget.amount, currencySettings, { locale })}
             </span>

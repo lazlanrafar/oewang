@@ -149,7 +149,7 @@ export default function ChatInterface({ dictionary }: Props) {
     requestAnimationFrame(() => {
       messagesEndRef.current?.scrollIntoView({ behavior, block: "end" });
     });
-  }, [messages, status]);
+  }, [status]);
 
   const [, _setSelectedType] = useQueryState("artifact-type", parseAsString);
 

@@ -5,7 +5,9 @@ import { useCallback } from "react";
 import { useRouter } from "next/navigation";
 
 import { BaseCanvas, Button, CanvasContent, CanvasHeader, Icons } from "@workspace/ui";
+
 import { useAppStore } from "@/stores/app";
+
 import { getDictionaryText } from "../chat-i18n";
 
 export function CanvasErrorFallback() {

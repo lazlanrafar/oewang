@@ -1,8 +1,8 @@
 "use client";
 
+import type { RevenueChartProps } from "@workspace/types";
 import { Area, Line, Tooltip, XAxis, YAxis } from "recharts";
 
-import type { RevenueChartProps } from "@workspace/types";
 import { BaseChart, ChartLegend, StyledTooltip } from "./base-charts";
 import { createYAxisTickFormatter, useChartMargin } from "./chart-utils";
 import { formatAmount } from "./format-amount";

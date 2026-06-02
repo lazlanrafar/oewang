@@ -1,5 +1,5 @@
-import type { StickyColumnConfig, TableConfig } from "./data-table-types";
 import type { TableId } from "./data-table-settings";
+import type { StickyColumnConfig, TableConfig } from "./data-table-types";
 
 /**
  * Sticky column configurations for each table
@@ -24,7 +24,6 @@ export const STICKY_COLUMNS: Record<TableId, StickyColumnConfig[]> = {
   ],
   workspaces: [{ id: "name", width: 220 }],
 };
-
 
 /**
  * Sort field mappings for each table
@@ -89,7 +88,6 @@ export const SORT_FIELD_MAPS: Record<TableId, Record<string, string>> = {
   },
 };
 
-
 /**
  * Non-reorderable columns for each table (sticky + actions)
  */
@@ -105,7 +103,6 @@ export const NON_REORDERABLE_COLUMNS: Record<TableId, Set<string>> = {
   workspaces: new Set(["name", "actions"]),
 };
 
-
 /**
  * Row heights for each table
  */
@@ -120,7 +117,6 @@ export const ROW_HEIGHTS: Record<TableId, number> = {
   debts: 45,
   workspaces: 45,
 };
-
 
 /**
  * Summary grid heights for tables with summary sections
@@ -195,7 +191,6 @@ export const TABLE_CONFIGS: Record<TableId, TableConfig> = {
     rowHeight: ROW_HEIGHTS.workspaces,
   },
 };
-
 
 /**
  * Get table configuration by ID

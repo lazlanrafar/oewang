@@ -1,24 +1,21 @@
+import { API_CONFIG } from "@workspace/constants";
 import { CategoriesRepository } from "../categories/categories.repository";
 import { ContactsRepository } from "../contacts/contacts.repository";
 import { ContactsService } from "../contacts/contacts.service";
 import { DebtsService } from "../debts/debts.service";
-import { TransactionsService } from "../transactions/transactions.service";
-import { TransactionsRepository } from "../transactions/transactions.repository";
-import { TransactionItemsService } from "../transactions/items/transaction-items.service";
-import { TransactionItemsRepository } from "../transactions/items/transaction-items.repository";
-import { WalletsRepository as walletsRepository } from "../wallets/wallets.repository";
 import { SettingsRepository } from "../settings/settings.repository";
-import { API_CONFIG } from "@workspace/constants";
+import { TransactionItemsRepository } from "../transactions/items/transaction-items.repository";
+import { TransactionItemsService } from "../transactions/items/transaction-items.service";
+import { TransactionsRepository } from "../transactions/transactions.repository";
+import { TransactionsService } from "../transactions/transactions.service";
+import { WalletsRepository as walletsRepository } from "../wallets/wallets.repository";
 
 // Tool definitions are now managed in @workspace/ai/tools/tool.definitions.ts
 
 /** Verbose dev logger — no-op in production */
 function devLog(toolName: string, phase: "IN" | "OUT", data: unknown) {
   if (!API_CONFIG.verboseToolLogs) return;
-  console.log(
-    `[AI Tool ${phase}] ${toolName}:`,
-    JSON.stringify(data, null, 2),
-  );
+  console.log(`[AI Tool ${phase}] ${toolName}:`, JSON.stringify(data, null, 2));
 }
 
 // Helper to check if string is a UUID
@@ -81,14 +78,18 @@ function resolveDateRange(
     case "last-3-months":
     case "3-months":
       return {
-        startDate: toDateOnly(new Date(now.getFullYear(), now.getMonth() - 2, 1)),
+        startDate: toDateOnly(
+          new Date(now.getFullYear(), now.getMonth() - 2, 1),
+        ),
         endDate: toDateOnly(now),
         label: "last-3-months",
       };
     case "6-months":
     case "last-6-months":
       return {
-        startDate: toDateOnly(new Date(now.getFullYear(), now.getMonth() - 5, 1)),
+        startDate: toDateOnly(
+          new Date(now.getFullYear(), now.getMonth() - 5, 1),
+        ),
         endDate: toDateOnly(now),
         label: "last-6-months",
       };
@@ -109,7 +110,9 @@ function resolveDateRange(
     case "1-year":
     default:
       return {
-        startDate: toDateOnly(new Date(now.getFullYear(), now.getMonth() - 11, 1)),
+        startDate: toDateOnly(
+          new Date(now.getFullYear(), now.getMonth() - 11, 1),
+        ),
         endDate: toDateOnly(now),
         label: "last-12-months",
       };
@@ -140,7 +143,10 @@ async function buildSpendingPayload(workspaceId: string, input: any) {
     endDate,
   });
 
-  const totalSpending = txList.reduce((sum: number, t: any) => sum + Number(t.amount || 0), 0);
+  const totalSpending = txList.reduce(
+    (sum: number, t: any) => sum + Number(t.amount || 0),
+    0,
+  );
 
   // Build category breakdown
   const categoryMap: Record<string, { name: string; amount: number }> = {};
@@ -152,7 +158,9 @@ async function buildSpendingPayload(workspaceId: string, input: any) {
     categoryMap[catName]!.amount += Number(tx.amount || 0);
   }
 
-  const topCategory = Object.values(categoryMap).sort((a, b) => b.amount - a.amount)[0];
+  const topCategory = Object.values(categoryMap).sort(
+    (a, b) => b.amount - a.amount,
+  )[0];
 
   // Top 10 transactions with share
   const sortedTx = [...txList]
@@ -162,12 +170,16 @@ async function buildSpendingPayload(workspaceId: string, input: any) {
   const transactions = sortedTx.map((tx: any) => ({
     id: tx.id,
     date: tx.date
-      ? new Date(tx.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+      ? new Date(tx.date).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+        })
       : "—",
     vendor: tx.name || "Unknown",
     category: tx.category?.name || "Uncategorized",
     amount: Number(tx.amount || 0),
-    share: totalSpending > 0 ? (Number(tx.amount || 0) / totalSpending) * 100 : 0,
+    share:
+      totalSpending > 0 ? (Number(tx.amount || 0) / totalSpending) * 100 : 0,
   }));
 
   // Build a readable summary for the AI
@@ -177,9 +189,10 @@ async function buildSpendingPayload(workspaceId: string, input: any) {
     .map((c) => `${c.name} (${Math.round((c.amount / totalSpending) * 100)}%)`)
     .join(", ");
 
-  const summary = totalSpending > 0
-    ? `Your total spending for the selected period is ${currency} ${totalSpending.toFixed(2)}, spread across ${txList.length} transactions.${topCats ? `\n\nTop categories: ${topCats}.` : ""}\n\n${topCategory ? `${topCategory.name} is your largest spending category at ${currency} ${topCategory.amount.toFixed(2)}.` : ""}${transactions.length > 0 ? `\n\nThe single largest expense was ${transactions[0]!.vendor} for ${currency} ${transactions[0]!.amount.toFixed(2)}.` : ""}`
-    : "No expense transactions found for the selected period.";
+  const summary =
+    totalSpending > 0
+      ? `Your total spending for the selected period is ${currency} ${totalSpending.toFixed(2)}, spread across ${txList.length} transactions.${topCats ? `\n\nTop categories: ${topCats}.` : ""}\n\n${topCategory ? `${topCategory.name} is your largest spending category at ${currency} ${topCategory.amount.toFixed(2)}.` : ""}${transactions.length > 0 ? `\n\nThe single largest expense was ${transactions[0]!.vendor} for ${currency} ${transactions[0]!.amount.toFixed(2)}.` : ""}`
+      : "No expense transactions found for the selected period.";
 
   return {
     stage: "analysis_ready",
@@ -218,21 +231,29 @@ async function buildRevenuePayload(workspaceId: string, input: any) {
   const monthlyMap: Record<string, number> = {};
   for (const tx of txList) {
     const d = new Date(tx.date);
-    const key = d.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
+    const key = d.toLocaleDateString("en-US", {
+      month: "short",
+      year: "2-digit",
+    });
     monthlyMap[key] = (monthlyMap[key] || 0) + Number(tx.amount || 0);
   }
 
   const monthlyEntries = Object.entries(monthlyMap);
   const totalRevenue = monthlyEntries.reduce((s, [, v]) => s + v, 0);
-  const averageMonthlyRevenue = monthlyEntries.length > 0 ? totalRevenue / monthlyEntries.length : 0;
+  const averageMonthlyRevenue =
+    monthlyEntries.length > 0 ? totalRevenue / monthlyEntries.length : 0;
 
   // Current month
-  const currentMonthKey = now.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
+  const currentMonthKey = now.toLocaleDateString("en-US", {
+    month: "short",
+    year: "2-digit",
+  });
   const currentMonthRevenue = monthlyMap[currentMonthKey] || 0;
 
-  const summary = totalRevenue > 0
-    ? `Your total revenue over the last 12 months is ${currency} ${totalRevenue.toFixed(2)}.\n\nAverage monthly revenue is ${currency} ${averageMonthlyRevenue.toFixed(2)}. ${currentMonthRevenue > averageMonthlyRevenue ? "This month is trending above average." : currentMonthRevenue > 0 ? "This month is below the 12-month average." : "No income recorded this month yet."}`
-    : "No income transactions found for the last 12 months.";
+  const summary =
+    totalRevenue > 0
+      ? `Your total revenue over the last 12 months is ${currency} ${totalRevenue.toFixed(2)}.\n\nAverage monthly revenue is ${currency} ${averageMonthlyRevenue.toFixed(2)}. ${currentMonthRevenue > averageMonthlyRevenue ? "This month is trending above average." : currentMonthRevenue > 0 ? "This month is below the 12-month average." : "No income recorded this month yet."}`
+      : "No income transactions found for the last 12 months.";
 
   return {
     stage: "analysis_ready",
@@ -254,7 +275,10 @@ async function buildRevenuePayload(workspaceId: string, input: any) {
 async function buildBurnRatePayload(workspaceId: string, input: any) {
   const currency = await getWorkspaceCurrency(workspaceId);
   const now = new Date();
-  const { startDate, endDate, label } = resolveDateRange(input, "last-6-months");
+  const { startDate, endDate, label } = resolveDateRange(
+    input,
+    "last-6-months",
+  );
   const start = new Date(startDate);
   const end = new Date(endDate);
   const months: { label: string; start: string; end: string }[] = [];
@@ -280,18 +304,23 @@ async function buildBurnRatePayload(workspaceId: string, input: any) {
       startDate: month.start,
       endDate: month.end,
     });
-    const total = txList.reduce((s: number, t: any) => s + Number(t.amount || 0), 0);
+    const total = txList.reduce(
+      (s: number, t: any) => s + Number(t.amount || 0),
+      0,
+    );
     chart.push({ label: month.label, value: total });
   }
 
   const nonZero = chart.filter((c) => c.value > 0);
-  const avgMonthlyBurn = nonZero.length > 0
-    ? nonZero.reduce((s, c) => s + c.value, 0) / nonZero.length
-    : 0;
+  const avgMonthlyBurn =
+    nonZero.length > 0
+      ? nonZero.reduce((s, c) => s + c.value, 0) / nonZero.length
+      : 0;
 
-  const summary = avgMonthlyBurn > 0
-    ? `Your average monthly burn rate over the last 6 months is ${currency} ${avgMonthlyBurn.toFixed(2)}.\n\n${chart[chart.length - 1]!.value > avgMonthlyBurn ? "Last month's spending was above your average burn rate — consider reviewing discretionary expenses." : "Your burn rate is stable and within your historical average."}`
-    : "No expense data found for the last 6 months.";
+  const summary =
+    avgMonthlyBurn > 0
+      ? `Your average monthly burn rate over the last 6 months is ${currency} ${avgMonthlyBurn.toFixed(2)}.\n\n${chart[chart.length - 1]!.value > avgMonthlyBurn ? "Last month's spending was above your average burn rate — consider reviewing discretionary expenses." : "Your burn rate is stable and within your historical average."}`
+      : "No expense data found for the last 6 months.";
 
   return {
     stage: "analysis_ready",
@@ -402,11 +431,9 @@ export async function executeAiTool(
           input.contactName,
         );
         if (!contact) {
-          const res = await ContactsService.createContact(
-            workspaceId,
-            userId,
-            { name: input.contactName }
-          );
+          const res = await ContactsService.createContact(workspaceId, userId, {
+            name: input.contactName,
+          });
           if (res.success) {
             contact = res.data;
           }
@@ -424,7 +451,11 @@ export async function executeAiTool(
           dueDate: input.dueDate,
         };
 
-        const debtRes = await DebtsService.createDebt(workspaceId, userId, debtBody);
+        const debtRes = await DebtsService.createDebt(
+          workspaceId,
+          userId,
+          debtBody,
+        );
         result = { success: true, data: debtRes.data };
         break;
       }
@@ -457,7 +488,11 @@ export async function executeAiTool(
           contactNames: input.contactNames,
         };
 
-        const splitRes = await DebtsService.splitBill(workspaceId, userId, splitBody);
+        const splitRes = await DebtsService.splitBill(
+          workspaceId,
+          userId,
+          splitBody,
+        );
         result = { success: true, data: splitRes.data };
         break;
       }

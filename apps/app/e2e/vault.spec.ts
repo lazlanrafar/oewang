@@ -107,7 +107,7 @@ test.describe("Workspace: Vault", () => {
     const successToast = page.getByText(dictionary.vault.toasts.upload_success);
     const fileInList = page.getByText(fileName);
 
-    await expect(successToast.or(fileInList)).toBeVisible({ timeout: 60000 });
+    await expect(successToast.or(fileInList).first()).toBeVisible({ timeout: 60000 });
   });
 
   test("should search for a file", async ({ page, dictionary }) => {

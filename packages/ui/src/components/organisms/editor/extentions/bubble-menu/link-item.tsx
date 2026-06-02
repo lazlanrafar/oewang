@@ -8,8 +8,12 @@ import {
   MdOutlineDelete,
   MdOutlineLinkOff,
 } from "react-icons/md";
-import { Button } from "../../../../atoms";
-import { Popover, PopoverContent, PopoverTrigger } from "../../../../atoms";
+import {
+  Button,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "../../../../atoms";
 import { formatUrlWithProtocol } from "../../utils";
 import { BubbleMenuButton } from "./bubble-menu-button";
 

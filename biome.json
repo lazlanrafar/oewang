@@ -19,6 +19,11 @@
     "lineWidth": 80,
     "attributePosition": "auto"
   },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    }
+  },
   "javascript": {
     "formatter": {
       "jsxQuoteStyle": "double",
@@ -34,7 +39,7 @@
   },
   "overrides": [
     {
-      "includes": ["**/globals.css", "src/globals.css"],
+      "includes": ["**/globals.css", "src/globals.css", "**/editor/styles.css", "packages/ui/src/components/organisms/editor/styles.css"],
       "linter": { "enabled": false },
       "formatter": { "enabled": false }
     },
@@ -44,7 +49,19 @@
         "rules": {
           "a11y": {
             "useSemanticElements": "off",
-            "useFocusableInteractive": "off"
+            "useFocusableInteractive": "off",
+            "noSvgWithoutTitle": "off",
+            "noStaticElementInteractions": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/integrations/**/assets/logo.tsx"],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "noSvgWithoutTitle": "off"
           }
         }
       }

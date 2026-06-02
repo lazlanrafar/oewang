@@ -1,2 +1,9 @@
 [test]
-ignore = ["references/**"]
+# Patterns to exclude from test discovery
+ignore = [
+  "references/**",
+  "**/e2e/**/*.spec.ts",
+  "**/e2e/**/*.test.ts",
+  "**/test/integration/**/*.test.ts",
+  "apps/app/**/*.spec.ts"
+]

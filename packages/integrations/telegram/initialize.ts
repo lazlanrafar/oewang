@@ -1,6 +1,6 @@
-// WhatsApp initialization - dispatch event to open the connect dialog
+// Telegram initialization - dispatch event to open the connect dialog
 export const onInitialize = async ({
-  accessToken,
+  accessToken: _accessToken,
   onComplete,
 }: {
   accessToken: string;

@@ -52,9 +52,12 @@ export function useRealtime() {
               refetchType: "all",
             });
 
-            // If it's a critical type, we might want to invalidate others or global settings
             if (data.type === "transactions" || data.type === "wallets") {
               queryClient.invalidateQueries({ queryKey: ["workspace", "active"] });
+            }
+
+            if (data.type === "notifications") {
+              queryClient.invalidateQueries({ queryKey: ["notifications"] });
             }
 
             // Trigger a lightweight router refresh to update any server-side rendered data on the current page

@@ -8,9 +8,9 @@ import { Message, MessageAvatar, MessageContent, Response } from "@workspace/ui"
 import type { UIMessage } from "ai";
 import { PaperclipIcon } from "lucide-react";
 
-import { getDictionaryText } from "./chat-i18n";
 import { ChatArtifactToggle } from "./chat-artifact-toggle";
 import { ChatFaviconStack } from "./chat-favicon-stack";
+import { getDictionaryText } from "./chat-i18n";
 import { ChatInsightMessage } from "./chat-insight-message";
 import { ChatMessageActions } from "./chat-message-actions";
 
@@ -83,8 +83,16 @@ export function ChatMessages({ messages, isStreaming = false, dictionary }: Chat
     email: "",
   };
 
-  const attachmentAlt = getDictionaryText(dictionary as Record<string, unknown>, "chat.messages.attachment_alt", "attachment");
-  const unknownFile = getDictionaryText(dictionary as Record<string, unknown>, "chat.messages.unknown_file", "Unknown file");
+  const attachmentAlt = getDictionaryText(
+    dictionary as Record<string, unknown>,
+    "chat.messages.attachment_alt",
+    "attachment",
+  );
+  const unknownFile = getDictionaryText(
+    dictionary as Record<string, unknown>,
+    "chat.messages.unknown_file",
+    "Unknown file",
+  );
 
   return (
     <>

@@ -1,14 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { BarChart3, Wallet, Users, Sparkles } from "lucide-react";
+
+import { BarChart3, Sparkles, Users, Wallet } from "lucide-react";
+
 import type { WebsiteDictionary } from "@/lib/translations";
 
-export function HowItWorksSection({
-  dictionary,
-}: {
-  dictionary: WebsiteDictionary;
-}) {
+export function HowItWorksSection({ dictionary }: { dictionary: WebsiteDictionary }) {
   const items = useMemo(
     () => [
       {
@@ -31,8 +29,7 @@ export function HowItWorksSection({
       },
       {
         title: "One workspace, multiple collaborators",
-        description:
-          "Invite teammates, set roles, and keep every decision traceable in one shared finance workspace.",
+        description: "Invite teammates, set roles, and keep every decision traceable in one shared finance workspace.",
         points: [
           "Member roles and permissions",
           "Shared categories and transaction views",
@@ -54,9 +51,7 @@ export function HowItWorksSection({
     <section className="py-18 sm:py-24 bg-background" id="how-it-works">
       <div className="max-w-[1300px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="max-w-2xl">
-          <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground mb-3">
-            Why teams choose oewang
-          </p>
+          <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground mb-3">Why teams choose oewang</p>
           <h2 className="font-serif text-3xl sm:text-4xl tracking-tight text-foreground">
             Clear day-to-day tracking for individuals and companies
           </h2>
@@ -70,9 +65,7 @@ export function HowItWorksSection({
                 type="button"
                 onClick={() => setActive(index)}
                 className={`w-full text-left rounded-none p-4 sm:p-5 transition-colors border ${
-                  active === index
-                    ? "border-foreground/30 bg-muted/35"
-                    : "border-transparent hover:bg-muted/20"
+                  active === index ? "border-foreground/30 bg-muted/35" : "border-transparent hover:bg-muted/20"
                 }`}
               >
                 <p className="text-sm sm:text-base font-medium text-foreground">{item.title}</p>

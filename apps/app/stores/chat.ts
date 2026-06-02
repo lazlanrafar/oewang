@@ -1,7 +1,9 @@
-import { endOfMonth, startOfMonth, startOfYear, subDays, subMonths } from "date-fns";
 import { CHAT_SHORTCUT_TEMPLATES, type ShortcutDateRangePreset } from "@workspace/constants";
+import { endOfMonth, startOfMonth, startOfYear, subDays, subMonths } from "date-fns";
 import { create } from "zustand";
+
 import { getDictionaryText } from "@/modules/types/dictionary";
+
 import { useAppStore } from "./app";
 
 export interface CommandSuggestion {

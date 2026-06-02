@@ -51,11 +51,7 @@ export function DashboardWireframe() {
           <div className="h-32 rounded border border-border bg-muted/10 p-3">
             <div className="flex items-end justify-between h-full gap-1">
               {[40, 60, 45, 80, 65, 90, 75].map((h, i) => (
-                <div
-                  key={i}
-                  className="flex-1 rounded-t bg-muted-foreground/20"
-                  style={{ height: `${h}%` }}
-                />
+                <div key={i} className="flex-1 rounded-t bg-muted-foreground/20" style={{ height: `${h}%` }} />
               ))}
             </div>
           </div>

@@ -127,6 +127,68 @@ export async function sendSubscriptionDowngradedEmail(
 }
 
 /**
+ * Send a payment failed notification to the workspace owner.
+ */
+export async function sendPaymentFailedEmail(
+  to: string,
+  userName: string,
+  workspaceName: string,
+) {
+  const billingUrl = `${Env.NEXT_PUBLIC_APP_URL || "https://app.oewang.com"}/en/settings/billing`;
+  const html = renderTemplate("payment-failed", {
+    userName,
+    workspaceName,
+    billingUrl,
+  });
+
+  return sendEmail(to, `Payment failed for ${workspaceName}`, html);
+}
+
+/**
+ * Send the invoice/bill to the owner when a checkout session is created.
+ */
+export async function sendInvoiceSentEmail(
+  to: string,
+  userName: string,
+  workspaceName: string,
+  planName: string,
+  billing: string,
+  amount: string,
+  checkoutUrl: string,
+) {
+  const html = renderTemplate("invoice-sent", {
+    userName,
+    workspaceName,
+    planName,
+    billing,
+    amount,
+    checkoutUrl,
+  });
+
+  return sendEmail(to, `Invoice for ${workspaceName} — ${planName}`, html);
+}
+
+/**
+ * Send a confirmation email after a successful add-on purchase.
+ */
+export async function sendAddonPurchaseSuccessEmail(
+  to: string,
+  userName: string,
+  workspaceName: string,
+  addonName: string,
+) {
+  const appUrl = Env.NEXT_PUBLIC_APP_URL || "https://app.oewang.com";
+  const html = renderTemplate("purchase-success", {
+    userName,
+    workspaceName,
+    planName: addonName,
+    appUrl,
+  });
+
+  return sendEmail(to, `Add-on activated for ${workspaceName}`, html);
+}
+
+/**
  * Internal helper to send email via Resend.
  */
 async function sendEmail(to: string, subject: string, html: string) {

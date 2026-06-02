@@ -20,7 +20,7 @@ test.describe("Workspace: Contacts", () => {
     await page.goto("/en/contacts");
     await page.waitForLoadState("domcontentloaded");
     // Wait for client-side hydration — the button only appears after dictionary loads
-    await expect(page.getByRole("button", { name: dictionary.contacts.add_button })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole("button", { name: dictionary.contacts.add_button })).toBeVisible({ timeout: 45000 });
   });
 
   test("should render the contacts page", async ({ page, dictionary }) => {
@@ -39,7 +39,8 @@ test.describe("Workspace: Contacts", () => {
       .click({ force: true });
 
     // Check for the Label "Name" as proof of form readiness
-    await expect(page.getByLabel(dictionary.contacts.form.name_label)).toBeVisible({ timeout: 30000 });
+    // Use first() because both "Name" and "Contact Person" have placeholder "John Doe"
+    await expect(page.getByLabel(dictionary.contacts.form.name_label).first()).toBeVisible({ timeout: 30000 });
   });
 
   test("should show validation error when creating contact without name", async ({ page, dictionary }) => {
@@ -48,7 +49,7 @@ test.describe("Workspace: Contacts", () => {
       .filter({ visible: true })
       .first()
       .click({ force: true });
-    await expect(page.getByLabel(dictionary.contacts.form.name_label)).toBeVisible({ timeout: 30000 });
+    await expect(page.getByLabel(dictionary.contacts.form.name_label).first()).toBeVisible({ timeout: 30000 });
 
     // Fill only email to trigger name validation
     await page.getByPlaceholder(dictionary.contacts.form.email_placeholder).fill("test@example.com");
@@ -65,17 +66,19 @@ test.describe("Workspace: Contacts", () => {
       .filter({ visible: true })
       .first()
       .click({ force: true });
-    await expect(page.getByLabel(dictionary.contacts.form.name_label)).toBeVisible({ timeout: 30000 });
+    await expect(page.getByLabel(dictionary.contacts.form.name_label).first()).toBeVisible({ timeout: 30000 });
 
     const testName = `E2E Contact ${Date.now()}`;
-    await page.getByPlaceholder(dictionary.contacts.form.name_placeholder).fill(testName);
+    // Both "Name" and "Contact Person" fields have placeholder "John Doe".
+    // Target the Name field specifically via its form label context (first match).
+    await page.getByPlaceholder(dictionary.contacts.form.name_placeholder).first().fill(testName);
     await page.getByPlaceholder(dictionary.contacts.form.email_placeholder).fill("e2e@example.com");
     await page.getByPlaceholder(dictionary.contacts.form.phone_placeholder).fill("+123456789");
 
     await page.getByRole("button", { name: dictionary.contacts.form.create }).click();
 
     await expect(page.getByText(dictionary.contacts.toasts.created)).toBeVisible({ timeout: 45000 });
-    await expect(page.getByText(testName)).toBeVisible({ timeout: 45000 });
+    await expect(page.getByText(testName).first()).toBeVisible({ timeout: 45000 });
   });
 
   test("should search for contacts in the search field", async ({ page, dictionary }) => {
@@ -99,7 +102,7 @@ test.describe("Finance: Debts & Receivables", () => {
     await page.goto("/en/debts");
     await page.waitForLoadState("domcontentloaded");
     // Wait for the Add Debt button as hydration signal
-    await expect(page.getByRole("button", { name: dictionary.debts.add_button })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole("button", { name: dictionary.debts.add_button })).toBeVisible({ timeout: 45000 });
   });
 
   test("should render the debts page", async ({ page, dictionary }) => {

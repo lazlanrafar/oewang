@@ -2,7 +2,7 @@
 
 import { cn } from "../../../lib/utils";
 import { Skeleton } from "../../atoms";
-import { SkeletonType } from "./data-table-types";
+import type { SkeletonType } from "./data-table-types";
 
 interface SkeletonCellProps {
   type: SkeletonType;

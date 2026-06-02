@@ -1,11 +1,11 @@
-import { OrdersRepository } from "./orders.repository";
+import { ErrorCode } from "@workspace/types";
 import {
-  buildSuccess,
   buildError,
   buildPaginatedSuccess,
   buildPagination,
+  buildSuccess,
 } from "@workspace/utils";
-import { ErrorCode } from "@workspace/types";
+import { OrdersRepository } from "./orders.repository";
 
 export abstract class OrdersService {
   static async createOrder(
@@ -28,7 +28,7 @@ export abstract class OrdersService {
       if (existing) {
         const updated = await OrdersRepository.updateByMayarInvoiceId(
           invoiceId,
-          { status: data.status, amount: data.amount, currency: data.currency }
+          { status: data.status, amount: data.amount, currency: data.currency },
         );
         return buildSuccess(updated, "Order updated");
       }
@@ -39,7 +39,9 @@ export abstract class OrdersService {
   }
 
   static async updateOrderFromInvoiceId(invoiceId: string, status: string) {
-    const updated = await OrdersRepository.updateByMayarInvoiceId(invoiceId, { status });
+    const updated = await OrdersRepository.updateByMayarInvoiceId(invoiceId, {
+      status,
+    });
 
     if (!updated) {
       return buildError(ErrorCode.NOT_FOUND, "Order not found");
@@ -85,5 +87,10 @@ export abstract class OrdersService {
   static async getWorkspaceOrders(workspaceId: string) {
     const orders = await OrdersRepository.findByWorkspaceId(workspaceId);
     return buildSuccess(orders, "Workspace orders fetched");
+  }
+
+  static async orderExistsForInvoice(invoiceId: string): Promise<boolean> {
+    const order = await OrdersRepository.findByInvoiceId(invoiceId);
+    return !!order;
   }
 }

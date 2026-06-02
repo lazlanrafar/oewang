@@ -1,5 +1,7 @@
-import { Button } from "@workspace/ui/atoms";
 import Link from "next/link";
+
+import { Button } from "@workspace/ui/atoms";
+
 import type { WebsiteDictionary } from "@/lib/translations";
 
 export function CTASection({
@@ -22,9 +24,7 @@ export function CTASection({
           <h2 className="font-serif text-3xl sm:text-4xl tracking-tight text-foreground mb-4">
             {dictionary.cta.title}
           </h2>
-          <p className="text-muted-foreground text-base sm:text-lg mb-8 max-w-2xl mx-auto">
-            {dictionary.cta.subtitle}
-          </p>
+          <p className="text-muted-foreground text-base sm:text-lg mb-8 max-w-2xl mx-auto">{dictionary.cta.subtitle}</p>
 
           {isLoggedIn ? (
             <Button size="lg" asChild>

@@ -41,8 +41,11 @@ export const pricingController = new Elysia({
   .post(
     "/",
     async ({ body, auth, workspaceId }) => {
-      // @ts-ignore
-      return PricingService.create(body, auth?.user_id || "system", workspaceId!);
+      return PricingService.create(
+        body,
+        auth?.user_id || "system",
+        workspaceId!,
+      );
     },
     {
       body: CreatePricingDto,
@@ -52,8 +55,12 @@ export const pricingController = new Elysia({
   .patch(
     "/:id",
     async ({ params: { id }, body, auth, workspaceId }) => {
-      // @ts-ignore
-      return PricingService.update(id, body, auth?.user_id || "system", workspaceId!);
+      return PricingService.update(
+        id,
+        body,
+        auth?.user_id || "system",
+        workspaceId!,
+      );
     },
     {
       body: UpdatePricingDto,
@@ -63,8 +70,11 @@ export const pricingController = new Elysia({
   .delete(
     "/:id",
     async ({ params: { id }, auth, workspaceId }) => {
-      // @ts-ignore
-      return PricingService.softDelete(id, auth?.user_id || "system", workspaceId!);
+      return PricingService.softDelete(
+        id,
+        auth?.user_id || "system",
+        workspaceId!,
+      );
     },
     { detail: { summary: "Delete Pricing Plan", tags: ["Pricing"] } },
   );

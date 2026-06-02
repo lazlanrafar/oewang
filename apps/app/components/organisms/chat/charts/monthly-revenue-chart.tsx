@@ -1,13 +1,12 @@
 "use client";
 
+import type { MonthlyRevenueChartProps } from "@workspace/types";
 import { Bar, Line, Tooltip, XAxis, YAxis } from "recharts";
 
 import { BaseChart, StyledTooltip } from "./base-charts";
 import { commonChartConfig, createCompactTickFormatter, useChartMargin } from "./chart-utils";
 import { formatAmount } from "./format-amount";
 import { SelectableChartWrapper } from "./selectable-chart-wrapper";
-
-import type { MonthlyRevenueChartProps } from "@workspace/types";
 
 export function MonthlyRevenueChart({
   data,
@@ -62,7 +61,8 @@ export function MonthlyRevenueChart({
                     locale,
                     maximumFractionDigits: 0,
                   }) || `${currency}${numValue.toLocaleString()}`;
-                const displayName = name === "amount" ? "This Year" : name === "lastYearAmount" ? "Last Year" : "Average";
+                const displayName =
+                  name === "amount" ? "This Year" : name === "lastYearAmount" ? "Last Year" : "Average";
                 return [formattedValue, displayName];
               }}
             />

@@ -1,30 +1,31 @@
 import {
-  db,
-  pricing,
-  user_workspaces,
-  users,
-  webhook_events,
-  workspaces,
   and,
+  db,
   eq,
   isNull,
   or,
+  pricing,
   sql,
+  user_workspaces,
+  users,
+  webhook_events,
   workspaceAddons,
+  workspaces,
 } from "@workspace/database";
 
 export abstract class MayarRepository {
-  static async isEventProcessed(eventId: string): Promise<boolean> {
-    const [existing] = await db
-      .select({ id: webhook_events.id })
-      .from(webhook_events)
-      .where(eq(webhook_events.id, eventId))
-      .limit(1);
-    return !!existing;
-  }
-
-  static async markEventProcessed(eventId: string): Promise<void> {
-    await db.insert(webhook_events).values({ id: eventId }).onConflictDoNothing();
+  /**
+   * Atomically claim an event for processing. Returns true if this caller
+   * successfully inserted the row (i.e., can proceed). Returns false if
+   * another process already claimed it (skip processing to avoid duplicates).
+   */
+  static async tryClaimEvent(eventId: string): Promise<boolean> {
+    const result = await db
+      .insert(webhook_events)
+      .values({ id: eventId })
+      .onConflictDoNothing()
+      .returning({ id: webhook_events.id });
+    return result.length > 0;
   }
 
   static async findPlanByMayarProductId(productId: string) {
@@ -35,7 +36,8 @@ export abstract class MayarRepository {
         and(
           or(
             sql`${pricing.prices} @> ${JSON.stringify([{ mayar_monthly_id: productId }])}::jsonb`,
-            sql`${pricing.prices} @> ${JSON.stringify([{ mayar_yearly_id: productId }])}::jsonb`
+            sql`${pricing.prices} @> ${JSON.stringify([{ mayar_yearly_id: productId }])}::jsonb`,
+            sql`${pricing.prices} @> ${JSON.stringify([{ mayar_product_id: productId }])}::jsonb`,
           ),
           isNull(pricing.deleted_at),
         ),
@@ -49,14 +51,14 @@ export abstract class MayarRepository {
       .update(workspaces)
       .set(data)
       .where(
-        and(
-          eq(workspaces.id, workspaceId),
-          isNull(workspaces.deleted_at),
-        ),
+        and(eq(workspaces.id, workspaceId), isNull(workspaces.deleted_at)),
       );
   }
 
-  static async updateWorkspaceSubscriptionByCustomerEmail(customerEmail: string, data: any) {
+  static async updateWorkspaceSubscriptionByCustomerEmail(
+    customerEmail: string,
+    data: any,
+  ) {
     await db
       .update(workspaces)
       .set(data)
@@ -148,22 +150,14 @@ export abstract class MayarRepository {
   }
 
   static async findAllPlans() {
-    return db
-      .select()
-      .from(pricing)
-      .where(isNull(pricing.deleted_at));
+    return db.select().from(pricing).where(isNull(pricing.deleted_at));
   }
 
   static async findStarterPlan() {
     const [plan] = await db
       .select()
       .from(pricing)
-      .where(
-        and(
-          eq(pricing.name, "Starter"),
-          isNull(pricing.deleted_at),
-        ),
-      )
+      .where(and(eq(pricing.name, "Starter"), isNull(pricing.deleted_at)))
       .limit(1);
     return plan ?? null;
   }

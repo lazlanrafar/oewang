@@ -1,18 +1,17 @@
 import type { ReactNode } from "react";
-import type { Metadata } from "next";
-import { Providers } from "@/components/providers";
-import { Toaster } from "@workspace/ui/atoms";
+
 import { fontVars } from "@workspace/ui";
+import { Toaster } from "@workspace/ui/atoms";
+import type { Metadata } from "next";
+
+import { Providers } from "@/components/providers";
 import "@workspace/ui/globals.css";
 
 import { WEBSITE_CONFIG } from "@workspace/constants";
+
 import { i18n } from "@/i18n-config";
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ locale: string }>;
-}): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
   const baseUrl = WEBSITE_CONFIG.url;
 
@@ -25,9 +24,7 @@ export async function generateMetadata({
     metadataBase: new URL(baseUrl),
     alternates: {
       canonical: locale === i18n.defaultLocale ? "/" : `/${locale}`,
-      languages: Object.fromEntries(
-        i18n.locales.map((l) => [l, l === i18n.defaultLocale ? "/" : `/${l}`]),
-      ),
+      languages: Object.fromEntries(i18n.locales.map((l) => [l, l === i18n.defaultLocale ? "/" : `/${l}`])),
     },
     openGraph: {
       ...WEBSITE_CONFIG.meta.og,

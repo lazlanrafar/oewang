@@ -1,11 +1,10 @@
-import { Elysia } from "elysia";
-import { NotificationSettingsService } from "./notification-settings.service";
-import { NotificationSettingDto } from "../notifications/notifications.dto";
-import { authPlugin } from "../../plugins/auth";
-import { encryptionPlugin } from "../../plugins/encryption";
-import { status } from "elysia";
 import { ErrorCode } from "@workspace/types";
 import { buildError } from "@workspace/utils";
+import { Elysia, status } from "elysia";
+import { authPlugin } from "../../plugins/auth";
+import { encryptionPlugin } from "../../plugins/encryption";
+import { NotificationSettingDto } from "../notifications/notifications.dto";
+import { NotificationSettingsService } from "./notification-settings.service";
 
 export const notificationSettingsController = new Elysia({
   prefix: "/notification-settings",
@@ -16,10 +15,7 @@ export const notificationSettingsController = new Elysia({
     if (!auth?.workspace_id) {
       throw status(401, buildError(ErrorCode.UNAUTHORIZED, "Unauthorized"));
     }
-    return NotificationSettingsService.get(
-      auth.workspace_id,
-      auth.user_id,
-    );
+    return NotificationSettingsService.get(auth.workspace_id, auth.user_id);
   })
   .patch(
     "/",

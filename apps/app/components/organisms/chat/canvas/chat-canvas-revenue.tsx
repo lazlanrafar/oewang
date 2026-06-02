@@ -6,25 +6,27 @@ import {
   CanvasContent,
   CanvasHeader,
   CanvasSection,
+  shouldShowChart,
+  shouldShowMetricsSkeleton,
+  shouldShowSummarySkeleton,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-  shouldShowChart,
-  shouldShowMetricsSkeleton,
-  shouldShowSummarySkeleton,
 } from "@workspace/ui";
 
 import { useAppStore } from "@/stores/app";
-import { getDictionaryText } from "../chat-i18n";
+
 import { formatAmount } from "../charts/format-amount";
 import { RevenueTrendChart } from "../charts/revenue-trend-chart";
+import { getDictionaryText } from "../chat-i18n";
 import { ArtifactTabs, useStaticArtifactData } from "./chat-canvas";
 
 export function RevenueCanvas({ dataOverride }: { dataOverride?: Record<string, unknown> | null } = {}) {
-  const data = (dataOverride ?? (useStaticArtifactData("revenue-canvas") as Record<string, unknown> | null) ?? {});
+  const artifactData = useStaticArtifactData("revenue-canvas") as Record<string, unknown> | null;
+  const data = dataOverride ?? artifactData ?? {};
   const dictionary = useAppStore((state) => state.dictionary);
   const t = (key: string, fallback: string, params?: Record<string, string | number>) =>
     getDictionaryText(dictionary, key, fallback, params);
@@ -83,7 +85,9 @@ export function RevenueCanvas({ dataOverride }: { dataOverride?: Record<string, 
           id: String(transaction.id ?? `income-${index}`),
           date: String(transaction.date ?? "-"),
           vendor: String(transaction.vendor ?? transaction.name ?? "-"),
-          category: String(transaction.category ?? transaction.source ?? t("chat.canvas.revenue.income_label", "Income")),
+          category: String(
+            transaction.category ?? transaction.source ?? t("chat.canvas.revenue.income_label", "Income"),
+          ),
           amount: Number(transaction.amount) || 0,
         }))
       : revenueData
@@ -192,7 +196,10 @@ export function RevenueCanvas({ dataOverride }: { dataOverride?: Record<string, 
                 <TableBody>
                   {latestIncome.slice(0, 10).map((transaction, index) => {
                     const amount = Number(transaction.amount) || 0;
-                    const shareBase = totalIncome > 0 ? totalIncome : latestIncome.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+                    const shareBase =
+                      totalIncome > 0
+                        ? totalIncome
+                        : latestIncome.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
                     const share = shareBase > 0 ? (amount / shareBase) * 100 : 0;
 
                     return (
@@ -219,7 +226,10 @@ export function RevenueCanvas({ dataOverride }: { dataOverride?: Record<string, 
           </div>
 
           {/* Summary */}
-          <CanvasSection title={t("chat.canvas.common.summary", "Summary")} isLoading={shouldShowSummarySkeleton(stage)}>
+          <CanvasSection
+            title={t("chat.canvas.common.summary", "Summary")}
+            isLoading={shouldShowSummarySkeleton(stage)}
+          >
             {(analysis.summary as string) || t("chat.canvas.revenue.no_summary", "No income summary available yet.")}
           </CanvasSection>
         </div>

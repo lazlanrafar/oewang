@@ -1,31 +1,12 @@
 "use client";
 
-import {
-  type ComponentProps,
-  useCallback,
-  useEffect as useReactEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { type ComponentProps, useCallback, useMemo, useEffect as useReactEffect, useRef, useState } from "react";
 
-import {
-  useInfiniteQuery,
-  useMutation,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef, Row } from "@tanstack/react-table";
 import type { Dictionary } from "@workspace/dictionaries";
-import {
-  deleteTransaction,
-  getTransactions,
-} from "@workspace/modules/transaction/transaction.action";
-import type {
-  Category,
-  Transaction,
-  TransactionQueryParams,
-  Wallet,
-} from "@workspace/types";
+import { deleteTransaction, getTransactions } from "@workspace/modules/transaction/transaction.action";
+import type { Category, Transaction, TransactionQueryParams, Wallet } from "@workspace/types";
 import {
   Button,
   cn,
@@ -41,21 +22,8 @@ import {
   DropdownMenuTrigger,
   Icons,
 } from "@workspace/ui";
-import {
-  endOfMonth,
-  endOfWeek,
-  format,
-  parseISO,
-  startOfMonth,
-  startOfWeek,
-} from "date-fns";
-import {
-  ChevronDown,
-  ChevronRight,
-  FileDown,
-  FileUp,
-  Plus,
-} from "lucide-react";
+import { endOfMonth, endOfWeek, format, parseISO, startOfMonth, startOfWeek } from "date-fns";
+import { ChevronDown, ChevronRight, FileDown, FileUp, Plus } from "lucide-react";
 import { parseAsString, useQueryState } from "nuqs";
 import { toast } from "sonner";
 
@@ -68,13 +36,10 @@ import { useTransactionsStore } from "@/stores/transactions";
 import { TransactionBulkEditBar } from "./transaction-bulk-edit-bar";
 import { transactionColumns } from "./transaction-columns";
 import { TransactionDetailSheet } from "./transaction-detail-sheet";
-import { TransactionFormSheet } from "./transaction-form-sheet";
-import {
-  type GroupByInterval,
-  TransactionGroupingSelector,
-} from "./transaction-grouping-selector";
-import { ImportModal } from "./transaction-import-modal";
 import { ExportModal } from "./transaction-export-modal";
+import { TransactionFormSheet } from "./transaction-form-sheet";
+import { type GroupByInterval, TransactionGroupingSelector } from "./transaction-grouping-selector";
+import { ImportModal } from "./transaction-import-modal";
 import { TransactionTableSkeleton } from "./transaction-table-skeleton";
 
 interface TransactionGroup {
@@ -113,36 +78,23 @@ interface TransactionsClientProps {
   dictionary: Dictionary;
 }
 
-const isTransactionGroup = (row: TransactionRow): row is TransactionGroup =>
-  "_isGroup" in row;
+const isTransactionGroup = (row: TransactionRow): row is TransactionGroup => "_isGroup" in row;
 
-const toNumberOrUndefined = (
-  value: string | number | null,
-): number | undefined => {
+const toNumberOrUndefined = (value: string | number | null): number | undefined => {
   if (value === null || value === "") return undefined;
-  if (typeof value === "number")
-    return Number.isFinite(value) ? value : undefined;
+  if (typeof value === "number") return Number.isFinite(value) ? value : undefined;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : undefined;
 };
 
 const getRowTransactionIds = (rows: TransactionRow[]): string[] =>
-  rows.flatMap((row) =>
-    isTransactionGroup(row) ? row.transactions.map((tx) => tx.id) : [row.id],
-  );
+  rows.flatMap((row) => (isTransactionGroup(row) ? row.transactions.map((tx) => tx.id) : [row.id]));
 
-const getTransactionValueByColumn = (
-  tx: Transaction,
-  columnId: string,
-): string | number | boolean => {
+const getTransactionValueByColumn = (tx: Transaction, columnId: string): string | number | boolean => {
   if (columnId === "wallet.name") return tx.wallet?.name || "";
   if (columnId === "category.name") return tx.category?.name || "";
   const value = tx[columnId as keyof Transaction];
-  if (
-    typeof value === "string" ||
-    typeof value === "number" ||
-    typeof value === "boolean"
-  ) {
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
     return value;
   }
   return "";
@@ -162,12 +114,8 @@ export function TransactionsClient({
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
-  const [selectedTransaction, setSelectedTransaction] = useState<
-    Transaction | undefined
-  >();
-  const [columns, setColumns] = useState<
-    ComponentProps<typeof DataTableColumnsVisibility>["columns"]
-  >([]);
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | undefined>();
+  const [columns, setColumns] = useState<ComponentProps<typeof DataTableColumnsVisibility>["columns"]>([]);
   const [activeTab, _setActiveTab] = useState<"all" | "review" | "none">("all");
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -182,45 +130,32 @@ export function TransactionsClient({
     parseAsString.withDefault("").withOptions({ shallow: true }),
   );
 
-  const [groupBy, setGroupBy] = useQueryState(
-    "groupBy",
-    parseAsString.withDefault("daily"),
-  );
+  const [groupBy, setGroupBy] = useQueryState("groupBy", parseAsString.withDefault("daily"));
 
-  const { filters, handleFilterChange } =
-    useDataTableFilter<TransactionsFilters>({
-      initialFilters: {
-        q: "",
-        type: "",
-        walletId: "",
-        categoryId: [],
-        startDate: startOfMonth(new Date()).toISOString(),
-        endDate: endOfMonth(new Date()).toISOString(),
-        minAmount: null,
-        maxAmount: null,
-        attachments: null,
-      },
-      debounceMs: 500,
-    });
+  const { filters, handleFilterChange } = useDataTableFilter<TransactionsFilters>({
+    initialFilters: {
+      q: "",
+      type: "",
+      walletId: "",
+      categoryId: [],
+      startDate: startOfMonth(new Date()).toISOString(),
+      endDate: endOfMonth(new Date()).toISOString(),
+      minAmount: null,
+      maxAmount: null,
+      attachments: null,
+    },
+    debounceMs: 500,
+  });
 
   const queryClient = useQueryClient();
   const [mountFilters] = useState(filters);
 
   const isInitial = useMemo(
-    () =>
-      JSON.stringify(filters) === JSON.stringify(mountFilters) &&
-      activeTab === "all",
+    () => JSON.stringify(filters) === JSON.stringify(mountFilters) && activeTab === "all",
     [filters, mountFilters, activeTab],
   );
 
-  const {
-    data,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    refetch,
-    isLoading,
-  } = useInfiniteQuery({
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, refetch, isLoading } = useInfiniteQuery({
     queryKey: ["transactions", filters, activeTab],
     queryFn: async ({ pageParam = 1 }) => {
       const params: TransactionQueryParams = {
@@ -234,11 +169,7 @@ export function TransactionsClient({
         minAmount: toNumberOrUndefined(filters.minAmount),
         maxAmount: toNumberOrUndefined(filters.maxAmount),
         hasAttachments:
-          filters.attachments === "include"
-            ? true
-            : filters.attachments === "exclude"
-              ? false
-              : undefined,
+          filters.attachments === "include" ? true : filters.attachments === "exclude" ? false : undefined,
         search: filters.q || undefined,
         uncategorized: activeTab === "review",
       };
@@ -248,9 +179,7 @@ export function TransactionsClient({
     getNextPageParam: (lastPage) => {
       const pagination = lastPage.meta?.pagination;
       if (!pagination) return undefined;
-      return pagination.page < pagination.total_pages
-        ? pagination.page + 1
-        : undefined;
+      return pagination.page < pagination.total_pages ? pagination.page + 1 : undefined;
     },
     staleTime: 300000,
     refetchOnWindowFocus: false,
@@ -295,24 +224,17 @@ export function TransactionsClient({
     refetchOnWindowFocus: false,
   });
 
-  const _reviewCount =
-    reviewCountData?.pages?.[0]?.meta?.pagination?.total ?? 0;
+  const _reviewCount = reviewCountData?.pages?.[0]?.meta?.pagination?.total ?? 0;
 
   const deleteMutation = useMutation({
     mutationFn: deleteTransaction,
     onSuccess: () => {
-      toast.success(
-        dictionary.transactions.toasts.deleted || "Transaction deleted",
-      );
+      toast.success(dictionary.transactions.toasts.deleted || "Transaction deleted");
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
       refetch();
     },
     onError: (error: Error) => {
-      toast.error(
-        error.message ||
-          dictionary.transactions.errors.process_failed ||
-          "Failed to delete transaction",
-      );
+      toast.error(error.message || dictionary.transactions.errors.process_failed || "Failed to delete transaction");
     },
   });
 
@@ -331,10 +253,7 @@ export function TransactionsClient({
   }, []);
 
   const transactions = useMemo(
-    () =>
-      data?.pages
-        ?.flatMap((page) => page.data ?? [])
-        .filter((tx): tx is Transaction => Boolean(tx)) ?? [],
+    () => data?.pages?.flatMap((page) => page.data ?? []).filter((tx): tx is Transaction => Boolean(tx)) ?? [],
     [data],
   );
 
@@ -457,9 +376,7 @@ export function TransactionsClient({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!isDetailOpen || !transactionId) return;
 
-      const currentIndex = transactions.findIndex(
-        (t) => t.id === transactionId,
-      );
+      const currentIndex = transactions.findIndex((t) => t.id === transactionId);
       if (currentIndex === -1) return;
 
       if (e.key === "ArrowDown") {
@@ -541,8 +458,7 @@ export function TransactionsClient({
     () => [
       {
         id: "include",
-        name:
-          dictionary.transactions.filter.has_attachments || "Has attachments",
+        name: dictionary.transactions.filter.has_attachments || "Has attachments",
       },
       {
         id: "exclude",
@@ -560,8 +476,7 @@ export function TransactionsClient({
       },
       {
         id: "exclude",
-        name:
-          dictionary.transactions.filter.bank_connection || "Bank connection",
+        name: dictionary.transactions.filter.bank_connection || "Bank connection",
       },
     ],
     [dictionary],
@@ -594,10 +509,7 @@ export function TransactionsClient({
     ];
   }, [dictionary, typeOptions, categoryOptions, walletOptions]);
 
-  const nonClickableColumns = useMemo(
-    () => new Set(["select", "actions", "category", "assignee", "account"]),
-    [],
-  );
+  const nonClickableColumns = useMemo(() => new Set(["select", "actions", "category", "assignee", "account"]), []);
 
   if (!dictionary) return <TransactionTableSkeleton hideHeader />;
 
@@ -655,7 +567,7 @@ export function TransactionsClient({
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline">
                     <FileUp className="h-4 w-4" />
-                    <span className="hidden sm:inline-block ml-2 text-sm">
+                    <span className="ml-2 hidden text-sm sm:inline-block">
                       {dictionary.transactions.import_backfill}
                     </span>
                     <ChevronDown className="ml-2 h-4 w-4 text-muted-foreground" />
@@ -731,9 +643,7 @@ export function TransactionsClient({
               if (item && isTransactionGroup(item)) {
                 const headerHeight = 40;
                 const rowHeight = 45;
-                return item.isExpanded
-                  ? headerHeight + item.transactions.length * rowHeight
-                  : headerHeight;
+                return item.isExpanded ? headerHeight + item.transactions.length * rowHeight : headerHeight;
               }
               return 45;
             }}
@@ -749,15 +659,11 @@ export function TransactionsClient({
               },
               onDelete: async (id: string) => {
                 const ok = await confirm({
-                  title:
-                    dictionary.transactions.delete_title ||
-                    "Delete transaction",
+                  title: dictionary.transactions.delete_title || "Delete transaction",
                   description:
-                    dictionary.transactions.delete_description ||
-                    "Are you sure you want to delete this transaction?",
+                    dictionary.transactions.delete_description || "Are you sure you want to delete this transaction?",
                   destructive: true,
-                  confirmLabel:
-                    dictionary.transactions.delete_confirm || "Delete",
+                  confirmLabel: dictionary.transactions.delete_confirm || "Delete",
                 });
                 if (ok) {
                   deleteMutation.mutate(id);
@@ -774,8 +680,7 @@ export function TransactionsClient({
               isSomeTransactionsSelected: () => {
                 const transactionIds = getRowTransactionIds(processedRows);
                 return (
-                  transactionIds.some((id) => !!rowSelection[id]) &&
-                  !transactionIds.every((id) => !!rowSelection[id])
+                  transactionIds.some((id) => !!rowSelection[id]) && !transactionIds.every((id) => !!rowSelection[id])
                 );
               },
               toggleAllTransactions: (value: boolean) => {
@@ -811,10 +716,7 @@ export function TransactionsClient({
                         toggleGroup(item.groupKey);
                       }}
                     >
-                      <td
-                        className="flex h-full shrink-0 items-center px-4"
-                        style={{ width: "100%" }}
-                      >
+                      <td className="flex h-full shrink-0 items-center px-4" style={{ width: "100%" }}>
                         <div className="flex w-full items-center gap-3">
                           <div className="flex h-4 w-4 shrink-0 items-center justify-center transition-transform duration-200">
                             {item.isExpanded ? (
@@ -828,20 +730,10 @@ export function TransactionsClient({
                           </span>
 
                           <div className="ml-auto flex items-center gap-4">
-                            <span
-                              className={cn(
-                                "font-bold text-[10px]",
-                                getTransactionColor("income"),
-                              )}
-                            >
+                            <span className={cn("font-bold text-[10px]", getTransactionColor("income"))}>
                               {formatCurrency(item.income)}
                             </span>
-                            <span
-                              className={cn(
-                                "font-bold text-[10px]",
-                                getTransactionColor("expense"),
-                              )}
-                            >
+                            <span className={cn("font-bold text-[10px]", getTransactionColor("expense"))}>
                               {formatCurrency(item.expense)}
                             </span>
                           </div>
@@ -857,8 +749,7 @@ export function TransactionsClient({
                           ...baseRow,
                           id: tx.id,
                           original: tx,
-                          getValue: (columnId: string) =>
-                            getTransactionValueByColumn(tx, columnId),
+                          getValue: (columnId: string) => getTransactionValueByColumn(tx, columnId),
                           getVisibleCells: () =>
                             baseRow.getVisibleCells().map((cell) => ({
                               ...cell,
@@ -871,10 +762,7 @@ export function TransactionsClient({
                                 toggleSelected: (value?: boolean) => {
                                   setRowSelection((prev) => {
                                     const next = { ...prev };
-                                    const isSelected =
-                                      value !== undefined
-                                        ? value
-                                        : !prev[tx.id];
+                                    const isSelected = value !== undefined ? value : !prev[tx.id];
                                     if (isSelected) {
                                       next[tx.id] = true;
                                     } else {
@@ -883,8 +771,7 @@ export function TransactionsClient({
                                     return next;
                                   });
                                 },
-                                getValue: (colId: string) =>
-                                  getTransactionValueByColumn(tx, colId),
+                                getValue: (colId: string) => getTransactionValueByColumn(tx, colId),
                               },
                               getContext: () => ({
                                 ...cell.getContext(),
@@ -896,10 +783,7 @@ export function TransactionsClient({
                                   toggleSelected: (value?: boolean) => {
                                     setRowSelection((prev) => {
                                       const next = { ...prev };
-                                      const isSelected =
-                                        value !== undefined
-                                          ? value
-                                          : !prev[tx.id];
+                                      const isSelected = value !== undefined ? value : !prev[tx.id];
                                       if (isSelected) {
                                         next[tx.id] = true;
                                       } else {
@@ -908,8 +792,7 @@ export function TransactionsClient({
                                       return next;
                                     });
                                   },
-                                  getValue: (colId: string) =>
-                                    getTransactionValueByColumn(tx, colId),
+                                  getValue: (colId: string) => getTransactionValueByColumn(tx, colId),
                                 },
                               }),
                             })),
@@ -993,15 +876,9 @@ export function TransactionsClient({
         dictionary={dictionary}
         canEdit={canEditData}
         onNext={() => {
-          const currentIndex = transactions.findIndex(
-            (t) => t.id === transactionId,
-          );
+          const currentIndex = transactions.findIndex((t) => t.id === transactionId);
 
-          if (
-            currentIndex >= transactions.length - 2 &&
-            hasNextPage &&
-            !isFetchingNextPage
-          ) {
+          if (currentIndex >= transactions.length - 2 && hasNextPage && !isFetchingNextPage) {
             fetchNextPage();
           }
 
@@ -1012,9 +889,7 @@ export function TransactionsClient({
           }
         }}
         onPrevious={() => {
-          const currentIndex = transactions.findIndex(
-            (t) => t.id === transactionId,
-          );
+          const currentIndex = transactions.findIndex((t) => t.id === transactionId);
           const prev = transactions[currentIndex - 1];
           if (prev) {
             setTransactionId(prev.id);
@@ -1035,10 +910,7 @@ export function TransactionsClient({
         />
       ) : null}
 
-      <ExportModal
-        open={isExportOpen}
-        onOpenChange={setIsExportOpen}
-      />
+      <ExportModal open={isExportOpen} onOpenChange={setIsExportOpen} />
     </div>
   );
 }

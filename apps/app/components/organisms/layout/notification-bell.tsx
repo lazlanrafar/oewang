@@ -123,9 +123,9 @@ export function NotificationBell({ dictionary }: { dictionary: AppDictionary }) 
             variant="ghost"
             size="sm"
             className="w-full text-muted-foreground text-xs hover:text-primary"
-            onClick={() => router.push("/settings/notifications")}
+            onClick={() => router.push("/notifications")}
           >
-            {dictionary.notifications.view_settings || "View notification settings"}
+            {dictionary.notifications.view_all || "View all notifications"}
           </Button>
         </div>
       </PopoverContent>

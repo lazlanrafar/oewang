@@ -23,9 +23,9 @@ import { animate, motion, useMotionValue, useTransform } from "framer-motion";
 import { useAiQuota } from "@/hooks/use-ai-quota";
 import { useChatStore } from "@/stores/chat";
 
-import { getDictionaryText } from "./chat-i18n";
 import { ChatCommandMenu } from "./chat-command-menu";
 import { ChatHistoryButton, ChatHistoryDropdown, useChatHistoryContext } from "./chat-history";
+import { getDictionaryText } from "./chat-i18n";
 import { ChatSuggestionButton } from "./chat-suggestion-button";
 import { ChatWebSearchButton } from "./chat-web-search-button";
 import { QuotaLimitCard } from "./quota-limit-card";
@@ -38,7 +38,11 @@ export interface ChatInputMessage extends PromptInputMessage {
 }
 
 export function ChatInput({ dictionary }: { dictionary: Dictionary }) {
-  const chatInputPlaceholder = getDictionaryText(dictionary as Record<string, unknown>, "chat.placeholder", "Ask anything...");
+  const chatInputPlaceholder = getDictionaryText(
+    dictionary as Record<string, unknown>,
+    "chat.placeholder",
+    "Ask anything...",
+  );
   const webSearchPlaceholder = getDictionaryText(
     dictionary as Record<string, unknown>,
     "chat.search_placeholder",
