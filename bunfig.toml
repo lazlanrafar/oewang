@@ -1,6 +1,4 @@
 [test]
-preload = []
-
 # Patterns to exclude from test discovery
 ignore = [
   "references/**",
