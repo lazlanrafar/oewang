@@ -47,18 +47,20 @@ interface InvoiceColumnsOptions {
 
 export function buildInvoiceColumns({ onEdit, onDelete, dictionary }: InvoiceColumnsOptions): ColumnDef<InvoiceRow>[] {
   const dict = dictionary.invoices;
+  const cols = dict.columns as Record<string, string>;
+  const acts = dict.actions as Record<string, string>;
 
   return [
     {
       id: "invoiceNumber",
-      header: dict.columns.invoice_number || "Invoice No.",
+      header: cols.invoice_number || "Invoice No.",
       accessorKey: "invoiceNumber",
       size: 180,
       cell: ({ row }) => <span className="truncate font-medium">{row.original.invoiceNumber}</span>,
     },
     {
       id: "status",
-      header: dict.columns.status || "Status",
+      header: cols.status || "Status",
       accessorKey: "status",
       size: 120,
       cell: ({ row }) => {
@@ -72,37 +74,37 @@ export function buildInvoiceColumns({ onEdit, onDelete, dictionary }: InvoiceCol
     },
     {
       id: "contact",
-      header: dict.columns.contact || "Contact",
+      header: cols.contact || "Contact",
       size: 220,
       cell: ({ row }) => {
-        const name = row.original.contact.name ?? "-";
+        const name = row.original.contact?.name ?? "-";
         return <span className="truncate">{name}</span>;
       },
     },
     {
       id: "amount",
-      header: dict.columns.amount || "Amount",
+      header: cols.amount || "Amount",
       accessorKey: "amount",
       size: 140,
       cell: ({ row }) => <span className="truncate">{formatAmount(row.original.amount, row.original.currency)}</span>,
     },
     {
       id: "issueDate",
-      header: dict.columns.issue_date || "Issue Date",
+      header: cols.issue_date || "Issue Date",
       accessorKey: "issueDate",
       size: 130,
       cell: ({ row }) => <span className="truncate">{formatDate(row.original.issueDate)}</span>,
     },
     {
       id: "dueDate",
-      header: dict.columns.due_date || "Due Date",
+      header: cols.due_date || "Due Date",
       accessorKey: "dueDate",
       size: 130,
       cell: ({ row }) => <span className="truncate">{formatDate(row.original.dueDate)}</span>,
     },
     {
       id: "actions",
-      header: dict.columns.actions || "Actions",
+      header: cols.actions || "Actions",
       size: 100,
       enableHiding: false,
       cell: ({ row }) => (
@@ -114,11 +116,11 @@ export function buildInvoiceColumns({ onEdit, onDelete, dictionary }: InvoiceCol
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             {onEdit && (
-              <DropdownMenuItem onClick={() => onEdit(row.original)}>{dict.actions.edit || "Edit"}</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onEdit(row.original)}>{acts.edit || "Edit"}</DropdownMenuItem>
             )}
             {onDelete && (
               <DropdownMenuItem className="text-destructive" onClick={() => onDelete(row.original)}>
-                {dict.actions.delete || "Delete"}
+                {acts.delete || "Delete"}
               </DropdownMenuItem>
             )}
           </DropdownMenuContent>

@@ -82,7 +82,7 @@ export function PaymentFormSheet({ open, onOpenChange, debt, wallets: _wallets, 
 
   const mutation = useMutation({
     mutationFn: async (data: PaymentFormValues) => {
-      if (!debt.id) throw new Error("Debt ID missing");
+      if (!debt?.id) throw new Error("Debt ID missing");
       return payDebt(debt.id, {
         amount: data.amount,
         walletId: data.walletId,

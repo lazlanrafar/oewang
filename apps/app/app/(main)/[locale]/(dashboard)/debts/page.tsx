@@ -53,6 +53,6 @@ async function DebtsPageContent({ locale }: { locale: Locale }) {
   }
 
   return (
-    <DebtsClient initialData={initialDebts} wallets={initialWallets} dictionary={dictionary} settings={settings} />
+    <DebtsClient initialData={initialDebts} wallets={initialWallets} dictionary={dictionary} settings={settings as TransactionSettings} />
   );
 }

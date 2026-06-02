@@ -170,7 +170,7 @@ export function InvoiceSettings({
                         {["Due on Receipt", "Net 7", "Net 10", "Net 15", "Net 30", "Net 45", "Net 60", "Net 90"].map(
                           (term) => (
                             <DropdownMenuRadioItem key={term} value={term}>
-                              {dict.settings.terms[term.toLowerCase().replace(/ /g, "_")] || term}
+                              {(dict.settings.terms as Record<string, string>)[term.toLowerCase().replace(/ /g, "_")] || term}
                             </DropdownMenuRadioItem>
                           ),
                         )}

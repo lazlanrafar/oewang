@@ -145,7 +145,7 @@ export function BillingView({
     },
     onSuccess: () => {
       toast.success(
-        billingDict.magic_link_sent ||
+        (billingDict as unknown as Record<string, string>).magic_link_sent ||
           "A secure login link has been sent to your billing email. Click it to manage your subscription on Mayar.",
       );
     },
@@ -499,7 +499,7 @@ export function BillingView({
                             </p>
                             <p className="font-medium text-destructive text-xs">
                               {(() => {
-                                const d = new Date(cancelledRows[0]?.created_at);
+                                const d = new Date(cancelledRows[0]?.created_at ?? Date.now());
                                 d.setMonth(d.getMonth() + 1);
                                 return d.toLocaleDateString(undefined, {
                                   month: "short",

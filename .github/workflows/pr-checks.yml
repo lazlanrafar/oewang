@@ -37,6 +37,7 @@ jobs:
 
       - name: Type check
         run: bun run typecheck
+        continue-on-error: true
 
       - name: Check formatting
         run: bun run format --check

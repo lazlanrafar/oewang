@@ -2,6 +2,8 @@
 
 import { useCallback, useMemo, useState } from "react";
 
+import type { Column } from "@tanstack/react-table";
+
 import { useRouter } from "next/navigation";
 
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -32,7 +34,7 @@ interface Props {
 
 export function DebtsClient({ initialData, wallets, dictionary, settings }: Props) {
   const router = useRouter();
-  const [columns, setColumns] = useState<string[]>([]);
+  const [columns, setColumns] = useState<Column<any, unknown>[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isContactDetailOpen, setIsContactDetailOpen] = useState(false);

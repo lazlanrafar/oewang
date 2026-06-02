@@ -113,7 +113,7 @@ export function VaultClient({ dictionary }: Props) {
   // Auto-select the first file when data loads and nothing is selected yet
   React.useEffect(() => {
     if (files.length > 0 && !selectedFile) {
-      setSelectedFile(files[0]);
+      setSelectedFile(files[0] ?? null);
     }
   }, [files, selectedFile]);
 

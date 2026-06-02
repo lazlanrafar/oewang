@@ -19,7 +19,7 @@ export function ChatSuggestionButton() {
     // Focus textarea for keyboard navigation when opening
     if (!showCommands) {
       requestAnimationFrame(() => {
-        document.querySelector("textarea").focus();
+        document.querySelector("textarea")?.focus();
       });
     }
   };

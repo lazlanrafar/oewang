@@ -97,12 +97,12 @@ export function SelectContact({
       onCreate={(value) => {
         createMutation.mutate(value);
       }}
-      renderSelectedItem={(item: Record<string, string>) => (
+      renderSelectedItem={(item) => (
         <div className="flex items-center space-x-2">
           <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted">
             <User className="h-3 w-3 text-muted-foreground" />
           </div>
-          <span className="max-w-[90%] truncate text-left font-medium text-xs">{item.label}</span>
+          <span className="max-w-[90%] truncate text-left font-medium text-xs">{Array.isArray(item) ? item[0]?.label : item.label}</span>
         </div>
       )}
       renderOnCreate={(value) => (
@@ -113,7 +113,7 @@ export function SelectContact({
           <span className="text-xs">{`Create "${value}"`}</span>
         </div>
       )}
-      renderListItem={({ item }: { item: Record<string, string> }) => (
+      renderListItem={({ item }) => (
         <div className="flex items-center gap-2 overflow-hidden">
           <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted">
             <User className="h-3 w-3 text-muted-foreground" />

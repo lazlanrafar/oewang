@@ -100,7 +100,7 @@ export function ChatCommandMenu() {
                   // Prevent input from losing focus when clicking on command
                   e.preventDefault();
                 }}
-                onClick={() => handleCommandExecution(command as Record<string, unknown>)}
+                onClick={() => handleCommandExecution(command as unknown as Record<string, unknown>)}
                 data-index={index}
               >
                 <div>

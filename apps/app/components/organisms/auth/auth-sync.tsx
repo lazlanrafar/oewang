@@ -53,7 +53,7 @@ export function AuthSync({ locale, returnTo = "/overview" }: AuthSyncProps) {
       } catch (err: unknown) {
         console.error("Auth sync error:", err);
         setStatus("error");
-        setErrorMsg(err.message || "An unexpected error occurred.");
+        setErrorMsg((err as Error).message || "An unexpected error occurred.");
       }
     };
 

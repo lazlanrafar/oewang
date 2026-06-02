@@ -75,8 +75,6 @@ test.describe("Invoices Page", () => {
     const invoiceRows = page.getByRole("row");
     const count = await invoiceRows.count();
     if (count > 1) {
-      // biome-ignore lint/suspicious/noEmptyBlockStatements: intentional no-op
-      await invoiceRows.onSubmit?.().catch(() => {});
       expect(true).toBe(true);
     }
   });

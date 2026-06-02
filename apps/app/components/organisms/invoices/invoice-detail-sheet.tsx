@@ -361,7 +361,7 @@ export function InvoiceDetailSheet({
 
       {/* Hidden InvoiceA4 for PDF Generation */}
       <div className="-z-50 pointer-events-none fixed top-0 left-0 w-[800px] opacity-0">
-        <InvoiceA4 ref={invoiceRef} invoice={invoice} dictionary={dictionary} />
+        <InvoiceA4 ref={invoiceRef} invoice={invoice as any} dictionary={dictionary} />
       </div>
     </Sheet>
   );

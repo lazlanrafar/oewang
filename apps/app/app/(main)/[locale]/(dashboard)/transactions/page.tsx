@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 
+import type { Dictionary } from "@workspace/dictionaries";
 import { getCategories, getTransactions, getWallets } from "@workspace/modules/server";
 import type { Category, Transaction, Wallet } from "@workspace/types";
 import { endOfMonth, startOfMonth } from "date-fns";
@@ -62,7 +63,7 @@ async function TransactionPageContent({
   let rowCount = 0;
   let initialWallets: Wallet[] = [];
   let initialCategories: Category[] = [];
-  let dictData: Record<string, string> | null = null;
+  let dictData: Dictionary | null = null;
 
   try {
     const [transactionsRes, walletsRes, categoriesRes, fetchedDict] = await Promise.all([
@@ -110,7 +111,7 @@ async function TransactionPageContent({
         pageSize={limit}
         wallets={initialWallets}
         categories={initialCategories}
-        dictionary={dictData}
+        dictionary={dictData as Dictionary}
       />
     </Hydrated>
   );
