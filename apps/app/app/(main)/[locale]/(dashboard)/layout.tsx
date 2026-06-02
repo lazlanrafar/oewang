@@ -24,13 +24,8 @@ import { getPreference } from "@/server/server-actions";
 
 async function getUserAndWorkspaces() {
   try {
-    // 5-second timeout prevents infinite /sync loop when the API is unreachable
-    // or the cookie is unreadable (e.g. missing domain on cross-subdomain requests).
-    const result = await Promise.race([
-      getMe(),
-      new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000)),
-    ]);
-    if (result && "success" in result && result.success) {
+    const result = await getMe();
+    if (result.success) {
       return result.data;
     }
     return null;
@@ -58,12 +53,10 @@ export default async function Layout({
   ]);
 
   if (!me_data) {
-    // getMe() failed: API unreachable, cookie missing domain, or token expired.
-    // Delete the stale cookie first — without it, proxy.ts routes the user to
-    // /sync (to mint a fresh token) instead of looping back to /overview.
-    const cookieStore = await cookies();
-    cookieStore.delete("oewang-session");
-    redirect(`/${locale}/login`);
+    // getMe() failed (API cold start, expired token, etc.)
+    // Redirect to /sync — it will mint a fresh token and retry.
+    // The retry counter in auth-sync.tsx prevents true infinite loops.
+    redirect(`/${locale}/sync`);
   }
 
   const current_user = me_data.user;
