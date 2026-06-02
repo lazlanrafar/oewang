@@ -91,12 +91,15 @@ export const switchWorkspaceAction = async (
       const exchangeResult = await exchangeSupabaseToken(session.access_token);
 
       if (exchangeResult.success && exchangeResult.data) {
+        const isProduction = Env.NODE_ENV === "production";
+        const cookieDomain = isProduction ? ".oewang.com" : undefined;
         (await cookies()).set("oewang-session", exchangeResult.data.token, {
           path: "/",
           httpOnly: true,
-          secure: Env.NODE_ENV === "production",
+          secure: isProduction,
           sameSite: "lax",
           maxAge: 60 * 60 * 24 * 7, // 7 days
+          ...(cookieDomain ? { domain: cookieDomain } : {}),
         });
       }
     }

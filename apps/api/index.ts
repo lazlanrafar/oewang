@@ -115,7 +115,21 @@ const apiControllers3 = new Elysia()
   .use(pushSubscriptionsController);
 
 const app = new Elysia()
-  .use(cors())
+  .use(
+    cors({
+      origin: [
+        "https://app.oewang.com",
+        "https://console.oewang.com",
+        "https://oewang.com",
+        ...(process.env.NODE_ENV !== "production"
+          ? ["http://localhost:3000", "http://localhost:3001", "http://localhost:3003"]
+          : []),
+      ],
+      credentials: true,
+      allowedHeaders: ["Content-Type", "Authorization", "x-workspace-id"],
+      methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    }),
+  )
   .use(staticPlugin({ assets: "public", prefix: "" }))
   .get("/", () => Bun.file("public/index.html"))
   .use(loggerPlugin)

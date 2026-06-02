@@ -233,14 +233,20 @@ export async function exchangeSupabaseToken(supabase_token: string): Promise<
       workspace_id: string | null;
     };
 
-    // Set the cookie so the proxy can detect it
+    // Set the cookie so the proxy can detect it.
+    // In production we set domain=".oewang.com" so the cookie is shared
+    // across all subdomains (app.oewang.com → api.oewang.com), which is
+    // required for the WebSocket auth handshake to work.
     if (result.token) {
+      const isProduction = Env.NODE_ENV === "production";
+      const cookieDomain = isProduction ? ".oewang.com" : undefined;
       (await cookies()).set("oewang-session", result.token, {
         path: "/",
         httpOnly: true,
-        secure: Env.NODE_ENV === "production",
+        secure: isProduction,
         sameSite: "lax",
         maxAge: 60 * 60 * 24 * 7, // 7 days
+        ...(cookieDomain ? { domain: cookieDomain } : {}),
       });
     }
 
