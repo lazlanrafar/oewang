@@ -17,7 +17,7 @@
     "db:release:prod": "bun run db:migrate:prod && bun run db:seed:prod",
     "mcp": "bun run --cwd apps/api mcp.ts",
     "test": "bash -c 'cd apps/api && bun test modules/'",
-    "test:unit": "bash -c 'cd apps/api && bun test --preload ./test/setup.ts test/unit/**/*.test.ts' || true",
+    "test:unit": "bash -c 'cd apps/api && bun test --preload ./test/setup.ts ./test/unit/**/*.test.ts' || true",
     "test:integration": "bun run --cwd apps/api test:integration",
     "test:e2e": "turbo run test:e2e",
     "test:e2e:ui": "cd apps/app && bun run test:e2e:ui",
