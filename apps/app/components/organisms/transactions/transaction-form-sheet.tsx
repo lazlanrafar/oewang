@@ -252,15 +252,29 @@ export function TransactionFormSheet({
         // Optimistically patch the updated transaction in every matching cache
         if (result.data) {
           const updated = result.data as Transaction;
-          queryClient.setQueriesData<InfiniteData<any>>({ queryKey: ["transactions"], exact: false }, (old) => {
+          queryClient.setQueriesData<any>({ queryKey: ["transactions"], exact: false }, (old: any) => {
             if (!old) return old;
-            return {
-              ...old,
-              pages: old.pages.map((page: any) => ({
-                ...page,
-                data: (page.data ?? []).map((tx: Transaction) => (tx.id === updated.id ? { ...tx, ...updated } : tx)),
-              })),
-            };
+            
+            // Handle infinite queries (has pages)
+            if ("pages" in old && Array.isArray(old.pages)) {
+              return {
+                ...old,
+                pages: old.pages.map((page: any) => ({
+                  ...page,
+                  data: (page.data ?? []).map((tx: Transaction) => (tx.id === updated.id ? { ...tx, ...updated } : tx)),
+                })),
+              };
+            }
+            
+            // Handle regular queries (has data array directly)
+            if ("data" in old && Array.isArray(old.data)) {
+              return {
+                ...old,
+                data: old.data.map((tx: Transaction) => (tx.id === updated.id ? { ...tx, ...updated } : tx)),
+              };
+            }
+
+            return old;
           });
         }
       } else {
@@ -274,20 +288,34 @@ export function TransactionFormSheet({
         // matching cache so it appears instantly without waiting for refetch.
         if (result.data) {
           const created = result.data as Transaction;
-          queryClient.setQueriesData<InfiniteData<any>>({ queryKey: ["transactions"], exact: false }, (old) => {
+          queryClient.setQueriesData<any>({ queryKey: ["transactions"], exact: false }, (old: any) => {
             if (!old) return old;
-            const [firstPage, ...restPages] = old.pages;
-            if (!firstPage) return old;
-            return {
-              ...old,
-              pages: [
-                {
-                  ...firstPage,
-                  data: [created, ...(firstPage.data ?? [])],
-                },
-                ...restPages,
-              ],
-            };
+            
+            // Handle infinite queries (has pages)
+            if ("pages" in old && Array.isArray(old.pages)) {
+              const [firstPage, ...restPages] = old.pages;
+              if (!firstPage) return old;
+              return {
+                ...old,
+                pages: [
+                  {
+                    ...firstPage,
+                    data: [created, ...(firstPage.data ?? [])],
+                  },
+                  ...restPages,
+                ],
+              };
+            }
+            
+            // Handle regular queries (has data array directly)
+            if ("data" in old && Array.isArray(old.data)) {
+              return {
+                ...old,
+                data: [created, ...old.data],
+              };
+            }
+
+            return old;
           });
         }
       }

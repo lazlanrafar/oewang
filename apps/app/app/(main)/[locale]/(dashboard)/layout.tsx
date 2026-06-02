@@ -38,7 +38,7 @@ export default async function Layout({
   params,
 }: Readonly<{
   children: ReactNode;
-  params: Promise<{ locale: Locale }>;
+  params: Promise<{ locale: string }>;
 }>) {
   const cookie_store = await cookies();
   const default_open = cookie_store.get("sidebar_state")?.value !== "false";
@@ -48,7 +48,7 @@ export default async function Layout({
     getPreference("sidebar_variant", SIDEBAR_VARIANT_VALUES, "inset"),
     getPreference("sidebar_collapsible", SIDEBAR_COLLAPSIBLE_VALUES, "icon"),
     getUserAndWorkspaces(),
-    getDictionary(locale),
+    getDictionary(locale as Locale),
   ]);
 
   // getMe() may return null if the API is temporarily unavailable (cold start).
