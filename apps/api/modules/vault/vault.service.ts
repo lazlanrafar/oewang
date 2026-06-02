@@ -20,10 +20,10 @@ export abstract class VaultService {
   private static buildBucketCacheKey(workspaceId: string, settings: any) {
     return JSON.stringify({
       workspaceId,
-      endpoint: settings?.r2Endpoint || Env.R2_ENDPOINT || "",
-      accessKeyId: settings?.r2AccessKeyId || Env.R2_ACCESS_KEY_ID || "",
-      secretAccessKey: settings?.r2SecretAccessKey || Env.R2_SECRET_ACCESS_KEY || "",
-      bucketName: settings?.r2BucketName || Env.R2_BUCKET_NAME || "",
+      endpoint: settings?.r2Endpoint || Env.BUCKET_ENDPOINT || "",
+      accessKeyId: settings?.r2AccessKeyId || Env.BUCKET_ACCESS_KEY_ID || "",
+      secretAccessKey: settings?.r2SecretAccessKey || Env.BUCKET_SECRET_ACCESS_KEY || "",
+      bucketName: settings?.r2BucketName || Env.BUCKET_NAME || "",
     });
   }
 
@@ -47,16 +47,17 @@ export abstract class VaultService {
         accessKeyId: decrypt(settings.r2AccessKeyId, secret),
         secretAccessKey: decrypt(settings.r2SecretAccessKey, secret),
         bucketName: settings.r2BucketName,
+        region: Env.BUCKET_REGION,
       });
       VaultService.bucketClientCache.set(cacheKey, client);
       return client;
     }
 
     // Fallback to system bucket (from env)
-    const systemEndpoint = Env.R2_ENDPOINT;
-    const systemAccessKeyId = Env.R2_ACCESS_KEY_ID;
-    const systemSecretAccessKey = Env.R2_SECRET_ACCESS_KEY;
-    const systemBucketName = Env.R2_BUCKET_NAME;
+    const systemEndpoint = Env.BUCKET_ENDPOINT;
+    const systemAccessKeyId = Env.BUCKET_ACCESS_KEY_ID;
+    const systemSecretAccessKey = Env.BUCKET_SECRET_ACCESS_KEY;
+    const systemBucketName = Env.BUCKET_NAME;
 
     if (
       !systemEndpoint ||
@@ -64,7 +65,7 @@ export abstract class VaultService {
       !systemSecretAccessKey ||
       !systemBucketName
     ) {
-      throw new Error("R2 storage not configured");
+      throw new Error("S3 bucket storage not configured");
     }
 
     const client = new BucketClient({
@@ -72,6 +73,7 @@ export abstract class VaultService {
       accessKeyId: systemAccessKeyId,
       secretAccessKey: systemSecretAccessKey,
       bucketName: systemBucketName,
+      region: Env.BUCKET_REGION,
     });
     VaultService.bucketClientCache.set(cacheKey, client);
     return client;

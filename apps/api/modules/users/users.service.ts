@@ -15,19 +15,20 @@ import { normalizeWorkspaceRole } from "../workspaces/workspace-permissions";
 export abstract class UsersService {
   private static async getBucketClient() {
     if (
-      !Env.R2_ENDPOINT ||
-      !Env.R2_ACCESS_KEY_ID ||
-      !Env.R2_SECRET_ACCESS_KEY ||
-      !Env.R2_BUCKET_NAME
+      !Env.BUCKET_ENDPOINT ||
+      !Env.BUCKET_ACCESS_KEY_ID ||
+      !Env.BUCKET_SECRET_ACCESS_KEY ||
+      !Env.BUCKET_NAME
     ) {
-      throw new Error("R2 storage not configured for avatars");
+      throw new Error("S3 bucket storage not configured for avatars");
     }
 
     return new BucketClient({
-      endpoint: Env.R2_ENDPOINT,
-      accessKeyId: Env.R2_ACCESS_KEY_ID,
-      secretAccessKey: Env.R2_SECRET_ACCESS_KEY,
-      bucketName: Env.R2_BUCKET_NAME,
+      endpoint: Env.BUCKET_ENDPOINT,
+      accessKeyId: Env.BUCKET_ACCESS_KEY_ID,
+      secretAccessKey: Env.BUCKET_SECRET_ACCESS_KEY,
+      bucketName: Env.BUCKET_NAME,
+      region: Env.BUCKET_REGION,
     });
   }
 

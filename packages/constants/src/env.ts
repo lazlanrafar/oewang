@@ -59,11 +59,12 @@ const serverSchema = z.object({
   TWILIO_AUTH_TOKEN: z.string().optional(),
   TWILIO_WHATSAPP_NUMBER: z.string().optional(),
 
-  // R2 Storage
-  R2_ENDPOINT: z.string().min(1).optional(),
-  R2_ACCESS_KEY_ID: z.string().optional(),
-  R2_SECRET_ACCESS_KEY: z.string().optional(),
-  R2_BUCKET_NAME: z.string().optional(),
+  // S3-compatible Storage
+  BUCKET_ENDPOINT: z.string().min(1).optional(),
+  BUCKET_REGION: z.string().optional().default("us-east-1"),
+  BUCKET_ACCESS_KEY_ID: z.string().optional(),
+  BUCKET_SECRET_ACCESS_KEY: z.string().optional(),
+  BUCKET_NAME: z.string().optional(),
 
   // Monitoring
   SENTRY_DSN: z.string().optional(),
