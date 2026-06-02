@@ -42,7 +42,7 @@ export function PricingDetailSheet() {
             <div className="flex justify-between mb-8">
               <div className="flex-1 flex-col">
                 <div className="flex items-center justify-between">
-                  <div></div>
+                  <div />
                   <span className="text-[#606060] text-xs select-text">
                     {selectedPricing.created_at
                       ? format(new Date(selectedPricing.created_at), "MMM d, y")
@@ -178,6 +178,7 @@ export function PricingDetailSheet() {
                   </p>
                 </div>
                 <button
+                  type="button"
                   onClick={copyId}
                   className="flex items-center gap-2 hover:text-green transition-colors text-xs font-mono group"
                 >

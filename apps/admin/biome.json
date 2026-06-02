@@ -31,7 +31,7 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "includes": ["**", "!.github", "!.husky", "!node_modules", "!.next", "!dist", "!out", "!src/components/ui"]
+    "includes": ["**", "!.github", "!.husky", "!node_modules", "!.next", "!dist", "!out", "!src/components/ui", "!playwright-report", "!test-results"]
   },
   "formatter": {
     "enabled": true,
@@ -54,7 +54,7 @@
         "noUndeclaredVariables": "error"
       },
       "nursery": {
-        "useSortedClasses": "on"
+        "useSortedClasses": "warn"
       },
       "performance": {
         "noImgElement": "warn"

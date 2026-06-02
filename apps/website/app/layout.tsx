@@ -1,10 +1,8 @@
 import type { ReactNode } from "react";
 
 import { WEBSITE_CONFIG } from "@workspace/constants";
-import { Toaster } from "@workspace/ui/atoms";
 import type { Metadata } from "next";
 
-import { Providers } from "@/components/providers";
 import "@workspace/ui/globals.css";
 
 export const metadata: Metadata = {
