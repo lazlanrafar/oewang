@@ -1,18 +1,16 @@
 "use client";
 
 import {
-  NON_REORDERABLE_COLUMNS,
-  SORT_FIELD_MAPS,
-  STICKY_COLUMNS,
-} from "./data-table-configs";
-import {
-  SortableContext,
   horizontalListSortingStrategy,
+  SortableContext,
 } from "@dnd-kit/sortable";
 import { flexRender, type Header, type Table } from "@tanstack/react-table";
 import { ArrowDown, ArrowUp } from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
 import { useMemo } from "react";
+import { useSortQuery } from "../../../hooks/use-sort-query";
+import { useStickyColumns } from "../../../hooks/use-sticky-columns";
+import { cn } from "../../../lib/utils";
 import {
   Button,
   Checkbox,
@@ -20,19 +18,21 @@ import {
   TableHeader,
   TableRow,
 } from "../../atoms";
-import { cn } from "../../../lib/utils";
 import { HorizontalPagination } from "../../molecules";
-import { TableId } from "./data-table-settings";
+import type { StickyConfig } from "./data-table";
+import {
+  NON_REORDERABLE_COLUMNS,
+  SORT_FIELD_MAPS,
+  STICKY_COLUMNS,
+} from "./data-table-configs";
+import { DataTableHeaderDraggable } from "./data-table-header-draggable";
+import { DataTableResizeHandle } from "./data-table-resize-handle";
+import type { TableId } from "./data-table-settings";
 import {
   ACTIONS_FULL_WIDTH_HEADER_CLASS,
   ACTIONS_STICKY_HEADER_CLASS,
-  TableScrollState,
+  type TableScrollState,
 } from "./data-table-types";
-import type { StickyConfig } from "./data-table";
-import { useStickyColumns } from "../../../hooks/use-sticky-columns";
-import { useSortQuery } from "../../../hooks/use-sort-query";
-import { DataTableResizeHandle } from "./data-table-resize-handle";
-import { DataTableHeaderDraggable } from "./data-table-header-draggable";
 
 interface Props<TData> {
   table?: Table<TData>;
@@ -292,7 +292,10 @@ function renderHeaderContent<TData>(
   const sortField = SORT_FIELD_MAPS[tableId][columnId];
 
   // Priority 1: Custom header renderer from column definition
-  if (header.column.columnDef.header && typeof header.column.columnDef.header !== "string") {
+  if (
+    header.column.columnDef.header &&
+    typeof header.column.columnDef.header !== "string"
+  ) {
     // For the select column, we still want the centering wrapper
     if (columnId === "select") {
       return (

@@ -1,13 +1,16 @@
 "use client";
 
-import { Button } from "@workspace/ui/atoms";
-import Link from "next/link";
-import { Menu, X, ChevronDown } from "lucide-react";
 import { useRef, useState } from "react";
+
+import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { NAV_ITEMS } from "@/navigation/nav-items";
+
+import { Button } from "@workspace/ui/atoms";
+import { ChevronDown, Menu, X } from "lucide-react";
+
 import { i18n } from "@/i18n-config";
 import type { WebsiteDictionary } from "@/lib/translations";
+import { NAV_ITEMS } from "@/navigation/nav-items";
 
 type MegaMenuType = "features" | "resources";
 
@@ -75,12 +78,8 @@ export function Header({
 
   const segments = pathname.split("/").filter(Boolean);
   const firstSegment = segments[0] ?? "";
-  const hasLocalePrefix = i18n.locales.includes(
-    firstSegment as (typeof i18n.locales)[number],
-  );
-  const pathAfterLocale = hasLocalePrefix
-    ? `/${segments.slice(1).join("/")}`
-    : pathname;
+  const hasLocalePrefix = i18n.locales.includes(firstSegment as (typeof i18n.locales)[number]);
+  const pathAfterLocale = hasLocalePrefix ? `/${segments.slice(1).join("/")}` : pathname;
 
   const withLocale = (path: string) => `/${locale}${path === "/" ? "" : path}`;
 
@@ -91,11 +90,11 @@ export function Header({
 
   return (
     <>
+      {/* biome-ignore lint/a11y/useSemanticElements: backdrop overlay uses div with role for click-outside behavior */}
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: backdrop overlay needs click/keydown to close menu */}
       <div
         className={`fixed inset-0 z-40 bg-black/35 transition-opacity duration-200 ${
-          isMenuOpen || activeMegaMenu
-            ? "opacity-100"
-            : "opacity-0 pointer-events-none"
+          isMenuOpen || activeMegaMenu ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
         onClick={() => {
           setIsMenuOpen(false);
@@ -110,6 +109,7 @@ export function Header({
       />
 
       <nav className="fixed top-0 left-0 right-0 z-50 w-full">
+        {/* biome-ignore lint/a11y/noStaticElementInteractions: layout div uses mouse events for mega menu hover behavior */}
         <div
           className="mx-auto max-w-[1300px] px-4 sm:px-6 xl:px-8 pt-3 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-top-2 duration-500"
           onMouseLeave={scheduleCloseMegaMenu}
@@ -127,7 +127,7 @@ export function Header({
               <button
                 type="button"
                 onMouseEnter={() => openMegaMenu("features")}
-                  className={`px-3 py-2 text-sm transition-all duration-200 inline-flex items-center gap-1 relative after:absolute after:left-3 after:right-3 after:bottom-[5px] after:h-px after:origin-left after:scale-x-0 after:transition-transform after:duration-200 after:bg-foreground ${
+                className={`px-3 py-2 text-sm transition-all duration-200 inline-flex items-center gap-1 relative after:absolute after:left-3 after:right-3 after:bottom-[5px] after:h-px after:origin-left after:scale-x-0 after:transition-transform after:duration-200 after:bg-foreground ${
                   activeMegaMenu === "features" || pathname.startsWith(`/${locale}/features`)
                     ? "text-foreground after:scale-x-100"
                     : "text-muted-foreground hover:text-foreground hover:after:scale-x-100"
@@ -192,6 +192,7 @@ export function Header({
             </button>
           </div>
 
+          {/* biome-ignore lint/a11y/noStaticElementInteractions: mega menu panel uses mouse events for hover delay behavior */}
           <div
             className={`hidden xl:block overflow-hidden border border-t-0 border-border/60 bg-background transition-all duration-300 ease-out ${
               activeMegaMenu
@@ -244,9 +245,7 @@ export function Header({
                       </div>
                       <div className="border-t border-border/80 p-4">
                         <p className="text-[15px] leading-tight">Customer Stories</p>
-                        <p className="text-[13px] text-muted-foreground mt-2">
-                          See how founders use Oewang
-                        </p>
+                        <p className="text-[13px] text-muted-foreground mt-2">See how founders use Oewang</p>
                       </div>
                     </Link>
                   </div>
@@ -278,9 +277,7 @@ export function Header({
                       </div>
                       <div className="border-t border-border/80 p-4">
                         <p className="text-[15px] leading-tight">Integrations</p>
-                        <p className="text-[13px] text-muted-foreground mt-2">
-                          Connect your existing tools
-                        </p>
+                        <p className="text-[13px] text-muted-foreground mt-2">Connect your existing tools</p>
                       </div>
                     </Link>
 
@@ -293,9 +290,7 @@ export function Header({
                       </div>
                       <div className="border-t border-border/80 p-4">
                         <p className="text-[15px] leading-tight">Updates</p>
-                        <p className="text-[13px] text-muted-foreground mt-2">
-                          See what is new in Oewang
-                        </p>
+                        <p className="text-[13px] text-muted-foreground mt-2">See what is new in Oewang</p>
                       </div>
                     </Link>
                   </div>
@@ -307,9 +302,7 @@ export function Header({
 
         <div
           className={`xl:hidden fixed top-20 left-4 right-4 z-50 transition-all duration-200 ${
-            isMenuOpen
-              ? "opacity-100 translate-y-0"
-              : "opacity-0 -translate-y-2 pointer-events-none"
+            isMenuOpen ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2 pointer-events-none"
           }`}
         >
           <div className="border border-border bg-background shadow-sm p-5">

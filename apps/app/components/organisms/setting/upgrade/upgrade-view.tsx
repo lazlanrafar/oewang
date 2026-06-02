@@ -227,8 +227,8 @@ export function UpgradeView({
                           ? downgradeMutation.isPending
                             ? dictionary.common.processing || "Processing..."
                             : dict.upgrade
-                            : checkoutMutation.isPending
-                              ? dictionary.common.connecting || "Connecting..."
+                          : checkoutMutation.isPending
+                            ? dictionary.common.connecting || "Connecting..."
                             : isStarter
                               ? dict.free_plan
                               : dict.get_started}

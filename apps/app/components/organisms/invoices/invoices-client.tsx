@@ -6,10 +6,10 @@ import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import type { Dictionary } from "@workspace/dictionaries";
 import {
   type CreateInvoiceData,
-  type UpdateInvoiceData,
   createInvoice,
   deleteInvoice,
   getInvoices,
+  type UpdateInvoiceData,
   updateInvoice,
 } from "@workspace/modules/client";
 import type { ApiResponse, Invoice } from "@workspace/types";

@@ -1,9 +1,9 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import {
   getPublicRequestUrl,
   parseFormBody,
-  verifyTwilioSignature,
   verifyTelegramSecret,
+  verifyTwilioSignature,
 } from "./webhook-security";
 
 describe("webhook-security", () => {
@@ -124,7 +124,7 @@ describe("webhook-security", () => {
       // Generate a valid signature
       const { createHmac } = require("node:crypto");
       const sortedEntries = Object.entries(formBody).sort(([a], [b]) =>
-        a.localeCompare(b)
+        a.localeCompare(b),
       );
       const data = `${url}${sortedEntries.map(([k, v]) => `${k}${v}`).join("")}`;
       const validSignature = createHmac("sha1", authToken)
@@ -138,7 +138,7 @@ describe("webhook-security", () => {
           signatureHeader: validSignature,
           url,
           formBody,
-        })
+        }),
       ).toBe(true);
 
       // Verify with wrong signature
@@ -148,7 +148,7 @@ describe("webhook-security", () => {
           signatureHeader: "wrong-signature",
           url,
           formBody,
-        })
+        }),
       ).toBe(false);
     });
   });

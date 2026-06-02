@@ -2,8 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-import { useQuery } from "@tanstack/react-query";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Env } from "@workspace/constants";
 import type { Dictionary } from "@workspace/dictionaries";
 import { getIntegrationsAction } from "@workspace/modules/integrations/integrations.action";
@@ -38,14 +37,10 @@ export function ConnectTelegram({ dictionary }: { dictionary: Dictionary }) {
 
   const userId = me?.user?.id;
   const workspaceId = me?.user?.workspace_id;
-  const activeWorkspace = me?.workspaces?.find(
-    (workspace) => workspace.id === workspaceId,
-  );
+  const activeWorkspace = me?.workspaces?.find((workspace) => workspace.id === workspaceId);
   const workspaceIdentifier = activeWorkspace?.slug || workspaceId;
   const botUsername = Env.NEXT_PUBLIC_TELEGRAM_BOT_USER || "OewangBot";
-  const telegramPayload = workspaceIdentifier && userId
-    ? `${workspaceIdentifier}___${userId}`
-    : workspaceIdentifier;
+  const telegramPayload = workspaceIdentifier && userId ? `${workspaceIdentifier}___${userId}` : workspaceIdentifier;
   const telegramUrl = telegramPayload
     ? `https://t.me/${botUsername}?start=${encodeURIComponent(telegramPayload)}`
     : `https://t.me/${botUsername}`;
@@ -83,8 +78,7 @@ export function ConnectTelegram({ dictionary }: { dictionary: Dictionary }) {
     if (!open || !integrations) return;
     type IntegrationStatus = { provider?: string; isActive?: boolean };
     const isConnected = integrations.some(
-      (integration: IntegrationStatus) =>
-        integration?.provider === "telegram" && integration?.isActive,
+      (integration: IntegrationStatus) => integration?.provider === "telegram" && integration?.isActive,
     );
     if (!isConnected) return;
 
@@ -131,11 +125,7 @@ export function ConnectTelegram({ dictionary }: { dictionary: Dictionary }) {
           </div>
 
           <div className="grid w-full grid-cols-2 gap-4">
-            <Button
-              asChild
-              variant="default"
-              disabled={isLoading || !workspaceIdentifier}
-            >
+            <Button asChild variant="default" disabled={isLoading || !workspaceIdentifier}>
               <a
                 href={workspaceIdentifier ? telegramUrl : "#"}
                 target={workspaceIdentifier ? "_blank" : undefined}

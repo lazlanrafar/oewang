@@ -58,7 +58,7 @@ setup("authenticate", async ({ page, dictionary }) => {
     await page.waitForURL(/\/(overview|create-workspace)/, { timeout: 30000 });
 
     // If redirected to create-workspace, provide instructions
-    if (page.url().includes('create-workspace')) {
+    if (page.url().includes("create-workspace")) {
       console.log("\n⚠️  First-time user detected - workspace needs to be created.");
       console.log("\n📝 Please run manual setup:");
       console.log("   bun run test:e2e:login");
@@ -67,25 +67,25 @@ setup("authenticate", async ({ page, dictionary }) => {
       // Try to create workspace automatically if possible
       try {
         console.log("Attempting automatic workspace creation...");
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState("networkidle");
 
         // Step 1: Fill business details
         const nameInput = page.getByLabel(/Company name/i);
-        await nameInput.waitFor({ state: 'visible', timeout: 3000 });
-        await nameInput.fill('E2E Test Workspace');
-        
+        await nameInput.waitFor({ state: "visible", timeout: 3000 });
+        await nameInput.fill("E2E Test Workspace");
+
         // Click Continue
-        const continueBtn = page.getByRole('button', { name: /Continue/i });
+        const continueBtn = page.getByRole("button", { name: /Continue/i });
         await continueBtn.click();
 
         // Step 2: Create Workspace (Free Plan)
-        const createBtn = page.getByRole('button', { name: /Create workspace/i });
-        await createBtn.waitFor({ state: 'visible', timeout: 5000 });
+        const createBtn = page.getByRole("button", { name: /Create workspace/i });
+        await createBtn.waitFor({ state: "visible", timeout: 5000 });
         await createBtn.click();
 
         await page.waitForURL(/.*overview/, { timeout: 20000 });
         console.log("✅ Workspace created automatically!");
-      } catch (error) {
+      } catch (_error) {
         console.log("❌ Could not create workspace automatically.");
         console.log("   Please run: bun run test:e2e:login");
         setup.skip();

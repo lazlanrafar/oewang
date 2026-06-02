@@ -1,15 +1,4 @@
-import {
-  BarChart3,
-  Wallet,
-  Receipt,
-  ShieldCheck,
-  Globe2,
-  Zap,
-  Bell,
-  FileText,
-  Users,
-  Tag,
-} from "lucide-react";
+import { BarChart3, Bell, FileText, Globe2, Receipt, ShieldCheck, Tag, Users, Wallet, Zap } from "lucide-react";
 
 const INTEGRATIONS = [
   { label: "Wallets", icon: Wallet },

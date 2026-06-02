@@ -244,7 +244,7 @@ function ProfileFormInner({
             name="email"
             render={({ field }) => (
               <FormItem>
-                  <FormLabel>{profile.email.label}</FormLabel>
+                <FormLabel>{profile.email.label}</FormLabel>
                 <FormControl>
                   <Input disabled {...field} className="max-w-md rounded-none" />
                 </FormControl>

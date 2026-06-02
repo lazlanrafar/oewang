@@ -1,13 +1,13 @@
 import {
-  db,
-  eq,
   and,
-  desc,
   asc,
-  isNull,
-  walletGroups,
-  sql,
+  db,
+  desc,
+  eq,
   inArray,
+  isNull,
+  sql,
+  walletGroups,
 } from "@workspace/database";
 
 export abstract class WalletGroupsRepository {

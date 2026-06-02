@@ -1,7 +1,8 @@
-import Link from "next/link";
 import { cookies } from "next/headers";
-import { Header } from "@/components/layout/header";
+import Link from "next/link";
+
 import { Footer } from "@/components/layout/footer";
+import { Header } from "@/components/layout/header";
 import { CTASection } from "@/components/sections/cta-section";
 import { getDictionary } from "@/lib/translations";
 
@@ -28,17 +29,11 @@ const POSTS = [
   },
 ];
 
-export default async function UpdatesPage({
-  params,
-}: {
-  params: Promise<{ locale: string }>;
-}) {
+export default async function UpdatesPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   const dictionary = getDictionary(locale);
   const cookieStore = await cookies();
-  const isLoggedIn = cookieStore.has(
-    process.env.NEXT_PUBLIC_SESSION_COOKIE_NAME ?? "oewang-session",
-  );
+  const isLoggedIn = cookieStore.has(process.env.NEXT_PUBLIC_SESSION_COOKIE_NAME ?? "oewang-session");
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
   return (
@@ -61,7 +56,10 @@ export default async function UpdatesPage({
                 <p className="text-xs text-muted-foreground mb-2">{post.date}</p>
                 <h2 className="font-serif text-2xl mb-2">{post.title}</h2>
                 <p className="text-sm text-muted-foreground">{post.description}</p>
-                <Link href={`/${locale}/support`} className="mt-4 inline-block text-xs text-muted-foreground hover:text-foreground">
+                <Link
+                  href={`/${locale}/support`}
+                  className="mt-4 inline-block text-xs text-muted-foreground hover:text-foreground"
+                >
                   Learn more
                 </Link>
               </article>

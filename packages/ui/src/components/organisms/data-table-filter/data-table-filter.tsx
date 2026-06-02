@@ -1,29 +1,29 @@
 "use client";
 
+import type { FilterRecord } from "@workspace/types";
+import { parseISO } from "date-fns";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { DateRange } from "react-day-picker";
+import { cn } from "../../../lib/utils";
 import {
   Button,
-  Input,
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuTrigger,
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
-  DropdownMenuSubContent,
   DropdownMenuPortal,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
   Icons,
+  Input,
 } from "../../atoms";
 import { Combobox, type ComboboxItem } from "../../atoms/combobox";
-import { cn } from "../../../lib/utils";
-import { useState, useMemo, useRef, useEffect } from "react";
-import { FilterList, type FilterOption } from "./filter-list";
-import type { FilterRecord } from "@workspace/types";
 import {
   DateRangePicker,
   DateRangePickerContent,
 } from "../../molecules/date-range-picker";
-import { parseISO } from "date-fns";
-import type { DateRange } from "react-day-picker";
+import { FilterList, type FilterOption } from "./filter-list";
 
 export interface DataTableFilterFacet {
   id: string;
@@ -124,7 +124,9 @@ export function DataTableFilter<TFilters extends FilterRecord>({
 
   const getArrayFilter = (key: string): string[] => {
     const value = filters[key];
-    return Array.isArray(value) ? value.filter((v): v is string => typeof v === "string") : [];
+    return Array.isArray(value)
+      ? value.filter((v): v is string => typeof v === "string")
+      : [];
   };
 
   const [searchValue, setSearchValue] = useState(getStringFilter("q") || "");
@@ -299,7 +301,7 @@ export function DataTableFilter<TFilters extends FilterRecord>({
                   icon={facet.icon || Icons.Filter}
                   label={facet.label}
                 >
-                   <div className="p-0 min-w-[200px]">
+                  <div className="p-0 min-w-[200px]">
                     <Combobox
                       headless
                       multiple={facet.multiple}
@@ -316,8 +318,9 @@ export function DataTableFilter<TFilters extends FilterRecord>({
                                 label: o.name,
                                 colorClass: o.colorClass,
                               }))
-                              .find((o) => o.id === getStringFilter(facet.id)) ||
-                            undefined
+                              .find(
+                                (o) => o.id === getStringFilter(facet.id),
+                              ) || undefined
                           : undefined
                       }
                       selectedItems={
@@ -365,9 +368,8 @@ export function DataTableFilter<TFilters extends FilterRecord>({
                               isChecked ? "opacity-100" : "opacity-0",
                             )}
                           />
-                          {(
-                            item as ComboboxItem & { colorClass?: string }
-                          ).colorClass && (
+                          {(item as ComboboxItem & { colorClass?: string })
+                            .colorClass && (
                             <div
                               className={cn(
                                 "w-2.5 h-2.5 rounded-[2px] shrink-0 mr-2",
@@ -480,7 +482,8 @@ export function DataTableFilter<TFilters extends FilterRecord>({
                     const resetFilters = Object.keys(filters).reduce(
                       (acc, key) => ({
                         ...acc,
-                        [key]: key === "q" ? getStringFilter("q") || null : null,
+                        [key]:
+                          key === "q" ? getStringFilter("q") || null : null,
                       }),
                       {} as TFilters,
                     );

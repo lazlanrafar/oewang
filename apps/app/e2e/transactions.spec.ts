@@ -16,7 +16,11 @@ test.describe("Finance: Transactions", () => {
 
   test("should open the Create Transaction sheet from the plus button", async ({ page, dictionary }) => {
     // Click the plus icon button to open sheet directly
-    await page.locator("button").filter({ has: page.locator("svg.lucide-plus") }).first().click();
+    await page
+      .locator("button")
+      .filter({ has: page.locator("svg.lucide-plus") })
+      .first()
+      .click();
 
     // Sheet should open
     await expect(page.getByText(dictionary.transactions.new_transaction)).toBeVisible({ timeout: 10000 });
@@ -24,7 +28,11 @@ test.describe("Finance: Transactions", () => {
 
   test("should switch transaction type tabs when sheet is open", async ({ page, dictionary }) => {
     // Open the sheet
-    await page.locator("button").filter({ has: page.locator("svg.lucide-plus") }).first().click();
+    await page
+      .locator("button")
+      .filter({ has: page.locator("svg.lucide-plus") })
+      .first()
+      .click();
     await expect(page.getByText(dictionary.transactions.new_transaction)).toBeVisible({ timeout: 10000 });
 
     // Click the "Income" type tab
@@ -37,7 +45,11 @@ test.describe("Finance: Transactions", () => {
 
   test('should switch to Transfer tab and show "To Account"', async ({ page, dictionary }) => {
     // Open the sheet
-    await page.locator("button").filter({ has: page.locator("svg.lucide-plus") }).first().click();
+    await page
+      .locator("button")
+      .filter({ has: page.locator("svg.lucide-plus") })
+      .first()
+      .click();
     await expect(page.getByText(dictionary.transactions.new_transaction)).toBeVisible({ timeout: 10000 });
 
     const transferTab = page.getByRole("button", { name: dictionary.transactions.types.transfer, exact: true });
@@ -49,7 +61,11 @@ test.describe("Finance: Transactions", () => {
 
   test("should show validation error when saving empty transaction", async ({ page, dictionary }) => {
     // Open the sheet
-    await page.locator("button").filter({ has: page.locator("svg.lucide-plus") }).first().click();
+    await page
+      .locator("button")
+      .filter({ has: page.locator("svg.lucide-plus") })
+      .first()
+      .click();
     await expect(page.getByText(dictionary.transactions.new_transaction)).toBeVisible({ timeout: 10000 });
 
     await page.getByRole("button", { name: dictionary.transactions.save_transaction }).click();

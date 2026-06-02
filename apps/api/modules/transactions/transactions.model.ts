@@ -109,4 +109,3 @@ export type GetTransactionsQueryInput = UnwrapSchema<
 export type ExportTransactionsQueryInput = UnwrapSchema<
   typeof TransactionModel.exportQuery
 >;
-

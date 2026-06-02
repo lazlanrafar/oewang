@@ -1,17 +1,17 @@
-import { Elysia, t } from "elysia";
+import { logger } from "@workspace/logger";
 import { ErrorCode } from "@workspace/types";
-import { buildSuccess, buildError } from "@workspace/utils";
-import { WorkspacesService } from "./workspaces.service";
-import { OrdersService } from "../orders/orders.service";
-import {
-  CreateWorkspaceBody,
-  CreateInvitationBody,
-  InvitationParams,
-} from "./workspaces.model";
+import { buildError, buildSuccess } from "@workspace/utils";
+import { Elysia, t } from "elysia";
 import { authPlugin } from "../../plugins/auth";
 import { encryptionPlugin } from "../../plugins/encryption";
-import { logger } from "@workspace/logger";
+import { OrdersService } from "../orders/orders.service";
 import { assertCanManageSensitiveWorkspace } from "./workspace-permissions";
+import {
+  CreateInvitationBody,
+  CreateWorkspaceBody,
+  InvitationParams,
+} from "./workspaces.model";
+import { WorkspacesService } from "./workspaces.service";
 
 /**
  * Workspaces controller — route definitions + validation + call service.
@@ -43,7 +43,10 @@ export const workspacesController = new Elysia({ prefix: "/workspaces" })
         set.status = 201;
         return buildSuccess(workspace, "Workspace created successfully");
       } catch (error: any) {
-        logger.error("Error creating workspace", { error, userId: auth.user_id });
+        logger.error("Error creating workspace", {
+          error,
+          userId: auth.user_id,
+        });
 
         // Handle errors thrown by service using status()
         if (error.status && error.body) {
@@ -172,7 +175,10 @@ export const workspacesController = new Elysia({ prefix: "/workspaces" })
         );
         return buildSuccess(invitation, "Invitation sent successfully");
       } catch (error: any) {
-        logger.error("Error inviting member", { error, workspaceId: auth.workspace_id });
+        logger.error("Error inviting member", {
+          error,
+          workspaceId: auth.workspace_id,
+        });
 
         set.status = 400;
         return buildError(ErrorCode.VALIDATION_ERROR, error.message);
@@ -293,7 +299,8 @@ export const workspacesController = new Elysia({ prefix: "/workspaces" })
     {
       detail: {
         summary: "Get Billing History",
-        description: "Retrieves the billing/order history for the active workspace.",
+        description:
+          "Retrieves the billing/order history for the active workspace.",
         tags: ["Workspaces"],
       },
     },

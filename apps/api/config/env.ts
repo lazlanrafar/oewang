@@ -27,24 +27,30 @@ const apiEnvSchema = z.object({
 
   // Mayar
   MAYAR_API_URL: z.string().url().optional(),
-  MAYAR_API_KEY: z.string().superRefine((val, ctx) => {
-    if (process.env.NODE_ENV === "production" && !val) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "MAYAR_API_KEY is required in production",
-        path: ["MAYAR_API_KEY"],
-      });
-    }
-  }).optional(),
-  MAYAR_WEBHOOK_TOKEN: z.string().superRefine((val, ctx) => {
-    if (process.env.NODE_ENV === "production" && !val) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "MAYAR_WEBHOOK_TOKEN is required in production",
-        path: ["MAYAR_WEBHOOK_TOKEN"],
-      });
-    }
-  }).optional(),
+  MAYAR_API_KEY: z
+    .string()
+    .superRefine((val, ctx) => {
+      if (process.env.NODE_ENV === "production" && !val) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "MAYAR_API_KEY is required in production",
+          path: ["MAYAR_API_KEY"],
+        });
+      }
+    })
+    .optional(),
+  MAYAR_WEBHOOK_TOKEN: z
+    .string()
+    .superRefine((val, ctx) => {
+      if (process.env.NODE_ENV === "production" && !val) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "MAYAR_WEBHOOK_TOKEN is required in production",
+          path: ["MAYAR_WEBHOOK_TOKEN"],
+        });
+      }
+    })
+    .optional(),
 
   // AI
   OPENAI_API_KEY: z.string().min(1).optional(),

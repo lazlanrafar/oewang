@@ -18,7 +18,6 @@ export type TableId =
   | "debts"
   | "workspaces";
 
-
 /**
  * Settings for a single table
  */

@@ -1,9 +1,9 @@
-import { Elysia } from "elysia";
+import { ErrorCode } from "@workspace/types";
+import { buildError } from "@workspace/utils";
+import { Elysia, t } from "elysia";
 import { authPlugin } from "../../plugins/auth";
 import { encryptionPlugin } from "../../plugins/encryption";
-import { buildError } from "@workspace/utils";
-import { ErrorCode } from "@workspace/types";
-import { PrivacyService } from "./privacy.service";
+import { requireAdminAccess } from "../system-admins/system-admins.controller";
 import {
   CreatePrivacyRequestBody,
   EraseDataBody,
@@ -11,8 +11,7 @@ import {
   RestrictProcessingBody,
   UpdatePrivacyRequestStatusBody,
 } from "./privacy.model";
-import { requireAdminAccess } from "../system-admins/system-admins.controller";
-import { t } from "elysia";
+import { PrivacyService } from "./privacy.service";
 
 export const privacyController = new Elysia({ prefix: "/privacy" })
   .use(authPlugin)
@@ -175,7 +174,8 @@ export const privacyController = new Elysia({ prefix: "/privacy" })
       body: UpdatePrivacyRequestStatusBody,
       detail: {
         summary: "Update Privacy Request Status (Admin)",
-        description: "Updates privacy request lifecycle status for administrators.",
+        description:
+          "Updates privacy request lifecycle status for administrators.",
         tags: ["Privacy Admin"],
       },
     },

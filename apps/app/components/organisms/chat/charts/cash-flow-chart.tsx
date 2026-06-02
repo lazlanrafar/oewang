@@ -1,8 +1,8 @@
 "use client";
 
+import type { CashFlowChartProps } from "@workspace/types";
 import { Bar, Line, ReferenceLine, Tooltip, XAxis, YAxis } from "recharts";
 
-import type { CashFlowChartProps } from "@workspace/types";
 import { BaseChart, ChartLegend, StyledTooltip } from "./base-charts";
 import { commonChartConfig, createYAxisTickFormatter, getZeroInclusiveDomain, useChartMargin } from "./chart-utils";
 import { formatAmount } from "./format-amount";

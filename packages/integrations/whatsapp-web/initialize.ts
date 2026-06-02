@@ -1,6 +1,6 @@
 // WhatsApp Web initialization — dispatch event to open the QR scan dialog
 export const onInitialize = async ({
-  accessToken,
+  accessToken: _accessToken,
   onComplete,
 }: {
   accessToken: string;

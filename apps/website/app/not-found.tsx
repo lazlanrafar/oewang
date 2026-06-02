@@ -1,4 +1,5 @@
 import Link from "next/link";
+
 import { Button } from "@workspace/ui/atoms";
 
 export default function NotFound() {
@@ -9,9 +10,7 @@ export default function NotFound() {
           404
         </h1>
 
-        <h2 className="font-serif text-2xl sm:text-3xl text-foreground mb-4">
-          Page not found
-        </h2>
+        <h2 className="font-serif text-2xl sm:text-3xl text-foreground mb-4">Page not found</h2>
 
         <p className="text-muted-foreground mb-8 max-w-sm mx-auto">
           The page you&apos;re looking for doesn&apos;t exist or has been moved.

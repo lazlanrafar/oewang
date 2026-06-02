@@ -1,5 +1,5 @@
-import webpush from "web-push";
 import { buildSuccess } from "@workspace/utils";
+import webpush from "web-push";
 import { PushSubscriptionsRepository } from "./push-subscriptions.repository";
 
 function getVapidKeys() {
@@ -15,7 +15,11 @@ export abstract class PushSubscriptionsService {
     return buildSuccess({ public_key: getVapidKeys().publicKey });
   }
 
-  static async register(user_id: string, workspace_id: string, subscriptionJson: string) {
+  static async register(
+    user_id: string,
+    workspace_id: string,
+    subscriptionJson: string,
+  ) {
     let parsed: { endpoint: string };
     try {
       parsed = JSON.parse(subscriptionJson);
@@ -23,7 +27,12 @@ export abstract class PushSubscriptionsService {
       throw new Error("Invalid subscription JSON");
     }
 
-    await PushSubscriptionsRepository.upsert(user_id, workspace_id, parsed.endpoint, subscriptionJson);
+    await PushSubscriptionsRepository.upsert(
+      user_id,
+      workspace_id,
+      parsed.endpoint,
+      subscriptionJson,
+    );
     return buildSuccess(null, "Push subscription registered");
   }
 
@@ -32,7 +41,10 @@ export abstract class PushSubscriptionsService {
     return buildSuccess(null, "Push subscription removed");
   }
 
-  static async sendToUser(user_id: string, payload: { title: string; body: string; url?: string }) {
+  static async sendToUser(
+    user_id: string,
+    payload: { title: string; body: string; url?: string },
+  ) {
     const subs = await PushSubscriptionsRepository.findByUserId(user_id);
     if (!subs.length) return;
 
@@ -44,11 +56,17 @@ export abstract class PushSubscriptionsService {
     await Promise.allSettled(
       subs.map((sub) =>
         webpush
-          .sendNotification(JSON.parse(sub.subscription), JSON.stringify(payload))
+          .sendNotification(
+            JSON.parse(sub.subscription),
+            JSON.stringify(payload),
+          )
           .catch((err) => {
             // Remove expired subscriptions (410 Gone)
             if (err.statusCode === 410) {
-              PushSubscriptionsRepository.deleteByEndpoint(user_id, sub.endpoint);
+              PushSubscriptionsRepository.deleteByEndpoint(
+                user_id,
+                sub.endpoint,
+              );
             }
           }),
       ),

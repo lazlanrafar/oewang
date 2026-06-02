@@ -1,17 +1,16 @@
+import { ErrorCode } from "@workspace/types";
+import { buildError, buildSuccess } from "@workspace/utils";
 import { Elysia, t } from "elysia";
 import { authPlugin } from "../../plugins/auth";
-import { InvoicesService } from "./invoices.service";
 import { encryptionPlugin } from "../../plugins/encryption";
-import { buildError } from "@workspace/utils";
-import { ErrorCode } from "@workspace/types";
+import { assertCanEditWorkspaceData } from "../workspaces/workspace-permissions";
 import {
   CreateInvoiceDto,
-  UpdateInvoiceDto,
   InvoiceListQuery,
+  UpdateInvoiceDto,
 } from "./invoices.dto";
+import { InvoicesService } from "./invoices.service";
 import { generateInvoiceToken } from "./invoices.utils";
-import { buildSuccess } from "@workspace/utils";
-import { assertCanEditWorkspaceData } from "../workspaces/workspace-permissions";
 
 export const invoicesController = new Elysia({ prefix: "/invoices" })
   .use(authPlugin)
@@ -35,7 +34,8 @@ export const invoicesController = new Elysia({ prefix: "/invoices" })
       query: InvoiceListQuery,
       detail: {
         summary: "Get Invoices",
-        description: "Returns a paginated list of invoices for the active workspace.",
+        description:
+          "Returns a paginated list of invoices for the active workspace.",
         tags: ["Invoices"],
       },
     },
@@ -51,7 +51,8 @@ export const invoicesController = new Elysia({ prefix: "/invoices" })
       body: CreateInvoiceDto,
       detail: {
         summary: "Create Invoice",
-        description: "Creates a new invoice with line items and customer details.",
+        description:
+          "Creates a new invoice with line items and customer details.",
         tags: ["Invoices"],
       },
     },
@@ -64,7 +65,8 @@ export const invoicesController = new Elysia({ prefix: "/invoices" })
     {
       detail: {
         summary: "Get Invoice by ID",
-        description: "Retrieves the full details of a specific invoice by its unique ID.",
+        description:
+          "Retrieves the full details of a specific invoice by its unique ID.",
         tags: ["Invoices"],
       },
     },
@@ -78,7 +80,8 @@ export const invoicesController = new Elysia({ prefix: "/invoices" })
     {
       detail: {
         summary: "Get Invoice Public Token",
-        description: "Generates a secure, temporary token to allow public viewing of an invoice without authentication.",
+        description:
+          "Generates a secure, temporary token to allow public viewing of an invoice without authentication.",
         tags: ["Invoices"],
       },
     },
@@ -91,7 +94,8 @@ export const invoicesController = new Elysia({ prefix: "/invoices" })
     {
       detail: {
         summary: "Get Invoice Activity",
-        description: "Returns an audit trail of all changes and events related to a specific invoice.",
+        description:
+          "Returns an audit trail of all changes and events related to a specific invoice.",
         tags: ["Invoices"],
       },
     },
@@ -120,7 +124,8 @@ export const invoicesController = new Elysia({ prefix: "/invoices" })
     {
       detail: {
         summary: "Delete Invoice",
-        description: "Soft-deletes an invoice. Deleted invoices are hidden from the list but remain in the database for audit purposes.",
+        description:
+          "Soft-deletes an invoice. Deleted invoices are hidden from the list but remain in the database for audit purposes.",
         tags: ["Invoices"],
       },
     },

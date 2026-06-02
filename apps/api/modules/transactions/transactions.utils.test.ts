@@ -1,13 +1,13 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import {
-  sanitizeAmount,
   calculateBalanceChange,
-  isBudgetExceeded,
   calculateBudgetUsage,
-  getBudgetStatus,
   formatTransactionAmount,
-  validateTransactionAmount,
+  getBudgetStatus,
   getCurrentMonthRange,
+  isBudgetExceeded,
+  sanitizeAmount,
+  validateTransactionAmount,
 } from "./transactions.utils";
 
 describe("transactions.utils", () => {
@@ -220,7 +220,11 @@ describe("transactions.utils", () => {
       const { endDate } = getCurrentMonthRange();
       const date = new Date(endDate);
       const now = new Date();
-      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+      const lastDay = new Date(
+        now.getFullYear(),
+        now.getMonth() + 1,
+        0,
+      ).getDate();
 
       expect(date.getDate()).toBe(lastDay);
       expect(date.getHours()).toBe(23);

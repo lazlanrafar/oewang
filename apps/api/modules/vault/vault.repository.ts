@@ -1,17 +1,17 @@
 import {
-  db,
-  eq,
   and,
-  desc,
-  isNull,
-  vaultFiles,
   count,
-  sql,
-  pricing,
-  workspaces,
+  db,
+  desc,
+  eq,
   ilike,
+  isNull,
+  pricing,
+  sql,
+  vaultFiles,
   workspaceAddons,
   workspaceSettings,
+  workspaces,
 } from "@workspace/database";
 
 export abstract class VaultRepository {
@@ -24,9 +24,7 @@ export abstract class VaultRepository {
           eq(vaultFiles.workspaceId, workspaceId),
           isNull(vaultFiles.deletedAt),
           isNull(vaultFiles.inactive_at),
-          ...(data?.search
-            ? [ilike(vaultFiles.name, `%${data.search}%`)]
-            : []),
+          ...(data?.search ? [ilike(vaultFiles.name, `%${data.search}%`)] : []),
         ),
       );
     return result?.value ?? 0;
@@ -191,10 +189,7 @@ export abstract class VaultRepository {
   }
 
   static async updateWorkspaceSubscription(workspaceId: string, data: any) {
-    await db
-      .update(workspaces)
-      .set(data)
-      .where(eq(workspaces.id, workspaceId));
+    await db.update(workspaces).set(data).where(eq(workspaces.id, workspaceId));
   }
 
   static async getWorkspaceSettings(workspaceId: string) {
@@ -237,7 +232,7 @@ export abstract class VaultRepository {
     const results = [];
 
     for (const w of ws) {
-      const quota = await this.getUsageAndQuota(w.id);
+      const quota = await VaultRepository.getUsageAndQuota(w.id);
       if (quota) {
         results.push({
           workspaceId: w.id,

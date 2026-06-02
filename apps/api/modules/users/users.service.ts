@@ -1,11 +1,11 @@
-import { UsersRepository } from "./users.repository";
-import { AuditLogsService } from "../audit-logs/audit-logs.service";
-import { createClient } from "@workspace/supabase/server";
+import * as path from "node:path";
 import { BucketClient } from "@workspace/bucket";
 import { Env } from "@workspace/constants";
-import * as path from "node:path";
 import { logger } from "@workspace/logger";
+import { createClient } from "@workspace/supabase/server";
+import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { normalizeWorkspaceRole } from "../workspaces/workspace-permissions";
+import { UsersRepository } from "./users.repository";
 
 /**
  * Users service — business logic layer.
@@ -111,7 +111,7 @@ export abstract class UsersService {
     let profile_picture = user.profile_picture;
     if (profile_picture && profile_picture.startsWith("avatars/")) {
       try {
-        const bucket = await this.getBucketClient();
+        const bucket = await UsersService.getBucketClient();
         profile_picture = await bucket.getSignedUrl(profile_picture);
       } catch (error) {
         logger.error("Failed to sign avatar URL", { error, userId: user_id });
@@ -164,7 +164,11 @@ export abstract class UsersService {
    */
   static async updateProfile(
     user_id: string,
-    data: { name?: string; profile_picture?: string | null; mobile?: string | null },
+    data: {
+      name?: string;
+      profile_picture?: string | null;
+      mobile?: string | null;
+    },
   ) {
     await UsersRepository.update(user_id, data);
   }
@@ -173,11 +177,14 @@ export abstract class UsersService {
    * Update user avatar (photo profile).
    * Automatically deletes the old avatar from storage.
    */
-  static async updateAvatar(user_id: string, file: { name: string; type: string; size: number; buffer: Buffer }) {
+  static async updateAvatar(
+    user_id: string,
+    file: { name: string; type: string; size: number; buffer: Buffer },
+  ) {
     const user = await UsersRepository.findById(user_id);
     if (!user) throw new Error("User not found");
 
-    const bucket = await this.getBucketClient();
+    const bucket = await UsersService.getBucketClient();
 
     // 1. Storage Cleanup: Delete old avatar if it exists and is an internal key
     if (user.profile_picture && user.profile_picture.startsWith("avatars/")) {
@@ -248,7 +255,7 @@ export abstract class UsersService {
     // Supabase admin SDK might not have "unlink" directly in all versions.
     // However, if we are on a version that supports it:
     if ("unlinkIdentity" in supabase.auth.admin) {
-      // @ts-ignore
+      // @ts-expect-error
       const { error: unlinkErr } = await supabase.auth.admin.unlinkIdentity(
         identity.id,
       );

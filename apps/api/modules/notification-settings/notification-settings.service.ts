@@ -1,6 +1,6 @@
 import { buildSuccess } from "@workspace/utils";
-import { NotificationSettingsRepository } from "./notification-settings.repository";
 import type { UpdateNotificationSettingInput } from "../notifications/notifications.dto";
+import { NotificationSettingsRepository } from "./notification-settings.repository";
 
 export abstract class NotificationSettingsService {
   static async get(workspace_id: string, user_id: string) {

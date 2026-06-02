@@ -1,16 +1,16 @@
 "use client";
 
-import type { ArtifactStage, ArtifactType } from "@workspace/constants";
-import { getSectionFromStage } from "@workspace/constants";
-import {
-  extractBankAccountRequired,
-  extractInsightData,
-  hasInsightToolRunning,
-  extractArtifactTypeFromMessage,
-} from "@workspace/constants";
-import type { AgentStatus } from "@workspace/types";
 import { useArtifacts } from "@ai-sdk-tools/artifacts/client";
 import { useDataPart } from "@ai-sdk-tools/store";
+import type { ArtifactStage, ArtifactType } from "@workspace/constants";
+import {
+  extractArtifactTypeFromMessage,
+  extractBankAccountRequired,
+  extractInsightData,
+  getSectionFromStage,
+  hasInsightToolRunning,
+} from "@workspace/constants";
+import type { AgentStatus } from "@workspace/types";
 import { getStatusMessage, getToolMessage } from "@workspace/utils";
 import type { ChatStatus, ToolUIPart, UIMessage } from "ai";
 import { useMemo } from "react";
@@ -54,8 +54,8 @@ export function useChatStatus(
     // Check for artifacts in the current/latest store state
     if (current?.type) {
       artifactType = current.type as ArtifactType;
-      const stage = current.payload 
-        ? (current.payload as { stage?: ArtifactStage })?.stage 
+      const stage = current.payload
+        ? (current.payload as { stage?: ArtifactStage })?.stage
         : null;
       if (stage) {
         artifactStage = stage;
@@ -78,8 +78,7 @@ export function useChatStatus(
       }
     }
 
-    const msg =
-      messages.length > 0 ? messages[messages.length - 1] : null;
+    const msg = messages.length > 0 ? messages[messages.length - 1] : null;
 
     if (messages.length === 0) {
       return {
@@ -112,14 +111,13 @@ export function useChatStatus(
     }
 
     // Check if we have text content streaming
-    const textParts = msg?.parts?.filter(
-      (part) => part.type === "text",
-    );
+    const textParts = msg?.parts?.filter((part) => part.type === "text");
 
-    const hasTextContent = textParts?.some((part) => {
-      const textPart = part as { text?: string };
-      return textPart.text?.trim();
-    }) || false;
+    const hasTextContent =
+      textParts?.some((part) => {
+        const textPart = part as { text?: string };
+        return textPart.text?.trim();
+      }) || false;
 
     // Check if we have insight data (should hide loading indicator when insight is rendering)
     const hasInsightData = extractInsightData(msg?.parts || []) !== null;

@@ -1,12 +1,11 @@
-import { Elysia, t } from "elysia";
-import { authPlugin } from "../../../plugins/auth";
-import { encryptionPlugin } from "../../../plugins/encryption";
-import { SubCurrenciesService } from "./sub-currencies.service";
-import { SubCurrenciesModel } from "./sub-currencies.model";
 import { ErrorCode } from "@workspace/types";
 import { buildError } from "@workspace/utils";
-import { status } from "elysia";
+import { Elysia, status, t } from "elysia";
+import { authPlugin } from "../../../plugins/auth";
+import { encryptionPlugin } from "../../../plugins/encryption";
 import { assertCanEditWorkspaceData } from "../../workspaces/workspace-permissions";
+import { SubCurrenciesModel } from "./sub-currencies.model";
+import { SubCurrenciesService } from "./sub-currencies.service";
 
 export const subCurrenciesController = new Elysia({
   prefix: "/sub-currencies",

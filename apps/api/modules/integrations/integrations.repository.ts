@@ -1,11 +1,11 @@
-import { eq, and, sql, isNull, desc } from "drizzle-orm";
+import type { NewWorkspaceIntegration } from "@workspace/database";
 import {
   db,
-  workspaceIntegrations,
   user_workspaces,
+  workspaceIntegrations,
   workspaces,
 } from "@workspace/database";
-import type { NewWorkspaceIntegration } from "@workspace/database";
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
 
 export abstract class IntegrationsRepository {
   static async findByProvider(workspace_id: string, provider: string) {
@@ -36,7 +36,10 @@ export abstract class IntegrationsRepository {
       );
   }
 
-  static async findByWhatsAppNumber(phoneNumber: string, provider = "whatsapp") {
+  static async findByWhatsAppNumber(
+    phoneNumber: string,
+    provider = "whatsapp",
+  ) {
     // Find the workspace tied to this specific WhatsApp phone number
     const records = await db
       .select()
@@ -70,9 +73,14 @@ export abstract class IntegrationsRepository {
     return records[0] || null;
   }
 
-  static async upsert(data: NewWorkspaceIntegration & { connectedBy?: string }) {
+  static async upsert(
+    data: NewWorkspaceIntegration & { connectedBy?: string },
+  ) {
     const now = new Date().toISOString();
-    const existing = await this.findByProvider(data.workspaceId, data.provider);
+    const existing = await IntegrationsRepository.findByProvider(
+      data.workspaceId,
+      data.provider,
+    );
 
     if (existing) {
       const [updated] = await db

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { InsightData } from "@workspace/constants";
 import type { Dictionary } from "@workspace/dictionaries";
 import { AnimatePresence, motion } from "framer-motion";
+
 import { getDictionaryText } from "./chat-i18n";
 
 interface InsightMessageProps {

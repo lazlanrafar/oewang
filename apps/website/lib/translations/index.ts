@@ -1,7 +1,7 @@
-import { websiteEn } from "./website-en";
-import { websiteJa } from "./website-ja";
-import { websiteId } from "./website-id";
 import type { WebsiteDictionary } from "./website-en";
+import { websiteEn } from "./website-en";
+import { websiteId } from "./website-id";
+import { websiteJa } from "./website-ja";
 
 export const dictionaries = {
   en: websiteEn,

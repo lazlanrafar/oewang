@@ -35,10 +35,7 @@ export function AccountDetailSheet({
 }: AccountDetailSheetProps) {
   const [mounted, setMounted] = useState(false);
   const { settings, formatCurrency } = useAppStore();
-  const currencyUnit = getCurrencyDisplayUnit(
-    settings?.mainCurrencyCode,
-    settings?.mainCurrencySymbol,
-  );
+  const currencyUnit = getCurrencyDisplayUnit(settings?.mainCurrencyCode, settings?.mainCurrencySymbol);
   const [wallet, setWallet] = useState<Wallet | undefined>();
   const [name, setName] = useState("");
   const [balance, setBalance] = useState(0);
@@ -139,9 +136,7 @@ export function AccountDetailSheet({
             <div className="flex items-baseline justify-start gap-3 pt-1">
               {isEditingBalance ? (
                 <div className="flex items-center gap-2">
-                  <span className="font-medium font-serif text-3xl text-foreground/90">
-                    {currencyUnit}
-                  </span>
+                  <span className="font-medium font-serif text-3xl text-foreground/90">{currencyUnit}</span>
                   <CurrencyInput
                     value={balance}
                     onChange={(val) => setBalance(val)}

@@ -1,23 +1,24 @@
+import { Env } from "@workspace/constants";
 import {
   sendAddonPurchaseSuccessEmail,
   sendInvoiceSentEmail,
   sendPaymentFailedEmail,
   sendPurchaseSuccessEmail,
 } from "@workspace/email";
-import { NotificationsService } from "../notifications/notifications.service";
-import { Env } from "@workspace/constants";
 import { logger } from "@workspace/logger";
 import { ErrorCode } from "@workspace/types";
 import { buildError, buildSuccess } from "@workspace/utils";
 import { status } from "elysia";
-import { MayarRepository } from "./mayar.repository";
-import { OrdersService } from "../orders/orders.service";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
+import { NotificationsService } from "../notifications/notifications.service";
+import { OrdersService } from "../orders/orders.service";
 import { calculatePeriodEnd, inferBillingInterval } from "./billing.utils";
+import { MayarRepository } from "./mayar.repository";
 
 const MAYAR_BASE_URL =
   Env.MAYAR_API_URL ||
-  (process.env.NODE_ENV === "development" && !Env.MAYAR_API_KEY?.startsWith("sk_live_")
+  (process.env.NODE_ENV === "development" &&
+  !Env.MAYAR_API_KEY?.startsWith("sk_live_")
     ? "https://api.mayar.club/hl/v1"
     : "https://api.mayar.id/hl/v1");
 
@@ -25,10 +26,9 @@ const MAYAR_BASE_URL =
 const MAYAR_WEB_URL = "https://mayar.id";
 
 // Customer portal — where customers can log in to view/download invoices
-const MAYAR_MEMBER_URL =
-  MAYAR_BASE_URL.includes("api.mayar.club")
-    ? "https://portal.mayar.club"
-    : "https://portal.mayar.id";
+const MAYAR_MEMBER_URL = MAYAR_BASE_URL.includes("api.mayar.club")
+  ? "https://portal.mayar.club"
+  : "https://portal.mayar.id";
 
 export abstract class MayarService {
   private static getAuthHeader() {
@@ -45,7 +45,7 @@ export abstract class MayarService {
   static async syncWorkspaceInvoices(workspaceId: string, email: string) {
     logger.info("[Mayar] Syncing workspace invoices", { workspaceId, email });
     try {
-      const response = await this.mayarRequest(
+      const response = await MayarService.mayarRequest(
         "GET",
         "/invoice?pageSize=50",
         undefined,
@@ -56,7 +56,7 @@ export abstract class MayarService {
       let synced = false;
       for (const invoice of response.data) {
         if (invoice.status === "paid") {
-          const meta = this.getMetadata(invoice);
+          const meta = MayarService.getMetadata(invoice);
           if (
             meta.workspaceId === workspaceId ||
             invoice.customer?.email === email
@@ -66,7 +66,7 @@ export abstract class MayarService {
             logger.info("[Mayar] Manually syncing invoice via mock event", {
               invoiceId: invoice.id,
             });
-            await this.asyncProcessEvent({
+            await MayarService.asyncProcessEvent({
               event: "payment.received",
               _skipNotifications: true,
               data: {
@@ -215,7 +215,7 @@ export abstract class MayarService {
 
   private static async asyncProcessEvent(event: any) {
     // Sync events reconcile subscription state only — emails are the webhook's job.
-    const skipNotifications = !!(event._skipNotifications);
+    const skipNotifications = !!event._skipNotifications;
 
     const eventType = MayarService.getEventType(event);
 
@@ -236,7 +236,10 @@ export abstract class MayarService {
     // This prevents duplicate processing when Mayar retries the webhook concurrently.
     const claimed = await MayarRepository.tryClaimEvent(eventId);
     if (!claimed) {
-      logger.info("[Mayar Webhook] Event already claimed by another process, skipping", { eventId });
+      logger.info(
+        "[Mayar Webhook] Event already claimed by another process, skipping",
+        { eventId },
+      );
       return;
     }
 
@@ -324,7 +327,7 @@ export abstract class MayarService {
         }
       }
 
-        // Determine if we should handle as addon or subscription
+      // Determine if we should handle as addon or subscription
       // Priority: 1. Matched plan's is_addon property, 2. metadata.type hint
       const isAddon = matchedPlan
         ? matchedPlan.is_addon
@@ -347,8 +350,10 @@ export abstract class MayarService {
 
           // Email only from real webhook, only for a new order (not a retry)
           if (!skipNotifications && isNewOrder) {
-            const addonOwner = await MayarRepository.findWorkspaceOwner(targetWorkspaceId);
-            const addonWorkspace = await MayarRepository.findWorkspaceById(targetWorkspaceId);
+            const addonOwner =
+              await MayarRepository.findWorkspaceOwner(targetWorkspaceId);
+            const addonWorkspace =
+              await MayarRepository.findWorkspaceById(targetWorkspaceId);
             if (addonOwner?.email && matchedPlan?.name) {
               await sendAddonPurchaseSuccessEmail(
                 addonOwner.email,
@@ -409,8 +414,10 @@ export abstract class MayarService {
 
         // Email only from real webhook, only for a new order (not a retry)
         if (!skipNotifications && isNewOrder) {
-          const owner = await MayarRepository.findWorkspaceOwner(targetWorkspaceId);
-          const workspaceRecord = await MayarRepository.findWorkspaceById(targetWorkspaceId);
+          const owner =
+            await MayarRepository.findWorkspaceOwner(targetWorkspaceId);
+          const workspaceRecord =
+            await MayarRepository.findWorkspaceById(targetWorkspaceId);
           if (owner?.email && matchedPlan?.name) {
             await sendPurchaseSuccessEmail(
               owner.email,
@@ -442,9 +449,12 @@ export abstract class MayarService {
         await OrdersService.updateOrderFromInvoiceId(transactionId, "failed");
 
         // Look up the workspace and notify the owner
-        const failedWorkspace = await MayarRepository.findWorkspaceByTransactionId(transactionId);
+        const failedWorkspace =
+          await MayarRepository.findWorkspaceByTransactionId(transactionId);
         if (failedWorkspace) {
-          const failedOwner = await MayarRepository.findWorkspaceOwner(failedWorkspace.id);
+          const failedOwner = await MayarRepository.findWorkspaceOwner(
+            failedWorkspace.id,
+          );
           if (failedOwner) {
             await Promise.allSettled([
               NotificationsService.create({
@@ -466,7 +476,6 @@ export abstract class MayarService {
         }
       }
     }
-
   }
 
   private static async processEvent(event: any) {
@@ -569,7 +578,9 @@ export abstract class MayarService {
     const isAddonPurchase = !!options?.metadata?.addonId;
     const description = isAddonPurchase
       ? resolvedPlan?.name ||
-        (options?.metadata?.addonType === "ai" ? "AI Token Add-on" : "Storage Add-on")
+        (options?.metadata?.addonType === "ai"
+          ? "AI Token Add-on"
+          : "Storage Add-on")
       : resolvedPlan
         ? `${resolvedPlan.name} – ${resolvedBilling === "annual" ? "Annual" : "Monthly"} Plan`
         : "Oewang Subscription";
@@ -606,7 +617,9 @@ export abstract class MayarService {
         extraData: {
           workspaceId,
           planId: priceId,
-          type: options?.metadata?.addonId ? "addon" : (options?.metadata?.type || "subscription"),
+          type: options?.metadata?.addonId
+            ? "addon"
+            : options?.metadata?.type || "subscription",
           addonId: options?.metadata?.addonId,
           addonType: options?.metadata?.addonType,
           qty: qty > 1 ? String(qty) : undefined,
@@ -637,9 +650,29 @@ export abstract class MayarService {
 
       // Send the invoice/bill email to the owner
       const billingLabel = resolvedBilling === "annual" ? "Annual" : "Monthly";
-      const invoiceCurrency = (options?.metadata?.currency || "IDR").toUpperCase();
-      const ZERO_DECIMAL_CURRENCIES = new Set(["IDR", "JPY", "KRW", "VND", "BIF", "CLP", "GNF", "MGA", "PYG", "RWF", "UGX", "VUV", "XAF", "XOF", "XPF"]);
-      const displayRawAmount = ZERO_DECIMAL_CURRENCIES.has(invoiceCurrency) ? amount : amount / 100;
+      const invoiceCurrency = (
+        options?.metadata?.currency || "IDR"
+      ).toUpperCase();
+      const ZERO_DECIMAL_CURRENCIES = new Set([
+        "IDR",
+        "JPY",
+        "KRW",
+        "VND",
+        "BIF",
+        "CLP",
+        "GNF",
+        "MGA",
+        "PYG",
+        "RWF",
+        "UGX",
+        "VUV",
+        "XAF",
+        "XOF",
+        "XPF",
+      ]);
+      const displayRawAmount = ZERO_DECIMAL_CURRENCIES.has(invoiceCurrency)
+        ? amount
+        : amount / 100;
       const displayAmount = amount
         ? new Intl.NumberFormat("en-US", {
             style: "currency",
@@ -720,7 +753,7 @@ export abstract class MayarService {
     }
 
     try {
-      const response = await this.mayarRequest(
+      const response = await MayarService.mayarRequest(
         "POST",
         "/customer/login/portal",
         { email },
@@ -748,7 +781,10 @@ export abstract class MayarService {
   }
 
   static async createCustomerPortal(_email?: string) {
-    return buildSuccess({ url: MAYAR_MEMBER_URL }, "Customer portal URL retrieved");
+    return buildSuccess(
+      { url: MAYAR_MEMBER_URL },
+      "Customer portal URL retrieved",
+    );
   }
 
   private static toAbsoluteUrl(link: string): string {
@@ -760,34 +796,70 @@ export abstract class MayarService {
   static async getInvoiceUrl(invoiceId: string) {
     // 1. Try direct lookup by ID
     try {
-      const response = await this.mayarRequest("GET", `/invoice/${invoiceId}`, undefined, "v1");
+      const response = await MayarService.mayarRequest(
+        "GET",
+        `/invoice/${invoiceId}`,
+        undefined,
+        "v1",
+      );
       const link = response.data?.link ?? response.link;
-      logger.info("[Mayar] Direct invoice lookup", { invoiceId, rawLink: link, responseKeys: Object.keys(response.data || response || {}) });
-      if (link) return buildSuccess({ url: this.toAbsoluteUrl(link) }, "Invoice URL retrieved");
+      logger.info("[Mayar] Direct invoice lookup", {
+        invoiceId,
+        rawLink: link,
+        responseKeys: Object.keys(response.data || response || {}),
+      });
+      if (link)
+        return buildSuccess(
+          { url: MayarService.toAbsoluteUrl(link) },
+          "Invoice URL retrieved",
+        );
     } catch (err) {
-      logger.warn("[Mayar] Direct invoice lookup failed", { invoiceId, err: err instanceof Error ? err.message : String(err) });
+      logger.warn("[Mayar] Direct invoice lookup failed", {
+        invoiceId,
+        err: err instanceof Error ? err.message : String(err),
+      });
     }
 
     // 2. Scan the invoice list (handles cases where direct GET isn't supported)
     try {
-      const response = await this.mayarRequest("GET", "/invoice?pageSize=100", undefined, "v1");
+      const response = await MayarService.mayarRequest(
+        "GET",
+        "/invoice?pageSize=100",
+        undefined,
+        "v1",
+      );
       if (Array.isArray(response.data)) {
         const invoice = response.data.find((inv: any) => inv.id === invoiceId);
-        logger.info("[Mayar] Invoice list scan", { invoiceId, found: !!invoice, rawLink: invoice?.link });
-        if (invoice?.link) return buildSuccess({ url: this.toAbsoluteUrl(invoice.link) }, "Invoice URL retrieved");
+        logger.info("[Mayar] Invoice list scan", {
+          invoiceId,
+          found: !!invoice,
+          rawLink: invoice?.link,
+        });
+        if (invoice?.link)
+          return buildSuccess(
+            { url: MayarService.toAbsoluteUrl(invoice.link) },
+            "Invoice URL retrieved",
+          );
       }
     } catch (error) {
-      logger.warn("[Mayar] Failed to fetch invoice link, falling back to member portal", {
-        invoiceId,
-        error: error instanceof Error ? error.message : String(error),
-      });
+      logger.warn(
+        "[Mayar] Failed to fetch invoice link, falling back to member portal",
+        {
+          invoiceId,
+          error: error instanceof Error ? error.message : String(error),
+        },
+      );
     }
 
     // 3. Last resort: member portal
     return buildSuccess({ url: MAYAR_MEMBER_URL }, "Invoice URL retrieved");
   }
 
-  static async cancelAddon(workspaceId: string, addonId: string, userId: string) {
+  static async cancelAddon(
+    workspaceId: string,
+    addonId: string,
+    userId: string,
+  ) {
     const addon = await MayarRepository.findAddon(workspaceId, addonId);
 
     if (!addon) {

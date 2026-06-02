@@ -25,10 +25,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@workspace/ui";
-import {
-  formatCurrency as formatCurrencyUtil,
-  getCurrencyDisplayUnit,
-} from "@workspace/utils";
+import { formatCurrency as formatCurrencyUtil, getCurrencyDisplayUnit } from "@workspace/utils";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import * as z from "zod";
@@ -45,10 +42,7 @@ interface Props {
 }
 
 export function PaymentFormSheet({ open, onOpenChange, debt, wallets: _wallets, dictionary, settings }: Props) {
-  const currencyUnit = getCurrencyDisplayUnit(
-    settings?.mainCurrencyCode,
-    settings?.mainCurrencySymbol,
-  );
+  const currencyUnit = getCurrencyDisplayUnit(settings?.mainCurrencyCode, settings?.mainCurrencySymbol);
   const router = useRouter();
   const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(false);

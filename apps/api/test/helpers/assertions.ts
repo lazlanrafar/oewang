@@ -1,11 +1,11 @@
-import { expect } from 'bun:test';
+import { expect } from "bun:test";
 
 /**
  * Assert response matches expected JSON shape
  */
 export async function expectJSON<T = any>(
   response: Response,
-  expected: Partial<T>
+  expected: Partial<T>,
 ): Promise<T> {
   expect(response.ok).toBe(true);
   const data = await response.json();
@@ -18,7 +18,7 @@ export async function expectJSON<T = any>(
  */
 export async function expectValidationError(
   response: Response,
-  field?: string
+  field?: string,
 ): Promise<any> {
   expect(response.status).toBe(400);
   const data = await response.json();
@@ -76,7 +76,7 @@ export async function expectConflict(response: Response): Promise<any> {
  */
 export async function expectSuccess<T = any>(
   response: Response,
-  expectedStatus = 200
+  expectedStatus = 200,
 ): Promise<T> {
   expect(response.status).toBe(expectedStatus);
   return response.json();
@@ -87,7 +87,7 @@ export async function expectSuccess<T = any>(
  */
 export async function expectFields(
   response: Response,
-  fields: string[]
+  fields: string[],
 ): Promise<any> {
   const data = await response.json();
 
@@ -103,7 +103,7 @@ export async function expectFields(
  */
 export async function expectArrayLength(
   response: Response,
-  length: number
+  length: number,
 ): Promise<any[]> {
   const data = await response.json();
   expect(Array.isArray(data)).toBe(true);
@@ -117,8 +117,8 @@ export async function expectArrayLength(
 export async function expectPaginated(response: Response): Promise<any> {
   const data = await response.json();
 
-  expect(data).toHaveProperty('data');
-  expect(data).toHaveProperty('meta');
+  expect(data).toHaveProperty("data");
+  expect(data).toHaveProperty("meta");
   expect(Array.isArray(data.data)).toBe(true);
 
   return data;

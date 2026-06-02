@@ -10,7 +10,7 @@ import {
   type DayButton,
   DayPicker,
   getDefaultClassNames,
-  Locale,
+  type Locale,
 } from "react-day-picker";
 
 import { cn } from "../../lib/utils";

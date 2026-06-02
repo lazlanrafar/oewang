@@ -34,7 +34,11 @@ export function addMonthlyReset(base: Date): Date {
   const day = next.getDate();
   next.setDate(1);
   next.setMonth(next.getMonth() + 1);
-  const lastDay = new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate();
+  const lastDay = new Date(
+    next.getFullYear(),
+    next.getMonth() + 1,
+    0,
+  ).getDate();
   next.setDate(Math.min(day, lastDay));
   return next;
 }
@@ -43,7 +47,9 @@ export function addMonthlyReset(base: Date): Date {
 export function toValidIsoDate(input?: string): string {
   if (!input) return new Date().toISOString();
   const date = new Date(input);
-  return Number.isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString();
+  return Number.isNaN(date.getTime())
+    ? new Date().toISOString()
+    : date.toISOString();
 }
 
 /** Format number as Indonesian currency */
@@ -53,18 +59,25 @@ export function formatAmount(amount: number): string {
 
 /** Check if attachment is a receipt (PDF or image) */
 export function isReceiptAttachment(attachment: { type: string }): boolean {
-  return attachment.type === "application/pdf" || attachment.type.startsWith("image/");
+  return (
+    attachment.type === "application/pdf" ||
+    attachment.type.startsWith("image/")
+  );
 }
 
 /** Check if attachments contain receipts */
-export function hasReceiptAttachments(attachments: { type: string }[] | undefined): boolean {
+export function hasReceiptAttachments(
+  attachments: { type: string }[] | undefined,
+): boolean {
   return Boolean(attachments?.some(isReceiptAttachment));
 }
 
 /** Check if text indicates confirmation intent */
 export function isConfirmIntent(text: string): boolean {
   const normalized = text.toLowerCase().trim();
-  return /(^|\b)(confirm|confirmed|yes|ok|okay|save|simpan|ya|lanjut)(\b|$)/i.test(normalized);
+  return /(^|\b)(confirm|confirmed|yes|ok|okay|save|simpan|ya|lanjut)(\b|$)/i.test(
+    normalized,
+  );
 }
 
 /** Check if text indicates cancel intent */
@@ -76,14 +89,16 @@ export function isCancelIntent(text: string): boolean {
 /** Extract wallet name from text */
 export function extractRequestedWalletName(
   text: string,
-  wallets: Array<{ name: string }>
+  wallets: Array<{ name: string }>,
 ): string | undefined {
-  const explicit = text.match(/(?:account|wallet|akun)\s*[:=-]\s*([^\n]+)/i)?.[1]?.trim();
+  const explicit = text
+    .match(/(?:account|wallet|akun)\s*[:=-]\s*([^\n]+)/i)?.[1]
+    ?.trim();
   if (explicit) return explicit;
 
   const normalized = text.toLowerCase();
   const byMention = wallets.find((wallet) =>
-    normalized.includes(wallet.name.toLowerCase())
+    normalized.includes(wallet.name.toLowerCase()),
   );
   return byMention?.name;
 }
@@ -91,7 +106,7 @@ export function extractRequestedWalletName(
 /** Resolve wallet by name (case-insensitive) */
 export function resolveWalletByName<T extends { name: string }>(
   wallets: T[],
-  name: string | undefined
+  name: string | undefined,
 ): T | null {
   if (!name) return null;
   const lowered = name.toLowerCase();
@@ -109,7 +124,7 @@ export function resolveDateRange(
     to?: string;
     period?: string;
   } = {},
-  defaultPeriod: "this-month" | "last-6-months" | "1-year" = "this-month"
+  defaultPeriod: "this-month" | "last-6-months" | "1-year" = "this-month",
 ): { startDate: string; endDate: string; label: string } {
   const now = new Date();
   const parsedFrom = parseInputDate(input.from);
@@ -148,14 +163,18 @@ export function resolveDateRange(
     case "last-3-months":
     case "3-months":
       return {
-        startDate: toDateOnly(new Date(now.getFullYear(), now.getMonth() - 2, 1)),
+        startDate: toDateOnly(
+          new Date(now.getFullYear(), now.getMonth() - 2, 1),
+        ),
         endDate: toDateOnly(now),
         label: "last-3-months",
       };
     case "6-months":
     case "last-6-months":
       return {
-        startDate: toDateOnly(new Date(now.getFullYear(), now.getMonth() - 5, 1)),
+        startDate: toDateOnly(
+          new Date(now.getFullYear(), now.getMonth() - 5, 1),
+        ),
         endDate: toDateOnly(now),
         label: "last-6-months",
       };
@@ -176,7 +195,9 @@ export function resolveDateRange(
     case "1-year":
     default:
       return {
-        startDate: toDateOnly(new Date(now.getFullYear(), now.getMonth() - 11, 1)),
+        startDate: toDateOnly(
+          new Date(now.getFullYear(), now.getMonth() - 11, 1),
+        ),
         endDate: toDateOnly(now),
         label: "last-12-months",
       };

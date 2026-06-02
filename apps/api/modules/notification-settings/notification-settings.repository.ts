@@ -1,9 +1,9 @@
 import {
-  db,
-  notification_settings,
   and,
+  db,
   eq,
   isNull,
+  notification_settings,
 } from "@workspace/database";
 import type { UpdateNotificationSettingInput } from "../notifications/notifications.dto";
 

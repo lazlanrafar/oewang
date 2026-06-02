@@ -4,6 +4,7 @@ import { cn, Icons } from "@workspace/ui";
 
 import { useAppStore } from "@/stores/app";
 import { useChatStore } from "@/stores/chat";
+
 import { getDictionaryText } from "./chat-i18n";
 
 export function ChatWebSearchButton() {

@@ -16,7 +16,7 @@ export function sanitizeAmount(amount: number | string): string {
 export function calculateBalanceChange(
   type: "expense" | "income" | "transfer",
   amount: number,
-  walletRole: "from" | "to"
+  walletRole: "from" | "to",
 ): number {
   if (type === "expense") {
     return -amount; // Deduct from wallet
@@ -38,7 +38,10 @@ export function isBudgetExceeded(spent: number, budgetAmount: number): boolean {
 /**
  * Calculate budget usage percentage
  */
-export function calculateBudgetUsage(spent: number, budgetAmount: number): number {
+export function calculateBudgetUsage(
+  spent: number,
+  budgetAmount: number,
+): number {
   if (budgetAmount === 0) return 0;
   return Math.round((spent / budgetAmount) * 100);
 }
@@ -48,7 +51,7 @@ export function calculateBudgetUsage(spent: number, budgetAmount: number): numbe
  */
 export function getBudgetStatus(
   spent: number,
-  budgetAmount: number
+  budgetAmount: number,
 ): "safe" | "warning" | "exceeded" {
   const usage = calculateBudgetUsage(spent, budgetAmount);
   if (usage >= 100) return "exceeded";
@@ -61,7 +64,7 @@ export function getBudgetStatus(
  */
 export function formatTransactionAmount(
   amount: number | string,
-  type: "expense" | "income" | "transfer"
+  type: "expense" | "income" | "transfer",
 ): string {
   const value = typeof amount === "string" ? parseFloat(amount) : amount;
   const formatted = value.toLocaleString("id-ID", {
@@ -106,14 +109,18 @@ export function validateTransactionAmount(amount: number | string): {
  */
 export function getCurrentMonthRange(): { startDate: string; endDate: string } {
   const now = new Date();
-  const startDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const startDate = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    1,
+  ).toISOString();
   const endDate = new Date(
     now.getFullYear(),
     now.getMonth() + 1,
     0,
     23,
     59,
-    59
+    59,
   ).toISOString();
   return { startDate, endDate };
 }

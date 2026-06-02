@@ -2,9 +2,7 @@ import type { Pricing } from "@workspace/types";
 
 export type BillingInterval = "monthly" | "annual";
 
-function normalizeBilling(
-  billing?: string | null,
-): BillingInterval | null {
+function normalizeBilling(billing?: string | null): BillingInterval | null {
   if (billing === "annual" || billing === "yearly") return "annual";
   if (billing === "monthly") return "monthly";
   return null;

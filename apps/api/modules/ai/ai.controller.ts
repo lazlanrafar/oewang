@@ -1,11 +1,11 @@
+import { logger } from "@workspace/logger";
+import { ErrorCode } from "@workspace/types";
+import { buildError, buildSuccess } from "@workspace/utils";
 import { Elysia } from "elysia";
 import { authPlugin } from "../../plugins/auth";
 import { encryptionPlugin } from "../../plugins/encryption";
-import { buildSuccess, buildError } from "@workspace/utils";
-import { ErrorCode } from "@workspace/types";
-import { AiService } from "./ai.service";
 import { ChatRequestDto, ParseReceiptDto } from "./ai.dto";
-import { logger } from "@workspace/logger";
+import { AiService } from "./ai.service";
 
 export const aiController = new Elysia({ prefix: "/ai" })
   .use(authPlugin)
@@ -28,7 +28,8 @@ export const aiController = new Elysia({ prefix: "/ai" })
     {
       detail: {
         summary: "Get AI Sessions",
-        description: "Returns a list of previous AI chat sessions for the active workspace.",
+        description:
+          "Returns a list of previous AI chat sessions for the active workspace.",
         tags: ["AI"],
       },
     },
@@ -77,7 +78,9 @@ export const aiController = new Elysia({ prefix: "/ai" })
   .post(
     "/chat",
     async ({ body, workspaceId, userId, set }) => {
-      console.log(`[AI Controller] /chat hit. Body type: ${typeof body}, Keys: ${Object.keys(body || {})}`);
+      console.log(
+        `[AI Controller] /chat hit. Body type: ${typeof body}, Keys: ${Object.keys(body || {})}`,
+      );
       try {
         const response = await AiService.chat(
           body.messages,
@@ -111,7 +114,8 @@ export const aiController = new Elysia({ prefix: "/ai" })
       body: ChatRequestDto,
       detail: {
         summary: "Chat with AI",
-        description: "Sends messages to the AI and returns a response, optionally within a session. Supports function calling for financial tasks.",
+        description:
+          "Sends messages to the AI and returns a response, optionally within a session. Supports function calling for financial tasks.",
         tags: ["AI"],
       },
     },
@@ -128,7 +132,11 @@ export const aiController = new Elysia({ prefix: "/ai" })
         );
         return buildSuccess(result, "Receipt parsed successfully");
       } catch (error: any) {
-        logger.error("Error parsing receipt", { error: error?.message ?? String(error), errorName: error?.name, workspaceId });
+        logger.error("Error parsing receipt", {
+          error: error?.message ?? String(error),
+          errorName: error?.name,
+          workspaceId,
+        });
         set.status = 500;
         return buildError(
           ErrorCode.INTERNAL_ERROR,
@@ -140,7 +148,8 @@ export const aiController = new Elysia({ prefix: "/ai" })
       body: ParseReceiptDto,
       detail: {
         summary: "Parse Receipt",
-        description: "Extracts transaction data from a receipt image or PDF using AI.",
+        description:
+          "Extracts transaction data from a receipt image or PDF using AI.",
         tags: ["AI"],
       },
     },

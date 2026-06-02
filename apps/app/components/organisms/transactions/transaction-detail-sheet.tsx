@@ -102,11 +102,7 @@ function AttachmentCard({
       {isImage ? (
         url ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={url}
-            alt={file.name}
-            className="absolute inset-0 h-full w-full object-cover"
-          />
+          <img src={url} alt={file.name} className="absolute inset-0 h-full w-full object-cover" />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-muted/20">
             <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
@@ -115,20 +111,14 @@ function AttachmentCard({
       ) : (
         <div className="flex h-full w-full flex-col items-center justify-center gap-1 p-2 text-muted-foreground">
           <FileIcon type={file.type} />
-          <span className="line-clamp-2 text-center text-[9px] leading-tight">
-            {file.name}
-          </span>
+          <span className="line-clamp-2 text-center text-[9px] leading-tight">{file.name}</span>
         </div>
       )}
 
       {/* Hover overlay with name + size */}
       <div className="absolute inset-0 flex flex-col items-start justify-end bg-gradient-to-t from-black/70 to-transparent p-1.5 opacity-0 transition-opacity group-hover:opacity-100">
-        <p className="line-clamp-1 w-full text-[9px] font-medium text-white leading-tight">
-          {file.name}
-        </p>
-        {file.size > 0 && (
-          <p className="text-[8px] text-white/70">{formatBytes(file.size)}</p>
-        )}
+        <p className="line-clamp-1 w-full font-medium text-[9px] text-white leading-tight">{file.name}</p>
+        {file.size > 0 && <p className="text-[8px] text-white/70">{formatBytes(file.size)}</p>}
       </div>
 
       {/* Remove button */}
@@ -139,7 +129,7 @@ function AttachmentCard({
             e.stopPropagation();
             onRemove(file.id);
           }}
-          className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center bg-black/60 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-destructive"
+          className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center bg-black/60 text-white opacity-0 transition-opacity hover:bg-destructive group-hover:opacity-100"
         >
           <X className="h-2.5 w-2.5" />
         </button>

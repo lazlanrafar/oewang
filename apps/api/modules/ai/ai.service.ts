@@ -1,23 +1,24 @@
-import { 
-  AiOrchestrator, 
-  ReceiptService, 
-  ChatMessage as RepoChatMessage,
+import {
+  AiOrchestrator,
+  ReceiptService,
+  type ChatMessage as RepoChatMessage,
 } from "@workspace/ai";
-import { AiRepository } from "./ai.repository";
-import { executeAiTool } from "./ai.tools";
-import { CategoriesRepository } from "../categories/categories.repository";
-import { WalletsRepository } from "../wallets/wallets.repository";
-import { TransactionsService } from "../transactions/transactions.service";
-import { TransactionItemsService } from "../transactions/items/transaction-items.service";
-import { VaultService } from "../vault/vault.service";
+import { API_CONFIG, Env } from "@workspace/constants";
+import { createLogger } from "@workspace/logger";
 import { redis } from "@workspace/redis";
+import { ErrorCode } from "@workspace/types";
 import { buildError } from "@workspace/utils";
 import { status } from "elysia";
-import { ErrorCode } from "@workspace/types";
-import { Env, API_CONFIG } from "@workspace/constants";
-import { createLogger } from "@workspace/logger";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
+import { CategoriesRepository } from "../categories/categories.repository";
+import { TransactionItemsService } from "../transactions/items/transaction-items.service";
+import { TransactionsService } from "../transactions/transactions.service";
+import { VaultService } from "../vault/vault.service";
+import { WalletsRepository } from "../wallets/wallets.repository";
 import type { ChatMessage, ChatResponse } from "./ai.dto";
+import { AiRepository } from "./ai.repository";
+import { executeAiTool } from "./ai.tools";
+
 const log = createLogger("ai-service");
 type ChatAttachment = NonNullable<ChatMessage["attachments"]>[number];
 type WalletRef = { id: string; name: string };
@@ -52,19 +53,28 @@ function addMonthlyReset(base: Date) {
   const day = next.getDate();
   next.setDate(1);
   next.setMonth(next.getMonth() + 1);
-  const lastDay = new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate();
+  const lastDay = new Date(
+    next.getFullYear(),
+    next.getMonth() + 1,
+    0,
+  ).getDate();
   next.setDate(Math.min(day, lastDay));
   return next;
 }
 
 function isReceiptAttachment(attachment: ChatAttachment) {
-  return attachment.type === "application/pdf" || attachment.type.startsWith("image/");
+  return (
+    attachment.type === "application/pdf" ||
+    attachment.type.startsWith("image/")
+  );
 }
 
 function toValidIsoDate(input?: string) {
   if (!input) return new Date().toISOString();
   const date = new Date(input);
-  return Number.isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString();
+  return Number.isNaN(date.getTime())
+    ? new Date().toISOString()
+    : date.toISOString();
 }
 
 function formatAmount(amount: number) {
@@ -77,7 +87,9 @@ function hasReceiptAttachments(attachments: ChatAttachment[] | undefined) {
 
 function isConfirmIntent(text: string) {
   const normalized = text.toLowerCase().trim();
-  return /(^|\b)(confirm|confirmed|yes|ok|okay|save|simpan|ya|lanjut)(\b|$)/i.test(normalized);
+  return /(^|\b)(confirm|confirmed|yes|ok|okay|save|simpan|ya|lanjut)(\b|$)/i.test(
+    normalized,
+  );
 }
 
 function isCancelIntent(text: string) {
@@ -86,11 +98,15 @@ function isCancelIntent(text: string) {
 }
 
 function extractRequestedWalletName(text: string, wallets: WalletRef[]) {
-  const explicit = text.match(/(?:account|wallet|akun)\s*[:=-]\s*([^\n]+)/i)?.[1]?.trim();
+  const explicit = text
+    .match(/(?:account|wallet|akun)\s*[:=-]\s*([^\n]+)/i)?.[1]
+    ?.trim();
   if (explicit) return explicit;
 
   const normalized = text.toLowerCase();
-  const byMention = wallets.find((wallet) => normalized.includes(wallet.name.toLowerCase()));
+  const byMention = wallets.find((wallet) =>
+    normalized.includes(wallet.name.toLowerCase()),
+  );
   return byMention?.name;
 }
 
@@ -131,7 +147,10 @@ export abstract class AiService {
       page: 1,
       limit: 50,
     });
-    const wallets = walletResult.rows.map((wallet: any) => ({ id: wallet.id, name: wallet.name }));
+    const wallets = walletResult.rows.map((wallet: any) => ({
+      id: wallet.id,
+      name: wallet.name,
+    }));
     const defaultWallet = wallets[0];
 
     if (!defaultWallet?.id) {
@@ -148,8 +167,13 @@ export abstract class AiService {
       };
     }
 
-    const categories = await CategoriesRepository.findMany(workspaceId, "expense");
-    const categoryContext = categories.map((c: any) => `- ${c.name} (ID: ${c.id})`).join("\n");
+    const categories = await CategoriesRepository.findMany(
+      workspaceId,
+      "expense",
+    );
+    const categoryContext = categories
+      .map((c: any) => `- ${c.name} (ID: ${c.id})`)
+      .join("\n");
 
     const entries: ReceiptDraftEntry[] = [];
     const failedLines: string[] = [];
@@ -191,7 +215,9 @@ export abstract class AiService {
           continue;
         }
 
-        const items = (parsed.items || []).filter((item) => item?.name && Number(item.amount) > 0);
+        const items = (parsed.items || []).filter(
+          (item) => item?.name && Number(item.amount) > 0,
+        );
         entries.push({
           fileName: attachment.name,
           amount: Number(parsed.amount),
@@ -211,7 +237,9 @@ export abstract class AiService {
           })),
         });
       } catch (error: any) {
-        failedLines.push(`${attachment.name}: ${error?.message ?? "failed to parse"}`);
+        failedLines.push(
+          `${attachment.name}: ${error?.message ?? "failed to parse"}`,
+        );
       }
     }
 
@@ -224,9 +252,10 @@ export abstract class AiService {
 
     if (entries.length === 0) {
       return {
-        reply: failedLines.length > 0
-          ? `I could not read any invoice from the uploaded files.\n${failedLines.map((line) => `- ${line}`).join("\n")}`
-          : "I could not read any invoice from the uploaded files.",
+        reply:
+          failedLines.length > 0
+            ? `I could not read any invoice from the uploaded files.\n${failedLines.map((line) => `- ${line}`).join("\n")}`
+            : "I could not read any invoice from the uploaded files.",
         draft,
       };
     }
@@ -240,7 +269,9 @@ export abstract class AiService {
       "",
       "To change account, reply: account: <account name>",
       "Then reply: confirm",
-      ...(failedLines.length > 0 ? ["", "Skipped files:", ...failedLines.map((line) => `- ${line}`)] : []),
+      ...(failedLines.length > 0
+        ? ["", "Skipped files:", ...failedLines.map((line) => `- ${line}`)]
+        : []),
     ].join("\n");
 
     return { reply, draft };
@@ -312,15 +343,28 @@ export abstract class AiService {
     if (draft.status !== "awaiting_confirmation") return null;
 
     const wallets = draft.wallets || [];
-    const requestedWalletName = extractRequestedWalletName(latestUserMessage.content || "", wallets);
+    const requestedWalletName = extractRequestedWalletName(
+      latestUserMessage.content || "",
+      wallets,
+    );
     const resolvedWallet = resolveWalletByName(wallets, requestedWalletName);
     const confirm = isConfirmIntent(latestUserMessage.content || "");
     const cancel = isCancelIntent(latestUserMessage.content || "");
 
     if (cancel) {
-      const cancelledDraft: InvoiceDraftState = { ...draft, status: "cancelled" };
-      const reply = "Cancelled. I did not save any transaction from this receipt.";
-      await AiRepository.saveMessage(currentSessionId, workspaceId, "assistant", reply, { invoiceDraft: cancelledDraft });
+      const cancelledDraft: InvoiceDraftState = {
+        ...draft,
+        status: "cancelled",
+      };
+      const reply =
+        "Cancelled. I did not save any transaction from this receipt.";
+      await AiRepository.saveMessage(
+        currentSessionId,
+        workspaceId,
+        "assistant",
+        reply,
+        { invoiceDraft: cancelledDraft },
+      );
       return { sessionId: currentSessionId, reply };
     }
 
@@ -331,13 +375,24 @@ export abstract class AiService {
         draft,
         resolvedWallet?.id,
       );
-      const confirmedDraft: InvoiceDraftState = { ...draft, status: "confirmed" };
-      await AiRepository.saveMessage(currentSessionId, workspaceId, "assistant", reply, { invoiceDraft: confirmedDraft });
+      const confirmedDraft: InvoiceDraftState = {
+        ...draft,
+        status: "confirmed",
+      };
+      await AiRepository.saveMessage(
+        currentSessionId,
+        workspaceId,
+        "assistant",
+        reply,
+        { invoiceDraft: confirmedDraft },
+      );
       return { sessionId: currentSessionId, reply };
     }
 
     if (requestedWalletName && !resolvedWallet) {
-      const walletOptions = wallets.map((wallet) => `- ${wallet.name}`).join("\n");
+      const walletOptions = wallets
+        .map((wallet) => `- ${wallet.name}`)
+        .join("\n");
       const reply = [
         `I cannot find account "${requestedWalletName}".`,
         "Available accounts:",
@@ -345,23 +400,46 @@ export abstract class AiService {
         "",
         "Reply with: account: <account name>",
       ].join("\n");
-      await AiRepository.saveMessage(currentSessionId, workspaceId, "assistant", reply, { invoiceDraft: draft });
+      await AiRepository.saveMessage(
+        currentSessionId,
+        workspaceId,
+        "assistant",
+        reply,
+        { invoiceDraft: draft },
+      );
       return { sessionId: currentSessionId, reply };
     }
 
     if (resolvedWallet) {
       const updatedDraft: InvoiceDraftState = {
         ...draft,
-        entries: draft.entries.map((entry) => ({ ...entry, walletId: resolvedWallet.id })),
+        entries: draft.entries.map((entry) => ({
+          ...entry,
+          walletId: resolvedWallet.id,
+        })),
       };
       const reply = `Account updated to "${resolvedWallet.name}". Reply "confirm" to save this receipt.`;
-      await AiRepository.saveMessage(currentSessionId, workspaceId, "assistant", reply, { invoiceDraft: updatedDraft });
+      await AiRepository.saveMessage(
+        currentSessionId,
+        workspaceId,
+        "assistant",
+        reply,
+        { invoiceDraft: updatedDraft },
+      );
       return { sessionId: currentSessionId, reply };
     }
 
-    const currentWallet = wallets.find((wallet) => wallet.id === draft.entries[0]?.walletId)?.name || "-";
+    const currentWallet =
+      wallets.find((wallet) => wallet.id === draft.entries[0]?.walletId)
+        ?.name || "-";
     const reply = `Draft is ready. Current account: "${currentWallet}". Reply "confirm" to save, or "account: <name>" to change account.`;
-    await AiRepository.saveMessage(currentSessionId, workspaceId, "assistant", reply, { invoiceDraft: draft });
+    await AiRepository.saveMessage(
+      currentSessionId,
+      workspaceId,
+      "assistant",
+      reply,
+      { invoiceDraft: draft },
+    );
     return { sessionId: currentSessionId, reply };
   }
 
@@ -415,7 +493,7 @@ export abstract class AiService {
           geminiKey: Env.GEMINI_API_KEY,
           openaiKey: Env.OPENAI_API_KEY,
           anthropicKey: Env.ANTHROPIC_API_KEY,
-        }
+        },
       );
       const newSession = await AiRepository.createSession(workspaceId, title);
       currentSessionId = newSession!.id;
@@ -431,10 +509,18 @@ export abstract class AiService {
 
       // Save previous messages if any
       for (const msg of messages.slice(0, -1)) {
-        await AiRepository.saveMessage(currentSessionId, workspaceId, msg.role as any, msg.content);
+        await AiRepository.saveMessage(
+          currentSessionId,
+          workspaceId,
+          msg.role as any,
+          msg.content,
+        );
       }
     } else {
-      const session = await AiRepository.getSession(currentSessionId, workspaceId);
+      const session = await AiRepository.getSession(
+        currentSessionId,
+        workspaceId,
+      );
       if (!session) throw new Error("Chat session not found or access denied.");
     }
 
@@ -447,7 +533,10 @@ export abstract class AiService {
       latestUserMessage.attachments,
     );
 
-    const history = await AiRepository.getSessionMessages(currentSessionId as string, workspaceId);
+    const history = await AiRepository.getSessionMessages(
+      currentSessionId as string,
+      workspaceId,
+    );
 
     // 2. Draft flow for receipt attachments: parse first, save only on explicit confirm.
     const latestDraft = getLatestDraftState(history);
@@ -480,7 +569,7 @@ export abstract class AiService {
     const consolidatedMessages: RepoChatMessage[] = history.map((m: any) => ({
       role: m.role as any,
       content: m.content as string,
-      attachments: m.attachments as any
+      attachments: m.attachments as any,
     }));
 
     // 4. Quota Check
@@ -488,15 +577,14 @@ export abstract class AiService {
     if (!usageData) {
       throw status(
         404,
-        buildError(ErrorCode.WORKSPACE_NOT_FOUND, "Workspace not found")
+        buildError(ErrorCode.WORKSPACE_NOT_FOUND, "Workspace not found"),
       );
     }
 
-    if (
-      usageData.plan_status === "free" &&
-      usageData.ai_tokens_reset_at
-    ) {
-      const nextResetAt = addMonthlyReset(new Date(usageData.ai_tokens_reset_at));
+    if (usageData.plan_status === "free" && usageData.ai_tokens_reset_at) {
+      const nextResetAt = addMonthlyReset(
+        new Date(usageData.ai_tokens_reset_at),
+      );
       if (new Date() >= nextResetAt) {
         await AiRepository.resetAiTokens(workspaceId, new Date());
         usageData.used = 0;
@@ -504,7 +592,8 @@ export abstract class AiService {
       }
     }
 
-    const maxTokens = (usageData.maxTokens && usageData.maxTokens > 0) ? usageData.maxTokens : 50;
+    const maxTokens =
+      usageData.maxTokens && usageData.maxTokens > 0 ? usageData.maxTokens : 50;
     const currentTokens = Number(usageData.used || 0);
 
     if (
@@ -519,8 +608,14 @@ export abstract class AiService {
       if (!usageData.plan_current_period_end) {
         // Default to same day next month
         const now = new Date();
-        const createdAt = usageData.created_at ? new Date(usageData.created_at) : now;
-        resetAt = new Date(now.getFullYear(), now.getMonth() + 1, createdAt.getDate());
+        const createdAt = usageData.created_at
+          ? new Date(usageData.created_at)
+          : now;
+        resetAt = new Date(
+          now.getFullYear(),
+          now.getMonth() + 1,
+          createdAt.getDate(),
+        );
       } else {
         resetAt = new Date(usageData.plan_current_period_end);
       }
@@ -531,8 +626,8 @@ export abstract class AiService {
           ErrorCode.PLAN_LIMIT_REACHED,
           `Monthly AI Token limit exceeded. Max: ${maxTokens} tokens.`,
           undefined,
-          { reset_at: resetAt.toISOString() }
-        )
+          { reset_at: resetAt.toISOString() },
+        ),
       );
     }
 
@@ -541,7 +636,7 @@ export abstract class AiService {
     }
 
     // 5. Orchestrate
-    let response;
+    let response: ChatResponse;
     try {
       response = await AiOrchestrator.chat(
         consolidatedMessages,
@@ -561,7 +656,7 @@ export abstract class AiService {
             executeAiTool(name, args, workspaceId, userId),
           executeItemsAction: (name, args) =>
             executeAiTool(name, args, workspaceId, userId),
-        }
+        },
       );
     } catch (error: any) {
       throw error;
@@ -580,10 +675,15 @@ export abstract class AiService {
           }
         : undefined,
     );
-    
+
     const tokensSpent =
-      (response.usage?.input_tokens ?? 0) + (response.usage?.output_tokens ?? 0);
-    await AiRepository.incrementAiTokens(workspaceId, currentTokens, tokensSpent);
+      (response.usage?.input_tokens ?? 0) +
+      (response.usage?.output_tokens ?? 0);
+    await AiRepository.incrementAiTokens(
+      workspaceId,
+      currentTokens,
+      tokensSpent,
+    );
 
     return {
       sessionId: currentSessionId,
@@ -596,37 +696,47 @@ export abstract class AiService {
   /**
    * Parse receipt data from image or PDF.
    */
-  static async parseReceipt(workspaceId: string, userId: string, base64Image: string, mediaType: string) {
+  static async parseReceipt(
+    workspaceId: string,
+    userId: string,
+    base64Image: string,
+    mediaType: string,
+  ) {
     // We need category context for the parser
-    const categories = await CategoriesRepository.findMany(workspaceId, "expense");
-    const categoryContext = categories.map((c: any) => `- ${c.name} (ID: ${c.id})`).join("\n");
+    const categories = await CategoriesRepository.findMany(
+      workspaceId,
+      "expense",
+    );
+    const categoryContext = categories
+      .map((c: any) => `- ${c.name} (ID: ${c.id})`)
+      .join("\n");
 
     const parsed = await ReceiptService.parse(
-        base64Image,
-        mediaType,
-        categoryContext,
-        {
-            geminiKey: Env.GEMINI_API_KEY,
-            openaiKey: Env.OPENAI_API_KEY,
-            anthropicKey: Env.ANTHROPIC_API_KEY,
-        }
+      base64Image,
+      mediaType,
+      categoryContext,
+      {
+        geminiKey: Env.GEMINI_API_KEY,
+        openaiKey: Env.OPENAI_API_KEY,
+        anthropicKey: Env.ANTHROPIC_API_KEY,
+      },
     );
 
     if (parsed) {
-        if (parsed.name && parsed.categoryId) {
-            const cacheKey = `oewang:category-cache:${workspaceId}:${parsed.name.toLowerCase().trim()}`;
-            await redis.set(cacheKey, parsed.categoryId, { ex: 60 * 60 * 24 * 30 });
-        }
+      if (parsed.name && parsed.categoryId) {
+        const cacheKey = `oewang:category-cache:${workspaceId}:${parsed.name.toLowerCase().trim()}`;
+        await redis.set(cacheKey, parsed.categoryId, { ex: 60 * 60 * 24 * 30 });
+      }
 
-        await AuditLogsService.log({
-          workspace_id: workspaceId,
-          user_id: userId,
-          action: "ai.receipt_parsed",
-          entity: "vault_file", // Receipt parsing is conceptually linked to storage/vault
-          entity_id: "00000000-0000-0000-0000-000000000000",
-          before: null,
-          after: parsed,
-        });
+      await AuditLogsService.log({
+        workspace_id: workspaceId,
+        user_id: userId,
+        action: "ai.receipt_parsed",
+        entity: "vault_file", // Receipt parsing is conceptually linked to storage/vault
+        entity_id: "00000000-0000-0000-0000-000000000000",
+        before: null,
+        after: parsed,
+      });
     }
 
     return parsed;

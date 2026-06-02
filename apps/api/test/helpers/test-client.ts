@@ -1,4 +1,4 @@
-import type { Elysia } from 'elysia';
+import type { Elysia } from "elysia";
 
 export interface RequestOptions {
   headers?: Record<string, string>;
@@ -10,7 +10,7 @@ export interface RequestOptions {
  * Can work with either a real server or an Elysia app instance
  */
 export class TestClient {
-  private baseURL = 'http://localhost:3002';
+  private baseURL = "http://localhost:3002";
   private defaultHeaders: Record<string, string> = {};
 
   constructor(private app?: Elysia) {}
@@ -19,7 +19,7 @@ export class TestClient {
    * Set authorization token for subsequent requests
    */
   withAuth(token: string): TestClient {
-    this.defaultHeaders['Authorization'] = `Bearer ${token}`;
+    this.defaultHeaders["Authorization"] = `Bearer ${token}`;
     return this;
   }
 
@@ -27,7 +27,7 @@ export class TestClient {
    * Clear all default headers
    */
   clearAuth(): TestClient {
-    delete this.defaultHeaders['Authorization'];
+    delete this.defaultHeaders["Authorization"];
     return this;
   }
 
@@ -41,13 +41,13 @@ export class TestClient {
     if (this.app) {
       return this.app.handle(
         new Request(url, {
-          method: 'GET',
+          method: "GET",
           headers,
-        })
+        }),
       );
     }
 
-    return fetch(url, { method: 'GET', headers });
+    return fetch(url, { method: "GET", headers });
   }
 
   /**
@@ -56,11 +56,11 @@ export class TestClient {
   async post(
     path: string,
     body?: any,
-    options: RequestOptions = {}
+    options: RequestOptions = {},
   ): Promise<Response> {
     const url = this.buildURL(path, options.query);
     const headers = {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...this.defaultHeaders,
       ...options.headers,
     };
@@ -68,15 +68,15 @@ export class TestClient {
     if (this.app) {
       return this.app.handle(
         new Request(url, {
-          method: 'POST',
+          method: "POST",
           headers,
           body: body ? JSON.stringify(body) : undefined,
-        })
+        }),
       );
     }
 
     return fetch(url, {
-      method: 'POST',
+      method: "POST",
       headers,
       body: body ? JSON.stringify(body) : undefined,
     });
@@ -88,11 +88,11 @@ export class TestClient {
   async patch(
     path: string,
     body?: any,
-    options: RequestOptions = {}
+    options: RequestOptions = {},
   ): Promise<Response> {
     const url = this.buildURL(path, options.query);
     const headers = {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...this.defaultHeaders,
       ...options.headers,
     };
@@ -100,15 +100,15 @@ export class TestClient {
     if (this.app) {
       return this.app.handle(
         new Request(url, {
-          method: 'PATCH',
+          method: "PATCH",
           headers,
           body: body ? JSON.stringify(body) : undefined,
-        })
+        }),
       );
     }
 
     return fetch(url, {
-      method: 'PATCH',
+      method: "PATCH",
       headers,
       body: body ? JSON.stringify(body) : undefined,
     });
@@ -120,11 +120,11 @@ export class TestClient {
   async put(
     path: string,
     body?: any,
-    options: RequestOptions = {}
+    options: RequestOptions = {},
   ): Promise<Response> {
     const url = this.buildURL(path, options.query);
     const headers = {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...this.defaultHeaders,
       ...options.headers,
     };
@@ -132,15 +132,15 @@ export class TestClient {
     if (this.app) {
       return this.app.handle(
         new Request(url, {
-          method: 'PUT',
+          method: "PUT",
           headers,
           body: body ? JSON.stringify(body) : undefined,
-        })
+        }),
       );
     }
 
     return fetch(url, {
-      method: 'PUT',
+      method: "PUT",
       headers,
       body: body ? JSON.stringify(body) : undefined,
     });
@@ -156,13 +156,13 @@ export class TestClient {
     if (this.app) {
       return this.app.handle(
         new Request(url, {
-          method: 'DELETE',
+          method: "DELETE",
           headers,
-        })
+        }),
       );
     }
 
-    return fetch(url, { method: 'DELETE', headers });
+    return fetch(url, { method: "DELETE", headers });
   }
 
   /**
@@ -191,7 +191,7 @@ export class TestClient {
   static expectSuccess(response: Response): Response {
     if (!response.ok) {
       throw new Error(
-        `Expected successful response, got ${response.status}: ${response.statusText}`
+        `Expected successful response, got ${response.status}: ${response.statusText}`,
       );
     }
     return response;
@@ -203,7 +203,7 @@ export class TestClient {
   static expectStatus(response: Response, status: number): Response {
     if (response.status !== status) {
       throw new Error(
-        `Expected status ${status}, got ${response.status}: ${response.statusText}`
+        `Expected status ${status}, got ${response.status}: ${response.statusText}`,
       );
     }
     return response;
@@ -215,18 +215,18 @@ export class TestClient {
  */
 export async function createAuthenticatedClient(
   email: string,
-  password: string
+  password: string,
 ): Promise<TestClient> {
   const client = new TestClient();
 
-  const response = await client.post('/auth/login', {
+  const response = await client.post("/auth/login", {
     email,
     password,
   });
 
   if (!response.ok) {
     throw new Error(
-      `Failed to authenticate: ${response.status} ${response.statusText}`
+      `Failed to authenticate: ${response.status} ${response.statusText}`,
     );
   }
 
@@ -234,7 +234,7 @@ export async function createAuthenticatedClient(
   const token = data.access_token || data.token;
 
   if (!token) {
-    throw new Error('No token returned from login endpoint');
+    throw new Error("No token returned from login endpoint");
   }
 
   return client.withAuth(token);

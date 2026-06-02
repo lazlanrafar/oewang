@@ -26,16 +26,14 @@ self.addEventListener("notificationclick", (event) => {
   const url = event.notification.data?.url || "/";
 
   event.waitUntil(
-    clients
-      .matchAll({ type: "window", includeUncontrolled: true })
-      .then((clientList) => {
-        const existingClient = clientList.find((c) => c.url.includes(self.location.origin));
-        if (existingClient) {
-          existingClient.focus();
-          existingClient.navigate(url);
-        } else {
-          clients.openWindow(url);
-        }
-      }),
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
+      const existingClient = clientList.find((c) => c.url.includes(self.location.origin));
+      if (existingClient) {
+        existingClient.focus();
+        existingClient.navigate(url);
+      } else {
+        clients.openWindow(url);
+      }
+    }),
   );
 });

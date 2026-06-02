@@ -1,11 +1,10 @@
-import { Elysia } from "elysia";
-import { NotificationsService } from "./notifications.service";
-import { NotificationDto } from "./notifications.dto";
-import { authPlugin } from "../../plugins/auth";
-import { encryptionPlugin } from "../../plugins/encryption";
-import { status } from "elysia";
 import { ErrorCode } from "@workspace/types";
 import { buildError, buildSuccess } from "@workspace/utils";
+import { Elysia, status } from "elysia";
+import { authPlugin } from "../../plugins/auth";
+import { encryptionPlugin } from "../../plugins/encryption";
+import { NotificationDto } from "./notifications.dto";
+import { NotificationsService } from "./notifications.service";
 
 export const notificationsController = new Elysia({ prefix: "/notifications" })
   .use(authPlugin)
@@ -14,7 +13,10 @@ export const notificationsController = new Elysia({ prefix: "/notifications" })
     "/",
     async ({ auth, query }) => {
       if (!auth?.user_id) {
-        throw status(401, buildError(ErrorCode.UNAUTHORIZED, "Unauthenticated"));
+        throw status(
+          401,
+          buildError(ErrorCode.UNAUTHORIZED, "Unauthenticated"),
+        );
       }
 
       if (!auth.workspace_id) {
@@ -36,7 +38,10 @@ export const notificationsController = new Elysia({ prefix: "/notifications" })
     "/mark-read",
     async ({ auth, body }) => {
       if (!auth?.user_id) {
-        throw status(401, buildError(ErrorCode.UNAUTHORIZED, "Unauthenticated"));
+        throw status(
+          401,
+          buildError(ErrorCode.UNAUTHORIZED, "Unauthenticated"),
+        );
       }
 
       if (!auth.workspace_id) {
@@ -55,21 +60,18 @@ export const notificationsController = new Elysia({ prefix: "/notifications" })
     },
     { body: NotificationDto.markRead },
   )
-  .delete(
-    "/:id",
-    async ({ auth, params }) => {
-      if (!auth?.user_id) {
-        throw status(401, buildError(ErrorCode.UNAUTHORIZED, "Unauthenticated"));
-      }
+  .delete("/:id", async ({ auth, params }) => {
+    if (!auth?.user_id) {
+      throw status(401, buildError(ErrorCode.UNAUTHORIZED, "Unauthenticated"));
+    }
 
-      if (!auth.workspace_id) {
-        return buildSuccess(null);
-      }
+    if (!auth.workspace_id) {
+      return buildSuccess(null);
+    }
 
-      return NotificationsService.delete(
-        auth.workspace_id,
-        auth.user_id,
-        params.id,
-      );
-    },
-  );
+    return NotificationsService.delete(
+      auth.workspace_id,
+      auth.user_id,
+      params.id,
+    );
+  });

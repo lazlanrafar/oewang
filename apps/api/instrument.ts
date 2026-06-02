@@ -4,8 +4,8 @@ import { loadEnv } from "@workspace/utils/load-env";
 loadEnv();
 
 import * as Sentry from "@sentry/bun";
-import { createLogger } from "@workspace/logger";
 import { Env } from "@workspace/constants";
+import { createLogger } from "@workspace/logger";
 
 const log = createLogger("sentry");
 

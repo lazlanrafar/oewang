@@ -1,13 +1,13 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import {
-  calculateNewBalance,
-  hasSufficientBalance,
-  formatBalance,
-  calculateTotalBalance,
-  getWalletStatus,
-  validateWalletName,
   calculateBalanceChangePercentage,
+  calculateNewBalance,
+  calculateTotalBalance,
+  formatBalance,
+  getWalletStatus,
   groupWalletsByType,
+  hasSufficientBalance,
+  validateWalletName,
 } from "./wallets.utils";
 
 describe("wallets.utils", () => {
@@ -27,7 +27,7 @@ describe("wallets.utils", () => {
     });
 
     test("handles decimal amounts", () => {
-      expect(calculateNewBalance(1000.50, 99.99)).toBe(1100.49);
+      expect(calculateNewBalance(1000.5, 99.99)).toBe(1100.49);
     });
 
     test("can result in negative balance", () => {
@@ -55,8 +55,8 @@ describe("wallets.utils", () => {
     });
 
     test("handles decimal amounts", () => {
-      expect(hasSufficientBalance(100.50, 100.49)).toBe(true);
-      expect(hasSufficientBalance(100.50, 100.51)).toBe(false);
+      expect(hasSufficientBalance(100.5, 100.49)).toBe(true);
+      expect(hasSufficientBalance(100.5, 100.51)).toBe(false);
     });
   });
 
@@ -97,27 +97,17 @@ describe("wallets.utils", () => {
 
   describe("calculateTotalBalance", () => {
     test("sums all wallet balances", () => {
-      const wallets = [
-        { balance: 1000 },
-        { balance: 500 },
-        { balance: 250 },
-      ];
+      const wallets = [{ balance: 1000 }, { balance: 500 }, { balance: 250 }];
       expect(calculateTotalBalance(wallets)).toBe(1750);
     });
 
     test("handles string balances", () => {
-      const wallets = [
-        { balance: "1000" },
-        { balance: "500" },
-      ];
+      const wallets = [{ balance: "1000" }, { balance: "500" }];
       expect(calculateTotalBalance(wallets)).toBe(1500);
     });
 
     test("handles mixed number and string balances", () => {
-      const wallets = [
-        { balance: 1000 },
-        { balance: "500" },
-      ];
+      const wallets = [{ balance: 1000 }, { balance: "500" }];
       expect(calculateTotalBalance(wallets)).toBe(1500);
     });
 
@@ -126,19 +116,12 @@ describe("wallets.utils", () => {
     });
 
     test("handles negative balances", () => {
-      const wallets = [
-        { balance: 1000 },
-        { balance: -300 },
-        { balance: 500 },
-      ];
+      const wallets = [{ balance: 1000 }, { balance: -300 }, { balance: 500 }];
       expect(calculateTotalBalance(wallets)).toBe(1200);
     });
 
     test("handles decimal balances", () => {
-      const wallets = [
-        { balance: 100.50 },
-        { balance: 50.25 },
-      ];
+      const wallets = [{ balance: 100.5 }, { balance: 50.25 }];
       expect(calculateTotalBalance(wallets)).toBe(150.75);
     });
   });
@@ -255,8 +238,8 @@ describe("wallets.utils", () => {
 
       expect(grouped.cash).toHaveLength(2);
       expect(grouped.bank).toHaveLength(2);
-      expect(grouped.cash[0].name).toBe("Cash");
-      expect(grouped.bank[0].name).toBe("Bank");
+      expect(grouped.cash![0]!.name).toBe("Cash");
+      expect(grouped.bank![0]!.name).toBe("Bank");
     });
 
     test("handles wallets without type", () => {

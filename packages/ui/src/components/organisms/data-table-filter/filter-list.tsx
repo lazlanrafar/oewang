@@ -1,9 +1,9 @@
 "use client";
 
-import { Badge, Button, Icons, Skeleton } from "../../atoms";
 import { format, parseISO } from "date-fns";
 import { useMemo } from "react";
-import { DataTableFilterFacet } from "./data-table-filter";
+import { Badge, Button, Icons, Skeleton } from "../../atoms";
+import type { DataTableFilterFacet } from "./data-table-filter";
 
 export type FilterKey =
   | "start"
@@ -180,7 +180,8 @@ export function FilterList({
         return (value as string[])
           .map(
             (id) =>
-              tags?.find((tag) => tag?.id === id || tag?.slug === id)?.name || id,
+              tags?.find((tag) => tag?.id === id || tag?.slug === id)?.name ||
+              id,
           )
           .join(", ");
       }
@@ -239,27 +240,31 @@ export function FilterList({
   };
 
   const activeFilters = useMemo(() => {
-    return Object.entries(filters).filter(
-      ([key, value]) => {
-        if (value === null || value === undefined || value === "") return false;
-        
-        // Handle explicit excluded keys
-        if (excludeKeys?.includes(key)) return false;
-        
-        // Handle date hiding
-        if (!showDateFilter && (key === "start" || key === "end" || key === "startDate" || key === "endDate")) {
-          return false;
-        }
+    return Object.entries(filters).filter(([key, value]) => {
+      if (value === null || value === undefined || value === "") return false;
 
-        return (
-          key !== "end" &&
-          key !== "endDate" &&
-          key !== "q" &&
-          key !== "page" &&
-          key !== "limit"
-        );
+      // Handle explicit excluded keys
+      if (excludeKeys?.includes(key)) return false;
+
+      // Handle date hiding
+      if (
+        !showDateFilter &&
+        (key === "start" ||
+          key === "end" ||
+          key === "startDate" ||
+          key === "endDate")
+      ) {
+        return false;
       }
-    );
+
+      return (
+        key !== "end" &&
+        key !== "endDate" &&
+        key !== "q" &&
+        key !== "page" &&
+        key !== "limit"
+      );
+    });
   }, [filters, excludeKeys, showDateFilter]);
 
   if (activeFilters.length === 0 && !loading) return null;

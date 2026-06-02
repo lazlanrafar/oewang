@@ -1,8 +1,8 @@
-import { describe, expect, test, beforeEach, afterEach } from 'bun:test';
-import { db, TestClient, cleanupUser } from '../helpers';
-import { createFactories } from '@workspace/database/test/factories';
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { createFactories } from "@workspace/database/test/factories";
+import { cleanupUser, db, TestClient } from "../helpers";
 
-describe('Transactions API', () => {
+describe("Transactions API", () => {
   let client: TestClient;
   let factories: ReturnType<typeof createFactories>;
   let userId: string;
@@ -29,75 +29,75 @@ describe('Transactions API', () => {
     await cleanupUser(userId);
   });
 
-  describe('POST /transactions', () => {
-    test('creates a transaction successfully', async () => {
+  describe("POST /transactions", () => {
+    test("creates a transaction successfully", async () => {
       const payload = {
         workspaceId,
         walletId,
-        amount: '100.50',
-        description: 'Test transaction',
-        name: 'Test',
-        type: 'expense',
+        amount: "100.50",
+        description: "Test transaction",
+        name: "Test",
+        type: "expense",
         date: new Date().toISOString(),
       };
 
-      const response = await client.post('/transactions', payload);
+      const response = await client.post("/transactions", payload);
 
       expect(response.status).toBe(201);
 
       const data = await response.json();
       expect(data).toMatchObject({
-        amount: '100.50',
-        description: 'Test transaction',
-        type: 'expense',
+        amount: "100.50",
+        description: "Test transaction",
+        type: "expense",
       });
       expect(data.id).toBeDefined();
     });
 
-    test('validates required fields', async () => {
-      const response = await client.post('/transactions', {});
+    test("validates required fields", async () => {
+      const response = await client.post("/transactions", {});
 
       expect(response.status).toBe(400);
     });
 
-    test('validates amount is positive', async () => {
+    test("validates amount is positive", async () => {
       const payload = {
         workspaceId,
         walletId,
-        amount: '-50',
-        type: 'expense',
+        amount: "-50",
+        type: "expense",
         date: new Date().toISOString(),
       };
 
-      const response = await client.post('/transactions', payload);
+      const response = await client.post("/transactions", payload);
 
       expect(response.status).toBe(400);
     });
 
-    test('validates transaction type', async () => {
+    test("validates transaction type", async () => {
       const payload = {
         workspaceId,
         walletId,
-        amount: '100',
-        type: 'invalid_type',
+        amount: "100",
+        type: "invalid_type",
         date: new Date().toISOString(),
       };
 
-      const response = await client.post('/transactions', payload);
+      const response = await client.post("/transactions", payload);
 
       expect(response.status).toBe(400);
     });
   });
 
-  describe('GET /transactions', () => {
+  describe("GET /transactions", () => {
     beforeEach(async () => {
       // Create test transactions
       const txFactory = factories.transactions(workspaceId, walletId);
       await txFactory.createMany(5);
     });
 
-    test('lists transactions', async () => {
-      const response = await client.get('/transactions', {
+    test("lists transactions", async () => {
+      const response = await client.get("/transactions", {
         query: { workspaceId },
       });
 
@@ -107,9 +107,9 @@ describe('Transactions API', () => {
       expect(Array.isArray(data) || data.data).toBeTruthy();
     });
 
-    test('supports pagination', async () => {
-      const response = await client.get('/transactions', {
-        query: { workspaceId, limit: '2', offset: '0' },
+    test("supports pagination", async () => {
+      const response = await client.get("/transactions", {
+        query: { workspaceId, limit: "2", offset: "0" },
       });
 
       expect(response.ok).toBe(true);
@@ -119,8 +119,8 @@ describe('Transactions API', () => {
       expect(transactions.length).toBeLessThanOrEqual(2);
     });
 
-    test('filters by wallet', async () => {
-      const response = await client.get('/transactions', {
+    test("filters by wallet", async () => {
+      const response = await client.get("/transactions", {
         query: { workspaceId, walletId },
       });
 
@@ -134,8 +134,8 @@ describe('Transactions API', () => {
     });
   });
 
-  describe('GET /transactions/:id', () => {
-    test('gets a single transaction', async () => {
+  describe("GET /transactions/:id", () => {
+    test("gets a single transaction", async () => {
       // Create transaction
       const tx = await factories
         .transactions(workspaceId, walletId)
@@ -147,26 +147,26 @@ describe('Transactions API', () => {
 
       const data = await response.json();
       expect(data.id).toBe(tx.id);
-      expect(data.amount).toBe('100');
+      expect(data.amount).toBe("100");
     });
 
-    test('returns 404 for non-existent transaction', async () => {
-      const response = await client.get('/transactions/non_existent_id');
+    test("returns 404 for non-existent transaction", async () => {
+      const response = await client.get("/transactions/non_existent_id");
 
       expect(response.status).toBe(404);
     });
   });
 
-  describe('PATCH /transactions/:id', () => {
-    test('updates a transaction', async () => {
+  describe("PATCH /transactions/:id", () => {
+    test("updates a transaction", async () => {
       // Create transaction
       const tx = await factories
         .transactions(workspaceId, walletId)
         .expense(100);
 
       const updates = {
-        amount: '200',
-        description: 'Updated description',
+        amount: "200",
+        description: "Updated description",
       };
 
       const response = await client.patch(`/transactions/${tx.id}`, updates);
@@ -174,25 +174,25 @@ describe('Transactions API', () => {
       expect(response.ok).toBe(true);
 
       const data = await response.json();
-      expect(data.amount).toBe('200');
-      expect(data.description).toBe('Updated description');
+      expect(data.amount).toBe("200");
+      expect(data.description).toBe("Updated description");
     });
 
-    test('validates update data', async () => {
+    test("validates update data", async () => {
       const tx = await factories
         .transactions(workspaceId, walletId)
         .expense(100);
 
       const response = await client.patch(`/transactions/${tx.id}`, {
-        amount: 'invalid',
+        amount: "invalid",
       });
 
       expect(response.status).toBe(400);
     });
   });
 
-  describe('DELETE /transactions/:id', () => {
-    test('deletes a transaction', async () => {
+  describe("DELETE /transactions/:id", () => {
+    test("deletes a transaction", async () => {
       const tx = await factories
         .transactions(workspaceId, walletId)
         .expense(100);
@@ -206,14 +206,14 @@ describe('Transactions API', () => {
       expect(getResponse.status).toBe(404);
     });
 
-    test('returns 404 for non-existent transaction', async () => {
-      const response = await client.delete('/transactions/non_existent_id');
+    test("returns 404 for non-existent transaction", async () => {
+      const response = await client.delete("/transactions/non_existent_id");
 
       expect(response.status).toBe(404);
     });
   });
 
-  describe('Transaction Statistics', () => {
+  describe("Transaction Statistics", () => {
     beforeEach(async () => {
       // Create mix of income and expenses
       const txFactory = factories.transactions(workspaceId, walletId);
@@ -223,9 +223,9 @@ describe('Transactions API', () => {
       await txFactory.expense(150);
     });
 
-    test('calculates total income', async () => {
-      const response = await client.get('/transactions/stats', {
-        query: { workspaceId, type: 'income' },
+    test("calculates total income", async () => {
+      const response = await client.get("/transactions/stats", {
+        query: { workspaceId, type: "income" },
       });
 
       expect(response.ok).toBe(true);
@@ -234,9 +234,9 @@ describe('Transactions API', () => {
       expect(parseFloat(data.total)).toBeGreaterThan(0);
     });
 
-    test('calculates total expenses', async () => {
-      const response = await client.get('/transactions/stats', {
-        query: { workspaceId, type: 'expense' },
+    test("calculates total expenses", async () => {
+      const response = await client.get("/transactions/stats", {
+        query: { workspaceId, type: "expense" },
       });
 
       expect(response.ok).toBe(true);

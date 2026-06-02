@@ -27,18 +27,15 @@ export const websiteEn = {
     seeAllFeatures: "See all features",
     transactions: {
       title: "Transactions",
-      description:
-        "Every payment in and out, automatically synced and categorized. No more manual entry.",
+      description: "Every payment in and out, automatically synced and categorized. No more manual entry.",
     },
     aiAssistant: {
       title: "AI Assistant",
-      description:
-        "Ask anything about your finances in plain language. Get insights instantly.",
+      description: "Ask anything about your finances in plain language. Get insights instantly.",
     },
     invoices: {
       title: "Invoices",
-      description:
-        "Professional invoices, payments tracked automatically. Get paid faster.",
+      description: "Professional invoices, payments tracked automatically. Get paid faster.",
     },
   },
   features: {
@@ -56,36 +53,18 @@ export const websiteEn = {
     },
     aiAssistant: {
       title: "Ask anything about your finances",
-      description:
-        "Get instant answers about your spending, revenue, and trends. No more digging through reports.",
-      items: [
-        "Natural language queries",
-        "Real-time insights",
-        "Weekly summaries",
-        "Multi-agent AI system",
-      ],
+      description: "Get instant answers about your spending, revenue, and trends. No more digging through reports.",
+      items: ["Natural language queries", "Real-time insights", "Weekly summaries", "Multi-agent AI system"],
     },
     invoices: {
       title: "Professional invoices, payments tracked",
-      description:
-        "Create and send invoices in seconds. Get paid faster with online payment links.",
-      items: [
-        "Customizable templates",
-        "Online payment links",
-        "Automatic reminders",
-        "VAT and tax support",
-      ],
+      description: "Create and send invoices in seconds. Get paid faster with online payment links.",
+      items: ["Customizable templates", "Online payment links", "Automatic reminders", "VAT and tax support"],
     },
     dashboard: {
       title: "Complete financial overview",
-      description:
-        "See your complete financial picture at a glance. Income, expenses, and trends in one dashboard.",
-      items: [
-        "Real-time metrics",
-        "Trend analysis",
-        "Top expense categories",
-        "AI-powered insights",
-      ],
+      description: "See your complete financial picture at a glance. Income, expenses, and trends in one dashboard.",
+      items: ["Real-time metrics", "Trend analysis", "Top expense categories", "AI-powered insights"],
     },
   },
   story: {
@@ -153,8 +132,7 @@ export const websiteEn = {
     faqTitle: "Frequently asked questions",
     faqSubtitle: "Everything you need to know about oewang.",
     contactTitle: "Still have questions?",
-    contactText:
-      "Can't find the answer you're looking for? Reach out to our team.",
+    contactText: "Can't find the answer you're looking for? Reach out to our team.",
     contactEmail: "Email us",
   },
   footer: {
@@ -172,8 +150,7 @@ export const websiteEn = {
   },
   cta: {
     title: "Ready for calmer money decisions?",
-    subtitle:
-      "Join people using oewang to track spending, understand cash flow, and stay ahead of bills.",
+    subtitle: "Join people using oewang to track spending, understand cash flow, and stay ahead of bills.",
     getStarted: "Get started free",
     viewPricing: "View pricing",
   },

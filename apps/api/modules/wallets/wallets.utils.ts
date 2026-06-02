@@ -8,11 +8,12 @@
  */
 export function calculateNewBalance(
   currentBalance: number | string,
-  change: number
+  change: number,
 ): number {
-  const current = typeof currentBalance === "string"
-    ? parseFloat(currentBalance)
-    : currentBalance;
+  const current =
+    typeof currentBalance === "string"
+      ? parseFloat(currentBalance)
+      : currentBalance;
   return current + change;
 }
 
@@ -21,7 +22,7 @@ export function calculateNewBalance(
  */
 export function hasSufficientBalance(
   balance: number | string,
-  amount: number
+  amount: number,
 ): boolean {
   const current = typeof balance === "string" ? parseFloat(balance) : balance;
   return current >= amount;
@@ -32,7 +33,7 @@ export function hasSufficientBalance(
  */
 export function formatBalance(
   balance: number | string,
-  currency: string = "IDR"
+  currency: string = "IDR",
 ): string {
   const value = typeof balance === "string" ? parseFloat(balance) : balance;
 
@@ -48,7 +49,7 @@ export function formatBalance(
  * Calculate total balance across multiple wallets
  */
 export function calculateTotalBalance(
-  wallets: Array<{ balance: number | string }>
+  wallets: Array<{ balance: number | string }>,
 ): number {
   return wallets.reduce((total, wallet) => {
     const balance =
@@ -63,7 +64,7 @@ export function calculateTotalBalance(
  * Get wallet status based on balance
  */
 export function getWalletStatus(
-  balance: number | string
+  balance: number | string,
 ): "positive" | "zero" | "negative" {
   const value = typeof balance === "string" ? parseFloat(balance) : balance;
 
@@ -99,7 +100,7 @@ export function validateWalletName(name: string): {
  */
 export function calculateBalanceChangePercentage(
   oldBalance: number,
-  newBalance: number
+  newBalance: number,
 ): number {
   if (oldBalance === 0) {
     return newBalance > 0 ? 100 : 0;
@@ -113,14 +114,17 @@ export function calculateBalanceChangePercentage(
  * Group wallets by type
  */
 export function groupWalletsByType<T extends { type?: string }>(
-  wallets: T[]
+  wallets: T[],
 ): Record<string, T[]> {
-  return wallets.reduce((groups, wallet) => {
-    const type = wallet.type || "other";
-    if (!groups[type]) {
-      groups[type] = [];
-    }
-    groups[type].push(wallet);
-    return groups;
-  }, {} as Record<string, T[]>);
+  return wallets.reduce(
+    (groups, wallet) => {
+      const type = wallet.type || "other";
+      if (!groups[type]) {
+        groups[type] = [];
+      }
+      groups[type].push(wallet);
+      return groups;
+    },
+    {} as Record<string, T[]>,
+  );
 }

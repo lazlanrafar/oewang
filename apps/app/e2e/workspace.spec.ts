@@ -67,7 +67,10 @@ test.describe("Workspace: Switcher", () => {
       .first()
       .or(
         // Fallback: button containing the plan text as a child span
-        page.locator('button').filter({ has: page.locator('span').filter({ hasText: /free|pro|premium/i }) }).first()
+        page
+          .locator("button")
+          .filter({ has: page.locator("span").filter({ hasText: /free|pro|premium/i }) })
+          .first(),
       );
     await expect(switcher.first()).toBeVisible({ timeout: 15000 });
   });
@@ -78,9 +81,15 @@ test.describe("Workspace: Switcher", () => {
       .locator('[data-sidebar="menu-button"][data-size="lg"]')
       .first()
       .or(
-        page.locator('button').filter({ has: page.locator('span').filter({ hasText: /free|pro|premium/i }) }).first()
+        page
+          .locator("button")
+          .filter({ has: page.locator("span").filter({ hasText: /free|pro|premium/i }) })
+          .first(),
       );
-    const isVisible = await switcher.first().isVisible({ timeout: 10000 }).catch(() => false);
+    const isVisible = await switcher
+      .first()
+      .isVisible({ timeout: 10000 })
+      .catch(() => false);
     if (isVisible) {
       await switcher.first().click();
       // The dropdown shows a label with the "Workspaces" text

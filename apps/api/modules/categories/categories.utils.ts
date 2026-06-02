@@ -17,11 +17,17 @@ export function validateCategoryName(name: string): {
   }
 
   if (name.trim().length < 2) {
-    return { valid: false, error: "Category name must be at least 2 characters" };
+    return {
+      valid: false,
+      error: "Category name must be at least 2 characters",
+    };
   }
 
   if (name.length > 30) {
-    return { valid: false, error: "Category name must not exceed 30 characters" };
+    return {
+      valid: false,
+      error: "Category name must not exceed 30 characters",
+    };
   }
 
   return { valid: true };
@@ -71,14 +77,14 @@ export function getCategoryIcon(name: string, type: CategoryType): string {
  * Group categories by type
  */
 export function groupCategoriesByType<T extends { type: CategoryType }>(
-  categories: T[]
+  categories: T[],
 ): { income: T[]; expense: T[] } {
   return categories.reduce(
     (groups, category) => {
       groups[category.type].push(category);
       return groups;
     },
-    { income: [] as T[], expense: [] as T[] }
+    { income: [] as T[], expense: [] as T[] },
   );
 }
 
@@ -87,7 +93,7 @@ export function groupCategoriesByType<T extends { type: CategoryType }>(
  */
 export function sortCategoriesByName<T extends { name: string }>(
   categories: T[],
-  order: "asc" | "desc" = "asc"
+  order: "asc" | "desc" = "asc",
 ): T[] {
   return [...categories].sort((a, b) => {
     const comparison = a.name.localeCompare(b.name);
@@ -100,7 +106,7 @@ export function sortCategoriesByName<T extends { name: string }>(
  */
 export function isDuplicateCategoryName(
   name: string,
-  existingNames: string[]
+  existingNames: string[],
 ): boolean {
   const lowerName = name.toLowerCase().trim();
   return existingNames.some((existing) => existing.toLowerCase() === lowerName);
@@ -109,7 +115,10 @@ export function isDuplicateCategoryName(
 /**
  * Get default categories for a new workspace
  */
-export function getDefaultCategories(): Array<{ name: string; type: CategoryType }> {
+export function getDefaultCategories(): Array<{
+  name: string;
+  type: CategoryType;
+}> {
   return [
     // Income categories
     { name: "Salary", type: "income" },

@@ -1,7 +1,7 @@
-import { Elysia } from "elysia";
 import { ErrorCode } from "@workspace/types";
-import { buildSuccess, buildError } from "@workspace/utils";
-import { generateJwt, authPlugin } from "../../plugins/auth";
+import { buildError, buildSuccess } from "@workspace/utils";
+import { Elysia } from "elysia";
+import { authPlugin, generateJwt } from "../../plugins/auth";
 import { WorkspacesService } from "../workspaces/workspaces.service";
 
 /**

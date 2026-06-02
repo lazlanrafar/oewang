@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeAll } from "bun:test";
+import { beforeAll, describe, expect, test } from "bun:test";
 import { generateInvoiceToken, verifyInvoiceToken } from "./invoices.utils";
 
 describe("invoices.utils", () => {
@@ -33,7 +33,7 @@ describe("invoices.utils", () => {
     test("generates valid token with special characters in IDs", async () => {
       const token = await generateInvoiceToken(
         "inv-123_test@example",
-        "ws-456_org#1"
+        "ws-456_org#1",
       );
 
       expect(token).toBeDefined();
@@ -140,7 +140,7 @@ describe("invoices.utils", () => {
 
       // Try to modify the payload (middle part)
       const tamperedPayload = Buffer.from(
-        JSON.stringify({ id: "inv_999", workspaceId: "ws_999" })
+        JSON.stringify({ id: "inv_999", workspaceId: "ws_999" }),
       ).toString("base64url");
 
       const tamperedToken = `${parts[0]}.${tamperedPayload}.${parts[2]}`;
@@ -155,7 +155,7 @@ describe("invoices.utils", () => {
       // A valid token should have a signature (third part)
       const parts = token.split(".");
       expect(parts[2]).toBeDefined();
-      expect(parts[2].length).toBeGreaterThan(0);
+      expect(parts[2]!.length).toBeGreaterThan(0);
     });
   });
 });

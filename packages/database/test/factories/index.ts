@@ -39,10 +39,10 @@ export class TestFactories {
     const { user, workspace } = await this.users.withWorkspace();
 
     // Create wallet
-    const wallet = await this.wallets(workspace.id).withBalance(1000);
+    const wallet = await this.wallets(workspace.id!).withBalance(1000);
 
     // Create transactions
-    const transactionFactory = this.transactions(workspace.id, wallet.id);
+    const transactionFactory = this.transactions(workspace.id!, wallet.id!);
     const txns = await transactionFactory.createMany(transactionCount);
 
     return {

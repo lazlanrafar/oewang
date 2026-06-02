@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import { QueryClient, dehydrate } from "@tanstack/react-query";
+import { dehydrate, QueryClient } from "@tanstack/react-query";
 import { getSubCurrencies, getTransactionSettings } from "@workspace/modules/setting/setting.action";
 import {
   CONTENT_LAYOUT_VALUES,

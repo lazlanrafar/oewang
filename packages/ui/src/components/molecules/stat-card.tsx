@@ -1,9 +1,9 @@
 "use client";
 
+import { Minus, TrendingDown, TrendingUp } from "lucide-react";
 import * as React from "react";
-import { TrendingUp, TrendingDown, Minus } from "lucide-react";
-import { Card, CardContent } from "../atoms/card";
 import { cn } from "../../lib/utils";
+import { Card, CardContent } from "../atoms/card";
 
 export interface StatCardProps {
   /** The metric label e.g. "Total Revenue" */

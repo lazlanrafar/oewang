@@ -50,12 +50,12 @@ export class TransactionFactory extends BaseFactory<TransactionAttributes> {
     };
   }
 
-  protected async insert(attributes: Partial<TransactionAttributes>) {
+  protected async insert(attributes: Partial<TransactionAttributes>): Promise<TransactionAttributes> {
     const [transaction] = await this.db
       .insert(transactions)
       .values(attributes as any)
       .returning();
-    return transaction;
+    return transaction! as TransactionAttributes;
   }
 
   /**

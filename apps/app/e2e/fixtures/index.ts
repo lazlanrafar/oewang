@@ -9,7 +9,7 @@ type MyFixtures = {
 
 // Extend the base test with the dictionary fixture and page helper
 export const test = base.extend<MyFixtures>({
-  dictionary: async ({}, use) => {
+  dictionary: async (_: object, use) => {
     // We use the English dictionary by default for E2E tests
     await use(en);
   },
@@ -17,7 +17,7 @@ export const test = base.extend<MyFixtures>({
     // Inject a style to hide nextjs-portal (dev overlay) and other potential blockages
     await page.addInitScript(() => {
       const injectStyle = () => {
-        const style = document.createElement('style');
+        const style = document.createElement("style");
         style.innerHTML = `
           nextjs-portal, 
           [data-nextjs-dev-overlay],
@@ -35,11 +35,11 @@ export const test = base.extend<MyFixtures>({
       if (document.head) {
         injectStyle();
       } else {
-        window.addEventListener('DOMContentLoaded', injectStyle);
+        window.addEventListener("DOMContentLoaded", injectStyle);
       }
     });
     await use(page);
-  }
+  },
 });
 
 export { expect } from "@playwright/test";

@@ -5,8 +5,7 @@ const FALLBACK_INTEGRATIONS = [
     name: "Gmail",
     category: "Email",
     status: "available",
-    description:
-      "Automatically capture receipts and invoices from your Gmail inbox.",
+    description: "Automatically capture receipts and invoices from your Gmail inbox.",
     longDescription:
       "The Gmail integration scans incoming financial emails, extracts documents, and links them to transactions so your records stay complete without manual uploads.",
     features: [
@@ -28,8 +27,7 @@ const FALLBACK_INTEGRATIONS = [
     name: "Outlook",
     category: "Email",
     status: "available",
-    description:
-      "Capture receipts and invoices from Outlook and sync them to your workspace.",
+    description: "Capture receipts and invoices from Outlook and sync them to your workspace.",
     longDescription:
       "Outlook integration keeps incoming financial documents organized in Oewang so teams can review and reconcile transactions from one place.",
     features: [
@@ -51,8 +49,7 @@ const FALLBACK_INTEGRATIONS = [
     name: "QuickBooks",
     category: "Accounting",
     status: "coming-soon",
-    description:
-      "Keep bookkeeping flows aligned between Oewang and QuickBooks.",
+    description: "Keep bookkeeping flows aligned between Oewang and QuickBooks.",
     longDescription:
       "QuickBooks integration helps growing teams align transaction records and reporting workflows across finance tools.",
     features: [
@@ -61,10 +58,7 @@ const FALLBACK_INTEGRATIONS = [
       "Cleaner month-end process",
       "Less duplicate data entry",
     ],
-    setupSteps: [
-      "Available soon.",
-      "We will provide a guided setup once released.",
-    ],
+    setupSteps: ["Available soon.", "We will provide a guided setup once released."],
   },
   {
     id: "xero",
@@ -72,8 +66,7 @@ const FALLBACK_INTEGRATIONS = [
     name: "Xero",
     category: "Accounting",
     status: "coming-soon",
-    description:
-      "Connect Xero to streamline reporting and reconciliation.",
+    description: "Connect Xero to streamline reporting and reconciliation.",
     longDescription:
       "Xero integration is designed for teams that need cleaner accounting handoff and centralized transaction context.",
     features: [
@@ -82,10 +75,7 @@ const FALLBACK_INTEGRATIONS = [
       "Faster reconciliation prep",
       "Role-based collaboration support",
     ],
-    setupSteps: [
-      "Available soon.",
-      "Setup steps will be published at launch.",
-    ],
+    setupSteps: ["Available soon.", "Setup steps will be published at launch."],
   },
   {
     id: "telegram",
@@ -93,8 +83,7 @@ const FALLBACK_INTEGRATIONS = [
     name: "Telegram",
     category: "Messaging",
     status: "available",
-    description:
-      "Send receipts via Telegram and keep records synced in real-time.",
+    description: "Send receipts via Telegram and keep records synced in real-time.",
     longDescription:
       "Telegram integration allows fast receipt capture and AI-assisted finance interactions directly from chat.",
     features: [
@@ -116,8 +105,7 @@ const FALLBACK_INTEGRATIONS = [
     name: "WhatsApp",
     category: "Messaging",
     status: "available",
-    description:
-      "Capture finance documents from WhatsApp conversations.",
+    description: "Capture finance documents from WhatsApp conversations.",
     longDescription:
       "WhatsApp integration helps teams and founders send receipts on the go and keep transaction evidence attached.",
     features: [
@@ -139,8 +127,7 @@ const FALLBACK_INTEGRATIONS = [
     name: "Google Drive",
     category: "Storage",
     status: "coming-soon",
-    description:
-      "Store and sync finance documents with Drive.",
+    description: "Store and sync finance documents with Drive.",
     longDescription:
       "Google Drive integration helps centralize financial documents while keeping audit trails and workspace context.",
     features: [
@@ -160,12 +147,7 @@ const FALLBACK_INTEGRATIONS = [
     description: "Sync invoices and receipts from Dropbox folders.",
     longDescription:
       "Dropbox integration supports finance teams that rely on file-based workflows and need cleaner organization.",
-    features: [
-      "Folder-based sync",
-      "Document tracking",
-      "Attachment linking",
-      "Reduced admin work",
-    ],
+    features: ["Folder-based sync", "Document tracking", "Attachment linking", "Reduced admin work"],
     setupSteps: ["Available soon."],
   },
 ];
@@ -174,7 +156,10 @@ type IntegrationItem = (typeof FALLBACK_INTEGRATIONS)[number];
 export type PublicIntegration = IntegrationItem;
 
 function slugify(value: string) {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, "");
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)+/g, "");
 }
 
 function normalizeFromApi(item: any): IntegrationItem {
@@ -187,29 +172,26 @@ function normalizeFromApi(item: any): IntegrationItem {
     name,
     category: item?.category ?? "General",
     status: item?.active ? "available" : "coming-soon",
-    description:
-      item?.short_description ??
-      item?.description ??
-      "Connect this integration with your Oewang workspace.",
+    description: item?.short_description ?? item?.description ?? "Connect this integration with your Oewang workspace.",
     longDescription:
-      item?.description ??
-      item?.short_description ??
-      "Integration details are managed from your workspace settings.",
-    features: Array.isArray(item?.features) && item.features.length > 0
-      ? item.features
-      : [
-          "Connect in minutes",
-          "Workspace-ready access",
-          "Supports team collaboration",
-          "Designed for finance workflows",
-        ],
-    setupSteps: Array.isArray(item?.setupSteps) && item.setupSteps.length > 0
-      ? item.setupSteps
-      : [
-          "Open integrations in Oewang.",
-          "Connect and authorize provider access.",
-          "Review synced data in your workspace.",
-        ],
+      item?.description ?? item?.short_description ?? "Integration details are managed from your workspace settings.",
+    features:
+      Array.isArray(item?.features) && item.features.length > 0
+        ? item.features
+        : [
+            "Connect in minutes",
+            "Workspace-ready access",
+            "Supports team collaboration",
+            "Designed for finance workflows",
+          ],
+    setupSteps:
+      Array.isArray(item?.setupSteps) && item.setupSteps.length > 0
+        ? item.setupSteps
+        : [
+            "Open integrations in Oewang.",
+            "Connect and authorize provider access.",
+            "Review synced data in your workspace.",
+          ],
   };
 }
 
@@ -251,9 +233,7 @@ export async function getPublicIntegrations(): Promise<PublicIntegration[]> {
   }
 }
 
-export async function getPublicIntegrationBySlug(
-  slug: string,
-): Promise<PublicIntegration | null> {
+export async function getPublicIntegrationBySlug(slug: string): Promise<PublicIntegration | null> {
   const integrations = await getPublicIntegrations();
   return integrations.find((item: IntegrationItem) => item.slug === slug) ?? null;
 }

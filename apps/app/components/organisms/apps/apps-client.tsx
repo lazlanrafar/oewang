@@ -15,8 +15,8 @@ import { getMe } from "@workspace/modules/user/user.action";
 import { cn, Input, Tabs, TabsList, TabsTrigger } from "@workspace/ui";
 import { Grid2X2, Link as LinkIcon, Search } from "lucide-react";
 import { toast } from "sonner";
-import { useConfirm } from "../../providers/confirm-modal-provider";
 
+import { useConfirm } from "../../providers/confirm-modal-provider";
 import { AppsCard } from "./apps-card";
 import { ConnectTelegram } from "./connect-telegram";
 import { ConnectWhatsApp } from "./connect-whatsapp";
@@ -50,9 +50,7 @@ export function AppsClient({ dictionary }: Props) {
   const [search, setSearch] = React.useState("");
   const [filter, setFilter] = React.useState<"all" | "connected">("all");
   const [expandedApp, setExpandedApp] = React.useState<string | null>(null);
-  const [disconnectingAppId, setDisconnectingAppId] = React.useState<
-    string | null
-  >(null);
+  const [disconnectingAppId, setDisconnectingAppId] = React.useState<string | null>(null);
 
   // Fetch real integrations from the API
   const { data: installedApps = [], isLoading } = useQuery<InstalledIntegration[]>({
@@ -86,8 +84,7 @@ export function AppsClient({ dictionary }: Props) {
       toast.success("Integration disconnected");
     },
     onError: (error: unknown) => {
-      const message =
-        error instanceof Error ? error.message : "Failed to disconnect integration";
+      const message = error instanceof Error ? error.message : "Failed to disconnect integration";
       toast.error(message);
     },
     onSettled: () => setDisconnectingAppId(null),
@@ -240,8 +237,7 @@ export function AppsClient({ dictionary }: Props) {
               (async () => {
                 const ok = await confirm({
                   title: `Disconnect ${app.name}?`,
-                  description:
-                    "This will stop syncing messages from this app to your workspace.",
+                  description: "This will stop syncing messages from this app to your workspace.",
                   confirmLabel: "Disconnect",
                   cancelLabel: "Cancel",
                   destructive: true,
@@ -252,9 +248,7 @@ export function AppsClient({ dictionary }: Props) {
                 disconnectMutation.mutate(app.id);
               })();
             }}
-            isDisconnecting={
-              disconnectMutation.isPending && disconnectingAppId === app.id
-            }
+            isDisconnecting={disconnectMutation.isPending && disconnectingAppId === app.id}
           />
         ))}
 

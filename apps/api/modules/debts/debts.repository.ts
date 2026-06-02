@@ -1,34 +1,39 @@
 import {
-  db,
-  eq,
   and,
-  or,
-  gte,
-  lte,
-  desc,
-  isNull,
-  debts,
-  debtPayments,
-  sql,
   contacts,
-  transactions,
+  db,
+  debtPayments,
+  debts,
+  desc,
+  eq,
+  gte,
   ilike,
+  isNull,
+  lte,
+  or,
+  sql,
+  transactions,
 } from "@workspace/database";
 import type { Debt, DebtPayment } from "@workspace/types";
 
 export abstract class DebtsRepository {
-  static async create(data: {
-    workspaceId: string;
-    contactId: string;
-    type: "payable" | "receivable";
-    amount: string | number;
-    remainingAmount: string | number;
-    origin?: "manual" | "from_transaction";
-    sourceTransactionId?: string;
-    description?: string;
-    dueDate?: string;
-  }, tx: any = db): Promise<Debt | null> {
-    const [debt] = await tx.insert(debts).values({
+  static async create(
+    data: {
+      workspaceId: string;
+      contactId: string;
+      type: "payable" | "receivable";
+      amount: string | number;
+      remainingAmount: string | number;
+      origin?: "manual" | "from_transaction";
+      sourceTransactionId?: string;
+      description?: string;
+      dueDate?: string;
+    },
+    tx: any = db,
+  ): Promise<Debt | null> {
+    const [debt] = await tx
+      .insert(debts)
+      .values({
         workspaceId: data.workspaceId,
         contactId: data.contactId,
         type: data.type,
@@ -38,7 +43,8 @@ export abstract class DebtsRepository {
         sourceTransactionId: data.sourceTransactionId,
         description: data.description,
         dueDate: data.dueDate,
-    }).returning();
+      })
+      .returning();
     return debt
       ? ({
           ...debt,
@@ -52,12 +58,19 @@ export abstract class DebtsRepository {
   static async update(
     id: string,
     workspaceId: string,
-    data: Partial<{ amount: string | number; remainingAmount: string | number; status: string; description: string; dueDate: string }>,
-    tx: any = db
+    data: Partial<{
+      amount: string | number;
+      remainingAmount: string | number;
+      status: string;
+      description: string;
+      dueDate: string;
+    }>,
+    tx: any = db,
   ): Promise<Debt | null> {
     const updateData: any = { ...data, updatedAt: sql`now()` };
     if (data.amount !== undefined) updateData.amount = data.amount.toString();
-    if (data.remainingAmount !== undefined) updateData.remainingAmount = data.remainingAmount.toString();
+    if (data.remainingAmount !== undefined)
+      updateData.remainingAmount = data.remainingAmount.toString();
 
     const [debt] = await tx
       .update(debts)
@@ -80,10 +93,7 @@ export abstract class DebtsRepository {
       : null;
   }
 
-  static async delete(
-    id: string,
-    workspaceId: string,
-  ): Promise<Debt | null> {
+  static async delete(id: string, workspaceId: string): Promise<Debt | null> {
     const [debt] = await db
       .update(debts)
       .set({ deletedAt: sql`now()` })
@@ -166,10 +176,7 @@ export abstract class DebtsRepository {
     };
   }
 
-  static async findById(
-    workspaceId: string,
-    id: string,
-  ): Promise<Debt | null> {
+  static async findById(workspaceId: string, id: string): Promise<Debt | null> {
     const [debt] = await db
       .select()
       .from(debts)
@@ -185,23 +192,32 @@ export abstract class DebtsRepository {
     return debt ? (debt as unknown as Debt) : null;
   }
 
-  static async addPayment(data: {
-    workspaceId: string;
-    debtId: string;
-    transactionId?: string;
-    amount: string | number;
-  }, tx: any = db): Promise<DebtPayment | null> {
-    const [payment] = await tx.insert(debtPayments).values({
-      workspaceId: data.workspaceId,
-      debtId: data.debtId,
-      transactionId: data.transactionId,
-      amount: data.amount.toString(),
-      deletedAt: null,
-    }).returning();
+  static async addPayment(
+    data: {
+      workspaceId: string;
+      debtId: string;
+      transactionId?: string;
+      amount: string | number;
+    },
+    tx: any = db,
+  ): Promise<DebtPayment | null> {
+    const [payment] = await tx
+      .insert(debtPayments)
+      .values({
+        workspaceId: data.workspaceId,
+        debtId: data.debtId,
+        transactionId: data.transactionId,
+        amount: data.amount.toString(),
+        deletedAt: null,
+      })
+      .returning();
     return payment as unknown as DebtPayment;
   }
 
-  static async getPayments(workspaceId: string, debtId: string): Promise<DebtPayment[]> {
+  static async getPayments(
+    workspaceId: string,
+    debtId: string,
+  ): Promise<DebtPayment[]> {
     const results = await db
       .select()
       .from(debtPayments)

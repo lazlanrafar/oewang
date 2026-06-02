@@ -23,9 +23,9 @@ export interface UnifiedApp {
     description: string;
     type: string;
     required: boolean;
-    value: any;
+    value: unknown;
   }>;
-  userSettings?: Record<string, any>;
+  userSettings?: Record<string, unknown>;
 
   // Inbox app specific (Gmail/Outlook)
   inboxAccountId?: string;

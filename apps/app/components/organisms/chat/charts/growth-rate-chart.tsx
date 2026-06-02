@@ -1,8 +1,8 @@
 "use client";
 
+import type { GrowthRateChartProps } from "@workspace/types";
 import { Bar, Line, Tooltip, XAxis, YAxis } from "recharts";
 
-import type { GrowthRateChartProps } from "@workspace/types";
 import { BaseChart, StyledTooltip } from "./base-charts";
 import { commonChartConfig, createCompactTickFormatter, getZeroInclusiveDomain, useChartMargin } from "./chart-utils";
 import { formatAmount } from "./format-amount";
@@ -61,12 +61,13 @@ export function GrowthRateChart({ data, height = 320, currency = "USD", locale }
                 if (name === "growthRate") {
                   return [`${numericValue > 0 ? "+" : ""}${numericValue.toFixed(1)}%`, "Growth Rate"];
                 }
-                const formattedValue = formatAmount({
-                  amount: numericValue,
-                  currency,
-                  locale: locale ?? undefined,
-                  maximumFractionDigits: 0,
-                }) ?? `${currency}${numericValue.toLocaleString()}`;
+                const formattedValue =
+                  formatAmount({
+                    amount: numericValue,
+                    currency,
+                    locale: locale ?? undefined,
+                    maximumFractionDigits: 0,
+                  }) ?? `${currency}${numericValue.toLocaleString()}`;
                 const displayName = name === "currentTotal" ? "Current" : "Previous";
                 return [formattedValue, displayName];
               }}
@@ -75,12 +76,7 @@ export function GrowthRateChart({ data, height = 320, currency = "USD", locale }
           wrapperStyle={{ zIndex: 9999 }}
         />
         {/* Previous period bars (with opacity) */}
-        <Bar
-          yAxisId="left"
-          dataKey="previousTotal"
-          fill="var(--chart-bar-fill-secondary)"
-          isAnimationActive={false}
-        />
+        <Bar yAxisId="left" dataKey="previousTotal" fill="var(--chart-bar-fill-secondary)" isAnimationActive={false} />
         {/* Current period bars (hatched) */}
         <Bar yAxisId="left" dataKey="currentTotal" fill="url(#incomePattern)" isAnimationActive={false} />
         {/* Growth rate line */}

@@ -1,8 +1,9 @@
-import { DashboardWireframe } from "./wireframe/dashboard-wireframe";
-import { TransactionsWireframe } from "./wireframe/transactions-wireframe";
-import { ChatWireframe } from "./wireframe/chat-wireframe";
-import { InvoiceWireframe } from "./wireframe/invoice-wireframe";
 import type { WebsiteDictionary } from "@/lib/translations";
+
+import { ChatWireframe } from "./wireframe/chat-wireframe";
+import { DashboardWireframe } from "./wireframe/dashboard-wireframe";
+import { InvoiceWireframe } from "./wireframe/invoice-wireframe";
+import { TransactionsWireframe } from "./wireframe/transactions-wireframe";
 
 const WIREFRAMES = {
   dashboard: DashboardWireframe,
@@ -31,12 +32,8 @@ function FeatureShowcase({
       <div className="max-w-[1300px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
           <div className={reverse ? "lg:order-2" : ""}>
-            <h3 className="font-serif text-2xl sm:text-3xl tracking-tight text-foreground mb-3">
-              {title}
-            </h3>
-            <p className="text-muted-foreground text-base sm:text-lg mb-5 leading-relaxed">
-              {description}
-            </p>
+            <h3 className="font-serif text-2xl sm:text-3xl tracking-tight text-foreground mb-3">{title}</h3>
+            <p className="text-muted-foreground text-base sm:text-lg mb-5 leading-relaxed">{description}</p>
             <ul className="space-y-2.5">
               {features.map((feature) => (
                 <li key={feature} className="flex items-start gap-2.5">
@@ -58,11 +55,7 @@ function FeatureShowcase({
   );
 }
 
-export function FeatureShowcases({
-  dictionary,
-}: {
-  dictionary: WebsiteDictionary;
-}) {
+export function FeatureShowcases({ dictionary }: { dictionary: WebsiteDictionary }) {
   const sections = [
     {
       title: dictionary.features.transactions.title,

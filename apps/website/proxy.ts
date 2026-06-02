@@ -7,12 +7,7 @@ import Negotiator from "negotiator";
 
 import { i18n } from "./i18n-config";
 
-const IGNORED_LOCALE_PATHS = [
-  "/manifest.json",
-  "/favicon.ico",
-  "/robots.txt",
-  "/sitemap.xml",
-];
+const IGNORED_LOCALE_PATHS = ["/manifest.json", "/favicon.ico", "/robots.txt", "/sitemap.xml"];
 
 function getLocale(request: NextRequest): string | undefined {
   const negotiatorHeaders: Record<string, string> = {};
@@ -49,17 +44,13 @@ export async function proxy(request: NextRequest) {
 
   // Check if there is any supported locale in the pathname
   const pathnameIsMissingLocale = i18n.locales.every(
-    (locale) =>
-      !pathname.startsWith(`/${locale}/`) && pathname !== `/${locale}`,
+    (locale) => !pathname.startsWith(`/${locale}/`) && pathname !== `/${locale}`,
   );
 
   // Redirect if there is no locale
   if (pathnameIsMissingLocale) {
     const locale = getLocale(request);
-    const url = new URL(
-      `/${locale}${pathname.startsWith("/") ? "" : "/"}${pathname}`,
-      request.url,
-    );
+    const url = new URL(`/${locale}${pathname.startsWith("/") ? "" : "/"}${pathname}`, request.url);
     url.search = request.nextUrl.search;
     return NextResponse.redirect(url);
   }
@@ -105,11 +96,7 @@ export async function proxy(request: NextRequest) {
   }
 
   // Redirect to dashboard if logged in and on login/register pages
-  if (
-    (pathAfterLocale === "/login" || pathAfterLocale === "/register") &&
-    session &&
-    oewang_session
-  ) {
+  if ((pathAfterLocale === "/login" || pathAfterLocale === "/register") && session && oewang_session) {
     return NextResponse.redirect(new URL(`/${locale}/overview`, request.url));
   }
 

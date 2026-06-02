@@ -1,8 +1,8 @@
 "use client";
 
+import type { BusinessHealthScoreChartProps } from "@workspace/types";
 import { Line, Tooltip, XAxis, YAxis } from "recharts";
 
-import type { BusinessHealthScoreChartProps } from "@workspace/types";
 import { BaseChart, StyledTooltip } from "./base-charts";
 import { commonChartConfig } from "./chart-utils";
 

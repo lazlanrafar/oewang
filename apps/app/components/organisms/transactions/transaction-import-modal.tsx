@@ -206,8 +206,7 @@ export function ImportModal({ open, onOpenChange, wallets, onSuccess }: ImportMo
         const resolvedCategoryId = categoryValue ? valueMappings.categories[categoryValue] : undefined;
 
         const walletValue = data.walletIdColumn ? row[data.walletIdColumn] : undefined;
-        const resolvedWalletId =
-          (walletValue ? valueMappings.wallets[walletValue] : undefined) || data.walletId;
+        const resolvedWalletId = (walletValue ? valueMappings.wallets[walletValue] : undefined) || data.walletId;
 
         return {
           walletId: resolvedWalletId,

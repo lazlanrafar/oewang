@@ -48,4 +48,3 @@ export function FormSegmentedTabs<TValue extends string>({
     </div>
   );
 }
-

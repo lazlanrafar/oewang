@@ -35,8 +35,7 @@ const FAQS = [
   },
   {
     question: "Can I change plans later?",
-    answer:
-      "Yes. You can upgrade or downgrade your plan at any time as your business grows or your needs change.",
+    answer: "Yes. You can upgrade or downgrade your plan at any time as your business grows or your needs change.",
   },
   {
     question: "Is there a free trial?",
@@ -57,9 +56,7 @@ export function FAQSection() {
     <section className="bg-background py-12 sm:py-16 lg:py-24">
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center space-y-4 mb-12">
-          <h2 className="font-serif text-2xl sm:text-3xl text-foreground">
-            Frequently asked questions
-          </h2>
+          <h2 className="font-serif text-2xl sm:text-3xl text-foreground">Frequently asked questions</h2>
           <p className="hidden sm:block text-base text-muted-foreground leading-normal max-w-2xl mx-auto">
             Everything you need to know before getting started.
           </p>
@@ -67,27 +64,20 @@ export function FAQSection() {
 
         <div className="max-w-3xl mx-auto space-y-2">
           {FAQS.map((faq, index) => (
-            <div
-              key={faq.question}
-              className="border border-border bg-background"
-            >
+            <div key={faq.question} className="border border-border bg-background">
               <button
                 type="button"
                 onClick={() => setOpenIndex(openIndex === index ? null : index)}
                 className="w-full flex items-center justify-between p-4 text-left hover:bg-muted/40 transition-colors"
               >
-                <span className="text-sm text-foreground pr-6">
-                  {faq.question}
-                </span>
+                <span className="text-sm text-foreground pr-6">{faq.question}</span>
                 <span className="shrink-0 text-muted-foreground text-lg leading-none">
                   {openIndex === index ? "−" : "+"}
                 </span>
               </button>
               {openIndex === index && (
                 <div className="px-4 pb-4">
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    {faq.answer}
-                  </p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{faq.answer}</p>
                 </div>
               )}
             </div>

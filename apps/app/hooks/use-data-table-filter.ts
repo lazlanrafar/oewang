@@ -43,7 +43,7 @@ export function useDataTableFilter<T extends FilterRecord>({
         currentFilters[key] = (values.length > 0 ? values : initialValue) as T[keyof T];
       } else {
         const value = searchParams.get(paramKey);
-        currentFilters[key] = ((value || initialValue) as PrimitiveFilterValue) as T[keyof T];
+        currentFilters[key] = (value || initialValue) as PrimitiveFilterValue as T[keyof T];
       }
     }
     return currentFilters;

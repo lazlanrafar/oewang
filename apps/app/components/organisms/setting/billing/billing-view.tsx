@@ -412,7 +412,7 @@ export function BillingView({
           const plan = initialAddons.find((a) => a.id === row.id);
           if (!plan) continue;
           if (!grouped.has(row.id)) grouped.set(row.id, { plan, rows: [] });
-          grouped.get(row.id)!.rows.push(row);
+          grouped.get(row.id)?.rows.push(row);
         }
         if (grouped.size === 0) return null;
 
@@ -432,7 +432,7 @@ export function BillingView({
                   const q = r.qty || 1;
                   return s + (plan.addon_type === "ai" ? (r.max_ai_tokens || 0) * q : (r.max_vault_size_mb || 0) * q);
                 }, 0);
-                const unitPrice = plan.prices.find((p) => p.currency === currency)?.monthly || 0;
+                const _unitPrice = plan.prices.find((p) => p.currency === currency)?.monthly || 0;
 
                 return (
                   <Card key={addonId} className="rounded-none border bg-background p-4 shadow-none">
@@ -467,7 +467,7 @@ export function BillingView({
                             {cancelledRows.length > 0 && activeRows.length === 0 && (
                               <Badge
                                 variant="secondary"
-                                className="h-3.5 rounded-none bg-muted px-1 font-mono text-[8px] uppercase text-muted-foreground"
+                                className="h-3.5 rounded-none bg-muted px-1 font-mono text-[8px] text-muted-foreground uppercase"
                               >
                                 {dictionary.common.cancelled || "Cancelled"}
                               </Badge>
@@ -499,9 +499,13 @@ export function BillingView({
                             </p>
                             <p className="font-medium text-destructive text-xs">
                               {(() => {
-                                const d = new Date(cancelledRows[0]!.created_at);
+                                const d = new Date(cancelledRows[0]?.created_at);
                                 d.setMonth(d.getMonth() + 1);
-                                return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+                                return d.toLocaleDateString(undefined, {
+                                  month: "short",
+                                  day: "numeric",
+                                  year: "numeric",
+                                });
                               })()}
                             </p>
                           </div>
@@ -510,7 +514,7 @@ export function BillingView({
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="h-8 rounded-none px-3 text-[10px] uppercase tracking-widest text-destructive hover:bg-destructive/5 hover:text-destructive"
+                            className="h-8 rounded-none px-3 text-[10px] text-destructive uppercase tracking-widest hover:bg-destructive/5 hover:text-destructive"
                             disabled={cancelAddonMutation.isPending}
                             onClick={async () => {
                               const ok = await confirm({
@@ -693,8 +697,26 @@ export function BillingView({
                         <td className="p-4 font-medium tracking-tight">{order.code}</td>
                         <td className="p-4 font-serif text-xs">
                           {(() => {
-                            const ZERO_DECIMAL = new Set(["IDR", "JPY", "KRW", "VND", "BIF", "CLP", "GNF", "MGA", "PYG", "RWF", "UGX", "VUV", "XAF", "XOF", "XPF"]);
-                            const amt = ZERO_DECIMAL.has((order.currency || "").toUpperCase()) ? order.amount : order.amount / 100;
+                            const ZERO_DECIMAL = new Set([
+                              "IDR",
+                              "JPY",
+                              "KRW",
+                              "VND",
+                              "BIF",
+                              "CLP",
+                              "GNF",
+                              "MGA",
+                              "PYG",
+                              "RWF",
+                              "UGX",
+                              "VUV",
+                              "XAF",
+                              "XOF",
+                              "XPF",
+                            ]);
+                            const amt = ZERO_DECIMAL.has((order.currency || "").toUpperCase())
+                              ? order.amount
+                              : order.amount / 100;
                             return amt.toLocaleString(undefined, { style: "currency", currency: order.currency });
                           })()}
                         </td>

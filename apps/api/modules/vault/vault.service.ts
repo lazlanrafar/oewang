@@ -1,18 +1,18 @@
-import { VaultRepository } from "./vault.repository";
+import { createHash } from "node:crypto";
 import { BucketClient } from "@workspace/bucket";
+import { Env } from "@workspace/constants";
 import { decrypt } from "@workspace/encryption";
-import { AuditLogsService } from "../audit-logs/audit-logs.service";
-import {
-  buildPagination,
-  parsePaginationQuery,
-  buildError,
-} from "@workspace/utils";
+import { logger } from "@workspace/logger";
 import type { PaginationQuery } from "@workspace/types";
 import { ErrorCode } from "@workspace/types";
+import {
+  buildError,
+  buildPagination,
+  parsePaginationQuery,
+} from "@workspace/utils";
 import { status } from "elysia";
-import { Env } from "@workspace/constants";
-import { logger } from "@workspace/logger";
-import { createHash } from "node:crypto";
+import { AuditLogsService } from "../audit-logs/audit-logs.service";
+import { VaultRepository } from "./vault.repository";
 
 export abstract class VaultService {
   private static bucketClientCache = new Map<string, BucketClient>();
@@ -22,7 +22,8 @@ export abstract class VaultService {
       workspaceId,
       endpoint: settings?.r2Endpoint || Env.BUCKET_ENDPOINT || "",
       accessKeyId: settings?.r2AccessKeyId || Env.BUCKET_ACCESS_KEY_ID || "",
-      secretAccessKey: settings?.r2SecretAccessKey || Env.BUCKET_SECRET_ACCESS_KEY || "",
+      secretAccessKey:
+        settings?.r2SecretAccessKey || Env.BUCKET_SECRET_ACCESS_KEY || "",
       bucketName: settings?.r2BucketName || Env.BUCKET_NAME || "",
     });
   }
@@ -126,7 +127,8 @@ export abstract class VaultService {
 
     // Generate unique key
     const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, "-");
-    const key = existingFile?.key || `vault/${workspaceId}/${sha256}-${safeName}`;
+    const key =
+      existingFile?.key || `vault/${workspaceId}/${sha256}-${safeName}`;
 
     if (!existingFile) {
       await bucket.upload(key, file.buffer, file.type);
@@ -283,16 +285,21 @@ export abstract class VaultService {
           await VaultRepository.updateWorkspaceSubscription(ws.workspaceId, {
             storage_violation_at: now,
           });
-          logger.info(`[Vault] Started storage violation grace period for workspace ${ws.workspaceId}`);
+          logger.info(
+            `[Vault] Started storage violation grace period for workspace ${ws.workspaceId}`,
+          );
         } else {
           // Check if grace period has expired
           const violationDate = new Date(ws.storage_violation_at);
-          const diffDays = (now.getTime() - violationDate.getTime()) / (1000 * 60 * 60 * 24);
+          const diffDays =
+            (now.getTime() - violationDate.getTime()) / (1000 * 60 * 60 * 24);
 
           if (diffDays > gracePeriodDays) {
             // Mark all files as inactive
             await VaultRepository.bulkSetFilesInactive(ws.workspaceId, true);
-            logger.warn(`[Vault] Grace period expired. Marked files as inactive for workspace ${ws.workspaceId}`);
+            logger.warn(
+              `[Vault] Grace period expired. Marked files as inactive for workspace ${ws.workspaceId}`,
+            );
           }
         }
       } else {
@@ -302,7 +309,9 @@ export abstract class VaultService {
             storage_violation_at: null,
           });
           await VaultRepository.bulkSetFilesInactive(ws.workspaceId, false);
-          logger.info(`[Vault] Resolved storage violation for workspace ${ws.workspaceId}`);
+          logger.info(
+            `[Vault] Resolved storage violation for workspace ${ws.workspaceId}`,
+          );
         }
       }
     }

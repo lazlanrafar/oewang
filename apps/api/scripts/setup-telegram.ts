@@ -1,4 +1,3 @@
-
 import { Env } from "@workspace/constants";
 
 async function setup() {
@@ -12,7 +11,9 @@ async function setup() {
 
   if (!webhookUrl) {
     console.error("❌ Please provide a public HTTPS URL as an argument.");
-    console.log("Usage: bun run scripts/setup-telegram.ts https://your-public-url.ngrok-free.app");
+    console.log(
+      "Usage: bun run scripts/setup-telegram.ts https://your-public-url.ngrok-free.app",
+    );
     process.exit(1);
   }
 
@@ -20,7 +21,9 @@ async function setup() {
 
   console.log(`📡 Setting Telegram Webhook to: ${fullWebhookUrl}`);
 
-  const response = await fetch(`https://api.telegram.org/bot${token}/setWebhook?url=${fullWebhookUrl}`);
+  const response = await fetch(
+    `https://api.telegram.org/bot${token}/setWebhook?url=${fullWebhookUrl}`,
+  );
   const result = await response.json();
 
   if (result.ok) {

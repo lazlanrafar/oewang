@@ -1,8 +1,8 @@
 "use client";
 
+import { cva, type VariantProps } from "class-variance-authority";
 import { XIcon } from "lucide-react";
 import { Dialog as SheetPrimitive } from "radix-ui";
-import { type VariantProps, cva } from "class-variance-authority";
 import * as React from "react";
 
 import { cn } from "../../lib/utils";
@@ -51,8 +51,7 @@ const sheetVariants = cva(
 );
 
 interface SheetContentProps
-  extends
-    React.ComponentPropsWithoutRef<typeof SheetPrimitive.Content>,
+  extends React.ComponentPropsWithoutRef<typeof SheetPrimitive.Content>,
     VariantProps<typeof sheetVariants> {
   stack?: boolean;
   title?: string;

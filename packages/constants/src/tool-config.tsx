@@ -25,10 +25,10 @@ import {
   Users,
   Wallet,
 } from "lucide-react";
-import type { ComponentType, SVGProps } from "react";
+import type { ReactNode } from "react";
 import { MdOutlineInsights } from "react-icons/md";
 
-export type IconComponent = ComponentType<SVGProps<SVGSVGElement>>;
+export type IconComponent = (props: { className?: string; size?: string | number }) => ReactNode;
 
 export interface ToolConfig {
   name: string;

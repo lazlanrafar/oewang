@@ -1,4 +1,7 @@
-import { sendSubscriptionDowngradedEmail, sendSubscriptionPaymentReminderEmail } from "@workspace/email";
+import {
+  sendSubscriptionDowngradedEmail,
+  sendSubscriptionPaymentReminderEmail,
+} from "@workspace/email";
 import { createLogger } from "@workspace/logger";
 import { NotificationsService } from "../notifications/notifications.service";
 import { MayarRepository } from "./mayar.repository";
@@ -14,7 +17,10 @@ function daysBetween(from: Date, to: Date) {
 }
 
 export abstract class BillingLifecycleService {
-  private static async sendPastDueReminder(workspace: any, overdueStartedAt: Date) {
+  private static async sendPastDueReminder(
+    workspace: any,
+    overdueStartedAt: Date,
+  ) {
     if (!workspace.owner_id) return;
 
     const dueDate = workspace.plan_current_period_end
@@ -41,7 +47,10 @@ export abstract class BillingLifecycleService {
     }
   }
 
-  private static async downgradeWorkspace(workspace: any, reason: "past_due" | "cancelled") {
+  private static async downgradeWorkspace(
+    workspace: any,
+    reason: "past_due" | "cancelled",
+  ) {
     const starterPlan = await MayarRepository.findStarterPlan();
 
     await MayarRepository.updateWorkspaceSubscription(workspace.workspaceId, {
@@ -82,7 +91,8 @@ export abstract class BillingLifecycleService {
   }
 
   static async processLifecycle() {
-    const workspaces = await MayarRepository.findWorkspacesForBillingLifecycle();
+    const workspaces =
+      await MayarRepository.findWorkspacesForBillingLifecycle();
     const now = new Date();
 
     for (const workspace of workspaces) {
@@ -92,7 +102,10 @@ export abstract class BillingLifecycleService {
       if (currentPeriodEnd > now) continue;
 
       if (workspace.plan_status === "cancelled") {
-        await this.downgradeWorkspace(workspace, "cancelled");
+        await BillingLifecycleService.downgradeWorkspace(
+          workspace,
+          "cancelled",
+        );
         log.info("Downgraded cancelled workspace at period end", {
           workspaceId: workspace.workspaceId,
         });
@@ -104,14 +117,20 @@ export abstract class BillingLifecycleService {
           ? new Date(workspace.plan_overdue_started_at)
           : now;
 
-        await MayarRepository.updateWorkspaceSubscription(workspace.workspaceId, {
-          plan_status: "past_due",
-          plan_overdue_started_at: overdueStartedAt,
-          plan_last_reminder_at: now,
-          updated_at: now,
-        });
+        await MayarRepository.updateWorkspaceSubscription(
+          workspace.workspaceId,
+          {
+            plan_status: "past_due",
+            plan_overdue_started_at: overdueStartedAt,
+            plan_last_reminder_at: now,
+            updated_at: now,
+          },
+        );
 
-        await this.sendPastDueReminder(workspace, overdueStartedAt);
+        await BillingLifecycleService.sendPastDueReminder(
+          workspace,
+          overdueStartedAt,
+        );
         log.warn("Marked workspace as past due", {
           workspaceId: workspace.workspaceId,
         });
@@ -127,7 +146,10 @@ export abstract class BillingLifecycleService {
 
         if (daysOverdue >= GRACE_PERIOD_DAYS) {
           // Grace period expired — downgrade immediately.
-          await this.downgradeWorkspace(workspace, "past_due");
+          await BillingLifecycleService.downgradeWorkspace(
+            workspace,
+            "past_due",
+          );
           log.warn("Downgraded past due workspace after grace period", {
             workspaceId: workspace.workspaceId,
           });
@@ -142,11 +164,17 @@ export abstract class BillingLifecycleService {
           : REMINDER_INTERVAL_DAYS; // treat as overdue so we send immediately if never reminded
 
         if (daysSinceLastReminder >= REMINDER_INTERVAL_DAYS) {
-          await MayarRepository.updateWorkspaceSubscription(workspace.workspaceId, {
-            plan_last_reminder_at: now,
-            updated_at: now,
-          });
-          await this.sendPastDueReminder(workspace, overdueStartedAt);
+          await MayarRepository.updateWorkspaceSubscription(
+            workspace.workspaceId,
+            {
+              plan_last_reminder_at: now,
+              updated_at: now,
+            },
+          );
+          await BillingLifecycleService.sendPastDueReminder(
+            workspace,
+            overdueStartedAt,
+          );
           log.info("Sent escalating payment reminder", {
             workspaceId: workspace.workspaceId,
             daysOverdue,

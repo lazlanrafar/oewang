@@ -1,30 +1,22 @@
 "use client";
 
+import { COLORS } from "@workspace/constants";
 import * as React from "react";
 import {
-  BarChart,
+  Area,
+  AreaChart,
   Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
   XAxis,
   YAxis,
-  CartesianGrid,
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  AreaChart,
-  Area,
-  PieChart,
-  Pie,
-  Cell,
 } from "recharts";
-
-import {
-  ChartConfig,
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  ChartLegend,
-  ChartLegendContent,
-} from "../atoms/chart";
 import {
   Card,
   CardContent,
@@ -32,7 +24,14 @@ import {
   CardHeader,
   CardTitle,
 } from "../atoms/card";
-import { COLORS } from "@workspace/constants";
+import {
+  type ChartConfig,
+  ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "../atoms/chart";
 
 export interface AiChartProps {
   code: string;

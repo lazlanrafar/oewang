@@ -7,8 +7,8 @@ import {
   ilike,
   isNull,
   or,
-  sql,
   type SQL,
+  sql,
 } from "drizzle-orm";
 import type {
   CreatePricingInput,
@@ -47,14 +47,12 @@ export abstract class PricingRepository {
     if (query.sortBy === "name") {
       orderByClause =
         query.sortOrder === "desc" ? desc(pricing.name) : asc(pricing.name);
-
     } else if (query.sortBy === "created_at") {
       orderByClause =
         query.sortOrder === "desc"
           ? desc(pricing.created_at)
           : asc(pricing.created_at);
     }
-
 
     const [data, totalCount] = await Promise.all([
       db
@@ -69,7 +67,6 @@ export abstract class PricingRepository {
         .from(pricing)
         .where(and(...conditions)),
     ]);
-
 
     return {
       rows: data,

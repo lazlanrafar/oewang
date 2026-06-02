@@ -98,9 +98,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
       limit = (plan?.max_vault_size_mb || 50) + (workspace?.extra_vault_size_mb || 0);
       // Convert MB to bytes for comparison if currentUsage is in bytes
     } else if (feature === "ai_tokens") {
-      limit =
-        aiQuota?.maxTokens ||
-        (plan?.max_ai_tokens || 50) + (workspace?.extra_ai_tokens || 0);
+      limit = aiQuota?.maxTokens || (plan?.max_ai_tokens || 50) + (workspace?.extra_ai_tokens || 0);
       actualUsage = aiQuota?.used ?? currentUsage;
     }
 

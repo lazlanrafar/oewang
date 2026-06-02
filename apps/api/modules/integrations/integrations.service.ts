@@ -1,15 +1,15 @@
 import { Env } from "@workspace/constants";
-import { buildSuccess } from "@workspace/utils";
 import { logger } from "@workspace/logger";
+import { buildSuccess } from "@workspace/utils";
 import { AiService } from "../ai/ai.service";
 import { executeAiTool } from "../ai/ai.tools";
+import { NotificationsService } from "../notifications/notifications.service";
+import { TransactionItemsService } from "../transactions/items/transaction-items.service";
 import { TransactionsService } from "../transactions/transactions.service";
 import { VaultService as vaultService } from "../vault/vault.service";
 import { WalletsRepository as walletsRepository } from "../wallets/wallets.repository";
-import { TransactionItemsService } from "../transactions/items/transaction-items.service";
-import { IntegrationsRepository } from "./integrations.repository";
 import { WorkspacesService } from "../workspaces/workspaces.service";
-import { NotificationsService } from "../notifications/notifications.service";
+import { IntegrationsRepository } from "./integrations.repository";
 
 export abstract class IntegrationsService {
   private static extractLeadingJson(text: string): {
@@ -38,7 +38,7 @@ export abstract class IntegrationsService {
         continue;
       }
 
-      if (ch === "\"") {
+      if (ch === '"') {
         inString = !inString;
         continue;
       }
@@ -72,7 +72,9 @@ export abstract class IntegrationsService {
     }
   }
 
-  private static isTransactionDraftPayload(payload: Record<string, any>): boolean {
+  private static isTransactionDraftPayload(
+    payload: Record<string, any>,
+  ): boolean {
     const type = payload.type;
     const amount = Number(payload.amount);
     const walletId = payload.walletId;
@@ -80,10 +82,12 @@ export abstract class IntegrationsService {
 
     if (!["income", "expense", "transfer"].includes(type)) return false;
     if (!Number.isFinite(amount) || amount <= 0) return false;
-    if (typeof walletId !== "string" || walletId.trim().length === 0) return false;
+    if (typeof walletId !== "string" || walletId.trim().length === 0)
+      return false;
     if (typeof name !== "string" || name.trim().length === 0) return false;
     // If the payload already looks like a tool result wrapper, skip fallback execution.
-    if ("success" in payload || "data" in payload || "error" in payload) return false;
+    if ("success" in payload || "data" in payload || "error" in payload)
+      return false;
     return true;
   }
 
@@ -116,7 +120,8 @@ export abstract class IntegrationsService {
     }
 
     if (createResult?.success && createResult?.dryRun) {
-      const fallbackText = remaining || "⚠️ Mode dry-run aktif, transaksi belum disimpan.";
+      const fallbackText =
+        remaining || "⚠️ Mode dry-run aktif, transaksi belum disimpan.";
       return `${fallbackText}\n\n⚠️ Mode dry-run aktif, transaksi belum masuk database.`.trim();
     }
 
@@ -137,7 +142,11 @@ export abstract class IntegrationsService {
   } | null {
     const startCommandMatch = text.match(/^\/start(?:\s+(.+))?$/i);
     const legacyConnectMatch = text.match(/^Connect Oewang\s+(.+)$/i);
-    const rawPayload = (startCommandMatch?.[1] || legacyConnectMatch?.[1] || "").trim();
+    const rawPayload = (
+      startCommandMatch?.[1] ||
+      legacyConnectMatch?.[1] ||
+      ""
+    ).trim();
 
     if (!rawPayload) return null;
 
@@ -189,9 +198,14 @@ export abstract class IntegrationsService {
       title: "WhatsApp Connected",
       message: `WhatsApp has been connected to your workspace. You can now receive alerts on ${cleaned}.`,
       link: "/apps",
-    }).catch((err) => logger.error("Failed to create WhatsApp connected notification", { err }));
+    }).catch((err) =>
+      logger.error("Failed to create WhatsApp connected notification", { err }),
+    );
 
-    return buildSuccess(integration, "WhatsApp (Twilio) connected successfully");
+    return buildSuccess(
+      integration,
+      "WhatsApp (Twilio) connected successfully",
+    );
   }
 
   static async connectTelegram(
@@ -212,9 +226,16 @@ export abstract class IntegrationsService {
       user_id: userId,
       type: "integration.connected",
       title: "Telegram Connected",
-      message: "Telegram has been connected to your workspace. You can now chat with your AI assistant via Telegram.",
+      message:
+        "Telegram has been connected to your workspace. You can now chat with your AI assistant via Telegram.",
       link: "/apps",
-    }).catch((err) => logger.error("Failed to create Telegram connected notification", { err, workspaceId, userId }));
+    }).catch((err) =>
+      logger.error("Failed to create Telegram connected notification", {
+        err,
+        workspaceId,
+        userId,
+      }),
+    );
 
     return buildSuccess(integration, "Telegram connected successfully");
   }
@@ -224,7 +245,11 @@ export abstract class IntegrationsService {
     return buildSuccess(integrations, "Integrations retrieved successfully");
   }
 
-  static async disconnectIntegration(workspaceId: string, provider: string, userId?: string) {
+  static async disconnectIntegration(
+    workspaceId: string,
+    provider: string,
+    userId?: string,
+  ) {
     const disconnected = await IntegrationsRepository.disconnectByProvider(
       workspaceId,
       provider,
@@ -235,7 +260,10 @@ export abstract class IntegrationsService {
     }
 
     if (userId) {
-      const providerLabel = provider === "whatsapp-twilio" ? "WhatsApp" : provider.charAt(0).toUpperCase() + provider.slice(1);
+      const providerLabel =
+        provider === "whatsapp-twilio"
+          ? "WhatsApp"
+          : provider.charAt(0).toUpperCase() + provider.slice(1);
       NotificationsService.create({
         workspace_id: workspaceId,
         user_id: userId,
@@ -250,7 +278,10 @@ export abstract class IntegrationsService {
   }
 
   static async handleTelegramWebhook(payload: Record<string, any>) {
-    console.log("[Telegram Webhook] Received payload:", JSON.stringify(payload));
+    console.log(
+      "[Telegram Webhook] Received payload:",
+      JSON.stringify(payload),
+    );
     const message = payload.message;
     if (!message) return "OK";
 
@@ -262,11 +293,14 @@ export abstract class IntegrationsService {
 
     // 1. Check for linking command
     if (text) {
-      const connectPayload = IntegrationsService.parseTelegramConnectPayload(text);
+      const connectPayload =
+        IntegrationsService.parseTelegramConnectPayload(text);
 
       if (connectPayload) {
         const { workspaceIdentifier, userIdCandidate } = connectPayload;
-        const targetWorkspaceId = IntegrationsService.isUuid(workspaceIdentifier)
+        const targetWorkspaceId = IntegrationsService.isUuid(
+          workspaceIdentifier,
+        )
           ? workspaceIdentifier
           : await IntegrationsRepository.findWorkspaceIdBySlug(
               workspaceIdentifier.toLowerCase(),
@@ -286,8 +320,9 @@ export abstract class IntegrationsService {
         // If userId is missing, try to find the first member of the workspace
         if (!targetUserId) {
           targetUserId =
-            (await IntegrationsRepository.findFirstMemberId(targetWorkspaceId)) ||
-            undefined;
+            (await IntegrationsRepository.findFirstMemberId(
+              targetWorkspaceId,
+            )) || undefined;
         }
 
         // If still no userId, we can't link safely
@@ -382,16 +417,20 @@ export abstract class IntegrationsService {
               const defaultWallet = wallets[0];
               if (!defaultWallet) return "OK";
 
-              const transactionRes = await TransactionsService.create(workspaceId, userId, {
-                walletId: defaultWallet.id,
-                amount: parsedReceipt.amount,
-                date: parsedReceipt.date || new Date().toISOString(),
-                type: "expense",
-                name: parsedReceipt.name || "Expense",
-                description: "Parsed automatically from Telegram Receipt",
-                categoryId: parsedReceipt.categoryId,
-                attachmentIds: vaultFile ? [vaultFile.id] : undefined,
-              });
+              const transactionRes = await TransactionsService.create(
+                workspaceId,
+                userId,
+                {
+                  walletId: defaultWallet.id,
+                  amount: parsedReceipt.amount,
+                  date: parsedReceipt.date || new Date().toISOString(),
+                  type: "expense",
+                  name: parsedReceipt.name || "Expense",
+                  description: "Parsed automatically from Telegram Receipt",
+                  categoryId: parsedReceipt.categoryId,
+                  attachmentIds: vaultFile ? [vaultFile.id] : undefined,
+                },
+              );
 
               // Save items if extracted
               if (parsedReceipt.items && parsedReceipt.items.length > 0) {
@@ -448,10 +487,7 @@ export abstract class IntegrationsService {
               workspaceId,
               userId,
             );
-            await IntegrationsService.sendTelegramMessage(
-              chatId,
-              replyText,
-            );
+            await IntegrationsService.sendTelegramMessage(chatId, replyText);
           }
         } catch (chatErr) {
           console.error("[Telegram AI Chat Error]", chatErr);
@@ -509,10 +545,14 @@ export abstract class IntegrationsService {
       const match = text.match(/^Connect Oewang\s+([a-f0-9-]{36})$/i);
       if (match) {
         const targetWorkspaceId = match[1];
-        const targetUserId = await IntegrationsRepository.findFirstMemberId(targetWorkspaceId);
+        const targetUserId =
+          await IntegrationsRepository.findFirstMemberId(targetWorkspaceId);
 
         if (!targetUserId) {
-          await IntegrationsService.sendTwilioWhatsAppMessage(fromUserNumber, "❌ Could not find a valid user to link with this workspace. Please use the link from the Oewang app.");
+          await IntegrationsService.sendTwilioWhatsAppMessage(
+            fromUserNumber,
+            "❌ Could not find a valid user to link with this workspace. Please use the link from the Oewang app.",
+          );
           return "OK";
         }
 
@@ -521,12 +561,18 @@ export abstract class IntegrationsService {
           targetUserId!,
           fromUserNumber,
         );
-        await IntegrationsService.sendTwilioWhatsAppMessage(fromUserNumber, "✅ Your WhatsApp is now connected to Oewang (via Twilio)! You can now send me your expenses or upload receipts anytime.");
+        await IntegrationsService.sendTwilioWhatsAppMessage(
+          fromUserNumber,
+          "✅ Your WhatsApp is now connected to Oewang (via Twilio)! You can now send me your expenses or upload receipts anytime.",
+        );
         return "OK";
       }
     }
 
-    const integration = await IntegrationsRepository.findByWhatsAppNumber(fromUserNumber, "whatsapp-twilio");
+    const integration = await IntegrationsRepository.findByWhatsAppNumber(
+      fromUserNumber,
+      "whatsapp-twilio",
+    );
     if (!integration) return "Unauthorized";
 
     const { workspaceId, settings, connectedBy } = integration;
@@ -541,8 +587,9 @@ export abstract class IntegrationsService {
       if (mediaUrl) {
         // Handle media (image/pdf)
         const response = await fetch(mediaUrl);
-        if (!response.ok) throw new Error("Failed to download media from Twilio");
-        
+        if (!response.ok)
+          throw new Error("Failed to download media from Twilio");
+
         const arrayBuffer = await response.arrayBuffer();
         const base64Image = Buffer.from(arrayBuffer).toString("base64");
         const mimeType = mediaType || "image/jpeg";
@@ -554,7 +601,12 @@ export abstract class IntegrationsService {
           buffer: Buffer.from(base64Image, "base64"),
         });
 
-        const parsedReceipt = await AiService.parseReceipt(workspaceId, userId, base64Image, mimeType);
+        const parsedReceipt = await AiService.parseReceipt(
+          workspaceId,
+          userId,
+          base64Image,
+          mimeType,
+        );
 
         if (parsedReceipt && parsedReceipt.amount) {
           const walletsResult = await walletsRepository.findMany(workspaceId);
@@ -566,32 +618,51 @@ export abstract class IntegrationsService {
               date: parsedReceipt.date || new Date().toISOString(),
               type: "expense",
               name: parsedReceipt.name || "Expense",
-              description: "Parsed automatically from WhatsApp (Twilio) Receipt",
+              description:
+                "Parsed automatically from WhatsApp (Twilio) Receipt",
               categoryId: parsedReceipt.categoryId,
               attachmentIds: vaultFile ? [vaultFile.id] : undefined,
             });
 
-            await IntegrationsService.sendTwilioWhatsAppMessage(fromUserNumber, `✅ Added expense: ${parsedReceipt.name || "Receipt"} for ${Number(parsedReceipt.amount).toLocaleString()}.`);
+            await IntegrationsService.sendTwilioWhatsAppMessage(
+              fromUserNumber,
+              `✅ Added expense: ${parsedReceipt.name || "Receipt"} for ${Number(parsedReceipt.amount).toLocaleString()}.`,
+            );
           }
         }
       } else if (text) {
         // AI Chat
         const chatSessionId = (settings as any)?.chatSessionId;
-        const chatResponse = await AiService.chat([{ role: "user", content: text }], workspaceId, userId, chatSessionId);
+        const chatResponse = await AiService.chat(
+          [{ role: "user", content: text }],
+          workspaceId,
+          userId,
+          chatSessionId,
+        );
 
         if (chatResponse?.reply) {
-          if (chatResponse.sessionId && chatResponse.sessionId !== chatSessionId) {
-            await IntegrationsRepository.updateSettings(integration.id, workspaceId, {
-              ...((settings as any) || {}),
-              chatSessionId: chatResponse.sessionId,
-            });
+          if (
+            chatResponse.sessionId &&
+            chatResponse.sessionId !== chatSessionId
+          ) {
+            await IntegrationsRepository.updateSettings(
+              integration.id,
+              workspaceId,
+              {
+                ...((settings as any) || {}),
+                chatSessionId: chatResponse.sessionId,
+              },
+            );
           }
           const replyText = await IntegrationsService.normalizeAiReplyForChat(
             chatResponse.reply,
             workspaceId,
             userId,
           );
-          await IntegrationsService.sendTwilioWhatsAppMessage(fromUserNumber, replyText);
+          await IntegrationsService.sendTwilioWhatsAppMessage(
+            fromUserNumber,
+            replyText,
+          );
         }
       }
     } catch (err) {
@@ -609,17 +680,20 @@ export abstract class IntegrationsService {
     if (!accountSid || !authToken || !from) return;
 
     const auth = Buffer.from(`${accountSid}:${authToken}`).toString("base64");
-    await fetch(`https://api.twilio.org/2010-04-01/Accounts/${accountSid}/Messages.json`, {
-      method: "POST",
-      headers: {
-        Authorization: `Basic ${auth}`,
-        "Content-Type": "application/x-www-form-urlencoded",
+    await fetch(
+      `https://api.twilio.org/2010-04-01/Accounts/${accountSid}/Messages.json`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${auth}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({
+          To: `whatsapp:${to}`,
+          From: from,
+          Body: body,
+        }).toString(),
       },
-      body: new URLSearchParams({
-        To: `whatsapp:${to}`,
-        From: from,
-        Body: body,
-      }).toString(),
-    });
+    );
   }
 }

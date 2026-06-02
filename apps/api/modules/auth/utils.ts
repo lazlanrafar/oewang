@@ -1,7 +1,7 @@
-import { Elysia } from "elysia";
-import { authPlugin } from "../../plugins/auth";
-import { buildError } from "@workspace/utils";
 import { ErrorCode } from "@workspace/types";
+import { buildError } from "@workspace/utils";
+import type { Elysia } from "elysia";
+import { authPlugin } from "../../plugins/auth";
 
 export const isAuthenticated = (app: Elysia) =>
   app

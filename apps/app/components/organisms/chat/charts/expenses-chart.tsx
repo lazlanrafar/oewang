@@ -1,17 +1,8 @@
 "use client";
 
-import {
-  Bar,
-  Cell,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
-
 import type { CategoryData, ExpensesChartProps } from "@workspace/types";
+import { Bar, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+
 import { BaseChart, ChartLegend, StyledTooltip } from "./base-charts";
 import { createYAxisTickFormatter, useChartMargin } from "./chart-utils";
 import { formatAmount } from "./format-amount";
@@ -126,24 +117,15 @@ export function ExpensesChart({
                 isAnimationActive={false}
               >
                 {categoryData.map((entry, index) => (
-                  <Cell
-                    key={`cell-${entry.name}-${index}`}
-                    fill={entry.color}
-                    stroke="none"
-                  />
+                  <Cell key={`cell-${entry.name}-${index}`} fill={entry.color} stroke="none" />
                 ))}
               </Pie>
               <Tooltip
                 content={
                   <StyledTooltip
-                    formatter={(
-                      value: number | string,
-                      _: string,
-                      entry: any,
-                    ) => {
+                    formatter={(value: number | string, _: string, entry: any) => {
                       const data = entry.payload as CategoryData;
-                      const numValue =
-                        typeof value === "number" ? value : Number(value);
+                      const numValue = typeof value === "number" ? value : Number(value);
                       const formattedValue =
                         formatAmount({
                           amount: numValue,
@@ -166,19 +148,10 @@ export function ExpensesChart({
   const chartContent = (
     <div className={`w-full ${className}`}>
       {/* Legend */}
-      {showLegend && (
-        <ChartLegend
-          title={title}
-          items={[{ label: valueLabel, type: "solid" }]}
-        />
-      )}
+      {showLegend && <ChartLegend title={title} items={[{ label: valueLabel, type: "solid" }]} />}
 
       {/* Bar Chart */}
-      <BaseChart
-        data={data}
-        height={height}
-        margin={{ top: 6, right: 6, left: -marginLeft, bottom: 6 }}
-      >
+      <BaseChart data={data} height={height} margin={{ top: 6, right: 6, left: -marginLeft, bottom: 6 }}>
         <XAxis
           dataKey="month"
           axisLine={false}
@@ -196,8 +169,7 @@ export function ExpensesChart({
           content={
             <StyledTooltip
               formatter={(value: number | string, name: string) => {
-                const numValue =
-                  typeof value === "number" ? value : Number(value);
+                const numValue = typeof value === "number" ? value : Number(value);
                 const formattedValue =
                   formatAmount({
                     amount: numValue,
@@ -213,12 +185,7 @@ export function ExpensesChart({
           wrapperStyle={{ zIndex: 9999 }}
         />
 
-        <Bar
-          dataKey="amount"
-          radius={[2, 2, 0, 0]}
-          shape={<PatternBarShape />}
-          isAnimationActive={false}
-        />
+        <Bar dataKey="amount" radius={[2, 2, 0, 0]} shape={<PatternBarShape />} isAnimationActive={false} />
       </BaseChart>
     </div>
   );

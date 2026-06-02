@@ -1,21 +1,22 @@
 // Re-export all test helpers
-export { TestClient, createAuthenticatedClient } from './test-client';
+
 export {
-  expectJSON,
-  expectValidationError,
-  expectUnauthorized,
-  expectForbidden,
-  expectNotFound,
-  expectConflict,
-  expectSuccess,
-  expectFields,
   expectArrayLength,
+  expectConflict,
+  expectFields,
+  expectForbidden,
+  expectJSON,
+  expectNotFound,
   expectPaginated,
-} from './assertions';
+  expectSuccess,
+  expectUnauthorized,
+  expectValidationError,
+} from "./assertions";
 export {
+  cleanupUser,
   db,
   resetDatabase,
-  withTransaction,
   seedTestData,
-  cleanupUser,
-} from './database';
+  withTransaction,
+} from "./database";
+export { createAuthenticatedClient, TestClient } from "./test-client";

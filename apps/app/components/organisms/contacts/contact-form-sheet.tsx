@@ -157,7 +157,7 @@ export function ContactFormSheet({ open, onClose, contact, dictionary }: Props) 
       website: contact?.website ?? "",
       contact: contact?.contact ?? "",
       addressLine1: contact?.addressLine1 ?? "",
-      addressLine2: contact?.addressLine2 ?? "" ,
+      addressLine2: contact?.addressLine2 ?? "",
       city: contact?.city ?? "",
       state: contact?.state ?? "",
       country: contact?.country ?? "",
@@ -231,9 +231,7 @@ export function ContactFormSheet({ open, onClose, contact, dictionary }: Props) 
         billingEmails,
       };
 
-      const result = isEdit
-        ? await updateContact(contact?.id || "", payload)
-        : await createContact(payload);
+      const result = isEdit ? await updateContact(contact?.id || "", payload) : await createContact(payload);
 
       if (result.success) {
         toast.success(isEdit ? dictionary.contacts.toasts.updated : dictionary.contacts.toasts.created);

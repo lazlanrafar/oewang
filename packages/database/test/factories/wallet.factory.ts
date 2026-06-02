@@ -38,12 +38,12 @@ export class WalletFactory extends BaseFactory<WalletAttributes> {
     };
   }
 
-  protected async insert(attributes: Partial<WalletAttributes>) {
+  protected async insert(attributes: Partial<WalletAttributes>): Promise<WalletAttributes> {
     const [wallet] = await this.db
       .insert(wallets)
       .values(attributes as any)
       .returning();
-    return wallet;
+    return wallet! as WalletAttributes;
   }
 
   /**

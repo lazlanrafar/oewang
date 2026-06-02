@@ -54,10 +54,7 @@ export function TransactionReceiptConfirmationModal({ open, onOpenChange, data, 
   const { settings, user } = useAppStore();
   const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(false);
-  const currencyUnit = getCurrencyDisplayUnit(
-    settings?.mainCurrencyCode,
-    settings?.mainCurrencySymbol,
-  );
+  const currencyUnit = getCurrencyDisplayUnit(settings?.mainCurrencyCode, settings?.mainCurrencySymbol);
 
   const form = useForm<ConfirmationFormValues>({
     resolver: zodResolver(confirmationSchema),

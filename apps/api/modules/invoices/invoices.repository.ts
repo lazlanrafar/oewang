@@ -1,13 +1,13 @@
 import {
-  db,
-  invoices,
-  contacts,
   and,
+  contacts,
+  db,
+  desc,
   eq,
   ilike,
+  invoices,
   isNull,
   sql,
-  desc,
   workspaceSettings,
   workspaces,
 } from "@workspace/database";
@@ -42,10 +42,7 @@ export abstract class InvoicesRepository {
         .limit(limit)
         .offset(offset)
         .orderBy(desc(invoices.createdAt)),
-      db
-        .select({ count: sql`count(*)` })
-        .from(invoices)
-        .where(where),
+      db.select({ count: sql`count(*)` }).from(invoices).where(where),
     ]);
 
     return {
@@ -90,7 +87,10 @@ export abstract class InvoicesRepository {
       .from(invoices)
       .leftJoin(contacts, eq(invoices.contactId, contacts.id))
       .leftJoin(workspaces, eq(invoices.workspaceId, workspaces.id))
-      .leftJoin(workspaceSettings, eq(invoices.workspaceId, workspaceSettings.workspaceId))
+      .leftJoin(
+        workspaceSettings,
+        eq(invoices.workspaceId, workspaceSettings.workspaceId),
+      )
       .where(
         and(
           eq(invoices.id, id),

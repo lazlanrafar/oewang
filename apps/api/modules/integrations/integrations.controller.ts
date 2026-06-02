@@ -1,19 +1,18 @@
-import { Elysia, t } from "elysia";
-import { authPlugin } from "../../plugins/auth";
-import { IntegrationsService } from "./integrations.service";
-import { ConnectWhatsAppDto } from "./integrations.dto";
-import { logger } from "@workspace/logger";
 import { Env } from "@workspace/constants";
-import { status } from "elysia";
+import { logger } from "@workspace/logger";
 import { ErrorCode } from "@workspace/types";
 import { buildError, buildSuccess } from "@workspace/utils";
+import { Elysia, status, t } from "elysia";
+import { authPlugin } from "../../plugins/auth";
+import { assertCanManageSensitiveWorkspace } from "../workspaces/workspace-permissions";
+import { ConnectWhatsAppDto } from "./integrations.dto";
+import { IntegrationsService } from "./integrations.service";
 import {
   getPublicRequestUrl,
   parseFormBody,
   verifyTelegramSecret,
   verifyTwilioSignature,
 } from "./webhook-security";
-import { assertCanManageSensitiveWorkspace } from "../workspaces/workspace-permissions";
 
 export const integrationsController = new Elysia({ prefix: "/integrations" })
   // Public webhook route for Twilio WhatsApp

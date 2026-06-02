@@ -16,9 +16,9 @@ import {
   users,
   workspaces,
 } from "@workspace/database";
-import { status } from "elysia";
 import { ErrorCode } from "@workspace/types";
 import { buildError, buildSuccess } from "@workspace/utils";
+import { status } from "elysia";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 
 const ERASURE_CONFIRMATION_TEXT = "ERASE_MY_DATA";
@@ -50,7 +50,7 @@ export abstract class PrivacyService {
     const dueAt =
       data.status && (data.status === "completed" || data.status === "rejected")
         ? null
-        : this.addDays(now, 30);
+        : PrivacyService.addDays(now, 30);
     const [request] = await db
       .insert(privacy_requests)
       .values({
@@ -115,7 +115,7 @@ export abstract class PrivacyService {
       throw status(404, buildError(ErrorCode.USER_NOT_FOUND, "User not found"));
     }
 
-    const memberships = await this.getActiveMemberships(userId);
+    const memberships = await PrivacyService.getActiveMemberships(userId);
     const workspaceIds = memberships.map((m) => m.workspaceId);
 
     const [
@@ -227,8 +227,8 @@ export abstract class PrivacyService {
   }
 
   static async getAccessReport(userId: string) {
-    const data = await this.buildSubjectData(userId);
-    await this.createRequest({
+    const data = await PrivacyService.buildSubjectData(userId);
+    await PrivacyService.createRequest({
       userId,
       requestType: "access",
       status: "completed",
@@ -245,8 +245,8 @@ export abstract class PrivacyService {
   }
 
   static async exportPersonalData(userId: string) {
-    const data = await this.buildSubjectData(userId);
-    await this.createRequest({
+    const data = await PrivacyService.buildSubjectData(userId);
+    await PrivacyService.createRequest({
       userId,
       requestType: "export",
       status: "completed",
@@ -264,7 +264,7 @@ export abstract class PrivacyService {
   }
 
   static async restrictProcessing(userId: string, reason?: string) {
-    const memberships = await this.getActiveMemberships(userId);
+    const memberships = await PrivacyService.getActiveMemberships(userId);
 
     await db
       .update(notification_settings)
@@ -298,7 +298,7 @@ export abstract class PrivacyService {
       );
     }
 
-    await this.createRequest({
+    await PrivacyService.createRequest({
       userId,
       requestType: "restrict",
       status: "completed",
@@ -329,7 +329,7 @@ export abstract class PrivacyService {
       );
     }
 
-    const memberships = await this.getActiveMemberships(userId);
+    const memberships = await PrivacyService.getActiveMemberships(userId);
     const workspaceIds = memberships.map((m) => m.workspaceId);
     const anonymizedEmail = `deleted+${userId}@redacted.invalid`;
 
@@ -396,7 +396,7 @@ export abstract class PrivacyService {
       );
     }
 
-    await this.createRequest({
+    await PrivacyService.createRequest({
       userId,
       requestType: "erasure",
       status: "completed",
@@ -423,7 +423,7 @@ export abstract class PrivacyService {
     requestType: PrivacyRequestType,
     reason?: string,
   ) {
-    const request = await this.createRequest({
+    const request = await PrivacyService.createRequest({
       userId,
       requestType,
       reason,
@@ -435,7 +435,12 @@ export abstract class PrivacyService {
 
   static async listMyRequests(
     userId: string,
-    query?: { page?: number; limit?: number; status?: string; requestType?: string },
+    query?: {
+      page?: number;
+      limit?: number;
+      status?: string;
+      requestType?: string;
+    },
   ) {
     const page = Number(query?.page || 1);
     const limit = Number(query?.limit || 20);
@@ -454,12 +459,12 @@ export abstract class PrivacyService {
     }
 
     const rows = await db
-        .select()
-        .from(privacy_requests)
-        .where(and(...conditions))
-        .orderBy(desc(privacy_requests.created_at))
-        .limit(limit)
-        .offset(offset);
+      .select()
+      .from(privacy_requests)
+      .where(and(...conditions))
+      .orderBy(desc(privacy_requests.created_at))
+      .limit(limit)
+      .offset(offset);
 
     const [count] = await db
       .select({ total: sql<number>`count(*)` })
@@ -628,7 +633,7 @@ export abstract class PrivacyService {
     const dueAt =
       statusValue === "completed" || statusValue === "rejected"
         ? null
-        : this.addDays(now, 30);
+        : PrivacyService.addDays(now, 30);
     const [updated] = await db
       .update(privacy_requests)
       .set({
@@ -636,7 +641,7 @@ export abstract class PrivacyService {
         note: note ?? null,
         closed_reason:
           statusValue === "completed" || statusValue === "rejected"
-            ? closedReason ?? null
+            ? (closedReason ?? null)
             : null,
         reviewed_by: reviewerId,
         reviewed_at: now,

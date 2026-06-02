@@ -1,4 +1,5 @@
 import { faker } from '@faker-js/faker';
+import { eq } from 'drizzle-orm';
 import { users } from '../../schema/users';
 import { workspaces } from '../../schema/workspaces';
 import { BaseFactory, type DB } from './base-factory';
@@ -28,7 +29,7 @@ export class UserFactory extends BaseFactory<UserAttributes> {
       name: faker.person.fullName(),
       profile_picture: faker.image.avatar(),
       mobile: faker.phone.number(),
-      oauth_provider: null,
+      oauth_provider: undefined,
       providers: [],
       system_role: 'user',
       created_at: new Date(),
@@ -36,12 +37,12 @@ export class UserFactory extends BaseFactory<UserAttributes> {
     };
   }
 
-  protected async insert(attributes: Partial<UserAttributes>) {
+  protected async insert(attributes: Partial<UserAttributes>): Promise<UserAttributes> {
     const [user] = await this.db
       .insert(users)
       .values(attributes as any)
       .returning();
-    return user;
+    return user! as UserAttributes;
   }
 
   /**
@@ -66,11 +67,11 @@ export class UserFactory extends BaseFactory<UserAttributes> {
     // Update user with workspace_id
     const [updatedUser] = await this.db
       .update(users)
-      .set({ workspace_id: workspace.id })
-      .where(users.id.eq(user.id))
+      .set({ workspace_id: workspace!.id })
+      .where(eq(users.id, user.id!))
       .returning();
 
-    return { user: updatedUser, workspace };
+    return { user: updatedUser!, workspace: workspace! };
   }
 
   /**

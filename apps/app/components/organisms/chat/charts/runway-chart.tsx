@@ -1,15 +1,10 @@
 "use client";
 
+import type { RunwayChartProps } from "@workspace/types";
 import { Area, Line, Tooltip, XAxis, YAxis } from "recharts";
 
-import type { RunwayChartProps } from "@workspace/types";
 import { BaseChart, ChartLegend, StyledTooltip } from "./base-charts";
-import {
-  commonChartConfig,
-  createMonthsTickFormatter,
-  createYAxisTickFormatter,
-  useChartMargin,
-} from "./chart-utils";
+import { commonChartConfig, createMonthsTickFormatter, createYAxisTickFormatter, useChartMargin } from "./chart-utils";
 import { formatAmount } from "./format-amount";
 import { SelectableChartWrapper } from "./selectable-chart-wrapper";
 
@@ -28,16 +23,10 @@ export function RunwayChart({
   onSelectionStateChange,
 }: RunwayChartProps) {
   const isMonthsMode = displayMode === "months";
-  const tickFormatter = isMonthsMode
-    ? createMonthsTickFormatter()
-    : createYAxisTickFormatter(currency, locale);
+  const tickFormatter = isMonthsMode ? createMonthsTickFormatter() : createYAxisTickFormatter(currency, locale);
 
   // Calculate margin using the actual data field
-  const { marginLeft } = useChartMargin(
-    data || [],
-    isMonthsMode ? "runwayMonths" : "cashRemaining",
-    tickFormatter,
-  );
+  const { marginLeft } = useChartMargin(data || [], isMonthsMode ? "runwayMonths" : "cashRemaining", tickFormatter);
 
   // Guard against empty data
   if (!data || data.length === 0) {

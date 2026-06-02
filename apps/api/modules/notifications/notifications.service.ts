@@ -1,9 +1,13 @@
-import { buildPaginatedSuccess, buildSuccess, buildPagination } from "@workspace/utils";
-import { NotificationsRepository } from "./notifications.repository";
-import type { NotificationListQuery } from "./notifications.dto";
 import type { InsertNotification } from "@workspace/database";
-import { RealtimeService } from "../realtime/realtime.service";
+import {
+  buildPaginatedSuccess,
+  buildPagination,
+  buildSuccess,
+} from "@workspace/utils";
 import { PushSubscriptionsService } from "../push-subscriptions/push-subscriptions.service";
+import { RealtimeService } from "../realtime/realtime.service";
+import type { NotificationListQuery } from "./notifications.dto";
+import { NotificationsRepository } from "./notifications.repository";
 
 export abstract class NotificationsService {
   static async getAll(

@@ -1,6 +1,5 @@
-import { MetricsRepository } from "./metrics.repository";
-import { buildSuccess, buildError } from "@workspace/utils";
 import { ErrorCode } from "@workspace/types";
+import { buildError, buildSuccess } from "@workspace/utils";
 import {
   eachMonthOfInterval,
   endOfDay,
@@ -13,6 +12,7 @@ import {
   subMonths,
 } from "date-fns";
 import type { ChartDataPoint } from "./metrics.dto";
+import { MetricsRepository } from "./metrics.repository";
 
 export abstract class MetricsService {
   private static getDefaultDateRange() {

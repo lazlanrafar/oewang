@@ -120,16 +120,12 @@ export function NavUsage({
   }, [fetchAiQuota]);
 
   const resolvedWorkspace = (activeWorkspaceUsage ?? activeWorkspace ?? workspace) as WorkspaceData | null;
-  const maxAiTokens = resolvedWorkspace
-    ? (aiQuota?.maxTokens ?? getMaxAiTokens(resolvedWorkspace))
-    : 0;
+  const maxAiTokens = resolvedWorkspace ? (aiQuota?.maxTokens ?? getMaxAiTokens(resolvedWorkspace)) : 0;
   const aiTokensUsed = aiQuota?.used ?? resolvedWorkspace?.ai_tokens_used ?? 0;
-  const targetAiTokenPercentage =
-    maxAiTokens > 0 ? (aiTokensUsed / maxAiTokens) * 100 : 0;
+  const targetAiTokenPercentage = maxAiTokens > 0 ? (aiTokensUsed / maxAiTokens) * 100 : 0;
   const maxVaultBytes = resolvedWorkspace ? getMaxVaultBytes(resolvedWorkspace) : 0;
   const vaultBytesUsed = resolvedWorkspace?.vault_size_used_bytes ?? 0;
-  const targetVaultPercentage =
-    maxVaultBytes > 0 ? (vaultBytesUsed / maxVaultBytes) * 100 : 0;
+  const targetVaultPercentage = maxVaultBytes > 0 ? (vaultBytesUsed / maxVaultBytes) * 100 : 0;
 
   const animatedAiTokensUsed = Math.round(useAnimatedNumber(aiTokensUsed));
   const animatedMaxAiTokens = Math.round(useAnimatedNumber(maxAiTokens));
@@ -145,19 +141,15 @@ export function NavUsage({
   if (!resolvedWorkspace) return null;
 
   return (
-    <div className="flex flex-col gap-4 px-4 py-4 border-t border-b">
+    <div className="flex flex-col gap-4 border-t border-b px-4 py-4">
       {maxAiTokens > 0 && (
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between text-[10px] text-muted-foreground uppercase tracking-wider">
             <div className="flex flex-col gap-0.5">
               <span className="font-bold">AI Usage</span>
-              <span className="font-medium text-[10px] normal-case tabular-nums">
-                {aiUsageLabel}
-              </span>
+              <span className="font-medium text-[10px] normal-case tabular-nums">{aiUsageLabel}</span>
             </div>
-            <span className="tabular-nums font-medium">
-              {Math.round(animatedAiPercentage)}%
-            </span>
+            <span className="font-medium tabular-nums">{Math.round(animatedAiPercentage)}%</span>
           </div>
           <Progress
             value={Math.min(animatedAiPercentage, 100)}
@@ -172,13 +164,9 @@ export function NavUsage({
           <div className="flex items-center justify-between text-[10px] text-muted-foreground uppercase tracking-wider">
             <div className="flex flex-col gap-0.5">
               <span className="font-bold">Vault Storage</span>
-              <span className="font-medium text-[10px] normal-case tabular-nums">
-                {animatedVaultUsageLabel}
-              </span>
+              <span className="font-medium text-[10px] normal-case tabular-nums">{animatedVaultUsageLabel}</span>
             </div>
-            <span className="tabular-nums font-medium">
-              {Math.round(animatedVaultPercentage)}%
-            </span>
+            <span className="font-medium tabular-nums">{Math.round(animatedVaultPercentage)}%</span>
           </div>
           <Progress
             value={Math.min(animatedVaultPercentage, 100)}

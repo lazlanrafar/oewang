@@ -1,17 +1,17 @@
 import {
-  db,
-  eq,
-  desc,
-  orders,
-  workspaces,
-  users,
   and,
-  or,
-  ilike,
+  db,
+  desc,
+  eq,
   gte,
-  lte,
-  sql,
+  ilike,
   isNull,
+  lte,
+  or,
+  orders,
+  sql,
+  users,
+  workspaces,
 } from "@workspace/database";
 
 /**
@@ -80,15 +80,15 @@ export abstract class OrdersRepository {
       conditions.push(
         or(
           sql`${orders.mayar_invoice_id} IS NOT NULL`,
-          sql`${orders.mayar_payment_id} IS NOT NULL`
-        )
+          sql`${orders.mayar_payment_id} IS NOT NULL`,
+        ),
       );
     } else if (attachments === "exclude") {
       conditions.push(
         and(
           sql`${orders.mayar_invoice_id} IS NULL`,
-          sql`${orders.mayar_payment_id} IS NULL`
-        )
+          sql`${orders.mayar_payment_id} IS NULL`,
+        ),
       );
     }
 
@@ -159,10 +159,7 @@ export abstract class OrdersRepository {
       .select()
       .from(orders)
       .where(
-        and(
-          eq(orders.mayar_invoice_id, invoiceId),
-          isNull(orders.deleted_at)
-        )
+        and(eq(orders.mayar_invoice_id, invoiceId), isNull(orders.deleted_at)),
       )
       .limit(1);
     return order ?? null;
@@ -185,7 +182,9 @@ export abstract class OrdersRepository {
         updated_at: orders.updated_at,
       })
       .from(orders)
-      .where(and(eq(orders.workspace_id, workspaceId), isNull(orders.deleted_at)))
+      .where(
+        and(eq(orders.workspace_id, workspaceId), isNull(orders.deleted_at)),
+      )
       .orderBy(desc(orders.created_at));
   }
 }

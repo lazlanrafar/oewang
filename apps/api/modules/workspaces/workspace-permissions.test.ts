@@ -1,10 +1,10 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import {
-  normalizeWorkspaceRole,
-  canEditWorkspaceData,
-  canManageSensitiveWorkspace,
   assertCanEditWorkspaceData,
   assertCanManageSensitiveWorkspace,
+  canEditWorkspaceData,
+  canManageSensitiveWorkspace,
+  normalizeWorkspaceRole,
 } from "./workspace-permissions";
 
 describe("workspace-permissions", () => {
@@ -138,7 +138,8 @@ describe("workspace-permissions", () => {
         expect(true).toBe(false); // Should not reach here
       } catch (error: any) {
         // The error is wrapped in a response object
-        const errorMessage = typeof error === 'string' ? error : JSON.stringify(error);
+        const errorMessage =
+          typeof error === "string" ? error : JSON.stringify(error);
         expect(errorMessage).toContain("Editor, Admin, or Owner");
       }
     });
@@ -175,7 +176,8 @@ describe("workspace-permissions", () => {
         expect(true).toBe(false); // Should not reach here
       } catch (error: any) {
         // The error is wrapped in a response object
-        const errorMessage = typeof error === 'string' ? error : JSON.stringify(error);
+        const errorMessage =
+          typeof error === "string" ? error : JSON.stringify(error);
         expect(errorMessage).toContain("Admin or Owner");
       }
     });

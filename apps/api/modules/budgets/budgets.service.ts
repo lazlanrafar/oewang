@@ -1,15 +1,22 @@
-import { BudgetsRepository } from "./budgets.repository";
-import { CategoriesRepository } from "../categories/categories.repository";
-import { AuditLogsService } from "../audit-logs/audit-logs.service";
-import { NotificationsService } from "../notifications/notifications.service";
-import { buildApiResponse } from "@workspace/utils";
-import { ErrorCode } from "@workspace/types";
 import type { CreateBudgetInput, UpdateBudgetInput } from "@workspace/types";
+import { ErrorCode } from "@workspace/types";
+import { buildApiResponse } from "@workspace/utils";
+import { AuditLogsService } from "../audit-logs/audit-logs.service";
+import { CategoriesRepository } from "../categories/categories.repository";
+import { NotificationsService } from "../notifications/notifications.service";
+import { BudgetsRepository } from "./budgets.repository";
 
 export abstract class BudgetsService {
-  static async create(data: CreateBudgetInput, workspaceId: string, userId: string) {
+  static async create(
+    data: CreateBudgetInput,
+    workspaceId: string,
+    userId: string,
+  ) {
     // Check if budget for this category already exists
-    const existing = await BudgetsRepository.findByCategory(data.categoryId, workspaceId);
+    const existing = await BudgetsRepository.findByCategory(
+      data.categoryId,
+      workspaceId,
+    );
     if (existing) {
       return buildApiResponse({
         success: false,
@@ -20,7 +27,10 @@ export abstract class BudgetsService {
     }
 
     // Verify category exists and belongs to workspace
-    const category = await CategoriesRepository.findById(workspaceId, data.categoryId);
+    const category = await CategoriesRepository.findById(
+      workspaceId,
+      data.categoryId,
+    );
     if (!category || category.type !== "expense") {
       return buildApiResponse({
         success: false,
@@ -70,7 +80,12 @@ export abstract class BudgetsService {
     });
   }
 
-  static async update(id: string, data: UpdateBudgetInput, workspaceId: string, userId: string) {
+  static async update(
+    id: string,
+    data: UpdateBudgetInput,
+    workspaceId: string,
+    userId: string,
+  ) {
     const before = await BudgetsRepository.findById(id, workspaceId);
     if (!before) {
       return buildApiResponse({
@@ -135,9 +150,20 @@ export abstract class BudgetsService {
     const targetYear = year !== undefined ? year : now.getFullYear();
 
     const startDate = new Date(targetYear, targetMonth, 1).toISOString();
-    const endDate = new Date(targetYear, targetMonth + 1, 0, 23, 59, 59).toISOString();
+    const endDate = new Date(
+      targetYear,
+      targetMonth + 1,
+      0,
+      23,
+      59,
+      59,
+    ).toISOString();
 
-    const status = await BudgetsRepository.getStatus(workspaceId, startDate, endDate);
+    const status = await BudgetsRepository.getStatus(
+      workspaceId,
+      startDate,
+      endDate,
+    );
 
     return buildApiResponse({
       success: true,

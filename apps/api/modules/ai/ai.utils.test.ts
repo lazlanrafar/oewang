@@ -1,20 +1,20 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import {
+  addMonthlyReset,
+  endOfMonth,
+  extractRequestedWalletName,
+  formatAmount,
+  hasReceiptAttachments,
+  isCancelIntent,
+  isConfirmIntent,
+  isReceiptAttachment,
   isUuid,
   parseInputDate,
-  toDateOnly,
-  startOfMonth,
-  endOfMonth,
-  addMonthlyReset,
-  toValidIsoDate,
-  formatAmount,
-  isReceiptAttachment,
-  hasReceiptAttachments,
-  isConfirmIntent,
-  isCancelIntent,
-  extractRequestedWalletName,
-  resolveWalletByName,
   resolveDateRange,
+  resolveWalletByName,
+  startOfMonth,
+  toDateOnly,
+  toValidIsoDate,
 } from "./ai.utils";
 
 describe("ai.utils", () => {
@@ -219,21 +219,14 @@ describe("ai.utils", () => {
 
   describe("hasReceiptAttachments", () => {
     test("returns true when array contains receipt", () => {
+      expect(hasReceiptAttachments([{ type: "application/pdf" }])).toBe(true);
       expect(
-        hasReceiptAttachments([{ type: "application/pdf" }])
-      ).toBe(true);
-      expect(
-        hasReceiptAttachments([
-          { type: "text/plain" },
-          { type: "image/png" },
-        ])
+        hasReceiptAttachments([{ type: "text/plain" }, { type: "image/png" }]),
       ).toBe(true);
     });
 
     test("returns false when no receipts", () => {
-      expect(
-        hasReceiptAttachments([{ type: "text/plain" }])
-      ).toBe(false);
+      expect(hasReceiptAttachments([{ type: "text/plain" }])).toBe(false);
     });
 
     test("returns false for empty array", () => {
@@ -314,7 +307,7 @@ describe("ai.utils", () => {
     test("extracts explicit wallet name", () => {
       expect(extractRequestedWalletName("wallet: Cash", wallets)).toBe("Cash");
       expect(extractRequestedWalletName("account: Bank Account", wallets)).toBe(
-        "Bank Account"
+        "Bank Account",
       );
       expect(extractRequestedWalletName("akun: Cash", wallets)).toBe("Cash");
     });
@@ -322,20 +315,18 @@ describe("ai.utils", () => {
     test("finds wallet by mention", () => {
       expect(extractRequestedWalletName("Pay with Cash", wallets)).toBe("Cash");
       expect(
-        extractRequestedWalletName("Transfer from Bank Account", wallets)
+        extractRequestedWalletName("Transfer from Bank Account", wallets),
       ).toBe("Bank Account");
     });
 
     test("returns undefined when no wallet found", () => {
-      expect(
-        extractRequestedWalletName("Some text", wallets)
-      ).toBeUndefined();
+      expect(extractRequestedWalletName("Some text", wallets)).toBeUndefined();
     });
 
     test("is case-insensitive", () => {
       expect(extractRequestedWalletName("pay with cash", wallets)).toBe("Cash");
       expect(extractRequestedWalletName("BANK ACCOUNT", wallets)).toBe(
-        "Bank Account"
+        "Bank Account",
       );
     });
   });
@@ -475,7 +466,9 @@ describe("ai.utils", () => {
         const result = resolveDateRange({ period });
         expect(result.startDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
         expect(result.endDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-        expect(new Date(result.startDate) <= new Date(result.endDate)).toBe(true);
+        expect(new Date(result.startDate) <= new Date(result.endDate)).toBe(
+          true,
+        );
       }
     });
   });

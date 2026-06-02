@@ -1,16 +1,16 @@
 import {
-  db,
-  pricing,
-  user_workspaces,
-  users,
-  webhook_events,
-  workspaces,
   and,
+  db,
   eq,
   isNull,
   or,
+  pricing,
   sql,
+  user_workspaces,
+  users,
+  webhook_events,
   workspaceAddons,
+  workspaces,
 } from "@workspace/database";
 
 export abstract class MayarRepository {
@@ -51,14 +51,14 @@ export abstract class MayarRepository {
       .update(workspaces)
       .set(data)
       .where(
-        and(
-          eq(workspaces.id, workspaceId),
-          isNull(workspaces.deleted_at),
-        ),
+        and(eq(workspaces.id, workspaceId), isNull(workspaces.deleted_at)),
       );
   }
 
-  static async updateWorkspaceSubscriptionByCustomerEmail(customerEmail: string, data: any) {
+  static async updateWorkspaceSubscriptionByCustomerEmail(
+    customerEmail: string,
+    data: any,
+  ) {
     await db
       .update(workspaces)
       .set(data)
@@ -150,22 +150,14 @@ export abstract class MayarRepository {
   }
 
   static async findAllPlans() {
-    return db
-      .select()
-      .from(pricing)
-      .where(isNull(pricing.deleted_at));
+    return db.select().from(pricing).where(isNull(pricing.deleted_at));
   }
 
   static async findStarterPlan() {
     const [plan] = await db
       .select()
       .from(pricing)
-      .where(
-        and(
-          eq(pricing.name, "Starter"),
-          isNull(pricing.deleted_at),
-        ),
-      )
+      .where(and(eq(pricing.name, "Starter"), isNull(pricing.deleted_at)))
       .limit(1);
     return plan ?? null;
   }

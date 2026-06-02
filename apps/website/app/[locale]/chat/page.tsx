@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
-import { Header } from "@/components/layout/header";
+
 import { Footer } from "@/components/layout/footer";
+import { Header } from "@/components/layout/header";
 import { CTASection } from "@/components/sections/cta-section";
 import { getDictionary } from "@/lib/translations";
 
@@ -30,7 +31,9 @@ export default async function ChatPage({ params }: { params: Promise<{ locale: s
         <section className="py-16 sm:py-20 border-b border-border/70">
           <div className="max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8">
             <h1 className="font-serif text-4xl sm:text-6xl tracking-tight max-w-4xl">Run business finance from chat</h1>
-            <p className="text-muted-foreground text-base sm:text-lg mt-5 max-w-3xl">Turn everyday chat tools into finance execution surfaces for tracking, receipts, and shared team actions.</p>
+            <p className="text-muted-foreground text-base sm:text-lg mt-5 max-w-3xl">
+              Turn everyday chat tools into finance execution surfaces for tracking, receipts, and shared team actions.
+            </p>
           </div>
         </section>
 

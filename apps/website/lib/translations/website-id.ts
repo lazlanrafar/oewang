@@ -23,8 +23,7 @@ export const websiteId = {
   },
   howItWorks: {
     title: "Cara kerjanya",
-    subtitle:
-      "Semua yang Anda butuhkan untuk mengelola keuangan bisnis di satu tempat.",
+    subtitle: "Semua yang Anda butuhkan untuk mengelola keuangan bisnis di satu tempat.",
     seeAllFeatures: "Lihat semua fitur",
     transactions: {
       title: "Transaksi",
@@ -33,13 +32,11 @@ export const websiteId = {
     },
     aiAssistant: {
       title: "Asisten AI",
-      description:
-        "Tanyakan apa saja tentang keuangan Anda dalam bahasa biasa. Dapatkan wawasan secara instan.",
+      description: "Tanyakan apa saja tentang keuangan Anda dalam bahasa biasa. Dapatkan wawasan secara instan.",
     },
     invoices: {
       title: "Faktur",
-      description:
-        "Faktur profesional, pembayaran dilacak secara otomatis. Bayar lebih cepat.",
+      description: "Faktur profesional, pembayaran dilacak secara otomatis. Bayar lebih cepat.",
     },
   },
   features: {
@@ -59,17 +56,11 @@ export const websiteId = {
       title: "Tanyakan apa saja tentang keuangan Anda",
       description:
         "Dapatkan jawaban instan tentang pengeluaran, pendapatan, dan tren Anda. Tidak perlu mencari laporan.",
-      items: [
-        "Kueri bahasa alami",
-        "Wawasan real-time",
-        "Ringkasan mingguan",
-        "Sistem AI multi-agen",
-      ],
+      items: ["Kueri bahasa alami", "Wawasan real-time", "Ringkasan mingguan", "Sistem AI multi-agen"],
     },
     invoices: {
       title: "Faktur profesional, pembayaran dilacak",
-      description:
-        "Buat dan kirim faktur dalam hitungan detik. Bayar lebih cepat dengan tautan pembayaran online.",
+      description: "Buat dan kirim faktur dalam hitungan detik. Bayar lebih cepat dengan tautan pembayaran online.",
       items: [
         "Template yang dapat disesuaikan",
         "Tautan pembayaran online",
@@ -81,12 +72,7 @@ export const websiteId = {
       title: "Gambaran keuangan lengkap",
       description:
         "Lihat gambaran keuangan lengkap Anda sekilas. Pendapatan, pengeluaran, dan tren dalam satu dashboard.",
-      items: [
-        "Metrik real-time",
-        "Analisis tren",
-        "Kategori pengeluaran teratas",
-        "Wawasan berbasis AI",
-      ],
+      items: ["Metrik real-time", "Analisis tren", "Kategori pengeluaran teratas", "Wawasan berbasis AI"],
     },
   },
   story: {
@@ -172,8 +158,7 @@ export const websiteId = {
   },
   cta: {
     title: "Siap mengambil kendali?",
-    subtitle:
-      "Bergabunglah dengan ratusan bisnis yang sudah menggunakan oewang untuk mengelola keuangan mereka.",
+    subtitle: "Bergabunglah dengan ratusan bisnis yang sudah menggunakan oewang untuk mengelola keuangan mereka.",
     getStarted: "Mulai gratis",
     viewPricing: "Lihat harga",
   },

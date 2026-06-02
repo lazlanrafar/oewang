@@ -1,12 +1,11 @@
-import { Elysia, t } from "elysia";
-import { TransactionItemsService } from "./transaction-items.service";
-import { TransactionItemDto } from "./transaction-items.dto";
+import { ErrorCode } from "@workspace/types";
+import { buildError } from "@workspace/utils";
+import { Elysia, status, t } from "elysia";
 import { authPlugin } from "../../../plugins/auth";
 import { encryptionPlugin } from "../../../plugins/encryption";
-import { buildError } from "@workspace/utils";
-import { ErrorCode } from "@workspace/types";
-import { status } from "elysia";
 import { assertCanEditWorkspaceData } from "../../workspaces/workspace-permissions";
+import { TransactionItemDto } from "./transaction-items.dto";
+import { TransactionItemsService } from "./transaction-items.service";
 
 export const transactionItemsController = new Elysia({
   prefix: "/:id/items",
@@ -27,7 +26,8 @@ export const transactionItemsController = new Elysia({
       params: t.Object({ id: t.String() }),
       detail: {
         summary: "List transaction items",
-        description: "Returns all line items associated with the given transaction.",
+        description:
+          "Returns all line items associated with the given transaction.",
         tags: ["Transactions"],
       },
     },
@@ -75,7 +75,8 @@ export const transactionItemsController = new Elysia({
       params: t.Object({ id: t.String() }),
       detail: {
         summary: "Bulk create transaction items (AI)",
-        description: "Adds multiple line items at once. Used by the AI after parsing a receipt.",
+        description:
+          "Adds multiple line items at once. Used by the AI after parsing a receipt.",
         tags: ["Transactions"],
       },
     },

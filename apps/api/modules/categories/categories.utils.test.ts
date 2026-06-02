@@ -1,12 +1,12 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import {
-  validateCategoryName,
   formatCategoryName,
   getCategoryIcon,
-  groupCategoriesByType,
-  sortCategoriesByName,
-  isDuplicateCategoryName,
   getDefaultCategories,
+  groupCategoriesByType,
+  isDuplicateCategoryName,
+  sortCategoriesByName,
+  validateCategoryName,
 } from "./categories.utils";
 
 describe("categories.utils", () => {
@@ -58,7 +58,9 @@ describe("categories.utils", () => {
     });
 
     test("collapses multiple spaces", () => {
-      expect(formatCategoryName("Food     and    Drink")).toBe("Food and Drink");
+      expect(formatCategoryName("Food     and    Drink")).toBe(
+        "Food and Drink",
+      );
     });
 
     test("handles already formatted names", () => {
@@ -109,8 +111,8 @@ describe("categories.utils", () => {
 
       expect(grouped.income).toHaveLength(2);
       expect(grouped.expense).toHaveLength(2);
-      expect(grouped.income[0].name).toBe("Salary");
-      expect(grouped.expense[0].name).toBe("Food");
+      expect(grouped.income[0]!.name).toBe("Salary");
+      expect(grouped.expense[0]!.name).toBe("Food");
     });
 
     test("handles all income categories", () => {
@@ -155,9 +157,9 @@ describe("categories.utils", () => {
 
       const sorted = sortCategoriesByName(categories);
 
-      expect(sorted[0].name).toBe("Apple");
-      expect(sorted[1].name).toBe("Mango");
-      expect(sorted[2].name).toBe("Zebra");
+      expect(sorted[0]!.name).toBe("Apple");
+      expect(sorted[1]!.name).toBe("Mango");
+      expect(sorted[2]!.name).toBe("Zebra");
     });
 
     test("sorts categories descending", () => {
@@ -169,9 +171,9 @@ describe("categories.utils", () => {
 
       const sorted = sortCategoriesByName(categories, "desc");
 
-      expect(sorted[0].name).toBe("Zebra");
-      expect(sorted[1].name).toBe("Mango");
-      expect(sorted[2].name).toBe("Apple");
+      expect(sorted[0]!.name).toBe("Zebra");
+      expect(sorted[1]!.name).toBe("Mango");
+      expect(sorted[2]!.name).toBe("Apple");
     });
 
     test("does not mutate original array", () => {
@@ -197,9 +199,9 @@ describe("categories.utils", () => {
       const sorted = sortCategoriesByName(categories);
 
       // localeCompare is case-insensitive by default
-      expect(sorted[0].name).toBe("Apple");
-      expect(sorted[1].name).toBe("banana");
-      expect(sorted[2].name).toBe("cherry");
+      expect(sorted[0]!.name).toBe("Apple");
+      expect(sorted[1]!.name).toBe("banana");
+      expect(sorted[2]!.name).toBe("cherry");
     });
   });
 
@@ -218,7 +220,9 @@ describe("categories.utils", () => {
     });
 
     test("returns false for non-duplicates", () => {
-      expect(isDuplicateCategoryName("Food", ["Transport", "Shopping"])).toBe(false);
+      expect(isDuplicateCategoryName("Food", ["Transport", "Shopping"])).toBe(
+        false,
+      );
     });
 
     test("returns false for empty existing names", () => {

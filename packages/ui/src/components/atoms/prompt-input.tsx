@@ -1,33 +1,18 @@
 "use client";
 
-import { Button } from "./button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "./";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "./";
-import { Textarea } from "./";
 import type { ChatStatus, FileUIPart } from "ai";
 import { PaperclipIcon, PlusIcon, XIcon } from "lucide-react";
 import {
   type ChangeEventHandler,
   Children,
   type ComponentProps,
+  createContext,
   type FormEvent,
   type FormEventHandler,
   Fragment,
   type HTMLAttributes,
   type KeyboardEventHandler,
   type RefObject,
-  createContext,
   useCallback,
   useContext,
   useEffect,
@@ -36,8 +21,21 @@ import {
   useRef,
   useState,
 } from "react";
-import { Icons } from "./icons";
 import { cn } from "../../lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Textarea,
+} from "./";
+import { Button } from "./button";
+import { Icons } from "./icons";
 
 type AttachmentsContext = {
   files: (FileUIPart & { id: string })[];

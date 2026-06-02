@@ -10,6 +10,12 @@ export interface WorkspaceAttributes {
   plan_id?: string;
   plan_status?: string;
   plan_billing_interval?: 'monthly' | 'annual';
+  ai_tokens_used?: number;
+  ai_tokens_reset_at?: Date;
+  vault_size_used_bytes?: number;
+  extra_ai_tokens?: number;
+  extra_vault_size_mb?: number;
+  storage_violation_at?: Date | null;
   created_at?: Date;
   updated_at?: Date;
 }
@@ -36,12 +42,12 @@ export class WorkspaceFactory extends BaseFactory<WorkspaceAttributes> {
     };
   }
 
-  protected async insert(attributes: Partial<WorkspaceAttributes>) {
+  protected async insert(attributes: Partial<WorkspaceAttributes>): Promise<WorkspaceAttributes> {
     const [workspace] = await this.db
       .insert(workspaces)
       .values(attributes as any)
       .returning();
-    return workspace;
+    return workspace! as WorkspaceAttributes;
   }
 
   /**

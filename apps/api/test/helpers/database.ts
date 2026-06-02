@@ -1,13 +1,13 @@
-import { db } from '@workspace/database';
-import type { PgTransaction } from 'drizzle-orm/pg-core';
+import { db } from "@workspace/database";
+import type { PgTransaction } from "drizzle-orm/pg-core";
 
 /**
  * Reset test database (truncate all tables)
  * WARNING: Only use in test environment!
  */
 export async function resetDatabase() {
-  if (process.env.NODE_ENV !== 'test') {
-    throw new Error('resetDatabase can only be called in test environment');
+  if (process.env.NODE_ENV !== "test") {
+    throw new Error("resetDatabase can only be called in test environment");
   }
 
   // Get all table names from the schema
@@ -18,7 +18,7 @@ export async function resetDatabase() {
 
   // Truncate all tables (restart identity to reset sequences)
   for (const { tablename } of tables as any[]) {
-    if (tablename !== '_drizzle_migrations') {
+    if (tablename !== "_drizzle_migrations") {
       await db.execute`TRUNCATE TABLE ${tablename} RESTART IDENTITY CASCADE`;
     }
   }
@@ -29,7 +29,7 @@ export async function resetDatabase() {
  * Useful for isolating test data
  */
 export async function withTransaction<T>(
-  fn: (tx: PgTransaction<any, any, any>) => Promise<T>
+  fn: (tx: PgTransaction<any, any, any>) => Promise<T>,
 ): Promise<T> {
   return db.transaction(async (tx) => {
     try {
@@ -50,7 +50,7 @@ export async function withTransaction<T>(
  */
 class RollbackError extends Error {
   constructor(public result: any) {
-    super('Rollback');
+    super("Rollback");
   }
 }
 

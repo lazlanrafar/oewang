@@ -1,12 +1,14 @@
 import { cookies } from "next/headers";
-import { notFound } from "next/navigation";
 import Link from "next/link";
-import { Header } from "@/components/layout/header";
-import { Footer } from "@/components/layout/footer";
-import { CTASection } from "@/components/sections/cta-section";
-import { getDictionary } from "@/lib/translations";
-import { FEATURE_DETAILS } from "@/lib/feature-details";
+import { notFound } from "next/navigation";
+
 import { ArrowLeft } from "lucide-react";
+
+import { Footer } from "@/components/layout/footer";
+import { Header } from "@/components/layout/header";
+import { CTASection } from "@/components/sections/cta-section";
+import { FEATURE_DETAILS } from "@/lib/feature-details";
+import { getDictionary } from "@/lib/translations";
 
 const FEATURE_KEYS = Object.keys(FEATURE_DETAILS) as Array<keyof typeof FEATURE_DETAILS>;
 
@@ -28,11 +30,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   };
 }
 
-export default async function FeatureDetailPage({
-  params,
-}: {
-  params: Promise<{ locale: string; slug: string }>;
-}) {
+export default async function FeatureDetailPage({ params }: { params: Promise<{ locale: string; slug: string }> }) {
   const { locale, slug } = await params;
   const detail = FEATURE_DETAILS[slug as keyof typeof FEATURE_DETAILS];
 

@@ -1,19 +1,23 @@
-import { DebtsRepository } from "./debts.repository";
-import { ContactsRepository } from "../contacts/contacts.repository";
-import { TransactionsRepository } from "../transactions/transactions.repository";
-import { AuditLogsService } from "../audit-logs/audit-logs.service";
-import { NotificationsService } from "../notifications/notifications.service";
-import { buildSuccess, buildError, buildPaginatedSuccess } from "@workspace/utils";
-import { status } from "elysia";
-import { ErrorCode } from "@workspace/types";
 import { db } from "@workspace/database";
-import type { 
-  CreateDebtInput, 
-  UpdateDebtInput, 
-  PayDebtInput,
+import { ErrorCode } from "@workspace/types";
+import {
+  buildError,
+  buildPaginatedSuccess,
+  buildSuccess,
+} from "@workspace/utils";
+import { status } from "elysia";
+import { AuditLogsService } from "../audit-logs/audit-logs.service";
+import { ContactsRepository } from "../contacts/contacts.repository";
+import { NotificationsService } from "../notifications/notifications.service";
+import { TransactionsRepository } from "../transactions/transactions.repository";
+import type {
   BulkPayDebtInput,
-  SplitBillInput
+  CreateDebtInput,
+  PayDebtInput,
+  SplitBillInput,
+  UpdateDebtInput,
 } from "./debts.model";
+import { DebtsRepository } from "./debts.repository";
 
 export abstract class DebtsService {
   static async createDebt(
@@ -21,15 +25,25 @@ export abstract class DebtsService {
     userId: string,
     data: CreateDebtInput,
   ) {
-    const contact = await ContactsRepository.findById(workspaceId, data.contactId);
+    const contact = await ContactsRepository.findById(
+      workspaceId,
+      data.contactId,
+    );
     if (!contact) {
       throw status(404, buildError(ErrorCode.NOT_FOUND, "Contact not found"));
     }
 
     let origin: "manual" | "from_transaction" = "manual";
     if (data.sourceTransactionId) {
-      const tx = await TransactionsRepository.findById(workspaceId, data.sourceTransactionId);
-      if (!tx) throw status(404, buildError(ErrorCode.NOT_FOUND, "Source transaction not found"));
+      const tx = await TransactionsRepository.findById(
+        workspaceId,
+        data.sourceTransactionId,
+      );
+      if (!tx)
+        throw status(
+          404,
+          buildError(ErrorCode.NOT_FOUND, "Source transaction not found"),
+        );
       origin = "from_transaction";
     }
 
@@ -46,7 +60,10 @@ export abstract class DebtsService {
     });
 
     if (!debt) {
-      throw status(500, buildError(ErrorCode.INTERNAL_ERROR, "Failed to create debt"));
+      throw status(
+        500,
+        buildError(ErrorCode.INTERNAL_ERROR, "Failed to create debt"),
+      );
     }
 
     await AuditLogsService.log({
@@ -63,7 +80,8 @@ export abstract class DebtsService {
       workspace_id: workspaceId,
       user_id: userId,
       type: "debt.created",
-      title: debt.type === "payable" ? "New Payable Debt" : "New Receivable Debt",
+      title:
+        debt.type === "payable" ? "New Payable Debt" : "New Receivable Debt",
       message: `${debtLabel} ${contact.name} ${Number(data.amount).toLocaleString()}.`,
       link: "/debts",
     }).catch(() => {});
@@ -78,10 +96,11 @@ export abstract class DebtsService {
     data: UpdateDebtInput,
   ) {
     const debt = await DebtsRepository.findById(workspaceId, id);
-    if (!debt) throw status(404, buildError(ErrorCode.NOT_FOUND, "Debt not found"));
+    if (!debt)
+      throw status(404, buildError(ErrorCode.NOT_FOUND, "Debt not found"));
 
-    let newAmount = data.amount ? Number(data.amount) : Number(debt.amount);
-    let amountDiff = newAmount - Number(debt.amount);
+    const newAmount = data.amount ? Number(data.amount) : Number(debt.amount);
+    const amountDiff = newAmount - Number(debt.amount);
     let newRemaining = Number(debt.remainingAmount) + amountDiff;
 
     let debtStatus = "unpaid";
@@ -115,7 +134,8 @@ export abstract class DebtsService {
 
   static async deleteDebt(workspaceId: string, userId: string, id: string) {
     const debt = await DebtsRepository.findById(workspaceId, id);
-    if (!debt) throw status(404, buildError(ErrorCode.NOT_FOUND, "Debt not found"));
+    if (!debt)
+      throw status(404, buildError(ErrorCode.NOT_FOUND, "Debt not found"));
 
     await DebtsRepository.delete(id, workspaceId);
 
@@ -142,7 +162,10 @@ export abstract class DebtsService {
       search?: string;
     },
   ) {
-    const { rows, total } = await DebtsRepository.findMany(workspaceId, filters);
+    const { rows, total } = await DebtsRepository.findMany(
+      workspaceId,
+      filters,
+    );
     const page = filters?.page ?? 1;
     const limit = filters?.limit ?? 20;
 
@@ -158,19 +181,35 @@ export abstract class DebtsService {
     );
   }
 
-  static async payDebt(workspaceId: string, userId: string, id: string, data: PayDebtInput) {
+  static async payDebt(
+    workspaceId: string,
+    userId: string,
+    id: string,
+    data: PayDebtInput,
+  ) {
     return await db.transaction(async (tx) => {
       const debt = await DebtsRepository.findById(workspaceId, id);
-      if (!debt) throw status(404, buildError(ErrorCode.NOT_FOUND, "Debt not found"));
+      if (!debt)
+        throw status(404, buildError(ErrorCode.NOT_FOUND, "Debt not found"));
 
       const payAmount = Number(data.amount);
-      if (payAmount <= 0) throw status(400, buildError(ErrorCode.VALIDATION_ERROR, "Invalid payment amount"));
+      if (payAmount <= 0)
+        throw status(
+          400,
+          buildError(ErrorCode.VALIDATION_ERROR, "Invalid payment amount"),
+        );
       if (payAmount > Number(debt.remainingAmount)) {
-        throw status(400, buildError(ErrorCode.VALIDATION_ERROR, "Payment amount exceeds remaining debt"));
+        throw status(
+          400,
+          buildError(
+            ErrorCode.VALIDATION_ERROR,
+            "Payment amount exceeds remaining debt",
+          ),
+        );
       }
 
-      let generatedTxId: string | undefined = undefined;
-      
+      let generatedTxId: string | undefined;
+
       // If payment is made through a wallet
       if (data.walletId) {
         // Debt Payable (you owe them): Settling means Expense for you.
@@ -189,21 +228,29 @@ export abstract class DebtsService {
         generatedTxId = newTx?.id;
       }
 
-      const payment = await DebtsRepository.addPayment({
-        workspaceId,
-        debtId: id,
-        amount: payAmount,
-        transactionId: generatedTxId,
-      }, tx);
+      const payment = await DebtsRepository.addPayment(
+        {
+          workspaceId,
+          debtId: id,
+          amount: payAmount,
+          transactionId: generatedTxId,
+        },
+        tx,
+      );
 
       const newRemaining = Number(debt.remainingAmount) - payAmount;
       let newStatus = "partial";
       if (newRemaining <= 0) newStatus = "paid";
 
-      const updatedDebt = await DebtsRepository.update(id, workspaceId, {
-        remainingAmount: newRemaining,
-        status: newStatus,
-      }, tx);
+      const updatedDebt = await DebtsRepository.update(
+        id,
+        workspaceId,
+        {
+          remainingAmount: newRemaining,
+          status: newStatus,
+        },
+        tx,
+      );
 
       await AuditLogsService.log({
         workspace_id: workspaceId,
@@ -230,7 +277,11 @@ export abstract class DebtsService {
     });
   }
 
-  static async bulkPayDebt(workspaceId: string, userId: string, data: BulkPayDebtInput) {
+  static async bulkPayDebt(
+    workspaceId: string,
+    userId: string,
+    data: BulkPayDebtInput,
+  ) {
     return await db.transaction(async (tx) => {
       const debtPaymentsToProcess = [];
       let totalExpense = 0;
@@ -240,13 +291,24 @@ export abstract class DebtsService {
 
       for (const p of data.payments) {
         const debt = await DebtsRepository.findById(workspaceId, p.id);
-        if (!debt) throw status(404, buildError(ErrorCode.NOT_FOUND, `Debt not found`));
+        if (!debt)
+          throw status(404, buildError(ErrorCode.NOT_FOUND, `Debt not found`));
         if (!contactId) contactId = debt.contactId;
 
         const payAmount = Number(p.amount);
-        if (payAmount <= 0) throw status(400, buildError(ErrorCode.VALIDATION_ERROR, "Invalid payment amount"));
+        if (payAmount <= 0)
+          throw status(
+            400,
+            buildError(ErrorCode.VALIDATION_ERROR, "Invalid payment amount"),
+          );
         if (payAmount > Number(debt.remainingAmount)) {
-          throw status(400, buildError(ErrorCode.VALIDATION_ERROR, "Payment amount exceeds remaining debt"));
+          throw status(
+            400,
+            buildError(
+              ErrorCode.VALIDATION_ERROR,
+              "Payment amount exceeds remaining debt",
+            ),
+          );
         }
 
         if (debt.type === "payable") totalExpense += payAmount;
@@ -257,17 +319,23 @@ export abstract class DebtsService {
       }
 
       if (debtPaymentsToProcess.length === 0) {
-        throw status(400, buildError(ErrorCode.VALIDATION_ERROR, "No payments provided"));
+        throw status(
+          400,
+          buildError(ErrorCode.VALIDATION_ERROR, "No payments provided"),
+        );
       }
 
       let contactName = "Multiple";
       if (contactId) {
-        const contact = await ContactsRepository.findById(workspaceId, contactId);
+        const contact = await ContactsRepository.findById(
+          workspaceId,
+          contactId,
+        );
         if (contact) contactName = contact.name;
       }
 
-      let generatedExpenseTxId: string | undefined = undefined;
-      let generatedIncomeTxId: string | undefined = undefined;
+      let generatedExpenseTxId: string | undefined;
+      let generatedIncomeTxId: string | undefined;
 
       const descName = count === 1 ? contactName : `${contactName} (Bulk)`;
 
@@ -304,24 +372,33 @@ export abstract class DebtsService {
       const recordedPayments = [];
 
       for (const { debt, payAmount } of debtPaymentsToProcess) {
-        const txId = debt.type === "payable" ? generatedExpenseTxId : generatedIncomeTxId;
+        const txId =
+          debt.type === "payable" ? generatedExpenseTxId : generatedIncomeTxId;
 
-        const payment = await DebtsRepository.addPayment({
-          workspaceId,
-          debtId: debt.id,
-          amount: payAmount,
-          transactionId: txId,
-        }, tx);
+        const payment = await DebtsRepository.addPayment(
+          {
+            workspaceId,
+            debtId: debt.id,
+            amount: payAmount,
+            transactionId: txId,
+          },
+          tx,
+        );
         recordedPayments.push(payment);
 
         const newRemaining = Number(debt.remainingAmount) - payAmount;
         let newStatus = "partial";
         if (newRemaining <= 0) newStatus = "paid";
 
-        const updatedDebt = await DebtsRepository.update(debt.id, workspaceId, {
-          remainingAmount: newRemaining,
-          status: newStatus,
-        }, tx);
+        const updatedDebt = await DebtsRepository.update(
+          debt.id,
+          workspaceId,
+          {
+            remainingAmount: newRemaining,
+            status: newStatus,
+          },
+          tx,
+        );
 
         await AuditLogsService.log({
           workspace_id: workspaceId,
@@ -334,11 +411,19 @@ export abstract class DebtsService {
         });
       }
 
-      return buildSuccess(recordedPayments, "Bulk payment recorded successfully", "CREATED");
+      return buildSuccess(
+        recordedPayments,
+        "Bulk payment recorded successfully",
+        "CREATED",
+      );
     });
   }
 
-  static async splitBill(workspaceId: string, userId: string, data: SplitBillInput) {
+  static async splitBill(
+    workspaceId: string,
+    userId: string,
+    data: SplitBillInput,
+  ) {
     return await db.transaction(async (tx) => {
       let sourceTxId = data.transactionId;
       const totalAmount = Number(data.amount);
@@ -367,26 +452,32 @@ export abstract class DebtsService {
 
       for (const contactName of data.contactNames) {
         // Look for existing contact or create new one
-        let contact = await ContactsRepository.findByName(workspaceId, contactName);
+        let contact = await ContactsRepository.findByName(
+          workspaceId,
+          contactName,
+        );
         if (!contact) {
-            contact = await ContactsRepository.create({
-                workspaceId,
-                name: contactName,
-            });
+          contact = await ContactsRepository.create({
+            workspaceId,
+            name: contactName,
+          });
         }
         if (!contact) continue;
 
-        const debt = await DebtsRepository.create({
-          workspaceId,
-          contactId: contact.id,
-          type: "receivable", // others owe you
-          amount: debtAmount,
-          remainingAmount: debtAmount,
-          origin: sourceTxId ? "from_transaction" : "manual",
-          sourceTransactionId: sourceTxId,
-          description: `Split for ${data.name}`,
-        }, tx);
-        
+        const debt = await DebtsRepository.create(
+          {
+            workspaceId,
+            contactId: contact.id,
+            type: "receivable", // others owe you
+            amount: debtAmount,
+            remainingAmount: debtAmount,
+            origin: sourceTxId ? "from_transaction" : "manual",
+            sourceTransactionId: sourceTxId,
+            description: `Split for ${data.name}`,
+          },
+          tx,
+        );
+
         createdDebts.push(debt);
       }
 
@@ -408,7 +499,11 @@ export abstract class DebtsService {
         link: "/debts",
       }).catch(() => {});
 
-      return buildSuccess({ sourceTxId, createdDebts }, "Bill split successfully", "CREATED");
+      return buildSuccess(
+        { sourceTxId, createdDebts },
+        "Bill split successfully",
+        "CREATED",
+      );
     });
   }
 }

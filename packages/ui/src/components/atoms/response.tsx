@@ -1,11 +1,11 @@
 "use client";
 
+import { Env } from "@workspace/constants";
 import Link from "next/link";
 import { type ComponentProps, memo } from "react";
 import { Streamdown } from "streamdown";
-import { Table } from "./table";
 import { cn } from "../../lib/utils";
-import { Env } from "@workspace/constants";
+import { Table } from "./table";
 
 type ResponseProps = ComponentProps<typeof Streamdown>;
 

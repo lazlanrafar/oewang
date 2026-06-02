@@ -1,10 +1,11 @@
 import { loadEnv } from "@workspace/utils/load-env";
+
 loadEnv();
 
-import { VaultService } from "../modules/vault/vault.service";
-import { createLogger } from "@workspace/logger";
 import { db } from "@workspace/database";
+import { createLogger } from "@workspace/logger";
 import { sql } from "drizzle-orm";
+import { VaultService } from "../modules/vault/vault.service";
 
 const logger = createLogger("storage-worker");
 
@@ -14,9 +15,9 @@ async function run() {
   try {
     // Ensure DB connection
     await db.execute(sql`SELECT 1`);
-    
+
     await VaultService.processStorageViolations();
-    
+
     logger.info("Storage violation check completed successfully.");
     process.exit(0);
   } catch (error) {

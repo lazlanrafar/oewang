@@ -32,8 +32,8 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import * as z from "zod";
 
-import { SelectContact } from "@/components/molecules/select-contact";
 import { FormSegmentedTabs } from "@/components/molecules/form-segmented-tabs";
+import { SelectContact } from "@/components/molecules/select-contact";
 
 const getDebtSchema = (dictionary: Dictionary["debts"], _remaining?: number) =>
   z.object({
@@ -55,16 +55,11 @@ interface Props {
 }
 
 export function DebtFormSheet({ open, onOpenChange, debt, dictionary, settings }: Props) {
-  const currencyUnit = getCurrencyDisplayUnit(
-    settings?.mainCurrencyCode,
-    settings?.mainCurrencySymbol,
-  );
+  const currencyUnit = getCurrencyDisplayUnit(settings?.mainCurrencyCode, settings?.mainCurrencySymbol);
   const router = useRouter();
   const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<"payable" | "receivable">(
-    debt?.type || "receivable",
-  );
+  const [activeTab, setActiveTab] = useState<"payable" | "receivable">(debt?.type || "receivable");
   const dict = dictionary.debts;
 
   const form = useForm<DebtFormValues>({

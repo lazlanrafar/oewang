@@ -1,7 +1,9 @@
 "use client";
 
-import { Button } from "@workspace/ui/atoms";
 import Link from "next/link";
+
+import { Button } from "@workspace/ui/atoms";
+
 import type { WebsiteDictionary } from "@/lib/translations";
 
 const PRICING_COPY = {
@@ -94,12 +96,7 @@ const PRICING_COPY = {
   ja: {
     starter: {
       description: "個人の資金管理とソロ運用向け。",
-      features: [
-        "取引の追跡と自動分類",
-        "最大3ウォレット",
-        "週間支出インサイト",
-        "1ワークスペースメンバー",
-      ],
+      features: ["取引の追跡と自動分類", "最大3ウォレット", "週間支出インサイト", "1ワークスペースメンバー"],
       cta: "無料で始める",
       note: "クレジットカード不要",
     },
@@ -175,12 +172,8 @@ export function PricingSection({
     <section className="bg-background py-14 sm:py-18 lg:py-24">
       <div className="max-w-[1300px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center space-y-4 mb-10 sm:mb-14 max-w-3xl mx-auto">
-          <h1 className="font-serif text-3xl sm:text-5xl tracking-tight text-foreground">
-            {dictionary.pricing.title}
-          </h1>
-          <p className="text-base text-muted-foreground leading-normal">
-            {dictionary.pricing.subtitle}
-          </p>
+          <h1 className="font-serif text-3xl sm:text-5xl tracking-tight text-foreground">{dictionary.pricing.title}</h1>
+          <p className="text-base text-muted-foreground leading-normal">{dictionary.pricing.subtitle}</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
@@ -188,9 +181,7 @@ export function PricingSection({
             <div
               key={plan.name}
               className={`h-full rounded-none border p-6 sm:p-7 flex flex-col ${
-                plan.highlighted
-                  ? "border-foreground bg-muted/35"
-                  : "border-border/70 bg-background"
+                plan.highlighted ? "border-foreground bg-muted/35" : "border-border/70 bg-background"
               }`}
             >
               {plan.highlighted && (
@@ -204,9 +195,7 @@ export function PricingSection({
 
               <div className="flex items-baseline gap-2 mb-6">
                 <span className="font-serif text-4xl text-foreground">{plan.price}</span>
-                {plan.price !== "$0" && (
-                  <span className="text-sm text-muted-foreground">{copy.monthly}</span>
-                )}
+                {plan.price !== "$0" && <span className="text-sm text-muted-foreground">{copy.monthly}</span>}
               </div>
 
               <div className="space-y-2.5 border-t border-border/70 pt-5 pb-6 flex-1">
@@ -225,11 +214,7 @@ export function PricingSection({
                   variant={plan.highlighted ? "default" : "outline"}
                   disabled={plan.disabled}
                 >
-                  {plan.disabled ? (
-                    <span>{copy.comingSoon}</span>
-                  ) : (
-                    <Link href={`${appUrl}/register`}>{plan.cta}</Link>
-                  )}
+                  {plan.disabled ? <span>{copy.comingSoon}</span> : <Link href={`${appUrl}/register`}>{plan.cta}</Link>}
                 </Button>
                 <p className="text-xs text-muted-foreground text-center">{plan.note}</p>
               </div>

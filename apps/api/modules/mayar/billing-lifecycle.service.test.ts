@@ -40,9 +40,11 @@ mock.module("./mayar.repository", () => ({
   MayarRepository: {
     findStarterPlan: mock(async () => ({ id: "starter-plan" })),
     findWorkspacesForBillingLifecycle: mock(async () => state.workspaces),
-    updateWorkspaceSubscription: mock(async (workspaceId: string, data: any) => {
-      state.updates.push({ workspaceId, data });
-    }),
+    updateWorkspaceSubscription: mock(
+      async (workspaceId: string, data: any) => {
+        state.updates.push({ workspaceId, data });
+      },
+    ),
   },
 }));
 

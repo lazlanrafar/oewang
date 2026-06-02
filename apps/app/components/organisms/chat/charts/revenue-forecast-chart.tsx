@@ -2,10 +2,9 @@
 
 import { useMemo } from "react";
 
-import { format, parseISO } from "date-fns";
+import type { ForecastData, RevenueForecastChartProps } from "@workspace/types";
 import { Area, Line, ReferenceLine, Tooltip, XAxis, YAxis } from "recharts";
 
-import type { ForecastData, RevenueForecastChartProps } from "@workspace/types";
 import { BaseChart, StyledTooltip } from "./base-charts";
 import { commonChartConfig, createCompactTickFormatter, useChartMargin } from "./chart-utils";
 import { formatAmount } from "./format-amount";
@@ -52,11 +51,7 @@ export function RevenueForecastChart({
 
     // If the last actual month also has forecasted, that's the forecast start
     const lastActualItem = lastActualIndex >= 0 ? normalizedData[lastActualIndex] : null;
-    if (
-      lastActualItem &&
-      lastActualItem.forecasted !== null &&
-      lastActualItem.forecasted !== undefined
-    ) {
+    if (lastActualItem && lastActualItem.forecasted !== null && lastActualItem.forecasted !== undefined) {
       return lastActualIndex;
     }
 
@@ -131,25 +126,23 @@ export function RevenueForecastChart({
         tickFormatter={tickFormatter}
         domain={[yAxisDomain.min, yAxisDomain.max]}
       />
-      {forecastStartIndexFinal !== null &&
-        forecastStartIndexFinal !== undefined &&
-        forecastStartIndexFinal >= 0 && (
-          <ReferenceLine
-            x={forecastStartIndexFinal}
-            stroke="var(--chart-reference-line-stroke)"
-            strokeWidth={1}
-            label={{
-              value: "Forecast Start",
-              position: "top",
+      {forecastStartIndexFinal !== null && forecastStartIndexFinal !== undefined && forecastStartIndexFinal >= 0 && (
+        <ReferenceLine
+          x={forecastStartIndexFinal}
+          stroke="var(--chart-reference-line-stroke)"
+          strokeWidth={1}
+          label={{
+            value: "Forecast Start",
+            position: "top",
+            fill: "var(--chart-reference-label)",
+            style: {
+              fontSize: "10px",
               fill: "var(--chart-reference-label)",
-              style: {
-                fontSize: "10px",
-                fill: "var(--chart-reference-label)",
-                textAnchor: "start",
-              },
-            }}
-          />
-        )}
+              textAnchor: "start",
+            },
+          }}
+        />
+      )}
       {/* Confidence band (shaded area between pessimistic and optimistic) */}
       {hasConfidenceBand && (
         <Area

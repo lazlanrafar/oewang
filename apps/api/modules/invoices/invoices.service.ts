@@ -1,14 +1,14 @@
-import {
-  buildSuccess,
-  buildPaginatedSuccess,
-  buildError,
-} from "@workspace/utils";
-import { InvoicesRepository } from "./invoices.repository";
-import type { CreateInvoiceInput, UpdateInvoiceInput } from "./invoices.dto";
 import { ErrorCode } from "@workspace/types";
-import { AuditLogsService } from "../audit-logs/audit-logs.service";
+import {
+  buildError,
+  buildPaginatedSuccess,
+  buildSuccess,
+} from "@workspace/utils";
 import { AuditLogsRepository } from "../audit-logs/audit-logs.repository";
+import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { NotificationsService } from "../notifications/notifications.service";
+import type { CreateInvoiceInput, UpdateInvoiceInput } from "./invoices.dto";
+import { InvoicesRepository } from "./invoices.repository";
 
 export abstract class InvoicesService {
   static async getAll(
@@ -109,12 +109,25 @@ export abstract class InvoicesService {
     const prevStatus = (before.invoice as any)?.status;
     const newStatus = data.status;
     if (newStatus && newStatus !== prevStatus) {
-      const statusMessages: Record<string, { title: string; message: string }> = {
-        sent: { title: "Invoice Sent", message: `Invoice #${(result as any).invoice_number || id.slice(0, 8)} has been sent to the client.` },
-        paid: { title: "Invoice Paid", message: `Invoice #${(result as any).invoice_number || id.slice(0, 8)} has been marked as paid.` },
-        overdue: { title: "Invoice Overdue", message: `Invoice #${(result as any).invoice_number || id.slice(0, 8)} is now overdue.` },
-        canceled: { title: "Invoice Canceled", message: `Invoice #${(result as any).invoice_number || id.slice(0, 8)} has been canceled.` },
-      };
+      const statusMessages: Record<string, { title: string; message: string }> =
+        {
+          sent: {
+            title: "Invoice Sent",
+            message: `Invoice #${(result as any).invoice_number || id.slice(0, 8)} has been sent to the client.`,
+          },
+          paid: {
+            title: "Invoice Paid",
+            message: `Invoice #${(result as any).invoice_number || id.slice(0, 8)} has been marked as paid.`,
+          },
+          overdue: {
+            title: "Invoice Overdue",
+            message: `Invoice #${(result as any).invoice_number || id.slice(0, 8)} is now overdue.`,
+          },
+          canceled: {
+            title: "Invoice Canceled",
+            message: `Invoice #${(result as any).invoice_number || id.slice(0, 8)} has been canceled.`,
+          },
+        };
       const notif = statusMessages[newStatus];
       if (notif) {
         NotificationsService.create({

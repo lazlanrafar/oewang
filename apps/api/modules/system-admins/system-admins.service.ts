@@ -1,12 +1,12 @@
+import { db, users } from "@workspace/database";
 import { createAdminClient } from "@workspace/supabase/admin";
 import { ErrorCode } from "@workspace/types";
 import {
   buildError,
   buildPaginatedSuccess,
-  buildSuccess,
   buildPagination,
+  buildSuccess,
 } from "@workspace/utils";
-import { db, users } from "@workspace/database";
 import { eq } from "drizzle-orm";
 import { SystemAdminsRepository } from "./system-admins.repository";
 

@@ -5,25 +5,25 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Cell,
+  ResponsiveContainer,
   XAxis,
   YAxis,
-  ResponsiveContainer,
-  Cell,
 } from "recharts";
+import { cn } from "../../lib/utils";
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
-  CardDescription,
 } from "../atoms/card";
+import type { ChartConfig } from "../atoms/chart";
 import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
 } from "../atoms/chart";
-import type { ChartConfig } from "../atoms/chart";
-import { cn } from "../../lib/utils";
 
 export interface BarMetricDataPoint {
   name: string;

@@ -1,15 +1,15 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
+import { endOfMonth, format, startOfMonth, subMonths } from "date-fns";
 import {
+  aggregateByCategory,
+  calculateGrowthRate,
+  calculatePercentageChange,
+  calculateTotal,
+  fillMissingMonths,
+  findPeak,
   getDefaultDateRange,
   resolveDateRange,
-  fillMissingMonths,
-  calculatePercentageChange,
-  calculateGrowthRate,
-  aggregateByCategory,
-  calculateTotal,
-  findPeak,
 } from "./metrics.utils";
-import { startOfMonth, endOfMonth, subMonths, format } from "date-fns";
 
 describe("metrics.utils", () => {
   describe("getDefaultDateRange", () => {
@@ -39,7 +39,7 @@ describe("metrics.utils", () => {
       const lastDay = new Date(
         now.getFullYear(),
         now.getMonth() + 1,
-        0
+        0,
       ).getDate();
 
       expect(range.endDate.getDate()).toBe(lastDay);
@@ -99,8 +99,8 @@ describe("metrics.utils", () => {
       const result = fillMissingMonths(data, start, end);
 
       expect(result).toHaveLength(1);
-      expect(result[0].name).toBe("Jan '24");
-      expect(result[0].current).toBe(1000);
+      expect(result[0]!.name).toBe("Jan '24");
+      expect(result[0]!.current).toBe(1000);
     });
 
     test("fills missing months with zero", () => {
@@ -114,9 +114,9 @@ describe("metrics.utils", () => {
       const result = fillMissingMonths(data, start, end);
 
       expect(result).toHaveLength(3);
-      expect(result[0].current).toBe(1000);
-      expect(result[1].current).toBe(0); // Feb missing
-      expect(result[2].current).toBe(1500);
+      expect(result[0]!.current).toBe(1000);
+      expect(result[1]!.current).toBe(0); // Feb missing
+      expect(result[2]!.current).toBe(1500);
     });
 
     test("calculates average across all months", () => {
@@ -132,10 +132,10 @@ describe("metrics.utils", () => {
       const result = fillMissingMonths(data, start, end);
 
       // Average = (100 + 200 + 300 + 400) / 4 = 250
-      expect(result[0].average).toBe(250);
-      expect(result[1].average).toBe(250);
-      expect(result[2].average).toBe(250);
-      expect(result[3].average).toBe(250);
+      expect(result[0]!.average).toBe(250);
+      expect(result[1]!.average).toBe(250);
+      expect(result[2]!.average).toBe(250);
+      expect(result[3]!.average).toBe(250);
     });
 
     test("handles empty data array", () => {
@@ -145,10 +145,10 @@ describe("metrics.utils", () => {
       const result = fillMissingMonths([], start, end);
 
       expect(result).toHaveLength(3);
-      expect(result[0].current).toBe(0);
-      expect(result[1].current).toBe(0);
-      expect(result[2].current).toBe(0);
-      expect(result[0].average).toBe(0);
+      expect(result[0]!.current).toBe(0);
+      expect(result[1]!.current).toBe(0);
+      expect(result[2]!.current).toBe(0);
+      expect(result[0]!.average).toBe(0);
     });
 
     test("rounds average to nearest integer", () => {
@@ -163,7 +163,7 @@ describe("metrics.utils", () => {
       const result = fillMissingMonths(data, start, end);
 
       // Average = (100 + 150 + 200) / 3 = 150
-      expect(result[0].average).toBe(150);
+      expect(result[0]!.average).toBe(150);
     });
   });
 
@@ -248,9 +248,9 @@ describe("metrics.utils", () => {
       const result = aggregateByCategory(data);
 
       expect(result).toHaveLength(1);
-      expect(result[0].categoryId).toBe("cat1");
-      expect(result[0].name).toBe("Food");
-      expect(result[0].value).toBe(100);
+      expect(result[0]!.categoryId).toBe("cat1");
+      expect(result[0]!.name).toBe("Food");
+      expect(result[0]!.value).toBe(100);
     });
 
     test("aggregates duplicate categories", () => {
@@ -263,7 +263,7 @@ describe("metrics.utils", () => {
       const result = aggregateByCategory(data);
 
       expect(result).toHaveLength(1);
-      expect(result[0].value).toBe(300);
+      expect(result[0]!.value).toBe(300);
     });
 
     test("separates different categories", () => {
@@ -289,7 +289,7 @@ describe("metrics.utils", () => {
 
       const result = aggregateByCategory(data);
 
-      expect(result[0].value).toBe(31.22);
+      expect(result[0]!.value).toBe(31.22);
     });
 
     test("handles empty array", () => {

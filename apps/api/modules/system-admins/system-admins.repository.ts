@@ -1,18 +1,18 @@
-import { db, users, workspaces, pricing } from "@workspace/database";
-import { isNull } from "drizzle-orm";
+import { db, pricing, users, workspaces } from "@workspace/database";
 import {
-  ilike,
-  or,
-  eq,
-  desc,
-  asc,
   and,
-  not,
-  sql,
-  inArray,
+  asc,
+  desc,
+  eq,
   gte,
+  ilike,
+  inArray,
+  isNull,
   lte,
+  not,
+  or,
   type SQL,
+  sql,
 } from "drizzle-orm";
 
 export abstract class SystemAdminsRepository {
@@ -160,7 +160,7 @@ export abstract class SystemAdminsRepository {
       .from(pricing)
       .where(eq(pricing.id, planId))
       .limit(1);
-    
+
     if (!plan) throw new Error("Plan not found");
 
     const [updated] = await db

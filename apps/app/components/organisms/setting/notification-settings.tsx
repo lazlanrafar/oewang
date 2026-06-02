@@ -4,8 +4,8 @@ import type { Dictionary } from "@workspace/dictionaries";
 import { Label, Separator, Switch } from "@workspace/ui";
 import { toast } from "sonner";
 
-import { useNotifications } from "@/hooks/use-notifications";
 import { PushNotificationToggle } from "@/components/organisms/notification/push-notification-toggle";
+import { useNotifications } from "@/hooks/use-notifications";
 
 export function NotificationSettings({ dictionary }: { dictionary: Dictionary }) {
   const { settings, updateSettings, isLoading } = useNotifications();

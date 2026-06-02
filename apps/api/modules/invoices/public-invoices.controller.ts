@@ -1,11 +1,13 @@
-import { Elysia, t } from "elysia";
-import { InvoicesService } from "./invoices.service";
-import { encryptionPlugin } from "../../plugins/encryption";
-import { verifyInvoiceToken } from "./invoices.utils";
-import { buildError, buildSuccess } from "@workspace/utils";
 import { ErrorCode } from "@workspace/types";
+import { buildError, buildSuccess } from "@workspace/utils";
+import { Elysia, t } from "elysia";
+import { encryptionPlugin } from "../../plugins/encryption";
+import { InvoicesService } from "./invoices.service";
+import { verifyInvoiceToken } from "./invoices.utils";
 
-export const publicInvoicesController = new Elysia({ prefix: "/public/invoices" })
+export const publicInvoicesController = new Elysia({
+  prefix: "/public/invoices",
+})
   .use(encryptionPlugin)
   .get(
     "/:token",
@@ -15,11 +17,14 @@ export const publicInvoicesController = new Elysia({ prefix: "/public/invoices" 
         return buildError(ErrorCode.VALIDATION_ERROR, "Invalid token");
       }
 
-      const result = await InvoicesService.getPublicData(payload.id, payload.workspaceId);
+      const result = await InvoicesService.getPublicData(
+        payload.id,
+        payload.workspaceId,
+      );
       if (!result.success || !result.data) return result;
 
       const invoice = result.data.invoice;
-      
+
       // Check if isPublic
       if (!invoice.isPublic) {
         return buildError(ErrorCode.FORBIDDEN, "This invoice is not public");
@@ -27,7 +32,10 @@ export const publicInvoicesController = new Elysia({ prefix: "/public/invoices" 
 
       // Check if needs access code
       if (invoice.accessCode && invoice.accessCode !== query.code) {
-        return buildSuccess({ needsCode: true, invoiceNumber: invoice.invoiceNumber });
+        return buildSuccess({
+          needsCode: true,
+          invoiceNumber: invoice.invoiceNumber,
+        });
       }
 
       return result;

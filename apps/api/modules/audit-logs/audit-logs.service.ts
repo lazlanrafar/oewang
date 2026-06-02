@@ -16,8 +16,8 @@ export abstract class AuditLogsService {
     after?: unknown;
   }) {
     // Strip any sensitive fields from before/after
-    const sanitized_before = this.sanitize(data.before);
-    const sanitized_after = this.sanitize(data.after);
+    const sanitized_before = AuditLogsService.sanitize(data.before);
+    const sanitized_after = AuditLogsService.sanitize(data.after);
 
     await AuditLogsRepository.create({
       ...data,
@@ -26,21 +26,23 @@ export abstract class AuditLogsService {
     });
   }
 
-  static async logMany(dataArray: {
-    workspace_id: string;
-    user_id: string;
-    action: string;
-    entity: string;
-    entity_id: string;
-    before?: unknown;
-    after?: unknown;
-  }[]) {
+  static async logMany(
+    dataArray: {
+      workspace_id: string;
+      user_id: string;
+      action: string;
+      entity: string;
+      entity_id: string;
+      before?: unknown;
+      after?: unknown;
+    }[],
+  ) {
     if (dataArray.length === 0) return;
 
-    const sanitizedArray = dataArray.map(data => ({
+    const sanitizedArray = dataArray.map((data) => ({
       ...data,
-      before: this.sanitize(data.before),
-      after: this.sanitize(data.after),
+      before: AuditLogsService.sanitize(data.before),
+      after: AuditLogsService.sanitize(data.after),
     }));
 
     await AuditLogsRepository.createMany(sanitizedArray);

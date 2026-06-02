@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+
 import { Label, Switch } from "@workspace/ui";
 import { toast } from "sonner";
+
 import { registerPushSubscription, unregisterPushSubscription } from "@/actions/push-subscription.actions";
 
 interface PushNotificationToggleProps {
@@ -104,4 +106,3 @@ export function PushNotificationToggle({ enabled, onToggle, dict }: PushNotifica
     </div>
   );
 }
-

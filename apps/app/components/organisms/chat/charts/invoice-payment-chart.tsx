@@ -1,8 +1,8 @@
 "use client";
 
+import type { InvoicePaymentChartProps } from "@workspace/types";
 import { Bar, Line, Tooltip, XAxis, YAxis } from "recharts";
 
-import type { InvoicePaymentChartProps } from "@workspace/types";
 import { BaseChart, StyledTooltip } from "./base-charts";
 import { commonChartConfig, createCompactTickFormatter, useChartMargin } from "./chart-utils";
 

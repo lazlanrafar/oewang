@@ -3,7 +3,6 @@
 import * as React from "react";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useAppStore } from "@/stores/app";
 import {
   INCOME_EXPENSES_COLOR_OPTIONS,
   INPUT_ORDER_OPTIONS,
@@ -31,6 +30,8 @@ import {
   Switch,
 } from "@workspace/ui";
 import { toast } from "sonner";
+
+import { useAppStore } from "@/stores/app";
 
 function SettingTransactionSkeleton() {
   return (

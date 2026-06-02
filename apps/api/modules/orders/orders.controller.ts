@@ -1,11 +1,10 @@
+import { ErrorCode } from "@workspace/types";
+import { buildError } from "@workspace/utils";
 import { Elysia, t } from "elysia";
-import { OrdersService } from "./orders.service";
 import { authPlugin } from "../../plugins/auth";
 import { encryptionPlugin } from "../../plugins/encryption";
-import { buildError } from "@workspace/utils";
-import { ErrorCode } from "@workspace/types";
-
 import { requireAdminAccess } from "../system-admins/system-admins.controller";
+import { OrdersService } from "./orders.service";
 
 export const ordersController = new Elysia({
   prefix: "/orders",
@@ -42,7 +41,8 @@ export const ordersController = new Elysia({
       }),
       detail: {
         summary: "List Orders",
-        description: "Lists all payment orders (invoices/subscriptions) across the system. Restricted to system administrators.",
+        description:
+          "Lists all payment orders (invoices/subscriptions) across the system. Restricted to system administrators.",
         tags: ["Orders"],
       },
     },
@@ -58,7 +58,8 @@ export const ordersController = new Elysia({
       }),
       detail: {
         summary: "Get Order Details",
-        description: "Retrieves full details of a payment order, including associated customer and transaction IDs.",
+        description:
+          "Retrieves full details of a payment order, including associated customer and transaction IDs.",
         tags: ["Orders"],
       },
     },

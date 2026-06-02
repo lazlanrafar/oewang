@@ -1,15 +1,15 @@
 import {
+  and,
   db,
   eq,
-  and,
-  isNull,
   inArray,
-  workspaces,
-  user_workspaces,
-  workspaceInvitations,
-  users,
+  isNull,
   pricing,
+  user_workspaces,
+  users,
   workspaceAddons,
+  workspaceInvitations,
+  workspaces,
 } from "@workspace/database";
 
 /**
@@ -39,7 +39,9 @@ export abstract class WorkspacesRepository {
       })
       .from(workspaces)
       .leftJoin(pricing, eq(workspaces.plan_id, pricing.id))
-      .where(and(eq(workspaces.id, workspace_id), isNull(workspaces.deleted_at)))
+      .where(
+        and(eq(workspaces.id, workspace_id), isNull(workspaces.deleted_at)),
+      )
       .limit(1);
 
     if (!result) return null;
@@ -80,8 +82,10 @@ export abstract class WorkspacesRepository {
       ...result.workspace,
       plan: result.plan,
       // Total extra tokens = one-time (from workspace columns) + recurring (from workspace_addons)
-      extra_ai_tokens: (result.workspace.extra_ai_tokens || 0) + recurringExtraAi,
-      extra_vault_size_mb: (result.workspace.extra_vault_size_mb || 0) + recurringExtraVault,
+      extra_ai_tokens:
+        (result.workspace.extra_ai_tokens || 0) + recurringExtraAi,
+      extra_vault_size_mb:
+        (result.workspace.extra_vault_size_mb || 0) + recurringExtraVault,
       active_addons: activeAddons,
     };
   }
@@ -228,7 +232,10 @@ export abstract class WorkspacesRepository {
       );
   }
 
-  static async updateInvitationStatus(id: string, status: "accepted" | "expired") {
+  static async updateInvitationStatus(
+    id: string,
+    status: "accepted" | "expired",
+  ) {
     await db
       .update(workspaceInvitations)
       .set({

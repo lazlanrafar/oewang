@@ -1,15 +1,15 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import {
   calculateDebtStatus,
-  calculateRemainingAfterPayment,
-  calculateRemainingAfterAmountChange,
-  calculatePaymentProgress,
-  isDebtOverdue,
-  getDaysUntilDue,
-  formatDebtLabel,
-  validatePaymentAmount,
   calculateDebtSummary,
+  calculatePaymentProgress,
+  calculateRemainingAfterAmountChange,
+  calculateRemainingAfterPayment,
+  formatDebtLabel,
+  getDaysUntilDue,
+  isDebtOverdue,
   splitBillAmount,
+  validatePaymentAmount,
 } from "./debts.utils";
 
 describe("debts.utils", () => {
@@ -52,7 +52,7 @@ describe("debts.utils", () => {
     });
 
     test("handles decimal amounts", () => {
-      expect(calculateRemainingAfterPayment(1000.50, 300.25)).toBe(700.25);
+      expect(calculateRemainingAfterPayment(1000.5, 300.25)).toBe(700.25);
     });
   });
 
@@ -168,7 +168,9 @@ describe("debts.utils", () => {
 
     test("formats receivable debt", () => {
       expect(formatDebtLabel("receivable", "John")).toBe("John owes you");
-      expect(formatDebtLabel("receivable", "Acme Corp")).toBe("Acme Corp owes you");
+      expect(formatDebtLabel("receivable", "Acme Corp")).toBe(
+        "Acme Corp owes you",
+      );
     });
   });
 
@@ -205,9 +207,24 @@ describe("debts.utils", () => {
   describe("calculateDebtSummary", () => {
     test("calculates summary for mixed debts", () => {
       const debts = [
-        { type: "payable" as const, amount: 1000, remainingAmount: 500, status: "partial" as const },
-        { type: "receivable" as const, amount: 800, remainingAmount: 800, status: "unpaid" as const },
-        { type: "payable" as const, amount: 500, remainingAmount: 0, status: "paid" as const },
+        {
+          type: "payable" as const,
+          amount: 1000,
+          remainingAmount: 500,
+          status: "partial" as const,
+        },
+        {
+          type: "receivable" as const,
+          amount: 800,
+          remainingAmount: 800,
+          status: "unpaid" as const,
+        },
+        {
+          type: "payable" as const,
+          amount: 500,
+          remainingAmount: 0,
+          status: "paid" as const,
+        },
       ];
 
       const summary = calculateDebtSummary(debts);
@@ -219,8 +236,18 @@ describe("debts.utils", () => {
 
     test("handles all paid debts", () => {
       const debts = [
-        { type: "payable" as const, amount: 1000, remainingAmount: 0, status: "paid" as const },
-        { type: "receivable" as const, amount: 500, remainingAmount: 0, status: "paid" as const },
+        {
+          type: "payable" as const,
+          amount: 1000,
+          remainingAmount: 0,
+          status: "paid" as const,
+        },
+        {
+          type: "receivable" as const,
+          amount: 500,
+          remainingAmount: 0,
+          status: "paid" as const,
+        },
       ];
 
       const summary = calculateDebtSummary(debts);
@@ -240,7 +267,12 @@ describe("debts.utils", () => {
 
     test("handles string amounts", () => {
       const debts = [
-        { type: "payable" as const, amount: "1000", remainingAmount: "500", status: "partial" as const },
+        {
+          type: "payable" as const,
+          amount: "1000",
+          remainingAmount: "500",
+          status: "partial" as const,
+        },
       ];
 
       const summary = calculateDebtSummary(debts);

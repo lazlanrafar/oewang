@@ -102,9 +102,7 @@ export function WalletClient({ dictionary }: WalletClientProps) {
         <div className="flex flex-col items-center justify-center space-y-4 rounded-none border border-dashed bg-accent/5 p-12 text-center">
           <Wallet className="h-12 w-12 text-muted-foreground/50" />
           <div className="space-y-1">
-            <h3 className="font-medium text-sm">
-              {wallets_t.empty}
-            </h3>
+            <h3 className="font-medium text-sm">{wallets_t.empty}</h3>
           </div>
         </div>
       </div>

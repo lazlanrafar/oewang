@@ -9,5 +9,9 @@ export const PushSubscriptionDto = {
   }),
 };
 
-export type RegisterPushSubscriptionInput = UnwrapSchema<typeof PushSubscriptionDto.register>;
-export type UnregisterPushSubscriptionInput = UnwrapSchema<typeof PushSubscriptionDto.unregister>;
+export type RegisterPushSubscriptionInput = UnwrapSchema<
+  typeof PushSubscriptionDto.register
+>;
+export type UnregisterPushSubscriptionInput = UnwrapSchema<
+  typeof PushSubscriptionDto.unregister
+>;

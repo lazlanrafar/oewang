@@ -11,7 +11,7 @@ export type DebtType = "payable" | "receivable";
  */
 export function calculateDebtStatus(
   remainingAmount: number,
-  totalAmount: number
+  totalAmount: number,
 ): DebtStatus {
   if (remainingAmount <= 0) return "paid";
   if (remainingAmount < totalAmount) return "partial";
@@ -23,7 +23,7 @@ export function calculateDebtStatus(
  */
 export function calculateRemainingAfterPayment(
   currentRemaining: number,
-  paymentAmount: number
+  paymentAmount: number,
 ): number {
   const newRemaining = currentRemaining - paymentAmount;
   return Math.max(0, newRemaining); // Cannot be negative
@@ -35,7 +35,7 @@ export function calculateRemainingAfterPayment(
 export function calculateRemainingAfterAmountChange(
   oldAmount: number,
   newAmount: number,
-  currentRemaining: number
+  currentRemaining: number,
 ): number {
   const amountDiff = newAmount - oldAmount;
   const newRemaining = currentRemaining + amountDiff;
@@ -47,7 +47,7 @@ export function calculateRemainingAfterAmountChange(
  */
 export function calculatePaymentProgress(
   totalAmount: number,
-  remainingAmount: number
+  remainingAmount: number,
 ): number {
   if (totalAmount === 0) return 100;
   const paid = totalAmount - remainingAmount;
@@ -67,7 +67,9 @@ export function isDebtOverdue(dueDate: string | null | undefined): boolean {
 /**
  * Get days until due date
  */
-export function getDaysUntilDue(dueDate: string | null | undefined): number | null {
+export function getDaysUntilDue(
+  dueDate: string | null | undefined,
+): number | null {
   if (!dueDate) return null;
   const due = new Date(dueDate);
   const now = new Date();
@@ -91,7 +93,7 @@ export function formatDebtLabel(type: DebtType, contactName: string): string {
  */
 export function validatePaymentAmount(
   paymentAmount: number,
-  remainingAmount: number
+  remainingAmount: number,
 ): { valid: boolean; error?: string } {
   if (paymentAmount <= 0) {
     return { valid: false, error: "Payment amount must be greater than 0" };
@@ -116,7 +118,7 @@ export function calculateDebtSummary(
     amount: number | string;
     remainingAmount: number | string;
     status: DebtStatus;
-  }>
+  }>,
 ): {
   totalPayable: number;
   totalReceivable: number;
@@ -129,10 +131,12 @@ export function calculateDebtSummary(
   let totalUnpaid = 0;
 
   for (const debt of debts) {
-    const amount = typeof debt.amount === "string" ? parseFloat(debt.amount) : debt.amount;
-    const remaining = typeof debt.remainingAmount === "string"
-      ? parseFloat(debt.remainingAmount)
-      : debt.remainingAmount;
+    const amount =
+      typeof debt.amount === "string" ? parseFloat(debt.amount) : debt.amount;
+    const remaining =
+      typeof debt.remainingAmount === "string"
+        ? parseFloat(debt.remainingAmount)
+        : debt.remainingAmount;
 
     if (debt.type === "payable") {
       totalPayable += remaining;
@@ -160,7 +164,7 @@ export function calculateDebtSummary(
  */
 export function splitBillAmount(
   totalAmount: number,
-  numberOfPeople: number
+  numberOfPeople: number,
 ): number {
   if (numberOfPeople <= 0) return totalAmount;
   return Math.round((totalAmount / numberOfPeople) * 100) / 100; // Round to 2 decimals

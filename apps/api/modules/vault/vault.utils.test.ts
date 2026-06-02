@@ -1,17 +1,17 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import {
   bytesToMB,
-  mbToBytes,
-  isFileTooLarge,
-  isStorageQuotaExceeded,
   calculateRemainingStorage,
   calculateStorageUsagePercentage,
   computeSha256,
-  validateFileName,
-  getFileExtension,
-  isFileTypeAllowed,
   formatFileSize,
+  getFileExtension,
   getStorageStatus,
+  isFileTooLarge,
+  isFileTypeAllowed,
+  isStorageQuotaExceeded,
+  mbToBytes,
+  validateFileName,
 } from "./vault.utils";
 
 describe("vault.utils", () => {
@@ -124,7 +124,9 @@ describe("vault.utils", () => {
     });
 
     test("rounds to 2 decimal places", () => {
-      expect(calculateStorageUsagePercentage(mbToBytes(33.333), 100)).toBe(33.33);
+      expect(calculateStorageUsagePercentage(mbToBytes(33.333), 100)).toBe(
+        33.33,
+      );
     });
   });
 
@@ -134,7 +136,7 @@ describe("vault.utils", () => {
       const hash = computeSha256(buffer);
 
       expect(hash).toBe(
-        "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9"
+        "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9",
       );
     });
 

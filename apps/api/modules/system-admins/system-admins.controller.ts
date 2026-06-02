@@ -1,20 +1,17 @@
+import { ErrorCode } from "@workspace/types";
+import { buildError } from "@workspace/utils";
 import { Elysia, t } from "elysia";
 import { authPlugin } from "../../plugins/auth";
 import { encryptionPlugin } from "../../plugins/encryption";
 import { SystemAdminModel } from "./system-admins.model";
 import { SystemAdminsService } from "./system-admins.service";
-import { ErrorCode } from "@workspace/types";
-import { buildError } from "@workspace/utils";
 
 // Admin Guard Plugin
 export const requireAdminAccess = new Elysia({ name: "guard.admin-access" })
   .use(authPlugin)
   .onBeforeHandle(({ auth, status }) => {
     if (!auth) {
-      return status(
-        401,
-        buildError(ErrorCode.UNAUTHORIZED, "Unauthorized"),
-      );
+      return status(401, buildError(ErrorCode.UNAUTHORIZED, "Unauthorized"));
     }
     if (
       auth.system_role !== "superadmin" &&
@@ -57,7 +54,8 @@ export const systemAdminsController = new Elysia({ prefix: "/system-admins" })
       query: SystemAdminModel.listQuery,
       detail: {
         summary: "List All Users",
-        description: "Retrieves a paginated list of all users in the system. Restricted to system owners and finance administrators.",
+        description:
+          "Retrieves a paginated list of all users in the system. Restricted to system owners and finance administrators.",
         tags: ["System Admins"],
       },
     },
@@ -83,7 +81,8 @@ export const systemAdminsController = new Elysia({ prefix: "/system-admins" })
       }),
       detail: {
         summary: "Update System Role",
-        description: "Promotes or demotes a user's system-wide administrative role. Restricted to system owners.",
+        description:
+          "Promotes or demotes a user's system-wide administrative role. Restricted to system owners.",
         tags: ["System Admins"],
       },
     },
@@ -105,7 +104,8 @@ export const systemAdminsController = new Elysia({ prefix: "/system-admins" })
       query: SystemAdminModel.workspaceListQuery,
       detail: {
         summary: "List All Workspaces",
-        description: "Retrieves a paginated list of all workspaces. Restricted to system owners and finance administrators.",
+        description:
+          "Retrieves a paginated list of all workspaces. Restricted to system owners and finance administrators.",
         tags: ["System Admins"],
       },
     },
@@ -137,7 +137,8 @@ export const systemAdminsController = new Elysia({ prefix: "/system-admins" })
       body: SystemAdminModel.updatePlanBody,
       detail: {
         summary: "Update Workspace Plan",
-        description: "Manually updates a workspace's pricing plan. Restricted to system owners.",
+        description:
+          "Manually updates a workspace's pricing plan. Restricted to system owners.",
         tags: ["System Admins"],
       },
     },

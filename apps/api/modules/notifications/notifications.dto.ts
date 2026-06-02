@@ -10,7 +10,9 @@ export const NotificationDto = {
   }),
 };
 
-export type NotificationListQuery = UnwrapSchema<typeof NotificationDto.listQuery>;
+export type NotificationListQuery = UnwrapSchema<
+  typeof NotificationDto.listQuery
+>;
 export type MarkReadInput = UnwrapSchema<typeof NotificationDto.markRead>;
 
 export const NotificationSettingDto = {

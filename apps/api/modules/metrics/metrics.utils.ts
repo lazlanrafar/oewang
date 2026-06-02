@@ -48,7 +48,7 @@ export function getDefaultDateRange(): DateRange {
  */
 export function resolveDateRange(
   startDate?: string,
-  endDate?: string
+  endDate?: string,
 ): DateRange | null {
   const defaults = getDefaultDateRange();
   const parsedStart = startDate ? parseISO(startDate) : defaults.startDate;
@@ -77,7 +77,7 @@ export function resolveDateRange(
 export function fillMissingMonths(
   dbResults: MonthlyTotal[],
   startDate: Date,
-  endDate: Date
+  endDate: Date,
 ): ChartDataPoint[] {
   const dataMap = new Map<string, number>();
   for (const row of dbResults) {
@@ -117,7 +117,7 @@ export function fillMissingMonths(
  */
 export function calculatePercentageChange(
   oldValue: number,
-  newValue: number
+  newValue: number,
 ): number {
   if (oldValue === 0) {
     return newValue === 0 ? 0 : 100;
@@ -136,8 +136,8 @@ export function calculateGrowthRate(values: number[]): number {
   const validPairs: number[] = [];
 
   for (let i = 1; i < values.length; i++) {
-    const prev = values[i - 1];
-    const curr = values[i];
+    const prev = values[i - 1]!;
+    const curr = values[i]!;
 
     if (prev > 0) {
       validPairs.push(((curr - prev) / prev) * 100);
@@ -156,7 +156,7 @@ export function calculateGrowthRate(values: number[]): number {
  * Aggregate data by category
  */
 export function aggregateByCategory(
-  data: Array<{ categoryId: string; categoryName: string; amount: number }>
+  data: Array<{ categoryId: string; categoryName: string; amount: number }>,
 ): Array<{ categoryId: string; name: string; value: number }> {
   const aggregated = new Map<string, { name: string; value: number }>();
 
@@ -191,11 +191,11 @@ export function calculateTotal(data: ChartDataPoint[]): number {
  * Find peak value and its month in chart data
  */
 export function findPeak(
-  data: ChartDataPoint[]
+  data: ChartDataPoint[],
 ): { month: string; value: number } | null {
   if (data.length === 0) return null;
 
-  let peak = data[0];
+  let peak = data[0]!;
   for (const point of data) {
     if (point.current > peak.current) {
       peak = point;

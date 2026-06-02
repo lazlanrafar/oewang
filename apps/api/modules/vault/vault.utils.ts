@@ -24,7 +24,7 @@ export function mbToBytes(mb: number): number {
  */
 export function isFileTooLarge(
   fileSizeBytes: number,
-  maxSizeMB: number
+  maxSizeMB: number,
 ): boolean {
   const maxBytes = mbToBytes(maxSizeMB);
   return fileSizeBytes > maxBytes;
@@ -36,7 +36,7 @@ export function isFileTooLarge(
 export function isStorageQuotaExceeded(
   currentUsageBytes: number,
   newFileSizeBytes: number,
-  quotaMB: number
+  quotaMB: number,
 ): boolean {
   const quotaBytes = mbToBytes(quotaMB);
   const totalAfterUpload = currentUsageBytes + newFileSizeBytes;
@@ -48,7 +48,7 @@ export function isStorageQuotaExceeded(
  */
 export function calculateRemainingStorage(
   currentUsageBytes: number,
-  quotaMB: number
+  quotaMB: number,
 ): number {
   const quotaBytes = mbToBytes(quotaMB);
   const remaining = quotaBytes - currentUsageBytes;
@@ -60,7 +60,7 @@ export function calculateRemainingStorage(
  */
 export function calculateStorageUsagePercentage(
   currentUsageBytes: number,
-  quotaMB: number
+  quotaMB: number,
 ): number {
   const quotaBytes = mbToBytes(quotaMB);
   if (quotaBytes === 0) return 100;
@@ -91,6 +91,7 @@ export function validateFileName(fileName: string): {
   }
 
   // Check for illegal characters
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: intentional control-char range for file name validation
   const illegalChars = /[<>:"|?*\x00-\x1f]/;
   if (illegalChars.test(fileName)) {
     return { valid: false, error: "File name contains illegal characters" };
@@ -113,7 +114,7 @@ export function getFileExtension(fileName: string): string {
  */
 export function isFileTypeAllowed(
   mimeType: string,
-  allowedTypes: string[]
+  allowedTypes: string[],
 ): boolean {
   return allowedTypes.some((allowed) => {
     // Support wildcards like "image/*"
@@ -134,7 +135,7 @@ export function formatFileSize(bytes: number): string {
   const units = ["B", "KB", "MB", "GB", "TB"];
   const k = 1024;
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  const size = bytes / Math.pow(k, i);
+  const size = bytes / k ** i;
 
   return `${size.toFixed(2)} ${units[i]}`;
 }
@@ -143,7 +144,7 @@ export function formatFileSize(bytes: number): string {
  * Get storage status based on usage
  */
 export function getStorageStatus(
-  usagePercentage: number
+  usagePercentage: number,
 ): "low" | "medium" | "high" | "full" {
   if (usagePercentage >= 100) return "full";
   if (usagePercentage >= 90) return "high";

@@ -1,11 +1,11 @@
-import { WalletsRepository } from "./wallets.repository";
-import { WalletGroupsRepository } from "./groups/groups.repository";
-import { buildPaginatedSuccess, buildError } from "@workspace/utils";
-import { AuditLogsService } from "../audit-logs/audit-logs.service";
-import { status } from "elysia";
 import { ErrorCode } from "@workspace/types";
-import { RealtimeService } from "../realtime/realtime.service";
+import { buildError, buildPaginatedSuccess } from "@workspace/utils";
+import { status } from "elysia";
+import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { NotificationsService } from "../notifications/notifications.service";
+import { RealtimeService } from "../realtime/realtime.service";
+import { WalletGroupsRepository } from "./groups/groups.repository";
+import { WalletsRepository } from "./wallets.repository";
 
 export abstract class WalletsService {
   // --- Wallet Groups ---
@@ -14,14 +14,21 @@ export abstract class WalletsService {
     return WalletGroupsRepository.findMany(workspaceId);
   }
 
-  static async createGroup(workspaceId: string, userId: string, data: { name: string }) {
+  static async createGroup(
+    workspaceId: string,
+    userId: string,
+    data: { name: string },
+  ) {
     const group = await WalletGroupsRepository.create({
       workspaceId,
       ...data,
     });
 
     if (!group) {
-        throw status(500, buildError(ErrorCode.INTERNAL_ERROR, "Failed to create wallet group"));
+      throw status(
+        500,
+        buildError(ErrorCode.INTERNAL_ERROR, "Failed to create wallet group"),
+      );
     }
 
     await AuditLogsService.log({
@@ -46,12 +53,18 @@ export abstract class WalletsService {
   ) {
     const before = await WalletGroupsRepository.findById(id, workspaceId);
     if (!before) {
-        throw status(404, buildError(ErrorCode.NOT_FOUND, "Wallet group not found"));
+      throw status(
+        404,
+        buildError(ErrorCode.NOT_FOUND, "Wallet group not found"),
+      );
     }
     const group = await WalletGroupsRepository.update(id, workspaceId, data);
 
     if (!group) {
-        throw status(500, buildError(ErrorCode.INTERNAL_ERROR, "Failed to update wallet group"));
+      throw status(
+        500,
+        buildError(ErrorCode.INTERNAL_ERROR, "Failed to update wallet group"),
+      );
     }
 
     await AuditLogsService.log({
@@ -72,7 +85,10 @@ export abstract class WalletsService {
   static async deleteGroup(workspaceId: string, userId: string, id: string) {
     const before = await WalletGroupsRepository.findById(id, workspaceId);
     if (!before) {
-        throw status(404, buildError(ErrorCode.NOT_FOUND, "Wallet group not found"));
+      throw status(
+        404,
+        buildError(ErrorCode.NOT_FOUND, "Wallet group not found"),
+      );
     }
     await WalletGroupsRepository.delete(id, workspaceId);
 
@@ -110,7 +126,7 @@ export abstract class WalletsService {
   }
 
   // --- Wallets ---
-  
+
   static async getById(workspaceId: string, id: string) {
     const wallet = await WalletsRepository.findById(workspaceId, id);
     if (!wallet) {
@@ -121,9 +137,17 @@ export abstract class WalletsService {
 
   static async getWallets(
     workspaceId: string,
-    filters?: { search?: string; groupId?: string; page?: number; limit?: number },
+    filters?: {
+      search?: string;
+      groupId?: string;
+      page?: number;
+      limit?: number;
+    },
   ) {
-    const { rows, total } = await WalletsRepository.findMany(workspaceId, filters);
+    const { rows, total } = await WalletsRepository.findMany(
+      workspaceId,
+      filters,
+    );
     const page = filters?.page ?? 1;
     const limit = filters?.limit ?? 20;
 
@@ -157,7 +181,10 @@ export abstract class WalletsService {
     });
 
     if (!wallet) {
-        throw status(500, buildError(ErrorCode.INTERNAL_ERROR, "Failed to create wallet"));
+      throw status(
+        500,
+        buildError(ErrorCode.INTERNAL_ERROR, "Failed to create wallet"),
+      );
     }
 
     await AuditLogsService.log({
@@ -202,12 +229,15 @@ export abstract class WalletsService {
 
     const before = await WalletsRepository.findById(workspaceId, id);
     if (!before) {
-        throw status(404, buildError(ErrorCode.NOT_FOUND, "Wallet not found"));
+      throw status(404, buildError(ErrorCode.NOT_FOUND, "Wallet not found"));
     }
     const wallet = await WalletsRepository.update(id, workspaceId, updateData);
 
     if (!wallet) {
-        throw status(500, buildError(ErrorCode.INTERNAL_ERROR, "Failed to update wallet"));
+      throw status(
+        500,
+        buildError(ErrorCode.INTERNAL_ERROR, "Failed to update wallet"),
+      );
     }
 
     await AuditLogsService.log({
@@ -228,7 +258,7 @@ export abstract class WalletsService {
   static async deleteWallet(workspaceId: string, userId: string, id: string) {
     const before = await WalletsRepository.findById(workspaceId, id);
     if (!before) {
-        throw status(404, buildError(ErrorCode.NOT_FOUND, "Wallet not found"));
+      throw status(404, buildError(ErrorCode.NOT_FOUND, "Wallet not found"));
     }
     await WalletsRepository.delete(id, workspaceId);
 
