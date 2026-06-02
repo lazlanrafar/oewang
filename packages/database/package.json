@@ -8,15 +8,13 @@
     ".": "./index.ts",
     "./test/factories": "./test/factories/index.ts"
   },
-  "exports": {
-    ".": "./index.ts"
-  },
   "scripts": {
     "push": "drizzle-kit push",
     "studio": "drizzle-kit studio",
     "seed": "bun --env-file=../../.env scripts/seeders/index.ts",
     "seed:plans": "bun --env-file=../../.env scripts/seeders/01-plans.ts",
     "seed:addons": "bun --env-file=../../.env scripts/seeders/02-addons.ts",
+    "seed:admin": "bun --env-file=../../.env scripts/seeders/03-admin-user.ts",
     "reset": "bun --env-file=../../.env scripts/reset.ts",
     "typecheck": "tsc --noEmit"
   },
