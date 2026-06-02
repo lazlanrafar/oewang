@@ -23,11 +23,20 @@ import type { Locale } from "@/i18n-config";
 import { getPreference } from "@/server/server-actions";
 
 async function getUserAndWorkspaces() {
-  const result = await getMe();
-  if (result.success) {
-    return result.data;
+  try {
+    // 5-second timeout prevents infinite /sync loop when the API is unreachable
+    // or the cookie is unreadable (e.g. missing domain on cross-subdomain requests).
+    const result = await Promise.race([
+      getMe(),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000)),
+    ]);
+    if (result && "success" in result && result.success) {
+      return result.data;
+    }
+    return null;
+  } catch {
+    return null;
   }
-  return null;
 }
 
 export default async function Layout({
@@ -49,9 +58,9 @@ export default async function Layout({
   ]);
 
   if (!me_data) {
-    // If app JWT is missing/expired but Supabase session still exists,
-    // routing to sync prevents login/overview redirect loops.
-    redirect(`/${locale}/sync`);
+    // getMe() failed: API unreachable, cookie missing, or token expired.
+    // Redirect to login (not /sync) to break any potential redirect loop.
+    redirect(`/${locale}/login`);
   }
 
   const current_user = me_data.user;
