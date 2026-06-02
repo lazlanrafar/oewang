@@ -58,8 +58,11 @@ export default async function Layout({
   ]);
 
   if (!me_data) {
-    // getMe() failed: API unreachable, cookie missing, or token expired.
-    // Redirect to login (not /sync) to break any potential redirect loop.
+    // getMe() failed: API unreachable, cookie missing domain, or token expired.
+    // Delete the stale cookie first — without it, proxy.ts routes the user to
+    // /sync (to mint a fresh token) instead of looping back to /overview.
+    const cookieStore = await cookies();
+    cookieStore.delete("oewang-session");
     redirect(`/${locale}/login`);
   }
 
