@@ -10,7 +10,7 @@ export interface RequestOptions {
  * Can work with either a real server or an Elysia app instance
  */
 export class TestClient {
-  private baseURL = "http://localhost:3002";
+  private baseURL = "http://localhost:3002/v1";
   private defaultHeaders: Record<string, string> = {};
 
   constructor(private app?: Elysia) {}

@@ -46,20 +46,7 @@ jobs:
   critical-tests:
     name: Critical Path Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 8
-
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: oewang_test
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-        ports:
-          - 5432:5432
+    timeout-minutes: 10
 
     steps:
       - name: Checkout code
@@ -73,16 +60,36 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Set up test database
+      - name: Start API server
         env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/oewang_test
-        run: bun run db:push
+          DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_ANON_KEY: test-anon-key-placeholder
+          JWT_SECRET: test-jwt-secret-key-32-characters!!
+          ENCRYPTION_KEY: test-encryption-key-32-chars!!!!
+          NODE_ENV: test
+        run: |
+          cd apps/api && bun run index.ts &
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:3002/v1/health/live > /dev/null 2>&1; then
+              echo "API server ready after ${i}s"
+              break
+            fi
+            echo "Waiting for API server... ($i/30)"
+            sleep 1
+          done
 
       - name: Run integration tests (critical)
         env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/oewang_test
+          DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_ANON_KEY: test-anon-key-placeholder
+          JWT_SECRET: test-jwt-secret-key-32-characters!!
+          ENCRYPTION_KEY: test-encryption-key-32-chars!!!!
+          NODE_ENV: test
         run: |
-          # Run only critical tests (health, auth, transactions)
           bun test --preload ./apps/api/test/setup.ts \
             apps/api/test/integration/health.test.ts \
             apps/api/test/integration/transactions.test.ts

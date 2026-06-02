@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { db } from "@workspace/database";
 import type { PgTransaction } from "drizzle-orm/pg-core";
 
@@ -10,16 +11,14 @@ export async function resetDatabase() {
     throw new Error("resetDatabase can only be called in test environment");
   }
 
-  // Get all table names from the schema
-  const tables = await db.execute`
+  const tables = await db.execute(sql`
     SELECT tablename FROM pg_tables
     WHERE schemaname = 'public'
-  `;
+  `);
 
-  // Truncate all tables (restart identity to reset sequences)
   for (const { tablename } of tables as any[]) {
     if (tablename !== "_drizzle_migrations") {
-      await db.execute`TRUNCATE TABLE ${tablename} RESTART IDENTITY CASCADE`;
+      await db.execute(sql.raw(`TRUNCATE TABLE "${tablename}" RESTART IDENTITY CASCADE`));
     }
   }
 }
@@ -68,18 +67,27 @@ export async function seedTestData() {
 }
 
 /**
- * Clean up test data by user ID
+ * Clean up test data by user ID.
+ * Handles FK constraints: clears workspace link from user before deleting workspace,
+ * which cascades to wallets, transactions, and other workspace-owned data.
  */
 export async function cleanupUser(userId: string) {
   if (!userId) return;
 
-  // Delete in order to respect foreign key constraints
-  await db.execute`DELETE FROM transactions WHERE user_id = ${userId}`;
-  await db.execute`DELETE FROM accounts WHERE user_id = ${userId}`;
-  await db.execute`DELETE FROM budgets WHERE user_id = ${userId}`;
-  await db.execute`DELETE FROM categories WHERE user_id = ${userId}`;
-  await db.execute`DELETE FROM workspaces WHERE user_id = ${userId}`;
-  await db.execute`DELETE FROM users WHERE id = ${userId}`;
+  // Get workspace ID before we unlink it
+  const rows = await db.execute(sql`SELECT workspace_id FROM users WHERE id = ${userId}`);
+  const workspaceId = (rows as unknown as Array<{ workspace_id: string | null }>)[0]?.workspace_id;
+
+  // Clear workspace_id FK first so we can delete the workspace
+  await db.execute(sql`UPDATE users SET workspace_id = NULL WHERE id = ${userId}`);
+
+  // Delete workspace — cascades to wallets, wallet_groups, transactions, etc.
+  if (workspaceId) {
+    await db.execute(sql`DELETE FROM workspaces WHERE id = ${workspaceId}`);
+  }
+
+  // Delete user
+  await db.execute(sql`DELETE FROM users WHERE id = ${userId}`);
 }
 
 /**

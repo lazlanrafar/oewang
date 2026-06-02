@@ -87,6 +87,22 @@ jobs:
           bun run db:push
           echo "✅ Test database initialized"
 
+      - name: Start API server
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/oewang_test
+          REDIS_URL: redis://localhost:6379/1
+          NODE_ENV: test
+        run: |
+          cd apps/api && bun run index.ts &
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:3002/v1/health/live > /dev/null 2>&1; then
+              echo "API server ready after ${i}s"
+              break
+            fi
+            echo "Waiting for API server... ($i/30)"
+            sleep 1
+          done
+
       - name: Run unit tests
         run: bun run test:unit
         continue-on-error: true
