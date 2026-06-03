@@ -2,6 +2,12 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+> **Documentation:** [ARCHITECTURE.md](./docs/ARCHITECTURE.md) · [FEATURES.md](./docs/FEATURES.md) · [BEST_PRACTICE_ELYSIA.md](./docs/BEST_PRACTICE_ELYSIA.md) · [BEST_PRACTICE_NEXT_JS.md](./docs/BEST_PRACTICE_NEXT_JS.md) · [ENGINEERING_STANDARDS.md](./docs/ENGINEERING_STANDARDS.md) · [IMPLEMENTATION_PLAN.md](./docs/IMPLEMENTATION_PLAN.md)
+> **Testing:** [TESTING_UNIT.md](./docs/TESTING_UNIT.md) · [TESTING_E2E.md](./docs/TESTING_E2E.md)
+
+
+---
+
 ## Commands
 
 ### Root (run from repo root)
@@ -14,7 +20,7 @@ bun run typecheck     # Type-check all workspaces
 bun run format        # Prettier format (TS, TSX, MD)
 
 # Database
-bun run db:push       # Push schema changes (no migration files)
+bun run db:push       # Push schema changes (dev only — no migration files)
 bun run db:seed       # Seed the database
 bun run db:reset      # Reset + push + seed
 
@@ -42,9 +48,11 @@ bun run test:e2e:ui   # Playwright with UI mode
 docker compose up -d  # Start PostgreSQL 16 (5432) and Redis 7 (6379)
 ```
 
+---
+
 ## Architecture
 
-This is a **Turborepo monorepo** using **Bun** as package manager and runtime.
+This is a **Turborepo monorepo** using **Bun** as package manager and runtime. See [ARCHITECTURE.md](./docs/ARCHITECTURE.md) for the full design.
 
 ### Apps
 
@@ -58,13 +66,15 @@ This is a **Turborepo monorepo** using **Bun** as package manager and runtime.
 
 ### Key packages
 
-- **`packages/database`** — Drizzle ORM + PostgreSQL. Schema lives here (33 tables); all DB access goes through this package. Primary keys use CUID2 (`@paralleldrive/cuid2`).
-- **`packages/modules`** — Server actions and data-fetching logic (24 action modules). Next.js `app/` calls into these rather than hitting the API or DB directly.
+- **`packages/database`** — Drizzle ORM + PostgreSQL. Schema lives here (32 tables); all DB access goes through this package. Primary keys use CUID2 (`@paralleldrive/cuid2`).
+- **`packages/modules`** — Server actions and data-fetching logic. Next.js `app/` calls into these rather than hitting the API or DB directly.
 - **`packages/ai`** — AI service abstractions over OpenAI, Anthropic Claude, and Google Generative AI. Includes agent, memory, artifact, and store tooling.
-- **`packages/integrations`** — 40+ third-party integrations (Slack, Gmail, WhatsApp, Stripe, QuickBooks, Xero, etc.).
-- **`packages/ui`** — Shared React components built on Shadcn + Radix UI + Tailwind CSS v4.
+- **`packages/integrations`** — 40+ third-party integrations (Telegram, WhatsApp, Stripe, etc.).
+- **`packages/ui`** — Shared React components built on shadcn + Radix UI + Tailwind CSS v4.
 - **`packages/supabase`** — Supabase clients (server, client, middleware) for auth and realtime.
-- **`packages/types`** — Central TypeScript type definitions shared across workspaces.
+- **`packages/types`** — Central TypeScript type definitions and `ErrorCode` constants.
+- **`packages/constants`** — Static constants: roles, colors, pricing features, API config.
+- **`packages/encryption`** — AES-256-GCM encrypt/decrypt. Used in exactly two places: `apps/api/plugins/encryption.ts` and `apps/app/lib/axios.ts`.
 
 ### Data flow
 
@@ -75,15 +85,19 @@ Next.js pages/components
       → PostgreSQL (Supabase transaction pooler)
 
 Next.js pages/components
-  → apps/api (ElysiaJS REST endpoints)
+  → apps/api (ElysiaJS REST — AES-256-GCM encrypted transport)
     → packages/database / packages/integrations / packages/ai
 ```
 
 ### Environment variables
 
-All env vars are defined in a single root `.env` file and surfaced to workspaces via `turbo.json` → `globalEnv`. **Do not create `.env` files inside `apps/*` or `packages/*`.**
+All env vars are defined in a **single root `.env`** file and surfaced to workspaces via `turbo.json → globalEnv`. **Do not create `.env` files inside `apps/*` or `packages/*`.**
 
-## Coding standards (from `docs/rules.md`)
+---
+
+## Coding Standards
+
+> Full details in [ENGINEERING_STANDARDS.md](./docs/ENGINEERING_STANDARDS.md)
 
 ### Naming
 
@@ -93,23 +107,126 @@ All env vars are defined in a single root `.env` file and surfaced to workspaces
 | React props and interface keys | `camelCase` |
 | Files and directories | `kebab-case` |
 | React components | `PascalCase` |
+| Constants objects | `SCREAMING_SNAKE_CASE` |
 
 ### Typing
 
 - Prefer `type` over `interface` for data models and state.
 - Always add explicit return types to exported functions and API handlers.
 - No `any` — use `unknown` or a concrete type. Use Zod at validation boundaries.
+- TypeBox (`Elysia.t`) schemas are the single source of truth in `apps/api` — never duplicate with separate TypeScript interfaces.
 
 ### Logging
 
-Always use `@workspace/logger` (Pino-based), never `console.log` in shared code.
+Always use `@workspace/logger` (Pino-based) in API and packages — **never `console.log`** in shared code.
 
 ```typescript
 import { createLogger } from "@workspace/logger";
 const log = createLogger("my-module");
-log.info("Processing", { user_id });
+log.info("Processing", { workspace_id, user_id });
 ```
 
 ### Linter
 
 Biome (`@biomejs/biome`) handles both linting and formatting (2-space indent, 80-char line width). Run `bun run lint` or `biome check --write` before committing.
+
+---
+
+## ElysiaJS (apps/api)
+
+> Full details in [BEST_PRACTICE_ELYSIA.md](./docs/BEST_PRACTICE_ELYSIA.md)
+
+### Layer Flow
+
+```
+Request → authPlugin → rateLimitPlugin → Controller → Service → Repository → Database
+```
+
+### Critical Rules
+
+1. **Always use method chaining** — breaking the chain loses Elysia type inference entirely.
+2. **Controllers are Elysia instances** — not classes, not functions returning classes.
+3. **Extract `workspace_id` from `auth` context only** — never from body or query params.
+4. **Repositories are the only layer importing `@workspace/database`.**
+5. **Every mutation calls `AuditLogsService.log()`** after success.
+6. **Every read filters by `workspaceId` AND `isNull(deletedAt)`.**
+7. **Soft delete only** — never `db.delete()`.
+
+### Module Structure
+
+```
+modules/{feature}/
+  {feature}.controller.ts   — Elysia instance (routes + validation)
+  {feature}.service.ts      — abstract class with static methods
+  {feature}.repository.ts   — DB queries only
+  {feature}.dto.ts          — TypeBox schemas (or .model.ts)
+  {feature}.utils.ts        — Pure helper functions
+  {feature}.utils.test.ts   — Unit tests for utils
+  __tests__/                — Service / repository / controller tests
+```
+
+---
+
+## Next.js (apps/app)
+
+> Full details in [BEST_PRACTICE_NEXT_JS.md](./docs/BEST_PRACTICE_NEXT_JS.md)
+
+### Critical Rules
+
+1. **`actions/` is the only place HTTP calls are made** — all calls go through `lib/axios.ts` (handles encryption automatically).
+2. **Never call `fetch` or `axios` directly** outside of `actions/`.
+3. **All routes are dynamic by default** in Next.js 16 — opt into caching explicitly with `"use cache"`.
+4. **Always `await params`** — it is a Promise in Next.js 16.
+5. **Keep `"use client"` boundary as low as possible** in the component tree.
+6. **Fetch independent data in parallel** with `Promise.all([...])`.
+7. **All user-facing strings through the dictionary system** — no hardcoded strings.
+
+### Route Structure
+
+```
+app/(main)/[locale]/
+  (auth)/           — Public auth pages (login, register, invite, onboarding)
+  (dashboard)/      — Authenticated app shell (all main features)
+  invoice/[token]/  — Public shareable invoice
+```
+
+---
+
+## Security
+
+- Workspace context from `auth.workspace_id` in JWT — never from request body.
+- All responses AES-256-GCM encrypted. `apps/app/lib/axios.ts` handles decryption.
+- Rate limits: 300 req/min (authenticated) · 30 req/min (unauthenticated) · 10 req/15min (auth endpoints).
+- Soft delete only — workspace-scoped records are never hard-deleted.
+- **Never log:** passwords · JWT tokens · encryption keys · decrypted API payloads.
+
+---
+
+## Testing
+
+| Guide | Coverage |
+|-------|----------|
+| [TESTING_UNIT.md](./docs/TESTING_UNIT.md) | Bun test runner, `bun:test` patterns, module mocking, utils test anatomy, service test with mocks, coverage requirements |
+| [TESTING_E2E.md](./docs/TESTING_E2E.md) | Playwright setup, fixture system, dictionary selectors, auth setup, spec file inventory, debugging |
+| [TESTING.md](./TESTING.md) | Full test inventory and metrics summary |
+
+**Current baseline:** 399 unit tests (~134ms) · 115+ E2E tests
+
+```bash
+bun run test              # all unit tests
+bun run test:watch        # watch mode
+bun run test:coverage     # with coverage report
+bun run test:e2e          # Playwright E2E (2–10 min)
+bun run test:e2e:ui       # Playwright interactive UI mode
+```
+
+Test name format: `should {expected behaviour} when {condition}`
+
+### 🤖 AI Agent Testing Obligations
+
+When writing code, you MUST:
+- **Add `.utils.test.ts`** whenever you create a `.utils.ts` file
+- **Update `TESTING_UNIT.md` Test Inventory** when adding/removing test files
+- **Add a spec file** in `apps/app/e2e/` when adding a new dashboard route
+- **Update `TESTING_E2E.md` Spec Inventory** when adding/removing spec files
+- **Update baseline counts** in `TESTING_UNIT.md`, `TESTING_E2E.md`, and `TESTING.md` if counts change significantly
