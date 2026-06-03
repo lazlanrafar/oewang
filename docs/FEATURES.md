@@ -32,6 +32,8 @@ Each feature document contains detailed documentation on the purpose, data model
 | **Workspace Settings** | [FEAT_SETTINGS.md](./FEAT_SETTINGS.md) | Workspace display preferences, start screens, main currency formats, and custom R2 settings. |
 | **Notifications & Alerts** | [FEAT_NOTIFICATIONS.md](./FEAT_NOTIFICATIONS.md) | In-app WebSocket alerts, transactional emails, and Web Push notifications (VAPID). |
 | **Messaging Integrations** | [FEAT_INTEGRATIONS.md](./FEAT_INTEGRATIONS.md) | Twilio WhatsApp and Telegram bot integration for AI receipt uploads and chat. |
+| **Workspaces, Settings & Billing** | [WORKSPACE_BILLING_SETTINGS.md](./WORKSPACE_BILLING_SETTINGS.md) | Unified architectural guide detailing how tenancy, settings, plan pricing, and Mayar billing connect. |
+
 
 ---
 
