@@ -106,4 +106,19 @@ export abstract class ContextRepository {
       .groupBy(categories.name)
       .orderBy(sql`SUM(CAST(${transactions.amount} AS DECIMAL)) DESC`);
   }
+
+  static async getCategories(workspaceId: string) {
+    return await db
+      .select({
+        id: categories.id,
+        name: categories.name,
+      })
+      .from(categories)
+      .where(
+        and(
+          eq(categories.workspaceId, workspaceId),
+          isNull(categories.deletedAt),
+        ),
+      );
+  }
 }

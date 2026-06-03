@@ -22,7 +22,7 @@ export abstract class AiOrchestrator {
     if (!lastMsg) throw new Error("No messages provided to orchestrator.");
 
     // 1. Detect Intent
-    const intent = IntentService.detectIntent(lastMsg.content);
+    const intent = IntentService.detectIntent(lastMsg.content, messages);
     log.info(`[AiOrchestrator] Detected Intent: ${intent}`);
 
     // 2. Build Context by Intent

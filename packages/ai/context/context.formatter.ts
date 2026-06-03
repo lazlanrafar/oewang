@@ -32,4 +32,9 @@ export abstract class ContextFormatter {
       .map((s) => `- ${s.categoryName}: ${Number(s.total).toLocaleString()}`)
       .join("\n");
   }
+
+  static formatCategories(categories: any[]) {
+    if (categories.length === 0) return "No categories found.";
+    return categories.map((c) => c.name).join(", ");
+  }
 }
