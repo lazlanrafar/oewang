@@ -1,4 +1,3 @@
-import { db } from "@workspace/database";
 import { ErrorCode } from "@workspace/types";
 import {
   buildError,
@@ -183,7 +182,7 @@ export abstract class TransactionsService {
     }
 
     try {
-      return await db.transaction(async (tx) => {
+      return await TransactionsRepository.runTransaction(async (tx) => {
         const walletDeltas: Record<string, number> = {};
         const dbTransactionsToInsert: any[] = [];
 
@@ -516,7 +515,7 @@ export abstract class TransactionsService {
     }
 
     try {
-      return await db.transaction(async (tx) => {
+      return await TransactionsRepository.runTransaction(async (tx) => {
         // Attempt to soft-delete them all in one operation within the transaction
         const deletedTransactions = await TransactionsRepository.deleteMany(
           workspaceId,

@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 
-import type { Notification } from "@workspace/database";
+import type { Notification } from "@workspace/types";
 import { Badge, Button, cn, Popover, PopoverContent, PopoverTrigger, ScrollArea } from "@workspace/ui";
 import { formatDistanceToNow } from "date-fns";
 import { Bell, Trash2 } from "lucide-react";

@@ -1,4 +1,3 @@
-import { db } from "@workspace/database";
 import { ErrorCode } from "@workspace/types";
 import {
   buildError,
@@ -187,7 +186,7 @@ export abstract class DebtsService {
     id: string,
     data: PayDebtInput,
   ) {
-    return await db.transaction(async (tx) => {
+    return await DebtsRepository.runTransaction(async (tx) => {
       const debt = await DebtsRepository.findById(workspaceId, id);
       if (!debt)
         throw status(404, buildError(ErrorCode.NOT_FOUND, "Debt not found"));
@@ -282,7 +281,7 @@ export abstract class DebtsService {
     userId: string,
     data: BulkPayDebtInput,
   ) {
-    return await db.transaction(async (tx) => {
+    return await DebtsRepository.runTransaction(async (tx) => {
       const debtPaymentsToProcess = [];
       let totalExpense = 0;
       let totalIncome = 0;
@@ -424,7 +423,7 @@ export abstract class DebtsService {
     userId: string,
     data: SplitBillInput,
   ) {
-    return await db.transaction(async (tx) => {
+    return await DebtsRepository.runTransaction(async (tx) => {
       let sourceTxId = data.transactionId;
       const totalAmount = Number(data.amount);
 

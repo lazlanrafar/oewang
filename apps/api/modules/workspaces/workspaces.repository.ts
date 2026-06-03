@@ -270,4 +270,18 @@ export abstract class WorkspacesRepository {
       .set({ deletedAt: new Date(), updatedAt: new Date() })
       .where(eq(workspaceInvitations.id, id));
   }
+
+  static async findPlanByName(name: string) {
+    const [plan] = await db
+      .select({ id: pricing.id })
+      .from(pricing)
+      .where(eq(pricing.name, name))
+      .limit(1);
+    return plan ?? null;
+  }
+
+  static async runTransaction<T>(callback: (tx: any) => Promise<T>): Promise<T> {
+    return db.transaction(callback);
+  }
 }
+

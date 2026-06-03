@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { Notification } from "@workspace/database"; // Added type import
+import type { Notification } from "@workspace/types";
 
 import {
   deleteNotification,
