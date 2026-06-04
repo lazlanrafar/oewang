@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@workspace/ui";
 import { Check, Copy } from "lucide-react";
 import { useState } from "react";
 
-const MCP_URL = "https://3002.lazlanrafar.com/mcp";
+const MCP_URL = `${process.env.NEXT_PUBLIC_API_URL}/mcp`;
 
 function CopyableUrl({ url }: { url: string }) {
   const [copied, setCopied] = useState(false);
@@ -42,8 +42,8 @@ function CopyableCode({ code }: { code: string }) {
 
   return (
     <div className="group relative">
-      <div className="overflow-hidden border border-border bg-secondary">
-        <pre className="overflow-x-auto p-3 text-xs font-mono">
+      <div className="border border-border bg-secondary">
+        <pre className="p-3 text-xs font-mono leading-relaxed whitespace-pre-wrap break-words">
           <code>{code}</code>
         </pre>
       </div>

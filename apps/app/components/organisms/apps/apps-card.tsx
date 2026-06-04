@@ -260,7 +260,7 @@ export function AppsCard({
             </div>
 
             {/* Scrollable body */}
-            <div className="flex min-h-0 flex-1 flex-col px-6">
+            <div className="flex min-h-0 flex-1 flex-col overflow-x-hidden px-6">
               <ScrollArea className="h-0 flex-1" hideScrollbar>
                 <Accordion type="multiple" defaultValue={["description"]} className="mt-4">
                   <AccordionItem value="description" className="border-none">
