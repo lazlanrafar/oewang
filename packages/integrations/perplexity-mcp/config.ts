@@ -5,21 +5,20 @@ export default {
   id: "perplexity-mcp",
   category: "ai-automation",
   active: true,
-  hidden: true,
+  hidden: false,
   logo: Logo,
   short_description:
-    "Connect Perplexity to your Midday data with AI-powered search.",
-  description: `Connect Perplexity to your Midday account using the Model Context Protocol (MCP).
+    "Connect Perplexity to your Oewang data with AI-powered search.",
+  description: `Connect Perplexity to your Oewang account using the Model Context Protocol (MCP). No API key needed — authentication is handled automatically via OAuth.
 
 **What you can do:**
 - Query your financial data using natural language
 - Get instant answers about transactions, invoices, and reports
 - Combine Perplexity's AI search with your real business data
 
-**How it works:**
-1. Click Install to open the setup page
-2. Add the MCP server configuration to Perplexity
-3. Add your Midday API key and start asking questions`,
+**Setup steps:**
+1. In Perplexity, go to **Settings → Connectors** and click **Create**
+2. Paste the Oewang MCP URL as the connector URL
+3. When you use an Oewang tool, you'll be prompted to sign in`,
   images: [],
-  installUrl: "https://midday.ai/mcp/perplexity",
 };

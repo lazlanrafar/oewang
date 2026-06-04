@@ -5,22 +5,23 @@ export default {
   id: "chatgpt-mcp",
   category: "ai-automation",
   active: true,
-  hidden: true,
+  hidden: false,
   logo: Logo,
   short_description:
-    "Build custom ChatGPT integrations with Midday using the MCP SDK.",
-  description: `Connect ChatGPT to your Midday account using the Model Context Protocol (MCP).
+    "Connect ChatGPT to your Oewang financial data via MCP with one-click OAuth.",
+  description: `Connect ChatGPT to your Oewang account using the Model Context Protocol (MCP). No API key needed — authentication is handled automatically via OAuth.
 
 **What you can do:**
-- Build custom AI workflows with your financial data
+- Query transactions, invoices, and reports in ChatGPT
+- Get financial insights grounded in your real business data
 - Create automated reports and summaries
-- Integrate Midday data into your own applications
-- Use the MCP SDK for programmatic access
+- Use deep research with your private financial data
 
-**How it works:**
-1. Click Install to open the setup page
-2. Use the ChatGPT Developer config or MCP SDK
-3. Add your Midday API key and start building`,
+**Setup steps:**
+1. In ChatGPT, go to **Settings → Connectors** and click **Create**
+2. Paste the Oewang MCP URL as the connector URL
+3. When you use an Oewang tool, you'll be prompted to sign in
+
+**Requirements:** ChatGPT Pro, Plus, Business, Enterprise, or Education account.`,
   images: [],
-  installUrl: "https://midday.ai/mcp/chatgpt",
 };

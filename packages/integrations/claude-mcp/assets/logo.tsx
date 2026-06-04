@@ -1,6 +1,4 @@
-const claudeIcon = {
-  src: "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7",
-};
+import claudeIcon from "./claude.png";
 
 export const Logo = () => {
   return (

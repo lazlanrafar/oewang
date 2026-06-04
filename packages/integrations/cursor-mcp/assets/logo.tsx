@@ -1,6 +1,4 @@
-const cursorIcon = {
-  src: "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7",
-};
+import cursorIcon from "./cursor.png";
 
 export const Logo = () => {
   return (

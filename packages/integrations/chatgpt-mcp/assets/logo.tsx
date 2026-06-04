@@ -1,6 +1,4 @@
-const chatgptIcon = {
-  src: "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7",
-};
+import chatgptIcon from "./chatgpt.png";
 
 export const Logo = () => {
   return (

@@ -12,7 +12,7 @@ import {
   getIntegrationsAction,
 } from "@workspace/modules/integrations/integrations.action";
 import { getMe } from "@workspace/modules/user/user.action";
-import { cn, Input, Tabs, TabsList, TabsTrigger } from "@workspace/ui";
+import { FilterToggle, Input } from "@workspace/ui";
 import { Grid2X2, Link as LinkIcon, Search } from "lucide-react";
 import { toast } from "sonner";
 
@@ -91,9 +91,7 @@ export function AppsClient({ dictionary }: Props) {
   });
 
   // Transform official apps
-  const transformedOfficialApps: AppCardModel[] = appStoreApps
-    .filter((app) => !app.hidden)
-    .map((app) => {
+  const transformedOfficialApps: AppCardModel[] = appStoreApps.map((app) => {
       // Check if the app is installed via the integrations API response
       const isInstalled = installedApps.some((installed) => installed.provider === app.id && installed.isActive);
 
@@ -135,22 +133,7 @@ export function AppsClient({ dictionary }: Props) {
       };
     });
 
-  // Since Oewang doesn't have OAuth Applications currently, we use an empty array.
-  // In the future, this is where transformedExternalApps will go.
-  const transformedExternalApps: AppCardModel[] = [
-    {
-      id: "oewang-app",
-      name: "Oewang App",
-      category: "Mobile",
-      active: false, // Coming soon
-      logo: undefined,
-      short_description: "Manage your finances on the go with the Oewang mobile app.",
-      description:
-        "The Oewang mobile app will allow you to track expenses, scan receipts, and manage your budget directly from your smartphone.\n\n**Coming Soon**\nWe are currently developing our mobile application for both iOS and Android. Stay tuned for updates!",
-      installed: false,
-      type: "official" as const,
-    },
-  ];
+  const transformedExternalApps: AppCardModel[] = [];
 
   // Combine all apps
   const allApps = [...transformedOfficialApps, ...transformedExternalApps];
@@ -170,7 +153,7 @@ export function AppsClient({ dictionary }: Props) {
 
   return (
     <div className="w-full space-y-8">
-      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+      <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
         {/* Search on left */}
         <div className="relative w-full sm:max-w-[280px]">
           <Search className="-translate-y-1/2 absolute top-1/2 left-3 h-4 w-4 text-muted-foreground" />
@@ -183,34 +166,14 @@ export function AppsClient({ dictionary }: Props) {
         </div>
 
         {/* Filter Toggle on right */}
-        <div className="flex w-fit items-stretch bg-[#f7f7f7] dark:bg-[#131313]">
-          <Tabs value={filter} onValueChange={(v) => setFilter(v as "all" | "connected")}>
-            <TabsList className="flex h-auto items-stretch bg-transparent p-0">
-              <TabsTrigger
-                value="all"
-                className={cn(
-                  "group relative flex h-9 min-h-9 items-center gap-1.5 whitespace-nowrap border border-transparent px-3 py-1.5 text-[14px] transition-all",
-                  "relative z-1 mb-0 bg-[#f7f7f7] text-[#707070] hover:text-black dark:bg-[#131313] dark:text-[#666666] dark:hover:text-white",
-                  "data-[state=active]:-mb-px data-[state=active]:z-10 data-[state=active]:bg-[#e6e6e6] data-[state=active]:text-black dark:data-[state=active]:bg-[#1d1d1d] dark:data-[state=active]:text-white",
-                )}
-              >
-                <Grid2X2 className="h-4 w-4" />
-                {t.tabs.all}
-              </TabsTrigger>
-              <TabsTrigger
-                value="connected"
-                className={cn(
-                  "group relative flex h-9 min-h-9 items-center gap-1.5 whitespace-nowrap border border-transparent px-3 py-1.5 text-[14px] transition-all",
-                  "relative z-1 mb-0 bg-[#f7f7f7] text-[#707070] hover:text-black dark:bg-[#131313] dark:text-[#666666] dark:hover:text-white",
-                  "data-[state=active]:-mb-px data-[state=active]:z-10 data-[state=active]:bg-[#e6e6e6] data-[state=active]:text-black dark:data-[state=active]:bg-[#1d1d1d] dark:data-[state=active]:text-white",
-                )}
-              >
-                <LinkIcon className="h-4 w-4" />
-                {t.tabs.connected}
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
+        <FilterToggle
+          value={filter}
+          onValueChange={(v) => setFilter(v as "all" | "connected")}
+          options={[
+            { value: "all", label: t.tabs.all },
+            { value: "connected", label: t.tabs.connected },
+          ]}
+        />
       </div>
 
       <div className="mx-auto mt-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
@@ -222,7 +185,6 @@ export function AppsClient({ dictionary }: Props) {
             isExpanded={expandedApp === app.id}
             onExpand={() => setExpandedApp(app.id)}
             onClose={() => setExpandedApp(null)}
-            dictionary={dictionary}
             onInstall={async () => {
               if (app.onInitialize) {
                 await app.onInitialize({

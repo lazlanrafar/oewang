@@ -5,22 +5,21 @@ export default {
   id: "cursor-mcp",
   category: "ai-automation",
   active: true,
-  hidden: true,
+  hidden: false,
   logo: Logo,
   short_description:
-    "Connect Cursor to your Midday data via MCP. Ask questions about finances while you code.",
-  description: `Connect Cursor to your Midday account using the Model Context Protocol (MCP).
+    "Connect Cursor to your Oewang data via MCP. Ask questions about finances while you code.",
+  description: `Connect Cursor to your Oewang account using the Model Context Protocol (MCP). No API key needed — authentication is handled automatically via OAuth.
 
 **What you can do:**
-- Track time and log expenses without leaving your editor
-- Ask about transactions, invoices, and customers
+- Ask about transactions, invoices, and budgets
 - Generate financial reports and summaries
 - Query your business data using natural language
+- Get answers grounded in your real financial data
 
 **How it works:**
-1. Click Install to open the setup page
-2. Add your Midday API key to Cursor's MCP configuration
-3. Restart Cursor and @-mention Midday in chat`,
+1. Open Cursor and go to **Settings → MCP Servers**
+2. Add the Oewang MCP server URL
+3. When you first use an Oewang tool, sign in and select a workspace`,
   images: [],
-  installUrl: "https://midday.ai/mcp/cursor",
 };

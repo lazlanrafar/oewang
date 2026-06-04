@@ -1,6 +1,5 @@
-import { useParams } from "next/navigation";
+"use client";
 
-import type { Dictionary } from "@workspace/dictionaries";
 import {
   Accordion,
   AccordionContent,
@@ -19,6 +18,12 @@ import {
   SheetHeader,
 } from "@workspace/ui";
 import { Lock } from "lucide-react";
+import {
+  ChatGPTSetupInstructions,
+  ClaudeSetupInstructions,
+  CursorSetupInstructions,
+  PerplexitySetupInstructions,
+} from "./mcp-setup-instructions";
 
 interface App {
   id: string;
@@ -51,7 +56,61 @@ export interface AppsCardProps {
   onDisconnect?: () => void;
   isInstalling?: boolean;
   isDisconnecting?: boolean;
-  dictionary: Dictionary;
+
+}
+
+const MCP_IDS = new Set(["cursor-mcp", "claude-mcp", "perplexity-mcp", "chatgpt-mcp"]);
+
+function AppLogo({ app, size = "sm" }: { app: App; size?: "sm" | "md" }) {
+  const cls = size === "md" ? "h-10 w-10 rounded" : "h-8 w-8 rounded";
+  if (app.type === "official" && app.logo && typeof app.logo !== "string") {
+    return <app.logo />;
+  }
+  if (app.logo) {
+    return (
+      // biome-ignore lint/performance/noImgElement: App logo is a dynamic external image
+      <img src={app.logo as string} alt={app.name} className={cls} />
+    );
+  }
+  return (
+    <div
+      className={`flex items-center justify-center rounded bg-secondary font-bold text-xs uppercase ${cls}`}
+    >
+      {app.name.charAt(0)}
+    </div>
+  );
+}
+
+function AppHeroBanner({ app }: { app: App }) {
+  return (
+    <div className="relative flex h-[200px] w-full items-center justify-center overflow-hidden bg-[#fafafa] dark:bg-[#0c0c0c]">
+      <div
+        className="absolute inset-0 dark:hidden"
+        style={{
+          backgroundImage: "radial-gradient(circle, #e0e0e0 1px, transparent 1px)",
+          backgroundSize: "10px 10px",
+        }}
+      />
+      <div
+        className="absolute inset-0 hidden dark:block"
+        style={{
+          backgroundImage: "radial-gradient(circle, #333 1px, transparent 1px)",
+          backgroundSize: "10px 10px",
+        }}
+      />
+      <div className="relative z-10 [&_img]:!h-16 [&_img]:!w-16 [&_svg]:!h-16 [&_svg]:!w-16">
+        <AppLogo app={app} size="md" />
+      </div>
+    </div>
+  );
+}
+
+function McpSheetContent({ appId }: { appId: string }) {
+  if (appId === "cursor-mcp") return <CursorSetupInstructions />;
+  if (appId === "claude-mcp") return <ClaudeSetupInstructions />;
+  if (appId === "perplexity-mcp") return <PerplexitySetupInstructions />;
+  if (appId === "chatgpt-mcp") return <ChatGPTSetupInstructions />;
+  return null;
 }
 
 export function AppsCard({
@@ -64,49 +123,27 @@ export function AppsCard({
   isInstalling,
   isDisconnecting,
   userPlan = "Starter",
-  dictionary,
 }: AppsCardProps) {
-  const params = useParams();
-  const _locale = (params.locale as string) || "en";
+  const planLevels: Record<string, number> = { Starter: 0, "Free Tier": 0, Pro: 1, Business: 2 };
+  const isLocked = (planLevels[userPlan] ?? 0) < (app.requires_plan ? (planLevels[app.requires_plan] ?? 1) : 0);
+  const isMcp = MCP_IDS.has(app.id);
 
-  const planLevels: Record<string, number> = {
-    Starter: 0,
-    "Free Tier": 0,
-    Pro: 1,
-    Business: 2,
-  };
-
-  const currentLevel = planLevels[userPlan] ?? 0;
-  const requiredLevel = app.requires_plan ? (planLevels[app.requires_plan] ?? 1) : 0;
-  const isLocked = currentLevel < requiredLevel;
   return (
     <Card className="flex w-full flex-col">
       <Sheet open={isExpanded} onOpenChange={(open) => !open && onClose()}>
+        {/* ── Card: logo row ── */}
         <div className="flex h-16 items-center justify-between px-6 pt-6">
-          {app.type === "official" && app.logo && typeof app.logo !== "string" ? (
-            <app.logo />
-          ) : app.logo ? (
-            <>
-              {/* biome-ignore lint/performance/noImgElement: App logo is a dynamic external image */}
-              <img src={app.logo as string} alt={app.name} className="h-8 w-8 rounded" />
-            </>
-          ) : (
-            <div className="flex h-8 w-8 items-center justify-center rounded bg-secondary font-bold text-xs uppercase">
-              {app.name.charAt(0)}
+          <AppLogo app={app} />
+          {app.installed && (
+            <div className="rounded-full bg-green-100 px-3 py-1 font-mono text-[10px] text-green-600 dark:bg-green-900/30 dark:text-green-400">
+              Installed
             </div>
           )}
-
-          <div className="flex items-center gap-2">
-            {app.installed && (
-              <div className="rounded-full bg-green-100 px-3 py-1 font-mono font-semibold text-[10px] text-green-600 uppercase tracking-wider dark:bg-green-900/30 dark:text-green-400">
-                Installed
-              </div>
-            )}
-          </div>
         </div>
 
-        <CardHeader className="pt-2 pb-0">
-          <div className="flex items-center space-x-2 pb-4">
+        {/* ── Card: title + badges ── */}
+        <CardHeader className="pb-0 pt-2">
+          <div className="flex items-center gap-2 pb-4">
             <CardTitle className="m-0 p-0 font-medium text-md leading-none">{app.name}</CardTitle>
             {!app.active && (
               <span className="rounded-full bg-secondary px-2 py-0.5 font-mono text-[10px] text-muted-foreground">
@@ -114,7 +151,7 @@ export function AppsCard({
               </span>
             )}
             {app.active && app.beta && (
-              <span className="rounded-full bg-secondary px-2 py-0.5 font-mono text-[10px] text-foreground">Beta</span>
+              <span className="rounded-full bg-secondary px-2 py-0.5 font-mono text-[10px]">Beta</span>
             )}
             {app.requires_plan && (
               <Badge
@@ -126,177 +163,163 @@ export function AppsCard({
             )}
           </div>
         </CardHeader>
+
+        {/* ── Card: description ── */}
         <CardContent className="flex-1 pb-4 text-muted-foreground text-xs">
           <p className="line-clamp-2">{app.short_description || app.description || ""}</p>
         </CardContent>
 
-        <div className="mt-auto grid grid-cols-2 gap-2 px-6 pb-6">
-          <Button variant="outline" className="w-full" disabled={!app.active} onClick={onExpand}>
-            Details
-          </Button>
-
-          {isLocked ? (
-            <Button disabled variant="outline" className="group w-full">
-              <Lock className="mr-2 h-3 w-3 text-muted-foreground transition-colors" />
-              {dictionary.common.coming_soon || "Coming Soon"}
-            </Button>
-          ) : app.installUrl ? (
-            <Button variant="outline" className="w-full" onClick={onInstall} disabled={!app.active}>
-              {app.id === "midday-desktop" ? "Download" : "Install"}
-            </Button>
-          ) : app.installed ? (
-            <Button
-              variant="outline"
-              className="w-full border-primary/20 bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary"
-              onClick={onDisconnect}
-              disabled={isDisconnecting}
-            >
-              Disconnect
+        {/* ── Card: action buttons ── */}
+        <div className={`mt-auto px-6 pb-6 ${isMcp ? "" : "grid grid-cols-2 gap-2"}`}>
+          {isMcp ? (
+            <Button variant="outline" className="w-full" onClick={onExpand}>
+              Details
             </Button>
           ) : (
-            <Button variant="outline" className="w-full" onClick={onInstall} disabled={!app.active || isInstalling}>
-              Install
-            </Button>
+            <>
+              <Button variant="outline" className="w-full" onClick={onExpand}>
+                Details
+              </Button>
+              {isLocked ? (
+                <Button disabled variant="outline" className="w-full">
+                  <Lock className="mr-2 h-3 w-3 text-muted-foreground" />
+                  Upgrade
+                </Button>
+              ) : app.installed ? (
+                <Button
+                  variant="outline"
+                  className="w-full border-primary/20 bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary"
+                  onClick={onDisconnect}
+                  disabled={isDisconnecting}
+                >
+                  Disconnect
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={onInstall}
+                  disabled={!app.active || isInstalling}
+                >
+                  Install
+                </Button>
+              )}
+            </>
           )}
         </div>
 
-        <SheetContent className="h-full w-full overflow-y-auto p-0 sm:max-w-[465px]">
-          <SheetHeader className="p-6 text-left">
-            {app.images && app.images.length > 0 && (
-              <div className="mb-4">
-                {/* biome-ignore lint/performance/noImgElement: App screenshot is a dynamic external image */}
-                <img
-                  src={
-                    typeof app.images[0] === "string"
-                      ? app.images[0]
-                      : (app.images[0] as { default?: { src: string }; src?: string }).default?.src ||
-                        (app.images[0] as { src?: string }).src
-                  }
-                  alt={app.name}
-                  className="h-auto w-full rounded-lg object-cover"
-                />
-              </div>
-            )}
-
-            <div className="mt-2 flex items-center justify-between border-border border-b pb-4">
-              <div className="flex items-center space-x-3">
-                {app.type === "official" && app.logo && typeof app.logo !== "string" ? (
-                  <app.logo />
-                ) : app.logo ? (
-                  <>
-                    {/* biome-ignore lint/performance/noImgElement: App logo is a dynamic external image */}
-                    <img src={app.logo as string} alt={app.name} className="h-10 w-10 rounded" />
-                  </>
-                ) : (
-                  <div className="flex h-10 w-10 items-center justify-center rounded bg-secondary font-bold uppercase">
-                    {app.name.charAt(0)}
-                  </div>
-                )}
-                <div>
-                  <div className="flex items-center space-x-2">
-                    <h3 className="font-bold text-xl leading-none">{app.name}</h3>
-                    {app.installed && <div className="h-2 w-2 rounded-full bg-green-500" />}
-                  </div>
-
-                  <span className="mt-2 block text-muted-foreground text-xs">
-                    {app.category || "Integration"} •{" "}
-                    {app.type === "external" ? `By ${app.developerName || "Partner"}` : "By Oewang"}
-                  </span>
-                </div>
-              </div>
-
-              <div>
-                {isLocked ? (
-                  <Button disabled variant="default" className="w-full font-medium">
-                    <Lock className="mr-2 h-4 w-4" />
-                    {dictionary.common.coming_soon || "Coming Soon"}
-                  </Button>
-                ) : app.installed ? (
-                  <Button
-                    variant="destructive"
-                    className="w-full font-medium"
-                    onClick={onDisconnect}
-                    disabled={isDisconnecting}
-                  >
-                    Disconnect
-                  </Button>
-                ) : (
-                  <Button
-                    variant="default"
-                    className="w-full font-medium"
-                    onClick={onInstall}
-                    disabled={!app.active || isInstalling}
-                  >
-                    {app.id === "midday-desktop" ? "Download" : "Install"}
-                  </Button>
-                )}
-              </div>
+        {/* ── Sheet ── */}
+        <SheetContent className="h-full w-full overflow-hidden p-0">
+          <SheetHeader className="h-full overflow-hidden text-left">
+            {/* Hero banner */}
+            <div className="shrink-0">
+              <AppHeroBanner app={app} />
             </div>
 
-            <div className="mt-4">
-              <ScrollArea className="h-full pt-2">
+            {/* Title row */}
+            <div className="flex shrink-0 items-center justify-between border-border border-b px-6 pb-4 pt-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg leading-none">{app.name}</h3>
+                  {app.installed && <div className="size-1.5 rounded-full bg-green-500" />}
+                </div>
+                <span className="mt-1.5 block text-muted-foreground text-xs">
+                  {app.category || "Integration"} •{" "}
+                  {app.type === "external" ? `By ${app.developerName || "Partner"}` : "By Oewang"}
+                </span>
+              </div>
+
+              {!isMcp && (
+                <div>
+                  {isLocked ? (
+                    <Button disabled variant="outline" size="sm">
+                      <Lock className="mr-2 h-3.5 w-3.5" />
+                      Upgrade
+                    </Button>
+                  ) : app.installed ? (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={onDisconnect}
+                      disabled={isDisconnecting}
+                    >
+                      Disconnect
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={onInstall}
+                      disabled={!app.active || isInstalling}
+                    >
+                      Install
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Scrollable body */}
+            <div className="flex min-h-0 flex-1 flex-col px-6">
+              <ScrollArea className="h-0 flex-1" hideScrollbar>
                 <Accordion type="multiple" defaultValue={["description"]} className="mt-4">
                   <AccordionItem value="description" className="border-none">
-                    <AccordionTrigger className="font-semibold hover:no-underline">How it works</AccordionTrigger>
-                    <AccordionContent>
-                      <Markdown
-                        content={
-                          app.description || app.overview || app.short_description || "No description available."
-                        }
-                      />
+                    <AccordionTrigger className="hover:no-underline">How it works</AccordionTrigger>
+                    <AccordionContent className="text-[#878787] text-sm">
+                      {isMcp ? (
+                        <McpSheetContent appId={app.id} />
+                      ) : (
+                        <Markdown
+                          content={
+                            app.description ||
+                            app.overview ||
+                            app.short_description ||
+                            "No description available."
+                          }
+                        />
+                      )}
                     </AccordionContent>
                   </AccordionItem>
 
-                  {app.type === "external" && (
-                    <>
-                      {app.website && (
-                        <AccordionItem value="website" className="border-none">
-                          <AccordionTrigger className="font-semibold hover:no-underline">Website</AccordionTrigger>
-                          <AccordionContent>
-                            <a
-                              href={app.website}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-primary text-sm hover:underline"
-                            >
-                              {app.website}
-                            </a>
-                          </AccordionContent>
-                        </AccordionItem>
-                      )}
+                  {app.type === "external" && app.website && (
+                    <AccordionItem value="website" className="border-none">
+                      <AccordionTrigger className="hover:no-underline">Website</AccordionTrigger>
+                      <AccordionContent>
+                        <a
+                          href={app.website}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-primary hover:underline"
+                        >
+                          {app.website}
+                        </a>
+                      </AccordionContent>
+                    </AccordionItem>
+                  )}
 
-                      {app.scopes && app.scopes.length > 0 && (
-                        <AccordionItem value="permissions" className="border-none">
-                          <AccordionTrigger className="font-semibold hover:no-underline">Permissions</AccordionTrigger>
-                          <AccordionContent>
-                            <div className="flex flex-wrap gap-2">
-                              {app.scopes.map((scope: string) => (
-                                <Badge key={scope} variant="secondary">
-                                  {scope}
-                                </Badge>
-                              ))}
-                            </div>
-                          </AccordionContent>
-                        </AccordionItem>
-                      )}
-                    </>
+                  {app.type === "external" && app.scopes && app.scopes.length > 0 && (
+                    <AccordionItem value="permissions" className="border-none">
+                      <AccordionTrigger className="hover:no-underline">Permissions</AccordionTrigger>
+                      <AccordionContent>
+                        <div className="flex flex-wrap gap-2">
+                          {app.scopes.map((scope) => (
+                            <Badge key={scope} variant="secondary">
+                              {scope}
+                            </Badge>
+                          ))}
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
                   )}
                 </Accordion>
-
-                {(!app.type || app.type !== "external") && app.settings && (
-                  <div className="mt-8 mb-4">
-                    <h4 className="mb-2 font-semibold text-lg">Settings & Configuration</h4>
-                    <p className="text-muted-foreground text-sm">
-                      Configuration options will appear here once the integration is installed.
-                    </p>
-                  </div>
-                )}
               </ScrollArea>
 
-              <div className="mt-6 border-border border-t pt-8">
-                <p className="text-[10px] text-muted-foreground">
-                  All apps on the Oewang App Store are open-source and peer-reviewed. Oewang Labs maintains high
-                  standards but doesn't endorse third-party apps unless officially certified.
+              {/* Footer */}
+              <div className="shrink-0 border-border border-t py-4">
+                <p className="text-[10px] text-[#878787]">
+                  All apps on the Oewang App Store are open-source and peer-reviewed. Oewang Labs
+                  maintains high standards but doesn't endorse third-party apps. Apps published by
+                  Oewang are officially certified.
                 </p>
                 <a
                   href="mailto:support@oewang.dev"
