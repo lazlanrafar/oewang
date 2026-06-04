@@ -141,7 +141,7 @@ export function NavUsage({
   if (!resolvedWorkspace) return null;
 
   return (
-    <div className="flex flex-col gap-4 border-t border-b px-4 py-4">
+    <div className="flex flex-col gap-4 border-t border-b px-4 py-4 group-data-[collapsible=icon]:hidden">
       {maxAiTokens > 0 && (
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between text-[10px] text-muted-foreground uppercase tracking-wider">
