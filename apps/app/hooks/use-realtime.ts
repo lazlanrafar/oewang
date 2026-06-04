@@ -24,7 +24,7 @@ export function useRealtime() {
     const baseWsUrl = apiUrl.replace(/^http/, "ws").replace(/\/$/, "");
     const wsUrl = `${baseWsUrl}/v1/realtime`;
 
-    console.log("[Realtime] Attempting connection to", wsUrl);
+    if (process.env.NODE_ENV !== "production") console.log("[Realtime] Connecting to", wsUrl);
 
     try {
       const ws = new WebSocket(wsUrl);
@@ -78,8 +78,8 @@ export function useRealtime() {
         reconnectTimeoutRef.current = setTimeout(connect, delay);
       };
 
-      ws.onerror = (err) => {
-        console.error("[Realtime] 🛑 WebSocket Error Event:", err);
+      ws.onerror = () => {
+        console.warn("[Realtime] 🛑 WebSocket connection failed:", wsUrl, "(API may not be running)");
       };
     } catch (e) {
       console.error("[Realtime] ❌ Connection failed", e);

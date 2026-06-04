@@ -7,7 +7,16 @@ import Negotiator from "negotiator";
 
 import { i18n } from "./i18n-config";
 
-const IGNORED_LOCALE_PATHS = ["/manifest.json", "/favicon.ico", "/robots.txt", "/sitemap.xml", "/terms", "/policy"];
+const IGNORED_LOCALE_PATHS = [
+  "/manifest.json",
+  "/favicon.ico",
+  "/robots.txt",
+  "/sitemap.xml",
+  "/terms",
+  "/policy",
+  "/sw.js",
+  "/workbox-",
+];
 
 function getLocale(request: NextRequest): string | undefined {
   const negotiatorHeaders: Record<string, string> = {};
