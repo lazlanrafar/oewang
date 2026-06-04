@@ -47,6 +47,16 @@ export default async function LoginV2({ params }: { params: Promise<{ locale: Lo
         </details>
       </div>
 
+      <p className="text-center text-muted-foreground text-sm">
+        {dictionary.auth.no_account}{" "}
+        <Link
+          href={`/${locale}/register`}
+          className="font-medium text-foreground underline underline-offset-4 hover:text-primary"
+        >
+          {dictionary.auth.sign_up}
+        </Link>
+      </p>
+
       <div className="pointer-events-none flex w-full justify-center px-10">
         <p className="max-w-[400px] text-center text-muted-foreground text-sm">
           {dictionary.auth.terms_privacy_agreement}{" "}
@@ -58,7 +68,7 @@ export default async function LoginV2({ params }: { params: Promise<{ locale: Lo
           >
             {dictionary.auth.terms_of_service}
           </Link>
-          &{" "}
+          {" & "}
           <Link
             href="/policy"
             target="_blank"

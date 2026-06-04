@@ -2,16 +2,10 @@ import * as path from "node:path";
 import { BucketClient } from "@workspace/bucket";
 import { Env } from "@workspace/constants";
 import { logger } from "@workspace/logger";
-import { createClient } from "@workspace/supabase/server";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { normalizeWorkspaceRole } from "../workspaces/workspace-permissions";
 import { UsersRepository } from "./users.repository";
 
-/**
- * Users service — business logic layer.
- * Handles workspace validation, calls repository.
- * No HTTP logic. No DB access.
- */
 export abstract class UsersService {
   private static async getBucketClient() {
     if (
@@ -32,9 +26,102 @@ export abstract class UsersService {
     });
   }
 
+  /** Look up a user by email. */
+  static async findByEmail(email: string) {
+    return UsersRepository.findByEmail(email);
+  }
+
   /**
-   * Sync a user from Supabase Auth to the internal database.
-   * Returns workspace status.
+   * Resolve the active workspace_id for a user.
+   * Returns the user's stored workspace_id, or falls back to the first active membership.
+   */
+  static async resolveWorkspaceId(user_id: string): Promise<string> {
+    const stored = await UsersRepository.getWorkspaceId(user_id);
+    if (stored) return stored;
+
+    const memberships = await UsersRepository.getMemberships(user_id);
+    return memberships[0]?.workspace_id ?? "";
+  }
+
+  /**
+   * Create a new user with a hashed password (email/password auth).
+   */
+  static async createWithPassword(data: {
+    email: string;
+    name?: string | null;
+    password_hash: string;
+  }) {
+    await UsersRepository.upsert({
+      email: data.email,
+      name: data.name,
+      password_hash: data.password_hash,
+      oauth_provider: "email",
+    });
+    const user = await UsersRepository.findByEmail(data.email);
+    if (!user) throw new Error("Failed to create user");
+    return user;
+  }
+
+  /**
+   * Upsert a user and their oauth_accounts row from an OAuth provider callback.
+   * Lookup order: oauth_accounts → users.email → create new.
+   */
+  static async upsertFromOAuth(data: {
+    provider: string;
+    provider_user_id: string;
+    email: string;
+    name?: string | null;
+    avatar_url?: string | null;
+  }) {
+    // 1. Check if we already have an oauth_accounts row for this provider identity
+    const oauthRow = await UsersRepository.findOAuthAccount(data.provider, data.provider_user_id);
+    let user_id: string;
+
+    if (oauthRow) {
+      user_id = oauthRow.user_id;
+      // Refresh profile fields if they changed
+      await UsersRepository.update(user_id, {
+        name: data.name ?? undefined,
+        profile_picture: data.avatar_url ?? undefined,
+        oauth_provider: data.provider,
+      });
+    } else {
+      // 2. Look up by email (user may have registered with email/password before)
+      const existing = await UsersRepository.findByEmail(data.email);
+      if (existing) {
+        user_id = existing.id;
+      } else {
+        // 3. Create new user
+        await UsersRepository.upsert({
+          email: data.email,
+          name: data.name,
+          profile_picture: data.avatar_url,
+          oauth_provider: data.provider,
+          providers: [data.provider],
+        });
+        const created = await UsersRepository.findByEmail(data.email);
+        if (!created) throw new Error("Failed to create user from OAuth");
+        user_id = created.id;
+      }
+    }
+
+    // 4. Upsert oauth_accounts row
+    await UsersRepository.upsertOAuthAccount({
+      user_id,
+      provider: data.provider,
+      provider_user_id: data.provider_user_id,
+      provider_email: data.email,
+      provider_name: data.name,
+      provider_avatar: data.avatar_url,
+    });
+
+    const user = await UsersRepository.findById(user_id);
+    if (!user) throw new Error("User not found after upsert");
+    return user;
+  }
+
+  /**
+   * Sync a user record from external data (used by existing sync endpoint).
    */
   static async syncUser(data: {
     id: string;
@@ -45,40 +132,26 @@ export abstract class UsersService {
     providers?: string[] | null;
   }) {
     try {
-      // 1. Validate ID format (must be UUID)
-      const uuidRegex =
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[4][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-      if (!uuidRegex.test(data.id)) {
-        throw new Error(`Invalid UUID format for provider ID: ${data.id}`);
-      }
-
-      // Ensure providers is an array if provided
       const providers = Array.isArray(data.providers) ? data.providers : null;
 
-      // 2. Upsert user
       await UsersRepository.upsert({
         id: data.id,
         email: data.email,
         name: data.name,
         oauth_provider: data.oauth_provider,
         profile_picture: data.profile_picture,
-        providers: providers,
+        providers,
       });
 
-      // 2. Check workspace membership
       const memberships = await UsersRepository.getMemberships(data.id);
       const has_workspace = memberships.length > 0;
       let workspace_id: string | null = null;
 
       if (has_workspace) {
-        const current_workspace_id = await UsersRepository.getWorkspaceId(
-          data.id,
-        );
-        workspace_id =
-          current_workspace_id ?? memberships[0]?.workspace_id ?? null;
+        const current_workspace_id = await UsersRepository.getWorkspaceId(data.id);
+        workspace_id = current_workspace_id ?? memberships[0]?.workspace_id ?? null;
       }
 
-      // 3. Log action (only if workspace_id found)
       if (workspace_id) {
         await AuditLogsService.log({
           workspace_id,
@@ -91,17 +164,11 @@ export abstract class UsersService {
 
       return { has_workspace, workspace_id };
     } catch (error: any) {
-      logger.error("Sync user failed", {
-        error,
-        userId: data.id,
-      });
+      logger.error("Sync user failed", { error, userId: data.id });
       throw error;
     }
   }
 
-  /**
-   * Get current user profile with workspaces.
-   */
   static async getProfile(user_id: string) {
     const user = await UsersRepository.findById(user_id);
     if (!user) return null;
@@ -134,11 +201,7 @@ export abstract class UsersService {
     };
   }
 
-  /**
-   * Update the user's active workspace.
-   */
   static async updateActiveWorkspace(user_id: string, workspaceId: string) {
-    // 1. Verify membership
     const memberships = await UsersRepository.getMemberships(user_id);
     const isMember = memberships.some((m) => m.workspace_id === workspaceId);
 
@@ -146,10 +209,8 @@ export abstract class UsersService {
       throw new Error("User is not a member of this workspace");
     }
 
-    // 2. Update active workspace
     await UsersRepository.setWorkspaceId(user_id, workspaceId);
 
-    // 3. Log action
     await AuditLogsService.log({
       workspace_id: workspaceId,
       user_id,
@@ -159,9 +220,6 @@ export abstract class UsersService {
     });
   }
 
-  /**
-   * Update user profile.
-   */
   static async updateProfile(
     user_id: string,
     data: {
@@ -173,10 +231,6 @@ export abstract class UsersService {
     await UsersRepository.update(user_id, data);
   }
 
-  /**
-   * Update user avatar (photo profile).
-   * Automatically deletes the old avatar from storage.
-   */
   static async updateAvatar(
     user_id: string,
     file: { name: string; type: string; size: number; buffer: Buffer },
@@ -186,87 +240,49 @@ export abstract class UsersService {
 
     const bucket = await UsersService.getBucketClient();
 
-    // 1. Storage Cleanup: Delete old avatar if it exists and is an internal key
     if (user.profile_picture && user.profile_picture.startsWith("avatars/")) {
       try {
         await bucket.delete(user.profile_picture);
       } catch (error) {
         logger.error("Failed to delete old avatar", { error, userId: user_id });
-        // Continue anyway, we don't want to block the new upload
       }
     }
 
-    // 2. Upload new avatar
     const timestamp = Date.now();
     const extension = path.extname(file.name) || ".png";
     const key = `avatars/${user_id}/${timestamp}${extension}`;
 
     await bucket.upload(key, file.buffer, file.type);
-
-    // 3. Update user record with the new key
     await UsersRepository.update(user_id, { profile_picture: key });
-
-    // 4. Return the signed URL for immediate UI update
     return bucket.getSignedUrl(key);
   }
 
   /**
-   * Get linked providers.
+   * Get linked OAuth providers from oauth_accounts table.
    */
   static async getProviders(user_id: string) {
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error,
-    } = await supabase.auth.admin.getUserById(user_id);
-
-    if (error || !user) {
-      throw new Error(error?.message || "User not found in Supabase");
-    }
-
+    const rows = await UsersRepository.getOAuthAccounts(user_id);
     return {
-      providers: user.app_metadata.providers || [],
-      identities: user.identities || [],
+      providers: rows.map((r) => r.provider),
+      identities: rows.map((r) => ({
+        id: r.id,
+        provider: r.provider,
+        provider_user_id: r.provider_user_id,
+        email: r.provider_email,
+      })),
     };
   }
 
   /**
-   * Disconnect a provider.
+   * Disconnect a provider by removing its oauth_accounts row.
    */
   static async disconnectProvider(user_id: string, provider: string) {
-    const supabase = await createClient();
-
-    // 1. Get user to find identity ID for this provider
-    const {
-      data: { user },
-      error: getError,
-    } = await supabase.auth.admin.getUserById(user_id);
-
-    if (getError || !user) {
-      throw new Error(getError?.message || "User not found");
-    }
-
-    const identity = user.identities?.find((i: any) => i.provider === provider);
-    if (!identity) {
-      throw new Error(`Provider ${provider} not linked`);
-    }
-
-    // 2. Unlink identity
-    // Supabase admin SDK might not have "unlink" directly in all versions.
-    // However, if we are on a version that supports it:
-    if ("unlinkIdentity" in supabase.auth.admin) {
-      // @ts-expect-error
-      const { error: unlinkErr } = await supabase.auth.admin.unlinkIdentity(
-        identity.id,
-      );
-      if (unlinkErr) throw unlinkErr;
-    } else {
-      throw new Error("Unlink identity not supported by this SDK version");
-    }
-
-    // 3. Update internal providers list
-    const updatedProviders =
-      user.app_metadata.providers?.filter((p: string) => p !== provider) || [];
-    await UsersRepository.update(user_id, { providers: updatedProviders });
+    await UsersRepository.deleteOAuthAccount(user_id, provider);
+    const user = await UsersRepository.findById(user_id);
+    if (!user) throw new Error("User not found");
+    const remaining = await UsersRepository.getOAuthAccounts(user_id);
+    await UsersRepository.update(user_id, {
+      providers: remaining.map((r) => r.provider),
+    });
   }
 }

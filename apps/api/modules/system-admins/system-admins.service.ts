@@ -1,4 +1,3 @@
-import { createAdminClient } from "@workspace/supabase/admin";
 import { ErrorCode } from "@workspace/types";
 import {
   buildError,
@@ -55,28 +54,7 @@ export abstract class SystemAdminsService {
       return buildError(ErrorCode.FORBIDDEN, "Cannot demote the root owner.");
     }
 
-    // 3. Update the database record
     await SystemAdminsRepository.updateSystemRole(targetUserId, newRole);
-
-    // 4. Try to sync to Supabase (graceful fail for local test users)
-    const supabaseAdmin = createAdminClient();
-    const { data: authData, error: authError } =
-      await supabaseAdmin.auth.admin.getUserById(targetUserId);
-
-    if (!authError && authData?.user) {
-      const currentMetadata = authData.user.app_metadata || {};
-      const { error: updateError } =
-        await supabaseAdmin.auth.admin.updateUserById(targetUserId, {
-          app_metadata: { ...currentMetadata, system_role: newRole },
-        });
-
-      if (updateError) {
-        console.warn(
-          "Database updated, but failed to sync Supabase role:",
-          updateError.message,
-        );
-      }
-    }
 
     return buildSuccess(undefined);
   }

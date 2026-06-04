@@ -13,9 +13,6 @@ const apiEnvSchema = z.object({
   DATABASE_URL: z.string().min(1),
 
   // Auth & Security
-  SUPABASE_URL: z.string().min(1),
-  SUPABASE_ANON_KEY: z.string().min(1),
-  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
   JWT_SECRET: z.string().min(32),
   JWT_EXPIRES_IN: z.string().optional().default("7d"),
   ENCRYPTION_KEY: z.string().length(32),
@@ -95,7 +92,6 @@ const apiEnvSchema = z.object({
 
   // Next.js specific (occasionally used in API for redirects or logic)
   NEXT_PUBLIC_APP_URL: z.string().min(1).optional(),
-  NEXT_PUBLIC_SUPABASE_COOKIE_NAME: z.string().optional(),
 });
 
 const isServer = typeof window === "undefined";

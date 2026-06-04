@@ -48,22 +48,6 @@ axiosInstance.interceptors.request.use(async (config) => {
     config.headers.Authorization = `Bearer ${token}`;
   }
 
-  // Fallback to Supabase session (server-side only)
-  if (!config.headers.Authorization) {
-    try {
-      const { createClient } = await import("@workspace/supabase/server");
-      const supabase = await createClient();
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (session?.access_token) {
-        config.headers.Authorization = `Bearer ${session.access_token}`;
-      }
-    } catch (e) {
-      // Ignore
-    }
-  }
-
   // Request body encryption
   if (
     config.data &&

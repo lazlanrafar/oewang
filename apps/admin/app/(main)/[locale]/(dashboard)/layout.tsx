@@ -12,7 +12,6 @@ import {
 } from "@workspace/ui";
 
 import { getMe } from "@workspace/modules/user/user.action";
-import { createClient } from "@workspace/supabase/server";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import {
   SIDEBAR_COLLAPSIBLE_VALUES,
@@ -21,23 +20,10 @@ import {
 import { getPreference } from "@/server/server-actions";
 import { AccountSwitcher } from "@/components/layout/account-switcher";
 
-const ADMIN_ROLES = new Set(["superadmin"]);
-
 async function requireAdminAccess(locale: string) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect(`/${locale}/login`);
-  }
-
-  const systemRole = user.app_metadata?.system_role;
-
-  if (typeof systemRole !== "string" || !ADMIN_ROLES.has(systemRole)) {
-    redirect(`/${locale}/unauthorized`);
-  }
+  const cookie_store = await cookies();
+  const token = cookie_store.get("oewang-session")?.value;
+  if (!token) redirect(`/${locale}/login`);
 }
 
 async function getUserAndWorkspaces() {

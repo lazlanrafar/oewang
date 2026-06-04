@@ -8,7 +8,6 @@ import {
   users,
   workspaces,
 } from "@workspace/database";
-import { createClient } from "@workspace/supabase/admin";
 import { Elysia } from "elysia";
 import * as jose from "jose";
 import { normalizeWorkspaceRole } from "../modules/workspaces/workspace-permissions";
@@ -185,53 +184,7 @@ export async function getAuth(token: string) {
     } as const;
   }
 
-  // Fallback: try Supabase token
-  try {
-    const supabase = createClient();
-
-    const {
-      data: { user },
-      error,
-    } = await supabase.auth.getUser(token);
-
-    if (error || !user) {
-      return null;
-    }
-
-    const membershipWorkspaceIds = await getActiveMembershipWorkspaceIds(
-      user.id,
-    );
-
-    // Look up user record for workspace_id and system role
-    const [db_user] = await db
-      .select({
-        email: users.email,
-        workspace_id: users.workspace_id,
-        system_role: users.system_role,
-      })
-      .from(users)
-      .where(eq(users.id, user.id))
-      .limit(1);
-
-    const workspace_id = resolveWorkspaceId(
-      db_user?.workspace_id,
-      membershipWorkspaceIds,
-    );
-    const workspace_role = await getMembershipRole(user.id, workspace_id);
-
-    return {
-      user_id: user.id,
-      workspace_id,
-      workspaceId: workspace_id,
-      workspace_role,
-      workspaceRole: workspace_role,
-      email: db_user?.email || user.email || "",
-      system_role:
-        db_user?.system_role || user.app_metadata?.system_role || "user",
-    } as const;
-  } catch {
-    return null;
-  }
+  return null;
 }
 
 export const authPlugin = new Elysia({ name: "auth" })
