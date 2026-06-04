@@ -67,7 +67,7 @@ This is a **Turborepo monorepo** using **Bun** as package manager and runtime. S
 
 ### Key packages
 
-- **`packages/database`** — Drizzle ORM + PostgreSQL. Schema lives here (32 tables); all DB access goes through this package. Primary keys use CUID2 (`@paralleldrive/cuid2`).
+- **`packages/database`** — Drizzle ORM + PostgreSQL. Schema lives here (33 tables); all DB access goes through this package. Primary keys use CUID2 (`@paralleldrive/cuid2`).
 - **`packages/modules`** — Server actions and data-fetching logic. Next.js `app/` calls into these rather than hitting the API or DB directly.
 - **`packages/ai`** — AI service abstractions over OpenAI, Anthropic Claude, and Google Generative AI. Includes agent, memory, artifact, and store tooling.
 - **`packages/integrations`** — 40+ third-party integrations (Telegram, WhatsApp, Stripe, etc.).
@@ -75,6 +75,7 @@ This is a **Turborepo monorepo** using **Bun** as package manager and runtime. S
 - **`packages/types`** — Central TypeScript type definitions and `ErrorCode` constants.
 - **`packages/constants`** — Static constants: roles, colors, pricing features, API config.
 - **`packages/encryption`** — AES-256-GCM encrypt/decrypt. Used in exactly two places: `apps/api/plugins/encryption.ts` and `apps/app/lib/axios.ts`.
+- **`packages/redis`** — Redis client singleton. Uses ioredis (TCP) when `REDIS_URL` is set (local Docker), or Upstash REST when `UPSTASH_REDIS_REST_*` vars are set (production). Consumed by `apps/api/lib/cache.ts` and `apps/api/plugins/rate-limit.ts`.
 
 ### Data flow
 

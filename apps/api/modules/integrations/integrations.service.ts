@@ -1,6 +1,7 @@
 import { Env } from "@workspace/constants";
 import { logger } from "@workspace/logger";
 import { buildSuccess } from "@workspace/utils";
+import { cacheDel, cacheGet, cacheSet } from "../../lib/cache";
 import { AiService } from "../ai/ai.service";
 import { executeAiTool } from "../ai/ai.tools";
 import { NotificationsService } from "../notifications/notifications.service";
@@ -10,6 +11,10 @@ import { VaultService as vaultService } from "../vault/vault.service";
 import { WalletsRepository as walletsRepository } from "../wallets/wallets.repository";
 import { WorkspacesService } from "../workspaces/workspaces.service";
 import { IntegrationsRepository } from "./integrations.repository";
+
+const INTEGRATIONS_TTL = 60 * 60 * 24; // 24h — integration configs rarely change
+const integrationsKey = (workspaceId: string) =>
+  `oewang:integrations:${workspaceId}`;
 
 export abstract class IntegrationsService {
   private static extractLeadingJson(text: string): {
@@ -202,6 +207,8 @@ export abstract class IntegrationsService {
       logger.error("Failed to create WhatsApp connected notification", { err }),
     );
 
+    await cacheDel(integrationsKey(workspaceId));
+
     return buildSuccess(
       integration,
       "WhatsApp (Twilio) connected successfully",
@@ -237,11 +244,18 @@ export abstract class IntegrationsService {
       }),
     );
 
+    await cacheDel(integrationsKey(workspaceId));
+
     return buildSuccess(integration, "Telegram connected successfully");
   }
 
   static async getAll(workspace_id: string) {
+    const key = integrationsKey(workspace_id);
+    const cached = await cacheGet<object[]>(key);
+    if (cached) return buildSuccess(cached, "Integrations retrieved successfully");
+
     const integrations = await IntegrationsRepository.findAll(workspace_id);
+    await cacheSet(key, integrations, INTEGRATIONS_TTL);
     return buildSuccess(integrations, "Integrations retrieved successfully");
   }
 
@@ -274,14 +288,13 @@ export abstract class IntegrationsService {
       }).catch(() => {});
     }
 
+    await cacheDel(integrationsKey(workspaceId));
+
     return buildSuccess(disconnected, `${provider} disconnected successfully`);
   }
 
   static async handleTelegramWebhook(payload: Record<string, any>) {
-    console.log(
-      "[Telegram Webhook] Received payload:",
-      JSON.stringify(payload),
-    );
+    logger.debug("Telegram webhook received", { payload });
     const message = payload.message;
     if (!message) return "OK";
 
@@ -490,7 +503,7 @@ export abstract class IntegrationsService {
             await IntegrationsService.sendTelegramMessage(chatId, replyText);
           }
         } catch (chatErr) {
-          console.error("[Telegram AI Chat Error]", chatErr);
+          logger.error("Telegram AI chat failed", { err: chatErr });
           await IntegrationsService.sendTelegramMessage(
             chatId,
             "❌ Sorry, I encountered an error processing your request.",
@@ -498,7 +511,7 @@ export abstract class IntegrationsService {
         }
       }
     } catch (error) {
-      console.error("[Telegram Webhook] Error processing message:", error);
+      logger.error("Telegram webhook message processing failed", { error });
     }
 
     return "OK";
@@ -507,7 +520,7 @@ export abstract class IntegrationsService {
   static async sendTelegramMessage(chatId: string, text: string) {
     const token = Env.TELEGRAM_BOT_TOKEN;
     if (!token) {
-      console.warn("[Telegram] Bot token missing, cannot send message.");
+      logger.warn("Telegram bot token missing, cannot send message");
       return;
     }
 
@@ -525,10 +538,7 @@ export abstract class IntegrationsService {
     );
 
     if (!response.ok) {
-      console.error(
-        "[Telegram] Failed to send message:",
-        await response.text(),
-      );
+      logger.error("Failed to send Telegram message", { body: await response.text() });
     }
   }
 
@@ -666,7 +676,7 @@ export abstract class IntegrationsService {
         }
       }
     } catch (err) {
-      console.error("[Twilio WhatsApp Error]", err);
+      logger.error("Twilio WhatsApp webhook failed", { err });
     }
 
     return "OK";

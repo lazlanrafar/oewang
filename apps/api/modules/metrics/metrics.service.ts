@@ -11,8 +11,17 @@ import {
   startOfMonth,
   subMonths,
 } from "date-fns";
+import { cacheDel, cacheGet, cacheSet } from "../../lib/cache";
 import type { ChartDataPoint } from "./metrics.dto";
 import { MetricsRepository } from "./metrics.repository";
+
+const METRICS_TTL = 60 * 60; // 1h
+const metricsKey = (
+  workspaceId: string,
+  type: string,
+  start?: string,
+  end?: string,
+) => `oewang:metrics:${workspaceId}:${type}:${start ?? "d"}:${end ?? "d"}`;
 
 export abstract class MetricsService {
   private static getDefaultDateRange() {
@@ -89,6 +98,10 @@ export abstract class MetricsService {
     startDate?: string,
     endDate?: string,
   ) {
+    const key = metricsKey(workspaceId, "revenue", startDate, endDate);
+    const cached = await cacheGet<ChartDataPoint[]>(key);
+    if (cached) return buildSuccess(cached, "Revenue metrics retrieved");
+
     const range = MetricsService.resolveDateRange(startDate, endDate);
 
     if (!range) {
@@ -108,6 +121,7 @@ export abstract class MetricsService {
       range.endDate,
     );
 
+    await cacheSet(key, formatted, METRICS_TTL);
     return buildSuccess(formatted, "Revenue metrics retrieved");
   }
 
@@ -116,6 +130,10 @@ export abstract class MetricsService {
     startDate?: string,
     endDate?: string,
   ) {
+    const key = metricsKey(workspaceId, "expenses", startDate, endDate);
+    const cached = await cacheGet<ChartDataPoint[]>(key);
+    if (cached) return buildSuccess(cached, "Expenses metrics retrieved");
+
     const range = MetricsService.resolveDateRange(startDate, endDate);
 
     if (!range) {
@@ -135,6 +153,7 @@ export abstract class MetricsService {
       range.endDate,
     );
 
+    await cacheSet(key, formatted, METRICS_TTL);
     return buildSuccess(formatted, "Expenses metrics retrieved");
   }
 
@@ -143,6 +162,10 @@ export abstract class MetricsService {
     startDate?: string,
     endDate?: string,
   ) {
+    const key = metricsKey(workspaceId, "burn-rate", startDate, endDate);
+    const cached = await cacheGet<ChartDataPoint[]>(key);
+    if (cached) return buildSuccess(cached);
+
     const range = MetricsService.resolveDateRange(startDate, endDate);
 
     if (!range) {
@@ -162,7 +185,18 @@ export abstract class MetricsService {
       range.endDate,
     );
 
+    await cacheSet(key, formatted, METRICS_TTL);
     return buildSuccess(formatted);
+  }
+
+  static async invalidateWorkspaceCache(workspaceId: string) {
+    await cacheDel(
+      metricsKey(workspaceId, "revenue"),
+      metricsKey(workspaceId, "expenses"),
+      metricsKey(workspaceId, "burn-rate"),
+      metricsKey(workspaceId, "breakdown-income"),
+      metricsKey(workspaceId, "breakdown-expense"),
+    );
   }
 
   static async getCategoryBreakdown(
@@ -171,6 +205,10 @@ export abstract class MetricsService {
     startDate?: string,
     endDate?: string,
   ) {
+    const key = metricsKey(workspaceId, `breakdown-${type}`, startDate, endDate);
+    const cached = await cacheGet<object[]>(key);
+    if (cached) return buildSuccess(cached, "Category breakdown retrieved");
+
     const range = MetricsService.resolveDateRange(startDate, endDate);
 
     if (!range) {
@@ -190,6 +228,7 @@ export abstract class MetricsService {
       value: Number(row.total || 0),
     }));
 
+    await cacheSet(key, formatted, METRICS_TTL);
     return buildSuccess(formatted, "Category breakdown retrieved");
   }
 }

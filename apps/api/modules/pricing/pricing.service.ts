@@ -5,6 +5,7 @@ import {
   buildPagination,
   buildSuccess,
 } from "@workspace/utils";
+import { cacheDel, cacheGet, cacheSet } from "../../lib/cache";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import type {
   CreatePricingInput,
@@ -12,6 +13,9 @@ import type {
   UpdatePricingInput,
 } from "./pricing.dto";
 import { PricingRepository } from "./pricing.repository";
+
+const PRICING_PUBLIC_KEY = "oewang:pricing:public";
+const PRICING_PUBLIC_TTL = 60 * 60; // 1h
 
 export abstract class PricingService {
   static async getAll(query: PricingListInput) {
@@ -54,6 +58,8 @@ export abstract class PricingService {
       after: p,
     });
 
+    await cacheDel(PRICING_PUBLIC_KEY);
+
     return buildSuccess(p, "Pricing plan created successfully", "CREATED");
   }
 
@@ -80,6 +86,8 @@ export abstract class PricingService {
       after: updated,
     });
 
+    await cacheDel(PRICING_PUBLIC_KEY);
+
     return buildSuccess(updated);
   }
 
@@ -100,10 +108,15 @@ export abstract class PricingService {
       before: existing,
     });
 
+    await cacheDel(PRICING_PUBLIC_KEY);
+
     return buildSuccess(null);
   }
 
   static async getPublicPlans() {
+    const cached = await cacheGet<object[]>(PRICING_PUBLIC_KEY);
+    if (cached) return buildSuccess(cached, "Pricing plans retrieved");
+
     const plans = await PricingRepository.findPublicActive();
 
     const formattedPlans = plans.map((plan) => ({
@@ -115,6 +128,8 @@ export abstract class PricingService {
       is_highlighted: plan.name.toLowerCase() === "pro",
       comingSoon: plan.name.toLowerCase() !== "starter",
     }));
+
+    await cacheSet(PRICING_PUBLIC_KEY, formattedPlans, PRICING_PUBLIC_TTL);
 
     return buildSuccess(formattedPlans, "Pricing plans retrieved");
   }

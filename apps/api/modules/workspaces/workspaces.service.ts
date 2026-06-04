@@ -10,6 +10,7 @@ import { logger } from "@workspace/logger";
 import { ErrorCode } from "@workspace/types";
 import { buildError, generateSlug } from "@workspace/utils";
 import { status } from "elysia";
+import { cacheDel, cacheGet, cacheSet } from "../../lib/cache";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { CategoriesRepository } from "../categories/categories.repository";
 import { NotificationsService } from "../notifications/notifications.service";
@@ -23,6 +24,11 @@ import {
   normalizeWorkspaceRole,
 } from "./workspace-permissions";
 import { WorkspacesRepository } from "./workspaces.repository";
+
+const WORKSPACE_TTL = 60 * 15; // 15 min — short enough that plan upgrades are visible quickly
+const MEMBERS_TTL = 60 * 60; // 1h
+const workspaceKey = (workspaceId: string) => `oewang:workspace:${workspaceId}`;
+const membersKey = (workspaceId: string) => `oewang:workspace:members:${workspaceId}`;
 
 /**
  * Workspaces service — business logic layer.
@@ -265,15 +271,27 @@ export abstract class WorkspacesService {
   }
 
   static async getActiveWorkspace(workspace_id: string) {
-    return WorkspacesRepository.findById(workspace_id);
+    const key = workspaceKey(workspace_id);
+    const cached = await cacheGet<object>(key);
+    if (cached) return cached;
+
+    const workspace = await WorkspacesRepository.findById(workspace_id);
+    if (workspace) await cacheSet(key, workspace, WORKSPACE_TTL);
+    return workspace;
   }
 
   static async getMembers(workspace_id: string) {
+    const key = membersKey(workspace_id);
+    const cached = await cacheGet<object[]>(key);
+    if (cached) return cached;
+
     const members = await WorkspacesRepository.getMembers(workspace_id);
-    return members.map((member) => ({
+    const result = members.map((member) => ({
       ...member,
       role: normalizeWorkspaceRole(member.role),
     }));
+    await cacheSet(key, result, MEMBERS_TTL);
+    return result;
   }
 
   /**
@@ -445,6 +463,8 @@ export abstract class WorkspacesService {
       entity_id: invitation.id,
     });
 
+    await cacheDel(membersKey(invitation.workspaceId));
+
     return invitation.workspaceId;
   }
 
@@ -528,6 +548,8 @@ export abstract class WorkspacesService {
         link: "/settings/members",
       }).catch(() => {});
     }
+
+    await cacheDel(membersKey(invitation.workspaceId));
 
     return invitation.workspaceId;
   }

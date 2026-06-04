@@ -632,7 +632,7 @@ export abstract class AiService {
     }
 
     if (API_CONFIG.mockAiQuota) {
-      console.log("[DEV] mockAiQuota=true — quota check bypassed");
+      log.debug("mockAiQuota=true — quota check bypassed");
     }
 
     // 5. Orchestrate

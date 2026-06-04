@@ -1,3 +1,4 @@
+import { createLogger } from "@workspace/logger";
 import { ErrorCode } from "@workspace/types";
 import {
   buildError,
@@ -6,6 +7,8 @@ import {
   buildSuccess,
 } from "@workspace/utils";
 import { SystemAdminsRepository } from "./system-admins.repository";
+
+const log = createLogger("system-admins");
 
 export abstract class SystemAdminsService {
   static async getAllUsers(params: {
@@ -28,7 +31,7 @@ export abstract class SystemAdminsService {
         buildPagination(total, params.page, params.limit),
       );
     } catch (error: any) {
-      console.error("Unhandled error fetching Drizzle users:", error);
+      log.error("Failed to fetch users", { error });
       return buildError(ErrorCode.INTERNAL_ERROR, "Failed to fetch users");
     }
   }
@@ -73,7 +76,7 @@ export abstract class SystemAdminsService {
         buildPagination(total, params.page, params.limit),
       );
     } catch (error: any) {
-      console.error("Error fetching workspaces:", error);
+      log.error("Failed to fetch workspaces", { error });
       return buildError(ErrorCode.INTERNAL_ERROR, "Failed to fetch workspaces");
     }
   }
@@ -86,7 +89,7 @@ export abstract class SystemAdminsService {
       );
       return buildSuccess(updated, "Workspace plan updated successfully");
     } catch (error: any) {
-      console.error("Error updating workspace plan:", error);
+      log.error("Failed to update workspace plan", { error });
       return buildError(
         ErrorCode.VALIDATION_ERROR,
         error.message || "Failed to update workspace plan",
@@ -99,7 +102,7 @@ export abstract class SystemAdminsService {
       const plans = await SystemAdminsRepository.findAllPlans();
       return buildSuccess(plans);
     } catch (error: any) {
-      console.error("Error fetching plans:", error);
+      log.error("Failed to fetch plans", { error });
       return buildError(ErrorCode.INTERNAL_ERROR, "Failed to fetch plans");
     }
   }

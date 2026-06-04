@@ -1,3 +1,4 @@
+import { createLogger } from "@workspace/logger";
 import { ErrorCode } from "@workspace/types";
 import {
   buildError,
@@ -7,9 +8,13 @@ import {
 import { status } from "elysia";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { BudgetsRepository } from "../budgets/budgets.repository";
+import { BudgetsService } from "../budgets/budgets.service";
+import { MetricsService } from "../metrics/metrics.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { RealtimeService } from "../realtime/realtime.service";
 import { WalletsRepository } from "../wallets/wallets.repository";
+
+const log = createLogger("transactions");
 import type {
   CreateTransactionInput,
   ExportTransactionsQueryInput,
@@ -128,6 +133,11 @@ export abstract class TransactionsService {
 
     RealtimeService.notifyValueChange(workspaceId, "transactions");
     RealtimeService.notifyValueChange(workspaceId, "wallets");
+
+    await Promise.all([
+      MetricsService.invalidateWorkspaceCache(workspaceId),
+      BudgetsService.invalidateCurrentMonthCache(workspaceId),
+    ]);
 
     return buildSuccess(
       transaction,
@@ -250,6 +260,11 @@ export abstract class TransactionsService {
         RealtimeService.notifyValueChange(workspaceId, "transactions");
         RealtimeService.notifyValueChange(workspaceId, "wallets");
 
+        await Promise.all([
+          MetricsService.invalidateWorkspaceCache(workspaceId),
+          BudgetsService.invalidateCurrentMonthCache(workspaceId),
+        ]);
+
         return buildSuccess(
           {
             imported: results.length,
@@ -261,7 +276,7 @@ export abstract class TransactionsService {
         );
       });
     } catch (err: any) {
-      console.error("[Bulk Create Error]", err);
+      log.error("Bulk create failed", { err });
       return buildError(
         ErrorCode.INTERNAL_ERROR,
         `Import failed: ${err.message || "Unknown error"}`,
@@ -453,6 +468,11 @@ export abstract class TransactionsService {
     RealtimeService.notifyValueChange(workspaceId, "transactions");
     RealtimeService.notifyValueChange(workspaceId, "wallets");
 
+    await Promise.all([
+      MetricsService.invalidateWorkspaceCache(workspaceId),
+      BudgetsService.invalidateCurrentMonthCache(workspaceId),
+    ]);
+
     return buildSuccess(updated, "Transaction updated successfully");
   }
 
@@ -505,6 +525,11 @@ export abstract class TransactionsService {
 
     RealtimeService.notifyValueChange(workspaceId, "transactions");
     RealtimeService.notifyValueChange(workspaceId, "wallets");
+
+    await Promise.all([
+      MetricsService.invalidateWorkspaceCache(workspaceId),
+      BudgetsService.invalidateCurrentMonthCache(workspaceId),
+    ]);
 
     return buildSuccess(null, "Transaction deleted successfully");
   }
@@ -575,13 +600,18 @@ export abstract class TransactionsService {
         RealtimeService.notifyValueChange(workspaceId, "transactions");
         RealtimeService.notifyValueChange(workspaceId, "wallets");
 
+        await Promise.all([
+          MetricsService.invalidateWorkspaceCache(workspaceId),
+          BudgetsService.invalidateCurrentMonthCache(workspaceId),
+        ]);
+
         return buildSuccess(
           { deleted: deletedTransactions.length },
           `Successfully deleted ${deletedTransactions.length} transactions`,
         );
       });
     } catch (err: any) {
-      console.error("[Bulk Delete Error]", err);
+      log.error("Bulk delete failed", { err });
       return buildError(
         ErrorCode.INTERNAL_ERROR,
         `Delete failed: ${err.message || "Unknown error"}`,

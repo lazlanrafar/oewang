@@ -78,9 +78,7 @@ export const aiController = new Elysia({ prefix: "/ai" })
   .post(
     "/chat",
     async ({ body, workspaceId, userId, set }) => {
-      console.log(
-        `[AI Controller] /chat hit. Body type: ${typeof body}, Keys: ${Object.keys(body || {})}`,
-      );
+      logger.debug("AI chat request received", { bodyType: typeof body, keys: Object.keys(body || {}) });
       try {
         const response = await AiService.chat(
           body.messages,
