@@ -190,4 +190,21 @@ export abstract class SystemAdminsRepository {
       .where(and(eq(pricing.is_addon, false), isNull(pricing.deleted_at)))
       .orderBy(asc(pricing.name));
   }
+
+  static async findUserEmail(userId: string) {
+    const [dbUser] = await db
+      .select({ email: users.email })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+    return dbUser ?? null;
+  }
+
+  static async updateSystemRole(userId: string, systemRole: import("@workspace/constants").SystemRole) {
+    await db
+      .update(users)
+      .set({ system_role: systemRole })
+      .where(eq(users.id, userId));
+  }
 }
+

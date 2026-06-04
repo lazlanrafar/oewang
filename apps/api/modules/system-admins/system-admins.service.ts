@@ -1,4 +1,3 @@
-import { db, users } from "@workspace/database";
 import { createAdminClient } from "@workspace/supabase/admin";
 import { ErrorCode } from "@workspace/types";
 import {
@@ -7,7 +6,6 @@ import {
   buildPagination,
   buildSuccess,
 } from "@workspace/utils";
-import { eq } from "drizzle-orm";
 import { SystemAdminsRepository } from "./system-admins.repository";
 
 export abstract class SystemAdminsService {
@@ -42,11 +40,7 @@ export abstract class SystemAdminsService {
     newRole: import("@workspace/constants").SystemRole,
   ) {
     // 1. Fetch user from database
-    const [dbUser] = await db
-      .select({ email: users.email })
-      .from(users)
-      .where(eq(users.id, targetUserId))
-      .limit(1);
+    const dbUser = await SystemAdminsRepository.findUserEmail(targetUserId);
 
     if (!dbUser) {
       return buildError(ErrorCode.NOT_FOUND, "User not found in database.");
@@ -62,10 +56,7 @@ export abstract class SystemAdminsService {
     }
 
     // 3. Update the database record
-    await db
-      .update(users)
-      .set({ system_role: newRole })
-      .where(eq(users.id, targetUserId));
+    await SystemAdminsRepository.updateSystemRole(targetUserId, newRole);
 
     // 4. Try to sync to Supabase (graceful fail for local test users)
     const supabaseAdmin = createAdminClient();

@@ -1,4 +1,4 @@
-import type { InsertNotification } from "@workspace/database";
+import type { InsertNotification } from "@workspace/types";
 import {
   buildPaginatedSuccess,
   buildPagination,

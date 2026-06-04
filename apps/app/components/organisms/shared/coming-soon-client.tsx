@@ -6,17 +6,19 @@ import { Button, Input } from "@workspace/ui";
 import { ArrowRight, HardHat, Mail } from "lucide-react";
 import { toast } from "sonner";
 
-export function ComingSoonClient() {
+import type { AppDictionary } from "@/modules/types/dictionary";
+
+export function ComingSoonClient({ dictionary }: { dictionary: AppDictionary }) {
   const [email, setEmail] = React.useState("");
 
   const handleNotify = (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) {
-      toast.error("Please enter your email");
+      toast.error(dictionary.coming_soon.toast_email_error);
       return;
     }
     // Mock success
-    toast.success(`Thanks! We'll notify you at ${email}`);
+    toast.success(dictionary.coming_soon.toast_notify_success.replace("{email}", email));
     setEmail("");
   };
 
@@ -30,10 +32,9 @@ export function ComingSoonClient() {
 
         {/* Content */}
         <div className="space-y-2">
-          <h1 className="font-bold text-3xl tracking-tight">Coming Soon</h1>
+          <h1 className="font-bold text-3xl tracking-tight">{dictionary.coming_soon.title}</h1>
           <p className="text-muted-foreground text-sm">
-            We're currently working hard on this feature. <br />
-            Sign up below to get notified when it's ready.
+            {dictionary.coming_soon.description}
           </p>
         </div>
 
@@ -45,17 +46,17 @@ export function ComingSoonClient() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter your email"
+              placeholder={dictionary.coming_soon.email_placeholder}
               className="h-10 bg-background/50 pl-10 focus-visible:ring-primary"
             />
           </div>
           <Button type="submit" className="group h-10 w-full font-medium">
-            Notify Me
+            {dictionary.coming_soon.notify_me}
             <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
           </Button>
         </form>
 
-        <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Stay tuned for updates</p>
+        <p className="text-[10px] text-muted-foreground uppercase tracking-widest">{dictionary.coming_soon.stay_tuned}</p>
       </div>
     </div>
   );

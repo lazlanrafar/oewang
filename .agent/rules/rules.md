@@ -4,279 +4,87 @@ trigger: always_on
 
 # AI AGENT ENFORCED ARCHITECTURE RULES
 
-## Multi-Workspace SaaS — Turborepo — Encrypted REST
+> See also: [docs/ARCHITECTURE.md](file:///Users/boneconsulting/Developer/oewang/docs/ARCHITECTURE.md) · [docs/ENGINEERING_STANDARDS.md](file:///Users/boneconsulting/Developer/oewang/docs/ENGINEERING_STANDARDS.md)
 
-Single source of truth. No deviation allowed.
+## Multi-Workspace SaaS — Turborepo — Encrypted REST
 
 ---
 
 # System Overview
 
-**Stack:** Turborepo · Bun · Next.js (`apps/app`) · ElysiaJS (`apps/api`) · PostgreSQL · Drizzle ORM · Redis · Supabase (auth/storage) · Sentry
-
-**Flow:** `apps/app` → Encrypted REST → `apps/api` → Database
+**Stack:** Turborepo · Next.js (`apps/app`) · ElysiaJS (`apps/api`) · PostgreSQL (Drizzle ORM) · Redis · Supabase
+**Flow:** `apps/app` (Next.js) → Encrypted REST (AES-256-GCM) → `apps/api` (ElysiaJS) → Database
 
 ---
 
 # Monorepo Structure
 
-```
-apps/app/
-  actions/          → REST wrappers only (*.actions.ts)
-  app/[locale]/     → Next.js App Router pages with i18n
-  components/       → All UI components
-  lib/              → Client utilities (axios, cookie, currency, preferences, fonts)
-  hooks/            → Custom React hooks
-  stores/           → Client state (Zustand or equivalent)
-  navigation/       → Sidebar/nav config
-  server/           → Next.js Server Actions (server-actions.ts)
-  config/           → App-level config (app-config.ts)
-  types/            → App-local types only (e.g. settings.ts)
-  data/             → Static/seed data consumed by UI
-  middleware.ts     → Auth + workspace guard only
-
-apps/api/
-  modules/{feature}/  → controller · service · repository · model|dto · __tests__/
-  plugins/            → auth · encryption · logger · rate-limit
-  config/             → env.ts (startup validation)
-  index.ts
-  instrument.ts       → Sentry instrumentation
-
-packages/
-  bucket/           → Object/file storage client (S3-compatible)
-  constants/        → countries.json · roles.ts · default/category.ts · default/wallet.ts
-  currencyfreaks/   → CurrencyFreaks API client
-  database/         → Drizzle ORM: schema/ · drizzle/ · client.ts · drizzle.config.ts · index.ts
-  dictionaries/     → i18n JSON files (en · id · ja) + index.ts
-  email/            → Email sender + templates/
-  encryption/       → AES encryption utilities
-  eslint-config/    → Shared ESLint configs
-  logger/           → Shared logger
-  redis/            → Redis client singleton
-  supabase/         → Supabase client · queries · mutations · types · utils
-  types/            → Shared TypeScript types + error codes (no runtime logic)
-  typescript-config/→ Shared tsconfig bases
-  ui/               → shadcn/ui components (uses src/ internally)
-  utils/            → Pure TS utilities (api-response · formatting · pagination · env · load-env)
-```
+- `apps/app/`: actions/ (REST actions) · app/[locale]/ (Pages) · components/ (UI) · lib/ (utils) · hooks/ · stores/ (Zustand) · middleware.ts (auth/guard)
+- `apps/api/`: modules/{feature}/ (layered controller/service/repository) · plugins/ (auth/encryption/rate-limit)
+- `packages/`: bucket/ (S3) · constants/ · currencyfreaks/ · database/ (Drizzle) · dictionaries/ (i18n) · email/ · encryption/ (AES) · logger/ · redis/ · supabase/ · types/ (shared typescript contracts) · ui/ (shadcn) · utils/ (TS helpers)
 
 ---
 
 # `src/` Directory Rule
 
 `src/` is **forbidden everywhere** with exactly **two exceptions**:
-
 - `packages/ui/src/` — shadcn component library convention
-- `packages/bucket/src/` — existing package structure
-
-All other packages and apps MUST NOT use `src/`. No new packages should adopt `src/`.
+- `packages/bucket/src/` — S3 package structure
 
 ---
 
 # Multi-Workspace Rules (CRITICAL)
 
 Every workspace-scoped table MUST have `workspace_id` + `deleted_at`.
-
-**Workspace context priority:** JWT `workspace_id` → `x-workspace-id` header → subdomain. JWT always wins on conflict.
-
-All repository queries MUST filter by `workspace_id` and `deleted_at: null`. No cross-workspace joins. No global queries without explicit super-admin role check.
-
+All repository queries MUST filter by `workspace_id` and `deleted_at: null`. No cross-workspace joins.
 ```ts
 where: { workspace_id, deleted_at: null }
 ```
-
-**Forbidden:** hardcoded workspace IDs · super-admin bypass without role check · returning data without workspace validation.
+**Forbidden:** hardcoded workspace IDs, super-admin bypass without checks, or skipping workspace checks.
 
 ---
 
 # User ↔ Workspace Model (CRITICAL)
 
-**users table:** `workspace_id FK → workspaces.id` (active workspace, nullable until first join)
-
-**user_workspaces table:** `{ user_id, workspace_id, role: "owner" | "admin" | "member", joined_at }`
-
-- Workspace membership resolved via `user_workspaces` join table. NEVER an array/JSON column on users.
-- `workspace_id` on users auto-set on first join. Updated on workspace switch. Null or reassigned on leave.
-- Roles defined in `packages/constants/roles.ts` only — never hardcoded strings inline.
-
-**JWT MUST include:** `{ user_id, workspace_id }`
-
-**Forbidden:** array/JSON workspaces column on users · skipping `user_workspaces` membership check · JWT without `workspace_id` · access without a membership row.
+- **users table:** `workspace_id` (FK → workspaces.id, active workspace)
+- **user_workspaces table:** `{ user_id, workspace_id, role, joined_at }`
+- Workspace membership resolved via `user_workspaces` join. Never an array/JSON column on users.
+- Roles defined in `packages/constants/roles.ts` only.
+- **JWT MUST include:** `{ user_id, workspace_id }`.
 
 ---
 
-# apps/app Rules
+# apps/app Rules (Frontend)
 
-UI and REST consumer only. No DB access. No business logic. No direct ElysiaJS imports.
-
+UI and REST consumer only. No DB access. No business logic.
 **`apps/app` CANNOT import `packages/database` or `packages/supabase` in client components.**
-
-### Directory Responsibilities
-
-**`actions/`** — REST wrappers only. One file per feature: `auth.actions.ts`, `wallet.actions.ts`, etc. Files call the encrypted API via axios and return typed responses. No DB, no business logic, no direct Drizzle usage.
-
-**`app/[locale]/`** — Next.js App Router with i18n locale segment. Route groups: `(auth)/` for public auth pages, `(main)/` for authenticated app shell. Page components are thin — they import from `components/` and call `actions/`. No API calls directly in page files.
-
-**`components/`** — All React components. Organized by feature domain (auth, layout, setting, transactions, vault, wallets, shared) plus `ui/` for primitives. PascalCase files. No business logic. Server components may call `actions/`; client components use hooks/stores.
-
-**`lib/`** — Client-side utilities: `axios.ts` (configured instance with encryption interceptors), `cookie.client.ts`, `currency.ts`, `local-storage.client.ts`, `fonts/`, `preferences/`. No DB, no API routes.
-
-**`hooks/`** — Custom React hooks (`use-currency.ts`, `use-localized-route.ts`, etc.). Hooks may use stores or call actions. Must be client-only (`"use client"`).
-
-**`stores/`** — Client state management (Zustand). Stores are client-only. Do not persist sensitive data to localStorage without encryption.
-
-**`navigation/`** — Sidebar and nav config objects only. No rendering logic.
-
-**`server/`** — Next.js Server Actions (`server-actions.ts`). May call `actions/` or use server-only utilities. Never expose raw DB queries.
-
-**`config/`** — App-level configuration constants (`app-config.ts`). No secrets; only public-safe config.
-
-**`types/`** — App-local types that are not shared across apps (e.g., `settings.ts`). Shared types belong in `packages/types`.
-
-**`data/`** — Static data consumed by UI (e.g., `users.ts` for mock/seed display). No business logic.
-
-**`middleware.ts`** — Auth + workspace guard only:
-
-- Verify JWT, redirect unauthenticated users to `/login`
-- Detect `workspace_id`, redirect no-workspace users to onboarding
-- Handle i18n locale detection/redirect
-- CANNOT: contain business logic · call DB · call `apps/api` directly
-
-### i18n Rules
-
-- All routes nested under `app/[locale]/`. Supported locales configured in `i18n-config.ts`.
-- Dictionary strings loaded via `get-dictionary.ts`. Dictionary files live in `packages/dictionaries/`.
-- Hard-coded user-facing strings in components are FORBIDDEN. All copy goes through the dictionary system.
-- Locale-aware navigation via `hooks/use-localized-route.ts`.
-
-### Sentry (apps/app)
-
-- `instrumentation.ts` initializes Sentry on the server.
-- `sentry.client.config.ts` initializes Sentry on the client.
-- `sentry.server.config.ts` for server-side config.
-- Never log decrypted payloads or secrets to Sentry. Scrub PII before sending.
+See [RULES_APP.md](file:///Users/boneconsulting/Developer/oewang/.agent/rules/RULES_APP.md) for detailed frontend guidelines.
 
 ---
 
-# apps/api Rules
+# apps/api Rules (Backend)
 
-Only layer allowed to: access DB · contain business logic · handle workspace validation.
-
-**Layer flow:** `Controller → Service → Repository → Database`
-
-### Controller
-
-- Route definition + TypeBox input validation + call service + encrypt response.
-- No DB access. No business logic. No plan logic.
-- File naming: `{feature}.controller.ts`. For sub-features: `rates.controller.ts` inside the parent module folder.
-- Register routes on the Elysia app instance exported from `modules/{feature}/index.ts`.
-
-### Service
-
-- All business logic: workspace validation · plan enforcement · orchestration · audit log writes.
-- No HTTP primitives (no `ctx`, no status codes).
-- File naming: `{feature}.service.ts`.
-
-### Repository
-
-- Only layer importing `packages/database`. Enforces `workspace_id` + `deleted_at: null` on all reads.
-- No business logic. Never hard-delete workspace-scoped records. Use soft delete (`deleted_at = now()`).
-- File naming: `{feature}.repository.ts`.
-
-### Model / DTO Files
-
-- TypeBox schemas for request/response validation live in `{feature}.model.ts` OR `{feature}.dto.ts`.
-- Use `.model.ts` when the file defines the primary resource shape (categories, users, workspaces, transactions).
-- Use `.dto.ts` when the file defines request/response transfer objects for a service with complex sub-operations (vault, wallets, settings).
-- Never duplicate TypeBox schema definitions across files. One source per shape.
-
-### Auth Module
-
-- `auth.controller.ts` — route definitions and TypeBox validation.
-- `utils.ts` — auth-specific helpers (token generation, bcrypt helpers). Acceptable to skip separate service/repository for pure auth logic that doesn't require workspace DB queries.
-- Workspace-scoped auth actions (e.g. invite acceptance) MUST go through a proper service+repository.
-
-### Sub-module Pattern
-
-For features with sub-resources (e.g. `wallets/groups/`, `wallets/items/`, `settings/sub-currencies/`):
-
-- Create a sub-directory under the parent module.
-- Sub-module follows the same controller/service/repository pattern.
-- Parent module `index.ts` registers all sub-module routes.
-
-### Sentry (apps/api)
-
-- `instrument.ts` at api root initializes Sentry. Import first in `index.ts` before anything else.
-- Never send raw error objects, stack traces, or decrypted payloads to Sentry.
+Only layer allowed to: access DB, contain business logic, enforce isolation.
+**Strict Layer Flow:** `Controller → Service → Repository → Database` (No skipping layers)
+See [RULES_API.md](file:///Users/boneconsulting/Developer/oewang/.agent/rules/RULES_API.md) for detailed backend guidelines.
 
 ---
 
 # packages/ Rules
 
-## packages/database
+- **packages/database**: Drizzle ORM + PG. Migrations generated via `drizzle-kit generate`, applied via `drizzle-kit migrate`.
+- **packages/types**: Shared contracts (API responses, interfaces, ErrorCode constant). **MUST** define shared types (e.g. `Notification`, `NotificationSetting`) here so frontend never imports from the database package.
+- **packages/constants**: Static constants (roles, default category/wallet seeds).
+- **packages/ui**: shadcn/ui components (`src/` internally). Imported in frontend components only.
+See [RULES_PACKAGES.md](file:///Users/boneconsulting/Developer/oewang/.agent/rules/RULES_PACKAGES.md) for details.
 
-Drizzle ORM only.
+---
 
-```
-schema/           → one file per table (users.ts, workspaces.ts, wallets.ts, etc.)
-drizzle/          → generated migration SQL files — NEVER edit manually
-drizzle.config.ts → Drizzle Kit config
-client.ts         → db client singleton
-check_migrations.ts → migration integrity check
-index.ts          → re-exports client + schema + types
-```
+# Styling and Design System Rules
 
-- Singleton DB client. Migrations generated via `drizzle-kit generate`, applied via `drizzle-kit migrate`.
-- Schema changes require `drizzle-kit generate` before `drizzle-kit migrate`. No exceptions.
-- Every workspace-scoped table MUST define `workspace_id` and `deleted_at` columns in its schema file.
-- Only `apps/api` repositories may import this package.
-- `scripts/` inside database are one-off migration helpers. Do not add business logic here.
-
-**Current schema files:** `articles.ts · audit-logs.ts · categories.ts · transactions.ts · user-workspaces.ts · users.ts · vault-files.ts · wallet-groups.ts · wallets.ts · workspace-invitations.ts · workspace-settings.ts · workspace-sub-currencies.ts · workspaces.ts`
-
-## packages/types
-
-Shared TypeScript contract for all apps. Types + constants only. No runtime logic. No DB imports.
-
-```
-api.ts          → ApiResponse<T>, pagination types
-workspace.ts    → Workspace, WorkspaceMember types
-user.ts         → User types
-category.ts     → Category types
-transaction.ts  → Transaction types
-wallet.ts       → Wallet, WalletGroup types
-error-codes.ts  → ErrorCode const (SCREAMING_SNAKE_CASE)
-index.ts        → re-exports all
-```
-
-- All error codes defined here as `const ErrorCode = { WORKSPACE_NOT_FOUND, FORBIDDEN, ... }`.
-- Plan names defined here only — never hardcoded elsewhere.
-- Never duplicated across apps.
-- The `src/` sub-directory inside `packages/types` is a legacy artifact — do not add new files there; place all types at the package root.
-
-## packages/constants
-
-Shared static constants. No runtime logic. No DB imports.
-
-```
-countries.json      → ISO country list
-roles.ts            → Role definitions ("owner" | "admin" | "member")
-default/category.ts → Default category seeds
-default/wallet.ts   → Default wallet seeds
-index.ts            → re-exports
-```
-
-- Role strings imported from here everywhere — never hardcoded as plain strings.
-- Default seed data used by `packages/database/seed` and onboarding logic only.
-
-## packages/utils
-
-Pure TypeScript utilities. No DB, no framework code.
-
-```
-api-response.ts  → ApiResponse builder helpers
-formatting.ts    → Display formatting
-pagination.ts    → Pagination helpers
-env.ts           → Env var accessors
-load-env.ts      → Env loadi
-```
+Components must implement the styling patterns defined in the style guide:
+1. **Design Philosophy**: Minimalist, flat, and typography-focused. Avoid shadows; use borders (`border-border` / `border-[#e6e6e6]`).
+2. **Typography pairing**: serif headers (`font-serif`) for titles/metrics; sans (`font-sans text-[12px] uppercase tracking-widest text-muted-foreground`) for labels/metadata.
+3. **Preset-Aware Styling**: Never hardcode roundedness or shadows. Use CSS variables: `rounded-(--radius)` and `shadow-(--shadow-sm)`.
+4. **Layout grids**: Use Canvas layout primitives (`BaseCanvas`, `CanvasHeader`, `CanvasContent`, `CanvasChart`, `CanvasGrid`).
+5. **Interactive UI**: Flat cards and inline row selections in data tables.

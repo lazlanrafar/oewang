@@ -45,6 +45,7 @@
   },
   "notifications": {
     "title": "Notifikasi",
+    "description": "Aktivitas dan peringatan terbaru Anda.",
     "mark_all_read": "Tandai semua telah dibaca",
     "empty": {
       "title": "Belum ada notifikasi",
@@ -1172,6 +1173,15 @@
     "by": "oleh",
     "system": "Sistem",
     "cancelled": "Cancelled"
+  },
+  "coming_soon": {
+    "title": "Segera Hadir",
+    "description": "Kami sedang bekerja keras untuk fitur ini. Daftar di bawah ini untuk mendapatkan notifikasi saat siap.",
+    "email_placeholder": "Masukkan email Anda",
+    "notify_me": "Beritahu Saya",
+    "stay_tuned": "Nantikan pembaruan lainnya",
+    "toast_email_error": "Silakan masukkan email Anda",
+    "toast_notify_success": "Terima kasih! Kami akan memberi tahu Anda di {email}"
   },
   "vault": {
     "title": "Brankas",

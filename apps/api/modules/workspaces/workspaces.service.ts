@@ -5,7 +5,6 @@ import {
   DEFAULT_WALLETS,
   Env,
 } from "@workspace/constants";
-import { db, eq, pricing } from "@workspace/database";
 import { sendInvitationEmail } from "@workspace/email";
 import { logger } from "@workspace/logger";
 import { ErrorCode } from "@workspace/types";
@@ -93,16 +92,11 @@ export abstract class WorkspacesService {
     // 1. Parallelize initial setup: generate slug and find default plan
     const [slug, freePlan] = await Promise.all([
       (async () => generateSlug(name))(),
-      db
-        .select({ id: pricing.id })
-        .from(pricing)
-        .where(eq(pricing.name, "Starter"))
-        .limit(1)
-        .then((res) => res[0]),
+      WorkspacesRepository.findPlanByName("Starter"),
     ]);
 
     // 2. Wrap creation in a transaction to rollback on partial failure
-    const workspaceResult = await db.transaction(async (tx) => {
+    const workspaceResult = await WorkspacesRepository.runTransaction(async (tx) => {
       const workspace = await WorkspacesRepository.create(
         {
           name,

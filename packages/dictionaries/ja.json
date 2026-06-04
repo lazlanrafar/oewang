@@ -45,6 +45,7 @@
   },
   "notifications": {
     "title": "通知",
+    "description": "最近のアクティビティとアラート。",
     "mark_all_read": "すべて既読にする",
     "empty": {
       "title": "まだ通知はありません",
@@ -1160,6 +1161,15 @@
     "by": "by",
     "system": "システム",
     "cancelled": "Cancelled"
+  },
+  "coming_soon": {
+    "title": "近日公開",
+    "description": "この機能は現在開発中です。準備が整い次第通知を受け取るには、以下からご登録ください。",
+    "email_placeholder": "メールアドレスを入力してください",
+    "notify_me": "通知を受け取る",
+    "stay_tuned": "今後のアップデートにご期待ください",
+    "toast_email_error": "メールアドレスを入力してください",
+    "toast_notify_success": "ありがとうございます！ {email} に通知をお送りします"
   },
   "vault": {
     "title": "保管庫",

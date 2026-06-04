@@ -45,6 +45,7 @@
   },
   "notifications": {
     "title": "Notifications",
+    "description": "Your recent activity and alerts.",
     "mark_all_read": "Mark all as read",
     "empty": {
       "title": "No notifications yet",
@@ -1176,6 +1177,15 @@
       }
     },
     "cancelled": "Cancelled"
+  },
+  "coming_soon": {
+    "title": "Coming Soon",
+    "description": "We're currently working hard on this feature. Sign up below to get notified when it's ready.",
+    "email_placeholder": "Enter your email",
+    "notify_me": "Notify Me",
+    "stay_tuned": "Stay tuned for updates",
+    "toast_email_error": "Please enter your email",
+    "toast_notify_success": "Thanks! We'll notify you at {email}"
   },
   "vault": {
     "title": "Vault",

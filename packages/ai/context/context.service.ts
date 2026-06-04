@@ -31,10 +31,14 @@ export abstract class ContextService {
         context = `Monthly Spending by Category:\n${ContextFormatter.formatSpending(spending)}`;
         break;
 
+      case "create_transaction":
+      case "create_debt":
+      case "split_bill":
       case "general":
       default:
         const summary = await ContextRepository.getWalletSummary(workspaceId);
-        context = `Quick Summary:\n${ContextFormatter.formatWallets(summary)}`;
+        const categoriesList = await ContextRepository.getCategories(workspaceId);
+        context = `Wallet Balances:\n${ContextFormatter.formatWallets(summary)}\n\nAvailable Categories:\n${ContextFormatter.formatCategories(categoriesList)}`;
         break;
     }
 

@@ -129,6 +129,85 @@ async function getWorkspaceCurrency(workspaceId: string): Promise<string> {
   }
 }
 
+async function resolveWalletIdByName(workspaceId: string, walletId: string | undefined): Promise<string> {
+  if (!walletId) return "";
+  if (isUuid(walletId)) return walletId;
+
+  try {
+    const allWalletsResult = await walletsRepository.findMany(workspaceId);
+    const allWallets = allWalletsResult.rows;
+    const lowered = walletId.toLowerCase().trim();
+    
+    // 1. Exact match or substring match
+    let match = allWallets.find((w: any) =>
+      w.name.toLowerCase() === lowered ||
+      w.name.toLowerCase().includes(lowered) ||
+      lowered.includes(w.name.toLowerCase())
+    );
+    
+    if (match) return match.id;
+
+    // 2. Word-level overlap match
+    const words = lowered.split(/\s+/);
+    match = allWallets.find((w: any) => {
+      const nameLower = w.name.toLowerCase();
+      return words.some(word => word.length > 1 && nameLower.includes(word));
+    });
+    
+    if (match) return match.id;
+
+    // 3. Fallback to the first wallet so we don't crash
+    return allWallets[0]?.id || "";
+  } catch {
+    return "";
+  }
+}
+
+async function resolveCategoryIdByName(workspaceId: string, categoryId: string | undefined): Promise<string | undefined> {
+  if (!categoryId) return undefined;
+  if (isUuid(categoryId)) return categoryId;
+
+  try {
+    const allCats = await CategoriesRepository.findMany(workspaceId);
+    const lowered = categoryId.toLowerCase().trim();
+
+    // 1. Exact match or substring match (stripping emojis/special characters)
+    const cleanStr = (s: string) => s.replace(/[^\w\s]/g, "").trim().toLowerCase();
+    const cleanInput = cleanStr(lowered);
+
+    let match = allCats.find((c: any) => {
+      const cNameLower = c.name.toLowerCase();
+      return cNameLower.includes(lowered) ||
+        lowered.includes(cNameLower) ||
+        cleanStr(c.name).includes(cleanInput) ||
+        cleanInput.includes(cleanStr(c.name));
+    });
+
+    if (match) return match.id;
+
+    // 2. Word-level overlap match
+    const words = cleanInput.split(/\s+/);
+    match = allCats.find((c: any) => {
+      const cleanCatName = cleanStr(c.name);
+      return words.some(word => word.length > 2 && cleanCatName.includes(word));
+    });
+
+    if (match) return match.id;
+
+    // 3. Fallback to "Other" or "Lain-lain" category if possible
+    const otherMatch = allCats.find((c: any) => {
+      const nameLower = c.name.toLowerCase();
+      return nameLower.includes("other") || nameLower.includes("lain") || nameLower.includes("general");
+    });
+    if (otherMatch) return otherMatch.id;
+
+    // 4. Default to the first category so we don't crash
+    return allCats[0]?.id;
+  } catch {
+    return undefined;
+  }
+}
+
 /** Build spending analysis payload from real transaction data */
 async function buildSpendingPayload(workspaceId: string, input: any) {
   const currency = await getWorkspaceCurrency(workspaceId);
@@ -348,28 +427,9 @@ export async function executeAiTool(
   try {
     switch (toolName) {
       case "create_transaction": {
-        let walletId = input.walletId;
-        let categoryId = input.categoryId;
-
-        // Robustness: Resolve walletId from name if not a UUID
-        if (walletId && !isUuid(walletId)) {
-          const allWalletsResult =
-            await walletsRepository.findMany(workspaceId);
-          const allWallets = allWalletsResult.rows;
-          const match = allWallets.find((w: any) =>
-            w.name.toLowerCase().includes(walletId.toLowerCase()),
-          );
-          if (match) walletId = match.id;
-        }
-
-        // Robustness: Resolve categoryId from name if not a UUID
-        if (categoryId && !isUuid(categoryId)) {
-          const allCats = await CategoriesRepository.findMany(workspaceId);
-          const match = allCats.find((c: any) =>
-            c.name.toLowerCase().includes(categoryId.toLowerCase()),
-          );
-          if (match) categoryId = match.id;
-        }
+        const walletId = await resolveWalletIdByName(workspaceId, input.walletId);
+        const toWalletId = await resolveWalletIdByName(workspaceId, input.toWalletId);
+        const categoryId = await resolveCategoryIdByName(workspaceId, input.categoryId);
 
         const body = {
           type: input.type,
@@ -377,7 +437,7 @@ export async function executeAiTool(
           date: input.date || new Date().toISOString(),
           name: input.name,
           walletId,
-          toWalletId: input.toWalletId,
+          toWalletId,
           categoryId,
           description: input.description,
         };
@@ -460,25 +520,8 @@ export async function executeAiTool(
         break;
       }
       case "split_bill": {
-        let walletId = input.walletId;
-        if (walletId && !isUuid(walletId)) {
-          const allWalletsResult =
-            await walletsRepository.findMany(workspaceId);
-          const allWallets = allWalletsResult.rows;
-          const match = allWallets.find((w: any) =>
-            w.name.toLowerCase().includes(walletId.toLowerCase()),
-          );
-          if (match) walletId = match.id;
-        }
-
-        let categoryId = input.categoryId;
-        if (categoryId && !isUuid(categoryId)) {
-          const allCats = await CategoriesRepository.findMany(workspaceId);
-          const match = allCats.find((c: any) =>
-            c.name.toLowerCase().includes(categoryId.toLowerCase()),
-          );
-          if (match) categoryId = match.id;
-        }
+        const walletId = await resolveWalletIdByName(workspaceId, input.walletId);
+        const categoryId = await resolveCategoryIdByName(workspaceId, input.categoryId);
 
         const splitBody = {
           amount: input.amount,

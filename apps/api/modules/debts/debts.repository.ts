@@ -231,4 +231,9 @@ export abstract class DebtsRepository {
       .orderBy(desc(debtPayments.createdAt));
     return results as unknown as DebtPayment[];
   }
+
+  static async runTransaction<T>(callback: (tx: any) => Promise<T>): Promise<T> {
+    return db.transaction(callback);
+  }
 }
+
