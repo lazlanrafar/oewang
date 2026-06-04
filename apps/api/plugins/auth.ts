@@ -130,10 +130,7 @@ function resolveWorkspaceId(
 
 /**
  * Auth plugin — provides derive context and guard macro.
- *
- * Hybrid approach:
- * 1. Try to verify as app JWT first (has user_id + workspace_id)
- * 2. If that fails, try Supabase token exchange (for initial login flow)
+ * Verifies the oewang-session JWT (HS256). Sets auth on context, null if unauthenticated.
  */
 export async function getAuth(token: string) {
   // Try app JWT first

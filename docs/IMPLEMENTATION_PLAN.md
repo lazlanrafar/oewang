@@ -56,7 +56,7 @@ This document tracks active and planned work for oewang. Update it as features m
 
 | Task | Completed | PR |
 |------|-----------|-----|
-| Multi-workspace auth with JWT + Supabase hybrid | — | — |
+| Multi-workspace auth with custom JWT (email/password + Google/GitHub OAuth) | — | — |
 | AES-256-GCM end-to-end request/response encryption | — | — |
 | Redis-backed sliding window rate limiting | — | — |
 | AI assistant (OpenAI + Claude + Gemini multi-agent) | — | — |
@@ -146,13 +146,13 @@ Quick reference for key past decisions:
 
 ---
 
-### ADR-002: Hybrid JWT + Supabase Auth
+### ADR-002: Custom JWT Auth (no third-party IdP)
 
-**Decision:** Supabase handles initial authentication (email/password, OAuth). Our API mints a separate app JWT on first use.
+**Decision:** The API owns authentication entirely. Email/password uses `Bun.password.hash/verify`. Google and GitHub OAuth uses Authorization Code flow via Next.js route handlers. The API mints an HS256 JWT on every successful login.
 
-**Rationale:** Decouples Supabase auth lifecycle from our workspace membership model. App JWT carries `workspace_id` and `system_role`.
+**Rationale:** The API owns auth entirely. App JWT carries `workspace_id` and `system_role` from the first request. Single auth path simplifies the `authPlugin`.
 
-**Implementation:** `apps/api/plugins/auth.ts` → `getAuth()` tries app JWT first, falls back to Supabase token verification.
+**Implementation:** `apps/api/modules/auth/auth.controller.ts` → `/login`, `/register`, `/oauth/connect`. `apps/api/plugins/auth.ts` → JWT-only verification.
 
 ---
 

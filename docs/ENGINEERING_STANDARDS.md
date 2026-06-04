@@ -126,7 +126,7 @@ console.log("Wallet created:", wallet);
 
 `apps/app` uses Sentry (not `@workspace/logger`) for error tracking. `console.*` calls in `apps/app` are stripped in production by the Next.js compiler.
 
-**Never log:** passwords · JWT tokens · encryption keys · decrypted API payloads · `SUPABASE_SERVICE_ROLE_KEY`
+**Never log:** passwords · JWT tokens · encryption keys · decrypted API payloads
 
 Always include `workspace_id` and `user_id` in error/warn log context for traceability.
 
@@ -161,9 +161,12 @@ DATABASE_URL=               # PostgreSQL connection string
 JWT_SECRET=                 # ≥32 chars
 JWT_EXPIRES_IN=7d
 ENCRYPTION_KEY=             # exactly 32 chars (AES-256)
-SUPABASE_URL=
-SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=  # NEVER expose to browser
+
+# OAuth (Google + GitHub)
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GITHUB_CLIENT_ID=
+GITHUB_CLIENT_SECRET=
 
 # Redis (optional dev, required prod)
 UPSTASH_REDIS_REST_URL=
@@ -190,8 +193,6 @@ SENTRY_DSN=
 # App URLs
 APP_URL=
 NEXT_PUBLIC_APP_URL=
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY= # safe for browser — anon key only
 ```
 
 `NEXT_PUBLIC_` vars are bundled into the browser. **Never** put secrets there.
@@ -405,7 +406,7 @@ This triggers WebSocket events to all clients subscribed to the workspace channe
 | Structured logs | `@workspace/logger` (Pino) | All `apps/api` and packages |
 | Request logs | `loggerPlugin` | `apps/api/plugins/logger.ts` |
 
-**Never attach to Sentry events:** passwords · decrypted payloads · JWT tokens · `SUPABASE_SERVICE_ROLE_KEY`
+**Never attach to Sentry events:** passwords · decrypted payloads · JWT tokens · encryption keys
 
 Always set `Sentry.setUser({ id: userId })` for authenticated requests — no raw email/PII without explicit consent.
 

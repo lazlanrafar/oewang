@@ -52,7 +52,11 @@ Turbopack is the default bundler (configured in `apps/app/next.config.mjs` via `
 
 ```
 apps/app/app/
-  (api)/api/auth/callback/   — Supabase OAuth callback
+  (api)/api/auth/
+    google/                  — Redirect to Google OAuth
+    google/callback/         — Exchange code → JWT, set cookie
+    github/                  — Redirect to GitHub OAuth
+    github/callback/         — Exchange code → JWT, set cookie
   (main)/[locale]/
     (auth)/                  — Public auth pages (no layout wrapper)
       login/
@@ -192,7 +196,7 @@ revalidatePath("/accounts");
 |-------------|---------|--------------|
 | `(auth)/` | Login, register, invite acceptance, workspace creation | ❌ No |
 | `(dashboard)/` | Main app with sidebar layout | ✅ Yes |
-| `(api)/api/` | Next.js API routes (Supabase OAuth callback) | N/A |
+| `(api)/api/` | Next.js API routes (Google/GitHub OAuth callbacks) | N/A |
 | `invoice/[token]/` | Public shareable invoice view | ❌ No (JWT token in URL) |
 
 ---
@@ -263,7 +267,7 @@ apps/app/
   sentry.server.config.ts   — server Sentry config (DSN, source maps)
 ```
 
-**Never attach to Sentry:** passwords · JWT tokens · decrypted API payloads · `SUPABASE_SERVICE_ROLE_KEY`
+**Never attach to Sentry:** passwords · JWT tokens · decrypted API payloads · encryption keys
 
 ---
 
@@ -281,7 +285,7 @@ const payload = verifyJwt(token);
 if (!payload?.workspace_id) redirect(`/${locale}/create-workspace`);
 ```
 
-**Middleware CANNOT:** call `@workspace/database` · make HTTP requests to `apps/api` · import Drizzle or Supabase admin client
+**Middleware CANNOT:** call `@workspace/database` · make HTTP requests to `apps/api` · import Drizzle or any DB client
 
 ---
 

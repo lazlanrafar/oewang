@@ -46,7 +46,6 @@ export abstract class WorkspacesService {
     const { name, country, mainCurrencyCode, mainCurrencySymbol } = data;
 
     // Ensure the internal user row exists before linking workspace membership.
-    // This can be missing when auth succeeds via Supabase token but sync has not run yet.
     const existingUser = await UsersRepository.findById(user_id);
     if (!existingUser) {
       if (!user_email) {
@@ -56,9 +55,8 @@ export abstract class WorkspacesService {
       }
 
       // Check for a row with the same email but a different ID (e.g., created by
-      // the dev seeder using CUID2 before the Supabase UUID was known). If the
-      // stale row has no workspace memberships it is safe to remove so the upsert
-      // by Supabase UUID can succeed.
+      // the dev seeder). If the stale row has no workspace memberships it is safe
+      // to remove so the upsert can succeed.
       const userByEmail = await UsersRepository.findByEmail(user_email);
       if (userByEmail && userByEmail.id !== user_id) {
         const memberships = await UsersRepository.getMemberships(userByEmail.id);

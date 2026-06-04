@@ -21,8 +21,7 @@ export abstract class SystemAdminsService {
     try {
       const { rows, total } = await SystemAdminsRepository.findAll(params);
 
-      // Return Drizzle users only. We don't fetch the whole Supabase list anymore.
-      // Drizzle now natively stores system_role.
+      // system_role is stored natively in the users table.
 
       return buildPaginatedSuccess(
         rows,

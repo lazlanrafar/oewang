@@ -10,10 +10,10 @@ interface AuthSyncProps {
 }
 
 /**
- * Minimal sync page — no Supabase. If the user landed here they either have
- * no session (→ login) or a valid JWT (→ overview). The middleware workspace
- * guard handles the redirect logic; this component is just a loading screen
- * for the brief moment before the middleware redirect resolves.
+ * Minimal sync page. If the user landed here they either have no session
+ * (→ login) or a valid JWT (→ overview). The middleware workspace guard
+ * handles the redirect logic; this component is just a loading screen for
+ * the brief moment before the middleware redirect resolves.
  */
 export function AuthSync({ locale, returnTo = "/overview" }: AuthSyncProps) {
   const router = useRouter();

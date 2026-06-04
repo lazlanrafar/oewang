@@ -34,7 +34,6 @@
   },
   "dependencies": {
     "@workspace/encryption": "workspace:*",
-    "@workspace/supabase": "workspace:*",
     "@workspace/types": "workspace:*",
     "axios": "^1.6.0",
     "next": "catalog:"

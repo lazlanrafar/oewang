@@ -13,7 +13,6 @@ const nextConfig = {
   },
   transpilePackages: [
     "@workspace/ui",
-    "@workspace/supabase",
     "@workspace/utils",
     "@workspace/dictionaries",
     "@workspace/constants",

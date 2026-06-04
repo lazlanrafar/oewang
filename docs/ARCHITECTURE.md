@@ -31,7 +31,6 @@ oewang/
     ├── modules/        # Server actions and data-fetching logic (app-side)
     ├── playwright/     # Shared Playwright E2E configuration
     ├── redis/          # Upstash Redis client singleton
-    ├── supabase/       # Supabase clients (server, client, admin, middleware)
     ├── types/          # Shared TypeScript types + error codes (no runtime)
     ├── typescript-config/ # Shared tsconfig bases
     ├── ui/             # shadcn/ui + Radix UI + Tailwind CSS v4 components
@@ -49,7 +48,7 @@ oewang/
 │                                                             │
 │  pages / components → packages/modules (server actions)     │
 │                         → packages/database (Drizzle)       │
-│                               → PostgreSQL (Supabase)       │
+│                               → PostgreSQL       │
 │                                                             │
 │  pages / components → apps/api (ElysiaJS REST)              │
 │                         → packages/database                 │
@@ -122,7 +121,7 @@ modules/wallets/
 
 ```
 apps/api/plugins/
-  auth.ts         — JWT verify (app JWT + Supabase token fallback)
+  auth.ts         — JWT verify (HS256 oewang-session only)
                     sets `auth` on context, null if unauthenticated
   encryption.ts   — AES-256-GCM: decrypts request bodies, encrypts all responses
   logger.ts       — Pino request logging
@@ -153,14 +152,17 @@ WebSocket: `/v1/realtime` — workspace-scoped pub/sub via Bun server
 
 ```
 apps/app/app/
-  (api)/api/auth/callback/   — Supabase OAuth callback handler
+  (api)/api/auth/
+    google/                  — GET: redirect to Google OAuth (sets oauth_state cookie)
+    google/callback/         — GET: exchange code → JWT, set oewang-session cookie
+    github/                  — GET: redirect to GitHub OAuth (sets oauth_state cookie)
+    github/callback/         — GET: exchange code → JWT, set oewang-session cookie
   (main)/[locale]/
     (auth)/
-      login/                 — Public login page
-      register/              — Public registration
+      login/                 — Public login page (email/password + OAuth)
+      register/              — Public registration (email/password + OAuth)
       accept-invite/         — Workspace invitation acceptance
       create-workspace/      — Onboarding: first workspace creation
-      sync/                  — Auth state synchronization
     (dashboard)/             — Authenticated app shell
       overview/
       transactions/
@@ -196,7 +198,7 @@ apps/app/app/
 | `server/` | Next.js Server Actions |
 | `modules/types/` | App-local UI types |
 
-**`actions/`** calls go through `lib/axios.ts` which handles encryption/decryption automatically. Current action files: `mayar.actions.ts` · `notification.actions.ts` · `push-subscription.actions.ts`
+**`actions/`** files must use `"use server"` and import from `@workspace/modules/server` (server-side axios). The server axios reads the `oewang-session` httpOnly cookie from `next/headers` — client code cannot read it. Current action files: `mayar.actions.ts` · `notification.actions.ts` · `push-subscription.actions.ts`
 
 ### i18n
 
@@ -208,9 +210,13 @@ All routes are under `app/(main)/[locale]/`. Supported locales configured in `i1
 
 Drizzle ORM + PostgreSQL. The **only** package that directly talks to the database.
 
-**32 schema tables** (all in `packages/database/schema/`):
+**33 schema tables** (all in `packages/database/schema/`):
 
-`ai-messages` · `ai-sessions` · `articles` · `audit-logs` · `budgets` · `categories` · `contacts` · `debt-payments` · `debts` · `invoices` · `notification-settings` · `notifications` · `orders` · `pricing` · `privacy-requests` · `push-subscriptions` · `system-settings` · `transaction-attachments` · `transaction-items` · `transactions` · `user-workspaces` · `users` · `vault-files` · `wallet-groups` · `wallets` · `webhook-events` · `workspace-addons` · `workspace-integrations` · `workspace-invitations` · `workspace-settings` · `workspace-sub-currencies` · `workspaces`
+`ai-messages` · `ai-sessions` · `articles` · `audit-logs` · `budgets` · `categories` · `contacts` · `debt-payments` · `debts` · `invoices` · `notification-settings` · `notifications` · `oauth-accounts` · `orders` · `pricing` · `privacy-requests` · `push-subscriptions` · `system-settings` · `transaction-attachments` · `transaction-items` · `transactions` · `user-workspaces` · `users` · `vault-files` · `wallet-groups` · `wallets` · `webhook-events` · `workspace-addons` · `workspace-integrations` · `workspace-invitations` · `workspace-settings` · `workspace-sub-currencies` · `workspaces`
+
+**Auth-relevant schema notes:**
+- `users.password_hash` — nullable text; null for OAuth-only users
+- `oauth_accounts` — links users to OAuth provider identities; unique index on `(provider, provider_user_id)`
 
 **Every workspace-scoped table MUST have:**
 - `workspace_id` (FK → `workspaces.id`)
@@ -251,12 +257,37 @@ user_workspaces: { user_id, workspace_id, role, joined_at, deleted_at }
 
 ## Auth Model
 
-Hybrid JWT + Supabase:
+Custom JWT (HS256):
 
-1. `apps/app` authenticates via Supabase → receives Supabase token
-2. On first API call, the Supabase token is exchanged for an app JWT (`{ user_id, workspace_id, email, system_role }`)
-3. All subsequent API calls use the app JWT via `Authorization: Bearer <token>` or `oewang-session` cookie
-4. `authPlugin` (`apps/api/plugins/auth.ts`) verifies the JWT, validates workspace membership, resolves active workspace, and sets `auth` on context
+```
+Login (email/password or OAuth)
+  → apps/api validates credentials or receives OAuth user info
+  → upserts user + oauth_accounts in DB
+  → generateJwt({ user_id, workspace_id, email, system_role })
+  → returns token
+  → apps/app sets oewang-session httpOnly cookie
+  → middleware / authPlugin reads cookie on every request
+```
+
+**Auth endpoints** (`apps/api/modules/auth/auth.controller.ts`):
+- `POST /v1/auth/login` — email + password → JWT
+- `POST /v1/auth/register` — email + password + name → JWT
+- `POST /v1/auth/oauth/connect` — OAuth user info from Next.js callback → JWT
+
+**OAuth flow** (Authorization Code + CSRF state cookie):
+1. User clicks "Login with Google/GitHub" → navigates to `/api/auth/{provider}`
+2. Next.js route handler generates `oauth_state` UUID, stores in 10-min httpOnly cookie, redirects to provider
+3. Provider redirects to `/api/auth/{provider}/callback?code=...&state=...`
+4. Callback verifies state, exchanges code → provider access token, fetches user info
+5. Calls `POST /v1/auth/oauth/connect` via `axiosInstance` (handles encryption automatically)
+6. Sets `oewang-session` cookie on `NextResponse`, deletes `oauth_state` cookie
+7. Redirects to `/overview` (existing workspace) or `/create-workspace` (new user)
+
+**Password hashing:** `Bun.password.hash()` / `Bun.password.verify()` — Bun-native bcrypt, no external dependency.
+
+**Cookie settings:** `httpOnly: true`, `sameSite: lax`, `maxAge: 7 days`. In production: `domain: ".oewang.com"`, `secure: true`.
+
+**`authPlugin`** (`apps/api/plugins/auth.ts`) verifies the HS256 JWT, validates workspace membership, resolves active workspace, and sets `auth` on context.
 
 **NEVER** trust `workspace_id` from request body or query params. Always use `auth.workspace_id` from the plugin.
 
@@ -279,7 +310,6 @@ Hybrid JWT + Supabase:
 | Package | apps/app | apps/api | Other packages |
 |---------|----------|----------|----------------|
 | `database` | ❌ NEVER | ✅ repositories only | ❌ NEVER |
-| `supabase` | ✅ server only | ✅ services only | ❌ NEVER |
 | `bucket` | ❌ NEVER | ✅ vault service only | ❌ NEVER |
 | `encryption` | ✅ axios interceptor only | ✅ encryption plugin only | ❌ NEVER |
 | `redis` | ❌ NEVER | ✅ rate-limit + services | ❌ NEVER |

@@ -17,8 +17,8 @@ oewang is the financial OS for modern businesses. AI-powered insights, automatic
 
 - **App**: Next.js 16, React 19, TypeScript, Tailwind CSS, Shadcn UI
 - **API**: ElysiaJS, Bun
-- **Database**: PostgreSQL (Supabase), Drizzle ORM
-- **Auth**: Supabase Auth, JWT
+- **Database**: PostgreSQL, Drizzle ORM
+- **Auth**: Custom JWT (HS256), Google/GitHub OAuth
 - **Payments**: Mayar (Indonesian Payment Gateway)
 - **AI**: OpenAI, Claude, and multi-agent system
 
