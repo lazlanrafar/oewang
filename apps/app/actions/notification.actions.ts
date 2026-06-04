@@ -1,5 +1,7 @@
-import { axiosInstance as api } from "@workspace/modules/client";
-import type { ApiResponse, PaginatedList, Notification, NotificationSetting } from "@workspace/types";
+"use server";
+
+import { axiosInstance as api } from "@workspace/modules/server";
+import type { ApiResponse, Notification, NotificationSetting, PaginatedList } from "@workspace/types";
 
 import type {
   NotificationListQuery,
