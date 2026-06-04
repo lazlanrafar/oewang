@@ -54,6 +54,19 @@ export abstract class WorkspacesService {
           "User profile is not synced yet. Please sign in again.",
         );
       }
+
+      // Check for a row with the same email but a different ID (e.g., created by
+      // the dev seeder using CUID2 before the Supabase UUID was known). If the
+      // stale row has no workspace memberships it is safe to remove so the upsert
+      // by Supabase UUID can succeed.
+      const userByEmail = await UsersRepository.findByEmail(user_email);
+      if (userByEmail && userByEmail.id !== user_id) {
+        const memberships = await UsersRepository.getMemberships(userByEmail.id);
+        if (memberships.length === 0) {
+          await UsersRepository.hardDeleteById(userByEmail.id);
+        }
+      }
+
       await UsersRepository.upsert({
         id: user_id,
         email: user_email,

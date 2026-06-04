@@ -72,6 +72,13 @@ export abstract class UsersRepository {
       .where(eq(users.id, user_id));
   }
 
+  // Hard-delete a user row. Only called when migrating a stale seeder-created
+  // row (CUID2 ID) to the real Supabase UUID. Must only be used when the row
+  // has no FK-dependent records (verified by the caller beforehand).
+  static async hardDeleteById(user_id: string) {
+    await db.delete(users).where(eq(users.id, user_id));
+  }
+
   static async getWorkspaceId(user_id: string, tx: any = db) {
     const [user] = await tx
       .select({ workspace_id: users.workspace_id })
