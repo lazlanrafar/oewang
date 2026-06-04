@@ -15,7 +15,6 @@ All shared code lives in `packages/`. Each package has a single responsibility. 
 | Package          | apps/app                  | apps/api                  | Other packages |
 | ---------------- | ------------------------- | ------------------------- | -------------- |
 | `database`       | ❌ NEVER                  | ✅ repositories only      | ❌ NEVER       |
-| `supabase`       | ✅ server only            | ✅ services only          | ❌ NEVER       |
 | `bucket`         | ❌ NEVER                  | ✅ vault service only     | ❌ NEVER       |
 | `encryption`     | ✅ axios interceptor only | ✅ encryption plugin only | ❌ NEVER       |
 | `redis`          | ❌ NEVER                  | ✅ rate-limit + services  | ❌ NEVER       |
@@ -65,7 +64,6 @@ Shared TypeScript contract. Types and constants only — zero runtime logic, zer
 
 - **packages/encryption**: AES-256 encrypt/decrypt. Used in `apps/api/plugins/encryption.ts` and `apps/app/lib/axios.ts` interceptors.
 - **packages/redis**: Redis client singleton. Falls back to in-memory Map in dev when `REDIS_URL` is unset.
-- **packages/supabase**: Supabase clients, queries, mutations, types. `admin.ts` (SERVER ONLY, never in frontend) uses `SUPABASE_SERVICE_ROLE_KEY`. `client.ts` uses anonymous browser-safe key.
 - **packages/bucket**: S3-compatible storage client. Used only by vault service in `apps/api`.
 - **packages/currencyfreaks**: CurrencyFreaks API client. Cash results in Redis to avoid excessive API calls.
 - **packages/email**: SMTP mail sender + simple HTML templates.

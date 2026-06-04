@@ -41,7 +41,7 @@ erDiagram
     workspaces ||--o{ orders : "billing log"
 
     users {
-        string id PK "Supabase User ID"
+        string id PK "CUID2"
         string email
         string name
         string workspace_id FK "active workspace"
@@ -94,9 +94,9 @@ erDiagram
 
 ## 3. Onboarding & Provisioning Flow
 
-When a user signs up via Supabase, they have no active workspaces.
+When a user registers, they have no active workspaces.
 
-1. **Initial Authentication**: The frontend intercepts the login and exchanges the Supabase token via `POST /auth/token`.
+1. **Initial Authentication**: The API mints a JWT via `POST /auth/login`, `/auth/register`, or `/auth/oauth/connect`. The JWT contains `workspace_id: null` until a workspace is created.
 2. **Null Workspace Redirection**: The API returns an app JWT with a `workspace_id: null` payload. The Next.js `middleware.ts` detects the null workspace ID and redirects the client browser to `/onboarding`.
 3. **Workspace Provisioning**:
    - The user fills in the onboarding form (Workspace Name, Main Currency, Country).

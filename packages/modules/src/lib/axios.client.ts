@@ -37,24 +37,7 @@ axiosInstance.interceptors.request.use(async (config) => {
     config.headers.Authorization = `Bearer ${token}`;
   }
 
-  // 3. Fallback to Supabase session (browser only)
-  if (!config.headers.Authorization && typeof window !== "undefined") {
-    try {
-      const { createBrowserClient } =
-        await import("@workspace/supabase/client");
-      const supabase = createBrowserClient();
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (session?.access_token) {
-        config.headers.Authorization = `Bearer ${session.access_token}`;
-      }
-    } catch (e) {
-      // Ignore
-    }
-  }
-
-  // 4. Request body encryption
+  // 3. Request body encryption
   if (
     config.data &&
     ["post", "put", "patch"].includes(config.method?.toLowerCase() || "") &&

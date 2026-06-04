@@ -67,15 +67,15 @@ This is a **Turborepo monorepo** using **Bun** as package manager and runtime. S
 
 ### Key packages
 
-- **`packages/database`** — Drizzle ORM + PostgreSQL. Schema lives here (32 tables); all DB access goes through this package. Primary keys use CUID2 (`@paralleldrive/cuid2`).
+- **`packages/database`** — Drizzle ORM + PostgreSQL. Schema lives here (33 tables); all DB access goes through this package. Primary keys use CUID2 (`@paralleldrive/cuid2`).
 - **`packages/modules`** — Server actions and data-fetching logic. Next.js `app/` calls into these rather than hitting the API or DB directly.
 - **`packages/ai`** — AI service abstractions over OpenAI, Anthropic Claude, and Google Generative AI. Includes agent, memory, artifact, and store tooling.
 - **`packages/integrations`** — 40+ third-party integrations (Telegram, WhatsApp, Stripe, etc.).
 - **`packages/ui`** — Shared React components built on shadcn + Radix UI + Tailwind CSS v4.
-- **`packages/supabase`** — Supabase clients (server, client, middleware) for auth and realtime.
 - **`packages/types`** — Central TypeScript type definitions and `ErrorCode` constants.
 - **`packages/constants`** — Static constants: roles, colors, pricing features, API config.
 - **`packages/encryption`** — AES-256-GCM encrypt/decrypt. Used in exactly two places: `apps/api/plugins/encryption.ts` and `apps/app/lib/axios.ts`.
+- **`packages/redis`** — Redis client singleton. Uses ioredis (TCP) when `REDIS_URL` is set (local Docker), or Upstash REST when `UPSTASH_REDIS_REST_*` vars are set (production). Consumed by `apps/api/lib/cache.ts` and `apps/api/plugins/rate-limit.ts`.
 
 ### Data flow
 
@@ -83,11 +83,19 @@ This is a **Turborepo monorepo** using **Bun** as package manager and runtime. S
 Next.js pages/components
   → packages/modules (server actions)
     → packages/database (Drizzle queries)
-      → PostgreSQL (Supabase transaction pooler)
+      → PostgreSQL
 
 Next.js pages/components
   → apps/api (ElysiaJS REST — AES-256-GCM encrypted transport)
     → packages/database / packages/integrations / packages/ai
+```
+
+**Auth flow** — custom JWT (HS256):
+```
+Login (email/password or OAuth provider)
+  → apps/api generates oewang-session JWT (HS256)
+  → apps/app sets httpOnly cookie on NextResponse
+  → middleware verifies JWT cookie on every request
 ```
 
 ### Environment variables
@@ -174,7 +182,7 @@ modules/{feature}/
 
 ### Critical Rules
 
-1. **`actions/` is the only place HTTP calls are made** — all calls go through `lib/axios.ts` (handles encryption automatically).
+1. **`actions/` is the only place HTTP calls are made** — files must have `"use server"` and import `axiosInstance` from `@workspace/modules/server` (reads `oewang-session` httpOnly cookie from `next/headers`). Never use client axios in server actions.
 2. **Never call `fetch` or `axios` directly** outside of `actions/`.
 3. **All routes are dynamic by default** in Next.js 16 — opt into caching explicitly with `"use cache"`.
 4. **Always `await params`** — it is a Promise in Next.js 16.

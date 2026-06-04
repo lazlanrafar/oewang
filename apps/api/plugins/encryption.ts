@@ -1,10 +1,13 @@
 import { Env } from "@workspace/constants";
 import { decrypt, encrypt } from "@workspace/encryption";
+import { createLogger } from "@workspace/logger";
 import { ErrorCode } from "@workspace/types";
 import { buildError } from "@workspace/utils";
 import type { Elysia } from "elysia";
 
 import { appendFileSync } from "fs";
+
+const log = createLogger("encryption");
 
 /**
  * Encryption plugin — symmetric encryption for production.
@@ -24,12 +27,10 @@ export const encryptionPlugin = (app: Elysia) =>
         typeof body === "object" &&
         "data" in body
       ) {
-        console.log(
-          `[Encryption] onTransform: path=${path}, decrypting body...`,
-        );
+        log.debug("Decrypting request body", { path });
         const secret = Env.ENCRYPTION_KEY;
         if (!secret) {
-          console.error("[Encryption] ENCRYPTION_KEY missing in Env");
+          log.error("ENCRYPTION_KEY missing");
           return;
         }
 
@@ -41,7 +42,7 @@ export const encryptionPlugin = (app: Elysia) =>
           Object.keys(body).forEach((key) => { delete (body as any)[key]; });
           Object.assign(body, parsed);
         } catch (error: any) {
-          console.error(`[Encryption] Decrypt failed for ${path}:`, error);
+          log.error("Decrypt failed", { path, error });
         }
       }
     })
@@ -83,7 +84,7 @@ export const encryptionPlugin = (app: Elysia) =>
             },
           });
         } catch (error) {
-          console.error("Encryption failed:", error);
+          log.error("Encryption failed", { error });
           return;
         }
       }

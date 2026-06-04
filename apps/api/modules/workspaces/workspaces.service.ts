@@ -10,6 +10,7 @@ import { logger } from "@workspace/logger";
 import { ErrorCode } from "@workspace/types";
 import { buildError, generateSlug } from "@workspace/utils";
 import { status } from "elysia";
+import { cacheDel, cacheGet, cacheSet } from "../../lib/cache";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { CategoriesRepository } from "../categories/categories.repository";
 import { NotificationsService } from "../notifications/notifications.service";
@@ -23,6 +24,11 @@ import {
   normalizeWorkspaceRole,
 } from "./workspace-permissions";
 import { WorkspacesRepository } from "./workspaces.repository";
+
+const WORKSPACE_TTL = 60 * 15; // 15 min — short enough that plan upgrades are visible quickly
+const MEMBERS_TTL = 60 * 60; // 1h
+const workspaceKey = (workspaceId: string) => `oewang:workspace:${workspaceId}`;
+const membersKey = (workspaceId: string) => `oewang:workspace:members:${workspaceId}`;
 
 /**
  * Workspaces service — business logic layer.
@@ -46,7 +52,6 @@ export abstract class WorkspacesService {
     const { name, country, mainCurrencyCode, mainCurrencySymbol } = data;
 
     // Ensure the internal user row exists before linking workspace membership.
-    // This can be missing when auth succeeds via Supabase token but sync has not run yet.
     const existingUser = await UsersRepository.findById(user_id);
     if (!existingUser) {
       if (!user_email) {
@@ -56,9 +61,8 @@ export abstract class WorkspacesService {
       }
 
       // Check for a row with the same email but a different ID (e.g., created by
-      // the dev seeder using CUID2 before the Supabase UUID was known). If the
-      // stale row has no workspace memberships it is safe to remove so the upsert
-      // by Supabase UUID can succeed.
+      // the dev seeder). If the stale row has no workspace memberships it is safe
+      // to remove so the upsert can succeed.
       const userByEmail = await UsersRepository.findByEmail(user_email);
       if (userByEmail && userByEmail.id !== user_id) {
         const memberships = await UsersRepository.getMemberships(userByEmail.id);
@@ -267,15 +271,27 @@ export abstract class WorkspacesService {
   }
 
   static async getActiveWorkspace(workspace_id: string) {
-    return WorkspacesRepository.findById(workspace_id);
+    const key = workspaceKey(workspace_id);
+    const cached = await cacheGet<object>(key);
+    if (cached) return cached;
+
+    const workspace = await WorkspacesRepository.findById(workspace_id);
+    if (workspace) await cacheSet(key, workspace, WORKSPACE_TTL);
+    return workspace;
   }
 
   static async getMembers(workspace_id: string) {
+    const key = membersKey(workspace_id);
+    const cached = await cacheGet<object[]>(key);
+    if (cached) return cached;
+
     const members = await WorkspacesRepository.getMembers(workspace_id);
-    return members.map((member) => ({
+    const result = members.map((member) => ({
       ...member,
       role: normalizeWorkspaceRole(member.role),
     }));
+    await cacheSet(key, result, MEMBERS_TTL);
+    return result;
   }
 
   /**
@@ -447,6 +463,8 @@ export abstract class WorkspacesService {
       entity_id: invitation.id,
     });
 
+    await cacheDel(membersKey(invitation.workspaceId));
+
     return invitation.workspaceId;
   }
 
@@ -530,6 +548,8 @@ export abstract class WorkspacesService {
         link: "/settings/members",
       }).catch(() => {});
     }
+
+    await cacheDel(membersKey(invitation.workspaceId));
 
     return invitation.workspaceId;
   }

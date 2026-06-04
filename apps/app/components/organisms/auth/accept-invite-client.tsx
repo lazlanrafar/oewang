@@ -6,7 +6,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { acceptInvitationAction } from "@workspace/modules/workspace/workspace.action";
-import { createBrowserClient } from "@workspace/supabase";
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui";
 import { CheckCircle2, Loader2, XCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -21,17 +20,12 @@ export function AcceptInviteClient({ token }: AcceptInviteClientProps) {
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = React.useState<boolean | null>(null);
 
-  const supabase = createBrowserClient();
-
   React.useEffect(() => {
-    const checkAuth = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      setIsAuthenticated(!!session);
-    };
-    checkAuth();
-  }, [supabase]);
+    const hasSession = document.cookie
+      .split(";")
+      .some((c) => c.trim().startsWith("oewang-session="));
+    setIsAuthenticated(hasSession);
+  }, []);
 
   const handleAccept = React.useCallback(async () => {
     if (!token) return;

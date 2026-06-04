@@ -7,13 +7,14 @@ const appEnvSchema = z.object({
   NEXT_PUBLIC_API_URL: z.string().min(1),
   NEXT_PUBLIC_WEBSITE_URL: z.string().min(1).optional(),
 
-  NEXT_PUBLIC_SUPABASE_URL: z.string().min(1),
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
-
   NEXT_PUBLIC_SENTRY_DSN: z.string().optional(),
 
   NEXT_PUBLIC_SESSION_COOKIE_NAME: z.string().optional().default("oewang-session"),
-  NEXT_PUBLIC_SUPABASE_COOKIE_NAME: z.string().optional(),
+
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
+  GITHUB_CLIENT_ID: z.string().optional(),
+  GITHUB_CLIENT_SECRET: z.string().optional(),
 
   NEXT_PUBLIC_TWILIO_WHATSAPP_NUMBER: z.string().optional().default("+14155238886"),
   NEXT_PUBLIC_TELEGRAM_BOT_USER: z.string().optional().default("oewangbot"),

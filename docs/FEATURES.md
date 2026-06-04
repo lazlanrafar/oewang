@@ -28,7 +28,7 @@ Each feature document contains detailed documentation on the purpose, data model
 | **Transactions** | [FEAT_TRANSACTIONS.md](./FEAT_TRANSACTIONS.md) | Double-entry ledger (incomes, expenses, wallet transfers) supporting attachments. |
 | **Vault File Storage** | [FEAT_VAULT.md](./FEAT_VAULT.md) | Cloudflare R2 bucket storage integration for receipt images, PDFs, and invoices. |
 | **Wallets & Wallet Groups** | [FEAT_WALLETS.md](./FEAT_WALLETS.md) | Multi-currency cash, card, bank account tracking with drag-and-drop ordering. |
-| **Workspaces & Members** | [FEAT_WORKSPACES.md](./FEAT_WORKSPACES.md) | Multi-workspace tenant isolation, Supabase Auth mapping, secure invitations, and roles. |
+| **Workspaces & Members** | [FEAT_WORKSPACES.md](./FEAT_WORKSPACES.md) | Multi-workspace tenant isolation, secure invitations, and roles. |
 | **Workspace Settings** | [FEAT_SETTINGS.md](./FEAT_SETTINGS.md) | Workspace display preferences, start screens, main currency formats, and custom R2 settings. |
 | **Notifications & Alerts** | [FEAT_NOTIFICATIONS.md](./FEAT_NOTIFICATIONS.md) | In-app WebSocket alerts, transactional emails, and Web Push notifications (VAPID). |
 | **Messaging Integrations** | [FEAT_INTEGRATIONS.md](./FEAT_INTEGRATIONS.md) | Twilio WhatsApp and Telegram bot integration for AI receipt uploads and chat. |

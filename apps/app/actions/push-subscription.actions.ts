@@ -1,4 +1,6 @@
-import { axiosInstance as api } from "@workspace/modules/client";
+"use server";
+
+import { axiosInstance as api } from "@workspace/modules/server";
 import type { ApiResponse } from "@workspace/types";
 
 export async function registerPushSubscription(subscriptionJson: string): Promise<void> {

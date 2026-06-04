@@ -2,13 +2,21 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
 import { match as matchLocale } from "@formatjs/intl-localematcher";
-import { createMiddlewareClient } from "@workspace/supabase/middleware";
 import { jwtVerify } from "jose";
 import Negotiator from "negotiator";
 
 import { i18n } from "./i18n-config";
 
-const IGNORED_LOCALE_PATHS = ["/manifest.json", "/favicon.ico", "/robots.txt", "/sitemap.xml", "/terms", "/policy"];
+const IGNORED_LOCALE_PATHS = [
+  "/manifest.json",
+  "/favicon.ico",
+  "/robots.txt",
+  "/sitemap.xml",
+  "/terms",
+  "/policy",
+  "/sw.js",
+  "/workbox-",
+];
 
 function getLocale(request: NextRequest): string | undefined {
   const negotiatorHeaders: Record<string, string> = {};
@@ -26,19 +34,15 @@ function getLocale(request: NextRequest): string | undefined {
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
-  // Ignore static assets and ignored paths
   if (IGNORED_LOCALE_PATHS.some((path) => pathname.startsWith(path))) return;
 
-  // Check if there is any supported locale in the pathname
   const pathnameIsMissingLocale = i18n.locales.every(
     (locale) => !pathname.startsWith(`/${locale}/`) && pathname !== `/${locale}`,
   );
 
-  // Redirect or Rewrite if there is no locale
   if (pathnameIsMissingLocale) {
     const locale = getLocale(request);
 
-    // Support short sharing links for invoices via rewrite
     if (pathname.startsWith("/invoice/")) {
       const rewriteUrl = new URL(`/${locale}${pathname}`, request.url);
       rewriteUrl.search = request.nextUrl.search;
@@ -50,26 +54,10 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Extract locale from the path
   const locale = pathname.split("/")[1];
-
-  // Calculate specific path after locale
   const pathAfterLocale = pathname.replace(`/${locale}`, "") || "/";
+  const response = NextResponse.next({ request: { headers: request.headers } });
 
-  // Supabase Auth Logic
-  const response = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
-  });
-
-  const supabase = createMiddlewareClient(request, response);
-
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  // Get app session from cookie
   const token = request.cookies.get("oewang-session")?.value;
 
   const isDashboardRoute =
@@ -83,34 +71,24 @@ export async function proxy(request: NextRequest) {
     pathAfterLocale.startsWith("/vault");
 
   const isAuthRoute = pathAfterLocale === "/login" || pathAfterLocale === "/register";
-  const isSyncRoute = pathAfterLocale === "/sync";
   const isCreateWorkspaceRoute = pathAfterLocale === "/create-workspace";
-  const isProtectedRoute = isDashboardRoute || isSyncRoute || isCreateWorkspaceRoute;
+  const isProtectedRoute = isDashboardRoute || isCreateWorkspaceRoute;
 
-  // 1. Auth Guard
-  if (isProtectedRoute && !session) {
+  // 1. Auth guard — no token → login
+  if (isProtectedRoute && !token) {
     return NextResponse.redirect(new URL(`/${locale}/login`, request.url));
   }
 
-  if (isAuthRoute && session) {
-    // Supabase session exists but app JWT is missing/expired.
-    // Route to sync to mint a fresh app session cookie and avoid redirect loops.
-    if (!token) {
-      return NextResponse.redirect(new URL(`/${locale}/sync`, request.url));
-    }
+  // 2. Already authenticated → skip login/register
+  if (isAuthRoute && token) {
     return NextResponse.redirect(new URL(`/${locale}/overview`, request.url));
   }
 
-  if (isDashboardRoute && session && !token) {
-    return NextResponse.redirect(new URL(`/${locale}/sync`, request.url));
-  }
-
-  // 2. Workspace Guard (Lightweight JWT check)
+  // 3. Workspace guard — verify JWT and check workspace_id
   if (isDashboardRoute && token) {
     try {
       const jwtSecret = process.env.JWT_SECRET;
       if (!jwtSecret) {
-        console.error("[Proxy] Missing JWT_SECRET. Refusing to verify session.");
         const redirectResponse = NextResponse.redirect(new URL(`/${locale}/login`, request.url));
         redirectResponse.cookies.delete("oewang-session");
         return redirectResponse;
@@ -119,15 +97,10 @@ export async function proxy(request: NextRequest) {
       const secret = new TextEncoder().encode(jwtSecret);
       const { payload } = await jwtVerify(token, secret);
 
-      if (
-        !payload.workspace_id &&
-        !pathAfterLocale.startsWith("/sync") &&
-        !pathAfterLocale.startsWith("/create-workspace")
-      ) {
-        return NextResponse.redirect(new URL(`/${locale}/sync`, request.url));
+      if (!payload.workspace_id) {
+        return NextResponse.redirect(new URL(`/${locale}/create-workspace`, request.url));
       }
-    } catch (e) {
-      console.error("[Proxy] JWT verification failed:", e);
+    } catch {
       const redirectResponse = NextResponse.redirect(new URL(`/${locale}/login`, request.url));
       redirectResponse.cookies.delete("oewang-session");
       return redirectResponse;

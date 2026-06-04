@@ -24,11 +24,11 @@ Oewang is a multi-workspace SaaS application. Workspaces are isolated logical bo
 
 ### `users` table
 
-Stores the primary user identity. Accounts are authenticated externally (via Supabase Auth) and mapped to this table.
+Stores the primary user identity. Accounts are authenticated via custom JWT (email/password or OAuth).
 
 | Column | Type | Notes |
 |--------|------|-------|
-| `id` | `text` (CUID2) | Primary key, matches Supabase User ID |
+| `id` | `text` (CUID2) | Primary key |
 | `email` | `text` | Required, unique |
 | `name` | `text` | Optional display name |
 | `profile_picture` | `text` | Optional profile image URL |
@@ -97,13 +97,13 @@ Tracks pending invites sent to external users.
 
 ## API Endpoints
 
-### Authentication Token Exchange
-
-Exchanges a Supabase access token for an app JWT payload containing the user's active `workspace_id`.
+### Auth Endpoints
 
 | Method | Path | Auth Required | Description |
 |--------|------|---------------|-------------|
-| `POST` | `/auth/token` | Supabase Token | Exchanges Supabase token for app JWT |
+| `POST` | `/auth/login` | None | Email + password → JWT |
+| `POST` | `/auth/register` | None | New email user → JWT |
+| `POST` | `/auth/oauth/connect` | None | OAuth user info → JWT |
 
 ### Workspace Operations
 
@@ -174,7 +174,7 @@ Role normalization in `workspace-permissions.ts` translates legacy `member` role
 
 ## Known Constraints & Edge Cases
 
-- **No Workspaces Fallback**: When a user registers, they have no workspaces. During the Supabase token exchange, `workspace_id` returns `null`. The Next.js middleware detects `workspace_id = null` in the JWT and redirects the user to `/onboarding` to create their first workspace.
+- **No Workspaces Fallback**: When a user registers, they have no workspaces. The auth endpoints return `workspace_id: null` in the JWT. The Next.js middleware detects `workspace_id = null` and redirects to `/create-workspace`.
 - **Switching Workspaces**: When a user switches workspaces on the client dashboard:
   1. The client calls `PATCH /v1/users/active-workspace` (updates `users.workspace_id`).
   2. The client fetches a new app JWT reflecting the updated `workspace_id`.

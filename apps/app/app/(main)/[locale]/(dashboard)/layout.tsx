@@ -17,6 +17,7 @@ import { AccountSwitcher } from "@/components/organisms/layout/account-switcher"
 import { AppSidebar } from "@/components/organisms/layout/app-sidebar";
 import { NotificationBell } from "@/components/organisms/layout/notification-bell";
 import { SearchDialog } from "@/components/organisms/search/search-dialog";
+import { RealtimeProvider } from "@/components/providers/realtime-provider";
 import { getDictionary } from "@/get-dictionary";
 import type { Locale } from "@/i18n-config";
 import { getPreference } from "@/server/server-actions";
@@ -60,6 +61,7 @@ export default async function Layout({
 
   return (
     <SidebarProvider defaultOpen={default_open}>
+      <RealtimeProvider />
       <AppSidebar
         variant={variant}
         collapsible={collapsible}

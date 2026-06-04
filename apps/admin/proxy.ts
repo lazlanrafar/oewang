@@ -2,17 +2,10 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
 import { match as matchLocale } from "@formatjs/intl-localematcher";
-import { createMiddlewareClient } from "@workspace/supabase/middleware";
+import { jwtVerify } from "jose";
 import Negotiator from "negotiator";
 
 import { i18n } from "./i18n-config";
-
-const ADMIN_ROLES = new Set(["superadmin"]);
-
-function hasAdminAccess(session: any) {
-  const systemRole = session?.user?.app_metadata?.system_role;
-  return typeof systemRole === "string" && ADMIN_ROLES.has(systemRole);
-}
 
 function getLocale(request: NextRequest): string | undefined {
   const negotiatorHeaders: Record<string, string> = {};
@@ -22,65 +15,44 @@ function getLocale(request: NextRequest): string | undefined {
 
   // @ts-expect-error locales are readonly
   const locales: string[] = i18n.locales;
-  const languages = new Negotiator({ headers: negotiatorHeaders }).languages(
-    locales,
-  );
+  const languages = new Negotiator({ headers: negotiatorHeaders }).languages(locales);
 
   return matchLocale(languages, locales, i18n.defaultLocale);
+}
+
+async function hasAdminAccess(token: string): Promise<boolean> {
+  try {
+    const secret = process.env.JWT_SECRET;
+    if (!secret) return false;
+    const { payload } = await jwtVerify(token, new TextEncoder().encode(secret));
+    return payload.system_role === "superadmin";
+  } catch {
+    return false;
+  }
 }
 
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
-  // Ignore static assets and ignored paths
-  if (
-    ["/manifest.json", "/favicon.ico", "/robots.txt", "/sitemap.xml"].includes(
-      pathname,
-    )
-  )
-    return;
+  if (["/manifest.json", "/favicon.ico", "/robots.txt", "/sitemap.xml"].includes(pathname)) return;
 
-  // Check if there is any supported locale in the pathname
   const pathnameIsMissingLocale = i18n.locales.every(
-    (locale) =>
-      !pathname.startsWith(`/${locale}/`) && pathname !== `/${locale}`,
+    (locale) => !pathname.startsWith(`/${locale}/`) && pathname !== `/${locale}`,
   );
 
-  // Redirect if there is no locale
   if (pathnameIsMissingLocale) {
     const locale = getLocale(request);
-    const url = new URL(
-      `/${locale}${pathname.startsWith("/") ? "" : "/"}${pathname}`,
-      request.url,
-    );
+    const url = new URL(`/${locale}${pathname.startsWith("/") ? "" : "/"}${pathname}`, request.url);
     url.search = request.nextUrl.search;
     return NextResponse.redirect(url);
   }
 
-  // Extract locale from the path
-  // Assumes path starts with /<locale>
   const locale = pathname.split("/")[1];
-
-  // Calculate specific path after locale
-  // e.g. /en/overview -> /overview
-  // e.g. /en -> /
   const pathAfterLocale = pathname.replace(`/${locale}`, "") || "/";
 
-  // Supabase Auth Logic
-  const response = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
-  });
+  const response = NextResponse.next({ request: { headers: request.headers } });
 
-  const supabase = createMiddlewareClient(request, response);
-
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  // Get app session from cookie
-  const oewang_session = request.cookies.get("oewang-admin-session")?.value;
+  const token = request.cookies.get("oewang-session")?.value;
 
   const isAuthRoute =
     pathAfterLocale === "/login" ||
@@ -89,31 +61,23 @@ export async function proxy(request: NextRequest) {
   const isUnauthorizedRoute = pathAfterLocale === "/unauthorized";
   const isDashboardRoute = !isAuthRoute && !isUnauthorizedRoute;
 
-  // Protect all dashboard routes
   if (isDashboardRoute) {
-    if (!session || !oewang_session) {
+    if (!token) {
       return NextResponse.redirect(new URL(`/${locale}/login`, request.url));
     }
 
-    if (!hasAdminAccess(session)) {
-      return NextResponse.redirect(
-        new URL(`/${locale}/unauthorized`, request.url),
-      );
+    const isAdmin = await hasAdminAccess(token);
+    if (!isAdmin) {
+      return NextResponse.redirect(new URL(`/${locale}/unauthorized`, request.url));
     }
   }
 
-  // Redirect to dashboard if logged in and on login/register pages
-  if (
-    (pathAfterLocale === "/login" || pathAfterLocale === "/register") &&
-    session &&
-    oewang_session
-  ) {
-    if (hasAdminAccess(session)) {
+  if ((pathAfterLocale === "/login" || pathAfterLocale === "/register") && token) {
+    const isAdmin = await hasAdminAccess(token);
+    if (isAdmin) {
       return NextResponse.redirect(new URL(`/${locale}/overview`, request.url));
     }
-    return NextResponse.redirect(
-      new URL(`/${locale}/unauthorized`, request.url),
-    );
+    return NextResponse.redirect(new URL(`/${locale}/unauthorized`, request.url));
   }
 
   return response;

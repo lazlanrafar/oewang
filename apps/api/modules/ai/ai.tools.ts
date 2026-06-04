@@ -1,5 +1,8 @@
 import { API_CONFIG } from "@workspace/constants";
+import { createLogger } from "@workspace/logger";
 import { CategoriesRepository } from "../categories/categories.repository";
+
+const log = createLogger("ai.tools");
 import { ContactsRepository } from "../contacts/contacts.repository";
 import { ContactsService } from "../contacts/contacts.service";
 import { DebtsService } from "../debts/debts.service";
@@ -12,10 +15,10 @@ import { WalletsRepository as walletsRepository } from "../wallets/wallets.repos
 
 // Tool definitions are now managed in @workspace/ai/tools/tool.definitions.ts
 
-/** Verbose dev logger — no-op in production */
+/** Verbose dev logger — no-op unless verboseToolLogs is enabled */
 function devLog(toolName: string, phase: "IN" | "OUT", data: unknown) {
   if (!API_CONFIG.verboseToolLogs) return;
-  console.log(`[AI Tool ${phase}] ${toolName}:`, JSON.stringify(data, null, 2));
+  log.debug(`tool ${phase}`, { toolName, data });
 }
 
 // Helper to check if string is a UUID
@@ -595,7 +598,7 @@ export async function executeAiTool(
         result = { success: false, error: `Unknown tool: ${toolName}` };
     }
   } catch (error: any) {
-    console.error(`[AI Tool Error] ${toolName}:`, error);
+    log.error("AI tool execution failed", { toolName, error });
     result = { success: false, error: error.message || String(error) };
   }
 

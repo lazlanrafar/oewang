@@ -4,11 +4,18 @@ import {
   buildPaginatedSuccess,
   buildSuccess,
 } from "@workspace/utils";
+import { cacheDel, cacheGet, cacheSet } from "../../lib/cache";
 import { AuditLogsRepository } from "../audit-logs/audit-logs.repository";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import type { CreateInvoiceInput, UpdateInvoiceInput } from "./invoices.dto";
 import { InvoicesRepository } from "./invoices.repository";
+
+const INVOICE_TTL = 60 * 60 * 2; // 2h — invoices are rarely edited after creation
+const invoiceKey = (workspaceId: string, id: string) =>
+  `oewang:invoice:${workspaceId}:${id}`;
+const invoicePublicKey = (workspaceId: string, id: string) =>
+  `oewang:invoice:public:${workspaceId}:${id}`;
 
 export abstract class InvoicesService {
   static async getAll(
@@ -35,12 +42,17 @@ export abstract class InvoicesService {
   }
 
   static async getById(id: string, workspaceId: string) {
+    const key = invoiceKey(workspaceId, id);
+    const cached = await cacheGet<object>(key);
+    if (cached) return buildSuccess(cached);
+
     const result = await InvoicesRepository.findById(id, workspaceId);
 
     if (!result) {
       return buildError(ErrorCode.NOT_FOUND, "Invoice not found");
     }
 
+    await cacheSet(key, result, INVOICE_TTL);
     return buildSuccess(result);
   }
 
@@ -106,6 +118,8 @@ export abstract class InvoicesService {
       after: result,
     });
 
+    await cacheDel(invoiceKey(workspaceId, id), invoicePublicKey(workspaceId, id));
+
     const prevStatus = (before.invoice as any)?.status;
     const newStatus = data.status;
     if (newStatus && newStatus !== prevStatus) {
@@ -157,6 +171,8 @@ export abstract class InvoicesService {
       before: before?.invoice,
     });
 
+    await cacheDel(invoiceKey(workspaceId, id), invoicePublicKey(workspaceId, id));
+
     return buildSuccess(null);
   }
 
@@ -170,12 +186,18 @@ export abstract class InvoicesService {
   }
 
   static async getPublicData(id: string, workspaceId: string) {
+    const key = invoicePublicKey(workspaceId, id);
+    type PublicData = NonNullable<Awaited<ReturnType<typeof InvoicesRepository.findPublicById>>>;
+    const cached = await cacheGet<PublicData>(key);
+    if (cached) return buildSuccess(cached);
+
     const result = await InvoicesRepository.findPublicById(id, workspaceId);
 
     if (!result) {
       return buildError(ErrorCode.NOT_FOUND, "Invoice not found");
     }
 
+    await cacheSet(key, result, INVOICE_TTL);
     return buildSuccess(result);
   }
 }

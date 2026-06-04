@@ -1,6 +1,7 @@
 import { ErrorCode } from "@workspace/types";
 import { buildError, buildSuccess } from "@workspace/utils";
 import { status } from "elysia";
+import { cacheDel, cacheGet, cacheSet } from "../../lib/cache";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { RealtimeService } from "../realtime/realtime.service";
 import type {
@@ -9,6 +10,20 @@ import type {
   UpdateCategoryInput,
 } from "./categories.model";
 import { CategoriesRepository } from "./categories.repository";
+
+const CATEGORIES_TTL = 60 * 60 * 24; // 24h
+
+function categoryKeys(workspaceId: string): string[] {
+  return [
+    `oewang:categories:${workspaceId}:all`,
+    `oewang:categories:${workspaceId}:income`,
+    `oewang:categories:${workspaceId}:expense`,
+  ];
+}
+
+function categoryKey(workspaceId: string, type?: "income" | "expense"): string {
+  return `oewang:categories:${workspaceId}:${type ?? "all"}`;
+}
 
 export abstract class CategoriesService {
   static async createCategory(
@@ -38,6 +53,7 @@ export abstract class CategoriesService {
       after: category,
     });
 
+    await cacheDel(...categoryKeys(workspaceId));
     RealtimeService.notifyValueChange(workspaceId, "categories");
 
     return buildSuccess(category, "Category created successfully", "CREATED");
@@ -73,6 +89,7 @@ export abstract class CategoriesService {
       after: updated,
     });
 
+    await cacheDel(...categoryKeys(workspaceId));
     RealtimeService.notifyValueChange(workspaceId, "categories");
 
     return buildSuccess(updated, "Category updated successfully");
@@ -94,6 +111,7 @@ export abstract class CategoriesService {
       after: data.updates,
     });
 
+    await cacheDel(...categoryKeys(workspaceId));
     RealtimeService.notifyValueChange(workspaceId, "categories");
 
     return buildSuccess(null, "Categories reordered successfully");
@@ -116,13 +134,19 @@ export abstract class CategoriesService {
       before: category,
     });
 
+    await cacheDel(...categoryKeys(workspaceId));
     RealtimeService.notifyValueChange(workspaceId, "categories");
 
     return buildSuccess(null, "Category deleted successfully");
   }
 
   static async getCategories(workspaceId: string, type?: "income" | "expense") {
+    const key = categoryKey(workspaceId, type);
+    const cached = await cacheGet<ReturnType<typeof CategoriesRepository.findMany> extends Promise<infer T> ? T : never>(key);
+    if (cached) return buildSuccess(cached, "Categories retrieved successfully");
+
     const categories = await CategoriesRepository.findMany(workspaceId, type);
+    await cacheSet(key, categories, CATEGORIES_TTL);
     return buildSuccess(categories, "Categories retrieved successfully");
   }
 }

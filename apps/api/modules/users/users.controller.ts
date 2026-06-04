@@ -52,7 +52,7 @@ export const usersController = new Elysia({ prefix: "/users" })
       detail: {
         summary: "Sync User",
         description:
-          "Syncs a user from Supabase Auth to the internal database. Returns workspace status.",
+          "Syncs a user to the internal database. Returns workspace status.",
         tags: ["Users"],
       },
     },

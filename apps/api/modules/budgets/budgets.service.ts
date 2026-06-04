@@ -1,10 +1,15 @@
 import type { CreateBudgetInput, UpdateBudgetInput } from "@workspace/types";
 import { ErrorCode } from "@workspace/types";
 import { buildApiResponse } from "@workspace/utils";
+import { cacheDel, cacheGet, cacheSet } from "../../lib/cache";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { CategoriesRepository } from "../categories/categories.repository";
 import { NotificationsService } from "../notifications/notifications.service";
 import { BudgetsRepository } from "./budgets.repository";
+
+const BUDGET_STATUS_TTL = 60 * 30; // 30 min
+const budgetStatusKey = (workspaceId: string, year: number, month: number) =>
+  `oewang:budgets:status:${workspaceId}:${year}:${month}`;
 
 export abstract class BudgetsService {
   static async create(
@@ -64,6 +69,9 @@ export abstract class BudgetsService {
       after: budget,
     });
 
+    const now = new Date();
+    await cacheDel(budgetStatusKey(workspaceId, now.getFullYear(), now.getMonth() + 1));
+
     NotificationsService.create({
       workspace_id: workspaceId,
       user_id: userId,
@@ -110,6 +118,9 @@ export abstract class BudgetsService {
       after: budget,
     });
 
+    const now = new Date();
+    await cacheDel(budgetStatusKey(workspaceId, now.getFullYear(), now.getMonth() + 1));
+
     return buildApiResponse({
       success: true,
       data: budget,
@@ -138,16 +149,32 @@ export abstract class BudgetsService {
       before,
     });
 
+    const now = new Date();
+    await cacheDel(budgetStatusKey(workspaceId, now.getFullYear(), now.getMonth() + 1));
+
     return buildApiResponse({
       success: true,
       message: "Budget deleted successfully",
     });
   }
 
+  static async invalidateCurrentMonthCache(workspaceId: string) {
+    const now = new Date();
+    await cacheDel(
+      budgetStatusKey(workspaceId, now.getFullYear(), now.getMonth() + 1),
+    );
+  }
+
   static async getStatus(workspaceId: string, month?: number, year?: number) {
     const now = new Date();
     const targetMonth = month !== undefined ? month - 1 : now.getMonth();
     const targetYear = year !== undefined ? year : now.getFullYear();
+    const cacheMonth = month !== undefined ? month : now.getMonth() + 1;
+    const cacheYear = year !== undefined ? year : now.getFullYear();
+
+    const key = budgetStatusKey(workspaceId, cacheYear, cacheMonth);
+    const cached = await cacheGet<object[]>(key);
+    if (cached) return buildApiResponse({ success: true, data: cached });
 
     const startDate = new Date(targetYear, targetMonth, 1).toISOString();
     const endDate = new Date(
@@ -159,15 +186,17 @@ export abstract class BudgetsService {
       59,
     ).toISOString();
 
-    const status = await BudgetsRepository.getStatus(
+    const budgetStatus = await BudgetsRepository.getStatus(
       workspaceId,
       startDate,
       endDate,
     );
 
+    await cacheSet(key, budgetStatus, BUDGET_STATUS_TTL);
+
     return buildApiResponse({
       success: true,
-      data: status,
+      data: budgetStatus,
     });
   }
 }

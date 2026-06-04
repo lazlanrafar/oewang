@@ -6,13 +6,9 @@ const adminEnvSchema = z.object({
   NEXT_PUBLIC_ADMIN_URL: z.string().min(1),
   NEXT_PUBLIC_API_URL: z.string().min(1),
 
-  NEXT_PUBLIC_SUPABASE_URL: z.string().min(1),
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
-  
   NEXT_PUBLIC_SENTRY_DSN: z.string().optional(),
-  
+
   NEXT_PUBLIC_SESSION_COOKIE_NAME: z.string().optional().default("oewang-session"),
-  NEXT_PUBLIC_SUPABASE_COOKIE_NAME: z.string().optional(),
 
   // Server-side
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),

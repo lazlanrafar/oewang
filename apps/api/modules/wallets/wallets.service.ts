@@ -1,17 +1,28 @@
 import { ErrorCode } from "@workspace/types";
 import { buildError, buildPaginatedSuccess } from "@workspace/utils";
 import { status } from "elysia";
+import { cacheDel, cacheGet, cacheSet } from "../../lib/cache";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { RealtimeService } from "../realtime/realtime.service";
 import { WalletGroupsRepository } from "./groups/groups.repository";
 import { WalletsRepository } from "./wallets.repository";
 
+const WALLET_GROUPS_TTL = 60 * 60 * 24; // 24h
+const walletGroupsKey = (workspaceId: string) =>
+  `oewang:wallets:groups:${workspaceId}`;
+
 export abstract class WalletsService {
   // --- Wallet Groups ---
 
   static async getGroups(workspaceId: string) {
-    return WalletGroupsRepository.findMany(workspaceId);
+    const key = walletGroupsKey(workspaceId);
+    const cached = await cacheGet<object[]>(key);
+    if (cached) return cached;
+
+    const groups = await WalletGroupsRepository.findMany(workspaceId);
+    await cacheSet(key, groups, WALLET_GROUPS_TTL);
+    return groups;
   }
 
   static async createGroup(
@@ -40,6 +51,7 @@ export abstract class WalletsService {
       after: group,
     });
 
+    await cacheDel(walletGroupsKey(workspaceId));
     RealtimeService.notifyValueChange(workspaceId, "wallets");
 
     return group;
@@ -77,6 +89,7 @@ export abstract class WalletsService {
       after: group,
     });
 
+    await cacheDel(walletGroupsKey(workspaceId));
     RealtimeService.notifyValueChange(workspaceId, "wallets");
 
     return group;
@@ -101,6 +114,7 @@ export abstract class WalletsService {
       before,
     });
 
+    await cacheDel(walletGroupsKey(workspaceId));
     RealtimeService.notifyValueChange(workspaceId, "wallets");
 
     return true;
@@ -122,6 +136,7 @@ export abstract class WalletsService {
       after: updates,
     });
 
+    await cacheDel(walletGroupsKey(workspaceId));
     RealtimeService.notifyValueChange(workspaceId, "wallets");
   }
 

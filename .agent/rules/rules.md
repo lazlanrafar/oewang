@@ -12,7 +12,7 @@ trigger: always_on
 
 # System Overview
 
-**Stack:** Turborepo · Next.js (`apps/app`) · ElysiaJS (`apps/api`) · PostgreSQL (Drizzle ORM) · Redis · Supabase
+**Stack:** Turborepo · Next.js (`apps/app`) · ElysiaJS (`apps/api`) · PostgreSQL (Drizzle ORM) · Redis · Custom JWT Auth (HS256)
 **Flow:** `apps/app` (Next.js) → Encrypted REST (AES-256-GCM) → `apps/api` (ElysiaJS) → Database
 
 ---
@@ -21,7 +21,7 @@ trigger: always_on
 
 - `apps/app/`: actions/ (REST actions) · app/[locale]/ (Pages) · components/ (UI) · lib/ (utils) · hooks/ · stores/ (Zustand) · middleware.ts (auth/guard)
 - `apps/api/`: modules/{feature}/ (layered controller/service/repository) · plugins/ (auth/encryption/rate-limit)
-- `packages/`: bucket/ (S3) · constants/ · currencyfreaks/ · database/ (Drizzle) · dictionaries/ (i18n) · email/ · encryption/ (AES) · logger/ · redis/ · supabase/ · types/ (shared typescript contracts) · ui/ (shadcn) · utils/ (TS helpers)
+- `packages/`: bucket/ (S3) · constants/ · currencyfreaks/ · database/ (Drizzle) · dictionaries/ (i18n) · email/ · encryption/ (AES) · logger/ · redis/ · types/ (shared typescript contracts) · ui/ (shadcn) · utils/ (TS helpers)
 
 ---
 
@@ -57,7 +57,7 @@ where: { workspace_id, deleted_at: null }
 # apps/app Rules (Frontend)
 
 UI and REST consumer only. No DB access. No business logic.
-**`apps/app` CANNOT import `packages/database` or `packages/supabase` in client components.**
+**`apps/app` CANNOT import `packages/database` in client components.**
 See [RULES_APP.md](file:///Users/boneconsulting/Developer/oewang/.agent/rules/RULES_APP.md) for detailed frontend guidelines.
 
 ---

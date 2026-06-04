@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 
-import { createClient } from "@workspace/supabase/server";
 import type {
   ActionResponse,
   ApiResponse,
@@ -12,7 +11,6 @@ import type {
 } from "@workspace/types";
 
 import { axiosInstance } from "../lib/axios.server";
-import { exchangeSupabaseToken } from "../auth/auth.action";
 import { Env } from "@workspace/constants";
 
 export interface SyncUserDTO {
@@ -81,27 +79,18 @@ export const switchWorkspaceAction = async (
     // 1. Update active workspace in DB via API
     await axiosInstance.patch("users/me/workspace", { workspace_id });
 
-    // 2. Refresh app JWT
-    const supabase = await createClient();
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    if (session?.access_token) {
-      const exchangeResult = await exchangeSupabaseToken(session.access_token);
-
-      if (exchangeResult.success && exchangeResult.data) {
-        const isProduction = Env.NODE_ENV === "production";
-        const cookieDomain = isProduction ? ".oewang.com" : undefined;
-        (await cookies()).set("oewang-session", exchangeResult.data.token, {
-          path: "/",
-          httpOnly: true,
-          secure: isProduction,
-          sameSite: "lax",
-          maxAge: 60 * 60 * 24 * 7, // 7 days
-          ...(cookieDomain ? { domain: cookieDomain } : {}),
-        });
-      }
+    // 2. Refresh app JWT to embed the new workspace_id
+    const refreshResponse = await axiosInstance.post("auth/refresh", {});
+    if (refreshResponse.data?.data?.token) {
+      const isProduction = Env.NODE_ENV === "production";
+      (await cookies()).set("oewang-session", refreshResponse.data.data.token, {
+        path: "/",
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: "lax",
+        maxAge: 60 * 60 * 24 * 7,
+        ...(isProduction ? { domain: ".oewang.com" } : {}),
+      });
     }
 
     revalidatePath("/[locale]/overview", "layout");

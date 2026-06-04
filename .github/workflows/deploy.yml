@@ -75,8 +75,6 @@ jobs:
       - name: Seed admin user
         env:
           DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: bun scripts/seeders/03-admin-user.ts
         working-directory: packages/database
 

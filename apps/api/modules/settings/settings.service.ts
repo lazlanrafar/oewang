@@ -1,24 +1,34 @@
 import { Env } from "@workspace/constants";
 import { encrypt } from "@workspace/encryption";
 import { buildSuccess } from "@workspace/utils";
+import { cacheDel, cacheGet, cacheSet } from "../../lib/cache";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import type { TransactionSettingsInput } from "./settings.model";
 import { SettingsRepository } from "./settings.repository";
 
+const SETTINGS_TTL = 60 * 60 * 24; // 24h
+const settingsKey = (workspaceId: string) => `oewang:settings:${workspaceId}`;
+
 export abstract class SettingsService {
   static async getTransactionSettings(workspaceId: string) {
+    const key = settingsKey(workspaceId);
+    const cached = await cacheGet<Record<string, unknown>>(key);
+    if (cached) return buildSuccess(cached, "Transaction settings retrieved successfully");
+
     let settings = await SettingsRepository.findByWorkspaceId(workspaceId);
 
     if (!settings) {
       settings = await SettingsRepository.create(workspaceId);
     }
 
-    // Sanitize
+    // Cache the sanitized result — never cache raw credentials
     const sanitizedSettings = {
       ...settings,
       r2AccessKeyId: settings.r2AccessKeyId ? "********" : null,
       r2SecretAccessKey: settings.r2SecretAccessKey ? "********" : null,
     };
+
+    await cacheSet(key, sanitizedSettings, SETTINGS_TTL);
 
     return buildSuccess(
       sanitizedSettings,
@@ -71,6 +81,8 @@ export abstract class SettingsService {
       before: existing,
       after: updated,
     });
+
+    await cacheDel(settingsKey(workspaceId));
 
     const sanitizedSettings = {
       ...updated,

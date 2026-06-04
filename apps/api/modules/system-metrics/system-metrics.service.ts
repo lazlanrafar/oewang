@@ -1,8 +1,17 @@
 import { buildSuccess } from "@workspace/utils";
+import { cacheGet, cacheSet } from "../../lib/cache";
 import { SystemMetricsRepository } from "./system-metrics.repository";
+
+const SYSTEM_METRICS_TTL = 60 * 15; // 15 min — admin overview, tolerates slight staleness
+const systemMetricsKey = (start?: string, end?: string) =>
+  `oewang:system-metrics:${start ?? "d"}:${end ?? "d"}`;
 
 export abstract class SystemMetricsService {
   static async getOverview(start?: string, end?: string) {
+    const key = systemMetricsKey(start, end);
+    const cached = await cacheGet<object>(key);
+    if (cached) return buildSuccess(cached, "System metrics fetched");
+
     let startDate: Date | undefined;
     let endDate: Date | undefined;
 
@@ -25,12 +34,9 @@ export abstract class SystemMetricsService {
       endDate,
     );
 
-    return buildSuccess(
-      {
-        metrics,
-        chartData: timeSeries,
-      },
-      "System metrics fetched",
-    );
+    const result = { metrics, chartData: timeSeries };
+    await cacheSet(key, result, SYSTEM_METRICS_TTL);
+
+    return buildSuccess(result, "System metrics fetched");
   }
 }

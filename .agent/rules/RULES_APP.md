@@ -15,13 +15,13 @@ Next.js 16 App Router frontend. UI and REST consumer only. No database access. N
 ```
 CANNOT import:              CAN import:
   packages/database           packages/types
-  packages/supabase            packages/utils
-    (in client components)     packages/ui
-  packages/bucket              packages/constants
-  apps/api internals           packages/dictionaries
-                                 (via get-dictionary.ts only)
-                               packages/encryption
-                                 (axios interceptor only)
+  packages/bucket             packages/utils
+  apps/api internals          packages/ui
+                              packages/constants
+                              packages/dictionaries
+                                (via get-dictionary.ts only)
+                              packages/encryption
+                                (axios interceptor only)
 ```
 
 All data fetching goes through `actions/` → encrypted REST → `apps/api`.

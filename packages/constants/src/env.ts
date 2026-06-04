@@ -21,10 +21,11 @@ const serverSchema = z.object({
   // Database
   DATABASE_URL: z.string().min(1),
 
-  // Auth
-  SUPABASE_URL: z.string().min(1),
-  SUPABASE_ANON_KEY: z.string().min(1),
-  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
+  // OAuth
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
+  GITHUB_CLIENT_ID: z.string().optional(),
+  GITHUB_CLIENT_SECRET: z.string().optional(),
 
   // JWT
   JWT_SECRET: z.string().min(32),
@@ -89,14 +90,11 @@ const clientSchema = z.object({
   NEXT_PUBLIC_API_URL: z.string().min(1),
   NEXT_PUBLIC_WEBSITE_URL: z.string().min(1).optional(),
 
-  NEXT_PUBLIC_SUPABASE_URL: z.string().min(1),
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
   NEXT_PUBLIC_SENTRY_DSN: z.string().optional(),
   NEXT_PUBLIC_SESSION_COOKIE_NAME: z
     .string()
     .optional()
     .default("oewang-session"),
-  NEXT_PUBLIC_SUPABASE_COOKIE_NAME: z.string().optional(),
   NEXT_PUBLIC_TWILIO_WHATSAPP_NUMBER: z.string().optional().default("+14155238886"),
   NEXT_PUBLIC_TELEGRAM_BOT_USER: z.string().optional().default("OewangBot"),
 });
@@ -110,12 +108,8 @@ const clientEnv = {
   NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
   NEXT_PUBLIC_WEBSITE_URL: process.env.NEXT_PUBLIC_WEBSITE_URL,
 
-  NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
   NEXT_PUBLIC_SESSION_COOKIE_NAME: process.env.NEXT_PUBLIC_SESSION_COOKIE_NAME,
-  NEXT_PUBLIC_SUPABASE_COOKIE_NAME:
-    process.env.NEXT_PUBLIC_SUPABASE_COOKIE_NAME,
   NEXT_PUBLIC_TWILIO_WHATSAPP_NUMBER: process.env.NEXT_PUBLIC_TWILIO_WHATSAPP_NUMBER,
   NEXT_PUBLIC_TELEGRAM_BOT_USER: process.env.NEXT_PUBLIC_TELEGRAM_BOT_USER,
 };
