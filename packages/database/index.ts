@@ -33,3 +33,6 @@ export * from "./schema/workspace-sub-currencies";
 export * from "./schema/workspace-addons";
 export * from "./schema/workspaces";
 export * from "./schema/system-settings";
+export * from "./schema/mcp-oauth-clients";
+export * from "./schema/mcp-auth-codes";
+export * from "./schema/mcp-tokens";

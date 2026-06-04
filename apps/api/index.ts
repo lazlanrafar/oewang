@@ -44,6 +44,7 @@ import { usersController } from "./modules/users/users.controller";
 import { vaultController } from "./modules/vault/vault.controller";
 import { walletsController } from "./modules/wallets/wallets.controller";
 import { workspacesController } from "./modules/workspaces/workspaces.controller";
+import { mcpController } from "./modules/mcp/mcp.controller";
 import { authPlugin, getAuth } from "./plugins/auth";
 import { encryptionPlugin } from "./plugins/encryption";
 import { loggerPlugin } from "./plugins/logger";
@@ -130,6 +131,7 @@ const app = new Elysia()
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     }),
   )
+  .use(mcpController)
   .use(staticPlugin({ assets: "public", prefix: "" }))
   .get("/", () => Bun.file("public/index.html"))
   .use(loggerPlugin)

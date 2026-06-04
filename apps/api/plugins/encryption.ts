@@ -51,6 +51,9 @@ export const encryptionPlugin = (app: Elysia) =>
         path &&
         (path.startsWith("/swagger") ||
           path.startsWith("/health") ||
+          path.startsWith("/mcp") ||
+          path.startsWith("/.well-known") ||
+          path.startsWith("/oauth") ||
           path.includes("/mayar/webhook"))
       )
         return;
