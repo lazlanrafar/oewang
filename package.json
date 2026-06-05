@@ -12,6 +12,7 @@
     "db:migrate": "bun run --cwd packages/database migrate",
     "db:seed": "bun run --cwd packages/database seed",
     "db:reset": "bun run --cwd packages/database reset && bun run db:push && bun run db:seed",
+    "db:setup-vector": "bun run packages/database/setup-vector.ts",
     "db:migrate:prod": "bun run --cwd packages/database prod:migrate",
     "db:seed:prod": "bun run --cwd packages/database prod:seed",
     "db:release:prod": "bun run db:migrate:prod && bun run db:seed:prod",

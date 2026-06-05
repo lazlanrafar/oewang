@@ -19,6 +19,9 @@ import * as users from "./schema/users";
 import * as vault_files from "./schema/vault-files";
 import * as wallet_groups from "./schema/wallet-groups";
 import * as wallets from "./schema/wallets";
+import * as mcp_auth_codes from "./schema/mcp-auth-codes";
+import * as mcp_oauth_clients from "./schema/mcp-oauth-clients";
+import * as mcp_tokens from "./schema/mcp-tokens";
 import * as webhook_events from "./schema/webhook-events";
 import * as workspace_integrations from "./schema/workspace-integrations";
 import * as workspace_invitations from "./schema/workspace-invitations";
@@ -52,6 +55,9 @@ const schema = {
   ...debts,
   ...debt_payments,
   ...webhook_events,
+  ...mcp_oauth_clients,
+  ...mcp_auth_codes,
+  ...mcp_tokens,
 };
 
 // Disable prefetch as it is not supported for "Transaction" pool mode

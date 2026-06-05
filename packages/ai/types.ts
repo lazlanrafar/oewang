@@ -1,4 +1,10 @@
-import { t, type Static } from "elysia";
+export interface AgentSettings {
+  model: string;
+  temperature: number;
+  maxSteps: number;
+  customInstructions?: string | null;
+  responseLanguage: "auto" | "english" | "indonesian";
+}
 
 export type Intent =
   | "transaction_query"

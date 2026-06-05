@@ -62,7 +62,7 @@ const TabsContent = React.forwardRef<
     ref={ref}
     data-slot="tabs-content"
     className={cn(
-      "mt-2 ring-offset-background focus-visible:outline-none flex-1 outline-none",
+      "mt-2 ring-offset-background focus-visible:outline-none flex-1 outline-none data-[state=inactive]:hidden",
       className,
     )}
     {...props}

@@ -1,6 +1,4 @@
-const perplexityIcon = {
-  src: "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7",
-};
+import perplexityIcon from "./perplexity.png";
 
 export const Logo = () => {
   return (

@@ -26,6 +26,7 @@ export * from "./conversation";
 export * from "./dialog";
 export * from "./drawer";
 export * from "./dropdown-menu";
+export * from "./filter-toggle";
 export * from "./form";
 export * from "./hover-card";
 export * from "./icons";
