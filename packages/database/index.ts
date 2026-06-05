@@ -1,5 +1,6 @@
 export * from "drizzle-orm";
 export { db } from "./client";
+export * from "./schema/ai-agent-settings";
 export * from "./schema/ai-messages";
 export * from "./schema/ai-sessions";
 export * from "./schema/articles";

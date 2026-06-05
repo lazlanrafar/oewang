@@ -3,11 +3,12 @@ import { ErrorCode } from "@workspace/types";
 import { buildError, buildSuccess } from "@workspace/utils";
 import { Elysia } from "elysia";
 import { authPlugin } from "../../plugins/auth";
-import { encryptionPlugin } from "../../plugins/encryption";
+import { agentSettingsController } from "./agent-settings.controller";
 import { ChatRequestDto, ParseReceiptDto } from "./ai.dto";
 import { AiService } from "./ai.service";
 
 export const aiController = new Elysia({ prefix: "/ai" })
+  .use(agentSettingsController)
   .use(authPlugin)
   .derive(({ auth }) => ({
     workspaceId: auth?.workspace_id,
@@ -28,8 +29,7 @@ export const aiController = new Elysia({ prefix: "/ai" })
     {
       detail: {
         summary: "Get AI Sessions",
-        description:
-          "Returns a list of previous AI chat sessions for the active workspace.",
+        description: "Returns a list of previous AI chat sessions for the active workspace.",
         tags: ["AI"],
       },
     },
@@ -80,32 +80,21 @@ export const aiController = new Elysia({ prefix: "/ai" })
     async ({ body, workspaceId, userId, set }) => {
       logger.debug("AI chat request received", { bodyType: typeof body, keys: Object.keys(body || {}) });
       try {
-        const response = await AiService.chat(
-          body.messages,
-          workspaceId!,
-          userId!,
-          body.sessionId,
-        );
+        const response = await AiService.chat(body.messages, workspaceId!, userId!, body.sessionId);
         return buildSuccess(response, "Chat response generated");
       } catch (error: any) {
-        // If it's a custom status response (e.g. from Elysia's status() helper), propagate it
         if (error.code && error.response) {
           set.status = error.code;
           return error.response;
         }
-
         logger.error("Error generating AI response", {
           error: error?.message ?? String(error),
           errorName: error?.name,
           userId,
           sessionId: body.sessionId,
         });
-
         set.status = 500;
-        return buildError(
-          ErrorCode.INTERNAL_ERROR,
-          error?.message ?? "Failed to generate AI response",
-        );
+        return buildError(ErrorCode.INTERNAL_ERROR, error?.message ?? "Failed to generate AI response");
       }
     },
     {
@@ -113,7 +102,7 @@ export const aiController = new Elysia({ prefix: "/ai" })
       detail: {
         summary: "Chat with AI",
         description:
-          "Sends messages to the AI and returns a response, optionally within a session. Supports function calling for financial tasks.",
+          "Sends messages to the AI and returns a response, optionally within a session. Supports multi-step tool calling for financial tasks.",
         tags: ["AI"],
       },
     },
@@ -122,12 +111,7 @@ export const aiController = new Elysia({ prefix: "/ai" })
     "/parse-receipt",
     async ({ body, workspaceId, userId, set }) => {
       try {
-        const result = await AiService.parseReceipt(
-          workspaceId!,
-          userId!,
-          body.file.data,
-          body.file.type,
-        );
+        const result = await AiService.parseReceipt(workspaceId!, userId!, body.file.data, body.file.type);
         return buildSuccess(result, "Receipt parsed successfully");
       } catch (error: any) {
         logger.error("Error parsing receipt", {
@@ -136,18 +120,14 @@ export const aiController = new Elysia({ prefix: "/ai" })
           workspaceId,
         });
         set.status = 500;
-        return buildError(
-          ErrorCode.INTERNAL_ERROR,
-          error?.message ?? "Failed to parse receipt",
-        );
+        return buildError(ErrorCode.INTERNAL_ERROR, error?.message ?? "Failed to parse receipt");
       }
     },
     {
       body: ParseReceiptDto,
       detail: {
         summary: "Parse Receipt",
-        description:
-          "Extracts transaction data from a receipt image or PDF using AI.",
+        description: "Extracts transaction data from a receipt image or PDF using AI.",
         tags: ["AI"],
       },
     },

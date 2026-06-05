@@ -1,5 +1,5 @@
 import { ProviderFactory } from "../providers/provider.factory";
-import { SYSTEM_PROMPT_BASE } from "./prompts";
+import { buildSystemPrompt } from "./prompts";
 import type { AiInput, ExtractedTransaction } from "../types";
 import OpenAI from "openai";
 
@@ -94,9 +94,10 @@ ${JSON.stringify(input.tabular.rows.slice(0, 100))}
         return Array.isArray(parsed.transactions) ? parsed.transactions : [];
       }
 
+      const fallbackPrompt = buildSystemPrompt({ currencyCode: "USD", currencySymbol: "$" });
       const response = await ProviderFactory.chat(
-        [{ role: "user", content: prompt }], // User message only, system prompt passsed separately
-        SYSTEM_PROMPT_BASE,
+        [{ role: "user", content: prompt }],
+        fallbackPrompt,
         keys
       );
 

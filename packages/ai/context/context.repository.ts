@@ -2,6 +2,8 @@ import {
   db,
   eq,
   and,
+  gte,
+  lte,
   isNull,
   desc,
   sql,
@@ -27,7 +29,14 @@ export abstract class ContextRepository {
     return results[0];
   }
 
-  static async getRecentTransactions(workspaceId: string, limit = 10) {
+  static async getRecentTransactions(workspaceId: string, limit = 20, from?: string, to?: string) {
+    const conditions = [
+      eq(transactions.workspaceId, workspaceId),
+      isNull(transactions.deletedAt),
+    ];
+    if (from) conditions.push(gte(transactions.date, from));
+    if (to) conditions.push(lte(transactions.date, to));
+
     return await db
       .select({
         id: transactions.id,
@@ -41,12 +50,7 @@ export abstract class ContextRepository {
       .from(transactions)
       .leftJoin(wallets, eq(transactions.walletId, wallets.id))
       .leftJoin(categories, eq(transactions.categoryId, categories.id))
-      .where(
-        and(
-          eq(transactions.workspaceId, workspaceId),
-          isNull(transactions.deletedAt),
-        ),
-      )
+      .where(and(...conditions))
       .orderBy(desc(transactions.date), desc(transactions.createdAt))
       .limit(limit);
   }
