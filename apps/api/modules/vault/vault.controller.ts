@@ -14,6 +14,7 @@ import {
   updateTagsBody,
   uploadFileBody,
 } from "./vault.dto";
+import { VaultIndexingService } from "./vault-indexing.service";
 import { VaultService } from "./vault.service";
 
 export const vaultController = new Elysia({ prefix: "/vault" })
@@ -60,6 +61,16 @@ export const vaultController = new Elysia({ prefix: "/vault" })
           size: file.size,
           buffer,
         });
+
+        // Async background indexing — don't block the upload response
+        VaultIndexingService.indexBuffer(
+          workspaceId!,
+          data.id,
+          buffer,
+          file.type,
+          file.name,
+        ).catch((e) => logger.error("Vault indexing failed", { error: e?.message, fileId: data.id }));
+
         set.status = 201;
         return buildSuccess(data, "File uploaded successfully");
       } catch (error: any) {

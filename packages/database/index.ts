@@ -23,6 +23,7 @@ export * from "./schema/notification-settings";
 export * from "./schema/push-subscriptions";
 export * from "./schema/oauth-accounts";
 export * from "./schema/users";
+export * from "./schema/vault-file-chunks";
 export * from "./schema/vault-files";
 export * from "./schema/wallet-groups";
 export * from "./schema/wallets";

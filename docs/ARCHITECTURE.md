@@ -17,11 +17,12 @@ oewang/
 │   ├── website/    # Next.js — Marketing website (port 3003)
 │   └── native/     # Flutter — Mobile app (Dart/Flutter 3.11+)
 └── packages/
-    ├── ai/             # AI service abstractions (OpenAI, Anthropic, Gemini)
+    ├── ai/             # AI orchestration (Vercel AI SDK, OpenAI, Anthropic, Gemini)
+    │                   #   Includes: embedding, RAG, chunking, receipt parsing, artifacts
     ├── bucket/         # S3-compatible object storage client
     ├── constants/      # Shared static constants (roles, colors, config, env)
     ├── currencyfreaks/ # CurrencyFreaks exchange rate client
-    ├── database/       # Drizzle ORM + PostgreSQL (32 tables)
+    ├── database/       # Drizzle ORM + PostgreSQL (35 tables)
     ├── dictionaries/   # i18n JSON files (en, id, ja)
     ├── email/          # Resend email sender + HTML templates
     ├── encryption/     # AES-256-GCM encrypt/decrypt
@@ -210,9 +211,9 @@ All routes are under `app/(main)/[locale]/`. Supported locales configured in `i1
 
 Drizzle ORM + PostgreSQL. The **only** package that directly talks to the database.
 
-**33 schema tables** (all in `packages/database/schema/`):
+**35 schema tables** (all in `packages/database/schema/`):
 
-`ai-messages` · `ai-sessions` · `articles` · `audit-logs` · `budgets` · `categories` · `contacts` · `debt-payments` · `debts` · `invoices` · `notification-settings` · `notifications` · `oauth-accounts` · `orders` · `pricing` · `privacy-requests` · `push-subscriptions` · `system-settings` · `transaction-attachments` · `transaction-items` · `transactions` · `user-workspaces` · `users` · `vault-files` · `wallet-groups` · `wallets` · `webhook-events` · `workspace-addons` · `workspace-integrations` · `workspace-invitations` · `workspace-settings` · `workspace-sub-currencies` · `workspaces`
+`ai-agent-settings` · `ai-messages` · `ai-sessions` · `articles` · `audit-logs` · `budgets` · `categories` · `contacts` · `debt-payments` · `debts` · `invoices` · `notification-settings` · `notifications` · `oauth-accounts` · `orders` · `pricing` · `privacy-requests` · `push-subscriptions` · `system-settings` · `transaction-attachments` · `transaction-items` · `transactions` · `user-workspaces` · `users` · `vault-file-chunks` · `vault-files` · `wallet-groups` · `wallets` · `webhook-events` · `workspace-addons` · `workspace-integrations` · `workspace-invitations` · `workspace-settings` · `workspace-sub-currencies` · `workspaces`
 
 **Auth-relevant schema notes:**
 - `users.password_hash` — nullable text; null for OAuth-only users
@@ -231,6 +232,13 @@ bun run --cwd packages/database drizzle-kit generate
 # 4. Apply migration
 bun run --cwd packages/database drizzle-kit migrate
 ```
+
+**pgvector setup (one-time per environment):**
+```bash
+# Enable vector extension + create HNSW index on vault_file_chunks.embedding
+bun run db:setup-vector
+```
+Required for RAG document search. Railway production: already enabled (June 2025). Safe to re-run (idempotent).
 
 ---
 
@@ -313,7 +321,7 @@ Login (email/password or OAuth)
 | `bucket` | ❌ NEVER | ✅ vault service only | ❌ NEVER |
 | `encryption` | ✅ axios interceptor only | ✅ encryption plugin only | ❌ NEVER |
 | `redis` | ❌ NEVER | ✅ rate-limit + services | ❌ NEVER |
-| `ai` | ❌ NEVER | ✅ ai module only | ❌ NEVER |
+| `ai` | ❌ NEVER | ✅ ai module only | ✅ internally uses `database` + `redis` |
 | `integrations` | ❌ NEVER | ✅ integrations module | ❌ NEVER |
 | `email` | ❌ NEVER | ✅ services only | ❌ NEVER |
 | `types` | ✅ everywhere | ✅ everywhere | ✅ everywhere |

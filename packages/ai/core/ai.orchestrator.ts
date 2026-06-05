@@ -5,6 +5,8 @@ import { z } from "zod";
 import { redis } from "@workspace/redis";
 import { ChatMessage, ChatResponse, AgentSettings } from "../types";
 import { ContextRepository } from "../context/context.repository";
+import { EmbeddingService } from "../embedding/embedding.service";
+import { RagRepository } from "../rag/rag.repository";
 import { log } from "../utils/logger";
 
 export interface OrchestratorOptions {
@@ -49,6 +51,7 @@ function buildTools(
   workspaceId: string,
   executor: ToolExecutorFn,
   onArtifact: (type: string, payload: any) => void,
+  openaiKey?: string,
 ) {
   return {
     // ── Context / read tools ────────────────────────────────────────────────
@@ -308,6 +311,46 @@ function buildTools(
       }),
       execute: async (args) => executor("search_transaction_items", args),
     }),
+
+    // ── RAG: document search ────────────────────────────────────────────────
+
+    search_documents: tool({
+      description:
+        "Search the user's uploaded documents (PDFs, spreadsheets, text files) for information relevant to the query. Use when the user asks about the content of their uploaded files, financial reports, contracts, or any document they have shared. Returns excerpts from the most relevant sections.",
+      parameters: z.object({
+        query: z.string().describe("Natural language search query, e.g. 'Q1 profit margin' or 'contract payment terms'."),
+        limit: z.number().int().min(1).max(10).default(5).optional().describe("Max number of document excerpts to return (default 5)."),
+      }),
+      execute: async ({ query, limit }) => {
+        if (!openaiKey) {
+          return { error: "Document search requires an OpenAI API key." };
+        }
+
+        try {
+          const queryEmbedding = await EmbeddingService.embedQuery(query, openaiKey);
+          const results = await RagRepository.similaritySearch(
+            workspaceId,
+            queryEmbedding,
+            limit ?? 5,
+          );
+
+          if (!results.length) {
+            return { message: "No relevant documents found for this query." };
+          }
+
+          return {
+            results: results.map((r) => ({
+              fileName: r.fileName,
+              excerpt: r.content,
+              relevance: Math.round(r.similarity * 100),
+            })),
+          };
+        } catch (error: any) {
+          log.error("search_documents tool failed", { error: error?.message });
+          return { error: "Document search temporarily unavailable." };
+        }
+      },
+    }),
   };
 }
 
@@ -323,7 +366,7 @@ export abstract class AiOrchestrator {
     const model = buildModel(options);
     const tools = buildTools(options.workspaceId, executor, (type, payload) => {
       capturedArtifact = { type, payload };
-    });
+    }, options.openaiKey);
 
     const result = await generateText({
       model,
