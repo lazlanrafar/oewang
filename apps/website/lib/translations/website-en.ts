@@ -9,10 +9,10 @@ export const websiteEn = {
     signOut: "Sign out",
   },
   hero: {
-    badge: "Personal finance OS",
-    title: "Your money, finally clear in one place.",
+    badge: "Daily finance tracker",
+    title: "Track every rupiah without the spreadsheet.",
     subtitle:
-      "oewang helps you track spending, understand cash flow, and stay ahead of bills with AI-assisted categorization.",
+      "oewang helps you input daily transactions, understand spending, and keep personal money clear with AI-assisted categorization.",
     ctaStartFree: "Start free trial",
     ctaSeeHow: "See how it works",
     ctaGetStarted: "Get started free",
@@ -23,11 +23,11 @@ export const websiteEn = {
   },
   howItWorks: {
     title: "How it works",
-    subtitle: "Everything you need to run your business finances in one place.",
+    subtitle: "Everything you need to track daily money in one place.",
     seeAllFeatures: "See all features",
     transactions: {
       title: "Transactions",
-      description: "Every payment in and out, automatically synced and categorized. No more manual entry.",
+      description: "Every daily expense and income entry, organized and categorized with less manual work.",
     },
     aiAssistant: {
       title: "AI Assistant",
@@ -39,11 +39,11 @@ export const websiteEn = {
     },
   },
   features: {
-    title: "Everything you need to run your business",
+    title: "Everything you need to track daily spending",
     transactions: {
       title: "All your transactions, unified",
       description:
-        "Every payment in and out of the business is automatically synced and categorized. No more manual entry.",
+        "Every income and expense can be tracked, searched, and categorized so your daily money stays clear.",
       items: [
         "Auto-categorization with AI",
         "Search and filter instantly",
@@ -57,8 +57,8 @@ export const websiteEn = {
       items: ["Natural language queries", "Real-time insights", "Weekly summaries", "Multi-agent AI system"],
     },
     invoices: {
-      title: "Professional invoices, payments tracked",
-      description: "Create and send invoices in seconds. Get paid faster with online payment links.",
+      title: "Receipts and invoices stay organized",
+      description: "Keep receipts, invoices, and payment notes attached to the right transaction.",
       items: ["Customizable templates", "Online payment links", "Automatic reminders", "VAT and tax support"],
     },
     dashboard: {
@@ -72,16 +72,16 @@ export const websiteEn = {
     heading: "Why we built oewang",
     problemTitle: "The Problem",
     problemText:
-      "Running a business means managing finances across multiple tools. Bank accounts, invoices, receipts, transactions—all scattered across spreadsheets, email threads, and disconnected dashboards.",
+      "Daily money tracking often ends up scattered across notes, chat screenshots, receipts, bank apps, and spreadsheets.",
     solutionTitle: "What We Built",
     solutionText:
-      "oewang brings everything together. Transactions sync automatically, AI categorizes and explains your spending, invoices get created and tracked, vault keeps receipts organized.",
-    modernTitle: "Built for Modern Businesses",
+      "oewang brings everything together. Transactions are easy to input, AI helps categorize spending, and the vault keeps receipts organized.",
+    modernTitle: "Built for Daily Use",
     modernText:
-      "Whether you're a solo founder or running a small team, oewang adapts to your workflow—not the other way around.",
+      "Whether you track personal spending, family expenses, or side-income, oewang adapts to your daily routine.",
     focusTitle: "Our Focus",
     focusItems: [
-      "Reduce manual financial work",
+      "Reduce manual money tracking work",
       "Keep data consistent and reliable",
       "Surface the right info at the right time",
       "Work quietly in the background",
@@ -90,8 +90,8 @@ export const websiteEn = {
     founderTitle: "Founder",
   },
   pricing: {
-    title: "Pricing that matches how you run your business",
-    subtitle: "Start simple, upgrade when your workflow gets more complex.",
+    title: "Affordable pricing for daily tracking",
+    subtitle: "Start free, upgrade from Rp39.9k when you need more room.",
     monthly: "Monthly",
     yearly: "Yearly",
     yearlyDiscount: "Save 20%",
@@ -99,7 +99,7 @@ export const websiteEn = {
     getStarted: "Get started",
     startFree: "Start free trial",
     noCreditCard: "No credit card required",
-    allPrices: "All prices in USD. Local taxes may apply.",
+    allPrices: "Prices are optimized for Indonesia. Local taxes may apply.",
   },
   integrations: {
     title: "Works with the tools you already use",
@@ -149,8 +149,8 @@ export const websiteEn = {
     goToApp: "Go to app",
   },
   cta: {
-    title: "Ready for calmer money decisions?",
-    subtitle: "Join people using oewang to track spending, understand cash flow, and stay ahead of bills.",
+    title: "Ready to track money daily?",
+    subtitle: "Use oewang to input transactions, understand spending, and stay ahead of bills.",
     getStarted: "Get started free",
     viewPricing: "View pricing",
   },

@@ -15,7 +15,7 @@
 
 ## Purpose
 
-Billing is handled via **Mayar** (an Indonesian payment gateway). Workspaces subscribe to plans that gate features like AI token quota, vault storage, and number of workspaces. Billing lifecycle is managed by a cron job that automatically transitions expired subscriptions.
+Billing is handled via **Mayar** (an Indonesian payment gateway). Workspaces subscribe to plans that gate features like AI token quota, vault storage, and number of workspaces. Pricing is optimized for Indonesia-first personal/daily tracking, with a low-cost Personal tier and optional add-ons. Billing lifecycle is managed by a cron job that automatically transitions expired subscriptions.
 
 ---
 
@@ -26,7 +26,7 @@ Billing is handled via **Mayar** (an Indonesian payment gateway). Workspaces sub
 | Column | Type | Notes |
 |--------|------|-------|
 | `id` | `text` (CUID2) | Primary key |
-| `name` | `text` | Plan name (e.g. `Starter`, `Pro`, `Business`) |
+| `name` | `text` | Plan name (e.g. `Starter`, `Personal`, `Pro`, `Business`) |
 | `description` | `text` | Optional |
 | `prices` | `jsonb` | Array of `{ currency, monthly, yearly, mayar_monthly_id, mayar_yearly_id }` |
 | `mayar_product_id` | `text` | Mayar product identifier |

@@ -86,7 +86,7 @@ export const websiteJa = {
     getStarted: "始める",
     startFree: "無料試用を開始",
     noCreditCard: "クレジットカード不要",
-    allPrices: "すべての価格はUSD。現地税が適用される場合があります。",
+    allPrices: "価格は地域別に最適化されています。現地税が適用される場合があります。",
   },
   integrations: {
     title: "お使いのツールと連携",

@@ -1,14 +1,13 @@
 export const FEATURE_DETAILS = {
   invoicing: {
     title: "Invoicing",
-    subtitle: "Get paid faster with cleaner invoice operations.",
-    intro:
-      "Create, send, and track invoices in one flow. Keep payment status visible for both solo operators and team workspaces.",
+    subtitle: "Keep bills, invoices, and payment notes organized.",
+    intro: "Track invoices and payment notes in one flow so personal, freelance, and side-income records stay clear.",
     points: [
       "Reusable invoice templates",
       "Clear due-date and status tracking",
-      "Shared visibility for finance collaborators",
-      "Simple follow-up workflows for unpaid invoices",
+      "Clear records for freelance or side-income payments",
+      "Simple follow-up workflows for unpaid bills",
     ],
   },
   transactions: {
@@ -79,7 +78,7 @@ export const FEATURE_DETAILS = {
   },
   assistant: {
     title: "Assistant",
-    subtitle: "Ask business finance questions in plain language.",
+    subtitle: "Ask daily finance questions in plain language.",
     intro: "Use AI-assisted queries to understand trends, anomalies, and next actions without digging through reports.",
     points: [
       "Natural-language finance questions",

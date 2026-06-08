@@ -9,10 +9,10 @@ export const websiteId = {
     signOut: "Keluar",
   },
   hero: {
-    badge: "OS keuangan open-source",
-    title: "Jalankan keuangan bisnis tanpa kerja manual.",
+    badge: "Tracker keuangan harian",
+    title: "Catat setiap rupiah tanpa spreadsheet.",
     subtitle:
-      "oewang adalah OS keuangan untuk bisnis modern. Wawasan berbasis AI, kategorisasi otomatis, sinkronisasi real-time.",
+      "oewang membantu Anda input transaksi harian, memahami pengeluaran, dan menjaga uang pribadi tetap jelas dengan bantuan AI.",
     ctaStartFree: "Mulai uji coba gratis",
     ctaSeeHow: "Lihat cara kerjanya",
     ctaGetStarted: "Mulai gratis",
@@ -23,12 +23,11 @@ export const websiteId = {
   },
   howItWorks: {
     title: "Cara kerjanya",
-    subtitle: "Semua yang Anda butuhkan untuk mengelola keuangan bisnis di satu tempat.",
+    subtitle: "Semua yang Anda butuhkan untuk tracking uang harian di satu tempat.",
     seeAllFeatures: "Lihat semua fitur",
     transactions: {
       title: "Transaksi",
-      description:
-        "Setiap pembayaran masuk dan keluar, secara otomatis disinkronkan dan dikategorikan. Tanpa entri manual.",
+      description: "Setiap pemasukan dan pengeluaran harian lebih mudah dicatat, dirapikan, dan dikategorikan.",
     },
     aiAssistant: {
       title: "Asisten AI",
@@ -40,11 +39,11 @@ export const websiteId = {
     },
   },
   features: {
-    title: "Semua yang Anda butuhkan untuk menjalankan bisnis",
+    title: "Semua yang Anda butuhkan untuk tracking pengeluaran harian",
     transactions: {
       title: "Semua transaksi Anda, disatukan",
       description:
-        "Setiap pembayaran masuk dan keluar bisnis secara otomatis disinkronkan dan dikategorikan. Tanpa entri manual.",
+        "Setiap pemasukan dan pengeluaran dapat dicatat, dicari, dan dikategorikan agar uang harian tetap jelas.",
       items: [
         "Kategorisasi otomatis dengan AI",
         "Cari dan filter secara instan",
@@ -59,8 +58,8 @@ export const websiteId = {
       items: ["Kueri bahasa alami", "Wawasan real-time", "Ringkasan mingguan", "Sistem AI multi-agen"],
     },
     invoices: {
-      title: "Faktur profesional, pembayaran dilacak",
-      description: "Buat dan kirim faktur dalam hitungan detik. Bayar lebih cepat dengan tautan pembayaran online.",
+      title: "Kwitansi dan faktur tetap rapi",
+      description: "Simpan kwitansi, faktur, dan catatan pembayaran pada transaksi yang tepat.",
       items: [
         "Template yang dapat disesuaikan",
         "Tautan pembayaran online",
@@ -80,16 +79,16 @@ export const websiteId = {
     heading: " Mengapa kami membangun oewang",
     problemTitle: "Masalah",
     problemText:
-      "Menjalankan bisnis berarti mengelola keuangan di berbagai alat. Rekening bank, faktur, kwitansi, transaksi—semuanya tersebar di spreadsheet, email, dan dasbor yang tidak terhubung.",
+      "Tracking uang harian sering tercecer di catatan, screenshot chat, kwitansi, aplikasi bank, dan spreadsheet.",
     solutionTitle: "Yang Kami Bangun",
     solutionText:
-      "oewang menyatukan semuanya. Transaksi disinkronkan secara otomatis, AI mengkategorikan dan menjelaskan pengeluaran Anda, faktur dibuat dan dilacak, vault menjaga kwitansi tetap teratur.",
-    modernTitle: "Dibuat untuk Bisnis Modern",
+      "oewang menyatukan semuanya. Transaksi mudah diinput, AI membantu kategorisasi pengeluaran, dan vault menjaga kwitansi tetap rapi.",
+    modernTitle: "Dibuat untuk Pemakaian Harian",
     modernText:
-      "Baik Anda founder solo atau menjalankan tim kecil, oewang beradaptasi dengan alur kerja Anda—bukan sebaliknya.",
+      "Baik untuk pengeluaran pribadi, keluarga, atau pemasukan sampingan, oewang mengikuti rutinitas harian Anda.",
     focusTitle: "Fokus Kami",
     focusItems: [
-      "Kurangi pekerjaan manual keuangan",
+      "Kurangi kerja manual tracking uang",
       "Jaga konsistensi dan keandalan data",
       "Sajikan informasi yang tepat pada waktu yang tepat",
       "Bekerja tanpa gangguan di latar belakang",
@@ -98,8 +97,8 @@ export const websiteId = {
     founderTitle: "Pendiri",
   },
   pricing: {
-    title: "Harga yang sesuai dengan cara Anda menjalankan bisnis",
-    subtitle: "Mulai sederhana, upgrade saat alur kerja Anda lebih kompleks.",
+    title: "Harga terjangkau untuk tracking harian",
+    subtitle: "Mulai gratis, upgrade dari Rp39,9 ribu saat butuh lebih banyak ruang.",
     monthly: "Bulanan",
     yearly: "Tahunan",
     yearlyDiscount: "Hemat 20%",
@@ -107,7 +106,7 @@ export const websiteId = {
     getStarted: "Mulai",
     startFree: "Mulai uji coba gratis",
     noCreditCard: "Tidak perlu kartu kredit",
-    allPrices: "Semua harga dalam USD. Pajak lokal mungkin berlaku.",
+    allPrices: "Harga dioptimalkan untuk Indonesia. Pajak lokal mungkin berlaku.",
   },
   integrations: {
     title: "Bekerja dengan alat yang sudah Anda gunakan",
@@ -157,8 +156,8 @@ export const websiteId = {
     goToApp: "Ke aplikasi",
   },
   cta: {
-    title: "Siap mengambil kendali?",
-    subtitle: "Bergabunglah dengan ratusan bisnis yang sudah menggunakan oewang untuk mengelola keuangan mereka.",
+    title: "Siap tracking uang harian?",
+    subtitle: "Gunakan oewang untuk input transaksi, memahami pengeluaran, dan mengingat tagihan.",
     getStarted: "Mulai gratis",
     viewPricing: "Lihat harga",
   },

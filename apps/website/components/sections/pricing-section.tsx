@@ -9,7 +9,7 @@ import type { WebsiteDictionary } from "@/lib/translations";
 const PRICING_COPY = {
   en: {
     starter: {
-      description: "For personal finance tracking and solo workflows.",
+      description: "For simple daily transaction tracking.",
       features: [
         "Transaction tracking and categorization",
         "Up to 3 wallets",
@@ -19,13 +19,25 @@ const PRICING_COPY = {
       cta: "Get started free",
       note: "No credit card required",
     },
+    personal: {
+      description: "Best value for personal daily tracking.",
+      features: [
+        "Everything in Starter",
+        "Unlimited wallets",
+        "Daily spending insights",
+        "100,000 AI tokens included",
+        "2GB receipt vault",
+      ],
+      cta: "Start Personal",
+      note: "Best for Indonesian daily use",
+    },
     pro: {
-      description: "For founders and small teams that need collaboration.",
+      description: "For heavier tracking and shared household workflows.",
       features: [
         "Everything in Starter",
         "Unlimited wallets",
         "Advanced insights and reports",
-        "Up to 10 workspace members",
+        "Up to 10 workspaces",
         "400,000 AI tokens included",
         "Role-based access",
       ],
@@ -33,7 +45,7 @@ const PRICING_COPY = {
       note: "14-day trial · Cancel anytime",
     },
     business: {
-      description: "For growing companies running finance with multiple teams.",
+      description: "For small teams that need shared financial control.",
       features: [
         "Everything in Pro",
         "Unlimited workspace members",
@@ -46,13 +58,14 @@ const PRICING_COPY = {
       note: "Custom onboarding available",
     },
     monthly: "/month",
-    annual: "Displayed in USD. Checkout supports USD, EUR, and IDR. Taxes may apply.",
+    annual:
+      "Displayed in IDR for Indonesia. Checkout supports localized IDR, USD, and EUR pricing. Taxes may apply.",
     comingSoon: "Coming soon",
     mostPopular: "Most popular",
   },
   id: {
     starter: {
-      description: "Untuk pelacakan keuangan pribadi dan alur kerja solo.",
+      description: "Untuk mencatat transaksi harian secara sederhana.",
       features: [
         "Pelacakan dan kategorisasi transaksi",
         "Hingga 3 wallet",
@@ -62,13 +75,25 @@ const PRICING_COPY = {
       cta: "Mulai gratis",
       note: "Tanpa kartu kredit",
     },
+    personal: {
+      description: "Paling hemat untuk tracking keuangan pribadi harian.",
+      features: [
+        "Semua fitur Starter",
+        "Wallet tanpa batas",
+        "Insight pengeluaran harian",
+        "Termasuk 100.000 token AI",
+        "Vault kwitansi 2GB",
+      ],
+      cta: "Mulai Personal",
+      note: "Harga terbaik untuk pemakaian harian Indonesia",
+    },
     pro: {
-      description: "Untuk founder dan tim kecil yang butuh kolaborasi.",
+      description: "Untuk tracking lebih aktif dan kebutuhan keluarga.",
       features: [
         "Semua fitur Starter",
         "Wallet tanpa batas",
         "Insight dan laporan lanjutan",
-        "Hingga 10 anggota workspace",
+        "Hingga 10 workspace",
         "Termasuk 400.000 token AI",
         "Akses berbasis peran",
       ],
@@ -76,7 +101,7 @@ const PRICING_COPY = {
       note: "Uji coba 14 hari · Bisa batal kapan saja",
     },
     business: {
-      description: "Untuk perusahaan berkembang dengan tim multi-user.",
+      description: "Untuk tim kecil yang butuh kontrol keuangan bersama.",
       features: [
         "Semua fitur Pro",
         "Anggota workspace tanpa batas",
@@ -89,7 +114,8 @@ const PRICING_COPY = {
       note: "Onboarding khusus tersedia",
     },
     monthly: "/bulan",
-    annual: "Ditampilkan dalam USD. Checkout mendukung USD, EUR, dan IDR. Pajak dapat berlaku.",
+    annual:
+      "Ditampilkan dalam IDR untuk Indonesia. Checkout mendukung harga lokal IDR, USD, dan EUR. Pajak dapat berlaku.",
     comingSoon: "Segera hadir",
     mostPopular: "Paling populer",
   },
@@ -100,13 +126,25 @@ const PRICING_COPY = {
       cta: "無料で始める",
       note: "クレジットカード不要",
     },
+    personal: {
+      description: "日々の個人支出管理に最適なプラン。",
+      features: [
+        "Starterの全機能",
+        "無制限ウォレット",
+        "日次支出インサイト",
+        "AIトークン100,000/月を含む",
+        "2GBレシートVault",
+      ],
+      cta: "Personalを開始",
+      note: "インドネシアの日常利用向け",
+    },
     pro: {
-      description: "共同作業が必要な創業者・小規模チーム向け。",
+      description: "より多くの記録や家計共有が必要な方向け。",
       features: [
         "Starterの全機能",
         "無制限ウォレット",
         "高度な分析とレポート",
-        "最大10ワークスペースメンバー",
+        "最大10ワークスペース",
         "AIトークン400,000/月を含む",
         "ロールベース権限",
       ],
@@ -114,7 +152,7 @@ const PRICING_COPY = {
       note: "14日間トライアル · いつでも解約可能",
     },
     business: {
-      description: "複数チームで財務管理する成長企業向け。",
+      description: "共同で資金管理する小規模チーム向け。",
       features: [
         "Proの全機能",
         "無制限ワークスペースメンバー",
@@ -127,7 +165,8 @@ const PRICING_COPY = {
       note: "カスタム導入サポートあり",
     },
     monthly: "/月",
-    annual: "表示価格はUSDです。チェックアウトはUSD/EUR/IDRに対応。税金が適用される場合があります。",
+    annual:
+      "インドネシア向けにIDRで表示。チェックアウトはIDR/USD/EURのローカライズ価格に対応。税金が適用される場合があります。",
     comingSoon: "近日公開",
     mostPopular: "人気プラン",
   },
@@ -147,21 +186,28 @@ export function PricingSection({
   const plans = [
     {
       name: "Starter",
-      price: "$0",
+      price: "Rp0",
       ...copy.starter,
       highlighted: false,
       disabled: false,
     },
     {
-      name: "Pro",
-      price: "$9.99",
-      ...copy.pro,
+      name: "Personal",
+      price: "Rp39.9k",
+      ...copy.personal,
       highlighted: true,
       disabled: false,
     },
     {
+      name: "Pro",
+      price: "Rp99.9k",
+      ...copy.pro,
+      highlighted: false,
+      disabled: false,
+    },
+    {
       name: "Business",
-      price: "$38.99",
+      price: "Rp249.9k",
       ...copy.business,
       highlighted: false,
       disabled: false,
@@ -170,39 +216,39 @@ export function PricingSection({
 
   return (
     <section className="bg-background py-14 sm:py-18 lg:py-24">
-      <div className="max-w-[1300px] mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center space-y-4 mb-10 sm:mb-14 max-w-3xl mx-auto">
-          <h1 className="font-serif text-3xl sm:text-5xl tracking-tight text-foreground">{dictionary.pricing.title}</h1>
+      <div className="mx-auto max-w-[1300px] px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto mb-10 max-w-3xl space-y-4 text-center sm:mb-14">
+          <h1 className="font-serif text-3xl text-foreground tracking-tight sm:text-5xl">{dictionary.pricing.title}</h1>
           <p className="text-base text-muted-foreground leading-normal">{dictionary.pricing.subtitle}</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+        <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
           {plans.map((plan) => (
             <div
               key={plan.name}
-              className={`h-full rounded-none border p-6 sm:p-7 flex flex-col ${
+              className={`flex h-full flex-col rounded-none border p-6 sm:p-7 ${
                 plan.highlighted ? "border-foreground bg-muted/35" : "border-border/70 bg-background"
               }`}
             >
               {plan.highlighted && (
-                <span className="inline-flex self-start mb-4 rounded-none border border-foreground px-3 py-1 text-xs">
+                <span className="mb-4 inline-flex self-start rounded-none border border-foreground px-3 py-1 text-xs">
                   {copy.mostPopular}
                 </span>
               )}
 
-              <h2 className="text-lg font-medium text-foreground">{plan.name}</h2>
-              <p className="text-sm text-muted-foreground mt-1 mb-5">{plan.description}</p>
+              <h2 className="font-medium text-foreground text-lg">{plan.name}</h2>
+              <p className="mt-1 mb-5 text-muted-foreground text-sm">{plan.description}</p>
 
-              <div className="flex items-baseline gap-2 mb-6">
+              <div className="mb-6 flex items-baseline gap-2">
                 <span className="font-serif text-4xl text-foreground">{plan.price}</span>
-                {plan.price !== "$0" && <span className="text-sm text-muted-foreground">{copy.monthly}</span>}
+                {plan.price !== "$0" && <span className="text-muted-foreground text-sm">{copy.monthly}</span>}
               </div>
 
-              <div className="space-y-2.5 border-t border-border/70 pt-5 pb-6 flex-1">
+              <div className="flex-1 space-y-2.5 border-border/70 border-t pt-5 pb-6">
                 {plan.features.map((feat) => (
                   <div key={feat} className="flex items-start gap-2.5">
-                    <span className="text-foreground mt-0.5">•</span>
-                    <span className="text-sm text-foreground">{feat}</span>
+                    <span className="mt-0.5 text-foreground">•</span>
+                    <span className="text-foreground text-sm">{feat}</span>
                   </div>
                 ))}
               </div>
@@ -216,13 +262,13 @@ export function PricingSection({
                 >
                   {plan.disabled ? <span>{copy.comingSoon}</span> : <Link href={`${appUrl}/register`}>{plan.cta}</Link>}
                 </Button>
-                <p className="text-xs text-muted-foreground text-center">{plan.note}</p>
+                <p className="text-center text-muted-foreground text-xs">{plan.note}</p>
               </div>
             </div>
           ))}
         </div>
 
-        <p className="text-center mt-10 text-xs text-muted-foreground">{copy.annual}</p>
+        <p className="mt-10 text-center text-muted-foreground text-xs">{copy.annual}</p>
       </div>
     </section>
   );

@@ -1,12 +1,12 @@
 # oewang
 
-**Run your business finances without manual work.**
+**Track daily money without manual spreadsheets.**
 
-oewang is the financial OS for modern businesses. AI-powered insights, automatic categorization, real-time sync, invoicing, and more.
+oewang is a personal finance tracker for daily use in Indonesia. AI-powered insights, simple transaction input, automatic categorization, receipts, wallets, and more.
 
 ## Features
 
-- **Transactions** - Every payment in and out, auto-synced and categorized
+- **Transactions** - Daily income and expenses, organized and categorized
 - **AI Assistant** - Ask anything about your finances in plain language
 - **Invoices** - Professional invoices, payments tracked automatically
 - **Vault** - Receipts and documents, organized and secure

@@ -106,8 +106,7 @@ const FALLBACK_INTEGRATIONS = [
     category: "Messaging",
     status: "available",
     description: "Capture finance documents from WhatsApp conversations.",
-    longDescription:
-      "WhatsApp integration helps teams and founders send receipts on the go and keep transaction evidence attached.",
+    longDescription: "WhatsApp integration helps users send receipts on the go and keep transaction evidence attached.",
     features: [
       "Mobile-first receipt capture",
       "Document-to-transaction linking",
@@ -162,22 +161,32 @@ function slugify(value: string) {
     .replace(/(^-|-$)+/g, "");
 }
 
-function normalizeFromApi(item: any): IntegrationItem {
-  const name = item?.name ?? item?.id ?? "Integration";
-  const slug = item?.slug ?? slugify(String(name));
+function normalizeFromApi(item: Record<string, unknown>): IntegrationItem {
+  const rawName = item.name ?? item.id ?? "Integration";
+  const name = String(rawName);
+  const slug = typeof item.slug === "string" ? item.slug : slugify(name);
+  const description = typeof item.description === "string" ? item.description : null;
+  const shortDescription = typeof item.short_description === "string" ? item.short_description : null;
+  const features =
+    Array.isArray(item.features) && item.features.every((feature) => typeof feature === "string")
+      ? item.features
+      : null;
+  const setupSteps =
+    Array.isArray(item.setupSteps) && item.setupSteps.every((step) => typeof step === "string")
+      ? item.setupSteps
+      : null;
 
   return {
-    id: item?.id ?? slug,
+    id: typeof item.id === "string" ? item.id : slug,
     slug,
     name,
-    category: item?.category ?? "General",
-    status: item?.active ? "available" : "coming-soon",
-    description: item?.short_description ?? item?.description ?? "Connect this integration with your Oewang workspace.",
-    longDescription:
-      item?.description ?? item?.short_description ?? "Integration details are managed from your workspace settings.",
+    category: typeof item.category === "string" ? item.category : "General",
+    status: item.active === true ? "available" : "coming-soon",
+    description: shortDescription ?? description ?? "Connect this integration with your Oewang workspace.",
+    longDescription: description ?? shortDescription ?? "Integration details are managed from your workspace settings.",
     features:
-      Array.isArray(item?.features) && item.features.length > 0
-        ? item.features
+      features && features.length > 0
+        ? features
         : [
             "Connect in minutes",
             "Workspace-ready access",
@@ -185,8 +194,8 @@ function normalizeFromApi(item: any): IntegrationItem {
             "Designed for finance workflows",
           ],
     setupSteps:
-      Array.isArray(item?.setupSteps) && item.setupSteps.length > 0
-        ? item.setupSteps
+      setupSteps && setupSteps.length > 0
+        ? setupSteps
         : [
             "Open integrations in Oewang.",
             "Connect and authorize provider access.",

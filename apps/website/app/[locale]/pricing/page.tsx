@@ -11,17 +11,16 @@ const SEO_COPY = {
   en: {
     title: "Pricing",
     description:
-      "Simple pricing for personal users, founders, and teams. Start free and upgrade as your workspace grows.",
+      "Affordable pricing for daily personal finance tracking in Indonesia. Start free and upgrade from Rp39.9k.",
   },
   id: {
     title: "Harga",
     description:
-      "Harga sederhana untuk pengguna pribadi, founder, dan tim. Mulai gratis dan upgrade saat workspace bertumbuh.",
+      "Harga terjangkau untuk tracking keuangan pribadi harian di Indonesia. Mulai gratis dan upgrade dari Rp39,9 ribu.",
   },
   ja: {
     title: "料金",
-    description:
-      "個人ユーザー、創業者、チーム向けのシンプルな料金。無料で開始し、成長に合わせてアップグレードできます。",
+    description: "インドネシアの日々の個人資金管理向けの手頃な料金。無料で開始し、Rp39.9kからアップグレードできます。",
   },
 };
 
@@ -44,14 +43,14 @@ export default async function PricingPage({ params }: { params: Promise<{ locale
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex min-h-screen flex-col">
       <Header isLoggedIn={isLoggedIn} appUrl={appUrl} locale={locale} dictionary={dictionary} />
 
       <main className="flex-1 pt-24">
         <PricingSection appUrl={appUrl} locale={locale} dictionary={dictionary} />
 
-        <div className="max-w-[1300px] mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="h-px w-full border-t border-border/70" />
+        <div className="mx-auto max-w-[1300px] px-4 sm:px-6 lg:px-8">
+          <div className="h-px w-full border-border/70 border-t" />
         </div>
 
         <FAQSection />

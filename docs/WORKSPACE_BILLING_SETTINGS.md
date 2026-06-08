@@ -81,7 +81,7 @@ erDiagram
 
     pricing {
         string id PK
-        string name "Starter | Pro | Business"
+        string name "Starter | Personal | Pro | Business"
         jsonb prices "monthly/yearly rates & IDs"
         integer max_vault_size_mb
         integer max_ai_tokens

@@ -205,9 +205,10 @@ Each workspace has a monthly AI token budget:
 
 | Plan | Monthly tokens |
 |------|----------------|
-| Free (starter) | 100 tokens |
-| Pro | 1,000 tokens |
-| Business | 10,000 tokens |
+| Starter | 30,000 tokens |
+| Personal | 100,000 tokens |
+| Pro | 400,000 tokens |
+| Business | 1,500,000 tokens |
 | Add-on | Purchasable extra tokens |
 
 Quota fields on `workspaces`:

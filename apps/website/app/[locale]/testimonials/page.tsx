@@ -7,7 +7,7 @@ import { getDictionary } from "@/lib/translations";
 
 export const metadata = {
   title: "Customer Stories – oewang",
-  description: "See how founders and teams use Oewang to run finance operations with less manual work.",
+  description: "See how people use Oewang to track daily money with less manual spreadsheet work.",
 };
 
 export default async function TestimonialsPage({ params }: { params: Promise<{ locale: string }> }) {
@@ -36,26 +36,26 @@ export default async function TestimonialsPage({ params }: { params: Promise<{ l
   ];
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex min-h-screen flex-col">
       <Header isLoggedIn={isLoggedIn} appUrl={appUrl} locale={locale} dictionary={dictionary} />
       <main className="flex-1 pt-24">
-        <section className="py-16 sm:py-20 border-b border-border/70">
-          <div className="max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8">
-            <h1 className="font-serif text-4xl sm:text-6xl tracking-tight max-w-4xl">Customer stories</h1>
-            <p className="text-muted-foreground text-base sm:text-lg mt-5 max-w-3xl">
-              Real usage patterns from founders and teams managing transactions, invoices, and collaboration in one
+        <section className="border-border/70 border-b py-16 sm:py-20">
+          <div className="mx-auto max-w-[1100px] px-4 sm:px-6 lg:px-8">
+            <h1 className="max-w-4xl font-serif text-4xl tracking-tight sm:text-6xl">Customer stories</h1>
+            <p className="mt-5 max-w-3xl text-base text-muted-foreground sm:text-lg">
+              Real usage patterns from people tracking daily transactions, receipts, bills, and side-income in one
               workspace.
             </p>
           </div>
         </section>
 
         <section className="py-12 sm:py-16">
-          <div className="max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 space-y-4">
+          <div className="mx-auto max-w-[1100px] space-y-4 px-4 sm:px-6 lg:px-8">
             {stories.map((story) => (
-              <article key={story.name} className="border border-border/70 p-6 bg-background">
-                <p className="font-serif text-3xl leading-tight mb-4">“{story.quote}”</p>
-                <p className="text-sm text-muted-foreground mb-1">{story.name}</p>
-                <p className="text-sm text-foreground">{story.result}</p>
+              <article key={story.name} className="border border-border/70 bg-background p-6">
+                <p className="mb-4 font-serif text-3xl leading-tight">“{story.quote}”</p>
+                <p className="mb-1 text-muted-foreground text-sm">{story.name}</p>
+                <p className="text-foreground text-sm">{story.result}</p>
               </article>
             ))}
           </div>

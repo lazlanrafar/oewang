@@ -79,7 +79,7 @@ export function Header({
   const segments = pathname.split("/").filter(Boolean);
   const firstSegment = segments[0] ?? "";
   const hasLocalePrefix = i18n.locales.includes(firstSegment as (typeof i18n.locales)[number]);
-  const pathAfterLocale = hasLocalePrefix ? `/${segments.slice(1).join("/")}` : pathname;
+  const _pathAfterLocale = hasLocalePrefix ? `/${segments.slice(1).join("/")}` : pathname;
 
   const withLocale = (path: string) => `/${locale}${path === "/" ? "" : path}`;
 
@@ -91,10 +91,9 @@ export function Header({
   return (
     <>
       {/* biome-ignore lint/a11y/useSemanticElements: backdrop overlay uses div with role for click-outside behavior */}
-      {/* biome-ignore lint/a11y/noStaticElementInteractions: backdrop overlay needs click/keydown to close menu */}
       <div
         className={`fixed inset-0 z-40 bg-black/35 transition-opacity duration-200 ${
-          isMenuOpen || activeMegaMenu ? "opacity-100" : "opacity-0 pointer-events-none"
+          isMenuOpen || activeMegaMenu ? "opacity-100" : "pointer-events-none opacity-0"
         }`}
         onClick={() => {
           setIsMenuOpen(false);
@@ -108,26 +107,26 @@ export function Header({
         tabIndex={0}
       />
 
-      <nav className="fixed top-0 left-0 right-0 z-50 w-full">
+      <nav className="fixed top-0 right-0 left-0 z-50 w-full">
         {/* biome-ignore lint/a11y/noStaticElementInteractions: layout div uses mouse events for mega menu hover behavior */}
         <div
-          className="mx-auto max-w-[1300px] px-4 sm:px-6 xl:px-8 pt-3 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-top-2 duration-500"
+          className="motion-safe:fade-in motion-safe:slide-in-from-top-2 mx-auto max-w-[1300px] px-4 pt-3 duration-500 motion-safe:animate-in sm:px-6 xl:px-8"
           onMouseLeave={scheduleCloseMegaMenu}
         >
-          <div className="flex items-center justify-between border border-border/60 bg-background/95 backdrop-blur-md px-4 sm:px-5 py-2.5 min-h-[56px]">
+          <div className="flex min-h-[56px] items-center justify-between border border-border/60 bg-background/95 px-4 py-2.5 backdrop-blur-md sm:px-5">
             <Link
               href={withLocale("/")}
-              className="flex items-center gap-2 hover:opacity-80 transition-opacity duration-200"
+              className="flex items-center gap-2 transition-opacity duration-200 hover:opacity-80"
               aria-label="oewang homepage"
             >
               <span className="font-serif text-xl tracking-tight">oewang</span>
             </Link>
 
-            <div className="hidden xl:flex items-center gap-0.5">
+            <div className="hidden items-center gap-0.5 xl:flex">
               <button
                 type="button"
                 onMouseEnter={() => openMegaMenu("features")}
-                className={`px-3 py-2 text-sm transition-all duration-200 inline-flex items-center gap-1 relative after:absolute after:left-3 after:right-3 after:bottom-[5px] after:h-px after:origin-left after:scale-x-0 after:transition-transform after:duration-200 after:bg-foreground ${
+                className={`relative inline-flex items-center gap-1 px-3 py-2 text-sm transition-all duration-200 after:absolute after:right-3 after:bottom-[5px] after:left-3 after:h-px after:origin-left after:scale-x-0 after:bg-foreground after:transition-transform after:duration-200 ${
                   activeMegaMenu === "features" || pathname.startsWith(`/${locale}/features`)
                     ? "text-foreground after:scale-x-100"
                     : "text-muted-foreground hover:text-foreground hover:after:scale-x-100"
@@ -145,7 +144,7 @@ export function Header({
                   <Link
                     key={item.href}
                     href={href}
-                    className={`px-3 py-2 text-sm transition-all duration-200 relative after:absolute after:left-3 after:right-3 after:bottom-[5px] after:h-px after:origin-left after:scale-x-0 after:transition-transform after:duration-200 after:bg-foreground ${
+                    className={`relative px-3 py-2 text-sm transition-all duration-200 after:absolute after:right-3 after:bottom-[5px] after:left-3 after:h-px after:origin-left after:scale-x-0 after:bg-foreground after:transition-transform after:duration-200 ${
                       isActive
                         ? "text-foreground after:scale-x-100"
                         : "text-muted-foreground hover:text-foreground hover:after:scale-x-100"
@@ -159,7 +158,7 @@ export function Header({
               <button
                 type="button"
                 onMouseEnter={() => openMegaMenu("resources")}
-                className={`px-3 py-2 text-sm transition-all duration-200 inline-flex items-center gap-1 relative after:absolute after:left-3 after:right-3 after:bottom-[5px] after:h-px after:origin-left after:scale-x-0 after:transition-transform after:duration-200 after:bg-foreground ${
+                className={`relative inline-flex items-center gap-1 px-3 py-2 text-sm transition-all duration-200 after:absolute after:right-3 after:bottom-[5px] after:left-3 after:h-px after:origin-left after:scale-x-0 after:bg-foreground after:transition-transform after:duration-200 ${
                   activeMegaMenu === "resources"
                     ? "text-foreground after:scale-x-100"
                     : "text-muted-foreground hover:text-foreground hover:after:scale-x-100"
@@ -170,7 +169,7 @@ export function Header({
               </button>
             </div>
 
-            <div className="hidden xl:flex items-center gap-2">
+            <div className="hidden items-center gap-2 xl:flex">
               {isLoggedIn ? (
                 <Button asChild size="sm">
                   <Link href={`${appUrl}/`}>Dashboard</Link>
@@ -184,7 +183,7 @@ export function Header({
 
             <button
               type="button"
-              className="xl:hidden p-2 text-foreground"
+              className="p-2 text-foreground xl:hidden"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               aria-label={isMenuOpen ? "Close menu" : "Open menu"}
             >
@@ -194,10 +193,10 @@ export function Header({
 
           {/* biome-ignore lint/a11y/noStaticElementInteractions: mega menu panel uses mouse events for hover delay behavior */}
           <div
-            className={`hidden xl:block overflow-hidden border border-t-0 border-border/60 bg-background transition-all duration-300 ease-out ${
+            className={`hidden overflow-hidden border border-border/60 border-t-0 bg-background transition-all duration-300 ease-out xl:block ${
               activeMegaMenu
-                ? "max-h-[470px] opacity-100 translate-y-0"
-                : "max-h-0 opacity-0 -translate-y-1 pointer-events-none"
+                ? "max-h-[470px] translate-y-0 opacity-100"
+                : "-translate-y-1 pointer-events-none max-h-0 opacity-0"
             }`}
             onMouseEnter={clearCloseTimer}
             onMouseLeave={scheduleCloseMegaMenu}
@@ -210,10 +209,10 @@ export function Header({
                       <Link
                         key={item.title}
                         href={withLocale(item.href)}
-                        className="px-4 py-3 hover:bg-muted/25 transition-all duration-200 hover:translate-x-0.5 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-left-1"
+                        className="motion-safe:fade-in motion-safe:slide-in-from-left-1 px-4 py-3 transition-all duration-200 hover:translate-x-0.5 hover:bg-muted/25 motion-safe:animate-in"
                       >
-                        <p className="text-foreground text-[15px] leading-tight">{item.title}</p>
-                        <p className="text-muted-foreground text-[13px] mt-2">{item.description}</p>
+                        <p className="text-[15px] text-foreground leading-tight">{item.title}</p>
+                        <p className="mt-2 text-[13px] text-muted-foreground">{item.description}</p>
                       </Link>
                     ))}
                   </div>
@@ -221,14 +220,14 @@ export function Header({
                   <div className="grid grid-cols-2 gap-4">
                     <Link
                       href={withLocale("/pre-accounting")}
-                      className="border border-border/80 min-h-[320px] flex flex-col justify-between hover:bg-muted/20 transition-all duration-300 hover:-translate-y-0.5 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2"
+                      className="hover:-translate-y-0.5 motion-safe:fade-in motion-safe:slide-in-from-bottom-2 flex min-h-[320px] flex-col justify-between border border-border/80 transition-all duration-300 hover:bg-muted/20 motion-safe:animate-in"
                     >
-                      <div className="flex-1 flex items-center justify-center">
+                      <div className="flex flex-1 items-center justify-center">
                         <div className="size-28 border border-border bg-muted/20" />
                       </div>
-                      <div className="border-t border-border/80 p-4">
+                      <div className="border-border/80 border-t p-4">
                         <p className="text-[15px] leading-tight">Pre-accounting</p>
-                        <p className="text-[13px] text-muted-foreground mt-2">
+                        <p className="mt-2 text-[13px] text-muted-foreground">
                           Clean records ready for your accountant
                         </p>
                       </div>
@@ -236,16 +235,16 @@ export function Header({
 
                     <Link
                       href={withLocale("/testimonials")}
-                      className="border border-border/80 min-h-[320px] flex flex-col justify-between hover:bg-muted/20 transition-all duration-300 hover:-translate-y-0.5 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2"
+                      className="hover:-translate-y-0.5 motion-safe:fade-in motion-safe:slide-in-from-bottom-2 flex min-h-[320px] flex-col justify-between border border-border/80 transition-all duration-300 hover:bg-muted/20 motion-safe:animate-in"
                     >
-                      <div className="flex-1 flex items-center justify-center px-6">
-                        <p className="font-serif text-4xl leading-tight text-center">
+                      <div className="flex flex-1 items-center justify-center px-6">
+                        <p className="text-center font-serif text-4xl leading-tight">
                           “Everything lives in one place now.”
                         </p>
                       </div>
-                      <div className="border-t border-border/80 p-4">
+                      <div className="border-border/80 border-t p-4">
                         <p className="text-[15px] leading-tight">Customer Stories</p>
-                        <p className="text-[13px] text-muted-foreground mt-2">See how founders use Oewang</p>
+                        <p className="mt-2 text-[13px] text-muted-foreground">See how people use Oewang</p>
                       </div>
                     </Link>
                   </div>
@@ -259,10 +258,10 @@ export function Header({
                       <Link
                         key={item.title}
                         href={withLocale(item.href)}
-                        className="px-4 py-3 hover:bg-muted/25 transition-all duration-200 hover:translate-x-0.5 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-left-1"
+                        className="motion-safe:fade-in motion-safe:slide-in-from-left-1 px-4 py-3 transition-all duration-200 hover:translate-x-0.5 hover:bg-muted/25 motion-safe:animate-in"
                       >
-                        <p className="text-foreground text-[15px] leading-tight">{item.title}</p>
-                        <p className="text-muted-foreground text-[13px] mt-2">{item.description}</p>
+                        <p className="text-[15px] text-foreground leading-tight">{item.title}</p>
+                        <p className="mt-2 text-[13px] text-muted-foreground">{item.description}</p>
                       </Link>
                     ))}
                   </div>
@@ -270,27 +269,27 @@ export function Header({
                   <div className="grid grid-cols-2 gap-4">
                     <Link
                       href={withLocale("/integrations")}
-                      className="border border-border/80 min-h-[320px] flex flex-col justify-between hover:bg-muted/20 transition-all duration-300 hover:-translate-y-0.5 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2"
+                      className="hover:-translate-y-0.5 motion-safe:fade-in motion-safe:slide-in-from-bottom-2 flex min-h-[320px] flex-col justify-between border border-border/80 transition-all duration-300 hover:bg-muted/20 motion-safe:animate-in"
                     >
-                      <div className="flex-1 flex items-center justify-center px-8">
+                      <div className="flex flex-1 items-center justify-center px-8">
                         <p className="font-serif text-6xl opacity-80">Integrations</p>
                       </div>
-                      <div className="border-t border-border/80 p-4">
+                      <div className="border-border/80 border-t p-4">
                         <p className="text-[15px] leading-tight">Integrations</p>
-                        <p className="text-[13px] text-muted-foreground mt-2">Connect your existing tools</p>
+                        <p className="mt-2 text-[13px] text-muted-foreground">Connect your existing tools</p>
                       </div>
                     </Link>
 
                     <Link
                       href={withLocale("/updates")}
-                      className="border border-border/80 min-h-[320px] flex flex-col justify-between hover:bg-muted/20 transition-all duration-300 hover:-translate-y-0.5 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2"
+                      className="hover:-translate-y-0.5 motion-safe:fade-in motion-safe:slide-in-from-bottom-2 flex min-h-[320px] flex-col justify-between border border-border/80 transition-all duration-300 hover:bg-muted/20 motion-safe:animate-in"
                     >
-                      <div className="flex-1 flex items-center justify-center">
-                        <div className="w-44 h-16 border border-border bg-muted/20" />
+                      <div className="flex flex-1 items-center justify-center">
+                        <div className="h-16 w-44 border border-border bg-muted/20" />
                       </div>
-                      <div className="border-t border-border/80 p-4">
+                      <div className="border-border/80 border-t p-4">
                         <p className="text-[15px] leading-tight">Updates</p>
-                        <p className="text-[13px] text-muted-foreground mt-2">See what is new in Oewang</p>
+                        <p className="mt-2 text-[13px] text-muted-foreground">See what is new in Oewang</p>
                       </div>
                     </Link>
                   </div>
@@ -301,18 +300,18 @@ export function Header({
         </div>
 
         <div
-          className={`xl:hidden fixed top-20 left-4 right-4 z-50 transition-all duration-200 ${
-            isMenuOpen ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2 pointer-events-none"
+          className={`fixed top-20 right-4 left-4 z-50 transition-all duration-200 xl:hidden ${
+            isMenuOpen ? "translate-y-0 opacity-100" : "-translate-y-2 pointer-events-none opacity-0"
           }`}
         >
-          <div className="border border-border bg-background shadow-sm p-5">
+          <div className="border border-border bg-background p-5 shadow-sm">
             <div className="space-y-2">
               {NAV_ITEMS.map((item) => (
                 <Link
                   key={item.key}
                   href={withLocale(item.href)}
                   onClick={() => setIsMenuOpen(false)}
-                  className="block text-base text-foreground hover:text-muted-foreground transition-colors py-2"
+                  className="block py-2 text-base text-foreground transition-colors hover:text-muted-foreground"
                 >
                   {dictionary.nav[item.key as keyof typeof dictionary.nav]}
                 </Link>
@@ -320,20 +319,20 @@ export function Header({
               <Link
                 href={withLocale("/docs")}
                 onClick={() => setIsMenuOpen(false)}
-                className="block text-base text-foreground hover:text-muted-foreground transition-colors py-2"
+                className="block py-2 text-base text-foreground transition-colors hover:text-muted-foreground"
               >
                 Documentation
               </Link>
               <Link
                 href={withLocale("/updates")}
                 onClick={() => setIsMenuOpen(false)}
-                className="block text-base text-foreground hover:text-muted-foreground transition-colors py-2"
+                className="block py-2 text-base text-foreground transition-colors hover:text-muted-foreground"
               >
                 Updates
               </Link>
             </div>
 
-            <div className="my-4 h-px border-t border-border" />
+            <div className="my-4 h-px border-border border-t" />
 
             {isLoggedIn ? (
               <Button asChild size="lg" className="w-full">

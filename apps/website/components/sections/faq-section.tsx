@@ -6,12 +6,12 @@ const FAQS = [
   {
     question: "What is Oewang?",
     answer:
-      "Oewang is a financial workspace for founders and small teams. It brings transactions, wallets, and insights into one connected system so you always know what's happening in your business.",
+      "Oewang is a daily finance tracker for personal use. It brings transactions, wallets, receipts, and insights into one place so you always know where your money goes.",
   },
   {
     question: "Who is Oewang for?",
     answer:
-      "Oewang is built for solo founders, freelancers, and small teams who want clarity and control over their business finances without spending time on manual admin or spreadsheets.",
+      "Oewang is built for people in Indonesia who want to input and track daily spending, income, bills, receipts, and side-hustle money without spreadsheets.",
   },
   {
     question: "Do I need accounting knowledge to use Oewang?",
@@ -35,17 +35,17 @@ const FAQS = [
   },
   {
     question: "Can I change plans later?",
-    answer: "Yes. You can upgrade or downgrade your plan at any time as your business grows or your needs change.",
+    answer: "Yes. You can upgrade or downgrade your plan at any time as your tracking needs change.",
   },
   {
     question: "Is there a free trial?",
     answer:
-      "Yes. The Pro and Business plans include a 14-day free trial. No credit card is required for the Starter plan.",
+      "Yes. You can start free with Starter, then upgrade to Personal from Rp39.9k/month when you need more room.",
   },
   {
-    question: "How many team members can I invite?",
+    question: "What plan is best for daily use?",
     answer:
-      "The Starter plan supports 1 member, Pro supports up to 5, and Business has no member limit. You can manage roles and permissions from your workspace settings.",
+      "Personal is the best-value daily plan: it adds unlimited wallets, daily spending insights, more AI quota, and more receipt storage at an Indonesia-friendly price.",
   },
 ];
 
@@ -54,30 +54,30 @@ export function FAQSection() {
 
   return (
     <section className="bg-background py-12 sm:py-16 lg:py-24">
-      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center space-y-4 mb-12">
-          <h2 className="font-serif text-2xl sm:text-3xl text-foreground">Frequently asked questions</h2>
-          <p className="hidden sm:block text-base text-muted-foreground leading-normal max-w-2xl mx-auto">
+      <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8">
+        <div className="mb-12 space-y-4 text-center">
+          <h2 className="font-serif text-2xl text-foreground sm:text-3xl">Frequently asked questions</h2>
+          <p className="mx-auto hidden max-w-2xl text-base text-muted-foreground leading-normal sm:block">
             Everything you need to know before getting started.
           </p>
         </div>
 
-        <div className="max-w-3xl mx-auto space-y-2">
+        <div className="mx-auto max-w-3xl space-y-2">
           {FAQS.map((faq, index) => (
             <div key={faq.question} className="border border-border bg-background">
               <button
                 type="button"
                 onClick={() => setOpenIndex(openIndex === index ? null : index)}
-                className="w-full flex items-center justify-between p-4 text-left hover:bg-muted/40 transition-colors"
+                className="flex w-full items-center justify-between p-4 text-left transition-colors hover:bg-muted/40"
               >
-                <span className="text-sm text-foreground pr-6">{faq.question}</span>
-                <span className="shrink-0 text-muted-foreground text-lg leading-none">
+                <span className="pr-6 text-foreground text-sm">{faq.question}</span>
+                <span className="shrink-0 text-lg text-muted-foreground leading-none">
                   {openIndex === index ? "−" : "+"}
                 </span>
               </button>
               {openIndex === index && (
                 <div className="px-4 pb-4">
-                  <p className="text-sm text-muted-foreground leading-relaxed">{faq.answer}</p>
+                  <p className="text-muted-foreground text-sm leading-relaxed">{faq.answer}</p>
                 </div>
               )}
             </div>

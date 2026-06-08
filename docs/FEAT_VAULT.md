@@ -70,9 +70,10 @@ When a workspace exceeds its plan's `max_vault_size_mb`:
 
 | Plan | Default vault quota |
 |------|---------------------|
-| Free (starter) | 100 MB |
-| Pro | 1 GB |
-| Business | 10 GB |
+| Starter | 250 MB |
+| Personal | 2 GB |
+| Pro | 15 GB |
+| Business | 50 GB |
 | (See `pricing.max_vault_size_mb`) | Configurable per plan |
 
 Extra vault storage can be purchased as an add-on.
