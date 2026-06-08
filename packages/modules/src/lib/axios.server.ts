@@ -99,6 +99,9 @@ axiosInstance.interceptors.response.use(
             const decrypted = decrypt(error.response.data.data, secret);
             const parsed: ApiResponse<unknown> = JSON.parse(decrypted);
             error.response.data = parsed;
+            if (typeof parsed.message === "string" && parsed.message.length > 0) {
+              error.message = parsed.message;
+            }
           } catch (e) {
             console.error("Failed to decrypt error response", e);
           }

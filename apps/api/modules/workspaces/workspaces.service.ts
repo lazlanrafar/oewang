@@ -67,7 +67,13 @@ export abstract class WorkspacesService {
       if (userByEmail && userByEmail.id !== user_id) {
         const memberships = await UsersRepository.getMemberships(userByEmail.id);
         if (memberships.length === 0) {
-          await UsersRepository.hardDeleteById(userByEmail.id);
+          throw status(
+            409,
+            buildError(
+              ErrorCode.CONFLICT,
+              "A user record with this email already exists. Please sign out and sign in again to sync your account.",
+            ),
+          );
         }
       }
 

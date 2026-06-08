@@ -8,11 +8,11 @@
 
 All backend tests use **Bun's built-in test runner** (`bun:test`). Tests are fast, require no database, and run in ~134ms.
 
-**Current baseline: 399 unit tests across 12 modules — all must pass before merging.**
+**Current baseline: 404 unit tests across 14 test files — all must pass before merging.**
 
 ```bash
 # From repo root
-bun run test              # run all 399 tests
+bun run test              # run all 404 tests
 bun run test:watch        # watch mode (auto-rerun on change)
 bun run test:coverage     # generate coverage report
 
@@ -71,7 +71,9 @@ apps/api/modules/{feature}/
 | `workspaces` | `workspaces/workspace-permissions.test.ts` | 22 | Role normalization, edit permissions, sensitive permissions, assertion throws, permission hierarchy |
 | `mayar` | `mayar/billing.utils.test.ts` | 5 | Annual billing detection, period calculations |
 | `mayar` | `mayar/billing-lifecycle.service.test.ts` | 2 | Subscription expiration → `past_due`, grace period → downgrade to free |
-| **TOTAL** | **12 files** | **399** | **All core business logic** |
+| `mayar` | `mayar/mayar.controller.test.ts` | 2 | Public webhook HTTP status behavior on success/failure paths |
+| `users` | `users/users.utils.test.ts` | 3 | Workspace ID resolution from mixed `workspaceId`/`workspace_id` payloads and empty input handling |
+| **TOTAL** | **14 files** | **404** | **All core business logic** |
 
 ---
 

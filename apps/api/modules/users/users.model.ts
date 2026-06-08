@@ -24,3 +24,8 @@ export const UpdateProfileBody = t.Object({
   profile_picture: t.Optional(t.Nullable(t.String())),
   mobile: t.Optional(t.Nullable(t.String())),
 });
+
+export const SwitchWorkspaceBody = t.Object({
+  workspaceId: t.Optional(t.String()),
+  workspace_id: t.Optional(t.String()),
+});

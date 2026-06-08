@@ -9,8 +9,6 @@ interface Props {
   redirectUri: string;
   state?: string;
   codeChallenge?: string;
-  sessionToken: string;
-  locale: string;
 }
 
 export function OAuthConsentClient({
@@ -19,8 +17,6 @@ export function OAuthConsentClient({
   redirectUri,
   state,
   codeChallenge,
-  sessionToken,
-  locale,
 }: Props) {
   const [loading, setLoading] = useState(false);
 
@@ -37,12 +33,10 @@ export function OAuthConsentClient({
     }
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-      const res = await fetch(`${apiUrl}/oauth/code`, {
+      const res = await fetch("/api/oauth/code", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${sessionToken}`,
         },
         body: JSON.stringify({
           client_id: clientId,

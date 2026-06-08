@@ -1,0 +1,18 @@
+model = "gpt-5.5"
+model_context_window = 400000
+model_reasoning_effort = "high"
+plan_mode_reasoning_effort = "xhigh"
+[mcp_servers.filesystem]
+args = [
+    "-y",
+    "@modelcontextprotocol/server-filesystem",
+    "/Users/boneconsulting/Developer/okane",
+]
+command = "npx"
+
+[mcp_servers.postgres]
+args = [
+    "-y",
+    "@modelcontextprotocol/server-postgres",
+]
+command = "npx"

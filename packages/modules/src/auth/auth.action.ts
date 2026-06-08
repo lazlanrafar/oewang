@@ -10,6 +10,7 @@ import type { ActionResponse } from "@workspace/types";
 import { axiosInstance } from "../lib/axios.server";
 import { createWorkspace } from "../workspace/workspace.action";
 import { Env } from "@workspace/constants";
+import { extractErrorMessage } from "../lib/error-message";
 
 function sessionCookieOptions(isProduction: boolean) {
   return {
@@ -39,9 +40,12 @@ export async function login(form_data: FormData): Promise<ActionResponse<void>> 
     if (!result.workspace_id) {
       redirect("/create-workspace");
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (isRedirectError(error)) throw error;
-    return { success: false, error: error.response?.data?.message || "Invalid email or password" };
+    return {
+      success: false,
+      error: extractErrorMessage(error, "Invalid email or password"),
+    };
   }
 
   redirect("/overview");
@@ -60,9 +64,12 @@ export async function signup(form_data: FormData): Promise<ActionResponse<void>>
     if (!result.workspace_id) {
       redirect("/create-workspace");
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (isRedirectError(error)) throw error;
-    return { success: false, error: error.response?.data?.message || "Registration failed" };
+    return {
+      success: false,
+      error: extractErrorMessage(error, "Registration failed"),
+    };
   }
 
   redirect("/overview");
@@ -112,9 +119,11 @@ export async function onboardingCreateWorkspaceAction(data: {
     }
 
     return { success: true, data: workspace };
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (isRedirectError(error)) throw error;
-    console.error("Failed to create workspace:", error);
-    return { success: false, error: error.message || "Failed to create workspace" };
+    return {
+      success: false,
+      error: extractErrorMessage(error, "Failed to create workspace"),
+    };
   }
 }

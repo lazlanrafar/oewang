@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { jwtVerify } from "jose";
 
 import {
   cn,
@@ -24,6 +25,21 @@ async function requireAdminAccess(locale: string) {
   const cookie_store = await cookies();
   const token = cookie_store.get("oewang-session")?.value;
   if (!token) redirect(`/${locale}/login`);
+
+  const jwtSecret = process.env.JWT_SECRET;
+  if (!jwtSecret) {
+    redirect(`/${locale}/unauthorized`);
+  }
+
+  try {
+    const secret = new TextEncoder().encode(jwtSecret);
+    const { payload } = await jwtVerify(token, secret);
+    if (payload.system_role !== "superadmin") {
+      redirect(`/${locale}/unauthorized`);
+    }
+  } catch {
+    redirect(`/${locale}/unauthorized`);
+  }
 }
 
 async function getUserAndWorkspaces() {

@@ -19,7 +19,7 @@ export const mayarController = new Elysia({
 })
   .post(
     "/webhook",
-    async ({ body, headers }) => {
+    async ({ body, headers, set }) => {
       try {
         const rawAuthorization = headers["authorization"];
         const bearerToken =
@@ -35,6 +35,7 @@ export const mayarController = new Elysia({
         return { success: true };
       } catch (err: any) {
         logger.error("Mayar webhook failed", { err: err.message, stack: err.stack });
+        set.status = 500;
         return { success: false, error: "Webhook processing failed" };
       }
     },

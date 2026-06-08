@@ -57,8 +57,6 @@ export default async function OAuthAuthorizePage({
       redirectUri={redirect_uri!}
       state={state}
       codeChallenge={code_challenge}
-      sessionToken={sessionToken}
-      locale={locale}
     />
   );
 }
