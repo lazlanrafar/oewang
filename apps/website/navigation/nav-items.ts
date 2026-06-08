@@ -1,7 +1,7 @@
 export const NAV_ITEMS = [
-  { key: "features", href: "/features" },
-  { key: "pricing", href: "/pricing" },
-  { key: "story", href: "/story" },
-  { key: "integrations", href: "/integrations" },
-  { key: "support", href: "/support" },
+  { key: "overview", href: "#overview" },
+  { key: "capture", href: "#capture" },
+  { key: "clarity", href: "#clarity" },
+  { key: "ai", href: "#ai" },
+  { key: "workspaces", href: "#workspaces" },
 ] as const;
