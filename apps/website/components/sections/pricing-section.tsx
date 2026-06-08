@@ -58,8 +58,7 @@ const PRICING_COPY = {
       note: "Custom onboarding available",
     },
     monthly: "/month",
-    annual:
-      "Displayed in IDR for Indonesia. Checkout supports localized IDR, USD, and EUR pricing. Taxes may apply.",
+    annual: "Displayed in IDR for Indonesia. Checkout supports localized IDR, USD, and EUR pricing. Taxes may apply.",
     comingSoon: "Coming soon",
     mostPopular: "Most popular",
   },
@@ -175,7 +174,6 @@ const PRICING_COPY = {
 export function PricingSection({
   appUrl,
   locale,
-  dictionary,
 }: {
   appUrl: string;
   locale: string;
@@ -218,8 +216,8 @@ export function PricingSection({
     <section className="bg-background py-14 sm:py-18 lg:py-24">
       <div className="mx-auto max-w-[1300px] px-4 sm:px-6 lg:px-8">
         <div className="mx-auto mb-10 max-w-3xl space-y-4 text-center sm:mb-14">
-          <h1 className="font-serif text-3xl text-foreground tracking-tight sm:text-5xl">{dictionary.pricing.title}</h1>
-          <p className="text-base text-muted-foreground leading-normal">{dictionary.pricing.subtitle}</p>
+          <h1 className="font-serif text-3xl text-foreground tracking-tight sm:text-5xl">Affordable pricing for daily tracking</h1>
+          <p className="text-base text-muted-foreground leading-normal">Start free, upgrade when you need more room.</p>
         </div>
 
         <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
