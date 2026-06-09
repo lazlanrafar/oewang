@@ -55,10 +55,10 @@ const serverSchema = z.object({
   TELEGRAM_BOT_TOKEN: z.string().optional(),
   TELEGRAM_WEBHOOK_SECRET: z.string().optional(),
 
-  // Twilio
-  TWILIO_ACCOUNT_SID: z.string().optional(),
-  TWILIO_AUTH_TOKEN: z.string().optional(),
-  TWILIO_WHATSAPP_NUMBER: z.string().optional(),
+  // Evolution API (WhatsApp)
+  EVOLUTION_API_URL: z.string().url().optional(),
+  EVOLUTION_API_TOKEN: z.string().optional(),
+  EVOLUTION_API_INSTANCE: z.string().optional(),
 
   // S3-compatible Storage
   BUCKET_ENDPOINT: z.string().min(1).optional(),
@@ -95,10 +95,7 @@ const clientSchema = z.object({
     .string()
     .optional()
     .default("oewang-session"),
-  NEXT_PUBLIC_TWILIO_WHATSAPP_NUMBER: z
-    .string()
-    .optional()
-    .default("+14155238886"),
+  NEXT_PUBLIC_WHATSAPP_NUMBER: z.string().optional(),
   NEXT_PUBLIC_TELEGRAM_BOT_USER: z.string().optional().default("OewangBot"),
 });
 
@@ -113,8 +110,7 @@ const clientEnv = {
 
   NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
   NEXT_PUBLIC_SESSION_COOKIE_NAME: process.env.NEXT_PUBLIC_SESSION_COOKIE_NAME,
-  NEXT_PUBLIC_TWILIO_WHATSAPP_NUMBER:
-    process.env.NEXT_PUBLIC_TWILIO_WHATSAPP_NUMBER,
+  NEXT_PUBLIC_WHATSAPP_NUMBER: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER,
   NEXT_PUBLIC_TELEGRAM_BOT_USER: process.env.NEXT_PUBLIC_TELEGRAM_BOT_USER,
 };
 

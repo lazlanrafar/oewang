@@ -182,15 +182,12 @@ export abstract class IntegrationsService {
     userId: string,
     phoneNumber: string,
   ) {
-    // Plan Gating: Pro or higher
-    await WorkspacesService.assertPlanTier(workspaceId, "Pro");
-
     // Basic phone number sanitization
     const cleaned = phoneNumber.replace(/[^0-9+]/g, "");
 
     const integration = await IntegrationsRepository.upsert({
       workspaceId,
-      provider: "whatsapp-twilio",
+      provider: "whatsapp",
       settings: { phoneNumber: cleaned },
       isActive: true,
       connectedBy: userId,
@@ -209,10 +206,7 @@ export abstract class IntegrationsService {
 
     await cacheDel(integrationsKey(workspaceId));
 
-    return buildSuccess(
-      integration,
-      "WhatsApp (Twilio) connected successfully",
-    );
+    return buildSuccess(integration, "WhatsApp connected successfully");
   }
 
   static async connectTelegram(
@@ -276,7 +270,7 @@ export abstract class IntegrationsService {
 
     if (userId) {
       const providerLabel =
-        provider === "whatsapp-twilio"
+        provider === "whatsapp"
           ? "WhatsApp"
           : provider.charAt(0).toUpperCase() + provider.slice(1);
       NotificationsService.create({
@@ -545,25 +539,54 @@ export abstract class IntegrationsService {
     }
   }
 
-  static async handleTwilioWhatsAppWebhook(payload: Record<string, any>) {
-    const fromUserNumber = payload.From?.replace("whatsapp:", "");
-    const text = payload.Body?.trim();
-    const mediaUrl = payload.MediaUrl0;
-    const mediaType = payload.ContentType0;
+  static async handleEvolutionWhatsAppWebhook(payload: Record<string, any>) {
+    const event = payload.event as string | undefined;
 
-    if (!fromUserNumber) return "OK";
+    // Only process incoming messages (ignore sent/delivery events)
+    if (event && event !== "messages.upsert") return "OK";
+
+    const data = payload.data as Record<string, any> | undefined;
+    if (!data) return "OK";
+
+    // Skip messages sent by the bot itself
+    if (data.key?.fromMe === true) return "OK";
+
+    const remoteJid: string = data.key?.remoteJid || "";
+    // Extract plain phone number from JID (e.g. "62812345@s.whatsapp.net" → "62812345")
+    const fromNumber = remoteJid.split("@")[0] || "";
+    if (!fromNumber) return "OK";
+
+    const messageType: string = data.messageType || "";
+    const text: string =
+      data.message?.conversation?.trim() ||
+      data.message?.extendedTextMessage?.text?.trim() ||
+      "";
+    const imageMessage = data.message?.imageMessage;
+    const documentMessage = data.message?.documentMessage;
 
     // Linking command
     if (text) {
-      const match = text.match(/^Connect Oewang\s+([a-f0-9-]{36})$/i);
-      if (match) {
-        const targetWorkspaceId = match[1];
+      const connectPayload =
+        IntegrationsService.parseTelegramConnectPayload(text);
+      const directMatch = text.match(/^Connect Oewang\s+([a-f0-9-]{36})$/i);
+
+      const targetWorkspaceId = directMatch
+        ? directMatch[1]
+        : connectPayload
+          ? IntegrationsService.isUuid(connectPayload.workspaceIdentifier)
+            ? connectPayload.workspaceIdentifier
+            : await IntegrationsRepository.findWorkspaceIdBySlug(
+                connectPayload.workspaceIdentifier.toLowerCase(),
+              )
+          : null;
+
+      if (targetWorkspaceId) {
         const targetUserId =
           await IntegrationsRepository.findFirstMemberId(targetWorkspaceId);
 
         if (!targetUserId) {
-          await IntegrationsService.sendTwilioWhatsAppMessage(
-            fromUserNumber,
+          await IntegrationsService.sendEvolutionWhatsAppMessage(
+            fromNumber,
             "❌ Could not find a valid user to link with this workspace. Please use the link from the Oewang app.",
           );
           return "OK";
@@ -571,22 +594,22 @@ export abstract class IntegrationsService {
 
         await IntegrationsService.connectWhatsApp(
           targetWorkspaceId,
-          targetUserId!,
-          fromUserNumber,
+          targetUserId,
+          fromNumber,
         );
-        await IntegrationsService.sendTwilioWhatsAppMessage(
-          fromUserNumber,
-          "✅ Your WhatsApp is now connected to Oewang (via Twilio)! You can now send me your expenses or upload receipts anytime.",
+        await IntegrationsService.sendEvolutionWhatsAppMessage(
+          fromNumber,
+          "✅ Your WhatsApp is now connected to Oewang! You can now send me your expenses or upload receipts anytime.",
         );
         return "OK";
       }
     }
 
     const integration = await IntegrationsRepository.findByWhatsAppNumber(
-      fromUserNumber,
-      "whatsapp-twilio",
+      fromNumber,
+      "whatsapp",
     );
-    if (!integration) return "Unauthorized";
+    if (!integration) return "OK";
 
     const { workspaceId, settings, connectedBy } = integration;
     let userId = connectedBy || (settings as any)?.connectedByUserId;
@@ -597,15 +620,39 @@ export abstract class IntegrationsService {
     }
 
     try {
-      if (mediaUrl) {
-        // Handle media (image/pdf)
-        const response = await fetch(mediaUrl);
+      const mediaMsg = imageMessage || documentMessage;
+
+      if (
+        mediaMsg ||
+        messageType === "imageMessage" ||
+        messageType === "documentMessage"
+      ) {
+        // Download media via Evolution API
+        const mediaUrl =
+          mediaMsg?.url ||
+          data.message?.imageMessage?.url ||
+          data.message?.documentMessage?.url;
+        const mimeType =
+          mediaMsg?.mimetype ||
+          data.message?.imageMessage?.mimetype ||
+          "image/jpeg";
+
+        if (!mediaUrl) {
+          await IntegrationsService.sendEvolutionWhatsAppMessage(
+            fromNumber,
+            "❌ Could not retrieve the media file. Please try again.",
+          );
+          return "OK";
+        }
+
+        const response = await fetch(mediaUrl, {
+          headers: { apikey: Env.EVOLUTION_API_TOKEN || "" },
+        });
         if (!response.ok)
-          throw new Error("Failed to download media from Twilio");
+          throw new Error("Failed to download media from Evolution API");
 
         const arrayBuffer = await response.arrayBuffer();
         const base64Image = Buffer.from(arrayBuffer).toString("base64");
-        const mimeType = mediaType || "image/jpeg";
 
         const vaultFile = await vaultService.uploadFile(workspaceId, userId, {
           name: `receipt-${Date.now()}.${mimeType === "application/pdf" ? "pdf" : "jpg"}`,
@@ -631,17 +678,21 @@ export abstract class IntegrationsService {
               date: parsedReceipt.date || new Date().toISOString(),
               type: "expense",
               name: parsedReceipt.name || "Expense",
-              description:
-                "Parsed automatically from WhatsApp (Twilio) Receipt",
+              description: "Parsed automatically from WhatsApp Receipt",
               categoryId: parsedReceipt.categoryId,
               attachmentIds: vaultFile ? [vaultFile.id] : undefined,
             });
 
-            await IntegrationsService.sendTwilioWhatsAppMessage(
-              fromUserNumber,
+            await IntegrationsService.sendEvolutionWhatsAppMessage(
+              fromNumber,
               `✅ Added expense: ${parsedReceipt.name || "Receipt"} for ${Number(parsedReceipt.amount).toLocaleString()}.`,
             );
           }
+        } else {
+          await IntegrationsService.sendEvolutionWhatsAppMessage(
+            fromNumber,
+            "❌ Sorry, I couldn't extract receipt data from that image.",
+          );
         }
       } else if (text) {
         // AI Chat
@@ -672,41 +723,49 @@ export abstract class IntegrationsService {
             workspaceId,
             userId,
           );
-          await IntegrationsService.sendTwilioWhatsAppMessage(
-            fromUserNumber,
+          await IntegrationsService.sendEvolutionWhatsAppMessage(
+            fromNumber,
             replyText,
           );
         }
       }
     } catch (err) {
-      logger.error("Twilio WhatsApp webhook failed", { err });
+      logger.error("Evolution WhatsApp webhook failed", { err });
     }
 
     return "OK";
   }
 
-  static async sendTwilioWhatsAppMessage(to: string, body: string) {
-    const accountSid = Env.TWILIO_ACCOUNT_SID;
-    const authToken = Env.TWILIO_AUTH_TOKEN;
-    const from = Env.TWILIO_WHATSAPP_NUMBER;
+  static async sendEvolutionWhatsAppMessage(to: string, text: string) {
+    const baseUrl = Env.EVOLUTION_API_URL;
+    const token = Env.EVOLUTION_API_TOKEN;
+    const instance = Env.EVOLUTION_API_INSTANCE;
 
-    if (!accountSid || !authToken || !from) return;
+    if (!baseUrl || !token || !instance) {
+      logger.warn("Evolution API not configured, cannot send WhatsApp message");
+      return;
+    }
 
-    const auth = Buffer.from(`${accountSid}:${authToken}`).toString("base64");
-    await fetch(
-      `https://api.twilio.org/2010-04-01/Accounts/${accountSid}/Messages.json`,
+    // Normalize number: strip non-digits except leading +, then strip the +
+    const number = to.replace(/[^0-9]/g, "");
+
+    const response = await fetch(
+      `${baseUrl}/message/sendText/${instance}`,
       {
         method: "POST",
         headers: {
-          Authorization: `Basic ${auth}`,
-          "Content-Type": "application/x-www-form-urlencoded",
+          "Content-Type": "application/json",
+          apikey: token,
         },
-        body: new URLSearchParams({
-          To: `whatsapp:${to}`,
-          From: from,
-          Body: body,
-        }).toString(),
+        body: JSON.stringify({ number, text }),
       },
     );
+
+    if (!response.ok) {
+      logger.error("Failed to send Evolution WhatsApp message", {
+        status: response.status,
+        body: await response.text(),
+      });
+    }
   }
 }

@@ -101,7 +101,7 @@ export function AppsClient({ dictionary }: Props) {
       id: app.id,
       name: app.name,
       category: "category" in app ? app.category : "Integration",
-      requires_plan: app.id === "whatsapp-twilio" ? "Pro" : undefined,
+      requires_plan: undefined,
       active: app.active,
       beta: "beta" in app && typeof app.beta === "boolean" ? app.beta : undefined,
       logo: app.logo,

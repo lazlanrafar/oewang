@@ -65,12 +65,14 @@ const apiEnvSchema = z.object({
   // External Services
   CURRENCYFREAKS_API_KEY: z.string().optional(),
 
-  // WhatsApp / Twilio / Telegram
+  // Telegram
   TELEGRAM_BOT_TOKEN: z.string().optional(),
   TELEGRAM_WEBHOOK_SECRET: z.string().optional(),
-  TWILIO_ACCOUNT_SID: z.string().optional(),
-  TWILIO_AUTH_TOKEN: z.string().optional(),
-  TWILIO_WHATSAPP_NUMBER: z.string().optional(),
+
+  // Evolution API (WhatsApp)
+  EVOLUTION_API_URL: z.string().url().optional(),
+  EVOLUTION_API_TOKEN: z.string().optional(),
+  EVOLUTION_API_INSTANCE: z.string().optional(),
 
   // S3-compatible Storage
   BUCKET_ENDPOINT: z.string().min(1).optional(),

@@ -1,4 +1,3 @@
-import { Env } from "@workspace/constants";
 import { logger } from "@workspace/logger";
 import { ErrorCode } from "@workspace/types";
 import { buildError, buildSuccess } from "@workspace/utils";
@@ -7,56 +6,39 @@ import { authPlugin } from "../../plugins/auth";
 import { assertCanManageSensitiveWorkspace } from "../workspaces/workspace-permissions";
 import { ConnectWhatsAppDto } from "./integrations.dto";
 import { IntegrationsService } from "./integrations.service";
-import {
-  getPublicRequestUrl,
-  parseFormBody,
-  verifyTelegramSecret,
-  verifyTwilioSignature,
-} from "./webhook-security";
+import { verifyTelegramSecret } from "./webhook-security";
 
 export const integrationsController = new Elysia({ prefix: "/integrations" })
-  // Public webhook route for Twilio WhatsApp
+  // Public webhook route for Evolution API WhatsApp
   .post(
-    "/whatsapp/twilio/webhook",
-    async ({ request, headers, set }) => {
-      const signatureHeader = headers["x-twilio-signature"];
-      const authToken = Env.TWILIO_AUTH_TOKEN;
-      const rawBody = await request.text();
-      const formBody = parseFormBody(rawBody);
+    "/whatsapp/webhook",
+    async ({ set, body }) => {
+      let parsedBody: Record<string, any>;
 
-      if (process.env.NODE_ENV === "production" && !authToken) {
-        set.status = 500;
-        return "Twilio webhook is not configured";
+      if (body && typeof body === "object") {
+        parsedBody = body as Record<string, any>;
+      } else if (typeof body === "string") {
+        try {
+          parsedBody = JSON.parse(body);
+        } catch {
+          set.status = 400;
+          return "Invalid JSON payload";
+        }
+      } else {
+        set.status = 400;
+        return "Invalid JSON payload";
       }
 
-      if (!authToken || typeof signatureHeader !== "string") {
-        set.status = 403;
-        return "Forbidden";
-      }
-
-      const webhookUrl = getPublicRequestUrl(request);
-      const isValid = verifyTwilioSignature({
-        authToken,
-        signatureHeader,
-        url: webhookUrl,
-        formBody,
-      });
-
-      if (!isValid) {
-        set.status = 403;
-        return "Forbidden";
-      }
-
-      IntegrationsService.handleTwilioWhatsAppWebhook(formBody).catch((error) =>
-        logger.error("Twilio WhatsApp webhook error", { error }),
+      IntegrationsService.handleEvolutionWhatsAppWebhook(parsedBody).catch(
+        (error) => logger.error("Evolution WhatsApp webhook error", { error }),
       );
       return "OK";
     },
     {
       detail: {
-        summary: "WhatsApp Webhook (Twilio)",
+        summary: "WhatsApp Webhook (Evolution API)",
         description:
-          "Receives incoming messages and events from the Twilio WhatsApp API.",
+          "Receives incoming messages and events from the Evolution API WhatsApp instance.",
         tags: ["Integrations"],
       },
     },

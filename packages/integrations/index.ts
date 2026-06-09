@@ -5,12 +5,12 @@ import gmailApp from "./gmail/config-client";
 import outlookApp from "./outlook/config-client";
 import perplexityMcpApp from "./perplexity-mcp/config";
 import telegramApp from "./telegram/config-client";
-import whatsappTwilioApp from "./whatsapp-twilio/config-client";
+import whatsappApp from "./whatsapp/config-client";
 
 export const apps = [
   gmailApp,
   outlookApp,
-  whatsappTwilioApp,
+  whatsappApp,
   telegramApp,
   cursorMcpApp,
   claudeMcpApp,
