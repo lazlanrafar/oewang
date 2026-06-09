@@ -32,26 +32,16 @@ export const FEATURE_DETAILS = {
       "Less month-end cleanup",
     ],
   },
-  "time-tracking": {
-    title: "Time Tracking",
-    subtitle: "Measure billable time and operational effort clearly.",
-    intro: "Capture work time in the same finance workspace so project effort and revenue decisions stay aligned.",
-    points: [
-      "Session-based tracking",
-      "Project and client association",
-      "Better billing preparation",
-      "Team-level time visibility",
-    ],
-  },
   customers: {
-    title: "Customers",
-    subtitle: "Understand who drives revenue and who delays payment.",
-    intro: "Customer-level performance data helps prioritize follow-up and improve cash planning.",
+    title: "Contacts & Customers",
+    subtitle: "Keep payers, billers, and recurring money relationships organized.",
+    intro:
+      "Connect people and organizations to transactions, invoices, debts, and notes so every money relationship has context.",
     points: [
-      "Invoice and payment history by customer",
-      "Outstanding balance visibility",
-      "Revenue concentration context",
-      "Cleaner handoff across teams",
+      "Contact records for customers, vendors, lenders, and family expense partners",
+      "Invoice and payment history by contact",
+      "Debt and receivable context for follow-up",
+      "Cleaner notes for shared household or workspace reviews",
     ],
   },
   files: {

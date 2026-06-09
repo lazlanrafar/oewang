@@ -2,12 +2,27 @@ import Link from "next/link";
 
 import { ArrowLeft } from "lucide-react";
 
+import { createPageMetadata } from "@/lib/seo";
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+
+  return createPageMetadata({
+    locale,
+    path: "/policy",
+    title: "Privacy policy",
+    description:
+      "Read Oewang's privacy policy for account data, workspace data, financial records, integrations, security, retention, and user rights.",
+    keywords: ["Oewang privacy policy", "finance app privacy", "workspace data security", "UU PDP GDPR privacy"],
+  });
+}
+
 export default async function PolicyPage({ params }: { params: Promise<{ locale: string }> }) {
-  const { locale: _locale } = await params;
+  const { locale } = await params;
   return (
     <div className="mx-auto max-w-3xl px-6 py-16 sm:py-24">
       <Link
-        href={`/`}
+        href={locale === "en" ? "/" : `/${locale}`}
         className="mb-8 inline-flex items-center text-muted-foreground text-sm transition-colors hover:text-foreground"
       >
         <ArrowLeft className="mr-2 size-4" />
