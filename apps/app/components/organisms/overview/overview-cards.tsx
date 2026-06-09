@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { animate } from "framer-motion";
+
 import { useChatActions } from "@ai-sdk-tools/store";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -15,6 +15,7 @@ import {
 } from "@workspace/modules/server";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, cn, Skeleton } from "@workspace/ui";
 import { format } from "date-fns";
+import { animate } from "framer-motion";
 import {
   ArrowDownRight,
   ArrowUpRight,

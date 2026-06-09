@@ -22,17 +22,18 @@ The Metrics module provides aggregated financial analytics for the Overview page
 
 Base path: `/v1/metrics`
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/revenue` | Monthly income totals (last 12 months by default) |
-| `GET` | `/expenses` | Monthly expense totals |
-| `GET` | `/burn-rate` | Monthly net cash flow (income - expenses) |
-| `GET` | `/net-worth` | Running net worth over time |
-| `GET` | `/category-breakdown` | Spending breakdown by category |
-| `GET` | `/top-wallets` | Wallets ranked by balance |
-| `GET` | `/overview` | All overview stats in a single call |
+| Method | Path                  | Description                                       |
+| ------ | --------------------- | ------------------------------------------------- |
+| `GET`  | `/revenue`            | Monthly income totals (last 12 months by default) |
+| `GET`  | `/expenses`           | Monthly expense totals                            |
+| `GET`  | `/burn-rate`          | Monthly net cash flow (income - expenses)         |
+| `GET`  | `/net-worth`          | Running net worth over time                       |
+| `GET`  | `/category-breakdown` | Spending breakdown by category                    |
+| `GET`  | `/top-wallets`        | Wallets ranked by balance                         |
+| `GET`  | `/overview`           | All overview stats in a single call               |
 
 **Query params (all endpoints):**
+
 - `startDate` — ISO date string (default: 12 months ago from start of month)
 - `endDate` — ISO date string (default: end of current month)
 
@@ -43,6 +44,7 @@ Base path: `/v1/metrics`
 ### Default Date Range
 
 If no dates are provided:
+
 - `startDate` = start of month, 11 months ago
 - `endDate` = end of current month
 
@@ -60,7 +62,7 @@ After gap-filling, the service computes a `runningTotal` across all months and d
 
 ```ts
 type ChartDataPoint = {
-  name: string;    // e.g. "Jan '25"
+  name: string; // e.g. "Jan '25"
   current: number; // value for that month
   average?: number; // running average (added by fillMissingMonths)
 };
@@ -74,15 +76,15 @@ Returns top N categories by total spending, with percentage of total. Used for t
 
 ## Source Files
 
-| Layer | File |
-|-------|------|
-| Controller | `apps/api/modules/metrics/metrics.controller.ts` |
-| Service | `apps/api/modules/metrics/metrics.service.ts` |
-| Repository | `apps/api/modules/metrics/metrics.repository.ts` |
-| DTOs | `apps/api/modules/metrics/metrics.dto.ts` |
-| Utils | `apps/api/modules/metrics/metrics.utils.ts` |
-| Tests | `apps/api/modules/metrics/metrics.utils.test.ts` (44 tests) |
-| E2E | `apps/app/e2e/overview.spec.ts` |
+| Layer      | File                                                        |
+| ---------- | ----------------------------------------------------------- |
+| Controller | `apps/api/modules/metrics/metrics.controller.ts`            |
+| Service    | `apps/api/modules/metrics/metrics.service.ts`               |
+| Repository | `apps/api/modules/metrics/metrics.repository.ts`            |
+| DTOs       | `apps/api/modules/metrics/metrics.dto.ts`                   |
+| Utils      | `apps/api/modules/metrics/metrics.utils.ts`                 |
+| Tests      | `apps/api/modules/metrics/metrics.utils.test.ts` (44 tests) |
+| E2E        | `apps/app/e2e/overview.spec.ts`                             |
 
 ---
 

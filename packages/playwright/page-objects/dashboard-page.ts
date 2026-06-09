@@ -1,5 +1,5 @@
-import { type Page, expect } from '@playwright/test';
-import { BasePage } from './base-page';
+import { type Page, expect } from "@playwright/test";
+import { BasePage } from "./base-page";
 
 /**
  * Page Object for the main dashboard/overview page
@@ -12,15 +12,19 @@ export class DashboardPage extends BasePage {
   /**
    * Navigate to dashboard
    */
-  async goto(locale = 'en') {
+  async goto(locale = "en") {
     await super.goto(`/${locale}/overview`);
   }
 
   /**
    * Navigate using sidebar
    */
-  async navigateTo(section: 'overview' | 'transactions' | 'accounts' | 'budgets' | 'settings') {
-    const link = this.page.getByRole('link', { name: new RegExp(section, 'i') });
+  async navigateTo(
+    section: "overview" | "transactions" | "accounts" | "budgets" | "settings",
+  ) {
+    const link = this.page.getByRole("link", {
+      name: new RegExp(section, "i"),
+    });
     await link.click();
     await this.waitForNetwork();
   }
@@ -64,7 +68,7 @@ export class DashboardPage extends BasePage {
    * Click workspace switcher
    */
   async clickWorkspaceSwitcher() {
-    await this.clickByTestId('workspace-switcher');
+    await this.clickByTestId("workspace-switcher");
   }
 
   /**
@@ -80,7 +84,7 @@ export class DashboardPage extends BasePage {
    * Open user menu
    */
   async openUserMenu() {
-    await this.clickByTestId('user-menu-trigger');
+    await this.clickByTestId("user-menu-trigger");
   }
 
   /**
@@ -88,7 +92,7 @@ export class DashboardPage extends BasePage {
    */
   async gotoSettings() {
     await this.openUserMenu();
-    await this.clickButton('Settings');
+    await this.clickButton("Settings");
     await this.waitForURL(/.*settings/);
   }
 }

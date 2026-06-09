@@ -25,16 +25,28 @@ function sessionCookieOptions(isProduction: boolean) {
 
 async function setSessionCookie(token: string) {
   const isProduction = Env.NODE_ENV === "production";
-  (await cookies()).set("oewang-session", token, sessionCookieOptions(isProduction));
+  (await cookies()).set(
+    "oewang-session",
+    token,
+    sessionCookieOptions(isProduction),
+  );
 }
 
-export async function login(form_data: FormData): Promise<ActionResponse<void>> {
+export async function login(
+  form_data: FormData,
+): Promise<ActionResponse<void>> {
   const email = form_data.get("email") as string;
   const password = form_data.get("password") as string;
 
   try {
-    const response = await axiosInstance.post("auth/login", { email, password });
-    const result = response.data.data as { token: string; workspace_id: string | null };
+    const response = await axiosInstance.post("auth/login", {
+      email,
+      password,
+    });
+    const result = response.data.data as {
+      token: string;
+      workspace_id: string | null;
+    };
     await setSessionCookie(result.token);
 
     if (!result.workspace_id) {
@@ -51,14 +63,23 @@ export async function login(form_data: FormData): Promise<ActionResponse<void>> 
   redirect("/overview");
 }
 
-export async function signup(form_data: FormData): Promise<ActionResponse<void>> {
+export async function signup(
+  form_data: FormData,
+): Promise<ActionResponse<void>> {
   const email = form_data.get("email") as string;
   const password = form_data.get("password") as string;
   const name = form_data.get("name") as string | undefined;
 
   try {
-    const response = await axiosInstance.post("auth/register", { email, password, name });
-    const result = response.data.data as { token: string; workspace_id: string | null };
+    const response = await axiosInstance.post("auth/register", {
+      email,
+      password,
+      name,
+    });
+    const result = response.data.data as {
+      token: string;
+      workspace_id: string | null;
+    };
     await setSessionCookie(result.token);
 
     if (!result.workspace_id) {
@@ -75,7 +96,9 @@ export async function signup(form_data: FormData): Promise<ActionResponse<void>>
   redirect("/overview");
 }
 
-export async function loginWithOAuth(provider: "google" | "github"): Promise<ActionResponse<void>> {
+export async function loginWithOAuth(
+  provider: "google" | "github",
+): Promise<ActionResponse<void>> {
   redirect(`/api/auth/${provider}`);
 }
 

@@ -254,7 +254,7 @@ export function TransactionFormSheet({
           const updated = result.data as Transaction;
           queryClient.setQueriesData<any>({ queryKey: ["transactions"], exact: false }, (old: any) => {
             if (!old) return old;
-            
+
             // Handle infinite queries (has pages)
             if ("pages" in old && Array.isArray(old.pages)) {
               return {
@@ -265,7 +265,7 @@ export function TransactionFormSheet({
                 })),
               };
             }
-            
+
             // Handle regular queries (has data array directly)
             if ("data" in old && Array.isArray(old.data)) {
               return {
@@ -290,7 +290,7 @@ export function TransactionFormSheet({
           const created = result.data as Transaction;
           queryClient.setQueriesData<any>({ queryKey: ["transactions"], exact: false }, (old: any) => {
             if (!old) return old;
-            
+
             // Handle infinite queries (has pages)
             if ("pages" in old && Array.isArray(old.pages)) {
               const [firstPage, ...restPages] = old.pages;
@@ -306,7 +306,7 @@ export function TransactionFormSheet({
                 ],
               };
             }
-            
+
             // Handle regular queries (has data array directly)
             if ("data" in old && Array.isArray(old.data)) {
               return {

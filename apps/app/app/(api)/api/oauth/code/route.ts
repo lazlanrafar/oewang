@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+
 import { axiosInstance } from "@workspace/modules/server";
 
 type OAuthCodeRequestBody = {
@@ -22,20 +23,14 @@ export async function POST(request: Request) {
   const sessionToken = cookieStore.get("oewang-session")?.value;
 
   if (!sessionToken) {
-    return NextResponse.json(
-      { error: "UNAUTHORIZED", message: "Unauthorized" },
-      { status: 401 },
-    );
+    return NextResponse.json({ error: "UNAUTHORIZED", message: "Unauthorized" }, { status: 401 });
   }
 
   let body: OAuthCodeRequestBody;
   try {
     body = (await request.json()) as OAuthCodeRequestBody;
   } catch {
-    return NextResponse.json(
-      { error: "VALIDATION_ERROR", message: "Invalid request payload" },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "VALIDATION_ERROR", message: "Invalid request payload" }, { status: 400 });
   }
 
   if (!body.client_id || !body.redirect_uri) {
@@ -66,10 +61,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ code: response.data.code }, { status: 200 });
   } catch (error: unknown) {
     const normalizedError = (error ?? {}) as AxiosLikeError;
-    const status =
-      typeof normalizedError.response?.status === "number"
-        ? normalizedError.response.status
-        : 500;
+    const status = typeof normalizedError.response?.status === "number" ? normalizedError.response.status : 500;
 
     const message =
       typeof normalizedError.response?.data?.message === "string"

@@ -5,6 +5,7 @@
 ---
 
 ## 🤖 AI Agent: Update This Doc When
+
 - Modifying relational models involving `users`, `workspaces`, `workspace_settings`, `pricing`, or `workspace_addons`.
 - Modifying subscription gating middleware, plan verification utilities, or onboarding logic.
 - Adding billing checkout or settings update APIs in `apps/api/modules/`.
@@ -16,6 +17,7 @@
 Oewang uses a **Multi-Tenant SaaS Architecture** where a **Workspace** is the primary tenant container. All financial records, wallets, transactions, budgets, settings, and files are isolated under a specific workspace.
 
 ### Core Architecture Concepts:
+
 - **Workspace Isolation**: A workspace represents a distinct business/personal ledger. No data can be shared across workspaces.
 - **Dynamic Active Workspace**: A user can be a member of multiple workspaces. The user's active workspace ID is embedded in their JWT token and governs all API request filters.
 - **Settings Customization**: Each workspace contains its own set of formatting and display preferences.
@@ -114,12 +116,15 @@ When a user registers, they have no active workspaces.
 Each workspace has a dedicated `workspace_settings` record containing functional preferences.
 
 ### Localization & Formats:
+
 - **Main Currency**: Standard currency code (e.g. `IDR`, `USD`) and symbol format.
 - **Reporting Period**: Budget limits calculate relative to the configured start day (`monthlyStartDate`).
 - **Weekend Adjustment**: Configures if reporting periods start earlier/later when the start date falls on a weekend (`no-changes` | `prev-weekday` | `next-weekday`).
 
 ### Storage Integration (Cloudflare R2):
+
 Workspaces can use the system-default Cloudflare R2 bucket or provide their own bucket.
+
 - Custom R2 credentials (`r2AccessKeyId`, `r2SecretAccessKey`) are encrypted in the API using AES-256-GCM.
 - When updated, fields are validated and saved.
 - File uploads check if a custom R2 configuration exists; otherwise, they use the default system bucket credentials.
@@ -131,17 +136,21 @@ Workspaces can use the system-default Cloudflare R2 bucket or provide their own 
 Plans are defined in the `pricing` table. Limits are checked at the Service layer before mutations are allowed.
 
 ### Plan Gating Mechanics:
+
 - **Workspace Limits**: Checked during `workspaces.service.ts` creation. Counts active workspaces owned by the user.
 - **AI Token Limits**: Checked during AI chat and receipt processing. Compares `workspaces.ai_tokens_used` with the plan limit + `extra_ai_tokens` add-ons.
 - **Vault Storage Limits**: Checked before uploading files in `VaultService`. Sums file sizes and compares against `max_vault_size_mb` + `extra_vault_size_mb`.
 
 ```ts
 // Example API Quota Gate
-if (workspace.vault_size_used_bytes + newFileSize > plan.max_vault_size_mb * 1024 * 1024) {
+if (
+  workspace.vault_size_used_bytes + newFileSize >
+  plan.max_vault_size_mb * 1024 * 1024
+) {
   return buildApiResponse({
     success: false,
     code: ErrorCode.PLAN_LIMIT_EXCEEDED,
-    status: 422
+    status: 422,
   });
 }
 ```
@@ -153,6 +162,7 @@ if (workspace.vault_size_used_bytes + newFileSize > plan.max_vault_size_mb * 102
 All paid upgrades and add-on purchases are integrated with the **Mayar Payment Gateway**.
 
 ### Checkout Flow:
+
 ```
 [Client] -> Requests checkout Link -> [API] -> Calls Mayar API (metadata: workspaceId)
                                                                  |
@@ -166,11 +176,14 @@ All paid upgrades and add-on purchases are integrated with the **Mayar Payment G
 ```
 
 ### Webhook Event Handling:
+
 - **`payment.received`**: Verifies transaction payload, retrieves `workspaceId` and `planId` from metadata, and sets `plan_status = 'active'`. Sets expiration date (`plan_current_period_end`) by calculating the billing interval (1 month or 1 year).
 - **`subscription.cancelled`**: Marks the subscription status as `cancelled`. The user retains premium access until `plan_current_period_end` is reached.
 
 ### Billing Lifecycle Daemon (Cron):
+
 A periodic background worker evaluates subscription periods:
+
 1. **Subscription Expiration**: If `plan_status == 'active'` and `plan_current_period_end < now()`:
    - Sets `plan_status = 'past_due'`.
    - Records `plan_overdue_started_at = now()`.

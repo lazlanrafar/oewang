@@ -2,7 +2,12 @@ import type { CurrencyFormatOptions } from "@workspace/types";
 
 export const CURRENCY_CONFIG: Record<
   string,
-  { divisor: number; decimals: number; symbol: string; position: "Front" | "Back" }
+  {
+    divisor: number;
+    decimals: number;
+    symbol: string;
+    position: "Front" | "Back";
+  }
 > = {
   usd: { divisor: 100, decimals: 2, symbol: "$", position: "Front" },
   eur: { divisor: 100, decimals: 2, symbol: "€", position: "Front" },
@@ -37,14 +42,20 @@ export function formatCurrency(
 
   if (isNaN(amount)) return "—";
 
-  const formattedAmount = Math.abs(amount).toLocaleString(options?.locale || "en-US", {
-    minimumFractionDigits: options?.compact ? 0 : mainCurrencyDecimalPlaces,
-    maximumFractionDigits: options?.compact ? 1 : mainCurrencyDecimalPlaces,
-    notation: options?.compact ? "compact" : "standard",
-  });
+  const formattedAmount = Math.abs(amount).toLocaleString(
+    options?.locale || "en-US",
+    {
+      minimumFractionDigits: options?.compact ? 0 : mainCurrencyDecimalPlaces,
+      maximumFractionDigits: options?.compact ? 1 : mainCurrencyDecimalPlaces,
+      notation: options?.compact ? "compact" : "standard",
+    },
+  );
 
   const sign = amount < 0 ? "-" : "";
-  const currencyUnit = getCurrencyDisplayUnit(mainCurrencyCode, mainCurrencySymbol);
+  const currencyUnit = getCurrencyDisplayUnit(
+    mainCurrencyCode,
+    mainCurrencySymbol,
+  );
   const separator = shouldUseCurrencySpacing(currencyUnit) ? " " : "";
 
   if (mainCurrencySymbolPosition === "Front") {

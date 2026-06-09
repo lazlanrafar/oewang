@@ -1,6 +1,8 @@
-import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+
 import type { Locale } from "@/i18n-config";
+
 import { OAuthConsentClient } from "./consent-client";
 
 interface SearchParams {
@@ -41,7 +43,9 @@ export default async function OAuthAuthorizePage({
   const apiUrl = process.env.API_BASE_URL ?? "http://localhost:3002";
   let clientName = client_id;
   try {
-    const res = await fetch(`${apiUrl}/oauth/client/${client_id}`, { cache: "no-store" });
+    const res = await fetch(`${apiUrl}/oauth/client/${client_id}`, {
+      cache: "no-store",
+    });
     if (res.ok) {
       const data = await res.json();
       clientName = data.client_name ?? client_id;

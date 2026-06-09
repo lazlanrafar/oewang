@@ -44,7 +44,9 @@ export function WalletGroupForm({ open, group, onClose, dictionary }: WalletGrou
   const common = dictionary.common;
 
   const formSchema = z.object({
-    name: z.string().min(1, { message: groups_t?.form?.name?.error_required || "Name is required" }),
+    name: z.string().min(1, {
+      message: groups_t?.form?.name?.error_required || "Name is required",
+    }),
   });
 
   const form = useForm<z.infer<typeof formSchema>>({

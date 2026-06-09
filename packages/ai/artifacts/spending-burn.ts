@@ -4,7 +4,12 @@ import { z } from "zod";
 export const spendingArtifact: any = artifact(
   "spending-canvas",
   z.object({
-    stage: z.enum(["loading", "chart_ready", "metrics_ready", "analysis_ready"]),
+    stage: z.enum([
+      "loading",
+      "chart_ready",
+      "metrics_ready",
+      "analysis_ready",
+    ]),
     currency: z.string(),
     metrics: z
       .object({
@@ -22,7 +27,12 @@ export const spendingArtifact: any = artifact(
 export const burnRateArtifact: any = artifact(
   "burn-rate-canvas",
   z.object({
-    stage: z.enum(["loading", "chart_ready", "metrics_ready", "analysis_ready"]),
+    stage: z.enum([
+      "loading",
+      "chart_ready",
+      "metrics_ready",
+      "analysis_ready",
+    ]),
     metrics: z
       .object({
         monthlyBurn: z.number(),

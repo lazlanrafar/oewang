@@ -41,8 +41,7 @@ export const websiteEn = {
   clarity: {
     label: "Clarity",
     title: "All your transactions, unified.",
-    subtitle:
-      "Every income and expense tracked, searched, and categorized so your daily money stays clear.",
+    subtitle: "Every income and expense tracked, searched, and categorized so your daily money stays clear.",
     items: [
       "Auto-categorization with AI",
       "Search and filter instantly",

@@ -28,7 +28,10 @@ import {
 import type { ReactNode } from "react";
 import { MdOutlineInsights } from "react-icons/md";
 
-export type IconComponent = (props: { className?: string; size?: string | number }) => ReactNode;
+export type IconComponent = (props: {
+  className?: string;
+  size?: string | number;
+}) => ReactNode;
 
 export interface ToolConfig {
   name: string;

@@ -16,14 +16,20 @@ export abstract class ProviderFactory {
     systemPrompt: string,
     options: ProviderOptions,
     tools?: any[],
-    onToolCall?: (name: string, args: any) => Promise<any>
+    onToolCall?: (name: string, args: any) => Promise<any>,
   ): Promise<ChatResponse> {
     const errors: string[] = [];
 
     // 1. OpenAI
     if (options.openaiKey) {
       try {
-        return await OpenAIProvider.chat(messages, systemPrompt, options.openaiKey, tools, onToolCall);
+        return await OpenAIProvider.chat(
+          messages,
+          systemPrompt,
+          options.openaiKey,
+          tools,
+          onToolCall,
+        );
       } catch (e: any) {
         const msg = e.message ?? String(e);
         errors.push(`OpenAI: ${msg}`);
@@ -34,7 +40,13 @@ export abstract class ProviderFactory {
     // 2. Gemini
     if (options.geminiKey) {
       try {
-        return await GeminiProvider.chat(messages, systemPrompt, options.geminiKey, tools, onToolCall);
+        return await GeminiProvider.chat(
+          messages,
+          systemPrompt,
+          options.geminiKey,
+          tools,
+          onToolCall,
+        );
       } catch (e: any) {
         const msg = e.message ?? String(e);
         errors.push(`Gemini: ${msg}`);
@@ -44,25 +56,44 @@ export abstract class ProviderFactory {
 
     // 3. Claude
     if (options.anthropicKey) {
-      return await ClaudeProvider.chat(messages, systemPrompt, options.anthropicKey, tools, onToolCall);
+      return await ClaudeProvider.chat(
+        messages,
+        systemPrompt,
+        options.anthropicKey,
+        tools,
+        onToolCall,
+      );
     }
 
-    const summary = errors.length > 0
-      ? `All AI providers failed. ${errors.join(" | ")}`
-      : "No AI provider API keys configured.";
+    const summary =
+      errors.length > 0
+        ? `All AI providers failed. ${errors.join(" | ")}`
+        : "No AI provider API keys configured.";
     throw new Error(summary);
   }
 
-  static async generateTitle(message: string, options: ProviderOptions): Promise<string> {
-      if (options.openaiKey) {
-          try { return await OpenAIProvider.generateTitle(message, options.openaiKey); } catch(e) {}
-      }
-      if (options.geminiKey) {
-          try { return await GeminiProvider.generateTitle(message, options.geminiKey); } catch(e) {}
-      }
-      if (options.anthropicKey) {
-          try { return await ClaudeProvider.generateTitle(message, options.anthropicKey); } catch(e) {}
-      }
-      return "New Chat";
+  static async generateTitle(
+    message: string,
+    options: ProviderOptions,
+  ): Promise<string> {
+    if (options.openaiKey) {
+      try {
+        return await OpenAIProvider.generateTitle(message, options.openaiKey);
+      } catch (e) {}
+    }
+    if (options.geminiKey) {
+      try {
+        return await GeminiProvider.generateTitle(message, options.geminiKey);
+      } catch (e) {}
+    }
+    if (options.anthropicKey) {
+      try {
+        return await ClaudeProvider.generateTitle(
+          message,
+          options.anthropicKey,
+        );
+      } catch (e) {}
+    }
+    return "New Chat";
   }
 }

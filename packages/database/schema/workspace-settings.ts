@@ -1,5 +1,11 @@
 import { createId } from "@paralleldrive/cuid2";
-import { boolean, integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  integer,
+  pgTable,
+  text,
+  timestamp,
+} from "drizzle-orm/pg-core";
 import { workspaces } from "./workspaces";
 
 export const workspaceSettings = pgTable("workspace_settings", {

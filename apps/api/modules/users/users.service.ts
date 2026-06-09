@@ -74,7 +74,10 @@ export abstract class UsersService {
     avatar_url?: string | null;
   }) {
     // 1. Check if we already have an oauth_accounts row for this provider identity
-    const oauthRow = await UsersRepository.findOAuthAccount(data.provider, data.provider_user_id);
+    const oauthRow = await UsersRepository.findOAuthAccount(
+      data.provider,
+      data.provider_user_id,
+    );
     let user_id: string;
 
     if (oauthRow) {
@@ -148,8 +151,11 @@ export abstract class UsersService {
       let workspace_id: string | null = null;
 
       if (has_workspace) {
-        const current_workspace_id = await UsersRepository.getWorkspaceId(data.id);
-        workspace_id = current_workspace_id ?? memberships[0]?.workspace_id ?? null;
+        const current_workspace_id = await UsersRepository.getWorkspaceId(
+          data.id,
+        );
+        workspace_id =
+          current_workspace_id ?? memberships[0]?.workspace_id ?? null;
       }
 
       if (workspace_id) {

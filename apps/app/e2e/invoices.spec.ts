@@ -101,7 +101,11 @@ test.describe("Invoice Creation", () => {
     const createButton = page.getByRole("button", { name: dictionary.invoices.add_button }).first();
     if (await createButton.isVisible()) {
       await createButton.click();
-      const submitButton = page.getByRole("button", { name: dictionary.common.save || /submit|create|save/i }).first();
+      const submitButton = page
+        .getByRole("button", {
+          name: dictionary.common.save || /submit|create|save/i,
+        })
+        .first();
       if (await submitButton.isVisible()) {
         await submitButton.click();
         // Since we didn't fill anything, check if some validation error is shown

@@ -2,10 +2,10 @@
 import { revalidatePath, revalidateTag as nextRevalidateTag } from "next/cache";
 
 /**
- * Type-safe wrapper for revalidateTag to satisfy the Next.js 16 compiler 
+ * Type-safe wrapper for revalidateTag to satisfy the Next.js 16 compiler
  * requirements while clearing IDE errors caused by signature discrepancies.
  */
-const revalidateTag = (nextRevalidateTag as unknown) as (
+const revalidateTag = nextRevalidateTag as unknown as (
   tag: string,
   profile: string,
 ) => void;
@@ -227,7 +227,7 @@ export const exportTransactions = async (params: {
       params,
       responseType: "text",
     });
-    
+
     return { success: true, data: response.data };
   } catch (error: any) {
     return {

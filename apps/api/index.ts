@@ -123,7 +123,11 @@ const app = new Elysia()
         "https://console.oewang.com",
         "https://oewang.com",
         ...(process.env.NODE_ENV !== "production"
-          ? ["http://localhost:3000", "http://localhost:3001", "http://localhost:3003"]
+          ? [
+              "http://localhost:3000",
+              "http://localhost:3001",
+              "http://localhost:3003",
+            ]
           : []),
       ],
       credentials: true,

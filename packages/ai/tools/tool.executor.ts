@@ -1,17 +1,17 @@
 import { log } from "../utils/logger";
 
 export interface ToolServices {
-    executeTransactionAction: (name: string, args: any) => Promise<any>;
-    executeDebtAction: (name: string, args: any) => Promise<any>;
-    executeAnalysisAction: (name: string, args: any) => Promise<any>;
-    executeItemsAction: (name: string, args: any) => Promise<any>;
+  executeTransactionAction: (name: string, args: any) => Promise<any>;
+  executeDebtAction: (name: string, args: any) => Promise<any>;
+  executeAnalysisAction: (name: string, args: any) => Promise<any>;
+  executeItemsAction: (name: string, args: any) => Promise<any>;
 }
 
 export abstract class ToolExecutor {
   static async execute(
     toolName: string,
     args: any,
-    services: ToolServices
+    services: ToolServices,
   ): Promise<any> {
     log.info(`[ToolExecutor] Executing ${toolName}`, args);
 

@@ -12,7 +12,7 @@ export interface BucketConfig {
   accessKeyId: string;
   secretAccessKey: string;
   bucketName: string;
-  region?: string;    // e.g. "us-east-1" for MinIO, "auto" for Railway/R2
+  region?: string; // e.g. "us-east-1" for MinIO, "auto" for Railway/R2
   publicUrl?: string; // For public assets, if any
 }
 

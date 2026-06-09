@@ -18,6 +18,7 @@ import {
   SheetHeader,
 } from "@workspace/ui";
 import { Lock } from "lucide-react";
+
 import {
   ChatGPTSetupInstructions,
   ClaudeSetupInstructions,
@@ -56,7 +57,6 @@ export interface AppsCardProps {
   onDisconnect?: () => void;
   isInstalling?: boolean;
   isDisconnecting?: boolean;
-
 }
 
 const MCP_IDS = new Set(["cursor-mcp", "claude-mcp", "perplexity-mcp", "chatgpt-mcp"]);
@@ -73,9 +73,7 @@ function AppLogo({ app, size = "sm" }: { app: App; size?: "sm" | "md" }) {
     );
   }
   return (
-    <div
-      className={`flex items-center justify-center rounded bg-secondary font-bold text-xs uppercase ${cls}`}
-    >
+    <div className={`flex items-center justify-center rounded bg-secondary font-bold text-xs uppercase ${cls}`}>
       {app.name.charAt(0)}
     </div>
   );
@@ -124,7 +122,12 @@ export function AppsCard({
   isDisconnecting,
   userPlan = "Starter",
 }: AppsCardProps) {
-  const planLevels: Record<string, number> = { Starter: 0, "Free Tier": 0, Pro: 1, Business: 2 };
+  const planLevels: Record<string, number> = {
+    Starter: 0,
+    "Free Tier": 0,
+    Pro: 1,
+    Business: 2,
+  };
   const isLocked = (planLevels[userPlan] ?? 0) < (app.requires_plan ? (planLevels[app.requires_plan] ?? 1) : 0);
   const isMcp = MCP_IDS.has(app.id);
 
@@ -195,12 +198,7 @@ export function AppsCard({
                   Disconnect
                 </Button>
               ) : (
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={onInstall}
-                  disabled={!app.active || isInstalling}
-                >
+                <Button variant="outline" className="w-full" onClick={onInstall} disabled={!app.active || isInstalling}>
                   Install
                 </Button>
               )}
@@ -237,21 +235,11 @@ export function AppsCard({
                       Upgrade
                     </Button>
                   ) : app.installed ? (
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={onDisconnect}
-                      disabled={isDisconnecting}
-                    >
+                    <Button variant="destructive" size="sm" onClick={onDisconnect} disabled={isDisconnecting}>
                       Disconnect
                     </Button>
                   ) : (
-                    <Button
-                      variant="default"
-                      size="sm"
-                      onClick={onInstall}
-                      disabled={!app.active || isInstalling}
-                    >
+                    <Button variant="default" size="sm" onClick={onInstall} disabled={!app.active || isInstalling}>
                       Install
                     </Button>
                   )}
@@ -271,10 +259,7 @@ export function AppsCard({
                       ) : (
                         <Markdown
                           content={
-                            app.description ||
-                            app.overview ||
-                            app.short_description ||
-                            "No description available."
+                            app.description || app.overview || app.short_description || "No description available."
                           }
                         />
                       )}
@@ -317,9 +302,8 @@ export function AppsCard({
               {/* Footer */}
               <div className="shrink-0 border-border border-t py-4">
                 <p className="text-[10px] text-[#878787]">
-                  All apps on the Oewang App Store are open-source and peer-reviewed. Oewang Labs
-                  maintains high standards but doesn't endorse third-party apps. Apps published by
-                  Oewang are officially certified.
+                  All apps on the Oewang App Store are open-source and peer-reviewed. Oewang Labs maintains high
+                  standards but doesn't endorse third-party apps. Apps published by Oewang are officially certified.
                 </p>
                 <a
                   href="mailto:support@oewang.dev"

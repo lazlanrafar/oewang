@@ -142,8 +142,16 @@ export abstract class CategoriesService {
 
   static async getCategories(workspaceId: string, type?: "income" | "expense") {
     const key = categoryKey(workspaceId, type);
-    const cached = await cacheGet<ReturnType<typeof CategoriesRepository.findMany> extends Promise<infer T> ? T : never>(key);
-    if (cached) return buildSuccess(cached, "Categories retrieved successfully");
+    const cached =
+      await cacheGet<
+        ReturnType<typeof CategoriesRepository.findMany> extends Promise<
+          infer T
+        >
+          ? T
+          : never
+      >(key);
+    if (cached)
+      return buildSuccess(cached, "Categories retrieved successfully");
 
     const categories = await CategoriesRepository.findMany(workspaceId, type);
     await cacheSet(key, categories, CATEGORIES_TTL);

@@ -14,14 +14,19 @@ export function ThemeSwitcher() {
 
   const cycleTheme = () => {
     const currentIndex = THEME_CYCLE.indexOf(themeMode);
-    const nextTheme = THEME_CYCLE[(currentIndex + 1) % THEME_CYCLE.length] ?? "system";
+    const nextTheme =
+      THEME_CYCLE[(currentIndex + 1) % THEME_CYCLE.length] ?? "system";
 
     setThemeMode(nextTheme);
     persistPreference("theme_mode", nextTheme);
   };
 
   return (
-    <Button size="icon" onClick={cycleTheme} aria-label={`Current theme: ${themeMode}. Click to cycle themes`}>
+    <Button
+      size="icon"
+      onClick={cycleTheme}
+      aria-label={`Current theme: ${themeMode}. Click to cycle themes`}
+    >
       {/* SYSTEM */}
       <Monitor className="hidden [html[data-theme-mode=system]_&]:block" />
 

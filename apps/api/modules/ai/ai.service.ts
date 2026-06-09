@@ -59,7 +59,11 @@ function addMonthlyReset(base: Date) {
   const day = next.getDate();
   next.setDate(1);
   next.setMonth(next.getMonth() + 1);
-  const lastDay = new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate();
+  const lastDay = new Date(
+    next.getFullYear(),
+    next.getMonth() + 1,
+    0,
+  ).getDate();
   next.setDate(Math.min(day, lastDay));
   return next;
 }
@@ -71,7 +75,9 @@ function isReceiptAttachment(a: ChatAttachment) {
 function toValidIsoDate(input?: string) {
   if (!input) return new Date().toISOString();
   const date = new Date(input);
-  return Number.isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString();
+  return Number.isNaN(date.getTime())
+    ? new Date().toISOString()
+    : date.toISOString();
 }
 
 function formatAmount(amount: number) {
@@ -136,8 +142,14 @@ async function buildInvoiceDraftFromAttachments(
   const receiptAttachments = attachments.filter(isReceiptAttachment);
   if (!receiptAttachments.length) return null;
 
-  const walletResult = await WalletsRepository.findMany(workspaceId, { page: 1, limit: 50 });
-  const wallets = walletResult.rows.map((w: any) => ({ id: w.id, name: w.name }));
+  const walletResult = await WalletsRepository.findMany(workspaceId, {
+    page: 1,
+    limit: 50,
+  });
+  const wallets = walletResult.rows.map((w: any) => ({
+    id: w.id,
+    name: w.name,
+  }));
   const defaultWallet = wallets[0];
 
   if (!defaultWallet?.id) {
@@ -148,13 +160,19 @@ async function buildInvoiceDraftFromAttachments(
       entries: [],
     };
     return {
-      reply: "I found receipt files, but no account is available yet. Please create an account first, then upload again.",
+      reply:
+        "I found receipt files, but no account is available yet. Please create an account first, then upload again.",
       draft: emptyDraft,
     };
   }
 
-  const categories = await CategoriesRepository.findMany(workspaceId, "expense");
-  const categoryContext = categories.map((c: any) => `- ${c.name} (ID: ${c.id})`).join("\n");
+  const categories = await CategoriesRepository.findMany(
+    workspaceId,
+    "expense",
+  );
+  const categoryContext = categories
+    .map((c: any) => `- ${c.name} (ID: ${c.id})`)
+    .join("\n");
 
   const entries: ReceiptDraftEntry[] = [];
   const failedLines: string[] = [];
@@ -195,7 +213,9 @@ async function buildInvoiceDraftFromAttachments(
         continue;
       }
 
-      const items = (parsed.items || []).filter((i) => i?.name && Number(i.amount) > 0);
+      const items = (parsed.items || []).filter(
+        (i) => i?.name && Number(i.amount) > 0,
+      );
       entries.push({
         fileName: attachment.name,
         amount: Number(parsed.amount),
@@ -215,7 +235,9 @@ async function buildInvoiceDraftFromAttachments(
         })),
       });
     } catch (err: any) {
-      failedLines.push(`${attachment.name}: ${err?.message ?? "failed to parse"}`);
+      failedLines.push(
+        `${attachment.name}: ${err?.message ?? "failed to parse"}`,
+      );
     }
   }
 
@@ -228,10 +250,9 @@ async function buildInvoiceDraftFromAttachments(
 
   if (!entries.length) {
     return {
-      reply:
-        failedLines.length
-          ? `I could not read any receipt from the uploaded files.\n${failedLines.map((l) => `- ${l}`).join("\n")}`
-          : "I could not read any receipt from the uploaded files.",
+      reply: failedLines.length
+        ? `I could not read any receipt from the uploaded files.\n${failedLines.map((l) => `- ${l}`).join("\n")}`
+        : "I could not read any receipt from the uploaded files.",
       draft,
     };
   }
@@ -245,7 +266,9 @@ async function buildInvoiceDraftFromAttachments(
     "",
     "To change account, reply: account: <account name>",
     "Then reply: confirm",
-    ...(failedLines.length ? ["", "Skipped files:", ...failedLines.map((l) => `- ${l}`)] : []),
+    ...(failedLines.length
+      ? ["", "Skipped files:", ...failedLines.map((l) => `- ${l}`)]
+      : []),
   ].join("\n");
 
   return { reply, draft };
@@ -275,16 +298,21 @@ async function confirmDraftAndCreateTransactions(
 
     const transactionId = created?.data?.id;
     if (transactionId && entry.items.length) {
-      await TransactionItemsService.bulkCreate(workspaceId, userId, transactionId, entry.items.map((i) => ({
-        name: i.name,
-        brand: i.brand ?? null,
-        quantity: i.quantity ?? null,
-        unit: i.unit ?? null,
-        unitPrice: i.unitPrice ?? null,
-        amount: Number(i.amount),
-        categoryId: i.categoryId ?? entry.categoryId ?? null,
-        notes: null,
-      })));
+      await TransactionItemsService.bulkCreate(
+        workspaceId,
+        userId,
+        transactionId,
+        entry.items.map((i) => ({
+          name: i.name,
+          brand: i.brand ?? null,
+          quantity: i.quantity ?? null,
+          unit: i.unit ?? null,
+          unitPrice: i.unitPrice ?? null,
+          amount: Number(i.amount),
+          categoryId: i.categoryId ?? entry.categoryId ?? null,
+          notes: null,
+        })),
+      );
     }
 
     createdCount += 1;
@@ -294,7 +322,10 @@ async function confirmDraftAndCreateTransactions(
   }
 
   return {
-    reply: [`Saved ${createdCount} transaction${createdCount > 1 ? "s" : ""}.`, ...createdLines.map((l) => `- ${l}`)].join("\n"),
+    reply: [
+      `Saved ${createdCount} transaction${createdCount > 1 ? "s" : ""}.`,
+      ...createdLines.map((l) => `- ${l}`),
+    ].join("\n"),
     createdCount,
   };
 }
@@ -309,22 +340,43 @@ async function handlePendingInvoiceDraft(
   if (draft.status !== "awaiting_confirmation") return null;
 
   const wallets = draft.wallets || [];
-  const requestedWalletName = extractRequestedWalletName(latestUserMessage.content || "", wallets);
+  const requestedWalletName = extractRequestedWalletName(
+    latestUserMessage.content || "",
+    wallets,
+  );
   const resolvedWallet = resolveWalletByName(wallets, requestedWalletName);
   const confirm = isConfirmIntent(latestUserMessage.content || "");
   const cancel = isCancelIntent(latestUserMessage.content || "");
 
   if (cancel) {
     const cancelledDraft = { ...draft, status: "cancelled" as const };
-    const reply = "Cancelled. I did not save any transaction from this receipt.";
-    await AiRepository.saveMessage(currentSessionId, workspaceId, "assistant", reply, { invoiceDraft: cancelledDraft });
+    const reply =
+      "Cancelled. I did not save any transaction from this receipt.";
+    await AiRepository.saveMessage(
+      currentSessionId,
+      workspaceId,
+      "assistant",
+      reply,
+      { invoiceDraft: cancelledDraft },
+    );
     return { sessionId: currentSessionId, reply };
   }
 
   if (confirm) {
-    const { reply } = await confirmDraftAndCreateTransactions(workspaceId, userId, draft, resolvedWallet?.id);
+    const { reply } = await confirmDraftAndCreateTransactions(
+      workspaceId,
+      userId,
+      draft,
+      resolvedWallet?.id,
+    );
     const confirmedDraft = { ...draft, status: "confirmed" as const };
-    await AiRepository.saveMessage(currentSessionId, workspaceId, "assistant", reply, { invoiceDraft: confirmedDraft });
+    await AiRepository.saveMessage(
+      currentSessionId,
+      workspaceId,
+      "assistant",
+      reply,
+      { invoiceDraft: confirmedDraft },
+    );
     return { sessionId: currentSessionId, reply };
   }
 
@@ -337,23 +389,45 @@ async function handlePendingInvoiceDraft(
       "",
       "Reply with: account: <account name>",
     ].join("\n");
-    await AiRepository.saveMessage(currentSessionId, workspaceId, "assistant", reply, { invoiceDraft: draft });
+    await AiRepository.saveMessage(
+      currentSessionId,
+      workspaceId,
+      "assistant",
+      reply,
+      { invoiceDraft: draft },
+    );
     return { sessionId: currentSessionId, reply };
   }
 
   if (resolvedWallet) {
     const updatedDraft = {
       ...draft,
-      entries: draft.entries.map((e) => ({ ...e, walletId: resolvedWallet.id })),
+      entries: draft.entries.map((e) => ({
+        ...e,
+        walletId: resolvedWallet.id,
+      })),
     };
     const reply = `Account updated to "${resolvedWallet.name}". Reply "confirm" to save this receipt.`;
-    await AiRepository.saveMessage(currentSessionId, workspaceId, "assistant", reply, { invoiceDraft: updatedDraft });
+    await AiRepository.saveMessage(
+      currentSessionId,
+      workspaceId,
+      "assistant",
+      reply,
+      { invoiceDraft: updatedDraft },
+    );
     return { sessionId: currentSessionId, reply };
   }
 
-  const currentWallet = wallets.find((w) => w.id === draft.entries[0]?.walletId)?.name || "-";
+  const currentWallet =
+    wallets.find((w) => w.id === draft.entries[0]?.walletId)?.name || "-";
   const reply = `Draft is ready. Current account: "${currentWallet}". Reply "confirm" to save, or "account: <name>" to change account.`;
-  await AiRepository.saveMessage(currentSessionId, workspaceId, "assistant", reply, { invoiceDraft: draft });
+  await AiRepository.saveMessage(
+    currentSessionId,
+    workspaceId,
+    "assistant",
+    reply,
+    { invoiceDraft: draft },
+  );
   return { sessionId: currentSessionId, reply };
 }
 
@@ -368,6 +442,7 @@ export abstract class AiService {
     workspaceId: string,
     userId: string,
     sessionId?: string,
+    webSearch?: boolean,
   ): Promise<ChatResponse> {
     let currentSessionId = sessionId;
     const latestUserMessage = messages[messages.length - 1];
@@ -396,10 +471,18 @@ export abstract class AiService {
       });
 
       for (const msg of messages.slice(0, -1)) {
-        await AiRepository.saveMessage(currentSessionId, workspaceId, msg.role as any, msg.content);
+        await AiRepository.saveMessage(
+          currentSessionId,
+          workspaceId,
+          msg.role as any,
+          msg.content,
+        );
       }
     } else {
-      const session = await AiRepository.getSession(currentSessionId, workspaceId);
+      const session = await AiRepository.getSession(
+        currentSessionId,
+        workspaceId,
+      );
       if (!session) throw new Error("Chat session not found or access denied.");
     }
 
@@ -412,21 +495,38 @@ export abstract class AiService {
       latestUserMessage.attachments,
     );
 
-    const history = await AiRepository.getSessionMessages(currentSessionId as string, workspaceId);
+    const history = await AiRepository.getSessionMessages(
+      currentSessionId as string,
+      workspaceId,
+    );
 
     // 4. Receipt draft flow
     const latestDraft = getLatestDraftState(history);
     if (latestDraft) {
       const draftResponse = await handlePendingInvoiceDraft(
-        workspaceId, userId, latestUserMessage, latestDraft, currentSessionId as string,
+        workspaceId,
+        userId,
+        latestUserMessage,
+        latestDraft,
+        currentSessionId as string,
       );
       if (draftResponse) return draftResponse;
     }
 
     if (hasReceiptAttachments(latestUserMessage.attachments)) {
-      const preview = await buildInvoiceDraftFromAttachments(workspaceId, userId, latestUserMessage.attachments);
+      const preview = await buildInvoiceDraftFromAttachments(
+        workspaceId,
+        userId,
+        latestUserMessage.attachments,
+      );
       if (preview) {
-        await AiRepository.saveMessage(currentSessionId as string, workspaceId, "assistant", preview.reply, { invoiceDraft: preview.draft });
+        await AiRepository.saveMessage(
+          currentSessionId as string,
+          workspaceId,
+          "assistant",
+          preview.reply,
+          { invoiceDraft: preview.draft },
+        );
         return { sessionId: currentSessionId, reply: preview.reply };
       }
     }
@@ -434,11 +534,16 @@ export abstract class AiService {
     // 5. Quota check
     const usageData = await AiRepository.getUsageAndQuota(workspaceId);
     if (!usageData) {
-      throw status(404, buildError(ErrorCode.WORKSPACE_NOT_FOUND, "Workspace not found"));
+      throw status(
+        404,
+        buildError(ErrorCode.WORKSPACE_NOT_FOUND, "Workspace not found"),
+      );
     }
 
     if (usageData.plan_status === "free" && usageData.ai_tokens_reset_at) {
-      const nextResetAt = addMonthlyReset(new Date(usageData.ai_tokens_reset_at));
+      const nextResetAt = addMonthlyReset(
+        new Date(usageData.ai_tokens_reset_at),
+      );
       if (new Date() >= nextResetAt) {
         await AiRepository.resetAiTokens(workspaceId, new Date());
         usageData.used = 0;
@@ -446,7 +551,8 @@ export abstract class AiService {
       }
     }
 
-    const maxTokens = usageData.maxTokens && usageData.maxTokens > 0 ? usageData.maxTokens : 50;
+    const maxTokens =
+      usageData.maxTokens && usageData.maxTokens > 0 ? usageData.maxTokens : 50;
     const currentTokens = Number(usageData.used || 0);
 
     if (
@@ -458,26 +564,40 @@ export abstract class AiService {
       let resetAt: Date;
       if (!usageData.plan_current_period_end) {
         const now = new Date();
-        const createdAt = usageData.created_at ? new Date(usageData.created_at) : now;
-        resetAt = new Date(now.getFullYear(), now.getMonth() + 1, createdAt.getDate());
+        const createdAt = usageData.created_at
+          ? new Date(usageData.created_at)
+          : now;
+        resetAt = new Date(
+          now.getFullYear(),
+          now.getMonth() + 1,
+          createdAt.getDate(),
+        );
       } else {
         resetAt = new Date(usageData.plan_current_period_end);
       }
       throw status(
         422,
-        buildError(ErrorCode.PLAN_LIMIT_REACHED, `Monthly AI token limit exceeded. Max: ${maxTokens} tokens.`, undefined, { reset_at: resetAt.toISOString() }),
+        buildError(
+          ErrorCode.PLAN_LIMIT_REACHED,
+          `Monthly AI token limit exceeded. Max: ${maxTokens} tokens.`,
+          undefined,
+          { reset_at: resetAt.toISOString() },
+        ),
       );
     }
 
-    if (API_CONFIG.mockAiQuota) log.debug("mockAiQuota=true — quota check bypassed");
+    if (API_CONFIG.mockAiQuota)
+      log.debug("mockAiQuota=true — quota check bypassed");
 
     // 6. Build system prompt with workspace context
     let currencyCode = "IDR";
     let currencySymbol = "Rp";
     try {
-      const wsSettings = await SettingsRepository.findByWorkspaceId(workspaceId);
+      const wsSettings =
+        await SettingsRepository.findByWorkspaceId(workspaceId);
       currencyCode = (wsSettings as any)?.mainCurrencyCode || currencyCode;
-      currencySymbol = (wsSettings as any)?.mainCurrencySymbol || currencySymbol;
+      currencySymbol =
+        (wsSettings as any)?.mainCurrencySymbol || currencySymbol;
     } catch {}
 
     const systemPrompt = buildSystemPrompt({
@@ -505,6 +625,7 @@ export abstract class AiService {
           anthropicKey: Env.ANTHROPIC_API_KEY,
           geminiKey: Env.GEMINI_API_KEY,
           settings: agentSettings,
+          webSearch,
         },
         (name, args) => executeAiTool(name, args, workspaceId, userId),
         systemPrompt,
@@ -527,8 +648,14 @@ export abstract class AiService {
         : undefined,
     );
 
-    const tokensSpent = (response.usage?.input_tokens ?? 0) + (response.usage?.output_tokens ?? 0);
-    await AiRepository.incrementAiTokens(workspaceId, currentTokens, tokensSpent);
+    const tokensSpent =
+      (response.usage?.input_tokens ?? 0) +
+      (response.usage?.output_tokens ?? 0);
+    await AiRepository.incrementAiTokens(
+      workspaceId,
+      currentTokens,
+      tokensSpent,
+    );
 
     return {
       sessionId: currentSessionId,
@@ -538,15 +665,30 @@ export abstract class AiService {
     };
   }
 
-  static async parseReceipt(workspaceId: string, userId: string, base64Image: string, mediaType: string) {
-    const categories = await CategoriesRepository.findMany(workspaceId, "expense");
-    const categoryContext = categories.map((c: any) => `- ${c.name} (ID: ${c.id})`).join("\n");
+  static async parseReceipt(
+    workspaceId: string,
+    userId: string,
+    base64Image: string,
+    mediaType: string,
+  ) {
+    const categories = await CategoriesRepository.findMany(
+      workspaceId,
+      "expense",
+    );
+    const categoryContext = categories
+      .map((c: any) => `- ${c.name} (ID: ${c.id})`)
+      .join("\n");
 
-    const parsed = await ReceiptService.parse(base64Image, mediaType, categoryContext, {
-      geminiKey: Env.GEMINI_API_KEY,
-      openaiKey: Env.OPENAI_API_KEY,
-      anthropicKey: Env.ANTHROPIC_API_KEY,
-    });
+    const parsed = await ReceiptService.parse(
+      base64Image,
+      mediaType,
+      categoryContext,
+      {
+        geminiKey: Env.GEMINI_API_KEY,
+        openaiKey: Env.OPENAI_API_KEY,
+        anthropicKey: Env.ANTHROPIC_API_KEY,
+      },
+    );
 
     if (parsed) {
       if (parsed.name && parsed.categoryId) {

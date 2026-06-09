@@ -9,7 +9,10 @@ const resend = new Resend(Env.RESEND_API_KEY || "re_123456789");
 /**
  * Generic helper to render a template and replace placeholders.
  */
-function renderTemplate(templateName: string, variables: Record<string, string>): string {
+function renderTemplate(
+  templateName: string,
+  variables: Record<string, string>,
+): string {
   const templatePath = path.join(__dirname, `templates/${templateName}.html`);
   let html = "";
 
@@ -20,11 +23,14 @@ function renderTemplate(templateName: string, variables: Record<string, string>)
       throw new Error(`Template ${templateName} not found at ${templatePath}`);
     }
   } catch (e) {
-    console.warn(`Could not read email template ${templateName}, using minimal fallback`, e);
+    console.warn(
+      `Could not read email template ${templateName}, using minimal fallback`,
+      e,
+    );
     // Minimal fallback for critical cases
     return Object.entries(variables).reduce(
       (acc, [key, val]) => acc.replace(new RegExp(`{{${key}}}`, "g"), val),
-      "<p>Oewang Notification: " + templateName + "</p>"
+      "<p>Oewang Notification: " + templateName + "</p>",
     );
   }
 

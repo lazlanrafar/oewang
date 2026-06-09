@@ -205,7 +205,12 @@ export abstract class MetricsService {
     startDate?: string,
     endDate?: string,
   ) {
-    const key = metricsKey(workspaceId, `breakdown-${type}`, startDate, endDate);
+    const key = metricsKey(
+      workspaceId,
+      `breakdown-${type}`,
+      startDate,
+      endDate,
+    );
     const cached = await cacheGet<object[]>(key);
     if (cached) return buildSuccess(cached, "Category breakdown retrieved");
 

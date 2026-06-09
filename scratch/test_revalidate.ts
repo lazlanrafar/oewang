@@ -1,10 +1,10 @@
 // Mocking the behavior for test
 function revalidateTag(tag: string, profile: string) {
-  console.log('Revalidating', tag, 'with profile', profile);
+  console.log("Revalidating", tag, "with profile", profile);
 }
 
 // Case 1: Direct call (what fails tsc or IDE)
-// revalidateTag("transactions"); 
+// revalidateTag("transactions");
 
 // Case 2: Tuple spread
 const args: [string, string] = ["transactions", "profile"];

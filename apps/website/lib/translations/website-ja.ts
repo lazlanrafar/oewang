@@ -11,8 +11,7 @@ export const websiteJa = {
   hero: {
     badge: "毎日の家計管理アプリ",
     title: "スプレッドシートなしで全ての支出を管理。",
-    subtitle:
-      "oewangは毎日の取引入力、支出の把握、AIによる自動分類でお金の流れを明確にします。",
+    subtitle: "oewangは毎日の取引入力、支出の把握、AIによる自動分類でお金の流れを明確にします。",
     ctaStartFree: "無料試用を開始",
     ctaSeeHow: "仕組みを見る",
     ctaGetStarted: "無料で始める",

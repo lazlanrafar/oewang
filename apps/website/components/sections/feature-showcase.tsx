@@ -2,8 +2,8 @@
 
 import { useRef } from "react";
 
-import { useGsapReveal } from "@/lib/use-gsap-reveal";
 import type { WebsiteDictionary } from "@/lib/translations";
+import { useGsapReveal } from "@/lib/use-gsap-reveal";
 
 import { ChatWireframe } from "./wireframe/chat-wireframe";
 import { DashboardWireframe } from "./wireframe/dashboard-wireframe";

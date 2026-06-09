@@ -18,7 +18,9 @@ export async function resetDatabase() {
 
   for (const { tablename } of tables as any[]) {
     if (tablename !== "_drizzle_migrations") {
-      await db.execute(sql.raw(`TRUNCATE TABLE "${tablename}" RESTART IDENTITY CASCADE`));
+      await db.execute(
+        sql.raw(`TRUNCATE TABLE "${tablename}" RESTART IDENTITY CASCADE`),
+      );
     }
   }
 }
@@ -75,11 +77,17 @@ export async function cleanupUser(userId: string) {
   if (!userId) return;
 
   // Get workspace ID before we unlink it
-  const rows = await db.execute(sql`SELECT workspace_id FROM users WHERE id = ${userId}`);
-  const workspaceId = (rows as unknown as Array<{ workspace_id: string | null }>)[0]?.workspace_id;
+  const rows = await db.execute(
+    sql`SELECT workspace_id FROM users WHERE id = ${userId}`,
+  );
+  const workspaceId = (
+    rows as unknown as Array<{ workspace_id: string | null }>
+  )[0]?.workspace_id;
 
   // Clear workspace_id FK first so we can delete the workspace
-  await db.execute(sql`UPDATE users SET workspace_id = NULL WHERE id = ${userId}`);
+  await db.execute(
+    sql`UPDATE users SET workspace_id = NULL WHERE id = ${userId}`,
+  );
 
   // Delete workspace — cascades to wallets, wallet_groups, transactions, etc.
   if (workspaceId) {

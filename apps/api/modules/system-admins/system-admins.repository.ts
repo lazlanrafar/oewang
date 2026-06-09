@@ -200,11 +200,13 @@ export abstract class SystemAdminsRepository {
     return dbUser ?? null;
   }
 
-  static async updateSystemRole(userId: string, systemRole: import("@workspace/constants").SystemRole) {
+  static async updateSystemRole(
+    userId: string,
+    systemRole: import("@workspace/constants").SystemRole,
+  ) {
     await db
       .update(users)
       .set({ system_role: systemRole })
       .where(eq(users.id, userId));
   }
 }
-

@@ -71,9 +71,12 @@ export function WorkspaceForm({ plans }: WorkspaceFormProps) {
   // Handle country change to auto-update currency
   const handleCountryChange = (countryName: string) => {
     setCountry(countryName);
-    const countryData = (COUNTRIES as Array<{ name: string; currency?: { code: string; symbol: string } }>).find(
-      (c) => c.name === countryName,
-    );
+    const countryData = (
+      COUNTRIES as Array<{
+        name: string;
+        currency?: { code: string; symbol: string };
+      }>
+    ).find((c) => c.name === countryName);
     if (countryData?.currency) {
       setCurrency({
         code: countryData.currency.code,

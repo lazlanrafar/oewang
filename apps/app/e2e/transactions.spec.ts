@@ -36,7 +36,10 @@ test.describe("Finance: Transactions", () => {
     await expect(page.getByText(dictionary.transactions.new_transaction)).toBeVisible({ timeout: 10000 });
 
     // Click the "Income" type tab
-    const incomeTab = page.getByRole("button", { name: dictionary.transactions.types.income, exact: true });
+    const incomeTab = page.getByRole("button", {
+      name: dictionary.transactions.types.income,
+      exact: true,
+    });
     if (await incomeTab.isVisible({ timeout: 5000 }).catch(() => false)) {
       await incomeTab.click();
       await expect(incomeTab).toBeVisible();
@@ -52,7 +55,10 @@ test.describe("Finance: Transactions", () => {
       .click();
     await expect(page.getByText(dictionary.transactions.new_transaction)).toBeVisible({ timeout: 10000 });
 
-    const transferTab = page.getByRole("button", { name: dictionary.transactions.types.transfer, exact: true });
+    const transferTab = page.getByRole("button", {
+      name: dictionary.transactions.types.transfer,
+      exact: true,
+    });
     if (await transferTab.isVisible({ timeout: 5000 }).catch(() => false)) {
       await transferTab.click();
       await expect(page.getByText(dictionary.transactions.to_account)).toBeVisible({ timeout: 5000 });

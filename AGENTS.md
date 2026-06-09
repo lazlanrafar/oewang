@@ -6,8 +6,6 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 > **References:** [REFERENCE_MIDDAY_AI.md](./docs/REFERENCE_MIDDAY_AI.md) — Midday AI chat, MCP server, and external app integration patterns
 > **Testing:** [TESTING_UNIT.md](./docs/TESTING_UNIT.md) · [TESTING_E2E.md](./docs/TESTING_E2E.md)
 
-
-
 ---
 
 ## Commands
@@ -58,13 +56,13 @@ This is a **Turborepo monorepo** using **Bun** as package manager and runtime. S
 
 ### Apps
 
-| App | Framework | Port | Purpose |
-|-----|-----------|------|---------|
-| `apps/app` | Next.js 16 (Turbopack) | 3000 | Main SaaS application |
-| `apps/admin` | Next.js | 3001 | Admin dashboard |
-| `apps/api` | ElysiaJS (Bun) | 3002 | REST API + MCP server |
-| `apps/website` | Next.js | 3003 | Marketing website |
-| `apps/native` | Flutter | — | Mobile app (Dart/Flutter 3.11+) |
+| App            | Framework              | Port | Purpose                         |
+| -------------- | ---------------------- | ---- | ------------------------------- |
+| `apps/app`     | Next.js 16 (Turbopack) | 3000 | Main SaaS application           |
+| `apps/admin`   | Next.js                | 3001 | Admin dashboard                 |
+| `apps/api`     | ElysiaJS (Bun)         | 3002 | REST API + MCP server           |
+| `apps/website` | Next.js                | 3003 | Marketing website               |
+| `apps/native`  | Flutter                | —    | Mobile app (Dart/Flutter 3.11+) |
 
 ### Key packages
 
@@ -92,6 +90,7 @@ Next.js pages/components
 ```
 
 **Auth flow** — custom JWT (HS256):
+
 ```
 Login (email/password or OAuth provider)
   → apps/api generates oewang-session JWT (HS256)
@@ -111,13 +110,13 @@ All env vars are defined in a **single root `.env`** file and surfaced to worksp
 
 ### Naming
 
-| Context | Convention |
-|---------|-----------|
-| Local variables, data objects, DB fields | `snake_case` |
-| React props and interface keys | `camelCase` |
-| Files and directories | `kebab-case` |
-| React components | `PascalCase` |
-| Constants objects | `SCREAMING_SNAKE_CASE` |
+| Context                                  | Convention             |
+| ---------------------------------------- | ---------------------- |
+| Local variables, data objects, DB fields | `snake_case`           |
+| React props and interface keys           | `camelCase`            |
+| Files and directories                    | `kebab-case`           |
+| React components                         | `PascalCase`           |
+| Constants objects                        | `SCREAMING_SNAKE_CASE` |
 
 ### Typing
 
@@ -214,11 +213,11 @@ app/(main)/[locale]/
 
 ## Testing
 
-| Guide | Coverage |
-|-------|----------|
+| Guide                                     | Coverage                                                                                                                 |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | [TESTING_UNIT.md](./docs/TESTING_UNIT.md) | Bun test runner, `bun:test` patterns, module mocking, utils test anatomy, service test with mocks, coverage requirements |
-| [TESTING_E2E.md](./docs/TESTING_E2E.md) | Playwright setup, fixture system, dictionary selectors, auth setup, spec file inventory, debugging |
-| [TESTING.md](./TESTING.md) | Full test inventory and metrics summary |
+| [TESTING_E2E.md](./docs/TESTING_E2E.md)   | Playwright setup, fixture system, dictionary selectors, auth setup, spec file inventory, debugging                       |
+| [TESTING.md](./TESTING.md)                | Full test inventory and metrics summary                                                                                  |
 
 **Current baseline:** 399 unit tests (~134ms) · 115+ E2E tests
 
@@ -235,6 +234,7 @@ Test name format: `should {expected behaviour} when {condition}`
 ### 🤖 AI Agent Testing Obligations
 
 When writing code, you MUST:
+
 - **Add `.utils.test.ts`** whenever you create a `.utils.ts` file
 - **Update `TESTING_UNIT.md` Test Inventory** when adding/removing test files
 - **Add a spec file** in `apps/app/e2e/` when adding a new dashboard route

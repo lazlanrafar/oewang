@@ -1,5 +1,5 @@
-import { type Page, type Locator, expect } from '@playwright/test';
-import { BasePage } from './base-page';
+import { type Page, type Locator, expect } from "@playwright/test";
+import { BasePage } from "./base-page";
 
 /**
  * Page Object for transactions page
@@ -11,16 +11,16 @@ export class TransactionPage extends BasePage {
 
   constructor(page: Page) {
     super(page);
-    this.createButton = page.getByTestId('create-transaction-btn').or(
-      page.getByRole('button', { name: /create.*transaction/i })
-    );
+    this.createButton = page
+      .getByTestId("create-transaction-btn")
+      .or(page.getByRole("button", { name: /create.*transaction/i }));
     this.searchInput = page.getByPlaceholder(/search.*transaction/i);
   }
 
   /**
    * Navigate to transactions page
    */
-  async goto(locale = 'en') {
+  async goto(locale = "en") {
     await super.goto(`/${locale}/transactions`);
   }
 
@@ -132,7 +132,7 @@ export class TransactionPage extends BasePage {
    * Get transaction row by description or name
    */
   getTransactionRow(text: string): Locator {
-    return this.page.getByRole('row').filter({ hasText: text });
+    return this.page.getByRole("row").filter({ hasText: text });
   }
 
   /**
@@ -140,7 +140,7 @@ export class TransactionPage extends BasePage {
    */
   async editTransaction(text: string) {
     const row = this.getTransactionRow(text);
-    await row.getByRole('button', { name: /edit/i }).click();
+    await row.getByRole("button", { name: /edit/i }).click();
     await this.waitForElement('[role="dialog"]');
   }
 
@@ -149,7 +149,7 @@ export class TransactionPage extends BasePage {
    */
   async deleteTransaction(text: string) {
     const row = this.getTransactionRow(text);
-    await row.getByRole('button', { name: /delete/i }).click();
+    await row.getByRole("button", { name: /delete/i }).click();
     await this.clickButton(/confirm|delete/i);
     await this.waitForToast(/deleted/i);
   }
@@ -172,7 +172,7 @@ export class TransactionPage extends BasePage {
    * Get transaction count
    */
   async getTransactionCount(): Promise<number> {
-    const rows = this.page.getByRole('row');
+    const rows = this.page.getByRole("row");
     return (await rows.count()) - 1; // Subtract header row
   }
 
@@ -182,7 +182,7 @@ export class TransactionPage extends BasePage {
   async selectTransactions(texts: string[]) {
     for (const text of texts) {
       const row = this.getTransactionRow(text);
-      await row.getByRole('checkbox').check();
+      await row.getByRole("checkbox").check();
     }
   }
 

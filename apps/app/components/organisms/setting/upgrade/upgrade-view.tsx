@@ -34,7 +34,11 @@ export function UpgradeView({
   dictionary: Dictionary;
 }) {
   const { workspace, settings } = useAppStore() as {
-    workspace?: { id?: string; plan_id?: string | null; mayar_transaction_id?: string | null };
+    workspace?: {
+      id?: string;
+      plan_id?: string | null;
+      mayar_transaction_id?: string | null;
+    };
     settings?: { mainCurrencyCode?: string };
   };
   const [billingCycle, setBillingCycle] = React.useState<"monthly" | "annual">("monthly");
@@ -215,7 +219,10 @@ export function UpgradeView({
                           if (!ok) return;
                           downgradeMutation.mutate();
                         } else if (!isCurrent && priceId) {
-                          checkoutMutation.mutate({ priceId, type: "subscription" });
+                          checkoutMutation.mutate({
+                            priceId,
+                            type: "subscription",
+                          });
                         }
                       }}
                     >

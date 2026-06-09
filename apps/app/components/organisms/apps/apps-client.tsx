@@ -80,7 +80,9 @@ export function AppsClient({ dictionary }: Props) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["integrations"] });
-      queryClient.invalidateQueries({ queryKey: ["integrations", "telegram-connect"] });
+      queryClient.invalidateQueries({
+        queryKey: ["integrations", "telegram-connect"],
+      });
       toast.success("Integration disconnected");
     },
     onError: (error: unknown) => {
@@ -92,46 +94,48 @@ export function AppsClient({ dictionary }: Props) {
 
   // Transform official apps
   const transformedOfficialApps: AppCardModel[] = appStoreApps.map((app) => {
-      // Check if the app is installed via the integrations API response
-      const isInstalled = installedApps.some((installed) => installed.provider === app.id && installed.isActive);
+    // Check if the app is installed via the integrations API response
+    const isInstalled = installedApps.some((installed) => installed.provider === app.id && installed.isActive);
 
-      return {
-        id: app.id,
-        name: app.name,
-        category: "category" in app ? app.category : "Integration",
-        requires_plan: app.id === "whatsapp-twilio" ? "Pro" : undefined,
-        active: app.active,
-        beta: "beta" in app && typeof app.beta === "boolean" ? app.beta : undefined,
-        logo: app.logo,
-        short_description: app.short_description,
-        description: "description" in app ? (app.description ?? undefined) : undefined,
-        images: "images" in app ? app.images : [],
-        installed: isInstalled,
-        type: "official" as const,
-        onInitialize:
-          "onInitialize" in app && typeof (app as Record<string, unknown>).onInitialize === "function"
-            ? async ({ accessToken, onComplete }: { accessToken: string; onComplete?: () => void }) => {
-                const result = (
-                  app as { onInitialize: (args: { accessToken: string; onComplete?: () => void }) => unknown }
-                ).onInitialize({
-                  accessToken,
-                  onComplete,
-                });
-                return result instanceof Promise ? result : Promise.resolve(result);
-              }
-            : undefined,
-        settings:
-          "settings" in app && Array.isArray((app as { settings?: Record<string, unknown>[] }).settings)
-            ? (app as { settings?: Record<string, unknown>[] }).settings
-            : undefined,
-        userSettings: installedApps.find((inst) => inst.provider === app.id)?.settings || undefined,
-        // Include installUrl for apps with external download pages
-        installUrl:
-          "installUrl" in app && typeof (app as { installUrl?: string }).installUrl === "string"
-            ? (app as { installUrl?: string }).installUrl
-            : undefined,
-      };
-    });
+    return {
+      id: app.id,
+      name: app.name,
+      category: "category" in app ? app.category : "Integration",
+      requires_plan: app.id === "whatsapp-twilio" ? "Pro" : undefined,
+      active: app.active,
+      beta: "beta" in app && typeof app.beta === "boolean" ? app.beta : undefined,
+      logo: app.logo,
+      short_description: app.short_description,
+      description: "description" in app ? (app.description ?? undefined) : undefined,
+      images: "images" in app ? app.images : [],
+      installed: isInstalled,
+      type: "official" as const,
+      onInitialize:
+        "onInitialize" in app && typeof (app as Record<string, unknown>).onInitialize === "function"
+          ? async ({ accessToken, onComplete }: { accessToken: string; onComplete?: () => void }) => {
+              const result = (
+                app as {
+                  onInitialize: (args: { accessToken: string; onComplete?: () => void }) => unknown;
+                }
+              ).onInitialize({
+                accessToken,
+                onComplete,
+              });
+              return result instanceof Promise ? result : Promise.resolve(result);
+            }
+          : undefined,
+      settings:
+        "settings" in app && Array.isArray((app as { settings?: Record<string, unknown>[] }).settings)
+          ? (app as { settings?: Record<string, unknown>[] }).settings
+          : undefined,
+      userSettings: installedApps.find((inst) => inst.provider === app.id)?.settings || undefined,
+      // Include installUrl for apps with external download pages
+      installUrl:
+        "installUrl" in app && typeof (app as { installUrl?: string }).installUrl === "string"
+          ? (app as { installUrl?: string }).installUrl
+          : undefined,
+    };
+  });
 
   const transformedExternalApps: AppCardModel[] = [];
 

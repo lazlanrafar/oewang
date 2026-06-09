@@ -1,12 +1,21 @@
 "use server";
 
-import type { ApiResponse, Budget, BudgetStatus, CreateBudgetInput, UpdateBudgetInput } from "@workspace/types";
+import type {
+  ApiResponse,
+  Budget,
+  BudgetStatus,
+  CreateBudgetInput,
+  UpdateBudgetInput,
+} from "@workspace/types";
 import { axiosInstance as api } from "../lib/axios.server";
 
 /**
  * Get current month budget status with categories and spending
  */
-export async function getBudgetStatus(query?: { month?: number; year?: number }): Promise<ApiResponse<BudgetStatus[]>> {
+export async function getBudgetStatus(query?: {
+  month?: number;
+  year?: number;
+}): Promise<ApiResponse<BudgetStatus[]>> {
   try {
     const res = await api.get("/budgets/status", { params: query });
     return (res as any)._api_response || res.data;
@@ -24,7 +33,9 @@ export async function getBudgetStatus(query?: { month?: number; year?: number })
 /**
  * Create a new budget limit
  */
-export async function createBudget(payload: CreateBudgetInput): Promise<ApiResponse<Budget>> {
+export async function createBudget(
+  payload: CreateBudgetInput,
+): Promise<ApiResponse<Budget>> {
   try {
     const res = await api.post("/budgets", payload);
     return (res as any)._api_response || res.data;
@@ -42,7 +53,10 @@ export async function createBudget(payload: CreateBudgetInput): Promise<ApiRespo
 /**
  * Update an existing budget limit
  */
-export async function updateBudget(id: string, payload: UpdateBudgetInput): Promise<ApiResponse<Budget>> {
+export async function updateBudget(
+  id: string,
+  payload: UpdateBudgetInput,
+): Promise<ApiResponse<Budget>> {
   try {
     const res = await api.put(`/budgets/${id}`, payload);
     return (res as any)._api_response || res.data;

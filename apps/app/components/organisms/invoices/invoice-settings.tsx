@@ -170,7 +170,8 @@ export function InvoiceSettings({
                         {["Due on Receipt", "Net 7", "Net 10", "Net 15", "Net 30", "Net 45", "Net 60", "Net 90"].map(
                           (term) => (
                             <DropdownMenuRadioItem key={term} value={term}>
-                              {(dict.settings.terms as Record<string, string>)[term.toLowerCase().replace(/ /g, "_")] || term}
+                              {(dict.settings.terms as Record<string, string>)[term.toLowerCase().replace(/ /g, "_")] ||
+                                term}
                             </DropdownMenuRadioItem>
                           ),
                         )}
@@ -270,7 +271,11 @@ export function InvoiceSettings({
             <span>{dict.details.public_sharing || "Public view"}</span>
           </DropdownMenuCheckboxItem>
 
-          {(settings as InvoiceSettingsProps["settings"] & { isPublic?: boolean }).isPublic && (
+          {(
+            settings as InvoiceSettingsProps["settings"] & {
+              isPublic?: boolean;
+            }
+          ).isPublic && (
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>
                 <Lock className="mr-2 h-4 w-4" />
@@ -286,7 +291,13 @@ export function InvoiceSettings({
                       type="text"
                       placeholder={dict.details.set_access_code || "Enter code..."}
                       className="w-full rounded-md border-none bg-muted p-1.5 text-xs outline-none focus:ring-1 focus:ring-primary"
-                      value={(settings as InvoiceSettingsProps["settings"] & { accessCode?: string }).accessCode ?? ""}
+                      value={
+                        (
+                          settings as InvoiceSettingsProps["settings"] & {
+                            accessCode?: string;
+                          }
+                        ).accessCode ?? ""
+                      }
                       onChange={(e) => onUpdate("accessCode", e.target.value)}
                       onClick={(e) => e.stopPropagation()}
                     />

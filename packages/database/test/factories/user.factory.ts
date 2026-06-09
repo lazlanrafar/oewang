@@ -1,8 +1,8 @@
-import { faker } from '@faker-js/faker';
-import { eq } from 'drizzle-orm';
-import { users } from '../../schema/users';
-import { workspaces } from '../../schema/workspaces';
-import { BaseFactory, type DB } from './base-factory';
+import { faker } from "@faker-js/faker";
+import { eq } from "drizzle-orm";
+import { users } from "../../schema/users";
+import { workspaces } from "../../schema/workspaces";
+import { BaseFactory, type DB } from "./base-factory";
 
 export interface UserAttributes {
   id?: string;
@@ -13,7 +13,7 @@ export interface UserAttributes {
   oauth_provider?: string;
   providers?: string[];
   workspace_id?: string;
-  system_role?: 'superadmin' | 'owner' | 'finance' | 'user';
+  system_role?: "superadmin" | "owner" | "finance" | "user";
   created_at?: Date;
   updated_at?: Date;
 }
@@ -31,13 +31,15 @@ export class UserFactory extends BaseFactory<UserAttributes> {
       mobile: faker.phone.number(),
       oauth_provider: undefined,
       providers: [],
-      system_role: 'user',
+      system_role: "user",
       created_at: new Date(),
       updated_at: new Date(),
     };
   }
 
-  protected async insert(attributes: Partial<UserAttributes>): Promise<UserAttributes> {
+  protected async insert(
+    attributes: Partial<UserAttributes>,
+  ): Promise<UserAttributes> {
     const [user] = await this.db
       .insert(users)
       .values(attributes as any)
@@ -57,8 +59,10 @@ export class UserFactory extends BaseFactory<UserAttributes> {
       .values({
         id: this.generateId(),
         name: workspaceName || `${user.name}'s Workspace`,
-        slug: faker.helpers.slugify(`${user.name}-${this.generateId().slice(0, 8)}`).toLowerCase(),
-        plan_status: 'free',
+        slug: faker.helpers
+          .slugify(`${user.name}-${this.generateId().slice(0, 8)}`)
+          .toLowerCase(),
+        plan_status: "free",
         created_at: new Date(),
         updated_at: new Date(),
       })
@@ -78,20 +82,20 @@ export class UserFactory extends BaseFactory<UserAttributes> {
    * Create superadmin user
    */
   async superadmin() {
-    return this.create({ system_role: 'superadmin' });
+    return this.create({ system_role: "superadmin" });
   }
 
   /**
    * Create owner user
    */
   async owner() {
-    return this.create({ system_role: 'owner' });
+    return this.create({ system_role: "owner" });
   }
 
   /**
    * Create OAuth user
    */
-  async oauth(provider: string = 'google') {
+  async oauth(provider: string = "google") {
     return this.create({
       oauth_provider: provider,
       providers: [provider],

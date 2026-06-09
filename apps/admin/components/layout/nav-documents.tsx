@@ -14,7 +14,13 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@workspace/ui";
-import { Ellipsis, Folder, Forward, type LucideIcon, Trash2 } from "lucide-react";
+import {
+  Ellipsis,
+  Folder,
+  Forward,
+  type LucideIcon,
+  Trash2,
+} from "lucide-react";
 
 export function NavDocuments({
   items,
@@ -41,7 +47,10 @@ export function NavDocuments({
             </SidebarMenuButton>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <SidebarMenuAction showOnHover className="rounded-sm data-[state=open]:bg-accent">
+                <SidebarMenuAction
+                  showOnHover
+                  className="rounded-sm data-[state=open]:bg-accent"
+                >
                   <Ellipsis />
                   <span className="sr-only">More</span>
                 </SidebarMenuAction>

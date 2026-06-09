@@ -102,7 +102,9 @@ export function SelectContact({
           <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted">
             <User className="h-3 w-3 text-muted-foreground" />
           </div>
-          <span className="max-w-[90%] truncate text-left font-medium text-xs">{Array.isArray(item) ? item[0]?.label : item.label}</span>
+          <span className="max-w-[90%] truncate text-left font-medium text-xs">
+            {Array.isArray(item) ? item[0]?.label : item.label}
+          </span>
         </div>
       )}
       renderOnCreate={(value) => (

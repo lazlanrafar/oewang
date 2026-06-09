@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+
 import { Env } from "@workspace/constants";
 
 export async function GET(request: Request) {
@@ -13,9 +14,7 @@ export async function GET(request: Request) {
     state,
   });
 
-  const response = NextResponse.redirect(
-    `https://github.com/login/oauth/authorize?${params}`,
-  );
+  const response = NextResponse.redirect(`https://github.com/login/oauth/authorize?${params}`);
 
   response.cookies.set("oauth_state", state, {
     httpOnly: true,

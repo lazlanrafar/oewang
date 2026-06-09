@@ -6,7 +6,9 @@ test.describe("Dashboard: Overview", () => {
     await page.goto("/en/overview");
     await page.waitForLoadState("domcontentloaded");
     // Wait for hydration by checking for the Overview tab
-    await expect(page.getByRole("tab", { name: /Overview/i })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole("tab", { name: /Overview/i })).toBeVisible({
+      timeout: 15000,
+    });
   });
 
   test("should render the dashboard title", async ({ page, dictionary }) => {
@@ -23,7 +25,9 @@ test.describe("Dashboard: Overview", () => {
   test("should interact with sidebar navigation from dashboard", async ({ page, dictionary }) => {
     // Click Transactions link in sidebar
     await page
-      .getByRole("link", { name: new RegExp(dictionary.sidebar.transactions_label, "i") })
+      .getByRole("link", {
+        name: new RegExp(dictionary.sidebar.transactions_label, "i"),
+      })
       .first()
       .click();
     await page.waitForLoadState("domcontentloaded");

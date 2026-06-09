@@ -297,6 +297,7 @@ export function ChatInput({ dictionary }: { dictionary: Dictionary }) {
         agentChoice: message.metadata?.agentChoice,
         toolChoice: message.metadata?.toolChoice,
         attachments, // We pass our processed attachments in metadata or body
+        webSearch: isWebSearch,
       },
     });
 

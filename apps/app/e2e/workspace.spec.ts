@@ -17,7 +17,9 @@ test.describe("Workspace: Sidebar & Navigation", () => {
   test("should navigate to Transactions page via sidebar", async ({ page, dictionary }) => {
     // Navigate using the sidebar link
     await page
-      .getByRole("link", { name: new RegExp(dictionary.sidebar.transactions_label, "i") })
+      .getByRole("link", {
+        name: new RegExp(dictionary.sidebar.transactions_label, "i"),
+      })
       .first()
       .click();
     await page.waitForLoadState("domcontentloaded");
@@ -27,7 +29,9 @@ test.describe("Workspace: Sidebar & Navigation", () => {
   test("should navigate back to Overview via sidebar", async ({ page, dictionary }) => {
     // Go to Transactions first
     await page
-      .getByRole("link", { name: new RegExp(dictionary.sidebar.transactions_label, "i") })
+      .getByRole("link", {
+        name: new RegExp(dictionary.sidebar.transactions_label, "i"),
+      })
       .first()
       .click();
     await page.waitForLoadState("domcontentloaded");
@@ -35,7 +39,9 @@ test.describe("Workspace: Sidebar & Navigation", () => {
     // Navigate back to Overview using the sidebar link
     // Sidebar usually has 'Overview' as the first link
     await page
-      .getByRole("link", { name: new RegExp(dictionary.sidebar.overview_label, "i") })
+      .getByRole("link", {
+        name: new RegExp(dictionary.sidebar.overview_label, "i"),
+      })
       .first()
       .click();
     await page.waitForLoadState("domcontentloaded");
@@ -44,7 +50,9 @@ test.describe("Workspace: Sidebar & Navigation", () => {
 
   test("should navigate to Settings via sidebar", async ({ page, dictionary }) => {
     await page
-      .getByRole("link", { name: new RegExp(dictionary.sidebar.settings_label, "i") })
+      .getByRole("link", {
+        name: new RegExp(dictionary.sidebar.settings_label, "i"),
+      })
       .first()
       .click();
     await page.waitForLoadState("domcontentloaded");
@@ -69,7 +77,9 @@ test.describe("Workspace: Switcher", () => {
         // Fallback: button containing the plan text as a child span
         page
           .locator("button")
-          .filter({ has: page.locator("span").filter({ hasText: /free|pro|premium/i }) })
+          .filter({
+            has: page.locator("span").filter({ hasText: /free|pro|premium/i }),
+          })
           .first(),
       );
     await expect(switcher.first()).toBeVisible({ timeout: 15000 });
@@ -83,7 +93,9 @@ test.describe("Workspace: Switcher", () => {
       .or(
         page
           .locator("button")
-          .filter({ has: page.locator("span").filter({ hasText: /free|pro|premium/i }) })
+          .filter({
+            has: page.locator("span").filter({ hasText: /free|pro|premium/i }),
+          })
           .first(),
       );
     const isVisible = await switcher
@@ -93,7 +105,9 @@ test.describe("Workspace: Switcher", () => {
     if (isVisible) {
       await switcher.first().click();
       // The dropdown shows a label with the "Workspaces" text
-      await expect(page.getByText(/Workspaces/i).first()).toBeVisible({ timeout: 5000 });
+      await expect(page.getByText(/Workspaces/i).first()).toBeVisible({
+        timeout: 5000,
+      });
     } else {
       expect(true).toBe(true);
     }

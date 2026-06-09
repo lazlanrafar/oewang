@@ -1,4 +1,8 @@
-export type ShortcutDateRangePreset = "last7Days" | "lastMonthToNow" | "thisMonth" | "yearToDate";
+export type ShortcutDateRangePreset =
+  | "last7Days"
+  | "lastMonthToNow"
+  | "thisMonth"
+  | "yearToDate";
 
 export interface ChatShortcutTemplate {
   command: "/show" | "/find" | "/analyze";
@@ -76,7 +80,14 @@ export const CHAT_SHORTCUT_TEMPLATES: ChatShortcutTemplate[] = [
     titleDefault: "Analyze cash flow stress test",
     toolName: "getCashFlowStressTest",
     toolParams: { showCanvas: true },
-    keywords: ["analyze", "stress", "test", "scenario", "resilience", "financial"],
+    keywords: [
+      "analyze",
+      "stress",
+      "test",
+      "scenario",
+      "resilience",
+      "financial",
+    ],
   },
   {
     command: "/find",
@@ -85,7 +96,14 @@ export const CHAT_SHORTCUT_TEMPLATES: ChatShortcutTemplate[] = [
     toolName: "getTransactions",
     toolParams: { statuses: ["pending"] },
     dateRangePreset: "lastMonthToNow",
-    keywords: ["find", "uncategorized", "transactions", "last month", "clean", "untagged"],
+    keywords: [
+      "find",
+      "uncategorized",
+      "transactions",
+      "last month",
+      "clean",
+      "untagged",
+    ],
   },
   {
     command: "/find",

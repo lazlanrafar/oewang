@@ -23,34 +23,34 @@ Invoices allow workspaces to create and send professional invoices to contacts. 
 
 ### `invoices` table
 
-| Column | Type | Notes |
-|--------|------|-------|
-| `id` | `text` (CUID2) | Primary key |
-| `workspaceId` | `text` FK → workspaces | Required |
-| `contactId` | `text` FK → contacts | Required. FK is `restrict` — cannot delete contact with invoices |
-| `invoiceNumber` | `text` | Required, e.g. `INV-001` |
-| `status` | `text` | `draft` \| `unpaid` \| `paid` \| `overdue` \| `canceled` |
-| `issueDate` | `timestamp` | Optional |
-| `dueDate` | `timestamp` | Optional |
-| `amount` | `decimal(19,4)` | Total invoice amount. Default `0` |
-| `vat` | `decimal(19,4)` | VAT amount. Default `0` |
-| `tax` | `decimal(19,4)` | Tax amount. Default `0` |
-| `currency` | `text` | ISO currency code. Default `USD` |
-| `internalNote` | `text` | Internal note (not shown to recipient) |
-| `noteDetails` | `text` | Note visible to recipient |
-| `paymentDetails` | `text` | Payment instructions for recipient |
-| `logoUrl` | `text` | Optional company logo URL |
-| `lineItems` | `jsonb` | Array of `{ name, quantity, price, unit?, discount?, tax? }` |
-| `invoiceSize` | `text` | `A4` \| `Letter` |
-| `dateFormat` | `text` | e.g. `DD/MM/YYYY` |
-| `paymentTerms` | `text` | e.g. `Due on Receipt`, `Net 30` |
-| `templateName` | `text` | PDF template name. Default `Default` |
-| `invoiceSettings` | `jsonb` | Feature flags: `{ salesTax, vat, lineItemTax, discount, decimals, units, qrCode }` |
-| `isPublic` | `boolean` | Whether public link is enabled |
-| `accessCode` | `text` | Optional access code for public link |
-| `createdAt` | `timestamp` | Auto |
-| `updatedAt` | `timestamp` | Auto |
-| `deletedAt` | `timestamp` | Soft delete |
+| Column            | Type                   | Notes                                                                              |
+| ----------------- | ---------------------- | ---------------------------------------------------------------------------------- |
+| `id`              | `text` (CUID2)         | Primary key                                                                        |
+| `workspaceId`     | `text` FK → workspaces | Required                                                                           |
+| `contactId`       | `text` FK → contacts   | Required. FK is `restrict` — cannot delete contact with invoices                   |
+| `invoiceNumber`   | `text`                 | Required, e.g. `INV-001`                                                           |
+| `status`          | `text`                 | `draft` \| `unpaid` \| `paid` \| `overdue` \| `canceled`                           |
+| `issueDate`       | `timestamp`            | Optional                                                                           |
+| `dueDate`         | `timestamp`            | Optional                                                                           |
+| `amount`          | `decimal(19,4)`        | Total invoice amount. Default `0`                                                  |
+| `vat`             | `decimal(19,4)`        | VAT amount. Default `0`                                                            |
+| `tax`             | `decimal(19,4)`        | Tax amount. Default `0`                                                            |
+| `currency`        | `text`                 | ISO currency code. Default `USD`                                                   |
+| `internalNote`    | `text`                 | Internal note (not shown to recipient)                                             |
+| `noteDetails`     | `text`                 | Note visible to recipient                                                          |
+| `paymentDetails`  | `text`                 | Payment instructions for recipient                                                 |
+| `logoUrl`         | `text`                 | Optional company logo URL                                                          |
+| `lineItems`       | `jsonb`                | Array of `{ name, quantity, price, unit?, discount?, tax? }`                       |
+| `invoiceSize`     | `text`                 | `A4` \| `Letter`                                                                   |
+| `dateFormat`      | `text`                 | e.g. `DD/MM/YYYY`                                                                  |
+| `paymentTerms`    | `text`                 | e.g. `Due on Receipt`, `Net 30`                                                    |
+| `templateName`    | `text`                 | PDF template name. Default `Default`                                               |
+| `invoiceSettings` | `jsonb`                | Feature flags: `{ salesTax, vat, lineItemTax, discount, decimals, units, qrCode }` |
+| `isPublic`        | `boolean`              | Whether public link is enabled                                                     |
+| `accessCode`      | `text`                 | Optional access code for public link                                               |
+| `createdAt`       | `timestamp`            | Auto                                                                               |
+| `updatedAt`       | `timestamp`            | Auto                                                                               |
+| `deletedAt`       | `timestamp`            | Soft delete                                                                        |
 
 ---
 
@@ -60,22 +60,22 @@ Invoices allow workspaces to create and send professional invoices to contacts. 
 
 Base path: `/v1/invoices`
 
-| Method | Path | Role Required | Description |
-|--------|------|--------------|-------------|
-| `GET` | `/` | Any authenticated | List invoices (paginated) |
-| `GET` | `/:id` | Any authenticated | Get invoice details |
-| `GET` | `/:id/token` | Any authenticated | Generate JWT share token for public link |
-| `POST` | `/` | Editor+ | Create a new invoice |
-| `PATCH` | `/:id` | Editor+ | Update invoice fields |
-| `DELETE` | `/:id` | Editor+ | Soft-delete invoice |
+| Method   | Path         | Role Required     | Description                              |
+| -------- | ------------ | ----------------- | ---------------------------------------- |
+| `GET`    | `/`          | Any authenticated | List invoices (paginated)                |
+| `GET`    | `/:id`       | Any authenticated | Get invoice details                      |
+| `GET`    | `/:id/token` | Any authenticated | Generate JWT share token for public link |
+| `POST`   | `/`          | Editor+           | Create a new invoice                     |
+| `PATCH`  | `/:id`       | Editor+           | Update invoice fields                    |
+| `DELETE` | `/:id`       | Editor+           | Soft-delete invoice                      |
 
 ### Public Routes (no auth)
 
 Base path: `/v1/invoices/public`
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| `GET` | `/invoice/:token` | None (JWT in URL) | Get invoice details for public view |
+| Method | Path              | Auth              | Description                         |
+| ------ | ----------------- | ----------------- | ----------------------------------- |
+| `GET`  | `/invoice/:token` | None (JWT in URL) | Get invoice details for public view |
 
 ---
 
@@ -98,6 +98,7 @@ The `PublicInvoicesController` verifies the JWT, fetches the invoice, and return
 ### Status Transitions
 
 Status is managed manually by the workspace. Expected flow:
+
 ```
 draft → unpaid → paid
               ↘ overdue (when past dueDate)
@@ -109,6 +110,7 @@ No automatic status transitions — this is intentional for flexibility.
 ### Line Items JSONB
 
 `lineItems` is a JSONB array. Each item:
+
 ```json
 {
   "name": "Consulting (3 hours)",
@@ -126,16 +128,16 @@ The `amount` field on the invoice is the sum of all line items (computed client-
 
 ## Source Files
 
-| Layer | File |
-|-------|------|
-| Schema | `packages/database/schema/invoices.ts` |
-| Controller | `apps/api/modules/invoices/invoices.controller.ts` |
-| Controller | `apps/api/modules/invoices/public-invoices.controller.ts` |
-| Service | `apps/api/modules/invoices/invoices.service.ts` |
-| Repository | `apps/api/modules/invoices/invoices.repository.ts` |
-| DTOs | `apps/api/modules/invoices/invoices.dto.ts` |
-| Utils | `apps/api/modules/invoices/invoices.utils.ts` |
-| Tests | `apps/api/modules/invoices/invoices.utils.test.ts` (24 tests — JWT round-trip) |
-| E2E | `apps/app/e2e/invoices.spec.ts` |
-| Frontend page | `apps/app/app/(main)/[locale]/(dashboard)/invoices/` |
-| Public page | `apps/app/app/(main)/[locale]/invoice/[token]/` |
+| Layer         | File                                                                           |
+| ------------- | ------------------------------------------------------------------------------ |
+| Schema        | `packages/database/schema/invoices.ts`                                         |
+| Controller    | `apps/api/modules/invoices/invoices.controller.ts`                             |
+| Controller    | `apps/api/modules/invoices/public-invoices.controller.ts`                      |
+| Service       | `apps/api/modules/invoices/invoices.service.ts`                                |
+| Repository    | `apps/api/modules/invoices/invoices.repository.ts`                             |
+| DTOs          | `apps/api/modules/invoices/invoices.dto.ts`                                    |
+| Utils         | `apps/api/modules/invoices/invoices.utils.ts`                                  |
+| Tests         | `apps/api/modules/invoices/invoices.utils.test.ts` (24 tests — JWT round-trip) |
+| E2E           | `apps/app/e2e/invoices.spec.ts`                                                |
+| Frontend page | `apps/app/app/(main)/[locale]/(dashboard)/invoices/`                           |
+| Public page   | `apps/app/app/(main)/[locale]/invoice/[token]/`                                |

@@ -17,9 +17,9 @@ This document tracks active and planned work for oewang. Update it as features m
 
 ## Active / In-Progress
 
-| Task | Owner | Started | PR |
-|------|-------|---------|-----|
-| — | — | — | — |
+| Task | Owner | Started | PR  |
+| ---- | ----- | ------- | --- |
+| —    | —     | —       | —   |
 
 ---
 
@@ -54,18 +54,18 @@ This document tracks active and planned work for oewang. Update it as features m
 
 ## Done
 
-| Task | Completed | PR |
-|------|-----------|-----|
-| Multi-workspace auth with custom JWT (email/password + Google/GitHub OAuth) | — | — |
-| AES-256-GCM end-to-end request/response encryption | — | — |
-| Redis-backed sliding window rate limiting | — | — |
-| AI assistant (OpenAI + Claude + Gemini multi-agent) | — | — |
-| Realtime WebSocket workspace pub/sub | — | — |
-| Invoice JWT shareable links | — | — |
-| Mayar payment gateway integration | — | — |
-| Telegram bot integration | — | — |
-| 399 unit tests across 12 modules | — | — |
-| 115+ Playwright E2E tests | — | — |
+| Task                                                                        | Completed | PR  |
+| --------------------------------------------------------------------------- | --------- | --- |
+| Multi-workspace auth with custom JWT (email/password + Google/GitHub OAuth) | —         | —   |
+| AES-256-GCM end-to-end request/response encryption                          | —         | —   |
+| Redis-backed sliding window rate limiting                                   | —         | —   |
+| AI assistant (OpenAI + Claude + Gemini multi-agent)                         | —         | —   |
+| Realtime WebSocket workspace pub/sub                                        | —         | —   |
+| Invoice JWT shareable links                                                 | —         | —   |
+| Mayar payment gateway integration                                           | —         | —   |
+| Telegram bot integration                                                    | —         | —   |
+| 399 unit tests across 12 modules                                            | —         | —   |
+| 115+ Playwright E2E tests                                                   | —         | —   |
 
 ---
 

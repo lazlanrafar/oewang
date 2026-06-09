@@ -53,7 +53,9 @@ export function WalletForm({ open, wallet, onClose, dictionary }: WalletFormProp
   const common = dictionary.common;
 
   const formSchema = z.object({
-    name: z.string().min(1, { message: walletForm?.name?.error_required || "Name is required" }),
+    name: z.string().min(1, {
+      message: walletForm?.name?.error_required || "Name is required",
+    }),
     groupId: z.string().optional().nullable(),
     balance: z.string().optional(),
     isIncludedInTotals: z.boolean().default(true),

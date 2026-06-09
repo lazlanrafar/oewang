@@ -48,6 +48,7 @@ apps/api/modules/{feature}/
 ```
 
 **Rules:**
+
 - Every `.utils.ts` file **MUST** have a companion `.utils.test.ts`
 - Service tests go in `__tests__/` with repository mocked
 - `__tests__/` is currently empty — service/controller tests are the next priority
@@ -57,23 +58,23 @@ apps/api/modules/{feature}/
 
 ## Test Inventory
 
-| Module | Test File | Tests | What's Covered |
-|--------|-----------|-------|----------------|
-| `ai` | `ai/ai.utils.test.ts` | 69 | Date parsing, date ranges, UUID validation, amount formatting, receipt detection, intent recognition, wallet extraction |
-| `transactions` | `transactions/transactions.utils.test.ts` | 66 | Amount sanitization, balance calculations, budget checking/status, amount formatting, amount validation, date ranges |
-| `debts` | `debts/debts.utils.test.ts` | 50 | Debt status, payment calculations, payment progress, due date checking, label formatting, payment validation, bill splitting |
-| `wallets` | `wallets/wallets.utils.test.ts` | 44 | Balance calculations, sufficiency checks, balance formatting, total balance aggregation, wallet status, name validation, balance change %, wallet grouping |
-| `vault` | `vault/vault.utils.test.ts` | 44 | Unit conversions, file size validation, storage quota, SHA-256 hashing, file name validation, extension extraction, file type validation, storage status |
-| `metrics` | `metrics/metrics.utils.test.ts` | 44 | Default date range, date range resolution, time series gap-filling, percentage change, growth rate, category aggregation, peak value detection |
-| `categories` | `categories/categories.utils.test.ts` | 38 | Name validation, name formatting, icon assignment, category grouping, sorting, duplicate detection, default categories |
-| `invoices` | `invoices/invoices.utils.test.ts` | 24 | JWT token generation/verification, round-trip encoding, expiration handling, security/tampering |
-| `integrations` | `integrations/webhook-security.test.ts` | 23 | URL parsing with forwarded headers, form body parsing, Twilio signature, Telegram secret, timing-safe comparisons |
-| `workspaces` | `workspaces/workspace-permissions.test.ts` | 22 | Role normalization, edit permissions, sensitive permissions, assertion throws, permission hierarchy |
-| `mayar` | `mayar/billing.utils.test.ts` | 5 | Annual billing detection, period calculations |
-| `mayar` | `mayar/billing-lifecycle.service.test.ts` | 2 | Subscription expiration → `past_due`, grace period → downgrade to free |
-| `mayar` | `mayar/mayar.controller.test.ts` | 2 | Public webhook HTTP status behavior on success/failure paths |
-| `users` | `users/users.utils.test.ts` | 3 | Workspace ID resolution from mixed `workspaceId`/`workspace_id` payloads and empty input handling |
-| **TOTAL** | **14 files** | **404** | **All core business logic** |
+| Module         | Test File                                  | Tests   | What's Covered                                                                                                                                             |
+| -------------- | ------------------------------------------ | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ai`           | `ai/ai.utils.test.ts`                      | 69      | Date parsing, date ranges, UUID validation, amount formatting, receipt detection, intent recognition, wallet extraction                                    |
+| `transactions` | `transactions/transactions.utils.test.ts`  | 66      | Amount sanitization, balance calculations, budget checking/status, amount formatting, amount validation, date ranges                                       |
+| `debts`        | `debts/debts.utils.test.ts`                | 50      | Debt status, payment calculations, payment progress, due date checking, label formatting, payment validation, bill splitting                               |
+| `wallets`      | `wallets/wallets.utils.test.ts`            | 44      | Balance calculations, sufficiency checks, balance formatting, total balance aggregation, wallet status, name validation, balance change %, wallet grouping |
+| `vault`        | `vault/vault.utils.test.ts`                | 44      | Unit conversions, file size validation, storage quota, SHA-256 hashing, file name validation, extension extraction, file type validation, storage status   |
+| `metrics`      | `metrics/metrics.utils.test.ts`            | 44      | Default date range, date range resolution, time series gap-filling, percentage change, growth rate, category aggregation, peak value detection             |
+| `categories`   | `categories/categories.utils.test.ts`      | 38      | Name validation, name formatting, icon assignment, category grouping, sorting, duplicate detection, default categories                                     |
+| `invoices`     | `invoices/invoices.utils.test.ts`          | 24      | JWT token generation/verification, round-trip encoding, expiration handling, security/tampering                                                            |
+| `integrations` | `integrations/webhook-security.test.ts`    | 23      | URL parsing with forwarded headers, form body parsing, Twilio signature, Telegram secret, timing-safe comparisons                                          |
+| `workspaces`   | `workspaces/workspace-permissions.test.ts` | 22      | Role normalization, edit permissions, sensitive permissions, assertion throws, permission hierarchy                                                        |
+| `mayar`        | `mayar/billing.utils.test.ts`              | 5       | Annual billing detection, period calculations                                                                                                              |
+| `mayar`        | `mayar/billing-lifecycle.service.test.ts`  | 2       | Subscription expiration → `past_due`, grace period → downgrade to free                                                                                     |
+| `mayar`        | `mayar/mayar.controller.test.ts`           | 2       | Public webhook HTTP status behavior on success/failure paths                                                                                               |
+| `users`        | `users/users.utils.test.ts`                | 3       | Workspace ID resolution from mixed `workspaceId`/`workspace_id` payloads and empty input handling                                                          |
+| **TOTAL**      | **14 files**                               | **404** | **All core business logic**                                                                                                                                |
 
 ---
 
@@ -162,9 +163,11 @@ mock.module("@workspace/logger", () => ({
 mock.module("./mayar.repository", () => ({
   MayarRepository: {
     findWorkspacesForBillingLifecycle: mock(async () => state.workspaces),
-    updateWorkspaceSubscription: mock(async (workspaceId: string, data: any) => {
-      state.updates.push({ workspaceId, data });
-    }),
+    updateWorkspaceSubscription: mock(
+      async (workspaceId: string, data: any) => {
+        state.updates.push({ workspaceId, data });
+      },
+    ),
   },
 }));
 
@@ -180,12 +183,14 @@ describe("BillingLifecycleService", () => {
   });
 
   it("marks expired active subscriptions as past_due", async () => {
-    state.workspaces = [{
-      workspaceId: "ws_1",
-      plan_status: "active",
-      plan_current_period_end: new Date(Date.now() - 60_000), // 1 minute ago
-      owner_email: "owner@example.com",
-    }];
+    state.workspaces = [
+      {
+        workspaceId: "ws_1",
+        plan_status: "active",
+        plan_current_period_end: new Date(Date.now() - 60_000), // 1 minute ago
+        owner_email: "owner@example.com",
+      },
+    ];
 
     await BillingLifecycleService.processLifecycle();
 
@@ -194,12 +199,14 @@ describe("BillingLifecycleService", () => {
   });
 
   it("downgrades past_due after 7-day grace period", async () => {
-    state.workspaces = [{
-      workspaceId: "ws_2",
-      plan_status: "past_due",
-      plan_current_period_end: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000),
-      plan_overdue_started_at: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000),
-    }];
+    state.workspaces = [
+      {
+        workspaceId: "ws_2",
+        plan_status: "past_due",
+        plan_current_period_end: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000),
+        plan_overdue_started_at: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000),
+      },
+    ];
 
     await BillingLifecycleService.processLifecycle();
 
@@ -255,6 +262,7 @@ Or for Bun's `test()` style (shorter):
 ```
 
 **Examples:**
+
 ```ts
 // describe/test style
 test("should return 404 when wallet does not exist", ...)
@@ -271,12 +279,12 @@ test("defaults to viewer for null/undefined", ...)
 
 ## Coverage Requirements
 
-| Layer | Test Type | Minimum Coverage |
-|-------|-----------|-----------------|
-| `.utils.ts` | Unit (no mocks) | ≥ 90% branch |
-| Service | Unit (repository mocked) | ≥ 80% branch |
-| Repository | Integration (real test DB) | ≥ 1 happy + 1 error path per method |
-| Controller | Integration (HTTP) | All HTTP status codes + input validation |
+| Layer       | Test Type                  | Minimum Coverage                         |
+| ----------- | -------------------------- | ---------------------------------------- |
+| `.utils.ts` | Unit (no mocks)            | ≥ 90% branch                             |
+| Service     | Unit (repository mocked)   | ≥ 80% branch                             |
+| Repository  | Integration (real test DB) | ≥ 1 happy + 1 error path per method      |
+| Controller  | Integration (HTTP)         | All HTTP status codes + input validation |
 
 Zero coverage on any `.service.ts` file is forbidden. A feature without a service test is incomplete.
 
@@ -290,24 +298,24 @@ bun run test:coverage   # view coverage report
 
 ### ✅ Always Test
 
-| Category | Examples |
-|----------|---------|
-| **Business calculations** | Balance updates, amount sanitization, percentage calculations, payment math |
-| **Validation functions** | Name length, email format, currency code format, amount range |
-| **Status derivation** | Wallet status (positive/zero/negative), debt status (paid/partial/unpaid), storage status |
-| **Permission logic** | Role → can/cannot edit, role → can/cannot manage sensitive |
-| **Edge cases** | Empty arrays, zero values, negative numbers, string-encoded numbers, null/undefined |
-| **Security functions** | JWT generation/verification, webhook signature validation, timing-safe comparisons |
-| **Error conditions** | Missing required fields, duplicate detection, exceeding limits |
+| Category                  | Examples                                                                                  |
+| ------------------------- | ----------------------------------------------------------------------------------------- |
+| **Business calculations** | Balance updates, amount sanitization, percentage calculations, payment math               |
+| **Validation functions**  | Name length, email format, currency code format, amount range                             |
+| **Status derivation**     | Wallet status (positive/zero/negative), debt status (paid/partial/unpaid), storage status |
+| **Permission logic**      | Role → can/cannot edit, role → can/cannot manage sensitive                                |
+| **Edge cases**            | Empty arrays, zero values, negative numbers, string-encoded numbers, null/undefined       |
+| **Security functions**    | JWT generation/verification, webhook signature validation, timing-safe comparisons        |
+| **Error conditions**      | Missing required fields, duplicate detection, exceeding limits                            |
 
 ### ❌ Do Not Test
 
-| Category | Reason |
-|----------|--------|
+| Category                   | Reason                   |
+| -------------------------- | ------------------------ |
 | Elysia framework internals | Framework responsibility |
-| Database driver behavior | Not your code |
-| External API responses | Mock them instead |
-| Next.js rendering | Covered by E2E |
+| Database driver behavior   | Not your code            |
+| External API responses     | Mock them instead        |
+| Next.js rendering          | Covered by E2E           |
 
 ---
 
@@ -323,7 +331,10 @@ export const mockWalletsRepository = {
   findMany: mock(async () => ({ rows: [], total: 0 })),
   findById: mock(async () => null),
   create: mock(async (data: any) => ({ id: "test-id", ...data })),
-  update: mock(async (id: string, _workspaceId: string, data: any) => ({ id, ...data })),
+  update: mock(async (id: string, _workspaceId: string, data: any) => ({
+    id,
+    ...data,
+  })),
   delete: mock(async () => ({ id: "test-id" })),
 };
 ```
@@ -377,12 +388,12 @@ bun test --coverage modules/wallets
 
 ## Performance Targets
 
-| Metric | Target | Current |
-|--------|--------|---------|
-| Total test execution | < 200ms | ~134ms ✅ |
-| Per-test average | < 1ms | ~0.34ms ✅ |
-| DB required | Never (unit tests) | ❌ No ✅ |
-| External deps | Never (all mocked) | ❌ None ✅ |
-| Flaky tests | Zero | 0 ✅ |
+| Metric               | Target             | Current    |
+| -------------------- | ------------------ | ---------- |
+| Total test execution | < 200ms            | ~134ms ✅  |
+| Per-test average     | < 1ms              | ~0.34ms ✅ |
+| DB required          | Never (unit tests) | ❌ No ✅   |
+| External deps        | Never (all mocked) | ❌ None ✅ |
+| Flaky tests          | Zero               | 0 ✅       |
 
 Tests that require a real database go in `__tests__/` as **integration tests** (run separately, use `.env.test`).

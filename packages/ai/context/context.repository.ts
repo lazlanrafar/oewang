@@ -25,11 +25,16 @@ export abstract class ContextRepository {
       .from(workspaceSettings)
       .where(eq(workspaceSettings.workspaceId, workspaceId))
       .limit(1);
-    
+
     return results[0];
   }
 
-  static async getRecentTransactions(workspaceId: string, limit = 20, from?: string, to?: string) {
+  static async getRecentTransactions(
+    workspaceId: string,
+    limit = 20,
+    from?: string,
+    to?: string,
+  ) {
     const conditions = [
       eq(transactions.workspaceId, workspaceId),
       isNull(transactions.deletedAt),

@@ -6,7 +6,9 @@ import { ParsedReceipt } from "../types";
 import { log } from "../utils/logger";
 
 const OPENAI_RECEIPT_MODEL =
-  process.env.OPENAI_RECEIPT_MODEL || process.env.OPENAI_CHAT_MODEL || "gpt-5.4-mini";
+  process.env.OPENAI_RECEIPT_MODEL ||
+  process.env.OPENAI_CHAT_MODEL ||
+  "gpt-5.4-mini";
 
 export interface ReceiptProviderOptions {
   geminiKey?: string;
@@ -19,7 +21,7 @@ export abstract class ReceiptService {
     base64: string,
     mimeType: string,
     categoryContext: string,
-    options: ReceiptProviderOptions
+    options: ReceiptProviderOptions,
   ): Promise<ParsedReceipt | null> {
     const systemPrompt = `You are an AI receipt parser. Extract the relevant financial data exactly as JSON with these keys:
 {
@@ -57,7 +59,9 @@ Rules:
         const buffer = Buffer.from(base64, "base64");
         const pdfExtract = new PDFExtract();
         const data = await pdfExtract.extractBuffer(buffer);
-        pdfText = data.pages.map((p: any) => p.content.map((i: any) => i.str).join(" ")).join("\n");
+        pdfText = data.pages
+          .map((p: any) => p.content.map((i: any) => i.str).join(" "))
+          .join("\n");
       } catch (e: any) {
         log.error("PDF parse failed", { error: e.message || e });
       }
@@ -151,7 +155,15 @@ Rules:
                         amount: { type: "number" },
                         categoryId: { type: ["string", "null"] },
                       },
-                      required: ["name", "brand", "quantity", "unit", "unitPrice", "amount", "categoryId"],
+                      required: [
+                        "name",
+                        "brand",
+                        "quantity",
+                        "unit",
+                        "unitPrice",
+                        "amount",
+                        "categoryId",
+                      ],
                     },
                   },
                 },
@@ -192,9 +204,13 @@ Rules:
           system: systemPrompt,
           messages: [{ role: "user", content: messagesContent }],
         });
-        const textBlock = response.content.find((b): b is Anthropic.TextBlock => b.type === "text");
+        const textBlock = response.content.find(
+          (b): b is Anthropic.TextBlock => b.type === "text",
+        );
         if (textBlock) {
-          const parsed = JSON.parse(textBlock.text.trim().replace(/```json|```/g, ""));
+          const parsed = JSON.parse(
+            textBlock.text.trim().replace(/```json|```/g, ""),
+          );
           return parsed;
         }
       } catch (e: any) {

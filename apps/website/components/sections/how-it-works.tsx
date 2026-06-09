@@ -2,8 +2,8 @@
 
 import { useRef } from "react";
 
-import { useGsapReveal } from "@/lib/use-gsap-reveal";
 import type { WebsiteDictionary } from "@/lib/translations";
+import { useGsapReveal } from "@/lib/use-gsap-reveal";
 
 export function HowItWorksSection({ dictionary }: { dictionary: WebsiteDictionary }) {
   const ref = useRef<HTMLElement>(null);
@@ -13,12 +13,8 @@ export function HowItWorksSection({ dictionary }: { dictionary: WebsiteDictionar
     <section id="capture" ref={ref} className="bg-background py-18 sm:py-24">
       <div className="mx-auto max-w-[1300px] px-4 sm:px-6 lg:px-8">
         <div className="max-w-2xl">
-          <p className="mb-3 text-muted-foreground text-xs uppercase tracking-[0.22em]">
-            {dictionary.capture.label}
-          </p>
-          <h2 className="font-serif text-3xl text-foreground tracking-tight sm:text-4xl">
-            {dictionary.capture.title}
-          </h2>
+          <p className="mb-3 text-muted-foreground text-xs uppercase tracking-[0.22em]">{dictionary.capture.label}</p>
+          <h2 className="font-serif text-3xl text-foreground tracking-tight sm:text-4xl">{dictionary.capture.title}</h2>
           <p className="mt-4 text-base text-muted-foreground leading-relaxed">{dictionary.capture.subtitle}</p>
         </div>
 

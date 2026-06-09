@@ -7,11 +7,14 @@ async function test() {
   log.info("Starting WhatsApp Web test...");
   try {
     const client = new Client({
-      authStrategy: new LocalAuth({ clientId: "test-bot", dataPath: "./.test_wwebjs_auth" }),
+      authStrategy: new LocalAuth({
+        clientId: "test-bot",
+        dataPath: "./.test_wwebjs_auth",
+      }),
       puppeteer: {
         headless: true,
         args: ["--no-sandbox"],
-      }
+      },
     });
 
     client.on("qr", (qr) => {

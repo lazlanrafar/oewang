@@ -18,12 +18,12 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTransition } from "react";
 
-const CellActions = ({ 
-  row, 
-  plans 
-}: { 
-  row: { original: SystemAdminWorkspace },
-  plans: SystemAdminPlan[]
+const CellActions = ({
+  row,
+  plans,
+}: {
+  row: { original: SystemAdminWorkspace };
+  plans: SystemAdminPlan[];
 }) => {
   const workspace = row.original;
   const router = useRouter();
@@ -60,8 +60,8 @@ const CellActions = ({
           Change Plan
         </DropdownMenuLabel>
         {plans.map((plan) => (
-          <DropdownMenuItem 
-            key={plan.id} 
+          <DropdownMenuItem
+            key={plan.id}
             onClick={() => handlePlanChange(plan.id, plan.name)}
             disabled={workspace.plan_id === plan.id}
           >
@@ -80,7 +80,9 @@ const CellActions = ({
   );
 };
 
-export const getWorkspaceColumns = (plans: SystemAdminPlan[]): ColumnDef<SystemAdminWorkspace>[] => [
+export const getWorkspaceColumns = (
+  plans: SystemAdminPlan[],
+): ColumnDef<SystemAdminWorkspace>[] => [
   {
     accessorKey: "name",
     header: "Name",
@@ -98,7 +100,9 @@ export const getWorkspaceColumns = (plans: SystemAdminPlan[]): ColumnDef<SystemA
     cell: ({ row }) => (
       <div className="flex flex-col truncate">
         <span className="font-medium truncate">{row.original.name}</span>
-        <span className="text-[10px] text-muted-foreground truncate">{row.original.slug}</span>
+        <span className="text-[10px] text-muted-foreground truncate">
+          {row.original.slug}
+        </span>
       </div>
     ),
   },
@@ -119,19 +123,21 @@ export const getWorkspaceColumns = (plans: SystemAdminPlan[]): ColumnDef<SystemA
 
       return (
         <div className="flex items-center gap-2">
-          <Badge 
+          <Badge
             variant="outline"
             className={
-              planName.toLowerCase().includes("pro") 
+              planName.toLowerCase().includes("pro")
                 ? "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800"
                 : planName.toLowerCase().includes("business")
-                ? "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800"
-                : "bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700"
+                  ? "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800"
+                  : "bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700"
             }
           >
             {planName}
           </Badge>
-          <span className="text-[10px] text-muted-foreground uppercase">{status}</span>
+          <span className="text-[10px] text-muted-foreground uppercase">
+            {status}
+          </span>
         </div>
       );
     },
@@ -144,7 +150,9 @@ export const getWorkspaceColumns = (plans: SystemAdminPlan[]): ColumnDef<SystemA
       headerLabel: "AI Tokens",
     },
     cell: ({ getValue }) => (
-      <span className="text-sm">{(getValue<number>() || 0).toLocaleString()}</span>
+      <span className="text-sm">
+        {(getValue<number>() || 0).toLocaleString()}
+      </span>
     ),
   },
   {

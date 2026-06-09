@@ -1,6 +1,8 @@
 type MaybeRecord = Record<string, unknown>;
 
-function readMessageFromRecord(value: MaybeRecord | null | undefined): string | null {
+function readMessageFromRecord(
+  value: MaybeRecord | null | undefined,
+): string | null {
   if (!value) return null;
 
   const direct = value.message;

@@ -13,7 +13,7 @@ async function main() {
     sql`CREATE INDEX IF NOT EXISTS vault_file_chunks_embedding_idx
         ON vault_file_chunks
         USING hnsw (embedding vector_cosine_ops)
-        WITH (m = 16, ef_construction = 64)`
+        WITH (m = 16, ef_construction = 64)`,
   );
   console.log("✓ HNSW index created on vault_file_chunks.embedding");
 }
@@ -24,4 +24,3 @@ main()
     console.error("Failed to setup vector:", err);
     process.exit(1);
   });
-

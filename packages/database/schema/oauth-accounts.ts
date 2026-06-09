@@ -17,5 +17,10 @@ export const oauth_accounts = pgTable(
     created_at: timestamp("created_at").defaultNow().notNull(),
     updated_at: timestamp("updated_at").defaultNow().notNull(),
   },
-  (t) => [uniqueIndex("oauth_accounts_provider_uid_idx").on(t.provider, t.provider_user_id)],
+  (t) => [
+    uniqueIndex("oauth_accounts_provider_uid_idx").on(
+      t.provider,
+      t.provider_user_id,
+    ),
+  ],
 );

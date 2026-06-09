@@ -14,7 +14,10 @@ export interface CommandSuggestion {
   keywords: string[];
 }
 
-function getDateRangeFromPreset(preset?: ShortcutDateRangePreset): { from?: string; to?: string } {
+function getDateRangeFromPreset(preset?: ShortcutDateRangePreset): {
+  from?: string;
+  to?: string;
+} {
   const now = new Date();
 
   switch (preset) {

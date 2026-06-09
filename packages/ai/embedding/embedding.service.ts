@@ -28,8 +28,8 @@ export abstract class EmbeddingService {
     const embeddings: number[][] = [];
 
     for (let i = 0; i < texts.length; i += BATCH_SIZE) {
-      const batch = texts.slice(i, i + BATCH_SIZE).map((t) =>
-        t.replace(/\n/g, " ").trim().slice(0, 8191), // API limit
+      const batch = texts.slice(i, i + BATCH_SIZE).map(
+        (t) => t.replace(/\n/g, " ").trim().slice(0, 8191), // API limit
       );
 
       try {

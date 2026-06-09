@@ -147,9 +147,18 @@ export function RevenueCanvas({ dataOverride }: { dataOverride?: Record<string, 
               title={t("chat.canvas.revenue.monthly_income_trend", "Monthly Income Trend")}
               legend={{
                 items: [
-                  { label: t("chat.canvas.revenue.legend_this_year", "This Year"), type: "solid" },
-                  { label: t("chat.canvas.revenue.legend_last_year", "Last Year"), type: "solid" },
-                  { label: t("chat.canvas.common.average", "Average"), type: "pattern" },
+                  {
+                    label: t("chat.canvas.revenue.legend_this_year", "This Year"),
+                    type: "solid",
+                  },
+                  {
+                    label: t("chat.canvas.revenue.legend_last_year", "Last Year"),
+                    type: "solid",
+                  },
+                  {
+                    label: t("chat.canvas.common.average", "Average"),
+                    type: "pattern",
+                  },
                 ],
               }}
               isLoading={shouldShowMetricsSkeleton(stage)}
@@ -208,7 +217,12 @@ export function RevenueCanvas({ dataOverride }: { dataOverride?: Record<string, 
                         <TableCell className="text-[12px] text-black dark:text-white">{transaction.vendor}</TableCell>
                         <TableCell className="text-[12px] text-black dark:text-white">{transaction.category}</TableCell>
                         <TableCell className="text-right font-sans text-[12px] text-black dark:text-white">
-                          {formatAmount({ amount, currency, locale, maximumFractionDigits: 0 })}
+                          {formatAmount({
+                            amount,
+                            currency,
+                            locale,
+                            maximumFractionDigits: 0,
+                          })}
                         </TableCell>
                         <TableCell className="text-right text-[#707070] text-[12px] dark:text-[#666666]">
                           {share.toFixed(1)}%

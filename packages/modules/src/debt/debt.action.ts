@@ -1,6 +1,11 @@
 "use server";
 
-import type { ActionResponse, ApiResponse, Debt, DebtPayment } from "@workspace/types";
+import type {
+  ActionResponse,
+  ApiResponse,
+  Debt,
+  DebtPayment,
+} from "@workspace/types";
 import { axiosInstance as api } from "../lib/axios.server";
 
 export interface DebtWithContact extends Debt {
@@ -56,7 +61,7 @@ export const updateDebt = async (
     description?: string;
     dueDate?: string;
     status?: "unpaid" | "partial" | "paid";
-  }
+  },
 ): Promise<ActionResponse<Debt>> => {
   try {
     const res = await api.patch(`/debts/${id}`, data);
@@ -74,7 +79,7 @@ export const payDebt = async (
   data: {
     amount: number | string;
     walletId?: string;
-  }
+  },
 ): Promise<ActionResponse<DebtPayment>> => {
   try {
     const res = await api.post(`/debts/${id}/pay`, data);
@@ -141,8 +146,7 @@ export const bulkDeleteDebts = async (
   } catch (error: any) {
     return {
       success: false,
-      error:
-        error.response?.data?.message || "Failed to delete some debts",
+      error: error.response?.data?.message || "Failed to delete some debts",
     };
   }
 };

@@ -17,7 +17,9 @@ export const axiosInstance = axios.create({
         if (value === undefined || value === null || value === "") continue;
 
         if (Array.isArray(value)) {
-          value.forEach((v) => { searchParams.append(key, String(v)); });
+          value.forEach((v) => {
+            searchParams.append(key, String(v));
+          });
         } else {
           searchParams.set(key, String(value));
         }
@@ -99,7 +101,10 @@ axiosInstance.interceptors.response.use(
             const decrypted = decrypt(error.response.data.data, secret);
             const parsed: ApiResponse<unknown> = JSON.parse(decrypted);
             error.response.data = parsed;
-            if (typeof parsed.message === "string" && parsed.message.length > 0) {
+            if (
+              typeof parsed.message === "string" &&
+              parsed.message.length > 0
+            ) {
               error.message = parsed.message;
             }
           } catch (e) {

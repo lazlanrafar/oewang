@@ -50,9 +50,10 @@ import { WalletsService } from "./wallets.service";
 import { createWalletBody } from "./wallets.dto";
 
 export const walletsController = new Elysia()
-  .use(authPlugin)             // injects `auth` into context
-  .use(encryptionPlugin)       // encrypts all responses
-  .derive(({ auth }) => ({     // pull only what you need
+  .use(authPlugin) // injects `auth` into context
+  .use(encryptionPlugin) // encrypts all responses
+  .derive(({ auth }) => ({
+    // pull only what you need
     workspaceId: auth?.workspace_id,
     userId: auth?.user_id,
   }))
@@ -83,16 +84,21 @@ export const walletsController = new Elysia()
         "/",
         async ({ auth, workspaceId, userId, body, set }) => {
           assertCanEditWorkspaceData(auth?.workspace_role);
-          const data = await WalletsService.createWallet(workspaceId!, userId!, body);
+          const data = await WalletsService.createWallet(
+            workspaceId!,
+            userId!,
+            body,
+          );
           set.status = 201;
           return buildSuccess(data, "Wallet created");
         },
         { body: createWalletBody },
-      )
+      ),
   );
 ```
 
 **Controller MUST:**
+
 - Be an Elysia instance (not a class bound to `Context`)
 - Use method chaining — every `.get()`, `.post()`, `.use()` chained
 - Destructure only needed values from context, pass them to service
@@ -101,6 +107,7 @@ export const walletsController = new Elysia()
 - Wrap all groups with `assertCanEditWorkspaceData()` for mutation routes
 
 **Controller MUST NOT:**
+
 - Contain business logic or data transformation
 - Import `@workspace/database` or call repositories directly
 - Pass the entire `context` object to a service method
@@ -136,10 +143,17 @@ export abstract class WalletsService {
     data: { name: string; groupId?: string | null; balance?: string },
   ) {
     const balance = data.balance ? parseFloat(data.balance) : 0;
-    const wallet = await WalletsRepository.create({ workspaceId, ...data, balance });
+    const wallet = await WalletsRepository.create({
+      workspaceId,
+      ...data,
+      balance,
+    });
 
     if (!wallet) {
-      throw status(500, buildError(ErrorCode.INTERNAL_ERROR, "Failed to create wallet"));
+      throw status(
+        500,
+        buildError(ErrorCode.INTERNAL_ERROR, "Failed to create wallet"),
+      );
     }
 
     // Always log after every successful mutation
@@ -160,6 +174,7 @@ export abstract class WalletsService {
 ```
 
 **Service MUST:**
+
 - Use `abstract class` + `static` for all non-HTTP-context services
 - Call `AuditLogsService.log()` after **every** successful mutation
 - Use `throw status(httpCode, buildError(...))` for error responses
@@ -167,6 +182,7 @@ export abstract class WalletsService {
 - Call `RealtimeService.notifyValueChange()` after data mutations
 
 **Service MUST NOT:**
+
 - Import `@workspace/database` (only repositories may)
 - Accept or reference Elysia `Context` directly
 - Contain TypeBox validation (belongs in controller)
@@ -218,6 +234,7 @@ export abstract class WalletsRepository {
 ```
 
 **Repository MUST:**
+
 - Be the ONLY layer importing `@workspace/database`
 - Use `static` methods — no class instantiation
 - Include `workspaceId` filter on **every** query — no exceptions
@@ -276,13 +293,17 @@ export const encryptionPlugin = (app: Elysia) =>
 ```ts
 // Throw errors from service layer with status + structured body
 throw status(404, buildError(ErrorCode.NOT_FOUND, "Wallet not found"));
-throw status(500, buildError(ErrorCode.INTERNAL_ERROR, "Failed to create wallet"));
+throw status(
+  500,
+  buildError(ErrorCode.INTERNAL_ERROR, "Failed to create wallet"),
+);
 
 // Return structured error from controller
 return buildError(ErrorCode.UNAUTHORIZED, "Unauthorized");
 ```
 
 Global `onError` in `apps/api/index.ts` handles:
+
 - `VALIDATION` → 400 + `ErrorCode.VALIDATION_ERROR`
 - `NOT_FOUND` → 404 + `ErrorCode.NOT_FOUND`
 - Numeric HTTP codes (from `status()`) → pass-through
@@ -290,6 +311,7 @@ Global `onError` in `apps/api/index.ts` handles:
 - Fallback → 500 + `ErrorCode.INTERNAL_ERROR`
 
 **HTTP status mapping:**
+
 ```
 400 — validation
 401 — unauthenticated
@@ -383,10 +405,10 @@ The `/v1/realtime` WebSocket is workspace-scoped:
 
 ## Rate Limits
 
-| Scenario | Limit |
-|----------|-------|
-| Authenticated (per `workspace_id`) | 300 req/min |
-| Unauthenticated (per IP) | 30 req/min |
+| Scenario                             | Limit        |
+| ------------------------------------ | ------------ |
+| Authenticated (per `workspace_id`)   | 300 req/min  |
+| Unauthenticated (per IP)             | 30 req/min   |
 | Auth endpoints `/v1/auth/*` (per IP) | 10 req/15min |
 
 Headers always returned: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`

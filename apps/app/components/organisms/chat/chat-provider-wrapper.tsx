@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useEffect, useMemo } from "react";
+import { type ReactNode, useEffect, useMemo, useRef } from "react";
 
 import { Provider as ChatProvider, createChatStore } from "@ai-sdk-tools/store";
 import { sendChatMessage } from "@workspace/modules/ai/ai.action";
@@ -14,9 +14,10 @@ interface Props {
 
 export function ChatProviderWrapper({ children, initialMessages }: Props) {
   const { chatId, setChatId } = useChatInterface();
+  const isAbortedRef = useRef(false);
 
   // Create a stable store instance
-  const store = useMemo(() => createChatStore(initialMessages || []), [initialMessages]);
+  const store = useMemo(() => createChatStore((initialMessages as any) || []), [initialMessages]);
 
   useEffect(() => {
     if (chatId) {
@@ -28,7 +29,7 @@ export function ChatProviderWrapper({ children, initialMessages }: Props) {
   }, [store, chatId]);
 
   useEffect(() => {
-    // Inject our custom sendMessage into the store
+    // Inject our custom sendMessage and stop into the store
     const state = store.getState() as any;
     if (state._syncState) {
       state._syncState({
@@ -40,6 +41,7 @@ export function ChatProviderWrapper({ children, initialMessages }: Props) {
 
           let userMessage: UIMessage;
           let attachments = options?.metadata?.attachments as Record<string, unknown>[];
+          const webSearch = options?.metadata?.webSearch as boolean | undefined;
 
           if (typeof input === "string") {
             userMessage = {
@@ -93,7 +95,10 @@ export function ChatProviderWrapper({ children, initialMessages }: Props) {
               };
             });
 
-            const response = await sendChatMessage(backendMessages, chatId || undefined, attachments as any);
+            isAbortedRef.current = false;
+            const response = await sendChatMessage(backendMessages, chatId || undefined, attachments as any, webSearch);
+
+            if (isAbortedRef.current) return;
 
             if (response.success && response.data) {
               const parts: any[] = [{ type: "text", text: response.data.reply }];
@@ -149,9 +154,14 @@ export function ChatProviderWrapper({ children, initialMessages }: Props) {
               throw errorObj;
             }
           } catch (error: unknown) {
+            if (isAbortedRef.current) return;
             state.setError(error as Error);
             state.setStatus("error");
           }
+        },
+        stop: () => {
+          isAbortedRef.current = true;
+          state.setStatus("ready");
         },
       });
     }

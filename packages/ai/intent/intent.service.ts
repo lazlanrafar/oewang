@@ -9,7 +9,10 @@ export abstract class IntentService {
       if (prevMessage && prevMessage.role === "assistant") {
         const content = prevMessage.content.toLowerCase();
         // If the assistant was asking for clarification of a transaction (e.g. "Dari akun mana?" or "Kategori:")
-        if (content.includes("dari akun mana?") || content.includes("kategori:")) {
+        if (
+          content.includes("dari akun mana?") ||
+          content.includes("kategori:")
+        ) {
           return "create_transaction";
         }
       }

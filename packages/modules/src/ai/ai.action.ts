@@ -46,6 +46,7 @@ export async function sendChatMessage(
   messages: ChatMessage[],
   sessionId?: string,
   attachments?: { name: string; type: string; data: string }[],
+  webSearch?: boolean,
 ): Promise<AiChatResponse> {
   try {
     const messagesWithAttachments = [...messages];
@@ -64,6 +65,7 @@ export async function sendChatMessage(
     const response = await api.post("/ai/chat", {
       messages: messagesWithAttachments,
       sessionId,
+      webSearch,
     });
     const apiResponse = (response as any)._api_response;
     const data = (apiResponse?.data ??

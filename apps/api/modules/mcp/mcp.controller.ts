@@ -17,7 +17,8 @@ import { createMcpServer } from "./mcp-server";
 
 const log = createLogger("mcp");
 
-const apiUrl = () => Env.API_BASE_URL ?? `http://localhost:${Env.API_PORT ?? 3002}`;
+const apiUrl = () =>
+  Env.API_BASE_URL ?? `http://localhost:${Env.API_PORT ?? 3002}`;
 const appUrl = () => Env.APP_URL ?? "http://localhost:3000";
 
 function generateToken(): string {
@@ -80,9 +81,16 @@ export const mcpController = new Elysia()
   .post("/oauth/register", async ({ body, set }) => {
     const { client_name, redirect_uris } = body as any;
 
-    if (!client_name || !Array.isArray(redirect_uris) || redirect_uris.length === 0) {
+    if (
+      !client_name ||
+      !Array.isArray(redirect_uris) ||
+      redirect_uris.length === 0
+    ) {
       set.status = 400;
-      return { error: "invalid_request", error_description: "client_name and redirect_uris are required" };
+      return {
+        error: "invalid_request",
+        error_description: "client_name and redirect_uris are required",
+      };
     }
 
     const clientId = `oewang_${randomBytes(12).toString("hex")}`;
@@ -122,7 +130,8 @@ export const mcpController = new Elysia()
 
   .post("/oauth/code", async ({ set, body: rawBody, headers }) => {
     // Verify the caller is a logged-in app user (Bearer = app JWT)
-    const authHeader = (headers as any).authorization ?? (headers as any).Authorization ?? "";
+    const authHeader =
+      (headers as any).authorization ?? (headers as any).Authorization ?? "";
     if (!authHeader.startsWith("Bearer ")) {
       set.status = 401;
       return { error: "unauthorized" };
@@ -140,7 +149,9 @@ export const mcpController = new Elysia()
     }
 
     const user_id = payload.user_id as string | undefined;
-    const workspace_id = (payload.workspace_id ?? payload.workspaceId) as string | undefined;
+    const workspace_id = (payload.workspace_id ?? payload.workspaceId) as
+      | string
+      | undefined;
     if (!user_id || !workspace_id) {
       set.status = 401;
       return { error: "invalid_token" };
@@ -186,12 +197,18 @@ export const mcpController = new Elysia()
 
     if (grant_type !== "authorization_code") {
       set.status = 400;
-      return { error: "unsupported_grant_type", error_description: "Only authorization_code is supported" };
+      return {
+        error: "unsupported_grant_type",
+        error_description: "Only authorization_code is supported",
+      };
     }
 
     if (!code || !client_id) {
       set.status = 400;
-      return { error: "invalid_request", error_description: "code and client_id are required" };
+      return {
+        error: "invalid_request",
+        error_description: "code and client_id are required",
+      };
     }
 
     const authCode = await db.query.mcp_auth_codes.findFirst({
@@ -205,27 +222,40 @@ export const mcpController = new Elysia()
 
     if (!authCode) {
       set.status = 400;
-      return { error: "invalid_grant", error_description: "Authorization code is invalid or expired" };
+      return {
+        error: "invalid_grant",
+        error_description: "Authorization code is invalid or expired",
+      };
     }
 
     if (redirect_uri && authCode.redirect_uri !== redirect_uri) {
       set.status = 400;
-      return { error: "invalid_grant", error_description: "redirect_uri mismatch" };
+      return {
+        error: "invalid_grant",
+        error_description: "redirect_uri mismatch",
+      };
     }
 
     if (authCode.code_challenge) {
       if (!code_verifier) {
         set.status = 400;
-        return { error: "invalid_request", error_description: "code_verifier required" };
+        return {
+          error: "invalid_request",
+          error_description: "code_verifier required",
+        };
       }
       if (!verifyPkce(code_verifier, authCode.code_challenge)) {
         set.status = 400;
-        return { error: "invalid_grant", error_description: "PKCE verification failed" };
+        return {
+          error: "invalid_grant",
+          error_description: "PKCE verification failed",
+        };
       }
     }
 
     // Mark code as used
-    await db.update(mcp_auth_codes)
+    await db
+      .update(mcp_auth_codes)
       .set({ used: true })
       .where(eq(mcp_auth_codes.id, authCode.id));
 
@@ -251,11 +281,17 @@ export const mcpController = new Elysia()
   // ── HTTP MCP endpoint ─────────────────────────────────────────────────────────────────
 
   .all("/mcp", async ({ request, set, headers, body: elysiaBody }) => {
-    const tokenRow = await validateBearerToken((headers as any).authorization ?? null);
+    const tokenRow = await validateBearerToken(
+      (headers as any).authorization ?? null,
+    );
 
     if (!tokenRow) {
       return new Response(
-        JSON.stringify({ error: "unauthorized", error_description: "Bearer token required. Use OAuth to authenticate." }),
+        JSON.stringify({
+          error: "unauthorized",
+          error_description:
+            "Bearer token required. Use OAuth to authenticate.",
+        }),
         {
           status: 401,
           headers: {
@@ -266,7 +302,10 @@ export const mcpController = new Elysia()
       );
     }
 
-    log.info("MCP request", { user_id: tokenRow.user_id, workspace_id: tokenRow.workspace_id });
+    log.info("MCP request", {
+      user_id: tokenRow.user_id,
+      workspace_id: tokenRow.workspace_id,
+    });
 
     const transport = new WebStandardStreamableHTTPServerTransport({
       sessionIdGenerator: undefined, // stateless mode
@@ -282,7 +321,10 @@ export const mcpController = new Elysia()
       mcpRequest = new Request(request.url, {
         method: "POST",
         headers: request.headers,
-        body: typeof elysiaBody === "string" ? elysiaBody : JSON.stringify(elysiaBody),
+        body:
+          typeof elysiaBody === "string"
+            ? elysiaBody
+            : JSON.stringify(elysiaBody),
       });
     }
 

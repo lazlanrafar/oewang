@@ -8,16 +8,16 @@ This document defines the **non-negotiable coding standards** for oewang. Every 
 
 ## Naming Conventions
 
-| Context | Convention | Example |
-|---------|-----------|---------|
-| Local variables, data objects, DB fields | `snake_case` | `workspace_id`, `created_at`, `user_id` |
-| React props and interface/type keys | `camelCase` | `workspaceId`, `createdAt`, `userId` |
-| Files and directories | `kebab-case` | `wallet-groups.ts`, `audit-logs/` |
-| React components | `PascalCase` | `TransactionList`, `WalletCard` |
-| TypeScript types and interfaces | `PascalCase` | `WorkspaceRole`, `ApiResponse<T>` |
-| Constants objects | `SCREAMING_SNAKE_CASE` | `ErrorCode`, `ROLES`, `SYSTEM_ROLES` |
-| Elysia controller exports | `camelCase` | `walletsController`, `authController` |
-| Test names | `should {behavior} when {condition}` | `should return 404 when wallet not found` |
+| Context                                  | Convention                           | Example                                   |
+| ---------------------------------------- | ------------------------------------ | ----------------------------------------- |
+| Local variables, data objects, DB fields | `snake_case`                         | `workspace_id`, `created_at`, `user_id`   |
+| React props and interface/type keys      | `camelCase`                          | `workspaceId`, `createdAt`, `userId`      |
+| Files and directories                    | `kebab-case`                         | `wallet-groups.ts`, `audit-logs/`         |
+| React components                         | `PascalCase`                         | `TransactionList`, `WalletCard`           |
+| TypeScript types and interfaces          | `PascalCase`                         | `WorkspaceRole`, `ApiResponse<T>`         |
+| Constants objects                        | `SCREAMING_SNAKE_CASE`               | `ErrorCode`, `ROLES`, `SYSTEM_ROLES`      |
+| Elysia controller exports                | `camelCase`                          | `walletsController`, `authController`     |
+| Test names                               | `should {behavior} when {condition}` | `should return 404 when wallet not found` |
 
 > **Note on DB columns:** The database schema uses `camelCase` column names (e.g., `workspaceId`, `createdAt`) via Drizzle ORM's mapping, while the underlying PostgreSQL columns follow `snake_case`. When writing Drizzle queries, always use the camelCase property names from the schema definitions.
 
@@ -135,6 +135,7 @@ Always include `workspace_id` and `user_id` in error/warn log context for tracea
 ## Linting & Formatting
 
 **Biome** (`@biomejs/biome`) is the single tool for both linting and formatting:
+
 - **2-space indent**
 - **80-character line width**
 - Config: `biome.json` at repo root
@@ -230,7 +231,8 @@ No cross-workspace joins. No global queries without explicit super-admin role ch
 
 ```ts
 // ✅ Soft delete
-await db.update(wallets)
+await db
+  .update(wallets)
   .set({ deletedAt: new Date().toISOString() })
   .where(and(eq(wallets.id, id), eq(wallets.workspaceId, workspaceId)));
 
@@ -241,6 +243,7 @@ await db.delete(wallets).where(eq(wallets.id, id));
 ### Input Validation
 
 All incoming data validated with TypeBox in the controller before the service layer:
+
 - Invalid input → `400` + `ErrorCode.VALIDATION_ERROR` — never reaches service
 - Sanitize strings: trim whitespace, normalize currency codes to uppercase
 - File uploads: validate MIME type and file size server-side before storing to bucket
@@ -271,18 +274,19 @@ should {expected behaviour} when {condition}
 ```
 
 Examples:
+
 - `should return 404 when wallet does not exist`
 - `should throw 403 when user is not a workspace member`
 - `should not return soft-deleted wallets`
 
 ### Coverage Requirements
 
-| Layer | Test Type | Minimum |
-|-------|-----------|---------|
-| Utils (`.utils.ts`) | Unit | ≥ 90% branch |
-| Service | Unit (repository mocked) | ≥ 80% branch |
-| Repository | Integration (real test DB) | ≥ 1 happy + 1 error path per method |
-| Controller | Integration (HTTP) | All status codes + input validation |
+| Layer               | Test Type                  | Minimum                             |
+| ------------------- | -------------------------- | ----------------------------------- |
+| Utils (`.utils.ts`) | Unit                       | ≥ 90% branch                        |
+| Service             | Unit (repository mocked)   | ≥ 80% branch                        |
+| Repository          | Integration (real test DB) | ≥ 1 happy + 1 error path per method |
+| Controller          | Integration (HTTP)         | All status codes + input validation |
 
 ### Running Tests
 
@@ -307,13 +311,13 @@ Current test baseline: **399 unit tests** across 12 modules + **115+ E2E tests**
 
 ## Git Branching
 
-| Branch | Usage |
-|--------|-------|
-| `main` | Production — **never commit directly** |
-| `dev` | Development integration — **never commit directly** |
-| `feature/{name}` | New features |
-| `fix/{name}` | Bug fixes |
-| `chore/{name}` | Maintenance, dependency updates |
+| Branch           | Usage                                               |
+| ---------------- | --------------------------------------------------- |
+| `main`           | Production — **never commit directly**              |
+| `dev`            | Development integration — **never commit directly** |
+| `feature/{name}` | New features                                        |
+| `fix/{name}`     | Bug fixes                                           |
+| `chore/{name}`   | Maintenance, dependency updates                     |
 
 - Open a PR for every change
 - Check for open PRs on the same module before starting work
@@ -371,11 +375,11 @@ Every successful mutation MUST produce an audit log entry:
 await AuditLogsService.log({
   workspace_id: workspaceId,
   user_id: userId,
-  action: "wallet.created",    // format: "entity.verb"
+  action: "wallet.created", // format: "entity.verb"
   entity: "wallet",
   entity_id: wallet.id,
-  before: null,                // null for creates
-  after: wallet,               // null for deletes
+  before: null, // null for creates
+  after: wallet, // null for deletes
 });
 ```
 
@@ -399,12 +403,12 @@ This triggers WebSocket events to all clients subscribed to the workspace channe
 
 ## Observability
 
-| Signal | Tool | Where |
-|--------|------|-------|
-| Errors (server) | Sentry | `apps/api/instrument.ts` (first import in index.ts) |
-| Errors (client) | Sentry | `apps/app/instrumentation.ts` + `sentry.client.config.ts` |
-| Structured logs | `@workspace/logger` (Pino) | All `apps/api` and packages |
-| Request logs | `loggerPlugin` | `apps/api/plugins/logger.ts` |
+| Signal          | Tool                       | Where                                                     |
+| --------------- | -------------------------- | --------------------------------------------------------- |
+| Errors (server) | Sentry                     | `apps/api/instrument.ts` (first import in index.ts)       |
+| Errors (client) | Sentry                     | `apps/app/instrumentation.ts` + `sentry.client.config.ts` |
+| Structured logs | `@workspace/logger` (Pino) | All `apps/api` and packages                               |
+| Request logs    | `loggerPlugin`             | `apps/api/plugins/logger.ts`                              |
 
 **Never attach to Sentry events:** passwords · decrypted payloads · JWT tokens · encryption keys
 

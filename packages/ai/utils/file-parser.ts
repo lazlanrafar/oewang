@@ -8,11 +8,12 @@ import type { AiInput } from "../types";
 export function parseFileToAiInput(
   buffer: Buffer | Uint8Array,
   mimeType: string,
-  filename?: string
+  filename?: string,
 ): AiInput {
   const isTabular =
     mimeType === "text/csv" ||
-    mimeType === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+    mimeType ===
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
     filename?.endsWith(".csv") ||
     filename?.endsWith(".xlsx");
 

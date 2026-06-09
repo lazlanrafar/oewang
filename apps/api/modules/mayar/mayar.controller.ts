@@ -34,7 +34,10 @@ export const mayarController = new Elysia({
         await MayarService.handleWebhook(body, token);
         return { success: true };
       } catch (err: any) {
-        logger.error("Mayar webhook failed", { err: err.message, stack: err.stack });
+        logger.error("Mayar webhook failed", {
+          err: err.message,
+          stack: err.stack,
+        });
         set.status = 500;
         return { success: false, error: "Webhook processing failed" };
       }

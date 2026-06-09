@@ -78,7 +78,9 @@ export const switchWorkspaceAction = async (
 ): Promise<ActionResponse<void>> => {
   try {
     // 1. Update active workspace in DB via API
-    await axiosInstance.patch("users/me/workspace", { workspaceId: workspace_id });
+    await axiosInstance.patch("users/me/workspace", {
+      workspaceId: workspace_id,
+    });
 
     // 2. Refresh app JWT to embed the new workspace_id
     const refreshResponse = await axiosInstance.post("auth/refresh", {});

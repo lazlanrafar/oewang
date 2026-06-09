@@ -47,7 +47,11 @@ test.describe("Workspace: Vault", () => {
 
   test("should render the Upload button", async ({ page, dictionary }) => {
     // The button has a Plus icon + text "Upload" — match by role with partial name
-    await expect(page.getByRole("button", { name: new RegExp(dictionary.vault.upload_button, "i") })).toBeVisible();
+    await expect(
+      page.getByRole("button", {
+        name: new RegExp(dictionary.vault.upload_button, "i"),
+      }),
+    ).toBeVisible();
   });
 
   test("should display storage usage progress bar", async ({ page }) => {
@@ -91,7 +95,9 @@ test.describe("Workspace: Vault", () => {
     const fileChooserPromise = page.waitForEvent("filechooser");
     // Click any button or element that triggers the file input click
     await page
-      .getByRole("button", { name: new RegExp(dictionary.vault.upload_button, "i") })
+      .getByRole("button", {
+        name: new RegExp(dictionary.vault.upload_button, "i"),
+      })
       .first()
       .click();
     const fileChooser = await fileChooserPromise;
@@ -107,7 +113,9 @@ test.describe("Workspace: Vault", () => {
     const successToast = page.getByText(dictionary.vault.toasts.upload_success);
     const fileInList = page.getByText(fileName);
 
-    await expect(successToast.or(fileInList).first()).toBeVisible({ timeout: 60000 });
+    await expect(successToast.or(fileInList).first()).toBeVisible({
+      timeout: 60000,
+    });
   });
 
   test("should search for a file", async ({ page, dictionary }) => {

@@ -26,7 +26,7 @@ export function getGatewayPrice(
   if (isFree(plan) && billing !== "addon") return null;
   const price = plan.prices?.find((p) => p.currency === currency);
   if (!price) return null;
-  
+
   if (billing === "annual" && price.mayar_yearly_id)
     return price.mayar_yearly_id;
   if (billing === "monthly" && price.mayar_monthly_id)
@@ -75,10 +75,15 @@ export function displayPrice(
   return { label: "Free" };
 }
 
-export function getPlanLimits(plan: Pricing, extras?: { extra_vault_size_mb?: number; extra_ai_tokens?: number }) {
-  const vaultLimitMb = (plan.max_vault_size_mb || 0) + (extras?.extra_vault_size_mb || 0);
-  const aiLimitTokens = (plan.max_ai_tokens || 0) + (extras?.extra_ai_tokens || 0);
-  
+export function getPlanLimits(
+  plan: Pricing,
+  extras?: { extra_vault_size_mb?: number; extra_ai_tokens?: number },
+) {
+  const vaultLimitMb =
+    (plan.max_vault_size_mb || 0) + (extras?.extra_vault_size_mb || 0);
+  const aiLimitTokens =
+    (plan.max_ai_tokens || 0) + (extras?.extra_ai_tokens || 0);
+
   return {
     vaultLimitBytes: vaultLimitMb * 1024 * 1024,
     aiLimitTokens,

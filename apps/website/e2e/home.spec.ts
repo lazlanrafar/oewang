@@ -29,9 +29,7 @@ test.describe("homepage", () => {
   test("no horizontal overflow on mobile", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/en");
-    const overflow = await page.evaluate(
-      () => document.documentElement.scrollWidth > window.innerWidth,
-    );
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
     expect(overflow).toBe(false);
   });
 });
@@ -51,7 +49,9 @@ test.describe("header navigation", () => {
     const menuLink = page.locator('[href="#capture"]').nth(1);
     await expect(menuLink).toBeVisible();
     await menuLink.click();
-    await expect(page.getByRole("button", { name: "Open menu" })).toBeVisible({ timeout: 3000 });
+    await expect(page.getByRole("button", { name: "Open menu" })).toBeVisible({
+      timeout: 3000,
+    });
   });
 });
 

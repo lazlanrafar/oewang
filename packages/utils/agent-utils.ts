@@ -31,7 +31,7 @@ export const getStatusMessage = (status?: AgentStatus | null) => {
   }
 
   // Handle a possible "completing" or "rendering" state if sent by the backend
-  if (state as string === "completing" || state as string === "rendering") {
+  if ((state as string) === "completing" || (state as string) === "rendering") {
     return "Generating analysis...";
   }
 

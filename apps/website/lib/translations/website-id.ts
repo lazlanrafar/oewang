@@ -41,8 +41,7 @@ export const websiteId = {
   clarity: {
     label: "Kejelasan",
     title: "Semua transaksi Anda, disatukan.",
-    subtitle:
-      "Setiap pemasukan dan pengeluaran dicatat, dicari, dan dikategorikan agar uang harian tetap jelas.",
+    subtitle: "Setiap pemasukan dan pengeluaran dicatat, dicari, dan dikategorikan agar uang harian tetap jelas.",
     items: [
       "Kategorisasi otomatis dengan AI",
       "Cari dan filter secara instan",
@@ -53,8 +52,7 @@ export const websiteId = {
   ai: {
     label: "AI",
     title: "Tanyakan apa saja tentang keuangan Anda.",
-    subtitle:
-      "Dapatkan jawaban instan tentang pengeluaran, pendapatan, dan tren Anda. Tidak perlu mencari laporan.",
+    subtitle: "Dapatkan jawaban instan tentang pengeluaran, pendapatan, dan tren Anda. Tidak perlu mencari laporan.",
     items: ["Kueri bahasa alami", "Wawasan real-time", "Ringkasan mingguan", "Sistem AI multi-agen"],
   },
   workspaces: {

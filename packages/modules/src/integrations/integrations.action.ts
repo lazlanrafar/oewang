@@ -40,8 +40,8 @@ export async function disconnectIntegrationAction(
   } catch (error: any) {
     return {
       success: false,
-      error: error.response?.data?.message || "Failed to disconnect integration",
+      error:
+        error.response?.data?.message || "Failed to disconnect integration",
     };
   }
 }
-

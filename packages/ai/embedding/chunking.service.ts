@@ -4,7 +4,7 @@ export interface TextChunk {
   tokenCount: number;
 }
 
-const CHUNK_SIZE = 1000;   // characters per chunk
+const CHUNK_SIZE = 1000; // characters per chunk
 const CHUNK_OVERLAP = 200; // overlap between consecutive chunks
 
 // Rough token estimate: 1 token ≈ 4 characters for English/mixed text
@@ -43,7 +43,10 @@ export abstract class ChunkingService {
    * Tries to break on sentence boundaries within each chunk.
    */
   static chunk(text: string): TextChunk[] {
-    const cleaned = text.replace(/\r\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+    const cleaned = text
+      .replace(/\r\n/g, "\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
     if (!cleaned) return [];
 
     const chunks: TextChunk[] = [];
@@ -115,7 +118,8 @@ export abstract class ChunkingService {
     // Excel / CSV
     if (
       type === "application/vnd.ms-excel" ||
-      type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+      type ===
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
       type === "text/csv"
     ) {
       try {

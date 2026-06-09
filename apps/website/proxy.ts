@@ -14,7 +14,9 @@ function getLocale(request: NextRequest): string | undefined {
     negotiatorHeaders[key] = value;
   });
 
-  const rawLanguages = new Negotiator({ headers: negotiatorHeaders }).languages();
+  const rawLanguages = new Negotiator({
+    headers: negotiatorHeaders,
+  }).languages();
   const normalizedLanguages = rawLanguages.map((lang) => {
     const lower = lang.toLowerCase();
     if (lower.startsWith("id")) return "id";

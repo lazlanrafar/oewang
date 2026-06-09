@@ -171,14 +171,7 @@ const PRICING_COPY = {
   },
 };
 
-export function PricingSection({
-  appUrl,
-  locale,
-}: {
-  appUrl: string;
-  locale: string;
-  dictionary: WebsiteDictionary;
-}) {
+export function PricingSection({ appUrl, locale }: { appUrl: string; locale: string; dictionary: WebsiteDictionary }) {
   const copy = PRICING_COPY[locale as keyof typeof PRICING_COPY] ?? PRICING_COPY.en;
 
   const plans = [
@@ -216,7 +209,9 @@ export function PricingSection({
     <section className="bg-background py-14 sm:py-18 lg:py-24">
       <div className="mx-auto max-w-[1300px] px-4 sm:px-6 lg:px-8">
         <div className="mx-auto mb-10 max-w-3xl space-y-4 text-center sm:mb-14">
-          <h1 className="font-serif text-3xl text-foreground tracking-tight sm:text-5xl">Affordable pricing for daily tracking</h1>
+          <h1 className="font-serif text-3xl text-foreground tracking-tight sm:text-5xl">
+            Affordable pricing for daily tracking
+          </h1>
           <p className="text-base text-muted-foreground leading-normal">Start free, upgrade when you need more room.</p>
         </div>
 

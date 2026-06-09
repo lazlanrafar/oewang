@@ -15,7 +15,9 @@ function getLocale(request: NextRequest): string | undefined {
 
   // @ts-expect-error locales are readonly
   const locales: string[] = i18n.locales;
-  const languages = new Negotiator({ headers: negotiatorHeaders }).languages(locales);
+  const languages = new Negotiator({ headers: negotiatorHeaders }).languages(
+    locales,
+  );
 
   return matchLocale(languages, locales, i18n.defaultLocale);
 }
@@ -24,7 +26,10 @@ async function hasAdminAccess(token: string): Promise<boolean> {
   try {
     const secret = process.env.JWT_SECRET;
     if (!secret) return false;
-    const { payload } = await jwtVerify(token, new TextEncoder().encode(secret));
+    const { payload } = await jwtVerify(
+      token,
+      new TextEncoder().encode(secret),
+    );
     return payload.system_role === "superadmin";
   } catch {
     return false;
@@ -34,15 +39,24 @@ async function hasAdminAccess(token: string): Promise<boolean> {
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
-  if (["/manifest.json", "/favicon.ico", "/robots.txt", "/sitemap.xml"].includes(pathname)) return;
+  if (
+    ["/manifest.json", "/favicon.ico", "/robots.txt", "/sitemap.xml"].includes(
+      pathname,
+    )
+  )
+    return;
 
   const pathnameIsMissingLocale = i18n.locales.every(
-    (locale) => !pathname.startsWith(`/${locale}/`) && pathname !== `/${locale}`,
+    (locale) =>
+      !pathname.startsWith(`/${locale}/`) && pathname !== `/${locale}`,
   );
 
   if (pathnameIsMissingLocale) {
     const locale = getLocale(request);
-    const url = new URL(`/${locale}${pathname.startsWith("/") ? "" : "/"}${pathname}`, request.url);
+    const url = new URL(
+      `/${locale}${pathname.startsWith("/") ? "" : "/"}${pathname}`,
+      request.url,
+    );
     url.search = request.nextUrl.search;
     return NextResponse.redirect(url);
   }
@@ -68,16 +82,23 @@ export async function proxy(request: NextRequest) {
 
     const isAdmin = await hasAdminAccess(token);
     if (!isAdmin) {
-      return NextResponse.redirect(new URL(`/${locale}/unauthorized`, request.url));
+      return NextResponse.redirect(
+        new URL(`/${locale}/unauthorized`, request.url),
+      );
     }
   }
 
-  if ((pathAfterLocale === "/login" || pathAfterLocale === "/register") && token) {
+  if (
+    (pathAfterLocale === "/login" || pathAfterLocale === "/register") &&
+    token
+  ) {
     const isAdmin = await hasAdminAccess(token);
     if (isAdmin) {
       return NextResponse.redirect(new URL(`/${locale}/overview`, request.url));
     }
-    return NextResponse.redirect(new URL(`/${locale}/unauthorized`, request.url));
+    return NextResponse.redirect(
+      new URL(`/${locale}/unauthorized`, request.url),
+    );
   }
 
   return response;

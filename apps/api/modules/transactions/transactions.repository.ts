@@ -462,8 +462,9 @@ export abstract class TransactionsRepository {
       );
   }
 
-  static async runTransaction<T>(callback: (tx: any) => Promise<T>): Promise<T> {
+  static async runTransaction<T>(
+    callback: (tx: any) => Promise<T>,
+  ): Promise<T> {
     return db.transaction(callback);
   }
 }
-

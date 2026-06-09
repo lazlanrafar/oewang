@@ -2,11 +2,10 @@
 
 import { useCallback, useMemo, useState } from "react";
 
-import type { Column } from "@tanstack/react-table";
-
 import { useRouter } from "next/navigation";
 
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import type { Column } from "@tanstack/react-table";
 import type { Dictionary } from "@workspace/dictionaries";
 import { type DebtWithContact, deleteDebt, getContact, getDebts } from "@workspace/modules/client";
 import type { Contact, TransactionSettings, Wallet } from "@workspace/types";

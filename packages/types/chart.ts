@@ -46,8 +46,15 @@ export interface ExpensesChartProps extends BaseChartProps {
   valueLabel?: string;
   title?: string;
   enableSelection?: boolean;
-  onSelectionChange?: (startDate: string | null, endDate: string | null) => void;
-  onSelectionComplete?: (startDate: string, endDate: string, chartType: string) => void;
+  onSelectionChange?: (
+    startDate: string | null,
+    endDate: string | null,
+  ) => void;
+  onSelectionComplete?: (
+    startDate: string,
+    endDate: string,
+    chartType: string,
+  ) => void;
   onSelectionStateChange?: (isSelecting: boolean) => void;
 }
 
@@ -67,8 +74,15 @@ export interface RunwayChartProps extends BaseChartProps {
   locale?: string;
   displayMode?: "currency" | "months";
   enableSelection?: boolean;
-  onSelectionChange?: (startDate: string | null, endDate: string | null) => void;
-  onSelectionComplete?: (startDate: string, endDate: string, chartType: string) => void;
+  onSelectionChange?: (
+    startDate: string | null,
+    endDate: string | null,
+  ) => void;
+  onSelectionComplete?: (
+    startDate: string,
+    endDate: string,
+    chartType: string,
+  ) => void;
   onSelectionStateChange?: (isSelecting: boolean) => void;
 }
 
@@ -87,8 +101,15 @@ export interface BurnRateChartProps {
   currency?: string;
   locale?: string;
   enableSelection?: boolean;
-  onSelectionChange?: (startDate: string | null, endDate: string | null) => void;
-  onSelectionComplete?: (startDate: string, endDate: string, chartType: string) => void;
+  onSelectionChange?: (
+    startDate: string | null,
+    endDate: string | null,
+  ) => void;
+  onSelectionComplete?: (
+    startDate: string,
+    endDate: string,
+    chartType: string,
+  ) => void;
   onSelectionStateChange?: (isSelecting: boolean) => void;
 }
 
@@ -138,8 +159,15 @@ export interface MonthlyRevenueChartProps {
   currency?: string;
   locale?: string;
   enableSelection?: boolean;
-  onSelectionChange?: (startDate: string | null, endDate: string | null) => void;
-  onSelectionComplete?: (startDate: string, endDate: string, chartType: string) => void;
+  onSelectionChange?: (
+    startDate: string | null,
+    endDate: string | null,
+  ) => void;
+  onSelectionComplete?: (
+    startDate: string,
+    endDate: string,
+    chartType: string,
+  ) => void;
   onSelectionStateChange?: (isSelecting: boolean) => void;
 }
 
@@ -186,8 +214,15 @@ export interface RevenueTrendChartProps {
   currency?: string;
   locale?: string;
   enableSelection?: boolean;
-  onSelectionChange?: (startDate: string | null, endDate: string | null) => void;
-  onSelectionComplete?: (startDate: string, endDate: string, chartType: string) => void;
+  onSelectionChange?: (
+    startDate: string | null,
+    endDate: string | null,
+  ) => void;
+  onSelectionComplete?: (
+    startDate: string,
+    endDate: string,
+    chartType: string,
+  ) => void;
 }
 
 export interface ProfitData extends Record<string, unknown> {
@@ -208,8 +243,15 @@ export interface ProfitChartProps {
   currency?: string;
   locale?: string;
   enableSelection?: boolean;
-  onSelectionChange?: (startDate: string | null, endDate: string | null) => void;
-  onSelectionComplete?: (startDate: string, endDate: string, chartType: string) => void;
+  onSelectionChange?: (
+    startDate: string | null,
+    endDate: string | null,
+  ) => void;
+  onSelectionComplete?: (
+    startDate: string,
+    endDate: string,
+    chartType: string,
+  ) => void;
   onSelectionStateChange?: (isSelecting: boolean) => void;
 }
 
@@ -250,8 +292,15 @@ export interface StackedBarChartProps extends Omit<BaseChartProps, "data"> {
   data: StackedBarData;
   locale?: string;
   enableSelection?: boolean;
-  onSelectionChange?: (startDate: string | null, endDate: string | null) => void;
-  onSelectionComplete?: (startDate: string, endDate: string, chartType: string) => void;
+  onSelectionChange?: (
+    startDate: string | null,
+    endDate: string | null,
+  ) => void;
+  onSelectionComplete?: (
+    startDate: string,
+    endDate: string,
+    chartType: string,
+  ) => void;
   onSelectionStateChange?: (isSelecting: boolean) => void;
 }
 
@@ -275,14 +324,24 @@ export interface ForecastData extends Record<string, unknown> {
   breakdown?: ForecastBreakdown | null;
 }
 
-export interface RevenueForecastChartProps extends Omit<BaseChartProps, "data"> {
+export interface RevenueForecastChartProps extends Omit<
+  BaseChartProps,
+  "data"
+> {
   data?: ForecastData[];
   currency?: string;
   locale?: string;
   forecastStartIndex?: number;
   enableSelection?: boolean;
-  onSelectionChange?: (startDate: string | null, endDate: string | null) => void;
-  onSelectionComplete?: (startDate: string, endDate: string, chartType: string) => void;
+  onSelectionChange?: (
+    startDate: string | null,
+    endDate: string | null,
+  ) => void;
+  onSelectionComplete?: (
+    startDate: string,
+    endDate: string,
+    chartType: string,
+  ) => void;
   onSelectionStateChange?: (isSelecting: boolean) => void;
   height?: number;
 }

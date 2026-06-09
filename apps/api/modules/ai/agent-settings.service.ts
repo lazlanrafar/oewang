@@ -20,7 +20,8 @@ function rowToSettings(row: {
     temperature: parseFloat(row.temperature),
     maxSteps: row.max_steps,
     customInstructions: row.custom_instructions,
-    responseLanguage: row.response_language as AgentSettings["responseLanguage"],
+    responseLanguage:
+      row.response_language as AgentSettings["responseLanguage"],
   };
 }
 
@@ -52,19 +53,25 @@ export abstract class AgentSettingsService {
     return settings;
   }
 
-  static async update(workspaceId: string, patch: {
-    model?: string | undefined;
-    temperature?: number | undefined;
-    max_steps?: number | undefined;
-    custom_instructions?: string | null | undefined;
-    response_language?: string | undefined;
-  }) {
+  static async update(
+    workspaceId: string,
+    patch: {
+      model?: string | undefined;
+      temperature?: number | undefined;
+      max_steps?: number | undefined;
+      custom_instructions?: string | null | undefined;
+      response_language?: string | undefined;
+    },
+  ) {
     const dbPatch: Record<string, any> = {};
     if (patch.model !== undefined) dbPatch.model = patch.model;
-    if (patch.temperature !== undefined) dbPatch.temperature = String(patch.temperature.toFixed(2));
+    if (patch.temperature !== undefined)
+      dbPatch.temperature = String(patch.temperature.toFixed(2));
     if (patch.max_steps !== undefined) dbPatch.max_steps = patch.max_steps;
-    if ("custom_instructions" in patch) dbPatch.custom_instructions = patch.custom_instructions;
-    if (patch.response_language !== undefined) dbPatch.response_language = patch.response_language;
+    if ("custom_instructions" in patch)
+      dbPatch.custom_instructions = patch.custom_instructions;
+    if (patch.response_language !== undefined)
+      dbPatch.response_language = patch.response_language;
     const row = await AgentSettingsRepository.upsert(workspaceId, dbPatch);
 
     // Bust cache so next request picks up the new settings

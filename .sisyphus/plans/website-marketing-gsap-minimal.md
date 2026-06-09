@@ -5,6 +5,7 @@
 > **Quick Summary**: Refactor `apps/website` into a minimal, editorial, single-page marketing experience inspired by Shopify Editions Winter 2026, using GSAP for restrained scroll/reveal motion while preserving localized routes and legal pages.
 >
 > **Deliverables**:
+>
 > - One polished localized homepage at `apps/website/app/[locale]/page.tsx`
 > - Simplified anchor-based header/footer
 > - GSAP dependency and scoped reduced-motion-safe animation system
@@ -20,16 +21,20 @@
 ## Context
 
 ### Original Request
+
 “Refactor my website marketing to using gsap style but minimalism. single page application for the moment. remove other page and follow this references website by shopify https://www.shopify.com/editions/winter2026”
 
 ### Interview Summary
+
 **Key Discussions**:
+
 - Route strategy: preserve legal pages only; consolidate/remove marketing/product/resource pages.
 - GSAP approach: install GSAP rather than relying on CSS-only motion.
 - Testing: tests-after with Playwright E2E plus mandatory agent-executed QA.
 - Localization: keep `en`, `id`, and `ja` locale support.
 
 **Research Findings**:
+
 - `apps/website/app/[locale]/page.tsx` currently composes `Header`, `HeroSection`, `HowItWorksSection`, `FeatureShowcases`, `CTASection`, and `Footer`.
 - Existing routes under `apps/website/app/[locale]/` include `agents`, `chat`, `computer`, `customers`, `docs`, `download`, `features`, `integrations`, `policy`, `pre-accounting`, `pricing`, `sdks`, `story`, `support`, `terms`, `testimonials`, and `updates`.
 - `apps/website/components/layout/header.tsx` currently has multi-page navigation and mega menus.
@@ -39,7 +44,9 @@
 - Reference analysis: Shopify Editions Winter 2026 uses a story-led editorial long page, sticky/anchor navigation, media-led proof, calm spacing, contextual CTAs, and section-by-section reveal motion.
 
 ### Metis Review
+
 **Identified Gaps** (addressed):
+
 - Brand tone was not explicitly chosen; default to premium minimalist fintech/editorial.
 - Legal route handling needed explicit guardrail; preserve `terms` and `policy` only.
 - Scope creep risk: avoid rebuilding product features, dashboard UI, API, or exact Shopify clone.
@@ -50,9 +57,11 @@
 ## Work Objectives
 
 ### Core Objective
+
 Transform the marketing website into a single-page, premium minimalist landing experience with restrained GSAP motion and a Shopify Editions-inspired editorial structure, while keeping Oewang’s own brand, copy, locale system, and legal pages.
 
 ### Concrete Deliverables
+
 - `apps/website/package.json` updated with GSAP dependency.
 - New or refactored minimal motion utilities/components under `apps/website/components` or `apps/website/lib`.
 - Refactored homepage at `apps/website/app/[locale]/page.tsx`.
@@ -63,6 +72,7 @@ Transform the marketing website into a single-page, premium minimalist landing e
 - Updated SEO/sitemap metadata and E2E tests.
 
 ### Definition of Done
+
 - [ ] `bun run --cwd apps/website build` passes.
 - [ ] `bun run --cwd apps/website typecheck` passes.
 - [ ] `bun run --cwd apps/website lint` passes.
@@ -72,6 +82,7 @@ Transform the marketing website into a single-page, premium minimalist landing e
 - [ ] `terms` and `policy` remain reachable for all supported locales.
 
 ### Must Have
+
 - Single-page localized marketing homepage with anchor navigation.
 - Minimal GSAP reveal/scroll animations only where they add editorial polish.
 - Legal pages preserved: `terms` and `policy`.
@@ -79,6 +90,7 @@ Transform the marketing website into a single-page, premium minimalist landing e
 - Original Oewang brand/copy; no copied Shopify copy, imagery, or exact visual identity.
 
 ### Must NOT Have (Guardrails)
+
 - Do not modify `apps/app`, `apps/api`, database, auth, payment, or product dashboard code.
 - Do not copy Shopify text, assets, section labels, or brand-specific design elements.
 - Do not add heavy scroll-jacking or inaccessible motion.
@@ -93,12 +105,14 @@ Transform the marketing website into a single-page, premium minimalist landing e
 > **ZERO HUMAN INTERVENTION** - ALL verification is agent-executed. No exceptions.
 
 ### Test Decision
+
 - **Infrastructure exists**: YES
 - **Automated tests**: Tests-after
 - **Framework**: Playwright E2E for website; TypeScript/Biome/build for static verification
 - **If TDD**: Not selected
 
 ### QA Policy
+
 Every task MUST include agent-executed QA scenarios. Evidence saved to `.sisyphus/evidence/task-{N}-{scenario-slug}.{ext}`.
 
 - **Frontend/UI**: Use Playwright - navigate, interact, assert DOM, screenshot.
@@ -1292,20 +1306,20 @@ Wave FINAL:
 > 4 review agents run in PARALLEL. ALL must APPROVE. Present consolidated results to user and get explicit "okay" before completing.
 
 - [ ] F1. **Plan Compliance Audit** — `oracle`
-  Read this plan end-to-end. For each Must Have, verify implementation exists. For each Must NOT Have, search codebase for forbidden patterns. Verify evidence files exist in `.sisyphus/evidence/`. Confirm legal routes are preserved and other marketing pages are removed/redirected.
-  Output: `Must Have [N/N] | Must NOT Have [N/N] | Tasks [N/N] | VERDICT: APPROVE/REJECT`
+      Read this plan end-to-end. For each Must Have, verify implementation exists. For each Must NOT Have, search codebase for forbidden patterns. Verify evidence files exist in `.sisyphus/evidence/`. Confirm legal routes are preserved and other marketing pages are removed/redirected.
+      Output: `Must Have [N/N] | Must NOT Have [N/N] | Tasks [N/N] | VERDICT: APPROVE/REJECT`
 
 - [ ] F2. **Code Quality Review** — `unspecified-high`
-  Run `bun run --cwd apps/website typecheck`, `lint`, `build`, and `test:e2e`. Review changed files for `as any`, `@ts-ignore`, empty catches, `console.log`, unused imports, excessive comments, over-abstraction, and unnecessary client components.
-  Output: `Build [PASS/FAIL] | Lint [PASS/FAIL] | Tests [PASS/FAIL] | Files [N clean/N issues] | VERDICT`
+      Run `bun run --cwd apps/website typecheck`, `lint`, `build`, and `test:e2e`. Review changed files for `as any`, `@ts-ignore`, empty catches, `console.log`, unused imports, excessive comments, over-abstraction, and unnecessary client components.
+      Output: `Build [PASS/FAIL] | Lint [PASS/FAIL] | Tests [PASS/FAIL] | Files [N clean/N issues] | VERDICT`
 
 - [ ] F3. **Real Manual QA** — `unspecified-high` + `playwright`
-  Start from clean state. Execute every QA scenario from every task. Test homepage, anchors, mobile menu, reduced motion, locale switching, legal pages, redirects, and final CTA flows. Save evidence to `.sisyphus/evidence/final-qa/`.
-  Output: `Scenarios [N/N pass] | Integration [N/N] | Edge Cases [N tested] | VERDICT`
+      Start from clean state. Execute every QA scenario from every task. Test homepage, anchors, mobile menu, reduced motion, locale switching, legal pages, redirects, and final CTA flows. Save evidence to `.sisyphus/evidence/final-qa/`.
+      Output: `Scenarios [N/N pass] | Integration [N/N] | Edge Cases [N tested] | VERDICT`
 
 - [ ] F4. **Scope Fidelity Check** — `deep`
-  Compare actual diff against this plan. Verify only `apps/website` and dependency lockfiles were changed. Confirm no `apps/app`, `apps/api`, database, auth, payment, or dashboard scope creep. Confirm Shopify reference was used for structure only, not copied content/assets.
-  Output: `Tasks [N/N compliant] | Scope [CLEAN/N issues] | Unaccounted [CLEAN/N files] | VERDICT`
+      Compare actual diff against this plan. Verify only `apps/website` and dependency lockfiles were changed. Confirm no `apps/app`, `apps/api`, database, auth, payment, or dashboard scope creep. Confirm Shopify reference was used for structure only, not copied content/assets.
+      Output: `Tasks [N/N compliant] | Scope [CLEAN/N issues] | Unaccounted [CLEAN/N files] | VERDICT`
 
 ---
 
@@ -1324,6 +1338,7 @@ Wave FINAL:
 ## Success Criteria
 
 ### Verification Commands
+
 ```bash
 bun run --cwd apps/website typecheck  # Expected: exit 0
 bun run --cwd apps/website lint       # Expected: exit 0
@@ -1332,6 +1347,7 @@ bun run --cwd apps/website test:e2e   # Expected: exit 0
 ```
 
 ### Final Checklist
+
 - [ ] Homepage is a single-page editorial marketing experience.
 - [ ] GSAP is installed and motion is minimal, scoped, and reduced-motion safe.
 - [ ] Header/footer use anchors/legal/app links only.

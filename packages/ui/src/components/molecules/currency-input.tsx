@@ -3,8 +3,10 @@ import * as React from "react";
 import { cn } from "../../lib/utils";
 import { Input } from "../atoms/input";
 
-interface CurrencyInputProps
-  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "onChange"> {
+interface CurrencyInputProps extends Omit<
+  React.InputHTMLAttributes<HTMLInputElement>,
+  "onChange"
+> {
   value: number;
   onChange: (value: number) => void;
   currencySymbol?: string;

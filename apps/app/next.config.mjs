@@ -1,6 +1,7 @@
+import { withSentryConfig } from "@sentry/nextjs";
+
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { withSentryConfig } from "@sentry/nextjs";
 
 const currentDir = dirname(fileURLToPath(import.meta.url));
 

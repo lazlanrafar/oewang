@@ -42,7 +42,10 @@ export abstract class InvoicesRepository {
         .limit(limit)
         .offset(offset)
         .orderBy(desc(invoices.createdAt)),
-      db.select({ count: sql`count(*)` }).from(invoices).where(where),
+      db
+        .select({ count: sql`count(*)` })
+        .from(invoices)
+        .where(where),
     ]);
 
     return {

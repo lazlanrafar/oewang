@@ -252,7 +252,8 @@ export abstract class IntegrationsService {
   static async getAll(workspace_id: string) {
     const key = integrationsKey(workspace_id);
     const cached = await cacheGet<object[]>(key);
-    if (cached) return buildSuccess(cached, "Integrations retrieved successfully");
+    if (cached)
+      return buildSuccess(cached, "Integrations retrieved successfully");
 
     const integrations = await IntegrationsRepository.findAll(workspace_id);
     await cacheSet(key, integrations, INTEGRATIONS_TTL);
@@ -538,7 +539,9 @@ export abstract class IntegrationsService {
     );
 
     if (!response.ok) {
-      logger.error("Failed to send Telegram message", { body: await response.text() });
+      logger.error("Failed to send Telegram message", {
+        body: await response.text(),
+      });
     }
   }
 

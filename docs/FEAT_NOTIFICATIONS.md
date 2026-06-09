@@ -25,48 +25,48 @@ The Notifications system alerts users about critical account events (budget thre
 
 Stores individual notification logs generated for users in a workspace.
 
-| Column | Type | Notes |
-|--------|------|-------|
-| `id` | `text` (CUID2) | Primary key |
-| `workspace_id` | `text` FK → workspaces | Workspace link |
-| `user_id` | `text` FK → users | Target recipient user |
-| `type` | `text` | e.g. `budget.exceeded`, `integration.connected`, `subscription.expiring` |
-| `title` | `text` | Header title text |
-| `message` | `text` | Main body content |
-| `is_read` | `boolean` | Read status. Default `false` |
-| `link` | `text` | Target redirect URL inside the application dashboard |
-| `created_at` | `timestamp` | Auto |
-| `deleted_at` | `timestamp` | Soft delete support |
+| Column         | Type                   | Notes                                                                    |
+| -------------- | ---------------------- | ------------------------------------------------------------------------ |
+| `id`           | `text` (CUID2)         | Primary key                                                              |
+| `workspace_id` | `text` FK → workspaces | Workspace link                                                           |
+| `user_id`      | `text` FK → users      | Target recipient user                                                    |
+| `type`         | `text`                 | e.g. `budget.exceeded`, `integration.connected`, `subscription.expiring` |
+| `title`        | `text`                 | Header title text                                                        |
+| `message`      | `text`                 | Main body content                                                        |
+| `is_read`      | `boolean`              | Read status. Default `false`                                             |
+| `link`         | `text`                 | Target redirect URL inside the application dashboard                     |
+| `created_at`   | `timestamp`            | Auto                                                                     |
+| `deleted_at`   | `timestamp`            | Soft delete support                                                      |
 
 ### `notification_settings` table
 
 User preferences for notification delivery channels.
 
-| Column | Type | Notes |
-|--------|------|-------|
-| `id` | `text` (CUID2) | Primary key |
-| `workspace_id` | `text` FK → workspaces | Workspace link |
-| `user_id` | `text` FK → users | User link |
-| `email_enabled` | `boolean` | Allow email alerts. Default `true` |
-| `whatsapp_enabled` | `boolean` | Allow WhatsApp alerts (Pro plan feature). Default `true` |
-| `push_enabled` | `boolean` | Allow browser push notifications. Default `true` |
-| `marketing_enabled` | `boolean` | Allow news and feature updates. Default `false` |
-| `created_at` | `timestamp` | Auto |
-| `updated_at` | `timestamp` | Auto |
-| `deleted_at` | `timestamp` | Soft delete support |
+| Column              | Type                   | Notes                                                    |
+| ------------------- | ---------------------- | -------------------------------------------------------- |
+| `id`                | `text` (CUID2)         | Primary key                                              |
+| `workspace_id`      | `text` FK → workspaces | Workspace link                                           |
+| `user_id`           | `text` FK → users      | User link                                                |
+| `email_enabled`     | `boolean`              | Allow email alerts. Default `true`                       |
+| `whatsapp_enabled`  | `boolean`              | Allow WhatsApp alerts (Pro plan feature). Default `true` |
+| `push_enabled`      | `boolean`              | Allow browser push notifications. Default `true`         |
+| `marketing_enabled` | `boolean`              | Allow news and feature updates. Default `false`          |
+| `created_at`        | `timestamp`            | Auto                                                     |
+| `updated_at`        | `timestamp`            | Auto                                                     |
+| `deleted_at`        | `timestamp`            | Soft delete support                                      |
 
 ### `push_subscriptions` table
 
 Saves browser Web Push subscription tokens.
 
-| Column | Type | Notes |
-|--------|------|-------|
-| `id` | `text` (CUID2) | Primary key |
-| `user_id` | `text` FK → users | User link |
-| `workspace_id` | `text` FK → workspaces | Workspace link |
-| `endpoint` | `text` | Unique browser push service URL (e.g. google / mozilla push endpoint) |
-| `subscription` | `text` | Full JSON string representation of the browser's `PushSubscription` object |
-| `created_at` | `timestamp` | Auto |
+| Column         | Type                   | Notes                                                                      |
+| -------------- | ---------------------- | -------------------------------------------------------------------------- |
+| `id`           | `text` (CUID2)         | Primary key                                                                |
+| `user_id`      | `text` FK → users      | User link                                                                  |
+| `workspace_id` | `text` FK → workspaces | Workspace link                                                             |
+| `endpoint`     | `text`                 | Unique browser push service URL (e.g. google / mozilla push endpoint)      |
+| `subscription` | `text`                 | Full JSON string representation of the browser's `PushSubscription` object |
+| `created_at`   | `timestamp`            | Auto                                                                       |
 
 ---
 
@@ -76,30 +76,30 @@ Saves browser Web Push subscription tokens.
 
 Base path: `/v1/notifications`
 
-| Method | Path | Role Required | Description |
-|--------|------|--------------|-------------|
-| `GET` | `/` | User | List paginated notifications for the active workspace |
-| `PATCH` | `/mark-read` | User | Mark specified notifications as read |
-| `DELETE` | `/:id` | User | Soft-delete a notification |
+| Method   | Path         | Role Required | Description                                           |
+| -------- | ------------ | ------------- | ----------------------------------------------------- |
+| `GET`    | `/`          | User          | List paginated notifications for the active workspace |
+| `PATCH`  | `/mark-read` | User          | Mark specified notifications as read                  |
+| `DELETE` | `/:id`       | User          | Soft-delete a notification                            |
 
 ### Notification Settings
 
 Base path: `/v1/notification-settings`
 
-| Method | Path | Role Required | Description |
-|--------|------|--------------|-------------|
-| `GET` | `/` | User | Retrieve current settings preferences |
-| `PATCH` | `/` | User | Update preferences |
+| Method  | Path | Role Required | Description                           |
+| ------- | ---- | ------------- | ------------------------------------- |
+| `GET`   | `/`  | User          | Retrieve current settings preferences |
+| `PATCH` | `/`  | User          | Update preferences                    |
 
 ### Push Subscriptions (Web Push)
 
 Base path: `/v1/push-subscriptions`
 
-| Method | Path | Role Required | Description |
-|--------|------|--------------|-------------|
-| `GET` | `/vapid-key` | Any authenticated | Retrieve the backend VAPID Public Key |
-| `POST` | `/` | User | Register a new browser `PushSubscription` |
-| `DELETE` | `/` | User | Unregister a browser subscription |
+| Method   | Path         | Role Required     | Description                               |
+| -------- | ------------ | ----------------- | ----------------------------------------- |
+| `GET`    | `/vapid-key` | Any authenticated | Retrieve the backend VAPID Public Key     |
+| `POST`   | `/`          | User              | Register a new browser `PushSubscription` |
+| `DELETE` | `/`          | User              | Unregister a browser subscription         |
 
 ---
 
@@ -108,6 +108,7 @@ Base path: `/v1/push-subscriptions`
 ### Notification Dispatch Workflow
 
 When an event triggers a notification (e.g., budget exceeded in `BudgetsService`):
+
 1. **Database Insert**: Creates a `notifications` record.
 2. **Channel Resolution**: Retrieves `notification_settings` for the user.
 3. **Dispatch Channels**:
@@ -128,21 +129,21 @@ When an event triggers a notification (e.g., budget exceeded in `BudgetsService`
 
 ## Source Files
 
-| Layer | File |
-|-------|------|
-| Schema | `packages/database/schema/notifications.ts` |
-| Schema | `packages/database/schema/notification-settings.ts` |
-| Schema | `packages/database/schema/push-subscriptions.ts` |
-| Controller | `apps/api/modules/notifications/notifications.controller.ts` |
-| Controller | `apps/api/modules/notification-settings/notification-settings.controller.ts` |
-| Controller | `apps/api/modules/push-subscriptions/push-subscriptions.controller.ts` |
-| Service | `apps/api/modules/notifications/notifications.service.ts` |
-| Service | `apps/api/modules/notification-settings/notification-settings.service.ts` |
-| Service | `apps/api/modules/push-subscriptions/push-subscriptions.service.ts` |
-| Repository | `apps/api/modules/notifications/notifications.repository.ts` |
-| Repository | `apps/api/modules/notification-settings/notification-settings.repository.ts` |
-| Repository | `apps/api/modules/push-subscriptions/push-subscriptions.repository.ts` |
-| Web Service | `apps/app/public/sw.js` (service worker implementation) |
+| Layer       | File                                                                         |
+| ----------- | ---------------------------------------------------------------------------- |
+| Schema      | `packages/database/schema/notifications.ts`                                  |
+| Schema      | `packages/database/schema/notification-settings.ts`                          |
+| Schema      | `packages/database/schema/push-subscriptions.ts`                             |
+| Controller  | `apps/api/modules/notifications/notifications.controller.ts`                 |
+| Controller  | `apps/api/modules/notification-settings/notification-settings.controller.ts` |
+| Controller  | `apps/api/modules/push-subscriptions/push-subscriptions.controller.ts`       |
+| Service     | `apps/api/modules/notifications/notifications.service.ts`                    |
+| Service     | `apps/api/modules/notification-settings/notification-settings.service.ts`    |
+| Service     | `apps/api/modules/push-subscriptions/push-subscriptions.service.ts`          |
+| Repository  | `apps/api/modules/notifications/notifications.repository.ts`                 |
+| Repository  | `apps/api/modules/notification-settings/notification-settings.repository.ts` |
+| Repository  | `apps/api/modules/push-subscriptions/push-subscriptions.repository.ts`       |
+| Web Service | `apps/app/public/sw.js` (service worker implementation)                      |
 
 ---
 

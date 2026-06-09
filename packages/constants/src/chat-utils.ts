@@ -57,9 +57,7 @@ export type InsightData = {
 /**
  * Extract insight data from getInsights tool result
  */
-export function extractInsightData(
-  parts: any[],
-): InsightData | null {
+export function extractInsightData(parts: any[]): InsightData | null {
   for (const part of parts) {
     const type = part.type as string;
     if (type === "tool-getInsights") {
@@ -117,7 +115,7 @@ export function extractArtifactTypeFromMessage(
     const type = part.type as string;
 
     if (type === "artifact" || type.startsWith("data-artifact-")) {
-      const artifactPart = part as unknown as { 
+      const artifactPart = part as unknown as {
         artifactType?: ArtifactType;
         data?: { type?: ArtifactType };
       };

@@ -111,17 +111,12 @@ export const usersController = new Elysia({ prefix: "/users" })
       }
 
       try {
-        await UsersService.updateActiveWorkspace(
-          auth.user_id,
-          workspaceId,
-        );
+        await UsersService.updateActiveWorkspace(auth.user_id, workspaceId);
         return buildSuccess(null, "Workspace switched successfully");
       } catch (error: unknown) {
         set.status = 400;
         const message =
-          error instanceof Error
-            ? error.message
-            : "Failed to switch workspace";
+          error instanceof Error ? error.message : "Failed to switch workspace";
         return buildError(ErrorCode.VALIDATION_ERROR, message);
       }
     },

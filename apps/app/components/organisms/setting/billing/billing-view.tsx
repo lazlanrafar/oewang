@@ -488,7 +488,13 @@ export function BillingView({
                               Monthly
                             </p>
                             <p className="font-medium font-serif text-xs">
-                              {totalQty} × {displayPrice(plan, "monthly", { currency, compact: true })?.label}
+                              {totalQty} ×{" "}
+                              {
+                                displayPrice(plan, "monthly", {
+                                  currency,
+                                  compact: true,
+                                })?.label
+                              }
                             </p>
                           </div>
                         )}
@@ -553,7 +559,10 @@ export function BillingView({
         <div className="flex flex-col gap-3">
           {initialAddons.map((addon) => {
             const unitPrice = addon.prices.find((p) => p.currency === currency)?.monthly || 0;
-            const price = displayPrice(addon, "monthly", { currency, compact: true });
+            const price = displayPrice(addon, "monthly", {
+              currency,
+              compact: true,
+            });
             const priceId = getGatewayPrice(addon, "addon", currency);
             const qty = addonQty[addon.id] ?? 1;
             const totalAmount = unitPrice * qty;
@@ -605,7 +614,10 @@ export function BillingView({
                           className="flex h-8 w-7 items-center justify-center text-muted-foreground transition-colors hover:bg-accent/10 disabled:opacity-40"
                           disabled={qty <= 1}
                           onClick={() =>
-                            setAddonQty((prev) => ({ ...prev, [addon.id]: Math.max(1, (prev[addon.id] ?? 1) - 1) }))
+                            setAddonQty((prev) => ({
+                              ...prev,
+                              [addon.id]: Math.max(1, (prev[addon.id] ?? 1) - 1),
+                            }))
                           }
                         >
                           <Minus className="h-3 w-3" />
@@ -618,7 +630,10 @@ export function BillingView({
                           className="flex h-8 w-7 items-center justify-center text-muted-foreground transition-colors hover:bg-accent/10 disabled:opacity-40"
                           disabled={qty >= 10}
                           onClick={() =>
-                            setAddonQty((prev) => ({ ...prev, [addon.id]: Math.min(10, (prev[addon.id] ?? 1) + 1) }))
+                            setAddonQty((prev) => ({
+                              ...prev,
+                              [addon.id]: Math.min(10, (prev[addon.id] ?? 1) + 1),
+                            }))
                           }
                         >
                           <Plus className="h-3 w-3" />
@@ -717,7 +732,10 @@ export function BillingView({
                             const amt = ZERO_DECIMAL.has((order.currency || "").toUpperCase())
                               ? order.amount
                               : order.amount / 100;
-                            return amt.toLocaleString(undefined, { style: "currency", currency: order.currency });
+                            return amt.toLocaleString(undefined, {
+                              style: "currency",
+                              currency: order.currency,
+                            });
                           })()}
                         </td>
                         <td className="p-4">

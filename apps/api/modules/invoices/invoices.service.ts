@@ -118,7 +118,10 @@ export abstract class InvoicesService {
       after: result,
     });
 
-    await cacheDel(invoiceKey(workspaceId, id), invoicePublicKey(workspaceId, id));
+    await cacheDel(
+      invoiceKey(workspaceId, id),
+      invoicePublicKey(workspaceId, id),
+    );
 
     const prevStatus = (before.invoice as any)?.status;
     const newStatus = data.status;
@@ -171,7 +174,10 @@ export abstract class InvoicesService {
       before: before?.invoice,
     });
 
-    await cacheDel(invoiceKey(workspaceId, id), invoicePublicKey(workspaceId, id));
+    await cacheDel(
+      invoiceKey(workspaceId, id),
+      invoicePublicKey(workspaceId, id),
+    );
 
     return buildSuccess(null);
   }
@@ -187,7 +193,9 @@ export abstract class InvoicesService {
 
   static async getPublicData(id: string, workspaceId: string) {
     const key = invoicePublicKey(workspaceId, id);
-    type PublicData = NonNullable<Awaited<ReturnType<typeof InvoicesRepository.findPublicById>>>;
+    type PublicData = NonNullable<
+      Awaited<ReturnType<typeof InvoicesRepository.findPublicById>>
+    >;
     const cached = await cacheGet<PublicData>(key);
     if (cached) return buildSuccess(cached);
 

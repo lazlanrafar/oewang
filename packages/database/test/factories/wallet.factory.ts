@@ -1,6 +1,6 @@
-import { faker } from '@faker-js/faker';
-import { wallets } from '../../schema/wallets';
-import { BaseFactory, type DB } from './base-factory';
+import { faker } from "@faker-js/faker";
+import { wallets } from "../../schema/wallets";
+import { BaseFactory, type DB } from "./base-factory";
 
 export interface WalletAttributes {
   id?: string;
@@ -20,7 +20,7 @@ export interface WalletAttributes {
 export class WalletFactory extends BaseFactory<WalletAttributes> {
   constructor(
     db: DB,
-    private workspaceId: string
+    private workspaceId: string,
   ) {
     super(db);
   }
@@ -30,7 +30,7 @@ export class WalletFactory extends BaseFactory<WalletAttributes> {
       id: this.generateId(),
       workspaceId: this.workspaceId,
       name: `${faker.finance.accountName()} ${faker.string.numeric(4)}`,
-      balance: '0',
+      balance: "0",
       isIncludedInTotals: true,
       sortOrder: 0,
       createdAt: new Date().toISOString(),
@@ -38,7 +38,9 @@ export class WalletFactory extends BaseFactory<WalletAttributes> {
     };
   }
 
-  protected async insert(attributes: Partial<WalletAttributes>): Promise<WalletAttributes> {
+  protected async insert(
+    attributes: Partial<WalletAttributes>,
+  ): Promise<WalletAttributes> {
     const [wallet] = await this.db
       .insert(wallets)
       .values(attributes as any)

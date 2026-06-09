@@ -182,7 +182,9 @@ export const accountColumns = (
     },
     cell: ({ getValue, table }) => {
       const balance = getValue<number>();
-      const { formatCurrency } = (table.options.meta || {}) as { formatCurrency?: (value: number) => string };
+      const { formatCurrency } = (table.options.meta || {}) as {
+        formatCurrency?: (value: number) => string;
+      };
 
       return (
         <span className="block w-full px-2 text-right font-medium font-sans text-sm">

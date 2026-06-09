@@ -34,7 +34,9 @@ Use for: create/edit forms (transactions, budgets, contacts, debts, accounts).
   <SheetContent className="flex h-full flex-col p-0">
     {/* Header — fixed, never scrolls */}
     <SheetHeader className="flex shrink-0 flex-row items-center justify-between border-b px-6 py-4 text-left">
-      <SheetTitle className="font-medium text-lg">Create Transaction</SheetTitle>
+      <SheetTitle className="font-medium text-lg">
+        Create Transaction
+      </SheetTitle>
       {/* optional action buttons */}
     </SheetHeader>
 
@@ -45,7 +47,9 @@ Use for: create/edit forms (transactions, budgets, contacts, debts, accounts).
 
     {/* Footer — fixed, never scrolls */}
     <div className="flex shrink-0 items-center justify-end gap-2 border-t px-6 py-4">
-      <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+      <Button variant="outline" onClick={() => setOpen(false)}>
+        Cancel
+      </Button>
       <Button type="submit">Save</Button>
     </div>
   </SheetContent>
@@ -53,6 +57,7 @@ Use for: create/edit forms (transactions, budgets, contacts, debts, accounts).
 ```
 
 **Rules:**
+
 - Header height: `py-4` (compact) or `py-6` (spacious). Be consistent within a feature area.
 - Title: `font-medium text-lg`. Never use `font-serif` in form headers.
 - Footer: always `border-t`, right-aligned buttons.
@@ -83,7 +88,9 @@ Use for: read-only detail views (debt detail, contact detail, account detail).
     <SheetHeader className="flex shrink-0 flex-row items-center justify-between border-b bg-muted/5 px-6 py-6 text-left">
       <div className="space-y-1">
         <SheetTitle className="font-medium text-xl">{item.name}</SheetTitle>
-        <p className="text-muted-foreground text-xs uppercase tracking-widest">{item.subtitle}</p>
+        <p className="text-muted-foreground text-xs uppercase tracking-widest">
+          {item.subtitle}
+        </p>
       </div>
       <div className="flex items-center gap-2">
         {/* edit / delete buttons */}
@@ -99,6 +106,7 @@ Use for: read-only detail views (debt detail, contact detail, account detail).
 ```
 
 **Rules:**
+
 - `bg-muted/5` on the header gives a subtle distinction from the body.
 - No footer — actions live in the header row.
 
@@ -114,10 +122,21 @@ Use for: app store cards, any sheet that showcases a logo/image at the top.
     {/* Hero — full-bleed, no horizontal padding */}
     <div className="relative flex h-[200px] w-full shrink-0 items-center justify-center overflow-hidden bg-[#fafafa] dark:bg-[#0c0c0c]">
       {/* dot-grid background */}
-      <div className="absolute inset-0 dark:hidden"
-        style={{ backgroundImage: "radial-gradient(circle, #e0e0e0 1px, transparent 1px)", backgroundSize: "10px 10px" }} />
-      <div className="absolute inset-0 hidden dark:block"
-        style={{ backgroundImage: "radial-gradient(circle, #333 1px, transparent 1px)", backgroundSize: "10px 10px" }} />
+      <div
+        className="absolute inset-0 dark:hidden"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle, #e0e0e0 1px, transparent 1px)",
+          backgroundSize: "10px 10px",
+        }}
+      />
+      <div
+        className="absolute inset-0 hidden dark:block"
+        style={{
+          backgroundImage: "radial-gradient(circle, #333 1px, transparent 1px)",
+          backgroundSize: "10px 10px",
+        }}
+      />
       {/* 64×64 logo centered */}
       <div className="relative z-10 [&_img]:!h-16 [&_img]:!w-16 [&_svg]:!h-16 [&_svg]:!w-16">
         <Logo />
@@ -129,7 +148,9 @@ Use for: app store cards, any sheet that showcases a logo/image at the top.
       <div>
         <div className="flex items-center gap-2">
           <h3 className="text-lg leading-none">{item.name}</h3>
-          {item.installed && <div className="size-1.5 rounded-full bg-green-500" />}
+          {item.installed && (
+            <div className="size-1.5 rounded-full bg-green-500" />
+          )}
         </div>
         <span className="mt-1.5 block text-muted-foreground text-xs">
           {item.category} • By Oewang
@@ -157,12 +178,12 @@ Use for: app store cards, any sheet that showcases a logo/image at the top.
 
 ## Quick Reference
 
-| Variant | `SheetContent` className | Max width | Header style |
-|---|---|---|---|
-| Form — standard | `flex h-full flex-col p-0` | 520px (default) | `border-b px-6 py-4` |
-| Form — wide | `flex h-full flex-col p-0 sm:max-w-[630px]` | ~630px | `border-b px-6 py-4` |
-| Detail — sidebar | `flex h-full flex-col p-0` | 520px (default) | `border-b bg-muted/5 px-6 py-6` |
-| Detail — hero | `flex h-full flex-col p-0` | 520px (default) | hero banner + `border-b px-6 py-4` |
+| Variant          | `SheetContent` className                    | Max width       | Header style                       |
+| ---------------- | ------------------------------------------- | --------------- | ---------------------------------- |
+| Form — standard  | `flex h-full flex-col p-0`                  | 520px (default) | `border-b px-6 py-4`               |
+| Form — wide      | `flex h-full flex-col p-0 sm:max-w-[630px]` | ~630px          | `border-b px-6 py-4`               |
+| Detail — sidebar | `flex h-full flex-col p-0`                  | 520px (default) | `border-b bg-muted/5 px-6 py-6`    |
+| Detail — hero    | `flex h-full flex-col p-0`                  | 520px (default) | hero banner + `border-b px-6 py-4` |
 
 ---
 
@@ -182,13 +203,13 @@ Use for: app store cards, any sheet that showcases a logo/image at the top.
 
 These existing sheets deviate from the standard and should be updated:
 
-| File | Issue |
-|---|---|
-| `debt-form-sheet.tsx` | Uses `rounded-none border-l shadow-none` — remove these |
-| `debt-detail-sheet.tsx` | Same — remove `rounded-none border-l shadow-none` |
-| `contact-detail-sheet.tsx` | Same — remove `rounded-none border-l shadow-none` |
-| `budget-form-sheet.tsx` | Uses default `<SheetContent>` with no `p-0` — add `className="flex h-full flex-col p-0"` |
-| `invoice-detail-sheet.tsx` | Uses default `<SheetContent>` — add `className="flex h-full flex-col p-0"` |
-| `calendar-day-sheet.tsx` | Uses `p-0` but missing `flex h-full flex-col` |
-| `transaction-form-sheet.tsx` | Missing `SheetContent` className — add `className="flex h-full flex-col p-0"` |
-| `transaction-detail-sheet.tsx` | Missing `SheetContent` className — add `className="flex h-full flex-col p-0"` |
+| File                           | Issue                                                                                    |
+| ------------------------------ | ---------------------------------------------------------------------------------------- |
+| `debt-form-sheet.tsx`          | Uses `rounded-none border-l shadow-none` — remove these                                  |
+| `debt-detail-sheet.tsx`        | Same — remove `rounded-none border-l shadow-none`                                        |
+| `contact-detail-sheet.tsx`     | Same — remove `rounded-none border-l shadow-none`                                        |
+| `budget-form-sheet.tsx`        | Uses default `<SheetContent>` with no `p-0` — add `className="flex h-full flex-col p-0"` |
+| `invoice-detail-sheet.tsx`     | Uses default `<SheetContent>` — add `className="flex h-full flex-col p-0"`               |
+| `calendar-day-sheet.tsx`       | Uses `p-0` but missing `flex h-full flex-col`                                            |
+| `transaction-form-sheet.tsx`   | Missing `SheetContent` className — add `className="flex h-full flex-col p-0"`            |
+| `transaction-detail-sheet.tsx` | Missing `SheetContent` className — add `className="flex h-full flex-col p-0"`            |

@@ -28,6 +28,7 @@ trigger: always_on
 # `src/` Directory Rule
 
 `src/` is **forbidden everywhere** with exactly **two exceptions**:
+
 - `packages/ui/src/` — shadcn component library convention
 - `packages/bucket/src/` — S3 package structure
 
@@ -37,9 +38,11 @@ trigger: always_on
 
 Every workspace-scoped table MUST have `workspace_id` + `deleted_at`.
 All repository queries MUST filter by `workspace_id` and `deleted_at: null`. No cross-workspace joins.
+
 ```ts
 where: { workspace_id, deleted_at: null }
 ```
+
 **Forbidden:** hardcoded workspace IDs, super-admin bypass without checks, or skipping workspace checks.
 
 ---
@@ -76,13 +79,14 @@ See [RULES_API.md](file:///Users/boneconsulting/Developer/oewang/.agent/rules/RU
 - **packages/types**: Shared contracts (API responses, interfaces, ErrorCode constant). **MUST** define shared types (e.g. `Notification`, `NotificationSetting`) here so frontend never imports from the database package.
 - **packages/constants**: Static constants (roles, default category/wallet seeds).
 - **packages/ui**: shadcn/ui components (`src/` internally). Imported in frontend components only.
-See [RULES_PACKAGES.md](file:///Users/boneconsulting/Developer/oewang/.agent/rules/RULES_PACKAGES.md) for details.
+  See [RULES_PACKAGES.md](file:///Users/boneconsulting/Developer/oewang/.agent/rules/RULES_PACKAGES.md) for details.
 
 ---
 
 # Styling and Design System Rules
 
 Components must implement the styling patterns defined in the style guide:
+
 1. **Design Philosophy**: Minimalist, flat, and typography-focused. Avoid shadows; use borders (`border-border` / `border-[#e6e6e6]`).
 2. **Typography pairing**: serif headers (`font-serif`) for titles/metrics; sans (`font-sans text-[12px] uppercase tracking-widest text-muted-foreground`) for labels/metadata.
 3. **Preset-Aware Styling**: Never hardcode roundedness or shadows. Use CSS variables: `rounded-(--radius)` and `shadow-(--shadow-sm)`.

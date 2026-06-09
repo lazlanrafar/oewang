@@ -22,16 +22,16 @@ Categories classify transactions as either `income` or `expense`. Every workspac
 
 ### `categories` table
 
-| Column | Type | Notes |
-|--------|------|-------|
-| `id` | `text` (CUID2) | Primary key |
-| `workspaceId` | `text` FK → workspaces | Required |
-| `name` | `text` | Required |
-| `type` | `text` | `income` \| `expense` |
-| `sortOrder` | `integer` | Display order. Default `0` |
-| `createdAt` | `timestamp` | Auto |
-| `updatedAt` | `timestamp` | Auto |
-| `deletedAt` | `timestamp` | Soft delete |
+| Column        | Type                   | Notes                      |
+| ------------- | ---------------------- | -------------------------- |
+| `id`          | `text` (CUID2)         | Primary key                |
+| `workspaceId` | `text` FK → workspaces | Required                   |
+| `name`        | `text`                 | Required                   |
+| `type`        | `text`                 | `income` \| `expense`      |
+| `sortOrder`   | `integer`              | Display order. Default `0` |
+| `createdAt`   | `timestamp`            | Auto                       |
+| `updatedAt`   | `timestamp`            | Auto                       |
+| `deletedAt`   | `timestamp`            | Soft delete                |
 
 ---
 
@@ -39,15 +39,16 @@ Categories classify transactions as either `income` or `expense`. Every workspac
 
 Base path: `/v1/categories`
 
-| Method | Path | Role Required | Description |
-|--------|------|--------------|-------------|
-| `GET` | `/` | Any authenticated | List all categories for workspace |
-| `POST` | `/` | Editor+ | Create a new category |
-| `PUT` | `/reorder` | Editor+ | Reorder multiple categories at once |
-| `PUT` | `/:id` | Editor+ | Rename or update a category |
-| `DELETE` | `/:id` | Editor+ | Soft-delete a category |
+| Method   | Path       | Role Required     | Description                         |
+| -------- | ---------- | ----------------- | ----------------------------------- |
+| `GET`    | `/`        | Any authenticated | List all categories for workspace   |
+| `POST`   | `/`        | Editor+           | Create a new category               |
+| `PUT`    | `/reorder` | Editor+           | Reorder multiple categories at once |
+| `PUT`    | `/:id`     | Editor+           | Rename or update a category         |
+| `DELETE` | `/:id`     | Editor+           | Soft-delete a category              |
 
 **Query params for `GET /`:**
+
 - `type` — `income` | `expense` | (omit for all)
 - `search`
 - `page`, `limit`
@@ -76,13 +77,13 @@ Every mutation calls `AuditLogsService.log()` and triggers `RealtimeService.noti
 
 ## Source Files
 
-| Layer | File |
-|-------|------|
-| Schema | `packages/database/schema/categories.ts` |
-| Controller | `apps/api/modules/categories/categories.controller.ts` |
-| Service | `apps/api/modules/categories/categories.service.ts` |
-| Repository | `apps/api/modules/categories/categories.repository.ts` |
-| Utils | `apps/api/modules/categories/categories.utils.ts` |
-| Tests | `apps/api/modules/categories/categories.utils.test.ts` (38 tests) |
-| Seeds | `packages/constants/default/category.ts` |
-| E2E | `apps/app/e2e/categories.spec.ts` |
+| Layer      | File                                                              |
+| ---------- | ----------------------------------------------------------------- |
+| Schema     | `packages/database/schema/categories.ts`                          |
+| Controller | `apps/api/modules/categories/categories.controller.ts`            |
+| Service    | `apps/api/modules/categories/categories.service.ts`               |
+| Repository | `apps/api/modules/categories/categories.repository.ts`            |
+| Utils      | `apps/api/modules/categories/categories.utils.ts`                 |
+| Tests      | `apps/api/modules/categories/categories.utils.test.ts` (38 tests) |
+| Seeds      | `packages/constants/default/category.ts`                          |
+| E2E        | `apps/app/e2e/categories.spec.ts`                                 |

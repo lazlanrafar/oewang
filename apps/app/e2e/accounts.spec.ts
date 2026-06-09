@@ -29,7 +29,9 @@ test.describe("Finance: Accounts", () => {
     await page.getByRole("button", { name: dictionary.accounts.create_account }).click();
 
     // Name validation error - wait for it to appear (using regex for robustness)
-    await expect(page.getByText(/Name is required/i)).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText(/Name is required/i)).toBeVisible({
+      timeout: 15000,
+    });
   });
 
   test("should create a new account successfully", async ({ page, dictionary }) => {

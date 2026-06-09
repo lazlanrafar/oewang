@@ -95,7 +95,10 @@ const clientSchema = z.object({
     .string()
     .optional()
     .default("oewang-session"),
-  NEXT_PUBLIC_TWILIO_WHATSAPP_NUMBER: z.string().optional().default("+14155238886"),
+  NEXT_PUBLIC_TWILIO_WHATSAPP_NUMBER: z
+    .string()
+    .optional()
+    .default("+14155238886"),
   NEXT_PUBLIC_TELEGRAM_BOT_USER: z.string().optional().default("OewangBot"),
 });
 
@@ -110,7 +113,8 @@ const clientEnv = {
 
   NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
   NEXT_PUBLIC_SESSION_COOKIE_NAME: process.env.NEXT_PUBLIC_SESSION_COOKIE_NAME,
-  NEXT_PUBLIC_TWILIO_WHATSAPP_NUMBER: process.env.NEXT_PUBLIC_TWILIO_WHATSAPP_NUMBER,
+  NEXT_PUBLIC_TWILIO_WHATSAPP_NUMBER:
+    process.env.NEXT_PUBLIC_TWILIO_WHATSAPP_NUMBER,
   NEXT_PUBLIC_TELEGRAM_BOT_USER: process.env.NEXT_PUBLIC_TELEGRAM_BOT_USER,
 };
 
@@ -125,7 +129,7 @@ export const getEnv = () => {
     process.env.npm_lifecycle_event === "build" ||
     process.env.NEXT_PHASE !== undefined ||
     process.env.NODE_ENV === "test";
-  
+
   if (isServer) {
     try {
       // Use require for Node.js-only modules inside the isServer block to avoid client bundle crashes
@@ -139,7 +143,7 @@ export const getEnv = () => {
       for (let i = 0; i < 3; i++) {
         const envPath = path.join(current, ".env");
         if (!isSkipValidation) {
-           console.log(`🔍 getEnv: Searching for .env at: ${envPath}`);
+          console.log(`🔍 getEnv: Searching for .env at: ${envPath}`);
         }
         if (fs.existsSync(envPath)) {
           dotenv.config({ path: envPath });
@@ -152,7 +156,9 @@ export const getEnv = () => {
         current = path.dirname(current);
       }
       if (!loaded && !isSkipValidation) {
-        console.warn("⚠️ getEnv: Could not find .env file within 3 levels of process.cwd()");
+        console.warn(
+          "⚠️ getEnv: Could not find .env file within 3 levels of process.cwd()",
+        );
       }
     } catch (e) {
       if (!isSkipValidation) {

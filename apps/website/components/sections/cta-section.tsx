@@ -21,9 +21,7 @@ export function CTASection({
           <h2 className="mb-4 font-serif text-3xl text-foreground tracking-tight sm:text-4xl">
             {dictionary.cta.title}
           </h2>
-          <p className="mx-auto mb-8 max-w-2xl text-base text-muted-foreground sm:text-lg">
-            {dictionary.cta.subtitle}
-          </p>
+          <p className="mx-auto mb-8 max-w-2xl text-base text-muted-foreground sm:text-lg">{dictionary.cta.subtitle}</p>
 
           {isLoggedIn ? (
             <Button size="lg" asChild>

@@ -55,17 +55,41 @@ export function SearchDialog({ dictionary }: { dictionary: AppDictionary }) {
   };
 
   const SHORTCUTS = [
-    { label: t("sidebar.overview_label"), icon: Icons.Overview, href: getLocalizedUrl("/overview") },
+    {
+      label: t("sidebar.overview_label"),
+      icon: Icons.Overview,
+      href: getLocalizedUrl("/overview"),
+    },
     {
       label: t("sidebar.transactions_label"),
       icon: Icons.Transactions,
       href: getLocalizedUrl("/transactions"),
     },
-    { label: t("sidebar.calendar_label"), icon: Icons.CalendarMonth, href: getLocalizedUrl("/calendar") },
-    { label: t("sidebar.accounts_label"), icon: Icons.Accounts, href: getLocalizedUrl("/accounts") },
-    { label: t("sidebar.debts_label"), icon: Icons.Currency, href: getLocalizedUrl("/debts") },
-    { label: t("sidebar.contacts_label"), icon: Icons.Customers, href: getLocalizedUrl("/contacts") },
-    { label: t("sidebar.vault_label"), icon: Icons.Vault, href: getLocalizedUrl("/vault") },
+    {
+      label: t("sidebar.calendar_label"),
+      icon: Icons.CalendarMonth,
+      href: getLocalizedUrl("/calendar"),
+    },
+    {
+      label: t("sidebar.accounts_label"),
+      icon: Icons.Accounts,
+      href: getLocalizedUrl("/accounts"),
+    },
+    {
+      label: t("sidebar.debts_label"),
+      icon: Icons.Currency,
+      href: getLocalizedUrl("/debts"),
+    },
+    {
+      label: t("sidebar.contacts_label"),
+      icon: Icons.Customers,
+      href: getLocalizedUrl("/contacts"),
+    },
+    {
+      label: t("sidebar.vault_label"),
+      icon: Icons.Vault,
+      href: getLocalizedUrl("/vault"),
+    },
   ];
 
   const SETTINGS_ITEMS = [

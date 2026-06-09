@@ -25,7 +25,10 @@ export function useRealtime() {
 
     // In local development, if accessed via localhost/127.0.0.1, direct WebSockets to localhost
     // to bypass potential HTTPS/tunnel issues and ensure same-site cookies are attached correctly.
-    if (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")) {
+    if (
+      typeof window !== "undefined" &&
+      (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
+    ) {
       let port = "3002";
       const match = apiUrl.match(/(?:https?:\/\/)?([^.]+)/);
       if (match && match[1] && /^\d+$/.test(match[1])) {
@@ -72,7 +75,9 @@ export function useRealtime() {
             });
 
             if (data.type === "transactions" || data.type === "wallets") {
-              queryClient.invalidateQueries({ queryKey: ["workspace", "active"] });
+              queryClient.invalidateQueries({
+                queryKey: ["workspace", "active"],
+              });
             }
 
             if (data.type === "notifications") {

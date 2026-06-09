@@ -32,6 +32,7 @@ All shared code lives in `packages/`. Each package has a single responsibility. 
 # packages/database
 
 Drizzle ORM + PostgreSQL. Only package that talks to the database.
+
 ```
 database/
   schema/             → one file per table (kebab-case, e.g. wallet-groups.ts)
@@ -48,6 +49,7 @@ database/
 # packages/types
 
 Shared TypeScript contract. Types and constants only — zero runtime logic, zero DB imports.
+
 - All error codes in `error-codes.ts` as `const ErrorCode`.
 - **Type Isolation constraint:** Shared models and select types (such as `Notification`, `NotificationSetting`, etc.) must be defined here as plain TypeScript contracts so that client actions, hooks, and pages do not import from `@workspace/database`, preserving strict package layering.
 
@@ -76,6 +78,7 @@ Shared TypeScript contract. Types and constants only — zero runtime logic, zer
 # Adding a New Package
 
 Checklist:
+
 1. Create at `packages/{name}/` — no `src/` unless standard library convention requires it.
 2. Add `package.json` with name `@repo/{name}`.
 3. Add `tsconfig.json` extending base.

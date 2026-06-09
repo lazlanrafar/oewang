@@ -22,7 +22,9 @@ export const getContacts = async (filters?: {
   }
 };
 
-export const getContact = async (id: string): Promise<ActionResponse<Contact>> => {
+export const getContact = async (
+  id: string,
+): Promise<ActionResponse<Contact>> => {
   try {
     const res = await api.get(`/contacts/${id}`);
     return { success: true, data: res.data?.data };
@@ -53,7 +55,9 @@ export const createContact = async (data: {
   try {
     const payload = {
       ...data,
-      billingEmails: data.billingEmails ? data.billingEmails.join(",") : undefined,
+      billingEmails: data.billingEmails
+        ? data.billingEmails.join(",")
+        : undefined,
     };
     const res = await api.post("/contacts", payload);
     return { success: true, data: res.data?.data };
@@ -82,12 +86,14 @@ export const updateContact = async (
     note?: string | null;
     vatNumber?: string | null;
     billingEmails?: string[] | null;
-  }
+  },
 ): Promise<ActionResponse<Contact>> => {
   try {
     const payload = {
       ...data,
-      billingEmails: data.billingEmails ? data.billingEmails.join(",") : undefined,
+      billingEmails: data.billingEmails
+        ? data.billingEmails.join(",")
+        : undefined,
     };
     const res = await api.patch(`/contacts/${id}`, payload);
     return { success: true, data: res.data?.data };
@@ -99,7 +105,9 @@ export const updateContact = async (
   }
 };
 
-export const deleteContact = async (id: string): Promise<ActionResponse<void>> => {
+export const deleteContact = async (
+  id: string,
+): Promise<ActionResponse<void>> => {
   try {
     const res = await api.delete(`/contacts/${id}`);
     return { success: true, data: res.data?.data };
