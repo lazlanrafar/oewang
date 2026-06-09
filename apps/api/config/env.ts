@@ -69,6 +69,14 @@ const apiEnvSchema = z.object({
   TELEGRAM_BOT_TOKEN: z.string().optional(),
   TELEGRAM_WEBHOOK_SECRET: z.string().optional(),
 
+  // Gmail OAuth
+  GOOGLE_GMAIL_CLIENT_ID: z.string().optional(),
+  GOOGLE_GMAIL_CLIENT_SECRET: z.string().optional(),
+
+  // Outlook / Microsoft OAuth
+  MICROSOFT_CLIENT_ID: z.string().optional(),
+  MICROSOFT_CLIENT_SECRET: z.string().optional(),
+
   // Evolution API (WhatsApp)
   EVOLUTION_API_URL: z.string().url().optional(),
   EVOLUTION_API_TOKEN: z.string().optional(),

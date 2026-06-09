@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Receipt Processed</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f4f4f5; margin: 0; padding: 24px; }
+    .card { background: #ffffff; border-radius: 8px; max-width: 480px; margin: 0 auto; padding: 32px; }
+    .logo { font-weight: 700; font-size: 18px; color: #18181b; margin-bottom: 24px; }
+    .title { font-size: 20px; font-weight: 600; color: #18181b; margin-bottom: 8px; }
+    .subtitle { font-size: 14px; color: #71717a; margin-bottom: 24px; }
+    .amount-row { background: #f4f4f5; border-radius: 6px; padding: 16px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+    .amount-label { font-size: 13px; color: #71717a; }
+    .amount-value { font-size: 22px; font-weight: 700; color: #18181b; }
+    .source-badge { display: inline-flex; align-items: center; gap: 6px; background: #f0fdf4; color: #16a34a; font-size: 12px; font-weight: 500; padding: 4px 10px; border-radius: 999px; margin-bottom: 24px; }
+    .cta { display: block; text-align: center; background: #18181b; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-size: 14px; font-weight: 500; margin-bottom: 24px; }
+    .footer { font-size: 12px; color: #a1a1aa; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">Oewang</div>
+    <div class="title">Receipt processed ✅</div>
+    <div class="subtitle">A new expense was automatically captured from your inbox.</div>
+
+    <div class="amount-row">
+      <span class="amount-label">{{receiptName}}</span>
+      <span class="amount-value">Rp {{amount}}</span>
+    </div>
+
+    <div class="source-badge">Imported from {{source}}</div>
+
+    <a href="{{appUrl}}/transactions" class="cta">View in Oewang</a>
+
+    <div class="footer">
+      You received this because your {{source}} account is connected to Oewang.<br />
+      To disconnect, visit Settings → Apps.
+    </div>
+  </div>
+</body>
+</html>

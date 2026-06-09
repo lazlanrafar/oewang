@@ -17,3 +17,5 @@ export const apps = [
   perplexityMcpApp,
   chatgptMcpApp,
 ];
+
+export { gmailApp, outlookApp };

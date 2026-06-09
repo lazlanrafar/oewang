@@ -45,3 +45,57 @@ export async function disconnectIntegrationAction(
     };
   }
 }
+
+export async function getGmailInstallUrlAction(): Promise<
+  ActionResponse<{ url: string }>
+> {
+  try {
+    const res = await api.get("/integrations/gmail/install-url");
+    return { success: true, data: res.data?.data };
+  } catch (error: any) {
+    return {
+      success: false,
+      error:
+        error.response?.data?.message || "Failed to get Gmail install URL",
+    };
+  }
+}
+
+export async function syncGmailAction(): Promise<ActionResponse<null>> {
+  try {
+    await api.post("/integrations/gmail/sync");
+    return { success: true, data: null };
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.response?.data?.message || "Failed to sync Gmail",
+    };
+  }
+}
+
+export async function getOutlookInstallUrlAction(): Promise<
+  ActionResponse<{ url: string }>
+> {
+  try {
+    const res = await api.get("/integrations/outlook/install-url");
+    return { success: true, data: res.data?.data };
+  } catch (error: any) {
+    return {
+      success: false,
+      error:
+        error.response?.data?.message || "Failed to get Outlook install URL",
+    };
+  }
+}
+
+export async function syncOutlookAction(): Promise<ActionResponse<null>> {
+  try {
+    await api.post("/integrations/outlook/sync");
+    return { success: true, data: null };
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.response?.data?.message || "Failed to sync Outlook",
+    };
+  }
+}

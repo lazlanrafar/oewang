@@ -195,6 +195,25 @@ export async function sendAddonPurchaseSuccessEmail(
 }
 
 /**
+ * Notify the user that a receipt was automatically processed from their connected inbox.
+ */
+export async function sendReceiptProcessedEmail(
+  to: string,
+  receiptName: string,
+  amount: string,
+  source: "Gmail" | "Outlook",
+) {
+  const appUrl = Env.NEXT_PUBLIC_APP_URL || "https://app.oewang.com";
+  const html = renderTemplate("receipt-processed", {
+    receiptName,
+    amount,
+    source,
+    appUrl,
+  });
+  return sendEmail(to, `Receipt from ${source} processed — ${receiptName}`, html);
+}
+
+/**
  * Internal helper to send email via Resend.
  */
 async function sendEmail(to: string, subject: string, html: string) {
