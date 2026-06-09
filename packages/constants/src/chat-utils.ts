@@ -1,4 +1,3 @@
-import type { UIMessage } from "ai";
 import type { ArtifactType } from "./artifact-config";
 import { getArtifactTypeFromTool } from "./artifact-config";
 
@@ -59,7 +58,7 @@ export type InsightData = {
  * Extract insight data from getInsights tool result
  */
 export function extractInsightData(
-  parts: UIMessage["parts"],
+  parts: any[],
 ): InsightData | null {
   for (const part of parts) {
     const type = part.type as string;
@@ -80,7 +79,7 @@ export function extractInsightData(
  * Check if getInsights tool is present (running or completed)
  * Used to hide loading indicators as soon as the tool starts
  */
-export function hasInsightToolRunning(parts: UIMessage["parts"]): boolean {
+export function hasInsightToolRunning(parts: any[]): boolean {
   for (const part of parts) {
     const type = part.type as string;
     if (type === "tool-getInsights") {
@@ -93,7 +92,7 @@ export function hasInsightToolRunning(parts: UIMessage["parts"]): boolean {
 /**
  * Check if message parts indicate bank account is required
  */
-export function extractBankAccountRequired(parts: UIMessage["parts"]): boolean {
+export function extractBankAccountRequired(parts: any[]): boolean {
   for (const part of parts) {
     if ((part.type as string).startsWith("tool-")) {
       const toolPart = part as Record<string, unknown>;
@@ -112,7 +111,7 @@ export function extractBankAccountRequired(parts: UIMessage["parts"]): boolean {
  * Checks all tool calls in the message and returns the first artifact type found
  */
 export function extractArtifactTypeFromMessage(
-  parts: UIMessage["parts"],
+  parts: any[],
 ): ArtifactType | null {
   for (const part of parts) {
     const type = part.type as string;
