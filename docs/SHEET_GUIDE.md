@@ -25,42 +25,63 @@ Key things to know:
 
 ## Variants
 
-### 1. Form Sheet — standard width
+### 1. Form Sheet — standard width (Midday-style)
 
 Use for: create/edit forms (transactions, budgets, contacts, debts, accounts).
+
+This is the canonical pattern for every form sheet. Header has no border, footer is **absolutely positioned at the bottom inside the sheet** (no border), and the body scrolls under it with bottom padding so the last field is never hidden.
 
 ```tsx
 <Sheet open={open} onOpenChange={setOpen}>
   <SheetContent className="flex h-full flex-col p-0">
-    {/* Header — fixed, never scrolls */}
-    <SheetHeader className="flex shrink-0 flex-row items-center justify-between border-b px-6 py-4 text-left">
-      <SheetTitle className="font-medium text-lg">
-        Create Transaction
-      </SheetTitle>
-      {/* optional action buttons */}
+    {/* Header — title only, no border, generous margin-bottom */}
+    <SheetHeader className="shrink-0 px-6 pt-6">
+      <SheetTitle className="text-lg">Create Transaction</SheetTitle>
     </SheetHeader>
 
-    {/* Body — scrollable */}
-    <div className="no-scrollbar flex-1 overflow-y-auto px-6 py-6">
-      {/* form content */}
+    {/* Body — scrollable, padded so last field clears the absolute footer */}
+    <div className="no-scrollbar flex-1 overflow-y-auto px-6 pt-6 pb-[100px]">
+      <Form {...form}>
+        <form id="my-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          {/* form fields */}
+        </form>
+      </Form>
     </div>
 
-    {/* Footer — fixed, never scrolls */}
-    <div className="flex shrink-0 items-center justify-end gap-2 border-t px-6 py-4">
-      <Button variant="outline" onClick={() => setOpen(false)}>
-        Cancel
+    {/* Footer — absolutely positioned, no border, single full-width submit button */}
+    <div className="absolute bottom-0 left-0 right-0 bg-background p-6">
+      <Button form="my-form" type="submit" className="w-full" disabled={!form.formState.isDirty || isLoading}>
+        {isLoading ? "Saving..." : "Save"}
       </Button>
-      <Button type="submit">Save</Button>
     </div>
   </SheetContent>
 </Sheet>
 ```
 
-**Rules:**
+**Layout rules:**
 
-- Header height: `py-4` (compact) or `py-6` (spacious). Be consistent within a feature area.
-- Title: `font-medium text-lg`. Never use `font-serif` in form headers.
-- Footer: always `border-t`, right-aligned buttons.
+- **Header**: `shrink-0 px-6 pt-6` — no border, no `py-` (the body provides the gap with its own `pt-6`).
+- **Title**: `text-lg` — no `font-medium` / `font-serif`. Lighter weight, generous spacing.
+- **Body**: `pb-[100px]` so the last field clears the absolutely-positioned footer when scrolled to the bottom.
+- **Footer**: `absolute bottom-0 left-0 right-0 bg-background p-6` — sits on top of the body, **no `border-t`**, with `bg-background` so scrolling form content is hidden behind it (no bleed-through).
+- **Submit button**: `className="w-full"` — single full-width button, **no Cancel button**. Users close the sheet with the overlay or Esc key.
+- **Form id**: give the `<form>` an `id` so the submit button outside it can target it via `form="my-form" type="submit"`.
+
+**Field rules:**
+
+- **Spacing between fields**: `space-y-6` on the `<form>` (or `space-y-8` for forms with many fields and visual sections).
+- **Two-column row**: `<div className="grid grid-cols-2 gap-4">` — never `flex space-x-4`.
+- **Labels**: `<FormLabel className="text-xs font-normal text-muted-foreground">` — small, muted, regular weight.
+- **Descriptions**: plain `<FormDescription>` (no size override). Use them only when the hint adds real value; not every field needs one.
+- **Input/Button/Select/Combobox/InputDate/CurrencyInput height**: **always use the default `h-9`** from `@workspace/ui`. **Never override with `h-10`, `h-11`, or `h-8`** — those break vertical alignment between sibling fields in a 2-column row. Heights are centralized in the atom components so all form elements stay consistent.
+- **Non-FormField wrappers**: if you need a label + control without a `FormField` (e.g. a disabled display-only field), wrap it in `<FormItem>` so it gets the same `grid gap-2` spacing as adjacent FormItems. Don't use bare `<div className="flex flex-col">`.
+- **Never pass `className="flex flex-col"` to `<FormItem>`** — `FormItem` defaults to `grid gap-2`, and overriding it with `flex flex-col` removes the gap between label and input. In a 2-column row, sibling fields with mixed `flex flex-col` and default styling end up at different Y positions even when both inputs are `h-9`. Leave `FormItem` className empty unless you have a deliberate layout reason.
+
+**Behaviour rules:**
+
+- **Submit disabled** when `!form.formState.isDirty` (matches Midday) so users can't submit unchanged forms.
+- **Auto-focus** the first field with `autoFocus` on its `Input`.
+- **`autoComplete="off"`** on most inputs to prevent browser autofill noise.
 
 ---
 
@@ -178,12 +199,197 @@ Use for: app store cards, any sheet that showcases a logo/image at the top.
 
 ## Quick Reference
 
-| Variant          | `SheetContent` className                    | Max width       | Header style                       |
-| ---------------- | ------------------------------------------- | --------------- | ---------------------------------- |
-| Form — standard  | `flex h-full flex-col p-0`                  | 520px (default) | `border-b px-6 py-4`               |
-| Form — wide      | `flex h-full flex-col p-0 sm:max-w-[630px]` | ~630px          | `border-b px-6 py-4`               |
-| Detail — sidebar | `flex h-full flex-col p-0`                  | 520px (default) | `border-b bg-muted/5 px-6 py-6`    |
-| Detail — hero    | `flex h-full flex-col p-0`                  | 520px (default) | hero banner + `border-b px-6 py-4` |
+| Variant          | `SheetContent` className                    | Max width       | Header style                       | Footer style                                |
+| ---------------- | ------------------------------------------- | --------------- | ---------------------------------- | ------------------------------------------- |
+| Form — standard  | `flex h-full flex-col p-0`                  | 520px (default) | `shrink-0 px-6 pt-6` (no border)   | `absolute bottom-0 left-0 right-0 bg-background p-6` (full-width button) |
+| Form — wide      | `flex h-full flex-col p-0 sm:max-w-[630px]` | ~630px          | `shrink-0 px-6 pt-6`               | `absolute bottom-0 left-0 right-0 bg-background p-6`                     |
+| Detail — sidebar | `flex h-full flex-col p-0`                  | 520px (default) | `border-b bg-muted/5 px-6 py-6`    | none — actions in header                    |
+| Detail — hero    | `flex h-full flex-col p-0`                  | 520px (default) | hero banner + `border-b px-6 py-4` | inline in body                              |
+
+---
+
+## Form Sheet Behaviour
+
+This section documents how a form sheet should **behave** at runtime — independent of layout. Every form sheet in `apps/app` should follow these patterns so the user experience is consistent across create/edit flows for any entity.
+
+### Open / close
+
+| When                         | Behaviour                                                                            |
+| ---------------------------- | ------------------------------------------------------------------------------------ |
+| User clicks "Add" / "Edit"   | Parent sets `open={true}` and passes the entity (`undefined` for create, object for edit). |
+| User clicks the overlay      | `onOpenChange(false)` fires — sheet closes. Form state is preserved until next open. |
+| User presses `Esc`           | Same as overlay click.                                                               |
+| User submits successfully    | Sheet calls `onOpenChange(false)` itself after the mutation resolves.                |
+| There is **no Cancel button** | Users dismiss via overlay/Esc. See [Form Sheet — standard width](#1-form-sheet--standard-width-midday-style). |
+
+### Form state lifecycle
+
+```tsx
+const form = useForm<FormValues>({
+  resolver: zodResolver(schema),
+  defaultValues: { /* empty / safe defaults */ },
+});
+
+// Reset on every open so re-opening doesn't show stale values
+useEffect(() => {
+  if (!open) return;
+  if (entity) {
+    form.reset({ /* map entity → form values */ });
+  } else {
+    form.reset({ /* defaults for create */ });
+  }
+}, [open, entity, form]);
+```
+
+- **Always reset on `open` change** — not just on mount. A user can close → re-open the same sheet for a different entity in one mounted instance.
+- **Edit mode**: hydrate the form from the entity prop. Map external types (Date → `yyyy-MM-dd` string, numeric strings → numbers) here.
+- **Create mode**: reset to defaults. Pull sensible defaults from app state where possible (e.g. `user?.id` for `assignedUserId`, today's date for `date`).
+
+### Submit button states
+
+```tsx
+<Button
+  form="my-form"                                  // targets the form by id
+  type="submit"
+  className="w-full"
+  disabled={isLoading || !form.formState.isDirty}
+>
+  {isLoading ? "Saving..." : entity ? "Update" : "Create"}
+</Button>
+```
+
+| State                                   | Result                                                |
+| --------------------------------------- | ----------------------------------------------------- |
+| Form pristine (`!isDirty`)              | Disabled — nothing to submit                          |
+| Form dirty + valid                      | Enabled                                               |
+| Form submitting (`isLoading=true`)      | Disabled + label changes to "Saving..."               |
+| Edit mode label                         | "Update" / "Save"                                     |
+| Create mode label                       | "Create"                                              |
+
+### Mutation flow (TanStack Query)
+
+```tsx
+async function onSubmit(data: FormValues) {
+  setIsLoading(true);
+  try {
+    const result = entity
+      ? await updateEntity(entity.id, payload)
+      : await createEntity(payload);
+
+    if (!result.success) throw new Error(result.error);
+
+    // 1. Toast first — user sees feedback immediately
+    toast.success(entity ? "Updated" : "Created");
+
+    // 2. Optimistic cache patch — UI updates without a refetch round-trip
+    if (result.data) {
+      queryClient.setQueriesData<any>({ queryKey: ["entities"], exact: false }, (old) => {
+        if (!old) return old;
+        // Handle both infinite queries (pages[]) and regular queries (data[])
+        // See transaction-form-sheet.tsx for the canonical pattern.
+      });
+    }
+
+    // 3. Close the sheet
+    form.reset();
+    onOpenChange(false);
+    onSuccess?.();
+
+    // 4. Background reconciliation — fixes pagination totals, derived fields, etc.
+    void queryClient.invalidateQueries({ queryKey: ["entities"] });
+  } catch (err) {
+    toast.error(err instanceof Error ? err.message : "Failed to save");
+  } finally {
+    setIsLoading(false);
+  }
+}
+```
+
+**Rules:**
+
+1. **Order matters**: toast → optimistic patch → close → invalidate. Closing first feels laggy because the toast appears after the sheet is gone.
+2. **Optimistic patches must handle both shapes** — `useInfiniteQuery` returns `{ pages: [...] }`, `useQuery` returns the data directly. Check both via `"pages" in old` and `"data" in old`.
+3. **Always invalidate at the end** even after an optimistic patch. The patch updates the row; invalidation refreshes totals, ordering, and any computed fields the server controls.
+4. **Never throw inside the `try` block without catching** — uncaught errors leave `isLoading=true` forever. The `finally` block handles this.
+5. **Don't `await queryClient.invalidateQueries`** — it can re-fetch slowly. Fire-and-forget with `void` so the sheet closes immediately.
+
+### Schema validation
+
+```tsx
+const getSchema = (dictionary: Dictionary) =>
+  z.object({
+    amount: z.coerce.number().positive(dictionary.transactions.errors.amount_positive),
+    date: z.string().refine((v) => !Number.isNaN(Date.parse(v)), {
+      message: dictionary.transactions.errors.invalid_date,
+    }),
+    // ...
+  });
+
+const schema = useMemo(() => getSchema(dictionary), [dictionary]);
+const form = useForm<z.infer<typeof schema>>({ resolver: zodResolver(schema), ... });
+```
+
+- **Schema factory takes `dictionary`** so error messages are translatable. Never hardcode English error strings.
+- **`useMemo` the schema** keyed on dictionary so it doesn't recreate on every render.
+- **`z.coerce.number()`** for fields where the input is a string but the API expects a number.
+
+### Permissions
+
+```tsx
+interface Props {
+  // ...
+  canEdit?: boolean;
+}
+
+if (!mounted || !dictionary || !canEdit) return null;
+```
+
+- **Permission gating happens at the sheet level**, not at each field. If a user lacks edit access, render nothing — don't show a disabled sheet.
+- **Resolve `canEdit` from workspace role** in the parent (see `canEditWorkspaceData(workspace?.current_user_role)`).
+
+### Hydration / SSR
+
+```tsx
+const [mounted, setMounted] = useState(false);
+useEffect(() => setMounted(true), []);
+
+if (!mounted) return null;
+```
+
+- Form sheets that depend on `useForm` should guard against SSR mismatches by returning `null` until mounted. `react-hook-form` generates internal IDs that can differ between server and client.
+- The `mounted` gate also prevents the sheet from briefly rendering with empty default values before the `useEffect` hydration from the `entity` prop runs.
+
+### Dependent fields
+
+When changing one field should update another, do it in the field's `onChange`/`onValueChange` handler, **not in a separate `useEffect`**:
+
+```tsx
+const handleTabChange = (value: string) => {
+  setActiveTab(value);
+  form.setValue("type", value);
+  if (value === "transfer") {
+    form.setValue("categoryId", undefined); // clear because transfers have no category
+  }
+};
+```
+
+- `useEffect` watching form values causes a re-render cascade and can fight `react-hook-form`'s internal state.
+- Use `form.watch("field")` only for **derived display logic** (e.g. coloring an amount based on `type`), not for setting other field values.
+
+### Async-loaded data inside the sheet
+
+For data only needed when the sheet is open (e.g. attachments, related records), gate the query with `enabled`:
+
+```tsx
+const { data } = useQuery({
+  queryKey: ["entity", "attachments", entity?.id],
+  queryFn: () => getAttachments(entity!.id),
+  enabled: open && !!entity?.id,
+});
+```
+
+- Don't fetch when the sheet is closed — it wastes bandwidth and increases initial page load.
+- Use `enabled: open && ...` for any query specific to the sheet.
 
 ---
 

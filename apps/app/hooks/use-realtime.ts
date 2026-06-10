@@ -80,13 +80,23 @@ export function useRealtime() {
               });
             }
 
+            // workspace.usage is emitted by the API after AI token consumption or
+            // vault file uploads — invalidate both workspace and ai quota caches
+            // so NavUsage reflects the latest usage without any polling.
+            if (data.type === "workspace.usage") {
+              queryClient.invalidateQueries({
+                queryKey: ["workspace", "active"],
+                refetchType: "all",
+              });
+              queryClient.invalidateQueries({
+                queryKey: ["ai", "quota"],
+                refetchType: "all",
+              });
+            }
+
             if (data.type === "notifications") {
               queryClient.invalidateQueries({ queryKey: ["notifications"] });
             }
-
-            // Trigger a lightweight router refresh to update any server-side rendered data on the current page
-            // This is safe to call from client components in Next.js 16
-            // import { refresh } from "next/cache" is server only, but window.location or router.refresh works
           }
         } catch (e) {
           console.error("[Realtime] ❌ Failed to parse message", e);

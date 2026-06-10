@@ -12,6 +12,7 @@ import { buildError } from "@workspace/utils";
 import { status } from "elysia";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { CategoriesRepository } from "../categories/categories.repository";
+import { RealtimeService } from "../realtime/realtime.service";
 import { SettingsRepository } from "../settings/settings.repository";
 import { TransactionItemsService } from "../transactions/items/transaction-items.service";
 import { TransactionsService } from "../transactions/transactions.service";
@@ -656,6 +657,12 @@ export abstract class AiService {
       currentTokens,
       tokensSpent,
     );
+
+    // Notify connected WebSocket clients that AI usage has changed so the
+    // NavUsage widget can refresh without polling.
+    if (tokensSpent > 0) {
+      RealtimeService.notifyValueChange(workspaceId, "workspace.usage");
+    }
 
     return {
       sessionId: currentSessionId,

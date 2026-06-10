@@ -214,7 +214,7 @@ export function ContactDetailSheet({ contact, open, onClose, onDebtClick, dictio
                           {dictionary.contacts.form.name_label}
                         </FormLabel>
                         <FormControl>
-                          <Input {...field} className="h-10 rounded-none bg-transparent" />
+                          <Input {...field} className="rounded-none bg-transparent" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -229,7 +229,7 @@ export function ContactDetailSheet({ contact, open, onClose, onDebtClick, dictio
                           {dictionary.contacts.form.email_label}
                         </FormLabel>
                         <FormControl>
-                          <Input {...field} type="email" className="h-10 rounded-none bg-transparent" />
+                          <Input {...field} type="email" className="rounded-none bg-transparent" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -245,7 +245,7 @@ export function ContactDetailSheet({ contact, open, onClose, onDebtClick, dictio
                             {dictionary.contacts.form.phone_label}
                           </FormLabel>
                           <FormControl>
-                            <Input {...field} className="h-10 rounded-none bg-transparent" />
+                            <Input {...field} className="rounded-none bg-transparent" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -260,7 +260,7 @@ export function ContactDetailSheet({ contact, open, onClose, onDebtClick, dictio
                             {dictionary.contacts.form.address_label}
                           </FormLabel>
                           <FormControl>
-                            <Input {...field} className="h-10 rounded-none bg-transparent" />
+                            <Input {...field} className="rounded-none bg-transparent" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>

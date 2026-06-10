@@ -412,15 +412,15 @@ export function TransactionFormSheet({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="flex h-full flex-col p-0">
-        <SheetHeader className="shrink-0 border-b px-6 py-6">
-          <SheetTitle>
+        <SheetHeader className="shrink-0 px-6 pt-6">
+          <SheetTitle className="text-lg">
             {transaction ? dictionary.transactions.edit_transaction : dictionary.transactions.new_transaction}
           </SheetTitle>
         </SheetHeader>
 
-        <div className="no-scrollbar flex-1 overflow-y-auto px-6 py-6">
+        <div className="no-scrollbar flex-1 overflow-y-auto px-6 pt-6 pb-[120px]">
           <Form {...form}>
-            <form id="transaction-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+            <form id="transaction-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <FormSegmentedTabs
                 value={activeTab}
                 disabled={!!transaction}
@@ -440,23 +440,23 @@ export function TransactionFormSheet({
                   },
                 ]}
               />
-              <p className="mt-[-24px] mb-4 text-[11px] text-muted-foreground">{dictionary.transactions.hints.type}</p>
+              <FormDescription className="mt-[-10px]">{dictionary.transactions.hints.type}</FormDescription>
 
               <FormField
                 control={form.control}
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="font-medium text-sm">{dictionary.transactions.description_label}</FormLabel>
+                    <FormLabel className="font-normal text-muted-foreground text-xs">{dictionary.transactions.description_label}</FormLabel>
                     <FormControl>
                       <Input
                         placeholder={dictionary.transactions.placeholders.description}
                         {...field}
                         value={field.value ?? ""}
-                        className="h-10 bg-transparent transition-colors focus:border-foreground"
+                        className="bg-transparent transition-colors focus:border-foreground"
                       />
                     </FormControl>
-                    <FormDescription className="text-[11px]">
+                    <FormDescription>
                       {dictionary.transactions.hints.description}
                     </FormDescription>
                     <FormMessage />
@@ -470,7 +470,7 @@ export function TransactionFormSheet({
                   name="amount"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="font-medium text-sm">{dictionary.transactions.amount_label}</FormLabel>
+                      <FormLabel className="font-normal text-muted-foreground text-xs">{dictionary.transactions.amount_label}</FormLabel>
                       <FormControl>
                         <div className="group relative">
                           <span className="-translate-y-1/2 absolute top-1/2 left-3 text-muted-foreground/50 text-sm transition-colors group-focus-within:text-foreground">
@@ -482,7 +482,7 @@ export function TransactionFormSheet({
                             currencySymbol={settings?.mainCurrencySymbol}
                             decimalPlaces={settings?.mainCurrencyDecimalPlaces}
                             className={cn(
-                              "h-10 bg-transparent pl-14 font-medium text-sm transition-colors focus:border-foreground",
+                              "bg-transparent pl-14 font-medium text-sm transition-colors focus:border-foreground",
                               activeTab === "expense"
                                 ? "text-red-500"
                                 : activeTab === "income"
@@ -492,28 +492,27 @@ export function TransactionFormSheet({
                           />
                         </div>
                       </FormControl>
-                      <FormDescription className="text-[11px]">{dictionary.transactions.hints.amount}</FormDescription>
+                      <FormDescription>{dictionary.transactions.hints.amount}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
 
-                <div className="flex flex-col">
-                  <FormLabel className="mb-1 pt-1 pr-4 font-medium text-sm">
+                <FormItem>
+                  <FormLabel className="font-normal text-muted-foreground text-xs">
                     {dictionary.transactions.currency_label}
                   </FormLabel>
                   <Button
+                    type="button"
                     variant="outline"
-                    className="h-10 w-full justify-between bg-transparent pl-3 text-left font-normal text-muted-foreground hover:bg-muted/10"
+                    className="w-full justify-between bg-transparent pl-3 text-left font-normal text-muted-foreground hover:bg-muted/10"
                     disabled
                   >
                     {settings?.mainCurrencyCode || "USD"}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
-                  <FormDescription className="mt-2 text-[11px]">
-                    {dictionary.transactions.hints.currency}
-                  </FormDescription>
-                </div>
+                  <FormDescription>{dictionary.transactions.hints.currency}</FormDescription>
+                </FormItem>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -521,16 +520,16 @@ export function TransactionFormSheet({
                   control={form.control}
                   name="walletId"
                   render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel className="font-medium text-sm">{dictionary.transactions.account}</FormLabel>
+                    <FormItem>
+                      <FormLabel className="font-normal text-muted-foreground text-xs">{dictionary.transactions.account}</FormLabel>
                       <FormControl>
                         <SelectAccount
                           value={field.value ?? undefined}
                           onChange={(id) => form.setValue("walletId", id)}
-                          className="h-10 w-full justify-start bg-transparent px-3 text-left font-normal transition-colors hover:bg-muted/10 hover:bg-transparent"
+                          className="w-full justify-start bg-transparent px-3 text-left font-normal transition-colors hover:bg-muted/10 hover:bg-transparent"
                         />
                       </FormControl>
-                      <FormDescription className="text-[11px]">{dictionary.transactions.hints.account}</FormDescription>
+                      <FormDescription>{dictionary.transactions.hints.account}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -540,16 +539,16 @@ export function TransactionFormSheet({
                   control={form.control}
                   name="date"
                   render={({ field }) => (
-                    <FormItem className="">
-                      <FormLabel className="font-medium text-sm">{dictionary.transactions.date_label}</FormLabel>
+                    <FormItem>
+                      <FormLabel className="font-normal text-muted-foreground text-xs">{dictionary.transactions.date_label}</FormLabel>
                       <FormControl>
                         <InputDate
                           value={field.value}
                           onChange={field.onChange}
-                          className="h-10 bg-transparent transition-colors focus:border-foreground"
+                          className="bg-transparent transition-colors focus:border-foreground"
                         />
                       </FormControl>
-                      <FormDescription className="text-[11px]">{dictionary.transactions.hints.date}</FormDescription>
+                      <FormDescription>{dictionary.transactions.hints.date}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -562,8 +561,8 @@ export function TransactionFormSheet({
                     control={form.control}
                     name="categoryId"
                     render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                        <FormLabel className="font-medium text-sm">{dictionary.transactions.category}</FormLabel>
+                      <FormItem>
+                        <FormLabel className="font-normal text-muted-foreground text-xs">{dictionary.transactions.category}</FormLabel>
                         <FormControl>
                           <SelectCategory
                             value={field.value ?? undefined}
@@ -571,7 +570,7 @@ export function TransactionFormSheet({
                             onChange={(id) => form.setValue("categoryId", id)}
                           />
                         </FormControl>
-                        <FormDescription className="text-[11px]">
+                        <FormDescription>
                           {dictionary.transactions.hints.category}
                         </FormDescription>
                         <FormMessage />
@@ -583,8 +582,8 @@ export function TransactionFormSheet({
                     control={form.control}
                     name="toWalletId"
                     render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                        <FormLabel className="font-medium text-sm">{dictionary.transactions.to_account}</FormLabel>
+                      <FormItem>
+                        <FormLabel className="font-normal text-muted-foreground text-xs">{dictionary.transactions.to_account}</FormLabel>
                         <FormControl>
                           <SelectAccount
                             value={field.value ?? undefined}
@@ -592,7 +591,7 @@ export function TransactionFormSheet({
                             placeholder={dictionary.transactions.placeholders.destination}
                           />
                         </FormControl>
-                        <FormDescription className="text-[11px]">
+                        <FormDescription>
                           {dictionary.transactions.hints.to_account}
                         </FormDescription>
                         <FormMessage />
@@ -605,8 +604,8 @@ export function TransactionFormSheet({
                   control={form.control}
                   name="assignedUserId"
                   render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel className="font-medium text-sm">{dictionary.transactions.assign}</FormLabel>
+                    <FormItem>
+                      <FormLabel className="font-normal text-muted-foreground text-xs">{dictionary.transactions.assign}</FormLabel>
                       <FormControl>
                         <SelectUser
                           value={field.value ?? undefined}
@@ -614,7 +613,7 @@ export function TransactionFormSheet({
                           placeholder={dictionary.transactions.placeholders.member}
                         />
                       </FormControl>
-                      <FormDescription className="text-[11px]">{dictionary.transactions.hints.assign}</FormDescription>
+                      <FormDescription>{dictionary.transactions.hints.assign}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -626,7 +625,7 @@ export function TransactionFormSheet({
                 name="description"
                 render={({ field }) => (
                   <FormItem className="space-y-2">
-                    <FormLabel className="font-medium text-sm">{dictionary.transactions.notes_label}</FormLabel>
+                    <FormLabel className="font-normal text-muted-foreground text-xs">{dictionary.transactions.notes_label}</FormLabel>
                     <FormControl>
                       <div className="mb-4 min-h-[120px] border bg-transparent px-3 py-2 text-sm transition-colors focus-within:border-foreground focus-within:ring-0">
                         <Editor
@@ -637,7 +636,7 @@ export function TransactionFormSheet({
                         />
                       </div>
                     </FormControl>
-                    <FormDescription className="text-[11px]">{dictionary.transactions.hints.notes}</FormDescription>
+                    <FormDescription>{dictionary.transactions.hints.notes}</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -710,8 +709,13 @@ export function TransactionFormSheet({
           </Form>
         </div>
 
-        <div className="mt-auto shrink-0 border-t bg-background p-6">
-          <Button form="transaction-form" type="submit" className="w-full" disabled={isLoading}>
+        <div className="absolute right-0 bottom-0 left-0 bg-background p-6">
+          <Button
+            form="transaction-form"
+            type="submit"
+            className="w-full"
+            disabled={isLoading || !form.formState.isDirty}
+          >
             {isLoading ? dictionary.transactions.saving : dictionary.transactions.save_transaction}
           </Button>
         </div>

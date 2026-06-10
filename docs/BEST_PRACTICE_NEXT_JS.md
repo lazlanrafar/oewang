@@ -1,6 +1,6 @@
 # Next.js Best Practices
 
-> See also: [CLAUDE.md](../CLAUDE.md) · [ARCHITECTURE.md](./ARCHITECTURE.md) · [ENGINEERING_STANDARDS.md](./ENGINEERING_STANDARDS.md)
+> See also: [CLAUDE.md](../CLAUDE.md) · [ARCHITECTURE.md](./ARCHITECTURE.md) · [ENGINEERING_STANDARDS.md](./ENGINEERING_STANDARDS.md) · [REALTIME.md](./REALTIME.md)
 
 This document captures **oewang-specific** Next.js 16 patterns derived from the actual `apps/app` codebase. These are enforced rules, not suggestions.
 
@@ -340,6 +340,63 @@ components/
 ```
 
 **Naming:** PascalCase files for React components. No business logic in components.
+
+---
+
+## TanStack Query — Data Fetching Rules
+
+> Full reference: [REALTIME.md](./REALTIME.md)
+
+oewang uses TanStack Query (`@tanstack/react-query`) for all client-side server data. Updates flow from the API via WebSocket events — **not polling**.
+
+### Always Set `staleTime`
+
+```ts
+// ✅ CORRECT — prevents refetch on every mount/focus
+const { data } = useQuery({
+  queryKey: ["wallets"],
+  queryFn: getWallets,
+  staleTime: 1000 * 60 * 5,   // 5 minutes
+  refetchOnWindowFocus: false,
+});
+
+// ❌ FORBIDDEN — default staleTime is 0 (always stale)
+// Every component mount and every window focus fires a new network request
+const { data } = useQuery({
+  queryKey: ["wallets"],
+  queryFn: getWallets,
+});
+```
+
+### Standard staleTime Values
+
+| Data type | staleTime |
+|---|---|
+| User profile, workspace metadata, settings | `1000 * 60 * 60` (1 hour) |
+| Wallets, categories (select dropdowns) | `1000 * 60 * 5` (5 min) |
+| Transaction / invoice lists | `1000 * 60 * 5` (5 min) |
+| Usage metrics (AI quota, vault size) | `1000 * 60 * 5` (5 min) — safety net; primary refresh via WebSocket |
+
+### Polling is Forbidden as the Default
+
+Use WebSocket events (`useRealtime`) instead of `refetchInterval`. Polling is only acceptable when:
+- The data source does not support WebSocket notification
+- The interval is **≥ 5 minutes**
+- `refetchIntervalInBackground: false` is always set
+
+```ts
+// ❌ FORBIDDEN
+refetchInterval: 15_000,           // too aggressive
+refetchIntervalInBackground: true, // wastes resources in background tabs
+staleTime: 0,                      // always stale
+
+// ✅ CORRECT — WebSocket-driven
+// See REALTIME.md for how to emit and consume events
+```
+
+### Shared Component Queries (SelectAccount, SelectCategory)
+
+When a reusable component (dropdown, combobox) uses `useQuery` internally, it **must** set `staleTime` and `refetchOnWindowFocus: false`. Otherwise every row in a data table that renders the component fires a separate network request on mount.
 
 ---
 

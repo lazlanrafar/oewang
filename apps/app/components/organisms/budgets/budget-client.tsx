@@ -8,6 +8,7 @@ import type { BudgetStatus } from "@workspace/types";
 import { DataTable, DataTableEmptyState, TableSkeleton } from "@workspace/ui";
 
 import { useDataTableFilter } from "@/hooks/use-data-table-filter";
+import { canEditWorkspaceData } from "@/lib/workspace-permissions";
 import { useAppStore } from "@/stores/app";
 import { useBudgetsStore } from "@/stores/budgets";
 
@@ -27,7 +28,8 @@ type BudgetFilters = { q: string };
 export function BudgetClient({ initialData, locale }: Props) {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedBudget, setSelectedBudget] = useState<BudgetStatus | undefined>();
-  const { settings } = useAppStore();
+  const { settings, workspace } = useAppStore();
+  const canEditData = canEditWorkspaceData(workspace?.current_user_role);
   const { columns, setColumns } = useBudgetsStore();
 
   const { filters, handleFilterChange } = useDataTableFilter<BudgetFilters>({
@@ -128,7 +130,12 @@ export function BudgetClient({ initialData, locale }: Props) {
         )}
       </div>
 
-      <BudgetFormSheet open={isFormOpen} onOpenChange={setIsFormOpen} budget={selectedBudget} />
+      <BudgetFormSheet
+        open={isFormOpen}
+        onOpenChange={setIsFormOpen}
+        budget={selectedBudget}
+        canEdit={canEditData}
+      />
     </div>
   );
 }

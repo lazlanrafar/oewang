@@ -170,7 +170,7 @@ export function PaymentFormSheet({ open, onOpenChange, debt, wallets: _wallets, 
                 control={form.control}
                 name="walletId"
                 render={({ field }) => (
-                  <FormItem className="flex flex-col">
+                  <FormItem>
                     <FormLabel className="font-medium text-[10px] text-muted-foreground uppercase tracking-widest">
                       {dict.form.account.label}
                     </FormLabel>

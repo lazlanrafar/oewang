@@ -12,6 +12,7 @@ import {
 } from "@workspace/utils";
 import { status } from "elysia";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
+import { RealtimeService } from "../realtime/realtime.service";
 import { VaultRepository } from "./vault.repository";
 
 export abstract class VaultService {
@@ -177,6 +178,11 @@ export abstract class VaultService {
       after: vaultEntry,
     });
 
+    // Notify connected clients that vault storage usage has changed.
+    if (additionalBytes > 0) {
+      RealtimeService.notifyValueChange(workspaceId, "workspace.usage");
+    }
+
     return {
       ...vaultEntry,
       url: await bucket.getSignedUrl(vaultEntry.key),
@@ -236,6 +242,11 @@ export abstract class VaultService {
       entity_id: fileId,
       before: file,
     });
+
+    // Notify connected clients that vault storage usage has changed.
+    if (activeReferences === 0) {
+      RealtimeService.notifyValueChange(workspaceId, "workspace.usage");
+    }
 
     return deletedFile;
   }

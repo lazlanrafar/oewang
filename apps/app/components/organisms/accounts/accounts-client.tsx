@@ -10,6 +10,7 @@ import type { ApiResponse, FilterRecord, Wallet } from "@workspace/types";
 import { DataTable, DataTableEmptyState, TableSkeleton } from "@workspace/ui";
 
 import { useDataTableFilter } from "@/hooks/use-data-table-filter";
+import { canEditWorkspaceData } from "@/lib/workspace-permissions";
 import { useAccountsStore } from "@/stores/accounts";
 import { useAppStore } from "@/stores/app";
 
@@ -50,8 +51,9 @@ export function AccountsClient({
   const [isFormSheetOpen, setIsFormSheetOpen] = useState(false);
   const [isDetailSheetOpen, setIsDetailSheetOpen] = useState(false);
   const [selectedWalletId, setSelectedWalletId] = useState<string | undefined>();
-  const { settings, formatCurrency } = useAppStore();
+  const { settings, formatCurrency, workspace } = useAppStore();
   const queryClient = useQueryClient();
+  const canEditData = canEditWorkspaceData(workspace?.current_user_role);
 
   const { filters, handleFilterChange } = useDataTableFilter<AccountsFilters>({
     initialFilters: (initialFilters as AccountsFilters) || {
@@ -251,6 +253,7 @@ export function AccountsClient({
         open={isFormSheetOpen}
         onOpenChange={setIsFormSheetOpen}
         walletId={selectedWalletId}
+        canEdit={canEditData}
         onSuccess={handleSuccess}
         dictionary={dictionary}
       />

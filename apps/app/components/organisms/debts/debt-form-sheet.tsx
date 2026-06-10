@@ -199,7 +199,7 @@ export function DebtFormSheet({ open, onOpenChange, debt, dictionary, settings }
                   control={form.control}
                   name="contactId"
                   render={({ field }) => (
-                    <FormItem className="flex flex-col">
+                    <FormItem>
                       <FormLabel className="font-medium text-[10px] text-muted-foreground uppercase tracking-widest">
                         {dict.form.contact.label}
                       </FormLabel>
@@ -208,7 +208,7 @@ export function DebtFormSheet({ open, onOpenChange, debt, dictionary, settings }
                           value={field.value}
                           onChange={field.onChange}
                           placeholder={dict.form.contact.placeholder}
-                          className="h-10 w-full justify-start rounded-none border-border bg-transparent px-3 text-left focus:border-foreground"
+                          className="w-full justify-start rounded-none border-border bg-transparent px-3 text-left focus:border-foreground"
                         />
                       </FormControl>
                       <FormDescription className="text-[10px] uppercase tracking-wider opacity-60">
@@ -232,7 +232,7 @@ export function DebtFormSheet({ open, onOpenChange, debt, dictionary, settings }
                           value={field.value ?? ""}
                           onChange={field.onChange}
                           placeholder={dict.form.due_date.placeholder}
-                          className="h-10 rounded-none"
+                          className="rounded-none"
                         />
                       </FormControl>
                       <FormDescription className="text-[10px] uppercase tracking-wider opacity-60">
@@ -256,7 +256,7 @@ export function DebtFormSheet({ open, onOpenChange, debt, dictionary, settings }
                       <Input
                         placeholder={dict.form.notes.placeholder}
                         {...field}
-                        className="h-10 rounded-none border-border bg-transparent focus:border-foreground"
+                        className="rounded-none border-border bg-transparent focus:border-foreground"
                       />
                     </FormControl>
                     <FormMessage />
