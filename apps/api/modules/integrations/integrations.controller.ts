@@ -10,7 +10,7 @@ import { OutlookService } from "./outlook.service";
 import { IntegrationsService } from "./integrations.service";
 import { logger } from "@workspace/logger";
 
-const APP_URL = () => Env.APP_URL || Env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+const APP_URL = () => Env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
 export const integrationsController = new Elysia({ prefix: "/integrations" })
   // ── Public OAuth callbacks (no auth cookie — browser redirect from provider) ──

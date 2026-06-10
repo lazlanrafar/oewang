@@ -11,6 +11,12 @@ import { VaultService as vaultService } from "../vault/vault.service";
 import { WalletsRepository as walletsRepository } from "../wallets/wallets.repository";
 import { IntegrationsRepository } from "./integrations.repository";
 
+// Fall back to the generic Google OAuth credential when Gmail-specific vars aren't set.
+// One OAuth client can cover both Google login and Gmail API — just add the Gmail scopes
+// and redirect URI to the same client in Google Cloud Console.
+const gmailClientId = () => Env.GOOGLE_GMAIL_CLIENT_ID ?? Env.GOOGLE_CLIENT_ID;
+const gmailClientSecret = () => Env.GOOGLE_GMAIL_CLIENT_SECRET ?? Env.GOOGLE_CLIENT_SECRET;
+
 const GMAIL_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const GMAIL_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GMAIL_API_BASE = "https://gmail.googleapis.com/gmail/v1/users/me";
@@ -49,10 +55,10 @@ export abstract class GmailService {
   // ── OAuth ──────────────────────────────────────────────────────────────────
 
   static getInstallUrl(workspaceId: string, userId: string): string {
-    const clientId = Env.GOOGLE_GMAIL_CLIENT_ID;
-    if (!clientId) throw new Error("GOOGLE_GMAIL_CLIENT_ID not configured");
+    const clientId = gmailClientId();
+    if (!clientId) throw new Error("Google OAuth client ID not configured (set GOOGLE_GMAIL_CLIENT_ID or GOOGLE_CLIENT_ID)");
 
-    const redirectUri = `${Env.API_BASE_URL}/integrations/gmail/oauth-callback`;
+    const redirectUri = `${Env.NEXT_PUBLIC_API_URL}/v1/integrations/gmail/oauth-callback`;
     const state = GmailService.encryptState({
       workspaceId,
       userId,
@@ -81,9 +87,9 @@ export abstract class GmailService {
     const { workspaceId, userId } = decoded;
     if (!workspaceId || !userId) throw new Error("Invalid OAuth state");
 
-    const clientId = Env.GOOGLE_GMAIL_CLIENT_ID!;
-    const clientSecret = Env.GOOGLE_GMAIL_CLIENT_SECRET!;
-    const redirectUri = `${Env.API_BASE_URL}/integrations/gmail/oauth-callback`;
+    const clientId = gmailClientId()!;
+    const clientSecret = gmailClientSecret()!;
+    const redirectUri = `${Env.NEXT_PUBLIC_API_URL}/v1/integrations/gmail/oauth-callback`;
 
     const tokenRes = await fetch(GMAIL_TOKEN_URL, {
       method: "POST",
@@ -172,8 +178,8 @@ export abstract class GmailService {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
-        client_id: Env.GOOGLE_GMAIL_CLIENT_ID!,
-        client_secret: Env.GOOGLE_GMAIL_CLIENT_SECRET!,
+        client_id: gmailClientId()!,
+        client_secret: gmailClientSecret()!,
         refresh_token: refreshToken,
         grant_type: "refresh_token",
       }),

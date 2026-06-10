@@ -91,7 +91,7 @@ export async function registerEvolutionWebhook(): Promise<void> {
   const baseUrl = Env.EVOLUTION_API_URL;
   const token = Env.EVOLUTION_API_TOKEN;
   const instance = Env.EVOLUTION_API_INSTANCE;
-  const apiUrl = Env.API_URL;
+  const apiUrl = Env.NEXT_PUBLIC_API_URL;
 
   if (!baseUrl || !token || !instance || !apiUrl) return;
 

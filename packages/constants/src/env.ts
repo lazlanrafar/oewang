@@ -9,14 +9,9 @@ const serverSchema = z.object({
   NODE_ENV: z
     .enum(["development", "test", "production"])
     .default("development"),
-  APP_URL: z.string().min(1).optional(),
-  ADMIN_URL: z.string().min(1).optional(),
-  API_URL: z.string().min(1).optional(),
-  WEBSITE_URL: z.string().min(1).optional(),
 
   // API
   API_PORT: z.string().optional().default("3002"),
-  API_BASE_URL: z.string().min(1).optional(),
 
   // Database
   DATABASE_URL: z.string().min(1),

@@ -40,7 +40,7 @@ export default async function OAuthAuthorizePage({
   }
 
   // Fetch client name from the API's DCR registry
-  const apiUrl = process.env.API_BASE_URL ?? "http://localhost:3002";
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3002";
   let clientName = client_id;
   try {
     const res = await fetch(`${apiUrl}/oauth/client/${client_id}`, {

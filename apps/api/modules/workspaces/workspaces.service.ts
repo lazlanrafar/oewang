@@ -365,7 +365,7 @@ export abstract class WorkspacesService {
     // 5. Send email
     const workspace = await WorkspacesRepository.findById(workspace_id);
     if (workspace) {
-      const inviteLink = `${Env.APP_URL}/accept-invite?token=${token}`;
+      const inviteLink = `${Env.NEXT_PUBLIC_APP_URL}/accept-invite?token=${token}`;
       await sendInvitationEmail(email, workspace.name, inviteLink);
     }
 

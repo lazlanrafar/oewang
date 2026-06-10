@@ -55,7 +55,7 @@ export abstract class OutlookService {
     const clientId = Env.MICROSOFT_CLIENT_ID;
     if (!clientId) throw new Error("MICROSOFT_CLIENT_ID not configured");
 
-    const redirectUri = `${Env.API_BASE_URL}/integrations/outlook/oauth-callback`;
+    const redirectUri = `${Env.NEXT_PUBLIC_API_URL}/v1/integrations/outlook/oauth-callback`;
     const state = OutlookService.encryptState({
       workspaceId,
       userId,
@@ -85,7 +85,7 @@ export abstract class OutlookService {
 
     const clientId = Env.MICROSOFT_CLIENT_ID!;
     const clientSecret = Env.MICROSOFT_CLIENT_SECRET!;
-    const redirectUri = `${Env.API_BASE_URL}/integrations/outlook/oauth-callback`;
+    const redirectUri = `${Env.NEXT_PUBLIC_API_URL}/v1/integrations/outlook/oauth-callback`;
 
     const tokenRes = await fetch(OUTLOOK_TOKEN_URL, {
       method: "POST",
