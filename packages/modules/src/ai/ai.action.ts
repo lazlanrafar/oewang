@@ -186,3 +186,18 @@ export async function getAiQuota(): Promise<{
     };
   }
 }
+
+export async function updateAgentResponseLanguageAction(
+  response_language: string,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await api.put("/ai/agent-settings", { response_language });
+    return { success: true };
+  } catch (error: any) {
+    return {
+      success: false,
+      error:
+        error.response?.data?.message ?? "Failed to update response language",
+    };
+  }
+}
