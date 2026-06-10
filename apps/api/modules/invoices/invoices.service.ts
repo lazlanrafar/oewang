@@ -8,6 +8,7 @@ import { cacheDel, cacheGet, cacheSet } from "../../lib/cache";
 import { AuditLogsRepository } from "../audit-logs/audit-logs.repository";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { NotificationsService } from "../notifications/notifications.service";
+import { RealtimeService } from "../realtime/realtime.service";
 import type { CreateInvoiceInput, UpdateInvoiceInput } from "./invoices.dto";
 import { InvoicesRepository } from "./invoices.repository";
 
@@ -88,6 +89,8 @@ export abstract class InvoicesService {
       link: "/invoices",
     }).catch(() => {});
 
+    RealtimeService.notifyValueChange(workspaceId, "invoices");
+
     return buildSuccess(result);
   }
 
@@ -158,6 +161,8 @@ export abstract class InvoicesService {
       }
     }
 
+    RealtimeService.notifyValueChange(workspaceId, "invoices");
+
     return buildSuccess(result);
   }
 
@@ -178,6 +183,8 @@ export abstract class InvoicesService {
       invoiceKey(workspaceId, id),
       invoicePublicKey(workspaceId, id),
     );
+
+    RealtimeService.notifyValueChange(workspaceId, "invoices");
 
     return buildSuccess(null);
   }

@@ -8,6 +8,7 @@ import { status } from "elysia";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { ContactsRepository } from "../contacts/contacts.repository";
 import { NotificationsService } from "../notifications/notifications.service";
+import { RealtimeService } from "../realtime/realtime.service";
 import { TransactionsRepository } from "../transactions/transactions.repository";
 import type {
   BulkPayDebtInput,
@@ -85,6 +86,8 @@ export abstract class DebtsService {
       link: "/debts",
     }).catch(() => {});
 
+    RealtimeService.notifyValueChange(workspaceId, "debts");
+
     return buildSuccess(debt, "Debt created successfully", "CREATED");
   }
 
@@ -128,6 +131,8 @@ export abstract class DebtsService {
       after: updated,
     });
 
+    RealtimeService.notifyValueChange(workspaceId, "debts");
+
     return buildSuccess(updated, "Debt updated successfully");
   }
 
@@ -146,6 +151,8 @@ export abstract class DebtsService {
       entity_id: id,
       before: debt,
     });
+
+    RealtimeService.notifyValueChange(workspaceId, "debts");
 
     return buildSuccess(null, "Debt deleted successfully");
   }

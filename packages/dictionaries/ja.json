@@ -1053,6 +1053,8 @@
     "summary": {
       "total": "総連絡先数",
       "added_this_month": "今月追加",
+      "with_email": "メールあり",
+      "with_phone": "電話あり",
       "most_active": "最もアクティブなクライアント",
       "top_revenue": "最高収益クライアント",
       "no_activity": "アクティビティデータなし",

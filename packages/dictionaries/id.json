@@ -1065,6 +1065,8 @@
     "summary": {
       "total": "Total Kontak",
       "added_this_month": "Ditambahkan Bulan Ini",
+      "with_email": "Dengan Email",
+      "with_phone": "Dengan Telepon",
       "most_active": "Klien Paling Aktif",
       "top_revenue": "Klien Pendapatan Tertinggi",
       "no_activity": "Tidak ada data aktivitas",

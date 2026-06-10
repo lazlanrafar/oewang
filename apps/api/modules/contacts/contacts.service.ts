@@ -6,6 +6,7 @@ import {
 } from "@workspace/utils";
 import { status } from "elysia";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
+import { RealtimeService } from "../realtime/realtime.service";
 import type { CreateContactInput, UpdateContactInput } from "./contacts.model";
 import { ContactsRepository } from "./contacts.repository";
 
@@ -46,6 +47,8 @@ export abstract class ContactsService {
       entity_id: contact.id,
       after: contact,
     });
+
+    RealtimeService.notifyValueChange(workspaceId, "contacts");
 
     return buildSuccess(contact, "Contact created successfully", "CREATED");
   }
@@ -96,6 +99,8 @@ export abstract class ContactsService {
       after: updated,
     });
 
+    RealtimeService.notifyValueChange(workspaceId, "contacts");
+
     return buildSuccess(updated, "Contact updated successfully");
   }
 
@@ -115,6 +120,8 @@ export abstract class ContactsService {
       entity_id: id,
       before: contact,
     });
+
+    RealtimeService.notifyValueChange(workspaceId, "contacts");
 
     return buildSuccess(null, "Contact deleted successfully");
   }

@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Dictionary } from "@workspace/dictionaries";
 import { type DebtWithContact, deleteContact, getDebts, updateContact } from "@workspace/modules/client";
-import type { Contact, TransactionSettings } from "@workspace/types";
+import type { Contact } from "@workspace/types";
 import {
   Badge,
   Button,
@@ -24,7 +24,6 @@ import {
   SheetTitle,
   Textarea,
 } from "@workspace/ui";
-import { formatCurrency as formatCurrencyUtil } from "@workspace/utils";
 import { format } from "date-fns";
 import { History, Trash } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -32,6 +31,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 
 import { useConfirm } from "@/components/providers/confirm-modal-provider";
+import { useAppStore } from "@/stores/app";
 
 import { BulkPaySheet } from "../debts/bulk-pay-sheet";
 
@@ -53,13 +53,11 @@ interface Props {
   onClose: () => void;
   onDebtClick?: (debt: DebtWithContact) => void;
   dictionary: Dictionary;
-  settings: TransactionSettings;
 }
 
-export function ContactDetailSheet({ contact, open, onClose, onDebtClick, dictionary, settings }: Props) {
+export function ContactDetailSheet({ contact, open, onClose, onDebtClick, dictionary }: Props) {
   const queryClient = useQueryClient();
-  const formatCurrency = (amount: number, options?: Parameters<typeof formatCurrencyUtil>[2]) =>
-    formatCurrencyUtil(amount, settings, options);
+  const formatCurrency = useAppStore((s) => s.formatCurrency);
   const [isEditing, setIsEditing] = useState(false);
   const [isBulkPayOpen, setIsBulkPayOpen] = useState(false);
   const confirm = useConfirm();

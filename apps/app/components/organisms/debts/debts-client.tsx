@@ -326,7 +326,6 @@ export function DebtsClient({ initialData, wallets, dictionary, settings, locale
         }}
         onDebtClick={handleRowClick}
         dictionary={dictionary}
-        settings={settings}
       />
     </div>
   );

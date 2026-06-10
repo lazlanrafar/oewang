@@ -3,6 +3,7 @@ import { encrypt } from "@workspace/encryption";
 import { buildSuccess } from "@workspace/utils";
 import { cacheDel, cacheGet, cacheSet } from "../../lib/cache";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
+import { RealtimeService } from "../realtime/realtime.service";
 import type { TransactionSettingsInput } from "./settings.model";
 import { SettingsRepository } from "./settings.repository";
 
@@ -87,6 +88,9 @@ export abstract class SettingsService {
     });
 
     await cacheDel(settingsKey(workspaceId));
+
+    // Broadcast so any open tab refreshes its cached settings without polling
+    RealtimeService.notifyValueChange(workspaceId, "settings");
 
     const sanitizedSettings = {
       ...updated,
