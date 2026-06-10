@@ -18,12 +18,13 @@ apps/app/
   components/organisms/foo/
     foo-client.tsx                               ← Main client component — query, state, DataTable
     foo-client-header.tsx                        ← Toolbar (filters, date picker, actions)
+    foo-client-cards.tsx                         ← (optional) Summary cards above the toolbar
     foo-columns.tsx                              ← TanStack column definitions with skeleton meta
     foo-form-sheet.tsx                           ← (optional) Create/edit sheet
     foo-detail-sheet.tsx                         ← (optional) Detail view sheet
 ```
 
-The two non-negotiable pieces are `page.tsx` (server) and `foo-client.tsx` (client). The header file is required only when the toolbar has more than ~3 controls — otherwise inline it.
+The two non-negotiable pieces are `page.tsx` (server) and `foo-client.tsx` (client). The header file is required only when the toolbar has more than ~3 controls — otherwise inline it. The cards file is required when the page displays summary metrics above the table (e.g. accounts has Total Balance / Accounts / Active).
 
 ---
 
@@ -310,7 +311,95 @@ export function FooClient({
 
 ---
 
-## 4. The Skeleton (`TableSkeleton`)
+## 4. Summary Cards (`foo-client-cards.tsx`)
+
+Pages that show summary metrics above the table (totals, counts, statuses) should use the `DataTablePageCard` component from `@workspace/ui`. It handles the layout, label styling, and an **animated counter** for numeric values — same UX as the overview page.
+
+```tsx
+"use client";
+
+import type { Dictionary } from "@workspace/dictionaries";
+import { DataTablePageCard } from "@workspace/ui";
+
+interface FooClientCardsProps {
+  totalBalance: number;
+  accountCount: number;
+  activeCount: number;
+  isLoading: boolean;
+  formatCurrency: (v: number, opts?: { locale?: string }) => string;
+  locale: string;
+  dictionary: Dictionary;
+}
+
+export function FooClientCards({
+  totalBalance,
+  accountCount,
+  activeCount,
+  isLoading,
+  formatCurrency,
+  locale,
+  dictionary,
+}: FooClientCardsProps) {
+  return (
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <DataTablePageCard
+        label={dictionary.foo.total_balance}
+        value={totalBalance}
+        isLoading={isLoading}
+        formatter={(v) => formatCurrency(v, { locale })}
+      />
+      <DataTablePageCard
+        label={dictionary.foo.count}
+        value={accountCount}
+        isLoading={isLoading}
+      />
+      <DataTablePageCard
+        label={dictionary.foo.active}
+        value={activeCount}
+        isLoading={isLoading}
+        valueClassName="text-emerald-600 dark:text-emerald-400"
+      />
+    </div>
+  );
+}
+```
+
+### `DataTablePageCard` props
+
+| Prop | Type | Notes |
+| --- | --- | --- |
+| `label` | `string` | Small uppercase label above the value |
+| `value` | `number \| string` | **Numbers animate from 0** with a counter on mount. Strings render as-is |
+| `isLoading` | `boolean` | When true, **only the value** is replaced by a Skeleton — the label stays visible |
+| `formatter` | `(v: number) => string` | Optional formatter for number values (e.g. `formatCurrency`) |
+| `valueClassName` | `string` | Optional class on the value text (e.g. color override) |
+| `className` | `string` | Optional class on the card container |
+| `action` | `ReactNode` | Optional element rendered in the top-right (icon, badge, button) |
+
+### Loading rule for cards
+
+- The **label always shows** — no skeleton on labels
+- The **value** shows a `Skeleton` block when `isLoading` is true
+- For **numeric values**, when loading completes the number animates from 0 to its target using framer-motion (same `CountUp` pattern as overview cards)
+- For **string values**, the value appears immediately when loading completes — no animation
+
+The cards block is placed **above** the toolbar in `foo-client.tsx`:
+
+```tsx
+<div className="flex h-full w-full flex-col space-y-4">
+  <FooClientCards {...cardsProps} isLoading={isLoading} />
+  <FooClientHeader {...headerProps} />
+  <div className="relative min-h-0 flex-1">
+    {isLoading ? <TableSkeleton ... /> : <DataTable ... />}
+  </div>
+</div>
+```
+
+The same `isLoading` from `useInfiniteQuery` drives both cards and the table — they show their respective loading states in sync.
+
+---
+
+## 5. The Skeleton (`TableSkeleton`)
 
 `TableSkeleton` is exported from `@workspace/ui` and reads from the same column definitions as `DataTable`. It renders adaptive skeleton cells based on each column's `meta.skeleton` config.
 
@@ -355,20 +444,22 @@ Columns without `meta.skeleton` fall back to a default `Skeleton h-3.5 w-24` cel
 
 ## Loading Behavior Summary
 
-| Phase | What renders |
-| --- | --- |
-| **Initial server render** | Full page with header + table + data — no skeleton at all |
-| **First client paint** | Same DOM, hydrated. `useInfiniteQuery` reads `initialData` so `isLoading = false` |
-| **Filter change** | Header stays. Query key changes, `isLoading = true` → `TableSkeleton` replaces table body |
-| **Infinite scroll** | Header + visible rows stay. A spinner shows at bottom (`isFetchingNextPage`) |
-| **Mutation (delete/edit)** | Optimistic via TanStack Query — UI updates immediately, refetch in background |
+| Phase | Cards | Header | Table body |
+| --- | --- | --- | --- |
+| **Initial server render** | Numbers animate from 0 on first paint | Interactive | Real data |
+| **First client paint** | Numbers animate from 0 (`isLoading = false`) | Interactive | Real data |
+| **Filter change** | Card values show Skeleton; labels stay | Interactive | `TableSkeleton` |
+| **Infinite scroll** | Card values stay visible | Interactive | Visible rows stay + spinner at bottom |
+| **Mutation (delete/edit)** | Optimistic update — number re-animates to new value | Interactive | Optimistic row change |
 
 ---
 
 ## Common Pitfalls
 
 - **Do not** add `Suspense` around the client component in `page.tsx`. The page is already async and waits for data — adding `Suspense` causes a blank flash on slow connections.
-- **Do not** put the `isLoading` ternary outside the table container. The header must stay rendered.
+- **Do not** put the `isLoading` ternary outside the table container. The header and cards must stay rendered.
 - **Do not** rebuild the skeleton manually in `page.tsx`. Always use `TableSkeleton` so it stays in sync with the real table layout.
+- **Do not** wrap labels in `Skeleton` when cards are loading. Only the value should show a Skeleton — labels are static and known at render time.
+- **Do not** use a plain `<span>{value}</span>` for numeric card values. Use `DataTablePageCard` so the counter animation is consistent with other pages.
 - **Do not** pass `initialData` unconditionally to `useInfiniteQuery`. The `isInitial` check is what keeps the SSR data from being clobbered on filter changes.
 - **Do not** share `tableId` between pages — column settings will leak.
