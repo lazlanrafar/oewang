@@ -306,12 +306,10 @@ export abstract class IntegrationsService {
 
       if (connectPayload) {
         const { workspaceIdentifier, userIdCandidate } = connectPayload;
-        const targetWorkspaceId = IntegrationsService.isUuid(
-          workspaceIdentifier,
-        )
+        const targetWorkspaceId = IntegrationsService.isUuid(workspaceIdentifier)
           ? workspaceIdentifier
-          : await IntegrationsRepository.findWorkspaceIdBySlug(
-              workspaceIdentifier.toLowerCase(),
+          : await IntegrationsRepository.findWorkspaceIdBySlugOrId(
+              workspaceIdentifier,
             );
         let targetUserId = IntegrationsService.isUuid(userIdCandidate || "")
           ? userIdCandidate
@@ -551,6 +549,10 @@ export abstract class IntegrationsService {
     // Skip messages sent by the bot itself
     if (data.key?.fromMe === true) return "OK";
 
+    // Use instance name from webhook payload so the reply goes back to the right instance
+    const instanceName: string =
+      (payload.instance as string) || Env.EVOLUTION_API_INSTANCE || "";
+
     const remoteJid: string = data.key?.remoteJid || "";
     // Extract plain phone number from JID (e.g. "62812345@s.whatsapp.net" → "62812345")
     const fromNumber = remoteJid.split("@")[0] || "";
@@ -568,17 +570,14 @@ export abstract class IntegrationsService {
     if (text) {
       const connectPayload =
         IntegrationsService.parseTelegramConnectPayload(text);
-      const directMatch = text.match(/^Connect Oewang\s+([a-f0-9-]{36})$/i);
 
-      const targetWorkspaceId = directMatch
-        ? directMatch[1]
-        : connectPayload
-          ? IntegrationsService.isUuid(connectPayload.workspaceIdentifier)
-            ? connectPayload.workspaceIdentifier
-            : await IntegrationsRepository.findWorkspaceIdBySlug(
-                connectPayload.workspaceIdentifier.toLowerCase(),
-              )
-          : null;
+      const targetWorkspaceId = connectPayload
+        ? IntegrationsService.isUuid(connectPayload.workspaceIdentifier)
+          ? connectPayload.workspaceIdentifier
+          : await IntegrationsRepository.findWorkspaceIdBySlugOrId(
+              connectPayload.workspaceIdentifier,
+            )
+        : null;
 
       if (targetWorkspaceId) {
         const targetUserId =
@@ -588,6 +587,7 @@ export abstract class IntegrationsService {
           await IntegrationsService.sendEvolutionWhatsAppMessage(
             fromNumber,
             "❌ Could not find a valid user to link with this workspace. Please use the link from the Oewang app.",
+            instanceName,
           );
           return "OK";
         }
@@ -600,6 +600,7 @@ export abstract class IntegrationsService {
         await IntegrationsService.sendEvolutionWhatsAppMessage(
           fromNumber,
           "✅ Your WhatsApp is now connected to Oewang! You can now send me your expenses or upload receipts anytime.",
+          instanceName,
         );
         return "OK";
       }
@@ -641,6 +642,7 @@ export abstract class IntegrationsService {
           await IntegrationsService.sendEvolutionWhatsAppMessage(
             fromNumber,
             "❌ Could not retrieve the media file. Please try again.",
+            instanceName,
           );
           return "OK";
         }
@@ -686,12 +688,14 @@ export abstract class IntegrationsService {
             await IntegrationsService.sendEvolutionWhatsAppMessage(
               fromNumber,
               `✅ Added expense: ${parsedReceipt.name || "Receipt"} for ${Number(parsedReceipt.amount).toLocaleString()}.`,
+              instanceName,
             );
           }
         } else {
           await IntegrationsService.sendEvolutionWhatsAppMessage(
             fromNumber,
             "❌ Sorry, I couldn't extract receipt data from that image.",
+            instanceName,
           );
         }
       } else if (text) {
@@ -726,6 +730,7 @@ export abstract class IntegrationsService {
           await IntegrationsService.sendEvolutionWhatsAppMessage(
             fromNumber,
             replyText,
+            instanceName,
           );
         }
       }
@@ -736,10 +741,14 @@ export abstract class IntegrationsService {
     return "OK";
   }
 
-  static async sendEvolutionWhatsAppMessage(to: string, text: string) {
+  static async sendEvolutionWhatsAppMessage(
+    to: string,
+    text: string,
+    instanceName?: string,
+  ) {
     const baseUrl = Env.EVOLUTION_API_URL;
     const token = Env.EVOLUTION_API_TOKEN;
-    const instance = Env.EVOLUTION_API_INSTANCE;
+    const instance = instanceName || Env.EVOLUTION_API_INSTANCE;
 
     if (!baseUrl || !token || !instance) {
       logger.warn("Evolution API not configured, cannot send WhatsApp message");

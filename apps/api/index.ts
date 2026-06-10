@@ -24,6 +24,10 @@ import { contactsController } from "./modules/contacts/contacts.controller";
 import { debtsController } from "./modules/debts/debts.controller";
 import { healthController } from "./modules/health/health.controller";
 import { integrationsController } from "./modules/integrations/integrations.controller";
+import {
+  publicWebhooksController,
+  registerEvolutionWebhook,
+} from "./modules/integrations/public-webhooks.controller";
 import { invoicesController } from "./modules/invoices/invoices.controller";
 import { publicInvoicesController } from "./modules/invoices/public-invoices.controller";
 import { mayarController } from "./modules/mayar/mayar.controller";
@@ -136,6 +140,7 @@ const app = new Elysia()
     }),
   )
   .use(mcpController)
+  .use(publicWebhooksController)
   .use(staticPlugin({ assets: "public", prefix: "" }))
   .get("/", () => Bun.file("public/index.html"))
   .use(loggerPlugin)
@@ -348,6 +353,8 @@ RealtimeService.onDataChanged(({ workspaceId, type }) => {
 log.info(`🚀 oewang API running at http://localhost:${port}`);
 log.info(`📖 Swagger docs at http://localhost:${port}/swagger`);
 log.info(`🔗 API v1 at http://localhost:${port}/v1`);
+
+registerEvolutionWebhook();
 
 export { app };
 export type App = typeof app;

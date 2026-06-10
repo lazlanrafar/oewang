@@ -1,5 +1,4 @@
 import { Env } from "@workspace/constants";
-import { logger } from "@workspace/logger";
 import { ErrorCode } from "@workspace/types";
 import { buildError, buildSuccess } from "@workspace/utils";
 import { Elysia, status, t } from "elysia";
@@ -9,95 +8,11 @@ import { ConnectWhatsAppDto } from "./integrations.dto";
 import { GmailService } from "./gmail.service";
 import { OutlookService } from "./outlook.service";
 import { IntegrationsService } from "./integrations.service";
-import { verifyTelegramSecret } from "./webhook-security";
+import { logger } from "@workspace/logger";
 
 const APP_URL = () => Env.APP_URL || Env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
 export const integrationsController = new Elysia({ prefix: "/integrations" })
-  // ── Public webhooks ────────────────────────────────────────────────────────
-
-  .post(
-    "/whatsapp/webhook",
-    async ({ set, body }) => {
-      let parsedBody: Record<string, any>;
-
-      if (body && typeof body === "object") {
-        parsedBody = body as Record<string, any>;
-      } else if (typeof body === "string") {
-        try {
-          parsedBody = JSON.parse(body);
-        } catch {
-          set.status = 400;
-          return "Invalid JSON payload";
-        }
-      } else {
-        set.status = 400;
-        return "Invalid JSON payload";
-      }
-
-      IntegrationsService.handleEvolutionWhatsAppWebhook(parsedBody).catch(
-        (error) => logger.error("Evolution WhatsApp webhook error", { error }),
-      );
-      return "OK";
-    },
-    {
-      detail: {
-        summary: "WhatsApp Webhook (Evolution API)",
-        tags: ["Integrations"],
-      },
-    },
-  )
-
-  .post(
-    "/telegram/webhook",
-    async ({ request, set, body }) => {
-      const expectedSecret = Env.TELEGRAM_WEBHOOK_SECRET;
-      const receivedSecret = request.headers.get(
-        "x-telegram-bot-api-secret-token",
-      );
-
-      if (process.env.NODE_ENV === "production" && !expectedSecret) {
-        set.status = 500;
-        return "Telegram webhook is not configured";
-      }
-
-      if (expectedSecret) {
-        const isValid = verifyTelegramSecret({ expectedSecret, receivedSecret });
-        if (!isValid) {
-          set.status = 403;
-          return "Forbidden";
-        }
-      }
-
-      let parsedBody: Record<string, any>;
-
-      if (body && typeof body === "object") {
-        parsedBody = body as Record<string, any>;
-      } else if (typeof body === "string") {
-        try {
-          parsedBody = JSON.parse(body);
-        } catch {
-          set.status = 400;
-          return "Invalid JSON payload";
-        }
-      } else {
-        set.status = 400;
-        return "Invalid JSON payload";
-      }
-
-      IntegrationsService.handleTelegramWebhook(parsedBody).catch((error) =>
-        logger.error("Telegram webhook error", { error }),
-      );
-      return "OK";
-    },
-    {
-      detail: {
-        summary: "Telegram Webhook",
-        tags: ["Integrations"],
-      },
-    },
-  )
-
   // ── Public OAuth callbacks (no auth cookie — browser redirect from provider) ──
 
   .get(

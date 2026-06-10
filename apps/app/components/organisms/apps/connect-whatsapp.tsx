@@ -36,9 +36,11 @@ export function ConnectWhatsApp({ dictionary }: { dictionary: Dictionary }) {
   });
 
   const workspaceId = me?.user?.workspace_id;
+  const currentWorkspace = me?.workspaces?.find((w) => w.id === workspaceId);
+  const workspaceSlug = currentWorkspace?.slug;
   const whatsappNumber = Env.NEXT_PUBLIC_WHATSAPP_NUMBER;
-  const message = `Connect Oewang ${workspaceId}`;
-  const whatsappUrl = whatsappNumber
+  const message = workspaceSlug ? `Connect Oewang ${workspaceSlug}` : "";
+  const whatsappUrl = whatsappNumber && message
     ? `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`
     : "";
 
