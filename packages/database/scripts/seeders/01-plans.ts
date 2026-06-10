@@ -1,8 +1,8 @@
+import * as path from "node:path";
+import * as dotenv from "dotenv";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import { sql, eq } from "drizzle-orm";
-import * as dotenv from "dotenv";
-import * as path from "path";
 import { pricing } from "../../schema/pricing";
 
 if (!process.env.DATABASE_URL) {
@@ -12,7 +12,7 @@ if (!process.env.DATABASE_URL) {
 const PLANS = [
   {
     name: "Starter",
-    description: "Get started for free with meaningful limits and no credit card.",
+    description: "Start tracking daily spending for free with simple limits.",
     prices: [
       { currency: "usd", monthly: 0, yearly: 0 },
       { currency: "eur", monthly: 0, yearly: 0 },
@@ -23,7 +23,7 @@ const PLANS = [
     max_workspaces: 1,
     features: [
       "1 workspace",
-      "Basic transaction tracking",
+      "Daily transaction tracking",
       "30,000 AI tokens / month",
       "Secure vault storage (250MB)",
       "Standard support",
@@ -33,27 +33,70 @@ const PLANS = [
     addon_type: null,
   },
   {
-    name: "Pro",
-    description: "Built for founders and small teams that need room to scale.",
+    name: "Personal",
+    description:
+      "Best-value plan for daily personal money tracking in Indonesia.",
     prices: [
       {
         currency: "usd",
-        monthly: 999,
-        yearly: 9990,
+        monthly: 500,
+        yearly: 4800,
+        mayar_monthly_id: "PERSONAL_MONTHLY_USD",
+        mayar_yearly_id: "PERSONAL_YEARLY_USD",
+      },
+      {
+        currency: "eur",
+        monthly: 500,
+        yearly: 4800,
+        mayar_monthly_id: "PERSONAL_MONTHLY_EUR",
+        mayar_yearly_id: "PERSONAL_YEARLY_EUR",
+      },
+      {
+        currency: "idr",
+        monthly: 39900,
+        yearly: 383000,
+        mayar_monthly_id: "PERSONAL_MONTHLY_IDR",
+        mayar_yearly_id: "PERSONAL_YEARLY_IDR",
+      },
+    ],
+    max_vault_size_mb: 2048,
+    max_ai_tokens: 100000,
+    max_workspaces: 3,
+    features: [
+      "3 workspaces",
+      "Unlimited wallets",
+      "Daily spending insights",
+      "100,000 AI tokens included monthly",
+      "Receipt vault storage (2GB)",
+      "Best value for personal tracking",
+    ],
+    is_active: true,
+    is_addon: false,
+    addon_type: null,
+  },
+  {
+    name: "Pro",
+    description:
+      "For families, freelancers, and power users tracking more activity.",
+    prices: [
+      {
+        currency: "usd",
+        monthly: 1200,
+        yearly: 11500,
         mayar_monthly_id: "PRO_MONTHLY_USD",
         mayar_yearly_id: "PRO_YEARLY_USD",
       },
       {
         currency: "eur",
-        monthly: 899,
-        yearly: 8990,
+        monthly: 1100,
+        yearly: 10600,
         mayar_monthly_id: "PRO_MONTHLY_EUR",
         mayar_yearly_id: "PRO_YEARLY_EUR",
       },
       {
         currency: "idr",
-        monthly: 149000,
-        yearly: 1490000,
+        monthly: 99900,
+        yearly: 959000,
         mayar_monthly_id: "PRO_MONTHLY_IDR",
         mayar_yearly_id: "PRO_YEARLY_IDR",
       },
@@ -77,26 +120,27 @@ const PLANS = [
   },
   {
     name: "Business",
-    description: "For growing teams that need high limits and operational control.",
+    description:
+      "For small teams that need shared tracking and operational control.",
     prices: [
       {
         currency: "usd",
-        monthly: 3899,
-        yearly: 38990,
+        monthly: 2900,
+        yearly: 27800,
         mayar_monthly_id: "BUSINESS_MONTHLY_USD",
         mayar_yearly_id: "BUSINESS_YEARLY_USD",
       },
       {
         currency: "eur",
-        monthly: 3499,
-        yearly: 34990,
+        monthly: 2700,
+        yearly: 25900,
         mayar_monthly_id: "BUSINESS_MONTHLY_EUR",
         mayar_yearly_id: "BUSINESS_YEARLY_EUR",
       },
       {
         currency: "idr",
-        monthly: 649000,
-        yearly: 6490000,
+        monthly: 249900,
+        yearly: 2399000,
         mayar_monthly_id: "BUSINESS_MONTHLY_IDR",
         mayar_yearly_id: "BUSINESS_YEARLY_IDR",
       },
@@ -127,15 +171,25 @@ export async function seedPlans() {
   console.log("🌱 Seeding subscription plans...");
 
   for (const plan of PLANS) {
-    const existing = await db.execute(
-      sql`SELECT id FROM pricing WHERE lower(name) = lower(${plan.name}) AND deleted_at IS NULL LIMIT 1`,
-    );
+    const [existing] = await db
+      .select({ id: pricing.id })
+      .from(pricing)
+      .where(
+        and(
+          sql`lower(${pricing.name}) = lower(${plan.name})`,
+          isNull(pricing.deleted_at),
+        ),
+      )
+      .limit(1);
 
-    if (existing.length > 0) {
-      await db.update(pricing).set(plan).where(eq(pricing.id, (existing[0] as any).id));
+    if (existing) {
+      await db.update(pricing).set(plan).where(eq(pricing.id, existing.id));
       console.log(`  ↻  Updated: "${plan.name}"`);
     } else {
-      const [inserted] = await db.insert(pricing).values(plan).returning({ id: pricing.id, name: pricing.name });
+      const [inserted] = await db
+        .insert(pricing)
+        .values(plan)
+        .returning({ id: pricing.id, name: pricing.name });
       console.log(`  ✓  Inserted: "${inserted!.name}"`);
     }
   }
@@ -144,8 +198,7 @@ export async function seedPlans() {
   console.log("✅ Plans seeded.\n");
 }
 
-// @ts-ignore - Bun supports import.meta.main at runtime
-if (import.meta.main) {
+if (process.argv[1]?.endsWith("01-plans.ts")) {
   seedPlans().catch((err) => {
     console.error("❌ Failed:", err);
     process.exit(1);

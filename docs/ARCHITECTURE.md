@@ -109,6 +109,7 @@ modules/wallets/
 ```
 
 **File naming rules:**
+
 - `.controller.ts` — the Elysia instance (routes)
 - `.service.ts` — `abstract class` with `static` methods
 - `.repository.ts` — DB queries; imports `@workspace/database`
@@ -187,17 +188,17 @@ apps/app/app/
 
 ### Directory Responsibilities
 
-| Directory | Purpose |
-|-----------|---------|
-| `actions/` | REST wrappers only — the ONLY place HTTP calls are made |
-| `app/[locale]/` | Next.js App Router pages (thin orchestrators) |
-| `components/` | React components organized by feature domain |
-| `lib/` | Client utilities: axios, workspace-permissions |
-| `hooks/` | Custom React hooks (client-only) |
-| `stores/` | Client state (Zustand) |
-| `navigation/` | Sidebar/nav config objects (no rendering logic) |
-| `server/` | Next.js Server Actions |
-| `modules/types/` | App-local UI types |
+| Directory        | Purpose                                                 |
+| ---------------- | ------------------------------------------------------- |
+| `actions/`       | REST wrappers only — the ONLY place HTTP calls are made |
+| `app/[locale]/`  | Next.js App Router pages (thin orchestrators)           |
+| `components/`    | React components organized by feature domain            |
+| `lib/`           | Client utilities: axios, workspace-permissions          |
+| `hooks/`         | Custom React hooks (client-only)                        |
+| `stores/`        | Client state (Zustand)                                  |
+| `navigation/`    | Sidebar/nav config objects (no rendering logic)         |
+| `server/`        | Next.js Server Actions                                  |
+| `modules/types/` | App-local UI types                                      |
 
 **`actions/`** files must use `"use server"` and import from `@workspace/modules/server` (server-side axios). The server axios reads the `oewang-session` httpOnly cookie from `next/headers` — client code cannot read it. Current action files: `mayar.actions.ts` · `notification.actions.ts` · `push-subscription.actions.ts`
 
@@ -216,14 +217,17 @@ Drizzle ORM + PostgreSQL. The **only** package that directly talks to the databa
 `ai-agent-settings` · `ai-messages` · `ai-sessions` · `articles` · `audit-logs` · `budgets` · `categories` · `contacts` · `debt-payments` · `debts` · `invoices` · `notification-settings` · `notifications` · `oauth-accounts` · `orders` · `pricing` · `privacy-requests` · `push-subscriptions` · `system-settings` · `transaction-attachments` · `transaction-items` · `transactions` · `user-workspaces` · `users` · `vault-file-chunks` · `vault-files` · `wallet-groups` · `wallets` · `webhook-events` · `workspace-addons` · `workspace-integrations` · `workspace-invitations` · `workspace-settings` · `workspace-sub-currencies` · `workspaces`
 
 **Auth-relevant schema notes:**
+
 - `users.password_hash` — nullable text; null for OAuth-only users
 - `oauth_accounts` — links users to OAuth provider identities; unique index on `(provider, provider_user_id)`
 
 **Every workspace-scoped table MUST have:**
+
 - `workspace_id` (FK → `workspaces.id`)
 - `deleted_at` (nullable timestamp — soft delete only, NEVER `DELETE`)
 
 **Migration workflow (mandatory order):**
+
 ```bash
 # 1. Edit schema file(s) in packages/database/schema/
 # 2. Generate migration SQL
@@ -234,10 +238,12 @@ bun run --cwd packages/database drizzle-kit migrate
 ```
 
 **pgvector setup (one-time per environment):**
+
 ```bash
 # Enable vector extension + create HNSW index on vault_file_chunks.embedding
 bun run db:setup-vector
 ```
+
 Required for RAG document search. Railway production: already enabled (June 2025). Safe to re-run (idempotent).
 
 ---
@@ -256,6 +262,7 @@ user_workspaces: { user_id, workspace_id, role, joined_at, deleted_at }
 - JWT always wins on conflict
 
 **NEVER:**
+
 - Store workspaces as a JSON/array column on `users`
 - Skip the `user_workspaces` membership check
 - Return data without `workspace_id` filter
@@ -278,11 +285,13 @@ Login (email/password or OAuth)
 ```
 
 **Auth endpoints** (`apps/api/modules/auth/auth.controller.ts`):
+
 - `POST /v1/auth/login` — email + password → JWT
 - `POST /v1/auth/register` — email + password + name → JWT
 - `POST /v1/auth/oauth/connect` — OAuth user info from Next.js callback → JWT
 
 **OAuth flow** (Authorization Code + CSRF state cookie):
+
 1. User clicks "Login with Google/GitHub" → navigates to `/api/auth/{provider}`
 2. Next.js route handler generates `oauth_state` UUID, stores in 10-min httpOnly cookie, redirects to provider
 3. Provider redirects to `/api/auth/{provider}/callback?code=...&state=...`
@@ -303,11 +312,11 @@ Login (email/password or OAuth)
 
 ## Observability
 
-| Layer | Tool |
-|-------|------|
-| `apps/api` | Sentry (`instrument.ts` — must be first import) + Pino logger |
-| `apps/app` | Sentry (`instrumentation.ts` server + `sentry.client.config.ts` browser) |
-| Structured logging | `@workspace/logger` (Pino-based) — `never console.log` in shared code |
+| Layer              | Tool                                                                     |
+| ------------------ | ------------------------------------------------------------------------ |
+| `apps/api`         | Sentry (`instrument.ts` — must be first import) + Pino logger            |
+| `apps/app`         | Sentry (`instrumentation.ts` server + `sentry.client.config.ts` browser) |
+| Structured logging | `@workspace/logger` (Pino-based) — `never console.log` in shared code    |
 
 **Never attach to Sentry:** passwords · JWT tokens · encryption keys · decrypted API payloads
 
@@ -315,28 +324,29 @@ Login (email/password or OAuth)
 
 ## Package Import Matrix
 
-| Package | apps/app | apps/api | Other packages |
-|---------|----------|----------|----------------|
-| `database` | ❌ NEVER | ✅ repositories only | ❌ NEVER |
-| `bucket` | ❌ NEVER | ✅ vault service only | ❌ NEVER |
-| `encryption` | ✅ axios interceptor only | ✅ encryption plugin only | ❌ NEVER |
-| `redis` | ❌ NEVER | ✅ rate-limit + services | ❌ NEVER |
-| `ai` | ❌ NEVER | ✅ ai module only | ✅ internally uses `database` + `redis` |
-| `integrations` | ❌ NEVER | ✅ integrations module | ❌ NEVER |
-| `email` | ❌ NEVER | ✅ services only | ❌ NEVER |
-| `types` | ✅ everywhere | ✅ everywhere | ✅ everywhere |
-| `utils` | ✅ everywhere | ✅ everywhere | ✅ everywhere |
-| `constants` | ✅ everywhere | ✅ everywhere | ✅ everywhere |
-| `ui` | ✅ components only | ❌ NEVER | ❌ NEVER |
-| `dictionaries` | ✅ via get-dictionary.ts | ❌ NEVER | ❌ NEVER |
-| `logger` | ❌ NEVER | ✅ everywhere | ✅ everywhere |
-| `modules` | ✅ server actions only | ❌ NEVER | ❌ NEVER |
+| Package        | apps/app                  | apps/api                  | Other packages                          |
+| -------------- | ------------------------- | ------------------------- | --------------------------------------- |
+| `database`     | ❌ NEVER                  | ✅ repositories only      | ❌ NEVER                                |
+| `bucket`       | ❌ NEVER                  | ✅ vault service only     | ❌ NEVER                                |
+| `encryption`   | ✅ axios interceptor only | ✅ encryption plugin only | ❌ NEVER                                |
+| `redis`        | ❌ NEVER                  | ✅ rate-limit + services  | ❌ NEVER                                |
+| `ai`           | ❌ NEVER                  | ✅ ai module only         | ✅ internally uses `database` + `redis` |
+| `integrations` | ❌ NEVER                  | ✅ integrations module    | ❌ NEVER                                |
+| `email`        | ❌ NEVER                  | ✅ services only          | ❌ NEVER                                |
+| `types`        | ✅ everywhere             | ✅ everywhere             | ✅ everywhere                           |
+| `utils`        | ✅ everywhere             | ✅ everywhere             | ✅ everywhere                           |
+| `constants`    | ✅ everywhere             | ✅ everywhere             | ✅ everywhere                           |
+| `ui`           | ✅ components only        | ❌ NEVER                  | ❌ NEVER                                |
+| `dictionaries` | ✅ via get-dictionary.ts  | ❌ NEVER                  | ❌ NEVER                                |
+| `logger`       | ❌ NEVER                  | ✅ everywhere             | ✅ everywhere                           |
+| `modules`      | ✅ server actions only    | ❌ NEVER                  | ❌ NEVER                                |
 
 ---
 
 ## `src/` Directory Rule
 
 `src/` is **forbidden everywhere** with exactly **two exceptions**:
+
 - `packages/ui/src/` — shadcn component library convention
 - `packages/bucket/src/` — pre-existing package structure
 

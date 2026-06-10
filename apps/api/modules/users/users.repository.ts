@@ -76,10 +76,6 @@ export abstract class UsersRepository {
       .where(eq(users.id, user_id));
   }
 
-  static async hardDeleteById(user_id: string) {
-    await db.delete(users).where(eq(users.id, user_id));
-  }
-
   static async findOAuthAccount(provider: string, provider_user_id: string) {
     const [row] = await db
       .select()

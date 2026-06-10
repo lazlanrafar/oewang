@@ -75,7 +75,9 @@ test.describe("Notifications Page", () => {
         await deleteButton.click();
 
         // May need to confirm
-        const confirmButton = page.getByRole("button", { name: /confirm|delete/i });
+        const confirmButton = page.getByRole("button", {
+          name: /confirm|delete/i,
+        });
         if (await confirmButton.isVisible()) {
           await confirmButton.click();
         }
@@ -122,7 +124,9 @@ test.describe("Notification Settings", () => {
   test("can access notification settings", async ({ page }) => {
     await page.goto("/en/notifications");
 
-    const settingsButton = page.getByRole("button", { name: /settings|preferences/i });
+    const settingsButton = page.getByRole("button", {
+      name: /settings|preferences/i,
+    });
 
     if (await settingsButton.isVisible()) {
       await settingsButton.click();

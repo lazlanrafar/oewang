@@ -14,22 +14,21 @@ import * as path from "path";
 
 const db_url = process.env.DATABASE_URL;
 if (!db_url) {
-  console.error("❌ DATABASE_URL is not set. Pass --env-file or export it first.");
+  console.error(
+    "❌ DATABASE_URL is not set. Pass --env-file or export it first.",
+  );
   process.exit(1);
 }
 
 console.log("⏳ Running drizzle-kit migrate...");
 
-const proc = spawn(
-  ["bunx", "drizzle-kit", "migrate"],
-  {
-    cwd: path.resolve(__dirname, ".."),
-    env: process.env as Record<string, string>,
-    stdout: "inherit",
-    stderr: "inherit",
-    stdin: "inherit",
-  },
-);
+const proc = spawn(["bunx", "drizzle-kit", "migrate"], {
+  cwd: path.resolve(__dirname, ".."),
+  env: process.env as Record<string, string>,
+  stdout: "inherit",
+  stderr: "inherit",
+  stdin: "inherit",
+});
 
 async function main() {
   const exitCode = await proc.exited;

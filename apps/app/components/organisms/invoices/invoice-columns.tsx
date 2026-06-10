@@ -115,9 +115,7 @@ export function buildInvoiceColumns({ onEdit, onDelete, dictionary }: InvoiceCol
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            {onEdit && (
-              <DropdownMenuItem onClick={() => onEdit(row.original)}>{acts.edit || "Edit"}</DropdownMenuItem>
-            )}
+            {onEdit && <DropdownMenuItem onClick={() => onEdit(row.original)}>{acts.edit || "Edit"}</DropdownMenuItem>}
             {onDelete && (
               <DropdownMenuItem className="text-destructive" onClick={() => onDelete(row.original)}>
                 {acts.delete || "Delete"}

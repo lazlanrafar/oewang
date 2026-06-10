@@ -21,26 +21,26 @@ Contacts represent people or businesses that the workspace interacts with financ
 
 ### `contacts` table
 
-| Column | Type | Notes |
-|--------|------|-------|
-| `id` | `text` (CUID2) | Primary key |
-| `workspaceId` | `text` FK → workspaces | Required |
-| `name` | `text` | Required |
-| `email` | `text` | Optional |
-| `phone` | `text` | Optional |
-| `addressLine1` | `text` | Optional |
-| `addressLine2` | `text` | Optional |
-| `city` | `text` | Optional |
-| `state` | `text` | Optional |
-| `country` | `text` | Optional |
-| `zip` | `text` | Optional |
-| `website` | `text` | Optional |
-| `note` | `text` | Optional |
-| `vatNumber` | `text` | Optional — used on invoices |
-| `billingEmails` | `text` | Optional additional billing email recipients |
-| `createdAt` | `timestamp` | Auto |
-| `updatedAt` | `timestamp` | Auto |
-| `deletedAt` | `timestamp` | Soft delete |
+| Column          | Type                   | Notes                                        |
+| --------------- | ---------------------- | -------------------------------------------- |
+| `id`            | `text` (CUID2)         | Primary key                                  |
+| `workspaceId`   | `text` FK → workspaces | Required                                     |
+| `name`          | `text`                 | Required                                     |
+| `email`         | `text`                 | Optional                                     |
+| `phone`         | `text`                 | Optional                                     |
+| `addressLine1`  | `text`                 | Optional                                     |
+| `addressLine2`  | `text`                 | Optional                                     |
+| `city`          | `text`                 | Optional                                     |
+| `state`         | `text`                 | Optional                                     |
+| `country`       | `text`                 | Optional                                     |
+| `zip`           | `text`                 | Optional                                     |
+| `website`       | `text`                 | Optional                                     |
+| `note`          | `text`                 | Optional                                     |
+| `vatNumber`     | `text`                 | Optional — used on invoices                  |
+| `billingEmails` | `text`                 | Optional additional billing email recipients |
+| `createdAt`     | `timestamp`            | Auto                                         |
+| `updatedAt`     | `timestamp`            | Auto                                         |
+| `deletedAt`     | `timestamp`            | Soft delete                                  |
 
 ---
 
@@ -48,13 +48,13 @@ Contacts represent people or businesses that the workspace interacts with financ
 
 Base path: `/v1/contacts`
 
-| Method | Path | Role Required | Description |
-|--------|------|--------------|-------------|
-| `GET` | `/` | Any authenticated | List contacts (paginated, searchable) |
-| `GET` | `/:id` | Any authenticated | Get a single contact |
-| `POST` | `/` | Editor+ | Create a new contact |
-| `PATCH` | `/:id` | Editor+ | Update contact details |
-| `DELETE` | `/:id` | Editor+ | Soft-delete a contact |
+| Method   | Path   | Role Required     | Description                           |
+| -------- | ------ | ----------------- | ------------------------------------- |
+| `GET`    | `/`    | Any authenticated | List contacts (paginated, searchable) |
+| `GET`    | `/:id` | Any authenticated | Get a single contact                  |
+| `POST`   | `/`    | Editor+           | Create a new contact                  |
+| `PATCH`  | `/:id` | Editor+           | Update contact details                |
+| `DELETE` | `/:id` | Editor+           | Soft-delete a contact                 |
 
 ---
 
@@ -68,10 +68,10 @@ Base path: `/v1/contacts`
 
 ## Source Files
 
-| Layer | File |
-|-------|------|
-| Schema | `packages/database/schema/contacts.ts` |
+| Layer      | File                                               |
+| ---------- | -------------------------------------------------- |
+| Schema     | `packages/database/schema/contacts.ts`             |
 | Controller | `apps/api/modules/contacts/contacts.controller.ts` |
-| Service | `apps/api/modules/contacts/contacts.service.ts` |
+| Service    | `apps/api/modules/contacts/contacts.service.ts`    |
 | Repository | `apps/api/modules/contacts/contacts.repository.ts` |
-| E2E | `apps/app/e2e/contacts-debts.spec.ts` |
+| E2E        | `apps/app/e2e/contacts-debts.spec.ts`              |

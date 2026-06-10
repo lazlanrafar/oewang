@@ -38,7 +38,9 @@ export const getWallets = async (filters?: {
   }
 };
 
-export const getWallet = async (id: string): Promise<ActionResponse<Wallet>> => {
+export const getWallet = async (
+  id: string,
+): Promise<ActionResponse<Wallet>> => {
   try {
     const res = await api.get(`/wallets/${id}`);
     return { success: true, data: res.data?.data };

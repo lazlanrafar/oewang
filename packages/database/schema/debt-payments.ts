@@ -12,8 +12,9 @@ export const debtPayments = pgTable("debt_payments", {
   debtId: text("debt_id")
     .notNull()
     .references(() => debts.id, { onDelete: "cascade" }),
-  transactionId: text("transaction_id")
-    .references(() => transactions.id, { onDelete: "set null" }),
+  transactionId: text("transaction_id").references(() => transactions.id, {
+    onDelete: "set null",
+  }),
   amount: decimal("amount", { precision: 19, scale: 4 }).notNull(),
   createdAt: timestamp("created_at", { mode: "string" }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().notNull(),

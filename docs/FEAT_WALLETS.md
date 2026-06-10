@@ -23,30 +23,30 @@ Wallets represent financial accounts (bank accounts, cash, digital wallets, etc.
 
 ### `wallets` table
 
-| Column | Type | Notes |
-|--------|------|-------|
-| `id` | `text` (CUID2) | Primary key |
-| `workspaceId` | `text` FK → workspaces | Required — workspace isolation |
-| `groupId` | `text` FK → wallet_groups | Optional — `null` = ungrouped |
-| `name` | `text` | Required, min 2 chars |
-| `balance` | `decimal(19,4)` | Running balance. Default `0` |
-| `isIncludedInTotals` | `boolean` | Whether to count in net worth. Default `true` |
-| `sortOrder` | `integer` | Display order within group. Default `0` |
-| `createdAt` | `timestamp` | Auto |
-| `updatedAt` | `timestamp` | Auto |
-| `deletedAt` | `timestamp` | Soft delete — `null` = active |
+| Column               | Type                      | Notes                                         |
+| -------------------- | ------------------------- | --------------------------------------------- |
+| `id`                 | `text` (CUID2)            | Primary key                                   |
+| `workspaceId`        | `text` FK → workspaces    | Required — workspace isolation                |
+| `groupId`            | `text` FK → wallet_groups | Optional — `null` = ungrouped                 |
+| `name`               | `text`                    | Required, min 2 chars                         |
+| `balance`            | `decimal(19,4)`           | Running balance. Default `0`                  |
+| `isIncludedInTotals` | `boolean`                 | Whether to count in net worth. Default `true` |
+| `sortOrder`          | `integer`                 | Display order within group. Default `0`       |
+| `createdAt`          | `timestamp`               | Auto                                          |
+| `updatedAt`          | `timestamp`               | Auto                                          |
+| `deletedAt`          | `timestamp`               | Soft delete — `null` = active                 |
 
 ### `wallet_groups` table
 
-| Column | Type | Notes |
-|--------|------|-------|
-| `id` | `text` (CUID2) | Primary key |
-| `workspaceId` | `text` FK → workspaces | Required |
-| `name` | `text` | Required |
-| `sortOrder` | `integer` | Display order. Default `0` |
-| `createdAt` | `timestamp` | Auto |
-| `updatedAt` | `timestamp` | Auto |
-| `deletedAt` | `timestamp` | Soft delete |
+| Column        | Type                   | Notes                      |
+| ------------- | ---------------------- | -------------------------- |
+| `id`          | `text` (CUID2)         | Primary key                |
+| `workspaceId` | `text` FK → workspaces | Required                   |
+| `name`        | `text`                 | Required                   |
+| `sortOrder`   | `integer`              | Display order. Default `0` |
+| `createdAt`   | `timestamp`            | Auto                       |
+| `updatedAt`   | `timestamp`            | Auto                       |
+| `deletedAt`   | `timestamp`            | Soft delete                |
 
 ---
 
@@ -56,26 +56,27 @@ Base path: `/v1`
 
 ### Wallet Groups
 
-| Method | Path | Role Required | Description |
-|--------|------|--------------|-------------|
-| `GET` | `/wallet-groups` | Any authenticated | List all groups for workspace |
-| `POST` | `/wallet-groups` | Editor+ | Create a new wallet group |
-| `PUT` | `/wallet-groups/reorder` | Editor+ | Reorder multiple groups at once |
-| `PUT` | `/wallet-groups/:id` | Editor+ | Rename or update a group |
-| `DELETE` | `/wallet-groups/:id` | Editor+ | Soft-delete group; wallets moved to ungrouped |
+| Method   | Path                     | Role Required     | Description                                   |
+| -------- | ------------------------ | ----------------- | --------------------------------------------- |
+| `GET`    | `/wallet-groups`         | Any authenticated | List all groups for workspace                 |
+| `POST`   | `/wallet-groups`         | Editor+           | Create a new wallet group                     |
+| `PUT`    | `/wallet-groups/reorder` | Editor+           | Reorder multiple groups at once               |
+| `PUT`    | `/wallet-groups/:id`     | Editor+           | Rename or update a group                      |
+| `DELETE` | `/wallet-groups/:id`     | Editor+           | Soft-delete group; wallets moved to ungrouped |
 
 ### Wallets
 
-| Method | Path | Role Required | Description |
-|--------|------|--------------|-------------|
-| `GET` | `/wallets` | Any authenticated | List wallets (paginated, filterable by group/search) |
-| `GET` | `/wallets/:id` | Any authenticated | Get single wallet details |
-| `POST` | `/wallets` | Editor+ | Create a new wallet with optional initial balance |
-| `PUT` | `/wallets/reorder` | Editor+ | Reorder wallets and reassign groups in bulk |
-| `PUT` | `/wallets/:id` | Editor+ | Update name, group, balance visibility |
-| `DELETE` | `/wallets/:id` | Editor+ | Soft-delete wallet |
+| Method   | Path               | Role Required     | Description                                          |
+| -------- | ------------------ | ----------------- | ---------------------------------------------------- |
+| `GET`    | `/wallets`         | Any authenticated | List wallets (paginated, filterable by group/search) |
+| `GET`    | `/wallets/:id`     | Any authenticated | Get single wallet details                            |
+| `POST`   | `/wallets`         | Editor+           | Create a new wallet with optional initial balance    |
+| `PUT`    | `/wallets/reorder` | Editor+           | Reorder wallets and reassign groups in bulk          |
+| `PUT`    | `/wallets/:id`     | Editor+           | Update name, group, balance visibility               |
+| `DELETE` | `/wallets/:id`     | Editor+           | Soft-delete wallet                                   |
 
 **Query params for `GET /wallets`:**
+
 - `search` — filter by name
 - `groupId` — filter by group
 - `page` (default: 1), `limit` (default: 20, max: 250)
@@ -114,17 +115,17 @@ Every mutation triggers `RealtimeService.notifyValueChange(workspaceId, "wallets
 
 ## Source Files
 
-| Layer | File |
-|-------|------|
-| Schema | `packages/database/schema/wallets.ts` |
-| Schema | `packages/database/schema/wallet-groups.ts` |
-| Controller | `apps/api/modules/wallets/wallets.controller.ts` |
-| Service | `apps/api/modules/wallets/wallets.service.ts` |
-| Repository | `apps/api/modules/wallets/wallets.repository.ts` |
-| DTOs | `apps/api/modules/wallets/wallets.dto.ts` |
-| Utils | `apps/api/modules/wallets/wallets.utils.ts` |
-| Tests | `apps/api/modules/wallets/wallets.utils.test.ts` (44 tests) |
-| E2E | `apps/app/e2e/accounts.spec.ts` |
+| Layer      | File                                                        |
+| ---------- | ----------------------------------------------------------- |
+| Schema     | `packages/database/schema/wallets.ts`                       |
+| Schema     | `packages/database/schema/wallet-groups.ts`                 |
+| Controller | `apps/api/modules/wallets/wallets.controller.ts`            |
+| Service    | `apps/api/modules/wallets/wallets.service.ts`               |
+| Repository | `apps/api/modules/wallets/wallets.repository.ts`            |
+| DTOs       | `apps/api/modules/wallets/wallets.dto.ts`                   |
+| Utils      | `apps/api/modules/wallets/wallets.utils.ts`                 |
+| Tests      | `apps/api/modules/wallets/wallets.utils.test.ts` (44 tests) |
+| E2E        | `apps/app/e2e/accounts.spec.ts`                             |
 
 ---
 

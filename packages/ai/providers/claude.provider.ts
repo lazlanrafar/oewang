@@ -7,7 +7,7 @@ export abstract class ClaudeProvider {
     systemPrompt: string,
     apiKey: string,
     tools?: any[],
-    onToolCall?: (name: string, args: any) => Promise<any>
+    onToolCall?: (name: string, args: any) => Promise<any>,
   ): Promise<ChatResponse> {
     const client = new Anthropic({ apiKey });
     let requestMessages: Anthropic.MessageParam[] = messages
@@ -47,15 +47,18 @@ export abstract class ClaudeProvider {
 
     while (response.stop_reason === "tool_use" && onToolCall) {
       requestMessages.push({ role: "assistant", content: response.content });
-      const toolResultsMsg: Anthropic.MessageParam = { role: "user", content: [] };
+      const toolResultsMsg: Anthropic.MessageParam = {
+        role: "user",
+        content: [],
+      };
 
       for (const block of response.content) {
         if (block.type === "tool_use") {
           const toolResult = await onToolCall(block.name, block.input);
-          (toolResultsMsg.content as any[]).push({ 
-            type: "tool_result", 
-            tool_use_id: block.id, 
-            content: JSON.stringify(toolResult) 
+          (toolResultsMsg.content as any[]).push({
+            type: "tool_result",
+            tool_use_id: block.id,
+            content: JSON.stringify(toolResult),
           });
         }
       }
@@ -69,15 +72,19 @@ export abstract class ClaudeProvider {
       });
     }
 
-    const textBlock = response.content.find((block): block is Anthropic.TextBlock => block.type === "text");
-    const reply = textBlock ? textBlock.text : "I couldn't generate a response.";
+    const textBlock = response.content.find(
+      (block): block is Anthropic.TextBlock => block.type === "text",
+    );
+    const reply = textBlock
+      ? textBlock.text
+      : "I couldn't generate a response.";
 
-    return { 
-      reply, 
-      usage: { 
-        input_tokens: response.usage.input_tokens, 
-        output_tokens: response.usage.output_tokens 
-      } 
+    return {
+      reply,
+      usage: {
+        input_tokens: response.usage.input_tokens,
+        output_tokens: response.usage.output_tokens,
+      },
     };
   }
 
@@ -86,10 +93,15 @@ export abstract class ClaudeProvider {
     const response = await client.messages.create({
       model: "claude-3-haiku-20240307",
       max_tokens: 20,
-      system: "Generate a very short (max 4 words) title summarizing the user's message. Output ONLY the title, no quotes or extra text.",
+      system:
+        "Generate a very short (max 4 words) title summarizing the user's message. Output ONLY the title, no quotes or extra text.",
       messages: [{ role: "user", content: message }],
     });
-    const textBlock = response.content.find((b): b is Anthropic.TextBlock => b.type === "text");
-    return textBlock ? textBlock.text.trim().replace(/^['"]|['"]$/g, "") : "New Chat";
+    const textBlock = response.content.find(
+      (b): b is Anthropic.TextBlock => b.type === "text",
+    );
+    return textBlock
+      ? textBlock.text.trim().replace(/^['"]|['"]$/g, "")
+      : "New Chat";
   }
 }

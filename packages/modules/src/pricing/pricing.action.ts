@@ -45,7 +45,9 @@ export const getPricing = async (params?: {
     return {
       success: true,
       data: {
-        pricingList: Array.isArray(rawData) ? rawData : (rawData?.pricingList ?? []),
+        pricingList: Array.isArray(rawData)
+          ? rawData
+          : (rawData?.pricingList ?? []),
         meta: response.data?.meta?.pagination || rawData?.meta || {},
       },
     };

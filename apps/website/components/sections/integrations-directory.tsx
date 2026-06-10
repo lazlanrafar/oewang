@@ -39,14 +39,14 @@ function IntegrationLogo({ slug, name }: { slug: string; name: string }) {
 
   if (Logo) {
     return (
-      <div className="size-11 flex items-center justify-center bg-background">
+      <div className="flex size-11 items-center justify-center bg-background">
         <Logo />
       </div>
     );
   }
 
   return (
-    <div className="size-11 border border-border flex items-center justify-center text-sm font-semibold bg-background">
+    <div className="flex size-11 items-center justify-center border border-border bg-background font-semibold text-sm">
       {name.slice(0, 1)}
     </div>
   );
@@ -81,15 +81,15 @@ export function IntegrationsDirectory({ locale, integrations }: { locale: string
 
   return (
     <section className="py-12 sm:py-16">
-      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-8 border-b border-border/70 pb-5">
+      <div className="mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8">
+        <div className="mb-8 border-border/70 border-b pb-5">
           <div className="flex flex-wrap gap-2.5">
             <button
               type="button"
               onClick={() => setFilter("All")}
-              className={`px-3 py-1.5 text-xs border transition-colors ${
+              className={`border px-3 py-1.5 text-xs transition-colors ${
                 selectedCategory === "All"
-                  ? "bg-foreground text-background border-foreground"
+                  ? "border-foreground bg-foreground text-background"
                   : "border-border text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -104,9 +104,9 @@ export function IntegrationsDirectory({ locale, integrations }: { locale: string
                   key={category}
                   type="button"
                   onClick={() => setFilter(category)}
-                  className={`px-3 py-1.5 text-xs border transition-colors ${
+                  className={`border px-3 py-1.5 text-xs transition-colors ${
                     selectedCategory === category
-                      ? "bg-foreground text-background border-foreground"
+                      ? "border-foreground bg-foreground text-background"
                       : "border-border text-muted-foreground hover:text-foreground"
                   }`}
                 >
@@ -117,14 +117,14 @@ export function IntegrationsDirectory({ locale, integrations }: { locale: string
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {filtered.map((item) => (
             <Link
               key={item.slug}
               href={`/${locale}/integrations/${item.slug}`}
-              className="group border border-border/70 p-5 bg-background hover:bg-muted/20 transition-colors"
+              className="group border border-border/70 bg-background p-5 transition-colors hover:bg-muted/20"
             >
-              <div className="flex items-start justify-between gap-4 mb-4">
+              <div className="mb-4 flex items-start justify-between gap-4">
                 <IntegrationLogo slug={item.slug} name={item.name} />
                 <span
                   className={`text-[10px] uppercase tracking-[0.16em] ${
@@ -135,10 +135,10 @@ export function IntegrationsDirectory({ locale, integrations }: { locale: string
                 </span>
               </div>
 
-              <h3 className="font-medium text-lg mb-2">{item.name}</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed min-h-[60px]">{item.description}</p>
+              <h3 className="mb-2 font-medium text-lg">{item.name}</h3>
+              <p className="min-h-[60px] text-muted-foreground text-sm leading-relaxed">{item.description}</p>
 
-              <div className="mt-5 inline-flex items-center gap-2 text-xs text-muted-foreground group-hover:text-foreground transition-colors">
+              <div className="mt-5 inline-flex items-center gap-2 text-muted-foreground text-xs transition-colors group-hover:text-foreground">
                 View integration details
                 <ArrowRight className="size-3.5" />
               </div>
@@ -147,8 +147,8 @@ export function IntegrationsDirectory({ locale, integrations }: { locale: string
         </div>
 
         {filtered.length === 0 && (
-          <div className="border border-border p-8 text-center mt-4">
-            <p className="text-sm text-muted-foreground">No integrations found for this filter.</p>
+          <div className="mt-4 border border-border p-8 text-center">
+            <p className="text-muted-foreground text-sm">No integrations found for this filter.</p>
           </div>
         )}
       </div>

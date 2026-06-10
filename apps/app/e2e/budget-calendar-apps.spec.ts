@@ -12,7 +12,9 @@ test.describe("Workspace: Budget", () => {
     await page.waitForLoadState("domcontentloaded");
 
     // Check if it's the real page or Coming Soon
-    const title = page.getByRole("heading", { name: new RegExp(dictionary.sidebar.budget_label, "i") });
+    const title = page.getByRole("heading", {
+      name: new RegExp(dictionary.sidebar.budget_label, "i"),
+    });
     if (await title.isVisible()) {
       await expect(title).toBeVisible();
     } else {

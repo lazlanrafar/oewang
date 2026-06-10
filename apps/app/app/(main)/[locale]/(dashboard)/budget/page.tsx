@@ -48,7 +48,11 @@ async function BudgetPageContent({
 
   return (
     <Hydrated fallback={<BudgetSkeleton />}>
-      <BudgetClient initialData={budgetStatus} dictionary={dictionary as unknown as Record<string, string>} locale={locale} />
+      <BudgetClient
+        initialData={budgetStatus}
+        dictionary={dictionary as unknown as Record<string, string>}
+        locale={locale}
+      />
     </Hydrated>
   );
 }

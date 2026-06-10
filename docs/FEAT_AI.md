@@ -26,59 +26,59 @@ The AI Assistant is an in-app chat interface powered by multiple LLM providers (
 
 ### `ai_sessions` table
 
-| Column | Type | Notes |
-|--------|------|-------|
-| `id` | `text` (CUID2) | Primary key |
-| `workspace_id` | `text` FK → workspaces | Required |
-| `title` | `text` | Auto-generated from first message |
-| `created_at` | `timestamp` | Auto |
-| `updated_at` | `timestamp` | Auto |
-| `deleted_at` | `timestamp` | Soft delete |
+| Column         | Type                   | Notes                             |
+| -------------- | ---------------------- | --------------------------------- |
+| `id`           | `text` (CUID2)         | Primary key                       |
+| `workspace_id` | `text` FK → workspaces | Required                          |
+| `title`        | `text`                 | Auto-generated from first message |
+| `created_at`   | `timestamp`            | Auto                              |
+| `updated_at`   | `timestamp`            | Auto                              |
+| `deleted_at`   | `timestamp`            | Soft delete                       |
 
 ### `ai_messages` table
 
-| Column | Type | Notes |
-|--------|------|-------|
-| `id` | `text` (CUID2) | Primary key |
-| `session_id` | `text` FK → ai_sessions (cascade) | Required |
-| `workspace_id` | `text` | Denormalized for fast workspace queries |
-| `role` | enum | `user` \| `assistant` \| `system` |
-| `content` | `text` | Message text content |
-| `attachments` | `jsonb` | File attachments `{ name, url, type, size }` or artifact/provider metadata |
-| `created_at` | `timestamp` | Auto |
-| `deleted_at` | `timestamp` | Soft delete |
+| Column         | Type                              | Notes                                                                      |
+| -------------- | --------------------------------- | -------------------------------------------------------------------------- |
+| `id`           | `text` (CUID2)                    | Primary key                                                                |
+| `session_id`   | `text` FK → ai_sessions (cascade) | Required                                                                   |
+| `workspace_id` | `text`                            | Denormalized for fast workspace queries                                    |
+| `role`         | enum                              | `user` \| `assistant` \| `system`                                          |
+| `content`      | `text`                            | Message text content                                                       |
+| `attachments`  | `jsonb`                           | File attachments `{ name, url, type, size }` or artifact/provider metadata |
+| `created_at`   | `timestamp`                       | Auto                                                                       |
+| `deleted_at`   | `timestamp`                       | Soft delete                                                                |
 
 ### `ai_agent_settings` table
 
 One row per workspace. Created automatically on first use with sensible defaults.
 
-| Column | Type | Default | Notes |
-|--------|------|---------|-------|
-| `id` | `text` (CUID2) | — | Primary key |
-| `workspace_id` | `text` FK → workspaces | — | Unique — one config per workspace |
-| `model` | `text` | `gpt-4o-mini` | LLM model ID |
-| `temperature` | `decimal(3,2)` | `0.70` | Creativity 0–1 |
-| `max_steps` | `integer` | `10` | Max tool-calling steps per request |
-| `custom_instructions` | `text` | `null` | Custom system prompt suffix |
-| `response_language` | `text` | `auto` | `auto` \| `english` \| `indonesian` |
-| `created_at` | `timestamp` | Auto | — |
-| `updated_at` | `timestamp` | Auto | — |
+| Column                | Type                   | Default       | Notes                               |
+| --------------------- | ---------------------- | ------------- | ----------------------------------- |
+| `id`                  | `text` (CUID2)         | —             | Primary key                         |
+| `workspace_id`        | `text` FK → workspaces | —             | Unique — one config per workspace   |
+| `model`               | `text`                 | `gpt-4o-mini` | LLM model ID                        |
+| `temperature`         | `decimal(3,2)`         | `0.70`        | Creativity 0–1                      |
+| `max_steps`           | `integer`              | `10`          | Max tool-calling steps per request  |
+| `custom_instructions` | `text`                 | `null`        | Custom system prompt suffix         |
+| `response_language`   | `text`                 | `auto`        | `auto` \| `english` \| `indonesian` |
+| `created_at`          | `timestamp`            | Auto          | —                                   |
+| `updated_at`          | `timestamp`            | Auto          | —                                   |
 
 ### `vault_file_chunks` table
 
 Stores text chunks and vector embeddings for RAG document search.
 
-| Column | Type | Notes |
-|--------|------|-------|
-| `id` | `text` (CUID2) | Primary key |
-| `vault_file_id` | `text` FK → vault_files (cascade) | Required |
-| `workspace_id` | `text` FK → workspaces | Required |
-| `content` | `text` | Raw text chunk (~1000 chars) |
-| `embedding` | `vector(1536)` | OpenAI text-embedding-3-small embedding |
-| `chunk_index` | `integer` | Position within the source file |
-| `token_count` | `integer` | Estimated token count |
-| `created_at` | `timestamp` | Auto |
-| `deleted_at` | `timestamp` | Soft delete |
+| Column          | Type                              | Notes                                   |
+| --------------- | --------------------------------- | --------------------------------------- |
+| `id`            | `text` (CUID2)                    | Primary key                             |
+| `vault_file_id` | `text` FK → vault_files (cascade) | Required                                |
+| `workspace_id`  | `text` FK → workspaces            | Required                                |
+| `content`       | `text`                            | Raw text chunk (~1000 chars)            |
+| `embedding`     | `vector(1536)`                    | OpenAI text-embedding-3-small embedding |
+| `chunk_index`   | `integer`                         | Position within the source file         |
+| `token_count`   | `integer`                         | Estimated token count                   |
+| `created_at`    | `timestamp`                       | Auto                                    |
+| `deleted_at`    | `timestamp`                       | Soft delete                             |
 
 ---
 
@@ -86,16 +86,16 @@ Stores text chunks and vector embeddings for RAG document search.
 
 Base path: `/v1/ai`
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/sessions` | List all chat sessions for workspace |
-| `GET` | `/sessions/:id` | Get all messages in a session |
-| `GET` | `/sessions/:id/metadata` | Get session metadata (title, timestamps) |
-| `GET` | `/quota` | Get token usage + quota for current period |
-| `POST` | `/chat` | Send a message and get AI response |
-| `POST` | `/parse-receipt` | Parse a receipt image/PDF into transaction data |
-| `GET` | `/agent-settings` | Get workspace AI agent configuration |
-| `PUT` | `/agent-settings` | Update AI agent configuration |
+| Method | Path                     | Description                                     |
+| ------ | ------------------------ | ----------------------------------------------- |
+| `GET`  | `/sessions`              | List all chat sessions for workspace            |
+| `GET`  | `/sessions/:id`          | Get all messages in a session                   |
+| `GET`  | `/sessions/:id/metadata` | Get session metadata (title, timestamps)        |
+| `GET`  | `/quota`                 | Get token usage + quota for current period      |
+| `POST` | `/chat`                  | Send a message and get AI response              |
+| `POST` | `/parse-receipt`         | Parse a receipt image/PDF into transaction data |
+| `GET`  | `/agent-settings`        | Get workspace AI agent configuration            |
+| `PUT`  | `/agent-settings`        | Update AI agent configuration                   |
 
 ### Agent Settings — PUT `/v1/ai/agent-settings`
 
@@ -109,13 +109,13 @@ Base path: `/v1/ai`
 }
 ```
 
-| Field | Options |
-|-------|---------|
-| `model` | `gpt-4o-mini` · `gpt-4o` · `claude-3-5-haiku-20241022` · `claude-3-5-sonnet-20241022` |
-| `temperature` | `0.0` – `1.0` |
-| `max_steps` | `3` – `20` |
-| `custom_instructions` | Free text (max 2000 chars), appended to system prompt |
-| `response_language` | `auto` · `english` · `indonesian` |
+| Field                 | Options                                                                               |
+| --------------------- | ------------------------------------------------------------------------------------- |
+| `model`               | `gpt-4o-mini` · `gpt-4o` · `claude-3-5-haiku-20241022` · `claude-3-5-sonnet-20241022` |
+| `temperature`         | `0.0` – `1.0`                                                                         |
+| `max_steps`           | `3` – `20`                                                                            |
+| `custom_instructions` | Free text (max 2000 chars), appended to system prompt                                 |
+| `response_language`   | `auto` · `english` · `indonesian`                                                     |
 
 ---
 
@@ -133,6 +133,7 @@ Base path: `/v1/ai`
 ### System Prompt
 
 `packages/ai/core/prompts.ts` exports `buildSystemPrompt(ctx)` which dynamically injects:
+
 - Current date and workspace currency
 - Language rule based on `response_language` setting
 - Custom instructions from agent settings
@@ -142,32 +143,32 @@ Base path: `/v1/ai`
 
 **Context / read tools** (cached in Redis):
 
-| Tool | Cache TTL | Purpose |
-|------|-----------|---------|
-| `get_workspace_context` | 5 min | Wallets (id, name, balance) + categories + currency settings |
-| `get_recent_transactions` | 2 min | Last N transactions with wallet/category info |
-| `get_outstanding_debts` | 2 min | Unpaid debts and receivables |
-| `search_documents` | — | RAG search over vault file chunks |
+| Tool                      | Cache TTL | Purpose                                                      |
+| ------------------------- | --------- | ------------------------------------------------------------ |
+| `get_workspace_context`   | 5 min     | Wallets (id, name, balance) + categories + currency settings |
+| `get_recent_transactions` | 2 min     | Last N transactions with wallet/category info                |
+| `get_outstanding_debts`   | 2 min     | Unpaid debts and receivables                                 |
+| `search_documents`        | —         | RAG search over vault file chunks                            |
 
 **Action tools** (mutation):
 
-| Tool | Purpose |
-|------|---------|
-| `create_transaction` | Create income / expense / transfer |
-| `update_transaction` | Modify existing transaction |
-| `delete_transaction` | Soft-delete a transaction |
-| `create_debt` | Record hutang (payable) or piutang (receivable) |
-| `split_bill` | Create expense + auto-record receivable debts per person |
-| `add_transaction_items` | Attach receipt line items to a transaction |
-| `search_transaction_items` | Search purchase history by product name |
+| Tool                       | Purpose                                                  |
+| -------------------------- | -------------------------------------------------------- |
+| `create_transaction`       | Create income / expense / transfer                       |
+| `update_transaction`       | Modify existing transaction                              |
+| `delete_transaction`       | Soft-delete a transaction                                |
+| `create_debt`              | Record hutang (payable) or piutang (receivable)          |
+| `split_bill`               | Create expense + auto-record receivable debts per person |
+| `add_transaction_items`    | Attach receipt line items to a transaction               |
+| `search_transaction_items` | Search purchase history by product name                  |
 
 **Analysis tools** (trigger canvas artifact):
 
-| Tool | Artifact type |
-|------|--------------|
-| `getRevenueSummary` | `revenue-canvas` |
-| `getBurnRate` | `burn-rate-canvas` |
-| `getSpendingAnalysis` | `spending-canvas` |
+| Tool                  | Artifact type      |
+| --------------------- | ------------------ |
+| `getRevenueSummary`   | `revenue-canvas`   |
+| `getBurnRate`         | `burn-rate-canvas` |
+| `getSpendingAnalysis` | `spending-canvas`  |
 
 ### RAG — Document Search
 
@@ -182,6 +183,7 @@ Upload → VaultIndexingService.indexBuffer()
 ```
 
 At query time, the AI calls `search_documents(query)`:
+
 ```
 EmbeddingService.embedQuery(query)
   → RagRepository.similaritySearch()  — pgvector <=> cosine distance
@@ -195,6 +197,7 @@ EmbeddingService.embedQuery(query)
 ### Agent Settings Caching
 
 `AgentSettingsService.getCached()` is called on every chat request:
+
 - Check Redis key `oewang:ai-settings:{workspaceId}` (TTL 5 min)
 - On miss: query DB → cache → return
 - On `PUT /agent-settings`: bust cache immediately so next request picks up new config
@@ -203,14 +206,16 @@ EmbeddingService.embedQuery(query)
 
 Each workspace has a monthly AI token budget:
 
-| Plan | Monthly tokens |
-|------|----------------|
-| Free (starter) | 100 tokens |
-| Pro | 1,000 tokens |
-| Business | 10,000 tokens |
-| Add-on | Purchasable extra tokens |
+| Plan     | Monthly tokens           |
+| -------- | ------------------------ |
+| Starter  | 30,000 tokens            |
+| Personal | 100,000 tokens           |
+| Pro      | 400,000 tokens           |
+| Business | 1,500,000 tokens         |
+| Add-on   | Purchasable extra tokens |
 
 Quota fields on `workspaces`:
+
 - `ai_tokens_used` — tokens consumed this period
 - `ai_tokens_reset_at` — when the counter resets (monthly)
 - `extra_ai_tokens` — tokens from purchased add-ons (do not reset)
@@ -220,16 +225,17 @@ Before every AI call, `AiService` checks quota. If exceeded → `422 + ErrorCode
 ### Receipt Parsing
 
 `POST /v1/ai/parse-receipt` uses `packages/ai/ReceiptService`:
+
 1. Accepts an image (JPEG, PNG) or PDF
 2. Sends to vision-capable LLM (GPT-4o or Gemini) with provider fallback
 3. Returns structured transaction draft:
    ```json
    {
-     "amount": 45.50,
+     "amount": 45.5,
      "date": "2025-01-15",
      "name": "Starbucks",
      "categoryId": "...",
-     "items": [{ "name": "Latte", "quantity": 1, "amount": 6.50 }]
+     "items": [{ "name": "Latte", "quantity": 1, "amount": 6.5 }]
    }
    ```
 4. Client presents as a prefilled form; user must confirm before saving
@@ -243,13 +249,13 @@ Before every AI call, `AiService` checks quota. If exceeded → `422 + ErrorCode
 
 ### Redis Cache Keys
 
-| Key | TTL | Content |
-|-----|-----|---------|
-| `oewang:ai-settings:{workspaceId}` | 5 min | Agent settings (model, temp, instructions) |
-| `oewang:ws-ctx:{workspaceId}` | 5 min | Wallets + categories + currency settings |
-| `oewang:ws-txns:{workspaceId}:{limit}:{from}:{to}` | 2 min | Recent transactions list |
-| `oewang:ws-debts:{workspaceId}` | 2 min | Outstanding debts |
-| `oewang:category-cache:{workspaceId}:{name}` | 30 days | Category ID by merchant name |
+| Key                                                | TTL     | Content                                    |
+| -------------------------------------------------- | ------- | ------------------------------------------ |
+| `oewang:ai-settings:{workspaceId}`                 | 5 min   | Agent settings (model, temp, instructions) |
+| `oewang:ws-ctx:{workspaceId}`                      | 5 min   | Wallets + categories + currency settings   |
+| `oewang:ws-txns:{workspaceId}:{limit}:{from}:{to}` | 2 min   | Recent transactions list                   |
+| `oewang:ws-debts:{workspaceId}`                    | 2 min   | Outstanding debts                          |
+| `oewang:category-cache:{workspaceId}:{name}`       | 30 days | Category ID by merchant name               |
 
 Context caches are busted when a mutation tool (`create_transaction`, `delete_transaction`, `split_bill`) succeeds.
 
@@ -257,28 +263,28 @@ Context caches are busted when a mutation tool (`create_transaction`, `delete_tr
 
 ## Source Files
 
-| Layer | File |
-|-------|------|
-| Schema | `packages/database/schema/ai-sessions.ts` |
-| Schema | `packages/database/schema/ai-messages.ts` |
-| Schema | `packages/database/schema/ai-agent-settings.ts` |
-| Schema | `packages/database/schema/vault-file-chunks.ts` |
-| Controller | `apps/api/modules/ai/ai.controller.ts` |
-| Service | `apps/api/modules/ai/ai.service.ts` |
-| Repository | `apps/api/modules/ai/ai.repository.ts` |
-| Tools executor | `apps/api/modules/ai/ai.tools.ts` |
+| Layer          | File                                                                        |
+| -------------- | --------------------------------------------------------------------------- |
+| Schema         | `packages/database/schema/ai-sessions.ts`                                   |
+| Schema         | `packages/database/schema/ai-messages.ts`                                   |
+| Schema         | `packages/database/schema/ai-agent-settings.ts`                             |
+| Schema         | `packages/database/schema/vault-file-chunks.ts`                             |
+| Controller     | `apps/api/modules/ai/ai.controller.ts`                                      |
+| Service        | `apps/api/modules/ai/ai.service.ts`                                         |
+| Repository     | `apps/api/modules/ai/ai.repository.ts`                                      |
+| Tools executor | `apps/api/modules/ai/ai.tools.ts`                                           |
 | Agent settings | `apps/api/modules/ai/agent-settings.{dto,repository,service,controller}.ts` |
-| DTOs | `apps/api/modules/ai/ai.dto.ts` |
-| Utils | `apps/api/modules/ai/ai.utils.ts` |
-| Tests | `apps/api/modules/ai/ai.utils.test.ts` (69 tests) |
-| Orchestrator | `packages/ai/core/ai.orchestrator.ts` |
-| System prompt | `packages/ai/core/prompts.ts` |
-| Embedding | `packages/ai/embedding/embedding.service.ts` |
-| Chunking | `packages/ai/embedding/chunking.service.ts` |
-| RAG repository | `packages/ai/rag/rag.repository.ts` |
-| Vault indexing | `apps/api/modules/vault/vault-indexing.service.ts` |
-| Receipt parser | `packages/ai/receipt/receipt.service.ts` |
-| Frontend | `apps/app/app/(main)/[locale]/(dashboard)/chat/[id]/` |
+| DTOs           | `apps/api/modules/ai/ai.dto.ts`                                             |
+| Utils          | `apps/api/modules/ai/ai.utils.ts`                                           |
+| Tests          | `apps/api/modules/ai/ai.utils.test.ts` (69 tests)                           |
+| Orchestrator   | `packages/ai/core/ai.orchestrator.ts`                                       |
+| System prompt  | `packages/ai/core/prompts.ts`                                               |
+| Embedding      | `packages/ai/embedding/embedding.service.ts`                                |
+| Chunking       | `packages/ai/embedding/chunking.service.ts`                                 |
+| RAG repository | `packages/ai/rag/rag.repository.ts`                                         |
+| Vault indexing | `apps/api/modules/vault/vault-indexing.service.ts`                          |
+| Receipt parser | `packages/ai/receipt/receipt.service.ts`                                    |
+| Frontend       | `apps/app/app/(main)/[locale]/(dashboard)/chat/[id]/`                       |
 
 ---
 

@@ -1,5 +1,11 @@
 import { createId } from "@paralleldrive/cuid2";
-import { decimal, integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import {
+  decimal,
+  integer,
+  pgTable,
+  text,
+  timestamp,
+} from "drizzle-orm/pg-core";
 import { workspaces } from "./workspaces";
 
 export const aiAgentSettings = pgTable("ai_agent_settings", {

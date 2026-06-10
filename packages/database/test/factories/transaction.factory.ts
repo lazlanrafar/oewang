@@ -1,6 +1,6 @@
-import { faker } from '@faker-js/faker';
-import { transactions } from '../../schema/transactions';
-import { BaseFactory, type DB } from './base-factory';
+import { faker } from "@faker-js/faker";
+import { transactions } from "../../schema/transactions";
+import { BaseFactory, type DB } from "./base-factory";
 
 export interface TransactionAttributes {
   id?: string;
@@ -11,7 +11,7 @@ export interface TransactionAttributes {
   assignedUserId?: string;
   amount?: string;
   date?: string;
-  type?: 'income' | 'expense' | 'transfer';
+  type?: "income" | "expense" | "transfer";
   description?: string;
   name?: string;
   isReady?: boolean;
@@ -27,13 +27,13 @@ export class TransactionFactory extends BaseFactory<TransactionAttributes> {
   constructor(
     db: DB,
     private workspaceId: string,
-    private walletId: string
+    private walletId: string,
   ) {
     super(db);
   }
 
   protected defaultAttributes(): Partial<TransactionAttributes> {
-    const type = faker.helpers.arrayElement(['income', 'expense', 'transfer']);
+    const type = faker.helpers.arrayElement(["income", "expense", "transfer"]);
     return {
       id: this.generateId(),
       workspaceId: this.workspaceId,
@@ -50,7 +50,9 @@ export class TransactionFactory extends BaseFactory<TransactionAttributes> {
     };
   }
 
-  protected async insert(attributes: Partial<TransactionAttributes>): Promise<TransactionAttributes> {
+  protected async insert(
+    attributes: Partial<TransactionAttributes>,
+  ): Promise<TransactionAttributes> {
     const [transaction] = await this.db
       .insert(transactions)
       .values(attributes as any)
@@ -63,8 +65,9 @@ export class TransactionFactory extends BaseFactory<TransactionAttributes> {
    */
   async expense(amount?: number) {
     return this.create({
-      type: 'expense',
-      amount: amount?.toString() || faker.finance.amount({ min: 10, max: 1000 }),
+      type: "expense",
+      amount:
+        amount?.toString() || faker.finance.amount({ min: 10, max: 1000 }),
       description: `Expense: ${faker.commerce.productName()}`,
     });
   }
@@ -74,8 +77,9 @@ export class TransactionFactory extends BaseFactory<TransactionAttributes> {
    */
   async income(amount?: number) {
     return this.create({
-      type: 'income',
-      amount: amount?.toString() || faker.finance.amount({ min: 100, max: 5000 }),
+      type: "income",
+      amount:
+        amount?.toString() || faker.finance.amount({ min: 100, max: 5000 }),
       description: `Income: ${faker.company.name()}`,
     });
   }
@@ -85,9 +89,10 @@ export class TransactionFactory extends BaseFactory<TransactionAttributes> {
    */
   async transfer(toWalletId: string, amount?: number) {
     return this.create({
-      type: 'transfer',
+      type: "transfer",
       toWalletId,
-      amount: amount?.toString() || faker.finance.amount({ min: 50, max: 2000 }),
+      amount:
+        amount?.toString() || faker.finance.amount({ min: 50, max: 2000 }),
       description: `Transfer to wallet`,
     });
   }
@@ -107,7 +112,7 @@ export class TransactionFactory extends BaseFactory<TransactionAttributes> {
     for (let i = 0; i < count; i++) {
       const randomDate = new Date(
         startDate.getTime() +
-          Math.random() * (endDate.getTime() - startDate.getTime())
+          Math.random() * (endDate.getTime() - startDate.getTime()),
       );
       transactions.push(await this.onDate(randomDate));
     }

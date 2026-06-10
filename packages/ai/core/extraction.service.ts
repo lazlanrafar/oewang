@@ -4,7 +4,9 @@ import type { AiInput, ExtractedTransaction } from "../types";
 import OpenAI from "openai";
 
 const OPENAI_EXTRACTION_MODEL =
-  process.env.OPENAI_EXTRACTION_MODEL || process.env.OPENAI_CHAT_MODEL || "gpt-5.4-mini";
+  process.env.OPENAI_EXTRACTION_MODEL ||
+  process.env.OPENAI_CHAT_MODEL ||
+  "gpt-5.4-mini";
 
 export abstract class ExtractionService {
   /**
@@ -14,7 +16,7 @@ export abstract class ExtractionService {
     input: AiInput,
     walletNames: string[],
     categoryNames: string[],
-    keys: { geminiKey?: string; openaiKey?: string; anthropicKey?: string }
+    keys: { geminiKey?: string; openaiKey?: string; anthropicKey?: string },
   ): Promise<ExtractedTransaction[]> {
     if (!input.tabular || input.tabular.rows.length === 0) {
       return [];
@@ -79,7 +81,15 @@ ${JSON.stringify(input.tabular.rows.slice(0, 100))}
                         categoryName: { type: ["string", "null"] },
                         description: { type: ["string", "null"] },
                       },
-                      required: ["name", "amount", "date", "type", "walletName", "categoryName", "description"],
+                      required: [
+                        "name",
+                        "amount",
+                        "date",
+                        "type",
+                        "walletName",
+                        "categoryName",
+                        "description",
+                      ],
                     },
                   },
                 },
@@ -90,15 +100,20 @@ ${JSON.stringify(input.tabular.rows.slice(0, 100))}
           store: false,
         });
 
-        const parsed = JSON.parse(response.output_text || '{"transactions":[]}');
+        const parsed = JSON.parse(
+          response.output_text || '{"transactions":[]}',
+        );
         return Array.isArray(parsed.transactions) ? parsed.transactions : [];
       }
 
-      const fallbackPrompt = buildSystemPrompt({ currencyCode: "USD", currencySymbol: "$" });
+      const fallbackPrompt = buildSystemPrompt({
+        currencyCode: "USD",
+        currencySymbol: "$",
+      });
       const response = await ProviderFactory.chat(
         [{ role: "user", content: prompt }],
         fallbackPrompt,
-        keys
+        keys,
       );
 
       // Extract JSON from response

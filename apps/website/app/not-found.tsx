@@ -4,15 +4,15 @@ import { Button } from "@workspace/ui/atoms";
 
 export default function NotFound() {
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen px-4 text-center">
+    <div className="flex min-h-screen flex-col items-center justify-center px-4 text-center">
       <div className="max-w-md">
-        <h1 className="font-serif text-[120px] sm:text-[180px] leading-none text-muted-foreground/10 select-none mb-4">
+        <h1 className="mb-4 select-none font-serif text-[120px] text-muted-foreground/10 leading-none sm:text-[180px]">
           404
         </h1>
 
-        <h2 className="font-serif text-2xl sm:text-3xl text-foreground mb-4">Page not found</h2>
+        <h2 className="mb-4 font-serif text-2xl text-foreground sm:text-3xl">Page not found</h2>
 
-        <p className="text-muted-foreground mb-8 max-w-sm mx-auto">
+        <p className="mx-auto mb-8 max-w-sm text-muted-foreground">
           The page you&apos;re looking for doesn&apos;t exist or has been moved.
         </p>
 

@@ -2,13 +2,28 @@ import Link from "next/link";
 
 import { ArrowLeft } from "lucide-react";
 
+import { createPageMetadata } from "@/lib/seo";
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+
+  return createPageMetadata({
+    locale,
+    path: "/policy",
+    title: "Privacy policy",
+    description:
+      "Read Oewang's privacy policy for account data, workspace data, financial records, integrations, security, retention, and user rights.",
+    keywords: ["Oewang privacy policy", "finance app privacy", "workspace data security", "UU PDP GDPR privacy"],
+  });
+}
+
 export default async function PolicyPage({ params }: { params: Promise<{ locale: string }> }) {
-  const { locale: _locale } = await params;
+  const { locale } = await params;
   return (
     <div className="mx-auto max-w-3xl px-6 py-16 sm:py-24">
       <Link
-        href={`/`}
-        className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-8 transition-colors"
+        href={locale === "en" ? "/" : `/${locale}`}
+        className="mb-8 inline-flex items-center text-muted-foreground text-sm transition-colors hover:text-foreground"
       >
         <ArrowLeft className="mr-2 size-4" />
         Back to home
@@ -16,27 +31,27 @@ export default async function PolicyPage({ params }: { params: Promise<{ locale:
 
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-serif tracking-tight mb-2">Privacy Policy</h1>
+          <h1 className="mb-2 font-serif text-2xl tracking-tight">Privacy Policy</h1>
           <p className="text-muted-foreground text-sm">Last updated: April 22, 2026</p>
         </div>
 
-        <div className="h-px w-full bg-border my-8" />
+        <div className="my-8 h-px w-full bg-border" />
 
         <section className="space-y-4">
-          <p className="text-muted-foreground leading-6 text-sm">
+          <p className="text-muted-foreground text-sm leading-6">
             This Privacy Policy explains how oewang ("oewang", "we", "our", or "us") collects, uses, stores, and
             protects personal data when you use our product and website.
           </p>
-          <p className="text-muted-foreground leading-6 text-sm">
-            oewang is built to help founders and teams manage business finances, including transactions, wallets,
-            invoices, documents, and AI-assisted workflows. Privacy and workspace data isolation are core design
-            principles in the product.
+          <p className="text-muted-foreground text-sm leading-6">
+            oewang is built to help people track daily finances, including transactions, wallets, receipts, invoices,
+            documents, and AI-assisted workflows. Privacy and workspace data isolation are core design principles in the
+            product.
           </p>
         </section>
 
         <section className="space-y-4">
-          <h2 className="text-lg tracking-tight mt-10">Data We Collect</h2>
-          <ul className="list-disc pl-6 space-y-2 text-muted-foreground leading-6 text-sm">
+          <h2 className="mt-10 text-lg tracking-tight">Data We Collect</h2>
+          <ul className="list-disc space-y-2 pl-6 text-muted-foreground text-sm leading-6">
             <li>Account data: name, email, profile details, authentication provider information.</li>
             <li>Workspace data: workspace name, membership, role, and settings.</li>
             <li>
@@ -56,8 +71,8 @@ export default async function PolicyPage({ params }: { params: Promise<{ locale:
         </section>
 
         <section className="space-y-4">
-          <h2 className="text-lg tracking-tight mt-10">How We Use Data</h2>
-          <ul className="list-disc pl-6 space-y-2 text-muted-foreground leading-6 text-sm">
+          <h2 className="mt-10 text-lg tracking-tight">How We Use Data</h2>
+          <ul className="list-disc space-y-2 pl-6 text-muted-foreground text-sm leading-6">
             <li>Deliver and maintain the product.</li>
             <li>Authenticate users and protect accounts/workspaces.</li>
             <li>Process financial workflows and generate reports/insights.</li>
@@ -68,23 +83,23 @@ export default async function PolicyPage({ params }: { params: Promise<{ locale:
         </section>
 
         <section className="space-y-4">
-          <h2 className="text-lg tracking-tight mt-10">Workspace Access and Visibility</h2>
-          <p className="text-muted-foreground leading-6 text-sm">
+          <h2 className="mt-10 text-lg tracking-tight">Workspace Access and Visibility</h2>
+          <p className="text-muted-foreground text-sm leading-6">
             oewang enforces workspace-scoped access controls. Authenticated requests are validated against active
             workspace membership, and access is limited by role and permission.
           </p>
-          <p className="text-muted-foreground leading-6 text-sm">
+          <p className="text-muted-foreground text-sm leading-6">
             Users can only access data they own or data available inside workspaces where they are active members.
             Access is revoked when membership is removed.
           </p>
         </section>
 
         <section className="space-y-4">
-          <h2 className="text-lg tracking-tight mt-10">Legal Bases (GDPR)</h2>
-          <p className="text-muted-foreground leading-6 text-sm">
+          <h2 className="mt-10 text-lg tracking-tight">Legal Bases (GDPR)</h2>
+          <p className="text-muted-foreground text-sm leading-6">
             For users in the EEA/UK, we process personal data based on one or more of the following:
           </p>
-          <ul className="list-disc pl-6 space-y-2 text-muted-foreground leading-6 text-sm">
+          <ul className="list-disc space-y-2 pl-6 text-muted-foreground text-sm leading-6">
             <li>Contract necessity: to provide the oewang service.</li>
             <li>Legitimate interests: security, fraud prevention, reliability.</li>
             <li>Legal obligations: accounting, tax, and regulatory duties.</li>
@@ -93,118 +108,118 @@ export default async function PolicyPage({ params }: { params: Promise<{ locale:
         </section>
 
         <section className="space-y-4">
-          <h2 className="text-lg tracking-tight mt-10">Third-Party Processors and Integrations</h2>
-          <p className="text-muted-foreground leading-6 text-sm">
+          <h2 className="mt-10 text-lg tracking-tight">Third-Party Processors and Integrations</h2>
+          <p className="text-muted-foreground text-sm leading-6">
             We use third-party service providers to operate the product (for example authentication/database
             infrastructure, payment processing, cloud storage, messaging channels, and AI providers). These providers
             process data on our behalf under contractual controls.
           </p>
-          <p className="text-muted-foreground leading-6 text-sm">
+          <p className="text-muted-foreground text-sm leading-6">
             If you connect optional integrations, data is processed as required to deliver that integration's
             functionality. We do not sell your personal data.
           </p>
         </section>
 
         <section className="space-y-4">
-          <h2 className="text-lg tracking-tight mt-10">Google API Data</h2>
-          <p className="text-muted-foreground leading-6 text-sm">
+          <h2 className="mt-10 text-lg tracking-tight">Google API Data</h2>
+          <p className="text-muted-foreground text-sm leading-6">
             If you connect Google services, oewang's use of data received from Google APIs follows the Google API
             Services User Data Policy, including Limited Use requirements.
           </p>
-          <p className="text-muted-foreground leading-6 text-sm">
+          <p className="text-muted-foreground text-sm leading-6">
             Data obtained from Google Workspace APIs (including Gmail data) is not used to train generalized AI/ML
             models.
           </p>
         </section>
 
         <section className="space-y-4">
-          <h2 className="text-lg tracking-tight mt-10">International Data Transfers</h2>
-          <p className="text-muted-foreground leading-6 text-sm">
+          <h2 className="mt-10 text-lg tracking-tight">International Data Transfers</h2>
+          <p className="text-muted-foreground text-sm leading-6">
             Your data may be processed in countries outside your place of residence. Where required, we apply
             appropriate transfer safeguards under applicable law.
           </p>
         </section>
 
         <section className="space-y-4">
-          <h2 className="text-lg tracking-tight mt-10">Data Retention</h2>
-          <p className="text-muted-foreground leading-6 text-sm">
+          <h2 className="mt-10 text-lg tracking-tight">Data Retention</h2>
+          <p className="text-muted-foreground text-sm leading-6">
             We keep personal data for as long as needed to provide the service, maintain security, and comply with legal
             obligations. Retention periods vary by data type and legal requirements.
           </p>
-          <p className="text-muted-foreground leading-6 text-sm">
+          <p className="text-muted-foreground text-sm leading-6">
             When retention is no longer required, we delete or anonymize data according to our internal controls.
           </p>
         </section>
 
         <section className="space-y-4">
-          <h2 className="text-lg tracking-tight mt-10">Security</h2>
-          <p className="text-muted-foreground leading-6 text-sm">
+          <h2 className="mt-10 text-lg tracking-tight">Security</h2>
+          <p className="text-muted-foreground text-sm leading-6">
             We apply technical and organizational security measures, including encryption in transit, encrypted storage
             where supported, authenticated access control, role-based authorization, and audit logging.
           </p>
-          <p className="text-muted-foreground leading-6 text-sm">
+          <p className="text-muted-foreground text-sm leading-6">
             No system is 100% secure, but we continuously review and improve our controls.
           </p>
         </section>
 
         <section className="space-y-4">
-          <h2 className="text-lg tracking-tight mt-10">Your Privacy Rights</h2>
-          <p className="text-muted-foreground leading-6 text-sm">
+          <h2 className="mt-10 text-lg tracking-tight">Your Privacy Rights</h2>
+          <p className="text-muted-foreground text-sm leading-6">
             Privacy rights vary by region. Depending on where you live, you may have rights to access, correct, export,
             restrict, erase, or object to certain uses of your personal data.
           </p>
 
-          <h3 className="text-base mt-6">Indonesia (UU PDP)</h3>
-          <p className="text-muted-foreground leading-6 text-sm">
+          <h3 className="mt-6 text-base">Indonesia (UU PDP)</h3>
+          <p className="text-muted-foreground text-sm leading-6">
             For users in Indonesia, we process personal data in line with Indonesia's Personal Data Protection Law (UU
             PDP). Subject to legal conditions, you may request access, correction, deletion, restriction, and other
             rights recognized by applicable Indonesian law.
           </p>
 
-          <h3 className="text-base mt-6">EEA / UK (GDPR)</h3>
-          <p className="text-muted-foreground leading-6 text-sm">
+          <h3 className="mt-6 text-base">EEA / UK (GDPR)</h3>
+          <p className="text-muted-foreground text-sm leading-6">
             For users in the EEA/UK, GDPR-related rights may include access, rectification, erasure, restriction,
             portability, objection, and complaint rights with a supervisory authority, subject to legal limitations.
           </p>
 
-          <h3 className="text-base mt-6">United States (State Privacy Laws)</h3>
-          <p className="text-muted-foreground leading-6 text-sm">
+          <h3 className="mt-6 text-base">United States (State Privacy Laws)</h3>
+          <p className="text-muted-foreground text-sm leading-6">
             For users in certain US states, you may have rights to know, access, correct, delete, and request a portable
             copy of personal data, and where applicable, rights to opt out of specific processing uses defined by state
             law.
           </p>
 
-          <p className="text-muted-foreground leading-6 text-sm">
+          <p className="text-muted-foreground text-sm leading-6">
             oewang supports a structured privacy request workflow. Requests are tracked through lifecycle states
             (received, in progress, completed, rejected) and may require identity verification.
           </p>
-          <p className="text-muted-foreground leading-6 text-sm">
+          <p className="text-muted-foreground text-sm leading-6">
             Where required by law, we aim to respond within applicable statutory deadlines (typically within 30 days,
             subject to complexity and legal allowances).
           </p>
         </section>
 
         <section className="space-y-4">
-          <h2 className="text-lg tracking-tight mt-10">Children's Privacy</h2>
-          <p className="text-muted-foreground leading-6 text-sm">
+          <h2 className="mt-10 text-lg tracking-tight">Children's Privacy</h2>
+          <p className="text-muted-foreground text-sm leading-6">
             oewang is not intended for children under 18, and we do not knowingly collect personal data from children
             under 18.
           </p>
         </section>
 
         <section className="space-y-4">
-          <h2 className="text-lg tracking-tight mt-10">Changes to This Policy</h2>
-          <p className="text-muted-foreground leading-6 text-sm">
+          <h2 className="mt-10 text-lg tracking-tight">Changes to This Policy</h2>
+          <p className="text-muted-foreground text-sm leading-6">
             We may update this Privacy Policy from time to time. Material updates will be posted on this page with a
             revised "Last updated" date.
           </p>
         </section>
 
-        <section className="space-y-4 mb-20">
-          <h2 className="text-lg tracking-tight mt-10">Contact</h2>
-          <p className="text-muted-foreground leading-6 text-sm">
+        <section className="mb-20 space-y-4">
+          <h2 className="mt-10 text-lg tracking-tight">Contact</h2>
+          <p className="text-muted-foreground text-sm leading-6">
             For privacy questions or requests, contact us at{" "}
-            <a className="underline hover:text-foreground transition-colors" href="mailto:support@oewang.com">
+            <a className="underline transition-colors hover:text-foreground" href="mailto:support@oewang.com">
               support@oewang.com
             </a>
             .

@@ -34,10 +34,11 @@ interface WebSearchToolOutput {
  * Extract sources from webSearch tool results
  * Sources are already deduplicated by the tool
  */
-function extractWebSearchSources(parts: UIMessage["parts"]): SourceItem[] {
+function extractWebSearchSources(parts: any[]): SourceItem[] {
   const sources: SourceItem[] = [];
 
   for (const part of parts) {
+    if (!part) continue;
     const type = part.type as string;
     if (type === "tool-webSearch") {
       const output = (part as { output?: WebSearchToolOutput }).output;
@@ -53,16 +54,19 @@ function extractWebSearchSources(parts: UIMessage["parts"]): SourceItem[] {
 /**
  * Extract source-url parts from AI SDK
  */
-function extractAiSdkSources(parts: UIMessage["parts"]): SourceItem[] {
+function extractAiSdkSources(parts: any[]): SourceItem[] {
   const sources: SourceItem[] = [];
 
   for (const part of parts) {
-    if (part.type === "source-url") {
-      const sourcePart = part as { url: string; title?: string };
-      sources.push({
-        url: sourcePart.url,
-        title: sourcePart.title || sourcePart.url,
-      });
+    if (!part) continue;
+    if (part.type === "source") {
+      const sourcePart = part as any;
+      if (sourcePart.source?.url) {
+        sources.push({
+          url: sourcePart.source.url,
+          title: sourcePart.source.title || sourcePart.source.url,
+        });
+      }
     }
   }
 
@@ -72,8 +76,8 @@ function extractAiSdkSources(parts: UIMessage["parts"]): SourceItem[] {
 /**
  * Extract file parts from message
  */
-function extractFileParts(parts: UIMessage["parts"]) {
-  return parts.filter((part) => part.type === "file");
+function extractFileParts(parts: any[]) {
+  return parts.filter((part) => part && part.type === "file");
 }
 
 export function ChatMessages({ messages, isStreaming = false, dictionary }: ChatMessagesProps) {
@@ -135,11 +139,11 @@ export function ChatMessages({ messages, isStreaming = false, dictionary }: Chat
           <div key={`${message.id}-${index}`} className="group">
             {/* Render file attachments */}
             {fileParts.length > 0 && (
-              <Message from={message.role}>
+              <Message from={message.role === "data" ? "system" : (message.role as any)}>
                 <MessageContent className="max-w-[80%]">
                   <div className="mb-2 flex flex-wrap gap-2">
                     {fileParts.map((part) => {
-                      if (part.type !== "file") return null;
+                      if (!part || part.type !== "file") return null;
 
                       const file = part as {
                         type: "file";
@@ -186,16 +190,16 @@ export function ChatMessages({ messages, isStreaming = false, dictionary }: Chat
 
             {/* Render insight as a dedicated component - full width */}
             {insightData && message.role === "assistant" && (
-              <Message from={message.role}>
+              <Message from="assistant">
                 <MessageContent className="w-full max-w-full!">
-                  <ChatInsightMessage insight={insightData} dictionary={dictionary} />
+                  <ChatInsightMessage insight={insightData as any} dictionary={dictionary} />
                 </MessageContent>
               </Message>
             )}
 
             {/* Render text content in message (skip if we rendered insight) */}
             {textParts.length > 0 && !insightData && (
-              <Message from={message.role}>
+              <Message from={message.role === "data" ? "system" : (message.role as any)}>
                 <MessageContent className="max-w-[80%]">
                   <Response>{textContent}</Response>
                 </MessageContent>

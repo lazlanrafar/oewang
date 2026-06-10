@@ -78,7 +78,9 @@ test.describe("Workspace: Contacts", () => {
     await page.getByRole("button", { name: dictionary.contacts.form.create }).click();
 
     await expect(page.getByText(dictionary.contacts.toasts.created)).toBeVisible({ timeout: 45000 });
-    await expect(page.getByText(testName).first()).toBeVisible({ timeout: 45000 });
+    await expect(page.getByText(testName).first()).toBeVisible({
+      timeout: 45000,
+    });
   });
 
   test("should search for contacts in the search field", async ({ page, dictionary }) => {
@@ -114,12 +116,16 @@ test.describe("Finance: Debts & Receivables", () => {
 
   test("should open the Add Debt form sheet", async ({ page, dictionary }) => {
     await page.getByRole("button", { name: dictionary.debts.add_button }).click();
-    await expect(page.getByText(dictionary.debts.form.add_title)).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText(dictionary.debts.form.add_title)).toBeVisible({
+      timeout: 5000,
+    });
   });
 
   test("should show validation error when submitting empty debt form", async ({ page, dictionary }) => {
     await page.getByRole("button", { name: dictionary.debts.add_button }).click();
-    await expect(page.getByText(dictionary.debts.form.add_title)).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText(dictionary.debts.form.add_title)).toBeVisible({
+      timeout: 5000,
+    });
 
     await page.getByRole("button", { name: dictionary.debts.form.submit, exact: true }).click();
 
@@ -134,7 +140,9 @@ test.describe("Finance: Debts & Receivables", () => {
 
   test("should display the debt type options in the form", async ({ page, dictionary }) => {
     await page.getByRole("button", { name: dictionary.debts.add_button }).click();
-    await expect(page.getByText(dictionary.debts.form.add_title)).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText(dictionary.debts.form.add_title)).toBeVisible({
+      timeout: 5000,
+    });
 
     // Type buttons render as "You Owe" and "You Are Owed"
     await expect(page.getByText(dictionary.debts.form.type_payable).first()).toBeVisible({ timeout: 5000 });

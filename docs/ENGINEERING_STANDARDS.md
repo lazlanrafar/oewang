@@ -8,16 +8,16 @@ This document defines the **non-negotiable coding standards** for oewang. Every 
 
 ## Naming Conventions
 
-| Context | Convention | Example |
-|---------|-----------|---------|
-| Local variables, data objects, DB fields | `snake_case` | `workspace_id`, `created_at`, `user_id` |
-| React props and interface/type keys | `camelCase` | `workspaceId`, `createdAt`, `userId` |
-| Files and directories | `kebab-case` | `wallet-groups.ts`, `audit-logs/` |
-| React components | `PascalCase` | `TransactionList`, `WalletCard` |
-| TypeScript types and interfaces | `PascalCase` | `WorkspaceRole`, `ApiResponse<T>` |
-| Constants objects | `SCREAMING_SNAKE_CASE` | `ErrorCode`, `ROLES`, `SYSTEM_ROLES` |
-| Elysia controller exports | `camelCase` | `walletsController`, `authController` |
-| Test names | `should {behavior} when {condition}` | `should return 404 when wallet not found` |
+| Context                                  | Convention                           | Example                                   |
+| ---------------------------------------- | ------------------------------------ | ----------------------------------------- |
+| Local variables, data objects, DB fields | `snake_case`                         | `workspace_id`, `created_at`, `user_id`   |
+| React props and interface/type keys      | `camelCase`                          | `workspaceId`, `createdAt`, `userId`      |
+| Files and directories                    | `kebab-case`                         | `wallet-groups.ts`, `audit-logs/`         |
+| React components                         | `PascalCase`                         | `TransactionList`, `WalletCard`           |
+| TypeScript types and interfaces          | `PascalCase`                         | `WorkspaceRole`, `ApiResponse<T>`         |
+| Constants objects                        | `SCREAMING_SNAKE_CASE`               | `ErrorCode`, `ROLES`, `SYSTEM_ROLES`      |
+| Elysia controller exports                | `camelCase`                          | `walletsController`, `authController`     |
+| Test names                               | `should {behavior} when {condition}` | `should return 404 when wallet not found` |
 
 > **Note on DB columns:** The database schema uses `camelCase` column names (e.g., `workspaceId`, `createdAt`) via Drizzle ORM's mapping, while the underlying PostgreSQL columns follow `snake_case`. When writing Drizzle queries, always use the camelCase property names from the schema definitions.
 
@@ -135,6 +135,7 @@ Always include `workspace_id` and `user_id` in error/warn log context for tracea
 ## Linting & Formatting
 
 **Biome** (`@biomejs/biome`) is the single tool for both linting and formatting:
+
 - **2-space indent**
 - **80-character line width**
 - Config: `biome.json` at repo root
@@ -151,55 +152,81 @@ Run before every commit. The CI pipeline blocks merges with lint violations.
 
 ## Environment Variables
 
-All vars defined in root `.env`. **Never create `.env` files inside `apps/*` or `packages/*`.**
+Env vars are split across per-service Railway files and a local root `.env`. **Never create `.env` files inside `apps/*` or `packages/*`.**
 
-### Required Variables (subset)
+### File Structure
+
+| File | Git | Purpose |
+| ----------------------- | --- | ----------------------------------------------- |
+| `.env` | ❌ | Local development — all services combined |
+| `.env.global` | ❌ | Railway Shared Variables (contains real secrets) |
+| `.env.global.example` | ✅ | Safe template — keys only, no real values |
+| `.env.api` | ✅ | Railway `api` service — Railway `${{ref}}` only |
+| `.env.app` | ✅ | Railway `app` service — Railway `${{ref}}` only |
+| `.env.admin` | ✅ | Railway `admin` service — Railway `${{ref}}` only |
+| `.env.website` | ✅ | Railway `website` service — Railway `${{ref}}` only |
+
+Railway own-domain rule: each service uses `${{RAILWAY_PUBLIC_DOMAIN}}` (no prefix) for its own URL. Other services use `${{servicename.RAILWAY_PUBLIC_DOMAIN}}`.
+
+### Zod Validation
+
+Every app validates its env at startup. The API **refuses to start** with missing required vars.
+
+| Schema file | Validates |
+| ------------------------------- | ----------------------------------- |
+| `apps/api/config/env.ts` | API service vars |
+| `apps/app/env.ts` | App service vars |
+| `packages/constants/src/env.ts` | Shared vars used across packages |
+
+### Key Variables
 
 ```bash
-# Database & Auth
+# Required everywhere
+JWT_SECRET=                 # ≥32 chars — openssl rand -hex 32
+ENCRYPTION_KEY=             # exactly 32 chars — openssl rand -hex 16
 DATABASE_URL=               # PostgreSQL connection string
-JWT_SECRET=                 # ≥32 chars
-JWT_EXPIRES_IN=7d
-ENCRYPTION_KEY=             # exactly 32 chars (AES-256)
 
-# OAuth (Google + GitHub)
+# Required in production
+MAYAR_API_KEY=
+MAYAR_WEBHOOK_TOKEN=
+
+# Integrations
+EVOLUTION_API_URL=          # WhatsApp via Evolution API
+EVOLUTION_API_TOKEN=
+EVOLUTION_API_INSTANCE=
+TELEGRAM_BOT_TOKEN=
+TELEGRAM_WEBHOOK_SECRET=    # openssl rand -hex 32
+
+# OAuth
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 GITHUB_CLIENT_ID=
 GITHUB_CLIENT_SECRET=
 
-# Redis (optional dev, required prod)
-UPSTASH_REDIS_REST_URL=
-UPSTASH_REDIS_REST_TOKEN=
-
-# AI
-OPENAI_API_KEY=
-GEMINI_API_KEY=
-ANTHROPIC_API_KEY=
-
-# Payments
-MAYAR_API_KEY=              # required in production
-MAYAR_WEBHOOK_TOKEN=        # required in production
-
-# Storage
+# Storage (S3-compatible)
 BUCKET_ENDPOINT=
 BUCKET_ACCESS_KEY_ID=
 BUCKET_SECRET_ACCESS_KEY=
 BUCKET_NAME=
 
-# Monitoring
-SENTRY_DSN=
-
-# App URLs
-APP_URL=
+# NEXT_PUBLIC_ vars are bundled into the browser — NEVER put secrets here
 NEXT_PUBLIC_APP_URL=
+NEXT_PUBLIC_API_URL=
+NEXT_PUBLIC_SESSION_COOKIE_NAME=oewang-session
 ```
 
-`NEXT_PUBLIC_` vars are bundled into the browser. **Never** put secrets there.
+### Mandatory Checklist When Changing Env Vars
 
-### Startup Validation
+When **adding**, **removing**, or **renaming** any environment variable:
 
-`apps/api/config/env.ts` validates all required vars with Zod at startup. The API **refuses to start** with missing required vars — no silent failures.
+- [ ] `apps/api/config/env.ts` — update Zod schema
+- [ ] `apps/app/env.ts` — update Zod schema (if used in app)
+- [ ] `packages/constants/src/env.ts` — update shared schema (if used across packages)
+- [ ] `.env` — add var with local placeholder/default
+- [ ] `.env.global.example` — add var with empty value + description comment
+- [ ] `.env.global` — add var with real value
+- [ ] `.env.api` / `.env.app` / `.env.admin` / `.env.website` — add to affected services
+- [ ] `turbo.json → globalEnv` — add if Turborepo needs to surface it
 
 ---
 
@@ -230,7 +257,8 @@ No cross-workspace joins. No global queries without explicit super-admin role ch
 
 ```ts
 // ✅ Soft delete
-await db.update(wallets)
+await db
+  .update(wallets)
   .set({ deletedAt: new Date().toISOString() })
   .where(and(eq(wallets.id, id), eq(wallets.workspaceId, workspaceId)));
 
@@ -241,6 +269,7 @@ await db.delete(wallets).where(eq(wallets.id, id));
 ### Input Validation
 
 All incoming data validated with TypeBox in the controller before the service layer:
+
 - Invalid input → `400` + `ErrorCode.VALIDATION_ERROR` — never reaches service
 - Sanitize strings: trim whitespace, normalize currency codes to uppercase
 - File uploads: validate MIME type and file size server-side before storing to bucket
@@ -271,18 +300,19 @@ should {expected behaviour} when {condition}
 ```
 
 Examples:
+
 - `should return 404 when wallet does not exist`
 - `should throw 403 when user is not a workspace member`
 - `should not return soft-deleted wallets`
 
 ### Coverage Requirements
 
-| Layer | Test Type | Minimum |
-|-------|-----------|---------|
-| Utils (`.utils.ts`) | Unit | ≥ 90% branch |
-| Service | Unit (repository mocked) | ≥ 80% branch |
-| Repository | Integration (real test DB) | ≥ 1 happy + 1 error path per method |
-| Controller | Integration (HTTP) | All status codes + input validation |
+| Layer               | Test Type                  | Minimum                             |
+| ------------------- | -------------------------- | ----------------------------------- |
+| Utils (`.utils.ts`) | Unit                       | ≥ 90% branch                        |
+| Service             | Unit (repository mocked)   | ≥ 80% branch                        |
+| Repository          | Integration (real test DB) | ≥ 1 happy + 1 error path per method |
+| Controller          | Integration (HTTP)         | All status codes + input validation |
 
 ### Running Tests
 
@@ -307,13 +337,13 @@ Current test baseline: **399 unit tests** across 12 modules + **115+ E2E tests**
 
 ## Git Branching
 
-| Branch | Usage |
-|--------|-------|
-| `main` | Production — **never commit directly** |
-| `dev` | Development integration — **never commit directly** |
-| `feature/{name}` | New features |
-| `fix/{name}` | Bug fixes |
-| `chore/{name}` | Maintenance, dependency updates |
+| Branch           | Usage                                               |
+| ---------------- | --------------------------------------------------- |
+| `main`           | Production — **never commit directly**              |
+| `dev`            | Development integration — **never commit directly** |
+| `feature/{name}` | New features                                        |
+| `fix/{name}`     | Bug fixes                                           |
+| `chore/{name}`   | Maintenance, dependency updates                     |
 
 - Open a PR for every change
 - Check for open PRs on the same module before starting work
@@ -371,11 +401,11 @@ Every successful mutation MUST produce an audit log entry:
 await AuditLogsService.log({
   workspace_id: workspaceId,
   user_id: userId,
-  action: "wallet.created",    // format: "entity.verb"
+  action: "wallet.created", // format: "entity.verb"
   entity: "wallet",
   entity_id: wallet.id,
-  before: null,                // null for creates
-  after: wallet,               // null for deletes
+  before: null, // null for creates
+  after: wallet, // null for deletes
 });
 ```
 
@@ -399,12 +429,12 @@ This triggers WebSocket events to all clients subscribed to the workspace channe
 
 ## Observability
 
-| Signal | Tool | Where |
-|--------|------|-------|
-| Errors (server) | Sentry | `apps/api/instrument.ts` (first import in index.ts) |
-| Errors (client) | Sentry | `apps/app/instrumentation.ts` + `sentry.client.config.ts` |
-| Structured logs | `@workspace/logger` (Pino) | All `apps/api` and packages |
-| Request logs | `loggerPlugin` | `apps/api/plugins/logger.ts` |
+| Signal          | Tool                       | Where                                                     |
+| --------------- | -------------------------- | --------------------------------------------------------- |
+| Errors (server) | Sentry                     | `apps/api/instrument.ts` (first import in index.ts)       |
+| Errors (client) | Sentry                     | `apps/app/instrumentation.ts` + `sentry.client.config.ts` |
+| Structured logs | `@workspace/logger` (Pino) | All `apps/api` and packages                               |
+| Request logs    | `loggerPlugin`             | `apps/api/plugins/logger.ts`                              |
 
 **Never attach to Sentry events:** passwords · decrypted payloads · JWT tokens · encryption keys
 

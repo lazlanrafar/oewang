@@ -33,9 +33,7 @@ export function ComingSoonClient({ dictionary }: { dictionary: AppDictionary }) 
         {/* Content */}
         <div className="space-y-2">
           <h1 className="font-bold text-3xl tracking-tight">{dictionary.coming_soon.title}</h1>
-          <p className="text-muted-foreground text-sm">
-            {dictionary.coming_soon.description}
-          </p>
+          <p className="text-muted-foreground text-sm">{dictionary.coming_soon.description}</p>
         </div>
 
         {/* Simplified Form */}
@@ -56,7 +54,9 @@ export function ComingSoonClient({ dictionary }: { dictionary: AppDictionary }) 
           </Button>
         </form>
 
-        <p className="text-[10px] text-muted-foreground uppercase tracking-widest">{dictionary.coming_soon.stay_tuned}</p>
+        <p className="text-[10px] text-muted-foreground uppercase tracking-widest">
+          {dictionary.coming_soon.stay_tuned}
+        </p>
       </div>
     </div>
   );

@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
+
 import { useChatActions } from "@ai-sdk-tools/store";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -13,6 +15,7 @@ import {
 } from "@workspace/modules/server";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, cn, Skeleton } from "@workspace/ui";
 import { format } from "date-fns";
+import { animate } from "framer-motion";
 import {
   ArrowDownRight,
   ArrowUpRight,
@@ -28,6 +31,29 @@ import {
 
 import type { AppDictionary } from "@/modules/types/dictionary";
 import { useAppStore } from "@/stores/app";
+
+export function CountUp({
+  value,
+  duration = 0.8,
+  formatter,
+}: {
+  value: number;
+  duration?: number;
+  formatter?: (v: number) => string;
+}) {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    const controls = animate(count, value, {
+      duration,
+      ease: "easeOut",
+      onUpdate: (latest) => setCount(latest),
+    });
+    return () => controls.stop();
+  }, [value, duration]);
+
+  return <>{formatter ? formatter(count) : Math.round(count)}</>;
+}
 
 /** Skeleton block for a monetary value line */
 function ValueSkeleton() {
@@ -262,11 +288,9 @@ export function OverviewCards({
             <CardDescription className="sr-only">Current month total income</CardDescription>
           </CardHeader>
           <CardContent className="p-4 pt-0">
-            {isLoading ? (
-              <ValueSkeleton />
-            ) : (
-              <div className="font-medium font-serif text-2xl tracking-tight">{fmt(currentRevenue)}</div>
-            )}
+            <div className="font-medium font-serif text-2xl tracking-tight">
+              <CountUp value={currentRevenue} formatter={fmt} />
+            </div>
             <div className="mt-1 flex items-center">
               <span className="text-muted-foreground text-xs">{rangeLabel}</span>
               {renderTrend(currentRevenue, previousRevenue)}
@@ -287,11 +311,9 @@ export function OverviewCards({
             <CardDescription className="sr-only">Current month total expenses</CardDescription>
           </CardHeader>
           <CardContent className="p-4 pt-0">
-            {isLoading ? (
-              <ValueSkeleton />
-            ) : (
-              <div className="font-medium font-serif text-2xl tracking-tight">{fmt(currentExpense)}</div>
-            )}
+            <div className="font-medium font-serif text-2xl tracking-tight">
+              <CountUp value={currentExpense} formatter={fmt} />
+            </div>
             <div className="mt-1 flex items-center">
               <span className="text-muted-foreground text-xs">{rangeLabel}</span>
               {renderTrend(currentExpense, previousExpense, true)}
@@ -312,11 +334,9 @@ export function OverviewCards({
             <CardDescription className="sr-only">Current month net income</CardDescription>
           </CardHeader>
           <CardContent className="p-4 pt-0">
-            {isLoading ? (
-              <ValueSkeleton />
-            ) : (
-              <div className="font-medium font-serif text-2xl tracking-tight">{fmt(currentNetIncome)}</div>
-            )}
+            <div className="font-medium font-serif text-2xl tracking-tight">
+              <CountUp value={currentNetIncome} formatter={fmt} />
+            </div>
             <div className="mt-1 flex items-center">
               <span className="text-muted-foreground text-xs">{rangeLabel}</span>
               {renderTrend(currentNetIncome, previousNetIncome)}
@@ -339,14 +359,14 @@ export function OverviewCards({
           <CardContent className="p-4 pt-0">
             {loadingCategory ? (
               <>
-                <ValueSkeleton />
+                <Skeleton className="h-6 w-32" />
                 <TrendSkeleton />
               </>
             ) : topCategory ? (
               <>
                 <div className="truncate font-medium text-lg">{topCategory.name}</div>
                 <div className="mt-1 text-muted-foreground text-xs">
-                  {fmt(topCategory.value)} {rangeLabel}
+                  <CountUp value={topCategory.value} formatter={fmt} /> {rangeLabel}
                 </div>
               </>
             ) : (
@@ -367,11 +387,9 @@ export function OverviewCards({
             <CardDescription className="sr-only">Average monthly burn rate</CardDescription>
           </CardHeader>
           <CardContent className="p-4 pt-0">
-            {loadingBurnRate ? (
-              <ValueSkeleton />
-            ) : (
-              <div className="font-medium font-serif text-2xl tracking-tight">{fmt(averageBurn)}</div>
-            )}
+            <div className="font-medium font-serif text-2xl tracking-tight">
+              <CountUp value={averageBurn} formatter={fmt} />
+            </div>
             <div className="mt-1 text-muted-foreground text-xs">{rangeLabel}</div>
           </CardContent>
         </Card>
@@ -388,11 +406,9 @@ export function OverviewCards({
             <CardDescription className="sr-only">Current budget usage</CardDescription>
           </CardHeader>
           <CardContent className="p-4 pt-0">
-            {loadingBudgets ? (
-              <ValueSkeleton />
-            ) : (
-              <div className="font-medium font-serif text-2xl tracking-tight">{Math.round(budgetUsage)}%</div>
-            )}
+            <div className="font-medium font-serif text-2xl tracking-tight">
+              <CountUp value={Math.round(budgetUsage)} formatter={(v) => `${Math.round(v)}%`} />
+            </div>
             <div className="mt-1 text-muted-foreground text-xs">
               {loadingBudgets ? <TrendSkeleton /> : `${fmt(totalBudgetSpent)} of ${fmt(totalBudgeted)}`}
             </div>
@@ -411,11 +427,9 @@ export function OverviewCards({
             <CardDescription className="sr-only">Net open debt balance</CardDescription>
           </CardHeader>
           <CardContent className="p-4 pt-0">
-            {loadingDebts ? (
-              <ValueSkeleton />
-            ) : (
-              <div className="font-medium font-serif text-2xl tracking-tight">{fmt(debtBalance)}</div>
-            )}
+            <div className="font-medium font-serif text-2xl tracking-tight">
+              <CountUp value={debtBalance} formatter={fmt} />
+            </div>
             <div className="mt-1 text-muted-foreground text-xs">
               {loadingDebts ? <TrendSkeleton /> : `${openDebts.length} open balances`}
             </div>
@@ -434,11 +448,9 @@ export function OverviewCards({
             <CardDescription className="sr-only">Included account balances</CardDescription>
           </CardHeader>
           <CardContent className="p-4 pt-0">
-            {loadingWallets ? (
-              <ValueSkeleton />
-            ) : (
-              <div className="font-medium font-serif text-2xl tracking-tight">{fmt(trackedBalance)}</div>
-            )}
+            <div className="font-medium font-serif text-2xl tracking-tight">
+              <CountUp value={trackedBalance} formatter={fmt} />
+            </div>
             <div className="mt-1 text-muted-foreground text-xs">
               {loadingWallets ? (
                 <TrendSkeleton />

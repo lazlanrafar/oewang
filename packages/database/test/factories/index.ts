@@ -1,8 +1,8 @@
-import type { DB } from './base-factory';
-import { UserFactory } from './user.factory';
-import { WorkspaceFactory } from './workspace.factory';
-import { WalletFactory } from './wallet.factory';
-import { TransactionFactory } from './transaction.factory';
+import type { DB } from "./base-factory";
+import { UserFactory } from "./user.factory";
+import { WorkspaceFactory } from "./workspace.factory";
+import { WalletFactory } from "./wallet.factory";
+import { TransactionFactory } from "./transaction.factory";
 
 /**
  * Test factories container
@@ -62,9 +62,9 @@ export function createFactories(db: DB): TestFactories {
 }
 
 // Re-export factory classes
-export { UserFactory } from './user.factory';
-export { WorkspaceFactory } from './workspace.factory';
-export { WalletFactory } from './wallet.factory';
-export { TransactionFactory } from './transaction.factory';
-export { BaseFactory } from './base-factory';
-export type { DB } from './base-factory';
+export { UserFactory } from "./user.factory";
+export { WorkspaceFactory } from "./workspace.factory";
+export { WalletFactory } from "./wallet.factory";
+export { TransactionFactory } from "./transaction.factory";
+export { BaseFactory } from "./base-factory";
+export type { DB } from "./base-factory";

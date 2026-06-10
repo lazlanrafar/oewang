@@ -1,8 +1,4 @@
-import {
-  aiAgentSettings,
-  db,
-  eq,
-} from "@workspace/database";
+import { aiAgentSettings, db, eq } from "@workspace/database";
 
 const DEFAULTS = {
   model: "gpt-4o-mini" as string,
@@ -23,7 +19,8 @@ export abstract class AgentSettingsRepository {
   }
 
   static async upsert(workspaceId: string, patch: Partial<typeof DEFAULTS>) {
-    const existing = await AgentSettingsRepository.findByWorkspaceId(workspaceId);
+    const existing =
+      await AgentSettingsRepository.findByWorkspaceId(workspaceId);
 
     if (existing) {
       const [updated] = await db
@@ -42,7 +39,8 @@ export abstract class AgentSettingsRepository {
   }
 
   static async getOrCreate(workspaceId: string) {
-    const existing = await AgentSettingsRepository.findByWorkspaceId(workspaceId);
+    const existing =
+      await AgentSettingsRepository.findByWorkspaceId(workspaceId);
     if (existing) return existing;
 
     const [created] = await db

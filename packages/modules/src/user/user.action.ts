@@ -12,6 +12,7 @@ import type {
 
 import { axiosInstance } from "../lib/axios.server";
 import { Env } from "@workspace/constants";
+import { extractErrorMessage } from "../lib/error-message";
 
 export interface SyncUserDTO {
   id: string;
@@ -36,10 +37,10 @@ export const syncUser = async (
       user,
     );
     return { success: true, data: response.data.data as SyncUserResponse };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
-      error: error.response?.data?.message || "Failed to sync user",
+      error: extractErrorMessage(error, "Failed to sync user"),
     };
   }
 };
@@ -60,10 +61,10 @@ export const getMe = async (): Promise<
         workspaces: WorkspaceWithRole[];
       },
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
-      error: error.response?.data?.message || "Failed to fetch user data",
+      error: extractErrorMessage(error, "Failed to fetch user data"),
     };
   }
 };
@@ -77,7 +78,9 @@ export const switchWorkspaceAction = async (
 ): Promise<ActionResponse<void>> => {
   try {
     // 1. Update active workspace in DB via API
-    await axiosInstance.patch("users/me/workspace", { workspace_id });
+    await axiosInstance.patch("users/me/workspace", {
+      workspaceId: workspace_id,
+    });
 
     // 2. Refresh app JWT to embed the new workspace_id
     const refreshResponse = await axiosInstance.post("auth/refresh", {});
@@ -95,10 +98,10 @@ export const switchWorkspaceAction = async (
 
     revalidatePath("/[locale]/overview", "layout");
     return { success: true, data: undefined };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
-      error: error.response?.data?.message || "Failed to switch workspace",
+      error: extractErrorMessage(error, "Failed to switch workspace"),
     };
   }
 };
@@ -112,10 +115,10 @@ export const updateProfileAction = async (data: {
     await axiosInstance.patch("users/me", data);
     revalidatePath("/[locale]/settings/profile", "page");
     return { success: true, data: undefined };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
-      error: error.response?.data?.message || "Failed to update profile",
+      error: extractErrorMessage(error, "Failed to update profile"),
     };
   }
 };
@@ -126,10 +129,10 @@ export const getProvidersAction = async (): Promise<
   try {
     const response = await axiosInstance.get("users/me/providers");
     return { success: true, data: response.data.data };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
-      error: error.response?.data?.message || "Failed to get providers",
+      error: extractErrorMessage(error, "Failed to get providers"),
     };
   }
 };
@@ -141,10 +144,10 @@ export const disconnectProviderAction = async (
     await axiosInstance.delete(`users/me/providers/${provider}`);
     revalidatePath("/[locale]/settings/account", "page");
     return { success: true, data: undefined };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
-      error: error.response?.data?.message || "Failed to disconnect provider",
+      error: extractErrorMessage(error, "Failed to disconnect provider"),
     };
   }
 };
@@ -157,10 +160,10 @@ export const uploadAvatarAction = async (
       headers: { "Content-Type": "multipart/form-data" },
     });
     return { success: true, data: { url: response.data.data.url } };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
-      error: error.response?.data?.message || "Failed to upload avatar",
+      error: extractErrorMessage(error, "Failed to upload avatar"),
     };
   }
 };
@@ -173,11 +176,10 @@ export const updateAvatarAction = async (
       headers: { "Content-Type": "multipart/form-data" },
     });
     return { success: true, data: { url: response.data.data.url } };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
-      error:
-        error.response?.data?.message || "Failed to update profile picture",
+      error: extractErrorMessage(error, "Failed to update profile picture"),
     };
   }
 };

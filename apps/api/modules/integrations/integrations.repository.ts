@@ -5,7 +5,7 @@ import {
   workspaceIntegrations,
   workspaces,
 } from "@workspace/database";
-import { and, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, or, sql } from "drizzle-orm";
 
 export abstract class IntegrationsRepository {
   static async findByProvider(workspace_id: string, provider: string) {
@@ -147,6 +147,20 @@ export abstract class IntegrationsRepository {
       .select({ id: workspaces.id })
       .from(workspaces)
       .where(and(eq(workspaces.slug, slug), isNull(workspaces.deleted_at)))
+      .limit(1);
+    return workspace?.id || null;
+  }
+
+  static async findWorkspaceIdBySlugOrId(slugOrId: string) {
+    const [workspace] = await db
+      .select({ id: workspaces.id })
+      .from(workspaces)
+      .where(
+        and(
+          or(eq(workspaces.slug, slugOrId), eq(workspaces.id, slugOrId)),
+          isNull(workspaces.deleted_at),
+        ),
+      )
       .limit(1);
     return workspace?.id || null;
   }

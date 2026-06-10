@@ -3,9 +3,15 @@
 import { usePathname, useRouter } from "next/navigation";
 
 import type { Dictionary } from "@workspace/dictionaries";
+import { updateAgentResponseLanguageAction } from "@workspace/modules/ai/ai.action";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Separator, Skeleton } from "@workspace/ui";
 
 import type { Locale } from "@/i18n-config";
+
+const LOCALE_TO_RESPONSE_LANGUAGE: Record<string, string> = {
+  en: "english",
+  id: "indonesian",
+};
 
 function LanguageSkeleton() {
   return (
@@ -31,6 +37,9 @@ export function LanguageSettingsForm({ dictionary }: LanguageSettingsFormProps) 
   const currentLocale = pathname.split("/")[1] as Locale;
 
   const handleLanguageChange = (newLocale: string) => {
+    const responseLanguage = LOCALE_TO_RESPONSE_LANGUAGE[newLocale] ?? "auto";
+    updateAgentResponseLanguageAction(responseLanguage);
+
     const segments = pathname.split("/");
     segments[1] = newLocale;
     const newPath = segments.join("/");

@@ -55,7 +55,9 @@ export default function ComingSoonPage() {
           </Button>
         </form>
 
-        <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Stay tuned for updates</p>
+        <p className="text-[10px] text-muted-foreground uppercase tracking-widest">
+          Stay tuned for updates
+        </p>
       </div>
     </div>
   );

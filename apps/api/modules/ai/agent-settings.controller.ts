@@ -5,7 +5,9 @@ import { authPlugin } from "../../plugins/auth";
 import { UpdateAgentSettingsDto } from "./agent-settings.dto";
 import { AgentSettingsService } from "./agent-settings.service";
 
-export const agentSettingsController = new Elysia({ prefix: "/ai/agent-settings" })
+export const agentSettingsController = new Elysia({
+  prefix: "/ai/agent-settings",
+})
   .use(authPlugin)
   .derive(({ auth }) => ({ workspaceId: auth?.workspace_id }))
   .onBeforeHandle(({ auth, set }) => {
@@ -23,7 +25,8 @@ export const agentSettingsController = new Elysia({ prefix: "/ai/agent-settings"
     {
       detail: {
         summary: "Get AI Agent Settings",
-        description: "Returns the current AI agent configuration for the workspace (model, temperature, instructions, etc.).",
+        description:
+          "Returns the current AI agent configuration for the workspace (model, temperature, instructions, etc.).",
         tags: ["AI"],
       },
     },
@@ -44,7 +47,8 @@ export const agentSettingsController = new Elysia({ prefix: "/ai/agent-settings"
       body: UpdateAgentSettingsDto,
       detail: {
         summary: "Update AI Agent Settings",
-        description: "Adjust the AI agent's model, temperature, step limit, custom instructions, and response language.",
+        description:
+          "Adjust the AI agent's model, temperature, step limit, custom instructions, and response language.",
         tags: ["AI"],
       },
     },

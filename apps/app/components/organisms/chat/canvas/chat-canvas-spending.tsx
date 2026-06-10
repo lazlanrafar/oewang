@@ -153,7 +153,12 @@ export function SpendingCanvas({ dataOverride }: { dataOverride?: Record<string,
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="text-black dark:text-white">
-                        {formatAmount({ amount: item.amount, currency, locale, maximumFractionDigits: 0 })}
+                        {formatAmount({
+                          amount: item.amount,
+                          currency,
+                          locale,
+                          maximumFractionDigits: 0,
+                        })}
                       </span>
                       <span className="w-10 text-right text-[#707070] dark:text-[#666666]">
                         {item.percentage.toFixed(1)}%
@@ -232,7 +237,12 @@ export function SpendingCanvas({ dataOverride }: { dataOverride?: Record<string,
                             {category}
                           </TableCell>
                           <TableCell className="text-right font-sans text-[12px] text-black dark:text-white">
-                            {formatAmount({ amount, currency, locale, maximumFractionDigits: 0 })}
+                            {formatAmount({
+                              amount,
+                              currency,
+                              locale,
+                              maximumFractionDigits: 0,
+                            })}
                           </TableCell>
                           <TableCell className="border-r text-right text-[#707070] text-[12px] dark:text-[#666666]">
                             {share.toFixed(1)}%

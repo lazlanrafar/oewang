@@ -132,7 +132,10 @@ async function getWorkspaceCurrency(workspaceId: string): Promise<string> {
   }
 }
 
-async function resolveWalletIdByName(workspaceId: string, walletId: string | undefined): Promise<string> {
+async function resolveWalletIdByName(
+  workspaceId: string,
+  walletId: string | undefined,
+): Promise<string> {
   if (!walletId) return "";
   if (isUuid(walletId)) return walletId;
 
@@ -140,23 +143,24 @@ async function resolveWalletIdByName(workspaceId: string, walletId: string | und
     const allWalletsResult = await walletsRepository.findMany(workspaceId);
     const allWallets = allWalletsResult.rows;
     const lowered = walletId.toLowerCase().trim();
-    
+
     // 1. Exact match or substring match
-    let match = allWallets.find((w: any) =>
-      w.name.toLowerCase() === lowered ||
-      w.name.toLowerCase().includes(lowered) ||
-      lowered.includes(w.name.toLowerCase())
+    let match = allWallets.find(
+      (w: any) =>
+        w.name.toLowerCase() === lowered ||
+        w.name.toLowerCase().includes(lowered) ||
+        lowered.includes(w.name.toLowerCase()),
     );
-    
+
     if (match) return match.id;
 
     // 2. Word-level overlap match
     const words = lowered.split(/\s+/);
     match = allWallets.find((w: any) => {
       const nameLower = w.name.toLowerCase();
-      return words.some(word => word.length > 1 && nameLower.includes(word));
+      return words.some((word) => word.length > 1 && nameLower.includes(word));
     });
-    
+
     if (match) return match.id;
 
     // 3. Fallback to the first wallet so we don't crash
@@ -166,7 +170,10 @@ async function resolveWalletIdByName(workspaceId: string, walletId: string | und
   }
 }
 
-async function resolveCategoryIdByName(workspaceId: string, categoryId: string | undefined): Promise<string | undefined> {
+async function resolveCategoryIdByName(
+  workspaceId: string,
+  categoryId: string | undefined,
+): Promise<string | undefined> {
   if (!categoryId) return undefined;
   if (isUuid(categoryId)) return categoryId;
 
@@ -175,15 +182,21 @@ async function resolveCategoryIdByName(workspaceId: string, categoryId: string |
     const lowered = categoryId.toLowerCase().trim();
 
     // 1. Exact match or substring match (stripping emojis/special characters)
-    const cleanStr = (s: string) => s.replace(/[^\w\s]/g, "").trim().toLowerCase();
+    const cleanStr = (s: string) =>
+      s
+        .replace(/[^\w\s]/g, "")
+        .trim()
+        .toLowerCase();
     const cleanInput = cleanStr(lowered);
 
     let match = allCats.find((c: any) => {
       const cNameLower = c.name.toLowerCase();
-      return cNameLower.includes(lowered) ||
+      return (
+        cNameLower.includes(lowered) ||
         lowered.includes(cNameLower) ||
         cleanStr(c.name).includes(cleanInput) ||
-        cleanInput.includes(cleanStr(c.name));
+        cleanInput.includes(cleanStr(c.name))
+      );
     });
 
     if (match) return match.id;
@@ -192,7 +205,9 @@ async function resolveCategoryIdByName(workspaceId: string, categoryId: string |
     const words = cleanInput.split(/\s+/);
     match = allCats.find((c: any) => {
       const cleanCatName = cleanStr(c.name);
-      return words.some(word => word.length > 2 && cleanCatName.includes(word));
+      return words.some(
+        (word) => word.length > 2 && cleanCatName.includes(word),
+      );
     });
 
     if (match) return match.id;
@@ -200,7 +215,11 @@ async function resolveCategoryIdByName(workspaceId: string, categoryId: string |
     // 3. Fallback to "Other" or "Lain-lain" category if possible
     const otherMatch = allCats.find((c: any) => {
       const nameLower = c.name.toLowerCase();
-      return nameLower.includes("other") || nameLower.includes("lain") || nameLower.includes("general");
+      return (
+        nameLower.includes("other") ||
+        nameLower.includes("lain") ||
+        nameLower.includes("general")
+      );
     });
     if (otherMatch) return otherMatch.id;
 
@@ -430,9 +449,18 @@ export async function executeAiTool(
   try {
     switch (toolName) {
       case "create_transaction": {
-        const walletId = await resolveWalletIdByName(workspaceId, input.walletId);
-        const toWalletId = await resolveWalletIdByName(workspaceId, input.toWalletId);
-        const categoryId = await resolveCategoryIdByName(workspaceId, input.categoryId);
+        const walletId = await resolveWalletIdByName(
+          workspaceId,
+          input.walletId,
+        );
+        const toWalletId = await resolveWalletIdByName(
+          workspaceId,
+          input.toWalletId,
+        );
+        const categoryId = await resolveCategoryIdByName(
+          workspaceId,
+          input.categoryId,
+        );
 
         const body = {
           type: input.type,
@@ -523,8 +551,14 @@ export async function executeAiTool(
         break;
       }
       case "split_bill": {
-        const walletId = await resolveWalletIdByName(workspaceId, input.walletId);
-        const categoryId = await resolveCategoryIdByName(workspaceId, input.categoryId);
+        const walletId = await resolveWalletIdByName(
+          workspaceId,
+          input.walletId,
+        );
+        const categoryId = await resolveCategoryIdByName(
+          workspaceId,
+          input.categoryId,
+        );
 
         const splitBody = {
           amount: input.amount,

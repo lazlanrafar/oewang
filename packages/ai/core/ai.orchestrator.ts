@@ -16,6 +16,7 @@ export interface OrchestratorOptions {
   anthropicKey?: string;
   geminiKey?: string;
   settings?: AgentSettings;
+  webSearch?: boolean;
 }
 
 export type ToolExecutorFn = (name: string, args: any) => Promise<any>;
@@ -28,7 +29,8 @@ function buildModel(options: OrchestratorOptions) {
   const modelId = options.settings?.model ?? "gpt-4o-mini";
 
   if (modelId.startsWith("claude-")) {
-    if (!options.anthropicKey) throw new Error("Anthropic API key required for Claude models.");
+    if (!options.anthropicKey)
+      throw new Error("Anthropic API key required for Claude models.");
     const provider = createAnthropic({ apiKey: options.anthropicKey });
     return provider(modelId as any);
   }
@@ -52,8 +54,9 @@ function buildTools(
   executor: ToolExecutorFn,
   onArtifact: (type: string, payload: any) => void,
   openaiKey?: string,
+  webSearch?: boolean,
 ) {
-  return {
+  const tools: any = {
     // ── Context / read tools ────────────────────────────────────────────────
 
     get_workspace_context: tool({
@@ -79,7 +82,9 @@ function buildTools(
         const result = { settings, wallets, categories };
 
         try {
-          await redis.set(cacheKey, JSON.stringify(result), { ex: CONTEXT_CACHE_TTL });
+          await redis.set(cacheKey, JSON.stringify(result), {
+            ex: CONTEXT_CACHE_TTL,
+          });
         } catch {}
 
         return result;
@@ -90,21 +95,43 @@ function buildTools(
       description:
         "Fetch recent transactions for the workspace. Use when the user asks about their spending history, specific past purchases, or recent activity.",
       parameters: z.object({
-        limit: z.number().int().min(1).max(50).default(20).describe("Number of transactions to return (max 50)"),
-        from: z.string().nullable().optional().describe("ISO date start filter, e.g. 2026-01-01"),
-        to: z.string().nullable().optional().describe("ISO date end filter, e.g. 2026-06-30"),
+        limit: z
+          .number()
+          .int()
+          .min(1)
+          .max(50)
+          .default(20)
+          .describe("Number of transactions to return (max 50)"),
+        from: z
+          .string()
+          .nullable()
+          .optional()
+          .describe("ISO date start filter, e.g. 2026-01-01"),
+        to: z
+          .string()
+          .nullable()
+          .optional()
+          .describe("ISO date end filter, e.g. 2026-06-30"),
       }),
       execute: async ({ limit, from, to }) => {
         const cacheKey = `oewang:ws-txns:${workspaceId}:${limit}:${from ?? ""}:${to ?? ""}`;
         try {
           const cached = await redis.get(cacheKey);
-          if (cached) return typeof cached === "string" ? JSON.parse(cached) : cached;
+          if (cached)
+            return typeof cached === "string" ? JSON.parse(cached) : cached;
         } catch {}
 
-        const txns = await ContextRepository.getRecentTransactions(workspaceId, limit ?? 20, from ?? undefined, to ?? undefined);
+        const txns = await ContextRepository.getRecentTransactions(
+          workspaceId,
+          limit ?? 20,
+          from ?? undefined,
+          to ?? undefined,
+        );
 
         try {
-          await redis.set(cacheKey, JSON.stringify(txns), { ex: TRANSACTIONS_CACHE_TTL });
+          await redis.set(cacheKey, JSON.stringify(txns), {
+            ex: TRANSACTIONS_CACHE_TTL,
+          });
         } catch {}
 
         return txns;
@@ -119,13 +146,16 @@ function buildTools(
         const cacheKey = `oewang:ws-debts:${workspaceId}`;
         try {
           const cached = await redis.get(cacheKey);
-          if (cached) return typeof cached === "string" ? JSON.parse(cached) : cached;
+          if (cached)
+            return typeof cached === "string" ? JSON.parse(cached) : cached;
         } catch {}
 
         const debts = await ContextRepository.getOutstandingDebts(workspaceId);
 
         try {
-          await redis.set(cacheKey, JSON.stringify(debts), { ex: DEBTS_CACHE_TTL });
+          await redis.set(cacheKey, JSON.stringify(debts), {
+            ex: DEBTS_CACHE_TTL,
+          });
         } catch {}
 
         return debts;
@@ -135,22 +165,52 @@ function buildTools(
     // ── Transaction mutation tools ──────────────────────────────────────────
 
     create_transaction: tool({
-      description: "Create a new financial transaction (income, expense, or transfer). Call get_workspace_context first to get real wallet and category IDs.",
+      description:
+        "Create a new financial transaction (income, expense, or transfer). Call get_workspace_context first to get real wallet and category IDs.",
       parameters: z.object({
-        type: z.enum(["income", "expense", "transfer"]).describe("Transaction type."),
-        amount: z.number().positive().describe("Amount. Must be confirmed with the user."),
-        date: z.string().nullable().optional().describe("ISO date string. Defaults to today if null."),
+        type: z
+          .enum(["income", "expense", "transfer"])
+          .describe("Transaction type."),
+        amount: z
+          .number()
+          .positive()
+          .describe("Amount. Must be confirmed with the user."),
+        date: z
+          .string()
+          .nullable()
+          .optional()
+          .describe("ISO date string. Defaults to today if null."),
         name: z.string().describe("Name or merchant (e.g. 'Starbucks')."),
-        walletId: z.string().describe("Source wallet ID (use ID from get_workspace_context, not name)."),
-        toWalletId: z.string().nullable().optional().describe("Destination wallet ID — required for transfers only."),
-        categoryId: z.string().nullable().optional().describe("Category ID (use ID from get_workspace_context)."),
-        description: z.string().nullable().optional().describe("Optional notes."),
+        walletId: z
+          .string()
+          .describe(
+            "Source wallet ID (use ID from get_workspace_context, not name).",
+          ),
+        toWalletId: z
+          .string()
+          .nullable()
+          .optional()
+          .describe("Destination wallet ID — required for transfers only."),
+        categoryId: z
+          .string()
+          .nullable()
+          .optional()
+          .describe("Category ID (use ID from get_workspace_context)."),
+        description: z
+          .string()
+          .nullable()
+          .optional()
+          .describe("Optional notes."),
       }),
       execute: async (args) => {
         const result = await executor("create_transaction", args);
         // Bust context cache so balances refresh on next call
-        try { await redis.del(`oewang:ws-ctx:${workspaceId}`); } catch {}
-        try { await redis.del(`oewang:ws-txns:${workspaceId}:20::`.split(":")[0]!); } catch {}
+        try {
+          await redis.del(`oewang:ws-ctx:${workspaceId}`);
+        } catch {}
+        try {
+          await redis.del(`oewang:ws-txns:${workspaceId}:20::`.split(":")[0]!);
+        } catch {}
         return result;
       },
     }),
@@ -159,9 +219,18 @@ function buildTools(
       description: "Update an existing transaction's fields.",
       parameters: z.object({
         id: z.string().describe("Transaction ID to update."),
-        amount: z.number().positive().nullable().optional().describe("New amount."),
+        amount: z
+          .number()
+          .positive()
+          .nullable()
+          .optional()
+          .describe("New amount."),
         name: z.string().nullable().optional().describe("New name/merchant."),
-        categoryId: z.string().nullable().optional().describe("New category ID."),
+        categoryId: z
+          .string()
+          .nullable()
+          .optional()
+          .describe("New category ID."),
         description: z.string().nullable().optional().describe("New notes."),
       }),
       execute: async (args) => executor("update_transaction", args),
@@ -174,7 +243,9 @@ function buildTools(
       }),
       execute: async (args) => {
         const result = await executor("delete_transaction", args);
-        try { await redis.del(`oewang:ws-ctx:${workspaceId}`); } catch {}
+        try {
+          await redis.del(`oewang:ws-ctx:${workspaceId}`);
+        } catch {}
         return result;
       },
     }),
@@ -182,29 +253,51 @@ function buildTools(
     // ── Debt tools ──────────────────────────────────────────────────────────
 
     create_debt: tool({
-      description: "Record a debt (hutang/payable) or receivable (piutang). Use 'payable' when user owes money, 'receivable' when someone owes the user.",
+      description:
+        "Record a debt (hutang/payable) or receivable (piutang). Use 'payable' when user owes money, 'receivable' when someone owes the user.",
       parameters: z.object({
         contactName: z.string().describe("Name of the person involved."),
-        type: z.enum(["payable", "receivable"]).describe("payable = user owes them; receivable = they owe the user."),
+        type: z
+          .enum(["payable", "receivable"])
+          .describe(
+            "payable = user owes them; receivable = they owe the user.",
+          ),
         amount: z.number().positive().describe("Debt amount."),
-        description: z.string().nullable().optional().describe("Optional description."),
-        dueDate: z.string().nullable().optional().describe("Optional due date (ISO string)."),
+        description: z
+          .string()
+          .nullable()
+          .optional()
+          .describe("Optional description."),
+        dueDate: z
+          .string()
+          .nullable()
+          .optional()
+          .describe("Optional due date (ISO string)."),
       }),
       execute: async (args) => executor("create_debt", args),
     }),
 
     split_bill: tool({
-      description: "Create an expense transaction and split it equally with others. Auto-records receivable debts for each participant.",
+      description:
+        "Create an expense transaction and split it equally with others. Auto-records receivable debts for each participant.",
       parameters: z.object({
         amount: z.number().positive().describe("Total amount paid."),
         name: z.string().describe("Transaction name/merchant."),
-        walletId: z.string().describe("Wallet ID to deduct from (use ID from get_workspace_context)."),
+        walletId: z
+          .string()
+          .describe(
+            "Wallet ID to deduct from (use ID from get_workspace_context).",
+          ),
         categoryId: z.string().nullable().optional().describe("Category ID."),
-        contactNames: z.array(z.string()).describe("Names of everyone the bill is split with."),
+        contactNames: z
+          .array(z.string())
+          .describe("Names of everyone the bill is split with."),
       }),
       execute: async (args) => {
         const result = await executor("split_bill", args);
-        try { await redis.del(`oewang:ws-ctx:${workspaceId}`); } catch {}
+        try {
+          await redis.del(`oewang:ws-ctx:${workspaceId}`);
+        } catch {}
         return result;
       },
     }),
@@ -212,17 +305,34 @@ function buildTools(
     // ── Analysis tools ──────────────────────────────────────────────────────
 
     getRevenueSummary: tool({
-      description: "Analyze income/revenue — totals, monthly trends, and growth. A chart renders automatically; just write a text summary.",
+      description:
+        "Analyze income/revenue — totals, monthly trends, and growth. A chart renders automatically; just write a text summary.",
       parameters: z.object({
         period: z
-          .enum(["3-months", "6-months", "this-year", "1-year", "last-12-months", "year-to-date", "last-year"])
+          .enum([
+            "3-months",
+            "6-months",
+            "this-year",
+            "1-year",
+            "last-12-months",
+            "year-to-date",
+            "last-year",
+          ])
           .nullable()
           .optional()
           .describe("Predefined period. Use from/to for custom ranges."),
         from: z.string().nullable().optional().describe("ISO date-time start."),
         to: z.string().nullable().optional().describe("ISO date-time end."),
-        currency: z.string().nullable().optional().describe("Currency code override."),
-        showCanvas: z.boolean().nullable().optional().describe("Whether to show the visual chart."),
+        currency: z
+          .string()
+          .nullable()
+          .optional()
+          .describe("Currency code override."),
+        showCanvas: z
+          .boolean()
+          .nullable()
+          .optional()
+          .describe("Whether to show the visual chart."),
       }),
       execute: async (args) => {
         const result = await executor("getRevenueSummary", args);
@@ -235,17 +345,33 @@ function buildTools(
     }),
 
     getBurnRate: tool({
-      description: "Calculate monthly burn rate (expense rate) and financial runway. A chart renders automatically; just write a text summary.",
+      description:
+        "Calculate monthly burn rate (expense rate) and financial runway. A chart renders automatically; just write a text summary.",
       parameters: z.object({
         period: z
-          .enum(["3-months", "6-months", "1-year", "last-6-months", "last-12-months", "year-to-date"])
+          .enum([
+            "3-months",
+            "6-months",
+            "1-year",
+            "last-6-months",
+            "last-12-months",
+            "year-to-date",
+          ])
           .nullable()
           .optional()
           .describe("Predefined period."),
         from: z.string().nullable().optional().describe("ISO date-time start."),
         to: z.string().nullable().optional().describe("ISO date-time end."),
-        currency: z.string().nullable().optional().describe("Currency code override."),
-        showCanvas: z.boolean().nullable().optional().describe("Whether to show the visual chart."),
+        currency: z
+          .string()
+          .nullable()
+          .optional()
+          .describe("Currency code override."),
+        showCanvas: z
+          .boolean()
+          .nullable()
+          .optional()
+          .describe("Whether to show the visual chart."),
       }),
       execute: async (args) => {
         const result = await executor("getBurnRate", args);
@@ -258,17 +384,34 @@ function buildTools(
     }),
 
     getSpendingAnalysis: tool({
-      description: "Analyze spending patterns and category breakdown. A chart renders automatically; just write a text summary.",
+      description:
+        "Analyze spending patterns and category breakdown. A chart renders automatically; just write a text summary.",
       parameters: z.object({
         period: z
-          .enum(["this-month", "last-month", "last-3-months", "this-year", "year-to-date", "last-year", "last-12-months"])
+          .enum([
+            "this-month",
+            "last-month",
+            "last-3-months",
+            "this-year",
+            "year-to-date",
+            "last-year",
+            "last-12-months",
+          ])
           .nullable()
           .optional()
           .describe("Predefined period."),
         from: z.string().nullable().optional().describe("ISO date-time start."),
         to: z.string().nullable().optional().describe("ISO date-time end."),
-        currency: z.string().nullable().optional().describe("Currency code override."),
-        showCanvas: z.boolean().nullable().optional().describe("Whether to show the visual chart."),
+        currency: z
+          .string()
+          .nullable()
+          .optional()
+          .describe("Currency code override."),
+        showCanvas: z
+          .boolean()
+          .nullable()
+          .optional()
+          .describe("Whether to show the visual chart."),
       }),
       execute: async (args) => {
         const result = await executor("getSpendingAnalysis", args);
@@ -283,19 +426,38 @@ function buildTools(
     // ── Item tools ──────────────────────────────────────────────────────────
 
     add_transaction_items: tool({
-      description: "Add purchased line items to an existing transaction after parsing a receipt. Always call this immediately after create_transaction when items are present.",
+      description:
+        "Add purchased line items to an existing transaction after parsing a receipt. Always call this immediately after create_transaction when items are present.",
       parameters: z.object({
-        transactionId: z.string().describe("ID of the transaction to attach items to."),
+        transactionId: z
+          .string()
+          .describe("ID of the transaction to attach items to."),
         items: z
           .array(
             z.object({
               name: z.string().describe("Product name."),
               brand: z.string().nullable().optional().describe("Brand name."),
-              quantity: z.number().nullable().optional().describe("Quantity purchased."),
-              unit: z.string().nullable().optional().describe("Unit: pcs, kg, g, ml, L."),
-              unitPrice: z.number().nullable().optional().describe("Price per unit."),
+              quantity: z
+                .number()
+                .nullable()
+                .optional()
+                .describe("Quantity purchased."),
+              unit: z
+                .string()
+                .nullable()
+                .optional()
+                .describe("Unit: pcs, kg, g, ml, L."),
+              unitPrice: z
+                .number()
+                .nullable()
+                .optional()
+                .describe("Price per unit."),
               amount: z.number().describe("Total line amount."),
-              categoryId: z.string().nullable().optional().describe("Category ID for this item."),
+              categoryId: z
+                .string()
+                .nullable()
+                .optional()
+                .describe("Category ID for this item."),
             }),
           )
           .describe("Items from the receipt."),
@@ -304,10 +466,20 @@ function buildTools(
     }),
 
     search_transaction_items: tool({
-      description: "Search purchase history by product name or brand. Use for queries like 'when did I last buy X?' or 'how much do I spend on shampoo?'",
+      description:
+        "Search purchase history by product name or brand. Use for queries like 'when did I last buy X?' or 'how much do I spend on shampoo?'",
       parameters: z.object({
-        query: z.string().describe("Item name or brand to search (e.g. 'Dove Soap', 'shampoo')."),
-        limit: z.number().int().nullable().optional().describe("Max results (default 10)."),
+        query: z
+          .string()
+          .describe(
+            "Item name or brand to search (e.g. 'Dove Soap', 'shampoo').",
+          ),
+        limit: z
+          .number()
+          .int()
+          .nullable()
+          .optional()
+          .describe("Max results (default 10)."),
       }),
       execute: async (args) => executor("search_transaction_items", args),
     }),
@@ -318,8 +490,19 @@ function buildTools(
       description:
         "Search the user's uploaded documents (PDFs, spreadsheets, text files) for information relevant to the query. Use when the user asks about the content of their uploaded files, financial reports, contracts, or any document they have shared. Returns excerpts from the most relevant sections.",
       parameters: z.object({
-        query: z.string().describe("Natural language search query, e.g. 'Q1 profit margin' or 'contract payment terms'."),
-        limit: z.number().int().min(1).max(10).default(5).optional().describe("Max number of document excerpts to return (default 5)."),
+        query: z
+          .string()
+          .describe(
+            "Natural language search query, e.g. 'Q1 profit margin' or 'contract payment terms'.",
+          ),
+        limit: z
+          .number()
+          .int()
+          .min(1)
+          .max(10)
+          .default(5)
+          .optional()
+          .describe("Max number of document excerpts to return (default 5)."),
       }),
       execute: async ({ query, limit }) => {
         if (!openaiKey) {
@@ -327,7 +510,10 @@ function buildTools(
         }
 
         try {
-          const queryEmbedding = await EmbeddingService.embedQuery(query, openaiKey);
+          const queryEmbedding = await EmbeddingService.embedQuery(
+            query,
+            openaiKey,
+          );
           const results = await RagRepository.similaritySearch(
             workspaceId,
             queryEmbedding,
@@ -352,6 +538,85 @@ function buildTools(
       },
     }),
   };
+
+  if (webSearch) {
+    tools.webSearch = tool({
+      description:
+        "Search the web for real-time information, currency rates, financial news or general facts.",
+      parameters: z.object({
+        query: z.string().describe("The search query"),
+      }),
+      execute: async ({ query }) => {
+        try {
+          if (process.env.EXA_API_KEY) {
+            const res = await fetch("https://api.exa.ai/search", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "x-api-key": process.env.EXA_API_KEY,
+              },
+              body: JSON.stringify({
+                query,
+                numResults: 5,
+                text: true,
+              }),
+            });
+            const data = await res.json();
+            return {
+              sources: ((data as any).results || []).map((r: any) => ({
+                title: r.title || r.url,
+                url: r.url,
+              })),
+            };
+          }
+
+          const ddgRes = await fetch(
+            `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`,
+          );
+          if (ddgRes.ok) {
+            const html = await ddgRes.text();
+            const results: { title: string; url: string }[] = [];
+            const resultMatches = html.matchAll(
+              /<div class="result result--click-load[^"]*">([\s\S]*?)<\/div>/g,
+            );
+            for (const m of resultMatches) {
+              const content = m[1];
+              if (!content) continue;
+              const titleMatch = content.match(
+                /<a class="result__a"[^>]*>([\s\S]*?)<\/a>/,
+              );
+              const urlMatch = content.match(
+                /<a class="result__url"[^>]*href="([^"]+)"/,
+              );
+              if (titleMatch && urlMatch) {
+                const title =
+                  titleMatch[1]?.replace(/<[^>]*>/g, "").trim() || "";
+                let url = urlMatch[1] || "";
+                if (url.startsWith("//")) url = "https:" + url;
+                if (url.includes("uddg=")) {
+                  const urlObj = new URL("https://ddg.gg" + url);
+                  url = decodeURIComponent(
+                    urlObj.searchParams.get("uddg") || url,
+                  );
+                }
+                results.push({ title, url });
+                if (results.length >= 5) break;
+              }
+            }
+            if (results.length > 0) {
+              return { sources: results };
+            }
+          }
+
+          return { sources: [] };
+        } catch (error) {
+          return { sources: [] };
+        }
+      },
+    });
+  }
+
+  return tools;
 }
 
 export abstract class AiOrchestrator {
@@ -364,9 +629,15 @@ export abstract class AiOrchestrator {
     let capturedArtifact: { type: string; payload: any } | undefined;
 
     const model = buildModel(options);
-    const tools = buildTools(options.workspaceId, executor, (type, payload) => {
-      capturedArtifact = { type, payload };
-    }, options.openaiKey);
+    const tools = buildTools(
+      options.workspaceId,
+      executor,
+      (type, payload) => {
+        capturedArtifact = { type, payload };
+      },
+      options.openaiKey,
+      options.webSearch,
+    );
 
     const result = await generateText({
       model,
@@ -387,7 +658,11 @@ export abstract class AiOrchestrator {
     };
   }
 
-  static async generateTitle(message: string, openaiKey?: string, anthropicKey?: string): Promise<string> {
+  static async generateTitle(
+    message: string,
+    openaiKey?: string,
+    anthropicKey?: string,
+  ): Promise<string> {
     try {
       if (openaiKey) {
         const provider = createOpenAI({ apiKey: openaiKey });

@@ -1,14 +1,13 @@
 export const FEATURE_DETAILS = {
   invoicing: {
     title: "Invoicing",
-    subtitle: "Get paid faster with cleaner invoice operations.",
-    intro:
-      "Create, send, and track invoices in one flow. Keep payment status visible for both solo operators and team workspaces.",
+    subtitle: "Keep bills, invoices, and payment notes organized.",
+    intro: "Track invoices and payment notes in one flow so personal, freelance, and side-income records stay clear.",
     points: [
       "Reusable invoice templates",
       "Clear due-date and status tracking",
-      "Shared visibility for finance collaborators",
-      "Simple follow-up workflows for unpaid invoices",
+      "Clear records for freelance or side-income payments",
+      "Simple follow-up workflows for unpaid bills",
     ],
   },
   transactions: {
@@ -33,26 +32,16 @@ export const FEATURE_DETAILS = {
       "Less month-end cleanup",
     ],
   },
-  "time-tracking": {
-    title: "Time Tracking",
-    subtitle: "Measure billable time and operational effort clearly.",
-    intro: "Capture work time in the same finance workspace so project effort and revenue decisions stay aligned.",
-    points: [
-      "Session-based tracking",
-      "Project and client association",
-      "Better billing preparation",
-      "Team-level time visibility",
-    ],
-  },
   customers: {
-    title: "Customers",
-    subtitle: "Understand who drives revenue and who delays payment.",
-    intro: "Customer-level performance data helps prioritize follow-up and improve cash planning.",
+    title: "Contacts & Customers",
+    subtitle: "Keep payers, billers, and recurring money relationships organized.",
+    intro:
+      "Connect people and organizations to transactions, invoices, debts, and notes so every money relationship has context.",
     points: [
-      "Invoice and payment history by customer",
-      "Outstanding balance visibility",
-      "Revenue concentration context",
-      "Cleaner handoff across teams",
+      "Contact records for customers, vendors, lenders, and family expense partners",
+      "Invoice and payment history by contact",
+      "Debt and receivable context for follow-up",
+      "Cleaner notes for shared household or workspace reviews",
     ],
   },
   files: {
@@ -79,7 +68,7 @@ export const FEATURE_DETAILS = {
   },
   assistant: {
     title: "Assistant",
-    subtitle: "Ask business finance questions in plain language.",
+    subtitle: "Ask daily finance questions in plain language.",
     intro: "Use AI-assisted queries to understand trends, anomalies, and next actions without digging through reports.",
     points: [
       "Natural-language finance questions",

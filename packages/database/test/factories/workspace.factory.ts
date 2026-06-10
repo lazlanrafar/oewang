@@ -1,6 +1,6 @@
-import { faker } from '@faker-js/faker';
-import { workspaces } from '../../schema/workspaces';
-import { BaseFactory, type DB } from './base-factory';
+import { faker } from "@faker-js/faker";
+import { workspaces } from "../../schema/workspaces";
+import { BaseFactory, type DB } from "./base-factory";
 
 export interface WorkspaceAttributes {
   id?: string;
@@ -9,7 +9,7 @@ export interface WorkspaceAttributes {
   country?: string;
   plan_id?: string;
   plan_status?: string;
-  plan_billing_interval?: 'monthly' | 'annual';
+  plan_billing_interval?: "monthly" | "annual";
   ai_tokens_used?: number;
   ai_tokens_reset_at?: Date;
   vault_size_used_bytes?: number;
@@ -29,9 +29,11 @@ export class WorkspaceFactory extends BaseFactory<WorkspaceAttributes> {
     return {
       id: this.generateId(),
       name,
-      slug: faker.helpers.slugify(`${name}-${this.generateId().slice(0, 8)}`).toLowerCase(),
+      slug: faker.helpers
+        .slugify(`${name}-${this.generateId().slice(0, 8)}`)
+        .toLowerCase(),
       country: faker.location.countryCode(),
-      plan_status: 'free',
+      plan_status: "free",
       ai_tokens_used: 0,
       ai_tokens_reset_at: new Date(),
       vault_size_used_bytes: 0,
@@ -42,7 +44,9 @@ export class WorkspaceFactory extends BaseFactory<WorkspaceAttributes> {
     };
   }
 
-  protected async insert(attributes: Partial<WorkspaceAttributes>): Promise<WorkspaceAttributes> {
+  protected async insert(
+    attributes: Partial<WorkspaceAttributes>,
+  ): Promise<WorkspaceAttributes> {
     const [workspace] = await this.db
       .insert(workspaces)
       .values(attributes as any)
@@ -55,8 +59,8 @@ export class WorkspaceFactory extends BaseFactory<WorkspaceAttributes> {
    */
   async premium() {
     return this.create({
-      plan_status: 'active',
-      plan_billing_interval: 'monthly',
+      plan_status: "active",
+      plan_billing_interval: "monthly",
     });
   }
 
@@ -65,8 +69,8 @@ export class WorkspaceFactory extends BaseFactory<WorkspaceAttributes> {
    */
   async annual() {
     return this.create({
-      plan_status: 'active',
-      plan_billing_interval: 'annual',
+      plan_status: "active",
+      plan_billing_interval: "annual",
     });
   }
 }

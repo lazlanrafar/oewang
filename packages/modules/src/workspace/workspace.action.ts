@@ -7,6 +7,7 @@ import type {
 } from "@workspace/types";
 
 import { axiosInstance } from "../lib/axios.server";
+import { extractErrorMessage } from "../lib/error-message";
 
 export interface CreateWorkspaceDTO {
   name: string;
@@ -23,10 +24,10 @@ export const createWorkspace = async (
     const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
     const response = await axiosInstance.post("workspaces", data, { headers });
     return { success: true, data: response.data.data };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
-      error: error.response?.data?.message || "Failed to create workspace",
+      error: extractErrorMessage(error, "Failed to create workspace"),
     };
   }
 };
@@ -37,10 +38,10 @@ export const getMyWorkspaces = async (): Promise<
   try {
     const response = await axiosInstance.get("workspaces");
     return { success: true, data: response.data.data };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
-      error: error.response?.data?.message || "Failed to fetch workspaces",
+      error: extractErrorMessage(error, "Failed to fetch workspaces"),
     };
   }
 };
@@ -53,10 +54,10 @@ export const getWorkspaceMembers = async (): Promise<ActionResponse<any>> => {
   try {
     const response = await axiosInstance.get("workspaces/members");
     return { success: true, data: response.data.data };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
-      error: error.response?.data?.message || "Failed to fetch members",
+      error: extractErrorMessage(error, "Failed to fetch members"),
     };
   }
 };
@@ -71,10 +72,10 @@ export const inviteMember = async (
       role,
     });
     return { success: true, data: response.data.data };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
-      error: error.response?.data?.message || "Failed to send invitation",
+      error: extractErrorMessage(error, "Failed to send invitation"),
     };
   }
 };
@@ -85,10 +86,10 @@ export const getWorkspaceInvitations = async (): Promise<
   try {
     const response = await axiosInstance.get("workspaces/invitations");
     return { success: true, data: response.data.data };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
-      error: error.response?.data?.message || "Failed to fetch invitations",
+      error: extractErrorMessage(error, "Failed to fetch invitations"),
     };
   }
 };
@@ -101,10 +102,10 @@ export const cancelInvitation = async (
       `workspaces/invitations/${invitationId}`,
     );
     return { success: true, data: response.data.data };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
-      error: error.response?.data?.message || "Failed to cancel invitation",
+      error: extractErrorMessage(error, "Failed to cancel invitation"),
     };
   }
 };
@@ -119,10 +120,10 @@ export const acceptInvitationAction = async (
     );
     const resData = response.data as any;
     return { success: true, data: resData.data };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
-      error: error.response?.data?.message || "Failed to accept invitation",
+      error: extractErrorMessage(error, "Failed to accept invitation"),
     };
   }
 };
@@ -133,11 +134,10 @@ export const getActiveWorkspace = async (): Promise<
   try {
     const response = await axiosInstance.get("workspaces/active");
     return { success: true, data: response.data.data };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
-      error:
-        error.response?.data?.message || "Failed to fetch active workspace",
+      error: extractErrorMessage(error, "Failed to fetch active workspace"),
     };
   }
 };

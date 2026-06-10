@@ -232,8 +232,9 @@ export abstract class DebtsRepository {
     return results as unknown as DebtPayment[];
   }
 
-  static async runTransaction<T>(callback: (tx: any) => Promise<T>): Promise<T> {
+  static async runTransaction<T>(
+    callback: (tx: any) => Promise<T>,
+  ): Promise<T> {
     return db.transaction(callback);
   }
 }
-

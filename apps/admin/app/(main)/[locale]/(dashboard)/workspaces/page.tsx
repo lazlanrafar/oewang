@@ -1,7 +1,10 @@
 "use server";
 
 import { ScrollableContent } from "@workspace/ui";
-import { getSystemAdminWorkspaces, getSystemAdminPlans } from "@workspace/modules/system-admin/system-admin.action";
+import {
+  getSystemAdminWorkspaces,
+  getSystemAdminPlans,
+} from "@workspace/modules/system-admin/system-admin.action";
 import { WorkspacesClient } from "@/components/workspaces/workspaces-client";
 
 export default async function WorkspacesPage(props: {
@@ -12,12 +15,12 @@ export default async function WorkspacesPage(props: {
   const limit = Number(searchParams.limit) || 20;
   const search =
     typeof searchParams.search === "string" ? searchParams.search : undefined;
-  
-  const sortBy = 
+
+  const sortBy =
     typeof searchParams.sortBy === "string" ? searchParams.sortBy : undefined;
-  const sortOrder = 
-    (searchParams.sortOrder === "asc" || searchParams.sortOrder === "desc") 
-      ? searchParams.sortOrder 
+  const sortOrder =
+    searchParams.sortOrder === "asc" || searchParams.sortOrder === "desc"
+      ? searchParams.sortOrder
       : undefined;
 
   // Get initial data for SSR
@@ -32,11 +35,13 @@ export default async function WorkspacesPage(props: {
     getSystemAdminPlans(),
   ]);
 
-  const workspaces = workspacesResponse.success ? workspacesResponse.data.workspaces : [];
+  const workspaces = workspacesResponse.success
+    ? workspacesResponse.data.workspaces
+    : [];
   const meta = workspacesResponse.success
     ? workspacesResponse.data.meta
     : { total: 0, total_pages: 0 };
-  
+
   const plans = plansResponse.success ? plansResponse.data : [];
 
   return (

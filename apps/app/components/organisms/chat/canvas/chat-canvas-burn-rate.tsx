@@ -78,8 +78,14 @@ export function BurnRateCanvas({ dataOverride }: { dataOverride?: Record<string,
               title={t("chat.canvas.burn_rate.monthly_burn_rate", "Monthly Burn Rate")}
               legend={{
                 items: [
-                  { label: t("chat.canvas.common.current", "Current"), type: "solid" },
-                  { label: t("chat.canvas.common.average", "Average"), type: "pattern" },
+                  {
+                    label: t("chat.canvas.common.current", "Current"),
+                    type: "solid",
+                  },
+                  {
+                    label: t("chat.canvas.common.average", "Average"),
+                    type: "pattern",
+                  },
                 ],
               }}
               isLoading={stage === "loading"}

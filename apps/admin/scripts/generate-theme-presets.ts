@@ -19,7 +19,10 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
-const presetDir = path.resolve(__dirname, "../../../packages/ui/src/styles/presets");
+const presetDir = path.resolve(
+  __dirname,
+  "../../../packages/ui/src/styles/presets",
+);
 
 if (!fs.existsSync(presetDir)) {
   console.error(`❌ Preset directory not found at: ${presetDir}`);
@@ -31,7 +34,9 @@ const outputPath = path.resolve(__dirname, "../lib/preferences/theme.ts");
 const files = fs.readdirSync(presetDir).filter((file) => file.endsWith(".css"));
 
 if (files.length === 0) {
-  console.warn("⚠️ No preset CSS files found. Only default preset will be included.");
+  console.warn(
+    "⚠️ No preset CSS files found. Only default preset will be included.",
+  );
 }
 
 const presets = files.map((file) => {
@@ -42,17 +47,25 @@ const presets = files.map((file) => {
   const valueMatch = content.match(/value:\s*(.+)/);
 
   if (!labelMatch) {
-    console.warn(`⚠️ No 'label:' found in ${file}, using filename as fallback.`);
+    console.warn(
+      `⚠️ No 'label:' found in ${file}, using filename as fallback.`,
+    );
   }
   if (!valueMatch) {
-    console.warn(`⚠️ No 'value:' found in ${file}, using filename as fallback.`);
+    console.warn(
+      `⚠️ No 'value:' found in ${file}, using filename as fallback.`,
+    );
   }
 
   const label = labelMatch?.[1]?.trim() ?? file.replace(".css", "");
   const value = valueMatch?.[1]?.trim() ?? file.replace(".css", "");
 
-  const lightPrimaryMatch = content.match(/:root\[data-theme-preset="[^"]*"\][\s\S]*?--primary:\s*([^;]+);/);
-  const darkPrimaryMatch = content.match(/\.dark:root\[data-theme-preset="[^"]*"\][\s\S]*?--primary:\s*([^;]+);/);
+  const lightPrimaryMatch = content.match(
+    /:root\[data-theme-preset="[^"]*"\][\s\S]*?--primary:\s*([^;]+);/,
+  );
+  const darkPrimaryMatch = content.match(
+    /\.dark:root\[data-theme-preset="[^"]*"\][\s\S]*?--primary:\s*([^;]+);/,
+  );
 
   const primary = {
     light: lightPrimaryMatch?.[1]?.trim() ?? "",
@@ -60,13 +73,18 @@ const presets = files.map((file) => {
   };
 
   if (!lightPrimaryMatch || !darkPrimaryMatch) {
-    console.warn(`⚠️ Missing --primary for ${file} (light or dark). Check CSS syntax.`);
+    console.warn(
+      `⚠️ Missing --primary for ${file} (light or dark). Check CSS syntax.`,
+    );
   }
 
   return { label, value, primary };
 });
 
-const globalStylesPath = path.resolve(__dirname, "../../../packages/ui/src/globals.css");
+const globalStylesPath = path.resolve(
+  __dirname,
+  "../../../packages/ui/src/globals.css",
+);
 
 let globalContent = "";
 try {
@@ -112,10 +130,14 @@ const updated = fileContent.replace(
 );
 
 async function main() {
-  const formatted = execFileSync("npx", ["@biomejs/biome", "format", "--stdin-file-path", outputPath], {
-    input: updated,
-    encoding: "utf8",
-  });
+  const formatted = execFileSync(
+    "npx",
+    ["@biomejs/biome", "format", "--stdin-file-path", outputPath],
+    {
+      input: updated,
+      encoding: "utf8",
+    },
+  );
 
   if (formatted === fileContent) {
     console.log("ℹ️  No changes in theme.ts");

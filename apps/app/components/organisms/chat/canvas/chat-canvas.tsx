@@ -5,7 +5,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useArtifacts } from "@ai-sdk-tools/artifacts/client";
 import { useChatMessages } from "@ai-sdk-tools/store";
 import { cn, Icons, Loader } from "@workspace/ui";
-import type { UIMessage } from "ai";
 import { parseAsString, useQueryState } from "nuqs";
 
 import { useAppStore } from "@/stores/app";
@@ -25,15 +24,18 @@ type ArtifactEntry = {
   promptText: string;
 };
 
-function extractTextFromMessageParts(parts: UIMessage["parts"]): string {
+function extractTextFromMessageParts(parts: any[]): string {
   return parts
-    .filter((part) => part.type === "text")
+    .filter((part) => part && part.type === "text")
     .map((part) => (part as { text?: string }).text ?? "")
     .join(" ")
     .trim();
 }
 
-function getPayloadDateRange(payload: ArtifactPayload): { from?: Date; to?: Date } {
+function getPayloadDateRange(payload: ArtifactPayload): {
+  from?: Date;
+  to?: Date;
+} {
   if (!payload) return {};
   const fromValue = payload.from;
   const toValue = payload.to;
@@ -54,17 +56,28 @@ function formatRangeLabel(range: { from?: Date; to?: Date }, locale: string): st
   const sameMonth = sameYear && from.getMonth() === to.getMonth();
 
   if (sameMonth) {
-    return new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(from);
+    return new Intl.DateTimeFormat(locale, {
+      month: "long",
+      year: "numeric",
+    }).format(from);
   }
 
   if (sameYear) {
-    const fromShort = new Intl.DateTimeFormat(locale, { month: "short" }).format(from);
+    const fromShort = new Intl.DateTimeFormat(locale, {
+      month: "short",
+    }).format(from);
     const toShort = new Intl.DateTimeFormat(locale, { month: "short" }).format(to);
     return `${fromShort} - ${toShort} ${from.getFullYear()}`;
   }
 
-  const fromLabel = new Intl.DateTimeFormat(locale, { month: "short", year: "numeric" }).format(from);
-  const toLabel = new Intl.DateTimeFormat(locale, { month: "short", year: "numeric" }).format(to);
+  const fromLabel = new Intl.DateTimeFormat(locale, {
+    month: "short",
+    year: "numeric",
+  }).format(from);
+  const toLabel = new Intl.DateTimeFormat(locale, {
+    month: "short",
+    year: "numeric",
+  }).format(to);
   return `${fromLabel} - ${toLabel}`;
 }
 
@@ -121,7 +134,7 @@ export function useAllArtifactEntries(): ArtifactEntry[] {
 
     for (let i = 0; i < messages.length; i++) {
       const msg = messages[i];
-      if (!msg?.parts || msg.role !== "assistant") continue;
+      if (!msg || !msg.parts || msg.role !== "assistant") continue;
 
       for (let partIndex = 0; partIndex < msg.parts.length; partIndex++) {
         const part = msg.parts[partIndex];
@@ -354,7 +367,7 @@ export function ArtifactTabs() {
 
 export function Canvas() {
   const dictionary = useAppStore((state) => state.dictionary);
-  const t = (key: string, fallback: string) => getDictionaryText(dictionary, key, fallback);
+  const _t = (key: string, fallback: string) => getDictionaryText(dictionary, key, fallback);
   const [selectedType, setSelectedType] = useQueryState("artifact-type", parseAsString);
   const [selectedInstance, setSelectedInstance] = useQueryState("artifact-instance", parseAsString);
   const allEntries = useAllArtifactEntries();

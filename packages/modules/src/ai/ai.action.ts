@@ -46,6 +46,7 @@ export async function sendChatMessage(
   messages: ChatMessage[],
   sessionId?: string,
   attachments?: { name: string; type: string; data: string }[],
+  webSearch?: boolean,
 ): Promise<AiChatResponse> {
   try {
     const messagesWithAttachments = [...messages];
@@ -64,6 +65,7 @@ export async function sendChatMessage(
     const response = await api.post("/ai/chat", {
       messages: messagesWithAttachments,
       sessionId,
+      webSearch,
     });
     const apiResponse = (response as any)._api_response;
     const data = (apiResponse?.data ??
@@ -181,6 +183,21 @@ export async function getAiQuota(): Promise<{
     return {
       success: false,
       error: error.response?.data?.message ?? "Failed to fetch AI quota",
+    };
+  }
+}
+
+export async function updateAgentResponseLanguageAction(
+  response_language: string,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await api.put("/ai/agent-settings", { response_language });
+    return { success: true };
+  } catch (error: any) {
+    return {
+      success: false,
+      error:
+        error.response?.data?.message ?? "Failed to update response language",
     };
   }
 }

@@ -1,6 +1,6 @@
-import { createId } from '@paralleldrive/cuid2';
-import { faker } from '@faker-js/faker';
-import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { createId } from "@paralleldrive/cuid2";
+import { faker } from "@faker-js/faker";
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export type DB = PostgresJsDatabase<any>;
 
@@ -40,7 +40,7 @@ export abstract class BaseFactory<T> {
    */
   async createMany(count: number, overrides: Partial<T> = {}): Promise<T[]> {
     const promises = Array.from({ length: count }, () =>
-      this.create(overrides)
+      this.create(overrides),
     );
     return Promise.all(promises);
   }

@@ -69,7 +69,12 @@ export const vaultController = new Elysia({ prefix: "/vault" })
           buffer,
           file.type,
           file.name,
-        ).catch((e) => logger.error("Vault indexing failed", { error: e?.message, fileId: data.id }));
+        ).catch((e) =>
+          logger.error("Vault indexing failed", {
+            error: e?.message,
+            fileId: data.id,
+          }),
+        );
 
         set.status = 201;
         return buildSuccess(data, "File uploaded successfully");

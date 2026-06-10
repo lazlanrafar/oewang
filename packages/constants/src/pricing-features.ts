@@ -10,4 +10,4 @@ export const PRICING_FEATURES = [
   "White-label Reports",
 ] as const;
 
-export type PricingFeature = typeof PRICING_FEATURES[number];
+export type PricingFeature = (typeof PRICING_FEATURES)[number];

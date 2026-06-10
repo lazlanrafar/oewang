@@ -1,11 +1,5 @@
 import { createId } from "@paralleldrive/cuid2";
-import {
-  integer,
-  pgTable,
-  text,
-  timestamp,
-  vector,
-} from "drizzle-orm/pg-core";
+import { integer, pgTable, text, timestamp, vector } from "drizzle-orm/pg-core";
 import { vaultFiles } from "./vault-files";
 import { workspaces } from "./workspaces";
 

@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+
 import { Env } from "@workspace/constants";
 import { axiosInstance } from "@workspace/modules/server";
 
@@ -20,7 +21,10 @@ export async function GET(request: Request) {
   try {
     const tokenRes = await fetch("https://github.com/login/oauth/access_token", {
       method: "POST",
-      headers: { Accept: "application/json", "Content-Type": "application/json" },
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({
         client_id: Env.GITHUB_CLIENT_ID,
         client_secret: Env.GITHUB_CLIENT_SECRET,
@@ -37,10 +41,16 @@ export async function GET(request: Request) {
 
     const [userRes, emailsRes] = await Promise.all([
       fetch("https://api.github.com/user", {
-        headers: { Authorization: `Bearer ${accessToken}`, Accept: "application/json" },
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Accept: "application/json",
+        },
       }),
       fetch("https://api.github.com/user/emails", {
-        headers: { Authorization: `Bearer ${accessToken}`, Accept: "application/json" },
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Accept: "application/json",
+        },
       }),
     ]);
 
@@ -48,7 +58,11 @@ export async function GET(request: Request) {
 
     const githubUser = await userRes.json();
     const emailsList = emailsRes.ok
-      ? ((await emailsRes.json()) as { email: string; primary: boolean; verified: boolean }[])
+      ? ((await emailsRes.json()) as {
+          email: string;
+          primary: boolean;
+          verified: boolean;
+        }[])
       : [];
     const primaryEmail =
       emailsList.find((e) => e.primary && e.verified)?.email ??

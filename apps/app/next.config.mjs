@@ -1,5 +1,10 @@
 import { withSentryConfig } from "@sentry/nextjs";
 
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const currentDir = dirname(fileURLToPath(import.meta.url));
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactCompiler: true,
@@ -18,6 +23,9 @@ const nextConfig = {
     "@workspace/constants",
     "@workspace/redis",
   ],
+  turbopack: {
+    root: resolve(currentDir, "../.."),
+  },
   // async redirects() {
   //   return [
   //     {

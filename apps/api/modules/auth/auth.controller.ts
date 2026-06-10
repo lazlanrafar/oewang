@@ -22,8 +22,16 @@ export const authController = new Elysia({ prefix: "/auth" })
       }
 
       const workspace_id = await UsersService.resolveWorkspaceId(auth.user_id);
-      const token = await generateJwt(auth.user_id, workspace_id, auth.email, auth.system_role);
-      return buildSuccess({ token, user_id: auth.user_id, workspace_id: workspace_id || null }, "Token refreshed");
+      const token = await generateJwt(
+        auth.user_id,
+        workspace_id,
+        auth.email,
+        auth.system_role,
+      );
+      return buildSuccess(
+        { token, user_id: auth.user_id, workspace_id: workspace_id || null },
+        "Token refreshed",
+      );
     },
     { detail: { summary: "Refresh JWT", tags: ["Auth"] } },
   )
@@ -52,8 +60,16 @@ export const authController = new Elysia({ prefix: "/auth" })
         await WorkspacesService.acceptInvitation(user.email, user.id);
       }
 
-      const token = await generateJwt(user.id, workspace_id, user.email, user.system_role);
-      return buildSuccess({ token, user_id: user.id, workspace_id: workspace_id || null }, "Login successful");
+      const token = await generateJwt(
+        user.id,
+        workspace_id,
+        user.email,
+        user.system_role,
+      );
+      return buildSuccess(
+        { token, user_id: user.id, workspace_id: workspace_id || null },
+        "Login successful",
+      );
     },
     {
       body: t.Object({ email: t.String(), password: t.String() }),
@@ -72,21 +88,40 @@ export const authController = new Elysia({ prefix: "/auth" })
       const existing = await UsersService.findByEmail(email);
       if (existing) {
         set.status = 409;
-        return buildError(ErrorCode.VALIDATION_ERROR, "An account with this email already exists");
+        return buildError(
+          ErrorCode.VALIDATION_ERROR,
+          "An account with this email already exists",
+        );
       }
 
       const password_hash = await Bun.password.hash(password);
-      const user = await UsersService.createWithPassword({ email, name, password_hash });
+      const user = await UsersService.createWithPassword({
+        email,
+        name,
+        password_hash,
+      });
 
       // Auto-accept any pending invitations for this email
       await WorkspacesService.acceptInvitation(email, user.id);
 
       const workspace_id = await UsersService.resolveWorkspaceId(user.id);
-      const token = await generateJwt(user.id, workspace_id, user.email, user.system_role);
-      return buildSuccess({ token, user_id: user.id, workspace_id: workspace_id || null }, "Registration successful");
+      const token = await generateJwt(
+        user.id,
+        workspace_id,
+        user.email,
+        user.system_role,
+      );
+      return buildSuccess(
+        { token, user_id: user.id, workspace_id: workspace_id || null },
+        "Registration successful",
+      );
     },
     {
-      body: t.Object({ email: t.String(), password: t.String({ minLength: 8 }), name: t.Optional(t.String()) }),
+      body: t.Object({
+        email: t.String(),
+        password: t.String({ minLength: 8 }),
+        name: t.Optional(t.String()),
+      }),
       detail: { summary: "Email/Password Register", tags: ["Auth"] },
     },
   )
@@ -111,8 +146,16 @@ export const authController = new Elysia({ prefix: "/auth" })
       await WorkspacesService.acceptInvitation(email, user.id);
 
       const workspace_id = await UsersService.resolveWorkspaceId(user.id);
-      const token = await generateJwt(user.id, workspace_id, user.email, user.system_role);
-      return buildSuccess({ token, user_id: user.id, workspace_id: workspace_id || null }, "OAuth connected");
+      const token = await generateJwt(
+        user.id,
+        workspace_id,
+        user.email,
+        user.system_role,
+      );
+      return buildSuccess(
+        { token, user_id: user.id, workspace_id: workspace_id || null },
+        "OAuth connected",
+      );
     },
     {
       body: t.Object({

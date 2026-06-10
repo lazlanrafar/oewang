@@ -1,5 +1,11 @@
 import { createId } from "@paralleldrive/cuid2";
-import { pgTable, text, timestamp, decimal, boolean } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  timestamp,
+  decimal,
+  boolean,
+} from "drizzle-orm/pg-core";
 import { workspaces } from "./workspaces";
 import { wallets } from "./wallets";
 import { categories } from "./categories";

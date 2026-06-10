@@ -23,20 +23,20 @@ The Vault provides secure file storage for each workspace. Files (receipts, PDFs
 
 ### `vault_files` table
 
-| Column | Type | Notes |
-|--------|------|-------|
-| `id` | `text` (CUID2) | Primary key |
-| `workspaceId` | `text` FK → workspaces | Required |
-| `name` | `text` | Display filename. Required |
-| `key` | `text` | S3 object key (storage path). Required |
-| `size` | `bigint` | File size in bytes. Required |
-| `type` | `text` | MIME type (e.g. `image/jpeg`, `application/pdf`) |
-| `tags` | `jsonb` (string[]) | Optional tags for search/filter |
-| `metadata` | `text` | JSON string for extra metadata |
-| `createdAt` | `timestamp` | Auto |
-| `updatedAt` | `timestamp` | Auto |
-| `inactive_at` | `timestamp` | Set when quota exceeded — file is soft-blocked |
-| `deletedAt` | `timestamp` | Soft delete |
+| Column        | Type                   | Notes                                            |
+| ------------- | ---------------------- | ------------------------------------------------ |
+| `id`          | `text` (CUID2)         | Primary key                                      |
+| `workspaceId` | `text` FK → workspaces | Required                                         |
+| `name`        | `text`                 | Display filename. Required                       |
+| `key`         | `text`                 | S3 object key (storage path). Required           |
+| `size`        | `bigint`               | File size in bytes. Required                     |
+| `type`        | `text`                 | MIME type (e.g. `image/jpeg`, `application/pdf`) |
+| `tags`        | `jsonb` (string[])     | Optional tags for search/filter                  |
+| `metadata`    | `text`                 | JSON string for extra metadata                   |
+| `createdAt`   | `timestamp`            | Auto                                             |
+| `updatedAt`   | `timestamp`            | Auto                                             |
+| `inactive_at` | `timestamp`            | Set when quota exceeded — file is soft-blocked   |
+| `deletedAt`   | `timestamp`            | Soft delete                                      |
 
 ---
 
@@ -62,17 +62,19 @@ This ensures workspace isolation at the storage level.
 `workspace.vault_size_used_bytes` tracks total storage used. Updated on every upload/delete.
 
 When a workspace exceeds its plan's `max_vault_size_mb`:
+
 - New uploads are rejected with `422 + PLAN_LIMIT_EXCEEDED`
 - `workspace.storage_violation_at` is set to the timestamp of violation
 - Existing files can be downloaded but not new ones uploaded
 
 ### Plan Quota per Tier
 
-| Plan | Default vault quota |
-|------|---------------------|
-| Free (starter) | 100 MB |
-| Pro | 1 GB |
-| Business | 10 GB |
+| Plan                              | Default vault quota   |
+| --------------------------------- | --------------------- |
+| Starter                           | 250 MB                |
+| Personal                          | 2 GB                  |
+| Pro                               | 15 GB                 |
+| Business                          | 50 GB                 |
 | (See `pricing.max_vault_size_mb`) | Configurable per plan |
 
 Extra vault storage can be purchased as an add-on.
@@ -83,16 +85,17 @@ Extra vault storage can be purchased as an add-on.
 
 Base path: `/v1/vault`
 
-| Method | Path | Role Required | Description |
-|--------|------|--------------|-------------|
-| `GET` | `/` | Any authenticated | List files (paginated, filterable by tags/type) |
-| `GET` | `/:id` | Any authenticated | Get file metadata |
-| `GET` | `/:id/download` | Any authenticated | Get a signed temporary download URL |
-| `POST` | `/upload` | Editor+ | Upload a file (multipart/form-data) |
-| `PATCH` | `/:id/tags` | Editor+ | Update file tags |
-| `DELETE` | `/:id` | Editor+ | Soft-delete file record + delete from bucket |
+| Method   | Path            | Role Required     | Description                                     |
+| -------- | --------------- | ----------------- | ----------------------------------------------- |
+| `GET`    | `/`             | Any authenticated | List files (paginated, filterable by tags/type) |
+| `GET`    | `/:id`          | Any authenticated | Get file metadata                               |
+| `GET`    | `/:id/download` | Any authenticated | Get a signed temporary download URL             |
+| `POST`   | `/upload`       | Editor+           | Upload a file (multipart/form-data)             |
+| `PATCH`  | `/:id/tags`     | Editor+           | Update file tags                                |
+| `DELETE` | `/:id`          | Editor+           | Soft-delete file record + delete from bucket    |
 
 **Query params for `GET /`:**
+
 - `type` — MIME type prefix filter (e.g. `image/`)
 - `tags` — comma-separated tags
 - `search` — filename search
@@ -126,17 +129,17 @@ Generates a presigned S3 URL valid for a short duration (typically 5 minutes). T
 
 ## Source Files
 
-| Layer | File |
-|-------|------|
-| Schema | `packages/database/schema/vault-files.ts` |
-| Controller | `apps/api/modules/vault/vault.controller.ts` |
-| Service | `apps/api/modules/vault/vault.service.ts` |
-| Repository | `apps/api/modules/vault/vault.repository.ts` |
-| DTOs | `apps/api/modules/vault/vault.dto.ts` |
-| Utils | `apps/api/modules/vault/vault.utils.ts` |
-| Tests | `apps/api/modules/vault/vault.utils.test.ts` (44 tests) |
-| Bucket client | `packages/bucket/src/` |
-| E2E | `apps/app/e2e/vault.spec.ts` |
+| Layer         | File                                                    |
+| ------------- | ------------------------------------------------------- |
+| Schema        | `packages/database/schema/vault-files.ts`               |
+| Controller    | `apps/api/modules/vault/vault.controller.ts`            |
+| Service       | `apps/api/modules/vault/vault.service.ts`               |
+| Repository    | `apps/api/modules/vault/vault.repository.ts`            |
+| DTOs          | `apps/api/modules/vault/vault.dto.ts`                   |
+| Utils         | `apps/api/modules/vault/vault.utils.ts`                 |
+| Tests         | `apps/api/modules/vault/vault.utils.test.ts` (44 tests) |
+| Bucket client | `packages/bucket/src/`                                  |
+| E2E           | `apps/app/e2e/vault.spec.ts`                            |
 
 ---
 

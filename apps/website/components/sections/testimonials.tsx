@@ -15,14 +15,14 @@ const TESTIMONIALS = [
   },
   {
     quote:
-      "I switched from a spreadsheet to Oewang in one afternoon. The import was seamless and now I can actually see what's happening in my business.",
+      "I switched from a spreadsheet to Oewang in one afternoon. Now I can see my daily spending clearly without rebuilding my sheet every week.",
     name: "Priya Kapoor",
     role: "Freelance Designer",
     initials: "PK",
   },
   {
     quote:
-      "The real-time insights have completely changed how I make decisions. I used to wait until month-end for numbers — now I check them daily.",
+      "The real-time insights have completely changed how I make spending decisions. I used to wait until month-end for numbers — now I check them daily.",
     name: "James O'Brien",
     role: "Co-founder, NorthStack",
     initials: "JO",
@@ -46,30 +46,30 @@ const TESTIMONIALS = [
 export function TestimonialsSection() {
   return (
     <section className="bg-background py-24">
-      <div className="max-w-[1400px] mx-auto px-4 sm:px-8">
-        <div className="text-center mb-16">
-          <h2 className="font-serif text-3xl sm:text-4xl tracking-tight text-foreground mb-4">
-            Trusted by modern teams
+      <div className="mx-auto max-w-[1400px] px-4 sm:px-8">
+        <div className="mb-16 text-center">
+          <h2 className="mb-4 font-serif text-3xl text-foreground tracking-tight sm:text-4xl">
+            Trusted by daily money trackers
           </h2>
-          <p className="text-muted-foreground text-lg max-w-lg mx-auto">
-            See what founders and finance leads are saying about Oewang.
+          <p className="mx-auto max-w-lg text-lg text-muted-foreground">
+            See what people say after replacing spreadsheets with Oewang.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {TESTIMONIALS.map((t) => (
             <div
               key={t.name}
-              className="border border-border p-6 flex flex-col gap-4 bg-background hover:border-foreground/20 transition-colors"
+              className="flex flex-col gap-4 border border-border bg-background p-6 transition-colors hover:border-foreground/20"
             >
-              <p className="text-sm text-muted-foreground leading-6 flex-1">&ldquo;{t.quote}&rdquo;</p>
-              <div className="flex items-center gap-3 pt-4 border-t border-border">
-                <div className="size-9 rounded-full bg-muted flex items-center justify-center text-xs font-medium text-foreground shrink-0">
+              <p className="flex-1 text-muted-foreground text-sm leading-6">&ldquo;{t.quote}&rdquo;</p>
+              <div className="flex items-center gap-3 border-border border-t pt-4">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted font-medium text-foreground text-xs">
                   {t.initials}
                 </div>
                 <div>
-                  <p className="text-sm text-foreground">{t.name}</p>
-                  <p className="text-xs text-muted-foreground">{t.role}</p>
+                  <p className="text-foreground text-sm">{t.name}</p>
+                  <p className="text-muted-foreground text-xs">{t.role}</p>
                 </div>
               </div>
             </div>

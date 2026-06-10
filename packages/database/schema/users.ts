@@ -12,7 +12,9 @@ export const users = pgTable("users", {
   providers: text("providers").array(),
   workspace_id: text("workspace_id").references(() => workspaces.id),
   password_hash: text("password_hash"),
-  system_role: text("system_role", { enum: ["superadmin", "owner", "finance", "user"] })
+  system_role: text("system_role", {
+    enum: ["superadmin", "owner", "finance", "user"],
+  })
     .default("user")
     .notNull(),
   created_at: timestamp("created_at").defaultNow().notNull(),

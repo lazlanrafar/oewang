@@ -1,7 +1,7 @@
 "use client";
 
 import type * as React from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect } from "react";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Dictionary } from "@workspace/dictionaries";
@@ -28,12 +28,15 @@ export function AppProvider({ children, dictionary }: { children: React.ReactNod
   // Seed Zustand synchronously from the TanStack cache on first render.
   // HydrationBoundary (rendered above us) has already merged the server-prefetched
   // data into the QueryClient by this point, so getQueryData returns immediately.
-  useState(() => {
+  // useLayoutEffect runs after render but before paint — same eagerness as the old
+  // useState initializer but without triggering the "setState during render" warning.
+  useLayoutEffect(() => {
     const cached_settings = queryClient.getQueryData<TransactionSettings>(["settings", "transaction"]);
     const cached_sub_currencies = queryClient.getQueryData<SubCurrency[]>(["settings", "sub-currencies"]);
     if (cached_settings) useAppStore.getState().setSettings(cached_settings);
     if (cached_sub_currencies) useAppStore.getState().setSubCurrencies(cached_sub_currencies);
-  });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   usePushNotifications();
 

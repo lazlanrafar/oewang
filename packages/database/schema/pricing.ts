@@ -1,5 +1,12 @@
 import { createId } from "@paralleldrive/cuid2";
-import { boolean, integer, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+} from "drizzle-orm/pg-core";
 
 export const pricing = pgTable("pricing", {
   id: text("id").primaryKey().$defaultFn(createId),

@@ -43,6 +43,7 @@ POST /chat (UIMessages + file attachments)
 ```
 
 **Custom data injected into the stream before agent starts:**
+
 - `data-title` — auto-generated chat title (only on first turn, via `gpt-4o-mini`)
 - `data-rate-limit` — `{ limit, remaining }` for frontend rate limit display
 
@@ -50,14 +51,14 @@ POST /chat (UIMessages + file attachments)
 
 ## AI SDK Stack
 
-| Package | Role |
-|---------|------|
-| `ai` (Vercel AI SDK) | `ToolLoopAgent`, `smoothStream`, `UIMessageStream`, `generateText` |
-| `@ai-sdk/openai` | Primary LLM — `gpt-4.1-mini` for chat, `gpt-4o-mini` for title generation |
-| `@ai-sdk/anthropic` | Alternative model support |
-| `@ai-sdk/mcp` | MCP client integration (converts MCP tools → AI SDK tool format) |
-| `@ai-sdk/react` | Frontend `useChat` hook + `DefaultChatTransport` |
-| `toolpick` | Semantic embedding-based tool selection (reduces active tool count per step) |
+| Package              | Role                                                                         |
+| -------------------- | ---------------------------------------------------------------------------- |
+| `ai` (Vercel AI SDK) | `ToolLoopAgent`, `smoothStream`, `UIMessageStream`, `generateText`           |
+| `@ai-sdk/openai`     | Primary LLM — `gpt-4.1-mini` for chat, `gpt-4o-mini` for title generation    |
+| `@ai-sdk/anthropic`  | Alternative model support                                                    |
+| `@ai-sdk/mcp`        | MCP client integration (converts MCP tools → AI SDK tool format)             |
+| `@ai-sdk/react`      | Frontend `useChat` hook + `DefaultChatTransport`                             |
+| `toolpick`           | Semantic embedding-based tool selection (reduces active tool count per step) |
 
 ---
 
@@ -74,12 +75,12 @@ createMcpServer(context: McpContext): McpServer
 
 The server registers four capability types:
 
-| Type | Count | Purpose |
-|------|-------|---------|
-| **Tools** | 16 | Domain actions (CRUD + queries) |
-| **Resources** | ~5 | Static/semi-static data (team info, categories, etc.) |
-| **Prompts** | ~4 | Analysis prompt templates (spending report, etc.) |
-| **MCP Apps** | ~15 | HTML/UI resources served to MCP clients |
+| Type          | Count | Purpose                                               |
+| ------------- | ----- | ----------------------------------------------------- |
+| **Tools**     | 16    | Domain actions (CRUD + queries)                       |
+| **Resources** | ~5    | Static/semi-static data (team info, categories, etc.) |
+| **Prompts**   | ~4    | Analysis prompt templates (spending report, etc.)     |
+| **MCP Apps**  | ~15   | HTML/UI resources served to MCP clients               |
 
 ### Tool Domains
 
@@ -96,10 +97,10 @@ inbox_list
 
 ### MCP Transport Modes
 
-| Mode | When Used | Transport |
-|------|-----------|-----------|
-| **In-memory** | Internal bootstrap (chat endpoint) | `InMemoryTransport` pair |
-| **HTTP** | External clients (Claude, ChatGPT, Cursor…) | `StreamableHTTPTransport` |
+| Mode          | When Used                                   | Transport                 |
+| ------------- | ------------------------------------------- | ------------------------- |
+| **In-memory** | Internal bootstrap (chat endpoint)          | `InMemoryTransport` pair  |
+| **HTTP**      | External clients (Claude, ChatGPT, Cursor…) | `StreamableHTTPTransport` |
 
 The HTTP transport endpoint (`/mcp`) is OAuth-protected — external clients authenticate via the same OAuth flow before connecting.
 
@@ -132,12 +133,13 @@ Related tools map is hardcoded — if tool A is selected, tool B is always added
 
 Composio acts as a **meta-tool layer** — instead of building individual integrations for Gmail, Slack, Notion, GitHub, Linear, etc., the agent gets two meta-tools:
 
-| Tool | Purpose |
-|------|---------|
-| `COMPOSIO_SEARCH_TOOLS` | Given a user intent, return matching actions from the app catalog |
-| `COMPOSIO_MULTI_EXECUTE_TOOL` | Execute one or more selected Composio actions |
+| Tool                          | Purpose                                                           |
+| ----------------------------- | ----------------------------------------------------------------- |
+| `COMPOSIO_SEARCH_TOOLS`       | Given a user intent, return matching actions from the app catalog |
+| `COMPOSIO_MULTI_EXECUTE_TOOL` | Execute one or more selected Composio actions                     |
 
 **Flow:**
+
 ```
 User: "Send a Slack message to #finance about this invoice"
   → agent calls COMPOSIO_SEARCH_TOOLS("send slack message")
@@ -218,14 +220,15 @@ Users can `@mention` connected MCP apps (e.g., `@Gmail`, `@Slack`) in the chat i
 
 `packages/app-store/src/` contains connection configs for 15+ MCP client apps:
 
-| Category | Apps |
-|----------|------|
-| AI Assistants | claude-mcp, chatgpt-mcp, gemini-mcp, perplexity-mcp |
-| IDEs / Code | cursor-mcp, copilot-mcp, cline-mcp, windsurf-mcp, zed-mcp, opencode-mcp |
-| Productivity | raycast-mcp |
-| Automation | n8n-mcp, make-mcp, zapier-mcp, manus-mcp |
+| Category      | Apps                                                                    |
+| ------------- | ----------------------------------------------------------------------- |
+| AI Assistants | claude-mcp, chatgpt-mcp, gemini-mcp, perplexity-mcp                     |
+| IDEs / Code   | cursor-mcp, copilot-mcp, cline-mcp, windsurf-mcp, zed-mcp, opencode-mcp |
+| Productivity  | raycast-mcp                                                             |
+| Automation    | n8n-mcp, make-mcp, zapier-mcp, manus-mcp                                |
 
 Each app config provides:
+
 - OAuth setup instructions rendered as a UI guide
 - Connection URL template (`https://app.midday.ai/mcp`)
 - Required OAuth scopes
@@ -237,21 +240,27 @@ These are **read-only config objects** — the actual OAuth and transport is han
 ## Key Patterns to Adopt in oewang
 
 ### 1. Tool Indexing for Large Tool Sets
+
 When tool count exceeds ~10, use semantic embedding to select the most relevant tools per step rather than loading all tools always. This reduces context window usage and improves routing accuracy.
 
 ### 2. Custom Stream Data Channels
+
 The `UIMessageStream` supports injecting non-message data (titles, rate limits, metadata) alongside the AI response. This is cleaner than polling separate endpoints.
 
 ### 3. System Prompt as Safety Contract
+
 Put safety rules (draft-only, confirmation requirements) in the system prompt rather than in code guards. Easier to update without deployments.
 
 ### 4. Composio as External App Meta-Layer
+
 Instead of building N integrations, expose `search_tools` + `execute_tools` meta-tools backed by Composio. The agent figures out which app actions to use from intent.
 
 ### 5. MCP Server for External Access
+
 Serve the same tools via an HTTP MCP transport so power users can connect Claude Desktop, Cursor, etc. directly — no extra API surface to maintain.
 
 ### 6. Streaming Title Generation
+
 Generate the chat session title in parallel with the first response, then push it as a custom stream event. Avoids a separate round-trip.
 
 ---

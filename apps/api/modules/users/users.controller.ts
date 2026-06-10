@@ -5,11 +5,13 @@ import { Elysia } from "elysia";
 import { authPlugin } from "../../plugins/auth";
 import { encryptionPlugin } from "../../plugins/encryption";
 import {
+  SwitchWorkspaceBody,
   SyncUserBody,
   UpdateAvatarBody,
   UpdateProfileBody,
 } from "./users.model";
 import { UsersService } from "./users.service";
+import { resolveWorkspaceIdFromBody } from "./users.utils";
 
 /**
  * Users controller — route definitions + TypeBox validation + call service.
@@ -93,24 +95,33 @@ export const usersController = new Elysia({ prefix: "/users" })
   )
   .patch(
     "/me/workspace",
-    async ({ body, set, auth }: any) => {
+    async ({ body, set, auth }) => {
       if (!auth) {
         set.status = 401;
         return buildError(ErrorCode.UNAUTHORIZED, "Unauthorized");
       }
 
-      try {
-        await UsersService.updateActiveWorkspace(
-          auth.user_id,
-          body.workspaceId,
-        );
-        return buildSuccess(null, "Workspace switched successfully");
-      } catch (error: any) {
+      const workspaceId = resolveWorkspaceIdFromBody(body);
+      if (!workspaceId) {
         set.status = 400;
-        return buildError(ErrorCode.VALIDATION_ERROR, error.message);
+        return buildError(
+          ErrorCode.VALIDATION_ERROR,
+          "workspaceId is required",
+        );
+      }
+
+      try {
+        await UsersService.updateActiveWorkspace(auth.user_id, workspaceId);
+        return buildSuccess(null, "Workspace switched successfully");
+      } catch (error: unknown) {
+        set.status = 400;
+        const message =
+          error instanceof Error ? error.message : "Failed to switch workspace";
+        return buildError(ErrorCode.VALIDATION_ERROR, message);
       }
     },
     {
+      body: SwitchWorkspaceBody,
       detail: {
         summary: "Switch Active Workspace",
         description: "Updates the authenticated user's active workspace ID.",

@@ -18,9 +18,7 @@ export interface MetricsDateRangeParams {
 
 export const getRevenueMetrics = async (
   params?: MetricsDateRangeParams,
-): Promise<
-  ActionResponse<ChartDataPoint[]>
-> => {
+): Promise<ActionResponse<ChartDataPoint[]>> => {
   try {
     const res = await api.get("/metrics/revenue", { params });
     return { success: true, data: res.data?.data || [] };
@@ -35,9 +33,7 @@ export const getRevenueMetrics = async (
 
 export const getExpenseMetrics = async (
   params?: MetricsDateRangeParams,
-): Promise<
-  ActionResponse<ChartDataPoint[]>
-> => {
+): Promise<ActionResponse<ChartDataPoint[]>> => {
   try {
     const res = await api.get("/metrics/expenses", { params });
     return { success: true, data: res.data?.data || [] };
@@ -52,9 +48,7 @@ export const getExpenseMetrics = async (
 
 export const getBurnRateMetrics = async (
   params?: MetricsDateRangeParams,
-): Promise<
-  ActionResponse<ChartDataPoint[]>
-> => {
+): Promise<ActionResponse<ChartDataPoint[]>> => {
   try {
     const res = await api.get("/metrics/burn-rate", { params });
     return { success: true, data: res.data?.data || [] };

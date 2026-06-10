@@ -3,16 +3,22 @@ import { ContextRepository } from "./context.repository";
 import { ContextFormatter } from "./context.formatter";
 
 export abstract class ContextService {
-  static async buildContextByIntent(workspaceId: string, intent: Intent): Promise<string> {
+  static async buildContextByIntent(
+    workspaceId: string,
+    intent: Intent,
+  ): Promise<string> {
     const settings = await ContextRepository.getWorkspaceSettings(workspaceId);
-    const currencyInfo = settings 
+    const currencyInfo = settings
       ? `Workspace Currency: ${settings.mainCurrencyCode} (${settings.mainCurrencySymbol})\n`
       : "";
 
     let context = "";
     switch (intent) {
       case "transaction_query":
-        const txns = await ContextRepository.getRecentTransactions(workspaceId, 10);
+        const txns = await ContextRepository.getRecentTransactions(
+          workspaceId,
+          10,
+        );
         context = `Recent Transactions:\n${ContextFormatter.formatTransactions(txns)}`;
         break;
 
@@ -27,7 +33,10 @@ export abstract class ContextService {
         break;
 
       case "analytics_query":
-        const spending = await ContextRepository.getSpendingByCategory(workspaceId, 30);
+        const spending = await ContextRepository.getSpendingByCategory(
+          workspaceId,
+          30,
+        );
         context = `Monthly Spending by Category:\n${ContextFormatter.formatSpending(spending)}`;
         break;
 
@@ -37,7 +46,8 @@ export abstract class ContextService {
       case "general":
       default:
         const summary = await ContextRepository.getWalletSummary(workspaceId);
-        const categoriesList = await ContextRepository.getCategories(workspaceId);
+        const categoriesList =
+          await ContextRepository.getCategories(workspaceId);
         context = `Wallet Balances:\n${ContextFormatter.formatWallets(summary)}\n\nAvailable Categories:\n${ContextFormatter.formatCategories(categoriesList)}`;
         break;
     }

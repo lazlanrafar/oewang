@@ -13,7 +13,11 @@ export abstract class SettingsService {
   static async getTransactionSettings(workspaceId: string) {
     const key = settingsKey(workspaceId);
     const cached = await cacheGet<Record<string, unknown>>(key);
-    if (cached) return buildSuccess(cached, "Transaction settings retrieved successfully");
+    if (cached)
+      return buildSuccess(
+        cached,
+        "Transaction settings retrieved successfully",
+      );
 
     let settings = await SettingsRepository.findByWorkspaceId(workspaceId);
 

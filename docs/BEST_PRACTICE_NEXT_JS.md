@@ -98,6 +98,7 @@ export async function markNotificationRead(id: string) {
 ```
 
 **Rules:**
+
 - Never call `fetch` or `axios` directly outside of `actions/`
 - No business logic — these are thin HTTP wrappers only
 - Return the full `ApiResponse<T>` — do not unwrap inside the action
@@ -192,12 +193,12 @@ revalidatePath("/accounts");
 
 ## Route Group Conventions
 
-| Route group | Purpose | Auth required |
-|-------------|---------|--------------|
-| `(auth)/` | Login, register, invite acceptance, workspace creation | ❌ No |
-| `(dashboard)/` | Main app with sidebar layout | ✅ Yes |
-| `(api)/api/` | Next.js API routes (Google/GitHub OAuth callbacks) | N/A |
-| `invoice/[token]/` | Public shareable invoice view | ❌ No (JWT token in URL) |
+| Route group        | Purpose                                                | Auth required            |
+| ------------------ | ------------------------------------------------------ | ------------------------ |
+| `(auth)/`          | Login, register, invite acceptance, workspace creation | ❌ No                    |
+| `(dashboard)/`     | Main app with sidebar layout                           | ✅ Yes                   |
+| `(api)/api/`       | Next.js API routes (Google/GitHub OAuth callbacks)     | N/A                      |
+| `invoice/[token]/` | Public shareable invoice view                          | ❌ No (JWT token in URL) |
 
 ---
 
@@ -246,11 +247,11 @@ The frontend permission check is for **UI rendering only** (show/hide buttons). 
 
 ## Error Boundary Files
 
-| File | Purpose | Notes |
-|------|---------|-------|
-| `error.tsx` | Runtime errors in a segment | Must be `"use client"` |
-| `not-found.tsx` | `notFound()` — 404 | Server component |
-| `loading.tsx` | Suspense fallback skeleton | Server component |
+| File            | Purpose                     | Notes                  |
+| --------------- | --------------------------- | ---------------------- |
+| `error.tsx`     | Runtime errors in a segment | Must be `"use client"` |
+| `not-found.tsx` | `notFound()` — 404          | Server component       |
+| `loading.tsx`   | Suspense fallback skeleton  | Server component       |
 
 Use `notFound()` from `next/navigation` in server components to trigger `not-found.tsx`.
 
@@ -292,6 +293,7 @@ if (!payload?.workspace_id) redirect(`/${locale}/create-workspace`);
 ## proxy.ts
 
 `apps/app/proxy.ts` handles network-level proxying and rewrites. Use this for:
+
 - API route proxying
 - Network-level rewrites that don't need auth logic
 

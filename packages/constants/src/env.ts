@@ -9,14 +9,9 @@ const serverSchema = z.object({
   NODE_ENV: z
     .enum(["development", "test", "production"])
     .default("development"),
-  APP_URL: z.string().min(1).optional(),
-  ADMIN_URL: z.string().min(1).optional(),
-  API_URL: z.string().min(1).optional(),
-  WEBSITE_URL: z.string().min(1).optional(),
 
   // API
   API_PORT: z.string().optional().default("3002"),
-  API_BASE_URL: z.string().min(1).optional(),
 
   // Database
   DATABASE_URL: z.string().min(1),
@@ -55,10 +50,18 @@ const serverSchema = z.object({
   TELEGRAM_BOT_TOKEN: z.string().optional(),
   TELEGRAM_WEBHOOK_SECRET: z.string().optional(),
 
-  // Twilio
-  TWILIO_ACCOUNT_SID: z.string().optional(),
-  TWILIO_AUTH_TOKEN: z.string().optional(),
-  TWILIO_WHATSAPP_NUMBER: z.string().optional(),
+  // Gmail OAuth
+  GOOGLE_GMAIL_CLIENT_ID: z.string().optional(),
+  GOOGLE_GMAIL_CLIENT_SECRET: z.string().optional(),
+
+  // Outlook / Microsoft OAuth
+  MICROSOFT_CLIENT_ID: z.string().optional(),
+  MICROSOFT_CLIENT_SECRET: z.string().optional(),
+
+  // Evolution API (WhatsApp)
+  EVOLUTION_API_URL: z.string().url().optional(),
+  EVOLUTION_API_TOKEN: z.string().optional(),
+  EVOLUTION_API_INSTANCE: z.string().optional(),
 
   // S3-compatible Storage
   BUCKET_ENDPOINT: z.string().min(1).optional(),
@@ -95,7 +98,7 @@ const clientSchema = z.object({
     .string()
     .optional()
     .default("oewang-session"),
-  NEXT_PUBLIC_TWILIO_WHATSAPP_NUMBER: z.string().optional().default("+14155238886"),
+  NEXT_PUBLIC_WHATSAPP_NUMBER: z.string().optional(),
   NEXT_PUBLIC_TELEGRAM_BOT_USER: z.string().optional().default("OewangBot"),
 });
 
@@ -110,7 +113,7 @@ const clientEnv = {
 
   NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
   NEXT_PUBLIC_SESSION_COOKIE_NAME: process.env.NEXT_PUBLIC_SESSION_COOKIE_NAME,
-  NEXT_PUBLIC_TWILIO_WHATSAPP_NUMBER: process.env.NEXT_PUBLIC_TWILIO_WHATSAPP_NUMBER,
+  NEXT_PUBLIC_WHATSAPP_NUMBER: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER,
   NEXT_PUBLIC_TELEGRAM_BOT_USER: process.env.NEXT_PUBLIC_TELEGRAM_BOT_USER,
 };
 
@@ -125,7 +128,7 @@ export const getEnv = () => {
     process.env.npm_lifecycle_event === "build" ||
     process.env.NEXT_PHASE !== undefined ||
     process.env.NODE_ENV === "test";
-  
+
   if (isServer) {
     try {
       // Use require for Node.js-only modules inside the isServer block to avoid client bundle crashes
@@ -139,7 +142,7 @@ export const getEnv = () => {
       for (let i = 0; i < 3; i++) {
         const envPath = path.join(current, ".env");
         if (!isSkipValidation) {
-           console.log(`🔍 getEnv: Searching for .env at: ${envPath}`);
+          console.log(`🔍 getEnv: Searching for .env at: ${envPath}`);
         }
         if (fs.existsSync(envPath)) {
           dotenv.config({ path: envPath });
@@ -152,7 +155,9 @@ export const getEnv = () => {
         current = path.dirname(current);
       }
       if (!loaded && !isSkipValidation) {
-        console.warn("⚠️ getEnv: Could not find .env file within 3 levels of process.cwd()");
+        console.warn(
+          "⚠️ getEnv: Could not find .env file within 3 levels of process.cwd()",
+        );
       }
     } catch (e) {
       if (!isSkipValidation) {

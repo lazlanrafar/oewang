@@ -8,8 +8,12 @@ export const mcp_tokens = pgTable("mcp_tokens", {
   token: text("token").notNull().unique(),
   refresh_token: text("refresh_token").unique(),
   client_id: text("client_id").notNull(),
-  user_id: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  workspace_id: text("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+  user_id: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  workspace_id: text("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
   revoked: boolean("revoked").default(false).notNull(),
   expires_at: timestamp("expires_at").notNull(),
   created_at: timestamp("created_at").defaultNow().notNull(),

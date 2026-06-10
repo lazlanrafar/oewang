@@ -1,4 +1,4 @@
-import { type Page, type Locator, expect } from '@playwright/test';
+import { type Page, type Locator, expect } from "@playwright/test";
 
 /**
  * Base Page Object Model
@@ -12,7 +12,7 @@ export class BasePage {
    */
   async goto(path: string) {
     await this.page.goto(path);
-    await this.page.waitForLoadState('domcontentloaded');
+    await this.page.waitForLoadState("domcontentloaded");
   }
 
   /**
@@ -20,10 +20,10 @@ export class BasePage {
    */
   async waitForElement(
     selector: string,
-    options?: { timeout?: number; state?: 'visible' | 'hidden' | 'attached' }
+    options?: { timeout?: number; state?: "visible" | "hidden" | "attached" },
   ) {
     await this.page.waitForSelector(selector, {
-      state: options?.state || 'visible',
+      state: options?.state || "visible",
       timeout: options?.timeout,
     });
   }
@@ -32,14 +32,14 @@ export class BasePage {
    * Wait for network to be idle
    */
   async waitForNetwork() {
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState("networkidle");
   }
 
   /**
    * Click button by text
    */
   async clickButton(text: string | RegExp) {
-    await this.page.getByRole('button', { name: text }).click();
+    await this.page.getByRole("button", { name: text }).click();
   }
 
   /**
@@ -74,7 +74,7 @@ export class BasePage {
    * Get text content of an element
    */
   async getText(selector: string): Promise<string> {
-    return (await this.page.textContent(selector)) || '';
+    return (await this.page.textContent(selector)) || "";
   }
 
   /**
@@ -87,8 +87,11 @@ export class BasePage {
   /**
    * Wait for toast/notification message (using Sonner)
    */
-  async waitForToast(message?: string | RegExp, options?: { timeout?: number }) {
-    const toastSelector = '[data-sonner-toast]';
+  async waitForToast(
+    message?: string | RegExp,
+    options?: { timeout?: number },
+  ) {
+    const toastSelector = "[data-sonner-toast]";
     await this.waitForElement(toastSelector, options);
 
     if (message) {
@@ -100,7 +103,9 @@ export class BasePage {
    * Close toast notifications
    */
   async closeToasts() {
-    const closeButtons = this.page.locator('[data-sonner-toast] button[aria-label="Close"]');
+    const closeButtons = this.page.locator(
+      '[data-sonner-toast] button[aria-label="Close"]',
+    );
     const count = await closeButtons.count();
     for (let i = 0; i < count; i++) {
       await closeButtons.nth(0).click();
@@ -144,8 +149,8 @@ export class BasePage {
    * Get element by role
    */
   getByRole(
-    role: 'button' | 'link' | 'textbox' | 'checkbox' | 'radio' | 'heading',
-    options?: { name?: string | RegExp }
+    role: "button" | "link" | "textbox" | "checkbox" | "radio" | "heading",
+    options?: { name?: string | RegExp },
   ): Locator {
     return this.page.getByRole(role, options);
   }
@@ -161,7 +166,7 @@ export class BasePage {
    * Expect element to be visible
    */
   async expectVisible(locator: Locator | string) {
-    if (typeof locator === 'string') {
+    if (typeof locator === "string") {
       await expect(this.page.locator(locator)).toBeVisible();
     } else {
       await expect(locator).toBeVisible();
@@ -172,7 +177,7 @@ export class BasePage {
    * Expect element not to be visible
    */
   async expectNotVisible(locator: Locator | string) {
-    if (typeof locator === 'string') {
+    if (typeof locator === "string") {
       await expect(this.page.locator(locator)).not.toBeVisible();
     } else {
       await expect(locator).not.toBeVisible();

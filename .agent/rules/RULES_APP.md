@@ -31,7 +31,9 @@ All data fetching goes through `actions/` → encrypted REST → `apps/api`.
 # Next.js 16 Key Behaviors
 
 ## Caching is opt-in by default
+
 All routes are dynamic by default. Nothing is cached unless explicitly opted in via `"use cache"`:
+
 ```ts
 async function getWallets(workspace_id: string) {
   "use cache";
@@ -41,7 +43,9 @@ async function getWallets(workspace_id: string) {
 ```
 
 ## `params` and `searchParams` are Promises
+
 In Next.js 16, page props are Promises and must be awaited:
+
 ```ts
 export default async function Page({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
@@ -50,9 +54,11 @@ export default async function Page({ params }: { params: Promise<{ locale: strin
 ```
 
 ## Turbopack is stable and default
+
 Do not add `--turbopack` flags manually.
 
 ## `proxy.ts` replaces some middleware responsibilities
+
 Use `proxy.ts` at the app root for network-level proxying/rewrites. Use `middleware.ts` ONLY for auth, workspace guards, and i18n redirects.
 
 ---
@@ -60,38 +66,50 @@ Use `proxy.ts` at the app root for network-level proxying/rewrites. Use `middlew
 # Directory Responsibilities
 
 ## `actions/` — REST wrappers only
+
 One file per feature `{feature}.actions.ts`. The ONLY place in `apps/app` where HTTP calls are made.
+
 - Never call `fetch` or `axios` outside of `actions/`
 - No business logic — thin HTTP wrappers returning typed `ApiResponse<T>`
 
 ## `app/[locale]/` — Pages
+
 - Pages are thin orchestrators. Fetch data in parallel:
   ```ts
-  const [wallets, categories] = await Promise.all([getWalletsAction(), getCategoriesAction()]);
+  const [wallets, categories] = await Promise.all([
+    getWalletsAction(),
+    getCategoriesAction(),
+  ]);
   ```
 - Cache invalidation after mutations: use `updateTag` inside Server Actions for immediate invalidation, or `revalidateTag` / `revalidatePath` for eventual consistency.
 
 ## `components/` — React Components
+
 - Server Components (default): fetch data, no hooks, no event handlers.
 - Client Components (`"use client"`): interactivity, hooks, event handlers. Keep the boundary as low in the tree as possible.
 - Pass Server Actions as props to Client Components rather than importing them directly.
 - Define a `{ComponentName}Props` interface. No business logic.
 
 ## `lib/axios.ts` — Critical
+
 The single HTTP client (`api` instance) for all API calls. It automatically handles encryption/decryption, cookie JWT token inclusion, and the `x-workspace-id` header. Never use raw `fetch` or custom `axios`.
 
 ## `hooks/` & `stores/`
+
 - `hooks/`: Client-only hooks. Named `use-{purpose}.ts` (kebab-case file, camelCase export).
 - `stores/`: Client-only state (Zustand). Do not persist sensitive data without encryption. UI state only.
 
 ## `middleware.ts`
+
 Three responsibilities only:
+
 1. i18n locale detection & redirect.
 2. Auth verification of JWT from cookie (redirect to `/login` if invalid).
 3. Workspace guard (redirect to onboarding if `workspace_id` is missing).
-No database calls or HTTP calls to `apps/api` allowed here.
+   No database calls or HTTP calls to `apps/api` allowed here.
 
 ## `server/server-actions.ts`
+
 Next.js `"use server"` functions. Validate inputs, call actions, and return typed responses. Use `updateTag` for immediate cache invalidation.
 
 ---
@@ -99,6 +117,7 @@ Next.js `"use server"` functions. Validate inputs, call actions, and return type
 # i18n Rules
 
 All user-facing strings MUST go through the dictionary system. Hardcoded strings are FORBIDDEN.
+
 - Dictionaries: `packages/dictionaries/{locale}.json` (all updated simultaneously).
 - Loaded via `get-dictionary.ts` in server components.
 - Locale-aware navigation via `hooks/use-localized-route.ts`. Never prepend `/locale` manually.
@@ -125,6 +144,7 @@ All user-facing strings MUST go through the dictionary system. Hardcoded strings
 # Styling and Design System Rules
 
 Components must implement the styling patterns defined in the style guide:
+
 1. **Design Philosophy**: Minimalist, flat, and typography-focused. Avoid heavy drop shadows or elevations; use clean container borders (`border-border` / `border-[#e6e6e6]`).
 2. **Typography pairing**: Use elegant serif headers (`font-serif`) for page greetings and metric values, and sans headers (`font-sans text-[12px] uppercase tracking-widest text-muted-foreground`) for metadata and form labels.
 3. **Preset-Aware Styling**: Never hardcode border-radiuses or shadows using Tailwind CSS utility classes like `rounded-xl` or `shadow-lg`. Always use custom variables syntax like `rounded-(--radius)` and `shadow-(--shadow-sm)`.

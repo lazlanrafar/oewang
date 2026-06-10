@@ -12,7 +12,10 @@ export const workspaceAddons = pgTable("workspace_addons", {
     .references(() => pricing.id)
     .notNull(),
   mayar_transaction_id: text("mayar_transaction_id").unique(),
-  status: text("status").$type<"active" | "cancelled" | "past_due" | "unpaid">().default("active").notNull(),
+  status: text("status")
+    .$type<"active" | "cancelled" | "past_due" | "unpaid">()
+    .default("active")
+    .notNull(),
   amount: integer("amount").notNull(),
   qty: integer("qty").default(1).notNull(),
   created_at: timestamp("created_at").defaultNow().notNull(),

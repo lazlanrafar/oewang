@@ -16,9 +16,11 @@ export const CreateBudgetDto = t.Object({
   amount: t.Number({ minimum: 0 }),
 });
 
-export const UpdateBudgetDto = t.Partial(t.Object({
-  amount: t.Number({ minimum: 0 }),
-}));
+export const UpdateBudgetDto = t.Partial(
+  t.Object({
+    amount: t.Number({ minimum: 0 }),
+  }),
+);
 
 export const BudgetStatusDto = t.Object({
   id: t.String(),

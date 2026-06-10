@@ -1,17 +1,17 @@
 export function InvoiceWireframe() {
   return (
-    <div className="border border-border overflow-hidden">
+    <div className="overflow-hidden border border-border">
       {/* Invoice content */}
-      <div className="p-6 space-y-6 bg-background">
+      <div className="space-y-6 bg-background p-6">
         {/* Header */}
-        <div className="flex justify-between items-start">
+        <div className="flex items-start justify-between">
           <div>
-            <div className="w-24 h-6 rounded bg-muted-foreground/20 mb-2" />
-            <div className="w-32 h-3 rounded bg-muted-foreground/10" />
+            <div className="mb-2 h-6 w-24 rounded bg-muted-foreground/20" />
+            <div className="h-3 w-32 rounded bg-muted-foreground/10" />
           </div>
           <div className="text-right">
-            <div className="w-16 h-8 rounded bg-muted-foreground/10 mb-2" />
-            <div className="w-24 h-3 rounded bg-muted-foreground/10" />
+            <div className="mb-2 h-8 w-16 rounded bg-muted-foreground/10" />
+            <div className="h-3 w-24 rounded bg-muted-foreground/10" />
           </div>
         </div>
 
@@ -21,43 +21,43 @@ export function InvoiceWireframe() {
         {/* From/To */}
         <div className="grid grid-cols-2 gap-8">
           <div>
-            <div className="w-12 h-2 rounded bg-muted-foreground/10 mb-2" />
-            <div className="w-full h-3 rounded bg-muted-foreground/10 mb-1" />
-            <div className="w-3/4 h-3 rounded bg-muted-foreground/10" />
+            <div className="mb-2 h-2 w-12 rounded bg-muted-foreground/10" />
+            <div className="mb-1 h-3 w-full rounded bg-muted-foreground/10" />
+            <div className="h-3 w-3/4 rounded bg-muted-foreground/10" />
           </div>
           <div>
-            <div className="w-8 h-2 rounded bg-muted-foreground/10 mb-2" />
-            <div className="w-full h-3 rounded bg-muted-foreground/10 mb-1" />
-            <div className="w-3/4 h-3 rounded bg-muted-foreground/10" />
+            <div className="mb-2 h-2 w-8 rounded bg-muted-foreground/10" />
+            <div className="mb-1 h-3 w-full rounded bg-muted-foreground/10" />
+            <div className="h-3 w-3/4 rounded bg-muted-foreground/10" />
           </div>
         </div>
 
         {/* Table */}
         <div className="border border-border">
-          <div className="grid grid-cols-4 gap-4 p-3 border-b border-border bg-muted/20">
-            <div className="w-12 h-2 rounded bg-muted-foreground/20" />
-            <div className="w-8 h-2 rounded bg-muted-foreground/20" />
-            <div className="w-8 h-2 rounded bg-muted-foreground/20" />
-            <div className="w-12 h-2 rounded bg-muted-foreground/20" />
+          <div className="grid grid-cols-4 gap-4 border-border border-b bg-muted/20 p-3">
+            <div className="h-2 w-12 rounded bg-muted-foreground/20" />
+            <div className="h-2 w-8 rounded bg-muted-foreground/20" />
+            <div className="h-2 w-8 rounded bg-muted-foreground/20" />
+            <div className="h-2 w-12 rounded bg-muted-foreground/20" />
           </div>
           <div className="grid grid-cols-4 gap-4 p-3">
-            <div className="w-full h-3 rounded bg-muted-foreground/10" />
-            <div className="w-full h-3 rounded bg-muted-foreground/10" />
-            <div className="w-full h-3 rounded bg-muted-foreground/10" />
-            <div className="w-full h-3 rounded bg-muted-foreground/10" />
+            <div className="h-3 w-full rounded bg-muted-foreground/10" />
+            <div className="h-3 w-full rounded bg-muted-foreground/10" />
+            <div className="h-3 w-full rounded bg-muted-foreground/10" />
+            <div className="h-3 w-full rounded bg-muted-foreground/10" />
           </div>
         </div>
 
         {/* Total */}
         <div className="flex justify-end">
           <div className="w-40">
-            <div className="flex justify-between mb-1">
-              <div className="w-16 h-3 rounded bg-muted-foreground/10" />
-              <div className="w-16 h-3 rounded bg-muted-foreground/10" />
+            <div className="mb-1 flex justify-between">
+              <div className="h-3 w-16 rounded bg-muted-foreground/10" />
+              <div className="h-3 w-16 rounded bg-muted-foreground/10" />
             </div>
             <div className="flex justify-between">
-              <div className="w-16 h-4 rounded bg-muted-foreground/20" />
-              <div className="w-16 h-4 rounded bg-muted-foreground/30" />
+              <div className="h-4 w-16 rounded bg-muted-foreground/20" />
+              <div className="h-4 w-16 rounded bg-muted-foreground/30" />
             </div>
           </div>
         </div>

@@ -22,35 +22,35 @@ Debts track money owed — either money the workspace owes to a contact (`payabl
 
 ### `debts` table
 
-| Column | Type | Notes |
-|--------|------|-------|
-| `id` | `text` (CUID2) | Primary key |
-| `workspaceId` | `text` FK → workspaces | Required |
-| `contactId` | `text` FK → contacts | Required — who the debt is with |
-| `sourceTransactionId` | `text` FK → transactions | Optional — if created from a transaction |
-| `type` | enum | `payable` (workspace owes) \| `receivable` (contact owes) |
-| `origin` | enum | `manual` \| `from_transaction` |
-| `amount` | `decimal(19,4)` | Original debt amount. Immutable after creation |
-| `remainingAmount` | `decimal(19,4)` | Current outstanding balance |
-| `status` | enum | `unpaid` \| `partial` \| `paid` |
-| `description` | `text` | Optional |
-| `dueDate` | `timestamp` | Optional due date |
-| `createdAt` | `timestamp` | Auto |
-| `updatedAt` | `timestamp` | Auto |
-| `deletedAt` | `timestamp` | Soft delete |
+| Column                | Type                     | Notes                                                     |
+| --------------------- | ------------------------ | --------------------------------------------------------- |
+| `id`                  | `text` (CUID2)           | Primary key                                               |
+| `workspaceId`         | `text` FK → workspaces   | Required                                                  |
+| `contactId`           | `text` FK → contacts     | Required — who the debt is with                           |
+| `sourceTransactionId` | `text` FK → transactions | Optional — if created from a transaction                  |
+| `type`                | enum                     | `payable` (workspace owes) \| `receivable` (contact owes) |
+| `origin`              | enum                     | `manual` \| `from_transaction`                            |
+| `amount`              | `decimal(19,4)`          | Original debt amount. Immutable after creation            |
+| `remainingAmount`     | `decimal(19,4)`          | Current outstanding balance                               |
+| `status`              | enum                     | `unpaid` \| `partial` \| `paid`                           |
+| `description`         | `text`                   | Optional                                                  |
+| `dueDate`             | `timestamp`              | Optional due date                                         |
+| `createdAt`           | `timestamp`              | Auto                                                      |
+| `updatedAt`           | `timestamp`              | Auto                                                      |
+| `deletedAt`           | `timestamp`              | Soft delete                                               |
 
 ### `debt_payments` table
 
-| Column | Type | Notes |
-|--------|------|-------|
-| `id` | `text` (CUID2) | Primary key |
-| `debtId` | `text` FK → debts | Required |
-| `workspaceId` | `text` FK → workspaces | Required |
-| `amount` | `decimal(19,4)` | Payment amount |
-| `date` | `timestamp` | Payment date |
-| `note` | `text` | Optional |
-| `createdAt` | `timestamp` | Auto |
-| `deletedAt` | `timestamp` | Soft delete |
+| Column        | Type                   | Notes          |
+| ------------- | ---------------------- | -------------- |
+| `id`          | `text` (CUID2)         | Primary key    |
+| `debtId`      | `text` FK → debts      | Required       |
+| `workspaceId` | `text` FK → workspaces | Required       |
+| `amount`      | `decimal(19,4)`        | Payment amount |
+| `date`        | `timestamp`            | Payment date   |
+| `note`        | `text`                 | Optional       |
+| `createdAt`   | `timestamp`            | Auto           |
+| `deletedAt`   | `timestamp`            | Soft delete    |
 
 ---
 
@@ -58,17 +58,18 @@ Debts track money owed — either money the workspace owes to a contact (`payabl
 
 Base path: `/v1/debts`
 
-| Method | Path | Role Required | Description |
-|--------|------|--------------|-------------|
-| `GET` | `/` | Any authenticated | List debts (paginated, filterable) |
-| `GET` | `/:id` | Any authenticated | Get a single debt with payment history |
-| `POST` | `/` | Editor+ | Create a manual debt |
-| `PATCH` | `/:id` | Editor+ | Update debt details (not amount/remaining) |
-| `DELETE` | `/:id` | Editor+ | Soft-delete a debt |
-| `POST` | `/:id/payments` | Editor+ | Record a payment against a debt |
-| `DELETE` | `/:id/payments/:paymentId` | Editor+ | Reverse/delete a payment |
+| Method   | Path                       | Role Required     | Description                                |
+| -------- | -------------------------- | ----------------- | ------------------------------------------ |
+| `GET`    | `/`                        | Any authenticated | List debts (paginated, filterable)         |
+| `GET`    | `/:id`                     | Any authenticated | Get a single debt with payment history     |
+| `POST`   | `/`                        | Editor+           | Create a manual debt                       |
+| `PATCH`  | `/:id`                     | Editor+           | Update debt details (not amount/remaining) |
+| `DELETE` | `/:id`                     | Editor+           | Soft-delete a debt                         |
+| `POST`   | `/:id/payments`            | Editor+           | Record a payment against a debt            |
+| `DELETE` | `/:id/payments/:paymentId` | Editor+           | Reverse/delete a payment                   |
 
 **Query params for `GET /`:**
+
 - `type` — `payable` | `receivable`
 - `status` — `unpaid` | `partial` | `paid`
 - `contactId`
@@ -82,6 +83,7 @@ Base path: `/v1/debts`
 ### Status Transitions
 
 Status is computed (not stored statically) based on `remainingAmount`:
+
 - `remainingAmount == amount` → `unpaid`
 - `0 < remainingAmount < amount` → `partial`
 - `remainingAmount == 0` → `paid`
@@ -104,14 +106,14 @@ The billing lifecycle job (cron) checks for debts with `dueDate` approaching and
 
 ## Source Files
 
-| Layer | File |
-|-------|------|
-| Schema | `packages/database/schema/debts.ts` |
-| Schema | `packages/database/schema/debt-payments.ts` |
-| Controller | `apps/api/modules/debts/debts.controller.ts` |
-| Service | `apps/api/modules/debts/debts.service.ts` |
-| Repository | `apps/api/modules/debts/debts.repository.ts` |
-| Model | `apps/api/modules/debts/debts.model.ts` |
-| Utils | `apps/api/modules/debts/debts.utils.ts` |
-| Tests | `apps/api/modules/debts/debts.utils.test.ts` (50 tests) |
-| E2E | `apps/app/e2e/contacts-debts.spec.ts` |
+| Layer      | File                                                    |
+| ---------- | ------------------------------------------------------- |
+| Schema     | `packages/database/schema/debts.ts`                     |
+| Schema     | `packages/database/schema/debt-payments.ts`             |
+| Controller | `apps/api/modules/debts/debts.controller.ts`            |
+| Service    | `apps/api/modules/debts/debts.service.ts`               |
+| Repository | `apps/api/modules/debts/debts.repository.ts`            |
+| Model      | `apps/api/modules/debts/debts.model.ts`                 |
+| Utils      | `apps/api/modules/debts/debts.utils.ts`                 |
+| Tests      | `apps/api/modules/debts/debts.utils.test.ts` (50 tests) |
+| E2E        | `apps/app/e2e/contacts-debts.spec.ts`                   |

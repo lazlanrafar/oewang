@@ -9,7 +9,9 @@ export const workspaces = pgTable("workspaces", {
   country: text("country"),
   plan_id: text("plan_id").references(() => pricing.id),
   plan_status: text("plan_status").default("free").notNull(),
-  plan_billing_interval: text("plan_billing_interval").$type<"monthly" | "annual">(),
+  plan_billing_interval: text("plan_billing_interval").$type<
+    "monthly" | "annual"
+  >(),
   mayar_customer_email: text("mayar_customer_email"),
   mayar_transaction_id: text("mayar_transaction_id").unique(),
   plan_started_at: timestamp("plan_started_at"),

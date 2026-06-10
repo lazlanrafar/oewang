@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+
 import { Env } from "@workspace/constants";
 
 export async function GET(request: Request) {
@@ -16,9 +17,7 @@ export async function GET(request: Request) {
     prompt: "select_account",
   });
 
-  const response = NextResponse.redirect(
-    `https://accounts.google.com/o/oauth2/v2/auth?${params}`,
-  );
+  const response = NextResponse.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params}`);
 
   response.cookies.set("oauth_state", state, {
     httpOnly: true,

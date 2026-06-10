@@ -136,7 +136,9 @@ export function NotificationList({ dictionary }: { dictionary: Dictionary }) {
                   {notification.title}
                 </span>
                 <span className="flex-none text-[10px] text-muted-foreground">
-                  {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
+                  {formatDistanceToNow(new Date(notification.created_at), {
+                    addSuffix: true,
+                  })}
                 </span>
               </div>
               <p className="line-clamp-2 text-muted-foreground text-xs">{notification.message}</p>

@@ -1,11 +1,7 @@
 // Chart Components
 
 // Base Chart Components
-export {
-  BaseChart,
-  ChartLegend,
-  StyledTooltip,
-} from "./base-charts";
+export { BaseChart, ChartLegend, StyledTooltip } from "./base-charts";
 // Chart Types
 export type { BurnRateChart as BurnRateChartType } from "./burn-rate-chart";
 export { BurnRateChart } from "./burn-rate-chart";

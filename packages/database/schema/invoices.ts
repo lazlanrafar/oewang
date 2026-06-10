@@ -1,5 +1,12 @@
 import { createId } from "@paralleldrive/cuid2";
-import { pgTable, text, timestamp, decimal, jsonb, boolean } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  timestamp,
+  decimal,
+  jsonb,
+  boolean,
+} from "drizzle-orm/pg-core";
 import { workspaces } from "./workspaces";
 import { contacts } from "./contacts";
 
@@ -43,7 +50,7 @@ export const invoices = pgTable("invoices", {
   }),
 
   isPublic: boolean("is_public").notNull().default(false),
-  accessCode: text("access_code"), 
+  accessCode: text("access_code"),
   createdAt: timestamp("created_at", { mode: "string" }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().notNull(),
   deletedAt: timestamp("deleted_at", { mode: "string" }),

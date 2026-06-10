@@ -197,7 +197,7 @@ export default function ChatInterface({ dictionary }: Props) {
               <div className="scrollbar-hide flex-1 overflow-y-auto scroll-smooth px-4 md:px-0">
                 <div className="mx-auto w-full max-w-2xl pb-32">
                   <ChatMessages
-                    messages={messages}
+                    messages={messages as any}
                     isStreaming={status === "streaming" || status === "submitted"}
                     dictionary={dictionary}
                   />

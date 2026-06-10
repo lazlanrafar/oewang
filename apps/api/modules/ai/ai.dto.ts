@@ -21,6 +21,7 @@ export const ChatMessageDto = t.Object({
 export const ChatRequestDto = t.Object({
   sessionId: t.Optional(t.String()),
   messages: t.Array(ChatMessageDto, { minItems: 1 }),
+  webSearch: t.Optional(t.Boolean()),
 });
 
 export type ChatMessage = {
@@ -36,6 +37,7 @@ export type ChatMessage = {
 export type ChatRequest = {
   sessionId?: string;
   messages: ChatMessage[];
+  webSearch?: boolean;
 };
 
 export type ChatResponse = {

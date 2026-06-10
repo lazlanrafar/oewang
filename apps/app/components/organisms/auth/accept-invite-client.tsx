@@ -14,18 +14,16 @@ interface AcceptInviteClientProps {
   token: string | null;
 }
 
+function isAuthErrorMessage(message: string | null): boolean {
+  if (!message) return false;
+  const normalized = message.toLowerCase();
+  return normalized.includes("unauthorized") || normalized.includes("unauthenticated");
+}
+
 export function AcceptInviteClient({ token }: AcceptInviteClientProps) {
   const router = useRouter();
-  const [status, setStatus] = React.useState<"idle" | "loading" | "success" | "error">("idle");
+  const [status, setStatus] = React.useState<"idle" | "loading" | "success" | "error" | "needs-auth">("idle");
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = React.useState<boolean | null>(null);
-
-  React.useEffect(() => {
-    const hasSession = document.cookie
-      .split(";")
-      .some((c) => c.trim().startsWith("oewang-session="));
-    setIsAuthenticated(hasSession);
-  }, []);
 
   const handleAccept = React.useCallback(async () => {
     if (!token) return;
@@ -40,6 +38,11 @@ export function AcceptInviteClient({ token }: AcceptInviteClientProps) {
           router.push("/overview");
         }, 2000);
       } else {
+        if (isAuthErrorMessage(result.error || null)) {
+          setStatus("needs-auth");
+          return;
+        }
+
         setStatus("error");
         setErrorMessage(result.error || "Failed to accept invitation");
         toast.error(result.error || "Failed to accept invitation");
@@ -53,10 +56,10 @@ export function AcceptInviteClient({ token }: AcceptInviteClientProps) {
 
   // Automatically try to accept if token is present and user is authenticated
   React.useEffect(() => {
-    if (token && isAuthenticated === true && status === "idle") {
+    if (token && status === "idle") {
       handleAccept();
     }
-  }, [token, isAuthenticated, status, handleAccept]);
+  }, [token, status, handleAccept]);
 
   if (!token) {
     return (
@@ -86,12 +89,12 @@ export function AcceptInviteClient({ token }: AcceptInviteClientProps) {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle>Workspace Invitation</CardTitle>
-          <CardDescription>You have been invited to join a workspace?.</CardDescription>
+          <CardDescription>You have been invited to join a workspace.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col items-center gap-4 py-6 text-center">
-          {isAuthenticated === null ? (
+          {status === "idle" || status === "loading" ? (
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          ) : isAuthenticated === false ? (
+          ) : status === "needs-auth" ? (
             <>
               <p className="text-muted-foreground">Please log in or sign up to accept this invitation.</p>
               <div className="flex w-full flex-col gap-2">
@@ -110,11 +113,6 @@ export function AcceptInviteClient({ token }: AcceptInviteClientProps) {
                   </Link>
                 </Button>
               </div>
-            </>
-          ) : status === "loading" ? (
-            <>
-              <Loader2 className="h-10 w-10 animate-spin text-primary" />
-              <p>Accepting invitation...</p>
             </>
           ) : status === "success" ? (
             <>

@@ -24,6 +24,10 @@ import { contactsController } from "./modules/contacts/contacts.controller";
 import { debtsController } from "./modules/debts/debts.controller";
 import { healthController } from "./modules/health/health.controller";
 import { integrationsController } from "./modules/integrations/integrations.controller";
+import {
+  publicWebhooksController,
+  registerEvolutionWebhook,
+} from "./modules/integrations/public-webhooks.controller";
 import { invoicesController } from "./modules/invoices/invoices.controller";
 import { publicInvoicesController } from "./modules/invoices/public-invoices.controller";
 import { mayarController } from "./modules/mayar/mayar.controller";
@@ -115,23 +119,39 @@ const apiControllers3 = new Elysia()
   .use(notificationSettingsController)
   .use(pushSubscriptionsController);
 
+const APP_ORIGINS = [
+  "https://app.oewang.com",
+  "https://console.oewang.com",
+  "https://oewang.com",
+  ...(process.env.NODE_ENV !== "production"
+    ? ["http://localhost:3000", "http://localhost:3001", "http://localhost:3003"]
+    : []),
+];
+
+// Paths that must be open to any origin (OAuth, MCP, discovery)
+function isPublicOriginPath(pathname: string): boolean {
+  return (
+    pathname.startsWith("/.well-known") ||
+    pathname.startsWith("/oauth") ||
+    pathname.startsWith("/mcp")
+  );
+}
+
 const app = new Elysia()
   .use(
     cors({
-      origin: [
-        "https://app.oewang.com",
-        "https://console.oewang.com",
-        "https://oewang.com",
-        ...(process.env.NODE_ENV !== "production"
-          ? ["http://localhost:3000", "http://localhost:3001", "http://localhost:3003"]
-          : []),
-      ],
+      origin: (request: Request) => {
+        const pathname = new URL(request.url).pathname;
+        if (isPublicOriginPath(pathname)) return true;
+        return APP_ORIGINS.includes(request.headers.get("origin") ?? "");
+      },
       credentials: true,
       allowedHeaders: ["Content-Type", "Authorization", "x-workspace-id"],
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     }),
   )
   .use(mcpController)
+  .use(publicWebhooksController)
   .use(staticPlugin({ assets: "public", prefix: "" }))
   .get("/", () => Bun.file("public/index.html"))
   .use(loggerPlugin)
@@ -344,6 +364,8 @@ RealtimeService.onDataChanged(({ workspaceId, type }) => {
 log.info(`🚀 oewang API running at http://localhost:${port}`);
 log.info(`📖 Swagger docs at http://localhost:${port}/swagger`);
 log.info(`🔗 API v1 at http://localhost:${port}/v1`);
+
+registerEvolutionWebhook();
 
 export { app };
 export type App = typeof app;

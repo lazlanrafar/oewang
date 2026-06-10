@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect } from "react";
+
 import { useRouter } from "next/navigation";
+
 import { Loader2 } from "lucide-react";
 
 interface AuthSyncProps {
@@ -19,16 +21,7 @@ export function AuthSync({ locale, returnTo = "/overview" }: AuthSyncProps) {
   const router = useRouter();
 
   useEffect(() => {
-    // Check for oewang-session cookie client-side.
-    const hasSession = document.cookie
-      .split(";")
-      .some((c) => c.trim().startsWith("oewang-session="));
-
-    if (hasSession) {
-      router.replace(`/${locale}${returnTo}`);
-    } else {
-      router.replace(`/${locale}/login`);
-    }
+    router.replace(`/${locale}${returnTo}`);
   }, [locale, router, returnTo]);
 
   return (

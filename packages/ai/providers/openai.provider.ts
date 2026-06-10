@@ -38,7 +38,9 @@ function buildInputMessages(
   });
 }
 
-function getLatestOpenAIPreviousResponseId(messages: ChatMessage[]): string | undefined {
+function getLatestOpenAIPreviousResponseId(
+  messages: ChatMessage[],
+): string | undefined {
   for (let i = messages.length - 1; i >= 0; i--) {
     const message = messages[i];
     if (!message) continue;
@@ -48,7 +50,10 @@ function getLatestOpenAIPreviousResponseId(messages: ChatMessage[]): string | un
     if (!attachments || Array.isArray(attachments)) continue;
 
     const provider = (attachments as any)?.provider;
-    if (provider?.name === "openai" && typeof provider.response_id === "string") {
+    if (
+      provider?.name === "openai" &&
+      typeof provider.response_id === "string"
+    ) {
       return provider.response_id;
     }
   }
@@ -62,17 +67,19 @@ export abstract class OpenAIProvider {
     systemPrompt: string,
     apiKey: string,
     tools?: any[],
-    onToolCall?: (name: string, args: any) => Promise<any>
+    onToolCall?: (name: string, args: any) => Promise<any>,
   ): Promise<ChatResponse> {
     const openai = new OpenAI({ apiKey, timeout: 30_000, maxRetries: 2 });
 
-    const openAiTools: OpenAI.Responses.Tool[] | undefined = tools?.map((t) => ({
-      type: "function",
-      name: t.name,
-      description: t.description,
-      parameters: t.input_schema as any,
-      strict: true,
-    }));
+    const openAiTools: OpenAI.Responses.Tool[] | undefined = tools?.map(
+      (t) => ({
+        type: "function",
+        name: t.name,
+        description: t.description,
+        parameters: t.input_schema as any,
+        strict: true,
+      }),
+    );
 
     const previousResponseId = getLatestOpenAIPreviousResponseId(messages);
     let input = previousResponseId
@@ -132,8 +139,10 @@ export abstract class OpenAIProvider {
       usage: {
         input_tokens: response.usage?.input_tokens ?? 0,
         output_tokens: response.usage?.output_tokens ?? 0,
-        cached_input_tokens: response.usage?.input_tokens_details?.cached_tokens ?? 0,
-        reasoning_tokens: response.usage?.output_tokens_details?.reasoning_tokens ?? 0,
+        cached_input_tokens:
+          response.usage?.input_tokens_details?.cached_tokens ?? 0,
+        reasoning_tokens:
+          response.usage?.output_tokens_details?.reasoning_tokens ?? 0,
       },
       provider: {
         name: "openai",
@@ -153,6 +162,8 @@ export abstract class OpenAIProvider {
       truncation: "auto",
       store: false,
     });
-    return response.output_text.trim().replace(/^['"]|['"]$/g, "") || "New Chat";
+    return (
+      response.output_text.trim().replace(/^['"]|['"]$/g, "") || "New Chat"
+    );
   }
 }

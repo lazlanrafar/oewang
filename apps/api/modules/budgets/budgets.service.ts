@@ -70,7 +70,9 @@ export abstract class BudgetsService {
     });
 
     const now = new Date();
-    await cacheDel(budgetStatusKey(workspaceId, now.getFullYear(), now.getMonth() + 1));
+    await cacheDel(
+      budgetStatusKey(workspaceId, now.getFullYear(), now.getMonth() + 1),
+    );
 
     NotificationsService.create({
       workspace_id: workspaceId,
@@ -119,7 +121,9 @@ export abstract class BudgetsService {
     });
 
     const now = new Date();
-    await cacheDel(budgetStatusKey(workspaceId, now.getFullYear(), now.getMonth() + 1));
+    await cacheDel(
+      budgetStatusKey(workspaceId, now.getFullYear(), now.getMonth() + 1),
+    );
 
     return buildApiResponse({
       success: true,
@@ -150,7 +154,9 @@ export abstract class BudgetsService {
     });
 
     const now = new Date();
-    await cacheDel(budgetStatusKey(workspaceId, now.getFullYear(), now.getMonth() + 1));
+    await cacheDel(
+      budgetStatusKey(workspaceId, now.getFullYear(), now.getMonth() + 1),
+    );
 
     return buildApiResponse({
       success: true,

@@ -32,7 +32,8 @@ const nb = (description: string) => ({
 export const aiToolDefinitions = [
   {
     name: "create_transaction",
-    description: "Create a new financial transaction (income, expense, or transfer)",
+    description:
+      "Create a new financial transaction (income, expense, or transfer)",
     input_schema: {
       type: "object",
       additionalProperties: false,
@@ -42,18 +43,39 @@ export const aiToolDefinitions = [
           enum: ["income", "expense", "transfer"],
           description: "Type of transaction. If unknown, ask the user.",
         },
-        amount: { type: "number", description: "Numerical amount. Must be confirmed with the user if missing." },
+        amount: {
+          type: "number",
+          description:
+            "Numerical amount. Must be confirmed with the user if missing.",
+        },
         date: ns("ISO date string. Default to today if not mentioned."),
-        name: { type: "string", description: "Name/Merchant of the transaction (e.g., 'Starbucks')." },
+        name: {
+          type: "string",
+          description: "Name/Merchant of the transaction (e.g., 'Starbucks').",
+        },
         walletId: {
           type: "string",
-          description: "Source wallet/account ID or name. If the user doesn't specify an account, LIST the available wallets and ask them to choose.",
+          description:
+            "Source wallet/account ID or name. If the user doesn't specify an account, LIST the available wallets and ask them to choose.",
         },
-        toWalletId: ns("Destination wallet ID or name (required for transfers only)."),
-        categoryId: ns("Category ID or name. If unclear, pick the best match from context or ask the user."),
+        toWalletId: ns(
+          "Destination wallet ID or name (required for transfers only).",
+        ),
+        categoryId: ns(
+          "Category ID or name. If unclear, pick the best match from context or ask the user.",
+        ),
         description: ns("Optional notes."),
       },
-      required: ["type", "amount", "date", "name", "walletId", "toWalletId", "categoryId", "description"],
+      required: [
+        "type",
+        "amount",
+        "date",
+        "name",
+        "walletId",
+        "toWalletId",
+        "categoryId",
+        "description",
+      ],
     },
   },
   {
@@ -92,11 +114,15 @@ export const aiToolDefinitions = [
       type: "object",
       additionalProperties: false,
       properties: {
-        contactName: { type: "string", description: "Name of the person involved." },
+        contactName: {
+          type: "string",
+          description: "Name of the person involved.",
+        },
         type: {
           type: "string",
           enum: ["payable", "receivable"],
-          description: "payable (hutang) if the user owes them, receivable (piutang) if they owe the user.",
+          description:
+            "payable (hutang) if the user owes them, receivable (piutang) if they owe the user.",
         },
         amount: { type: "number", description: "Amount of the debt." },
         description: ns("Optional description."),
@@ -115,7 +141,10 @@ export const aiToolDefinitions = [
       properties: {
         amount: { type: "number", description: "Total amount paid initially." },
         name: { type: "string", description: "Transaction name/merchant." },
-        walletId: { type: "string", description: "Wallet to deduct the total from." },
+        walletId: {
+          type: "string",
+          description: "Wallet to deduct the total from.",
+        },
         categoryId: ns("Optional category ID or name."),
         contactNames: {
           type: "array",
@@ -128,7 +157,8 @@ export const aiToolDefinitions = [
   },
   {
     name: "getRevenueSummary",
-    description: "Analyze revenue (income/sales) — totals, trends, and growth rates.",
+    description:
+      "Analyze revenue (income/sales) — totals, trends, and growth rates.",
     input_schema: {
       type: "object",
       additionalProperties: false,
@@ -137,16 +167,28 @@ export const aiToolDefinitions = [
           anyOf: [
             {
               type: "string",
-              enum: ["3-months", "6-months", "this-year", "1-year", "last-12-months", "year-to-date", "last-year"],
+              enum: [
+                "3-months",
+                "6-months",
+                "this-year",
+                "1-year",
+                "last-12-months",
+                "year-to-date",
+                "last-year",
+              ],
             },
             { type: "null" },
           ],
           description: "Historical period for analysis.",
         },
-        from: ns("Optional ISO date-time start, e.g. 2026-01-01T00:00:00.000Z."),
+        from: ns(
+          "Optional ISO date-time start, e.g. 2026-01-01T00:00:00.000Z.",
+        ),
         to: ns("Optional ISO date-time end, e.g. 2026-12-31T23:59:59.000Z."),
         currency: ns("Currency code (e.g., USD, IDR)."),
-        showCanvas: nb("Whether to show a visual chart/canvas for this analysis."),
+        showCanvas: nb(
+          "Whether to show a visual chart/canvas for this analysis.",
+        ),
       },
       required: ["period", "from", "to", "currency", "showCanvas"],
     },
@@ -162,16 +204,27 @@ export const aiToolDefinitions = [
           anyOf: [
             {
               type: "string",
-              enum: ["3-months", "6-months", "1-year", "last-6-months", "last-12-months", "year-to-date"],
+              enum: [
+                "3-months",
+                "6-months",
+                "1-year",
+                "last-6-months",
+                "last-12-months",
+                "year-to-date",
+              ],
             },
             { type: "null" },
           ],
           description: "Historical period for burn analysis.",
         },
-        from: ns("Optional ISO date-time start, e.g. 2026-01-01T00:00:00.000Z."),
+        from: ns(
+          "Optional ISO date-time start, e.g. 2026-01-01T00:00:00.000Z.",
+        ),
         to: ns("Optional ISO date-time end, e.g. 2026-12-31T23:59:59.000Z."),
         currency: ns("Currency code (e.g., USD, IDR)."),
-        showCanvas: nb("Whether to show a visual chart/canvas for this analysis."),
+        showCanvas: nb(
+          "Whether to show a visual chart/canvas for this analysis.",
+        ),
       },
       required: ["period", "from", "to", "currency", "showCanvas"],
     },
@@ -187,16 +240,28 @@ export const aiToolDefinitions = [
           anyOf: [
             {
               type: "string",
-              enum: ["this-month", "last-month", "last-3-months", "this-year", "year-to-date", "last-year", "last-12-months"],
+              enum: [
+                "this-month",
+                "last-month",
+                "last-3-months",
+                "this-year",
+                "year-to-date",
+                "last-year",
+                "last-12-months",
+              ],
             },
             { type: "null" },
           ],
           description: "Time period for analysis.",
         },
-        from: ns("Optional ISO date-time start, e.g. 2026-01-01T00:00:00.000Z."),
+        from: ns(
+          "Optional ISO date-time start, e.g. 2026-01-01T00:00:00.000Z.",
+        ),
         to: ns("Optional ISO date-time end, e.g. 2026-12-31T23:59:59.000Z."),
         currency: ns("Currency code (e.g., USD, IDR)."),
-        showCanvas: nb("Whether to show a visual chart/canvas for this analysis."),
+        showCanvas: nb(
+          "Whether to show a visual chart/canvas for this analysis.",
+        ),
       },
       required: ["period", "from", "to", "currency", "showCanvas"],
     },
@@ -209,7 +274,10 @@ export const aiToolDefinitions = [
       type: "object",
       additionalProperties: false,
       properties: {
-        transactionId: { type: "string", description: "The ID of the transaction to add items to." },
+        transactionId: {
+          type: "string",
+          description: "The ID of the transaction to add items to.",
+        },
         items: {
           type: "array",
           description: "List of purchased products from the receipt.",
@@ -217,15 +285,29 @@ export const aiToolDefinitions = [
             type: "object",
             additionalProperties: false,
             properties: {
-              name: { type: "string", description: "Product name (e.g. 'Dove Soap 200ml')" },
+              name: {
+                type: "string",
+                description: "Product name (e.g. 'Dove Soap 200ml')",
+              },
               brand: ns("Brand name (e.g. 'Dove')"),
               quantity: nn("Quantity purchased"),
               unit: ns("Unit of measure: pcs, kg, g, ml, L"),
               unitPrice: nn("Price per unit"),
-              amount: { type: "number", description: "Total line amount for this item" },
+              amount: {
+                type: "number",
+                description: "Total line amount for this item",
+              },
               categoryId: ns("Category ID for this item"),
             },
-            required: ["name", "brand", "quantity", "unit", "unitPrice", "amount", "categoryId"],
+            required: [
+              "name",
+              "brand",
+              "quantity",
+              "unit",
+              "unitPrice",
+              "amount",
+              "categoryId",
+            ],
           },
         },
       },
@@ -240,7 +322,11 @@ export const aiToolDefinitions = [
       type: "object",
       additionalProperties: false,
       properties: {
-        query: { type: "string", description: "Item name or brand to search for (e.g. 'Dove Soap', 'shampoo', 'Indomie')" },
+        query: {
+          type: "string",
+          description:
+            "Item name or brand to search for (e.g. 'Dove Soap', 'shampoo', 'Indomie')",
+        },
         limit: nn("Max results to return (default: 10)"),
       },
       required: ["query", "limit"],

@@ -3,8 +3,7 @@ import path from "node:path";
 import fs from "node:fs";
 import { Env } from "@workspace/constants";
 
-const isPretty =
-  Env.LOG_PRETTY === "true" || Env.LOG_PRETTY === "1";
+const isPretty = Env.LOG_PRETTY === "true" || Env.LOG_PRETTY === "1";
 
 // Ensure logs directory exists at the monorepo root
 const logsDir = path.resolve(process.cwd(), Env.LOGS_DIR ?? "logs");

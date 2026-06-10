@@ -39,7 +39,9 @@ export const encryptionPlugin = (app: Elysia) =>
           const parsed = JSON.parse(decrypted);
 
           // Mutate the body object for subsequent handlers and validation
-          Object.keys(body).forEach((key) => { delete (body as any)[key]; });
+          Object.keys(body).forEach((key) => {
+            delete (body as any)[key];
+          });
           Object.assign(body, parsed);
         } catch (error: any) {
           log.error("Decrypt failed", { path, error });
@@ -54,7 +56,9 @@ export const encryptionPlugin = (app: Elysia) =>
           path.startsWith("/mcp") ||
           path.startsWith("/.well-known") ||
           path.startsWith("/oauth") ||
-          path.includes("/mayar/webhook"))
+          path.includes("/mayar/webhook") ||
+          path.includes("/integrations/whatsapp/webhook") ||
+          path.includes("/integrations/telegram/webhook"))
       )
         return;
 

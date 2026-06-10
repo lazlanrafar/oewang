@@ -1,8 +1,10 @@
 import type { SVGProps } from "react";
 import { cn } from "../../lib/utils";
 
-interface SpinnerProps
-  extends Omit<SVGProps<SVGSVGElement>, "width" | "height"> {
+interface SpinnerProps extends Omit<
+  SVGProps<SVGSVGElement>,
+  "width" | "height"
+> {
   /**
    * The size of the spinner in pixels.
    * @default 20

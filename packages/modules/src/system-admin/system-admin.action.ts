@@ -130,7 +130,7 @@ export const getSystemAdminPlans = async (): Promise<
 
     return {
       success: true,
-      data: apiResponse ? apiResponse.data ?? [] : response.data.data,
+      data: apiResponse ? (apiResponse.data ?? []) : response.data.data,
     };
   } catch (error: any) {
     return {

@@ -10,6 +10,7 @@ import type { ActionResponse } from "@workspace/types";
 import { axiosInstance } from "../lib/axios.server";
 import { createWorkspace } from "../workspace/workspace.action";
 import { Env } from "@workspace/constants";
+import { extractErrorMessage } from "../lib/error-message";
 
 function sessionCookieOptions(isProduction: boolean) {
   return {
@@ -24,51 +25,80 @@ function sessionCookieOptions(isProduction: boolean) {
 
 async function setSessionCookie(token: string) {
   const isProduction = Env.NODE_ENV === "production";
-  (await cookies()).set("oewang-session", token, sessionCookieOptions(isProduction));
+  (await cookies()).set(
+    "oewang-session",
+    token,
+    sessionCookieOptions(isProduction),
+  );
 }
 
-export async function login(form_data: FormData): Promise<ActionResponse<void>> {
+export async function login(
+  form_data: FormData,
+): Promise<ActionResponse<void>> {
   const email = form_data.get("email") as string;
   const password = form_data.get("password") as string;
 
   try {
-    const response = await axiosInstance.post("auth/login", { email, password });
-    const result = response.data.data as { token: string; workspace_id: string | null };
+    const response = await axiosInstance.post("auth/login", {
+      email,
+      password,
+    });
+    const result = response.data.data as {
+      token: string;
+      workspace_id: string | null;
+    };
     await setSessionCookie(result.token);
 
     if (!result.workspace_id) {
       redirect("/create-workspace");
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (isRedirectError(error)) throw error;
-    return { success: false, error: error.response?.data?.message || "Invalid email or password" };
+    return {
+      success: false,
+      error: extractErrorMessage(error, "Invalid email or password"),
+    };
   }
 
   redirect("/overview");
 }
 
-export async function signup(form_data: FormData): Promise<ActionResponse<void>> {
+export async function signup(
+  form_data: FormData,
+): Promise<ActionResponse<void>> {
   const email = form_data.get("email") as string;
   const password = form_data.get("password") as string;
   const name = form_data.get("name") as string | undefined;
 
   try {
-    const response = await axiosInstance.post("auth/register", { email, password, name });
-    const result = response.data.data as { token: string; workspace_id: string | null };
+    const response = await axiosInstance.post("auth/register", {
+      email,
+      password,
+      name,
+    });
+    const result = response.data.data as {
+      token: string;
+      workspace_id: string | null;
+    };
     await setSessionCookie(result.token);
 
     if (!result.workspace_id) {
       redirect("/create-workspace");
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (isRedirectError(error)) throw error;
-    return { success: false, error: error.response?.data?.message || "Registration failed" };
+    return {
+      success: false,
+      error: extractErrorMessage(error, "Registration failed"),
+    };
   }
 
   redirect("/overview");
 }
 
-export async function loginWithOAuth(provider: "google" | "github"): Promise<ActionResponse<void>> {
+export async function loginWithOAuth(
+  provider: "google" | "github",
+): Promise<ActionResponse<void>> {
   redirect(`/api/auth/${provider}`);
 }
 
@@ -112,9 +142,11 @@ export async function onboardingCreateWorkspaceAction(data: {
     }
 
     return { success: true, data: workspace };
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (isRedirectError(error)) throw error;
-    console.error("Failed to create workspace:", error);
-    return { success: false, error: error.message || "Failed to create workspace" };
+    return {
+      success: false,
+      error: extractErrorMessage(error, "Failed to create workspace"),
+    };
   }
 }

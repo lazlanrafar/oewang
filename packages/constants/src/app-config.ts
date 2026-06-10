@@ -2,7 +2,7 @@ const currentYear = new Date().getFullYear();
 
 const sharedMeta = {
   description:
-    "Oewang is a modern financial OS for businesses. Manage spending, send invoices, track transactions, and gain real-time visibility into your finances.",
+    "Oewang is a daily personal finance tracker for Indonesia. Input transactions, manage wallets, organize receipts, and understand spending with AI-assisted insights.",
 } as const;
 
 export const APP_CONFIG = {
@@ -25,15 +25,15 @@ const getWebsiteUrl = () => {
 const websiteUrl = getWebsiteUrl();
 
 export const WEBSITE_CONFIG = {
-  name: "Oewang - Run your business finances without manual work",
+  name: "Oewang - Track daily money without spreadsheets",
   url: websiteUrl,
   logo: `${websiteUrl}/logo.png`,
   version: "1.0.0",
   copyright: `© ${currentYear}, Latoe.`,
   meta: {
-    title: "Oewang – Run your business finances without manual work",
+    title: "Oewang – Track daily money without spreadsheets",
     description:
-      "Oewang is the financial OS for modern businesses. AI-powered insights, automatic categorization, real-time sync. Manage spending, send invoices, track transactions.",
+      "Oewang helps people in Indonesia input daily transactions, track spending, manage wallets, and organize receipts with AI-assisted categorization.",
     og: {
       type: "website",
       locale: "en_US",
@@ -44,7 +44,7 @@ export const WEBSITE_CONFIG = {
           url: `${websiteUrl}/og-image.png`,
           width: 1200,
           height: 630,
-          alt: "Oewang - Financial OS for Modern Businesses",
+          alt: "Oewang - Daily Personal Finance Tracker",
         },
       ],
     },

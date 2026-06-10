@@ -52,7 +52,12 @@ setup("authenticate", async ({ page, dictionary }) => {
 
     await page.getByLabel(dictionary.auth.form.email_label).fill(email);
     await page.getByLabel(dictionary.auth.form.password_label).fill(password);
-    await page.getByRole("button", { name: dictionary.auth.form.login_button, exact: true }).click();
+    await page
+      .getByRole("button", {
+        name: dictionary.auth.form.login_button,
+        exact: true,
+      })
+      .click();
 
     // Wait for redirect - could be overview or create-workspace
     await page.waitForURL(/\/(overview|create-workspace)/, { timeout: 30000 });
@@ -79,7 +84,9 @@ setup("authenticate", async ({ page, dictionary }) => {
         await continueBtn.click();
 
         // Step 2: Create Workspace (Free Plan)
-        const createBtn = page.getByRole("button", { name: /Create workspace/i });
+        const createBtn = page.getByRole("button", {
+          name: /Create workspace/i,
+        });
         await createBtn.waitFor({ state: "visible", timeout: 5000 });
         await createBtn.click();
 

@@ -21,7 +21,29 @@ export function useRealtime() {
     // Browser automatically attaches cookies for same-site WebSocket requests.
     // Avoid query-token transport in production to prevent token leakage via URLs/logs.
     const apiUrl = Env.NEXT_PUBLIC_API_URL ?? "http://localhost:3002";
-    const baseWsUrl = apiUrl.replace(/^http/, "ws").replace(/\/$/, "");
+    let baseWsUrl = apiUrl.replace(/^http/, "ws").replace(/\/$/, "");
+
+    // In local development, if accessed via localhost/127.0.0.1, direct WebSockets to localhost
+    // to bypass potential HTTPS/tunnel issues and ensure same-site cookies are attached correctly.
+    if (
+      typeof window !== "undefined" &&
+      (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
+    ) {
+      let port = "3002";
+      const match = apiUrl.match(/(?:https?:\/\/)?([^.]+)/);
+      if (match && match[1] && /^\d+$/.test(match[1])) {
+        port = match[1];
+      } else {
+        try {
+          const urlObj = new URL(apiUrl);
+          if (urlObj.port) {
+            port = urlObj.port;
+          }
+        } catch (_) {}
+      }
+      baseWsUrl = `ws://localhost:${port}`;
+    }
+
     const wsUrl = `${baseWsUrl}/v1/realtime`;
 
     if (process.env.NODE_ENV !== "production") console.log("[Realtime] Connecting to", wsUrl);
@@ -53,7 +75,9 @@ export function useRealtime() {
             });
 
             if (data.type === "transactions" || data.type === "wallets") {
-              queryClient.invalidateQueries({ queryKey: ["workspace", "active"] });
+              queryClient.invalidateQueries({
+                queryKey: ["workspace", "active"],
+              });
             }
 
             if (data.type === "notifications") {

@@ -11,7 +11,11 @@ test.describe("System: Settings — Profile", () => {
 
   test("should render the profile settings page", async ({ page, dictionary }) => {
     // Wait for hydration by checking for the Save button
-    await expect(page.getByRole("button", { name: dictionary.settings.profile.update_profile })).toBeVisible({
+    await expect(
+      page.getByRole("button", {
+        name: dictionary.settings.profile.update_profile,
+      }),
+    ).toBeVisible({
       timeout: 15000,
     });
     await expect(page.getByRole("heading", { name: dictionary.settings.profile.title })).toBeVisible();
@@ -51,11 +55,19 @@ test.describe("System: Settings — Appearance", () => {
   });
 
   test("should show Theme Settings section", async ({ page, dictionary }) => {
-    await expect(page.getByRole("heading", { name: dictionary.settings.appearance.theme.title })).toBeVisible();
+    await expect(
+      page.getByRole("heading", {
+        name: dictionary.settings.appearance.theme.title,
+      }),
+    ).toBeVisible();
   });
 
   test("should show Layout Settings section", async ({ page, dictionary }) => {
-    await expect(page.getByRole("heading", { name: dictionary.settings.appearance.layout.title })).toBeVisible();
+    await expect(
+      page.getByRole("heading", {
+        name: dictionary.settings.appearance.layout.title,
+      }),
+    ).toBeVisible();
   });
 
   test("should switch theme to Dark", async ({ page, dictionary }) => {
@@ -110,12 +122,20 @@ test.describe("System: Settings — Members", () => {
   });
 
   test("should show the Invite Member button", async ({ page, dictionary }) => {
-    await expect(page.getByRole("button", { name: dictionary.settings.members.invite_button })).toBeVisible();
+    await expect(
+      page.getByRole("button", {
+        name: dictionary.settings.members.invite_button,
+      }),
+    ).toBeVisible();
   });
 
   test("should show tabs for Members and Invitations", async ({ page, dictionary }) => {
     await expect(page.getByRole("tab", { name: dictionary.settings.members.tabs.members })).toBeVisible();
-    await expect(page.getByRole("tab", { name: dictionary.settings.members.tabs.invitations })).toBeVisible();
+    await expect(
+      page.getByRole("tab", {
+        name: dictionary.settings.members.tabs.invitations,
+      }),
+    ).toBeVisible();
   });
 });
 

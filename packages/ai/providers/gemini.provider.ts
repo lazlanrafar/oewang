@@ -8,27 +8,31 @@ export abstract class GeminiProvider {
     systemPrompt: string,
     apiKey: string,
     tools?: any[],
-    onToolCall?: (name: string, args: any) => Promise<any>
+    onToolCall?: (name: string, args: any) => Promise<any>,
   ): Promise<ChatResponse> {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
       model: "gemini-flash-latest",
       systemInstruction: systemPrompt,
-      tools: tools ? [{
-        // @ts-ignore
-        functionDeclarations: tools.map(t => ({
-          name: t.name,
-          description: t.description,
-          parameters: t.input_schema
-        }))
-      }] : undefined
+      tools: tools
+        ? [
+            {
+              // @ts-ignore
+              functionDeclarations: tools.map((t) => ({
+                name: t.name,
+                description: t.description,
+                parameters: t.input_schema,
+              })),
+            },
+          ]
+        : undefined,
     });
 
     const chat = model.startChat({
-      history: messages.slice(0, -1).map(m => ({
+      history: messages.slice(0, -1).map((m) => ({
         role: m.role === "user" ? "user" : "model",
-        parts: [{ text: m.content as string }]
-      }))
+        parts: [{ text: m.content as string }],
+      })),
     });
 
     const lastMsg = messages[messages.length - 1];
@@ -90,6 +94,9 @@ export abstract class GeminiProvider {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
     const result = await model.generateContent(prompt);
-    return result.response.text().trim().replace(/^['"]|['"]$/g, "");
+    return result.response
+      .text()
+      .trim()
+      .replace(/^['"]|['"]$/g, "");
   }
 }

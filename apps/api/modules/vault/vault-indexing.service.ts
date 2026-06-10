@@ -19,22 +19,38 @@ export abstract class VaultIndexingService {
     fileName: string,
   ): Promise<void> {
     if (!Env.OPENAI_API_KEY) {
-      log.warn("VaultIndexingService: OPENAI_API_KEY not set — skipping indexing", { vaultFileId });
+      log.warn(
+        "VaultIndexingService: OPENAI_API_KEY not set — skipping indexing",
+        { vaultFileId },
+      );
       return;
     }
 
     if (!ChunkingService.isIndexable(mimeType)) {
-      log.debug("VaultIndexingService: file type not indexable, skipping", { mimeType, vaultFileId });
+      log.debug("VaultIndexingService: file type not indexable, skipping", {
+        mimeType,
+        vaultFileId,
+      });
       return;
     }
 
-    log.info("VaultIndexingService: starting indexing", { vaultFileId, mimeType, fileName });
+    log.info("VaultIndexingService: starting indexing", {
+      vaultFileId,
+      mimeType,
+      fileName,
+    });
 
     try {
       // 1. Extract text
-      const text = await ChunkingService.extractText(buffer, mimeType, fileName);
+      const text = await ChunkingService.extractText(
+        buffer,
+        mimeType,
+        fileName,
+      );
       if (!text || text.trim().length < 50) {
-        log.info("VaultIndexingService: no usable text extracted", { vaultFileId });
+        log.info("VaultIndexingService: no usable text extracted", {
+          vaultFileId,
+        });
         return;
       }
 
@@ -42,7 +58,10 @@ export abstract class VaultIndexingService {
       const chunks = ChunkingService.chunk(text);
       if (!chunks.length) return;
 
-      log.info("VaultIndexingService: chunks created", { vaultFileId, count: chunks.length });
+      log.info("VaultIndexingService: chunks created", {
+        vaultFileId,
+        count: chunks.length,
+      });
 
       // 3. Delete any previous chunks for this file (re-indexing case)
       await db

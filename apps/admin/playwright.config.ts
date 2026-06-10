@@ -1,5 +1,5 @@
-import { defineConfig } from '@playwright/test';
-import { baseConfig } from '@workspace/playwright';
+import { defineConfig } from "@playwright/test";
+import { baseConfig } from "@workspace/playwright";
 
 /**
  * See https://playwright.dev/docs/test-configuration.
@@ -7,13 +7,13 @@ import { baseConfig } from '@workspace/playwright';
 export default defineConfig(baseConfig, {
   /* Base URL to use in actions like `await page.goto('/')`. */
   use: {
-    baseURL: process.env.NEXT_PUBLIC_ADMIN_URL || 'http://127.0.0.1:3001',
+    baseURL: process.env.NEXT_PUBLIC_ADMIN_URL || "http://127.0.0.1:3001",
   },
 
   /* Run your local dev server before starting the tests */
   webServer: {
-    command: 'bun run build && bun run start',
-    url: 'http://127.0.0.1:3001',
+    command: "bun run build && bun run start",
+    url: "http://127.0.0.1:3001",
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
   },

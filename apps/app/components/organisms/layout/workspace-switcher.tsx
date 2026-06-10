@@ -76,8 +76,8 @@ export function WorkspaceSwitcher({
       } else {
         toast.error(result.error || t("workspace.switcher.switch_error"));
       }
-    } catch (_error) {
-      toast.error("An unexpected error occurred");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t("workspace.switcher.switch_error"));
     } finally {
       setIsSwitching(false);
     }

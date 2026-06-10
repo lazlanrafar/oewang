@@ -16,7 +16,7 @@ const appEnvSchema = z.object({
   GITHUB_CLIENT_ID: z.string().optional(),
   GITHUB_CLIENT_SECRET: z.string().optional(),
 
-  NEXT_PUBLIC_TWILIO_WHATSAPP_NUMBER: z.string().optional().default("+14155238886"),
+  NEXT_PUBLIC_WHATSAPP_NUMBER: z.string().optional(),
   NEXT_PUBLIC_TELEGRAM_BOT_USER: z.string().optional().default("oewangbot"),
 
   // Server-side used in NextJS App

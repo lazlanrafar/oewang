@@ -25,8 +25,16 @@ function FilterToggle<T extends string>({
   className,
 }: FilterToggleProps<T>) {
   return (
-    <div className={cn("flex w-fit items-stretch bg-[#f7f7f7] dark:bg-[#131313]", className)}>
-      <TabsPrimitive.Root value={value} onValueChange={(v) => onValueChange(v as T)}>
+    <div
+      className={cn(
+        "flex w-fit items-stretch bg-[#f7f7f7] dark:bg-[#131313]",
+        className,
+      )}
+    >
+      <TabsPrimitive.Root
+        value={value}
+        onValueChange={(v) => onValueChange(v as T)}
+      >
         <TabsPrimitive.List className="flex h-auto items-stretch bg-transparent p-0">
           {options.map((option) => (
             <TabsPrimitive.Trigger

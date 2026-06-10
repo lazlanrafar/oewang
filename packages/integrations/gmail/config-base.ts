@@ -6,7 +6,7 @@ export const baseConfig = {
   id: "gmail",
   category: "capture",
   active: true,
-  hidden: true,
+  hidden: false,
   logo: Logo,
   short_description:
     "Automatically capture receipts and invoices from your Gmail inbox. Documents are extracted and matched to transactions in real-time.",

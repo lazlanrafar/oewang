@@ -10,37 +10,6 @@ import { useTheme } from "next-themes";
 
 import type { WebsiteDictionary } from "@/lib/translations";
 
-const FOOTER_GROUPS = [
-  {
-    title: "Product",
-    links: [
-      { href: "/features", label: "Features" },
-      { href: "/pricing", label: "Pricing" },
-      { href: "/integrations", label: "Integrations" },
-      { href: "/pre-accounting", label: "Pre-accounting" },
-    ],
-  },
-  {
-    title: "Company",
-    links: [
-      { href: "/story", label: "Story" },
-      { href: "/testimonials", label: "Customer Stories" },
-      { href: "/updates", label: "Updates" },
-      { href: "/support", label: "Support" },
-    ],
-  },
-  {
-    title: "Resources",
-    links: [
-      { href: "/docs", label: "Documentation" },
-      { href: "/chat", label: "Chat" },
-      { href: "/computer", label: "Computer" },
-      { href: "/terms", label: "Terms" },
-      { href: "/policy", label: "Privacy" },
-    ],
-  },
-];
-
 const LANGUAGE_OPTIONS = [
   { code: "en", label: "EN" },
   { code: "id", label: "ID" },
@@ -65,18 +34,18 @@ export function Footer({ locale, dictionary }: { locale: string; dictionary: Web
   };
 
   return (
-    <footer className="bg-background border-t border-border/70">
-      <div className="max-w-[1300px] mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-16">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1fr] gap-10">
-          <div className="max-w-sm">
-            <Link href={withLocale("/")} className="inline-block mb-4">
+    <footer className="border-border/70 border-t bg-background">
+      <div className="mx-auto max-w-[1300px] px-4 py-10 sm:px-6 lg:px-8">
+        <div className="flex flex-col items-start justify-between gap-8 sm:flex-row sm:items-start">
+          <div>
+            <Link href={withLocale("/")} className="mb-3 inline-block">
               <span className="font-serif text-xl tracking-tight">oewang</span>
             </Link>
-            <p className="text-sm text-muted-foreground mb-5">{dictionary.footer.tagline}</p>
+            <p className="mb-4 text-muted-foreground text-sm">{dictionary.footer.tagline}</p>
             <button
               type="button"
               onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-              className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              className="inline-flex items-center gap-2 text-muted-foreground text-xs transition-colors hover:text-foreground"
               aria-label="Toggle theme"
             >
               {mounted ? (
@@ -98,40 +67,30 @@ export function Footer({ locale, dictionary }: { locale: string; dictionary: Web
             </button>
           </div>
 
-          {FOOTER_GROUPS.map((group) => (
-            <div key={group.title}>
-              <h3 className="text-xs uppercase tracking-[0.18em] text-foreground/80 mb-3">{group.title}</h3>
-              <div className="space-y-2.5">
-                {group.links.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={withLocale(item.href)}
-                    className="text-sm text-muted-foreground hover:text-foreground transition-colors block"
-                  >
-                    {item.label}
-                  </Link>
-                ))}
-              </div>
+          <div className="flex flex-col items-start gap-3 sm:items-end">
+            <div className="flex items-center gap-4">
+              <Link
+                href={withLocale("/terms")}
+                className="text-muted-foreground text-sm transition-colors hover:text-foreground"
+              >
+                Terms
+              </Link>
+              <Link
+                href={withLocale("/policy")}
+                className="text-muted-foreground text-sm transition-colors hover:text-foreground"
+              >
+                Privacy
+              </Link>
             </div>
-          ))}
-        </div>
-
-        <div className="my-10 h-px w-full border-t border-border/70" />
-
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="space-y-2">
-            <p className="text-xs text-muted-foreground">
-              © {new Date().getFullYear()} Latoe. {dictionary.footer.rights}
-            </p>
             <div className="flex items-center gap-2">
               {LANGUAGE_OPTIONS.map((item) => (
                 <Link
                   key={item.code}
                   href={getLocaleHref(item.code)}
-                  className={`px-2.5 py-1 text-[11px] border transition-colors ${
+                  className={`border px-2.5 py-1 text-[11px] transition-colors ${
                     item.code === locale
-                      ? "bg-foreground text-background border-foreground"
-                      : "text-muted-foreground border-border hover:text-foreground"
+                      ? "border-foreground bg-foreground text-background"
+                      : "border-border text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   {item.label}
@@ -139,26 +98,13 @@ export function Footer({ locale, dictionary }: { locale: string; dictionary: Web
               ))}
             </div>
           </div>
-
-          <div className="flex items-center gap-4">
-            <a
-              href="https://x.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-            >
-              X / Twitter
-            </a>
-            <a
-              href="https://www.linkedin.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-            >
-              LinkedIn
-            </a>
-          </div>
         </div>
+
+        <div className="mt-8 h-px w-full border-border/70 border-t" />
+
+        <p className="mt-4 text-muted-foreground text-xs">
+          © {new Date().getFullYear()} Latoe. {dictionary.footer.rights}
+        </p>
       </div>
     </footer>
   );
