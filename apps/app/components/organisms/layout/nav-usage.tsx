@@ -23,7 +23,7 @@ type WorkspaceData = {
   extra_vault_size_mb?: number | null;
 };
 
-const USAGE_REFRESH_INTERVAL_MS = 15_000;
+const USAGE_REFRESH_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 const COUNTER_ANIMATION_MS = 700;
 
 function useAnimatedNumber(target: number, durationMs = COUNTER_ANIMATION_MS) {
@@ -109,9 +109,9 @@ export function NavUsage({
       return result.success ? result.data : null;
     },
     refetchInterval: USAGE_REFRESH_INTERVAL_MS,
-    refetchIntervalInBackground: true,
-    refetchOnWindowFocus: true,
-    staleTime: 0,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: false,
+    staleTime: USAGE_REFRESH_INTERVAL_MS,
   });
 
   useEffect(() => {

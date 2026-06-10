@@ -85,6 +85,8 @@ export function TransactionSettingsForm({ dictionary }: TransactionSettingsFormP
       if (result.success) return result.data;
       throw new Error(result.error);
     },
+    staleTime: 1000 * 60 * 60, // 1 hour — matches AppProvider cache duration
+    refetchOnWindowFocus: false,
   });
 
   const mutation = useMutation({

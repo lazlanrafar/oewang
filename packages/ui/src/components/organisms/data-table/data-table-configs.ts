@@ -23,6 +23,7 @@ export const STICKY_COLUMNS: Record<TableId, StickyColumnConfig[]> = {
     { id: "actions", width: 100 },
   ],
   workspaces: [{ id: "name", width: 220 }],
+  budgets: [{ id: "categoryName", width: 220 }],
 };
 
 /**
@@ -86,6 +87,12 @@ export const SORT_FIELD_MAPS: Record<TableId, Record<string, string>> = {
     ai_tokens_used: "ai_tokens_used",
     created_at: "created_at",
   },
+  budgets: {
+    categoryName: "categoryName",
+    amount: "amount",
+    spent: "spent",
+    percentage: "percentage",
+  },
 };
 
 /**
@@ -101,6 +108,7 @@ export const NON_REORDERABLE_COLUMNS: Record<TableId, Set<string>> = {
   transactions: new Set(["select", "date", "name", "actions"]),
   debts: new Set(["select", "contactName", "actions"]),
   workspaces: new Set(["name", "actions"]),
+  budgets: new Set(["categoryName", "actions"]),
 };
 
 /**
@@ -116,6 +124,7 @@ export const ROW_HEIGHTS: Record<TableId, number> = {
   transactions: 45,
   debts: 45,
   workspaces: 45,
+  budgets: 45,
 };
 
 /**
@@ -189,6 +198,13 @@ export const TABLE_CONFIGS: Record<TableId, TableConfig> = {
     sortFieldMap: SORT_FIELD_MAPS.workspaces,
     nonReorderableColumns: NON_REORDERABLE_COLUMNS.workspaces,
     rowHeight: ROW_HEIGHTS.workspaces,
+  },
+  budgets: {
+    tableId: "budgets",
+    stickyColumns: STICKY_COLUMNS.budgets,
+    sortFieldMap: SORT_FIELD_MAPS.budgets,
+    nonReorderableColumns: NON_REORDERABLE_COLUMNS.budgets,
+    rowHeight: ROW_HEIGHTS.budgets,
   },
 };
 
