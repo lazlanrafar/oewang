@@ -16,7 +16,7 @@
 
 ## Purpose
 
-The External Integrations system connects the workspace to WhatsApp (via Twilio) and Telegram. This enables users to send messages (receipts/bills) directly to their workspace via WhatsApp or Telegram, which are processed by AI to automatically extract expenses and create transaction attachments. Users can also chat with their AI Assistant directly via Telegram or WhatsApp.
+The External Integrations system connects the workspace to WhatsApp (via Evolution API or WhatsApp Web) and Telegram. This enables users to send messages (receipts/bills) directly to their workspace via WhatsApp or Telegram, which are processed by AI to automatically extract expenses and create transaction attachments. Users can also chat with their AI Assistant directly via Telegram or WhatsApp.
 
 ---
 
@@ -30,7 +30,7 @@ Maintains the credentials and active state of third-party bot integrations.
 | ------------- | ---------------------- | ------------------------------------------------------------------------- |
 | `id`          | `text` (CUID2)         | Primary key                                                               |
 | `workspaceId` | `text` FK → workspaces | Workspace link (cascade delete)                                           |
-| `provider`    | `text`                 | e.g. `whatsapp-twilio`, `telegram`                                        |
+| `provider`    | `text`                 | e.g. `whatsapp`, `whatsapp-web`, `telegram`                               |
 | `settings`    | `jsonb`                | Provider-specific config (e.g. `{ phoneNumber }` or `{ telegramChatId }`) |
 | `isActive`    | `boolean`              | Connection status state. Default `false`                                  |
 | `connectedAt` | `timestamp`            | Time of activation                                                        |
@@ -45,12 +45,12 @@ _Unique index on `(workspace_id, provider)` guarantees only one connection per p
 
 ### Public Webhooks (Unauthenticated)
 
-These are public endpoints exposed for webhook push triggers from Twilio and Telegram APIs.
+These are public endpoints exposed for webhook push triggers from WhatsApp (Evolution API) and Telegram APIs.
 
-| Method | Path                                    | Description                                             |
-| ------ | --------------------------------------- | ------------------------------------------------------- |
-| `POST` | `/integrations/whatsapp/twilio/webhook` | Receives incoming messages from Twilio WhatsApp numbers |
-| `POST` | `/integrations/telegram/webhook`        | Receives updates/messages from the Telegram Bot API     |
+| Method | Path                                        | Description                                                  |
+| ------ | ------------------------------------------- | ------------------------------------------------------------ |
+| `POST` | `/integrations/whatsapp/webhook`            | Receives incoming messages from Evolution API (WhatsApp)     |
+| `POST` | `/integrations/telegram/webhook`            | Receives updates/messages from the Telegram Bot API          |
 
 ### Admin Configuration (Authenticated)
 
@@ -59,7 +59,7 @@ Base path: `/v1/integrations`
 | Method | Path                    | Role Required | Description                                           |
 | ------ | ----------------------- | ------------- | ----------------------------------------------------- |
 | `GET`  | `/`                     | Any Member    | List active integrations for the workspace            |
-| `POST` | `/whatsapp/connect`     | Admin+        | Save Twilio WhatsApp settings and activate channel    |
+| `POST` | `/whatsapp/connect`     | Admin+        | Save WhatsApp settings and activate channel           |
 | `POST` | `/telegram/connect`     | Admin+        | Link a Telegram chat ID manually and activate channel |
 | `POST` | `/:provider/disconnect` | Admin+        | Deactivate and disconnect a messaging integration     |
 
@@ -85,7 +85,7 @@ Base path: `/v1/integrations`
 
 To prevent spam and spoofing:
 
-1. **Twilio Signature Verification**: The WhatsApp webhook checks the `x-twilio-signature` header against a computed SHA-1 HMAC of the request URL and raw form variables using the workspace `TWILIO_AUTH_TOKEN`.
+1. **Evolution API Signature Verification**: The WhatsApp webhook checks the `x-evolution-signature` header against a shared `EVOLUTION_API_TOKEN`.
 2. **Telegram Webhook Secret**: Checks the incoming header `x-telegram-bot-api-secret-token` against `TELEGRAM_WEBHOOK_SECRET`.
 
 If signature verification fails, the endpoints immediately reject the request with `403 Forbidden`.
@@ -96,7 +96,7 @@ If signature verification fails, the endpoints immediately reject the request wi
 
 When a user sends an image/receipt file via WhatsApp or Telegram:
 
-1. **Download Media**: The API fetches the file payload directly from the Telegram Bot API or Twilio Media CDN into buffer memory.
+1. **Download Media**: The API fetches the file payload directly from the Telegram Bot API or Evolution API media endpoint into buffer memory.
 2. **Vault Upload**: The file is uploaded to the workspace's Cloudflare R2 bucket via `VaultService.uploadFile` and logged in `vault_files`.
 3. **AI OCR Parsing**: The buffer is passed to `AiService.parseReceipt`. The AI model extracts the `amount`, `date`, `name`, and lists of individual item details.
 4. **Transaction Logging**:
@@ -137,5 +137,5 @@ When a text message is received:
 ## Known Constraints & Edge Cases
 
 - **WhatsApp Plan Lock**: Attempting to connect a WhatsApp integration for a workspace on the Starter plan returns a `422 UNPROCESSABLE_ENTITY` (assertPlanTier gate).
-- **Twilio Sandbox limits**: Twilio sandbox WhatsApp endpoints require pre-registering the recipient's phone number in Twilio Console.
-- **Asynchronous Webhook Processing**: Webhook routes immediately return a `200 OK` response to twilio/telegram servers to prevent webhook timeouts. Processing (downloading files, querying AI, updating DB, responding back) is performed in the background.
+- **Evolution API Session**: The Evolution API instance must be running and connected to WhatsApp before webhooks will be delivered.
+- **Asynchronous Webhook Processing**: Webhook routes immediately return a `200 OK` response to Evolution API/Telegram servers to prevent webhook timeouts. Processing (downloading files, querying AI, updating DB, responding back) is performed in the background.

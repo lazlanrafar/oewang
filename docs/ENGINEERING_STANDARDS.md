@@ -152,55 +152,81 @@ Run before every commit. The CI pipeline blocks merges with lint violations.
 
 ## Environment Variables
 
-All vars defined in root `.env`. **Never create `.env` files inside `apps/*` or `packages/*`.**
+Env vars are split across per-service Railway files and a local root `.env`. **Never create `.env` files inside `apps/*` or `packages/*`.**
 
-### Required Variables (subset)
+### File Structure
+
+| File | Git | Purpose |
+| ----------------------- | --- | ----------------------------------------------- |
+| `.env` | ❌ | Local development — all services combined |
+| `.env.global` | ❌ | Railway Shared Variables (contains real secrets) |
+| `.env.global.example` | ✅ | Safe template — keys only, no real values |
+| `.env.api` | ✅ | Railway `api` service — Railway `${{ref}}` only |
+| `.env.app` | ✅ | Railway `app` service — Railway `${{ref}}` only |
+| `.env.admin` | ✅ | Railway `admin` service — Railway `${{ref}}` only |
+| `.env.website` | ✅ | Railway `website` service — Railway `${{ref}}` only |
+
+Railway own-domain rule: each service uses `${{RAILWAY_PUBLIC_DOMAIN}}` (no prefix) for its own URL. Other services use `${{servicename.RAILWAY_PUBLIC_DOMAIN}}`.
+
+### Zod Validation
+
+Every app validates its env at startup. The API **refuses to start** with missing required vars.
+
+| Schema file | Validates |
+| ------------------------------- | ----------------------------------- |
+| `apps/api/config/env.ts` | API service vars |
+| `apps/app/env.ts` | App service vars |
+| `packages/constants/src/env.ts` | Shared vars used across packages |
+
+### Key Variables
 
 ```bash
-# Database & Auth
+# Required everywhere
+JWT_SECRET=                 # ≥32 chars — openssl rand -hex 32
+ENCRYPTION_KEY=             # exactly 32 chars — openssl rand -hex 16
 DATABASE_URL=               # PostgreSQL connection string
-JWT_SECRET=                 # ≥32 chars
-JWT_EXPIRES_IN=7d
-ENCRYPTION_KEY=             # exactly 32 chars (AES-256)
 
-# OAuth (Google + GitHub)
+# Required in production
+MAYAR_API_KEY=
+MAYAR_WEBHOOK_TOKEN=
+
+# Integrations
+EVOLUTION_API_URL=          # WhatsApp via Evolution API
+EVOLUTION_API_TOKEN=
+EVOLUTION_API_INSTANCE=
+TELEGRAM_BOT_TOKEN=
+TELEGRAM_WEBHOOK_SECRET=    # openssl rand -hex 32
+
+# OAuth
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 GITHUB_CLIENT_ID=
 GITHUB_CLIENT_SECRET=
 
-# Redis (optional dev, required prod)
-UPSTASH_REDIS_REST_URL=
-UPSTASH_REDIS_REST_TOKEN=
-
-# AI
-OPENAI_API_KEY=
-GEMINI_API_KEY=
-ANTHROPIC_API_KEY=
-
-# Payments
-MAYAR_API_KEY=              # required in production
-MAYAR_WEBHOOK_TOKEN=        # required in production
-
-# Storage
+# Storage (S3-compatible)
 BUCKET_ENDPOINT=
 BUCKET_ACCESS_KEY_ID=
 BUCKET_SECRET_ACCESS_KEY=
 BUCKET_NAME=
 
-# Monitoring
-SENTRY_DSN=
-
-# App URLs
-APP_URL=
+# NEXT_PUBLIC_ vars are bundled into the browser — NEVER put secrets here
 NEXT_PUBLIC_APP_URL=
+NEXT_PUBLIC_API_URL=
+NEXT_PUBLIC_SESSION_COOKIE_NAME=oewang-session
 ```
 
-`NEXT_PUBLIC_` vars are bundled into the browser. **Never** put secrets there.
+### Mandatory Checklist When Changing Env Vars
 
-### Startup Validation
+When **adding**, **removing**, or **renaming** any environment variable:
 
-`apps/api/config/env.ts` validates all required vars with Zod at startup. The API **refuses to start** with missing required vars — no silent failures.
+- [ ] `apps/api/config/env.ts` — update Zod schema
+- [ ] `apps/app/env.ts` — update Zod schema (if used in app)
+- [ ] `packages/constants/src/env.ts` — update shared schema (if used across packages)
+- [ ] `.env` — add var with local placeholder/default
+- [ ] `.env.global.example` — add var with empty value + description comment
+- [ ] `.env.global` — add var with real value
+- [ ] `.env.api` / `.env.app` / `.env.admin` / `.env.website` — add to affected services
+- [ ] `turbo.json → globalEnv` — add if Turborepo needs to surface it
 
 ---
 

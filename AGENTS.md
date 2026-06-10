@@ -100,7 +100,34 @@ Login (email/password or OAuth provider)
 
 ### Environment variables
 
-All env vars are defined in a **single root `.env`** file and surfaced to workspaces via `turbo.json → globalEnv`. **Do not create `.env` files inside `apps/*` or `packages/*`.**
+Env vars are split across **per-service Railway files** (committed to git) and a **local root `.env`** (gitignored). See [ENGINEERING_STANDARDS.md → Environment Variables](./docs/ENGINEERING_STANDARDS.md#environment-variables) for the full reference.
+
+| File | Git | Purpose |
+| ----------------------- | --- | ----------------------------------------------- |
+| `.env` | ❌ | Local development — all services combined |
+| `.env.global` | ❌ | Railway Shared Variables (real secrets) |
+| `.env.global.example` | ✅ | Template for `.env.global` — no real values |
+| `.env.api` | ✅ | Railway `api` service vars (Railway refs only) |
+| `.env.app` | ✅ | Railway `app` service vars (Railway refs only) |
+| `.env.admin` | ✅ | Railway `admin` service vars (Railway refs only) |
+| `.env.website` | ✅ | Railway `website` service vars (Railway refs only) |
+
+**Do not create `.env` files inside `apps/*` or `packages/*`.**
+
+### 🤖 AI Agent Env Obligations
+
+When adding, removing, or renaming an environment variable, you MUST update **all of the following** that are affected:
+
+1. **`apps/api/config/env.ts`** — Zod schema for the API service
+2. **`apps/app/env.ts`** — Zod schema for the app service
+3. **`packages/constants/src/env.ts`** — shared env schema used across packages
+4. **`.env`** — add the new var (with a placeholder or local default)
+5. **`.env.global.example`** — add the new var (empty, with a description comment)
+6. **`.env.global`** — add the new var with its real value
+7. **`.env.api`** / **`.env.app`** / **`.env.admin`** / **`.env.website`** — add to whichever service(s) consume it
+8. **`turbo.json → globalEnv`** — add if needed for Turborepo to surface the var
+
+Failure to update all affected files will cause runtime errors in production or CI failures.
 
 ---
 

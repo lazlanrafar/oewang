@@ -15,6 +15,9 @@ references
 .env.production
 .env.production.local
 
+# Per-service Railway env files
+.env.global
+
 # Testing
 coverage
 playwright-report
