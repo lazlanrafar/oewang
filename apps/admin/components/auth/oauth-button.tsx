@@ -31,7 +31,9 @@ export function OAuthButton({
       )}
       onClick={async () => {
         const result = await loginWithOAuth(provider);
-        if (result && !result.success) {
+        if (result?.success && result.data?.url) {
+          window.location.href = result.data.url;
+        } else if (result && !result.success) {
           toast.error(result.error);
         }
       }}

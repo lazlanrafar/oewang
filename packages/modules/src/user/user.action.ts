@@ -86,7 +86,7 @@ export const switchWorkspaceAction = async (
     const refreshResponse = await axiosInstance.post("auth/refresh", {});
     if (refreshResponse.data?.data?.token) {
       const isProduction = Env.NODE_ENV === "production";
-      (await cookies()).set("oewang-session", refreshResponse.data.data.token, {
+      (await cookies()).set(Env.NEXT_PUBLIC_SESSION_COOKIE_NAME, refreshResponse.data.data.token, {
         path: "/",
         httpOnly: true,
         secure: isProduction,

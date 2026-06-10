@@ -67,7 +67,6 @@ export async function GET(request: Request) {
 
     const googleUser = await userRes.json();
 
-    // Use axiosInstance — handles request encryption + response decryption automatically
     const connectRes = await axiosInstance.post("auth/oauth/connect", {
       provider: "google",
       provider_user_id: googleUser.sub as string,
@@ -76,17 +75,17 @@ export async function GET(request: Request) {
       avatar_url: googleUser.picture as string | undefined,
     });
 
-    const { token, workspace_id } = connectRes.data.data as {
+    const { token } = connectRes.data.data as {
       token: string;
       user_id: string;
       workspace_id: string | null;
     };
 
     const isProduction = Env.NODE_ENV === "production";
-    const next = workspace_id ? "/overview" : "/create-workspace";
-    const response = NextResponse.redirect(`${origin}${next}`);
+    const cookieName = Env.NEXT_PUBLIC_SESSION_COOKIE_NAME;
+    const response = NextResponse.redirect(`${origin}/overview`);
 
-    response.cookies.set("oewang-session", token, {
+    response.cookies.set(cookieName, token, {
       path: "/",
       httpOnly: true,
       secure: isProduction,

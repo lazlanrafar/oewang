@@ -16,21 +16,24 @@ function getRequestOrigin(request: Request): string {
 export async function GET(request: Request) {
   const state = crypto.randomUUID();
   const origin = getRequestOrigin(request);
-  const redirectUri = `${origin}/api/auth/github/callback`;
+  const redirectUri = `${origin}/api/auth/google/callback`;
 
-  const client_id = Env.GITHUB_CLIENT_ID;
+  const client_id = Env.GOOGLE_CLIENT_ID;
   if (!client_id) {
-    return NextResponse.json({ error: "Missing GITHUB_CLIENT_ID" }, { status: 500 });
+    return NextResponse.json({ error: "Missing GOOGLE_CLIENT_ID" }, { status: 500 });
   }
 
   const params = new URLSearchParams({
     client_id,
     redirect_uri: redirectUri,
-    scope: "read:user user:email",
+    response_type: "code",
+    scope: "openid email profile",
     state,
+    access_type: "offline",
+    prompt: "select_account",
   });
 
-  const response = NextResponse.redirect(`https://github.com/login/oauth/authorize?${params}`);
+  const response = NextResponse.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params}`);
 
   response.cookies.set("oauth_state", state, {
     httpOnly: true,

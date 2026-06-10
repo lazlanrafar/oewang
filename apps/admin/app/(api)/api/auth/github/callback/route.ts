@@ -30,8 +30,8 @@ export async function GET(request: Request) {
     return res;
   }
 
-  const client_id = Env.GOOGLE_CLIENT_ID;
-  const client_secret = Env.GOOGLE_CLIENT_SECRET;
+  const client_id = Env.GITHUB_CLIENT_ID;
+  const client_secret = Env.GITHUB_CLIENT_SECRET;
 
   if (!client_id || !client_secret) {
     const res = NextResponse.redirect(`${origin}/login?error=oauth_config_missing`);
@@ -40,53 +40,77 @@ export async function GET(request: Request) {
   }
 
   try {
-    const redirectUri = `${origin}/api/auth/google/callback`;
-
-    const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+    const tokenRes = await fetch("https://github.com/login/oauth/access_token", {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        code,
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
         client_id,
         client_secret,
-        redirect_uri: redirectUri,
-        grant_type: "authorization_code",
+        code,
+        redirect_uri: `${origin}/api/auth/github/callback`,
       }),
     });
 
-    if (!tokenRes.ok) throw new Error("Failed to exchange Google code for token");
+    if (!tokenRes.ok) throw new Error("Failed to exchange GitHub code for token");
 
     const tokenData = await tokenRes.json();
     const accessToken = tokenData.access_token as string;
+    if (!accessToken) throw new Error("No access token in GitHub response");
 
-    const userRes = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
+    const [userRes, emailsRes] = await Promise.all([
+      fetch("https://api.github.com/user", {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Accept: "application/json",
+        },
+      }),
+      fetch("https://api.github.com/user/emails", {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Accept: "application/json",
+        },
+      }),
+    ]);
 
-    if (!userRes.ok) throw new Error("Failed to fetch Google user info");
+    if (!userRes.ok) throw new Error("Failed to fetch GitHub user info");
 
-    const googleUser = await userRes.json();
+    const githubUser = await userRes.json();
+    const emailsList = emailsRes.ok
+      ? ((await emailsRes.json()) as {
+          email: string;
+          primary: boolean;
+          verified: boolean;
+        }[])
+      : [];
+    const primaryEmail =
+      emailsList.find((e) => e.primary && e.verified)?.email ??
+      emailsList[0]?.email ??
+      (githubUser.email as string | null);
 
-    // Use axiosInstance — handles request encryption + response decryption automatically
+    if (!primaryEmail) throw new Error("No verified email from GitHub");
+
     const connectRes = await axiosInstance.post("auth/oauth/connect", {
-      provider: "google",
-      provider_user_id: googleUser.sub as string,
-      email: googleUser.email as string,
-      name: googleUser.name as string | undefined,
-      avatar_url: googleUser.picture as string | undefined,
+      provider: "github",
+      provider_user_id: String(githubUser.id),
+      email: primaryEmail,
+      name: (githubUser.name as string | null) ?? (githubUser.login as string),
+      avatar_url: githubUser.avatar_url as string | undefined,
     });
 
-    const { token, workspace_id } = connectRes.data.data as {
+    const { token } = connectRes.data.data as {
       token: string;
       user_id: string;
       workspace_id: string | null;
     };
 
     const isProduction = Env.NODE_ENV === "production";
-    const next = workspace_id ? "/overview" : "/create-workspace";
-    const response = NextResponse.redirect(`${origin}${next}`);
+    const cookieName = Env.NEXT_PUBLIC_SESSION_COOKIE_NAME;
+    const response = NextResponse.redirect(`${origin}/overview`);
 
-    response.cookies.set("oewang-session", token, {
+    response.cookies.set(cookieName, token, {
       path: "/",
       httpOnly: true,
       secure: isProduction,
@@ -98,7 +122,7 @@ export async function GET(request: Request) {
 
     return response;
   } catch (err) {
-    console.error("[Google OAuth]", err);
+    console.error("[GitHub OAuth]", err);
     const res = NextResponse.redirect(`${origin}/login?error=oauth_failed`);
     res.cookies.delete("oauth_state");
     return res;

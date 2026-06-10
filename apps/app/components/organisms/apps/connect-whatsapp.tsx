@@ -40,9 +40,8 @@ export function ConnectWhatsApp({ dictionary }: { dictionary: Dictionary }) {
   const workspaceSlug = currentWorkspace?.slug;
   const whatsappNumber = Env.NEXT_PUBLIC_WHATSAPP_NUMBER;
   const message = workspaceSlug ? `Connect Oewang ${workspaceSlug}` : "";
-  const whatsappUrl = whatsappNumber && message
-    ? `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`
-    : "";
+  const whatsappUrl =
+    whatsappNumber && message ? `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}` : "";
 
   const generateQRCode = useCallback(async () => {
     if (!whatsappUrl) return;
@@ -97,9 +96,7 @@ export function ConnectWhatsApp({ dictionary }: { dictionary: Dictionary }) {
       <DialogContent className="overflow-hidden border-none bg-background p-0 sm:max-w-[500px]">
         <div className="p-8">
           <DialogHeader>
-            <DialogTitle className="text-xl tracking-tight">
-              {dictionary.apps.connect.whatsapp.title}
-            </DialogTitle>
+            <DialogTitle className="text-xl tracking-tight">{dictionary.apps.connect.whatsapp.title}</DialogTitle>
             <DialogDescription className="pt-2 text-muted-foreground">
               {dictionary.apps.connect.whatsapp.description}
             </DialogDescription>

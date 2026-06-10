@@ -25,11 +25,8 @@ function sessionCookieOptions(isProduction: boolean) {
 
 async function setSessionCookie(token: string) {
   const isProduction = Env.NODE_ENV === "production";
-  (await cookies()).set(
-    "oewang-session",
-    token,
-    sessionCookieOptions(isProduction),
-  );
+  const cookieName = Env.NEXT_PUBLIC_SESSION_COOKIE_NAME;
+  (await cookies()).set(cookieName, token, sessionCookieOptions(isProduction));
 }
 
 export async function login(
@@ -98,12 +95,12 @@ export async function signup(
 
 export async function loginWithOAuth(
   provider: "google" | "github",
-): Promise<ActionResponse<void>> {
-  redirect(`/api/auth/${provider}`);
+): Promise<ActionResponse<{ url: string }>> {
+  return { success: true, data: { url: `/api/auth/${provider}` } };
 }
 
 export async function logout() {
-  (await cookies()).delete("oewang-session");
+  (await cookies()).delete(Env.NEXT_PUBLIC_SESSION_COOKIE_NAME);
   redirect("/login");
 }
 
@@ -114,7 +111,7 @@ export async function onboardingCreateWorkspaceAction(data: {
   mainCurrencySymbol?: string;
 }): Promise<ActionResponse<Workspace>> {
   const cookieStore = await cookies();
-  const token = cookieStore.get("oewang-session")?.value;
+  const token = cookieStore.get(Env.NEXT_PUBLIC_SESSION_COOKIE_NAME)?.value;
 
   if (!token) {
     return { success: false, error: "Unauthorized" };
