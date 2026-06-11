@@ -71,11 +71,19 @@ Use a consistent `noun.verb` or `noun` naming convention.
 
 | Event Type | Emitted By | Triggers Query Invalidation |
 |---|---|---|
-| `transactions` | `TransactionsService` (create/update/delete) | `["transactions"]`, `["workspace", "active"]` |
+| `transactions` | `TransactionsService` (create/update/delete) | `["transactions"]`, `["metrics"]`, `["workspace", "active"]` |
 | `wallets` | `WalletsService` (create/update/delete) | `["wallets"]`, `["workspace", "active"]` |
 | `categories` | `CategoriesService` (create/update/delete) | `["categories"]` |
 | `notifications` | `NotificationsService` | `["notifications"]` |
+| `contacts` | `ContactsService` (create/update/delete) | `["contacts"]` |
+| `debts` | `DebtsService` (create/update/delete) | `["debts"]` |
+| `budgets` | `BudgetsService` (create/update/delete) | `["budgets"]` |
+| `invoices` | `InvoicesService` (create/update/delete) | `["invoices"]` |
+| `settings` | `SettingsService` (update), `SubCurrenciesService` (create/delete) | `["settings", "transaction"]`, `["settings", "sub-currencies"]` |
+| `workspace` | `MayarRepository.updateWorkspaceSubscription` (any subscription mutation) | `["workspace", "active"]`, `["user", "me"]` |
 | `workspace.usage` | `AiService` (after token spend), `VaultService` (after upload/delete) | `["workspace", "active"]`, `["ai", "quota"]` |
+
+> The full type → query-key map lives in the `INVALIDATIONS` constant in `apps/app/hooks/use-realtime.ts`. Unhandled types are silently ignored (with a dev-mode warning) so a new server event doesn't accidentally invalidate the whole cache.
 
 ### Adding a New Event Type
 

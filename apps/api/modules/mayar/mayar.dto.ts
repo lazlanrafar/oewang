@@ -20,3 +20,8 @@ export const MayarWebhookDto = t.Any();
 export const CancelAddonDto = t.Object({
   addonId: t.String(),
 });
+
+export const SchedulePlanSwitchDto = t.Object({
+  planId: t.String({ minLength: 1 }),
+  billing: t.Enum({ monthly: "monthly", annual: "annual" }),
+});

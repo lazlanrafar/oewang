@@ -12,6 +12,7 @@ import { status } from "elysia";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { OrdersService } from "../orders/orders.service";
+import { BillingInvoicesService } from "./billing-invoices.service";
 import { calculatePeriodEnd, inferBillingInterval } from "./billing.utils";
 import { MayarRepository } from "./mayar.repository";
 
@@ -348,6 +349,40 @@ export abstract class MayarService {
             mayar_transaction_id: transactionId,
           });
 
+          // Issue internal billing invoice for the add-on payment
+          if (isNewOrder && matchedPlan) {
+            const workspaceRecordForInvoice =
+              await MayarRepository.findWorkspaceById(targetWorkspaceId);
+            const unitAmount =
+              addonQty > 0 ? Math.round(Number(amount) / addonQty) : Number(amount);
+            await BillingInvoicesService.issue({
+              workspaceId: targetWorkspaceId,
+              workspaceName: workspaceRecordForInvoice?.name,
+              billingEmail: customerEmail || null,
+              planId: finalAddonId,
+              kind: "addon",
+              currency: (currency || "IDR").toUpperCase(),
+              mayarTransactionId: transactionId,
+              paidAt: new Date(),
+              lineItems: [
+                {
+                  description: matchedPlan.name,
+                  quantity: addonQty,
+                  unit_amount: unitAmount,
+                  amount: Number(amount),
+                  meta: {
+                    addon_id: finalAddonId,
+                    addon_type: matchedPlan.addon_type,
+                  },
+                },
+              ],
+            }).catch((err) =>
+              logger.warn("[Mayar] Failed to issue addon invoice (non-fatal)", {
+                err,
+              }),
+            );
+          }
+
           // Email only from real webhook, only for a new order (not a retry)
           if (!skipNotifications && isNewOrder) {
             const addonOwner =
@@ -411,6 +446,39 @@ export abstract class MayarService {
           ai_tokens_reset_at: periodStart,
           updated_at: periodStart,
         });
+
+        // Issue internal billing invoice for this subscription payment.
+        // Idempotent on mayar_transaction_id — safe if the webhook retries.
+        if (isNewOrder && matchedPlan) {
+          const workspaceRecordForInvoice =
+            await MayarRepository.findWorkspaceById(targetWorkspaceId);
+          await BillingInvoicesService.issue({
+            workspaceId: targetWorkspaceId,
+            workspaceName: workspaceRecordForInvoice?.name,
+            billingEmail: customerEmail || null,
+            planId: matchedPlan.id,
+            billingInterval,
+            periodStart,
+            periodEnd,
+            kind: "subscription",
+            currency: (currency || "IDR").toUpperCase(),
+            mayarTransactionId: transactionId,
+            paidAt: periodStart,
+            lineItems: [
+              {
+                description: `${matchedPlan.name} — ${billingInterval === "annual" ? "Annual" : "Monthly"} subscription`,
+                quantity: 1,
+                unit_amount: Number(amount),
+                amount: Number(amount),
+                meta: { plan_id: matchedPlan.id, billing_interval: billingInterval },
+              },
+            ],
+          }).catch((err) =>
+            logger.warn("[Mayar] Failed to issue billing invoice (non-fatal)", {
+              err,
+            }),
+          );
+        }
 
         // Email only from real webhook, only for a new order (not a retry)
         if (!skipNotifications && isNewOrder) {
@@ -718,29 +786,219 @@ export abstract class MayarService {
     }
   }
 
-  static async cancelSubscription(workspaceId: string) {
+  static async cancelSubscription(workspaceId: string, userId: string) {
     const workspace = await MayarRepository.findWorkspaceById(workspaceId);
 
     if (!workspace) {
       throw status(404, buildError(ErrorCode.NOT_FOUND, "Workspace not found"));
     }
 
-    if (!workspace.mayar_transaction_id) {
+    if (
+      workspace.plan_status === "free" ||
+      workspace.plan_status === "cancelled"
+    ) {
       throw status(
         400,
-        buildError(ErrorCode.VALIDATION_ERROR, "No active subscription found"),
+        buildError(ErrorCode.VALIDATION_ERROR, "No active subscription to cancel"),
       );
     }
 
-    // Mayar does not have a cancel subscription API endpoint.
-    // We mark the subscription as cancelled in our DB and it will expire naturally.
+    // Mayar does not have a cancel-subscription API endpoint.
+    // We flag the subscription as cancelled; the lifecycle service downgrades
+    // to Starter once `plan_current_period_end` passes.
     await MayarRepository.updateWorkspaceSubscription(workspaceId, {
       plan_status: "cancelled",
     });
 
+    await AuditLogsService.log({
+      workspace_id: workspaceId,
+      user_id: userId,
+      action: "subscription.cancelled",
+      entity: "workspace",
+      entity_id: workspaceId,
+      before: { plan_status: workspace.plan_status },
+      after: { plan_status: "cancelled" },
+    });
+
     return buildSuccess(
-      { status: "cancelled" },
-      "Subscription set to cancel at period end",
+      {
+        status: "cancelled",
+        cancels_at: workspace.plan_current_period_end,
+      },
+      "Subscription will end at the current period",
+    );
+  }
+
+  static async resumeSubscription(workspaceId: string, userId: string) {
+    const workspace = await MayarRepository.findWorkspaceById(workspaceId);
+
+    if (!workspace) {
+      throw status(404, buildError(ErrorCode.NOT_FOUND, "Workspace not found"));
+    }
+
+    if (workspace.plan_status !== "cancelled") {
+      throw status(
+        400,
+        buildError(
+          ErrorCode.VALIDATION_ERROR,
+          "Subscription is not in a cancelled state",
+        ),
+      );
+    }
+
+    // Only allow resume while the paid period is still in the future.
+    // After period_end the lifecycle service has already downgraded — user
+    // must purchase a new subscription instead.
+    const now = new Date();
+    if (
+      !workspace.plan_current_period_end ||
+      new Date(workspace.plan_current_period_end) <= now
+    ) {
+      throw status(
+        400,
+        buildError(
+          ErrorCode.VALIDATION_ERROR,
+          "Subscription has already ended. Please subscribe again.",
+        ),
+      );
+    }
+
+    await MayarRepository.updateWorkspaceSubscription(workspaceId, {
+      plan_status: "active",
+    });
+
+    await AuditLogsService.log({
+      workspace_id: workspaceId,
+      user_id: userId,
+      action: "subscription.resumed",
+      entity: "workspace",
+      entity_id: workspaceId,
+      before: { plan_status: "cancelled" },
+      after: { plan_status: "active" },
+    });
+
+    return buildSuccess(
+      { status: "active" },
+      "Subscription resumed — you'll be billed again at the next renewal",
+    );
+  }
+
+  /**
+   * Schedule a plan change at the next renewal.
+   *
+   * Mayar lacks a subscription primitive so we model this as a "pending switch":
+   * the workspace stays on its current plan until `plan_current_period_end`,
+   * then `BillingLifecycleService` (or the next `payment.received` webhook for
+   * the new plan) swaps `pending_plan_id` into `plan_id`.
+   *
+   * - Switching to a free plan: the lifecycle service handles the downgrade
+   *   exactly like a cancellation — except the target is the chosen plan instead
+   *   of Starter.
+   * - Switching to a paid plan: user is sent to checkout for the new plan when
+   *   the renewal would have fired. Until then, current plan stays active.
+   */
+  static async schedulePlanSwitch(
+    workspaceId: string,
+    userId: string,
+    targetPlanId: string,
+    targetBillingInterval: "monthly" | "annual",
+  ) {
+    const workspace = await MayarRepository.findWorkspaceById(workspaceId);
+
+    if (!workspace) {
+      throw status(404, buildError(ErrorCode.NOT_FOUND, "Workspace not found"));
+    }
+
+    if (workspace.plan_id === targetPlanId) {
+      // Same plan — could still be a billing-interval switch
+      if (
+        workspace.plan_billing_interval === targetBillingInterval &&
+        !workspace.pending_plan_id
+      ) {
+        throw status(
+          400,
+          buildError(
+            ErrorCode.VALIDATION_ERROR,
+            "Already on this plan and billing interval",
+          ),
+        );
+      }
+    }
+
+    const targetPlan = await MayarRepository.findPlanById(targetPlanId);
+    if (!targetPlan) {
+      throw status(
+        404,
+        buildError(ErrorCode.NOT_FOUND, "Target plan not found"),
+      );
+    }
+
+    await MayarRepository.updateWorkspaceSubscription(workspaceId, {
+      pending_plan_id: targetPlanId,
+      pending_plan_billing_interval: targetBillingInterval,
+    });
+
+    await AuditLogsService.log({
+      workspace_id: workspaceId,
+      user_id: userId,
+      action: "subscription.plan_switch_scheduled",
+      entity: "workspace",
+      entity_id: workspaceId,
+      before: {
+        plan_id: workspace.plan_id,
+        plan_billing_interval: workspace.plan_billing_interval,
+      },
+      after: {
+        pending_plan_id: targetPlanId,
+        pending_plan_billing_interval: targetBillingInterval,
+      },
+    });
+
+    return buildSuccess(
+      {
+        pending_plan_id: targetPlanId,
+        pending_plan_billing_interval: targetBillingInterval,
+        switches_at: workspace.plan_current_period_end,
+        target_plan_name: targetPlan.name,
+      },
+      `Plan change scheduled — you'll switch to ${targetPlan.name} on ${workspace.plan_current_period_end ? new Date(workspace.plan_current_period_end).toLocaleDateString() : "the next renewal"}`,
+    );
+  }
+
+  static async cancelPendingPlanSwitch(workspaceId: string, userId: string) {
+    const workspace = await MayarRepository.findWorkspaceById(workspaceId);
+
+    if (!workspace) {
+      throw status(404, buildError(ErrorCode.NOT_FOUND, "Workspace not found"));
+    }
+
+    if (!workspace.pending_plan_id) {
+      throw status(
+        400,
+        buildError(ErrorCode.VALIDATION_ERROR, "No pending plan switch to cancel"),
+      );
+    }
+
+    await MayarRepository.updateWorkspaceSubscription(workspaceId, {
+      pending_plan_id: null,
+      pending_plan_billing_interval: null,
+    });
+
+    await AuditLogsService.log({
+      workspace_id: workspaceId,
+      user_id: userId,
+      action: "subscription.plan_switch_cancelled",
+      entity: "workspace",
+      entity_id: workspaceId,
+      before: {
+        pending_plan_id: workspace.pending_plan_id,
+        pending_plan_billing_interval: workspace.pending_plan_billing_interval,
+      },
+    });
+
+    return buildSuccess(
+      { pending_plan_id: null },
+      "Pending plan change cancelled — staying on current plan",
     );
   }
 

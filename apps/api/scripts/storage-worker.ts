@@ -17,6 +17,7 @@ async function run() {
     await db.execute(sql`SELECT 1`);
 
     await VaultService.processStorageViolations();
+    await VaultService.hardDeleteExtendedInactiveFiles();
 
     logger.info("Storage violation check completed successfully.");
     process.exit(0);

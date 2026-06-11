@@ -91,7 +91,7 @@ export function UpgradeView({
   });
 
   return (
-    <div className="mx-auto mt-10 max-w-3xl space-y-8">
+    <div className="mx-auto mt-10 max-w-6xl space-y-8">
       <div className="space-y-1 text-center">
         <h2 className="font-medium text-2xl tracking-tight">{dict.available_plans}</h2>
         <p className="text-base text-muted-foreground">
@@ -133,7 +133,7 @@ export function UpgradeView({
             {dict.no_plans}
           </p>
         ) : (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {sortedPlans.map((plan, i) => {
               const isStarter = plan.name.toLowerCase() === "starter";
               const isCurrent = currentPlanId === plan.id || (currentPlanId === null && isStarter);
@@ -152,7 +152,6 @@ export function UpgradeView({
                     "group relative flex flex-col rounded-none border shadow-none transition-all",
                     isCurrent && "border-foreground ring-1 ring-foreground/10",
                     !isCurrent && "hover:border-foreground/40 hover:bg-accent/5",
-                    i === 1 && "md:scale-105",
                   )}
                 >
                   <CardHeader className="p-5 pb-3">

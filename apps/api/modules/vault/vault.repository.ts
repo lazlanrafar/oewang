@@ -5,7 +5,9 @@ import {
   desc,
   eq,
   ilike,
+  isNotNull,
   isNull,
+  lt,
   pricing,
   sql,
   vaultFiles,
@@ -216,6 +218,51 @@ export abstract class VaultRepository {
           isNull(vaultFiles.deletedAt),
         ),
       );
+  }
+
+  /** Find files inactive for longer than `cutoff` — candidates for hard delete. */
+  static async findInactiveFilesOlderThan(cutoff: Date) {
+    return db
+      .select({
+        id: vaultFiles.id,
+        workspaceId: vaultFiles.workspaceId,
+        key: vaultFiles.key,
+        size: vaultFiles.size,
+      })
+      .from(vaultFiles)
+      .where(
+        and(
+          isNull(vaultFiles.deletedAt),
+          isNotNull(vaultFiles.inactive_at),
+          lt(vaultFiles.inactive_at, cutoff),
+        ),
+      )
+      .limit(500); // process in batches
+  }
+
+  /** Soft-delete a file row (set deleted_at). Bucket delete handled separately. */
+  static async markDeleted(fileId: string, workspaceId: string) {
+    await db
+      .update(vaultFiles)
+      .set({ deletedAt: new Date() })
+      .where(
+        and(eq(vaultFiles.id, fileId), eq(vaultFiles.workspaceId, workspaceId)),
+      );
+  }
+
+  /** Count rows still pointing at the same R2 key (so we don't delete a shared blob). */
+  static async countActiveByKey(workspaceId: string, key: string) {
+    const [result] = await db
+      .select({ value: count() })
+      .from(vaultFiles)
+      .where(
+        and(
+          eq(vaultFiles.workspaceId, workspaceId),
+          eq(vaultFiles.key, key),
+          isNull(vaultFiles.deletedAt),
+        ),
+      );
+    return result?.value ?? 0;
   }
 
   static async findAllWorkspacesWithUsage() {

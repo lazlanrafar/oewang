@@ -22,6 +22,8 @@ export type Workspace = {
   plan_id?: string | null;
   plan_status: string;
   plan_billing_interval?: "monthly" | "annual" | null;
+  pending_plan_id?: string | null;
+  pending_plan_billing_interval?: "monthly" | "annual" | null;
   mayar_customer_email?: string | null;
   mayar_transaction_id?: string | null;
   plan_started_at?: string | null;

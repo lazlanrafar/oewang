@@ -12,6 +12,8 @@ import {
   workspaceAddons,
   workspaces,
 } from "@workspace/database";
+import { cacheDel } from "../../lib/cache";
+import { RealtimeService } from "../realtime/realtime.service";
 
 export abstract class MayarRepository {
   /**
@@ -53,12 +55,27 @@ export abstract class MayarRepository {
       .where(
         and(eq(workspaces.id, workspaceId), isNull(workspaces.deleted_at)),
       );
+
+    // Invalidate the cached active workspace + broadcast so any open tab refetches.
+    await cacheDel(`oewang:workspace:${workspaceId}`);
+    RealtimeService.notifyValueChange(workspaceId, "workspace");
   }
 
   static async updateWorkspaceSubscriptionByCustomerEmail(
     customerEmail: string,
     data: any,
   ) {
+    const [target] = await db
+      .select({ id: workspaces.id })
+      .from(workspaces)
+      .where(
+        and(
+          eq(workspaces.mayar_customer_email, customerEmail),
+          isNull(workspaces.deleted_at),
+        ),
+      )
+      .limit(1);
+
     await db
       .update(workspaces)
       .set(data)
@@ -68,6 +85,11 @@ export abstract class MayarRepository {
           isNull(workspaces.deleted_at),
         ),
       );
+
+    if (target?.id) {
+      await cacheDel(`oewang:workspace:${target.id}`);
+      RealtimeService.notifyValueChange(target.id, "workspace");
+    }
   }
 
   static async findWorkspaceById(id: string) {
@@ -170,11 +192,14 @@ export abstract class MayarRepository {
         plan_id: workspaces.plan_id,
         plan_status: workspaces.plan_status,
         plan_billing_interval: workspaces.plan_billing_interval,
+        pending_plan_id: workspaces.pending_plan_id,
+        pending_plan_billing_interval: workspaces.pending_plan_billing_interval,
         plan_started_at: workspaces.plan_started_at,
         plan_current_period_end: workspaces.plan_current_period_end,
         plan_overdue_started_at: workspaces.plan_overdue_started_at,
         plan_last_reminder_at: workspaces.plan_last_reminder_at,
         mayar_customer_email: workspaces.mayar_customer_email,
+        vault_size_used_bytes: workspaces.vault_size_used_bytes,
         owner_id: users.id,
         owner_name: users.name,
         owner_email: users.email,

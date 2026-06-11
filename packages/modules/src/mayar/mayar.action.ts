@@ -77,6 +77,21 @@ export const cancelSubscription = async (): Promise<ActionResponse<any>> => {
   }
 };
 
+export const resumeSubscription = async (): Promise<ActionResponse<any>> => {
+  try {
+    const response = await api.post("/mayar/resume-subscription");
+    return {
+      success: true,
+      data: response.data.data,
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.response?.data?.message || "Failed to resume subscription",
+    };
+  }
+};
+
 export const getInvoiceUrl = async (
   transactionId: string,
 ): Promise<ActionResponse<{ url: string }>> => {
@@ -121,6 +136,39 @@ export const sendMagicLinkAction = async (): Promise<ActionResponse<any>> => {
     return {
       success: false,
       error: error.response?.data?.message || "Failed to send magic link",
+    };
+  }
+};
+
+export const schedulePlanSwitch = async (
+  planId: string,
+  billing: "monthly" | "annual",
+): Promise<ActionResponse<any>> => {
+  try {
+    const response = await api.post("/mayar/schedule-plan-switch", {
+      planId,
+      billing,
+    });
+    return { success: true, data: response.data.data };
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.response?.data?.message || "Failed to schedule plan change",
+    };
+  }
+};
+
+export const cancelPendingPlanSwitch = async (): Promise<
+  ActionResponse<any>
+> => {
+  try {
+    const response = await api.post("/mayar/cancel-pending-plan-switch");
+    return { success: true, data: response.data.data };
+  } catch (error: any) {
+    return {
+      success: false,
+      error:
+        error.response?.data?.message || "Failed to cancel pending plan switch",
     };
   }
 };
