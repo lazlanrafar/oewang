@@ -26,6 +26,16 @@ export abstract class SettingsService {
       settings = await SettingsRepository.create(workspaceId);
     }
 
+    // Self-heal legacy invalid value for incomeExpensesColor.
+    // The original schema default was "Exp." which is not a member of the
+    // INCOME_EXPENSES_COLOR_OPTIONS union — fall back to "blue-red" and persist.
+    const validColorValues = ["blue-red", "red-blue"];
+    if (!validColorValues.includes(settings.incomeExpensesColor as string)) {
+      settings = await SettingsRepository.update(workspaceId, {
+        incomeExpensesColor: "blue-red",
+      } as Partial<TransactionSettingsInput>);
+    }
+
     // Cache the sanitized result — never cache raw credentials
     const sanitizedSettings = {
       ...settings,

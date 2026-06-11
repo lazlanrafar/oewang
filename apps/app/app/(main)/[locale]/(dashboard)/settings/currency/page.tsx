@@ -1,10 +1,8 @@
-import { getSubCurrencies, getTransactionSettings } from "@workspace/modules/server";
 import { Separator } from "@workspace/ui";
 import type { Metadata } from "next";
 
 import { MainCurrencyForm } from "@/components/organisms/setting/main-currency/main-currency-form";
 import { SubCurrencyList } from "@/components/organisms/setting/sub-currency/sub-currency-list";
-import { Hydrated } from "@/components/shared/hydrated";
 import { getDictionary } from "@/get-dictionary";
 import type { Locale } from "@/i18n-config";
 
@@ -12,35 +10,22 @@ export const metadata: Metadata = {
   title: "Currency | Settings",
 };
 
-interface CurrencyPageProps {
-  params: Promise<{
-    locale: string;
-  }>;
-}
-
-export default async function CurrencyPage({ params }: CurrencyPageProps) {
+export default async function CurrencyPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
   const { locale } = await params;
   const dictionary = await getDictionary(locale as Locale);
-  const settingsResult = await getTransactionSettings();
-  const subCurrenciesResult = await getSubCurrencies();
 
-  const settings = settingsResult.success ? settingsResult.data : null;
-  const subCurrencies = subCurrenciesResult.success ? subCurrenciesResult.data : [];
-
-  if (!settings) {
-    // Should handle this better, but for now just return empty or error
-    return <div>Failed to load settings</div>;
-  }
-
+  // Settings + sub-currencies live in `useAppStore` — `AppProvider` fetches them
+  // once at session start and the WebSocket invalidates the cache on changes.
+  // Both components read directly from the store; no server fetch needed here.
   return (
-    <Hydrated>
-      <div className="space-y-6">
-        <MainCurrencyForm settings={settings} dictionary={dictionary} />
-
-        <Separator />
-
-        <SubCurrencyList initialSubCurrencies={subCurrencies} settings={settings} dictionary={dictionary} />
-      </div>
-    </Hydrated>
+    <div className="space-y-6">
+      <MainCurrencyForm dictionary={dictionary} />
+      <Separator />
+      <SubCurrencyList dictionary={dictionary} />
+    </div>
   );
 }

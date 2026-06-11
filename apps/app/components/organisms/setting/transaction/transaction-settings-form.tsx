@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   INCOME_EXPENSES_COLOR_OPTIONS,
   INPUT_ORDER_OPTIONS,
@@ -14,7 +14,7 @@ import {
   WEEKLY_START_DAY_OPTIONS,
 } from "@workspace/constants";
 import type { Dictionary } from "@workspace/dictionaries";
-import { getTransactionSettings, updateTransactionSettings } from "@workspace/modules/setting/setting.action";
+import { updateTransactionSettings } from "@workspace/modules/setting/setting.action";
 import type { TransactionSettings } from "@workspace/types";
 import {
   Label,
@@ -76,18 +76,8 @@ interface TransactionSettingsFormProps {
 
 export function TransactionSettingsForm({ dictionary }: TransactionSettingsFormProps) {
   const queryClient = useQueryClient();
+  const settings = useAppStore((s) => s.settings);
   const setSettings = useAppStore((s) => s.setSettings);
-
-  const { data: settings, isLoading } = useQuery({
-    queryKey: ["settings", "transaction"],
-    queryFn: async () => {
-      const result = await getTransactionSettings();
-      if (result.success) return result.data;
-      throw new Error(result.error);
-    },
-    staleTime: 1000 * 60 * 60, // 1 hour — matches AppProvider cache duration
-    refetchOnWindowFocus: false,
-  });
 
   const mutation = useMutation({
     mutationFn: async (vars: Partial<TransactionSettings>) => {
@@ -109,7 +99,7 @@ export function TransactionSettingsForm({ dictionary }: TransactionSettingsFormP
     },
   });
 
-  if (isLoading || !settings || !dictionary) {
+  if (!settings || !dictionary) {
     return <SettingTransactionSkeleton />;
   }
 

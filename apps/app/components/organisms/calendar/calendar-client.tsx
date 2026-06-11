@@ -11,6 +11,8 @@ import { getTransactions } from "@workspace/modules/transaction/transaction.acti
 import type { Transaction, TransactionSettings } from "@workspace/types";
 import { cn } from "@workspace/ui";
 import { formatCurrency as formatCurrencyUtil } from "@workspace/utils";
+
+import { useAppStore } from "@/stores/app";
 import {
   addDays,
   addMonths,
@@ -49,7 +51,6 @@ function parseDateParam(value: string | null): Date {
 
 interface Props {
   dictionary: Dictionary;
-  settings: TransactionSettings;
 }
 
 type CalendarTranslations = Dictionary["calendar"];
@@ -64,7 +65,8 @@ interface DayData {
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
-export function CalendarClient({ dictionary, settings }: Props) {
+export function CalendarClient({ dictionary }: Props) {
+  const settings = useAppStore((s) => s.settings) as TransactionSettings;
   const t: CalendarTranslations = dictionary.calendar;
   const _queryClient = useQueryClient();
   const router = useRouter();
@@ -333,7 +335,6 @@ export function CalendarClient({ dictionary, settings }: Props) {
               (!debt.dueDate && debt.createdAt.startsWith(format(selectedDate, "yyyy-MM-dd")))),
         )}
         dictionary={dictionary}
-        settings={settings}
         onTransactionClick={(transaction) => {
           setSelectedTransaction(transaction);
           setIsTransactionDetailOpen(true);
