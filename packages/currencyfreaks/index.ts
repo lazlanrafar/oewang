@@ -49,21 +49,50 @@ export async function fetchAndCacheRates(): Promise<CurrencyRatesResponse> {
 
   console.log("[Currency] Fetching rates from API");
 
-  const response = await axios.get<CurrencyRatesResponse>(API_URL, {
-    params: { apikey: API_TOKEN },
-  });
+  let response: { data: CurrencyRatesResponse };
+  try {
+    response = await axios.get<CurrencyRatesResponse>(API_URL, {
+      params: { apikey: API_TOKEN },
+    });
+  } catch (err: any) {
+    const apiMessage =
+      err?.response?.data?.message ||
+      err?.response?.data?.error ||
+      err?.message ||
+      "unknown";
+    console.error(
+      `[Currency] ❌ Failed to fetch rates from API: ${apiMessage} (status ${err?.response?.status ?? "n/a"})`,
+    );
+    throw new Error(`Currency rates API request failed: ${apiMessage}`);
+  }
 
-  // If redis is ioredis, we should stringify the object
-  const dataToStore =
-    typeof (redis as any).status === "string"
-      ? JSON.stringify(response.data)
-      : response.data;
+  if (!response.data?.rates) {
+    throw new Error("Currency rates API returned no rates");
+  }
 
-  await redis.set(CACHE_KEY, dataToStore, {
-    ex: ONE_DAY_SECONDS,
-  });
+  // ioredis exposes `.status` (string like "ready"); Upstash does not.
+  // - ioredis: positional `EX <seconds>` args, payload must be string
+  // - Upstash: object `{ ex }` option, payload can be object
+  const isIoredis = typeof (redis as any).status === "string";
 
-  console.log("[Currency] Rates cached in Redis");
+  try {
+    if (isIoredis) {
+      await (redis as any).set(
+        CACHE_KEY,
+        JSON.stringify(response.data),
+        "EX",
+        ONE_DAY_SECONDS,
+      );
+    } else {
+      await (redis as any).set(CACHE_KEY, response.data, { ex: ONE_DAY_SECONDS });
+    }
+    console.log(
+      `[Currency] ✅ Cached ${Object.keys(response.data.rates).length} rates in Redis`,
+    );
+  } catch (err: any) {
+    // Don't fail the whole request if caching fails — return live data anyway
+    console.warn("[Currency] ⚠️ Failed to cache rates in Redis:", err?.message);
+  }
 
   return response.data;
 }

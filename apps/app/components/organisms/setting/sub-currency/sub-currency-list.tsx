@@ -80,7 +80,8 @@ export function SubCurrencyList({ initialSubCurrencies, settings, dictionary }: 
       const result = await addSubCurrency({ currencyCode: c.code });
       if (result.success) {
         setSubCurrencies((prev) => [...prev, result.data]);
-        toast.success(`${c.code} ${dictionary.settings.sub_currencies.toast_added || "added to sub-currencies"}`);
+        const template = dictionary.settings.sub_currencies.toast_added || "{code} added to sub-currencies";
+        toast.success(template.replace("{code}", c.code));
       } else {
         toast.error(result.error);
       }
@@ -92,7 +93,8 @@ export function SubCurrencyList({ initialSubCurrencies, settings, dictionary }: 
       const result = await removeSubCurrency(id);
       if (result.success) {
         setSubCurrencies((prev) => prev.filter((item) => item.id !== id));
-        toast.success(`${code} ${dictionary.settings.sub_currencies.toast_removed || "removed"}`);
+        const template = dictionary.settings.sub_currencies.toast_removed || "{code} removed";
+        toast.success(template.replace("{code}", code));
       } else {
         toast.error(result.error);
       }
