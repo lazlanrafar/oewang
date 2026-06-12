@@ -21,6 +21,14 @@ export const NotificationSettingDto = {
     whatsapp_enabled: t.Optional(t.Boolean()),
     push_enabled: t.Optional(t.Boolean()),
     marketing_enabled: t.Optional(t.Boolean()),
+    transactions_enabled: t.Optional(t.Boolean()),
+    budgets_enabled: t.Optional(t.Boolean()),
+    debts_enabled: t.Optional(t.Boolean()),
+    invoices_enabled: t.Optional(t.Boolean()),
+    wallets_enabled: t.Optional(t.Boolean()),
+    workspace_enabled: t.Optional(t.Boolean()),
+    inbox_enabled: t.Optional(t.Boolean()),
+    ai_enabled: t.Optional(t.Boolean()),
   }),
 };
 

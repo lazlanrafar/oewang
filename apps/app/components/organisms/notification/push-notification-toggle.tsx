@@ -13,6 +13,22 @@ interface PushNotificationToggleProps {
   dict: Record<string, string>;
 }
 
+// PushManager.subscribe requires applicationServerKey as a Uint8Array.
+// VAPID public keys are typically distributed as URL-safe base64 strings, so
+// decode them here. Passing the raw string is the most common cause of
+// `AbortError: push service error`.
+function urlBase64ToUint8Array(base64String: string): BufferSource {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = atob(base64);
+  const buffer = new ArrayBuffer(rawData.length);
+  const output = new Uint8Array(buffer);
+  for (let i = 0; i < rawData.length; i++) {
+    output[i] = rawData.charCodeAt(i);
+  }
+  return output;
+}
+
 export function PushNotificationToggle({ enabled, onToggle, dict }: PushNotificationToggleProps) {
   const [permission, setPermission] = useState<NotificationPermission>("default");
   const [isRegistering, setIsRegistering] = useState(false);
@@ -56,14 +72,32 @@ export function PushNotificationToggle({ enabled, onToggle, dict }: PushNotifica
         const registration = await navigator.serviceWorker.ready;
         const subscription = await registration.pushManager.subscribe({
           userVisibleOnly: true,
-          applicationServerKey: vapidPublicKey,
+          applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
         });
 
         await registerPushSubscription(JSON.stringify(subscription));
         onToggle(true);
         toast.success("Push notifications enabled.");
       } catch (err) {
-        toast.error("Failed to enable push notifications.");
+        const isAbort = err instanceof DOMException && err.name === "AbortError";
+        // Brave (and some hardened Chromium builds) block Google's FCM push
+        // service by default. Surface a specific hint instead of a generic
+        // failure so the user knows where to look.
+        const isBrave =
+          typeof navigator !== "undefined" &&
+          ((navigator as { brave?: { isBrave?: () => Promise<boolean> } }).brave !== undefined ||
+            /\bBrave\b/.test(navigator.userAgent));
+        if (isAbort && isBrave) {
+          toast.error(
+            "Brave blocks Google's push service by default. Enable it in brave://settings/privacy → 'Use Google services for push messaging', then retry.",
+          );
+        } else if (isAbort) {
+          toast.error(
+            "Browser push service rejected the request. Check that you're on HTTPS (or localhost) and that no extension is blocking push.",
+          );
+        } else {
+          toast.error("Failed to enable push notifications.");
+        }
         console.error("[Push] Registration error:", err);
       } finally {
         setIsRegistering(false);

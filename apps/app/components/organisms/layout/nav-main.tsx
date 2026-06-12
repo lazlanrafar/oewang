@@ -64,6 +64,7 @@ const NavItemExpanded = ({
         <CollapsibleTrigger asChild>
           {item.subItems ? (
             <SidebarMenuButton
+              size="default"
               disabled={item.comingSoon}
               isActive={isActive(item.url, item.subItems)}
               tooltip={title}
@@ -77,6 +78,7 @@ const NavItemExpanded = ({
           ) : (
             <SidebarMenuButton
               asChild
+              size="default"
               disabled={item.comingSoon}
               isActive={isActive(item.url)}
               tooltip={title}
@@ -227,6 +229,7 @@ export function NavMain({ items, dictionary }: NavMainProps) {
                       <SidebarMenuItem key={item.title}>
                         <SidebarMenuButton
                           asChild
+                          size="default"
                           disabled={item.comingSoon}
                           tooltip={title}
                           isActive={isItemActive(item.url)}
