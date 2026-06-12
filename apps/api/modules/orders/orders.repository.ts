@@ -145,6 +145,35 @@ export abstract class OrdersRepository {
     return { rows, total: Number(totalResult?.count ?? 0) };
   }
 
+  static async getStats(start?: string, end?: string) {
+    const dateConditions: any[] = [isNull(orders.deleted_at)];
+    if (start) {
+      dateConditions.push(gte(orders.created_at, new Date(start)));
+    }
+    if (end) {
+      const endDate = new Date(end);
+      endDate.setHours(23, 59, 59, 999);
+      dateConditions.push(lte(orders.created_at, endDate));
+    }
+
+    const [row] = await db
+      .select({
+        total: sql<number>`count(*)`,
+        paid: sql<number>`count(*) filter (where ${orders.status} = 'paid')`,
+        pending: sql<number>`count(*) filter (where ${orders.status} = 'pending')`,
+        failed: sql<number>`count(*) filter (where ${orders.status} in ('failed', 'canceled'))`,
+      })
+      .from(orders)
+      .where(and(...dateConditions));
+
+    return {
+      total: Number(row?.total ?? 0),
+      paid: Number(row?.paid ?? 0),
+      pending: Number(row?.pending ?? 0),
+      failed: Number(row?.failed ?? 0),
+    };
+  }
+
   static async findById(id: string) {
     const [order] = await db
       .select()

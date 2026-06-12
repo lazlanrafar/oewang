@@ -23,7 +23,7 @@ import {
   deletePricingAction,
   updatePricingAction,
 } from "@workspace/modules/pricing/pricing.action";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { usePricingStore } from "@/stores/pricing";
 import { formatPrice } from "@workspace/utils";
@@ -31,9 +31,15 @@ import React from "react";
 
 const CellActions = ({ row }: { row: { original: Pricing } }) => {
   const pricing = row.original;
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const { openEdit } = usePricingStore();
   const [isLoading, setIsLoading] = React.useState(false);
+
+  const invalidatePricing = () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["admin-pricing"] }),
+      queryClient.invalidateQueries({ queryKey: ["admin-pricing-stats"] }),
+    ]);
 
   const handleToggleActive = async () => {
     setIsLoading(true);
@@ -45,7 +51,7 @@ const CellActions = ({ row }: { row: { original: Pricing } }) => {
         toast.success(
           `Pricing plan ${pricing.is_active ? "deactivated" : "activated"}`,
         );
-        router.refresh();
+        await invalidatePricing();
       } else {
         toast.error(result.error);
       }
@@ -63,7 +69,7 @@ const CellActions = ({ row }: { row: { original: Pricing } }) => {
       const result = await deletePricingAction(pricing.id);
       if (result.success) {
         toast.success("Pricing plan deleted");
-        router.refresh();
+        await invalidatePricing();
       } else {
         toast.error(result.error);
       }
@@ -130,6 +136,7 @@ export const pricingColumns: ColumnDef<Pricing>[] = [
       headerLabel: "Name",
       className:
         "w-[200px] min-w-[120px] md:sticky md:left-[var(--stick-left)] bg-background group-hover:bg-[#F2F1EF] group-hover:dark:bg-[#0f0f0f] z-10",
+      skeleton: { type: "text", width: "w-32" },
     },
     cell: ({ getValue }) => (
       <span className="truncate font-medium">{getValue<string>()}</span>
@@ -145,6 +152,7 @@ export const pricingColumns: ColumnDef<Pricing>[] = [
     meta: {
       headerLabel: "Vault Limit",
       className: "w-[130px] min-w-[100px]",
+      skeleton: { type: "text", width: "w-16" },
     },
     cell: ({ getValue }) => {
       const mb = getValue<number>();
@@ -164,6 +172,7 @@ export const pricingColumns: ColumnDef<Pricing>[] = [
     meta: {
       headerLabel: "AI Tokens",
       className: "w-[130px] min-w-[100px]",
+      skeleton: { type: "text", width: "w-20" },
     },
     cell: ({ getValue }) => {
       const tokens = getValue<number>();
@@ -181,6 +190,7 @@ export const pricingColumns: ColumnDef<Pricing>[] = [
     meta: {
       headerLabel: "Pricing",
       className: "w-[200px] min-w-[150px]",
+      skeleton: { type: "text", width: "w-28" },
     },
     cell: ({ getValue }) => {
       const prices = getValue<Pricing["prices"]>();
@@ -216,6 +226,7 @@ export const pricingColumns: ColumnDef<Pricing>[] = [
     meta: {
       headerLabel: "Status",
       className: "w-[120px] min-w-[90px]",
+      skeleton: { type: "badge", width: "w-14" },
     },
     cell: ({ getValue }) => {
       const isActive = getValue<boolean>();
@@ -236,6 +247,7 @@ export const pricingColumns: ColumnDef<Pricing>[] = [
     meta: {
       headerLabel: "Created At",
       className: "w-[160px] min-w-[120px]",
+      skeleton: { type: "text", width: "w-24" },
     },
     cell: ({ getValue }) => {
       const val = getValue<string>();
@@ -254,6 +266,7 @@ export const pricingColumns: ColumnDef<Pricing>[] = [
     enableHiding: false,
     meta: {
       headerLabel: "Actions",
+      skeleton: { type: "icon" },
     },
     cell: ({ row }) => <CellActions row={row} />,
   },

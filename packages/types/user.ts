@@ -24,3 +24,10 @@ export type SystemAdminUser = {
   created_at: Date | string;
   system_role: import("../constants").SystemRole;
 };
+
+export type SystemAdminUserStats = {
+  total: number;
+  owners: number;
+  finance: number;
+  users: number;
+};

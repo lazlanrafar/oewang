@@ -13,19 +13,22 @@ import {
 } from "@workspace/ui";
 import { MoreHorizontal, Shield, User, Landmark } from "lucide-react";
 import { updateSystemRoleAction } from "@workspace/modules/system-admin/system-admin.action";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 const CellActions = ({ row }: { row: { original: SystemAdminUser } }) => {
   const user = row.original;
-  const router = useRouter();
+  const queryClient = useQueryClient();
 
   const handleRoleChange = async (role: "owner" | "finance" | "user") => {
     try {
       const result = await updateSystemRoleAction(user.id, role);
       if (result.success) {
         toast.success(`User role updated to ${role}`);
-        router.refresh();
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ["admin-users"] }),
+          queryClient.invalidateQueries({ queryKey: ["admin-users-stats"] }),
+        ]);
       } else {
         toast.error(result.error);
       }
@@ -76,6 +79,7 @@ export const userColumns: ColumnDef<SystemAdminUser>[] = [
       headerLabel: "Name",
       className:
         "w-[200px] min-w-[120px] md:sticky md:left-[var(--stick-left)] bg-background group-hover:bg-[#F2F1EF] group-hover:dark:bg-[#0f0f0f] z-10",
+      skeleton: { type: "text", width: "w-32" },
     },
     cell: ({ getValue }) => (
       <span className="truncate font-medium">
@@ -93,6 +97,7 @@ export const userColumns: ColumnDef<SystemAdminUser>[] = [
     meta: {
       headerLabel: "Email",
       className: "w-[260px] min-w-[160px]",
+      skeleton: { type: "avatar-text", width: "w-40" },
     },
     cell: ({ getValue }) => (
       <span className="truncate text-muted-foreground">
@@ -110,6 +115,7 @@ export const userColumns: ColumnDef<SystemAdminUser>[] = [
     meta: {
       headerLabel: "Role",
       className: "w-[120px] min-w-[80px]",
+      skeleton: { type: "badge", width: "w-14" },
     },
     cell: ({ getValue }) => {
       const role = getValue<string>();
@@ -135,6 +141,7 @@ export const userColumns: ColumnDef<SystemAdminUser>[] = [
     enableResizing: true,
     meta: {
       headerLabel: "Created At",
+      skeleton: { type: "text", width: "w-24" },
     },
     cell: ({ getValue }) => {
       const val = getValue<string>();
@@ -152,6 +159,7 @@ export const userColumns: ColumnDef<SystemAdminUser>[] = [
     enableHiding: false,
     meta: {
       headerLabel: "Actions",
+      skeleton: { type: "icon" },
     },
     cell: ({ row }) => <CellActions row={row} />,
   },

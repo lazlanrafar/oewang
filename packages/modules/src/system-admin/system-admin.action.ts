@@ -5,7 +5,9 @@ import type {
   ApiResponse,
   PaginationMeta,
   SystemAdminUser,
+  SystemAdminUserStats,
   SystemAdminWorkspace,
+  SystemAdminWorkspaceStats,
   SystemAdminPlan,
 } from "@workspace/types";
 
@@ -115,6 +117,61 @@ export const getSystemAdminWorkspaces = async (params: {
     return {
       success: false,
       error: error.response?.data?.message || "Failed to fetch workspaces",
+    };
+  }
+};
+
+export const getSystemAdminUserStats = async (params?: {
+  start?: string;
+  end?: string;
+}): Promise<ActionResponse<SystemAdminUserStats>> => {
+  try {
+    const response = await api.get("/system-admins/users/stats", { params });
+    const apiResponse = (response as any)._api_response as
+      | ApiResponse<SystemAdminUserStats>
+      | undefined;
+
+    const data =
+      apiResponse?.data ??
+      (response.data as ApiResponse<SystemAdminUserStats>).data ??
+      null;
+
+    if (!data) {
+      return { success: false, error: "Failed to fetch user stats" };
+    }
+
+    return { success: true, data };
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.response?.data?.message || "Failed to fetch user stats",
+    };
+  }
+};
+
+export const getSystemAdminWorkspaceStats = async (): Promise<
+  ActionResponse<SystemAdminWorkspaceStats>
+> => {
+  try {
+    const response = await api.get("/system-admins/workspaces/stats");
+    const apiResponse = (response as any)._api_response as
+      | ApiResponse<SystemAdminWorkspaceStats>
+      | undefined;
+
+    const data =
+      apiResponse?.data ??
+      (response.data as ApiResponse<SystemAdminWorkspaceStats>).data ??
+      null;
+
+    if (!data) {
+      return { success: false, error: "Failed to fetch workspace stats" };
+    }
+
+    return { success: true, data };
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.response?.data?.message || "Failed to fetch workspace stats",
     };
   }
 };

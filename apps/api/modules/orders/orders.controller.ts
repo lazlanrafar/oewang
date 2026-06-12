@@ -48,6 +48,24 @@ export const ordersController = new Elysia({
     },
   )
   .get(
+    "/stats",
+    async ({ query }) => {
+      return OrdersService.getStats(query.start, query.end);
+    },
+    {
+      query: t.Object({
+        start: t.Optional(t.String()),
+        end: t.Optional(t.String()),
+      }),
+      detail: {
+        summary: "Get Order Stats",
+        description:
+          "Returns aggregated counts (total, paid, pending, failed) for all payment orders. Restricted to system administrators.",
+        tags: ["Orders"],
+      },
+    },
+  )
+  .get(
     "/:id",
     async ({ params }) => {
       return OrdersService.getOrderDetails(params.id);

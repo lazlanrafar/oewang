@@ -195,6 +195,30 @@ export async function sendAddonPurchaseSuccessEmail(
 }
 
 /**
+ * Send a congratulations email when an admin changes a workspace's plan.
+ */
+export async function sendWorkspaceUpgradedEmail(
+  to: string,
+  userName: string,
+  workspaceName: string,
+  planName: string,
+) {
+  const appUrl = Env.NEXT_PUBLIC_APP_URL || "https://app.oewang.com";
+  const html = renderTemplate("workspace-upgraded", {
+    userName,
+    workspaceName,
+    planName,
+    appUrl,
+  });
+
+  return sendEmail(
+    to,
+    `Your workspace ${workspaceName} is now on ${planName}`,
+    html,
+  );
+}
+
+/**
  * Notify the user that a receipt was automatically processed from their connected inbox.
  */
 export async function sendReceiptProcessedEmail(

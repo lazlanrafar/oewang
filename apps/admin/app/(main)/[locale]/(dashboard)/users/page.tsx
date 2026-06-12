@@ -1,15 +1,34 @@
-"use server";
+import {
+  getSystemAdminUserStats,
+  getSystemAdminUsers,
+} from "@workspace/modules/system-admin/system-admin.action";
+import type {
+  SystemAdminUser,
+  SystemAdminUserStats,
+} from "@workspace/types";
+import type { Metadata } from "next";
 
-import { getInitialTableSettings, ScrollableContent } from "@workspace/ui";
-import { getSystemAdminUsers } from "@workspace/modules/system-admin/system-admin.action";
 import { UsersClient } from "@/components/users/users-client";
+
+export const metadata: Metadata = { title: "Users" };
+export const dynamic = "force-dynamic";
+
+const PAGE_LIMIT = 20;
+
+const EMPTY_STATS: SystemAdminUserStats = {
+  total: 0,
+  owners: 0,
+  finance: 0,
+  users: 0,
+};
 
 export default async function UsersPage(props: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const searchParams = await props.searchParams;
+
   const page = Number(searchParams.page) || 1;
-  const limit = Number(searchParams.limit) || 20;
+  const limit = Number(searchParams.limit) || PAGE_LIMIT;
   const search =
     typeof searchParams.search === "string" ? searchParams.search : undefined;
   const system_role =
@@ -21,32 +40,46 @@ export default async function UsersPage(props: {
   const end =
     typeof searchParams.end === "string" ? searchParams.end : undefined;
 
-  // Get initial data for SSR
-  const response = await getSystemAdminUsers({
-    page,
-    limit,
-    search,
-    system_role,
-    start,
-    end,
-  });
+  let initialData: SystemAdminUser[] = [];
+  let rowCount = 0;
+  let pageCount = 1;
+  let initialPage = page - 1;
+  let initialStats: SystemAdminUserStats = EMPTY_STATS;
 
-  const users = response.success ? response.data.users : [];
-  const meta = response.success
-    ? response.data.meta
-    : { total: 0, total_pages: 0 };
+  try {
+    const [usersRes, statsRes] = await Promise.all([
+      getSystemAdminUsers({ page, limit, search, system_role, start, end }),
+      getSystemAdminUserStats({ start, end }),
+    ]);
+
+    if (usersRes?.success) {
+      initialData = usersRes.data.users;
+      rowCount = usersRes.data.meta.total;
+      pageCount = usersRes.data.meta.total_pages || 1;
+      initialPage = (usersRes.data.meta.page || 1) - 1;
+    }
+
+    if (statsRes?.success) {
+      initialStats = statsRes.data;
+    }
+  } catch (error) {
+    console.error("Failed to fetch users page data:", error);
+  }
 
   return (
-    <ScrollableContent className="h-full">
-      <div className="flex flex-col h-full bg-background no-scrollbar space-y-4">
+    <div className="no-scrollbar flex h-full flex-col bg-background">
+      <div className="no-scrollbar min-h-0 flex-1">
         <UsersClient
-          initialData={users}
-          rowCount={meta?.total}
-          pageCount={meta?.total_pages}
-          initialPage={page - 1}
+          initialData={initialData}
+          rowCount={rowCount}
+          pageCount={pageCount}
+          initialPage={initialPage}
           pageSize={limit}
+          initialStats={initialStats}
+          initialStart={start ?? null}
+          initialEnd={end ?? null}
         />
       </div>
-    </ScrollableContent>
+    </div>
   );
 }

@@ -76,6 +76,11 @@ export abstract class OrdersService {
     );
   }
 
+  static async getStats(start?: string, end?: string) {
+    const stats = await OrdersRepository.getStats(start, end);
+    return buildSuccess(stats, "Order stats fetched");
+  }
+
   static async getOrderDetails(id: string) {
     const order = await OrdersRepository.findById(id);
     if (!order) {

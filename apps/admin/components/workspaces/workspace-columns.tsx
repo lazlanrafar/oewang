@@ -14,7 +14,7 @@ import {
 } from "@workspace/ui";
 import { MoreHorizontal, ShieldCheck, Zap, Star, Layout } from "lucide-react";
 import { updateWorkspacePlanAction } from "@workspace/modules/system-admin/system-admin.action";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useTransition } from "react";
 
@@ -26,7 +26,7 @@ const CellActions = ({
   plans: SystemAdminPlan[];
 }) => {
   const workspace = row.original;
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const [isPending, startTransition] = useTransition();
 
   const handlePlanChange = async (planId: string, planName: string) => {
@@ -35,7 +35,12 @@ const CellActions = ({
         const result = await updateWorkspacePlanAction(workspace.id, planId);
         if (result.success) {
           toast.success(`Workspace plan updated to ${planName}`);
-          router.refresh();
+          await Promise.all([
+            queryClient.invalidateQueries({ queryKey: ["admin-workspaces"] }),
+            queryClient.invalidateQueries({
+              queryKey: ["admin-workspaces-stats"],
+            }),
+          ]);
         } else {
           toast.error(result.error);
         }
@@ -96,6 +101,7 @@ export const getWorkspaceColumns = (
       headerLabel: "Name",
       className:
         "w-[200px] min-w-[120px] md:sticky md:left-[var(--stick-left)] bg-background group-hover:bg-[#F2F1EF] group-hover:dark:bg-[#0f0f0f] z-10",
+      skeleton: { type: "avatar-text", width: "w-32" },
     },
     cell: ({ row }) => (
       <div className="flex flex-col truncate">
@@ -116,6 +122,7 @@ export const getWorkspaceColumns = (
     meta: {
       headerLabel: "Plan",
       className: "w-[150px] min-w-[100px]",
+      skeleton: { type: "badge", width: "w-16" },
     },
     cell: ({ row }) => {
       const planName = row.original.plan_name || "Free";
@@ -148,6 +155,7 @@ export const getWorkspaceColumns = (
     size: 120,
     meta: {
       headerLabel: "AI Tokens",
+      skeleton: { type: "text", width: "w-16" },
     },
     cell: ({ getValue }) => (
       <span className="text-sm">
@@ -162,6 +170,7 @@ export const getWorkspaceColumns = (
     enableResizing: true,
     meta: {
       headerLabel: "Created At",
+      skeleton: { type: "text", width: "w-24" },
     },
     cell: ({ getValue }) => {
       const val = getValue<string>();
@@ -179,6 +188,7 @@ export const getWorkspaceColumns = (
     enableHiding: false,
     meta: {
       headerLabel: "Actions",
+      skeleton: { type: "icon" },
     },
     cell: ({ row }) => <CellActions row={row} plans={plans} />,
   },

@@ -20,6 +20,7 @@ export const columns: ColumnDef<AdminOrderListing>[] = [
       headerLabel: "Order ID",
       className:
         "w-[140px] min-w-[100px] md:sticky md:left-[var(--stick-left)] bg-background group-hover:bg-[#F2F1EF] group-hover:dark:bg-[#0f0f0f] z-10",
+      skeleton: { type: "text", width: "w-24" },
     },
     cell: ({ row }) => (
       <span className="font-mono text-green">{row.original.code}</span>
@@ -35,6 +36,7 @@ export const columns: ColumnDef<AdminOrderListing>[] = [
     meta: {
       headerLabel: "Workspace",
       className: "w-[200px] min-w-[140px]",
+      skeleton: { type: "text", width: "w-32" },
     },
     cell: ({ row }) => (
       <div className="flex flex-col truncate">
@@ -54,6 +56,7 @@ export const columns: ColumnDef<AdminOrderListing>[] = [
     meta: {
       headerLabel: "Customer",
       className: "w-[240px] min-w-[180px]",
+      skeleton: { type: "avatar-text", width: "w-40" },
     },
     cell: ({ row }) => (
       <div className="flex flex-col truncate">
@@ -76,6 +79,7 @@ export const columns: ColumnDef<AdminOrderListing>[] = [
     meta: {
       headerLabel: "Amount",
       className: "w-[140px] min-w-[100px]",
+      skeleton: { type: "text", width: "w-20" },
     },
     cell: ({ row }) => (
       <span className="font-medium text-sm">
@@ -93,27 +97,22 @@ export const columns: ColumnDef<AdminOrderListing>[] = [
     meta: {
       headerLabel: "Status",
       className: "w-[120px] min-w-[90px]",
+      skeleton: { type: "badge", width: "w-16" },
     },
     cell: ({ row }) => {
       const status = row.original.status;
-      let variant: "default" | "secondary" | "destructive" | "outline" =
-        "default";
 
-      switch (status) {
-        case "paid":
-          variant = "default"; // Assuming default is success green/blue in this theme
-          break;
-        case "pending":
-          variant = "secondary";
-          break;
-        case "failed":
-        case "canceled":
-          variant = "destructive";
-          break;
-      }
+      const colorClass =
+        status === "paid"
+          ? "border-transparent bg-emerald-100 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-400"
+          : status === "pending"
+            ? "border-transparent bg-amber-100 text-amber-700 hover:bg-amber-100 dark:bg-amber-500/15 dark:text-amber-400"
+            : status === "failed" || status === "canceled"
+              ? "border-transparent bg-red-100 text-red-700 hover:bg-red-100 dark:bg-red-500/15 dark:text-red-400"
+              : "border-transparent bg-muted text-muted-foreground";
 
       return (
-        <Badge variant={variant} className="capitalize">
+        <Badge variant="outline" className={`capitalize ${colorClass}`}>
           {status}
         </Badge>
       );
@@ -129,6 +128,7 @@ export const columns: ColumnDef<AdminOrderListing>[] = [
     meta: {
       headerLabel: "Date",
       className: "w-[180px] min-w-[140px]",
+      skeleton: { type: "text", width: "w-28" },
     },
     cell: ({ row }) => (
       <span className="text-sm text-muted-foreground">

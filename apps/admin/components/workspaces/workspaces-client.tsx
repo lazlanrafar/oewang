@@ -1,15 +1,32 @@
 "use client";
 
-import React, { useMemo } from "react";
+import { type ComponentProps, useMemo, useRef, useState } from "react";
+
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import type { ColumnDef } from "@tanstack/react-table";
+import {
+  getSystemAdminWorkspaceStats,
+  getSystemAdminWorkspaces,
+} from "@workspace/modules/system-admin/system-admin.action";
+import type {
+  SystemAdminPlan,
+  SystemAdminWorkspace,
+  SystemAdminWorkspaceStats,
+} from "@workspace/types";
 import {
   DataTable,
-  TableSkeleton,
   DataTableColumnsVisibility,
-  DataTableFilter,
+  DataTableEmptyState,
+  TableSkeleton,
 } from "@workspace/ui";
-import type { SystemAdminWorkspace, SystemAdminPlan } from "@workspace/types";
-import { useDataTableFilter } from "@/hooks/use-data-table-filter";
+
 import { useWorkspacesStore } from "@/stores/workspaces";
+
+import { WorkspacesClientCards } from "./workspaces-client-cards";
+import {
+  WorkspacesClientHeader,
+  type WorkspacesFilters,
+} from "./workspaces-client-header";
 import { getWorkspaceColumns } from "./workspace-columns";
 
 type Props = {
@@ -19,6 +36,7 @@ type Props = {
   pageCount: number;
   initialPage: number;
   pageSize: number;
+  initialStats: SystemAdminWorkspaceStats;
 };
 
 export function WorkspacesClient({
@@ -28,70 +46,131 @@ export function WorkspacesClient({
   pageCount,
   initialPage,
   pageSize,
+  initialStats,
 }: Props) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [columns, setColumnsLocal] =
+    useState<ComponentProps<typeof DataTableColumnsVisibility>["columns"]>([]);
+  const setColumnsStore = useWorkspacesStore((s) => s.setColumns);
+
+  const [filters, setFilters] = useState<WorkspacesFilters>({ q: "" });
+  const [mountFilters] = useState(filters);
+
+  const isInitial = useMemo(
+    () => JSON.stringify(filters) === JSON.stringify(mountFilters),
+    [filters, mountFilters],
+  );
+
   const {
-    filters,
-    handleFilterChange,
-    pagination,
-    handlePaginationChange,
-    isPending,
-  } = useDataTableFilter({
-    initialFilters: {
-      q: "",
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+  } = useInfiniteQuery({
+    queryKey: ["admin-workspaces", filters],
+    queryFn: async ({ pageParam = 1 }) =>
+      getSystemAdminWorkspaces({
+        page: pageParam,
+        limit: pageSize,
+        search: filters.q || undefined,
+      }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => {
+      if (!lastPage.success) return undefined;
+      const meta = lastPage.data.meta;
+      return meta.page < meta.total_pages ? meta.page + 1 : undefined;
     },
-    pageSize,
-    initialPage,
+    staleTime: 300_000,
+    refetchOnWindowFocus: false,
+    initialData: isInitial
+      ? {
+          pages: [
+            {
+              success: true,
+              data: {
+                workspaces: initialData,
+                meta: {
+                  total: rowCount,
+                  page: initialPage + 1,
+                  limit: pageSize,
+                  total_pages: pageCount,
+                },
+              },
+            } as Awaited<ReturnType<typeof getSystemAdminWorkspaces>>,
+          ],
+          pageParams: [1],
+        }
+      : undefined,
   });
 
-  const { columns: tableColumns, setColumns } = useWorkspacesStore();
-  const workspaceColumns = useMemo(() => getWorkspaceColumns(plans), [plans]);
+  const { data: statsData, isLoading: isStatsLoading } = useQuery({
+    queryKey: ["admin-workspaces-stats"],
+    queryFn: async () => getSystemAdminWorkspaceStats(),
+    staleTime: 300_000,
+    refetchOnWindowFocus: false,
+    initialData: { success: true, data: initialStats } as Awaited<
+      ReturnType<typeof getSystemAdminWorkspaceStats>
+    >,
+  });
+
+  const stats: SystemAdminWorkspaceStats =
+    statsData && statsData.success ? statsData.data : initialStats;
+
+  const rows = useMemo<SystemAdminWorkspace[]>(
+    () =>
+      data?.pages?.flatMap((p) => (p.success ? p.data.workspaces : [])) ?? [],
+    [data],
+  );
+
+  const workspaceColumns = useMemo(
+    () => getWorkspaceColumns(plans) as ColumnDef<SystemAdminWorkspace>[],
+    [plans],
+  );
+
+  const setColumns = (
+    next: ComponentProps<typeof DataTableColumnsVisibility>["columns"],
+  ) => {
+    setColumnsLocal(next);
+    setColumnsStore(next as never);
+  };
 
   return (
-    <div className="flex w-full flex-col h-full space-y-4">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0">
-        <div>
-          <h1 className="text-2xl tracking-tight">Workspaces</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            View and manage all workspaces in the system.
-          </p>
-        </div>
-      </div>
-      <div className="flex items-center gap-4">
-        <DataTableFilter
-          filters={filters}
-          onFilterChange={handleFilterChange as any}
-          placeholder="Search workspaces..."
-          showDateFilter={false}
-          showAmountFilter={false}
-        />
+    <div className="flex h-full w-full flex-col gap-4">
+      <WorkspacesClientCards stats={stats} isLoading={isStatsLoading} />
 
-        <DataTableColumnsVisibility columns={tableColumns} />
-      </div>
+      <WorkspacesClientHeader
+        filters={filters}
+        onFilterChange={setFilters}
+        columns={columns}
+      />
 
-      <div className="flex-1 min-h-0 relative">
-        {isPending ? (
+      <div className="relative min-h-0 flex-1">
+        {isLoading ? (
           <TableSkeleton
             columns={workspaceColumns}
             rowCount={pageSize}
             stickyColumnIds={["name"]}
-            className="h-full"
+            actionsColumnId="actions"
           />
         ) : (
-          <DataTable
-            data={initialData}
+          <DataTable<SystemAdminWorkspace>
+            data={rows}
             columns={workspaceColumns}
             setColumns={setColumns}
             tableId="workspaces"
-            sticky={{
-              columns: ["name"],
-              startFromColumn: 0,
-            }}
-            emptyMessage="No workspaces found."
-            manualPagination
-            pagination={pagination}
-            onPaginationChange={handlePaginationChange}
-            rowCount={rowCount}
-            pageCount={pageCount}
+            externalScrollContainerRef={containerRef}
+            sticky={{ columns: ["name"], startFromColumn: 0 }}
+            emptyMessage={
+              <DataTableEmptyState
+                title="No workspaces found"
+                description="There are no workspaces matching the current filters."
+              />
+            }
+            infiniteScroll
+            fetchNextPage={fetchNextPage}
+            hasNextPage={hasNextPage}
+            isFetchingNextPage={isFetchingNextPage}
             hFull
           />
         )}

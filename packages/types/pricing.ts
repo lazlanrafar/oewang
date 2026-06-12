@@ -49,3 +49,10 @@ export type SystemAdminPlan = {
   name: string;
   is_active: boolean;
 };
+
+export type PricingStats = {
+  total: number;
+  active: number;
+  inactive: number;
+  addons: number;
+};

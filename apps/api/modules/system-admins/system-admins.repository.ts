@@ -1,4 +1,10 @@
-import { db, pricing, users, workspaces } from "@workspace/database";
+import {
+  db,
+  pricing,
+  user_workspaces,
+  users,
+  workspaces,
+} from "@workspace/database";
 import {
   and,
   asc,
@@ -151,6 +157,51 @@ export abstract class SystemAdminsRepository {
   }
 
   /**
+   * Fetch the workspace owner (or fallback to any active member) for notifications.
+   */
+  static async findWorkspaceOwnerWithMeta(workspaceId: string) {
+    const [ownerRow] = await db
+      .select({
+        email: users.email,
+        name: users.name,
+        workspace_name: workspaces.name,
+      })
+      .from(user_workspaces)
+      .innerJoin(users, eq(user_workspaces.user_id, users.id))
+      .innerJoin(workspaces, eq(user_workspaces.workspace_id, workspaces.id))
+      .where(
+        and(
+          eq(user_workspaces.workspace_id, workspaceId),
+          eq(user_workspaces.role, "owner"),
+          isNull(user_workspaces.deleted_at),
+        ),
+      )
+      .limit(1);
+
+    if (ownerRow) return ownerRow;
+
+    // Fallback: any active member (e.g. admin), so notifications still go out.
+    const [memberRow] = await db
+      .select({
+        email: users.email,
+        name: users.name,
+        workspace_name: workspaces.name,
+      })
+      .from(user_workspaces)
+      .innerJoin(users, eq(user_workspaces.user_id, users.id))
+      .innerJoin(workspaces, eq(user_workspaces.workspace_id, workspaces.id))
+      .where(
+        and(
+          eq(user_workspaces.workspace_id, workspaceId),
+          isNull(user_workspaces.deleted_at),
+        ),
+      )
+      .limit(1);
+
+    return memberRow ?? null;
+  }
+
+  /**
    * Update a workspace's pricing plan
    */
   static async updateWorkspacePlan(workspaceId: string, planId: string) {
@@ -173,7 +224,7 @@ export abstract class SystemAdminsRepository {
       .where(eq(workspaces.id, workspaceId))
       .returning();
 
-    return updated;
+    return { workspace: updated, plan };
   }
 
   /**
@@ -189,6 +240,55 @@ export abstract class SystemAdminsRepository {
       .from(pricing)
       .where(and(eq(pricing.is_addon, false), isNull(pricing.deleted_at)))
       .orderBy(asc(pricing.name));
+  }
+
+  static async getUserStats(params: { start?: string; end?: string }) {
+    const conditions: SQL[] = [];
+    if (params.start) {
+      conditions.push(gte(users.created_at, new Date(params.start)));
+    }
+    if (params.end) {
+      conditions.push(lte(users.created_at, new Date(params.end)));
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const [row] = await db
+      .select({
+        total: sql<number>`count(*)`,
+        owners: sql<number>`count(*) filter (where ${users.system_role} in ('superadmin', 'owner'))`,
+        finance: sql<number>`count(*) filter (where ${users.system_role} = 'finance')`,
+        users: sql<number>`count(*) filter (where ${users.system_role} = 'user')`,
+      })
+      .from(users)
+      .where(whereClause);
+
+    return {
+      total: Number(row?.total ?? 0),
+      owners: Number(row?.owners ?? 0),
+      finance: Number(row?.finance ?? 0),
+      users: Number(row?.users ?? 0),
+    };
+  }
+
+  static async getWorkspaceStats() {
+    const [row] = await db
+      .select({
+        total: sql<number>`count(*)`,
+        active: sql<number>`count(*) filter (where ${workspaces.plan_status} = 'active')`,
+        paid: sql<number>`count(*) filter (where ${workspaces.plan_id} is not null and ${pricing.name} is not null and lower(${pricing.name}) <> 'free')`,
+        free: sql<number>`count(*) filter (where ${workspaces.plan_id} is null or lower(coalesce(${pricing.name}, 'free')) = 'free')`,
+      })
+      .from(workspaces)
+      .leftJoin(pricing, eq(workspaces.plan_id, pricing.id))
+      .where(isNull(workspaces.deleted_at));
+
+    return {
+      total: Number(row?.total ?? 0),
+      active: Number(row?.active ?? 0),
+      paid: Number(row?.paid ?? 0),
+      free: Number(row?.free ?? 0),
+    };
   }
 
   static async findUserEmail(userId: string) {

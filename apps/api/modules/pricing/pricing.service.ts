@@ -26,6 +26,11 @@ export abstract class PricingService {
     return buildPaginatedSuccess(rows, buildPagination(total, page, limit));
   }
 
+  static async getStats() {
+    const stats = await PricingRepository.getStats();
+    return buildSuccess(stats);
+  }
+
   static async getById(id: string) {
     const pricing = await PricingRepository.findById(id);
     if (!pricing) {

@@ -70,3 +70,10 @@ export type SystemAdminWorkspace = {
   ai_tokens_used: number;
   vault_size_used_bytes: number;
 };
+
+export type SystemAdminWorkspaceStats = {
+  total: number;
+  active: number;
+  paid: number;
+  free: number;
+};

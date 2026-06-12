@@ -30,6 +30,20 @@ export const pricingController = new Elysia({
     },
   )
   .get(
+    "/stats",
+    async () => {
+      return PricingService.getStats();
+    },
+    {
+      detail: {
+        summary: "Get Pricing Stats",
+        description:
+          "Returns aggregated counts (total, active, inactive, addons) for all pricing plans.",
+        tags: ["Pricing"],
+      },
+    },
+  )
+  .get(
     "/:id",
     async ({ params: { id } }) => {
       return PricingService.getById(id);

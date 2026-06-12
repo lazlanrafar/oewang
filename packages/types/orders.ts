@@ -27,3 +27,10 @@ export interface AdminOrderListing {
   mayar_invoice_id: string | null;
   mayar_transaction_id: string | null;
 }
+
+export interface AdminOrderStats {
+  total: number;
+  paid: number;
+  pending: number;
+  failed: number;
+}

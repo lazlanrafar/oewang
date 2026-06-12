@@ -6,6 +6,7 @@ import type {
   ApiResponse,
   PaginationMeta,
   AdminOrderListing,
+  AdminOrderStats,
   Order,
 } from "@workspace/types";
 
@@ -53,6 +54,35 @@ export const getAdminOrders = async (params: {
     return {
       success: false,
       error: error.response?.data?.message || "Failed to fetch orders",
+    };
+  }
+};
+
+export const getAdminOrderStats = async (params?: {
+  start?: string;
+  end?: string;
+}): Promise<ActionResponse<AdminOrderStats>> => {
+  try {
+    const response = await api.get("/orders/stats", { params });
+
+    const apiResponse = (response as any)._api_response as
+      | ApiResponse<AdminOrderStats>
+      | undefined;
+
+    const data =
+      apiResponse?.data ??
+      (response.data as ApiResponse<AdminOrderStats>).data ??
+      null;
+
+    if (!data) {
+      return { success: false, error: "Failed to fetch order stats" };
+    }
+
+    return { success: true, data };
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.response?.data?.message || "Failed to fetch order stats",
     };
   }
 };
