@@ -128,6 +128,13 @@ function resolveWorkspaceId(
   return membershipWorkspaceIds[0] ?? "";
 }
 
+// Legacy tokens issued before the CUID2 migration carry a UUID-format
+// user_id that no longer matches any row in users.id. Detect that shape so
+// we can resolve those sessions by email (the stable identifier) instead
+// of treating them as unauthenticated.
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /**
  * Auth plugin — provides derive context and guard macro.
  * Verifies the oewang-session JWT (HS256). Sets auth on context, null if unauthenticated.
@@ -136,21 +143,39 @@ export async function getAuth(token: string) {
   // Try app JWT first
   const jwt_payload = await verifyJwt(token);
   if (jwt_payload) {
-    const [db_user] = await db
-      .select({
-        email: users.email,
-        workspace_id: users.workspace_id,
-        system_role: users.system_role,
-      })
-      .from(users)
-      .where(eq(users.id, jwt_payload.user_id))
-      .limit(1);
+    const isLegacyUuid = UUID_PATTERN.test(jwt_payload.user_id);
+
+    const [db_user] =
+      isLegacyUuid && jwt_payload.email
+        ? await db
+            .select({
+              id: users.id,
+              email: users.email,
+              workspace_id: users.workspace_id,
+              system_role: users.system_role,
+            })
+            .from(users)
+            .where(eq(users.email, jwt_payload.email))
+            .limit(1)
+        : await db
+            .select({
+              id: users.id,
+              email: users.email,
+              workspace_id: users.workspace_id,
+              system_role: users.system_role,
+            })
+            .from(users)
+            .where(eq(users.id, jwt_payload.user_id))
+            .limit(1);
 
     if (!db_user) return null;
 
-    const membershipWorkspaceIds = await getActiveMembershipWorkspaceIds(
-      jwt_payload.user_id,
-    );
+    // For legacy UUID tokens, switch to the real (CUID2) user id from the
+    // DB row so downstream membership / audit queries hit the right rows.
+    const resolved_user_id = isLegacyUuid ? db_user.id : jwt_payload.user_id;
+
+    const membershipWorkspaceIds =
+      await getActiveMembershipWorkspaceIds(resolved_user_id);
 
     // Enforce workspace-scoped access: if token requests a workspace,
     // the user must still be an active member of that workspace.
@@ -166,12 +191,12 @@ export async function getAuth(token: string) {
       membershipWorkspaceIds,
     );
     const workspace_role = await getMembershipRole(
-      jwt_payload.user_id,
+      resolved_user_id,
       workspace_id,
     );
 
     return {
-      user_id: jwt_payload.user_id,
+      user_id: resolved_user_id,
       workspace_id,
       workspaceId: workspace_id,
       workspace_role,
