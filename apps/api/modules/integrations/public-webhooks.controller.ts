@@ -95,7 +95,7 @@ export async function registerEvolutionWebhook(): Promise<void> {
 
   if (!baseUrl || !token || !instance || !apiUrl) return;
 
-  const webhookUrl = `${apiUrl}/integrations/whatsapp/webhook`;
+  const webhookUrl = `${apiUrl.replace(/\/$/, "")}/v1/integrations/whatsapp/webhook`;
 
   try {
     const res = await fetch(`${baseUrl}/webhook/set/${instance}`, {
@@ -121,5 +121,45 @@ export async function registerEvolutionWebhook(): Promise<void> {
     }
   } catch (err) {
     logger.warn("Evolution API webhook registration error", { err });
+  }
+}
+
+export async function registerTelegramWebhook(): Promise<void> {
+  const token = Env.TELEGRAM_BOT_TOKEN;
+  const apiUrl = Env.NEXT_PUBLIC_API_URL;
+  const secret = Env.TELEGRAM_WEBHOOK_SECRET;
+
+  if (!token || !apiUrl) return;
+  if (apiUrl.startsWith("http://localhost")) {
+    logger.info(
+      "Skipping Telegram webhook registration (NEXT_PUBLIC_API_URL is localhost — use scripts/setup-telegram.ts with a public tunnel URL instead)",
+    );
+    return;
+  }
+
+  const webhookUrl = `${apiUrl.replace(/\/$/, "")}/v1/integrations/telegram/webhook`;
+
+  try {
+    const params = new URLSearchParams({ url: webhookUrl });
+    if (secret) params.set("secret_token", secret);
+
+    const res = await fetch(
+      `https://api.telegram.org/bot${token}/setWebhook?${params.toString()}`,
+    );
+    const result = (await res.json()) as { ok?: boolean; description?: string };
+
+    if (result.ok) {
+      logger.info("Telegram webhook registered", {
+        webhookUrl,
+        hasSecret: Boolean(secret),
+      });
+    } else {
+      logger.warn("Telegram webhook registration failed", {
+        webhookUrl,
+        description: result.description,
+      });
+    }
+  } catch (err) {
+    logger.warn("Telegram webhook registration error", { err });
   }
 }
