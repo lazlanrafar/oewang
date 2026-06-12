@@ -56,7 +56,7 @@ export const aiToolDefinitions = [
         walletId: {
           type: "string",
           description:
-            "Source wallet/account ID or name. If the user doesn't specify an account, LIST the available wallets and ask them to choose.",
+            "Source wallet/account ID or name. If the user doesn't specify an account, USE the wallet marked [DEFAULT] in the wallet context. Only ask the user to choose if NO default wallet exists in the workspace.",
         },
         toWalletId: ns(
           "Destination wallet ID or name (required for transfers only).",
@@ -107,6 +107,23 @@ export const aiToolDefinitions = [
     },
   },
   {
+    name: "set_default_wallet",
+    description:
+      "Set a wallet as the workspace default account. The default account is used by Oewang Bot for transactions in chat (WhatsApp, Telegram, etc.) when the user doesn't specify an account. Use this when the user asks to change/switch/set their default account.",
+    input_schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        walletId: {
+          type: "string",
+          description:
+            "ID of the wallet to mark as default (must be a real ID from get_workspace_context).",
+        },
+      },
+      required: ["walletId"],
+    },
+  },
+  {
     name: "create_debt",
     description:
       "Create a new debt record (Hutang or Piutang) when the user owes money or someone owes them.",
@@ -143,7 +160,8 @@ export const aiToolDefinitions = [
         name: { type: "string", description: "Transaction name/merchant." },
         walletId: {
           type: "string",
-          description: "Wallet to deduct the total from.",
+          description:
+            "Wallet to deduct the total from. If the user doesn't specify one, USE the wallet marked [DEFAULT] in the wallet context.",
         },
         categoryId: ns("Optional category ID or name."),
         contactNames: {

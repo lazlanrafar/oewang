@@ -277,6 +277,25 @@ function buildTools(
       execute: async (args) => executor("create_debt", args),
     }),
 
+    set_default_wallet: tool({
+      description:
+        "Set a wallet as the workspace default account. Use when the user asks to change/switch/set their default account (e.g. 'set BCA as my default account', 'ganti default ke Cash'). The default account is what Oewang Bot uses to record transactions from chat (WhatsApp/Telegram) when the user doesn't specify an account.",
+      parameters: z.object({
+        walletId: z
+          .string()
+          .describe(
+            "Wallet ID to mark as default (use ID from get_workspace_context).",
+          ),
+      }),
+      execute: async (args) => {
+        const result = await executor("set_default_wallet", args);
+        try {
+          await redis.del(`oewang:ws-ctx:${workspaceId}`);
+        } catch {}
+        return result;
+      },
+    }),
+
     split_bill: tool({
       description:
         "Create an expense transaction and split it equally with others. Auto-records receivable debts for each participant.",

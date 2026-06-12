@@ -12,7 +12,11 @@ export abstract class ContextFormatter {
   static formatWallets(wallets: any[]) {
     if (wallets.length === 0) return "No wallets found.";
     return wallets
-      .map((w) => `- ${w.name}: ${Number(w.balance).toLocaleString()}`)
+      .map((w) => {
+        const idPart = w.id ? ` (ID: ${w.id})` : "";
+        const defaultPart = w.isDefault ? " [DEFAULT]" : "";
+        return `- ${w.name}${idPart}: ${Number(w.balance).toLocaleString()}${defaultPart}`;
+      })
       .join("\n");
   }
 

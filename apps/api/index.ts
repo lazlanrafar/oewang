@@ -27,6 +27,7 @@ import { integrationsController } from "./modules/integrations/integrations.cont
 import {
   publicWebhooksController,
   registerEvolutionWebhook,
+  registerTelegramWebhook,
 } from "./modules/integrations/public-webhooks.controller";
 import { invoicesController } from "./modules/invoices/invoices.controller";
 import { publicInvoicesController } from "./modules/invoices/public-invoices.controller";
@@ -153,7 +154,6 @@ const app = new Elysia()
     }),
   )
   .use(mcpController)
-  .use(publicWebhooksController)
   .use(staticPlugin({ assets: "public", prefix: "" }))
   .get("/", () => Bun.file("public/index.html"))
   .use(loggerPlugin)
@@ -174,6 +174,7 @@ const app = new Elysia()
   // All routes grouped under /v1
   .group("/v1", (app) =>
     app
+      .use(publicWebhooksController)
       .use(apiControllers1)
       .use(apiControllers2)
       .use(apiControllers3)
@@ -383,6 +384,7 @@ log.info(`📖 Swagger docs at http://localhost:${port}/swagger`);
 log.info(`🔗 API v1 at http://localhost:${port}/v1`);
 
 registerEvolutionWebhook();
+registerTelegramWebhook();
 
 export { app };
 export type App = typeof app;

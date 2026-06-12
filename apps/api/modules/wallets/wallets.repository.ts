@@ -18,6 +18,7 @@ export abstract class WalletsRepository {
     name: string;
     balance: number;
     isIncludedInTotals?: boolean;
+    isDefault?: boolean;
   }) {
     const [wallet] = await db
       .insert(wallets)
@@ -58,6 +59,7 @@ export abstract class WalletsRepository {
       groupId: string | null;
       balance: number;
       isIncludedInTotals: boolean;
+      isDefault: boolean;
       sortOrder: number;
     }>,
   ) {
@@ -213,6 +215,51 @@ export abstract class WalletsRepository {
           isNull(wallets.deletedAt),
         ),
       );
+  }
+
+  static async findDefault(workspaceId: string) {
+    const [wallet] = await db
+      .select()
+      .from(wallets)
+      .where(
+        and(
+          eq(wallets.workspaceId, workspaceId),
+          eq(wallets.isDefault, true),
+          isNull(wallets.deletedAt),
+        ),
+      )
+      .limit(1);
+
+    if (!wallet) return null;
+    return { ...wallet, balance: Number(wallet.balance) };
+  }
+
+  static async setDefault(workspaceId: string, id: string) {
+    return db.transaction(async (tx) => {
+      await tx
+        .update(wallets)
+        .set({ isDefault: false, updatedAt: new Date().toISOString() })
+        .where(
+          and(
+            eq(wallets.workspaceId, workspaceId),
+            eq(wallets.isDefault, true),
+            isNull(wallets.deletedAt),
+          ),
+        );
+
+      const [wallet] = await tx
+        .update(wallets)
+        .set({ isDefault: true, updatedAt: new Date().toISOString() })
+        .where(
+          and(
+            eq(wallets.id, id),
+            eq(wallets.workspaceId, workspaceId),
+            isNull(wallets.deletedAt),
+          ),
+        )
+        .returning();
+      return wallet ?? null;
+    });
   }
 
   static async updateBalance(

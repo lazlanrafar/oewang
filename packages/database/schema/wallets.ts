@@ -25,6 +25,7 @@ export const wallets = pgTable("wallets", {
     .default("0")
     .notNull(),
   isIncludedInTotals: boolean("is_included_in_totals").default(true).notNull(),
+  isDefault: boolean("is_default").default(false).notNull(),
   sortOrder: integer("sort_order").default(0).notNull(),
   createdAt: timestamp("created_at", { mode: "string" }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().notNull(),

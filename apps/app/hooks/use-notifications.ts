@@ -21,7 +21,9 @@ export function useNotifications() {
   const notificationsQuery = useQuery({
     queryKey: ["notifications", workspace?.id],
     queryFn: () => getNotifications({ page: 1, limit: 20 }),
-    refetchInterval: 30000, // Refetch every 30 seconds
+    // Realtime invalidation is handled by useRealtime + INVALIDATIONS["notifications"].
+    // Keep a long fallback poll for environments where WebSockets are blocked.
+    refetchInterval: 5 * 60 * 1000,
     enabled: !!user?.id && !!workspace?.id,
   });
 
@@ -52,13 +54,18 @@ export function useNotifications() {
     },
   });
 
-  // Added null checks and explicit type for notifications
-  const notifications: Notification[] = notificationsQuery.data?.data?.rows || [];
+  // API returns { data: Notification[], meta: { pagination } } via buildPaginatedSuccess.
+  // The rows are directly on `.data`, not nested under `.data.rows`.
+  const raw = notificationsQuery.data?.data as
+    | Notification[]
+    | { rows?: Notification[] }
+    | undefined;
+  const notifications: Notification[] = Array.isArray(raw) ? raw : (raw?.rows ?? []);
   const unreadCount = notifications.filter((n: Notification) => !n.is_read).length || 0;
 
   return {
     notifications,
-    pagination: notificationsQuery.data?.data?.meta,
+    pagination: notificationsQuery.data?.meta?.pagination,
     unreadCount,
     isLoading: notificationsQuery.isLoading,
     isError: notificationsQuery.isError,

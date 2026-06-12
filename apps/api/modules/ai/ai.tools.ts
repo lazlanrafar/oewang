@@ -12,6 +12,7 @@ import { TransactionItemsService } from "../transactions/items/transaction-items
 import { TransactionsRepository } from "../transactions/transactions.repository";
 import { TransactionsService } from "../transactions/transactions.service";
 import { WalletsRepository as walletsRepository } from "../wallets/wallets.repository";
+import { WalletsService } from "../wallets/wallets.service";
 
 // Tool definitions are now managed in @workspace/ai/tools/tool.definitions.ts
 
@@ -136,7 +137,14 @@ async function resolveWalletIdByName(
   workspaceId: string,
   walletId: string | undefined,
 ): Promise<string> {
-  if (!walletId) return "";
+  if (!walletId) {
+    // Prefer the workspace default wallet when the AI omits a wallet.
+    try {
+      const def = await walletsRepository.findDefault(workspaceId);
+      if (def?.id) return def.id;
+    } catch {}
+    return "";
+  }
   if (isUuid(walletId)) return walletId;
 
   try {
@@ -163,7 +171,9 @@ async function resolveWalletIdByName(
 
     if (match) return match.id;
 
-    // 3. Fallback to the first wallet so we don't crash
+    // 3. Fallback to default wallet, then first wallet
+    const def = allWallets.find((w: any) => w.isDefault);
+    if (def) return def.id;
     return allWallets[0]?.id || "";
   } catch {
     return "";
@@ -626,6 +636,26 @@ export async function executeAiTool(
           input.limit ?? 10,
         );
         result = { success: true, data: items };
+        break;
+      }
+      case "set_default_wallet": {
+        const targetWalletId = await resolveWalletIdByName(
+          workspaceId,
+          input.walletId,
+        );
+        if (!targetWalletId) {
+          result = {
+            success: false,
+            error: "Could not find a matching wallet to set as default.",
+          };
+          break;
+        }
+        const wallet = await WalletsService.setDefaultWallet(
+          workspaceId,
+          userId,
+          targetWalletId,
+        );
+        result = { success: true, data: wallet };
         break;
       }
       default:

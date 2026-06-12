@@ -19,6 +19,7 @@ export abstract class ToolExecutor {
       case "create_transaction":
       case "update_transaction":
       case "delete_transaction":
+      case "set_default_wallet":
         return await services.executeTransactionAction(toolName, args);
 
       case "create_debt":
