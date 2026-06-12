@@ -264,10 +264,25 @@ const app = new Elysia()
       const message =
         error instanceof Error ? error.message : "Handled response";
       const stack = error instanceof Error ? error.stack : undefined;
+      // DrizzleQueryError wraps the underlying postgres error in `.cause`,
+      // and its `.message` only shows the SQL — surface the real reason.
+      const cause = (error as { cause?: unknown })?.cause;
+      const causeMessage =
+        cause instanceof Error ? cause.message : undefined;
+      const causeStack = cause instanceof Error ? cause.stack : undefined;
+      const causeCode =
+        cause && typeof cause === "object"
+          ? ((cause as { code?: string }).code ??
+            (cause as { errno?: string | number }).errno)
+          : undefined;
 
       log.error(`[API] Unhandled Error [${code}]`, {
         message,
         stack,
+        path,
+        cause_message: causeMessage,
+        cause_code: causeCode,
+        cause_stack: causeStack,
       });
     }
 
