@@ -66,7 +66,8 @@ export async function proxy(request: NextRequest) {
 
   const response = NextResponse.next({ request: { headers: request.headers } });
 
-  const token = request.cookies.get("oewang-session")?.value;
+  const cookieName = process.env.NEXT_PUBLIC_SESSION_COOKIE_NAME ?? "oewang-admin-session";
+  const token = request.cookies.get(cookieName)?.value;
 
   const isAuthRoute =
     pathAfterLocale === "/login" ||

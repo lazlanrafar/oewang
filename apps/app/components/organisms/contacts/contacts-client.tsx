@@ -1,44 +1,54 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
-import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import type { Dictionary } from "@workspace/dictionaries";
 import { getContacts } from "@workspace/modules/client";
-import type { Contact, TransactionSettings } from "@workspace/types";
-import { Button, DataTable, DataTableColumnsVisibility, DataTableEmptyState, DataTableFilter } from "@workspace/ui";
-import { Plus } from "lucide-react";
+import type { Contact } from "@workspace/types";
+import { DataTable, DataTableEmptyState, TableSkeleton } from "@workspace/ui";
 
 import { useDataTableFilter } from "@/hooks/use-data-table-filter";
+import { canEditWorkspaceData } from "@/lib/workspace-permissions";
+import { useAppStore } from "@/stores/app";
 import { useContactsStore } from "@/stores/contacts";
 
 import { getContactColumns } from "./contact-columns";
 import { ContactDetailSheet } from "./contact-detail-sheet";
 import { ContactFormSheet } from "./contact-form-sheet";
+import { ContactsClientCards } from "./contacts-client-cards";
+import { ContactsClientHeader } from "./contacts-client-header";
 
 interface Props {
   initialData: Contact[];
   dictionary: Dictionary;
-  settings: TransactionSettings;
 }
 
-export function ContactsClient({ initialData, dictionary, settings }: Props) {
-  const _queryClient = useQueryClient();
+type ContactsFilters = { q: string };
 
+export function ContactsClient({ initialData, dictionary }: Props) {
   const { columns, setColumns } = useContactsStore();
+  const { workspace } = useAppStore();
+  const canEditData = canEditWorkspaceData(workspace?.current_user_role);
 
   const [isFormSheetOpen, setIsFormSheetOpen] = useState(false);
   const [isDetailSheetOpen, setIsDetailSheetOpen] = useState(false);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [editContact, setEditContact] = useState<Contact | null>(null);
 
-  const { filters, handleFilterChange } = useDataTableFilter({
+  const { filters, handleFilterChange } = useDataTableFilter<ContactsFilters>({
     initialFilters: { q: "" },
     pageSize: 50,
     initialPage: 0,
   });
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
+  const [mountFilters] = useState(filters);
+  const isInitial = useMemo(
+    () => JSON.stringify(filters) === JSON.stringify(mountFilters),
+    [filters, mountFilters],
+  );
+
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteQuery({
     queryKey: ["contacts", filters.q],
     queryFn: async ({ pageParam = 1 }) => {
       const res = await getContacts({
@@ -55,36 +65,48 @@ export function ContactsClient({ initialData, dictionary, settings }: Props) {
       if (!pagination) return undefined;
       return pagination.page < pagination.total_pages ? pagination.page + 1 : undefined;
     },
-    initialData: {
-      pages: [
-        {
-          success: true,
-          data: initialData,
-          code: "OK",
-          message: "Initial data",
-          meta: {
-            pagination: {
-              total: initialData.length,
-              page: 1,
-              limit: 50,
-              total_pages: 1,
+    initialData: isInitial
+      ? {
+          pages: [
+            {
+              success: true,
+              data: initialData,
+              code: "OK",
+              message: "Initial data",
+              meta: {
+                pagination: {
+                  total: initialData.length,
+                  page: 1,
+                  limit: 50,
+                  total_pages: 1,
+                },
+                timestamp: Date.now(),
+              },
             },
-            timestamp: Date.now(),
-          },
-        },
-      ],
-      pageParams: [1],
-    },
+          ],
+          pageParams: [1],
+        }
+      : undefined,
     staleTime: 60000,
     refetchOnWindowFocus: false,
   });
 
-  const allContacts = data.pages?.flatMap((p) => p.data ?? []) ?? [];
-  const topContact = allContacts[0];
+  const allContacts = useMemo(() => data?.pages?.flatMap((p) => p.data ?? []) ?? [], [data]);
 
-  const now = new Date();
-  const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-  const addedThisMonth = allContacts.filter((c) => c.createdAt && c.createdAt >= thisMonthStart).length;
+  // Card metrics — derived from the loaded contacts
+  const cardMetrics = useMemo(() => {
+    const now = new Date();
+    const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    let addedThisMonth = 0;
+    let withEmail = 0;
+    let withPhone = 0;
+    for (const c of allContacts) {
+      if (c.createdAt && c.createdAt >= thisMonthStart) addedThisMonth += 1;
+      if (c.email?.trim()) withEmail += 1;
+      if (c.phone?.trim()) withPhone += 1;
+    }
+    return { addedThisMonth, withEmail, withPhone };
+  }, [allContacts]);
 
   const handleEdit = useCallback((contact: Contact) => {
     setEditContact(contact);
@@ -96,102 +118,69 @@ export function ContactsClient({ initialData, dictionary, settings }: Props) {
     setIsDetailSheetOpen(true);
   }, []);
 
-  const tableColumns = getContactColumns(handleEdit, dictionary);
+  const handleCreate = useCallback(() => {
+    setEditContact(null);
+    setIsFormSheetOpen(true);
+  }, []);
+
+  const tableColumns = useMemo(
+    () => getContactColumns(handleEdit, dictionary),
+    [handleEdit, dictionary],
+  );
 
   return (
     <div className="flex h-full w-full flex-col space-y-4">
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <div className="flex flex-col gap-1 border border-border bg-muted/5 p-6">
-          <span className="font-medium text-[10px] text-muted-foreground uppercase tracking-[0.2em]">
-            {dictionary.contacts.summary.total}
-          </span>
-          <span className="font-medium font-serif text-3xl tracking-tight">{allContacts.length}</span>
-        </div>
+      <ContactsClientCards
+        total={allContacts.length}
+        addedThisMonth={cardMetrics.addedThisMonth}
+        withEmail={cardMetrics.withEmail}
+        withPhone={cardMetrics.withPhone}
+        isLoading={isLoading}
+        dictionary={dictionary}
+      />
 
-        <div className="flex flex-col gap-1 border border-border p-6">
-          <span className="font-medium text-[10px] text-muted-foreground uppercase tracking-[0.2em]">
-            {dictionary.contacts.summary.added_this_month}
-          </span>
-          <span className="font-medium font-serif text-3xl text-emerald-600 tracking-tight dark:text-emerald-400">
-            {addedThisMonth}
-          </span>
-        </div>
+      <ContactsClientHeader
+        filters={filters as ContactsFilters}
+        onFilterChange={handleFilterChange}
+        columns={columns}
+        onAdd={handleCreate}
+        canEditData={canEditData}
+        dictionary={dictionary}
+      />
 
-        <div className="flex flex-col gap-1 border border-border bg-muted/5 p-6">
-          <span className="font-medium text-[10px] text-muted-foreground uppercase tracking-[0.2em]">
-            {dictionary.contacts.summary.most_active}
-          </span>
-          <span className="truncate font-medium font-serif text-lg tracking-tight">{topContact?.name ?? "–"}</span>
-          <span className="text-[10px] text-muted-foreground">{dictionary.contacts.summary.no_activity}</span>
-        </div>
-
-        <div className="flex flex-col gap-1 border border-border bg-muted/5 p-6">
-          <span className="font-medium text-[10px] text-muted-foreground uppercase tracking-[0.2em]">
-            {dictionary.contacts.summary.top_revenue}
-          </span>
-          <span className="truncate font-medium font-serif text-lg tracking-tight">{topContact?.name ?? "–"}</span>
-          <span className="text-[10px] text-muted-foreground">{dictionary.contacts.summary.no_revenue}</span>
-        </div>
-      </div>
-
-      {/* Toolbar */}
-      <div className="flex shrink-0 items-center justify-between gap-4 px-1">
-        <div className="flex max-w-sm flex-1 items-center">
-          <DataTableFilter
-            filters={filters}
-            onFilterChange={handleFilterChange as (filters: Record<string, unknown>) => void}
-            placeholder={dictionary.contacts.search_placeholder}
-            showDateFilter={false}
-            showAmountFilter={false}
-            className="w-full border-none bg-transparent p-0 focus-visible:ring-0"
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <DataTableColumnsVisibility columns={columns} />
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => {
-              setEditContact(null);
-              setIsFormSheetOpen(true);
-            }}
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            {dictionary.contacts.add_button}
-          </Button>
-        </div>
-      </div>
-
-      {/* Table */}
       <div className="relative min-h-0 flex-1">
-        <DataTable
-          data={allContacts}
-          columns={tableColumns}
-          setColumns={setColumns}
-          tableId="contacts"
-          hFull
-          emptyMessage={
-            <DataTableEmptyState
-              title={dictionary.contacts.empty.title}
-              description={dictionary.contacts.empty.description}
-              action={{
-                label: dictionary.contacts.empty.action,
-                onClick: () => {
-                  setEditContact(null);
-                  setIsFormSheetOpen(true);
-                },
-              }}
-            />
-          }
-          infiniteScroll={true}
-          fetchNextPage={fetchNextPage}
-          hasNextPage={hasNextPage}
-          isFetchingNextPage={isFetchingNextPage}
-          meta={{
-            onRowClick: handleRowClick,
-          }}
-        />
+        {isLoading ? (
+          <TableSkeleton
+            columns={tableColumns}
+            rowCount={20}
+            stickyColumnIds={["name"]}
+            actionsColumnId="actions"
+          />
+        ) : (
+          <DataTable
+            data={allContacts}
+            columns={tableColumns}
+            setColumns={setColumns}
+            tableId="contacts"
+            hFull
+            emptyMessage={
+              <DataTableEmptyState
+                title={dictionary.contacts.empty.title}
+                description={dictionary.contacts.empty.description}
+                action={
+                  canEditData
+                    ? { label: dictionary.contacts.empty.action, onClick: handleCreate }
+                    : undefined
+                }
+              />
+            }
+            infiniteScroll={true}
+            fetchNextPage={fetchNextPage}
+            hasNextPage={hasNextPage}
+            isFetchingNextPage={isFetchingNextPage}
+            meta={{ onRowClick: handleRowClick }}
+          />
+        )}
       </div>
 
       <ContactFormSheet
@@ -202,6 +191,7 @@ export function ContactsClient({ initialData, dictionary, settings }: Props) {
         }}
         contact={editContact}
         dictionary={dictionary}
+        canEdit={canEditData}
       />
 
       <ContactDetailSheet
@@ -212,7 +202,6 @@ export function ContactsClient({ initialData, dictionary, settings }: Props) {
           setSelectedContact(null);
         }}
         dictionary={dictionary}
-        settings={settings}
       />
     </div>
   );

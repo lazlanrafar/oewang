@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useState, useTransition } from "react";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { addSubCurrency, getExchangeRates, removeSubCurrency } from "@workspace/modules/setting/setting.action";
-import type { SubCurrency, TransactionSettings } from "@workspace/types";
+import type { SubCurrency } from "@workspace/types";
 import { Button, DataTableEmptyState, SelectCurrency, Separator, Skeleton } from "@workspace/ui";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -12,8 +13,6 @@ import type { AppDictionary } from "@/modules/types/dictionary";
 import { useAppStore } from "@/stores/app";
 
 interface SubCurrencyListProps {
-  initialSubCurrencies: SubCurrency[];
-  settings: TransactionSettings;
   dictionary: AppDictionary;
 }
 
@@ -25,9 +24,6 @@ function SubCurrencySkeleton() {
         <Skeleton className="h-4 w-72" />
       </div>
       <Separator className="my-6" />
-      <div className="flex justify-end">
-        <Skeleton className="h-8 w-32 rounded-none" />
-      </div>
       <div className="space-y-4">
         {[1, 2].map((i) => (
           <div key={i} className="flex justify-between rounded-none border p-4">
@@ -35,13 +31,7 @@ function SubCurrencySkeleton() {
               <Skeleton className="h-5 w-16" />
               <Skeleton className="h-3 w-24" />
             </div>
-            <div className="flex gap-4">
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-2 w-12" />
-              </div>
-              <Skeleton className="h-8 w-8 rounded-none" />
-            </div>
+            <Skeleton className="h-8 w-8 rounded-none" />
           </div>
         ))}
       </div>
@@ -49,20 +39,25 @@ function SubCurrencySkeleton() {
   );
 }
 
-export function SubCurrencyList({ initialSubCurrencies, settings, dictionary }: SubCurrencyListProps) {
-  const [subCurrencies, setSubCurrencies] = useState(initialSubCurrencies);
+export function SubCurrencyList({ dictionary }: SubCurrencyListProps) {
+  const settings = useAppStore((s) => s.settings);
+  const subCurrencies = useAppStore((s) => s.subCurrencies);
+  const setSubCurrencies = useAppStore((s) => s.setSubCurrencies);
+  const queryClient = useQueryClient();
+
   const [rates, setRates] = useState<Record<string, string>>({});
   const [isLoadingRates, setIsLoadingRates] = useState(false);
   const [isPending, startTransition] = useTransition();
-  const { isLoading: isAppLoading } = useAppStore();
 
   const fetchRates = useCallback(async () => {
     if (!settings?.mainCurrencyCode) return;
     setIsLoadingRates(true);
     try {
-      const result = await getExchangeRates(settings?.mainCurrencyCode);
+      const result = await getExchangeRates(settings.mainCurrencyCode);
       if (result.success) {
         setRates(result.data || {});
+      } else {
+        console.error("Failed to fetch rates", result.error);
       }
     } catch (error) {
       console.error("Failed to fetch rates", error);
@@ -75,12 +70,21 @@ export function SubCurrencyList({ initialSubCurrencies, settings, dictionary }: 
     fetchRates();
   }, [fetchRates]);
 
+  const syncStoreAndCache = useCallback(
+    (next: SubCurrency[]) => {
+      setSubCurrencies(next);
+      queryClient.setQueryData(["settings", "sub-currencies"], next);
+    },
+    [setSubCurrencies, queryClient],
+  );
+
   const handleAdd = (c: { code: string }) => {
     startTransition(async () => {
       const result = await addSubCurrency({ currencyCode: c.code });
       if (result.success) {
-        setSubCurrencies((prev) => [...prev, result.data]);
-        toast.success(`${c.code} ${dictionary.settings.sub_currencies.toast_added || "added to sub-currencies"}`);
+        syncStoreAndCache([...subCurrencies, result.data]);
+        const template = dictionary.settings.sub_currencies.toast_added || "{code} added to sub-currencies";
+        toast.success(template.replace("{code}", c.code));
       } else {
         toast.error(result.error);
       }
@@ -91,15 +95,16 @@ export function SubCurrencyList({ initialSubCurrencies, settings, dictionary }: 
     startTransition(async () => {
       const result = await removeSubCurrency(id);
       if (result.success) {
-        setSubCurrencies((prev) => prev.filter((item) => item.id !== id));
-        toast.success(`${code} ${dictionary.settings.sub_currencies.toast_removed || "removed"}`);
+        syncStoreAndCache(subCurrencies.filter((item) => item.id !== id));
+        const template = dictionary.settings.sub_currencies.toast_removed || "{code} removed";
+        toast.success(template.replace("{code}", code));
       } else {
         toast.error(result.error);
       }
     });
   };
 
-  if (!dictionary && isAppLoading) return <SubCurrencySkeleton />;
+  if (!settings) return <SubCurrencySkeleton />;
 
   return (
     <div className="space-y-8">
@@ -139,7 +144,7 @@ export function SubCurrencyList({ initialSubCurrencies, settings, dictionary }: 
                   ) : (
                     <div className="flex flex-col">
                       <span className="font-medium text-sm">
-                        1 {settings?.mainCurrencyCode} ={" "}
+                        1 {settings.mainCurrencyCode} ={" "}
                         {rate
                           ? parseFloat(rate).toLocaleString(undefined, {
                               maximumFractionDigits: 4,

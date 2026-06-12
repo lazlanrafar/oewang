@@ -1,4 +1,5 @@
 export * from "./data-table";
+export * from "./data-table-page-card";
 export * from "./data-table-columns-visibility";
 export * from "./data-table-configs";
 export * from "./data-table-header";

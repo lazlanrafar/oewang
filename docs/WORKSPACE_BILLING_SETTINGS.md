@@ -39,8 +39,11 @@ erDiagram
     workspaces ||--o{ workspace_sub_currencies : "supports"
     workspaces ||--o{ workspace_addons : "purchases"
     workspaces }o--|| pricing : "subscribed to plan"
+    workspaces }o--o| pricing : "pending plan switch"
     workspace_addons }o--|| pricing : "refers to addon"
     workspaces ||--o{ orders : "billing log"
+    workspaces ||--o{ billing_invoices : "issued"
+    orders ||--o| billing_invoices : "linked"
 
     users {
         string id PK "CUID2"
@@ -57,10 +60,29 @@ erDiagram
         string plan_id FK "pricing.id"
         string plan_status "free|active|past_due|cancelled"
         string plan_billing_interval "monthly|annual"
+        string pending_plan_id FK "scheduled switch"
+        string pending_plan_billing_interval "monthly|annual"
         string mayar_customer_email
         timestamp plan_current_period_end
+        timestamp plan_overdue_started_at
+        timestamp storage_violation_at "30d vault grace"
         bigint vault_size_used_bytes
         integer ai_tokens_used
+    }
+
+    billing_invoices {
+        string id PK
+        string workspace_id FK
+        string order_id FK
+        string invoice_number "INV-YYYY-NNNNN"
+        integer sequence "per-workspace"
+        string kind "subscription|addon|one_time"
+        string plan_id FK
+        jsonb line_items
+        bigint subtotal
+        bigint total
+        string currency
+        timestamp paid_at
     }
 
     user_workspaces {
@@ -177,17 +199,54 @@ All paid upgrades and add-on purchases are integrated with the **Mayar Payment G
 
 ### Webhook Event Handling:
 
-- **`payment.received`**: Verifies transaction payload, retrieves `workspaceId` and `planId` from metadata, and sets `plan_status = 'active'`. Sets expiration date (`plan_current_period_end`) by calculating the billing interval (1 month or 1 year).
-- **`subscription.cancelled`**: Marks the subscription status as `cancelled`. The user retains premium access until `plan_current_period_end` is reached.
+- **`payment.received` / `purchase` (success)**: Verifies the transaction payload, retrieves `workspaceId` and `planId` from `extraData`, sets `plan_status = 'active'`, calculates `plan_current_period_end` from the inferred billing interval, and **issues an internal `billing_invoices` row** with snapshotted line items.
+- **`payment.failed`**: Marks the order failed, notifies the workspace owner, sends a payment-failed email.
+
+> Mayar does not have a server-side cancellation event. User-initiated cancellation is handled entirely by our own `cancelSubscription` endpoint (see below).
+
+### User-driven subscription actions
+
+| Action | Endpoint | Effect |
+| --- | --- | --- |
+| Cancel | `POST /v1/mayar/cancel-subscription` | Sets `plan_status = 'cancelled'`. Workspace keeps premium access until `plan_current_period_end`. |
+| Resume | `POST /v1/mayar/resume-subscription` | Reverts `plan_status` to `'active'` (only allowed while period_end is still in the future). |
+| Schedule plan change | `POST /v1/mayar/schedule-plan-switch` | Persists `pending_plan_id` + `pending_plan_billing_interval`. Current plan stays active. |
+| Cancel pending switch | `POST /v1/mayar/cancel-pending-plan-switch` | Clears the pending fields. |
+| Cancel add-on | `POST /v1/mayar/cancel-addon` | Marks the addon `cancelled`. It stays active until its own period_end. |
+
+All require the `owner` or `admin` workspace role.
 
 ### Billing Lifecycle Daemon (Cron):
 
-A periodic background worker evaluates subscription periods:
+`BillingLifecycleService.processLifecycle()` runs every 6 hours and walks the following decision tree for each workspace where `plan_current_period_end < now()`:
 
-1. **Subscription Expiration**: If `plan_status == 'active'` and `plan_current_period_end < now()`:
-   - Sets `plan_status = 'past_due'`.
-   - Records `plan_overdue_started_at = now()`.
-   - Sends notification and transactional reminder email.
-2. **Grace Period Expiry**: If `plan_status == 'past_due'` and `plan_overdue_started_at < now() - 7 days`:
-   - Downgrades workspace to the `Free` plan (`plan_id` resets, `plan_status = 'free'`).
-   - Sends email alert advising the user of the downgrade and active quota limitations.
+1. **`plan_status == 'cancelled'`** → downgrade to Starter. If `vault_size_used_bytes > Starter.max_vault_size_mb`, immediately set `storage_violation_at = now` so the 30-day vault grace period starts predictably.
+2. **`plan_status == 'active'` AND `pending_plan_id` is set** → swap `plan_id` ← `pending_plan_id`, clear the pending fields, mark `past_due` (so the next checkout uses the new plan).
+3. **`plan_status == 'active'`** (no pending switch) → mark `past_due`, send a payment reminder.
+4. **`plan_status == 'past_due'`**:
+   - Less than 7 days overdue: re-send escalating reminders every 3 days.
+   - 7+ days overdue: downgrade to Starter (same vault grace logic as #1).
+
+### Vault grace period
+
+When the downgrade reduces the vault quota below current usage, the vault file lifecycle is:
+
+```
+day 0  → storage_violation_at = now (files visible)
+day 30 → processStorageViolations cron marks files inactive (hidden, R2 preserved)
+day 90 → hardDeleteExtendedInactiveFiles cron permanently deletes R2 blobs
+```
+
+At any time before day 90, the user can free space or upgrade — `storage_violation_at` clears and files reactivate automatically. The two crons live in `apps/api/scripts/storage-worker.ts`.
+
+### Internal billing invoices
+
+Every successful payment triggers `BillingInvoicesService.issue()` which writes a `billing_invoices` row with:
+
+- Per-workspace sequential `invoice_number` (`INV-YYYY-NNNNN`) allocated under a row-level lock to prevent duplicates on concurrent webhook retries
+- Snapshotted `line_items` (immutable — survives workspace renames, email changes)
+- Idempotency on `mayar_transaction_id` (re-running the same webhook returns the existing invoice)
+
+Users view invoices at `/settings/billing/invoices` and `/settings/billing/invoices/[id]`. The detail page is print-ready (browser native print dialog → save as PDF).
+
+For deep dives on the implementation, see [FEAT_BILLING.md](./FEAT_BILLING.md).

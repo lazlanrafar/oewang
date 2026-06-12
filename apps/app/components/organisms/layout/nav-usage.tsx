@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getActiveWorkspace } from "@workspace/modules/workspace/workspace.action";
 import { Progress } from "@workspace/ui";
 import { formatBytes } from "@workspace/utils";
@@ -23,8 +23,12 @@ type WorkspaceData = {
   extra_vault_size_mb?: number | null;
 };
 
-const USAGE_REFRESH_INTERVAL_MS = 15_000;
 const COUNTER_ANIMATION_MS = 700;
+
+// How long workspace usage data is considered fresh.
+// WebSocket events will invalidate the cache on real changes,
+// so this is only a safety-net for data staleness.
+const USAGE_STALE_TIME_MS = 5 * 60 * 1000; // 5 minutes
 
 function useAnimatedNumber(target: number, durationMs = COUNTER_ANIMATION_MS) {
   const safeTarget = Number.isFinite(target) ? target : 0;
@@ -98,29 +102,59 @@ export function NavUsage({
   readonly workspace: WorkspaceData | undefined;
   readonly dictionary: AppDictionary;
 }) {
+  const queryClient = useQueryClient();
   const aiQuota = useAppStore((state) => state.aiQuota);
   const fetchAiQuota = useAppStore((state) => state.fetchAiQuota);
   const activeWorkspace = useAppStore((state) => state.workspace);
 
+  // Stable ref so the WS cache-listener closure never captures a stale function.
+  const fetchAiQuotaRef = useRef(fetchAiQuota);
+  useEffect(() => {
+    fetchAiQuotaRef.current = fetchAiQuota;
+  }, [fetchAiQuota]);
+
+  // Fetch workspace usage once on mount.
+  // The existing useRealtime() hook (mounted in the dashboard layout) listens for
+  // WebSocket events from the API. When the API emits "workspace.usage" (after an AI
+  // call or vault upload), useRealtime calls queryClient.invalidateQueries(["workspace","active"]),
+  // which triggers a fresh fetch here automatically — no polling needed.
   const { data: activeWorkspaceUsage } = useQuery({
     queryKey: ["workspace", "active"],
     queryFn: async () => {
       const result = await getActiveWorkspace();
       return result.success ? result.data : null;
     },
-    refetchInterval: USAGE_REFRESH_INTERVAL_MS,
-    refetchIntervalInBackground: true,
-    refetchOnWindowFocus: true,
-    staleTime: 0,
+    staleTime: USAGE_STALE_TIME_MS,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 
+  // Hydrate AI quota once on mount.
   useEffect(() => {
     void fetchAiQuota();
-    const interval = setInterval(() => {
-      void fetchAiQuota();
-    }, USAGE_REFRESH_INTERVAL_MS);
-    return () => clearInterval(interval);
   }, [fetchAiQuota]);
+
+  // React to TanStack Query cache updates for the workspace — specifically after the
+  // WebSocket invalidates ["workspace", "active"]. When that query completes a fresh
+  // fetch, we also refresh the AI quota to stay in sync.
+  useEffect(() => {
+    const unsubscribe = queryClient.getQueryCache().subscribe((event) => {
+      if (
+        event.type === "updated" &&
+        Array.isArray(event.query.queryKey) &&
+        event.query.queryKey[0] === "workspace" &&
+        event.query.queryKey[1] === "active" &&
+        event.query.state.status === "success" &&
+        // Only react to a successful refetch (not the initial mount fetch)
+        event.query.state.fetchStatus === "idle" &&
+        event.query.state.dataUpdateCount > 1
+      ) {
+        void fetchAiQuotaRef.current();
+      }
+    });
+
+    return unsubscribe;
+  }, [queryClient]);
 
   const resolvedWorkspace = (activeWorkspaceUsage ?? activeWorkspace ?? workspace) as WorkspaceData | null;
   const maxAiTokens = resolvedWorkspace ? (aiQuota?.maxTokens ?? getMaxAiTokens(resolvedWorkspace)) : 0;

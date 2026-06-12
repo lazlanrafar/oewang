@@ -2,6 +2,7 @@ import { ErrorCode } from "@workspace/types";
 import { buildError, buildSuccess } from "@workspace/utils";
 import { status } from "elysia";
 import { AuditLogsService } from "../../audit-logs/audit-logs.service";
+import { RealtimeService } from "../../realtime/realtime.service";
 import type { CreateSubCurrencyInput } from "./sub-currencies.model";
 import { SubCurrenciesRepository } from "./sub-currencies.repository";
 
@@ -51,6 +52,8 @@ export abstract class SubCurrenciesService {
       after: subCurrency,
     });
 
+    RealtimeService.notifyValueChange(workspaceId, "settings");
+
     return buildSuccess(
       subCurrency,
       "Sub-currency created successfully",
@@ -77,6 +80,8 @@ export abstract class SubCurrenciesService {
       entity_id: id,
       before: existing,
     });
+
+    RealtimeService.notifyValueChange(workspaceId, "settings");
 
     return buildSuccess(null, "Sub-currency deleted successfully");
   }

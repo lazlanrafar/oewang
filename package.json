@@ -23,7 +23,8 @@
     "test:e2e": "turbo run test:e2e",
     "test:e2e:ui": "cd apps/app && bun run test:e2e:ui",
     "test:watch": "bash -c 'cd apps/api && bun test --watch modules/'",
-    "test:coverage": "bash -c 'cd apps/api && bun test --coverage modules/'"
+    "test:coverage": "bash -c 'cd apps/api && bun test --coverage modules/'",
+    "cache:reset": "find . -not -path '*/node_modules/*' \\( -name '.next' -o -name '.turbo' -o -name 'dist' \\) -type d -exec rm -rf {} + 2>/dev/null; bun install"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.11.3",

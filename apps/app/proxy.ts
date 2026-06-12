@@ -68,7 +68,8 @@ export async function proxy(request: NextRequest) {
     pathAfterLocale.startsWith("/calendar") ||
     pathAfterLocale.startsWith("/settings") ||
     pathAfterLocale.startsWith("/contacts") ||
-    pathAfterLocale.startsWith("/vault");
+    pathAfterLocale.startsWith("/vault") ||
+    pathAfterLocale.startsWith("/billing-invoice");
 
   const isAuthRoute = pathAfterLocale === "/login" || pathAfterLocale === "/register";
   const isCreateWorkspaceRoute = pathAfterLocale === "/create-workspace";

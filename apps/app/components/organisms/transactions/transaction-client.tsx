@@ -8,22 +8,16 @@ import type { Dictionary } from "@workspace/dictionaries";
 import { deleteTransaction, getTransactions } from "@workspace/modules/transaction/transaction.action";
 import type { Category, Transaction, TransactionQueryParams, Wallet } from "@workspace/types";
 import {
-  Button,
   cn,
   DataTable,
   DataTableColumnsVisibility,
   DataTableEmptyState,
-  DataTableFilter,
   DataTableRow,
-  DateRangePicker,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
   Icons,
+  TableSkeleton,
 } from "@workspace/ui";
 import { endOfMonth, endOfWeek, format, parseISO, startOfMonth, startOfWeek } from "date-fns";
-import { ChevronDown, ChevronRight, FileDown, FileUp, Plus } from "lucide-react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { parseAsString, useQueryState } from "nuqs";
 import { toast } from "sonner";
 
@@ -34,13 +28,12 @@ import { useAppStore } from "@/stores/app";
 import { useTransactionsStore } from "@/stores/transactions";
 
 import { TransactionBulkEditBar } from "./transaction-bulk-edit-bar";
+import { TransactionClientHeader } from "./transaction-client-header";
 import { transactionColumns } from "./transaction-columns";
 import { TransactionDetailSheet } from "./transaction-detail-sheet";
 import { ExportModal } from "./transaction-export-modal";
 import { TransactionFormSheet } from "./transaction-form-sheet";
-import { type GroupByInterval, TransactionGroupingSelector } from "./transaction-grouping-selector";
 import { ImportModal } from "./transaction-import-modal";
-import { TransactionTableSkeleton } from "./transaction-table-skeleton";
 
 interface TransactionGroup {
   id: string;
@@ -511,7 +504,7 @@ export function TransactionsClient({
 
   const nonClickableColumns = useMemo(() => new Set(["select", "actions", "category", "assignee", "account"]), []);
 
-  if (!dictionary) return <TransactionTableSkeleton hideHeader />;
+  if (!dictionary) return null;
 
   const handleCreate = () => {
     setSelectedTransaction(undefined);
@@ -520,90 +513,32 @@ export function TransactionsClient({
 
   return (
     <div className="flex h-full w-full flex-col gap-4">
-      <div className="flex shrink-0 items-center justify-between gap-4">
-        <div className="flex flex-1 items-center">
-          <DataTableFilter
-            filters={filters}
-            onFilterChange={handleFilterChange}
-            placeholder={dictionary.transactions.search_placeholder}
-            showDateFilter={false}
-            showAmountFilter={true}
-            showAttachments={true}
-            showSource={true}
-            facets={facets}
-            attachmentsFilters={attachmentsFilters}
-            manualFilters={manualFilters}
-            excludeKeys={["startDate", "endDate"]}
-            className="w-full border-none bg-transparent p-0 focus-visible:ring-0"
-            categories={categories}
-            accounts={wallets}
-          />
-        </div>
-
-        <div className="flex items-center gap-2">
-          <TransactionGroupingSelector
-            value={groupBy as GroupByInterval}
-            onValueChange={(v) => setGroupBy(v)}
-            dictionary={dictionary}
-          />
-          <DateRangePicker
-            range={{
-              from: filters.startDate ? parseISO(filters.startDate) : undefined,
-              to: filters.endDate ? parseISO(filters.endDate) : undefined,
-            }}
-            onSelect={(range) => {
-              handleFilterChange({
-                ...filters,
-                startDate: range?.from ? range.from.toISOString() : "",
-                endDate: range?.to ? range.to.toISOString() : "",
-              });
-            }}
-          />
-          <DataTableColumnsVisibility columns={columns} />
-
-          {canEditData ? (
-            <>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline">
-                    <FileUp className="h-4 w-4" />
-                    <span className="ml-2 hidden text-sm sm:inline-block">
-                      {dictionary.transactions.import_backfill}
-                    </span>
-                    <ChevronDown className="ml-2 h-4 w-4 text-muted-foreground" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setIsImportOpen(true)}>
-                    <FileUp className="mr-2 h-4 w-4" />
-                    {dictionary.transactions.backup_restore_device}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem disabled>
-                    <FileDown className="mr-2 h-4 w-4" />
-                    {dictionary.transactions.export_backup_email}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setIsExportOpen(true)}>
-                    <FileDown className="mr-2 h-4 w-4" />
-                    {dictionary.transactions.export_data_excel}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <Button variant="outline" size="icon" onClick={handleCreate}>
-                <Plus className="h-4 w-4" />
-              </Button>
-            </>
-          ) : (
-            <Button variant="outline" onClick={() => setIsExportOpen(true)}>
-              <FileDown className="h-4 w-4" />
-              <span className="ml-2 text-sm">{dictionary.transactions.export_data_excel}</span>
-            </Button>
-          )}
-        </div>
-      </div>
+      <TransactionClientHeader
+        filters={filters}
+        onFilterChange={handleFilterChange}
+        groupBy={groupBy}
+        onGroupByChange={(v) => setGroupBy(v)}
+        columns={columns}
+        facets={facets as any}
+        attachmentsFilters={attachmentsFilters}
+        manualFilters={manualFilters}
+        categories={categories}
+        wallets={wallets}
+        onImport={() => setIsImportOpen(true)}
+        onExport={() => setIsExportOpen(true)}
+        onAdd={handleCreate}
+        canEditData={canEditData}
+        dictionary={dictionary}
+      />
 
       <div className="relative min-h-0 flex-1">
         {isLoading ? (
-          <TransactionTableSkeleton hideHeader />
+          <TableSkeleton
+            columns={columnsWithActions}
+            rowCount={20}
+            stickyColumnIds={["select", "date", "name", "actions"]}
+            actionsColumnId="actions"
+          />
         ) : (
           <DataTable<TransactionRow>
             data={processedRows}

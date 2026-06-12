@@ -5,6 +5,7 @@ import { logger } from "@workspace/logger";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { normalizeWorkspaceRole } from "../workspaces/workspace-permissions";
 import { UsersRepository } from "./users.repository";
+import { WorkspacesRepository } from "../workspaces/workspaces.repository";
 
 export abstract class UsersService {
   private static async getBucketClient() {
@@ -179,7 +180,22 @@ export abstract class UsersService {
     const user = await UsersRepository.findById(user_id);
     if (!user) return null;
 
-    const workspaces = await UsersRepository.getWorkspacesWithRole(user_id);
+    let workspaces = await UsersRepository.getWorkspacesWithRole(user_id);
+
+    // Self-heal: if workspace_id is set on the user but no membership row exists,
+    // insert the missing user_workspaces row and re-fetch.
+    if (workspaces.length === 0 && user.workspace_id) {
+      try {
+        await WorkspacesRepository.addMember({
+          workspace_id: user.workspace_id,
+          user_id,
+          role: "owner",
+        });
+        workspaces = await UsersRepository.getWorkspacesWithRole(user_id);
+      } catch {
+        // Ignore — membership may already exist or workspace may be deleted
+      }
+    }
 
     let profile_picture = user.profile_picture;
     if (profile_picture && profile_picture.startsWith("avatars/")) {

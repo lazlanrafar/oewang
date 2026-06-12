@@ -6,18 +6,47 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Env } from "@workspace/constants";
 
 /**
- * useRealtime - Custom hook to listen for data change notifications via WebSockets.
+ * useRealtime — listens for data change notifications from the API via WebSocket
+ * and invalidates the matching TanStack Query caches so any open tab stays in
+ * sync without polling or page reloads.
  *
- * It automatically reconnects on failure and invalidates React Query caches
- * when a notification is received for a specific data type.
+ * The API emits events with `{ workspaceId, type }`. Each `type` maps to one or
+ * more query keys via the table below. Unknown types fall through to a no-op
+ * (we never invalidate the entire cache on an unknown event).
+ *
+ * To add a new event type:
+ * 1. Call `RealtimeService.notifyValueChange(workspaceId, "your.type")` in the API
+ * 2. Add a case in `INVALIDATIONS` below mapping the type to the query keys
  */
+
+type InvalidationKeys = readonly (readonly unknown[])[];
+
+/** Explicit type → query-key invalidation map. */
+const INVALIDATIONS: Record<string, InvalidationKeys> = {
+  transactions: [["transactions"], ["metrics"], ["workspace", "active"]],
+  wallets: [["wallets"], ["workspace", "active"]],
+  categories: [["categories"]],
+  notifications: [["notifications"]],
+  contacts: [["contacts"]],
+  debts: [["debts"]],
+  budgets: [["budgets"]],
+  invoices: [["invoices"]],
+  settings: [["settings", "transaction"], ["settings", "sub-currencies"]],
+  workspace: [["workspace", "active"], ["user", "me"]],
+  // Emitted by API after AI token consumption or vault file uploads.
+  "workspace.usage": [["workspace", "active"], ["ai", "quota"]],
+};
+
 export function useRealtime() {
   const queryClient = useQueryClient();
   const socketRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttempts = useRef(0);
+  const isUnmountingRef = useRef(false);
 
   const connect = useCallback(async () => {
+    if (isUnmountingRef.current) return;
+
     // Browser automatically attaches cookies for same-site WebSocket requests.
     // Avoid query-token transport in production to prevent token leakage via URLs/logs.
     const apiUrl = Env.NEXT_PUBLIC_API_URL ?? "http://localhost:3002";
@@ -30,63 +59,51 @@ export function useRealtime() {
       (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
     ) {
       let port = "3002";
-      const match = apiUrl.match(/(?:https?:\/\/)?([^.]+)/);
-      if (match && match[1] && /^\d+$/.test(match[1])) {
-        port = match[1];
-      } else {
-        try {
-          const urlObj = new URL(apiUrl);
-          if (urlObj.port) {
-            port = urlObj.port;
-          }
-        } catch (_) {}
-      }
+      try {
+        const urlObj = new URL(apiUrl);
+        if (urlObj.port) port = urlObj.port;
+      } catch {}
       baseWsUrl = `ws://localhost:${port}`;
     }
 
     const wsUrl = `${baseWsUrl}/v1/realtime`;
 
-    if (process.env.NODE_ENV !== "production") console.log("[Realtime] Connecting to", wsUrl);
+    if (process.env.NODE_ENV !== "production") {
+      console.log("[Realtime] Connecting to", wsUrl);
+    }
 
     try {
       const ws = new WebSocket(wsUrl);
       socketRef.current = ws;
 
       ws.onopen = () => {
-        console.log("[Realtime] ✅ Connected and listening for updates");
+        console.log("[Realtime] ✅ Connected");
         reconnectAttempts.current = 0;
         if (reconnectTimeoutRef.current) {
           clearTimeout(reconnectTimeoutRef.current);
+          reconnectTimeoutRef.current = null;
         }
       };
 
       ws.onmessage = (event) => {
         try {
-          const data = JSON.parse(event.data);
-          console.log("[Realtime] 📥 Received event:", data);
+          const data = JSON.parse(event.data) as { type?: string; workspaceId?: string };
+          if (!data.type) return;
 
-          if (data.type) {
-            console.log(`[Realtime] 🔄 Invalidating queries for: ${data.type}`);
-
-            // Invalidate the relevant query key (fuzzy match: unknown key starting with this type)
-            queryClient.invalidateQueries({
-              queryKey: [data.type],
-              refetchType: "all",
-            });
-
-            if (data.type === "transactions" || data.type === "wallets") {
-              queryClient.invalidateQueries({
-                queryKey: ["workspace", "active"],
-              });
+          const keysToInvalidate = INVALIDATIONS[data.type];
+          if (!keysToInvalidate) {
+            if (process.env.NODE_ENV !== "production") {
+              console.warn(`[Realtime] ⚠️ Unhandled event type: "${data.type}"`);
             }
+            return;
+          }
 
-            if (data.type === "notifications") {
-              queryClient.invalidateQueries({ queryKey: ["notifications"] });
-            }
+          if (process.env.NODE_ENV !== "production") {
+            console.log(`[Realtime] 🔄 ${data.type} → invalidating ${keysToInvalidate.length} key(s)`);
+          }
 
-            // Trigger a lightweight router refresh to update any server-side rendered data on the current page
-            // This is safe to call from client components in Next.js 16
-            // import { refresh } from "next/cache" is server only, but window.location or router.refresh works
+          for (const queryKey of keysToInvalidate) {
+            queryClient.invalidateQueries({ queryKey });
           }
         } catch (e) {
           console.error("[Realtime] ❌ Failed to parse message", e);
@@ -94,32 +111,39 @@ export function useRealtime() {
       };
 
       ws.onclose = (event) => {
+        if (isUnmountingRef.current) return;
         const delay = Math.min(1000 * 2 ** reconnectAttempts.current, 30000);
         console.log(
-          `[Realtime] ⚠️ Disconnected (Code: ${event.code}, Reason: ${event.reason || "None"}), retrying in ${delay / 1000}s...`,
+          `[Realtime] ⚠️ Disconnected (${event.code}${event.reason ? `: ${event.reason}` : ""}), retrying in ${delay / 1000}s`,
         );
         reconnectAttempts.current++;
         reconnectTimeoutRef.current = setTimeout(connect, delay);
       };
 
       ws.onerror = () => {
-        console.warn("[Realtime] 🛑 WebSocket connection failed:", wsUrl, "(API may not be running)");
+        console.warn("[Realtime] 🛑 WebSocket connection failed (API may not be running)");
       };
     } catch (e) {
       console.error("[Realtime] ❌ Connection failed", e);
-      reconnectTimeoutRef.current = setTimeout(connect, 5000);
+      if (!isUnmountingRef.current) {
+        reconnectTimeoutRef.current = setTimeout(connect, 5000);
+      }
     }
   }, [queryClient]);
 
   useEffect(() => {
+    isUnmountingRef.current = false;
     connect();
 
     return () => {
+      isUnmountingRef.current = true;
       if (socketRef.current) {
         socketRef.current.close();
+        socketRef.current = null;
       }
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
       }
     };
   }, [connect]);

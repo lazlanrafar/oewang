@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useTransition } from "react";
 
 import { useQueryClient } from "@tanstack/react-query";
 import type { Dictionary } from "@workspace/dictionaries";
@@ -24,11 +24,10 @@ import { toast } from "sonner";
 import { useAppStore } from "@/stores/app";
 
 interface MainCurrencyFormProps {
-  settings: TransactionSettings;
   dictionary: Dictionary;
 }
 
-function _MainCurrencySkeleton() {
+function MainCurrencySkeleton() {
   return (
     <div className="animate-pulse space-y-8">
       <div className="space-y-2">
@@ -41,45 +40,37 @@ function _MainCurrencySkeleton() {
         <Skeleton className="h-10 w-48" />
         <Skeleton className="h-8 w-24 rounded-none" />
       </div>
-      <Separator />
-      <div className="mx-auto max-w-sm space-y-4">
-        <div className="flex items-center justify-between">
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-8 w-32 rounded-none" />
-        </div>
-        <div className="flex items-center justify-between">
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-8 w-32 rounded-none" />
-        </div>
-      </div>
     </div>
   );
 }
 
-export function MainCurrencyForm({ settings, dictionary }: MainCurrencyFormProps) {
-  const [data, setData] = useState(settings);
-  const [_isPending, startTransition] = useTransition();
-  const queryClient = useQueryClient();
+export function MainCurrencyForm({ dictionary }: MainCurrencyFormProps) {
+  const data = useAppStore((s) => s.settings);
   const setAppSettings = useAppStore((s) => s.setSettings);
+  const [, startTransition] = useTransition();
+  const queryClient = useQueryClient();
+  const dict = dictionary.settings.currency;
 
-  if (!data) return null;
+  if (!data) return <MainCurrencySkeleton />;
 
   const handleUpdate = (updates: Partial<TransactionSettings>) => {
+    const previous = data;
     const optimistic = { ...data, ...updates };
-    // Optimistic local update
-    setData(optimistic);
+    // Optimistic update — UI reflects the change immediately
+    setAppSettings(optimistic);
+    queryClient.setQueryData(["settings", "transaction"], optimistic);
 
     startTransition(async () => {
       const result = await updateTransactionSettings(optimistic);
       if (result.success && result.data) {
-        // Sync Zustand and TanStack cache so formatCurrency updates everywhere
         setAppSettings(result.data);
         queryClient.setQueryData(["settings", "transaction"], result.data);
         toast.success(dict.toast_updated || "Main currency settings updated");
       } else {
-        toast.error(result.error);
         // Revert on error
-        setData(settings);
+        setAppSettings(previous);
+        queryClient.setQueryData(["settings", "transaction"], previous);
+        toast.error(result.error);
       }
     });
   };
@@ -87,13 +78,10 @@ export function MainCurrencyForm({ settings, dictionary }: MainCurrencyFormProps
   const formatPreview = () => {
     const amount = (1).toFixed(data.mainCurrencyDecimalPlaces);
     const currencyUnit = getCurrencyDisplayUnit(data.mainCurrencyCode, data.mainCurrencySymbol);
-    if (data.mainCurrencySymbolPosition === "Front") {
-      return `${currencyUnit} ${amount}`;
-    }
-    return `${amount} ${currencyUnit}`;
+    return data.mainCurrencySymbolPosition === "Front"
+      ? `${currencyUnit} ${amount}`
+      : `${amount} ${currencyUnit}`;
   };
-
-  const dict = dictionary.settings.currency;
 
   return (
     <div className="space-y-8">

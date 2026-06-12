@@ -12,6 +12,7 @@ import {
 } from "@workspace/utils";
 import { status } from "elysia";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
+import { RealtimeService } from "../realtime/realtime.service";
 import { VaultRepository } from "./vault.repository";
 
 export abstract class VaultService {
@@ -177,6 +178,11 @@ export abstract class VaultService {
       after: vaultEntry,
     });
 
+    // Notify connected clients that vault storage usage has changed.
+    if (additionalBytes > 0) {
+      RealtimeService.notifyValueChange(workspaceId, "workspace.usage");
+    }
+
     return {
       ...vaultEntry,
       url: await bucket.getSignedUrl(vaultEntry.key),
@@ -237,6 +243,11 @@ export abstract class VaultService {
       before: file,
     });
 
+    // Notify connected clients that vault storage usage has changed.
+    if (activeReferences === 0) {
+      RealtimeService.notifyValueChange(workspaceId, "workspace.usage");
+    }
+
     return deletedFile;
   }
 
@@ -268,6 +279,87 @@ export abstract class VaultService {
     });
 
     return updated;
+  }
+
+  /**
+   * Permanently delete files that have been inactive for longer than the
+   * extended retention window. Called by the same cron that runs
+   * `processStorageViolations`. Two-phase cleanup:
+   *   1. processStorageViolations marks files inactive 30 days after the user
+   *      first goes over quota.
+   *   2. hardDeleteExtendedInactiveFiles removes the R2 blobs after another
+   *      60 days of inactivity (so total grace ≈ 90 days from violation).
+   */
+  static async hardDeleteExtendedInactiveFiles() {
+    const HARD_DELETE_AFTER_DAYS = 60;
+    const cutoff = new Date(
+      Date.now() - HARD_DELETE_AFTER_DAYS * 24 * 60 * 60 * 1000,
+    );
+
+    const stale = await VaultRepository.findInactiveFilesOlderThan(cutoff);
+    if (stale.length === 0) return;
+
+    logger.info(
+      `[Vault] Hard-deleting ${stale.length} files inactive for >${HARD_DELETE_AFTER_DAYS}d`,
+    );
+
+    // Group keys by workspace so we minimise duplicate bucket lookups.
+    const byWorkspace = new Map<string, typeof stale>();
+    for (const file of stale) {
+      const list = byWorkspace.get(file.workspaceId) ?? [];
+      list.push(file);
+      byWorkspace.set(file.workspaceId, list);
+    }
+
+    for (const [workspaceId, files] of byWorkspace) {
+      let bucket;
+      try {
+        bucket = await VaultService.getBucketClient(workspaceId);
+      } catch (err) {
+        logger.error("[Vault] Could not load bucket client for hard delete", {
+          workspaceId,
+          err,
+        });
+        continue;
+      }
+
+      for (const file of files) {
+        try {
+          // Soft-delete the row first (others can no longer reference this key
+          // via this row), then count remaining live rows pointing at the same
+          // blob. Only delete from R2 when this was the last reference.
+          await VaultRepository.markDeleted(file.id, workspaceId);
+
+          const remaining = await VaultRepository.countActiveByKey(
+            workspaceId,
+            file.key,
+          );
+
+          if (remaining === 0) {
+            try {
+              await bucket.delete(file.key);
+            } catch (err) {
+              logger.warn(
+                "[Vault] R2 delete failed during hard delete (continuing)",
+                { workspaceId, key: file.key, err },
+              );
+            }
+            await VaultRepository.incrementVaultSize(
+              workspaceId,
+              -Number(file.size),
+            );
+          }
+        } catch (err) {
+          logger.error("[Vault] Hard delete error for file", {
+            workspaceId,
+            fileId: file.id,
+            err,
+          });
+        }
+      }
+
+      RealtimeService.notifyValueChange(workspaceId, "workspace.usage");
+    }
   }
 
   static async processStorageViolations() {

@@ -23,7 +23,8 @@ import { AccountSwitcher } from "@/components/layout/account-switcher";
 
 async function requireAdminAccess(locale: string) {
   const cookie_store = await cookies();
-  const token = cookie_store.get("oewang-session")?.value;
+  const cookieName = process.env.NEXT_PUBLIC_SESSION_COOKIE_NAME ?? "oewang-admin-session";
+  const token = cookie_store.get(cookieName)?.value;
   if (!token) redirect(`/${locale}/login`);
 
   const jwtSecret = process.env.JWT_SECRET;

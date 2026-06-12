@@ -61,11 +61,34 @@ This ensures workspace isolation at the storage level.
 
 `workspace.vault_size_used_bytes` tracks total storage used. Updated on every upload/delete.
 
-When a workspace exceeds its plan's `max_vault_size_mb`:
+When a workspace exceeds its plan's `max_vault_size_mb` — either by uploading more than allowed **or** by being downgraded to a plan with a smaller quota:
 
 - New uploads are rejected with `422 + PLAN_LIMIT_EXCEEDED`
-- `workspace.storage_violation_at` is set to the timestamp of violation
-- Existing files can be downloaded but not new ones uploaded
+- `workspace.storage_violation_at` is set to the timestamp the violation started
+- Existing files remain downloadable until the grace period expires
+
+### Storage violation lifecycle (two-phase cleanup)
+
+`apps/api/scripts/storage-worker.ts` runs on a cron and walks two services in order:
+
+```
+day 0  → storage_violation_at = now (set either by VaultService when upload is over,
+         or by BillingLifecycleService at downgrade time if usage is already over)
+
+day 30 → VaultService.processStorageViolations marks files inactive
+         (vault_files.inactive_at = now). Hidden in the UI; R2 blobs preserved.
+
+day 90 → VaultService.hardDeleteExtendedInactiveFiles permanently deletes R2 blobs
+         and soft-deletes the rows. Vault usage is decremented.
+```
+
+At any point before day 90, if the user frees space or upgrades:
+
+- `storage_violation_at` is cleared
+- `bulkSetFilesInactive(false)` reactivates any files marked inactive in phase 2
+- R2 blobs are untouched
+
+On downgrade, `BillingLifecycleService.downgradeWorkspace` sets `storage_violation_at` **immediately** (rather than waiting for the next vault cron pass) so users get a predictable 30-day countdown and a clear notification ("Vault is over the Starter limit — 30 days to act").
 
 ### Plan Quota per Tier
 

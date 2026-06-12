@@ -1,11 +1,11 @@
 "use client";
 
-import { INCOME_EXPENSES_COLOR_OPTIONS } from "@workspace/constants";
 import type { Dictionary } from "@workspace/dictionaries";
-import type { Debt, Transaction, TransactionSettings } from "@workspace/types";
+import type { Debt, Transaction } from "@workspace/types";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@workspace/ui";
-import { formatCurrency as formatCurrencyUtil } from "@workspace/utils";
 import { format } from "date-fns";
+
+import { useAppStore } from "@/stores/app";
 
 interface CalendarDaySheetProps {
   date: Date | null;
@@ -14,7 +14,6 @@ interface CalendarDaySheetProps {
   transactions: Transaction[];
   debts: (Debt & { contactName: string })[];
   dictionary: Dictionary;
-  settings: TransactionSettings;
   onTransactionClick: (transaction: Transaction) => void;
 }
 
@@ -25,33 +24,10 @@ export function CalendarDaySheet({
   transactions,
   debts,
   dictionary,
-  settings,
   onTransactionClick,
 }: CalendarDaySheetProps) {
-  const formatCurrency = (amount: number, options?: Parameters<typeof formatCurrencyUtil>[2]) =>
-    formatCurrencyUtil(amount, settings, options);
-
-  const getTransactionColor = (type: string) => {
-    const option =
-      INCOME_EXPENSES_COLOR_OPTIONS.find((o) => o.value === settings?.incomeExpensesColor) ||
-      INCOME_EXPENSES_COLOR_OPTIONS[0];
-
-    const normalizedType = type.toLowerCase();
-
-    if (normalizedType === "income" || normalizedType === "transfer-in") {
-      return (option.incomeColor as string) || "text-blue-600 dark:text-blue-400";
-    }
-
-    if (normalizedType === "expense" || normalizedType === "transfer-out") {
-      return (option.expensesColor as string) || "text-red-600 dark:text-red-400";
-    }
-
-    if (normalizedType === "transfer") {
-      return "text-foreground";
-    }
-
-    return "text-muted-foreground";
-  };
+  const formatCurrency = useAppStore((s) => s.formatCurrency);
+  const getTransactionColor = useAppStore((s) => s.getTransactionColor);
 
   if (!dictionary) return null;
   const t = dictionary.calendar.sheet;

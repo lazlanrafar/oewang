@@ -30,6 +30,7 @@ import {
 } from "./modules/integrations/public-webhooks.controller";
 import { invoicesController } from "./modules/invoices/invoices.controller";
 import { publicInvoicesController } from "./modules/invoices/public-invoices.controller";
+import { billingInvoicesController } from "./modules/mayar/billing-invoices.controller";
 import { mayarController } from "./modules/mayar/mayar.controller";
 import { metricsController } from "./modules/metrics/metrics.controller";
 import { notificationSettingsController } from "./modules/notification-settings/notification-settings.controller";
@@ -106,6 +107,7 @@ const apiControllers2 = new Elysia()
   .use(systemAdminsController)
   .use(pricingController)
   .use(mayarController)
+  .use(billingInvoicesController)
   .use(ordersController)
   .use(systemMetricsController)
   .use(privacyController)

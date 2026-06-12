@@ -39,6 +39,8 @@ export function SelectAccount({
       if (!res.success) throw new Error(res.message);
       return res.data || [];
     },
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnWindowFocus: false,
   });
 
   const createMutation = useMutation({

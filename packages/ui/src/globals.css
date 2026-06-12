@@ -4,10 +4,6 @@
 @source "../";
 @source "../../../../apps/app";
 
-/* Theme preset styles: these override CSS variables based on the selected data-theme-preset */
-@import "./styles/presets/brutalist.css";
-@import "./styles/presets/soft-pop.css";
-@import "./styles/presets/tangerine.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -305,4 +301,36 @@ html {
 
 .disable-transitions * {
   transition: none !important;
+}
+
+/*
+ * Print isolation.
+ * Any element marked with `data-print-only-root` (or its descendants) stays
+ * visible; everything else on the page is hidden. Used by the internal billing
+ * invoice detail page so the browser print dialog only captures the invoice
+ * document instead of the surrounding dashboard chrome.
+ */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  [data-print-only-root],
+  [data-print-only-root] * {
+    visibility: visible;
+  }
+  [data-print-only-root] {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+  /* Drop the document border + inner padding so the print fills the page with
+     a clean margin (controlled by the browser's "Margins" setting). */
+  [data-print-only-root] .print-document {
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    max-width: none !important;
+  }
 }

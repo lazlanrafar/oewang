@@ -60,20 +60,15 @@ const schema = {
   ...mcp_tokens,
 };
 
-// Disable prefetch as it is not supported for "Transaction" pool mode
-// Configure connection pool for production
-const maxConnections = parseInt(process.env.DATABASE_POOL_MAX ?? "10", 10);
-const idleTimeout = parseInt(process.env.DATABASE_IDLE_TIMEOUT ?? "30", 10);
-const connectTimeout = parseInt(
-  process.env.DATABASE_CONNECT_TIMEOUT ?? "10",
-  10,
-);
+const isDev = process.env.NODE_ENV !== "production";
 
 const client = postgres(process.env.DATABASE_URL!, {
   prepare: false,
-  max: maxConnections,
-  idle_timeout: idleTimeout,
-  connect_timeout: connectTimeout,
+  max: parseInt(process.env.DATABASE_POOL_MAX ?? (isDev ? "3" : "10"), 10),
+  idle_timeout: parseInt(process.env.DATABASE_IDLE_TIMEOUT ?? "20", 10),
+  connect_timeout: parseInt(process.env.DATABASE_CONNECT_TIMEOUT ?? "10", 10),
+  max_lifetime: 60 * 30, // 30 min — recycles stale connections from hot-reloads
+  onnotice: () => {}, // suppress NOTICE logs from migrations
 });
 
 export const db = drizzle(client, { schema });

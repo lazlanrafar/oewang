@@ -20,7 +20,7 @@ export const workspaceSettings = pgTable("workspace_settings", {
   weeklyStartDay: text("weekly_start_day").default("Sunday").notNull(),
   carryOver: boolean("carry_over").default(false).notNull(),
   period: text("period").default("Monthly").notNull(),
-  incomeExpensesColor: text("income_expenses_color").default("Exp.").notNull(),
+  incomeExpensesColor: text("income_expenses_color").default("blue-red").notNull(),
   autocomplete: boolean("autocomplete").default(true).notNull(),
   timeInput: text("time_input").default("None").notNull(),
   startScreen: text("start_screen").default("Daily").notNull(),

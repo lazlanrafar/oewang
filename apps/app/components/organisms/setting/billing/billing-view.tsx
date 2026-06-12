@@ -9,9 +9,10 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Dictionary } from "@workspace/dictionaries";
 import {
   cancelAddonAction,
+  cancelPendingPlanSwitch,
   cancelSubscription,
   createCheckoutSession,
-  getInvoiceUrl,
+  resumeSubscription,
   sendMagicLinkAction,
 } from "@workspace/modules/mayar/mayar.action";
 import { getBillingHistory } from "@workspace/modules/orders/orders.action";
@@ -32,12 +33,13 @@ import {
   Skeleton,
 } from "@workspace/ui";
 import { displayPrice, formatBytes, getGatewayPrice, getPlanLimits } from "@workspace/utils";
-import { AlertCircle, Check, CreditCard, Minus, Plus, Shield, Zap } from "lucide-react";
+import { AlertCircle, Check, CreditCard, Minus, Plus, RotateCcw, Shield, X, Zap } from "lucide-react";
 import { toast } from "sonner";
 
 import { useConfirm } from "@/components/providers/confirm-modal-provider";
 import { useAppStore } from "@/stores/app";
 import { useLocalizedRoute } from "@/utils/localized-route";
+import { getBillingInvoiceByOrder } from "@workspace/modules/server";
 
 function BillingSkeleton() {
   return (
@@ -152,26 +154,65 @@ export function BillingView({
     onError: (error: Error) => toast.error(error.message),
   });
 
-  const _downgradeMutation = useMutation({
+  const cancelMutation = useMutation({
     mutationFn: async () => {
       const result = await cancelSubscription();
       if (!result.success) throw new Error(result.error);
       return result.data;
     },
     onSuccess: () => {
-      toast.success("Subscription scheduled for cancellation");
+      toast.success("Subscription will end at the current period");
+      queryClient.invalidateQueries({ queryKey: ["workspace", "active"] });
+      router.refresh();
     },
     onError: (error: Error) => toast.error(error.message),
   });
 
-  const downloadMutation = useMutation({
-    mutationFn: async (invoiceId: string) => {
-      const result = await getInvoiceUrl(invoiceId);
+  const resumeMutation = useMutation({
+    mutationFn: async () => {
+      const result = await resumeSubscription();
+      if (!result.success) throw new Error(result.error);
+      return result.data;
+    },
+    onSuccess: () => {
+      toast.success("Subscription resumed");
+      queryClient.invalidateQueries({ queryKey: ["workspace", "active"] });
+      router.refresh();
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const cancelPendingSwitchMutation = useMutation({
+    mutationFn: async () => {
+      const result = await cancelPendingPlanSwitch();
+      if (!result.success) throw new Error(result.error);
+      return result.data;
+    },
+    onSuccess: () => {
+      toast.success("Pending plan change cancelled");
+      queryClient.invalidateQueries({ queryKey: ["workspace", "active"] });
+      router.refresh();
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  // "View invoice" → resolves the internal billing_invoices row for this order
+  // and opens our standalone invoice page in a new tab. That page lives outside
+  // the dashboard layout so it renders chrome-free and prints cleanly.
+  const viewInvoiceMutation = useMutation({
+    mutationFn: async (orderId: string) => {
+      const result = await getBillingInvoiceByOrder(orderId);
       if (!result.success) throw new Error(result.error);
       return result.data;
     },
     onSuccess: (data) => {
-      if (data.url) window.open(data.url, "_blank");
+      if (data?.id) {
+        window.open(
+          getLocalizedUrl(`/billing-invoice/${data.id}`),
+          "_blank",
+          "noopener,noreferrer",
+        );
+      }
     },
     onError: (error: Error) => toast.error(error.message),
   });
@@ -250,6 +291,40 @@ export function BillingView({
         </Alert>
       )}
 
+      {workspace?.pending_plan_id && (() => {
+        const pendingPlan = (initialPlans || []).find((p) => p.id === workspace.pending_plan_id);
+        if (!pendingPlan) return null;
+        const switchDate = workspace.plan_current_period_end
+          ? new Date(workspace.plan_current_period_end).toLocaleDateString(undefined, {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+            })
+          : "the next renewal";
+        return (
+          <Alert className="rounded-none border-amber-500/50 bg-amber-500/5">
+            <AlertCircle className="h-4 w-4 text-amber-600" />
+            <AlertTitle className="font-semibold text-xs uppercase tracking-widest">
+              Plan change scheduled
+            </AlertTitle>
+            <AlertDescription className="mt-1 flex items-center justify-between gap-4 text-[11px] leading-relaxed opacity-90">
+              <span>
+                Switching to <strong>{pendingPlan.name}</strong> ({workspace.pending_plan_billing_interval ?? "monthly"}) on {switchDate}.
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={cancelPendingSwitchMutation.isPending}
+                onClick={() => cancelPendingSwitchMutation.mutate()}
+                className="h-7 shrink-0 rounded-none px-3 text-[10px] uppercase tracking-widest hover:bg-amber-500/10"
+              >
+                {cancelPendingSwitchMutation.isPending ? "..." : "Undo"}
+              </Button>
+            </AlertDescription>
+          </Alert>
+        );
+      })()}
+
       {/* Current Plan Hero Card */}
       <Card className="group relative overflow-hidden rounded-none border bg-accent/5 shadow-none">
         <div className="pointer-events-none absolute top-0 right-0 p-8 opacity-5 transition-opacity group-hover:opacity-10">
@@ -266,7 +341,7 @@ export function BillingView({
               </Badge>
               <div className="flex items-center gap-3">
                 <h3 className="font-medium text-2xl tracking-tight">{currentPlan.name}</h3>
-                {workspace?.mayar_transaction_id && (
+                {workspace?.plan_status === "active" && workspace?.mayar_transaction_id && (
                   <Badge
                     variant="secondary"
                     className="h-4 rounded-none border-emerald-500/20 bg-emerald-500/10 px-1.5 font-medium text-[9px] text-emerald-600 uppercase tracking-wide"
@@ -274,7 +349,33 @@ export function BillingView({
                     {dictionary.common.active || "Active"}
                   </Badge>
                 )}
+                {workspace?.plan_status === "cancelled" && (
+                  <Badge
+                    variant="secondary"
+                    className="h-4 rounded-none border-amber-500/20 bg-amber-500/10 px-1.5 font-medium text-[9px] text-amber-600 uppercase tracking-wide"
+                  >
+                    Cancelling
+                  </Badge>
+                )}
+                {workspace?.plan_status === "past_due" && (
+                  <Badge
+                    variant="secondary"
+                    className="h-4 rounded-none border-destructive/20 bg-destructive/10 px-1.5 font-medium text-[9px] text-destructive uppercase tracking-wide"
+                  >
+                    Past Due
+                  </Badge>
+                )}
               </div>
+              {workspace?.plan_current_period_end && workspace?.plan_status !== "free" && (
+                <p className="text-[10px] text-muted-foreground uppercase tracking-widest">
+                  {workspace?.plan_status === "cancelled" ? "Ends" : "Renews"} on{" "}
+                  {new Date(workspace.plan_current_period_end).toLocaleDateString(undefined, {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                  })}
+                </p>
+              )}
             </div>
             <div className="text-right">
               <div className="flex items-baseline justify-end gap-1">
@@ -295,7 +396,7 @@ export function BillingView({
         </CardHeader>
         <CardContent className="relative z-10 p-6 pt-2 pb-6">
           <div className="grid gap-8 md:grid-cols-2">
-            <div className="space-y-4">
+            <div className="">
               <p className="max-w-sm text-muted-foreground text-xs leading-relaxed">{currentPlan.description}</p>
               <ul className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2">
                 {(currentPlan.features || []).slice(0, 8).map((feature: string) => (
@@ -306,30 +407,64 @@ export function BillingView({
                 ))}
               </ul>
             </div>
-            <div className="flex h-fit flex-col justify-end gap-3 self-end sm:flex-row">
-              {workspace?.mayar_transaction_id ? (
-                <>
-                  <Button
-                    variant="outline"
-                    onClick={() => portalMutation.mutate()}
-                    disabled={portalMutation.isPending}
-                    className="h-9 rounded-none border bg-background px-6 font-normal text-xs transition-colors hover:bg-accent/5"
-                  >
-                    <CreditCard className="mr-2 h-3.5 w-3.5" />
-                    {portalMutation.isPending
-                      ? dictionary.common.loading || "Sending..."
-                      : billingDict.manage_subscription}
-                  </Button>
-                  <Button asChild className="h-9 rounded-none px-6 font-medium text-xs shadow-sm">
-                    <Link href={getLocalizedUrl("/upgrade")}>{billingDict.upgrade || "Upgrade Plan"}</Link>
-                  </Button>
-                </>
-              ) : (
-                <Button asChild className="h-9 rounded-none px-8 font-medium text-xs shadow-sm">
-                  <Link href={getLocalizedUrl("/upgrade")}>{billingDict.upgrade || "View Plans"}</Link>
+          </div>
+          <div className="flex h-fit flex-col justify-end gap-3 self-end sm:flex-row">
+            {workspace?.plan_status === "cancelled" ? (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => resumeMutation.mutate()}
+                  disabled={resumeMutation.isPending}
+                  className="h-9 rounded-none border bg-background px-6 font-normal text-xs transition-colors hover:bg-accent/5"
+                >
+                  <RotateCcw className="mr-2 h-3.5 w-3.5" />
+                  {resumeMutation.isPending ? "Resuming..." : "Resume Subscription"}
                 </Button>
-              )}
-            </div>
+                <Button asChild className="h-9 rounded-none px-6 font-medium text-xs shadow-sm">
+                  <Link href={getLocalizedUrl("/upgrade")}>{billingDict.upgrade || "Change Plan"}</Link>
+                </Button>
+              </>
+            ) : workspace?.mayar_transaction_id ? (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => portalMutation.mutate()}
+                  disabled={portalMutation.isPending}
+                  className="h-9 rounded-none border bg-background px-6 font-normal text-xs transition-colors hover:bg-accent/5"
+                >
+                  <CreditCard className="mr-2 h-3.5 w-3.5" />
+                  {portalMutation.isPending
+                    ? dictionary.common.loading || "Sending..."
+                    : billingDict.manage_subscription}
+                </Button>
+                <Button asChild className="h-9 rounded-none px-6 font-medium text-xs shadow-sm">
+                  <Link href={getLocalizedUrl("/upgrade")}>{billingDict.upgrade || "Change Plan"}</Link>
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={async () => {
+                    const ok = await confirm({
+                      title: "Cancel Subscription?",
+                      description:
+                        "Your subscription will end at the current billing period. You'll keep access until then and can resume anytime before the end date.",
+                      confirmLabel: "Cancel Subscription",
+                      cancelLabel: "Keep Subscription",
+                      destructive: true,
+                    });
+                    if (ok) cancelMutation.mutate();
+                  }}
+                  disabled={cancelMutation.isPending}
+                  className="h-9 rounded-none px-4 font-normal text-destructive text-xs transition-colors hover:bg-destructive/5 hover:text-destructive"
+                >
+                  <X className="mr-1.5 h-3.5 w-3.5" />
+                  {cancelMutation.isPending ? "Cancelling..." : "Cancel"}
+                </Button>
+              </>
+            ) : (
+              <Button asChild className="h-9 rounded-none px-8 font-medium text-xs shadow-sm">
+                <Link href={getLocalizedUrl("/upgrade")}>{billingDict.upgrade || "View Plans"}</Link>
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -674,10 +809,16 @@ export function BillingView({
 
       {/* Billing history */}
       <div className="space-y-6">
-        <div className="border-b pb-2">
+        <div className="flex items-center justify-between border-b pb-2">
           <p className="font-semibold text-[10px] text-muted-foreground uppercase tracking-widest">
             {billingDict.history.title}
           </p>
+          <Link
+            href={getLocalizedUrl("/settings/billing/invoices")}
+            className="font-medium text-[10px] text-muted-foreground uppercase tracking-widest hover:text-foreground"
+          >
+            View all invoices →
+          </Link>
         </div>
         <Card className="overflow-hidden rounded-none border bg-background shadow-none">
           <CardContent className="p-0">
@@ -752,22 +893,18 @@ export function BillingView({
                           </Badge>
                         </td>
                         <td className="p-4 text-right">
-                          {order.mayar_invoice_id && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-7 rounded-none border px-3 font-medium text-[10px] uppercase tracking-widest transition-all hover:bg-foreground hover:text-background"
-                              onClick={() => {
-                                if (!order.mayar_invoice_id) return;
-                                downloadMutation.mutate(order.mayar_invoice_id);
-                              }}
-                              disabled={downloadMutation.isPending}
-                            >
-                              {downloadMutation.isPending && downloadMutation.variables === order.mayar_invoice_id
-                                ? "..."
-                                : dictionary.common.view_pdf || "View PDF"}
-                            </Button>
-                          )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 rounded-none border px-3 font-medium text-[10px] uppercase tracking-widest transition-all hover:bg-foreground hover:text-background"
+                            onClick={() => viewInvoiceMutation.mutate(order.id)}
+                            disabled={viewInvoiceMutation.isPending}
+                          >
+                            {viewInvoiceMutation.isPending &&
+                            viewInvoiceMutation.variables === order.id
+                              ? "..."
+                              : "View Invoice"}
+                          </Button>
                         </td>
                       </tr>
                     ))}

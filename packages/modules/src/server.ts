@@ -17,6 +17,7 @@ export * from "./wallet-group/wallet-group.action";
 export * from "./workspace/workspace.action";
 export * from "./pricing/pricing.action";
 export * from "./mayar/mayar.action";
+export * from "./billing-invoices/billing-invoices.action";
 export * from "./orders/orders.action";
 export * from "./system-metrics/system-metrics.action";
 export * from "./invoice/invoice.action";

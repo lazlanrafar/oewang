@@ -9,6 +9,7 @@ import {
   CancelAddonDto,
   CreateMayarCheckoutDto,
   MayarWebhookDto,
+  SchedulePlanSwitchDto,
 } from "./mayar.dto";
 import { MayarRepository } from "./mayar.repository";
 import { MayarService } from "./mayar.service";
@@ -178,9 +179,50 @@ export const mayarController = new Elysia({
       if (!auth)
         return status(401, buildError(ErrorCode.UNAUTHORIZED, "Unauthorized"));
       assertCanManageSensitiveWorkspace(auth.workspace_role);
-      return MayarService.cancelSubscription(auth.workspaceId);
+      return MayarService.cancelSubscription(auth.workspaceId, auth.user_id);
     },
     { detail: { summary: "Cancel Subscription", tags: ["Mayar"] } },
+  )
+  .post(
+    "/resume-subscription",
+    async ({ auth, status }) => {
+      if (!auth)
+        return status(401, buildError(ErrorCode.UNAUTHORIZED, "Unauthorized"));
+      assertCanManageSensitiveWorkspace(auth.workspace_role);
+      return MayarService.resumeSubscription(auth.workspaceId, auth.user_id);
+    },
+    { detail: { summary: "Resume Cancelled Subscription", tags: ["Mayar"] } },
+  )
+  .post(
+    "/schedule-plan-switch",
+    async ({ auth, body, status }) => {
+      if (!auth)
+        return status(401, buildError(ErrorCode.UNAUTHORIZED, "Unauthorized"));
+      assertCanManageSensitiveWorkspace(auth.workspace_role);
+      return MayarService.schedulePlanSwitch(
+        auth.workspaceId,
+        auth.user_id,
+        body.planId,
+        body.billing,
+      );
+    },
+    {
+      body: SchedulePlanSwitchDto,
+      detail: { summary: "Schedule Plan Switch at Renewal", tags: ["Mayar"] },
+    },
+  )
+  .post(
+    "/cancel-pending-plan-switch",
+    async ({ auth, status }) => {
+      if (!auth)
+        return status(401, buildError(ErrorCode.UNAUTHORIZED, "Unauthorized"));
+      assertCanManageSensitiveWorkspace(auth.workspace_role);
+      return MayarService.cancelPendingPlanSwitch(
+        auth.workspaceId,
+        auth.user_id,
+      );
+    },
+    { detail: { summary: "Cancel Pending Plan Switch", tags: ["Mayar"] } },
   )
   .post(
     "/cancel-addon",

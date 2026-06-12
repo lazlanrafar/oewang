@@ -4,8 +4,20 @@ import { NextResponse } from "next/server";
 import { Env } from "@workspace/constants";
 import { axiosInstance } from "@workspace/modules/server";
 
+function getRequestOrigin(request: Request): string {
+  const host = request.headers.get("x-forwarded-host") || request.headers.get("host");
+  const proto = request.headers.get("x-forwarded-proto") || "https";
+  if (host) {
+    const isLocal = host.includes("localhost") || host.includes("127.0.0.1");
+    const scheme = isLocal ? "http" : proto;
+    return `${scheme}://${host}`;
+  }
+  return Env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
+}
+
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url);
+  const { searchParams } = new URL(request.url);
+  const origin = getRequestOrigin(request);
   const code = searchParams.get("code");
   const state = searchParams.get("state");
 
@@ -18,6 +30,15 @@ export async function GET(request: Request) {
     return res;
   }
 
+  const client_id = Env.GOOGLE_CLIENT_ID;
+  const client_secret = Env.GOOGLE_CLIENT_SECRET;
+
+  if (!client_id || !client_secret) {
+    const res = NextResponse.redirect(`${origin}/login?error=oauth_config_missing`);
+    res.cookies.delete("oauth_state");
+    return res;
+  }
+
   try {
     const redirectUri = `${origin}/api/auth/google/callback`;
 
@@ -26,8 +47,8 @@ export async function GET(request: Request) {
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
         code,
-        client_id: Env.GOOGLE_CLIENT_ID!,
-        client_secret: Env.GOOGLE_CLIENT_SECRET!,
+        client_id,
+        client_secret,
         redirect_uri: redirectUri,
         grant_type: "authorization_code",
       }),

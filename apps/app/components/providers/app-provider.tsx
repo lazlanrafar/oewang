@@ -35,7 +35,7 @@ export function AppProvider({ children, dictionary }: { children: React.ReactNod
     const cached_sub_currencies = queryClient.getQueryData<SubCurrency[]>(["settings", "sub-currencies"]);
     if (cached_settings) useAppStore.getState().setSettings(cached_settings);
     if (cached_sub_currencies) useAppStore.getState().setSubCurrencies(cached_sub_currencies);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   usePushNotifications();

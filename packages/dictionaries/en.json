@@ -1065,6 +1065,8 @@
     "summary": {
       "total": "Total Contacts",
       "added_this_month": "Added This Month",
+      "with_email": "With Email",
+      "with_phone": "With Phone",
       "most_active": "Most Active Client",
       "top_revenue": "Top Revenue Client",
       "no_activity": "No activity data",

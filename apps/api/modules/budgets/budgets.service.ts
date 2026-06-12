@@ -5,6 +5,7 @@ import { cacheDel, cacheGet, cacheSet } from "../../lib/cache";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { CategoriesRepository } from "../categories/categories.repository";
 import { NotificationsService } from "../notifications/notifications.service";
+import { RealtimeService } from "../realtime/realtime.service";
 import { BudgetsRepository } from "./budgets.repository";
 
 const BUDGET_STATUS_TTL = 60 * 30; // 30 min
@@ -83,6 +84,8 @@ export abstract class BudgetsService {
       link: "/budget",
     }).catch(() => {});
 
+    RealtimeService.notifyValueChange(workspaceId, "budgets");
+
     return buildApiResponse({
       success: true,
       data: budget,
@@ -125,6 +128,8 @@ export abstract class BudgetsService {
       budgetStatusKey(workspaceId, now.getFullYear(), now.getMonth() + 1),
     );
 
+    RealtimeService.notifyValueChange(workspaceId, "budgets");
+
     return buildApiResponse({
       success: true,
       data: budget,
@@ -157,6 +162,8 @@ export abstract class BudgetsService {
     await cacheDel(
       budgetStatusKey(workspaceId, now.getFullYear(), now.getMonth() + 1),
     );
+
+    RealtimeService.notifyValueChange(workspaceId, "budgets");
 
     return buildApiResponse({
       success: true,

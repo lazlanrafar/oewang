@@ -4,7 +4,10 @@ import * as React from "react";
 
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type { Dictionary } from "@workspace/dictionaries";
-import { createCheckoutSession } from "@workspace/modules/mayar/mayar.action";
+import {
+  createCheckoutSession,
+  schedulePlanSwitch,
+} from "@workspace/modules/mayar/mayar.action";
 import { getPricing } from "@workspace/modules/pricing/pricing.action";
 import type { TransactionSettings, Workspace } from "@workspace/types";
 import {
@@ -75,6 +78,22 @@ export function UpgradeClient({ dictionary, settings, workspace }: UpgradeClient
       if (data.url) {
         window.location.href = data.url;
       }
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const scheduleMutation = useMutation({
+    mutationFn: async (planId: string) => {
+      const result = await schedulePlanSwitch(planId, billingCycle);
+      if (!result.success) throw new Error(result.error);
+      return result.data;
+    },
+    onSuccess: (data) => {
+      toast.success(
+        data?.switches_at
+          ? `Plan change scheduled for ${new Date(data.switches_at).toLocaleDateString()}`
+          : "Plan change scheduled at next renewal",
+      );
     },
     onError: (error: Error) => toast.error(error.message),
   });
@@ -265,7 +284,7 @@ export function UpgradeClient({ dictionary, settings, workspace }: UpgradeClient
                   </div>
                 </div>
 
-                <div className="mt-10">
+                <div className="mt-10 space-y-2">
                   <Button
                     size="lg"
                     className={cn(
@@ -291,6 +310,27 @@ export function UpgradeClient({ dictionary, settings, workspace }: UpgradeClient
                           ? dictionary.settings.billing.selected_plan || "Selected Plan"
                           : dictionary.common.coming_soon || "Coming Soon"}
                   </Button>
+
+                  {/* Schedule at renewal — only if user has an active paid plan
+                      and this isn't their current plan. Skips Starter targets
+                      (the cancel-subscription flow already handles going free). */}
+                  {!isCurrent &&
+                    !isStarter &&
+                    workspace?.plan_status === "active" &&
+                    workspace?.plan_id &&
+                    workspace.plan_id !== plan.id && (
+                      <Button
+                        variant="ghost"
+                        onClick={() => scheduleMutation.mutate(plan.id)}
+                        disabled={scheduleMutation.isPending}
+                        className="h-9 w-full rounded-2xl font-medium text-muted-foreground text-xs uppercase tracking-wider hover:bg-accent/5 hover:text-foreground"
+                      >
+                        {scheduleMutation.isPending &&
+                        scheduleMutation.variables === plan.id
+                          ? "Scheduling..."
+                          : "Switch at next renewal"}
+                      </Button>
+                    )}
                 </div>
               </motion.div>
             );
