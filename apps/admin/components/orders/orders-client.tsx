@@ -1,31 +1,47 @@
 "use client";
 
-import React, { useRef, useState, useEffect, useTransition } from "react";
-import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { type ComponentProps, useMemo, useRef, useState } from "react";
+
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import type { ColumnDef } from "@tanstack/react-table";
 import {
-  cn,
+  getAdminOrderStats,
+  getAdminOrders,
+} from "@workspace/modules/orders/orders.action";
+import type { AdminOrderListing, AdminOrderStats } from "@workspace/types";
+import {
   DataTable,
-  TableSkeleton,
   DataTableColumnsVisibility,
-  DataTableFilter,
-  Icons,
+  DataTableEmptyState,
+  TableSkeleton,
 } from "@workspace/ui";
-import type { PaginationState } from "@tanstack/react-table";
-import type { AdminOrderListing } from "@workspace/types";
+
 import { useOrdersStore } from "@/stores/orders";
-import { useDataTableFilter } from "@/hooks/use-data-table-filter";
+
+import { OrdersClientCards } from "./orders-client-cards";
+import {
+  OrdersClientHeader,
+  type OrdersFilters,
+} from "./orders-client-header";
 import { columns as orderColumns } from "./orders-columns";
 
-// ----------------------------------------------------------------------
-// Orders Client (Main Component Export)
-// ----------------------------------------------------------------------
 type Props = {
   initialData: AdminOrderListing[];
   rowCount: number;
   pageCount: number;
   initialPage: number;
   pageSize: number;
+  initialStats: AdminOrderStats;
+  initialStart: string | null;
+  initialEnd: string | null;
 };
+
+const STATUS_OPTIONS = [
+  { id: "paid", name: "Paid" },
+  { id: "pending", name: "Pending" },
+  { id: "failed", name: "Failed" },
+  { id: "canceled", name: "Canceled" },
+];
 
 export function OrdersClient({
   initialData,
@@ -33,82 +49,156 @@ export function OrdersClient({
   pageCount,
   initialPage,
   pageSize,
+  initialStats,
+  initialStart,
+  initialEnd,
 }: Props) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [columns, setColumnsLocal] =
+    useState<ComponentProps<typeof DataTableColumnsVisibility>["columns"]>([]);
+  const setColumnsStore = useOrdersStore((s) => s.setColumns);
+  const openDetail = useOrdersStore((s) => s.openDetail);
+
+  const [filters, setFilters] = useState<OrdersFilters>({
+    q: "",
+    status: null,
+    start: initialStart,
+    end: initialEnd,
+  });
+  const [mountFilters] = useState(filters);
+
+  const isInitial = useMemo(
+    () => JSON.stringify(filters) === JSON.stringify(mountFilters),
+    [filters, mountFilters],
+  );
+
   const {
-    filters,
-    handleFilterChange,
-    pagination,
-    handlePaginationChange,
-    isPending,
-  } = useDataTableFilter({
-    initialFilters: {
-      q: "",
-      status: null,
-      start: null,
-      end: null,
-      attachments: null,
-      manual: null,
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+  } = useInfiniteQuery({
+    queryKey: ["admin-orders", filters],
+    queryFn: async ({ pageParam = 1 }) =>
+      getAdminOrders({
+        page: pageParam,
+        limit: pageSize,
+        search: filters.q || undefined,
+        status: filters.status || undefined,
+        start: filters.start || undefined,
+        end: filters.end || undefined,
+      }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => {
+      if (!lastPage.success) return undefined;
+      const meta = lastPage.data.meta;
+      return meta.page < meta.total_pages ? meta.page + 1 : undefined;
     },
-    pageSize,
-    initialPage,
+    staleTime: 300_000,
+    refetchOnWindowFocus: false,
+    initialData: isInitial
+      ? {
+          pages: [
+            {
+              success: true,
+              data: {
+                orders: initialData,
+                meta: {
+                  total: rowCount,
+                  page: initialPage + 1,
+                  limit: pageSize,
+                  total_pages: pageCount,
+                },
+              },
+            } as Awaited<ReturnType<typeof getAdminOrders>>,
+          ],
+          pageParams: [1],
+        }
+      : undefined,
   });
 
-  const { columns, setColumns, openDetail } = useOrdersStore();
+  const statsKey = useMemo(
+    () => ({ start: filters.start, end: filters.end }),
+    [filters.start, filters.end],
+  );
+  const isStatsInitial =
+    statsKey.start === initialStart && statsKey.end === initialEnd;
 
-  const statusOptions = [
-    { id: "paid", name: "Paid" },
-    { id: "pending", name: "Pending" },
-    { id: "failed", name: "Failed" },
-    { id: "canceled", name: "Canceled" },
-  ];
+  const { data: statsData, isLoading: isStatsLoading } = useQuery({
+    queryKey: ["admin-orders-stats", statsKey],
+    queryFn: async () =>
+      getAdminOrderStats({
+        start: statsKey.start ?? undefined,
+        end: statsKey.end ?? undefined,
+      }),
+    staleTime: 300_000,
+    refetchOnWindowFocus: false,
+    initialData: isStatsInitial
+      ? ({ success: true, data: initialStats } as Awaited<
+          ReturnType<typeof getAdminOrderStats>
+        >)
+      : undefined,
+  });
+
+  const stats: AdminOrderStats =
+    statsData && statsData.success ? statsData.data : initialStats;
+
+  const rows = useMemo<AdminOrderListing[]>(
+    () =>
+      data?.pages?.flatMap((p) => (p.success ? p.data.orders : [])) ?? [],
+    [data],
+  );
+
+  const columnsWithMeta = useMemo(
+    () => orderColumns as ColumnDef<AdminOrderListing>[],
+    [],
+  );
+
+  const setColumns = (
+    next: ComponentProps<typeof DataTableColumnsVisibility>["columns"],
+  ) => {
+    setColumnsLocal(next);
+    setColumnsStore(next as never);
+  };
 
   return (
-    <div className="flex w-full flex-col h-full space-y-4">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0">
-        <div>
-          <h1 className="text-2xl tracking-tight">Orders</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            View and manage the system incoming active and historical orders.
-          </p>
-        </div>
-      </div>
-      <div className="flex items-center gap-4">
-        <DataTableFilter
-          filters={filters}
-          onFilterChange={handleFilterChange as any}
-          statusOptions={statusOptions}
-          placeholder="Search orders..."
-          showAttachments
-          showSource
-        />
+    <div className="flex h-full w-full flex-col gap-4">
+      <OrdersClientCards stats={stats} isLoading={isStatsLoading} />
 
-        <DataTableColumnsVisibility columns={columns} />
-      </div>
+      <OrdersClientHeader
+        filters={filters}
+        onFilterChange={setFilters}
+        statusOptions={STATUS_OPTIONS}
+        columns={columns}
+      />
 
-      <div className="flex-1 min-h-0 relative">
-        {isPending ? (
+      <div className="relative min-h-0 flex-1">
+        {isLoading ? (
           <TableSkeleton
-            columns={orderColumns}
+            columns={columnsWithMeta}
             rowCount={pageSize}
             stickyColumnIds={["code"]}
-            className="h-full"
           />
         ) : (
-          <DataTable
-            data={initialData}
-            columns={orderColumns}
+          <DataTable<AdminOrderListing>
+            data={rows}
+            columns={columnsWithMeta}
             setColumns={setColumns}
             tableId="orders"
+            externalScrollContainerRef={containerRef}
+            sticky={{ columns: ["code"], startFromColumn: 0 }}
             meta={{ onRowClick: openDetail }}
-            sticky={{
-              columns: ["code"],
-            }}
-            emptyMessage="No orders found."
-            manualPagination
-            pagination={pagination}
-            onPaginationChange={handlePaginationChange}
-            rowCount={rowCount}
-            pageCount={pageCount}
+            emptyMessage={
+              <DataTableEmptyState
+                title="No orders found"
+                description="There are no orders matching the current filters."
+              />
+            }
+            infiniteScroll
+            fetchNextPage={fetchNextPage}
+            hasNextPage={hasNextPage}
+            isFetchingNextPage={isFetchingNextPage}
             hFull
           />
         )}
