@@ -87,6 +87,9 @@
     "include_in_totals_description": "Show this account's balance in net worth calculations.",
     "included_in_totals": "Included in totals",
     "excluded_from_totals": "Excluded from totals",
+    "default_label": "Default Account",
+    "default_description": "Used by Oewang Bot when no account is specified in a chat (WhatsApp, Telegram, etc.).",
+    "set_as_default": "Set as default",
     "created_date": "Created Date",
     "created_date_description": "The date this account was first created in the system.",
     "updated": "Updated",
@@ -112,7 +115,9 @@
       "delete_failed": "Failed to delete account",
       "group_updated": "Account group updated",
       "group_update_failed": "Failed to update account group",
-      "balance_updated": "Balance updated"
+      "balance_updated": "Balance updated",
+      "default_set": "Default account updated",
+      "default_set_failed": "Failed to set default account"
     },
     "confirmations": {
       "delete": "Are you sure you want to delete this account?"

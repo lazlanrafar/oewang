@@ -38,6 +38,7 @@ const getAccountSchema = (dictionary: Dictionary["accounts"]) => {
     groupId: z.string().optional().nullable(),
     balance: z.coerce.number().default(0),
     isIncludedInTotals: z.boolean().default(true),
+    isDefault: z.boolean().default(false),
   });
 };
 
@@ -99,6 +100,7 @@ export function AccountFormSheet({
       groupId: null,
       balance: 0,
       isIncludedInTotals: true,
+      isDefault: false,
     },
   });
 
@@ -111,6 +113,7 @@ export function AccountFormSheet({
         groupId: wallet.groupId,
         balance: Number(wallet.balance),
         isIncludedInTotals: wallet.isIncludedInTotals,
+        isDefault: wallet.isDefault ?? false,
       });
     } else if (!walletId) {
       form.reset({
@@ -118,6 +121,7 @@ export function AccountFormSheet({
         groupId: null,
         balance: 0,
         isIncludedInTotals: true,
+        isDefault: false,
       });
     }
   }, [open, wallet, walletId, form]);
@@ -262,6 +266,27 @@ export function AccountFormSheet({
                         {dictionary.accounts.include_in_totals_label}
                       </FormLabel>
                       <FormDescription>{dictionary.accounts.include_in_totals_description}</FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch checked={field.value} onCheckedChange={field.onChange} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="isDefault"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between gap-4 border p-4">
+                    <div className="space-y-1">
+                      <FormLabel className="font-normal text-foreground text-sm">
+                        {dictionary.accounts.default_label ?? "Default account"}
+                      </FormLabel>
+                      <FormDescription>
+                        {dictionary.accounts.default_description ??
+                          "Used by Oewang Bot when no account is specified in a chat (WhatsApp, Telegram, etc.)."}
+                      </FormDescription>
                     </div>
                     <FormControl>
                       <Switch checked={field.value} onCheckedChange={field.onChange} />

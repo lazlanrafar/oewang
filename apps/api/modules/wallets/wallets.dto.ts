@@ -38,6 +38,7 @@ export const walletSchema = t.Object({
   name: t.String(),
   balance: t.String(), // Decimal returned as string
   isIncludedInTotals: t.Boolean(),
+  isDefault: t.Boolean(),
   sortOrder: t.Integer(),
   createdAt: t.String(),
   updatedAt: t.String(),
@@ -48,6 +49,7 @@ export const createWalletBody = t.Object({
   groupId: t.Optional(t.Union([t.String(), t.Null()])),
   balance: t.Optional(t.String()), // Input as string "100.00"
   isIncludedInTotals: t.Optional(t.Boolean()),
+  isDefault: t.Optional(t.Boolean()),
 });
 
 export const updateWalletBody = t.Object({
@@ -55,6 +57,7 @@ export const updateWalletBody = t.Object({
   groupId: t.Optional(t.Union([t.String(), t.Null()])), // Allow moving to no group
   balance: t.Optional(t.String()),
   isIncludedInTotals: t.Optional(t.Boolean()),
+  isDefault: t.Optional(t.Boolean()),
   sortOrder: t.Optional(t.Integer()),
 });
 

@@ -186,6 +186,7 @@ export abstract class WalletsService {
       groupId?: string | null;
       balance?: string;
       isIncludedInTotals?: boolean;
+      isDefault?: boolean;
     },
   ) {
     const balance = data.balance ? parseFloat(data.balance) : 0;
@@ -193,6 +194,9 @@ export abstract class WalletsService {
       workspaceId,
       ...data,
       balance,
+      // The default flag is set explicitly via setDefault below to keep the
+      // "only one default per workspace" invariant atomic.
+      isDefault: false,
     });
 
     if (!wallet) {
@@ -200,6 +204,11 @@ export abstract class WalletsService {
         500,
         buildError(ErrorCode.INTERNAL_ERROR, "Failed to create wallet"),
       );
+    }
+
+    if (data.isDefault) {
+      await WalletsRepository.setDefault(workspaceId, wallet.id);
+      wallet.isDefault = true;
     }
 
     await AuditLogsService.log({
@@ -234,12 +243,14 @@ export abstract class WalletsService {
       groupId?: string | null;
       balance?: string;
       isIncludedInTotals?: boolean;
+      isDefault?: boolean;
       sortOrder?: number;
     },
   ) {
-    const updateData: any = { ...data };
-    if (data.balance !== undefined) {
-      updateData.balance = parseFloat(data.balance);
+    const { isDefault, ...rest } = data;
+    const updateData: any = { ...rest };
+    if (rest.balance !== undefined) {
+      updateData.balance = parseFloat(rest.balance);
     }
 
     const before = await WalletsRepository.findById(workspaceId, id);
@@ -255,10 +266,48 @@ export abstract class WalletsService {
       );
     }
 
+    if (isDefault === true) {
+      const updated = await WalletsRepository.setDefault(workspaceId, id);
+      if (updated) wallet.isDefault = true;
+    }
+
     await AuditLogsService.log({
       workspace_id: workspaceId,
       user_id: userId,
       action: "wallet.updated",
+      entity: "wallet",
+      entity_id: id,
+      before,
+      after: wallet,
+    });
+
+    RealtimeService.notifyValueChange(workspaceId, "wallets");
+
+    return wallet;
+  }
+
+  static async setDefaultWallet(
+    workspaceId: string,
+    userId: string,
+    id: string,
+  ) {
+    const before = await WalletsRepository.findById(workspaceId, id);
+    if (!before) {
+      throw status(404, buildError(ErrorCode.NOT_FOUND, "Wallet not found"));
+    }
+
+    const wallet = await WalletsRepository.setDefault(workspaceId, id);
+    if (!wallet) {
+      throw status(
+        500,
+        buildError(ErrorCode.INTERNAL_ERROR, "Failed to set default wallet"),
+      );
+    }
+
+    await AuditLogsService.log({
+      workspace_id: workspaceId,
+      user_id: userId,
+      action: "wallet.default_set",
       entity: "wallet",
       entity_id: id,
       before,

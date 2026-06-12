@@ -83,8 +83,10 @@ export abstract class ContextRepository {
   static async getWalletSummary(workspaceId: string) {
     return await db
       .select({
+        id: wallets.id,
         name: wallets.name,
         balance: wallets.balance,
+        isDefault: wallets.isDefault,
       })
       .from(wallets)
       .where(

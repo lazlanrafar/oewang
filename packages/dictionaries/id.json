@@ -87,6 +87,9 @@
     "include_in_totals_description": "Tampilkan saldo akun ini dalam perhitungan kekayaan bersih.",
     "included_in_totals": "Disertakan dalam total",
     "excluded_from_totals": "Dikecualikan dari total",
+    "default_label": "Akun Default",
+    "default_description": "Digunakan oleh Oewang Bot saat akun tidak disebutkan dalam chat (WhatsApp, Telegram, dll.).",
+    "set_as_default": "Jadikan default",
     "created_date": "Tanggal Dibuat",
     "created_date_description": "Tanggal akun ini pertama kali dibuat dalam sistem.",
     "updated": "Diperbarui",
@@ -112,7 +115,9 @@
       "delete_failed": "Gagal menghapus akun",
       "group_updated": "Grup akun diperbarui",
       "group_update_failed": "Gagal memperbarui grup akun",
-      "balance_updated": "Saldo diperbarui"
+      "balance_updated": "Saldo diperbarui",
+      "default_set": "Akun default diperbarui",
+      "default_set_failed": "Gagal mengatur akun default"
     },
     "confirmations": {
       "delete": "Apakah Anda yakin ingin menghapus akun ini?"

@@ -8,6 +8,7 @@ export interface CreateWalletData {
   groupId?: string | null;
   balance?: string;
   isIncludedInTotals?: boolean;
+  isDefault?: boolean;
 }
 
 export interface UpdateWalletData {
@@ -15,6 +16,7 @@ export interface UpdateWalletData {
   groupId?: string | null;
   balance?: string;
   isIncludedInTotals?: boolean;
+  isDefault?: boolean;
   sortOrder?: number;
 }
 
@@ -105,6 +107,20 @@ export const deleteWallet = async (
     return {
       success: false,
       error: error.response?.data?.message || "Failed to delete wallet",
+    };
+  }
+};
+
+export const setDefaultWallet = async (
+  id: string,
+): Promise<ActionResponse<Wallet>> => {
+  try {
+    const res = await api.put(`/wallets/${id}/default`);
+    return { success: true, data: res.data?.data };
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.response?.data?.message || "Failed to set default wallet",
     };
   }
 };

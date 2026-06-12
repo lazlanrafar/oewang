@@ -3,7 +3,11 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { Dictionary } from "@workspace/dictionaries";
-import { deleteWallet, updateWallet } from "@workspace/modules/client";
+import {
+  deleteWallet,
+  setDefaultWallet,
+  updateWallet,
+} from "@workspace/modules/client";
 import type { Wallet } from "@workspace/types";
 import {
   Button,
@@ -15,7 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "@workspace/ui";
 import { isValid } from "date-fns";
-import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { MoreHorizontal, Pencil, Star, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { SelectAccountGroup } from "@/components/molecules/select-account-group";
@@ -33,6 +37,27 @@ const CellActions = ({
   const wallet = row.original;
   const queryClient = useQueryClient();
   const confirm = useConfirm();
+
+  const handleSetDefault = async () => {
+    if (wallet.isDefault) return;
+    try {
+      const result = await setDefaultWallet(wallet.id);
+      if (result.success) {
+        toast.success(
+          dictionary.accounts.toasts.default_set ?? "Default account updated",
+        );
+        queryClient.invalidateQueries({ queryKey: ["wallets"] });
+      } else {
+        toast.error(
+          result.error ??
+            dictionary.accounts.toasts.default_set_failed ??
+            "Failed to set default",
+        );
+      }
+    } catch (_error) {
+      toast.error(dictionary.common.error);
+    }
+  };
 
   const handleDelete = async () => {
     const ok = await confirm({
@@ -72,6 +97,14 @@ const CellActions = ({
           <Pencil className="mr-2 h-4 w-4" />
           <span>{dictionary.transactions.edit}</span>
         </DropdownMenuItem>
+        {!wallet.isDefault && (
+          <DropdownMenuItem onClick={handleSetDefault}>
+            <Star className="mr-2 h-4 w-4" />
+            <span>
+              {dictionary.accounts.set_as_default ?? "Set as default"}
+            </span>
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem onClick={handleDelete} className="text-destructive">
           <Trash2 className="mr-2 h-4 w-4" />
           <span>{dictionary.common.delete}</span>
@@ -148,9 +181,17 @@ export const accountColumns = (
       className:
         "w-[200px] min-w-[120px] md:sticky md:left-[var(--stick-left)] bg-background group-hover:bg-[#F2F1EF] group-hover:dark:bg-[#0f0f0f] z-10",
     },
-    cell: ({ getValue }) => (
-      <span className="truncate px-2 font-medium font-sans">
-        {getValue<string>() || (dictionary.common.na ?? "N/A")}
+    cell: ({ getValue, row }) => (
+      <span className="flex items-center gap-1.5 truncate px-2 font-medium font-sans">
+        <span className="truncate">
+          {getValue<string>() || (dictionary.common.na ?? "N/A")}
+        </span>
+        {row.original.isDefault && (
+          <Star
+            className="h-3.5 w-3.5 shrink-0 fill-amber-400 text-amber-400"
+            aria-label={dictionary.accounts.default_label ?? "Default"}
+          />
+        )}
       </span>
     ),
   },

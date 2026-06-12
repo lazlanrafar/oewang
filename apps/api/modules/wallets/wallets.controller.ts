@@ -244,5 +244,25 @@ export const walletsController = new Elysia()
           return buildSuccess(data, "Wallet deleted");
         },
         { detail: { summary: "Delete Wallet", tags: ["Wallets"] } },
+      )
+      .put(
+        "/:id/default",
+        async ({ auth, workspaceId, userId, params: { id } }) => {
+          assertCanEditWorkspaceData(auth?.workspace_role);
+          const data = await WalletsService.setDefaultWallet(
+            workspaceId!,
+            userId!,
+            id,
+          );
+          return buildSuccess(data, "Default wallet updated");
+        },
+        {
+          detail: {
+            summary: "Set Default Wallet",
+            description:
+              "Marks the wallet as the workspace default. Used by the AI bot when the user doesn't specify an account.",
+            tags: ["Wallets"],
+          },
+        },
       ),
   );

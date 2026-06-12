@@ -87,6 +87,9 @@
     "include_in_totals_description": "純資産計算にこのアカウントの残高を表示します。",
     "included_in_totals": "合計に含まれる",
     "excluded_from_totals": "合計から除外",
+    "default_label": "デフォルトアカウント",
+    "default_description": "WhatsAppやTelegramなどのチャットでアカウントが指定されていない場合にOewang Botが使用します。",
+    "set_as_default": "デフォルトに設定",
     "created_date": "作成日",
     "created_date_description": "このアカウントがシステムで最初に作成された日付。",
     "updated": "更新済み",
@@ -112,7 +115,9 @@
       "delete_failed": "アカウントの削除に失敗しました",
       "group_updated": "アカウントグループが更新されました",
       "group_update_failed": "アカウントグループの更新に失敗しました",
-      "balance_updated": "残高が更新されました"
+      "balance_updated": "残高が更新されました",
+      "default_set": "デフォルトアカウントが更新されました",
+      "default_set_failed": "デフォルトアカウントの設定に失敗しました"
     },
     "confirmations": {
       "delete": "このアカウントを削除してもよろしいですか？"

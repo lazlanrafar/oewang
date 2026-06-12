@@ -6,6 +6,7 @@ export interface Wallet {
   currency: string;
   balance: number;
   isIncludedInTotals: boolean;
+  isDefault: boolean;
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
