@@ -97,6 +97,29 @@ export abstract class SystemAdminsService {
     }
   }
 
+  static async getUserStats(params: { start?: string; end?: string }) {
+    try {
+      const stats = await SystemAdminsRepository.getUserStats(params);
+      return buildSuccess(stats);
+    } catch (error: any) {
+      log.error("Failed to fetch user stats", { error });
+      return buildError(ErrorCode.INTERNAL_ERROR, "Failed to fetch user stats");
+    }
+  }
+
+  static async getWorkspaceStats() {
+    try {
+      const stats = await SystemAdminsRepository.getWorkspaceStats();
+      return buildSuccess(stats);
+    } catch (error: any) {
+      log.error("Failed to fetch workspace stats", { error });
+      return buildError(
+        ErrorCode.INTERNAL_ERROR,
+        "Failed to fetch workspace stats",
+      );
+    }
+  }
+
   static async getAllPlans() {
     try {
       const plans = await SystemAdminsRepository.findAllPlans();

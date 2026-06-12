@@ -127,6 +127,25 @@ export abstract class PricingRepository {
     return result;
   }
 
+  static async getStats() {
+    const [row] = await db
+      .select({
+        total: sql<number>`count(*)`,
+        active: sql<number>`count(*) filter (where ${pricing.is_active} = true)`,
+        inactive: sql<number>`count(*) filter (where ${pricing.is_active} = false)`,
+        addons: sql<number>`count(*) filter (where ${pricing.is_addon} = true)`,
+      })
+      .from(pricing)
+      .where(isNull(pricing.deleted_at));
+
+    return {
+      total: Number(row?.total ?? 0),
+      active: Number(row?.active ?? 0),
+      inactive: Number(row?.inactive ?? 0),
+      addons: Number(row?.addons ?? 0),
+    };
+  }
+
   static async findPublicActive() {
     return db
       .select()

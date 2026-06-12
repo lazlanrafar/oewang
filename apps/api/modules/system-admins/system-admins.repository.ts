@@ -191,6 +191,55 @@ export abstract class SystemAdminsRepository {
       .orderBy(asc(pricing.name));
   }
 
+  static async getUserStats(params: { start?: string; end?: string }) {
+    const conditions: SQL[] = [];
+    if (params.start) {
+      conditions.push(gte(users.created_at, new Date(params.start)));
+    }
+    if (params.end) {
+      conditions.push(lte(users.created_at, new Date(params.end)));
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const [row] = await db
+      .select({
+        total: sql<number>`count(*)`,
+        owners: sql<number>`count(*) filter (where ${users.system_role} in ('superadmin', 'owner'))`,
+        finance: sql<number>`count(*) filter (where ${users.system_role} = 'finance')`,
+        users: sql<number>`count(*) filter (where ${users.system_role} = 'user')`,
+      })
+      .from(users)
+      .where(whereClause);
+
+    return {
+      total: Number(row?.total ?? 0),
+      owners: Number(row?.owners ?? 0),
+      finance: Number(row?.finance ?? 0),
+      users: Number(row?.users ?? 0),
+    };
+  }
+
+  static async getWorkspaceStats() {
+    const [row] = await db
+      .select({
+        total: sql<number>`count(*)`,
+        active: sql<number>`count(*) filter (where ${workspaces.plan_status} = 'active')`,
+        paid: sql<number>`count(*) filter (where ${workspaces.plan_id} is not null and ${pricing.name} is not null and lower(${pricing.name}) <> 'free')`,
+        free: sql<number>`count(*) filter (where ${workspaces.plan_id} is null or lower(coalesce(${pricing.name}, 'free')) = 'free')`,
+      })
+      .from(workspaces)
+      .leftJoin(pricing, eq(workspaces.plan_id, pricing.id))
+      .where(isNull(workspaces.deleted_at));
+
+    return {
+      total: Number(row?.total ?? 0),
+      active: Number(row?.active ?? 0),
+      paid: Number(row?.paid ?? 0),
+      free: Number(row?.free ?? 0),
+    };
+  }
+
   static async findUserEmail(userId: string) {
     const [dbUser] = await db
       .select({ email: users.email })

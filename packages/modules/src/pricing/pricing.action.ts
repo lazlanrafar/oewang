@@ -5,6 +5,7 @@ import type {
   ApiResponse,
   PaginationMeta,
   Pricing,
+  PricingStats,
   CreatePricingInput,
   UpdatePricingInput,
 } from "@workspace/types";
@@ -55,6 +56,33 @@ export const getPricing = async (params?: {
     return {
       success: false,
       error: error.response?.data?.message || "Failed to fetch pricing list",
+    };
+  }
+};
+
+export const getPricingStats = async (): Promise<
+  ActionResponse<PricingStats>
+> => {
+  try {
+    const response = await api.get("/pricing/stats");
+    const apiResponse = (response as any)._api_response as
+      | ApiResponse<PricingStats>
+      | undefined;
+
+    const data =
+      apiResponse?.data ??
+      (response.data as ApiResponse<PricingStats>).data ??
+      null;
+
+    if (!data) {
+      return { success: false, error: "Failed to fetch pricing stats" };
+    }
+
+    return { success: true, data };
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.response?.data?.message || "Failed to fetch pricing stats",
     };
   }
 };

@@ -111,6 +111,41 @@ export const systemAdminsController = new Elysia({ prefix: "/system-admins" })
     },
   )
   .get(
+    "/users/stats",
+    async ({ query }) => {
+      return SystemAdminsService.getUserStats({
+        start: query.start,
+        end: query.end,
+      });
+    },
+    {
+      query: t.Object({
+        start: t.Optional(t.String()),
+        end: t.Optional(t.String()),
+      }),
+      detail: {
+        summary: "Get User Stats",
+        description:
+          "Returns aggregated counts (total, owners, finance, users) for all users.",
+        tags: ["System Admins"],
+      },
+    },
+  )
+  .get(
+    "/workspaces/stats",
+    async () => {
+      return SystemAdminsService.getWorkspaceStats();
+    },
+    {
+      detail: {
+        summary: "Get Workspace Stats",
+        description:
+          "Returns aggregated counts (total, active, paid, free) for all workspaces.",
+        tags: ["System Admins"],
+      },
+    },
+  )
+  .get(
     "/plans",
     async () => {
       const results = await SystemAdminsService.getAllPlans();
