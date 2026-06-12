@@ -1,4 +1,10 @@
-import { db, pricing, users, workspaces } from "@workspace/database";
+import {
+  db,
+  pricing,
+  user_workspaces,
+  users,
+  workspaces,
+} from "@workspace/database";
 import {
   and,
   asc,
@@ -151,6 +157,51 @@ export abstract class SystemAdminsRepository {
   }
 
   /**
+   * Fetch the workspace owner (or fallback to any active member) for notifications.
+   */
+  static async findWorkspaceOwnerWithMeta(workspaceId: string) {
+    const [ownerRow] = await db
+      .select({
+        email: users.email,
+        name: users.name,
+        workspace_name: workspaces.name,
+      })
+      .from(user_workspaces)
+      .innerJoin(users, eq(user_workspaces.user_id, users.id))
+      .innerJoin(workspaces, eq(user_workspaces.workspace_id, workspaces.id))
+      .where(
+        and(
+          eq(user_workspaces.workspace_id, workspaceId),
+          eq(user_workspaces.role, "owner"),
+          isNull(user_workspaces.deleted_at),
+        ),
+      )
+      .limit(1);
+
+    if (ownerRow) return ownerRow;
+
+    // Fallback: any active member (e.g. admin), so notifications still go out.
+    const [memberRow] = await db
+      .select({
+        email: users.email,
+        name: users.name,
+        workspace_name: workspaces.name,
+      })
+      .from(user_workspaces)
+      .innerJoin(users, eq(user_workspaces.user_id, users.id))
+      .innerJoin(workspaces, eq(user_workspaces.workspace_id, workspaces.id))
+      .where(
+        and(
+          eq(user_workspaces.workspace_id, workspaceId),
+          isNull(user_workspaces.deleted_at),
+        ),
+      )
+      .limit(1);
+
+    return memberRow ?? null;
+  }
+
+  /**
    * Update a workspace's pricing plan
    */
   static async updateWorkspacePlan(workspaceId: string, planId: string) {
@@ -173,7 +224,7 @@ export abstract class SystemAdminsRepository {
       .where(eq(workspaces.id, workspaceId))
       .returning();
 
-    return updated;
+    return { workspace: updated, plan };
   }
 
   /**

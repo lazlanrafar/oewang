@@ -13,19 +13,22 @@ import {
 } from "@workspace/ui";
 import { MoreHorizontal, Shield, User, Landmark } from "lucide-react";
 import { updateSystemRoleAction } from "@workspace/modules/system-admin/system-admin.action";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 const CellActions = ({ row }: { row: { original: SystemAdminUser } }) => {
   const user = row.original;
-  const router = useRouter();
+  const queryClient = useQueryClient();
 
   const handleRoleChange = async (role: "owner" | "finance" | "user") => {
     try {
       const result = await updateSystemRoleAction(user.id, role);
       if (result.success) {
         toast.success(`User role updated to ${role}`);
-        router.refresh();
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ["admin-users"] }),
+          queryClient.invalidateQueries({ queryKey: ["admin-users-stats"] }),
+        ]);
       } else {
         toast.error(result.error);
       }

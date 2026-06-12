@@ -19,6 +19,6 @@ export const SystemAdminModel = {
     sortOrder: t.Optional(t.Union([t.Literal("asc"), t.Literal("desc")])),
   }),
   updatePlanBody: t.Object({
-    planId: t.String({ format: "uuid" }),
+    planId: t.String({ minLength: 1 }),
   }),
 };

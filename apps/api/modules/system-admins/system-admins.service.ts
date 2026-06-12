@@ -1,3 +1,4 @@
+import { sendWorkspaceUpgradedEmail } from "@workspace/email";
 import { createLogger } from "@workspace/logger";
 import { ErrorCode } from "@workspace/types";
 import {
@@ -83,11 +84,35 @@ export abstract class SystemAdminsService {
 
   static async changeWorkspacePlan(workspaceId: string, planId: string) {
     try {
-      const updated = await SystemAdminsRepository.updateWorkspacePlan(
-        workspaceId,
-        planId,
-      );
-      return buildSuccess(updated, "Workspace plan updated successfully");
+      const { workspace, plan } =
+        await SystemAdminsRepository.updateWorkspacePlan(workspaceId, planId);
+
+      // Fire-and-forget: notify the workspace owner of the upgrade.
+      // Failures shouldn't block the admin response.
+      void (async () => {
+        try {
+          const owner =
+            await SystemAdminsRepository.findWorkspaceOwnerWithMeta(
+              workspaceId,
+            );
+          if (!owner?.email) return;
+
+          await sendWorkspaceUpgradedEmail(
+            owner.email,
+            owner.name || owner.email,
+            owner.workspace_name || workspace?.name || "your workspace",
+            plan.name,
+          );
+        } catch (emailError) {
+          log.warn("Failed to send workspace upgrade email", {
+            workspaceId,
+            planId,
+            error: emailError,
+          });
+        }
+      })();
+
+      return buildSuccess(workspace, "Workspace plan updated successfully");
     } catch (error: any) {
       log.error("Failed to update workspace plan", { error });
       return buildError(

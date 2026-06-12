@@ -23,7 +23,7 @@ import {
   deletePricingAction,
   updatePricingAction,
 } from "@workspace/modules/pricing/pricing.action";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { usePricingStore } from "@/stores/pricing";
 import { formatPrice } from "@workspace/utils";
@@ -31,9 +31,15 @@ import React from "react";
 
 const CellActions = ({ row }: { row: { original: Pricing } }) => {
   const pricing = row.original;
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const { openEdit } = usePricingStore();
   const [isLoading, setIsLoading] = React.useState(false);
+
+  const invalidatePricing = () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["admin-pricing"] }),
+      queryClient.invalidateQueries({ queryKey: ["admin-pricing-stats"] }),
+    ]);
 
   const handleToggleActive = async () => {
     setIsLoading(true);
@@ -45,7 +51,7 @@ const CellActions = ({ row }: { row: { original: Pricing } }) => {
         toast.success(
           `Pricing plan ${pricing.is_active ? "deactivated" : "activated"}`,
         );
-        router.refresh();
+        await invalidatePricing();
       } else {
         toast.error(result.error);
       }
@@ -63,7 +69,7 @@ const CellActions = ({ row }: { row: { original: Pricing } }) => {
       const result = await deletePricingAction(pricing.id);
       if (result.success) {
         toast.success("Pricing plan deleted");
-        router.refresh();
+        await invalidatePricing();
       } else {
         toast.error(result.error);
       }

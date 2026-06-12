@@ -14,7 +14,7 @@ import {
 } from "@workspace/ui";
 import { MoreHorizontal, ShieldCheck, Zap, Star, Layout } from "lucide-react";
 import { updateWorkspacePlanAction } from "@workspace/modules/system-admin/system-admin.action";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useTransition } from "react";
 
@@ -26,7 +26,7 @@ const CellActions = ({
   plans: SystemAdminPlan[];
 }) => {
   const workspace = row.original;
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const [isPending, startTransition] = useTransition();
 
   const handlePlanChange = async (planId: string, planName: string) => {
@@ -35,7 +35,12 @@ const CellActions = ({
         const result = await updateWorkspacePlanAction(workspace.id, planId);
         if (result.success) {
           toast.success(`Workspace plan updated to ${planName}`);
-          router.refresh();
+          await Promise.all([
+            queryClient.invalidateQueries({ queryKey: ["admin-workspaces"] }),
+            queryClient.invalidateQueries({
+              queryKey: ["admin-workspaces-stats"],
+            }),
+          ]);
         } else {
           toast.error(result.error);
         }

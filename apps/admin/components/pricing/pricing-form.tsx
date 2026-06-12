@@ -23,7 +23,7 @@ import {
 } from "@workspace/ui";
 import { toast } from "sonner";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   createPricingAction,
   updatePricingAction,
@@ -61,7 +61,7 @@ interface PricingFormProps {
 }
 
 export function PricingForm({ initialData, onSuccess }: PricingFormProps) {
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<PricingFormValues>({
@@ -144,7 +144,10 @@ export function PricingForm({ initialData, onSuccess }: PricingFormProps) {
         toast.success("Pricing plan created");
       }
 
-      router.refresh();
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["admin-pricing"] }),
+        queryClient.invalidateQueries({ queryKey: ["admin-pricing-stats"] }),
+      ]);
       onSuccess?.();
     } catch (error) {
       console.error(error);
