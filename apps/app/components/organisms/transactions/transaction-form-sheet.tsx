@@ -5,6 +5,8 @@ import { useEffect, useMemo, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { type InfiniteData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Dictionary } from "@workspace/dictionaries";
+import { getWallets } from "@workspace/modules/client";
+import { getExchangeRates } from "@workspace/modules/setting/setting.action";
 import { createTransaction, updateTransaction } from "@workspace/modules/transaction/transaction.action";
 import { getVaultDownloadUrl, uploadVaultFile } from "@workspace/modules/vault/vault.action";
 import type { Transaction } from "@workspace/types";
@@ -22,13 +24,18 @@ import {
   FormMessage,
   Input,
   InputDate,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
 } from "@workspace/ui";
 import { getCurrencyDisplayUnit } from "@workspace/utils";
-import { ChevronsUpDown, File, FileText, Film, Image, Paperclip, X } from "lucide-react";
+import { File, FileText, Film, Image, Paperclip, X } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import * as z from "zod";
@@ -43,6 +50,8 @@ import { useAppStore } from "@/stores/app";
 const getTransactionSchema = (dictionary: Dictionary) =>
   z.object({
     amount: z.coerce.number().positive(dictionary.transactions.errors.amount_positive || "Amount must be positive"),
+    currencyCode: z.string().min(1),
+    exchangeRate: z.coerce.number().positive().optional(),
     date: z.string().refine((val) => !Number.isNaN(Date.parse(val)), {
       message: dictionary.transactions.errors.invalid_date || "Invalid date",
     }),
@@ -161,8 +170,41 @@ export function TransactionFormSheet({
   );
   const [attachments, setAttachments] = useState<VaultFileRef[]>([]);
   const [vaultPickerOpen, setVaultPickerOpen] = useState(false);
-  const { settings, user } = useAppStore();
+  const { settings, user, subCurrencies, formatCurrency } = useAppStore();
+  const mainCurrencyCode = settings?.mainCurrencyCode || "USD";
   const currencyUnit = getCurrencyDisplayUnit(settings?.mainCurrencyCode, settings?.mainCurrencySymbol);
+
+  const { data: ratesResp, isLoading: isRatesLoading } = useQuery({
+    queryKey: ["settings", "rates", mainCurrencyCode],
+    queryFn: () => getExchangeRates(mainCurrencyCode),
+    enabled: subCurrencies.length > 0 && open,
+    staleTime: 1000 * 60 * 15,
+  });
+
+  const { data: walletsData } = useQuery({
+    queryKey: ["wallets"],
+    queryFn: async () => {
+      const res = await getWallets();
+      if (!res.success) throw new Error(res.message);
+      return res.data || [];
+    },
+    staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: false,
+    enabled: open,
+  });
+  const defaultWalletId =
+    walletsData?.find((w) => w.isDefault)?.id || walletsData?.[0]?.id || "";
+
+  // ratesMap[code] = how many `code` you get for 1 main currency. To get
+  // `1 code = X main` we invert: X = 1 / ratesMap[code].
+  const ratesMap: Record<string, string> =
+    ratesResp?.success && ratesResp.data ? (ratesResp.data as Record<string, string>) : {};
+  const liveRateFor = (code: string): number | null => {
+    if (code === mainCurrencyCode) return 1;
+    const mainPerSub = Number(ratesMap[code]);
+    if (!mainPerSub || Number.isNaN(mainPerSub)) return null;
+    return 1 / mainPerSub;
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -176,6 +218,8 @@ export function TransactionFormSheet({
       type: "expense",
       date: new Date().toISOString().split("T")[0],
       amount: 0,
+      currencyCode: mainCurrencyCode,
+      exchangeRate: 1,
       name: "",
       description: "",
       walletId: "",
@@ -186,12 +230,27 @@ export function TransactionFormSheet({
     },
   });
 
+  const watchedCurrency = form.watch("currencyCode");
+  const watchedAmount = form.watch("amount");
+  const watchedRate = form.watch("exchangeRate");
+  const isMainCurrency = watchedCurrency === mainCurrencyCode;
+  const convertedAmount = !isMainCurrency
+    ? Number(watchedAmount || 0) * Number(watchedRate || 0)
+    : 0;
+
   useEffect(() => {
     const loadData = async () => {
       try {
         if (transaction) {
+          const hasOriginalCurrency =
+            !!transaction.originalCurrencyCode &&
+            transaction.originalCurrencyCode !== mainCurrencyCode;
           form.reset({
-            amount: Number(transaction?.amount),
+            amount: hasOriginalCurrency
+              ? Number(transaction.originalAmount ?? transaction.amount)
+              : Number(transaction.amount),
+            currencyCode: transaction.originalCurrencyCode || mainCurrencyCode,
+            exchangeRate: transaction.exchangeRate ? Number(transaction.exchangeRate) : 1,
             date:
               typeof transaction?.date === "string"
                 ? transaction?.date.slice(0, 10)
@@ -212,9 +271,11 @@ export function TransactionFormSheet({
             type: "expense",
             date: new Date().toISOString().split("T")[0],
             amount: 0,
+            currencyCode: mainCurrencyCode,
+            exchangeRate: 1,
             name: "",
             description: "",
-            walletId: "",
+            walletId: defaultWalletId,
             categoryId: "",
             toWalletId: "",
             attachmentIds: [],
@@ -230,15 +291,58 @@ export function TransactionFormSheet({
     if (open) {
       loadData();
     }
-  }, [open, transaction, form, user?.id]);
+  }, [open, transaction, form, user?.id, mainCurrencyCode]);
+
+  // When wallets finish loading after the sheet is already open, fill in the
+  // default wallet if the user hasn't picked one yet. Done with setValue (not
+  // reset) so other fields the user may have already typed are preserved.
+  useEffect(() => {
+    if (!open || transaction || !defaultWalletId) return;
+    if (!form.getValues("walletId")) {
+      form.setValue("walletId", defaultWalletId);
+    }
+  }, [open, transaction, defaultWalletId, form]);
+
+  // Transfer is single-currency only; snap back to main if user switches type.
+  useEffect(() => {
+    if (activeTab === "transfer" && watchedCurrency !== mainCurrencyCode) {
+      form.setValue("currencyCode", mainCurrencyCode);
+      form.setValue("exchangeRate", 1);
+    }
+  }, [activeTab, watchedCurrency, mainCurrencyCode, form]);
+
+  // Auto-populate exchange rate when user picks a non-main currency, unless the
+  // user has manually edited the rate this session.
+  const [rateManuallyEdited, setRateManuallyEdited] = useState(false);
+  useEffect(() => {
+    if (isMainCurrency) {
+      if (Number(watchedRate) !== 1) form.setValue("exchangeRate", 1);
+      return;
+    }
+    if (rateManuallyEdited) return;
+    const live = liveRateFor(watchedCurrency);
+    if (live != null && Number.isFinite(live) && Number(watchedRate || 0) !== live) {
+      form.setValue("exchangeRate", Number(live.toFixed(8)));
+    }
+    // liveRateFor depends on ratesMap which is stable per render
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchedCurrency, ratesResp, isMainCurrency, rateManuallyEdited]);
 
   async function onSubmit(data: TransactionFormValues) {
     if (!dictionary) return;
     setIsLoading(true);
     try {
+      const usingSubCurrency = data.currencyCode !== mainCurrencyCode;
+      const rate = Number(data.exchangeRate ?? 1);
+      const mainAmount = usingSubCurrency ? data.amount * rate : data.amount;
+
+      const { currencyCode, exchangeRate, ...rest } = data;
       const payload = {
-        ...data,
-        amount: data.amount.toString(),
+        ...rest,
+        amount: mainAmount.toString(),
+        originalAmount: usingSubCurrency ? data.amount.toString() : null,
+        originalCurrencyCode: usingSubCurrency ? currencyCode : null,
+        exchangeRate: usingSubCurrency ? rate.toString() : null,
         attachmentIds: attachments.map((a) => a.id),
       };
 
@@ -474,13 +578,13 @@ export function TransactionFormSheet({
                       <FormControl>
                         <div className="group relative">
                           <span className="-translate-y-1/2 absolute top-1/2 left-3 text-muted-foreground/50 text-sm transition-colors group-focus-within:text-foreground">
-                            {currencyUnit}
+                            {getCurrencyDisplayUnit(watchedCurrency, isMainCurrency ? settings?.mainCurrencySymbol : undefined)}
                           </span>
                           <CurrencyInput
                             value={field.value}
                             onChange={field.onChange}
-                            currencySymbol={settings?.mainCurrencySymbol}
-                            decimalPlaces={settings?.mainCurrencyDecimalPlaces}
+                            currencySymbol={isMainCurrency ? settings?.mainCurrencySymbol : undefined}
+                            decimalPlaces={isMainCurrency ? settings?.mainCurrencyDecimalPlaces : 2}
                             className={cn(
                               "bg-transparent pl-14 font-medium text-sm transition-colors focus:border-foreground",
                               activeTab === "expense"
@@ -492,28 +596,106 @@ export function TransactionFormSheet({
                           />
                         </div>
                       </FormControl>
-                      <FormDescription>{dictionary.transactions.hints.amount}</FormDescription>
+                      <FormDescription className="min-h-[2lh]">{dictionary.transactions.hints.amount}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
 
-                <FormItem>
-                  <FormLabel className="font-normal text-muted-foreground text-xs">
-                    {dictionary.transactions.currency_label}
-                  </FormLabel>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full justify-between bg-transparent pl-3 text-left font-normal text-muted-foreground hover:bg-muted/10"
-                    disabled
-                  >
-                    {settings?.mainCurrencyCode || "USD"}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                  <FormDescription>{dictionary.transactions.hints.currency}</FormDescription>
-                </FormItem>
+                <FormField
+                  control={form.control}
+                  name="currencyCode"
+                  render={({ field }) => {
+                    const transferLocked = activeTab === "transfer";
+                    return (
+                      <FormItem>
+                        <FormLabel className="font-normal text-muted-foreground text-xs">
+                          {dictionary.transactions.currency_label}
+                        </FormLabel>
+                        <Select
+                          value={field.value}
+                          onValueChange={(v) => {
+                            setRateManuallyEdited(false);
+                            field.onChange(v);
+                          }}
+                          disabled={transferLocked || subCurrencies.length === 0}
+                        >
+                          <SelectTrigger className="w-full bg-transparent transition-colors focus:border-foreground">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={mainCurrencyCode}>{mainCurrencyCode}</SelectItem>
+                            {subCurrencies.map((sc) => (
+                              <SelectItem key={sc.id} value={sc.currencyCode}>
+                                {sc.currencyCode}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormDescription className="min-h-[2lh]">{dictionary.transactions.hints.currency}</FormDescription>
+                      </FormItem>
+                    );
+                  }}
+                />
               </div>
+
+              {!isMainCurrency && (
+                <div className="grid grid-cols-2 gap-4 border bg-muted/5 p-3">
+                  <FormField
+                    control={form.control}
+                    name="exchangeRate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="font-normal text-muted-foreground text-xs">
+                          {dictionary.transactions.exchange_rate_label || "Exchange rate"}
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="any"
+                            min="0"
+                            value={field.value ?? ""}
+                            onChange={(e) => {
+                              setRateManuallyEdited(true);
+                              field.onChange(e.target.value === "" ? undefined : Number(e.target.value));
+                            }}
+                            className="bg-transparent transition-colors focus:border-foreground"
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          {(dictionary.transactions.exchange_rate_hint || "1 {from} = {rate} {to}")
+                            .replace("{from}", watchedCurrency)
+                            .replace(
+                              "{rate}",
+                              Number(field.value || 0).toLocaleString(undefined, {
+                                maximumSignificantDigits: 6,
+                              }),
+                            )
+                            .replace("{to}", mainCurrencyCode)}
+                          {isRatesLoading ? " …" : ""}
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormItem>
+                    <FormLabel className="font-normal text-muted-foreground text-xs">
+                      {(dictionary.transactions.converted_amount_label || "Converted to {currency}").replace(
+                        "{currency}",
+                        mainCurrencyCode,
+                      )}
+                    </FormLabel>
+                    <div className="flex h-9 items-center border border-input bg-muted/10 px-3 font-medium text-sm">
+                      {formatCurrency(convertedAmount || 0)}
+                    </div>
+                    <FormDescription>
+                      {(dictionary.transactions.converted_amount_hint ||
+                        "Stored in {main} for reports").replace("{main}", mainCurrencyCode)}
+                    </FormDescription>
+                  </FormItem>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-4">
                 <FormField
@@ -529,7 +711,7 @@ export function TransactionFormSheet({
                           className="w-full justify-start bg-transparent px-3 text-left font-normal transition-colors hover:bg-muted/10 hover:bg-transparent"
                         />
                       </FormControl>
-                      <FormDescription>{dictionary.transactions.hints.account}</FormDescription>
+                      <FormDescription className="min-h-[2lh]">{dictionary.transactions.hints.account}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -548,7 +730,7 @@ export function TransactionFormSheet({
                           className="bg-transparent transition-colors focus:border-foreground"
                         />
                       </FormControl>
-                      <FormDescription>{dictionary.transactions.hints.date}</FormDescription>
+                      <FormDescription className="min-h-[2lh]">{dictionary.transactions.hints.date}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -570,7 +752,7 @@ export function TransactionFormSheet({
                             onChange={(id) => form.setValue("categoryId", id)}
                           />
                         </FormControl>
-                        <FormDescription>
+                        <FormDescription className="min-h-[2lh]">
                           {dictionary.transactions.hints.category}
                         </FormDescription>
                         <FormMessage />
@@ -591,7 +773,7 @@ export function TransactionFormSheet({
                             placeholder={dictionary.transactions.placeholders.destination}
                           />
                         </FormControl>
-                        <FormDescription>
+                        <FormDescription className="min-h-[2lh]">
                           {dictionary.transactions.hints.to_account}
                         </FormDescription>
                         <FormMessage />
@@ -613,7 +795,7 @@ export function TransactionFormSheet({
                           placeholder={dictionary.transactions.placeholders.member}
                         />
                       </FormControl>
-                      <FormDescription>{dictionary.transactions.hints.assign}</FormDescription>
+                      <FormDescription className="min-h-[2lh]">{dictionary.transactions.hints.assign}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}

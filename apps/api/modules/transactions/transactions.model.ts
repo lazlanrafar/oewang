@@ -6,6 +6,9 @@ export const TransactionModel = {
     toWalletId: t.Optional(t.String()),
     categoryId: t.Optional(t.String()),
     amount: t.Numeric(),
+    originalAmount: t.Optional(t.Nullable(t.Numeric())),
+    originalCurrencyCode: t.Optional(t.Nullable(t.String())),
+    exchangeRate: t.Optional(t.Nullable(t.Numeric())),
     date: t.String(),
     type: t.Union([
       t.Literal("income"),
@@ -27,6 +30,9 @@ export const TransactionModel = {
       toWalletId: t.Optional(t.String()),
       categoryId: t.Optional(t.String()),
       amount: t.Numeric(),
+      originalAmount: t.Optional(t.Nullable(t.Numeric())),
+      originalCurrencyCode: t.Optional(t.Nullable(t.String())),
+      exchangeRate: t.Optional(t.Nullable(t.Numeric())),
       date: t.String(),
       type: t.Union([
         t.Literal("income"),
@@ -51,6 +57,9 @@ export const TransactionModel = {
     toWalletId: t.Optional(t.String()),
     categoryId: t.Optional(t.String()),
     amount: t.Optional(t.Numeric()),
+    originalAmount: t.Optional(t.Nullable(t.Numeric())),
+    originalCurrencyCode: t.Optional(t.Nullable(t.String())),
+    exchangeRate: t.Optional(t.Nullable(t.Numeric())),
     date: t.Optional(t.String()),
     type: t.Optional(
       t.Union([

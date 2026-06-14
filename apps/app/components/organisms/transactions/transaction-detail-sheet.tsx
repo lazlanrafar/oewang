@@ -157,7 +157,7 @@ export function TransactionDetailSheet({
   onPrevious,
   dictionary,
 }: Props) {
-  const { getTransactionColor, formatCurrency } = useAppStore();
+  const { getTransactionColor, formatCurrency, settings } = useAppStore();
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewFile, setPreviewFile] = useState<FilePreview | null>(null);
   const [vaultPickerOpen, setVaultPickerOpen] = useState(false);
@@ -271,6 +271,23 @@ export function TransactionDetailSheet({
                 <h1 className={cn("select-text font-serif text-4xl", getTransactionColor(transaction?.type))}>
                   {formatCurrency(Number(transaction?.amount))}
                 </h1>
+                {transaction?.originalCurrencyCode &&
+                  transaction?.originalCurrencyCode !== settings?.mainCurrencyCode && (
+                    <div className="flex flex-col gap-0.5 pt-1 text-muted-foreground">
+                      <span className="select-text text-sm tabular-nums">
+                        {Number(transaction.originalAmount ?? 0).toLocaleString(undefined, {
+                          maximumFractionDigits: 4,
+                        })}{" "}
+                        {transaction.originalCurrencyCode}
+                      </span>
+                      <span className="text-[10px] uppercase tracking-widest">
+                        {dictionary.transactions.exchange_rate_label || "Exchange rate"}:{" "}
+                        {Number(transaction.exchangeRate ?? 0).toLocaleString(undefined, {
+                          maximumFractionDigits: 4,
+                        })}
+                      </span>
+                    </div>
+                  )}
               </div>
             </div>
           </div>

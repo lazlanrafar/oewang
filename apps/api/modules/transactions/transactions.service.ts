@@ -23,14 +23,61 @@ import type {
 } from "./transactions.model";
 import { TransactionsRepository } from "./transactions.repository";
 
+type MulticurrencyFields = {
+  amount: string;
+  originalAmount: string | null;
+  originalCurrencyCode: string | null;
+  exchangeRate: string | null;
+};
+
+// Derive the main-currency amount and the three nullable original-currency
+// fields. When the user picks a non-main currency the client sends
+// originalAmount + exchangeRate; we re-compute `amount` server-side so the
+// stored main-currency value can't be tampered with from the client.
+function resolveMulticurrency(input: {
+  amount: number | string;
+  originalAmount?: number | string | null;
+  originalCurrencyCode?: string | null;
+  exchangeRate?: number | string | null;
+}): MulticurrencyFields {
+  const hasOriginal =
+    input.originalCurrencyCode != null &&
+    input.originalAmount != null &&
+    input.exchangeRate != null;
+
+  if (hasOriginal) {
+    const origNum = Number(input.originalAmount);
+    const rateNum = Number(input.exchangeRate);
+    const main = (origNum * rateNum).toFixed(4);
+    return {
+      amount: main,
+      originalAmount: origNum.toString(),
+      originalCurrencyCode: input.originalCurrencyCode as string,
+      exchangeRate: rateNum.toString(),
+    };
+  }
+
+  return {
+    amount:
+      typeof input.amount === "number" ? input.amount.toString() : input.amount,
+    originalAmount: null,
+    originalCurrencyCode: null,
+    exchangeRate: null,
+  };
+}
+
 export abstract class TransactionsService {
   static async create(
     workspaceId: string,
     userId: string,
     body: CreateTransactionInput,
   ) {
-    const amount =
-      typeof body.amount === "number" ? body.amount.toString() : body.amount;
+    const {
+      amount,
+      originalAmount,
+      originalCurrencyCode,
+      exchangeRate,
+    } = resolveMulticurrency(body);
 
     // Sanitize optional UUID fields: empty strings from the frontend are not valid UUIDs.
     const toWalletId = body.toWalletId || undefined;
@@ -43,6 +90,9 @@ export abstract class TransactionsService {
       ...dbBody,
       workspaceId,
       amount,
+      originalAmount,
+      originalCurrencyCode,
+      exchangeRate,
       toWalletId,
       categoryId,
       assignedUserId,
@@ -197,10 +247,12 @@ export abstract class TransactionsService {
         const dbTransactionsToInsert: any[] = [];
 
         for (const { item } of validItems) {
-          const amountStr =
-            typeof item.amount === "number"
-              ? item.amount.toString()
-              : item.amount;
+          const {
+            amount: amountStr,
+            originalAmount,
+            originalCurrencyCode,
+            exchangeRate,
+          } = resolveMulticurrency(item);
           const toWalletId = item.toWalletId || undefined;
           const categoryId = item.categoryId || undefined;
           const assignedUserId = item.assignedUserId || userId;
@@ -210,6 +262,9 @@ export abstract class TransactionsService {
             ...dbBody,
             workspaceId,
             amount: amountStr,
+            originalAmount,
+            originalCurrencyCode,
+            exchangeRate,
             toWalletId,
             categoryId,
             assignedUserId,
@@ -358,13 +413,40 @@ export abstract class TransactionsService {
       );
     }
 
-    const amount =
-      typeof body.amount === "number" ? body.amount.toString() : body.amount;
-
     // Strip non-DB fields and empty strings before update
     const { attachmentIds, ...bodyWithoutAttachments } = body;
     const rawData: any = { ...bodyWithoutAttachments };
-    if (amount !== undefined) rawData.amount = amount;
+
+    // Re-derive main-currency `amount` and the three original-currency fields
+    // whenever the client touches any of them. If the caller explicitly sends
+    // originalCurrencyCode = null we clear the multicurrency state.
+    const touchesCurrency =
+      body.amount !== undefined ||
+      body.originalAmount !== undefined ||
+      body.originalCurrencyCode !== undefined ||
+      body.exchangeRate !== undefined;
+
+    if (touchesCurrency) {
+      const merged = resolveMulticurrency({
+        amount: body.amount ?? transaction.amount,
+        originalAmount:
+          body.originalAmount !== undefined
+            ? body.originalAmount
+            : transaction.originalAmount,
+        originalCurrencyCode:
+          body.originalCurrencyCode !== undefined
+            ? body.originalCurrencyCode
+            : transaction.originalCurrencyCode,
+        exchangeRate:
+          body.exchangeRate !== undefined
+            ? body.exchangeRate
+            : transaction.exchangeRate,
+      });
+      rawData.amount = merged.amount;
+      rawData.originalAmount = merged.originalAmount;
+      rawData.originalCurrencyCode = merged.originalCurrencyCode;
+      rawData.exchangeRate = merged.exchangeRate;
+    }
 
     const updateData = Object.fromEntries(
       Object.entries(rawData).filter(([k, v]) => {
