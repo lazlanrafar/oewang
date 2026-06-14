@@ -22,3 +22,5 @@ linter:
     one_member_abstracts: false
     lines_longer_than_80_chars: false
     avoid_classes_with_only_static_members: false
+    avoid_redundant_argument_values: false
+    comment_references: false

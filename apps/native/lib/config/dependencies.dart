@@ -2,7 +2,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oewang/config/env.dart';
 import 'package:oewang/data/repositories/auth_repository.dart';
+import 'package:oewang/data/repositories/transactions_repository.dart';
 import 'package:oewang/data/repositories_remote/auth_repository_remote.dart';
+import 'package:oewang/data/repositories_remote/transactions_repository_remote.dart';
 import 'package:oewang/data/services/api/api_client.dart';
 import 'package:oewang/data/services/storage/secure_storage_service.dart';
 import 'package:oewang/domain/models/session.dart';
@@ -34,6 +36,10 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
     storage: ref.watch(secureStorageProvider),
     env: ref.watch(envProvider),
   );
+});
+
+final transactionsRepositoryProvider = Provider<TransactionsRepository>((ref) {
+  return TransactionsRepositoryRemote(ref.watch(apiClientProvider));
 });
 
 /// Single source of truth for "is the user logged in". The router redirect
