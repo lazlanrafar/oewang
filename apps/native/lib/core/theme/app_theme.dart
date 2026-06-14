@@ -6,7 +6,9 @@ import 'package:oewang/core/theme/oewang_typography.dart';
 class AppTheme {
   const AppTheme._();
 
-  static ThemeData dark() {
+  static ThemeData dark({
+    TransactionColorScheme transactionScheme = TransactionColorScheme.blueRed,
+  }) {
     final base = ThemeData.dark(useMaterial3: true);
     return base.copyWith(
       colorScheme: const ColorScheme.dark(
@@ -32,7 +34,7 @@ class AppTheme {
       ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         backgroundColor: OewangColors.background,
-        selectedItemColor: OewangColors.expense,
+        selectedItemColor: OewangColors.coral,
         unselectedItemColor: OewangColors.mutedForeground,
         type: BottomNavigationBarType.fixed,
       ),
@@ -45,7 +47,7 @@ class AppTheme {
         margin: EdgeInsets.zero,
       ),
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
-        backgroundColor: OewangColors.expense,
+        backgroundColor: OewangColors.coral,
         foregroundColor: OewangColors.foreground,
         shape: CircleBorder(),
       ),
@@ -61,6 +63,9 @@ class AppTheme {
           vertical: OewangSpacing.md,
         ),
       ),
+      extensions: <ThemeExtension<dynamic>>[
+        TransactionColors(scheme: transactionScheme),
+      ],
     );
   }
 }

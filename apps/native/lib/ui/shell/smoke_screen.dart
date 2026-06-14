@@ -42,15 +42,9 @@ class SmokeScreen extends StatelessWidget {
             label: 'foreground',
             color: OewangColors.foreground,
           ),
-          const _SwatchRow(
-            label: 'expense (FAB)',
-            color: OewangColors.expense,
-          ),
-          const _SwatchRow(
-            label: 'income blue',
-            color: OewangColors.incomeBlue,
-          ),
-          const _SwatchRow(label: 'income green', color: OewangColors.income),
+          const _SwatchRow(label: 'coral (FAB)', color: OewangColors.coral),
+          const _SwatchRow(label: 'blue (income)', color: OewangColors.blue),
+          const _SwatchRow(label: 'red (expense)', color: OewangColors.red),
           const SizedBox(height: OewangSpacing.xl),
           Text(
             'Typography',
@@ -75,77 +69,82 @@ class SmokeScreen extends StatelessWidget {
             style: OewangFonts.mono(fontSize: 14),
           ),
           const SizedBox(height: OewangSpacing.xl),
-          Container(
-            padding: const EdgeInsets.all(OewangSpacing.lg),
-            decoration: BoxDecoration(
-              color: OewangColors.card,
-              borderRadius: BorderRadius.circular(OewangRadius.lg),
-              border: Border.all(color: OewangColors.border),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    children: [
-                      Text(
-                        'Income',
-                        style: OewangFonts.sans(
-                          color: OewangColors.mutedForeground,
-                          fontSize: 12,
-                        ),
-                      ),
-                      const SizedBox(height: OewangSpacing.xs),
-                      Text(
-                        '0,00',
-                        style: OewangFonts.currency(
-                          color: OewangColors.incomeBlue,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ],
-                  ),
+          Builder(
+            builder: (context) {
+              final tx = Theme.of(context).extension<TransactionColors>()!;
+              return Container(
+                padding: const EdgeInsets.all(OewangSpacing.lg),
+                decoration: BoxDecoration(
+                  color: OewangColors.card,
+                  borderRadius: BorderRadius.circular(OewangRadius.lg),
+                  border: Border.all(color: OewangColors.border),
                 ),
-                Expanded(
-                  child: Column(
-                    children: [
-                      Text(
-                        'Exp.',
-                        style: OewangFonts.sans(
-                          color: OewangColors.mutedForeground,
-                          fontSize: 12,
-                        ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        children: [
+                          Text(
+                            'Income',
+                            style: OewangFonts.sans(
+                              color: OewangColors.mutedForeground,
+                              fontSize: 12,
+                            ),
+                          ),
+                          const SizedBox(height: OewangSpacing.xs),
+                          Text(
+                            '0,00',
+                            style: OewangFonts.currency(
+                              color: tx.income,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: OewangSpacing.xs),
-                      Text(
-                        '1.952.500,00',
-                        style: OewangFonts.currency(
-                          color: OewangColors.expense,
-                          fontSize: 16,
-                        ),
+                    ),
+                    Expanded(
+                      child: Column(
+                        children: [
+                          Text(
+                            'Exp.',
+                            style: OewangFonts.sans(
+                              color: OewangColors.mutedForeground,
+                              fontSize: 12,
+                            ),
+                          ),
+                          const SizedBox(height: OewangSpacing.xs),
+                          Text(
+                            '1.952.500,00',
+                            style: OewangFonts.currency(
+                              color: tx.expense,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                    Expanded(
+                      child: Column(
+                        children: [
+                          Text(
+                            'Total',
+                            style: OewangFonts.sans(
+                              color: OewangColors.mutedForeground,
+                              fontSize: 12,
+                            ),
+                          ),
+                          const SizedBox(height: OewangSpacing.xs),
+                          Text(
+                            '-1.952.500,00',
+                            style: OewangFonts.currency(fontSize: 16),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                Expanded(
-                  child: Column(
-                    children: [
-                      Text(
-                        'Total',
-                        style: OewangFonts.sans(
-                          color: OewangColors.mutedForeground,
-                          fontSize: 12,
-                        ),
-                      ),
-                      const SizedBox(height: OewangSpacing.xs),
-                      Text(
-                        '-1.952.500,00',
-                        style: OewangFonts.currency(fontSize: 16),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+              );
+            },
           ),
         ],
       ),

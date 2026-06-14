@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 
-/// Dark-mode color tokens, ported 1:1 from `packages/ui/src/globals.css` (.dark).
-///
-/// Source of truth: the existing Oewang web app dark theme. Mobile inherits the
-/// same palette so users see one product across web and native.
+/// Dark-mode color tokens, ported from `packages/ui/src/globals.css` (`.dark`)
+/// and Tailwind's `blue-400` / `red-400` (used by the web app for income /
+/// expense amount text via `text-blue-400` / `text-red-400` classes).
 class OewangColors {
   const OewangColors._();
 
@@ -28,16 +27,79 @@ class OewangColors {
   static const Color primaryForeground = Color(0xFF18181B);
   static const Color ring = Color(0xFFD4D4D8);
 
-  // Semantic colors (mirror --green / --red / --destructive in dark mode)
-  // The web tokens use green for income; the iOS screenshots use blue.
-  // Both are exposed; Transaction Settings picks one at runtime.
-  static const Color income = Color(0xFF00C781); // hsl(151 100% 39%)
-  static const Color incomeBlue = Color(0xFF4D9CFF); // matches IMG_1826
-  static const Color expense = Color(0xFFFF5A5F); // hsl(357 85% 64%)
-  static const Color destructive = Color(0xFFFF3838); // hsl(359 100% 61%)
-  static const Color transferOutline = Color(0xFFFAFAFA);
+  // Raw palette used for income / expense text. These match Tailwind dark-mode
+  // tokens (`blue-400` / `red-400`) the web app uses via the `incomeColor` /
+  // `expensesColor` Tailwind classes in `INCOME_EXPENSES_COLOR_OPTIONS`.
+  static const Color blue = Color(0xFF60A5FA); // tailwind blue-400
+  static const Color red = Color(0xFFF87171); // tailwind red-400
 
-  // Calendar weekday colors (IMG_1827)
-  static const Color sundayRed = expense;
-  static const Color saturdayBlue = incomeBlue;
+  // The coral red from the web `--red` token (`hsl(357 85% 64%)`) — reserved
+  // for the FAB, destructive accents, and the active bottom-nav tint.
+  static const Color coral = Color(0xFFFF5A5F);
+  static const Color destructive = Color(0xFFFF3838); // hsl(359 100% 61%)
+}
+
+/// Maps the raw [OewangColors.blue] / [OewangColors.red] palette onto the
+/// semantic "income" / "expense" roles, driven by the
+/// `incomeExpensesColor` workspace setting.
+///
+/// Values mirror `INCOME_EXPENSES_COLOR_OPTIONS` from
+/// `packages/constants/src/index.ts` — `blue-red` (default) and `red-blue`.
+enum TransactionColorScheme {
+  blueRed(
+    incomeColor: OewangColors.blue,
+    expenseColor: OewangColors.red,
+    settingValue: 'blue-red',
+  ),
+  redBlue(
+    incomeColor: OewangColors.red,
+    expenseColor: OewangColors.blue,
+    settingValue: 'red-blue',
+  );
+
+  const TransactionColorScheme({
+    required this.incomeColor,
+    required this.expenseColor,
+    required this.settingValue,
+  });
+
+  final Color incomeColor;
+  final Color expenseColor;
+  final String settingValue;
+
+  static TransactionColorScheme fromSetting(String? value) {
+    return switch (value) {
+      'red-blue' => TransactionColorScheme.redBlue,
+      _ => TransactionColorScheme.blueRed,
+    };
+  }
+}
+
+/// Carries the active [TransactionColorScheme] through the widget tree.
+///
+/// Read via `Theme.of(context).extension<TransactionColors>()` and override
+/// in `ThemeData(extensions: [...])` once the user-settings provider lands
+/// (Milestone 9). For now, defaults to [TransactionColorScheme.blueRed].
+@immutable
+class TransactionColors extends ThemeExtension<TransactionColors> {
+  const TransactionColors({required this.scheme});
+
+  factory TransactionColors.defaultBlueRed() =>
+      const TransactionColors(scheme: TransactionColorScheme.blueRed);
+
+  final TransactionColorScheme scheme;
+
+  Color get income => scheme.incomeColor;
+  Color get expense => scheme.expenseColor;
+
+  @override
+  TransactionColors copyWith({TransactionColorScheme? scheme}) {
+    return TransactionColors(scheme: scheme ?? this.scheme);
+  }
+
+  @override
+  TransactionColors lerp(ThemeExtension<TransactionColors>? other, double t) {
+    if (other is! TransactionColors) return this;
+    return t < 0.5 ? this : other;
+  }
 }
