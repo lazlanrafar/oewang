@@ -205,11 +205,11 @@ export const transactionColumns = (
         const original = Number(transaction.originalAmount);
         return (
           <div className={cn("flex flex-col items-end text-right", getTransactionColor?.(transaction?.type))}>
-            <span className="font-medium text-xs tabular-nums">
+            <span className="font-serif text-xs tabular-nums">
               {original.toLocaleString(undefined, { maximumFractionDigits: 4 })}{" "}
               {transaction.originalCurrencyCode}
             </span>
-            <span className="text-[10px] text-muted-foreground tabular-nums">
+            <span className="font-serif text-[10px] text-muted-foreground tabular-nums">
               {formatCurrency ? formatCurrency(amount) : amount}
             </span>
           </div>
@@ -217,7 +217,7 @@ export const transactionColumns = (
       }
 
       return (
-        <div className={cn("text-right font-medium text-xs", getTransactionColor?.(transaction?.type))}>
+        <div className={cn("text-right font-serif text-xs tabular-nums", getTransactionColor?.(transaction?.type))}>
           {formatCurrency ? formatCurrency(amount) : amount}
         </div>
       );

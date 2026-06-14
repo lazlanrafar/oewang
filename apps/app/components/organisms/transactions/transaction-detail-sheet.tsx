@@ -274,7 +274,7 @@ export function TransactionDetailSheet({
                 {transaction?.originalCurrencyCode &&
                   transaction?.originalCurrencyCode !== settings?.mainCurrencyCode && (
                     <div className="flex flex-col gap-0.5 pt-1 text-muted-foreground">
-                      <span className="select-text text-sm tabular-nums">
+                      <span className="select-text font-serif text-sm tabular-nums">
                         {Number(transaction.originalAmount ?? 0).toLocaleString(undefined, {
                           maximumFractionDigits: 4,
                         })}{" "}
@@ -282,9 +282,11 @@ export function TransactionDetailSheet({
                       </span>
                       <span className="text-[10px] uppercase tracking-widest">
                         {dictionary.transactions.exchange_rate_label || "Exchange rate"}:{" "}
-                        {Number(transaction.exchangeRate ?? 0).toLocaleString(undefined, {
-                          maximumFractionDigits: 4,
-                        })}
+                        <span className="font-serif tabular-nums">
+                          {Number(transaction.exchangeRate ?? 0).toLocaleString(undefined, {
+                            maximumFractionDigits: 4,
+                          })}
+                        </span>
                       </span>
                     </div>
                   )}

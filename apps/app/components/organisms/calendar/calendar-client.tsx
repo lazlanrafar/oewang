@@ -436,12 +436,12 @@ function MonthView({
 
                 <div className="mt-0.5 flex flex-col gap-0.5 overflow-hidden">
                   {income > 0 && (
-                    <div className="truncate rounded bg-emerald-500/10 px-1.5 py-0.5 font-medium text-[10px] text-emerald-600 sm:text-[11px] dark:text-emerald-400">
+                    <div className="truncate rounded bg-emerald-500/10 px-1.5 py-0.5 font-serif text-[10px] text-emerald-600 tabular-nums sm:text-[11px] dark:text-emerald-400">
                       +{formatCurrency(income)}
                     </div>
                   )}
                   {expense > 0 && (
-                    <div className="truncate rounded bg-red-500/10 px-1.5 py-0.5 font-medium text-[10px] text-red-600 sm:text-[11px] dark:text-red-400">
+                    <div className="truncate rounded bg-red-500/10 px-1.5 py-0.5 font-serif text-[10px] text-red-600 tabular-nums sm:text-[11px] dark:text-red-400">
                       -{formatCurrency(expense)}
                     </div>
                   )}
@@ -625,7 +625,7 @@ function WeekView({
                     return (
                       <div
                         key={k}
-                        className="absolute right-1 left-1 z-10 mx-0.5 overflow-hidden rounded px-1.5 py-0.5 font-medium text-[10px]"
+                        className="absolute right-1 left-1 z-10 mx-0.5 overflow-hidden rounded px-1.5 py-0.5 font-serif text-[10px] tabular-nums"
                         style={{
                           top: `calc(${(hour / 24) * 100}% + 2px)`,
                           minHeight: 20,

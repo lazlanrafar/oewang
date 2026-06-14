@@ -586,7 +586,7 @@ export function TransactionFormSheet({
                             currencySymbol={isMainCurrency ? settings?.mainCurrencySymbol : undefined}
                             decimalPlaces={isMainCurrency ? settings?.mainCurrencyDecimalPlaces : 2}
                             className={cn(
-                              "bg-transparent pl-14 font-medium text-sm transition-colors focus:border-foreground",
+                              "bg-transparent pl-14 font-serif text-sm tabular-nums transition-colors focus:border-foreground",
                               activeTab === "expense"
                                 ? "text-red-500"
                                 : activeTab === "income"
@@ -686,7 +686,7 @@ export function TransactionFormSheet({
                         mainCurrencyCode,
                       )}
                     </FormLabel>
-                    <div className="flex h-9 items-center border border-input bg-muted/10 px-3 font-medium text-sm">
+                    <div className="flex h-9 items-center border border-input bg-muted/10 px-3 font-serif text-sm tabular-nums">
                       {formatCurrency(convertedAmount || 0)}
                     </div>
                     <FormDescription>
