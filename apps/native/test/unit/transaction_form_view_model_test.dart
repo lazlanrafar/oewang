@@ -51,6 +51,27 @@ void main() {
       expect(vm.canSave, isTrue);
     });
 
+    test('transfer requires from + to that differ; swap swaps them', () {
+      vm.setType(TransactionType.transfer);
+      vm.setAmount(50000);
+      expect(vm.canSave, isFalse);
+      vm.setWallet('w-cash');
+      vm.setToWallet('w-cash');
+      expect(vm.canSave, isFalse); // same wallet
+      vm.setToWallet('w-bca');
+      expect(vm.canSave, isTrue);
+      vm.swapWallets();
+      expect(vm.state.walletId, 'w-bca');
+      expect(vm.state.toWalletId, 'w-cash');
+    });
+
+    test('switching to transfer clears the prior categoryId', () {
+      vm
+        ..setCategory('cat-food')
+        ..setType(TransactionType.transfer);
+      expect(vm.state.categoryId, isNull);
+    });
+
     test('successful save persists via the repo and resets Continue', () async {
       vm
         ..setWallet('w-cash')

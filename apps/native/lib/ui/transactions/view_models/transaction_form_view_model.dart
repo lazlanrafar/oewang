@@ -16,7 +16,9 @@ class TransactionFormState {
     required this.date,
     required this.amount,
     this.walletId,
+    this.toWalletId,
     this.categoryId,
+    this.fees = 0,
     this.note = '',
     this.description = '',
   });
@@ -31,21 +33,31 @@ class TransactionFormState {
   final DateTime date;
   final num amount;
   final String? walletId;
+  final String? toWalletId;
   final String? categoryId;
+  final num fees;
   final String note;
   final String description;
 
-  bool get isValid =>
-      amount > 0 &&
-      walletId != null &&
-      (type == TransactionType.transfer || categoryId != null);
+  bool get isValid {
+    if (amount <= 0) return false;
+    return switch (type) {
+      TransactionType.transfer =>
+        walletId != null && toWalletId != null && walletId != toWalletId,
+      TransactionType.income || TransactionType.expense =>
+        walletId != null && categoryId != null,
+      _ => walletId != null,
+    };
+  }
 
   TransactionFormState copyWith({
     TransactionType? type,
     DateTime? date,
     num? amount,
     String? walletId,
+    String? toWalletId,
     String? categoryId,
+    num? fees,
     String? note,
     String? description,
   }) {
@@ -54,7 +66,9 @@ class TransactionFormState {
       date: date ?? this.date,
       amount: amount ?? this.amount,
       walletId: walletId ?? this.walletId,
+      toWalletId: toWalletId ?? this.toWalletId,
       categoryId: categoryId ?? this.categoryId,
+      fees: fees ?? this.fees,
       note: note ?? this.note,
       description: description ?? this.description,
     );
@@ -66,7 +80,7 @@ class TransactionFormState {
   }
 }
 
-/// Owns the Income / Expense transaction form state and the Save Command.
+/// Owns the transaction form state and the Save Command.
 class TransactionFormViewModel extends ChangeNotifier {
   TransactionFormViewModel({
     required TransactionsRepository transactions,
@@ -100,11 +114,14 @@ class TransactionFormViewModel extends ChangeNotifier {
   bool get canSave => _state.isValid && !save.running;
 
   void setType(TransactionType type) {
+    // Reset to a clean state for the new type — copyWith can't null out
+    // categoryId / toWalletId because `null` collapses to the old value.
     _state = TransactionFormState(
       type: type,
       date: _state.date,
       amount: _state.amount,
-      walletId: _state.walletId,
+      walletId: type == TransactionType.transfer ? _state.walletId : _state.walletId,
+      toWalletId: type == TransactionType.transfer ? _state.toWalletId : null,
       note: _state.note,
       description: _state.description,
     );
@@ -126,8 +143,33 @@ class TransactionFormViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setToWallet(String walletId) {
+    _state = _state.copyWith(toWalletId: walletId);
+    notifyListeners();
+  }
+
+  void swapWallets() {
+    if (_state.walletId == null || _state.toWalletId == null) return;
+    _state = TransactionFormState(
+      type: _state.type,
+      date: _state.date,
+      amount: _state.amount,
+      walletId: _state.toWalletId,
+      toWalletId: _state.walletId,
+      fees: _state.fees,
+      note: _state.note,
+      description: _state.description,
+    );
+    notifyListeners();
+  }
+
   void setCategory(String categoryId) {
     _state = _state.copyWith(categoryId: categoryId);
+    notifyListeners();
+  }
+
+  void setFees(num fees) {
+    _state = _state.copyWith(fees: fees);
     notifyListeners();
   }
 
@@ -143,13 +185,17 @@ class TransactionFormViewModel extends ChangeNotifier {
 
   Future<Result<Transaction, AppError>?> submit() async {
     if (!_state.isValid) return null;
+    final note = _composeNote();
     final draft = NewTransactionDraft(
       type: _state.type,
       amount: _state.amount,
       date: _state.date,
       walletId: _state.walletId!,
-      categoryId: _state.categoryId,
-      note: _state.note.isEmpty ? null : _state.note,
+      toWalletId: _state.toWalletId,
+      categoryId: _state.type == TransactionType.transfer
+          ? null
+          : _state.categoryId,
+      note: note,
       description: _state.description.isEmpty ? null : _state.description,
     );
     await save.run(draft);
@@ -162,8 +208,18 @@ class TransactionFormViewModel extends ChangeNotifier {
 
   void resetForContinue() {
     save.reset();
-    _state = _state.copyWith(amount: 0, note: '', description: '');
+    _state = _state.copyWith(amount: 0, fees: 0, note: '', description: '');
     notifyListeners();
+  }
+
+  /// Fees aren't a column on the wire model. We tack the value into the note
+  /// for transfer transactions so the user still sees it on the daily list.
+  String? _composeNote() {
+    if (_state.type != TransactionType.transfer || _state.fees <= 0) {
+      return _state.note.isEmpty ? null : _state.note;
+    }
+    final feesText = 'Fee: ${_state.fees}';
+    return _state.note.isEmpty ? feesText : '${_state.note} ($feesText)';
   }
 
   Future<void> _loadPickers() async {

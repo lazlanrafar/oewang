@@ -76,11 +76,15 @@ class TransactionFormScreen extends ConsumerWidget {
             const Divider(height: 1, color: OewangColors.border),
             _AmountRow(vm: vm),
             const Divider(height: 1, color: OewangColors.border),
-            if (vm.state.type != TransactionType.transfer)
+            if (vm.state.type == TransactionType.transfer) ...[
+              _TransferWalletsRow(vm: vm),
+              const Divider(height: 1, color: OewangColors.border),
+            ] else ...[
               _CategoryRow(vm: vm),
-            const Divider(height: 1, color: OewangColors.border),
-            _AccountRow(vm: vm),
-            const Divider(height: 1, color: OewangColors.border),
+              const Divider(height: 1, color: OewangColors.border),
+              _AccountRow(vm: vm),
+              const Divider(height: 1, color: OewangColors.border),
+            ],
             _NoteRow(vm: vm),
             const SizedBox(height: 24),
             _DescriptionRow(vm: vm),
@@ -166,20 +170,65 @@ class _AmountRow extends StatelessWidget {
         : (vm.state.type == TransactionType.expense
               ? tx.expense
               : OewangColors.foreground);
-    return _LabelledRow(
-      label: 'Amount',
-      child: InkWell(
-        onTap: () async {
-          final result = await AmountCalculatorSheet.show(
-            context,
-            initial: vm.state.amount,
-          );
-          if (result != null) vm.setAmount(result);
-        },
-        child: Text(
-          Money(amount: vm.state.amount).format(),
-          style: OewangFonts.currency(color: color, fontSize: 16),
-        ),
+    final isTransfer = vm.state.type == TransactionType.transfer;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: 84,
+            child: Text(
+              'Amount',
+              style: OewangFonts.sans(color: OewangColors.mutedForeground),
+            ),
+          ),
+          Expanded(
+            child: InkWell(
+              onTap: () async {
+                final result = await AmountCalculatorSheet.show(
+                  context,
+                  initial: vm.state.amount,
+                );
+                if (result != null) vm.setAmount(result);
+              },
+              child: Text(
+                Money(amount: vm.state.amount).format(),
+                style: OewangFonts.currency(color: color, fontSize: 16),
+              ),
+            ),
+          ),
+          if (isTransfer)
+            OutlinedButton(
+              onPressed: () async {
+                final value = await AmountCalculatorSheet.show(
+                  context,
+                  initial: vm.state.fees,
+                );
+                if (value != null) vm.setFees(value);
+              },
+              style: OutlinedButton.styleFrom(
+                foregroundColor: vm.state.fees > 0
+                    ? OewangColors.foreground
+                    : OewangColors.mutedForeground,
+                side: const BorderSide(color: OewangColors.border),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                minimumSize: Size.zero,
+              ),
+              child: Text(
+                vm.state.fees > 0
+                    ? 'Fees ${vm.state.fees}'
+                    : 'Fees',
+                style: OewangFonts.sans(fontSize: 13),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -249,6 +298,114 @@ class _AccountRow extends StatelessWidget {
                 ? OewangColors.mutedForeground
                 : OewangColors.foreground,
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TransferWalletsRow extends StatelessWidget {
+  const _TransferWalletsRow({required this.vm});
+  final TransactionFormViewModel vm;
+
+  @override
+  Widget build(BuildContext context) {
+    final from = vm.walletOptions
+        .where((w) => w.id == vm.state.walletId)
+        .map((w) => w.name)
+        .firstOrNull;
+    final to = vm.walletOptions
+        .where((w) => w.id == vm.state.toWalletId)
+        .map((w) => w.name)
+        .firstOrNull;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _PickRow(
+                  label: 'From',
+                  value: from,
+                  onTap: () async {
+                    final picked = await EntityPickerSheet.show<Wallet>(
+                      context,
+                      title: 'From',
+                      items: vm.walletOptions,
+                      labelOf: (w) => w.name,
+                      idOf: (w) => w.id,
+                    );
+                    if (picked != null) vm.setWallet(picked.id);
+                  },
+                ),
+                const Divider(height: 1, color: OewangColors.border),
+                _PickRow(
+                  label: 'To',
+                  value: to,
+                  onTap: () async {
+                    final picked = await EntityPickerSheet.show<Wallet>(
+                      context,
+                      title: 'To',
+                      items: vm.walletOptions,
+                      labelOf: (w) => w.name,
+                      idOf: (w) => w.id,
+                    );
+                    if (picked != null) vm.setToWallet(picked.id);
+                  },
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: 'Swap',
+            onPressed: vm.swapWallets,
+            icon: const Icon(
+              Icons.swap_vert,
+              color: OewangColors.mutedForeground,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PickRow extends StatelessWidget {
+  const _PickRow({required this.label, required this.value, required this.onTap});
+
+  final String label;
+  final String? value;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 84,
+              child: Text(
+                label,
+                style: OewangFonts.sans(color: OewangColors.mutedForeground),
+              ),
+            ),
+            Expanded(
+              child: Text(
+                value ?? 'Choose an account',
+                style: OewangFonts.sans(
+                  color: value == null
+                      ? OewangColors.mutedForeground
+                      : OewangColors.foreground,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
