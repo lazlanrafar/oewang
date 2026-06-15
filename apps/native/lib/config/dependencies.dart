@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oewang/config/env.dart';
+import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/data/repositories/auth_repository.dart';
 import 'package:oewang/data/repositories/categories_repository.dart';
 import 'package:oewang/data/repositories/transactions_repository.dart';
@@ -85,6 +86,22 @@ class TransactionsRevisionController extends Notifier<int> {
 final transactionsRevisionProvider =
     NotifierProvider<TransactionsRevisionController, int>(
       TransactionsRevisionController.new,
+    );
+
+/// Active income/expense color scheme. Defaults to the web app's `blue-red`
+/// preset; will be hydrated from `/v1/settings/transaction` in a follow-up.
+class TransactionColorSchemeController extends Notifier<TransactionColorScheme> {
+  @override
+  TransactionColorScheme build() => TransactionColorScheme.blueRed;
+  // Notifier idiom: explicit method beats a generated setter so callers read
+  // `ctl.set(x)` consistently with the other controllers in this file.
+  // ignore: use_setters_to_change_properties
+  void set(TransactionColorScheme scheme) => state = scheme;
+}
+
+final transactionColorSchemeProvider =
+    NotifierProvider<TransactionColorSchemeController, TransactionColorScheme>(
+      TransactionColorSchemeController.new,
     );
 
 /// Single source of truth for "is the user logged in". The router redirect

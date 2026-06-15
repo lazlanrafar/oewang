@@ -1,9 +1,13 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:oewang/config/dependencies.dart';
+import 'package:oewang/domain/models/category.dart' as cat;
 import 'package:oewang/ui/auth/widgets/login_screen.dart';
+import 'package:oewang/ui/categories/widgets/category_edit_screen.dart';
+import 'package:oewang/ui/categories/widgets/category_list_screen.dart';
 import 'package:oewang/ui/settings/widgets/settings_screen.dart';
+import 'package:oewang/ui/settings/widgets/transaction_settings_screen.dart';
 import 'package:oewang/ui/shell/main_shell.dart';
 import 'package:oewang/ui/stats/widgets/stats_screen.dart';
 import 'package:oewang/ui/transactions/widgets/transaction_form_screen.dart';
@@ -21,6 +25,11 @@ class AppRoutes {
   static const String more = '/more';
   static const String transactionForm = '/transactions/new';
   static const String accountForm = '/accounts/new';
+  static const String transactionSettings = '/settings/transaction';
+  static const String categoriesIncome = '/settings/categories/income';
+  static const String categoriesExpense = '/settings/categories/expense';
+
+  static String categoryEditFor(String id) => '/settings/categories/edit/$id';
 }
 
 /// Re-runs go_router's `redirect` whenever the session value changes.
@@ -71,6 +80,32 @@ GoRouter buildAppRouter(Ref ref) {
       GoRoute(
         path: AppRoutes.accountForm,
         builder: (context, state) => const AccountFormScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.transactionSettings,
+        builder: (context, state) => const TransactionSettingsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.categoriesIncome,
+        builder: (context, state) =>
+            const CategoryListScreen(type: cat.CategoryType.income),
+      ),
+      GoRoute(
+        path: AppRoutes.categoriesExpense,
+        builder: (context, state) =>
+            const CategoryListScreen(type: cat.CategoryType.expense),
+      ),
+      GoRoute(
+        path: '/settings/categories/edit/:id',
+        builder: (context, state) {
+          final category = state.extra as cat.Category?;
+          if (category == null) {
+            return const Scaffold(
+              body: Center(child: Text('Missing category')),
+            );
+          }
+          return CategoryEditScreen(category: category);
+        },
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>

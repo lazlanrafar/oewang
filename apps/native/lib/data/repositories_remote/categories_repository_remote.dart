@@ -34,4 +34,25 @@ class CategoriesRepositoryRemote implements CategoriesRepository {
       return const Failure(UnknownError());
     }
   }
+
+  @override
+  Future<Result<Category, AppError>> update({
+    required String id,
+    required String name,
+  }) async {
+    try {
+      final res = await _api.patch('/categories/$id', data: {'name': name});
+      final json = (res.data as Map<String, dynamic>)['data'];
+      if (json is! Map<String, dynamic>) {
+        return const Failure(
+          ServerError(statusCode: 500, message: 'Unexpected response'),
+        );
+      }
+      return Success(CategoryDto.fromJson(json).toDomain());
+    } on DioException catch (e) {
+      return Failure(mapDioError(e));
+    } on Exception {
+      return const Failure(UnknownError());
+    }
+  }
 }
