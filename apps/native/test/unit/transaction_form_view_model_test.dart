@@ -52,11 +52,13 @@ void main() {
     });
 
     test('transfer requires from + to that differ; swap swaps them', () {
-      vm.setType(TransactionType.transfer);
-      vm.setAmount(50000);
+      vm
+        ..setType(TransactionType.transfer)
+        ..setAmount(50000);
       expect(vm.canSave, isFalse);
-      vm.setWallet('w-cash');
-      vm.setToWallet('w-cash');
+      vm
+        ..setWallet('w-cash')
+        ..setToWallet('w-cash');
       expect(vm.canSave, isFalse); // same wallet
       vm.setToWallet('w-bca');
       expect(vm.canSave, isTrue);
