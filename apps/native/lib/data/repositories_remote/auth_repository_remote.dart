@@ -4,6 +4,7 @@ import 'package:oewang/core/result/app_error.dart';
 import 'package:oewang/core/result/result.dart';
 import 'package:oewang/data/dto/login_response_dto.dart';
 import 'package:oewang/data/repositories/auth_repository.dart';
+import 'package:oewang/data/repositories_remote/dio_error_mapper.dart';
 import 'package:oewang/data/services/api/api_client.dart';
 import 'package:oewang/data/services/storage/secure_storage_service.dart';
 import 'package:oewang/domain/models/session.dart';
@@ -65,23 +66,5 @@ class AuthRepositoryRemote implements AuthRepository {
   @override
   Future<void> logout() => storage.deleteToken(env.sessionCookieName);
 
-  AppError _mapDioError(DioException e) {
-    final code = e.response?.statusCode;
-    final message =
-        (e.response?.data is Map<String, dynamic>
-            ? (e.response?.data as Map<String, dynamic>)['message'] as String?
-            : null) ??
-        e.message ??
-        'Network error';
-    if (code == 401) return UnauthorizedError(message);
-    if (e.type == DioExceptionType.connectionError ||
-        e.type == DioExceptionType.connectionTimeout ||
-        e.type == DioExceptionType.receiveTimeout) {
-      return NetworkError(message);
-    }
-    if (code != null && code >= 400) {
-      return ServerError(statusCode: code, message: message);
-    }
-    return UnknownError(message);
-  }
+  AppError _mapDioError(DioException e) => mapDioError(e);
 }

@@ -4,7 +4,9 @@ import 'package:oewang/core/result/app_error.dart';
 import 'package:oewang/core/result/result.dart';
 import 'package:oewang/data/dto/transaction_dto.dart';
 import 'package:oewang/data/repositories/transactions_repository.dart';
+import 'package:oewang/data/repositories_remote/dio_error_mapper.dart';
 import 'package:oewang/data/services/api/api_client.dart';
+import 'package:oewang/domain/models/new_transaction_draft.dart';
 import 'package:oewang/domain/models/transaction.dart';
 
 class TransactionsRepositoryRemote implements TransactionsRepository {
@@ -50,23 +52,35 @@ class TransactionsRepositoryRemote implements TransactionsRepository {
     }
   }
 
-  AppError _mapDioError(DioException e) {
-    final code = e.response?.statusCode;
-    final message =
-        (e.response?.data is Map<String, dynamic>
-            ? (e.response?.data as Map<String, dynamic>)['message'] as String?
-            : null) ??
-        e.message ??
-        'Network error';
-    if (code == 401) return UnauthorizedError(message);
-    if (e.type == DioExceptionType.connectionError ||
-        e.type == DioExceptionType.connectionTimeout ||
-        e.type == DioExceptionType.receiveTimeout) {
-      return NetworkError(message);
+  @override
+  Future<Result<Transaction, AppError>> create(
+    NewTransactionDraft draft,
+  ) async {
+    try {
+      final body = <String, dynamic>{
+        'type': draft.type.wire,
+        'amount': draft.amount,
+        'date': _dateFmt.format(draft.date),
+        'walletId': draft.walletId,
+        if (draft.toWalletId != null) 'toWalletId': draft.toWalletId,
+        if (draft.categoryId != null) 'categoryId': draft.categoryId,
+        if (draft.note != null) 'name': draft.note,
+        if (draft.description != null) 'description': draft.description,
+      };
+      final res = await _api.post('/transactions', data: body);
+      final json = (res.data as Map<String, dynamic>)['data'];
+      if (json is! Map<String, dynamic>) {
+        return const Failure(
+          ServerError(statusCode: 500, message: 'Unexpected create response'),
+        );
+      }
+      return Success(TransactionDto.fromJson(json).toDomain());
+    } on DioException catch (e) {
+      return Failure(mapDioError(e));
+    } on Exception {
+      return const Failure(UnknownError());
     }
-    if (code != null && code >= 400) {
-      return ServerError(statusCode: code, message: message);
-    }
-    return UnknownError(message);
   }
+
+  AppError _mapDioError(DioException e) => mapDioError(e);
 }

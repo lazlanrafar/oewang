@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/theme/app_theme.dart';
 import 'package:oewang/data/repositories/transactions_repository.dart';
 import 'package:oewang/data/repositories_fake/transactions_repository_fake.dart';
@@ -37,17 +38,17 @@ void main() {
         ),
       ];
       final fake = TransactionsRepositoryFake(seed: seed);
-      final repoProvider = Provider<TransactionsRepository>((ref) => fake);
 
       await tester.pumpWidget(
         ProviderScope(
+          overrides: [
+            transactionsRepositoryProvider.overrideWith(
+              (ref) => fake as TransactionsRepository,
+            ),
+          ],
           child: MaterialApp(
             theme: AppTheme.dark(),
-            home: Scaffold(
-              body: TransactionsDailyScreen(
-                repositoryProvider: repoProvider,
-              ),
-            ),
+            home: const Scaffold(body: TransactionsDailyScreen()),
           ),
         ),
       );
@@ -56,7 +57,6 @@ void main() {
 
       expect(find.text('Food'), findsOneWidget);
       expect(find.text('Laundry'), findsOneWidget);
-      // Day numbers from seed.
       expect(find.text('01'), findsOneWidget);
       expect(find.text('02'), findsOneWidget);
     },

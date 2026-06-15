@@ -2,6 +2,7 @@ import 'package:oewang/core/result/app_error.dart';
 import 'package:oewang/core/result/result.dart';
 import 'package:oewang/data/repositories/transactions_repository.dart';
 import 'package:oewang/domain/models/money.dart';
+import 'package:oewang/domain/models/new_transaction_draft.dart';
 import 'package:oewang/domain/models/transaction.dart';
 
 /// In-memory store seeded with the fixtures that match the IMG_1826 screenshot
@@ -43,6 +44,28 @@ class TransactionsRepositoryFake implements TransactionsRepository {
       expense('t6', DateTime(2026, 1, 2), 40000, 'Food', 'BCA', 'w-bca'),
       expense('t7', DateTime(2026, 1, 1), 27000, 'Food', 'BCA', 'w-bca'),
     ];
+  }
+
+  int _nextId = 100;
+
+  @override
+  Future<Result<Transaction, AppError>> create(
+    NewTransactionDraft draft,
+  ) async {
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+    final created = Transaction(
+      id: 'fake-${_nextId++}',
+      type: draft.type,
+      amount: Money(amount: draft.amount),
+      date: DateTime(draft.date.year, draft.date.month, draft.date.day),
+      walletId: draft.walletId,
+      toWalletId: draft.toWalletId,
+      categoryId: draft.categoryId,
+      name: draft.note,
+      description: draft.description,
+    );
+    _store.insert(0, created);
+    return Success(created);
   }
 
   @override

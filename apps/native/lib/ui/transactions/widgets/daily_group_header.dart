@@ -3,7 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/ui/core/money_text.dart';
-import 'package:oewang/ui/transactions/view_models/transactions_daily_view_model.dart';
+import 'package:oewang/ui/transactions/view_models/month_transactions_controller.dart';
 
 /// Sticky-style day header in IMG_1826: big day number + weekday chip +
 /// per-day Income/Expense totals.

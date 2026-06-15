@@ -6,7 +6,9 @@ import 'package:oewang/ui/auth/widgets/login_screen.dart';
 import 'package:oewang/ui/settings/widgets/settings_screen.dart';
 import 'package:oewang/ui/shell/main_shell.dart';
 import 'package:oewang/ui/stats/widgets/stats_screen.dart';
+import 'package:oewang/ui/transactions/widgets/transaction_form_screen.dart';
 import 'package:oewang/ui/transactions/widgets/transactions_screen.dart';
+import 'package:oewang/ui/wallets/widgets/account_form_screen.dart';
 import 'package:oewang/ui/wallets/widgets/wallets_screen.dart';
 
 class AppRoutes {
@@ -17,6 +19,8 @@ class AppRoutes {
   static const String stats = '/stats';
   static const String accounts = '/accounts';
   static const String more = '/more';
+  static const String transactionForm = '/transactions/new';
+  static const String accountForm = '/accounts/new';
 }
 
 /// Re-runs go_router's `redirect` whenever the session value changes.
@@ -45,7 +49,6 @@ GoRouter buildAppRouter(Ref ref) {
     refreshListenable: refresh,
     redirect: (context, state) {
       final session = ref.read(sessionControllerProvider);
-      // Wait for bootstrap to resolve before deciding.
       if (session.isLoading) return null;
 
       final loggedIn = session.valueOrNull != null;
@@ -60,6 +63,14 @@ GoRouter buildAppRouter(Ref ref) {
         path: AppRoutes.login,
         pageBuilder: (context, state) =>
             const NoTransitionPage(child: LoginScreen()),
+      ),
+      GoRoute(
+        path: AppRoutes.transactionForm,
+        builder: (context, state) => const TransactionFormScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.accountForm,
+        builder: (context, state) => const AccountFormScreen(),
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
@@ -108,5 +119,4 @@ GoRouter buildAppRouter(Ref ref) {
   );
 }
 
-/// Provider so tests can override the router with a fake-backed instance.
 final appRouterProvider = Provider<GoRouter>(buildAppRouter);

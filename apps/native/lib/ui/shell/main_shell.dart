@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:oewang/core/router/app_router.dart';
 import 'package:oewang/ui/shell/oewang_bottom_nav.dart';
 import 'package:oewang/ui/shell/oewang_fab.dart';
 
@@ -20,10 +21,7 @@ class MainShell extends StatelessWidget {
   }
 
   void _onAddTransaction(BuildContext context) {
-    // Transaction form lands in Milestone 4. For now, no-op feedback.
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Transaction form coming in Milestone 4')),
-    );
+    context.push(AppRoutes.transactionForm);
   }
 
   @override

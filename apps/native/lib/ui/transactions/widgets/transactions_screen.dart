@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
+import 'package:oewang/domain/models/money.dart';
+import 'package:oewang/ui/transactions/view_models/month_transactions_controller.dart';
+import 'package:oewang/ui/transactions/widgets/month_picker_bar.dart';
 import 'package:oewang/ui/transactions/widgets/sub_tab_bar.dart';
+import 'package:oewang/ui/transactions/widgets/transactions_calendar_screen.dart';
 import 'package:oewang/ui/transactions/widgets/transactions_daily_screen.dart';
 import 'package:oewang/ui/transactions/widgets/transactions_header.dart';
+import 'package:oewang/ui/transactions/widgets/transactions_monthly_screen.dart';
+import 'package:oewang/ui/transactions/widgets/transactions_summary_row.dart';
+import 'package:oewang/ui/transactions/widgets/transactions_summary_screen.dart';
 
-/// Trans. tab host. Owns the header, sub-tab bar, and renders the active
-/// sub-tab body. Sub-tabs other than Daily land in later milestones.
 class TransactionsScreen extends ConsumerStatefulWidget {
   const TransactionsScreen({super.key});
 
@@ -17,11 +21,27 @@ class TransactionsScreen extends ConsumerStatefulWidget {
 }
 
 class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
-  static const _labels = ['Daily', 'Calendar', 'Monthly', 'Summary', 'Description'];
+  static const _labels = [
+    'Daily',
+    'Calendar',
+    'Monthly',
+    'Summary',
+    'Description',
+  ];
   int _index = 0;
 
   @override
   Widget build(BuildContext context) {
+    final monthCtl = ref.read(monthControllerProvider.notifier);
+    final month = ref.watch(monthControllerProvider);
+    final async = ref.watch(monthTransactionsProvider(month));
+    final totals = async.maybeWhen(
+      data: computeMonthTotals,
+      orElse: () =>
+          const MonthTotals(income: Money(amount: 0), expense: Money(amount: 0)),
+    );
+    final yearOnlyMonthBar = _index == 2; // Monthly tab shows the year only.
+
     return Scaffold(
       body: SafeArea(
         child: Column(
@@ -33,12 +53,23 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
               onSelect: (i) => setState(() => _index = i),
             ),
             const Divider(height: 1, color: OewangColors.border),
+            MonthPickerBar(
+              month: month,
+              yearOnly: yearOnlyMonthBar,
+              onPrev: monthCtl.prev,
+              onNext: monthCtl.next,
+            ),
+            TransactionsSummaryRow(
+              income: totals.income,
+              expense: totals.expense,
+            ),
             Expanded(
               child: switch (_index) {
-                0 => TransactionsDailyScreen(
-                  repositoryProvider: transactionsRepositoryProvider,
-                ),
-                _ => _ComingSoon(label: _labels[_index]),
+                0 => const TransactionsDailyScreen(),
+                1 => const TransactionsCalendarScreen(),
+                2 => const TransactionsMonthlyScreen(),
+                3 => const TransactionsSummaryScreen(),
+                _ => const _Description(),
               },
             ),
           ],
@@ -48,15 +79,13 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   }
 }
 
-class _ComingSoon extends StatelessWidget {
-  const _ComingSoon({required this.label});
-  final String label;
-
+class _Description extends StatelessWidget {
+  const _Description();
   @override
   Widget build(BuildContext context) {
     return Center(
       child: Text(
-        '$label — coming soon',
+        'Description — coming soon',
         style: OewangFonts.sans(color: OewangColors.mutedForeground),
       ),
     );
