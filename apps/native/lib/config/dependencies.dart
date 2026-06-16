@@ -6,14 +6,18 @@ import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/data/repositories/auth_repository.dart';
 import 'package:oewang/data/repositories/budgets_repository.dart';
 import 'package:oewang/data/repositories/categories_repository.dart';
+import 'package:oewang/data/repositories/rates_repository.dart';
 import 'package:oewang/data/repositories/settings_repository.dart';
+import 'package:oewang/data/repositories/sub_currencies_repository.dart';
 import 'package:oewang/data/repositories/transactions_repository.dart';
 import 'package:oewang/data/repositories/wallet_groups_repository.dart';
 import 'package:oewang/data/repositories/wallets_repository.dart';
 import 'package:oewang/data/repositories_remote/auth_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/budgets_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/categories_repository_remote.dart';
+import 'package:oewang/data/repositories_remote/rates_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/settings_repository_remote.dart';
+import 'package:oewang/data/repositories_remote/sub_currencies_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/transactions_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/wallet_groups_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/wallets_repository_remote.dart';
@@ -91,6 +95,16 @@ final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
 
 final budgetsRepositoryProvider = Provider<BudgetsRepository>((ref) {
   return BudgetsRepositoryRemote(ref.watch(apiClientProvider));
+});
+
+final subCurrenciesRepositoryProvider = Provider<SubCurrenciesRepository>((
+  ref,
+) {
+  return SubCurrenciesRepositoryRemote(ref.watch(apiClientProvider));
+});
+
+final ratesRepositoryProvider = Provider<RatesRepository>((ref) {
+  return RatesRepositoryRemote(ref.watch(apiClientProvider));
 });
 
 /// Monotonically increasing integer bumped whenever a transaction is
