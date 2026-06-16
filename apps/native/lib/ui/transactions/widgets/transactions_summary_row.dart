@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
+import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/domain/models/money.dart';
 import 'package:oewang/ui/core/money_text.dart';
 
 /// Income / Exp. / Total roll-up row shown above every Trans. sub-tab.
-/// Matches the row in IMG_1826 / IMG_1827 / IMG_1828 / IMG_1829.
 class TransactionsSummaryRow extends StatelessWidget {
   const TransactionsSummaryRow({
     required this.income,
@@ -19,10 +19,11 @@ class TransactionsSummaryRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tx = Theme.of(context).extension<TransactionColors>()!;
+    final palette = context.palette;
     final total = income - expense;
     return DecoratedBox(
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: OewangColors.border)),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: palette.border)),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
@@ -30,7 +31,7 @@ class TransactionsSummaryRow extends StatelessWidget {
           children: [
             Expanded(child: _SummaryCell(label: 'Income', value: income, color: tx.income)),
             Expanded(child: _SummaryCell(label: 'Exp.', value: expense, color: tx.expense)),
-            Expanded(child: _SummaryCell(label: 'Total', value: total, color: OewangColors.foreground)),
+            Expanded(child: _SummaryCell(label: 'Total', value: total, color: palette.foreground)),
           ],
         ),
       ),
@@ -51,12 +52,13 @@ class _SummaryCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return Column(
       children: [
         Text(
           label,
           style: OewangFonts.sans(
-            color: OewangColors.mutedForeground,
+            color: palette.mutedForeground,
             fontSize: 12,
           ),
         ),

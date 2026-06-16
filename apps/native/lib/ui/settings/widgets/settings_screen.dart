@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:oewang/core/router/app_router.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
+import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 
 /// IMG_1844 + IMG_2244 — More tab. Grouped list of settings entries.
@@ -10,12 +11,13 @@ class SettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return Scaffold(
       body: SafeArea(
         child: Column(
           children: [
             const _Header(version: '2.12.3 AP'),
-            const Divider(height: 1, color: OewangColors.border),
+            Divider(height: 1, color: palette.border),
             Expanded(
               child: ListView(
                 children: [
@@ -55,7 +57,7 @@ class SettingsScreen extends StatelessWidget {
                     title: 'Accounts Setting',
                     subtitle:
                         'Account Group, Accounts, Include in totals, Transf…',
-                    onTap: () => _comingSoon(context, 'Accounts Setting'),
+                    onTap: () => context.push(AppRoutes.accountsSettings),
                   ),
                   _Row(
                     icon: Icons.account_balance_wallet_outlined,
@@ -135,6 +137,7 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return SizedBox(
       height: 48,
       child: Stack(
@@ -144,6 +147,7 @@ class _Header extends StatelessWidget {
             child: Text(
               'Settings',
               style: OewangFonts.sans(
+                color: palette.foreground,
                 fontSize: 17,
                 fontWeight: FontWeight.w500,
               ),
@@ -153,7 +157,7 @@ class _Header extends StatelessWidget {
             right: 16,
             child: Text(
               version,
-              style: OewangFonts.sans(color: OewangColors.mutedForeground),
+              style: OewangFonts.sans(color: palette.mutedForeground),
             ),
           ),
         ],
@@ -167,13 +171,14 @@ class _SectionLabel extends StatelessWidget {
   final String label;
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return Container(
-      color: OewangColors.background,
+      color: palette.background,
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       child: Text(
         label,
         style: OewangFonts.sans(
-          color: OewangColors.mutedForeground,
+          color: palette.mutedForeground,
           fontSize: 12,
         ),
       ),
@@ -198,13 +203,14 @@ class _Row extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return InkWell(
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
           children: [
-            Icon(icon, color: OewangColors.foreground, size: 22),
+            Icon(icon, color: palette.foreground, size: 22),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
@@ -213,6 +219,7 @@ class _Row extends StatelessWidget {
                   Text(
                     title,
                     style: OewangFonts.sans(
+                      color: palette.foreground,
                       fontSize: 15,
                       fontWeight: FontWeight.w500,
                     ),
@@ -222,7 +229,7 @@ class _Row extends StatelessWidget {
                     Text(
                       subtitle!,
                       style: OewangFonts.sans(
-                        color: OewangColors.mutedForeground,
+                        color: palette.mutedForeground,
                         fontSize: 12,
                       ),
                     ),

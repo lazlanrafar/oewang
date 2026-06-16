@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
+import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/ui/core/money_text.dart';
 import 'package:oewang/ui/transactions/view_models/month_transactions_controller.dart';
@@ -15,15 +16,16 @@ class DailyGroupHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tx = Theme.of(context).extension<TransactionColors>()!;
+    final palette = context.palette;
     final weekday = DateFormat('EEE').format(group.date);
     final isSunday = group.date.weekday == DateTime.sunday;
     final isSaturday = group.date.weekday == DateTime.saturday;
     final chipColor = isSunday
         ? OewangColors.coral
-        : (isSaturday ? OewangColors.blue : OewangColors.mutedForeground);
+        : (isSaturday ? OewangColors.blue : palette.mutedForeground);
 
     return Container(
-      color: OewangColors.card,
+      color: palette.card,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
@@ -32,6 +34,7 @@ class DailyGroupHeader extends StatelessWidget {
             child: Text(
               group.date.day.toString().padLeft(2, '0'),
               style: OewangFonts.sans(
+                color: palette.foreground,
                 fontSize: 18,
                 fontWeight: FontWeight.w500,
               ),
@@ -46,7 +49,7 @@ class DailyGroupHeader extends StatelessWidget {
             child: Text(
               weekday,
               style: OewangFonts.sans(
-                color: OewangColors.foreground,
+                color: Colors.white,
                 fontSize: 11,
                 fontWeight: FontWeight.w500,
               ),
@@ -56,14 +59,14 @@ class DailyGroupHeader extends StatelessWidget {
           MoneyText(
             amount: group.income,
             color: group.income.isZero
-                ? OewangColors.mutedForeground
+                ? palette.mutedForeground
                 : tx.income,
           ),
           const SizedBox(width: 16),
           MoneyText(
             amount: group.expense,
             color: group.expense.isZero
-                ? OewangColors.mutedForeground
+                ? palette.mutedForeground
                 : tx.expense,
           ),
         ],

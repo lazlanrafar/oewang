@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/router/app_router.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
+import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/domain/models/money.dart';
 import 'package:oewang/ui/core/money_text.dart';
@@ -24,6 +25,7 @@ class WalletsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final vm = ref.watch(accountsVmProvider);
+    final palette = context.palette;
     ref.listen<int>(walletsRevisionProvider, (_, _) => vm.load());
 
     return Scaffold(
@@ -31,13 +33,13 @@ class WalletsScreen extends ConsumerWidget {
         child: Column(
           children: [
             _Header(onAdd: () => context.push(AppRoutes.accountForm)),
-            const Divider(height: 1, color: OewangColors.border),
+            Divider(height: 1, color: palette.border),
             _SummaryRow(
               assets: vm.assets,
               liabilities: vm.liabilities,
               total: vm.total,
             ),
-            const Divider(height: 1, color: OewangColors.border),
+            Divider(height: 1, color: palette.border),
             Expanded(
               child: vm.loading
                   ? const Center(child: CircularProgressIndicator())
@@ -67,6 +69,7 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final fg = context.palette.foreground;
     return SizedBox(
       height: 48,
       child: Row(
@@ -74,17 +77,20 @@ class _Header extends StatelessWidget {
           const Spacer(),
           Text(
             'Accounts',
-            style: OewangFonts.sans(fontSize: 17, fontWeight: FontWeight.w500),
+            style: OewangFonts.sans(
+              color: fg,
+              fontSize: 17,
+              fontWeight: FontWeight.w500,
+            ),
           ),
           const Spacer(),
           IconButton(
             onPressed: () {},
-            icon: const Icon(Icons.edit_outlined,
-                color: OewangColors.foreground),
+            icon: Icon(Icons.edit_outlined, color: fg),
           ),
           IconButton(
             onPressed: onAdd,
-            icon: const Icon(Icons.add, color: OewangColors.foreground),
+            icon: Icon(Icons.add, color: fg),
           ),
         ],
       ),
@@ -106,6 +112,7 @@ class _SummaryRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tx = Theme.of(context).extension<TransactionColors>()!;
+    final palette = context.palette;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
@@ -124,7 +131,7 @@ class _SummaryRow extends StatelessWidget {
             child: _Cell(
               label: 'Total',
               value: total,
-              color: OewangColors.foreground,
+              color: palette.foreground,
             ),
           ),
         ],
@@ -146,7 +153,7 @@ class _Cell extends StatelessWidget {
         Text(
           label,
           style: OewangFonts.sans(
-            color: OewangColors.mutedForeground,
+            color: context.palette.mutedForeground,
             fontSize: 12,
           ),
         ),
@@ -163,11 +170,12 @@ class _AccountsList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     if (sections.isEmpty) {
       return Center(
         child: Text(
           'No accounts yet',
-          style: OewangFonts.sans(color: OewangColors.mutedForeground),
+          style: OewangFonts.sans(color: palette.mutedForeground),
         ),
       );
     }
@@ -178,17 +186,20 @@ class _AccountsList extends StatelessWidget {
         return Column(
           children: [
             _GroupHeader(name: s.group.name, subtotal: s.subtotal),
-            const Divider(height: 1, color: OewangColors.border),
+            Divider(height: 1, color: palette.border),
             for (final w in s.wallets) ...[
               ListTile(
-                title: Text(w.name, style: OewangFonts.sans()),
+                title: Text(
+                  w.name,
+                  style: OewangFonts.sans(color: palette.foreground),
+                ),
                 trailing: MoneyText(
                   amount: Money(amount: w.balance, currency: w.currency),
-                  color: OewangColors.foreground,
+                  color: palette.foreground,
                 ),
                 dense: true,
               ),
-              const Divider(height: 1, color: OewangColors.border),
+              Divider(height: 1, color: palette.border),
             ],
           ],
         );
@@ -204,8 +215,9 @@ class _GroupHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return Container(
-      color: OewangColors.muted,
+      color: palette.muted,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Row(
         children: [
@@ -213,14 +225,14 @@ class _GroupHeader extends StatelessWidget {
             child: Text(
               name,
               style: OewangFonts.sans(
-                color: OewangColors.mutedForeground,
+                color: palette.mutedForeground,
                 fontSize: 12,
               ),
             ),
           ),
           MoneyText(
             amount: subtotal,
-            color: OewangColors.mutedForeground,
+            color: palette.mutedForeground,
             fontSize: 13,
           ),
         ],

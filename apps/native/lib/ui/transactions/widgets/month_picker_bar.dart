@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:oewang/core/theme/oewang_colors.dart';
+import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 
 /// `< Jan 2026 >` bar used across all Trans sub-tabs.
@@ -20,6 +20,7 @@ class MonthPickerBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final fg = context.palette.foreground;
     final label = yearOnly
         ? DateFormat('yyyy').format(month)
         : DateFormat('MMM yyyy').format(month);
@@ -29,16 +30,14 @@ class MonthPickerBar extends StatelessWidget {
         children: [
           IconButton(
             onPressed: onPrev,
-            icon: const Icon(
-              Icons.chevron_left,
-              color: OewangColors.foreground,
-            ),
+            icon: Icon(Icons.chevron_left, color: fg),
           ),
           Expanded(
             child: Center(
               child: Text(
                 label,
                 style: OewangFonts.sans(
+                  color: fg,
                   fontSize: 15,
                   fontWeight: FontWeight.w500,
                 ),
@@ -47,10 +46,7 @@ class MonthPickerBar extends StatelessWidget {
           ),
           IconButton(
             onPressed: onNext,
-            icon: const Icon(
-              Icons.chevron_right,
-              color: OewangColors.foreground,
-            ),
+            icon: Icon(Icons.chevron_right, color: fg),
           ),
         ],
       ),

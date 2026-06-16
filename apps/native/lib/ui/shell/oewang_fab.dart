@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
 
-/// 56-pt coral circular FAB used on Trans / Stats / Accounts. Opens the
-/// transaction form once Milestone 4 lands.
+/// 56-pt coral circular FAB. Brand-fixed, so it stays the same in light + dark.
 class OewangFab extends StatelessWidget {
   const OewangFab({required this.onPressed, super.key});
 
@@ -13,7 +12,7 @@ class OewangFab extends StatelessWidget {
     return FloatingActionButton(
       heroTag: 'oewangFab',
       backgroundColor: OewangColors.coral,
-      foregroundColor: OewangColors.foreground,
+      foregroundColor: Colors.white,
       elevation: 4,
       onPressed: onPressed,
       child: const Icon(Icons.add, size: 28),

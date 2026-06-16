@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:oewang/core/theme/oewang_colors.dart';
+import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 
 /// Top chrome of the Trans. tab: search · "Trans." · favorites · filters.
-/// Matches the header pattern in IMG_1826 / IMG_1827 / IMG_1828 / IMG_1829.
 class TransactionsHeader extends StatelessWidget {
   const TransactionsHeader({
     this.onSearchTap,
@@ -18,6 +17,7 @@ class TransactionsHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final fg = context.palette.foreground;
     return SizedBox(
       height: 48,
       child: Row(
@@ -25,13 +25,14 @@ class TransactionsHeader extends StatelessWidget {
           IconButton(
             tooltip: 'Search',
             onPressed: onSearchTap,
-            icon: const Icon(Icons.search, color: OewangColors.foreground),
+            icon: Icon(Icons.search, color: fg),
           ),
           Expanded(
             child: Center(
               child: Text(
                 'Trans.',
                 style: OewangFonts.sans(
+                  color: fg,
                   fontSize: 17,
                   fontWeight: FontWeight.w500,
                 ),
@@ -41,15 +42,12 @@ class TransactionsHeader extends StatelessWidget {
           IconButton(
             tooltip: 'Favorites',
             onPressed: onFavoritesTap,
-            icon: const Icon(
-              Icons.star_border,
-              color: OewangColors.foreground,
-            ),
+            icon: Icon(Icons.star_border, color: fg),
           ),
           IconButton(
             tooltip: 'Filters',
             onPressed: onFiltersTap,
-            icon: const Icon(Icons.tune, color: OewangColors.foreground),
+            icon: Icon(Icons.tune, color: fg),
           ),
         ],
       ),

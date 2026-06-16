@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
+import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 
 /// Daily / Calendar / Monthly / Summary / Description segmented row with a
@@ -18,6 +19,7 @@ class SubTabBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return SizedBox(
       height: 40,
       child: Row(
@@ -33,8 +35,8 @@ class SubTabBar extends StatelessWidget {
                       labels[i],
                       style: OewangFonts.sans(
                         color: i == currentIndex
-                            ? OewangColors.foreground
-                            : OewangColors.mutedForeground,
+                            ? palette.foreground
+                            : palette.mutedForeground,
                         fontSize: 13,
                         fontWeight: i == currentIndex
                             ? FontWeight.w500

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
+import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/domain/models/transaction.dart';
 import 'package:oewang/ui/transactions/view_models/month_transactions_controller.dart';
@@ -43,7 +44,7 @@ class _DailyList extends StatelessWidget {
       return Center(
         child: Text(
           'No transactions this month',
-          style: OewangFonts.sans(color: OewangColors.mutedForeground),
+          style: OewangFonts.sans(color: context.palette.mutedForeground),
         ),
       );
     }

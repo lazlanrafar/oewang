@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
+import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_radius.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 
@@ -65,6 +66,7 @@ class AppTheme {
       ),
       extensions: <ThemeExtension<dynamic>>[
         TransactionColors(scheme: transactionScheme),
+        OewangPalette.dark(),
       ],
     );
   }
@@ -136,6 +138,7 @@ class AppTheme {
       ),
       extensions: <ThemeExtension<dynamic>>[
         TransactionColors(scheme: transactionScheme),
+        OewangPalette.light(),
       ],
     );
   }

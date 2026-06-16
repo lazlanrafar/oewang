@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
+import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/domain/models/money.dart';
 import 'package:oewang/domain/models/transaction.dart';
@@ -14,6 +15,7 @@ class TransactionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tx = Theme.of(context).extension<TransactionColors>()!;
+    final palette = context.palette;
     final isIncome = transaction.isIncome;
     final amountColor = isIncome ? tx.income : tx.expense;
     return Padding(
@@ -31,14 +33,14 @@ class TransactionRow extends StatelessWidget {
                   transaction.category?.name ??
                       transaction.name ??
                       'Uncategorized',
-                  style: OewangFonts.sans(),
+                  style: OewangFonts.sans(color: palette.foreground),
                 ),
                 if (transaction.wallet != null) ...[
                   const SizedBox(height: 2),
                   Text(
                     transaction.wallet!.name,
                     style: OewangFonts.sans(
-                      color: OewangColors.mutedForeground,
+                      color: palette.mutedForeground,
                       fontSize: 12,
                     ),
                   ),

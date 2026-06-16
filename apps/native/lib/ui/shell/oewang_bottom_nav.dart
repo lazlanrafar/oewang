@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
+import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_radius.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 
 /// 4-tab bottom navigation matching IMG_1826 / IMG_1834 / IMG_1835 / IMG_1844.
-///
-/// - Trans icon embeds today's `dd/MM` (e.g. 05/01).
-/// - Active tab tints icon + label with [OewangColors.coral].
-/// - Tap dispatches via [onSelect]; the parent (router shell) handles routing.
 class OewangBottomNav extends StatelessWidget {
   const OewangBottomNav({
     required this.currentIndex,
@@ -32,11 +29,12 @@ class OewangBottomNav extends StatelessWidget {
   Widget build(BuildContext context) {
     final today = _today ?? DateTime.now();
     final dayLabel = DateFormat('dd/MM').format(today);
+    final palette = context.palette;
 
     return DecoratedBox(
-      decoration: const BoxDecoration(
-        color: OewangColors.background,
-        border: Border(top: BorderSide(color: OewangColors.border)),
+      decoration: BoxDecoration(
+        color: palette.background,
+        border: Border(top: BorderSide(color: palette.border)),
       ),
       child: SafeArea(
         top: false,
@@ -82,8 +80,8 @@ class _NavButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color =
-        selected ? OewangColors.coral : OewangColors.mutedForeground;
+    final palette = context.palette;
+    final color = selected ? OewangColors.coral : palette.mutedForeground;
     final label = overrideLabel ?? item.label;
     return Material(
       color: Colors.transparent,
