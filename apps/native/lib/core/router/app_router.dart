@@ -6,13 +6,21 @@ import 'package:oewang/domain/models/category.dart' as cat;
 import 'package:oewang/ui/auth/widgets/login_screen.dart';
 import 'package:oewang/ui/categories/widgets/category_edit_screen.dart';
 import 'package:oewang/ui/categories/widgets/category_list_screen.dart';
+import 'package:oewang/ui/settings/widgets/main_currency_screen.dart';
 import 'package:oewang/ui/settings/widgets/settings_screen.dart';
+import 'package:oewang/ui/settings/widgets/style_screen.dart';
+import 'package:oewang/ui/settings/widgets/sub_currency_screen.dart';
 import 'package:oewang/ui/settings/widgets/transaction_settings_screen.dart';
 import 'package:oewang/ui/shell/main_shell.dart';
 import 'package:oewang/ui/stats/widgets/stats_screen.dart';
 import 'package:oewang/ui/transactions/widgets/transaction_form_screen.dart';
 import 'package:oewang/ui/transactions/widgets/transactions_screen.dart';
 import 'package:oewang/ui/wallets/widgets/account_form_screen.dart';
+import 'package:oewang/ui/wallets/widgets/account_group_screen.dart';
+import 'package:oewang/ui/wallets/widgets/account_simple_list_screen.dart';
+import 'package:oewang/ui/wallets/widgets/accounts_settings_screen.dart';
+import 'package:oewang/ui/wallets/widgets/include_in_totals_screen.dart';
+import 'package:oewang/ui/wallets/widgets/transfer_expense_setting_screen.dart';
 import 'package:oewang/ui/wallets/widgets/wallets_screen.dart';
 
 class AppRoutes {
@@ -28,6 +36,14 @@ class AppRoutes {
   static const String transactionSettings = '/settings/transaction';
   static const String categoriesIncome = '/settings/categories/income';
   static const String categoriesExpense = '/settings/categories/expense';
+  static const String mainCurrency = '/settings/currency/main';
+  static const String subCurrency = '/settings/currency/sub';
+  static const String style = '/settings/style';
+  static const String accountsSettings = '/settings/accounts';
+  static const String accountGroup = '/settings/accounts/group';
+  static const String accountSimpleList = '/settings/accounts/list';
+  static const String includeInTotals = '/settings/accounts/include';
+  static const String transferExpense = '/settings/accounts/transfer-expense';
 
   static String categoryEditFor(String id) => '/settings/categories/edit/$id';
 }
@@ -106,6 +122,38 @@ GoRouter buildAppRouter(Ref ref) {
           }
           return CategoryEditScreen(category: category);
         },
+      ),
+      GoRoute(
+        path: AppRoutes.mainCurrency,
+        builder: (context, state) => const MainCurrencyScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.subCurrency,
+        builder: (context, state) => const SubCurrencyScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.accountsSettings,
+        builder: (context, state) => const AccountsSettingsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.accountGroup,
+        builder: (context, state) => const AccountGroupScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.accountSimpleList,
+        builder: (context, state) => const AccountSimpleListScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.includeInTotals,
+        builder: (context, state) => const IncludeInTotalsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.transferExpense,
+        builder: (context, state) => const TransferExpenseSettingScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.style,
+        builder: (context, state) => const StyleScreen(),
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>

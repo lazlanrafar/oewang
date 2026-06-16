@@ -10,11 +10,12 @@ class OewangApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = ref.watch(transactionColorSchemeProvider);
+    final mode = ref.watch(themeModeProvider);
     return MaterialApp.router(
       title: 'Oewang',
-      theme: AppTheme.dark(transactionScheme: scheme),
+      theme: AppTheme.light(transactionScheme: scheme),
       darkTheme: AppTheme.dark(transactionScheme: scheme),
-      themeMode: ThemeMode.dark,
+      themeMode: mode,
       debugShowCheckedModeBanner: false,
       routerConfig: ref.watch(appRouterProvider),
     );

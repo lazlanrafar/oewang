@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oewang/config/env.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
@@ -13,6 +14,7 @@ import 'package:oewang/data/repositories_remote/transactions_repository_remote.d
 import 'package:oewang/data/repositories_remote/wallet_groups_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/wallets_repository_remote.dart';
 import 'package:oewang/data/services/api/api_client.dart';
+import 'package:oewang/data/services/storage/preferences_service.dart';
 import 'package:oewang/data/services/storage/secure_storage_service.dart';
 import 'package:oewang/domain/models/session.dart';
 
@@ -23,6 +25,11 @@ final envProvider = Provider<EnvConfig>((ref) {
 
 final secureStorageProvider = Provider<SecureStorageService>((ref) {
   return SecureStorageService();
+});
+
+/// Bootstrapped in main.dart and overridden in [ProviderScope].
+final preferencesServiceProvider = Provider<PreferencesService>((ref) {
+  throw UnimplementedError('Override in ProviderScope at startup');
 });
 
 final apiClientProvider = Provider<ApiClient>((ref) {
@@ -92,17 +99,34 @@ final transactionsRevisionProvider =
 /// preset; will be hydrated from `/v1/settings/transaction` in a follow-up.
 class TransactionColorSchemeController extends Notifier<TransactionColorScheme> {
   @override
-  TransactionColorScheme build() => TransactionColorScheme.blueRed;
-  // Notifier idiom: explicit method beats a generated setter so callers read
-  // `ctl.set(x)` consistently with the other controllers in this file.
-  // ignore: use_setters_to_change_properties
-  void set(TransactionColorScheme scheme) => state = scheme;
+  TransactionColorScheme build() =>
+      ref.read(preferencesServiceProvider).readTransactionColorScheme();
+
+  Future<void> set(TransactionColorScheme scheme) async {
+    state = scheme;
+    await ref.read(preferencesServiceProvider).writeTransactionColorScheme(scheme);
+  }
 }
 
 final transactionColorSchemeProvider =
     NotifierProvider<TransactionColorSchemeController, TransactionColorScheme>(
       TransactionColorSchemeController.new,
     );
+
+/// Active [ThemeMode] — `system` follows the OS, `light`/`dark` force one.
+class ThemeModeController extends Notifier<ThemeMode> {
+  @override
+  ThemeMode build() => ref.read(preferencesServiceProvider).readThemeMode();
+
+  Future<void> set(ThemeMode mode) async {
+    state = mode;
+    await ref.read(preferencesServiceProvider).writeThemeMode(mode);
+  }
+}
+
+final themeModeProvider = NotifierProvider<ThemeModeController, ThemeMode>(
+  ThemeModeController.new,
+);
 
 /// Single source of truth for "is the user logged in". The router redirect
 /// listens to this; on logout / 401 the auth interceptor calls `clear`.

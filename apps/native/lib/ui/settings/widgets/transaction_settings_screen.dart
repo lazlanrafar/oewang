@@ -44,7 +44,7 @@ class TransactionSettingsScreen extends ConsumerWidget {
                 final next = scheme == TransactionColorScheme.blueRed
                     ? TransactionColorScheme.redBlue
                     : TransactionColorScheme.blueRed;
-                ctl.set(next);
+                await ctl.set(next);
               },
               child: _Row(
                 label: 'Income-Expenses Color Setting',

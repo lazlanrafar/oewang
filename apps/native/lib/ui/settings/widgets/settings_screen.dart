@@ -85,12 +85,12 @@ class SettingsScreen extends StatelessWidget {
                     icon: Icons.payments_outlined,
                     title: 'Main Currency Setting',
                     subtitle: 'IDR(Rp)',
-                    onTap: () => _comingSoon(context, 'Main Currency'),
+                    onTap: () => context.push(AppRoutes.mainCurrency),
                   ),
                   _Row(
                     icon: Icons.payments_outlined,
                     title: 'Sub Currency Setting',
-                    onTap: () => _comingSoon(context, 'Sub Currency'),
+                    onTap: () => context.push(AppRoutes.subCurrency),
                   ),
                   _Row(
                     icon: Icons.notifications_none,
@@ -100,7 +100,7 @@ class SettingsScreen extends StatelessWidget {
                   _Row(
                     icon: Icons.palette_outlined,
                     title: 'Style',
-                    onTap: () => _comingSoon(context, 'Style'),
+                    onTap: () => context.push(AppRoutes.style),
                   ),
                   _Row(
                     icon: Icons.rocket_launch_outlined,

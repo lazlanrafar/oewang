@@ -39,6 +39,56 @@ class OewangColors {
   static const Color destructive = Color(0xFFFF3838); // hsl(359 100% 61%)
 }
 
+/// Light-mode tokens, ported from the `:root` block of
+/// `packages/ui/src/globals.css`. Mirrors [OewangColors] field-for-field so a
+/// future refactor can swap them through a single ThemeExtension.
+class OewangColorsLight {
+  const OewangColorsLight._();
+
+  // Surfaces
+  static const Color background = Color(0xFFFFFFFF); // hsl(0 0% 100%)
+  static const Color foreground = Color(0xFF121212); // hsl(0 0% 7%)
+  static const Color card = Color(0xFFF5F2EB); // hsl(45 18% 96%)
+  static const Color cardForeground = Color(0xFF09090B);
+  static const Color popover = Color(0xFFF5F2EB);
+  static const Color popoverForeground = Color(0xFF09090B);
+
+  // Muted / accent / border
+  static const Color muted = Color(0xFFE5E2D9); // hsl(40 11% 89%)
+  static const Color mutedForeground = Color(0xFF616161); // hsl(0 0% 38%)
+  static const Color accent = Color(0xFFF0EEE8); // hsl(40 10% 94%)
+  static const Color accentForeground = Color(0xFF18181B);
+  static const Color border = Color(0xFFDAD8D2); // hsl(45 5% 85%)
+  static const Color input = Color(0xFFE5E5EC); // hsl(240 5.9% 90%)
+
+  // Primary
+  static const Color primary = Color(0xFF18181B);
+  static const Color primaryForeground = Color(0xFFFAFAFA);
+  static const Color ring = Color(0xFF18181B);
+
+  // Tailwind blue-600 / red-600 — what the web uses in light mode.
+  static const Color blue = Color(0xFF2563EB);
+  static const Color red = Color(0xFFDC2626);
+
+  // Coral + destructive stay constant — they're brand colors.
+  static const Color coral = OewangColors.coral;
+  static const Color destructive = Color(0xFFE94545); // hsl(0 84.2% 60.2%)
+}
+
+/// Light-mode equivalent of [TransactionColorScheme] — uses the Tailwind
+/// blue-600 / red-600 values from [OewangColorsLight].
+extension TransactionColorSchemeLight on TransactionColorScheme {
+  Color get lightIncomeColor => switch (this) {
+    TransactionColorScheme.blueRed => OewangColorsLight.blue,
+    TransactionColorScheme.redBlue => OewangColorsLight.red,
+  };
+
+  Color get lightExpenseColor => switch (this) {
+    TransactionColorScheme.blueRed => OewangColorsLight.red,
+    TransactionColorScheme.redBlue => OewangColorsLight.blue,
+  };
+}
+
 /// Maps the raw [OewangColors.blue] / [OewangColors.red] palette onto the
 /// semantic "income" / "expense" roles, driven by the
 /// `incomeExpensesColor` workspace setting.
