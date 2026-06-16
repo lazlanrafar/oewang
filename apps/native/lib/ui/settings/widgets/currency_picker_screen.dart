@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:oewang/core/theme/oewang_colors.dart';
+import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_radius.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/data/dto/currency_catalog.dart';
@@ -19,6 +19,7 @@ class _CurrencyPickerScreenState extends State<CurrencyPickerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     final filtered = CurrencyCatalog.search(_query);
     final grouped = CurrencyCatalog.groupByLetter(filtered);
 
@@ -48,20 +49,20 @@ class _CurrencyPickerScreenState extends State<CurrencyPickerScreen> {
               child: TextField(
                 onChanged: (v) => setState(() => _query = v),
                 decoration: InputDecoration(
-                  prefixIcon: const Icon(
+                  prefixIcon: Icon(
                     Icons.search,
-                    color: OewangColors.mutedForeground,
+                    color: palette.mutedForeground,
                   ),
                   hintText: 'Search',
                   filled: true,
-                  fillColor: OewangColors.muted,
+                  fillColor: palette.muted,
                   border: OutlineInputBorder(
                     borderSide: BorderSide.none,
                     borderRadius: BorderRadius.circular(OewangRadius.md),
                   ),
                   contentPadding: EdgeInsets.zero,
                 ),
-                style: OewangFonts.sans(),
+                style: OewangFonts.sans(color: palette.foreground),
               ),
             ),
             Expanded(
@@ -70,7 +71,7 @@ class _CurrencyPickerScreenState extends State<CurrencyPickerScreen> {
                   for (final entry in grouped.entries) ...[
                     Container(
                       width: double.infinity,
-                      color: OewangColors.muted,
+                      color: palette.muted,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
                         vertical: 6,
@@ -78,7 +79,7 @@ class _CurrencyPickerScreenState extends State<CurrencyPickerScreen> {
                       child: Text(
                         entry.key,
                         style: OewangFonts.sans(
-                          color: OewangColors.mutedForeground,
+                          color: palette.mutedForeground,
                           fontSize: 12,
                         ),
                       ),
@@ -96,7 +97,9 @@ class _CurrencyPickerScreenState extends State<CurrencyPickerScreen> {
                               Expanded(
                                 child: Text(
                                   c.displayLabel,
-                                  style: OewangFonts.sans(),
+                                  style: OewangFonts.sans(
+                                    color: palette.foreground,
+                                  ),
                                 ),
                               ),
                             ],

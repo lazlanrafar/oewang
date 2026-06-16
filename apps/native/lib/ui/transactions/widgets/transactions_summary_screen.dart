@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
+import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_radius.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/domain/models/money.dart';
@@ -22,11 +23,9 @@ class TransactionsSummaryScreen extends ConsumerWidget {
 
     return async.when(
       data: (txs) => wallets.when(
-        data: (ws) =>
-            _SummaryBody(transactions: txs, wallets: ws),
+        data: (ws) => _SummaryBody(transactions: txs, wallets: ws),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) =>
-            Center(child: _ErrorText(message: e.toString())),
+        error: (e, _) => Center(child: _ErrorText(message: e.toString())),
       ),
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: _ErrorText(message: e.toString())),
@@ -92,6 +91,7 @@ class _AccountsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tx = Theme.of(context).extension<TransactionColors>()!;
+    final palette = context.palette;
     final rows = <Widget>[];
     for (final w in wallets) {
       final m = byWallet[w.id];
@@ -102,7 +102,10 @@ class _AccountsCard extends StatelessWidget {
           child: Row(
             children: [
               Expanded(
-                child: Text('Exp. (${w.name})', style: OewangFonts.sans()),
+                child: Text(
+                  'Exp. (${w.name})',
+                  style: OewangFonts.sans(color: palette.foreground),
+                ),
               ),
               MoneyText(amount: m, color: tx.expense),
             ],
@@ -116,7 +119,7 @@ class _AccountsCard extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: Text(
             'No expenses recorded this month',
-            style: OewangFonts.sans(color: OewangColors.mutedForeground),
+            style: OewangFonts.sans(color: palette.mutedForeground),
           ),
         ),
       );
@@ -134,6 +137,7 @@ class _BudgetCard extends StatelessWidget {
   const _BudgetCard();
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return _Card(
       icon: Icons.account_balance_wallet_outlined,
       title: 'Budget',
@@ -145,7 +149,7 @@ class _BudgetCard extends StatelessWidget {
               Container(
                 height: 6,
                 decoration: BoxDecoration(
-                  color: OewangColors.muted,
+                  color: palette.muted,
                   borderRadius: BorderRadius.circular(OewangRadius.pill),
                 ),
               ),
@@ -153,9 +157,7 @@ class _BudgetCard extends StatelessWidget {
                 left: 0,
                 right: 0,
                 top: -22,
-                child: Center(
-                  child: _TodayChip(),
-                ),
+                child: Center(child: _TodayChip()),
               ),
             ],
           ),
@@ -169,16 +171,22 @@ class _BudgetCard extends StatelessWidget {
                   Text(
                     'Total Budget',
                     style: OewangFonts.sans(
-                      color: OewangColors.mutedForeground,
+                      color: palette.mutedForeground,
                       fontSize: 12,
                     ),
                   ),
-                  Text('Rp 0,00', style: OewangFonts.currency(fontSize: 13)),
+                  Text(
+                    'Rp 0,00',
+                    style: OewangFonts.currency(
+                      color: palette.foreground,
+                      fontSize: 13,
+                    ),
+                  ),
                 ],
               ),
               Text(
                 '0%',
-                style: OewangFonts.sans(color: OewangColors.mutedForeground),
+                style: OewangFonts.sans(color: palette.mutedForeground),
               ),
             ],
           ),
@@ -192,18 +200,16 @@ class _TodayChip extends StatelessWidget {
   const _TodayChip();
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: OewangColors.muted,
+        color: palette.muted,
         borderRadius: BorderRadius.circular(OewangRadius.pill),
       ),
       child: Text(
         'Today',
-        style: OewangFonts.sans(
-          color: OewangColors.foreground,
-          fontSize: 11,
-        ),
+        style: OewangFonts.sans(color: palette.foreground, fontSize: 11),
       ),
     );
   }
@@ -212,8 +218,9 @@ class _TodayChip extends StatelessWidget {
 class _ExportCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return Material(
-      color: OewangColors.card,
+      color: palette.card,
       borderRadius: BorderRadius.circular(OewangRadius.lg),
       child: InkWell(
         borderRadius: BorderRadius.circular(OewangRadius.lg),
@@ -225,7 +232,7 @@ class _ExportCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            border: Border.all(color: OewangColors.border),
+            border: Border.all(color: palette.border),
             borderRadius: BorderRadius.circular(OewangRadius.lg),
           ),
           child: Row(
@@ -235,7 +242,10 @@ class _ExportCard extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 'Export data to Excel',
-                style: OewangFonts.sans(fontSize: 14),
+                style: OewangFonts.sans(
+                  color: palette.foreground,
+                  fontSize: 14,
+                ),
               ),
             ],
           ),
@@ -254,16 +264,18 @@ class _Card extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            Icon(icon, color: OewangColors.foreground, size: 18),
+            Icon(icon, color: palette.foreground, size: 18),
             const SizedBox(width: 8),
             Text(
               title,
               style: OewangFonts.sans(
+                color: palette.foreground,
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
               ),
@@ -274,8 +286,8 @@ class _Card extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: OewangColors.card,
-            border: Border.all(color: OewangColors.border),
+            color: palette.card,
+            border: Border.all(color: palette.border),
             borderRadius: BorderRadius.circular(OewangRadius.lg),
           ),
           child: child,

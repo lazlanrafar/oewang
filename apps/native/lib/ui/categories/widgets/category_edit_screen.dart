@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
+import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_radius.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/domain/models/category.dart' as cat;
@@ -44,6 +45,7 @@ class _CategoryEditScreenState extends ConsumerState<CategoryEditScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     final headerLabel = widget.category.type == cat.CategoryType.income
         ? 'Income'
         : 'Exp.';
@@ -80,13 +82,17 @@ class _CategoryEditScreenState extends ConsumerState<CategoryEditScreen> {
                   Expanded(
                     child: TextField(
                       controller: _ctl,
-                      decoration: const InputDecoration(border: InputBorder.none),
-                      style: OewangFonts.sans(fontSize: 16),
+                      decoration:
+                          const InputDecoration(border: InputBorder.none),
+                      style: OewangFonts.sans(
+                        color: palette.foreground,
+                        fontSize: 16,
+                      ),
                     ),
                   ),
                 ],
               ),
-              const Divider(color: OewangColors.border),
+              Divider(color: palette.border),
               const SizedBox(height: 16),
               if (_error != null) ...[
                 Text(
@@ -101,7 +107,7 @@ class _CategoryEditScreenState extends ConsumerState<CategoryEditScreen> {
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: OewangColors.coral,
-                    foregroundColor: OewangColors.foreground,
+                    foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(OewangRadius.lg),
                     ),
@@ -114,12 +120,13 @@ class _CategoryEditScreenState extends ConsumerState<CategoryEditScreen> {
                           height: 18,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: OewangColors.foreground,
+                            color: Colors.white,
                           ),
                         )
                       : Text(
                           'Save',
                           style: OewangFonts.sans(
+                            color: Colors.white,
                             fontSize: 15,
                             fontWeight: FontWeight.w500,
                           ),

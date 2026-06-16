@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:oewang/core/theme/oewang_colors.dart';
+import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 
 /// Reusable picker (modal bottom sheet) — used for Category and Account rows
@@ -30,7 +30,7 @@ class EntityPickerSheet<T> extends StatelessWidget {
   }) {
     return showModalBottomSheet<T>(
       context: context,
-      backgroundColor: OewangColors.card,
+      backgroundColor: context.palette.card,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
@@ -47,6 +47,7 @@ class EntityPickerSheet<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
@@ -58,12 +59,13 @@ class EntityPickerSheet<T> extends StatelessWidget {
               child: Text(
                 title,
                 style: OewangFonts.sans(
+                  color: palette.foreground,
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
                 ),
               ),
             ),
-            const Divider(height: 1, color: OewangColors.border),
+            Divider(height: 1, color: palette.border),
             Flexible(
               child: ListView.builder(
                 shrinkWrap: true,
@@ -71,13 +73,16 @@ class EntityPickerSheet<T> extends StatelessWidget {
                 itemBuilder: (context, index) {
                   final item = items[index];
                   return ListTile(
-                    title: Text(labelOf(item), style: OewangFonts.sans()),
+                    title: Text(
+                      labelOf(item),
+                      style: OewangFonts.sans(color: palette.foreground),
+                    ),
                     subtitle: subtitleOf == null
                         ? null
                         : Text(
                             subtitleOf!(item) ?? '',
                             style: OewangFonts.sans(
-                              color: OewangColors.mutedForeground,
+                              color: palette.mutedForeground,
                               fontSize: 12,
                             ),
                           ),

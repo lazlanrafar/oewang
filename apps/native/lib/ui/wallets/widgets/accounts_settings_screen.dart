@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:oewang/core/router/app_router.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
+import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/ui/wallets/widgets/card_expenses_display_sheet.dart';
 
@@ -94,16 +95,22 @@ class _Row extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return InkWell(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: OewangColors.border)),
+        decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: palette.border)),
         ),
         child: Row(
           children: [
-            Expanded(child: Text(label, style: OewangFonts.sans())),
+            Expanded(
+              child: Text(
+                label,
+                style: OewangFonts.sans(color: palette.foreground),
+              ),
+            ),
             if (trailing != null) trailing!,
           ],
         ),

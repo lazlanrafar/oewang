@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
+import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_radius.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/ui/auth/view_models/login_view_model.dart';
@@ -43,6 +44,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final vm = ref.watch(loginViewModelProvider);
+    final palette = context.palette;
 
     return Scaffold(
       body: SafeArea(
@@ -56,6 +58,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   'Oewang',
                   textAlign: TextAlign.center,
                   style: OewangFonts.sans(
+                    color: palette.foreground,
                     fontSize: 32,
                     fontWeight: FontWeight.w500,
                   ),
@@ -64,9 +67,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 Text(
                   'Sign in to continue',
                   textAlign: TextAlign.center,
-                  style: OewangFonts.sans(
-                    color: OewangColors.mutedForeground,
-                  ),
+                  style: OewangFonts.sans(color: palette.mutedForeground),
                 ),
                 const SizedBox(height: OewangSpacing.xxl),
                 TextField(
@@ -102,7 +103,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: OewangColors.coral,
-                      foregroundColor: OewangColors.foreground,
+                      foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius:
                             BorderRadius.circular(OewangRadius.lg),
@@ -115,12 +116,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             height: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: OewangColors.foreground,
+                              color: Colors.white,
                             ),
                           )
                         : Text(
                             'Sign in',
                             style: OewangFonts.sans(
+                              color: Colors.white,
                               fontSize: 15,
                               fontWeight: FontWeight.w500,
                             ),

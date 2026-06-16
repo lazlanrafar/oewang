@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
+import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_radius.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/data/dto/currency_catalog.dart';
@@ -30,6 +31,7 @@ class _MainCurrencyScreenState extends State<MainCurrencyScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -53,8 +55,8 @@ class _MainCurrencyScreenState extends State<MainCurrencyScreen> {
             child: OutlinedButton(
               onPressed: _openPicker,
               style: OutlinedButton.styleFrom(
-                foregroundColor: OewangColors.foreground,
-                side: const BorderSide(color: OewangColors.border),
+                foregroundColor: palette.foreground,
+                side: BorderSide(color: palette.border),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(OewangRadius.md),
                 ),
@@ -81,25 +83,27 @@ class _MainCurrencyScreenState extends State<MainCurrencyScreen> {
                 children: [
                   Text(
                     '${_currency.code} - ${_currency.country} (${_currency.symbol})',
-                    style: OewangFonts.sans(
-                      color: OewangColors.mutedForeground,
-                    ),
+                    style: OewangFonts.sans(color: palette.mutedForeground),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     '${_currency.symbol} ${_preview()}',
-                    style: OewangFonts.currency(fontSize: 24),
+                    style: OewangFonts.currency(
+                      color: palette.foreground,
+                      fontSize: 24,
+                    ),
                   ),
                 ],
               ),
             ),
-            const Divider(height: 1, color: OewangColors.border),
+            Divider(height: 1, color: palette.border),
             _Row(
               label: 'Unit\nposition',
               child: DropdownButton<String>(
                 value: _unitPosition,
                 underline: const SizedBox.shrink(),
-                dropdownColor: OewangColors.card,
+                dropdownColor: palette.card,
+                style: OewangFonts.sans(color: palette.foreground),
                 items: const [
                   DropdownMenuItem(value: 'Front', child: Text('Front')),
                   DropdownMenuItem(value: 'Back', child: Text('Back')),
@@ -108,13 +112,14 @@ class _MainCurrencyScreenState extends State<MainCurrencyScreen> {
                     setState(() => _unitPosition = v ?? _unitPosition),
               ),
             ),
-            const Divider(height: 1, color: OewangColors.border),
+            Divider(height: 1, color: palette.border),
             _Row(
               label: 'Decimal\npoint',
               child: DropdownButton<int>(
                 value: _decimalPoint,
                 underline: const SizedBox.shrink(),
-                dropdownColor: OewangColors.card,
+                dropdownColor: palette.card,
+                style: OewangFonts.sans(color: palette.foreground),
                 items: const [
                   DropdownMenuItem(value: 0, child: Text('0')),
                   DropdownMenuItem(value: 2, child: Text('1.00')),
@@ -133,7 +138,7 @@ class _MainCurrencyScreenState extends State<MainCurrencyScreen> {
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: OewangColors.coral,
-                    foregroundColor: OewangColors.foreground,
+                    foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(OewangRadius.lg),
                     ),
@@ -144,6 +149,7 @@ class _MainCurrencyScreenState extends State<MainCurrencyScreen> {
                   child: Text(
                     'Save',
                     style: OewangFonts.sans(
+                      color: Colors.white,
                       fontSize: 15,
                       fontWeight: FontWeight.w500,
                     ),
@@ -179,7 +185,7 @@ class _Row extends StatelessWidget {
             width: 80,
             child: Text(
               label,
-              style: OewangFonts.sans(color: OewangColors.mutedForeground),
+              style: OewangFonts.sans(color: context.palette.mutedForeground),
             ),
           ),
           Expanded(child: child),

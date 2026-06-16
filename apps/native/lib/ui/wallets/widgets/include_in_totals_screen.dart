@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
+import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/domain/models/money.dart';
 import 'package:oewang/domain/models/wallet.dart';
@@ -26,6 +27,7 @@ class _IncludeInTotalsScreenState extends ConsumerState<IncludeInTotalsScreen> {
     final groupsAsync = ref.watch(_groupsProvider);
     final walletsAsync = ref.watch(_walletsProvider);
     final tx = Theme.of(context).extension<TransactionColors>()!;
+    final palette = context.palette;
 
     return Scaffold(
       appBar: AppBar(
@@ -60,6 +62,7 @@ class _IncludeInTotalsScreenState extends ConsumerState<IncludeInTotalsScreen> {
                 }
               }),
               tx: tx,
+              palette: palette,
             ),
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, _) => Center(child: Text(e.toString())),
@@ -91,6 +94,7 @@ class _Body extends StatelessWidget {
     required this.excluded,
     required this.onToggle,
     required this.tx,
+    required this.palette,
   });
 
   final List<WalletGroup> groups;
@@ -98,6 +102,7 @@ class _Body extends StatelessWidget {
   final Set<String> excluded;
   final ValueChanged<String> onToggle;
   final TransactionColors tx;
+  final OewangPalette palette;
 
   @override
   Widget build(BuildContext context) {
@@ -121,8 +126,9 @@ class _Body extends StatelessWidget {
           assets: assets,
           liabilities: liabilities,
           tx: tx,
+          palette: palette,
         ),
-        const Divider(height: 1, color: OewangColors.border),
+        Divider(height: 1, color: palette.border),
         Expanded(
           child: ListView(
             children: [
@@ -160,11 +166,13 @@ class _SummaryRow extends StatelessWidget {
     required this.assets,
     required this.liabilities,
     required this.tx,
+    required this.palette,
   });
 
   final Money assets;
   final Money liabilities;
   final TransactionColors tx;
+  final OewangPalette palette;
 
   @override
   Widget build(BuildContext context) {
@@ -173,7 +181,9 @@ class _SummaryRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Row(
         children: [
-          Expanded(child: _Cell(label: 'Account', value: assets, color: tx.income)),
+          Expanded(
+            child: _Cell(label: 'Account', value: assets, color: tx.income),
+          ),
           Expanded(
             child: _Cell(
               label: 'Liabilities',
@@ -185,7 +195,7 @@ class _SummaryRow extends StatelessWidget {
             child: _Cell(
               label: 'Total',
               value: total,
-              color: OewangColors.foreground,
+              color: palette.foreground,
             ),
           ),
         ],
@@ -205,7 +215,7 @@ class _Cell extends StatelessWidget {
       Text(
         label,
         style: OewangFonts.sans(
-          color: OewangColors.mutedForeground,
+          color: context.palette.mutedForeground,
           fontSize: 12,
         ),
       ),
@@ -220,28 +230,31 @@ class _GroupHeader extends StatelessWidget {
   final String name;
   final Money subtotal;
   @override
-  Widget build(BuildContext context) => Container(
-    color: OewangColors.muted,
-    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-    child: Row(
-      children: [
-        Expanded(
-          child: Text(
-            name,
-            style: OewangFonts.sans(
-              color: OewangColors.mutedForeground,
-              fontSize: 12,
+  Widget build(BuildContext context) {
+    final palette = context.palette;
+    return Container(
+      color: palette.muted,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              name,
+              style: OewangFonts.sans(
+                color: palette.mutedForeground,
+                fontSize: 12,
+              ),
             ),
           ),
-        ),
-        MoneyText(
-          amount: subtotal,
-          color: OewangColors.mutedForeground,
-          fontSize: 13,
-        ),
-      ],
-    ),
-  );
+          MoneyText(
+            amount: subtotal,
+            color: palette.mutedForeground,
+            fontSize: 13,
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _Row extends StatelessWidget {
@@ -256,6 +269,7 @@ class _Row extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return InkWell(
       onTap: onToggle,
       child: Padding(
@@ -267,16 +281,21 @@ class _Row extends StatelessWidget {
               onChanged: (_) => onToggle(),
               fillColor: WidgetStateProperty.resolveWith(
                 (states) => states.contains(WidgetState.selected)
-                    ? OewangColors.foreground
+                    ? palette.foreground
                     : Colors.transparent,
               ),
-              checkColor: OewangColors.background,
+              checkColor: palette.background,
             ),
             const SizedBox(width: 4),
-            Expanded(child: Text(wallet.name, style: OewangFonts.sans())),
+            Expanded(
+              child: Text(
+                wallet.name,
+                style: OewangFonts.sans(color: palette.foreground),
+              ),
+            ),
             MoneyText(
               amount: Money(amount: wallet.balance, currency: wallet.currency),
-              color: OewangColors.foreground,
+              color: palette.foreground,
             ),
           ],
         ),

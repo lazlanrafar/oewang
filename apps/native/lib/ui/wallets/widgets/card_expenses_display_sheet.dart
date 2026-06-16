@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
+import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 
 enum CardExpensesDisplayMode { atTheTime, lumpSum }
@@ -16,7 +17,7 @@ class CardExpensesDisplaySheet extends StatelessWidget {
   }) {
     return showModalBottomSheet<CardExpensesDisplayMode>(
       context: context,
-      backgroundColor: OewangColors.card,
+      backgroundColor: context.palette.card,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
@@ -26,6 +27,7 @@ class CardExpensesDisplaySheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return SafeArea(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -35,6 +37,7 @@ class CardExpensesDisplaySheet extends StatelessWidget {
             child: Text(
               'Card expenses display config',
               style: OewangFonts.sans(
+                color: palette.foreground,
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
               ),
@@ -48,20 +51,20 @@ class CardExpensesDisplaySheet extends StatelessWidget {
               'show it as a lump sum on your card payment date.',
               textAlign: TextAlign.center,
               style: OewangFonts.sans(
-                color: OewangColors.mutedForeground,
+                color: palette.mutedForeground,
                 fontSize: 12,
               ),
             ),
           ),
           const SizedBox(height: 12),
-          const Divider(height: 1, color: OewangColors.border),
+          Divider(height: 1, color: palette.border),
           _Row(
             label: 'A. At the time',
             selected: current == CardExpensesDisplayMode.atTheTime,
             onTap: () =>
                 Navigator.of(context).pop(CardExpensesDisplayMode.atTheTime),
           ),
-          const Divider(height: 1, color: OewangColors.border),
+          Divider(height: 1, color: palette.border),
           _Row(
             label: 'B. Lump sum',
             selected: current == CardExpensesDisplayMode.lumpSum,
@@ -76,8 +79,8 @@ class CardExpensesDisplaySheet extends StatelessWidget {
               height: 44,
               child: TextButton(
                 style: TextButton.styleFrom(
-                  backgroundColor: OewangColors.muted,
-                  foregroundColor: OewangColors.foreground,
+                  backgroundColor: palette.muted,
+                  foregroundColor: palette.foreground,
                 ),
                 onPressed: () => Navigator.of(context).pop(),
                 child: Text(
@@ -106,7 +109,8 @@ class _Row extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? OewangColors.coral : OewangColors.foreground;
+    final palette = context.palette;
+    final color = selected ? OewangColors.coral : palette.foreground;
     return InkWell(
       onTap: onTap,
       child: Padding(

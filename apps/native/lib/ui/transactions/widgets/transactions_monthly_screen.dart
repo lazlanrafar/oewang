@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
+import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/domain/models/money.dart';
 import 'package:oewang/domain/models/transaction.dart';
@@ -46,12 +47,13 @@ class _MonthlyList extends StatelessWidget {
     final buckets = bucketsForMonth(month, transactions);
     final totals = computeMonthTotals(transactions);
     final tx = Theme.of(context).extension<TransactionColors>()!;
+    final palette = context.palette;
 
     return ListView(
       padding: EdgeInsets.zero,
       children: [
         _MonthRow(month: month, income: totals.income, expense: totals.expense),
-        const Divider(height: 1, color: OewangColors.border),
+        Divider(height: 1, color: palette.border),
         for (final bucket in buckets) ...[
           _BucketRow(
             bucket: bucket,
@@ -59,7 +61,7 @@ class _MonthlyList extends StatelessWidget {
             incomeColor: tx.income,
             expenseColor: tx.expense,
           ),
-          const Divider(height: 1, color: OewangColors.border),
+          Divider(height: 1, color: palette.border),
         ],
       ],
     );
@@ -83,6 +85,7 @@ class _MonthRow extends StatelessWidget {
     final rangeLabel =
         '${DateFormat('MM/01').format(month)} ~ ${DateFormat('MM/dd').format(DateTime(month.year, month.month + 1, 0))}';
     final tx = Theme.of(context).extension<TransactionColors>()!;
+    final palette = context.palette;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
@@ -94,6 +97,7 @@ class _MonthRow extends StatelessWidget {
               Text(
                 monthLabel,
                 style: OewangFonts.sans(
+                  color: palette.foreground,
                   fontSize: 18,
                   fontWeight: FontWeight.w500,
                 ),
@@ -101,7 +105,7 @@ class _MonthRow extends StatelessWidget {
               Text(
                 rangeLabel,
                 style: OewangFonts.sans(
-                  color: OewangColors.mutedForeground,
+                  color: palette.mutedForeground,
                   fontSize: 11,
                 ),
               ),
@@ -117,7 +121,7 @@ class _MonthRow extends StatelessWidget {
               Text(
                 'Total ${(income - expense).format()}',
                 style: OewangFonts.sans(
-                  color: OewangColors.mutedForeground,
+                  color: palette.mutedForeground,
                   fontSize: 11,
                 ),
               ),
@@ -144,6 +148,7 @@ class _BucketRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     final range =
         '${DateFormat('dd/MM').format(bucket.start)} ~ ${DateFormat('dd/MM').format(bucket.end)}';
     final highlight = isCurrent
@@ -155,7 +160,10 @@ class _BucketRow extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: Text(range, style: OewangFonts.sans()),
+            child: Text(
+              range,
+              style: OewangFonts.sans(color: palette.foreground),
+            ),
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
@@ -165,7 +173,7 @@ class _BucketRow extends StatelessWidget {
               Text(
                 bucket.net.format(),
                 style: OewangFonts.sans(
-                  color: OewangColors.mutedForeground,
+                  color: palette.mutedForeground,
                   fontSize: 11,
                 ),
               ),

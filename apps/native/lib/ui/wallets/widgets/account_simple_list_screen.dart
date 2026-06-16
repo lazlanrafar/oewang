@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
+import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/domain/models/wallet.dart';
 import 'package:oewang/domain/models/wallet_group.dart';
@@ -14,6 +15,7 @@ class AccountSimpleListScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final groupsAsync = ref.watch(_groupsProvider);
     final walletsAsync = ref.watch(_walletsProvider);
+    final palette = context.palette;
 
     return Scaffold(
       appBar: AppBar(
@@ -29,14 +31,14 @@ class AccountSimpleListScreen extends ConsumerWidget {
         ),
         leadingWidth: 130,
         title: Text('Accounts', style: OewangFonts.sans(fontSize: 17)),
-        actions: const [
+        actions: [
           Padding(
-            padding: EdgeInsets.only(right: 4),
-            child: Icon(Icons.edit_outlined, color: OewangColors.foreground),
+            padding: const EdgeInsets.only(right: 4),
+            child: Icon(Icons.edit_outlined, color: palette.foreground),
           ),
           Padding(
-            padding: EdgeInsets.only(right: 8),
-            child: Icon(Icons.add, color: OewangColors.foreground),
+            padding: const EdgeInsets.only(right: 8),
+            child: Icon(Icons.add, color: palette.foreground),
           ),
         ],
       ),
@@ -97,14 +99,20 @@ class _GroupHeader extends StatelessWidget {
   const _GroupHeader({required this.name});
   final String name;
   @override
-  Widget build(BuildContext context) => Container(
-    color: OewangColors.muted,
-    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-    child: Text(
-      name,
-      style: OewangFonts.sans(color: OewangColors.mutedForeground, fontSize: 12),
-    ),
-  );
+  Widget build(BuildContext context) {
+    final palette = context.palette;
+    return Container(
+      color: palette.muted,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Text(
+        name,
+        style: OewangFonts.sans(
+          color: palette.mutedForeground,
+          fontSize: 12,
+        ),
+      ),
+    );
+  }
 }
 
 class _WalletRow extends StatelessWidget {
@@ -113,7 +121,10 @@ class _WalletRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-    child: Text(w.name, style: OewangFonts.sans()),
+    child: Text(
+      w.name,
+      style: OewangFonts.sans(color: context.palette.foreground),
+    ),
   );
 }
 

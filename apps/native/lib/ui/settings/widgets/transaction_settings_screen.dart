@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
+import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 
 /// IMG_1848. Most rows are static placeholders until their underlying setting
@@ -58,7 +59,10 @@ class TransactionSettingsScreen extends ConsumerWidget {
             ),
             const _StaticRow(label: 'Autocomplete', value: 'On'),
             const _StaticRow(label: 'Time Input', value: 'None, Desc.'),
-            const _StaticRow(label: 'Start Screen (Daily/Calendar)', value: 'Daily'),
+            const _StaticRow(
+              label: 'Start Screen (Daily/Calendar)',
+              value: 'Daily',
+            ),
             const _StaticRow(label: 'Swipe', value: 'To Change Date'),
             const _StaticRow(label: 'Show description', value: 'Off'),
             const _StaticRow(label: 'Input order', value: 'From Amount'),
@@ -77,14 +81,20 @@ class _Row extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: OewangColors.border)),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: palette.border)),
       ),
       child: Row(
         children: [
-          Expanded(child: Text(label, style: OewangFonts.sans())),
+          Expanded(
+            child: Text(
+              label,
+              style: OewangFonts.sans(color: palette.foreground),
+            ),
+          ),
           if (trailing != null) trailing!,
         ],
       ),

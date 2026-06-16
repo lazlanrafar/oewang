@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/router/app_router.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
+import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/domain/models/category.dart' as cat;
 
@@ -32,6 +33,7 @@ class CategoryListScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(categoriesByTypeProvider(type));
+    final palette = context.palette;
     final title = type == cat.CategoryType.income ? 'Income' : 'Exp.';
     return Scaffold(
       appBar: AppBar(
@@ -47,10 +49,10 @@ class CategoryListScreen extends ConsumerWidget {
         ),
         leadingWidth: 130,
         title: Text(title, style: OewangFonts.sans(fontSize: 17)),
-        actions: const [
+        actions: [
           Padding(
-            padding: EdgeInsets.only(right: 8),
-            child: Icon(Icons.add, color: OewangColors.foreground),
+            padding: const EdgeInsets.only(right: 8),
+            child: Icon(Icons.add, color: palette.foreground),
           ),
         ],
       ),
@@ -58,13 +60,13 @@ class CategoryListScreen extends ConsumerWidget {
         child: Column(
           children: [
             _SubcategoryToggle(),
-            const Divider(height: 1, color: OewangColors.border),
+            Divider(height: 1, color: palette.border),
             Expanded(
               child: async.when(
                 data: (items) => ListView.separated(
                   itemCount: items.length,
                   separatorBuilder: (_, _) =>
-                      const Divider(height: 1, color: OewangColors.border),
+                      Divider(height: 1, color: palette.border),
                   itemBuilder: (context, i) {
                     final c = items[i];
                     return _CategoryRow(
@@ -103,11 +105,17 @@ class CategoryListScreen extends ConsumerWidget {
 class _SubcategoryToggle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
-          Expanded(child: Text('Subcategory', style: OewangFonts.sans())),
+          Expanded(
+            child: Text(
+              'Subcategory',
+              style: OewangFonts.sans(color: palette.foreground),
+            ),
+          ),
           Switch(value: false, onChanged: (_) {}),
         ],
       ),
@@ -122,6 +130,7 @@ class _CategoryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       child: Row(
@@ -137,17 +146,20 @@ class _CategoryRow extends StatelessWidget {
             const SizedBox(width: 8),
           ],
           Expanded(
-            child: Text(category.name, style: OewangFonts.sans()),
+            child: Text(
+              category.name,
+              style: OewangFonts.sans(color: palette.foreground),
+            ),
           ),
           IconButton(
             tooltip: 'Edit',
             onPressed: onEdit,
-            icon: const Icon(
+            icon: Icon(
               Icons.edit_outlined,
-              color: OewangColors.mutedForeground,
+              color: palette.mutedForeground,
             ),
           ),
-          const Icon(Icons.drag_handle, color: OewangColors.mutedForeground),
+          Icon(Icons.drag_handle, color: palette.mutedForeground),
           const SizedBox(width: 8),
         ],
       ),

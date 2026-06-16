@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
+import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_radius.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/domain/models/transaction.dart';
@@ -19,10 +20,11 @@ class SegmentedPillTabs extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tx = Theme.of(context).extension<TransactionColors>()!;
+    final palette = context.palette;
     Color colorFor(TransactionType t) => switch (t) {
       TransactionType.income => tx.income,
       TransactionType.expense => tx.expense,
-      _ => OewangColors.foreground,
+      _ => palette.foreground,
     };
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -69,7 +71,8 @@ class _Pill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isSelected ? activeColor : OewangColors.mutedForeground;
+    final palette = context.palette;
+    final color = isSelected ? activeColor : palette.mutedForeground;
     return Expanded(
       child: Material(
         color: Colors.transparent,
@@ -79,10 +82,10 @@ class _Pill extends StatelessWidget {
           child: Container(
             height: 40,
             decoration: BoxDecoration(
-              color: OewangColors.card,
+              color: palette.card,
               borderRadius: BorderRadius.circular(OewangRadius.lg),
               border: Border.all(
-                color: isSelected ? activeColor : OewangColors.border,
+                color: isSelected ? activeColor : palette.border,
                 width: isSelected ? 1.5 : 1,
               ),
             ),

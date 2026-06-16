@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:oewang/core/theme/oewang_colors.dart';
+import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/data/dto/currency_catalog.dart';
 import 'package:oewang/domain/models/currency.dart';
@@ -12,6 +12,7 @@ class SubCurrencyScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     final entries = <_SubEntry>[
       _SubEntry(
         currency: CurrencyCatalog.all.firstWhere((c) => c.code == 'SGD'),
@@ -43,14 +44,11 @@ class SubCurrencyScreen extends StatelessWidget {
         actions: [
           IconButton(
             onPressed: () => _comingSoon(context),
-            icon: const Icon(
-              Icons.edit_outlined,
-              color: OewangColors.foreground,
-            ),
+            icon: Icon(Icons.edit_outlined, color: palette.foreground),
           ),
           IconButton(
             onPressed: () => _comingSoon(context),
-            icon: const Icon(Icons.add, color: OewangColors.foreground),
+            icon: Icon(Icons.add, color: palette.foreground),
           ),
         ],
       ),
@@ -63,14 +61,13 @@ class SubCurrencyScreen extends StatelessWidget {
       ),
       floatingActionButton: FloatingActionButton(
         heroTag: 'sub-currency-refresh',
-        backgroundColor: OewangColors.muted,
-        foregroundColor: OewangColors.foreground,
+        backgroundColor: palette.muted,
+        foregroundColor: palette.foreground,
         elevation: 0,
         shape: const CircleBorder(),
-        onPressed: () =>
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Refreshing FX rates…')),
-            ),
+        onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Refreshing FX rates…')),
+        ),
         child: const Icon(Icons.refresh),
       ),
     );
@@ -95,24 +92,25 @@ class _SubRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     final formatter = NumberFormat('#,##0.#######', 'id_ID');
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: OewangColors.border)),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: palette.border)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             '${entry.currency.code} 1.00 = IDR ${formatter.format(entry.rateInIdr)}',
-            style: OewangFonts.sans(),
+            style: OewangFonts.sans(color: palette.foreground),
           ),
           const SizedBox(height: 2),
           Text(
             entry.currency.displayLabel,
             style: OewangFonts.sans(
-              color: OewangColors.mutedForeground,
+              color: palette.mutedForeground,
               fontSize: 12,
             ),
           ),

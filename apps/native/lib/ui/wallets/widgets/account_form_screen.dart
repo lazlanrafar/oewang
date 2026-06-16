@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
+import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_radius.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/domain/models/money.dart';
@@ -39,6 +40,7 @@ class AccountFormScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final vm = ref.watch(accountFormVmProvider);
+    final palette = context.palette;
     final selectedGroupName = vm.groupOptions
         .where((g) => g.id == vm.state.groupId)
         .map((g) => g.name)
@@ -70,7 +72,8 @@ class AccountFormScreen extends ConsumerWidget {
                     label: 'Group',
                     child: InkWell(
                       onTap: () async {
-                        final picked = await EntityPickerSheet.show<WalletGroup>(
+                        final picked =
+                            await EntityPickerSheet.show<WalletGroup>(
                           context,
                           title: 'Group',
                           items: vm.groupOptions,
@@ -83,13 +86,13 @@ class AccountFormScreen extends ConsumerWidget {
                         selectedGroupName ?? 'Choose a group',
                         style: OewangFonts.sans(
                           color: selectedGroupName == null
-                              ? OewangColors.mutedForeground
-                              : OewangColors.foreground,
+                              ? palette.mutedForeground
+                              : palette.foreground,
                         ),
                       ),
                     ),
                   ),
-                  const Divider(height: 1, color: OewangColors.border),
+                  Divider(height: 1, color: palette.border),
                   _Row(
                     label: 'Name',
                     child: TextField(
@@ -102,10 +105,10 @@ class AccountFormScreen extends ConsumerWidget {
                         fillColor: Colors.transparent,
                         filled: false,
                       ),
-                      style: OewangFonts.sans(),
+                      style: OewangFonts.sans(color: palette.foreground),
                     ),
                   ),
-                  const Divider(height: 1, color: OewangColors.border),
+                  Divider(height: 1, color: palette.border),
                   _Row(
                     label: 'Amount',
                     child: InkWell(
@@ -118,11 +121,14 @@ class AccountFormScreen extends ConsumerWidget {
                       },
                       child: Text(
                         Money(amount: vm.state.balance).format(),
-                        style: OewangFonts.currency(fontSize: 16),
+                        style: OewangFonts.currency(
+                          color: palette.foreground,
+                          fontSize: 16,
+                        ),
                       ),
                     ),
                   ),
-                  const Divider(height: 1, color: OewangColors.border),
+                  Divider(height: 1, color: palette.border),
                   _Row(
                     label: 'Description',
                     child: TextField(
@@ -135,10 +141,10 @@ class AccountFormScreen extends ConsumerWidget {
                         fillColor: Colors.transparent,
                         filled: false,
                       ),
-                      style: OewangFonts.sans(),
+                      style: OewangFonts.sans(color: palette.foreground),
                     ),
                   ),
-                  const Divider(height: 1, color: OewangColors.border),
+                  Divider(height: 1, color: palette.border),
                   if (vm.save.error != null)
                     Padding(
                       padding: const EdgeInsets.symmetric(
@@ -162,26 +168,26 @@ class AccountFormScreen extends ConsumerWidget {
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: OewangColors.coral,
-                    foregroundColor: OewangColors.foreground,
+                    foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(OewangRadius.lg),
                     ),
                   ),
-                  onPressed: vm.canSave
-                      ? () => _onSave(context, ref)
-                      : null,
+                  onPressed:
+                      vm.canSave ? () => _onSave(context, ref) : null,
                   child: vm.save.running
                       ? const SizedBox(
                           width: 18,
                           height: 18,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: OewangColors.foreground,
+                            color: Colors.white,
                           ),
                         )
                       : Text(
                           'Save',
                           style: OewangFonts.sans(
+                            color: Colors.white,
                             fontSize: 15,
                             fontWeight: FontWeight.w500,
                           ),
@@ -212,7 +218,7 @@ class _Row extends StatelessWidget {
             width: 100,
             child: Text(
               label,
-              style: OewangFonts.sans(color: OewangColors.mutedForeground),
+              style: OewangFonts.sans(color: context.palette.mutedForeground),
             ),
           ),
           Expanded(child: child),

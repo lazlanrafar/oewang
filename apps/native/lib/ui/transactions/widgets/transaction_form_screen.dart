@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
+import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_radius.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/domain/models/category.dart';
@@ -30,10 +31,11 @@ class TransactionFormScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final vm = ref.watch(transactionFormVmProvider);
     final tx = Theme.of(context).extension<TransactionColors>()!;
+    final palette = context.palette;
     final saveTint = switch (vm.state.type) {
       TransactionType.income => tx.income,
       TransactionType.expense => tx.expense,
-      _ => OewangColors.foreground,
+      _ => palette.foreground,
     };
 
     final title = switch (vm.state.type) {
@@ -56,10 +58,10 @@ class TransactionFormScreen extends ConsumerWidget {
         ),
         leadingWidth: 110,
         title: Text(title, style: OewangFonts.sans(fontSize: 17)),
-        actions: const [
+        actions: [
           Padding(
-            padding: EdgeInsets.only(right: 8),
-            child: Icon(Icons.star_border, color: OewangColors.foreground),
+            padding: const EdgeInsets.only(right: 8),
+            child: Icon(Icons.star_border, color: palette.foreground),
           ),
         ],
       ),
@@ -71,19 +73,19 @@ class TransactionFormScreen extends ConsumerWidget {
               selected: vm.state.type,
               onChanged: vm.setType,
             ),
-            const Divider(height: 1, color: OewangColors.border),
+            Divider(height: 1, color: palette.border),
             _DateRow(vm: vm),
-            const Divider(height: 1, color: OewangColors.border),
+            Divider(height: 1, color: palette.border),
             _AmountRow(vm: vm),
-            const Divider(height: 1, color: OewangColors.border),
+            Divider(height: 1, color: palette.border),
             if (vm.state.type == TransactionType.transfer) ...[
               _TransferWalletsRow(vm: vm),
-              const Divider(height: 1, color: OewangColors.border),
+              Divider(height: 1, color: palette.border),
             ] else ...[
               _CategoryRow(vm: vm),
-              const Divider(height: 1, color: OewangColors.border),
+              Divider(height: 1, color: palette.border),
               _AccountRow(vm: vm),
-              const Divider(height: 1, color: OewangColors.border),
+              Divider(height: 1, color: palette.border),
             ],
             _NoteRow(vm: vm),
             const SizedBox(height: 24),
@@ -122,7 +124,7 @@ class _LabelledRow extends StatelessWidget {
             width: 84,
             child: Text(
               label,
-              style: OewangFonts.sans(color: OewangColors.mutedForeground),
+              style: OewangFonts.sans(color: context.palette.mutedForeground),
             ),
           ),
           Expanded(child: child),
@@ -152,7 +154,10 @@ class _DateRow extends StatelessWidget {
           );
           if (picked != null) vm.setDate(picked);
         },
-        child: Text(formatted, style: OewangFonts.sans()),
+        child: Text(
+          formatted,
+          style: OewangFonts.sans(color: context.palette.foreground),
+        ),
       ),
     );
   }
@@ -165,11 +170,12 @@ class _AmountRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tx = Theme.of(context).extension<TransactionColors>()!;
+    final palette = context.palette;
     final color = vm.state.type == TransactionType.income
         ? tx.income
         : (vm.state.type == TransactionType.expense
               ? tx.expense
-              : OewangColors.foreground);
+              : palette.foreground);
     final isTransfer = vm.state.type == TransactionType.transfer;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -180,7 +186,7 @@ class _AmountRow extends StatelessWidget {
             width: 84,
             child: Text(
               'Amount',
-              style: OewangFonts.sans(color: OewangColors.mutedForeground),
+              style: OewangFonts.sans(color: palette.mutedForeground),
             ),
           ),
           Expanded(
@@ -209,9 +215,9 @@ class _AmountRow extends StatelessWidget {
               },
               style: OutlinedButton.styleFrom(
                 foregroundColor: vm.state.fees > 0
-                    ? OewangColors.foreground
-                    : OewangColors.mutedForeground,
-                side: const BorderSide(color: OewangColors.border),
+                    ? palette.foreground
+                    : palette.mutedForeground,
+                side: BorderSide(color: palette.border),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(6),
                 ),
@@ -240,6 +246,7 @@ class _CategoryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     final selected = vm.categoryOptions.where(
       (c) => c.id == vm.state.categoryId,
     );
@@ -261,8 +268,8 @@ class _CategoryRow extends StatelessWidget {
           label.isEmpty ? 'Choose a category' : label,
           style: OewangFonts.sans(
             color: label.isEmpty
-                ? OewangColors.mutedForeground
-                : OewangColors.foreground,
+                ? palette.mutedForeground
+                : palette.foreground,
           ),
         ),
       ),
@@ -276,6 +283,7 @@ class _AccountRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     final selected = vm.walletOptions.where((w) => w.id == vm.state.walletId);
     final label = selected.isEmpty ? '' : selected.first.name;
     return _LabelledRow(
@@ -295,8 +303,8 @@ class _AccountRow extends StatelessWidget {
           label.isEmpty ? 'Choose an account' : label,
           style: OewangFonts.sans(
             color: label.isEmpty
-                ? OewangColors.mutedForeground
-                : OewangColors.foreground,
+                ? palette.mutedForeground
+                : palette.foreground,
           ),
         ),
       ),
@@ -310,6 +318,7 @@ class _TransferWalletsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     final from = vm.walletOptions
         .where((w) => w.id == vm.state.walletId)
         .map((w) => w.name)
@@ -341,7 +350,7 @@ class _TransferWalletsRow extends StatelessWidget {
                     if (picked != null) vm.setWallet(picked.id);
                   },
                 ),
-                const Divider(height: 1, color: OewangColors.border),
+                Divider(height: 1, color: palette.border),
                 _PickRow(
                   label: 'To',
                   value: to,
@@ -362,10 +371,7 @@ class _TransferWalletsRow extends StatelessWidget {
           IconButton(
             tooltip: 'Swap',
             onPressed: vm.swapWallets,
-            icon: const Icon(
-              Icons.swap_vert,
-              color: OewangColors.mutedForeground,
-            ),
+            icon: Icon(Icons.swap_vert, color: palette.mutedForeground),
           ),
         ],
       ),
@@ -382,6 +388,7 @@ class _PickRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return InkWell(
       onTap: onTap,
       child: Padding(
@@ -392,7 +399,7 @@ class _PickRow extends StatelessWidget {
               width: 84,
               child: Text(
                 label,
-                style: OewangFonts.sans(color: OewangColors.mutedForeground),
+                style: OewangFonts.sans(color: palette.mutedForeground),
               ),
             ),
             Expanded(
@@ -400,8 +407,8 @@ class _PickRow extends StatelessWidget {
                 value ?? 'Choose an account',
                 style: OewangFonts.sans(
                   color: value == null
-                      ? OewangColors.mutedForeground
-                      : OewangColors.foreground,
+                      ? palette.mutedForeground
+                      : palette.foreground,
                 ),
               ),
             ),
@@ -431,7 +438,7 @@ class _NoteRow extends StatelessWidget {
           fillColor: Colors.transparent,
           filled: false,
         ),
-        style: OewangFonts.sans(),
+        style: OewangFonts.sans(color: context.palette.foreground),
       ),
     );
   }
@@ -443,8 +450,9 @@ class _DescriptionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return Container(
-      color: OewangColors.card,
+      color: palette.card,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
@@ -454,7 +462,7 @@ class _DescriptionRow extends StatelessWidget {
               decoration: InputDecoration(
                 hintText: 'Description',
                 hintStyle: OewangFonts.sans(
-                  color: OewangColors.mutedForeground,
+                  color: palette.mutedForeground,
                 ),
                 border: InputBorder.none,
                 enabledBorder: InputBorder.none,
@@ -462,11 +470,10 @@ class _DescriptionRow extends StatelessWidget {
                 fillColor: Colors.transparent,
                 filled: false,
               ),
-              style: OewangFonts.sans(),
+              style: OewangFonts.sans(color: palette.foreground),
             ),
           ),
-          const Icon(Icons.photo_camera_outlined,
-              color: OewangColors.mutedForeground),
+          Icon(Icons.photo_camera_outlined, color: palette.mutedForeground),
         ],
       ),
     );
@@ -501,6 +508,7 @@ class _ActionRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final palette = context.palette;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       child: Row(
@@ -511,7 +519,7 @@ class _ActionRow extends ConsumerWidget {
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: saveTint,
-                  foregroundColor: OewangColors.foreground,
+                  foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(OewangRadius.lg),
                   ),
@@ -525,12 +533,13 @@ class _ActionRow extends ConsumerWidget {
                         height: 18,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: OewangColors.foreground,
+                          color: Colors.white,
                         ),
                       )
                     : Text(
                         'Save',
                         style: OewangFonts.sans(
+                          color: Colors.white,
                           fontSize: 15,
                           fontWeight: FontWeight.w500,
                         ),
@@ -546,8 +555,8 @@ class _ActionRow extends ConsumerWidget {
                   ? () => _onSave(context, ref, keepOpen: true)
                   : null,
               style: OutlinedButton.styleFrom(
-                foregroundColor: OewangColors.foreground,
-                side: const BorderSide(color: OewangColors.border),
+                foregroundColor: palette.foreground,
+                side: BorderSide(color: palette.border),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(OewangRadius.lg),
                 ),

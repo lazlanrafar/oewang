@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:oewang/core/theme/oewang_colors.dart';
+import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 
 /// IMG_2252 — informational empty state.
@@ -8,6 +8,7 @@ class TransferExpenseSettingScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -42,24 +43,20 @@ class TransferExpenseSettingScreen extends StatelessWidget {
                 'selected account to the regular account will be displayed '
                 'as an income.',
                 style: OewangFonts.sans(
-                  color: OewangColors.mutedForeground,
+                  color: palette.mutedForeground,
                   fontSize: 12,
                 ),
               ),
             ),
-            const Divider(height: 1, color: OewangColors.border),
+            Divider(height: 1, color: palette.border),
             const Spacer(),
             Column(
               children: [
-                const Icon(
-                  Icons.pets,
-                  size: 56,
-                  color: OewangColors.mutedForeground,
-                ),
+                Icon(Icons.pets, size: 56, color: palette.mutedForeground),
                 const SizedBox(height: 8),
                 Text(
                   'No data available.',
-                  style: OewangFonts.sans(color: OewangColors.mutedForeground),
+                  style: OewangFonts.sans(color: palette.mutedForeground),
                 ),
               ],
             ),

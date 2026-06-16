@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
+import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/domain/models/money.dart';
 import 'package:oewang/domain/models/transaction.dart';
@@ -66,8 +67,7 @@ class _CalendarGrid extends StatelessWidget {
 
   List<DateTime> _gridDays() {
     final first = DateTime(month.year, month.month);
-    // Calendar starts on Sunday so leading days come from the previous month.
-    final leading = first.weekday % 7; // Sun = 0, Mon = 1, …
+    final leading = first.weekday % 7;
     final start = first.subtract(Duration(days: leading));
     return [for (var i = 0; i < 42; i++) start.add(Duration(days: i))];
   }
@@ -76,11 +76,11 @@ class _CalendarGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final days = _gridDays();
     final totals = _byDay();
+    final palette = context.palette;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Weekday header
         Row(
           children: [
             for (var i = 0; i < 7; i++)
@@ -95,7 +95,7 @@ class _CalendarGrid extends StatelessWidget {
                             ? OewangColors.coral
                             : (i == 6
                                   ? OewangColors.blue
-                                  : OewangColors.mutedForeground),
+                                  : palette.mutedForeground),
                         fontSize: 12,
                       ),
                     ),
@@ -104,7 +104,7 @@ class _CalendarGrid extends StatelessWidget {
               ),
           ],
         ),
-        const Divider(height: 1, color: OewangColors.border),
+        Divider(height: 1, color: palette.border),
         Expanded(
           child: GridView.builder(
             padding: EdgeInsets.zero,
@@ -147,26 +147,27 @@ class _DayCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tx = Theme.of(context).extension<TransactionColors>()!;
+    final palette = context.palette;
     final isSun = day.weekday == DateTime.sunday;
     final isSat = day.weekday == DateTime.saturday;
     final isToday = _isSameDay(day, DateTime.now());
 
     Color labelColor;
     if (!inMonth) {
-      labelColor = OewangColors.mutedForeground;
+      labelColor = palette.mutedForeground;
     } else if (isSun) {
       labelColor = OewangColors.coral;
     } else if (isSat) {
       labelColor = OewangColors.blue;
     } else {
-      labelColor = OewangColors.foreground;
+      labelColor = palette.foreground;
     }
 
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         border: Border(
-          right: BorderSide(color: OewangColors.border, width: 0.5),
-          bottom: BorderSide(color: OewangColors.border, width: 0.5),
+          right: BorderSide(color: palette.border, width: 0.5),
+          bottom: BorderSide(color: palette.border, width: 0.5),
         ),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
@@ -175,13 +176,11 @@ class _DayCell extends StatelessWidget {
         children: [
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 2),
-            decoration: isToday
-                ? const BoxDecoration(color: OewangColors.foreground)
-                : null,
+            decoration: isToday ? BoxDecoration(color: palette.foreground) : null,
             child: Text(
               _dayLabel(),
               style: OewangFonts.sans(
-                color: isToday ? OewangColors.background : labelColor,
+                color: isToday ? palette.background : labelColor,
                 fontSize: 12,
                 fontWeight: isToday ? FontWeight.w600 : FontWeight.w400,
               ),
@@ -204,7 +203,6 @@ class _DayCell extends StatelessWidget {
   }
 
   String _formatShort(Money m) {
-    // Compact for the tight grid cell — drop currency symbol.
     return NumberFormat('#,###', 'id_ID').format(m.amount);
   }
 

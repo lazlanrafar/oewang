@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
+import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_radius.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/domain/models/money.dart';
@@ -23,7 +24,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
   int _topIndex = 0;
   bool _incomeMode = false;
 
-  static const _palette = <Color>[
+  static const _chartPalette = <Color>[
     OewangColors.coral,
     Color(0xFFFFA630),
     Color(0xFFFFD23F),
@@ -37,6 +38,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
     final monthCtl = ref.read(monthControllerProvider.notifier);
     final month = ref.watch(monthControllerProvider);
     final async = ref.watch(monthTransactionsProvider(month));
+    final palette = context.palette;
 
     return Scaffold(
       body: SafeArea(
@@ -68,7 +70,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                 orElse: Money.zero,
               ),
             ),
-            const Divider(height: 1, color: OewangColors.border),
+            Divider(height: 1, color: palette.border),
             Expanded(
               child: _topIndex == 0
                   ? async.when(
@@ -77,7 +79,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                           transactions: txs,
                           incomeMode: _incomeMode,
                         ),
-                        palette: _palette,
+                        chartPalette: _chartPalette,
                       ),
                       loading: () =>
                           const Center(child: CircularProgressIndicator()),
@@ -105,6 +107,7 @@ class _TopPills extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: Row(
@@ -113,7 +116,7 @@ class _TopPills extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.all(2),
               decoration: BoxDecoration(
-                color: OewangColors.card,
+                color: palette.card,
                 borderRadius: BorderRadius.circular(OewangRadius.md),
               ),
               child: Row(
@@ -129,14 +132,15 @@ class _TopPills extends StatelessWidget {
                             color: i == currentIndex
                                 ? OewangColors.coral
                                 : Colors.transparent,
-                            borderRadius: BorderRadius.circular(OewangRadius.sm),
+                            borderRadius:
+                                BorderRadius.circular(OewangRadius.sm),
                           ),
                           child: Text(
                             labels[i],
                             style: OewangFonts.sans(
                               color: i == currentIndex
-                                  ? OewangColors.foreground
-                                  : OewangColors.mutedForeground,
+                                  ? Colors.white
+                                  : palette.mutedForeground,
                               fontSize: 13,
                               fontWeight: FontWeight.w500,
                             ),
@@ -152,18 +156,24 @@ class _TopPills extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
-              border: Border.all(color: OewangColors.border),
+              border: Border.all(color: palette.border),
               borderRadius: BorderRadius.circular(OewangRadius.md),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('M', style: OewangFonts.sans(fontSize: 13)),
+                Text(
+                  'M',
+                  style: OewangFonts.sans(
+                    color: palette.foreground,
+                    fontSize: 13,
+                  ),
+                ),
                 const SizedBox(width: 2),
-                const Icon(
+                Icon(
                   Icons.arrow_drop_down,
                   size: 18,
-                  color: OewangColors.foreground,
+                  color: palette.foreground,
                 ),
               ],
             ),
@@ -188,6 +198,7 @@ class _ModeToggle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tx = Theme.of(context).extension<TransactionColors>()!;
+    final palette = context.palette;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
@@ -200,7 +211,7 @@ class _ModeToggle extends StatelessWidget {
                   Text(
                     incomeMode ? 'Income ${totalMoney.format()}' : 'Income',
                     style: OewangFonts.sans(
-                      color: incomeMode ? tx.income : OewangColors.mutedForeground,
+                      color: incomeMode ? tx.income : palette.mutedForeground,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -221,7 +232,7 @@ class _ModeToggle extends StatelessWidget {
                   Text(
                     incomeMode ? 'Exp.' : 'Exp. ${totalMoney.format()}',
                     style: OewangFonts.sans(
-                      color: incomeMode ? OewangColors.mutedForeground : tx.expense,
+                      color: incomeMode ? palette.mutedForeground : tx.expense,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -241,18 +252,19 @@ class _ModeToggle extends StatelessWidget {
 }
 
 class _StatsBody extends StatelessWidget {
-  const _StatsBody({required this.slices, required this.palette});
+  const _StatsBody({required this.slices, required this.chartPalette});
 
   final List<StatsSlice> slices;
-  final List<Color> palette;
+  final List<Color> chartPalette;
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     if (slices.isEmpty) {
       return Center(
         child: Text(
           'No data for this month',
-          style: OewangFonts.sans(color: OewangColors.mutedForeground),
+          style: OewangFonts.sans(color: palette.mutedForeground),
         ),
       );
     }
@@ -261,21 +273,24 @@ class _StatsBody extends StatelessWidget {
       children: [
         SizedBox(
           height: 260,
-          child: _Pie(slices: slices, palette: palette),
+          child: _Pie(slices: slices, chartPalette: chartPalette),
         ),
         const SizedBox(height: 12),
-        const Divider(height: 1, color: OewangColors.border),
+        Divider(height: 1, color: palette.border),
         for (var i = 0; i < slices.length; i++)
-          _CategoryRow(slice: slices[i], color: palette[i % palette.length]),
+          _CategoryRow(
+            slice: slices[i],
+            color: chartPalette[i % chartPalette.length],
+          ),
       ],
     );
   }
 }
 
 class _Pie extends StatelessWidget {
-  const _Pie({required this.slices, required this.palette});
+  const _Pie({required this.slices, required this.chartPalette});
   final List<StatsSlice> slices;
-  final List<Color> palette;
+  final List<Color> chartPalette;
 
   @override
   Widget build(BuildContext context) {
@@ -288,7 +303,7 @@ class _Pie extends StatelessWidget {
           for (var i = 0; i < slices.length; i++)
             PieChartSectionData(
               value: slices[i].amount.amount.toDouble(),
-              color: palette[i % palette.length],
+              color: chartPalette[i % chartPalette.length],
               radius: 100,
               title: '',
             ),
@@ -306,6 +321,7 @@ class _CategoryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Row(
@@ -319,15 +335,20 @@ class _CategoryRow extends StatelessWidget {
             child: Text(
               '${slice.percent.round()}%',
               style: OewangFonts.sans(
-                color: OewangColors.foreground,
+                color: Colors.white,
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
               ),
             ),
           ),
           const SizedBox(width: 12),
-          Expanded(child: Text(slice.label, style: OewangFonts.sans())),
-          MoneyText(amount: slice.amount, color: OewangColors.foreground),
+          Expanded(
+            child: Text(
+              slice.label,
+              style: OewangFonts.sans(color: palette.foreground),
+            ),
+          ),
+          MoneyText(amount: slice.amount, color: palette.foreground),
         ],
       ),
     );
@@ -357,7 +378,7 @@ class _ComingSoon extends StatelessWidget {
   Widget build(BuildContext context) => Center(
     child: Text(
       '$label — coming soon',
-      style: OewangFonts.sans(color: OewangColors.mutedForeground),
+      style: OewangFonts.sans(color: context.palette.mutedForeground),
     ),
   );
 }
