@@ -4,12 +4,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oewang/config/env.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/data/repositories/auth_repository.dart';
+import 'package:oewang/data/repositories/budgets_repository.dart';
 import 'package:oewang/data/repositories/categories_repository.dart';
 import 'package:oewang/data/repositories/settings_repository.dart';
 import 'package:oewang/data/repositories/transactions_repository.dart';
 import 'package:oewang/data/repositories/wallet_groups_repository.dart';
 import 'package:oewang/data/repositories/wallets_repository.dart';
 import 'package:oewang/data/repositories_remote/auth_repository_remote.dart';
+import 'package:oewang/data/repositories_remote/budgets_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/categories_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/settings_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/transactions_repository_remote.dart';
@@ -85,6 +87,10 @@ final categoriesRepositoryProvider = Provider<CategoriesRepository>((ref) {
 
 final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
   return SettingsRepositoryRemote(ref.watch(apiClientProvider));
+});
+
+final budgetsRepositoryProvider = Provider<BudgetsRepository>((ref) {
+  return BudgetsRepositoryRemote(ref.watch(apiClientProvider));
 });
 
 /// Monotonically increasing integer bumped whenever a transaction is

@@ -5,6 +5,7 @@ import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_radius.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
+import 'package:oewang/domain/models/budget_status.dart';
 import 'package:oewang/domain/models/money.dart';
 import 'package:oewang/domain/models/transaction.dart';
 import 'package:oewang/domain/models/wallet.dart';
@@ -20,10 +21,15 @@ class TransactionsSummaryScreen extends ConsumerWidget {
     final month = ref.watch(monthControllerProvider);
     final async = ref.watch(monthTransactionsProvider(month));
     final wallets = ref.watch(_walletsSummaryProvider);
+    final budgets = ref.watch(_budgetTotalsProvider(month));
 
     return async.when(
       data: (txs) => wallets.when(
-        data: (ws) => _SummaryBody(transactions: txs, wallets: ws),
+        data: (ws) => _SummaryBody(
+          transactions: txs,
+          wallets: ws,
+          budgets: budgets.valueOrNull ?? BudgetTotals.zero(),
+        ),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: _ErrorText(message: e.toString())),
       ),
@@ -41,6 +47,20 @@ final _walletsSummaryProvider = FutureProvider.autoDispose<List<Wallet>>((
   return res.fold((w) => w, (_) => <Wallet>[]);
 });
 
+/// Per-month budget status. Updates whenever the active Trans-tab month
+/// changes (Stats + Trans share the same `monthControllerProvider`).
+final _budgetTotalsProvider = FutureProvider.autoDispose
+    .family<BudgetTotals, DateTime>((ref, month) async {
+      ref.watch(transactionsRevisionProvider);
+      final res = await ref
+          .watch(budgetsRepositoryProvider)
+          .status(month: month.month, year: month.year);
+      return res.fold(
+        BudgetTotals.fromStatuses,
+        (_) => BudgetTotals.zero(),
+      );
+    });
+
 class _ErrorText extends StatelessWidget {
   const _ErrorText({required this.message});
   final String message;
@@ -56,10 +76,15 @@ class _ErrorText extends StatelessWidget {
 }
 
 class _SummaryBody extends StatelessWidget {
-  const _SummaryBody({required this.transactions, required this.wallets});
+  const _SummaryBody({
+    required this.transactions,
+    required this.wallets,
+    required this.budgets,
+  });
 
   final List<Transaction> transactions;
   final List<Wallet> wallets;
+  final BudgetTotals budgets;
 
   @override
   Widget build(BuildContext context) {
@@ -75,7 +100,7 @@ class _SummaryBody extends StatelessWidget {
       children: [
         _AccountsCard(byWallet: byWallet, wallets: wallets),
         const SizedBox(height: 24),
-        const _BudgetCard(),
+        _BudgetCard(totals: budgets),
         const SizedBox(height: 24),
         _ExportCard(),
       ],
@@ -134,10 +159,13 @@ class _AccountsCard extends StatelessWidget {
 }
 
 class _BudgetCard extends StatelessWidget {
-  const _BudgetCard();
+  const _BudgetCard({required this.totals});
+  final BudgetTotals totals;
+
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
+    final percent = totals.percent;
     return _Card(
       icon: Icons.account_balance_wallet_outlined,
       title: 'Budget',
@@ -146,11 +174,16 @@ class _BudgetCard extends StatelessWidget {
         children: [
           Stack(
             children: [
-              Container(
-                height: 6,
-                decoration: BoxDecoration(
+              ClipRRect(
+                borderRadius: BorderRadius.circular(OewangRadius.pill),
+                child: Container(
+                  height: 6,
                   color: palette.muted,
-                  borderRadius: BorderRadius.circular(OewangRadius.pill),
+                  child: FractionallySizedBox(
+                    alignment: Alignment.centerLeft,
+                    widthFactor: (percent / 100).clamp(0.0, 1.0),
+                    child: Container(color: OewangColors.coral),
+                  ),
                 ),
               ),
               const Positioned(
@@ -176,17 +209,29 @@ class _BudgetCard extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    'Rp 0,00',
+                    totals.totalBudget.format(),
                     style: OewangFonts.currency(
                       color: palette.foreground,
                       fontSize: 13,
                     ),
                   ),
+                  Text(
+                    'Spent ${totals.totalSpent.format()}',
+                    style: OewangFonts.sans(
+                      color: palette.mutedForeground,
+                      fontSize: 11,
+                    ),
+                  ),
                 ],
               ),
               Text(
-                '0%',
-                style: OewangFonts.sans(color: palette.mutedForeground),
+                '$percent%',
+                style: OewangFonts.sans(
+                  color: percent >= 100
+                      ? OewangColors.coral
+                      : palette.foreground,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ],
           ),
