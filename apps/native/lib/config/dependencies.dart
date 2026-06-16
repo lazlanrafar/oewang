@@ -10,6 +10,7 @@ import 'package:oewang/data/repositories/rates_repository.dart';
 import 'package:oewang/data/repositories/settings_repository.dart';
 import 'package:oewang/data/repositories/sub_currencies_repository.dart';
 import 'package:oewang/data/repositories/transactions_repository.dart';
+import 'package:oewang/data/repositories/users_repository.dart';
 import 'package:oewang/data/repositories/wallet_groups_repository.dart';
 import 'package:oewang/data/repositories/wallets_repository.dart';
 import 'package:oewang/data/repositories_remote/auth_repository_remote.dart';
@@ -19,6 +20,7 @@ import 'package:oewang/data/repositories_remote/rates_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/settings_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/sub_currencies_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/transactions_repository_remote.dart';
+import 'package:oewang/data/repositories_remote/users_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/wallet_groups_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/wallets_repository_remote.dart';
 import 'package:oewang/data/services/api/api_client.dart';
@@ -105,6 +107,10 @@ final subCurrenciesRepositoryProvider = Provider<SubCurrenciesRepository>((
 
 final ratesRepositoryProvider = Provider<RatesRepository>((ref) {
   return RatesRepositoryRemote(ref.watch(apiClientProvider));
+});
+
+final usersRepositoryProvider = Provider<UsersRepository>((ref) {
+  return UsersRepositoryRemote(ref.watch(apiClientProvider));
 });
 
 /// Monotonically increasing integer bumped whenever a transaction is

@@ -38,6 +38,20 @@ class AuthRepositoryFake implements AuthRepository {
   Future<Session?> currentSession() async => _session;
 
   @override
+  Future<Result<Session, AppError>> refreshToken() async {
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+    if (_session == null) {
+      return const Failure(UnauthorizedError());
+    }
+    _session = Session(
+      token: '${_session!.token}-refreshed',
+      userId: _session!.userId,
+      workspaceId: _session!.workspaceId,
+    );
+    return Success(_session!);
+  }
+
+  @override
   Future<void> logout() async {
     _session = null;
   }

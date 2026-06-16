@@ -11,5 +11,10 @@ abstract class AuthRepository {
 
   Future<Session?> currentSession();
 
+  /// Calls POST /auth/refresh to mint a JWT with the freshest workspace_id +
+  /// roles. Persists the new token in secure storage. Used after switching
+  /// workspaces.
+  Future<Result<Session, AppError>> refreshToken();
+
   Future<void> logout();
 }

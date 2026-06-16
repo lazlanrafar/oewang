@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/router/app_router.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
+import 'package:oewang/ui/settings/widgets/user_card.dart';
 
 /// IMG_1844 + IMG_2244 — More tab. Grouped list of settings entries.
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final palette = context.palette;
     return Scaffold(
       body: SafeArea(
@@ -21,6 +24,7 @@ class SettingsScreen extends StatelessWidget {
             Expanded(
               child: ListView(
                 children: [
+                  const UserCard(),
                   _Row(
                     icon: Icons.menu_book_outlined,
                     title: 'Transaction Settings',
@@ -114,6 +118,12 @@ class SettingsScreen extends StatelessWidget {
                     title: 'Language Setting',
                     onTap: () => _comingSoon(context, 'Language'),
                   ),
+                  const SizedBox(height: 8),
+                  _Row(
+                    icon: Icons.logout,
+                    title: 'Log out',
+                    onTap: () async => _confirmLogout(context, ref),
+                  ),
                   const SizedBox(height: 24),
                 ],
               ),
@@ -128,6 +138,28 @@ class SettingsScreen extends StatelessWidget {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('$label — coming soon')),
     );
+  }
+
+  Future<void> _confirmLogout(BuildContext context, WidgetRef ref) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Log out'),
+        content: const Text('You will need to sign in again to use the app.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Log out'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    await ref.read(sessionControllerProvider.notifier).clear();
   }
 }
 

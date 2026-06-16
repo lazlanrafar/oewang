@@ -64,6 +64,28 @@ class AuthRepositoryRemote implements AuthRepository {
   }
 
   @override
+  Future<Result<Session, AppError>> refreshToken() async {
+    try {
+      final res = await api.post('/auth/refresh');
+      final body = res.data as Map<String, dynamic>;
+      final data = body['data'];
+      if (data is! Map<String, dynamic>) {
+        return const Failure(
+          ServerError(statusCode: 500, message: 'Unexpected refresh response'),
+        );
+      }
+      final dto = LoginResponseDto.fromJson(data);
+      final session = dto.toDomain();
+      await storage.writeToken(env.sessionCookieName, session.token);
+      return Success(session);
+    } on DioException catch (e) {
+      return Failure(_mapDioError(e));
+    } on Exception {
+      return const Failure(UnknownError());
+    }
+  }
+
+  @override
   Future<void> logout() => storage.deleteToken(env.sessionCookieName);
 
   AppError _mapDioError(DioException e) => mapDioError(e);
