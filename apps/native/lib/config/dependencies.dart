@@ -5,11 +5,13 @@ import 'package:oewang/config/env.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/data/repositories/auth_repository.dart';
 import 'package:oewang/data/repositories/categories_repository.dart';
+import 'package:oewang/data/repositories/settings_repository.dart';
 import 'package:oewang/data/repositories/transactions_repository.dart';
 import 'package:oewang/data/repositories/wallet_groups_repository.dart';
 import 'package:oewang/data/repositories/wallets_repository.dart';
 import 'package:oewang/data/repositories_remote/auth_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/categories_repository_remote.dart';
+import 'package:oewang/data/repositories_remote/settings_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/transactions_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/wallet_groups_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/wallets_repository_remote.dart';
@@ -81,6 +83,10 @@ final categoriesRepositoryProvider = Provider<CategoriesRepository>((ref) {
   return CategoriesRepositoryRemote(ref.watch(apiClientProvider));
 });
 
+final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
+  return SettingsRepositoryRemote(ref.watch(apiClientProvider));
+});
+
 /// Monotonically increasing integer bumped whenever a transaction is
 /// successfully created. Screens that show transaction lists watch this and
 /// reload when it changes.
@@ -95,16 +101,46 @@ final transactionsRevisionProvider =
       TransactionsRevisionController.new,
     );
 
-/// Active income/expense color scheme. Defaults to the web app's `blue-red`
-/// preset; will be hydrated from `/v1/settings/transaction` in a follow-up.
+/// Active income/expense color scheme. Boots from local prefs (so the choice
+/// survives restart), then hydrates from `/v1/settings/transaction` whenever
+/// a session is active — server is authoritative.
 class TransactionColorSchemeController extends Notifier<TransactionColorScheme> {
   @override
-  TransactionColorScheme build() =>
-      ref.read(preferencesServiceProvider).readTransactionColorScheme();
+  TransactionColorScheme build() {
+    // Re-hydrate whenever the session flips to logged-in.
+    ref.listen<AsyncValue<Session?>>(sessionControllerProvider, (prev, next) {
+      if (next.valueOrNull != null) {
+        hydrateFromServer();
+      }
+    });
+    return ref.read(preferencesServiceProvider).readTransactionColorScheme();
+  }
 
+  /// Pulls the current server-side `incomeExpensesColor` and updates state +
+  /// local prefs. Silently no-ops on errors so the cached value sticks.
+  Future<void> hydrateFromServer() async {
+    final res = await ref
+        .read(settingsRepositoryProvider)
+        .fetchTransactionSettings();
+    final settings = res.fold((ok) => ok, (_) => null);
+    if (settings == null) return;
+    if (state != settings.incomeExpensesColor) {
+      state = settings.incomeExpensesColor;
+      await ref
+          .read(preferencesServiceProvider)
+          .writeTransactionColorScheme(state);
+    }
+  }
+
+  /// Updates state immediately, persists to local prefs for offline safety,
+  /// then PATCHes the server. Server errors are silently swallowed — local
+  /// state stays current and the next hydrate reconciles.
   Future<void> set(TransactionColorScheme scheme) async {
     state = scheme;
-    await ref.read(preferencesServiceProvider).writeTransactionColorScheme(scheme);
+    await ref
+        .read(preferencesServiceProvider)
+        .writeTransactionColorScheme(scheme);
+    await ref.read(settingsRepositoryProvider).updateColorScheme(scheme);
   }
 }
 
