@@ -21,6 +21,9 @@ const appEnvSchema = z.object({
 
   // Server-side used in NextJS App
   ENCRYPTION_KEY: z.string().length(32).optional(),
+  // Must match the API's JWT_SECRET — proxy.ts verifies the session JWT with
+  // it. A missing/short value silently breaks ALL auth, so validate at startup.
+  JWT_SECRET: z.string().min(32),
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
 });
 

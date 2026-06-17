@@ -27,6 +27,10 @@ export const requireAdminAccess = new Elysia({ name: "guard.admin-access" })
   });
 
 export const systemAdminsController = new Elysia({ prefix: "/system-admins" })
+  // authPlugin is name-deduped (already pulled in by requireAdminAccess); using
+  // it directly here exposes `auth` to per-route beforeHandle for the
+  // superadmin-only checks below.
+  .use(authPlugin)
   .use(requireAdminAccess)
   .get(
     "/users",
@@ -71,6 +75,17 @@ export const systemAdminsController = new Elysia({ prefix: "/system-admins" })
       return result;
     },
     {
+      // Privilege escalation guard: only a superadmin may change system roles.
+      // requireAdminAccess admits finance/owner for read routes, so this route
+      // needs its own check or a finance user could self-promote to superadmin.
+      beforeHandle({ auth, status }) {
+        if (auth?.system_role !== "superadmin") {
+          return status(
+            403,
+            buildError(ErrorCode.FORBIDDEN, "Superadmin access required."),
+          );
+        }
+      },
       body: t.Object({
         role: t.Union([
           t.Literal("superadmin"),
@@ -82,7 +97,7 @@ export const systemAdminsController = new Elysia({ prefix: "/system-admins" })
       detail: {
         summary: "Update System Role",
         description:
-          "Promotes or demotes a user's system-wide administrative role. Restricted to system owners.",
+          "Promotes or demotes a user's system-wide administrative role. Restricted to superadmins.",
         tags: ["System Admins"],
       },
     },
@@ -169,11 +184,21 @@ export const systemAdminsController = new Elysia({ prefix: "/system-admins" })
       return result;
     },
     {
+      // Superadmin-only: manually overriding a workspace's paid plan is a
+      // billing-sensitive action and must not be reachable by finance/owner.
+      beforeHandle({ auth, status }) {
+        if (auth?.system_role !== "superadmin") {
+          return status(
+            403,
+            buildError(ErrorCode.FORBIDDEN, "Superadmin access required."),
+          );
+        }
+      },
       body: SystemAdminModel.updatePlanBody,
       detail: {
         summary: "Update Workspace Plan",
         description:
-          "Manually updates a workspace's pricing plan. Restricted to system owners.",
+          "Manually updates a workspace's pricing plan. Restricted to superadmins.",
         tags: ["System Admins"],
       },
     },

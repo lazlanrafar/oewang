@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import { Env } from "@workspace/constants";
 import {
   sendAddonPurchaseSuccessEmail,
@@ -12,8 +13,8 @@ import { status } from "elysia";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { OrdersService } from "../orders/orders.service";
-import { BillingInvoicesService } from "./billing-invoices.service";
 import { calculatePeriodEnd, inferBillingInterval } from "./billing.utils";
+import { BillingInvoicesService } from "./billing-invoices.service";
 import { MayarRepository } from "./mayar.repository";
 
 const MAYAR_BASE_URL =
@@ -159,6 +160,15 @@ export abstract class MayarService {
     return response.json();
   }
 
+  /** Constant-time webhook token comparison (avoids timing side-channels). */
+  private static tokensMatch(received: string | undefined, expected: string) {
+    if (!received) return false;
+    const a = Buffer.from(received);
+    const b = Buffer.from(expected);
+    if (a.length !== b.length) return false;
+    return timingSafeEqual(a, b);
+  }
+
   static async handleWebhook(event: any, receivedToken?: string) {
     // 1. Verify Webhook Token
     const configuredToken = Env.MAYAR_WEBHOOK_TOKEN;
@@ -172,13 +182,12 @@ export abstract class MayarService {
         ),
       );
     }
-    if (configuredToken && receivedToken !== configuredToken) {
-      logger.error("[Mayar Webhook] Unauthorized - Invalid or missing token", {
-        receivedLen: receivedToken?.length,
-        configuredLen: configuredToken?.length,
-        receivedStart: receivedToken?.substring(0, 5),
-        configuredStart: configuredToken?.substring(0, 5),
-      });
+    if (
+      configuredToken &&
+      !MayarService.tokensMatch(receivedToken, configuredToken)
+    ) {
+      // Never log token material (prefixes/lengths leak the secret over time).
+      logger.error("[Mayar Webhook] Unauthorized - Invalid or missing token");
       throw status(
         401,
         buildError(ErrorCode.UNAUTHORIZED, "Invalid webhook token"),
@@ -354,7 +363,9 @@ export abstract class MayarService {
             const workspaceRecordForInvoice =
               await MayarRepository.findWorkspaceById(targetWorkspaceId);
             const unitAmount =
-              addonQty > 0 ? Math.round(Number(amount) / addonQty) : Number(amount);
+              addonQty > 0
+                ? Math.round(Number(amount) / addonQty)
+                : Number(amount);
             await BillingInvoicesService.issue({
               workspaceId: targetWorkspaceId,
               workspaceName: workspaceRecordForInvoice?.name,
@@ -470,7 +481,10 @@ export abstract class MayarService {
                 quantity: 1,
                 unit_amount: Number(amount),
                 amount: Number(amount),
-                meta: { plan_id: matchedPlan.id, billing_interval: billingInterval },
+                meta: {
+                  plan_id: matchedPlan.id,
+                  billing_interval: billingInterval,
+                },
               },
             ],
           }).catch((err) =>
@@ -799,7 +813,10 @@ export abstract class MayarService {
     ) {
       throw status(
         400,
-        buildError(ErrorCode.VALIDATION_ERROR, "No active subscription to cancel"),
+        buildError(
+          ErrorCode.VALIDATION_ERROR,
+          "No active subscription to cancel",
+        ),
       );
     }
 
@@ -975,7 +992,10 @@ export abstract class MayarService {
     if (!workspace.pending_plan_id) {
       throw status(
         400,
-        buildError(ErrorCode.VALIDATION_ERROR, "No pending plan switch to cancel"),
+        buildError(
+          ErrorCode.VALIDATION_ERROR,
+          "No pending plan switch to cancel",
+        ),
       );
     }
 

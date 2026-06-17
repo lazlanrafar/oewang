@@ -1,8 +1,20 @@
 "use client";
 
+import { useState } from "react";
+
+import { useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
+import { updateSystemRoleAction } from "@workspace/modules/system-admin/system-admin.action";
 import type { SystemAdminUser } from "@workspace/types";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
   Button,
   DropdownMenu,
   DropdownMenuContent,
@@ -11,16 +23,20 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@workspace/ui";
-import { MoreHorizontal, Shield, User, Landmark } from "lucide-react";
-import { updateSystemRoleAction } from "@workspace/modules/system-admin/system-admin.action";
-import { useQueryClient } from "@tanstack/react-query";
+import { Landmark, MoreHorizontal, Shield, User } from "lucide-react";
 import { toast } from "sonner";
+
+type AssignableRole = "owner" | "finance" | "user";
 
 const CellActions = ({ row }: { row: { original: SystemAdminUser } }) => {
   const user = row.original;
   const queryClient = useQueryClient();
+  // Role changes grant/revoke admin access, so require explicit confirmation
+  // rather than mutating on a single dropdown click.
+  const [pendingRole, setPendingRole] = useState<AssignableRole | null>(null);
 
-  const handleRoleChange = async (role: "owner" | "finance" | "user") => {
+  const handleRoleChange = async (role: AssignableRole) => {
+    setPendingRole(null);
     try {
       const result = await updateSystemRoleAction(user.id, role);
       if (result.success) {
@@ -38,30 +54,48 @@ const CellActions = ({ row }: { row: { original: SystemAdminUser } }) => {
   };
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="h-8 w-8 p-0">
-          <span className="sr-only">Open menu</span>
-          <MoreHorizontal className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => handleRoleChange("owner")}>
-          <Shield className="mr-2 h-4 w-4" />
-          <span>Make Owner</span>
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => handleRoleChange("finance")}>
-          <Landmark className="mr-2 h-4 w-4" />
-          <span>Make Finance</span>
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => handleRoleChange("user")}>
-          <User className="mr-2 h-4 w-4" />
-          <span>Make User</span>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" className="h-8 w-8 p-0">
+            <span className="sr-only">Open menu</span>
+            <MoreHorizontal className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => setPendingRole("owner")}>
+            <Shield className="mr-2 h-4 w-4" />
+            <span>Make Owner</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setPendingRole("finance")}>
+            <Landmark className="mr-2 h-4 w-4" />
+            <span>Make Finance</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setPendingRole("user")}>
+            <User className="mr-2 h-4 w-4" />
+            <span>Make User</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <AlertDialog open={pendingRole !== null} onOpenChange={(open) => !open && setPendingRole(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Change user role?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will set {user.email || "this user"}&apos;s system role to <strong>{pendingRole}</strong>. Their
+              administrative access changes immediately.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => pendingRole && handleRoleChange(pendingRole)}>Confirm</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };
 
@@ -81,11 +115,7 @@ export const userColumns: ColumnDef<SystemAdminUser>[] = [
         "w-[200px] min-w-[120px] md:sticky md:left-[var(--stick-left)] bg-background group-hover:bg-[#F2F1EF] group-hover:dark:bg-[#0f0f0f] z-10",
       skeleton: { type: "text", width: "w-32" },
     },
-    cell: ({ getValue }) => (
-      <span className="truncate font-medium">
-        {getValue<string>() || "N/A"}
-      </span>
-    ),
+    cell: ({ getValue }) => <span className="truncate font-medium">{getValue<string>() || "N/A"}</span>,
   },
   {
     accessorKey: "email",
@@ -99,11 +129,7 @@ export const userColumns: ColumnDef<SystemAdminUser>[] = [
       className: "w-[260px] min-w-[160px]",
       skeleton: { type: "avatar-text", width: "w-40" },
     },
-    cell: ({ getValue }) => (
-      <span className="truncate text-muted-foreground">
-        {getValue<string>()}
-      </span>
-    ),
+    cell: ({ getValue }) => <span className="truncate text-muted-foreground">{getValue<string>()}</span>,
   },
   {
     accessorKey: "system_role",

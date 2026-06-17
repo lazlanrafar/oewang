@@ -2,12 +2,15 @@ import { Env } from "@workspace/constants";
 import { logger } from "@workspace/logger";
 import { Elysia } from "elysia";
 import { IntegrationsService } from "./integrations.service";
-import { verifyTelegramSecret } from "./webhook-security";
+import {
+  verifyEvolutionApiKey,
+  verifyTelegramSecret,
+} from "./webhook-security";
 
 export const publicWebhooksController = new Elysia({ prefix: "/integrations" })
   .post(
     "/whatsapp/webhook",
-    async ({ set, body }) => {
+    async ({ request, set, body }) => {
       let parsedBody: Record<string, any>;
 
       if (body && typeof body === "object") {
@@ -22,6 +25,29 @@ export const publicWebhooksController = new Elysia({ prefix: "/integrations" })
       } else {
         set.status = 400;
         return "Invalid JSON payload";
+      }
+
+      // Authenticate the webhook. This endpoint is unencrypted and not
+      // rate-limited, so an unverified payload could drive bot/AI actions for
+      // any user. Evolution sends the instance apikey in the body (and can be
+      // configured to send an `apikey`/Bearer header); verify it matches.
+      const expectedToken = Env.EVOLUTION_API_TOKEN;
+      if (process.env.NODE_ENV === "production" && !expectedToken) {
+        set.status = 500;
+        return "WhatsApp webhook is not configured";
+      }
+      if (expectedToken) {
+        const headerToken =
+          request.headers.get("apikey") ??
+          request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ??
+          null;
+        const receivedToken =
+          headerToken ??
+          (typeof parsedBody.apikey === "string" ? parsedBody.apikey : null);
+        if (!verifyEvolutionApiKey({ expectedToken, receivedToken })) {
+          set.status = 403;
+          return "Forbidden";
+        }
       }
 
       IntegrationsService.handleEvolutionWhatsAppWebhook(parsedBody).catch(
@@ -51,7 +77,10 @@ export const publicWebhooksController = new Elysia({ prefix: "/integrations" })
       }
 
       if (expectedSecret) {
-        const isValid = verifyTelegramSecret({ expectedSecret, receivedSecret });
+        const isValid = verifyTelegramSecret({
+          expectedSecret,
+          receivedSecret,
+        });
         if (!isValid) {
           set.status = 403;
           return "Forbidden";
