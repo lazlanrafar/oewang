@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
-import 'package:oewang/core/theme/oewang_radius.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 
 /// 4-tab bottom navigation matching IMG_1826 / IMG_1834 / IMG_1835 / IMG_1844.
@@ -81,13 +79,13 @@ class _NavButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    final color = selected ? OewangColors.coral : palette.mutedForeground;
+    final color = selected ? palette.foreground : palette.mutedForeground;
     final label = overrideLabel ?? item.label;
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(OewangRadius.sm),
+        borderRadius: BorderRadius.zero,
         child: Semantics(
           button: true,
           selected: selected,

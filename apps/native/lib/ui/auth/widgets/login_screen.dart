@@ -102,27 +102,27 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   height: 52,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: OewangColors.coral,
-                      foregroundColor: Colors.white,
+                      backgroundColor: palette.primary,
+                      foregroundColor: palette.primaryForeground,
                       shape: RoundedRectangleBorder(
                         borderRadius:
-                            BorderRadius.circular(OewangRadius.lg),
+                            BorderRadius.circular(OewangRadius.md),
                       ),
                     ),
                     onPressed: vm.canSubmit ? _onSubmit : null,
                     child: vm.submit.running
-                        ? const SizedBox(
+                        ? SizedBox(
                             width: 20,
                             height: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: Colors.white,
+                              color: palette.primaryForeground,
                             ),
                           )
                         : Text(
                             'Sign in',
                             style: OewangFonts.sans(
-                              color: Colors.white,
+                              color: palette.primaryForeground,
                               fontSize: 15,
                               fontWeight: FontWeight.w500,
                             ),

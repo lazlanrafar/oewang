@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
-import 'package:oewang/core/theme/oewang_radius.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/domain/models/transaction.dart';
 
@@ -78,12 +77,11 @@ class _Pill extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(OewangRadius.lg),
+          borderRadius: BorderRadius.zero,
           child: Container(
             height: 40,
             decoration: BoxDecoration(
               color: palette.card,
-              borderRadius: BorderRadius.circular(OewangRadius.lg),
               border: Border.all(
                 color: isSelected ? activeColor : palette.border,
                 width: isSelected ? 1.5 : 1,

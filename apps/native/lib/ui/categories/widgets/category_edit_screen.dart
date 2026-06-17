@@ -106,27 +106,27 @@ class _CategoryEditScreenState extends ConsumerState<CategoryEditScreen> {
                 height: 48,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: OewangColors.coral,
-                    foregroundColor: Colors.white,
+                    backgroundColor: palette.primary,
+                    foregroundColor: palette.primaryForeground,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(OewangRadius.lg),
+                      borderRadius: BorderRadius.circular(OewangRadius.md),
                     ),
                   ),
                   onPressed:
                       _saving || _ctl.text.trim().isEmpty ? null : _save,
                   child: _saving
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 18,
                           height: 18,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: Colors.white,
+                            color: palette.primaryForeground,
                           ),
                         )
                       : Text(
                           'Save',
                           style: OewangFonts.sans(
-                            color: Colors.white,
+                            color: palette.primaryForeground,
                             fontSize: 15,
                             fontWeight: FontWeight.w500,
                           ),

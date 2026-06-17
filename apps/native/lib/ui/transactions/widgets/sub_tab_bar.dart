@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 
@@ -47,7 +46,7 @@ class SubTabBar extends StatelessWidget {
                     Container(
                       height: 2,
                       color: i == currentIndex
-                          ? OewangColors.coral
+                          ? palette.foreground
                           : Colors.transparent,
                     ),
                   ],

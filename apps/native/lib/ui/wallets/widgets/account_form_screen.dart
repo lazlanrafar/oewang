@@ -167,27 +167,27 @@ class AccountFormScreen extends ConsumerWidget {
                 height: 48,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: OewangColors.coral,
-                    foregroundColor: Colors.white,
+                    backgroundColor: palette.primary,
+                    foregroundColor: palette.primaryForeground,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(OewangRadius.lg),
+                      borderRadius: BorderRadius.circular(OewangRadius.md),
                     ),
                   ),
                   onPressed:
                       vm.canSave ? () => _onSave(context, ref) : null,
                   child: vm.save.running
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 18,
                           height: 18,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: Colors.white,
+                            color: palette.primaryForeground,
                           ),
                         )
                       : Text(
                           'Save',
                           style: OewangFonts.sans(
-                            color: Colors.white,
+                            color: palette.primaryForeground,
                             fontSize: 15,
                             fontWeight: FontWeight.w500,
                           ),

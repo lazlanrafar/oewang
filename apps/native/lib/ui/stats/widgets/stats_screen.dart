@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
-import 'package:oewang/core/theme/oewang_radius.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/domain/models/money.dart';
 import 'package:oewang/ui/core/money_text.dart';
@@ -115,10 +114,7 @@ class _TopPills extends StatelessWidget {
           Expanded(
             child: Container(
               padding: const EdgeInsets.all(2),
-              decoration: BoxDecoration(
-                color: palette.card,
-                borderRadius: BorderRadius.circular(OewangRadius.md),
-              ),
+              color: palette.card,
               child: Row(
                 children: [
                   for (var i = 0; i < labels.length; i++)
@@ -128,18 +124,14 @@ class _TopPills extends StatelessWidget {
                         child: Container(
                           height: 32,
                           alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: i == currentIndex
-                                ? OewangColors.coral
-                                : Colors.transparent,
-                            borderRadius:
-                                BorderRadius.circular(OewangRadius.sm),
-                          ),
+                          color: i == currentIndex
+                              ? palette.primary
+                              : Colors.transparent,
                           child: Text(
                             labels[i],
                             style: OewangFonts.sans(
                               color: i == currentIndex
-                                  ? Colors.white
+                                  ? palette.primaryForeground
                                   : palette.mutedForeground,
                               fontSize: 13,
                               fontWeight: FontWeight.w500,
@@ -157,7 +149,6 @@ class _TopPills extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
               border: Border.all(color: palette.border),
-              borderRadius: BorderRadius.circular(OewangRadius.md),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -328,10 +319,7 @@ class _CategoryRow extends StatelessWidget {
         children: [
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(OewangRadius.sm),
-            ),
+            color: color,
             child: Text(
               '${slice.percent.round()}%',
               style: OewangFonts.sans(

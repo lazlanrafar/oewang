@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
-import 'package:oewang/core/theme/oewang_radius.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/data/dto/currency_catalog.dart';
 import 'package:oewang/domain/models/currency.dart';
@@ -57,8 +55,8 @@ class _MainCurrencyScreenState extends State<MainCurrencyScreen> {
               style: OutlinedButton.styleFrom(
                 foregroundColor: palette.foreground,
                 side: BorderSide(color: palette.border),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(OewangRadius.md),
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.zero,
                 ),
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,
@@ -137,10 +135,10 @@ class _MainCurrencyScreenState extends State<MainCurrencyScreen> {
                 height: 48,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: OewangColors.coral,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(OewangRadius.lg),
+                    backgroundColor: palette.primary,
+                    foregroundColor: palette.primaryForeground,
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.zero,
                     ),
                   ),
                   onPressed: () {
@@ -149,7 +147,7 @@ class _MainCurrencyScreenState extends State<MainCurrencyScreen> {
                   child: Text(
                     'Save',
                     style: OewangFonts.sans(
-                      color: Colors.white,
+                      color: palette.primaryForeground,
                       fontSize: 15,
                       fontWeight: FontWeight.w500,
                     ),

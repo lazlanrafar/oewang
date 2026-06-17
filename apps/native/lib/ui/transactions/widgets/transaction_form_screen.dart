@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
-import 'package:oewang/core/theme/oewang_radius.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/domain/models/category.dart';
 import 'package:oewang/domain/models/money.dart';
@@ -218,8 +217,8 @@ class _AmountRow extends StatelessWidget {
                     ? palette.foreground
                     : palette.mutedForeground,
                 side: BorderSide(color: palette.border),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(6),
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.zero,
                 ),
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,
@@ -520,8 +519,8 @@ class _ActionRow extends ConsumerWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: saveTint,
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(OewangRadius.lg),
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.zero,
                   ),
                 ),
                 onPressed: vm.canSave
@@ -557,8 +556,8 @@ class _ActionRow extends ConsumerWidget {
               style: OutlinedButton.styleFrom(
                 foregroundColor: palette.foreground,
                 side: BorderSide(color: palette.border),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(OewangRadius.lg),
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.zero,
                 ),
               ),
               child: Text('Continue', style: OewangFonts.sans(fontSize: 15)),

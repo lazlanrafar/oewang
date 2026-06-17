@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
-import 'package:oewang/core/theme/oewang_radius.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 
 /// IMG_1833 — number-pad keypad with + − × ÷ for entering an amount.
@@ -226,10 +224,10 @@ class _CellRow extends StatelessWidget {
     Color bg(_CellKind k) => switch (k) {
       _CellKind.digit => palette.card,
       _CellKind.op => palette.muted,
-      _CellKind.ok => OewangColors.coral,
+      _CellKind.ok => palette.primary,
     };
     Color fg(_CellKind k) =>
-        k == _CellKind.ok ? Colors.white : palette.foreground;
+        k == _CellKind.ok ? palette.primaryForeground : palette.foreground;
     return SizedBox(
       height: 52,
       child: Row(
@@ -240,10 +238,10 @@ class _CellRow extends StatelessWidget {
                 padding: const EdgeInsets.all(2),
                 child: Material(
                   color: bg(cell.kind),
-                  borderRadius: BorderRadius.circular(OewangRadius.sm),
+                  borderRadius: BorderRadius.zero,
                   child: InkWell(
                     onTap: cell.onTap,
-                    borderRadius: BorderRadius.circular(OewangRadius.sm),
+                    borderRadius: BorderRadius.zero,
                     child: Center(
                       child: Text(
                         cell.label,

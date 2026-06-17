@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
-import 'package:oewang/core/theme/oewang_radius.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/data/dto/currency_catalog.dart';
 import 'package:oewang/domain/models/currency.dart';
@@ -56,9 +55,9 @@ class _CurrencyPickerScreenState extends State<CurrencyPickerScreen> {
                   hintText: 'Search',
                   filled: true,
                   fillColor: palette.muted,
-                  border: OutlineInputBorder(
+                  border: const OutlineInputBorder(
                     borderSide: BorderSide.none,
-                    borderRadius: BorderRadius.circular(OewangRadius.md),
+                    borderRadius: BorderRadius.zero,
                   ),
                   contentPadding: EdgeInsets.zero,
                 ),

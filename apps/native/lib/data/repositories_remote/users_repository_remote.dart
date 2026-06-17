@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:oewang/core/result/app_error.dart';
 import 'package:oewang/core/result/result.dart';
@@ -31,6 +33,60 @@ class UsersRepositoryRemote implements UsersRepository {
   }
 
   @override
+  Future<Result<UserProfile, AppError>> updateProfile({
+    String? name,
+    String? mobile,
+  }) async {
+    try {
+      await _api.patch(
+        '/users/me',
+        data: {
+          if (name != null) 'name': name,
+          if (mobile != null) 'mobile': mobile,
+        },
+      );
+      // The PATCH endpoint returns the metadata wrapper, not the new profile,
+      // so re-fetch /me to get the canonical post-update state.
+      return getProfile();
+    } on DioException catch (e) {
+      return Failure(mapDioError(e));
+    } on Exception {
+      return const Failure(UnknownError());
+    }
+  }
+
+  @override
+  Future<Result<String, AppError>> uploadAvatar(File file) async {
+    try {
+      final form = FormData.fromMap({
+        'file': await MultipartFile.fromFile(file.path, filename: _baseName(file)),
+      });
+      final res = await _api.post('/users/me/avatar', data: form);
+      final body = res.data as Map<String, dynamic>;
+      final data = body['data'];
+      if (data is! Map<String, dynamic>) {
+        return const Failure(
+          ServerError(statusCode: 500, message: 'Unexpected avatar response'),
+        );
+      }
+      final url = data['url'] as String?;
+      if (url == null || url.isEmpty) {
+        return const Failure(
+          ServerError(
+            statusCode: 500,
+            message: 'Avatar response missing url',
+          ),
+        );
+      }
+      return Success(url);
+    } on DioException catch (e) {
+      return Failure(mapDioError(e));
+    } on Exception {
+      return const Failure(UnknownError());
+    }
+  }
+
+  @override
   Future<Result<void, AppError>> switchWorkspace(String workspaceId) async {
     try {
       await _api.patch(
@@ -43,5 +99,10 @@ class UsersRepositoryRemote implements UsersRepository {
     } on Exception {
       return const Failure(UnknownError());
     }
+  }
+
+  static String _baseName(File f) {
+    final sep = f.path.lastIndexOf(Platform.pathSeparator);
+    return sep < 0 ? f.path : f.path.substring(sep + 1);
   }
 }

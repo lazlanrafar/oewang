@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
-import 'package:oewang/core/theme/oewang_radius.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/domain/models/budget_status.dart';
 import 'package:oewang/domain/models/money.dart';
@@ -174,15 +173,14 @@ class _BudgetCard extends StatelessWidget {
         children: [
           Stack(
             children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(OewangRadius.pill),
-                child: Container(
-                  height: 6,
+              SizedBox(
+                height: 6,
+                child: ColoredBox(
                   color: palette.muted,
                   child: FractionallySizedBox(
                     alignment: Alignment.centerLeft,
                     widthFactor: (percent / 100).clamp(0.0, 1.0),
-                    child: Container(color: OewangColors.coral),
+                    child: const ColoredBox(color: OewangColors.coral),
                   ),
                 ),
               ),
@@ -248,10 +246,7 @@ class _TodayChip extends StatelessWidget {
     final palette = context.palette;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: palette.muted,
-        borderRadius: BorderRadius.circular(OewangRadius.pill),
-      ),
+      color: palette.muted,
       child: Text(
         'Today',
         style: OewangFonts.sans(color: palette.foreground, fontSize: 11),
@@ -266,9 +261,7 @@ class _ExportCard extends StatelessWidget {
     final palette = context.palette;
     return Material(
       color: palette.card,
-      borderRadius: BorderRadius.circular(OewangRadius.lg),
       child: InkWell(
-        borderRadius: BorderRadius.circular(OewangRadius.lg),
         onTap: () => ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Export to Excel coming in a later milestone'),
@@ -278,7 +271,6 @@ class _ExportCard extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             border: Border.all(color: palette.border),
-            borderRadius: BorderRadius.circular(OewangRadius.lg),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -333,7 +325,6 @@ class _Card extends StatelessWidget {
           decoration: BoxDecoration(
             color: palette.card,
             border: Border.all(color: palette.border),
-            borderRadius: BorderRadius.circular(OewangRadius.lg),
           ),
           child: child,
         ),

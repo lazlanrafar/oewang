@@ -6,7 +6,8 @@ import 'package:oewang/core/router/app_router.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
-import 'package:oewang/ui/settings/widgets/user_card.dart';
+import 'package:oewang/ui/settings/widgets/user_profile_header.dart';
+import 'package:oewang/ui/settings/widgets/workspace_card.dart';
 
 /// IMG_1844 + IMG_2244 — More tab. Grouped list of settings entries.
 class SettingsScreen extends ConsumerWidget {
@@ -24,7 +25,8 @@ class SettingsScreen extends ConsumerWidget {
             Expanded(
               child: ListView(
                 children: [
-                  const UserCard(),
+                  const UserProfileHeader(),
+                  const WorkspaceCard(),
                   _Row(
                     icon: Icons.menu_book_outlined,
                     title: 'Transaction Settings',

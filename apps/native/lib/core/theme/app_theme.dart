@@ -4,6 +4,18 @@ import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_radius.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 
+/// All shapes are square by default. The only intentional rounding in the app
+/// is on the top edge of modal bottom sheets — those override the shape per
+/// `showModalBottomSheet` call.
+const RoundedRectangleBorder _squareShape = RoundedRectangleBorder(
+  borderRadius: BorderRadius.zero,
+);
+
+const OutlineInputBorder _squareInputBorder = OutlineInputBorder(
+  borderRadius: BorderRadius.zero,
+  borderSide: BorderSide.none,
+);
+
 class AppTheme {
   const AppTheme._();
 
@@ -39,27 +51,45 @@ class AppTheme {
         unselectedItemColor: OewangColors.mutedForeground,
         type: BottomNavigationBarType.fixed,
       ),
-      cardTheme: CardThemeData(
+      cardTheme: const CardThemeData(
         color: OewangColors.card,
         elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(OewangRadius.lg),
-        ),
+        shape: _squareShape,
         margin: EdgeInsets.zero,
+      ),
+      dialogTheme: const DialogThemeData(
+        backgroundColor: OewangColors.card,
+        shape: _squareShape,
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: OewangColors.card,
+        // Bottom sheets are the ONE place where rounded corners stay (top
+        // edge only). Per-call shapes can still override this default.
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(shape: _squareShape),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(shape: _squareShape),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(shape: _squareShape),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(shape: _squareShape),
       ),
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
         backgroundColor: OewangColors.coral,
         foregroundColor: OewangColors.foreground,
         shape: CircleBorder(),
       ),
-      inputDecorationTheme: InputDecorationTheme(
+      inputDecorationTheme: const InputDecorationTheme(
         filled: true,
         fillColor: OewangColors.input,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(OewangRadius.lg),
-          borderSide: BorderSide.none,
-        ),
-        contentPadding: const EdgeInsets.symmetric(
+        border: _squareInputBorder,
+        enabledBorder: _squareInputBorder,
+        focusedBorder: _squareInputBorder,
+        contentPadding: EdgeInsets.symmetric(
           horizontal: OewangSpacing.lg,
           vertical: OewangSpacing.md,
         ),
@@ -71,11 +101,6 @@ class AppTheme {
     );
   }
 
-  /// Light theme ported from the `:root` block of
-  /// `packages/ui/src/globals.css`. Built widgets that read colors via
-  /// `Theme.of(context).colorScheme` adapt automatically; widgets that still
-  /// hardcode `OewangColors.*` constants continue rendering dark and will
-  /// migrate to `Theme.of(context)` as needed.
   static ThemeData light({
     TransactionColorScheme transactionScheme = TransactionColorScheme.blueRed,
   }) {
@@ -111,27 +136,43 @@ class AppTheme {
         unselectedItemColor: OewangColorsLight.mutedForeground,
         type: BottomNavigationBarType.fixed,
       ),
-      cardTheme: CardThemeData(
+      cardTheme: const CardThemeData(
         color: OewangColorsLight.card,
         elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(OewangRadius.lg),
-        ),
+        shape: _squareShape,
         margin: EdgeInsets.zero,
+      ),
+      dialogTheme: const DialogThemeData(
+        backgroundColor: OewangColorsLight.card,
+        shape: _squareShape,
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: OewangColorsLight.card,
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(shape: _squareShape),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(shape: _squareShape),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(shape: _squareShape),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(shape: _squareShape),
       ),
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
         backgroundColor: OewangColorsLight.coral,
         foregroundColor: OewangColors.foreground,
         shape: CircleBorder(),
       ),
-      inputDecorationTheme: InputDecorationTheme(
+      inputDecorationTheme: const InputDecorationTheme(
         filled: true,
         fillColor: OewangColorsLight.input,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(OewangRadius.lg),
-          borderSide: BorderSide.none,
-        ),
-        contentPadding: const EdgeInsets.symmetric(
+        border: _squareInputBorder,
+        enabledBorder: _squareInputBorder,
+        focusedBorder: _squareInputBorder,
+        contentPadding: EdgeInsets.symmetric(
           horizontal: OewangSpacing.lg,
           vertical: OewangSpacing.md,
         ),
