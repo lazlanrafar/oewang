@@ -1,8 +1,10 @@
 import { API_CONFIG } from "@workspace/constants";
 import { createLogger } from "@workspace/logger";
 import { CategoriesRepository } from "../categories/categories.repository";
+import { aggregateRecall } from "./ai.recall.utils";
 
 const log = createLogger("ai.tools");
+
 import { ContactsRepository } from "../contacts/contacts.repository";
 import { ContactsService } from "../contacts/contacts.service";
 import { DebtsService } from "../debts/debts.service";
@@ -636,6 +638,16 @@ export async function executeAiTool(
           input.limit ?? 10,
         );
         result = { success: true, data: items };
+        break;
+      }
+      case "recall_transaction": {
+        const rows = await TransactionsRepository.searchByName(
+          workspaceId,
+          input.query,
+          30,
+        );
+        const suggestions = aggregateRecall(rows, input.limit ?? 5);
+        result = { success: true, data: { suggestions } };
         break;
       }
       case "set_default_wallet": {

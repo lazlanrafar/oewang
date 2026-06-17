@@ -312,6 +312,56 @@ export abstract class TransactionsRepository {
     };
   }
 
+  /**
+   * Fuzzy-search past transactions by name for the AI "quick recall" feature.
+   * Returns the raw matching rows (most recent first) so the caller can
+   * aggregate them into per-name price suggestions. Excludes transfers since
+   * they are not recordable expenses/income the user would "buy" again.
+   */
+  static async searchByName(
+    workspaceId: string,
+    query: string,
+    limit = 30,
+  ): Promise<
+    {
+      name: string | null;
+      amount: string;
+      type: string;
+      date: string;
+      walletId: string;
+      walletName: string | null;
+      categoryId: string | null;
+      categoryName: string | null;
+    }[]
+  > {
+    const trimmed = query.trim();
+    if (!trimmed) return [];
+
+    return db
+      .select({
+        name: transactions.name,
+        amount: transactions.amount,
+        type: transactions.type,
+        date: transactions.date,
+        walletId: transactions.walletId,
+        walletName: wallets.name,
+        categoryId: transactions.categoryId,
+        categoryName: categories.name,
+      })
+      .from(transactions)
+      .leftJoin(wallets, eq(transactions.walletId, wallets.id))
+      .leftJoin(categories, eq(transactions.categoryId, categories.id))
+      .where(
+        and(
+          eq(transactions.workspaceId, workspaceId),
+          isNull(transactions.deletedAt),
+          ilike(transactions.name, `%${trimmed}%`),
+        ),
+      )
+      .orderBy(desc(transactions.date), desc(transactions.createdAt))
+      .limit(limit);
+  }
+
   static async update(
     workspaceId: string,
     id: string,

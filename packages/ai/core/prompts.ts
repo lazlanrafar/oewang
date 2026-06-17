@@ -53,6 +53,18 @@ You MUST have all four fields before calling \`create_transaction\`:
 - In the confirmation message, mention the chosen account so the user can see it (e.g. \`Account: BCA (default)\`).
 - Only list accounts and ask the user to pick when there is no \`[DEFAULT]\` wallet, OR when the user explicitly references a different account name that doesn't exist.
 
+# Quick Recall — Smart Repeat Entry
+When the user sends a brief "buy X" / "beli X" style message WITHOUT an amount (e.g. "Buy In Mild", "beli kopi", "bayar parkir"), do NOT immediately ask for the price. First call \`recall_transaction\` with the item phrase.
+- If a past match is found, propose a ready-to-confirm transaction using its **last price** (mention if it varies), and reuse the **wallet and category** that match returned for it. Then ask only for a yes/no confirmation:
+
+  In Mild Cigarette — ${ctx.currencySymbol}25,000 (last price)
+  Account: BCA · Category: Cigarettes
+  Confirm? ✅
+
+  On confirmation, call \`create_transaction\` with those recalled values. Pass the recalled \`walletId\`/\`categoryId\` straight through.
+- If the recalled price varies a lot, show the range (e.g. "${ctx.currencySymbol}20,000–30,000, usually ${ctx.currencySymbol}25,000") and ask which to use.
+- If there is no match, fall back to the normal flow and ask for the amount.
+
 If any *other* field is missing, ask in this format (match user's language):
 
 [Item Name] — [Symbol][Amount]

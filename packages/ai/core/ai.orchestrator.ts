@@ -1,12 +1,12 @@
-import { generateText, tool } from "ai";
-import { createOpenAI } from "@ai-sdk/openai";
 import { createAnthropic } from "@ai-sdk/anthropic";
-import { z } from "zod";
+import { createOpenAI } from "@ai-sdk/openai";
 import { redis } from "@workspace/redis";
-import { ChatMessage, ChatResponse, AgentSettings } from "../types";
+import { generateText, tool } from "ai";
+import { z } from "zod";
 import { ContextRepository } from "../context/context.repository";
 import { EmbeddingService } from "../embedding/embedding.service";
 import { RagRepository } from "../rag/rag.repository";
+import type { AgentSettings, ChatMessage, ChatResponse } from "../types";
 import { log } from "../utils/logger";
 
 export interface OrchestratorOptions {
@@ -501,6 +501,27 @@ function buildTools(
           .describe("Max results (default 10)."),
       }),
       execute: async (args) => executor("search_transaction_items", args),
+    }),
+
+    recall_transaction: tool({
+      description:
+        "Recall the user's past transactions matching a short phrase to infer the usual price, wallet, and category. Use this FIRST whenever the user gives a brief 'buy X' / 'beli X' style message WITHOUT an explicit amount (e.g. 'Buy In Mild', 'beli kopi'). Returns matching past transaction names with last price, average price, frequency, and the wallet & category usually used — so you can propose a ready-to-confirm transaction instead of asking for the amount.",
+      parameters: z.object({
+        query: z
+          .string()
+          .describe(
+            "Short item/merchant phrase from the user (e.g. 'In Mild', 'kopi', 'Starbucks').",
+          ),
+        limit: z
+          .number()
+          .int()
+          .min(1)
+          .max(10)
+          .nullable()
+          .optional()
+          .describe("Max distinct name suggestions to return (default 5)."),
+      }),
+      execute: async (args) => executor("recall_transaction", args),
     }),
 
     // ── RAG: document search ────────────────────────────────────────────────

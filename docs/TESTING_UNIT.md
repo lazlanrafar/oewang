@@ -61,6 +61,7 @@ apps/api/modules/{feature}/
 | Module         | Test File                                  | Tests   | What's Covered                                                                                                                                             |
 | -------------- | ------------------------------------------ | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `ai`           | `ai/ai.utils.test.ts`                      | 69      | Date parsing, date ranges, UUID validation, amount formatting, receipt detection, intent recognition, wallet extraction                                    |
+| `ai`           | `ai/ai.recall.utils.test.ts`               | 7       | Quick-recall aggregation: name grouping, last/avg/min/max price, frequency & recency ordering, transfer/invalid filtering, suggestion cap                  |
 | `transactions` | `transactions/transactions.utils.test.ts`  | 66      | Amount sanitization, balance calculations, budget checking/status, amount formatting, amount validation, date ranges                                       |
 | `debts`        | `debts/debts.utils.test.ts`                | 50      | Debt status, payment calculations, payment progress, due date checking, label formatting, payment validation, bill splitting                               |
 | `wallets`      | `wallets/wallets.utils.test.ts`            | 44      | Balance calculations, sufficiency checks, balance formatting, total balance aggregation, wallet status, name validation, balance change %, wallet grouping |
@@ -74,7 +75,7 @@ apps/api/modules/{feature}/
 | `mayar`        | `mayar/billing-lifecycle.service.test.ts`  | 2       | Subscription expiration → `past_due`, grace period → downgrade to free                                                                                     |
 | `mayar`        | `mayar/mayar.controller.test.ts`           | 2       | Public webhook HTTP status behavior on success/failure paths                                                                                               |
 | `users`        | `users/users.utils.test.ts`                | 3       | Workspace ID resolution from mixed `workspaceId`/`workspace_id` payloads and empty input handling                                                          |
-| **TOTAL**      | **14 files**                               | **404** | **All core business logic**                                                                                                                                |
+| **TOTAL**      | **15 files**                               | **411** | **All core business logic**                                                                                                                                |
 
 ---
 

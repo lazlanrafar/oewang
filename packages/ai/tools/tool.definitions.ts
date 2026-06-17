@@ -350,4 +350,22 @@ export const aiToolDefinitions = [
       required: ["query", "limit"],
     },
   },
+  {
+    name: "recall_transaction",
+    description:
+      "Recall the user's past transactions matching a short phrase to infer the usual price, wallet, and category. Use this FIRST whenever the user sends a brief 'buy X' / 'beli X' style message WITHOUT an explicit amount (e.g. 'Buy In Mild', 'beli kopi'). Returns matching past transaction names with last price, average price, frequency, and the wallet & category usually used — so you can propose a ready-to-confirm transaction instead of asking for the amount.",
+    input_schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        query: {
+          type: "string",
+          description:
+            "Short item/merchant phrase from the user (e.g. 'In Mild', 'kopi', 'Starbucks').",
+        },
+        limit: nn("Max distinct name suggestions to return (default: 5)."),
+      },
+      required: ["query", "limit"],
+    },
+  },
 ];
