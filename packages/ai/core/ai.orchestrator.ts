@@ -208,8 +208,10 @@ function buildTools(
         try {
           await redis.del(`oewang:ws-ctx:${workspaceId}`);
         } catch {}
+        // Bust the default recent-transactions cache (limit 20, no date filter)
+        // so freshly created transactions show up immediately.
         try {
-          await redis.del(`oewang:ws-txns:${workspaceId}:20::`.split(":")[0]!);
+          await redis.del(`oewang:ws-txns:${workspaceId}:20::`);
         } catch {}
         return result;
       },

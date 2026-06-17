@@ -24,9 +24,6 @@ function devLog(toolName: string, phase: "IN" | "OUT", data: unknown) {
   log.debug(`tool ${phase}`, { toolName, data });
 }
 
-// Helper to check if string is a UUID
-const isUuid = (id: string) => /^[a-f0-9-]{36}$/i.test(id);
-
 function parseInputDate(value: unknown): Date | null {
   if (typeof value !== "string" || !value.trim()) return null;
   const date = new Date(value);
@@ -147,11 +144,18 @@ async function resolveWalletIdByName(
     } catch {}
     return "";
   }
-  if (isUuid(walletId)) return walletId;
 
   try {
     const allWalletsResult = await walletsRepository.findMany(workspaceId);
     const allWallets = allWalletsResult.rows;
+
+    // 0. Exact ID match. IDs are CUID2, so match against real IDs first and
+    // verify existence before falling back to name matching. Without this a
+    // recalled walletId would resolve to the default/first wallet instead of
+    // the one actually requested.
+    const byId = allWallets.find((w: any) => w.id === walletId);
+    if (byId) return byId.id;
+
     const lowered = walletId.toLowerCase().trim();
 
     // 1. Exact match or substring match
@@ -187,10 +191,15 @@ async function resolveCategoryIdByName(
   categoryId: string | undefined,
 ): Promise<string | undefined> {
   if (!categoryId) return undefined;
-  if (isUuid(categoryId)) return categoryId;
 
   try {
     const allCats = await CategoriesRepository.findMany(workspaceId);
+
+    // 0. Exact ID match — IDs are CUID2. Honour a real recalled categoryId
+    // (verified to exist) before falling back to name matching.
+    const byId = allCats.find((c: any) => c.id === categoryId);
+    if (byId) return byId.id;
+
     const lowered = categoryId.toLowerCase().trim();
 
     // 1. Exact match or substring match (stripping emojis/special characters)

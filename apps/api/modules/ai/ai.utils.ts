@@ -3,9 +3,6 @@
  * Pure utility functions extracted for testing
  */
 
-/** Check if string is a valid UUID */
-export const isUuid = (id: string) => /^[a-f0-9-]{36}$/i.test(id);
-
 /** Parse input date string to Date object */
 export function parseInputDate(value: unknown): Date | null {
   if (typeof value !== "string" || !value.trim()) return null;

@@ -8,11 +8,11 @@
 
 All backend tests use **Bun's built-in test runner** (`bun:test`). Tests are fast, require no database, and run in ~134ms.
 
-**Current baseline: 404 unit tests across 14 test files — all must pass before merging.**
+**Current baseline: 408 unit tests across 15 test files — all must pass before merging.**
 
 ```bash
 # From repo root
-bun run test              # run all 404 tests
+bun run test              # run all 408 tests
 bun run test:watch        # watch mode (auto-rerun on change)
 bun run test:coverage     # generate coverage report
 
@@ -60,7 +60,7 @@ apps/api/modules/{feature}/
 
 | Module         | Test File                                  | Tests   | What's Covered                                                                                                                                             |
 | -------------- | ------------------------------------------ | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ai`           | `ai/ai.utils.test.ts`                      | 69      | Date parsing, date ranges, UUID validation, amount formatting, receipt detection, intent recognition, wallet extraction                                    |
+| `ai`           | `ai/ai.utils.test.ts`                      | 66      | Date parsing, date ranges, amount formatting, receipt detection, intent recognition, wallet extraction                                                     |
 | `ai`           | `ai/ai.recall.utils.test.ts`               | 7       | Quick-recall aggregation: name grouping, last/avg/min/max price, frequency & recency ordering, transfer/invalid filtering, suggestion cap                  |
 | `transactions` | `transactions/transactions.utils.test.ts`  | 66      | Amount sanitization, balance calculations, budget checking/status, amount formatting, amount validation, date ranges                                       |
 | `debts`        | `debts/debts.utils.test.ts`                | 50      | Debt status, payment calculations, payment progress, due date checking, label formatting, payment validation, bill splitting                               |
@@ -75,7 +75,7 @@ apps/api/modules/{feature}/
 | `mayar`        | `mayar/billing-lifecycle.service.test.ts`  | 2       | Subscription expiration → `past_due`, grace period → downgrade to free                                                                                     |
 | `mayar`        | `mayar/mayar.controller.test.ts`           | 2       | Public webhook HTTP status behavior on success/failure paths                                                                                               |
 | `users`        | `users/users.utils.test.ts`                | 3       | Workspace ID resolution from mixed `workspaceId`/`workspace_id` payloads and empty input handling                                                          |
-| **TOTAL**      | **15 files**                               | **411** | **All core business logic**                                                                                                                                |
+| **TOTAL**      | **15 files**                               | **408** | **All core business logic**                                                                                                                                |
 
 ---
 
