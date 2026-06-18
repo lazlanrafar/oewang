@@ -23,7 +23,12 @@ class SettingsScreen extends ConsumerWidget {
             const _Header(version: '2.12.3 AP'),
             Divider(height: 1, color: palette.border),
             Expanded(
-              child: ListView(
+              // Gray backdrop shows through the gaps between sections; rows and
+              // labels paint a white (background) card on top — mirrors the
+              // transactions Daily view grouping.
+              child: ColoredBox(
+                color: palette.border.withValues(alpha: 0.5),
+                child: ListView(
                 children: [
                   const UserProfileHeader(),
                   const WorkspaceCard(),
@@ -129,6 +134,7 @@ class SettingsScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 24),
                 ],
+                ),
               ),
             ),
           ],
@@ -207,16 +213,22 @@ class _SectionLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    return Container(
-      color: palette.background,
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-      child: Text(
-        label,
-        style: OewangFonts.sans(
-          color: palette.mutedForeground,
-          fontSize: 12,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: 8), // transparent — gray backdrop shows through
+        Container(
+          color: palette.background,
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: Text(
+            label,
+            style: OewangFonts.sans(
+              color: palette.mutedForeground,
+              fontSize: 12,
+            ),
+          ),
         ),
-      ),
+      ],
     );
   }
 }
@@ -239,13 +251,15 @@ class _Row extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    return InkWell(
+    return Material(
+      color: palette.background,
+      child: InkWell(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         child: Row(
           children: [
-            Icon(icon, color: palette.foreground, size: 22),
+            Icon(icon, color: palette.mutedForeground, size: 22),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
@@ -275,6 +289,7 @@ class _Row extends StatelessWidget {
             if (trailing != null) trailing!,
           ],
         ),
+      ),
       ),
     );
   }

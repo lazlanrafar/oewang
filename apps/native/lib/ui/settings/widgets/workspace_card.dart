@@ -75,6 +75,7 @@ class _Card extends ConsumerWidget {
         margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
+          color: palette.background,
           border: Border.all(color: palette.border),
         ),
         child: Row(
@@ -148,7 +149,7 @@ class _WorkspaceSkeleton extends StatelessWidget {
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: palette.card,
+        color: palette.background,
         border: Border.all(color: palette.border),
       ),
       child: Row(
