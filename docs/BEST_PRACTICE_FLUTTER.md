@@ -321,13 +321,46 @@ Rules:
 
 ## Forms
 
-The Transaction Form (IMG_1830–32) is the canonical example.
+The Transaction Form (IMG_1830–32) and the Account Form (IMG_1836) are the canonical examples. Both are assembled entirely from the reusable field + input-panel system in `lib/ui/core/form/` — do not hand-roll new row/sheet widgets for a form; compose these.
 
-1. ViewModel owns one `freezed` `FormState` value with copyWith — never per-field setters scattered through the widget.
-2. `TextEditingController`s are created in the ViewModel and disposed in `dispose()`.
-3. Validation is a pure function on `FormState`; the Save button binds to its result via a `Command`.
-4. `Command<NewTransactionDraft, Transaction>` drives the Save button's disabled / spinner / error states. **No manual `isLoading` booleans on buttons.**
-5. The custom calculator sheet (IMG_1833) returns a `Money` value; it does not mutate the form directly.
+### ViewModel rules
+
+1. The ViewModel owns one immutable `FormState` value with `copyWith` — never per-field setters scattered through the widget. Fields update via small `setX(value)` methods that `copyWith` + `notifyListeners`.
+2. Validation is a pure getter on `FormState` (`isValid`); the Save button binds to it via `canSave` and a `Command`.
+3. `Command<NewTransactionDraft, Transaction>` drives the Save button's disabled / spinner / error states. **No manual `isLoading` booleans on buttons.**
+4. Plain `TextField`s with `onChanged` feed the ViewModel directly; the form has no `TextEditingController`s for these simple fields.
+
+### Reusable form fields (`lib/ui/core/form/`)
+
+Each field is a labelled row that opens an input panel on tap. They report changes through callbacks and never mutate the ViewModel themselves.
+
+| Widget                  | Use                                                                                              |
+| ----------------------- | ------------------------------------------------------------------------------------------------ |
+| `FormFieldRow`          | Base labelled row (fixed-width label + child). Every other field and text row builds on it.       |
+| `SelectField`           | Tappable row showing a value or muted placeholder; opens any picker via `onTap`.                  |
+| `SelectDateField`       | Opens the calendar panel; reports the chosen `DateTime`.                                          |
+| `SelectEntityField<T>`  | Picks one item from a list. `gridColumns` → grid picker (with optional `leadingOf` emoji); else a list. |
+| `AmountInputField`      | Shows a live-grouped amount (`Rp 1.000.000`) and opens the keypad; `onChanged` fires per keystroke. Tracks the selected currency (Rp/S$/US$) locally. |
+
+### In-form input panels (`FormDrawerHost`)
+
+Pickers render as a **non-modal split panel** pinned to the bottom — a flat, square, full-width "second screen", not a floating modal. The form above stays fully visible and interactive.
+
+1. Wrap a form body in `FormDrawerHost(child: …)`. It supplies a `FormDrawerController` via `FormDrawerScope` and renders the bottom panel.
+2. Fields call the `openAmountDrawer` / `openGridDrawer` / `openListDrawer` / `openDateDrawer` helpers. When a host is an ancestor they open in the shared panel; with no host they **fall back to a modal bottom sheet** — so the fields work anywhere.
+3. Tapping a different field **swaps** the panel content (e.g. Amount → Category) instead of stacking sheets, because the form behind is never blocked. Tapping a text field closes the panel via `FormDrawerScope.maybeOf(context)?.close()`.
+4. Every panel is the same fixed height (`DrawerMetrics.height`) with the same black header (`FormDrawerHeader`). All panel sizing/colors live in `drawer_metrics.dart` — change them in one place.
+5. Sheet contents are Navigator-free widgets (`AmountKeypad`, `GridPickerContent`, `EntityListContent`, `CalendarContent`) wired with `onSelected`/`onChanged`/`onClose`; the modal `*Sheet.show()` wrappers and the host both reuse them.
+
+### Money formatting
+
+- **Display while typing:** `AmountFormat` (`lib/core/format/amount_format.dart`) — locale-aware thousands grouping with decimals only when entered (`Rp 1.000.000`). Use this for live input fields.
+- **Final/stored display:** `Money.format()` — fixed 2-decimal currency (`Rp 1.000.000,00`). Use this for lists and read-only amounts.
+- Both honor the `id_ID` locale and the `IDR`/`USD`/`SGD` symbols. A `decimals` param on `AmountFormat` lets the workspace "Decimal point" setting drive precision later.
+
+### Grouped list cards
+
+The Daily transactions list (`transactions_daily_screen.dart`) groups by day: each day group (header + rows) paints a white `background` card, separated by gaps that reveal a faint `border`-tinted backdrop behind the `CustomScrollView`. Keep group cards opaque and let the backdrop show through the inter-group `SizedBox` gaps.
 
 ---
 

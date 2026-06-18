@@ -17,15 +17,21 @@ class SettingsRepositoryRemote implements SettingsRepository {
   fetchTransactionSettings() async {
     try {
       final res = await _api.get('/settings/transaction');
-      final body = res.data;
-      if (body is! Map<String, dynamic>) {
-        return Success(TransactionSettings.defaults());
-      }
-      final data = body['data'];
-      if (data is! Map<String, dynamic>) {
-        return Success(TransactionSettings.defaults());
-      }
-      return Success(TransactionSettingsDto.fromJson(data).toDomain());
+      return Success(_parse(res.data));
+    } on DioException catch (e) {
+      return Failure(mapDioError(e));
+    } on Exception {
+      return const Failure(UnknownError());
+    }
+  }
+
+  @override
+  Future<Result<TransactionSettings, AppError>> updateTransactionSettings(
+    Map<String, Object?> changes,
+  ) async {
+    try {
+      final res = await _api.patch('/settings/transaction', data: changes);
+      return Success(_parse(res.data));
     } on DioException catch (e) {
       return Failure(mapDioError(e));
     } on Exception {
@@ -36,21 +42,12 @@ class SettingsRepositoryRemote implements SettingsRepository {
   @override
   Future<Result<TransactionSettings, AppError>> updateColorScheme(
     TransactionColorScheme scheme,
-  ) async {
-    try {
-      final res = await _api.patch(
-        '/settings/transaction',
-        data: {'incomeExpensesColor': scheme.settingValue},
-      );
-      final data = (res.data as Map<String, dynamic>)['data'];
-      if (data is! Map<String, dynamic>) {
-        return Success(TransactionSettings(incomeExpensesColor: scheme));
-      }
-      return Success(TransactionSettingsDto.fromJson(data).toDomain());
-    } on DioException catch (e) {
-      return Failure(mapDioError(e));
-    } on Exception {
-      return const Failure(UnknownError());
-    }
+  ) => updateTransactionSettings({'incomeExpensesColor': scheme.settingValue});
+
+  TransactionSettings _parse(Object? body) {
+    if (body is! Map<String, dynamic>) return TransactionSettings.defaults();
+    final data = body['data'];
+    if (data is! Map<String, dynamic>) return TransactionSettings.defaults();
+    return TransactionSettingsDto.fromJson(data).toDomain();
   }
 }

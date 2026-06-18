@@ -17,7 +17,19 @@ class SettingsRepositoryFake implements SettingsRepository {
   Future<Result<TransactionSettings, AppError>>
   fetchTransactionSettings() async {
     await Future<void>.delayed(const Duration(milliseconds: 10));
-    return Success(TransactionSettings(incomeExpensesColor: _scheme));
+    return Success(
+      TransactionSettings.defaults().copyWith(incomeExpensesColor: _scheme),
+    );
+  }
+
+  @override
+  Future<Result<TransactionSettings, AppError>> updateTransactionSettings(
+    Map<String, Object?> changes,
+  ) async {
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+    final color = changes['incomeExpensesColor'];
+    if (color is String) _scheme = TransactionColorScheme.fromSetting(color);
+    return fetchTransactionSettings();
   }
 
   @override
@@ -26,6 +38,6 @@ class SettingsRepositoryFake implements SettingsRepository {
   ) async {
     await Future<void>.delayed(const Duration(milliseconds: 10));
     _scheme = scheme;
-    return Success(TransactionSettings(incomeExpensesColor: scheme));
+    return fetchTransactionSettings();
   }
 }

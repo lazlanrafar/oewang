@@ -10,6 +10,7 @@
 - Adding/changing endpoints in `apps/api/modules/transactions/transactions.controller.ts`
 - Changing wallet balance logic in `apps/api/modules/transactions/transactions.service.ts`
 - Adding CSV export fields or import parsing in `transactions.import.service.ts`
+- Changing the **mobile** transaction/account form or its input panels in `apps/native/lib/ui/core/form/` or `apps/native/lib/ui/transactions/widgets/`
 
 ---
 
@@ -161,6 +162,34 @@ Every mutation calls `AuditLogsService.log()`. Every mutation triggers `Notifica
 | Sub-module | `apps/api/modules/transactions/items/transaction-items.controller.ts` |
 | Sub-module | `apps/api/modules/transactions/items/transaction-items.service.ts`    |
 | E2E        | `apps/app/e2e/transactions.spec.ts`, `transaction-management.spec.ts` |
+
+---
+
+## Mobile App (Flutter) — Transaction & Account Form UI
+
+The `apps/native` transaction and account forms were rebuilt on a reusable, WMoney-style component system. See [BEST_PRACTICE_FLUTTER.md → Forms](./BEST_PRACTICE_FLUTTER.md#forms) for the full pattern; this is the feature-level summary.
+
+### What it does
+
+- **Live amount entry.** Tapping the Amount row opens a numeric keypad and the value updates in the row in real time with locale grouping (`Rp 1.000.000`) — the number is no longer shown only inside the keypad. `Rp / S$ / US$` tabs switch the displayed currency (`IDR`/`USD`/`SGD`).
+- **Non-modal input panels.** Date, Amount, Category and Account each open a flat, full-width panel pinned to the bottom (a split "second screen", not a floating modal). The form above stays visible and tappable, so tapping another field **swaps** the panel instead of requiring you to close it first. All panels share one fixed height and a black header.
+- **Pickers.** Category and Account use a 3-column grid (categories show their emoji); the Date picker is a custom in-app calendar (Sunday-start, colored weekends, square selected day) replacing the OS dialog.
+- **Daily list.** The day-grouped list renders each day as a white card on a faint gray gap.
+
+### Currency note
+
+The keypad currency tabs currently change only the **displayed** symbol locally; the selected currency is not yet persisted onto the transaction (storage still defaults to `IDR`). To persist it, thread `onCurrencyChanged`/`currency` from `AmountInputField` into the form ViewModel and the `NewTransactionDraft`, and wire it to the Main Currency Setting once that setting is backed by a provider.
+
+### Mobile Source Files
+
+| Concern                 | File                                                                       |
+| ----------------------- | -------------------------------------------------------------------------- |
+| Transaction form        | `apps/native/lib/ui/transactions/widgets/transaction_form_screen.dart`     |
+| Account form            | `apps/native/lib/ui/wallets/widgets/account_form_screen.dart`              |
+| Form ViewModel          | `apps/native/lib/ui/transactions/view_models/transaction_form_view_model.dart` |
+| Reusable fields + panels | `apps/native/lib/ui/core/form/` (field rows, pickers, `FormDrawerHost`)    |
+| Amount formatting       | `apps/native/lib/core/format/amount_format.dart`                           |
+| Daily list cards        | `apps/native/lib/ui/transactions/widgets/transactions_daily_screen.dart`, `daily_group_header.dart` |
 
 ---
 

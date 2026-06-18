@@ -27,6 +27,7 @@ import 'package:oewang/data/services/api/api_client.dart';
 import 'package:oewang/data/services/storage/preferences_service.dart';
 import 'package:oewang/data/services/storage/secure_storage_service.dart';
 import 'package:oewang/domain/models/session.dart';
+import 'package:oewang/domain/models/transaction_settings.dart';
 
 /// Root env provider. Loaded once at startup by main.dart.
 final envProvider = Provider<EnvConfig>((ref) {
@@ -168,11 +169,53 @@ class TransactionColorSchemeController extends Notifier<TransactionColorScheme> 
         .writeTransactionColorScheme(scheme);
     await ref.read(settingsRepositoryProvider).updateColorScheme(scheme);
   }
+
+  /// Updates state + local prefs only — for callers that already persisted the
+  /// change server-side (e.g. the Transaction Settings screen).
+  Future<void> applyLocal(TransactionColorScheme scheme) async {
+    state = scheme;
+    await ref
+        .read(preferencesServiceProvider)
+        .writeTransactionColorScheme(scheme);
+  }
 }
 
 final transactionColorSchemeProvider =
     NotifierProvider<TransactionColorSchemeController, TransactionColorScheme>(
       TransactionColorSchemeController.new,
+    );
+
+/// Full workspace transaction settings for the Transaction Settings screen.
+/// Color changes are delegated to [transactionColorSchemeProvider] so the
+/// rest of the app re-colors immediately; all other fields PATCH directly.
+class TransactionSettingsController
+    extends AsyncNotifier<TransactionSettings> {
+  @override
+  Future<TransactionSettings> build() async {
+    final res = await ref
+        .read(settingsRepositoryProvider)
+        .fetchTransactionSettings();
+    return res.fold((ok) => ok, (_) => TransactionSettings.defaults());
+  }
+
+  Future<void> patch(Map<String, Object?> changes) async {
+    final current = state.valueOrNull ?? TransactionSettings.defaults();
+    final res = await ref
+        .read(settingsRepositoryProvider)
+        .updateTransactionSettings(changes);
+    state = AsyncData(res.fold((ok) => ok, (_) => current));
+    // Keep the app-wide color provider in sync without a second PATCH.
+    if (changes.containsKey('incomeExpensesColor')) {
+      await ref
+          .read(transactionColorSchemeProvider.notifier)
+          .applyLocal(state.value!.incomeExpensesColor);
+    }
+  }
+}
+
+final transactionSettingsProvider =
+    AsyncNotifierProvider<TransactionSettingsController, TransactionSettings>(
+      TransactionSettingsController.new,
     );
 
 /// Active [ThemeMode] — `system` follows the OS, `light`/`dark` force one.
