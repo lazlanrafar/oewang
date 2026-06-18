@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:oewang/components/organisms/stats/stats_view_model.dart';
 import 'package:oewang/domain/models/money.dart';
 import 'package:oewang/domain/models/transaction.dart';
-import 'package:oewang/ui/stats/view_models/stats_view_model.dart';
 
 void main() {
   group('aggregateStats', () {

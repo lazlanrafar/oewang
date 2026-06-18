@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:oewang/ui/core/form/form_drawer.dart';
-import 'package:oewang/ui/core/form/select_field.dart';
+import 'package:oewang/components/atoms/select_field.dart';
+import 'package:oewang/components/molecules/form_drawer.dart';
 
 /// A labelled row that shows a formatted [value] date and opens the WMoney-style
 /// calendar drawer on tap, reporting the chosen day through [onChanged]. Inside

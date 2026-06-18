@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:oewang/components/organisms/auth/auth_login_view_model.dart';
 import 'package:oewang/data/repositories_fake/auth_repository_fake.dart';
-import 'package:oewang/ui/auth/view_models/login_view_model.dart';
 
 void main() {
   group('LoginViewModel', () {

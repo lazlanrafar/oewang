@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:oewang/components/atoms/drawer_metrics.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
-import 'package:oewang/ui/core/form/drawer_metrics.dart';
 
 /// The solid black header bar shared by every input panel: a title on the left,
 /// optional [actions], and a close button on the right (white on black, square).

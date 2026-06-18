@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:oewang/components/organisms/transactions/transactions_daily_screen.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/theme/app_theme.dart';
 import 'package:oewang/data/repositories/transactions_repository.dart';
 import 'package:oewang/data/repositories_fake/transactions_repository_fake.dart';
 import 'package:oewang/domain/models/money.dart';
 import 'package:oewang/domain/models/transaction.dart';
-import 'package:oewang/ui/transactions/widgets/transactions_daily_screen.dart';
 
 void main() {
   testWidgets(

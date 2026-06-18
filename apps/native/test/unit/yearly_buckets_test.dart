@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:oewang/components/organisms/transactions/transactions_yearly_buckets.dart';
 import 'package:oewang/domain/models/money.dart';
 import 'package:oewang/domain/models/transaction.dart';
-import 'package:oewang/ui/transactions/view_models/yearly_buckets.dart';
 
 void main() {
   group('bucketsForMonth', () {

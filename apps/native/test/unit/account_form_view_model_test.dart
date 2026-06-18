@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:oewang/components/organisms/wallets/wallets_account_form_view_model.dart';
 import 'package:oewang/data/repositories_fake/wallet_groups_repository_fake.dart';
 import 'package:oewang/data/repositories_fake/wallets_repository_fake.dart';
-import 'package:oewang/ui/wallets/view_models/account_form_view_model.dart';
 
 void main() {
   group('AccountFormViewModel', () {

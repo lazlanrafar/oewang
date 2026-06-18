@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:oewang/components/molecules/page_app_bar.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
-import 'package:oewang/ui/core/page_app_bar.dart';
 
 /// IMG_2252 — informational empty state.
 class TransferExpenseSettingScreen extends StatelessWidget {

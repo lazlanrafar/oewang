@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:oewang/components/atoms/money_text.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/domain/models/money.dart';
-import 'package:oewang/ui/core/money_text.dart';
 
 /// Income / Exp. / Total roll-up row shown above every Trans. sub-tab.
 class TransactionsSummaryRow extends StatelessWidget {

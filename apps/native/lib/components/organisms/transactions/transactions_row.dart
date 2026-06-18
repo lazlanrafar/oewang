@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:oewang/components/atoms/money_text.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/domain/models/transaction.dart';
-import 'package:oewang/ui/core/money_text.dart';
 
 /// Single row inside the day-grouped list (IMG_1826).
 class TransactionRow extends StatelessWidget {

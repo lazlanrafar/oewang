@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:oewang/components/atoms/money_text.dart';
+import 'package:oewang/components/organisms/transactions/transactions_month_controller.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
-import 'package:oewang/ui/core/money_text.dart';
-import 'package:oewang/ui/transactions/view_models/month_transactions_controller.dart';
 
 /// Sticky-style day header in IMG_1826: big day number + weekday chip +
 /// per-day Income/Expense totals.

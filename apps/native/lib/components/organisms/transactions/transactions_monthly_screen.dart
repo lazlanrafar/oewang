@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:oewang/components/atoms/money_text.dart';
+import 'package:oewang/components/organisms/transactions/transactions_month_controller.dart';
+import 'package:oewang/components/organisms/transactions/transactions_yearly_buckets.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/domain/models/money.dart';
 import 'package:oewang/domain/models/transaction.dart';
-import 'package:oewang/ui/core/money_text.dart';
-import 'package:oewang/ui/transactions/view_models/month_transactions_controller.dart';
-import 'package:oewang/ui/transactions/view_models/yearly_buckets.dart';
 
 /// IMG_1828 — month roll-up row + per-week buckets. The current week (if
 /// today falls in the visible month) is highlighted in the expense color.

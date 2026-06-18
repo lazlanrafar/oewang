@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:oewang/components/molecules/page_app_bar.dart';
+import 'package:oewang/components/organisms/wallets/wallets_card_expenses_display_sheet.dart';
 import 'package:oewang/core/router/app_router.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
-import 'package:oewang/ui/core/page_app_bar.dart';
-import 'package:oewang/ui/wallets/widgets/card_expenses_display_sheet.dart';
 
 /// IMG_2247 — Accounts Setting hub.
 class AccountsSettingsScreen extends StatefulWidget {

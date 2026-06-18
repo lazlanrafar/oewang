@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:oewang/components/organisms/settings/settings_user_profile_header.dart';
+import 'package:oewang/components/organisms/settings/settings_workspace_card.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/router/app_router.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
-import 'package:oewang/ui/settings/widgets/user_profile_header.dart';
-import 'package:oewang/ui/settings/widgets/workspace_card.dart';
 
 /// IMG_1844 + IMG_2244 — More tab. Grouped list of settings entries.
 class SettingsScreen extends ConsumerWidget {

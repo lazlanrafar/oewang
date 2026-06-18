@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:oewang/components/atoms/button.dart';
+import 'package:oewang/components/molecules/page_app_bar.dart';
+import 'package:oewang/components/organisms/settings/settings_currency_picker_screen.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/data/dto/currency_catalog.dart';
 import 'package:oewang/domain/models/currency.dart';
-import 'package:oewang/ui/core/button.dart';
-import 'package:oewang/ui/core/page_app_bar.dart';
-import 'package:oewang/ui/settings/widgets/currency_picker_screen.dart';
 
 /// IMG_1849 / IMG_2258 — Main Currency Setting. Persisting it lives behind
 /// the settings API; for now the state is local to the screen.

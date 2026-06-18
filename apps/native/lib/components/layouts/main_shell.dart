@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:oewang/components/layouts/bottom_nav.dart';
+import 'package:oewang/components/layouts/fab.dart';
+import 'package:oewang/components/organisms/transactions/transactions_month_controller.dart';
 import 'package:oewang/core/router/app_router.dart';
-import 'package:oewang/ui/shell/oewang_bottom_nav.dart';
-import 'package:oewang/ui/shell/oewang_fab.dart';
-import 'package:oewang/ui/transactions/view_models/month_transactions_controller.dart';
 
 /// Hosts the 4-tab bottom-nav shell. Each tab is its own [StatefulShellBranch]
 /// so back-stacks are preserved per tab.

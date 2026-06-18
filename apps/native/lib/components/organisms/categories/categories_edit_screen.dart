@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:oewang/components/atoms/button.dart';
+import 'package:oewang/components/atoms/input.dart';
+import 'package:oewang/components/molecules/page_app_bar.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/domain/models/category.dart' as cat;
-import 'package:oewang/ui/core/button.dart';
-import 'package:oewang/ui/core/input.dart';
-import 'package:oewang/ui/core/page_app_bar.dart';
 
 /// Add (when [category] is null, using [createType]) or edit a category.
 /// Always a full page — pops `true` on success so the list can refresh.

@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:oewang/components/atoms/button.dart';
+import 'package:oewang/components/atoms/amount_input_field.dart';
+import 'package:oewang/components/atoms/form_field_row.dart';
+import 'package:oewang/components/atoms/select_entity_field.dart';
+import 'package:oewang/components/molecules/form_drawer.dart';
+import 'package:oewang/components/molecules/page_app_bar.dart';
+import 'package:oewang/components/organisms/wallets/wallets_account_form_view_model.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/domain/models/wallet_group.dart';
-import 'package:oewang/ui/core/button.dart';
-import 'package:oewang/ui/core/form/amount_input_field.dart';
-import 'package:oewang/ui/core/form/form_drawer.dart';
-import 'package:oewang/ui/core/form/form_field_row.dart';
-import 'package:oewang/ui/core/form/select_entity_field.dart';
-import 'package:oewang/ui/core/page_app_bar.dart';
-import 'package:oewang/ui/wallets/view_models/account_form_view_model.dart';
 
 final accountFormVmProvider =
     ChangeNotifierProvider.autoDispose<AccountFormViewModel>(

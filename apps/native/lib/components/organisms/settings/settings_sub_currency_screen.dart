@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:oewang/components/molecules/page_app_bar.dart';
+import 'package:oewang/components/organisms/settings/settings_currency_picker_screen.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
@@ -8,8 +10,6 @@ import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/data/dto/currency_catalog.dart';
 import 'package:oewang/domain/models/currency.dart';
 import 'package:oewang/domain/models/sub_currency.dart';
-import 'package:oewang/ui/core/page_app_bar.dart';
-import 'package:oewang/ui/settings/widgets/currency_picker_screen.dart';
 
 /// Bumped after add/delete so the list provider re-fetches.
 class _SubCurrenciesRevision extends Notifier<int> {

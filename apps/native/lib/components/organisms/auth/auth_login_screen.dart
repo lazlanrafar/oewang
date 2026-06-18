@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:oewang/components/atoms/button.dart';
+import 'package:oewang/components/organisms/auth/auth_login_view_model.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_radius.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
-import 'package:oewang/ui/auth/view_models/login_view_model.dart';
-import 'package:oewang/ui/core/button.dart';
 
 final loginViewModelProvider =
     ChangeNotifierProvider.autoDispose<LoginViewModel>(

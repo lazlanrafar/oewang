@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:oewang/components/organisms/transactions/transactions_month_controller.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/domain/models/money.dart';
 import 'package:oewang/domain/models/transaction.dart';
-import 'package:oewang/ui/transactions/view_models/month_transactions_controller.dart';
 
 /// IMG_1827 — full-month grid. One cell per day showing the per-day expense
 /// total (income shown smaller above when present). Built from scratch — the

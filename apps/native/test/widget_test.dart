@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:oewang/components/layouts/bottom_nav.dart';
 import 'package:oewang/core/theme/app_theme.dart';
-import 'package:oewang/ui/shell/oewang_bottom_nav.dart';
 
 void main() {
   testWidgets('Bottom nav renders all four tabs', (tester) async {

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:oewang/components/atoms/form_field_row.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
-import 'package:oewang/ui/core/form/form_field_row.dart';
 
 /// A tappable labelled row that displays a [value] (or a muted [placeholder]
 /// when empty) and triggers [onTap] — typically to open a drawer / bottom

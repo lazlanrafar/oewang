@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:oewang/ui/core/form/form_drawer.dart';
-import 'package:oewang/ui/core/form/select_field.dart';
+import 'package:oewang/components/atoms/select_field.dart';
+import 'package:oewang/components/molecules/form_drawer.dart';
 
 /// A labelled row that opens a picker to choose one item of type [T] from
 /// [items], then reports it through [onSelected]. Drives the Category, Account

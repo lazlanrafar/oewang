@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:oewang/components/molecules/segmented_tabs.dart';
 import 'package:oewang/domain/models/transaction.dart';
-import 'package:oewang/ui/core/oewang_segmented_tabs.dart';
 
 /// Income / Expense / Transfer selector for the transaction form. Thin wrapper
 /// over the reusable [OewangSegmentedTabs] so the segmented style stays

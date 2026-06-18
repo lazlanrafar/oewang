@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:oewang/components/molecules/page_app_bar.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/data/dto/currency_catalog.dart';
 import 'package:oewang/domain/models/currency.dart';
-import 'package:oewang/ui/core/page_app_bar.dart';
 
 /// IMG_2259 — full-screen picker. Pops the chosen [CurrencyInfo] via
 /// `Navigator.pop(...)`.

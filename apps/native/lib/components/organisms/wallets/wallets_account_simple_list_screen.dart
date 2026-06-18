@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:oewang/components/molecules/page_app_bar.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/domain/models/wallet.dart';
 import 'package:oewang/domain/models/wallet_group.dart';
-import 'package:oewang/ui/core/page_app_bar.dart';
 
 /// IMG_2249 — accounts grouped by their group, names only.
 class AccountSimpleListScreen extends ConsumerWidget {

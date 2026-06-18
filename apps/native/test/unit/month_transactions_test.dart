@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:oewang/components/organisms/transactions/transactions_month_controller.dart';
 import 'package:oewang/domain/models/money.dart';
 import 'package:oewang/domain/models/transaction.dart';
-import 'package:oewang/ui/transactions/view_models/month_transactions_controller.dart';
 
 void main() {
   group('groupByDay', () {

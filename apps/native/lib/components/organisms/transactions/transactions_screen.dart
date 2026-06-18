@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:oewang/components/organisms/transactions/transactions_month_picker_bar.dart';
+import 'package:oewang/components/organisms/transactions/transactions_month_controller.dart';
+import 'package:oewang/components/organisms/transactions/transactions_sub_tab_bar.dart';
+import 'package:oewang/components/organisms/transactions/transactions_calendar_screen.dart';
+import 'package:oewang/components/organisms/transactions/transactions_daily_screen.dart';
+import 'package:oewang/components/organisms/transactions/transactions_header.dart';
+import 'package:oewang/components/organisms/transactions/transactions_monthly_screen.dart';
+import 'package:oewang/components/organisms/transactions/transactions_summary_row.dart';
+import 'package:oewang/components/organisms/transactions/transactions_summary_screen.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/domain/models/money.dart';
-import 'package:oewang/ui/transactions/view_models/month_transactions_controller.dart';
-import 'package:oewang/ui/transactions/widgets/month_picker_bar.dart';
-import 'package:oewang/ui/transactions/widgets/sub_tab_bar.dart';
-import 'package:oewang/ui/transactions/widgets/transactions_calendar_screen.dart';
-import 'package:oewang/ui/transactions/widgets/transactions_daily_screen.dart';
-import 'package:oewang/ui/transactions/widgets/transactions_header.dart';
-import 'package:oewang/ui/transactions/widgets/transactions_monthly_screen.dart';
-import 'package:oewang/ui/transactions/widgets/transactions_summary_row.dart';
-import 'package:oewang/ui/transactions/widgets/transactions_summary_screen.dart';
 
 class TransactionsScreen extends ConsumerStatefulWidget {
   const TransactionsScreen({super.key});

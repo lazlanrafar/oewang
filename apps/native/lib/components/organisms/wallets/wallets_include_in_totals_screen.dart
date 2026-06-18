@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:oewang/components/atoms/money_text.dart';
+import 'package:oewang/components/molecules/page_app_bar.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
@@ -7,8 +9,6 @@ import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/domain/models/money.dart';
 import 'package:oewang/domain/models/wallet.dart';
 import 'package:oewang/domain/models/wallet_group.dart';
-import 'package:oewang/ui/core/money_text.dart';
-import 'package:oewang/ui/core/page_app_bar.dart';
 
 /// IMG_2250 — checkbox-driven Include-in-Totals editor. Selection is local;
 /// persistence lands when the wallet settings endpoint is wired.

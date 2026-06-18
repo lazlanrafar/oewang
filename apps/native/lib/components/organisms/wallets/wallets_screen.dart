@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:oewang/components/atoms/money_text.dart';
+import 'package:oewang/components/organisms/wallets/wallets_accounts_view_model.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/router/app_router.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/domain/models/money.dart';
-import 'package:oewang/ui/core/money_text.dart';
-import 'package:oewang/ui/wallets/view_models/accounts_view_model.dart';
 
 final accountsVmProvider =
     ChangeNotifierProvider.autoDispose<AccountsViewModel>(

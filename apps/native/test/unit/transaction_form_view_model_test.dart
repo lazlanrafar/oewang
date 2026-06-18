@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:oewang/components/organisms/transactions/transactions_form_view_model.dart';
 import 'package:oewang/data/repositories_fake/categories_repository_fake.dart';
 import 'package:oewang/data/repositories_fake/transactions_repository_fake.dart';
 import 'package:oewang/data/repositories_fake/wallets_repository_fake.dart';
 import 'package:oewang/domain/models/transaction.dart';
-import 'package:oewang/ui/transactions/view_models/transaction_form_view_model.dart';
 
 void main() {
   group('TransactionFormViewModel', () {
