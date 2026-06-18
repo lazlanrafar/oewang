@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { buttonVariants, cn } from "@workspace/ui";
+import { activeSidebarItemClass, cn, sidebarMenuButtonVariants } from "@workspace/ui";
 import {
   Banknote,
   Bell,
@@ -196,6 +196,10 @@ export function SettingSidebar({ className, dictionary, ...props }: SidebarNavPr
   }
   const normalizedPath = `/${activePath.join("/")}`;
 
+  // Match the app sidebar button look (size/padding/active hatch)
+  const linkClass = (comingSoon?: boolean) =>
+    cn(sidebarMenuButtonVariants(), activeSidebarItemClass, comingSoon && "pointer-events-none opacity-60");
+
   return (
     <nav className={cn("flex max-h-[300px] flex-col space-y-1 overflow-y-auto lg:max-h-none", className)} {...props}>
       {sidebarNavItems.map((item) => {
@@ -208,16 +212,10 @@ export function SettingSidebar({ className, dictionary, ...props }: SidebarNavPr
                   <Link
                     key={subItem.href}
                     href={getLocalizedUrl(subItem.href)}
-                    className={cn(
-                      buttonVariants({ variant: "ghost" }),
-                      normalizedPath === subItem.href
-                        ? "bg-muted hover:bg-muted"
-                        : "hover:bg-transparent hover:underline",
-                      "w-full justify-start overflow-hidden",
-                      subItem.comingSoon && "pointer-events-none opacity-60",
-                    )}
+                    data-active={normalizedPath === subItem.href}
+                    className={linkClass(subItem.comingSoon)}
                   >
-                    {subItem.icon && <subItem.icon className="mr-2 size-4 shrink-0" />}
+                    {subItem.icon && <subItem.icon className="size-4 shrink-0" />}
                     <span className="min-w-0 flex-1 truncate text-left">{subItem.title}</span>
                     {subItem.comingSoon && (
                       <span className="ml-auto rounded-md border bg-muted/50 px-1.5 py-0.5 font-medium text-[10px] text-muted-foreground">
@@ -236,14 +234,10 @@ export function SettingSidebar({ className, dictionary, ...props }: SidebarNavPr
           <Link
             key={flatItem.href}
             href={getLocalizedUrl(flatItem.href)}
-            className={cn(
-              buttonVariants({ variant: "ghost" }),
-              normalizedPath === flatItem.href ? "bg-muted hover:bg-muted" : "hover:bg-transparent hover:underline",
-              "w-full justify-start overflow-hidden",
-              flatItem.comingSoon && "pointer-events-none opacity-60",
-            )}
+            data-active={normalizedPath === flatItem.href}
+            className={linkClass(flatItem.comingSoon)}
           >
-            {flatItem.icon && <flatItem.icon className="mr-2 size-4 shrink-0" />}
+            {flatItem.icon && <flatItem.icon className="size-4 shrink-0" />}
             <span className="min-w-0 flex-1 truncate text-left">{flatItem.title}</span>
             {flatItem.comingSoon && (
               <span className="ml-auto rounded-md border bg-muted/50 px-1.5 py-0.5 font-medium text-[10px] text-muted-foreground">

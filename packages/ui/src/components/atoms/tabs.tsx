@@ -32,7 +32,7 @@ const tabsTriggerVariants = cva(
         default:
           "justify-center px-3 py-1.5 text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-foreground",
         segmented:
-          "group relative z-1 mb-0 h-9 min-h-9 gap-1.5 border border-transparent px-3 py-1.5 text-[14px] bg-[#f7f7f7] text-[#707070] hover:text-black dark:bg-[#131313] dark:text-[#666666] dark:hover:text-white data-[state=active]:-mb-px data-[state=active]:z-10 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:hover:text-primary-foreground",
+          "group relative z-1 mb-0 h-9 min-h-9 gap-1.5 border border-transparent px-3 py-1.5 text-[14px] bg-[#f7f7f7] text-[#707070] hover:text-black dark:bg-[#131313] dark:text-[#666666] dark:hover:text-white data-[state=active]:-mb-px data-[state=active]:z-10 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:hover:text-primary-foreground dark:data-[state=active]:bg-primary dark:data-[state=active]:text-primary-foreground",
       },
     },
     defaultVariants: {
