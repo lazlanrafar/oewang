@@ -189,6 +189,8 @@ class _AccountsList extends StatelessWidget {
             Divider(height: 1, color: palette.border),
             for (final w in s.wallets) ...[
               ListTile(
+                onTap: () =>
+                    context.push(AppRoutes.accountEditFor(w.id), extra: w),
                 title: Text(
                   w.name,
                   style: OewangFonts.sans(color: palette.foreground),
