@@ -5,6 +5,7 @@ import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/domain/models/transaction_settings.dart';
+import 'package:oewang/ui/core/button.dart';
 import 'package:oewang/ui/core/form/form_drawer.dart';
 import 'package:oewang/ui/core/form/select_field.dart';
 
@@ -429,19 +430,10 @@ class _MonthlyStartDateScreenState
             const SizedBox(height: 24),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: FilledButton(
-                style: FilledButton.styleFrom(
-                  backgroundColor: OewangColors.coral,
-                  minimumSize: const Size.fromHeight(52),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                onPressed: _saving ? null : _save,
-                child: Text(
-                  'Save',
-                  style: OewangFonts.sans(color: Colors.white, fontSize: 16),
-                ),
+              child: Button(
+                label: 'Save',
+                loading: _saving,
+                onPressed: _save,
               ),
             ),
           ],

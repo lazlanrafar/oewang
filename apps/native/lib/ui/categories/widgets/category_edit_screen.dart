@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
-import 'package:oewang/core/theme/oewang_radius.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/domain/models/category.dart' as cat;
+import 'package:oewang/ui/core/button.dart';
 
 class CategoryEditScreen extends ConsumerStatefulWidget {
   const CategoryEditScreen({required this.category, super.key});
@@ -102,36 +102,10 @@ class _CategoryEditScreenState extends ConsumerState<CategoryEditScreen> {
                 ),
                 const SizedBox(height: 12),
               ],
-              SizedBox(
-                height: 48,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: palette.primary,
-                    foregroundColor: palette.primaryForeground,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(OewangRadius.md),
-                    ),
-                  ),
-                  onPressed:
-                      _saving || _ctl.text.trim().isEmpty ? null : _save,
-                  child: _saving
-                      ? SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: palette.primaryForeground,
-                          ),
-                        )
-                      : Text(
-                          'Save',
-                          style: OewangFonts.sans(
-                            color: palette.primaryForeground,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                ),
+              Button(
+                label: 'Save',
+                loading: _saving,
+                onPressed: _ctl.text.trim().isEmpty ? null : _save,
               ),
             ],
           ),

@@ -3,6 +3,7 @@ import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/data/dto/currency_catalog.dart';
 import 'package:oewang/domain/models/currency.dart';
+import 'package:oewang/ui/core/button.dart';
 import 'package:oewang/ui/settings/widgets/currency_picker_screen.dart';
 
 /// IMG_1849 / IMG_2258 — Main Currency Setting. Persisting it lives behind
@@ -130,29 +131,9 @@ class _MainCurrencyScreenState extends State<MainCurrencyScreen> {
             const Spacer(),
             Padding(
               padding: const EdgeInsets.all(16),
-              child: SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: palette.primary,
-                    foregroundColor: palette.primaryForeground,
-                    shape: const RoundedRectangleBorder(
-                      borderRadius: BorderRadius.zero,
-                    ),
-                  ),
-                  onPressed: () {
-                    Navigator.of(context).pop(true);
-                  },
-                  child: Text(
-                    'Save',
-                    style: OewangFonts.sans(
-                      color: palette.primaryForeground,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
+              child: Button(
+                label: 'Save',
+                onPressed: () => Navigator.of(context).pop(true),
               ),
             ),
           ],

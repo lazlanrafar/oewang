@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
-import 'package:oewang/core/theme/oewang_radius.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/domain/models/wallet_group.dart';
+import 'package:oewang/ui/core/button.dart';
 import 'package:oewang/ui/core/form/amount_input_field.dart';
 import 'package:oewang/ui/core/form/form_drawer.dart';
 import 'package:oewang/ui/core/form/form_field_row.dart';
@@ -153,37 +153,10 @@ class AccountFormScreen extends ConsumerWidget {
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              child: SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: palette.primary,
-                    foregroundColor: palette.primaryForeground,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(OewangRadius.md),
-                    ),
-                  ),
-                  onPressed:
-                      vm.canSave ? () => _onSave(context, ref) : null,
-                  child: vm.save.running
-                      ? SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: palette.primaryForeground,
-                          ),
-                        )
-                      : Text(
-                          'Save',
-                          style: OewangFonts.sans(
-                            color: palette.primaryForeground,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                ),
+              child: Button(
+                label: 'Save',
+                loading: vm.save.running,
+                onPressed: vm.canSave ? () => _onSave(context, ref) : null,
               ),
             ),
           ],

@@ -6,6 +6,7 @@ import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_radius.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/ui/auth/view_models/login_view_model.dart';
+import 'package:oewang/ui/core/button.dart';
 
 final loginViewModelProvider =
     ChangeNotifierProvider.autoDispose<LoginViewModel>(
@@ -98,36 +99,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                 ],
                 const SizedBox(height: OewangSpacing.xl),
-                SizedBox(
+                Button(
+                  label: 'Sign in',
                   height: 52,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: palette.primary,
-                      foregroundColor: palette.primaryForeground,
-                      shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(OewangRadius.md),
-                      ),
-                    ),
-                    onPressed: vm.canSubmit ? _onSubmit : null,
-                    child: vm.submit.running
-                        ? SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: palette.primaryForeground,
-                            ),
-                          )
-                        : Text(
-                            'Sign in',
-                            style: OewangFonts.sans(
-                              color: palette.primaryForeground,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                  ),
+                  loading: vm.submit.running,
+                  onPressed: vm.canSubmit ? _onSubmit : null,
                 ),
               ],
             ),
