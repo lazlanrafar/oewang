@@ -25,21 +25,46 @@ This document captures **oewang-specific** Flutter patterns for `apps/native`. T
 ### The three layers
 
 ```
-ui/             ← Views (widgets) + ViewModels — Flutter SDK only
+components/     ← Views (widgets) + ViewModels, Atomic Design layout — Flutter SDK only
 domain/         ← Immutable models, value objects, mappers — pure Dart
 data/           ← Repositories (abstract + concrete) + Services — owns Dio, storage
 ```
+
+### Atomic Design — `lib/components/`
+
+The UI layer is `lib/components/`, organized by [Atomic Design](https://atomicdesign.bradfrost.com/):
+
+```
+components/
+  atoms/        ← smallest reusable widgets (button, input, money_text, section_label,
+                  + form field-level pieces: form_field_row, select_field, amount_input_field, drawer_*)
+  molecules/    ← compositions of atoms (page_app_bar, segmented_tabs, list_row,
+                  + form drawer/sheets: form_drawer, amount_keypad_sheet, *_picker_sheet)
+  organisms/    ← feature-complete UI, ALWAYS grouped by module folder + {module}_ filename prefix
+    {module}/   ← auth, categories, settings, stats, transactions, wallets
+                  screens AND their view-models live flat here (no widgets/ or view_models/ subfolder)
+                  e.g. organisms/transactions/transactions_form_screen.dart
+                       organisms/transactions/transactions_form_view_model.dart
+    settings/   ← large modules may sub-group by area: settings/currency/, settings/workspace/, …
+  layouts/      ← app shell scaffolding (main_shell, bottom_nav, fab, smoke_screen)
+```
+
+Rules:
+
+- **Organism filenames always start with `{module}_`** (the folder name), collapsing redundancy — `category_list_screen.dart` → `categories/categories_list_screen.dart`. View-models sit beside their screen, flat in the module folder.
+- **No `oewang_` brand prefix** on atom/molecule/layout filenames — the package is already `oewang`.
+- Promote a widget down the tree (organism → molecule → atom) the moment a second page needs it. Reusable rows/labels like `ListRow` (molecule) and `SectionLabel` (atom) came out of `settings_screen.dart` this way.
 
 ### Layer rules — what may import what
 
 | Layer | May import | MUST NOT import |
 | ----- | ---------- | --------------- |
-| `ui/widgets/`     | `view_models/`, `ui/core/`, `domain/models/`, `core/` | `data/**`, `dio`, `http`, `json_*` |
-| `ui/view_models/` | `data/repositories/` (abstract only), `domain/models/`, `core/command/` | `data/repositories_remote/`, `data/services/`, widgets |
+| `components/` widgets (atoms/molecules/organisms/layouts) | sibling components, `domain/models/`, `core/`, view-models in the same module | `data/**`, `dio`, `http`, `json_*` |
+| `components/organisms/{module}/*_view_model.dart` | `data/repositories/` (abstract only), `domain/models/`, `core/command/` | `data/repositories_remote/`, `data/services/`, widgets |
 | `data/repositories/` (abstract) | `domain/models/`, `core/result/` | widgets, `dio`, services |
-| `data/repositories_remote/`     | abstract repo, `data/services/`, `data/dto/`, `domain/mappers/` | widgets, view_models |
-| `data/services/`                | `dio`, `flutter_secure_storage`, platform channels | repos, view_models, widgets |
-| `domain/`        | nothing in `data/` or `ui/` | `dio`, `flutter/material` |
+| `data/repositories_remote/`     | abstract repo, `data/services/`, `data/dto/`, `domain/mappers/` | widgets, view-models |
+| `data/services/`                | `dio`, `flutter_secure_storage`, platform channels | repos, view-models, widgets |
+| `domain/`        | nothing in `data/` or `components/` | `dio`, `flutter/material` |
 
 Enforce with a CI grep against `import` lines per directory. A `dart_code_metrics` ruleset or `import_lint` package is acceptable too.
 
@@ -87,7 +112,7 @@ class TransactionsRepositoryRemote implements TransactionsRepository {
   // …
 }
 
-// ui/transactions/view_models/transactions_daily_view_model.dart
+// components/organisms/transactions/transactions_daily_view_model.dart
 class TransactionsDailyViewModel extends ChangeNotifier {
   TransactionsDailyViewModel(this._repo);
   final TransactionsRepository _repo;          // abstract — never the remote class
@@ -104,7 +129,7 @@ class TransactionsDailyViewModel extends ChangeNotifier {
   }
 }
 
-// ui/transactions/widgets/transactions_daily_screen.dart
+// components/organisms/transactions/transactions_daily_screen.dart
 class TransactionsDailyScreen extends ConsumerWidget {
   const TransactionsDailyScreen({super.key});
 
@@ -321,7 +346,7 @@ Rules:
 
 ## Forms
 
-The Transaction Form (IMG_1830–32) and the Account Form (IMG_1836) are the canonical examples. Both are assembled entirely from the reusable field + input-panel system in `lib/ui/core/form/` — do not hand-roll new row/sheet widgets for a form; compose these.
+The Transaction Form (IMG_1830–32) and the Account Form (IMG_1836) are the canonical examples. Both are assembled entirely from the reusable field + input-panel system — field-level pieces live in `lib/components/atoms/` and the drawer/sheets in `lib/components/molecules/`. Do not hand-roll new row/sheet widgets for a form; compose these.
 
 ### ViewModel rules
 
@@ -330,7 +355,7 @@ The Transaction Form (IMG_1830–32) and the Account Form (IMG_1836) are the can
 3. `Command<NewTransactionDraft, Transaction>` drives the Save button's disabled / spinner / error states. **No manual `isLoading` booleans on buttons.**
 4. Plain `TextField`s with `onChanged` feed the ViewModel directly; the form has no `TextEditingController`s for these simple fields.
 
-### Reusable form fields (`lib/ui/core/form/`)
+### Reusable form fields (`lib/components/atoms/`)
 
 Each field is a labelled row that opens an input panel on tap. They report changes through callbacks and never mutate the ViewModel themselves.
 
@@ -349,7 +374,7 @@ Pickers render as a **non-modal split panel** pinned to the bottom — a flat, s
 1. Wrap a form body in `FormDrawerHost(child: …)`. It supplies a `FormDrawerController` via `FormDrawerScope` and renders the bottom panel.
 2. Fields call the `openAmountDrawer` / `openGridDrawer` / `openListDrawer` / `openDateDrawer` helpers. When a host is an ancestor they open in the shared panel; with no host they **fall back to a modal bottom sheet** — so the fields work anywhere.
 3. Tapping a different field **swaps** the panel content (e.g. Amount → Category) instead of stacking sheets, because the form behind is never blocked. Tapping a text field closes the panel via `FormDrawerScope.maybeOf(context)?.close()`.
-4. Every panel is the same fixed height (`DrawerMetrics.height`) with the same black header (`FormDrawerHeader`). All panel sizing/colors live in `drawer_metrics.dart` — change them in one place.
+4. Every panel is the same fixed height (`DrawerMetrics.height`) with the same black header (`FormDrawerHeader`). All panel sizing/colors live in `components/atoms/drawer_metrics.dart` — change them in one place.
 5. Sheet contents are Navigator-free widgets (`AmountKeypad`, `GridPickerContent`, `EntityListContent`, `CalendarContent`) wired with `onSelected`/`onChanged`/`onClose`; the modal `*Sheet.show()` wrappers and the host both reuse them.
 
 ### Money formatting
@@ -361,6 +386,8 @@ Pickers render as a **non-modal split panel** pinned to the bottom — a flat, s
 ### Grouped list cards
 
 The Daily transactions list (`transactions_daily_screen.dart`) groups by day: each day group (header + rows) paints a white `background` card, separated by gaps that reveal a faint `border`-tinted backdrop behind the `CustomScrollView`. Keep group cards opaque and let the backdrop show through the inter-group `SizedBox` gaps.
+
+The same pattern drives grouped settings/menu lists. The shared pieces are `SectionLabel` (`components/atoms/section_label.dart`) — a section header whose leading transparent gap lets the backdrop show through — and `ListRow` (`components/molecules/list_row.dart`) — a tappable icon + title/subtitle/trailing row painting a `background` card. Put a `ColoredBox(color: border.withValues(alpha: 0.5))` behind the `ListView` and compose these; don't re-roll row/label widgets per screen.
 
 ---
 
@@ -412,7 +439,7 @@ Rules:
 - **Fakes over mocks.** Mockito/`mocktail` only when fakes are heavier than mocks.
 - **Provider override per test.** `ProviderScope(overrides: [transactionsRepositoryProvider.overrideWithValue(fake)])`.
 - **Goldens regenerate on macOS only** to avoid font-rendering churn. CI compares; doesn't generate.
-- **Coverage floor: 70%** on `domain/`, `data/repositories_remote/`, and `view_models/`. UI golden coverage is binary (matches / doesn't).
+- **Coverage floor: 70%** on `domain/`, `data/repositories_remote/`, and the `*_view_model.dart` files under `components/organisms/`. UI golden coverage is binary (matches / doesn't).
 
 ---
 
@@ -465,7 +492,7 @@ CI also runs:
 
 ## Quick reference
 
-- **New screen?** Create `ui/<feature>/widgets/<name>_screen.dart` + `ui/<feature>/view_models/<name>_view_model.dart` + a `*VmProvider`.
+- **New screen?** Create `components/organisms/<module>/<module>_<name>_screen.dart` + `components/organisms/<module>/<module>_<name>_view_model.dart` (flat in the module folder) + a `*VmProvider`. Shared widgets go in `atoms/` or `molecules/`, not the module folder.
 - **New external call?** Add the method to the abstract repository in `data/repositories/`. Implement in `data/repositories_remote/`. Add fixtures to `data/repositories_fake/`.
 - **New domain type?** `@freezed` in `domain/models/`. Mapper in `domain/mappers/`.
 - **New design token?** Add to `core/theme/` only. Never inline.

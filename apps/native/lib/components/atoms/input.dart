@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 
-/// The app's standard text field — mirrors the web `Input` (bordered box,
-/// square corners, 14px). Use this instead of a raw [TextField] so inputs
-/// stay visually identical across screens.
+/// The app's standard text field — underline only (bottom border), square
+/// corners, 14px. Use this instead of a raw [TextField] so inputs stay
+/// visually identical across screens.
 class Input extends StatelessWidget {
   const Input({
     required this.controller,
@@ -22,7 +22,7 @@ class Input extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    final border = OutlineInputBorder(
+    final border = UnderlineInputBorder(
       borderRadius: BorderRadius.zero,
       borderSide: BorderSide(color: palette.border),
     );
@@ -40,7 +40,7 @@ class Input extends StatelessWidget {
         filled: true,
         fillColor: palette.background,
         contentPadding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+            const EdgeInsets.symmetric(horizontal: 0, vertical: 14),
         border: border,
         enabledBorder: border,
         focusedBorder: border.copyWith(

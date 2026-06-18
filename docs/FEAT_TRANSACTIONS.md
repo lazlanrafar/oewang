@@ -10,7 +10,7 @@
 - Adding/changing endpoints in `apps/api/modules/transactions/transactions.controller.ts`
 - Changing wallet balance logic in `apps/api/modules/transactions/transactions.service.ts`
 - Adding CSV export fields or import parsing in `transactions.import.service.ts`
-- Changing the **mobile** transaction/account form or its input panels in `apps/native/lib/ui/core/form/` or `apps/native/lib/ui/transactions/widgets/`
+- Changing the **mobile** transaction/account form or its input panels in `apps/native/lib/components/atoms/` & `lib/components/molecules/` (shared form fields/sheets) or `apps/native/lib/components/organisms/transactions/`
 
 ---
 
@@ -184,12 +184,12 @@ The keypad currency tabs currently change only the **displayed** symbol locally;
 
 | Concern                 | File                                                                       |
 | ----------------------- | -------------------------------------------------------------------------- |
-| Transaction form        | `apps/native/lib/ui/transactions/widgets/transaction_form_screen.dart`     |
-| Account form            | `apps/native/lib/ui/wallets/widgets/account_form_screen.dart`              |
-| Form ViewModel          | `apps/native/lib/ui/transactions/view_models/transaction_form_view_model.dart` |
-| Reusable fields + panels | `apps/native/lib/ui/core/form/` (field rows, pickers, `FormDrawerHost`)    |
+| Transaction form        | `apps/native/lib/components/organisms/transactions/transactions_form_screen.dart` |
+| Account form            | `apps/native/lib/components/organisms/wallets/wallets_account_form_screen.dart` |
+| Form ViewModel          | `apps/native/lib/components/organisms/transactions/transactions_form_view_model.dart` |
+| Reusable fields + panels | `apps/native/lib/components/atoms/` (field rows, `drawer_*`) & `lib/components/molecules/` (pickers, `form_drawer`/`FormDrawerHost`) |
 | Amount formatting       | `apps/native/lib/core/format/amount_format.dart`                           |
-| Daily list cards        | `apps/native/lib/ui/transactions/widgets/transactions_daily_screen.dart`, `daily_group_header.dart` |
+| Daily list cards        | `apps/native/lib/components/organisms/transactions/transactions_daily_screen.dart`, `transactions_daily_group_header.dart` |
 
 ---
 
