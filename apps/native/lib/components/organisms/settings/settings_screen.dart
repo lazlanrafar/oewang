@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:oewang/components/organisms/settings/settings_user_profile_header.dart';
-import 'package:oewang/components/organisms/settings/settings_workspace_card.dart';
+import 'package:oewang/components/atoms/section_label.dart';
+import 'package:oewang/components/molecules/list_row.dart';
+import 'package:oewang/components/organisms/settings/profile/settings_user_profile_header.dart';
+import 'package:oewang/components/organisms/settings/workspace/settings_workspace_card.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/router/app_router.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
@@ -20,7 +22,7 @@ class SettingsScreen extends ConsumerWidget {
       body: SafeArea(
         child: Column(
           children: [
-            const _Header(version: '2.12.3 AP'),
+            const _Header(version: ''),
             Divider(height: 1, color: palette.border),
             Expanded(
               // Gray backdrop shows through the gaps between sections; rows and
@@ -32,8 +34,8 @@ class SettingsScreen extends ConsumerWidget {
                 children: [
                   const UserProfileHeader(),
                   const WorkspaceCard(),
-                  const _SectionLabel('Trans.'),
-                  _Row(
+                  const SectionLabel('Trans.'),
+                  ListRow(
                     icon: Icons.menu_book_outlined,
                     title: 'Transaction Settings',
                     subtitle:
@@ -41,49 +43,49 @@ class SettingsScreen extends ConsumerWidget {
                     onTap: () =>
                         context.push(AppRoutes.transactionSettings),
                   ),
-                  _Row(
+                  ListRow(
                     icon: Icons.repeat,
                     title: 'Repeat Setting',
                     onTap: () => _comingSoon(context, 'Repeat Setting'),
                   ),
-                  _Row(
+                  ListRow(
                     icon: Icons.content_copy_outlined,
                     title: 'Copy-Paste Settings',
                     onTap: () => _comingSoon(context, 'Copy-Paste Settings'),
                   ),
-                  const _SectionLabel('Category/Accounts'),
-                  _Row(
+                  const SectionLabel('Category/Accounts'),
+                  ListRow(
                     icon: Icons.add_circle_outline,
                     title: 'Income Category Setting',
                     onTap: () =>
                         context.push(AppRoutes.categoriesIncome),
                   ),
-                  _Row(
+                  ListRow(
                     icon: Icons.remove_circle_outline,
                     title: 'Expenses Category Setting',
                     onTap: () =>
                         context.push(AppRoutes.categoriesExpense),
                   ),
-                  _Row(
+                  ListRow(
                     icon: Icons.savings_outlined,
                     title: 'Accounts Setting',
                     subtitle:
                         'Account Group, Accounts, Include in totals, Transf…',
                     onTap: () => context.push(AppRoutes.accountsSettings),
                   ),
-                  _Row(
+                  ListRow(
                     icon: Icons.account_balance_wallet_outlined,
                     title: 'Budget Setting',
                     onTap: () => _comingSoon(context, 'Budget Setting'),
                   ),
-                  const _SectionLabel('Settings'),
-                  _Row(
+                  const SectionLabel('Settings'),
+                  ListRow(
                     icon: Icons.refresh,
                     title: 'Backup',
                     subtitle: 'Export, Import, A complete reset',
                     onTap: () => _comingSoon(context, 'Backup'),
                   ),
-                  _Row(
+                  ListRow(
                     icon: Icons.lock_outline,
                     title: 'Passcode',
                     trailing: Text(
@@ -95,39 +97,39 @@ class SettingsScreen extends ConsumerWidget {
                     ),
                     onTap: () => _comingSoon(context, 'Passcode'),
                   ),
-                  _Row(
+                  ListRow(
                     icon: Icons.payments_outlined,
                     title: 'Main Currency Setting',
                     subtitle: 'IDR(Rp)',
                     onTap: () => context.push(AppRoutes.mainCurrency),
                   ),
-                  _Row(
+                  ListRow(
                     icon: Icons.payments_outlined,
                     title: 'Sub Currency Setting',
                     onTap: () => context.push(AppRoutes.subCurrency),
                   ),
-                  _Row(
+                  ListRow(
                     icon: Icons.notifications_none,
                     title: 'Alarm Setting',
                     onTap: () => _comingSoon(context, 'Alarm'),
                   ),
-                  _Row(
+                  ListRow(
                     icon: Icons.palette_outlined,
                     title: 'Style',
                     onTap: () => context.push(AppRoutes.style),
                   ),
-                  _Row(
+                  ListRow(
                     icon: Icons.rocket_launch_outlined,
                     title: 'Application Icon',
                     onTap: () => _comingSoon(context, 'Application Icon'),
                   ),
-                  _Row(
+                  ListRow(
                     icon: Icons.translate,
                     title: 'Language Setting',
                     onTap: () => _comingSoon(context, 'Language'),
                   ),
                   const SizedBox(height: 8),
-                  _Row(
+                  ListRow(
                     icon: Icons.logout,
                     title: 'Log out',
                     onTap: () async => _confirmLogout(context, ref),
@@ -202,94 +204,6 @@ class _Header extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel(this.label);
-  final String label;
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.palette;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const SizedBox(height: 8), // transparent — gray backdrop shows through
-        Container(
-          color: palette.background,
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-          child: Text(
-            label,
-            style: OewangFonts.sans(
-              color: palette.mutedForeground,
-              fontSize: 12,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _Row extends StatelessWidget {
-  const _Row({
-    required this.icon,
-    required this.title,
-    required this.onTap,
-    this.subtitle,
-    this.trailing,
-  });
-
-  final IconData icon;
-  final String title;
-  final String? subtitle;
-  final Widget? trailing;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.palette;
-    return Material(
-      color: palette.background,
-      child: InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        child: Row(
-          children: [
-            Icon(icon, color: palette.mutedForeground, size: 22),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: OewangFonts.sans(
-                      color: palette.foreground,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  if (subtitle != null) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle!,
-                      style: OewangFonts.sans(
-                        color: palette.mutedForeground,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            if (trailing != null) trailing!,
-          ],
-        ),
-      ),
       ),
     );
   }

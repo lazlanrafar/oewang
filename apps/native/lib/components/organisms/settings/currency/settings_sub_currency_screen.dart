@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:oewang/components/molecules/page_app_bar.dart';
-import 'package:oewang/components/organisms/settings/settings_currency_picker_screen.dart';
+import 'package:oewang/components/organisms/settings/currency/settings_currency_picker_screen.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:oewang/components/organisms/settings/settings_user_profile_header.dart';
-import 'package:oewang/components/organisms/settings/settings_workspace_switcher_sheet.dart';
+import 'package:oewang/components/organisms/settings/profile/settings_user_profile_header.dart';
+import 'package:oewang/components/organisms/settings/workspace/settings_workspace_switcher_sheet.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';

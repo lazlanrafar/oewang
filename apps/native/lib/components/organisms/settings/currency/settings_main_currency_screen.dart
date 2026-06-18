@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:oewang/components/atoms/button.dart';
 import 'package:oewang/components/molecules/page_app_bar.dart';
-import 'package:oewang/components/organisms/settings/settings_currency_picker_screen.dart';
+import 'package:oewang/components/organisms/settings/currency/settings_currency_picker_screen.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/data/dto/currency_catalog.dart';
