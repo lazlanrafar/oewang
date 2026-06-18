@@ -27,6 +27,7 @@ class SettingsScreen extends ConsumerWidget {
                 children: [
                   const UserProfileHeader(),
                   const WorkspaceCard(),
+                  const _SectionLabel('Trans.'),
                   _Row(
                     icon: Icons.menu_book_outlined,
                     title: 'Transaction Settings',

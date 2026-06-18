@@ -73,9 +73,8 @@ class _Card extends ConsumerWidget {
       onTap: () => _openSwitcher(context, ref),
       child: Container(
         margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: palette.card,
           border: Border.all(color: palette.border),
         ),
         child: Row(

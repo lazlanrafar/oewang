@@ -27,7 +27,7 @@ class WorkspaceSwitcherSheet extends StatelessWidget {
   }) {
     return showModalBottomSheet<void>(
       context: context,
-      backgroundColor: context.palette.card,
+      backgroundColor: context.palette.background,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
