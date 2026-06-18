@@ -9,6 +9,7 @@ class Wallet extends Equatable {
     this.groupId,
     this.balance = 0,
     this.currency = 'IDR',
+    this.isIncludedInTotals = true,
   });
 
   final String id;
@@ -19,6 +20,16 @@ class Wallet extends Equatable {
   final num balance;
   final String currency;
 
+  /// Whether this wallet counts toward the Assets / Liabilities / Total.
+  final bool isIncludedInTotals;
+
   @override
-  List<Object?> get props => [id, name, groupId, balance, currency];
+  List<Object?> get props => [
+    id,
+    name,
+    groupId,
+    balance,
+    currency,
+    isIncludedInTotals,
+  ];
 }

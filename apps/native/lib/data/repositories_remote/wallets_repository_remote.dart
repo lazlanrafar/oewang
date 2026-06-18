@@ -94,4 +94,42 @@ class WalletsRepositoryRemote implements WalletsRepository {
       return const Failure(UnknownError());
     }
   }
+
+  @override
+  Future<Result<void, AppError>> reorder(
+    List<String> orderedIds, {
+    String? groupId,
+  }) async {
+    try {
+      await _api.put(
+        '/wallets/reorder',
+        data: {
+          'updates': [
+            for (var i = 0; i < orderedIds.length; i++)
+              {'id': orderedIds[i], 'sortOrder': i, 'groupId': groupId},
+          ],
+        },
+      );
+      return const Success(null);
+    } on DioException catch (e) {
+      return Failure(mapDioError(e));
+    } on Exception {
+      return const Failure(UnknownError());
+    }
+  }
+
+  @override
+  Future<Result<void, AppError>> setIncludedInTotals(
+    String id, {
+    required bool included,
+  }) async {
+    try {
+      await _api.put('/wallets/$id', data: {'isIncludedInTotals': included});
+      return const Success(null);
+    } on DioException catch (e) {
+      return Failure(mapDioError(e));
+    } on Exception {
+      return const Failure(UnknownError());
+    }
+  }
 }

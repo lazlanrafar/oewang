@@ -20,8 +20,8 @@ class SwipeActionRow extends StatelessWidget {
     required this.title,
     required this.isOpen,
     required this.onToggleOpen,
-    required this.onEdit,
     required this.onDelete,
+    this.onEdit,
     this.leading,
     this.dragIndex,
     super.key,
@@ -30,8 +30,10 @@ class SwipeActionRow extends StatelessWidget {
   final String title;
   final bool isOpen;
   final VoidCallback onToggleOpen;
-  final VoidCallback onEdit;
   final VoidCallback onDelete;
+
+  /// Optional edit button; hidden when null.
+  final VoidCallback? onEdit;
   final Widget? leading;
   final int? dragIndex;
 
@@ -102,12 +104,13 @@ class SwipeActionRow extends StatelessWidget {
                           style: OewangFonts.sans(color: palette.foreground),
                         ),
                       ),
-                      IconButton(
-                        tooltip: 'Edit',
-                        onPressed: onEdit,
-                        icon: Icon(Icons.edit_outlined,
-                            color: palette.mutedForeground),
-                      ),
+                      if (onEdit != null)
+                        IconButton(
+                          tooltip: 'Edit',
+                          onPressed: onEdit,
+                          icon: Icon(Icons.edit_outlined,
+                              color: palette.mutedForeground),
+                        ),
                       if (dragIndex != null)
                         ReorderableDragStartListener(
                           index: dragIndex!,

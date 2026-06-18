@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:oewang/components/atoms/money_text.dart';
+import 'package:oewang/components/molecules/swipe_action_row.dart';
 import 'package:oewang/components/organisms/wallets/wallets_accounts_view_model.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/router/app_router.dart';
@@ -9,6 +10,7 @@ import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/domain/models/money.dart';
+import 'package:oewang/domain/models/wallet.dart';
 
 final accountsVmProvider =
     ChangeNotifierProvider.autoDispose<AccountsViewModel>(
@@ -18,12 +20,31 @@ final accountsVmProvider =
       ),
     );
 
-/// IMG_1835 — Accounts tab.
-class WalletsScreen extends ConsumerWidget {
+/// IMG_1835 — Accounts tab. The pencil toggles an edit mode where each row
+/// gets a delete button, an include-in-totals toggle, and a drag handle.
+class WalletsScreen extends ConsumerStatefulWidget {
   const WalletsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<WalletsScreen> createState() => _WalletsScreenState();
+}
+
+class _WalletsScreenState extends ConsumerState<WalletsScreen> {
+  bool _editing = false;
+  // Which row has its Delete action revealed (only one at a time).
+  String? _openId;
+
+  Future<void> _delete(AccountsViewModel vm, Wallet w) async {
+    setState(() => _openId = null);
+    final err = await vm.deleteWallet(w.id);
+    if (err != null && mounted) _snack(err);
+  }
+
+  void _snack(String msg) =>
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+
+  @override
+  Widget build(BuildContext context) {
     final vm = ref.watch(accountsVmProvider);
     final palette = context.palette;
     ref.listen<int>(walletsRevisionProvider, (_, _) => vm.load());
@@ -32,7 +53,14 @@ class WalletsScreen extends ConsumerWidget {
       body: SafeArea(
         child: Column(
           children: [
-            _Header(onAdd: () => context.push(AppRoutes.accountForm)),
+            _Header(
+              editing: _editing,
+              onAdd: () => context.push(AppRoutes.accountForm),
+              onToggleEdit: () => setState(() {
+                _editing = !_editing;
+                _openId = null;
+              }),
+            ),
             Divider(height: 1, color: palette.border),
             _SummaryRow(
               assets: vm.assets,
@@ -54,7 +82,15 @@ class WalletsScreen extends ConsumerWidget {
                         ),
                       ),
                     )
-                  : _AccountsList(sections: vm.sections),
+                  : _AccountsList(
+                      sections: vm.sections,
+                      editing: _editing,
+                      openId: _openId,
+                      onToggleOpen: (id) => setState(
+                        () => _openId = _openId == id ? null : id,
+                      ),
+                      onDelete: (w) => _delete(vm, w),
+                    ),
             ),
           ],
         ),
@@ -64,8 +100,14 @@ class WalletsScreen extends ConsumerWidget {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.onAdd});
+  const _Header({
+    required this.editing,
+    required this.onAdd,
+    required this.onToggleEdit,
+  });
+  final bool editing;
   final VoidCallback onAdd;
+  final VoidCallback onToggleEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -74,6 +116,16 @@ class _Header extends StatelessWidget {
       height: 48,
       child: Row(
         children: [
+          // Left slot: close (X) while editing, otherwise empty to balance.
+          SizedBox(
+            width: 48,
+            child: editing
+                ? IconButton(
+                    onPressed: onToggleEdit,
+                    icon: Icon(Icons.close, color: fg),
+                  )
+                : null,
+          ),
           const Spacer(),
           Text(
             'Accounts',
@@ -84,14 +136,12 @@ class _Header extends StatelessWidget {
             ),
           ),
           const Spacer(),
-          IconButton(
-            onPressed: () {},
-            icon: Icon(Icons.edit_outlined, color: fg),
-          ),
-          IconButton(
-            onPressed: onAdd,
-            icon: Icon(Icons.add, color: fg),
-          ),
+          if (!editing)
+            IconButton(
+              onPressed: onToggleEdit,
+              icon: Icon(Icons.edit_outlined, color: fg),
+            ),
+          IconButton(onPressed: onAdd, icon: Icon(Icons.add, color: fg)),
         ],
       ),
     );
@@ -128,11 +178,7 @@ class _SummaryRow extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: _Cell(
-              label: 'Total',
-              value: total,
-              color: palette.foreground,
-            ),
+            child: _Cell(label: 'Total', value: total, color: palette.foreground),
           ),
         ],
       ),
@@ -165,8 +211,19 @@ class _Cell extends StatelessWidget {
 }
 
 class _AccountsList extends StatelessWidget {
-  const _AccountsList({required this.sections});
+  const _AccountsList({
+    required this.sections,
+    required this.editing,
+    required this.openId,
+    required this.onToggleOpen,
+    required this.onDelete,
+  });
+
   final List<AccountGroupSection> sections;
+  final bool editing;
+  final String? openId;
+  final ValueChanged<String> onToggleOpen;
+  final ValueChanged<Wallet> onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -179,6 +236,7 @@ class _AccountsList extends StatelessWidget {
         ),
       );
     }
+
     return ListView.builder(
       itemCount: sections.length,
       itemBuilder: (context, index) {
@@ -187,22 +245,31 @@ class _AccountsList extends StatelessWidget {
           children: [
             _GroupHeader(name: s.group.name, subtotal: s.subtotal),
             Divider(height: 1, color: palette.border),
-            for (final w in s.wallets) ...[
-              ListTile(
-                onTap: () =>
-                    context.push(AppRoutes.accountEditFor(w.id), extra: w),
-                title: Text(
-                  w.name,
-                  style: OewangFonts.sans(color: palette.foreground),
+            for (final w in s.wallets)
+              if (editing)
+                SwipeActionRow(
+                  key: ValueKey(w.id),
+                  title: w.name,
+                  isOpen: openId == w.id,
+                  onToggleOpen: () => onToggleOpen(w.id),
+                  onDelete: () => onDelete(w),
+                )
+              else ...[
+                ListTile(
+                  onTap: () =>
+                      context.push(AppRoutes.accountEditFor(w.id), extra: w),
+                  title: Text(
+                    w.name,
+                    style: OewangFonts.sans(color: palette.foreground),
+                  ),
+                  trailing: MoneyText(
+                    amount: Money(amount: w.balance, currency: w.currency),
+                    color: palette.foreground,
+                  ),
+                  dense: true,
                 ),
-                trailing: MoneyText(
-                  amount: Money(amount: w.balance, currency: w.currency),
-                  color: palette.foreground,
-                ),
-                dense: true,
-              ),
-              Divider(height: 1, color: palette.border),
-            ],
+                Divider(height: 1, color: palette.border),
+              ],
           ],
         );
       },

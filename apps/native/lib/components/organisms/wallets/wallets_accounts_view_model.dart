@@ -77,6 +77,8 @@ class AccountsViewModel extends ChangeNotifier {
       var subtotal = Money.zero();
       for (final w in ws) {
         subtotal += Money(amount: w.balance, currency: w.currency);
+        // Excluded wallets still show in the list but don't move the totals.
+        if (!w.isIncludedInTotals) continue;
         if (w.balance >= 0) {
           assets += Money(amount: w.balance, currency: w.currency);
         } else {
@@ -93,6 +95,8 @@ class AccountsViewModel extends ChangeNotifier {
       var subtotal = Money.zero();
       for (final w in ungrouped) {
         subtotal += Money(amount: w.balance, currency: w.currency);
+        // Excluded wallets still show in the list but don't move the totals.
+        if (!w.isIncludedInTotals) continue;
         if (w.balance >= 0) {
           assets += Money(amount: w.balance, currency: w.currency);
         } else {
@@ -113,5 +117,34 @@ class AccountsViewModel extends ChangeNotifier {
     _liabilities = liabilities;
     _loading = false;
     notifyListeners();
+  }
+
+  /// Deletes a wallet then reloads. Returns the error message on failure.
+  Future<String?> deleteWallet(String id) async {
+    final err = (await _wallets.delete(id)).fold((_) => null, (e) => e.message);
+    if (err == null) await load();
+    return err;
+  }
+
+  /// Toggles whether a wallet counts toward the totals, then reloads.
+  Future<String?> toggleIncluded(Wallet w) async {
+    final err =
+        (await _wallets.setIncludedInTotals(
+          w.id,
+          included: !w.isIncludedInTotals,
+        )).fold((_) => null, (e) => e.message);
+    if (err == null) await load();
+    return err;
+  }
+
+  /// Persists a new order for the wallets in [groupId] (null = Others).
+  Future<String?> reorderGroup(
+    String? groupId,
+    List<String> orderedIds,
+  ) async {
+    final err = (await _wallets.reorder(orderedIds, groupId: groupId))
+        .fold((_) => null, (e) => e.message);
+    if (err == null) await load();
+    return err;
   }
 }

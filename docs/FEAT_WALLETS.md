@@ -132,7 +132,9 @@ Every mutation triggers `RealtimeService.notifyValueChange(workspaceId, "wallets
 | Mobile     | `apps/native/lib/components/organisms/wallets/wallets_account_simple_list_screen.dart` (accounts grouped; delete/edit CRUD, empty groups hidden, no drag) |
 | Mobile     | `apps/native/lib/components/organisms/wallets/wallets_account_form_screen.dart` (account add/edit, nullable wallet arg; currency row = workspace main (IDR base) + workspace sub-currencies (loaded from `subCurrenciesRepositoryProvider`), shown by ISO **code** (IDR/SGD/USD, via `AmountFormat.currency(useCode: true)`), default main, display-only; amount keypad hides currency tabs via `AmountInputField(showCurrencyTabs: false)`) |
 | Mobile     | `apps/native/lib/components/molecules/swipe_action_row.dart` (shared swipe-delete + edit + optional drag row) |
-| Mobile     | `apps/native/lib/data/repositories/wallets_repository.dart` & `wallet_groups_repository.dart` (+ remote/fake — full CRUD; groups also reorder) |
+| Mobile     | `apps/native/lib/components/organisms/wallets/wallets_screen.dart` (Accounts tab; pencil → edit mode using `SwipeActionRow`: minus reveals a Delete button (no eye/drag); empty groups hidden; tap row → edit) |
+| Mobile     | `apps/native/lib/data/repositories/wallets_repository.dart` & `wallet_groups_repository.dart` (+ remote/fake — full CRUD; wallets also `reorder` + `setIncludedInTotals`; groups also reorder) |
+| Mobile     | `apps/native/lib/domain/models/wallet.dart` & `data/dto/wallet_dto.dart` (added `isIncludedInTotals`; `AccountsViewModel` excludes hidden wallets from Assets/Liabilities/Total) |
 
 ---
 

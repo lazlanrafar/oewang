@@ -64,4 +64,38 @@ class WalletsRepositoryFake implements WalletsRepository {
     _store.removeWhere((w) => w.id == id);
     return const Success(null);
   }
+
+  @override
+  Future<Result<void, AppError>> reorder(
+    List<String> orderedIds, {
+    String? groupId,
+  }) async {
+    _store.sort(
+      (a, b) => orderedIds.indexOf(a.id).compareTo(orderedIds.indexOf(b.id)),
+    );
+    return const Success(null);
+  }
+
+  @override
+  Future<Result<void, AppError>> setIncludedInTotals(
+    String id, {
+    required bool included,
+  }) async {
+    final i = _store.indexWhere((w) => w.id == id);
+    if (i == -1) {
+      return const Failure(
+        ServerError(statusCode: 404, message: 'Wallet not found'),
+      );
+    }
+    final w = _store[i];
+    _store[i] = Wallet(
+      id: w.id,
+      name: w.name,
+      groupId: w.groupId,
+      balance: w.balance,
+      currency: w.currency,
+      isIncludedInTotals: included,
+    );
+    return const Success(null);
+  }
 }

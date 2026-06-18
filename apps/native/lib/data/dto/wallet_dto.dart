@@ -7,6 +7,7 @@ class WalletDto {
     this.groupId,
     this.balance = 0,
     this.currency = 'IDR',
+    this.isIncludedInTotals = true,
   });
 
   factory WalletDto.fromJson(Map<String, dynamic> json) {
@@ -16,6 +17,10 @@ class WalletDto {
       groupId: (json['groupId'] ?? json['group_id']) as String?,
       balance: _readNum(json['balance']),
       currency: (json['currency'] as String?) ?? 'IDR',
+      isIncludedInTotals:
+          (json['isIncludedInTotals'] ?? json['is_included_in_totals'])
+              as bool? ??
+          true,
     );
   }
 
@@ -24,6 +29,7 @@ class WalletDto {
   final String? groupId;
   final num balance;
   final String currency;
+  final bool isIncludedInTotals;
 
   Wallet toDomain() => Wallet(
     id: id,
@@ -31,6 +37,7 @@ class WalletDto {
     groupId: groupId,
     balance: balance,
     currency: currency,
+    isIncludedInTotals: isIncludedInTotals,
   );
 
   static num _readNum(Object? v) {
