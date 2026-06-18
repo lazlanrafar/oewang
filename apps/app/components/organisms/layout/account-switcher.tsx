@@ -1,5 +1,8 @@
 "use client";
 
+import { usePathname, useRouter } from "next/navigation";
+
+import { updateAgentResponseLanguageAction } from "@workspace/modules/ai/ai.action";
 import { logout } from "@workspace/modules/auth/auth.action";
 import {
   Avatar,
@@ -18,9 +21,16 @@ import {
   persistPreference,
   usePreferencesStore,
 } from "@workspace/ui";
-import { Check, LogOut, Monitor, Moon, Sun } from "lucide-react";
+import { Check, CircleUser, CreditCard, Globe, LogOut, MessageSquareDot, Monitor, Moon, Sun } from "lucide-react";
 
 import type { AppDictionary } from "@/modules/types/dictionary";
+import { useLocalizedRoute } from "@/utils/localized-route";
+
+// ponytail: mirrors language-settings-form; keep in sync if more locales gain a response language
+const LOCALE_TO_RESPONSE_LANGUAGE: Record<string, string> = {
+  en: "english",
+  id: "indonesian",
+};
 
 export function AccountSwitcher({
   user,
@@ -34,12 +44,27 @@ export function AccountSwitcher({
   };
   readonly dictionary: AppDictionary;
 }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const { getLocalizedUrl } = useLocalizedRoute();
+
   const themeMode = usePreferencesStore((s) => s.themeMode);
   const setThemeMode = usePreferencesStore((s) => s.setThemeMode);
+
+  const currentLocale = pathname.split("/")[1] ?? "";
+  const languageOptions = dictionary.settings.language.options as Record<string, string>;
 
   const handleThemeChange = (theme: "light" | "dark" | "system") => {
     setThemeMode(theme);
     persistPreference("theme_mode", theme);
+  };
+
+  const handleLanguageChange = (newLocale: string) => {
+    if (newLocale === currentLocale) return;
+    updateAgentResponseLanguageAction(LOCALE_TO_RESPONSE_LANGUAGE[newLocale] ?? "auto");
+    const segments = pathname.split("/");
+    segments[1] = newLocale;
+    router.push(segments.join("/"));
   };
 
   return (
@@ -52,32 +77,27 @@ export function AccountSwitcher({
       </DropdownMenuTrigger>
       <DropdownMenuContent className="min-w-56 space-y-1 rounded-lg" side="bottom" align="end" sideOffset={4}>
         <div className="flex w-full items-center gap-2 px-2 py-2">
-          {/* <Avatar className="size-9 rounded-lg">
-            <AvatarImage src={user?.avatar || undefined} alt={user?.name} />
-            <AvatarFallback className="rounded-lg">
-              {getInitials(user?.name)}
-            </AvatarFallback>
-          </Avatar> */}
           <div className="grid flex-1 text-left text-sm leading-tight">
             <span className="truncate font-semibold">{user?.name}</span>
             <span className="truncate text-muted-foreground text-xs">{user?.email}</span>
           </div>
         </div>
         <DropdownMenuSeparator />
-        {/* <DropdownMenuGroup>
-          <DropdownMenuItem>
-            <BadgeCheck />
-            Account
+        <DropdownMenuGroup>
+          <DropdownMenuItem onSelect={() => router.push(getLocalizedUrl("/settings/profile"))}>
+            <CircleUser />
+            {dictionary.sidebar.account_label || "Account"}
           </DropdownMenuItem>
-          <DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => router.push(getLocalizedUrl("/settings/billing"))}>
             <CreditCard />
-            Billing
+            {dictionary.sidebar.billing_label || "Billing"}
           </DropdownMenuItem>
-          <DropdownMenuItem>
-            <Bell />
-            Notifications
+          <DropdownMenuItem onSelect={() => router.push(getLocalizedUrl("/settings/notifications"))}>
+            <MessageSquareDot />
+            {dictionary.sidebar.notifications_label || "Notifications"}
           </DropdownMenuItem>
-        </DropdownMenuGroup> */}
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuSub>
             <DropdownMenuSubTrigger>
@@ -104,6 +124,21 @@ export function AccountSwitcher({
                 {dictionary.settings.appearance.theme.system || "System"}
                 {themeMode === "system" && <Check className="ml-auto size-4" />}
               </DropdownMenuItem>
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <Globe />
+              {dictionary.settings.language.title || "Language"}
+              <span className="ml-auto text-muted-foreground text-xs">{languageOptions[currentLocale]}</span>
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent className="min-w-32">
+              {Object.entries(languageOptions).map(([value, label]) => (
+                <DropdownMenuItem key={value} onClick={() => handleLanguageChange(value)}>
+                  {label}
+                  {currentLocale === value && <Check className="ml-auto size-4" />}
+                </DropdownMenuItem>
+              ))}
             </DropdownMenuSubContent>
           </DropdownMenuSub>
         </DropdownMenuGroup>

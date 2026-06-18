@@ -15,6 +15,24 @@ const tabsListVariants = cva(
       variant: {
         default: "",
         line: "gap-1 bg-transparent p-0 h-auto rounded-none",
+        segmented: "h-auto w-fit items-stretch bg-[#f7f7f7] p-0 dark:bg-[#131313]",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+    },
+  },
+);
+
+const tabsTriggerVariants = cva(
+  "inline-flex items-center whitespace-nowrap ring-offset-background transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 cursor-pointer",
+  {
+    variants: {
+      variant: {
+        default:
+          "justify-center px-3 py-1.5 text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-foreground",
+        segmented:
+          "group relative z-1 mb-0 h-9 min-h-9 gap-1.5 border border-transparent px-3 py-1.5 text-[14px] bg-[#f7f7f7] text-[#707070] hover:text-black dark:bg-[#131313] dark:text-[#666666] dark:hover:text-white data-[state=active]:-mb-px data-[state=active]:z-10 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:hover:text-primary-foreground",
       },
     },
     defaultVariants: {
@@ -39,16 +57,13 @@ TabsList.displayName = TabsPrimitive.List.displayName;
 
 const TabsTrigger = React.forwardRef<
   React.ComponentRef<typeof TabsPrimitive.Trigger>,
-  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger>
->(({ className, ...props }, ref) => (
+  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger> &
+    VariantProps<typeof tabsTriggerVariants>
+>(({ className, variant = "default", ...props }, ref) => (
   <TabsPrimitive.Trigger
     ref={ref}
     data-slot="tabs-trigger"
-    className={cn(
-      "inline-flex items-center justify-center whitespace-nowrap px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground",
-      "cursor-pointer",
-      className,
-    )}
+    className={cn(tabsTriggerVariants({ variant }), className)}
     {...props}
   />
 ));
@@ -70,4 +85,4 @@ const TabsContent = React.forwardRef<
 ));
 TabsContent.displayName = TabsPrimitive.Content.displayName;
 
-export { Tabs, TabsList, TabsTrigger, TabsContent, tabsListVariants };
+export { Tabs, TabsList, TabsTrigger, TabsContent, tabsListVariants, tabsTriggerVariants };

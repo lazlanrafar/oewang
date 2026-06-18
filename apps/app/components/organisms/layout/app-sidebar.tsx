@@ -8,7 +8,6 @@ import { sidebarItems } from "@/navigation/sidebar/sidebar-items";
 
 import { NavMain } from "./nav-main";
 import { NavUsage } from "./nav-usage";
-import { NavUser } from "./nav-user";
 import { WorkspaceSwitcher } from "./workspace-switcher";
 
 type WorkspaceData = {
@@ -69,16 +68,6 @@ export function AppSidebar({
       </SidebarContent>
       <SidebarFooter>
         <NavUsage workspace={activeWorkspace} dictionary={dictionary} />
-        {currentUser && (
-          <NavUser
-            user={{
-              name: currentUser.name || currentUser.email,
-              email: currentUser.email,
-              avatar: currentUser.profile_picture || "",
-            }}
-            dictionary={dictionary}
-          />
-        )}
       </SidebarFooter>
     </Sidebar>
   );
