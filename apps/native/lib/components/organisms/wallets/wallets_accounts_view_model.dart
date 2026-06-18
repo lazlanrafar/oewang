@@ -72,6 +72,8 @@ class AccountsViewModel extends ChangeNotifier {
     final sections = <AccountGroupSection>[];
     for (final g in allGroups) {
       final ws = byGroup[g.id] ?? const <Wallet>[];
+      // Skip groups with no accounts — they'd render as an empty header.
+      if (ws.isEmpty) continue;
       var subtotal = Money.zero();
       for (final w in ws) {
         subtotal += Money(amount: w.balance, currency: w.currency);

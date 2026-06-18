@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oewang/components/molecules/page_app_bar.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
+import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 
 /// Settings → Style. Three options: System / Light / Dark.
@@ -69,7 +70,12 @@ class _Row extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Expanded(child: Text(label, style: OewangFonts.sans())),
+            Expanded(
+              child: Text(
+                label,
+                style: OewangFonts.sans(color: context.palette.foreground),
+              ),
+            ),
             if (selected)
               const Icon(Icons.check, color: OewangColors.coral, size: 20),
           ],

@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:oewang/components/layouts/main_shell.dart';
 import 'package:oewang/components/organisms/auth/auth_login_screen.dart';
+import 'package:oewang/components/organisms/budgets/budgets_form_screen.dart';
+import 'package:oewang/components/organisms/budgets/budgets_setting_screen.dart';
 import 'package:oewang/components/organisms/categories/categories_form_screen.dart';
 import 'package:oewang/components/organisms/categories/categories_list_screen.dart';
 import 'package:oewang/components/organisms/settings/currency/settings_main_currency_screen.dart';
@@ -22,6 +24,7 @@ import 'package:oewang/components/organisms/wallets/wallets_include_in_totals_sc
 import 'package:oewang/components/organisms/wallets/wallets_screen.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/domain/models/category.dart' as cat;
+import 'package:oewang/domain/models/budget_status.dart';
 import 'package:oewang/domain/models/transaction.dart';
 import 'package:oewang/domain/models/wallet.dart';
 import 'package:oewang/domain/models/wallet_group.dart';
@@ -48,8 +51,11 @@ class AppRoutes {
   static const String accountGroupAdd = '/settings/accounts/group/add';
   static const String accountSimpleList = '/settings/accounts/list';
   static const String includeInTotals = '/settings/accounts/include';
+  static const String budgetSettings = '/settings/budget';
+  static const String budgetForm = '/settings/budget/add';
 
   static String accountEditFor(String id) => '/accounts/edit/$id';
+  static String budgetEditFor(String id) => '/settings/budget/edit/$id';
   static String categoryEditFor(String id) => '/settings/categories/edit/$id';
   static String accountGroupEditFor(String id) =>
       '/settings/accounts/group/edit/$id';
@@ -184,6 +190,24 @@ GoRouter buildAppRouter(Ref ref) {
       GoRoute(
         path: AppRoutes.includeInTotals,
         builder: (context, state) => const IncludeInTotalsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.budgetSettings,
+        builder: (context, state) => const BudgetSettingScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.budgetForm,
+        builder: (context, state) => const BudgetFormScreen(),
+      ),
+      GoRoute(
+        path: '/settings/budget/edit/:id',
+        builder: (context, state) {
+          final budget = state.extra as BudgetStatus?;
+          if (budget == null) {
+            return const Scaffold(body: Center(child: Text('Missing budget')));
+          }
+          return BudgetFormScreen(budget: budget);
+        },
       ),
       GoRoute(
         path: AppRoutes.style,

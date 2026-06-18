@@ -104,3 +104,6 @@ This check is non-blocking (does not fail the transaction creation if the budget
 | Repository | `apps/api/modules/budgets/budgets.repository.ts` |
 | Model      | `apps/api/modules/budgets/budgets.model.ts`      |
 | E2E        | `apps/app/e2e/budget-calendar-apps.spec.ts`      |
+| Mobile     | `apps/native/lib/components/organisms/budgets/budgets_setting_screen.dart` (list + summary header; tap-to-edit, swipe-to-delete, `+` add) |
+| Mobile     | `apps/native/lib/components/organisms/budgets/budgets_form_screen.dart` (+ `_view_model`; create/edit, category locked on edit) |
+| Mobile     | `apps/native/lib/data/repositories/budgets_repository.dart` (+ remote/fake — `status` + create/update/delete) |

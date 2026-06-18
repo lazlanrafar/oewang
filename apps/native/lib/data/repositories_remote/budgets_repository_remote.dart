@@ -44,4 +44,49 @@ class BudgetsRepositoryRemote implements BudgetsRepository {
       return const Failure(UnknownError());
     }
   }
+
+  @override
+  Future<Result<void, AppError>> create({
+    required String categoryId,
+    required num amount,
+  }) async {
+    try {
+      await _api.post(
+        '/budgets',
+        data: {'categoryId': categoryId, 'amount': amount},
+      );
+      return const Success(null);
+    } on DioException catch (e) {
+      return Failure(mapDioError(e));
+    } on Exception {
+      return const Failure(UnknownError());
+    }
+  }
+
+  @override
+  Future<Result<void, AppError>> update({
+    required String id,
+    required num amount,
+  }) async {
+    try {
+      await _api.put('/budgets/$id', data: {'amount': amount});
+      return const Success(null);
+    } on DioException catch (e) {
+      return Failure(mapDioError(e));
+    } on Exception {
+      return const Failure(UnknownError());
+    }
+  }
+
+  @override
+  Future<Result<void, AppError>> delete(String id) async {
+    try {
+      await _api.delete('/budgets/$id');
+      return const Success(null);
+    } on DioException catch (e) {
+      return Failure(mapDioError(e));
+    } on Exception {
+      return const Failure(UnknownError());
+    }
+  }
 }

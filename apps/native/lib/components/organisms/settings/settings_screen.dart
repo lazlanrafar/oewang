@@ -76,7 +76,7 @@ class SettingsScreen extends ConsumerWidget {
                   ListRow(
                     icon: Icons.account_balance_wallet_outlined,
                     title: 'Budget Setting',
-                    onTap: () => _comingSoon(context, 'Budget Setting'),
+                    onTap: () => context.push(AppRoutes.budgetSettings),
                   ),
                   const SectionLabel('Settings'),
                   ListRow(

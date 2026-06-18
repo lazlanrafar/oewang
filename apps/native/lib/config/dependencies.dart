@@ -100,6 +100,18 @@ final budgetsRepositoryProvider = Provider<BudgetsRepository>((ref) {
   return BudgetsRepositoryRemote(ref.watch(apiClientProvider));
 });
 
+/// Bumped after a budget is created/edited/deleted so the Budget screen reloads.
+class BudgetsRevisionController extends Notifier<int> {
+  @override
+  int build() => 0;
+  void bump() => state = state + 1;
+}
+
+final budgetsRevisionProvider =
+    NotifierProvider<BudgetsRevisionController, int>(
+      BudgetsRevisionController.new,
+    );
+
 final subCurrenciesRepositoryProvider = Provider<SubCurrenciesRepository>((
   ref,
 ) {
