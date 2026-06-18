@@ -10,8 +10,8 @@ import 'package:oewang/domain/models/category.dart' as cat;
 
 /// Add (when [category] is null, using [createType]) or edit a category.
 /// Always a full page — pops `true` on success so the list can refresh.
-class CategoryEditScreen extends ConsumerStatefulWidget {
-  const CategoryEditScreen({this.category, this.createType, super.key})
+class CategoryFormScreen extends ConsumerStatefulWidget {
+  const CategoryFormScreen({this.category, this.createType, super.key})
     : assert(
         category != null || createType != null,
         'Provide a category to edit or a createType to add',
@@ -20,10 +20,10 @@ class CategoryEditScreen extends ConsumerStatefulWidget {
   final cat.CategoryType? createType;
 
   @override
-  ConsumerState<CategoryEditScreen> createState() => _CategoryEditScreenState();
+  ConsumerState<CategoryFormScreen> createState() => _CategoryFormScreenState();
 }
 
-class _CategoryEditScreenState extends ConsumerState<CategoryEditScreen> {
+class _CategoryFormScreenState extends ConsumerState<CategoryFormScreen> {
   late final _ctl = TextEditingController(text: widget.category?.name ?? '');
   bool _saving = false;
   String? _error;

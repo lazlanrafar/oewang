@@ -493,6 +493,7 @@ CI also runs:
 ## Quick reference
 
 - **New screen?** Create `components/organisms/<module>/<module>_<name>_screen.dart` + `components/organisms/<module>/<module>_<name>_view_model.dart` (flat in the module folder) + a `*VmProvider`. Shared widgets go in `atoms/` or `molecules/`, not the module folder.
+- **Add + edit the same record?** Use ONE `<module>_form_screen.dart` (not separate `*_new_screen` / `*_edit_screen`). Take a nullable record arg: `null` ⇒ create, non-null ⇒ edit. The screen branches title/labels and create-vs-update on that. One widget, one provider, less drift. (e.g. `categories_form_screen.dart`, `transactions_form_screen.dart`, `wallets_account_form_screen.dart`.)
 - **New external call?** Add the method to the abstract repository in `data/repositories/`. Implement in `data/repositories_remote/`. Add fixtures to `data/repositories_fake/`.
 - **New domain type?** `@freezed` in `domain/models/`. Mapper in `domain/mappers/`.
 - **New design token?** Add to `core/theme/` only. Never inline.

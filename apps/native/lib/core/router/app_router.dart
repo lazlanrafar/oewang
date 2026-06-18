@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:oewang/components/layouts/main_shell.dart';
 import 'package:oewang/components/organisms/auth/auth_login_screen.dart';
-import 'package:oewang/components/organisms/categories/categories_edit_screen.dart';
+import 'package:oewang/components/organisms/categories/categories_form_screen.dart';
 import 'package:oewang/components/organisms/categories/categories_list_screen.dart';
 import 'package:oewang/components/organisms/settings/currency/settings_main_currency_screen.dart';
 import 'package:oewang/components/organisms/settings/settings_screen.dart';
@@ -116,7 +116,7 @@ GoRouter buildAppRouter(Ref ref) {
       ),
       GoRoute(
         path: AppRoutes.categoryAdd,
-        builder: (context, state) => CategoryEditScreen(
+        builder: (context, state) => CategoryFormScreen(
           createType: state.extra as cat.CategoryType? ?? cat.CategoryType.expense,
         ),
       ),
@@ -129,7 +129,7 @@ GoRouter buildAppRouter(Ref ref) {
               body: Center(child: Text('Missing category')),
             );
           }
-          return CategoryEditScreen(category: category);
+          return CategoryFormScreen(category: category);
         },
       ),
       GoRoute(
