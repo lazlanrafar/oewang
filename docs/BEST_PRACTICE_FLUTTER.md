@@ -367,6 +367,13 @@ Each field is a labelled row that opens an input panel on tap. They report chang
 | `SelectEntityField<T>`  | Picks one item from a list. `gridColumns` → grid picker (with optional `leadingOf` emoji); else a list. |
 | `AmountInputField`      | Shows a live-grouped amount (`Rp 1.000.000`) and opens the keypad; `onChanged` fires per keystroke. Tracks the selected currency (Rp/S$/US$) locally. |
 
+### Standalone input + button atoms
+
+For plain text entry outside the field/drawer system (auth, dialogs) use the two variant-based atoms — don't hand-roll a `TextField`/`OutlinedButton`:
+
+- `Input` (`atoms/input.dart`) — `variant`: `underline` (default — in-app forms), `outlined` (boxed, used by login — Image #50), `filled` (grey box). Optional `label` renders a label above the field. Standard `hintText`/`obscureText`/`keyboardType`/`autofillHints`/`onChanged`/`onSubmitted`.
+- `Button` (`atoms/button.dart`) — `variant`: `primary` (default, filled), `outlined` (bordered, e.g. social buttons), `danger` (coral), `ghost` (transparent). Optional `leading` glyph; built-in `loading` spinner; full-width with square corners.
+
 ### In-form input panels (`FormDrawerHost`)
 
 Pickers render as a **non-modal split panel** pinned to the bottom — a flat, square, full-width "second screen", not a floating modal. The form above stays fully visible and interactive.
