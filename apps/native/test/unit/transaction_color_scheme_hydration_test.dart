@@ -71,7 +71,7 @@ void main() {
       expect(s!.incomeExpensesColor, TransactionColorScheme.redBlue);
     });
 
-    test('logging in triggers hydrateFromServer', () async {
+    test('logging in WITH a workspace triggers hydrateFromServer', () async {
       final settings = SettingsRepositoryFake(
         initial: TransactionColorScheme.redBlue,
       );
@@ -83,7 +83,7 @@ void main() {
       container.read(transactionColorSchemeProvider);
 
       container.read(sessionControllerProvider.notifier).onLoggedIn(
-        const Session(token: 't', userId: 'u'),
+        const Session(token: 't', userId: 'u', workspaceId: 'ws-1'),
       );
 
       // Let the hydrate microtask settle.
@@ -92,6 +92,31 @@ void main() {
       expect(
         container.read(transactionColorSchemeProvider),
         TransactionColorScheme.redBlue,
+      );
+    });
+
+    test('logging in WITHOUT a workspace does NOT hydrate', () async {
+      // A no-workspace session is mid-onboarding; an authed read would 401 and
+      // the 401 handler would clear the session, bouncing the user to login.
+      final settings = SettingsRepositoryFake(
+        initial: TransactionColorScheme.redBlue,
+      );
+      final container = await openContainer(
+        settingsRepo: settings,
+        authRepo: AuthRepositoryFake(),
+      );
+      container.read(transactionColorSchemeProvider);
+
+      container.read(sessionControllerProvider.notifier).onLoggedIn(
+        const Session(token: 't', userId: 'u'),
+      );
+
+      await Future<void>.delayed(const Duration(milliseconds: 30));
+
+      // Stays at the local default — no server hydrate fired.
+      expect(
+        container.read(transactionColorSchemeProvider),
+        TransactionColorScheme.blueRed,
       );
     });
   });

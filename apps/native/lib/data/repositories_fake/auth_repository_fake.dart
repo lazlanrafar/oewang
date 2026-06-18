@@ -35,6 +35,21 @@ class AuthRepositoryFake implements AuthRepository {
   }
 
   @override
+  Future<Result<Session, AppError>> register({
+    required String name,
+    required String email,
+    required String password,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 30));
+    // New users have no workspace yet — onboarding creates one.
+    _session = const Session(
+      token: 'fake-jwt-token',
+      userId: 'fake-user-id',
+    );
+    return Success(_session!);
+  }
+
+  @override
   Future<Session?> currentSession() async => _session;
 
   @override

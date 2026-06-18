@@ -28,7 +28,7 @@ class Button extends StatelessWidget {
     this.variant = ButtonVariant.primary,
     this.leading,
     this.loading = false,
-    this.height = 48,
+    this.height = 44,
     super.key,
   });
 

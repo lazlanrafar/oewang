@@ -163,6 +163,26 @@ export abstract class UsersRepository {
       );
   }
 
+  /**
+   * Workspace ids the user is an *active* member of (membership and workspace
+   * both not soft-deleted). Mirrors the auth plugin so issued JWTs never carry
+   * a workspace the guard would later reject.
+   */
+  static async getActiveWorkspaceIds(user_id: string): Promise<string[]> {
+    const rows = await db
+      .select({ workspace_id: user_workspaces.workspace_id })
+      .from(user_workspaces)
+      .innerJoin(workspaces, eq(user_workspaces.workspace_id, workspaces.id))
+      .where(
+        and(
+          eq(user_workspaces.user_id, user_id),
+          isNull(user_workspaces.deleted_at),
+          isNull(workspaces.deleted_at),
+        ),
+      );
+    return rows.map((r) => r.workspace_id);
+  }
+
   static async getWorkspacesWithRole(user_id: string) {
     return db
       .select({

@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:oewang/components/layouts/main_shell.dart';
 import 'package:oewang/components/organisms/auth/auth_login_screen.dart';
+import 'package:oewang/components/organisms/auth/auth_onboarding_screen.dart';
+import 'package:oewang/components/organisms/auth/auth_register_screen.dart';
 import 'package:oewang/components/organisms/budgets/budgets_form_screen.dart';
 import 'package:oewang/components/organisms/budgets/budgets_setting_screen.dart';
 import 'package:oewang/components/organisms/categories/categories_form_screen.dart';
@@ -33,6 +35,8 @@ class AppRoutes {
   const AppRoutes._();
 
   static const String login = '/login';
+  static const String register = '/register';
+  static const String onboarding = '/onboarding';
   static const String trans = '/trans';
   static const String stats = '/stats';
   static const String accounts = '/accounts';
@@ -89,11 +93,30 @@ GoRouter buildAppRouter(Ref ref) {
       final session = ref.read(sessionControllerProvider);
       if (session.isLoading) return null;
 
-      final loggedIn = session.valueOrNull != null;
-      final goingToLogin = state.matchedLocation == AppRoutes.login;
+      final value = session.valueOrNull;
+      final loggedIn = value != null;
+      final ws = value?.workspaceId;
+      final hasWorkspace = ws != null && ws.isNotEmpty;
+      final loc = state.matchedLocation;
+      // Public (logged-out) routes. Onboarding is NOT public — it needs a
+      // session, so a cleared session there falls back to login instead of
+      // stranding the user on a screen whose API calls 401.
+      const publicRoutes = {AppRoutes.login, AppRoutes.register};
+      const authFlowRoutes = {
+        AppRoutes.login,
+        AppRoutes.register,
+        AppRoutes.onboarding,
+      };
 
-      if (!loggedIn && !goingToLogin) return AppRoutes.login;
-      if (loggedIn && goingToLogin) return AppRoutes.trans;
+      if (!loggedIn) {
+        return publicRoutes.contains(loc) ? null : AppRoutes.login;
+      }
+      // Logged in but no workspace yet → must finish onboarding first.
+      if (!hasWorkspace) {
+        return loc == AppRoutes.onboarding ? null : AppRoutes.onboarding;
+      }
+      // Logged in with a workspace → keep them out of the auth flow.
+      if (authFlowRoutes.contains(loc)) return AppRoutes.trans;
       return null;
     },
     routes: [
@@ -101,6 +124,14 @@ GoRouter buildAppRouter(Ref ref) {
         path: AppRoutes.login,
         pageBuilder: (context, state) =>
             const NoTransitionPage(child: LoginScreen()),
+      ),
+      GoRoute(
+        path: AppRoutes.register,
+        builder: (context, state) => const RegisterScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.onboarding,
+        builder: (context, state) => const OnboardingScreen(),
       ),
       GoRoute(
         path: AppRoutes.transactionForm,

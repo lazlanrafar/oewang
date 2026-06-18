@@ -9,6 +9,14 @@ abstract class AuthRepository {
     required String password,
   });
 
+  /// Calls POST /auth/register, persists the returned token (same shape as
+  /// login). `workspaceId` is null for brand-new users — onboarding creates it.
+  Future<Result<Session, AppError>> register({
+    required String name,
+    required String email,
+    required String password,
+  });
+
   Future<Session?> currentSession();
 
   /// Calls POST /auth/refresh to mint a JWT with the freshest workspace_id +

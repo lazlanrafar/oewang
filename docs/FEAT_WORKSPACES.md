@@ -170,6 +170,13 @@ Role normalization in `workspace-permissions.ts` translates legacy `member` role
 | Middleware | `apps/app/middleware.ts`                                    |
 | Actions    | `apps/app/actions/auth.actions.ts` · `workspace.actions.ts` |
 | E2E        | `apps/app/e2e/auth.spec.ts` · `workspaces.spec.ts`          |
+| Mobile     | `apps/native/lib/components/organisms/auth/auth_register_screen.dart` + `_view_model.dart` (sign-up: name/email/password/confirm; on success pushes onboarding, **stays logged-out** so the router keeps the auth flow) |
+| Mobile     | `apps/native/lib/components/organisms/auth/auth_onboarding_screen.dart` + `_view_model.dart` (single step: workspace name + base currency via `CurrencyCatalog`/`CurrencyPickerScreen` → `POST /workspaces` (always **Free**) → `refreshToken` + `onLoggedIn` into the app. Paid plans are bought later on the web) |
+| Mobile     | `apps/native/lib/components/organisms/transactions/transactions_screen.dart` (`_UpgradeBanner`: dismissible home nudge → `url_launcher` opens `${APP_URL}/en/upgrade`) |
+| Mobile     | `apps/native/lib/data/repositories/auth_repository.dart` (`register()`), `workspaces_repository.dart` (`create()`) (+ remote/fake each) |
+| Mobile     | `apps/native/lib/domain/models/workspace.dart` + `lib/data/dto/workspace_dto.dart` |
+| Mobile     | `apps/native/lib/core/router/app_router.dart` (`/login` + `/register` are public; `currentSession()` decodes the JWT — a logged-in user **without** a workspace is routed to `/onboarding`, which itself requires a session so a cleared/expired token falls back to login). `resolveWorkspaceId` (API) only embeds a workspace the user is an **active member** of, so no-workspace tokens carry an empty `workspace_id` (else the auth guard 401s every call). |
+| Mobile     | `apps/native/lib/config/dependencies.dart` — `TransactionColorSchemeController` (and any app-root session listener) hydrates server data **only when the session has a `workspaceId`**. A no-workspace session is mid-onboarding; an eager authed read would 401 → the interceptor's 401 handler clears the session → bounce to login. Mirrors the web, whose create-workspace page loads no dashboard data. |
 
 ---
 

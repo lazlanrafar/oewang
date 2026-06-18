@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:oewang/components/atoms/button.dart';
 import 'package:oewang/components/atoms/input.dart';
 import 'package:oewang/components/organisms/auth/auth_login_view_model.dart';
 import 'package:oewang/config/dependencies.dart';
+import 'package:oewang/core/router/app_router.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_radius.dart';
@@ -133,11 +135,35 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   const SizedBox(height: OewangSpacing.lg),
                   Button(
                     label: 'Login',
-                    height: 52,
+                    height: 48,
                     loading: vm.submit.running,
                     onPressed: vm.canSubmit ? _onSubmit : null,
                   ),
                 ],
+                const SizedBox(height: OewangSpacing.lg),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      "Don't have an account? ",
+                      style: OewangFonts.sans(
+                        color: palette.mutedForeground,
+                        fontSize: 13,
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => context.push(AppRoutes.register),
+                      child: Text(
+                        'Sign up',
+                        style: OewangFonts.sans(
+                          color: palette.foreground,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ).copyWith(decoration: TextDecoration.underline),
+                      ),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: OewangSpacing.xxl),
                 Text(
                   'By signing in you agree to our Terms of service & Privacy policy',

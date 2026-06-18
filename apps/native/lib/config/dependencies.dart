@@ -13,6 +13,7 @@ import 'package:oewang/data/repositories/transactions_repository.dart';
 import 'package:oewang/data/repositories/users_repository.dart';
 import 'package:oewang/data/repositories/wallet_groups_repository.dart';
 import 'package:oewang/data/repositories/wallets_repository.dart';
+import 'package:oewang/data/repositories/workspaces_repository.dart';
 import 'package:oewang/data/repositories_remote/auth_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/budgets_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/categories_repository_remote.dart';
@@ -23,6 +24,7 @@ import 'package:oewang/data/repositories_remote/transactions_repository_remote.d
 import 'package:oewang/data/repositories_remote/users_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/wallet_groups_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/wallets_repository_remote.dart';
+import 'package:oewang/data/repositories_remote/workspaces_repository_remote.dart';
 import 'package:oewang/data/services/api/api_client.dart';
 import 'package:oewang/data/services/storage/preferences_service.dart';
 import 'package:oewang/data/services/storage/secure_storage_service.dart';
@@ -126,6 +128,10 @@ final usersRepositoryProvider = Provider<UsersRepository>((ref) {
   return UsersRepositoryRemote(ref.watch(apiClientProvider));
 });
 
+final workspacesRepositoryProvider = Provider<WorkspacesRepository>((ref) {
+  return WorkspacesRepositoryRemote(ref.watch(apiClientProvider));
+});
+
 /// Monotonically increasing integer bumped whenever a transaction is
 /// successfully created. Screens that show transaction lists watch this and
 /// reload when it changes.
@@ -146,9 +152,13 @@ final transactionsRevisionProvider =
 class TransactionColorSchemeController extends Notifier<TransactionColorScheme> {
   @override
   TransactionColorScheme build() {
-    // Re-hydrate whenever the session flips to logged-in.
+    // Re-hydrate only once the session has a workspace. A logged-in user
+    // without one is mid-onboarding; authed reads would 401 and the 401
+    // handler would clear the session, bouncing them back to login. (Mirrors
+    // the web, whose create-workspace page loads no dashboard data.)
     ref.listen<AsyncValue<Session?>>(sessionControllerProvider, (prev, next) {
-      if (next.valueOrNull != null) {
+      final ws = next.valueOrNull?.workspaceId;
+      if (ws != null && ws.isNotEmpty) {
         hydrateFromServer();
       }
     });

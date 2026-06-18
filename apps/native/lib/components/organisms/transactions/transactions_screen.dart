@@ -9,9 +9,12 @@ import 'package:oewang/components/organisms/transactions/transactions_header.dar
 import 'package:oewang/components/organisms/transactions/transactions_monthly_screen.dart';
 import 'package:oewang/components/organisms/transactions/transactions_summary_row.dart';
 import 'package:oewang/components/organisms/transactions/transactions_summary_screen.dart';
+import 'package:oewang/config/dependencies.dart';
+import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/domain/models/money.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class TransactionsScreen extends ConsumerStatefulWidget {
   const TransactionsScreen({super.key});
@@ -29,6 +32,16 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     'Description',
   ];
   int _index = 0;
+  // ponytail: not plan-gated (plan isn't in the JWT); shown until dismissed.
+  bool _showUpgrade = true;
+
+  Future<void> _openUpgrade() async {
+    final appUrl = ref.read(envProvider).appUrl;
+    await launchUrl(
+      Uri.parse('$appUrl/en/upgrade'),
+      mode: LaunchMode.externalApplication,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -47,6 +60,11 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       body: SafeArea(
         child: Column(
           children: [
+            if (_showUpgrade)
+              _UpgradeBanner(
+                onTap: _openUpgrade,
+                onDismiss: () => setState(() => _showUpgrade = false),
+              ),
             const TransactionsHeader(),
             SubTabBar(
               labels: _labels,
@@ -74,6 +92,50 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
               },
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Dismissible nudge to buy a paid plan on the web (mobile is free-only).
+class _UpgradeBanner extends StatelessWidget {
+  const _UpgradeBanner({required this.onTap, required this.onDismiss});
+  final VoidCallback onTap;
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.palette;
+    return Material(
+      color: OewangColors.coral.withValues(alpha: 0.12),
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: Row(
+            children: [
+              const Icon(Icons.workspace_premium_outlined,
+                  size: 18, color: OewangColors.coral),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  "You're on the Free plan — upgrade on the web for more.",
+                  style: OewangFonts.sans(
+                    color: palette.foreground,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+              Icon(Icons.open_in_new, size: 14, color: palette.mutedForeground),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: onDismiss,
+                child: Icon(Icons.close,
+                    size: 16, color: palette.mutedForeground),
+              ),
+            ],
+          ),
         ),
       ),
     );
