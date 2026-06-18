@@ -6,6 +6,7 @@ import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/domain/models/category.dart' as cat;
 import 'package:oewang/ui/core/button.dart';
+import 'package:oewang/ui/core/page_app_bar.dart';
 
 class CategoryEditScreen extends ConsumerStatefulWidget {
   const CategoryEditScreen({required this.category, super.key});
@@ -50,19 +51,9 @@ class _CategoryEditScreenState extends ConsumerState<CategoryEditScreen> {
         ? 'Income'
         : 'Exp.';
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.chevron_left),
-              Text(headerLabel),
-            ],
-          ),
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
-        leadingWidth: 130,
-        title: Text('Edit', style: OewangFonts.sans(fontSize: 17)),
+      appBar: PageAppBar(
+        title: 'Edit',
+        backLabel: headerLabel,
       ),
       body: SafeArea(
         child: Padding(

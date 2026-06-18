@@ -4,6 +4,7 @@ import 'package:oewang/core/router/app_router.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
+import 'package:oewang/ui/core/page_app_bar.dart';
 import 'package:oewang/ui/wallets/widgets/card_expenses_display_sheet.dart';
 
 /// IMG_2247 — Accounts Setting hub.
@@ -28,19 +29,9 @@ class _AccountsSettingsScreenState extends State<AccountsSettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.chevron_left),
-              Text('Settings'),
-            ],
-          ),
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
-        leadingWidth: 130,
-        title: Text('Accounts', style: OewangFonts.sans(fontSize: 17)),
+      appBar: const PageAppBar(
+        title: 'Accounts',
+        backLabel: 'Settings',
       ),
       body: SafeArea(
         child: ListView(

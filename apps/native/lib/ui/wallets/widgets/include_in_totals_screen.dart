@@ -8,6 +8,7 @@ import 'package:oewang/domain/models/money.dart';
 import 'package:oewang/domain/models/wallet.dart';
 import 'package:oewang/domain/models/wallet_group.dart';
 import 'package:oewang/ui/core/money_text.dart';
+import 'package:oewang/ui/core/page_app_bar.dart';
 
 /// IMG_2250 — checkbox-driven Include-in-Totals editor. Selection is local;
 /// persistence lands when the wallet settings endpoint is wired.
@@ -30,22 +31,9 @@ class _IncludeInTotalsScreenState extends ConsumerState<IncludeInTotalsScreen> {
     final palette = context.palette;
 
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.chevron_left),
-              Text('Accounts'),
-            ],
-          ),
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
-        leadingWidth: 130,
-        title: Text(
-          'Include in totals',
-          style: OewangFonts.sans(fontSize: 17),
-        ),
+      appBar: const PageAppBar(
+        title: 'Include in totals',
+        backLabel: 'Accounts',
       ),
       body: SafeArea(
         child: groupsAsync.when(

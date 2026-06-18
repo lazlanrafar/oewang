@@ -5,6 +5,7 @@ import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/domain/models/wallet_group.dart';
+import 'package:oewang/ui/core/page_app_bar.dart';
 
 /// IMG_2248 — canonical account-group catalog. Read-only against
 /// `walletGroupsRepositoryProvider`.
@@ -16,19 +17,9 @@ class AccountGroupScreen extends ConsumerWidget {
     final async = ref.watch(_groupsProvider);
     final palette = context.palette;
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.chevron_left),
-              Text('Accounts'),
-            ],
-          ),
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
-        leadingWidth: 130,
-        title: Text('Account Group', style: OewangFonts.sans(fontSize: 17)),
+      appBar: PageAppBar(
+        title: 'Account Group',
+        backLabel: 'Accounts',
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 4),

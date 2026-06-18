@@ -7,6 +7,7 @@ import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/domain/models/category.dart' as cat;
+import 'package:oewang/ui/core/page_app_bar.dart';
 
 final categoriesByTypeProvider = FutureProvider.autoDispose
     .family<List<cat.Category>, cat.CategoryType>((ref, type) async {
@@ -36,19 +37,9 @@ class CategoryListScreen extends ConsumerWidget {
     final palette = context.palette;
     final title = type == cat.CategoryType.income ? 'Income' : 'Exp.';
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.chevron_left),
-              Text('Settings'),
-            ],
-          ),
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
-        leadingWidth: 130,
-        title: Text(title, style: OewangFonts.sans(fontSize: 17)),
+      appBar: PageAppBar(
+        title: title,
+        backLabel: 'Settings',
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 8),

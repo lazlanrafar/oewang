@@ -8,6 +8,7 @@ import 'package:oewang/domain/models/transaction_settings.dart';
 import 'package:oewang/ui/core/button.dart';
 import 'package:oewang/ui/core/form/form_drawer.dart';
 import 'package:oewang/ui/core/form/select_field.dart';
+import 'package:oewang/ui/core/page_app_bar.dart';
 
 /// Global workspace transaction settings (IMG_3355). Every row is live —
 /// changes PATCH `/v1/settings/transaction`. The Note button row is
@@ -22,16 +23,9 @@ class TransactionSettingsScreen extends ConsumerWidget {
     final ctl = ref.read(transactionSettingsProvider.notifier);
 
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [Icon(Icons.chevron_left), Text('Settings')],
-          ),
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
-        leadingWidth: 130,
-        title: Text('Transaction Settings', style: OewangFonts.sans(fontSize: 17)),
+      appBar: const PageAppBar(
+        title: 'Transaction Settings',
+        backLabel: 'Settings',
       ),
       body: SafeArea(
         child: async.when(
@@ -370,17 +364,7 @@ class _MonthlyStartDateScreenState
   Widget build(BuildContext context) {
     final palette = context.palette;
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [Icon(Icons.chevron_left), Text('Back')],
-          ),
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
-        leadingWidth: 110,
-        title: Text('Monthly Start Date', style: OewangFonts.sans(fontSize: 17)),
-      ),
+      appBar: const PageAppBar(title: 'Monthly Start Date'),
       body: SafeArea(
         child: FormDrawerHost(
           child: ListView(

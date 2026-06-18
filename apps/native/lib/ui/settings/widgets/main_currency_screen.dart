@@ -4,6 +4,7 @@ import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/data/dto/currency_catalog.dart';
 import 'package:oewang/domain/models/currency.dart';
 import 'package:oewang/ui/core/button.dart';
+import 'package:oewang/ui/core/page_app_bar.dart';
 import 'package:oewang/ui/settings/widgets/currency_picker_screen.dart';
 
 /// IMG_1849 / IMG_2258 — Main Currency Setting. Persisting it lives behind
@@ -32,22 +33,9 @@ class _MainCurrencyScreenState extends State<MainCurrencyScreen> {
   Widget build(BuildContext context) {
     final palette = context.palette;
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.chevron_left),
-              Text('Settings'),
-            ],
-          ),
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
-        leadingWidth: 130,
-        title: Text(
-          'Main Currency Setting',
-          style: OewangFonts.sans(fontSize: 17),
-        ),
+      appBar: PageAppBar(
+        title: 'Main Currency Setting',
+        backLabel: 'Settings',
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 12),

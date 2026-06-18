@@ -10,6 +10,7 @@ import 'package:oewang/ui/core/form/amount_input_field.dart';
 import 'package:oewang/ui/core/form/form_drawer.dart';
 import 'package:oewang/ui/core/form/form_field_row.dart';
 import 'package:oewang/ui/core/form/select_entity_field.dart';
+import 'package:oewang/ui/core/page_app_bar.dart';
 import 'package:oewang/ui/wallets/view_models/account_form_view_model.dart';
 
 final accountFormVmProvider =
@@ -54,19 +55,9 @@ class AccountFormScreen extends ConsumerWidget {
     final palette = context.palette;
 
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.chevron_left),
-              Text('Accounts'),
-            ],
-          ),
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
-        leadingWidth: 130,
-        title: Text('Add', style: OewangFonts.sans(fontSize: 17)),
+      appBar: const PageAppBar(
+        title: 'Add',
+        backLabel: 'Accounts',
       ),
       body: SafeArea(
         child: FormDrawerHost(

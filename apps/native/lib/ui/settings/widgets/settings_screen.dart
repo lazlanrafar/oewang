@@ -254,7 +254,7 @@ class _Row extends StatelessWidget {
                     title,
                     style: OewangFonts.sans(
                       color: palette.foreground,
-                      fontSize: 15,
+                      fontSize: 14,
                       fontWeight: FontWeight.w500,
                     ),
                   ),

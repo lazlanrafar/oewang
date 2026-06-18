@@ -13,6 +13,7 @@ import 'package:oewang/ui/core/form/form_drawer.dart';
 import 'package:oewang/ui/core/form/form_field_row.dart';
 import 'package:oewang/ui/core/form/select_date_field.dart';
 import 'package:oewang/ui/core/form/select_entity_field.dart';
+import 'package:oewang/ui/core/page_app_bar.dart';
 import 'package:oewang/ui/transactions/view_models/transaction_form_view_model.dart';
 import 'package:oewang/ui/transactions/widgets/segmented_pill_tabs.dart';
 
@@ -58,19 +59,9 @@ class TransactionFormScreen extends ConsumerWidget {
     };
 
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.chevron_left),
-              Text('Trans.'),
-            ],
-          ),
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
-        leadingWidth: 110,
-        title: Text(title, style: OewangFonts.sans(fontSize: 17)),
+      appBar: PageAppBar(
+        title: title,
+        backLabel: 'Trans.',
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 8),

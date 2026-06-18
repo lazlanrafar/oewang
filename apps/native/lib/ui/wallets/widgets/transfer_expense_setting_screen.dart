@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
+import 'package:oewang/ui/core/page_app_bar.dart';
 
 /// IMG_2252 — informational empty state.
 class TransferExpenseSettingScreen extends StatelessWidget {
@@ -10,22 +11,8 @@ class TransferExpenseSettingScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = context.palette;
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.chevron_left),
-              Text('Back'),
-            ],
-          ),
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
-        leadingWidth: 100,
-        title: Text(
-          'Transfer-Expense setting',
-          style: OewangFonts.sans(fontSize: 17),
-        ),
+      appBar: const PageAppBar(
+        title: 'Transfer-Expense setting',
       ),
       body: SafeArea(
         child: Column(

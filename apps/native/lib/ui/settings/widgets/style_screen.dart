@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
+import 'package:oewang/ui/core/page_app_bar.dart';
 
 /// Settings → Style. Three options: System / Light / Dark.
 class StyleScreen extends ConsumerWidget {
@@ -15,19 +16,9 @@ class StyleScreen extends ConsumerWidget {
     final mode = ref.watch(themeModeProvider);
     final ctl = ref.read(themeModeProvider.notifier);
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.chevron_left),
-              Text('Settings'),
-            ],
-          ),
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
-        leadingWidth: 130,
-        title: Text('Style', style: OewangFonts.sans(fontSize: 17)),
+      appBar: const PageAppBar(
+        title: 'Style',
+        backLabel: 'Settings',
       ),
       body: SafeArea(
         child: ListView(

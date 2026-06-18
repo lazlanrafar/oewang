@@ -8,6 +8,7 @@ import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/data/dto/currency_catalog.dart';
 import 'package:oewang/domain/models/currency.dart';
 import 'package:oewang/domain/models/sub_currency.dart';
+import 'package:oewang/ui/core/page_app_bar.dart';
 import 'package:oewang/ui/settings/widgets/currency_picker_screen.dart';
 
 /// Bumped after add/delete so the list provider re-fetches.
@@ -48,22 +49,9 @@ class SubCurrencyScreen extends ConsumerWidget {
     final rates = ref.watch(_ratesProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.chevron_left),
-              Text('Settings'),
-            ],
-          ),
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
-        leadingWidth: 130,
-        title: Text(
-          'Sub Currency Setting',
-          style: OewangFonts.sans(fontSize: 17),
-        ),
+      appBar: PageAppBar(
+        title: 'Sub Currency Setting',
+        backLabel: 'Settings',
         actions: [
           IconButton(
             onPressed: () => _showInstructions(context),

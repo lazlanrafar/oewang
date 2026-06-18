@@ -6,6 +6,7 @@ import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/domain/models/wallet.dart';
 import 'package:oewang/domain/models/wallet_group.dart';
+import 'package:oewang/ui/core/page_app_bar.dart';
 
 /// IMG_2249 — accounts grouped by their group, names only.
 class AccountSimpleListScreen extends ConsumerWidget {
@@ -18,19 +19,9 @@ class AccountSimpleListScreen extends ConsumerWidget {
     final palette = context.palette;
 
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.chevron_left),
-              Text('Accounts'),
-            ],
-          ),
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
-        leadingWidth: 130,
-        title: Text('Accounts', style: OewangFonts.sans(fontSize: 17)),
+      appBar: PageAppBar(
+        title: 'Accounts',
+        backLabel: 'Accounts',
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 4),
