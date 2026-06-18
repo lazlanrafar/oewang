@@ -444,6 +444,49 @@ function buildTools(
       },
     }),
 
+    getDebtAnalysis: tool({
+      description:
+        "Summarize the user's outstanding debts (money owed) and receivables (money owed to them). A visual canvas renders automatically; just write a short text summary. Use when the user asks about their debts, what they owe, or what they're owed.",
+      parameters: z.object({}),
+      execute: async () => {
+        const result = await executor("getDebtAnalysis", {});
+        const payload = result?.data ?? result;
+        if (Number(payload?.metrics?.count ?? 0) > 0) {
+          onArtifact("debt-canvas", payload);
+        }
+        return result;
+      },
+    }),
+
+    getBudgetStatus: tool({
+      description:
+        "Show budget vs. actual spending per category for a given month. A visual canvas renders automatically; just write a short text summary. Use when the user asks about budgets, how much they've spent against budget, or whether they're over budget.",
+      parameters: z.object({
+        month: z
+          .number()
+          .int()
+          .min(1)
+          .max(12)
+          .nullable()
+          .optional()
+          .describe("Month number 1-12. Defaults to current month."),
+        year: z
+          .number()
+          .int()
+          .nullable()
+          .optional()
+          .describe("Four-digit year. Defaults to current year."),
+      }),
+      execute: async (args) => {
+        const result = await executor("getBudgetStatus", args);
+        const payload = result?.data ?? result;
+        if (Array.isArray(payload?.budgets) && payload.budgets.length > 0) {
+          onArtifact("budget-canvas", payload);
+        }
+        return result;
+      },
+    }),
+
     // ── Item tools ──────────────────────────────────────────────────────────
 
     add_transaction_items: tool({

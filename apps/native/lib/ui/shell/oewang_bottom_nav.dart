@@ -9,12 +9,14 @@ class OewangBottomNav extends StatelessWidget {
     required this.currentIndex,
     required this.onSelect,
     super.key,
-    DateTime? today,
-  }) : _today = today;
+    DateTime? month,
+  }) : _month = month;
 
   final int currentIndex;
   final ValueChanged<int> onSelect;
-  final DateTime? _today;
+
+  /// Active month shown under the Trans. tab. Defaults to the current month.
+  final DateTime? _month;
 
   static const List<_NavItem> _items = [
     _NavItem(label: 'Trans', icon: Icons.menu_book_outlined),
@@ -25,8 +27,8 @@ class OewangBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final today = _today ?? DateTime.now();
-    final dayLabel = DateFormat('dd/MM').format(today);
+    final month = _month ?? DateTime.now();
+    final monthLabel = DateFormat('MM/yyyy').format(month);
     final palette = context.palette;
 
     return DecoratedBox(
@@ -46,7 +48,7 @@ class OewangBottomNav extends StatelessWidget {
                     item: _items[i],
                     selected: i == currentIndex,
                     onTap: () => onSelect(i),
-                    overrideLabel: i == 0 ? dayLabel : null,
+                    overrideLabel: i == 0 ? monthLabel : null,
                   ),
                 ),
             ],

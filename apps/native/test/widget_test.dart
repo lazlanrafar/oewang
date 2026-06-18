@@ -13,13 +13,13 @@ void main() {
           bottomNavigationBar: OewangBottomNav(
             currentIndex: 0,
             onSelect: (i) => selected = i,
-            today: DateTime(2026, 1, 5),
+            month: DateTime(2026, 1, 5),
           ),
         ),
       ),
     );
 
-    expect(find.text('05/01'), findsOneWidget);
+    expect(find.text('01/2026'), findsOneWidget);
     expect(find.text('Stats'), findsOneWidget);
     expect(find.text('Accounts'), findsOneWidget);
     expect(find.text('More'), findsOneWidget);

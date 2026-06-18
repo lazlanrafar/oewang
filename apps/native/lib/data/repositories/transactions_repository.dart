@@ -23,4 +23,9 @@ abstract class TransactionsRepository {
   );
 
   Future<Result<Transaction, AppError>> create(NewTransactionDraft draft);
+
+  Future<Result<Transaction, AppError>> update(
+    String id,
+    NewTransactionDraft draft,
+  );
 }

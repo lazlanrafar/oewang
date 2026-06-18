@@ -2,96 +2,63 @@ import 'package:flutter/material.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
-import 'package:oewang/domain/models/money.dart';
 import 'package:oewang/domain/models/transaction.dart';
 import 'package:oewang/ui/core/money_text.dart';
 
 /// Single row inside the day-grouped list (IMG_1826).
 class TransactionRow extends StatelessWidget {
-  const TransactionRow({required this.transaction, super.key});
+  const TransactionRow({required this.transaction, this.onTap, super.key});
 
   final Transaction transaction;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final tx = Theme.of(context).extension<TransactionColors>()!;
     final palette = context.palette;
-    final isIncome = transaction.isIncome;
-    final amountColor = isIncome ? tx.income : tx.expense;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          _CategoryGlyph(category: transaction.category?.name),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  transaction.category?.name ??
-                      transaction.name ??
-                      'Uncategorized',
-                  style: OewangFonts.sans(color: palette.foreground),
-                ),
-                if (transaction.wallet != null) ...[
-                  const SizedBox(height: 2),
+    final amountColor = switch (transaction.type) {
+      TransactionType.income || TransactionType.transferIn => tx.income,
+      TransactionType.expense || TransactionType.transferOut => tx.expense,
+      TransactionType.transfer => palette.foreground,
+    };
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   Text(
-                    transaction.wallet!.name,
-                    style: OewangFonts.sans(
-                      color: palette.mutedForeground,
-                      fontSize: 12,
-                    ),
+                    transaction.category?.name ??
+                        transaction.name ??
+                        'Uncategorized',
+                    style: OewangFonts.sans(color: palette.foreground),
                   ),
+                  if (transaction.wallet != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      transaction.wallet!.name,
+                      style: OewangFonts.sans(
+                        color: palette.mutedForeground,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
-          Expanded(
-            child: MoneyText(
-              amount: isIncome ? transaction.amount : const Money(amount: 0),
-              color: tx.income,
-              textAlign: TextAlign.right,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: MoneyText(
-              amount: isIncome ? const Money(amount: 0) : transaction.amount,
+            const SizedBox(width: 12),
+            MoneyText(
+              amount: transaction.amount,
               color: amountColor,
               textAlign: TextAlign.right,
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CategoryGlyph extends StatelessWidget {
-  const _CategoryGlyph({required this.category});
-
-  final String? category;
-
-  static const _emojiByCategory = <String, String>{
-    'Food': '🍜',
-    'Rent': '🏠',
-    'Laundry': '🧣',
-    'Transport': '🚕',
-    'Coffee': '☕',
-    'Salary': '💰',
-    'Allowance': '🤑',
-  };
-
-  @override
-  Widget build(BuildContext context) {
-    final emoji = _emojiByCategory[category] ?? '🪙';
-    return SizedBox(
-      width: 28,
-      height: 28,
-      child: Center(
-        child: Text(emoji, style: const TextStyle(fontSize: 22)),
+          ],
+        ),
       ),
     );
   }

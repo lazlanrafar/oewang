@@ -13,20 +13,9 @@ export type ArtifactStage =
 export type ArtifactType =
   | "burn-rate-canvas"
   | "revenue-canvas"
-  | "profit-canvas"
-  | "growth-rate-canvas"
-  | "runway-canvas"
-  | "cash-flow-canvas"
-  | "balance-sheet-canvas"
-  | "category-expenses-canvas"
   | "spending-canvas"
-  | "tax-summary-canvas"
-  | "profit-analysis-canvas"
-  | "forecast-canvas"
-  | "stress-test-canvas"
-  | "invoice-payment-canvas"
-  | "health-report-canvas"
-  | "breakdown-summary-canvas";
+  | "debt-canvas"
+  | "budget-canvas";
 
 /**
  * Maps tool names to artifact types
@@ -34,31 +23,10 @@ export type ArtifactType =
  */
 export const TOOL_TO_ARTIFACT_MAP: Record<string, ArtifactType> = {
   getBurnRate: "burn-rate-canvas",
-  burnRate: "burn-rate-canvas",
-  getRunway: "runway-canvas",
-  runway: "runway-canvas",
   getRevenueSummary: "revenue-canvas",
-  revenue: "revenue-canvas",
-  getGrowthRate: "growth-rate-canvas",
-  getProfitAnalysis: "profit-canvas",
-  profitLoss: "profit-canvas",
-  getCashFlow: "cash-flow-canvas",
-  cashFlow: "cash-flow-canvas",
-  getBalanceSheet: "balance-sheet-canvas",
-  balanceSheet: "balance-sheet-canvas",
-  getExpenses: "category-expenses-canvas",
-  expenses: "category-expenses-canvas",
-  getSpending: "spending-canvas",
-  spending: "spending-canvas",
-  getTaxSummary: "tax-summary-canvas",
-  taxSummary: "tax-summary-canvas",
-  getForecast: "forecast-canvas",
-  forecast: "forecast-canvas",
-  cashFlowForecast: "forecast-canvas",
-  stressTest: "stress-test-canvas",
-  getCashFlowStressTest: "stress-test-canvas",
-  getInvoicePaymentAnalysis: "invoice-payment-canvas",
-  getMetricsBreakdown: "breakdown-summary-canvas",
+  getSpendingAnalysis: "spending-canvas",
+  getDebtAnalysis: "debt-canvas",
+  getBudgetStatus: "budget-canvas",
 };
 
 /**
@@ -101,76 +69,20 @@ const CUSTOM_STAGE_MESSAGES: Partial<
     metrics_ready: "Metrics calculated, generating insights...",
     analysis_ready: "Analysis complete",
   },
-  "profit-canvas": {
-    loading: "Preparing profit analysis...",
-    chart_ready: "Chart data ready, calculating metrics...",
-    metrics_ready: "Metrics calculated, generating insights...",
-    analysis_ready: "Analysis complete",
-  },
-  "growth-rate-canvas": {
-    loading: "Preparing growth rate analysis...",
-    chart_ready: "Chart data ready, calculating metrics...",
-    metrics_ready: "Metrics calculated, generating insights...",
-    analysis_ready: "Analysis complete",
-  },
-  "runway-canvas": {
-    loading: "Preparing runway analysis...",
-    chart_ready: "Chart data ready, calculating metrics...",
-    metrics_ready: "Metrics calculated, generating insights...",
-    analysis_ready: "Analysis complete",
-  },
-  "forecast-canvas": {
-    loading: "Preparing revenue forecast...",
-    chart_ready: "Chart data ready, calculating metrics...",
-    metrics_ready: "Metrics calculated, generating insights...",
-    analysis_ready: "Analysis complete",
-  },
-  "cash-flow-canvas": {
-    loading: "Preparing cash flow analysis...",
-    chart_ready: "Chart data ready, calculating metrics...",
-    metrics_ready: "Metrics calculated, generating insights...",
-    analysis_ready: "Analysis complete",
-  },
-  "tax-summary-canvas": {
-    loading: "Preparing tax summary...",
-    chart_ready: "Chart data ready, calculating metrics...",
-    metrics_ready: "Metrics calculated, generating insights...",
-    analysis_ready: "Analysis complete",
-  },
-  "stress-test-canvas": {
-    loading: "Preparing stress test scenarios...",
-    chart_ready: "Scenarios calculated, computing metrics...",
-    metrics_ready: "Metrics ready, generating insights...",
-    analysis_ready: "Analysis complete",
-  },
   "spending-canvas": {
     loading: "Preparing spending analysis...",
     chart_ready: "Chart data ready, calculating metrics...",
     metrics_ready: "Metrics calculated, generating insights...",
     analysis_ready: "Analysis complete",
   },
-  "balance-sheet-canvas": {
-    loading: "Preparing balance sheet...",
-    chart_ready: "Chart data ready, calculating metrics...",
-    metrics_ready: "Metrics calculated, generating insights...",
+  "debt-canvas": {
+    loading: "Preparing debt summary...",
+    metrics_ready: "Totals calculated, generating insights...",
     analysis_ready: "Analysis complete",
   },
-  "health-report-canvas": {
-    loading: "Preparing business health score...",
-    chart_ready: "Chart data ready, calculating metrics...",
-    metrics_ready: "Metrics calculated, generating insights...",
-    analysis_ready: "Analysis complete",
-  },
-  "invoice-payment-canvas": {
-    loading: "Preparing invoice payment analysis...",
-    chart_ready: "Chart data ready, calculating metrics...",
-    metrics_ready: "Metrics calculated, generating insights...",
-    analysis_ready: "Analysis complete",
-  },
-  "breakdown-summary-canvas": {
-    loading: "Preparing breakdown summary...",
-    chart_ready: "Chart data ready, calculating metrics...",
-    metrics_ready: "Metrics calculated, generating insights...",
+  "budget-canvas": {
+    loading: "Preparing budget status...",
+    metrics_ready: "Totals calculated, generating insights...",
     analysis_ready: "Analysis complete",
   },
 };
@@ -194,11 +106,6 @@ const CUSTOM_SECTION_MESSAGES: Partial<
     Chart: "Loading chart data...",
     Metrics: "Calculating metrics...",
     Summary: "Generating analysis...",
-  },
-  "forecast-canvas": {
-    Chart: "Loading forecast data...",
-    Metrics: "Calculating forecast metrics...",
-    Summary: "Generating forecast insights...",
   },
 };
 

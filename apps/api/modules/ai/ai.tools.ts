@@ -5,6 +5,7 @@ import { aggregateRecall } from "./ai.recall.utils";
 
 const log = createLogger("ai.tools");
 
+import { BudgetsService } from "../budgets/budgets.service";
 import { ContactsRepository } from "../contacts/contacts.repository";
 import { ContactsService } from "../contacts/contacts.service";
 import { DebtsService } from "../debts/debts.service";
@@ -459,6 +460,93 @@ async function buildBurnRatePayload(workspaceId: string, input: any) {
   };
 }
 
+/** Build debt/receivable summary payload from real debt data */
+async function buildDebtPayload(workspaceId: string, _input: any) {
+  const currency = await getWorkspaceCurrency(workspaceId);
+  const res = await DebtsService.getDebts(workspaceId, { page: 1, limit: 100 });
+  const rows: any[] = (res as any)?.data ?? [];
+
+  const outstanding = rows.filter((d) => Number(d.remainingAmount || 0) > 0);
+  const totalPayable = outstanding
+    .filter((d) => d.type === "payable")
+    .reduce((s, d) => s + Number(d.remainingAmount || 0), 0);
+  const totalReceivable = outstanding
+    .filter((d) => d.type === "receivable")
+    .reduce((s, d) => s + Number(d.remainingAmount || 0), 0);
+
+  const debtsList = outstanding
+    .sort((a, b) => Number(b.remainingAmount) - Number(a.remainingAmount))
+    .slice(0, 20)
+    .map((d) => ({
+      id: d.id,
+      contact: d.contactName || "Unknown",
+      type: d.type,
+      remaining: Number(d.remainingAmount || 0),
+      dueDate: d.dueDate
+        ? new Date(d.dueDate).toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+          })
+        : "—",
+      status: d.status,
+    }));
+
+  const net = totalReceivable - totalPayable;
+  const summary =
+    outstanding.length > 0
+      ? `You owe ${currency} ${totalPayable.toFixed(2)} across ${outstanding.filter((d) => d.type === "payable").length} payable(s), and are owed ${currency} ${totalReceivable.toFixed(2)}. Net position: ${net >= 0 ? "+" : ""}${currency} ${net.toFixed(2)}.`
+      : "You have no outstanding debts or receivables.";
+
+  return {
+    stage: "analysis_ready",
+    currency,
+    debts: debtsList,
+    metrics: { totalPayable, totalReceivable, net, count: outstanding.length },
+    analysis: { summary },
+  };
+}
+
+/** Build budget vs. actual payload from real budget status (current month) */
+async function buildBudgetPayload(workspaceId: string, input: any) {
+  const currency = await getWorkspaceCurrency(workspaceId);
+  const res = await BudgetsService.getStatus(
+    workspaceId,
+    input?.month,
+    input?.year,
+  );
+  const rows: any[] = (res as any)?.data ?? [];
+
+  const totalBudget = rows.reduce((s, b) => s + Number(b.amount || 0), 0);
+  const totalSpent = rows.reduce((s, b) => s + Number(b.spent || 0), 0);
+  const remaining = totalBudget - totalSpent;
+  const percentage =
+    totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
+
+  const budgets = rows
+    .sort((a, b) => Number(b.percentage || 0) - Number(a.percentage || 0))
+    .map((b) => ({
+      id: b.id,
+      category: b.categoryName || "Uncategorized",
+      amount: Number(b.amount || 0),
+      spent: Number(b.spent || 0),
+      percentage: Number(b.percentage || 0),
+    }));
+
+  const overBudget = budgets.filter((b) => b.percentage > 100);
+  const summary =
+    rows.length > 0
+      ? `You've spent ${currency} ${totalSpent.toFixed(2)} of your ${currency} ${totalBudget.toFixed(2)} budget this month (${percentage}%).${overBudget.length > 0 ? ` ${overBudget.length} categor${overBudget.length === 1 ? "y is" : "ies are"} over budget: ${overBudget.map((b) => b.category).join(", ")}.` : " You're within budget across all categories."}`
+      : "No budgets have been set up yet.";
+
+  return {
+    stage: "analysis_ready",
+    currency,
+    budgets,
+    metrics: { totalBudget, totalSpent, remaining, percentage },
+    analysis: { summary },
+  };
+}
+
 export async function executeAiTool(
   toolName: string,
   input: any,
@@ -610,6 +698,16 @@ export async function executeAiTool(
       case "getSpendingAnalysis": {
         const spendData = await buildSpendingPayload(workspaceId, input);
         result = { success: true, data: spendData };
+        break;
+      }
+      case "getDebtAnalysis": {
+        const debtData = await buildDebtPayload(workspaceId, input);
+        result = { success: true, data: debtData };
+        break;
+      }
+      case "getBudgetStatus": {
+        const budgetData = await buildBudgetPayload(workspaceId, input);
+        result = { success: true, data: budgetData };
         break;
       }
       case "add_transaction_items": {

@@ -69,6 +69,33 @@ class TransactionsRepositoryFake implements TransactionsRepository {
   }
 
   @override
+  Future<Result<Transaction, AppError>> update(
+    String id,
+    NewTransactionDraft draft,
+  ) async {
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+    final index = _store.indexWhere((t) => t.id == id);
+    if (index == -1) return const Failure(UnknownError());
+    final existing = _store[index];
+    final updated = Transaction(
+      id: id,
+      type: draft.type,
+      amount: Money(amount: draft.amount, currency: existing.amount.currency),
+      date: DateTime(draft.date.year, draft.date.month, draft.date.day),
+      walletId: draft.walletId,
+      toWalletId: draft.toWalletId,
+      categoryId: draft.categoryId,
+      name: draft.note,
+      description: draft.description,
+      wallet: existing.wallet,
+      toWallet: existing.toWallet,
+      category: existing.category,
+    );
+    _store[index] = updated;
+    return Success(updated);
+  }
+
+  @override
   Future<Result<List<Transaction>, AppError>> list(
     TransactionsListQuery query,
   ) async {

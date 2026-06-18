@@ -14,21 +14,25 @@ import 'package:oewang/ui/transactions/widgets/amount_calculator_sheet.dart';
 import 'package:oewang/ui/transactions/widgets/entity_picker_sheet.dart';
 import 'package:oewang/ui/transactions/widgets/segmented_pill_tabs.dart';
 
-final transactionFormVmProvider =
-    ChangeNotifierProvider.autoDispose<TransactionFormViewModel>(
-      (ref) => TransactionFormViewModel(
+final transactionFormVmProvider = ChangeNotifierProvider.autoDispose
+    .family<TransactionFormViewModel, Transaction?>(
+      (ref, editing) => TransactionFormViewModel(
         transactions: ref.watch(transactionsRepositoryProvider),
         wallets: ref.watch(walletsRepositoryProvider),
         categories: ref.watch(categoriesRepositoryProvider),
+        editing: editing,
       ),
     );
 
 class TransactionFormScreen extends ConsumerWidget {
-  const TransactionFormScreen({super.key});
+  const TransactionFormScreen({super.key, this.transaction});
+
+  /// When non-null the form opens in edit mode for this transaction.
+  final Transaction? transaction;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final vm = ref.watch(transactionFormVmProvider);
+    final vm = ref.watch(transactionFormVmProvider(transaction));
     final tx = Theme.of(context).extension<TransactionColors>()!;
     final palette = context.palette;
     final saveTint = switch (vm.state.type) {

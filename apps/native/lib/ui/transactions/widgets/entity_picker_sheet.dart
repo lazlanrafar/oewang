@@ -32,6 +32,10 @@ class EntityPickerSheet<T> extends StatelessWidget {
       context: context,
       backgroundColor: context.palette.card,
       isScrollControlled: true,
+      useSafeArea: true,
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.75,
+      ),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),

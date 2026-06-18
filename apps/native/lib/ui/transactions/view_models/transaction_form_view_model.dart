@@ -86,10 +86,13 @@ class TransactionFormViewModel extends ChangeNotifier {
     required TransactionsRepository transactions,
     required WalletsRepository wallets,
     required CategoriesRepository categories,
+    Transaction? editing,
   }) : _transactions = transactions,
        _wallets = wallets,
-       _categories = categories {
-    save = Command<NewTransactionDraft, Transaction>(_transactions.create)
+       _categories = categories,
+       _editingId = editing?.id {
+    if (editing != null) _state = _stateFrom(editing);
+    save = Command<NewTransactionDraft, Transaction>(_runSave)
       ..addListener(notifyListeners);
     _loadPickers();
   }
@@ -97,6 +100,9 @@ class TransactionFormViewModel extends ChangeNotifier {
   final TransactionsRepository _transactions;
   final WalletsRepository _wallets;
   final CategoriesRepository _categories;
+  final String? _editingId;
+
+  bool get isEditing => _editingId != null;
 
   TransactionFormState _state = TransactionFormState.initial();
   List<Wallet> _walletOptions = const [];
@@ -204,6 +210,35 @@ class TransactionFormViewModel extends ChangeNotifier {
     final err = save.error;
     if (err != null) return Failure<Transaction, AppError>(err);
     return null;
+  }
+
+  /// Dispatches the Save command to create (new) or update (editing).
+  Future<Result<Transaction, AppError>> _runSave(NewTransactionDraft draft) {
+    final id = _editingId;
+    return id == null
+        ? _transactions.create(draft)
+        : _transactions.update(id, draft);
+  }
+
+  /// Seeds the form from an existing transaction for edit mode.
+  static TransactionFormState _stateFrom(Transaction t) {
+    final type = switch (t.type) {
+      TransactionType.income => TransactionType.income,
+      TransactionType.transfer ||
+      TransactionType.transferIn ||
+      TransactionType.transferOut => TransactionType.transfer,
+      _ => TransactionType.expense,
+    };
+    return TransactionFormState(
+      type: type,
+      date: DateTime(t.date.year, t.date.month, t.date.day),
+      amount: t.amount.amount,
+      walletId: t.walletId,
+      toWalletId: t.toWalletId,
+      categoryId: t.categoryId,
+      note: t.name ?? '',
+      description: t.description ?? '',
+    );
   }
 
   void resetForContinue() {

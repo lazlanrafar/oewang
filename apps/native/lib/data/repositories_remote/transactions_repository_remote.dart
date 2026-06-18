@@ -82,5 +82,36 @@ class TransactionsRepositoryRemote implements TransactionsRepository {
     }
   }
 
+  @override
+  Future<Result<Transaction, AppError>> update(
+    String id,
+    NewTransactionDraft draft,
+  ) async {
+    try {
+      final body = <String, dynamic>{
+        'type': draft.type.wire,
+        'amount': draft.amount,
+        'date': _dateFmt.format(draft.date),
+        'walletId': draft.walletId,
+        if (draft.toWalletId != null) 'toWalletId': draft.toWalletId,
+        if (draft.categoryId != null) 'categoryId': draft.categoryId,
+        if (draft.note != null) 'name': draft.note,
+        if (draft.description != null) 'description': draft.description,
+      };
+      final res = await _api.put('/transactions/$id', data: body);
+      final json = (res.data as Map<String, dynamic>)['data'];
+      if (json is! Map<String, dynamic>) {
+        return const Failure(
+          ServerError(statusCode: 500, message: 'Unexpected update response'),
+        );
+      }
+      return Success(TransactionDto.fromJson(json).toDomain());
+    } on DioException catch (e) {
+      return Failure(mapDioError(e));
+    } on Exception {
+      return const Failure(UnknownError());
+    }
+  }
+
   AppError _mapDioError(DioException e) => mapDioError(e);
 }

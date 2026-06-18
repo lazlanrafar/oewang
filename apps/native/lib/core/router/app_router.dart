@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/domain/models/category.dart' as cat;
+import 'package:oewang/domain/models/transaction.dart';
 import 'package:oewang/ui/auth/widgets/login_screen.dart';
 import 'package:oewang/ui/categories/widgets/category_edit_screen.dart';
 import 'package:oewang/ui/categories/widgets/category_list_screen.dart';
@@ -91,7 +92,8 @@ GoRouter buildAppRouter(Ref ref) {
       ),
       GoRoute(
         path: AppRoutes.transactionForm,
-        builder: (context, state) => const TransactionFormScreen(),
+        builder: (context, state) =>
+            TransactionFormScreen(transaction: state.extra as Transaction?),
       ),
       GoRoute(
         path: AppRoutes.accountForm,

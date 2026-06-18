@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:oewang/core/router/app_router.dart';
 import 'package:oewang/ui/shell/oewang_bottom_nav.dart';
 import 'package:oewang/ui/shell/oewang_fab.dart';
+import 'package:oewang/ui/transactions/view_models/month_transactions_controller.dart';
 
 /// Hosts the 4-tab bottom-nav shell. Each tab is its own [StatefulShellBranch]
 /// so back-stacks are preserved per tab.
-class MainShell extends StatelessWidget {
+class MainShell extends ConsumerWidget {
   const MainShell({required this.navigationShell, super.key});
 
   final StatefulNavigationShell navigationShell;
 
-  static const int _settingsTabIndex = 3;
+  static const int _transactionsTabIndex = 0;
 
   void _onSelect(int index) {
     navigationShell.goBranch(
@@ -25,9 +27,10 @@ class MainShell extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final index = navigationShell.currentIndex;
-    final showFab = index != _settingsTabIndex;
+    final showFab = index == _transactionsTabIndex;
+    final month = ref.watch(monthControllerProvider);
     return Scaffold(
       body: navigationShell,
       floatingActionButton: showFab
@@ -36,6 +39,7 @@ class MainShell extends StatelessWidget {
       bottomNavigationBar: OewangBottomNav(
         currentIndex: index,
         onSelect: _onSelect,
+        month: month,
       ),
     );
   }
