@@ -37,6 +37,7 @@ class AppRoutes {
   static const String transactionSettings = '/settings/transaction';
   static const String categoriesIncome = '/settings/categories/income';
   static const String categoriesExpense = '/settings/categories/expense';
+  static const String categoryAdd = '/settings/categories/add';
   static const String mainCurrency = '/settings/currency/main';
   static const String subCurrency = '/settings/currency/sub';
   static const String style = '/settings/style';
@@ -112,6 +113,12 @@ GoRouter buildAppRouter(Ref ref) {
         path: AppRoutes.categoriesExpense,
         builder: (context, state) =>
             const CategoryListScreen(type: cat.CategoryType.expense),
+      ),
+      GoRoute(
+        path: AppRoutes.categoryAdd,
+        builder: (context, state) => CategoryEditScreen(
+          createType: state.extra as cat.CategoryType? ?? cat.CategoryType.expense,
+        ),
       ),
       GoRoute(
         path: '/settings/categories/edit/:id',

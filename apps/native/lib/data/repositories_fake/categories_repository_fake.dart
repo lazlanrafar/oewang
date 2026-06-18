@@ -35,6 +35,34 @@ class CategoriesRepositoryFake implements CategoriesRepository {
           .toList();
 
   final List<Category> _store;
+  int _seq = 0;
+
+  @override
+  Future<Result<Category, AppError>> create({
+    required String name,
+    required CategoryType type,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+    final created = Category(id: 'cat-new-${_seq++}', name: name, type: type);
+    _store.add(created);
+    return Success(created);
+  }
+
+  @override
+  Future<Result<void, AppError>> delete(String id) async {
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+    _store.removeWhere((c) => c.id == id);
+    return const Success(null);
+  }
+
+  @override
+  Future<Result<void, AppError>> reorder(List<String> orderedIds) async {
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+    _store.sort(
+      (a, b) => orderedIds.indexOf(a.id).compareTo(orderedIds.indexOf(b.id)),
+    );
+    return const Success(null);
+  }
 
   @override
   Future<Result<List<Category>, AppError>> list({CategoryType? type}) async {

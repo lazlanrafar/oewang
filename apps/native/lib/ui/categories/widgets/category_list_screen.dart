@@ -25,133 +25,220 @@ class _CategoriesRevision extends Notifier<int> {
 final _categoriesRevisionProvider =
     NotifierProvider<_CategoriesRevision, int>(_CategoriesRevision.new);
 
-/// IMG_1846 (Income) / IMG_1847 (Expense). Read-only delete/reorder for now
-/// — the pencil pushes the edit screen.
-class CategoryListScreen extends ConsumerWidget {
+/// IMG_1846 (Income) / IMG_1847 (Expense). Delete / edit / drag-to-reorder.
+class CategoryListScreen extends ConsumerStatefulWidget {
   const CategoryListScreen({required this.type, super.key});
   final cat.CategoryType type;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final async = ref.watch(categoriesByTypeProvider(type));
+  ConsumerState<CategoryListScreen> createState() => _CategoryListScreenState();
+}
+
+class _CategoryListScreenState extends ConsumerState<CategoryListScreen> {
+  // Local copy so drag-reorder updates instantly; synced from the provider.
+  List<cat.Category> _items = [];
+  // Which row has its Delete action revealed (only one at a time).
+  String? _openId;
+
+  void _bump() => ref.read(_categoriesRevisionProvider.notifier).bump();
+
+  Future<void> _add() async {
+    final saved = await context.push<bool>(
+      AppRoutes.categoryAdd,
+      extra: widget.type,
+    );
+    if ((saved ?? false) && mounted) _bump();
+  }
+
+  Future<void> _delete(cat.Category c) async {
+    setState(() => _openId = null);
+    final res = await ref.read(categoriesRepositoryProvider).delete(c.id);
+    if (!mounted) return;
+    res.fold((_) => _bump(), (e) => _snack(e.message));
+  }
+
+  Future<void> _reorder(int oldIndex, int newIndex) async {
+    setState(() {
+      final target = newIndex > oldIndex ? newIndex - 1 : newIndex;
+      final moved = _items.removeAt(oldIndex);
+      _items.insert(target, moved);
+    });
+    final res = await ref
+        .read(categoriesRepositoryProvider)
+        .reorder(_items.map((c) => c.id).toList());
+    if (!mounted) return;
+    res.fold((_) {}, (e) {
+      _snack(e.message);
+      _bump(); // reload to undo the optimistic move
+    });
+  }
+
+  void _snack(String msg) => ScaffoldMessenger.of(context)
+      .showSnackBar(SnackBar(content: Text(msg)));
+
+  @override
+  Widget build(BuildContext context) {
+    final async = ref.watch(categoriesByTypeProvider(widget.type));
+    // Keep the local list in sync whenever the provider re-fetches.
+    ref.listen(categoriesByTypeProvider(widget.type), (_, next) {
+      final data = next.valueOrNull;
+      if (data != null) setState(() => _items = List.of(data));
+    });
     final palette = context.palette;
-    final title = type == cat.CategoryType.income ? 'Income' : 'Exp.';
+    final title = widget.type == cat.CategoryType.income ? 'Income' : 'Exp.';
     return Scaffold(
       appBar: PageAppBar(
         title: title,
         backLabel: 'Settings',
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: Icon(Icons.add, color: palette.foreground),
+          IconButton(
+            onPressed: _add,
+            icon: Icon(Icons.add, color: palette.foreground),
           ),
         ],
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            _SubcategoryToggle(),
-            Divider(height: 1, color: palette.border),
-            Expanded(
-              child: async.when(
-                data: (items) => ListView.separated(
-                  itemCount: items.length,
-                  separatorBuilder: (_, _) =>
-                      Divider(height: 1, color: palette.border),
-                  itemBuilder: (context, i) {
-                    final c = items[i];
-                    return _CategoryRow(
-                      category: c,
-                      onEdit: () async {
-                        final saved = await context.push<bool>(
-                          AppRoutes.categoryEditFor(c.id),
-                          extra: c,
-                        );
-                        if (saved ?? false) {
-                          ref
-                              .read(_categoriesRevisionProvider.notifier)
-                              .bump();
-                        }
-                      },
+        child: async.when(
+          data: (items) {
+            final list = _items.isEmpty ? items : _items;
+            return ReorderableListView.builder(
+                itemCount: list.length,
+                onReorder: _reorder,
+                itemBuilder: (context, i) => _CategoryRow(
+                  key: ValueKey(list[i].id),
+                  index: i,
+                  category: list[i],
+                  isOpen: _openId == list[i].id,
+                  onToggleOpen: () => setState(
+                    () => _openId = _openId == list[i].id ? null : list[i].id,
+                  ),
+                  onDelete: () => _delete(list[i]),
+                  onEdit: () async {
+                    final saved = await context.push<bool>(
+                      AppRoutes.categoryEditFor(list[i].id),
+                      extra: list[i],
                     );
+                    if (saved ?? false) _bump();
                   },
                 ),
-                loading: () =>
-                    const Center(child: CircularProgressIndicator()),
-                error: (e, _) => Center(
-                  child: Text(
-                    e.toString(),
-                    style: OewangFonts.sans(color: OewangColors.coral),
-                  ),
-                ),
-              ),
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => Center(
+            child: Text(
+              e.toString(),
+              style: OewangFonts.sans(color: OewangColors.coral),
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _SubcategoryToggle extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.palette;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              'Subcategory',
-              style: OewangFonts.sans(color: palette.foreground),
-            ),
-          ),
-          Switch(value: false, onChanged: (_) {}),
-        ],
-      ),
-    );
-  }
-}
+// Width of the revealed Delete action (also how far the row slides left).
+const double _kDeleteWidth = 96;
+const double _kRowHeight = 56;
 
 class _CategoryRow extends StatelessWidget {
-  const _CategoryRow({required this.category, required this.onEdit});
+  const _CategoryRow({
+    required this.index,
+    required this.category,
+    required this.isOpen,
+    required this.onToggleOpen,
+    required this.onEdit,
+    required this.onDelete,
+    super.key,
+  });
+  final int index;
   final cat.Category category;
+  final bool isOpen;
+  final VoidCallback onToggleOpen;
   final VoidCallback onEdit;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      child: Row(
+    return SizedBox(
+      height: _kRowHeight,
+      child: Stack(
         children: [
-          const Icon(
-            Icons.remove_circle,
-            color: OewangColors.coral,
-            size: 22,
-          ),
-          const SizedBox(width: 12),
-          if (category.emoji != null) ...[
-            Text(category.emoji!, style: const TextStyle(fontSize: 18)),
-            const SizedBox(width: 8),
-          ],
-          Expanded(
-            child: Text(
-              category.name,
-              style: OewangFonts.sans(color: palette.foreground),
+          // Delete action behind, pinned to the right edge.
+          Positioned(
+            top: 0,
+            bottom: 0,
+            right: 0,
+            width: _kDeleteWidth,
+            child: GestureDetector(
+              onTap: onDelete,
+              child: ColoredBox(
+                color: OewangColors.coral,
+                child: Center(
+                  child: Text(
+                    'Delete',
+                    style: OewangFonts.sans(color: Colors.white, fontSize: 15),
+                  ),
+                ),
+              ),
             ),
           ),
-          IconButton(
-            tooltip: 'Edit',
-            onPressed: onEdit,
-            icon: Icon(
-              Icons.edit_outlined,
-              color: palette.mutedForeground,
+          // Foreground row — slides left to reveal the Delete action.
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOut,
+            top: 0,
+            bottom: 0,
+            left: isOpen ? -_kDeleteWidth : 0,
+            right: isOpen ? _kDeleteWidth : 0,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: palette.background,
+                border: Border(bottom: BorderSide(color: palette.border)),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Row(
+                  children: [
+                    IconButton(
+                      tooltip: 'Delete',
+                      onPressed: onToggleOpen,
+                      icon: Icon(
+                        Icons.remove_circle,
+                        color: palette.mutedForeground,
+                        size: 18,
+                      ),
+                    ),
+                    if (category.emoji != null) ...[
+                      Text(category.emoji!,
+                          style: const TextStyle(fontSize: 18)),
+                      const SizedBox(width: 8),
+                    ],
+                    Expanded(
+                      child: Text(
+                        category.name,
+                        style: OewangFonts.sans(color: palette.foreground),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Edit',
+                      onPressed: onEdit,
+                      icon: Icon(Icons.edit_outlined,
+                          color: palette.mutedForeground),
+                    ),
+                    ReorderableDragStartListener(
+                      index: index,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: Icon(Icons.drag_handle,
+                            color: palette.mutedForeground),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
-          Icon(Icons.drag_handle, color: palette.mutedForeground),
-          const SizedBox(width: 8),
         ],
       ),
     );

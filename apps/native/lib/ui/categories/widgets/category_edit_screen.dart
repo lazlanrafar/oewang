@@ -2,24 +2,35 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
-import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/domain/models/category.dart' as cat;
 import 'package:oewang/ui/core/button.dart';
+import 'package:oewang/ui/core/input.dart';
 import 'package:oewang/ui/core/page_app_bar.dart';
 
+/// Add (when [category] is null, using [createType]) or edit a category.
+/// Always a full page — pops `true` on success so the list can refresh.
 class CategoryEditScreen extends ConsumerStatefulWidget {
-  const CategoryEditScreen({required this.category, super.key});
-  final cat.Category category;
+  const CategoryEditScreen({this.category, this.createType, super.key})
+    : assert(
+        category != null || createType != null,
+        'Provide a category to edit or a createType to add',
+      );
+  final cat.Category? category;
+  final cat.CategoryType? createType;
 
   @override
   ConsumerState<CategoryEditScreen> createState() => _CategoryEditScreenState();
 }
 
 class _CategoryEditScreenState extends ConsumerState<CategoryEditScreen> {
-  late final _ctl = TextEditingController(text: widget.category.name);
+  late final _ctl = TextEditingController(text: widget.category?.name ?? '');
   bool _saving = false;
   String? _error;
+
+  bool get _isCreate => widget.category == null;
+  cat.CategoryType get _type =>
+      widget.category?.type ?? widget.createType!;
 
   @override
   void dispose() {
@@ -32,10 +43,11 @@ class _CategoryEditScreenState extends ConsumerState<CategoryEditScreen> {
       _saving = true;
       _error = null;
     });
-    final res = await ref.read(categoriesRepositoryProvider).update(
-      id: widget.category.id,
-      name: _ctl.text.trim(),
-    );
+    final repo = ref.read(categoriesRepositoryProvider);
+    final name = _ctl.text.trim();
+    final res = _isCreate
+        ? await repo.create(name: name, type: _type)
+        : await repo.update(id: widget.category!.id, name: name);
     if (!mounted) return;
     setState(() => _saving = false);
     res.fold(
@@ -46,13 +58,10 @@ class _CategoryEditScreenState extends ConsumerState<CategoryEditScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final palette = context.palette;
-    final headerLabel = widget.category.type == cat.CategoryType.income
-        ? 'Income'
-        : 'Exp.';
+    final headerLabel = _type == cat.CategoryType.income ? 'Income' : 'Exp.';
     return Scaffold(
       appBar: PageAppBar(
-        title: 'Edit',
+        title: _isCreate ? 'Add' : 'Edit',
         backLabel: headerLabel,
       ),
       body: SafeArea(
@@ -63,27 +72,16 @@ class _CategoryEditScreenState extends ConsumerState<CategoryEditScreen> {
             children: [
               Row(
                 children: [
-                  if (widget.category.emoji != null) ...[
+                  if (widget.category?.emoji != null) ...[
                     Text(
-                      widget.category.emoji!,
+                      widget.category!.emoji!,
                       style: const TextStyle(fontSize: 22),
                     ),
                     const SizedBox(width: 8),
                   ],
-                  Expanded(
-                    child: TextField(
-                      controller: _ctl,
-                      decoration:
-                          const InputDecoration(border: InputBorder.none),
-                      style: OewangFonts.sans(
-                        color: palette.foreground,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
+                  Expanded(child: Input(controller: _ctl, autofocus: true)),
                 ],
               ),
-              Divider(color: palette.border),
               const SizedBox(height: 16),
               if (_error != null) ...[
                 Text(
