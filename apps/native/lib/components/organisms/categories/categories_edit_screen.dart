@@ -91,10 +91,13 @@ class _CategoryEditScreenState extends ConsumerState<CategoryEditScreen> {
                 ),
                 const SizedBox(height: 12),
               ],
-              Button(
-                label: 'Save',
-                loading: _saving,
-                onPressed: _ctl.text.trim().isEmpty ? null : _save,
+              ListenableBuilder(
+                listenable: _ctl,
+                builder: (context, _) => Button(
+                  label: 'Save',
+                  loading: _saving,
+                  onPressed: _ctl.text.trim().isEmpty ? null : _save,
+                ),
               ),
             ],
           ),
