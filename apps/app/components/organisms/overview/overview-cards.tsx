@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 
 import { useChatActions } from "@ai-sdk-tools/store";
 import { useQuery } from "@tanstack/react-query";
@@ -63,6 +63,16 @@ function ValueSkeleton() {
 /** Skeleton block for a sub-line (trend) */
 function TrendSkeleton() {
   return <Skeleton className="mt-1 h-3 w-24" />;
+}
+
+/** Gray footer bar: date/description on the left, trend badge on the right */
+function CardFooterBar({ left, right }: { left: ReactNode; right?: ReactNode }) {
+  return (
+    <div className="mt-auto flex items-center justify-between gap-2 border-t bg-muted/60 px-4 py-2 text-xs">
+      <span className="truncate text-muted-foreground">{left}</span>
+      {right}
+    </div>
+  );
 }
 
 function formatRangeText(startDate?: string, endDate?: string) {
@@ -245,9 +255,7 @@ export function OverviewCards({
 
   const renderTrend = (current: number, previous: number, reverseColors = false) => {
     if (isLoading) return <TrendSkeleton />;
-    if (!previous && !current) return null;
-    if (!previous)
-      return <span className="ml-2 text-muted-foreground text-xs">{dictionary.overview.metrics.no_prior_data}</span>;
+    if (!previous) return null;
 
     const percentage = ((current - previous) / previous) * 100;
     const isPositive = percentage > 0;
@@ -258,16 +266,15 @@ export function OverviewCards({
       colorClass = isPositive ? "text-red-500" : "text-emerald-500";
     }
 
+    const Arrow = isNeutral ? Minus : isPositive ? ArrowUpRight : ArrowDownRight;
+
     return (
-      <span className={cn("ml-2 flex items-center font-medium text-xs tracking-tight", colorClass)}>
-        {isPositive ? (
-          <ArrowUpRight className="mr-0.5 h-3 w-3" />
-        ) : isNeutral ? (
-          <Minus className="mr-0.5 h-3 w-3" />
-        ) : (
-          <ArrowDownRight className="mr-0.5 h-3 w-3" />
-        )}
-        {Math.abs(percentage).toFixed(1)}% {dictionary.overview.metrics.vs_last_month}
+      <span className={cn("flex items-center gap-1.5 font-medium tracking-tight", colorClass)}>
+        {isPositive ? "+ " : isNeutral ? "" : "- "}
+        {Math.abs(percentage).toFixed(1)}%
+        <span className="flex h-5 w-5 items-center justify-center border bg-background text-foreground">
+          <Arrow className="h-3 w-3" />
+        </span>
       </span>
     );
   };
@@ -277,7 +284,7 @@ export function OverviewCards({
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4">
         {/* Total Income */}
         <Card
-          className="cursor-pointer rounded-none shadow-none transition-colors hover:border-primary/50"
+          className="flex cursor-pointer flex-col rounded-none p-0 shadow-none transition-colors hover:border-primary/50"
           onClick={() => handleCardClick(dictionary.overview.chips.monthly_summary_msg)}
         >
           <CardHeader className="p-4 pb-2">
@@ -287,20 +294,17 @@ export function OverviewCards({
             </CardTitle>
             <CardDescription className="sr-only">Current month total income</CardDescription>
           </CardHeader>
-          <CardContent className="p-4 pt-0">
+          <CardContent className="p-4 pt-0 pb-3">
             <div className="font-medium font-serif text-2xl tracking-tight">
               <CountUp value={currentRevenue} formatter={fmt} />
             </div>
-            <div className="mt-1 flex items-center">
-              <span className="text-muted-foreground text-xs">{rangeLabel}</span>
-              {renderTrend(currentRevenue, previousRevenue)}
-            </div>
           </CardContent>
+          <CardFooterBar left={rangeLabel} right={renderTrend(currentRevenue, previousRevenue)} />
         </Card>
 
         {/* Total Expenses */}
         <Card
-          className="cursor-pointer rounded-none shadow-none transition-colors hover:border-primary/50"
+          className="flex cursor-pointer flex-col rounded-none p-0 shadow-none transition-colors hover:border-primary/50"
           onClick={() => handleCardClick(dictionary.overview.chips.spending_analysis_msg)}
         >
           <CardHeader className="p-4 pb-2">
@@ -310,20 +314,17 @@ export function OverviewCards({
             </CardTitle>
             <CardDescription className="sr-only">Current month total expenses</CardDescription>
           </CardHeader>
-          <CardContent className="p-4 pt-0">
+          <CardContent className="p-4 pt-0 pb-3">
             <div className="font-medium font-serif text-2xl tracking-tight">
               <CountUp value={currentExpense} formatter={fmt} />
             </div>
-            <div className="mt-1 flex items-center">
-              <span className="text-muted-foreground text-xs">{rangeLabel}</span>
-              {renderTrend(currentExpense, previousExpense, true)}
-            </div>
           </CardContent>
+          <CardFooterBar left={rangeLabel} right={renderTrend(currentExpense, previousExpense, true)} />
         </Card>
 
         {/* Net Income */}
         <Card
-          className="cursor-pointer rounded-none shadow-none transition-colors hover:border-primary/50"
+          className="flex cursor-pointer flex-col rounded-none p-0 shadow-none transition-colors hover:border-primary/50"
           onClick={() => handleCardClick(dictionary.overview.chips.monthly_summary_msg)}
         >
           <CardHeader className="p-4 pb-2">
@@ -333,20 +334,17 @@ export function OverviewCards({
             </CardTitle>
             <CardDescription className="sr-only">Current month net income</CardDescription>
           </CardHeader>
-          <CardContent className="p-4 pt-0">
+          <CardContent className="p-4 pt-0 pb-3">
             <div className="font-medium font-serif text-2xl tracking-tight">
               <CountUp value={currentNetIncome} formatter={fmt} />
             </div>
-            <div className="mt-1 flex items-center">
-              <span className="text-muted-foreground text-xs">{rangeLabel}</span>
-              {renderTrend(currentNetIncome, previousNetIncome)}
-            </div>
           </CardContent>
+          <CardFooterBar left={rangeLabel} right={renderTrend(currentNetIncome, previousNetIncome)} />
         </Card>
 
         {/* Top Expense Category */}
         <Card
-          className="flex cursor-pointer flex-col justify-between rounded-none shadow-none transition-colors hover:border-primary/50"
+          className="flex cursor-pointer flex-col rounded-none p-0 shadow-none transition-colors hover:border-primary/50"
           onClick={() => handleCardClick(dictionary.overview.chips.top_expenses_msg)}
         >
           <CardHeader className="p-4 pb-2">
@@ -356,27 +354,28 @@ export function OverviewCards({
             </CardTitle>
             <CardDescription className="sr-only">Highest expense category this month</CardDescription>
           </CardHeader>
-          <CardContent className="p-4 pt-0">
+          <CardContent className="p-4 pt-0 pb-3">
             {loadingCategory ? (
-              <>
-                <Skeleton className="h-6 w-32" />
-                <TrendSkeleton />
-              </>
+              <Skeleton className="h-6 w-32" />
             ) : topCategory ? (
-              <>
-                <div className="truncate font-medium text-lg">{topCategory.name}</div>
-                <div className="mt-1 text-muted-foreground text-xs">
-                  <CountUp value={topCategory.value} formatter={fmt} /> {rangeLabel}
-                </div>
-              </>
+              <div className="truncate font-medium text-lg">{topCategory.name}</div>
             ) : (
-              <div className="mt-2 text-muted-foreground text-sm">{dictionary.overview.metrics.no_expenses}</div>
+              <div className="text-muted-foreground text-sm">{dictionary.overview.metrics.no_expenses}</div>
             )}
           </CardContent>
+          {topCategory ? (
+            <CardFooterBar
+              left={
+                <>
+                  {fmt(topCategory.value)} {rangeLabel}
+                </>
+              }
+            />
+          ) : null}
         </Card>
 
         <Card
-          className="cursor-pointer rounded-none shadow-none transition-colors hover:border-primary/50"
+          className="flex cursor-pointer flex-col rounded-none p-0 shadow-none transition-colors hover:border-primary/50"
           onClick={() => handleCardClick(dictionary.overview.chips.avg_burn_msg)}
         >
           <CardHeader className="p-4 pb-2">
@@ -386,16 +385,16 @@ export function OverviewCards({
             </CardTitle>
             <CardDescription className="sr-only">Average monthly burn rate</CardDescription>
           </CardHeader>
-          <CardContent className="p-4 pt-0">
+          <CardContent className="p-4 pt-0 pb-3">
             <div className="font-medium font-serif text-2xl tracking-tight">
               <CountUp value={averageBurn} formatter={fmt} />
             </div>
-            <div className="mt-1 text-muted-foreground text-xs">{rangeLabel}</div>
           </CardContent>
+          <CardFooterBar left={rangeLabel} />
         </Card>
 
         <Card
-          className="cursor-pointer rounded-none shadow-none transition-colors hover:border-primary/50"
+          className="flex cursor-pointer flex-col rounded-none p-0 shadow-none transition-colors hover:border-primary/50"
           onClick={() => handleCardClick(dictionary.overview.chips.budget_usage_msg)}
         >
           <CardHeader className="p-4 pb-2">
@@ -405,18 +404,16 @@ export function OverviewCards({
             </CardTitle>
             <CardDescription className="sr-only">Current budget usage</CardDescription>
           </CardHeader>
-          <CardContent className="p-4 pt-0">
+          <CardContent className="p-4 pt-0 pb-3">
             <div className="font-medium font-serif text-2xl tracking-tight">
               <CountUp value={Math.round(budgetUsage)} formatter={(v) => `${Math.round(v)}%`} />
             </div>
-            <div className="mt-1 text-muted-foreground text-xs">
-              {loadingBudgets ? <TrendSkeleton /> : `${fmt(totalBudgetSpent)} of ${fmt(totalBudgeted)}`}
-            </div>
           </CardContent>
+          <CardFooterBar left={loadingBudgets ? "—" : `${fmt(totalBudgetSpent)} of ${fmt(totalBudgeted)}`} />
         </Card>
 
         <Card
-          className="cursor-pointer rounded-none shadow-none transition-colors hover:border-primary/50"
+          className="flex cursor-pointer flex-col rounded-none p-0 shadow-none transition-colors hover:border-primary/50"
           onClick={() => handleCardClick(dictionary.overview.chips.debt_balance_msg)}
         >
           <CardHeader className="p-4 pb-2">
@@ -426,18 +423,16 @@ export function OverviewCards({
             </CardTitle>
             <CardDescription className="sr-only">Net open debt balance</CardDescription>
           </CardHeader>
-          <CardContent className="p-4 pt-0">
+          <CardContent className="p-4 pt-0 pb-3">
             <div className="font-medium font-serif text-2xl tracking-tight">
               <CountUp value={debtBalance} formatter={fmt} />
             </div>
-            <div className="mt-1 text-muted-foreground text-xs">
-              {loadingDebts ? <TrendSkeleton /> : `${openDebts.length} open balances`}
-            </div>
           </CardContent>
+          <CardFooterBar left={loadingDebts ? "—" : `${openDebts.length} open balances`} />
         </Card>
 
         <Card
-          className="cursor-pointer rounded-none shadow-none transition-colors hover:border-primary/50"
+          className="flex cursor-pointer flex-col rounded-none p-0 shadow-none transition-colors hover:border-primary/50"
           onClick={() => handleCardClick(dictionary.overview.chips.tracked_balance_msg)}
         >
           <CardHeader className="p-4 pb-2">
@@ -447,18 +442,18 @@ export function OverviewCards({
             </CardTitle>
             <CardDescription className="sr-only">Included account balances</CardDescription>
           </CardHeader>
-          <CardContent className="p-4 pt-0">
+          <CardContent className="p-4 pt-0 pb-3">
             <div className="font-medium font-serif text-2xl tracking-tight">
               <CountUp value={trackedBalance} formatter={fmt} />
             </div>
-            <div className="mt-1 text-muted-foreground text-xs">
-              {loadingWallets ? (
-                <TrendSkeleton />
-              ) : (
-                `${walletsData.filter((wallet) => wallet.isIncludedInTotals).length} included accounts`
-              )}
-            </div>
           </CardContent>
+          <CardFooterBar
+            left={
+              loadingWallets
+                ? "—"
+                : `${walletsData.filter((wallet) => wallet.isIncludedInTotals).length} included accounts`
+            }
+          />
         </Card>
       </div>
 
