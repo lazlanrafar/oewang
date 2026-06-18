@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:oewang/config/dependencies.dart';
+import 'package:oewang/core/format/amount_format.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/domain/models/category.dart';
-import 'package:oewang/domain/models/money.dart';
 import 'package:oewang/domain/models/transaction.dart';
 import 'package:oewang/domain/models/wallet.dart';
+import 'package:oewang/ui/core/form/amount_input_field.dart';
+import 'package:oewang/ui/core/form/form_drawer.dart';
+import 'package:oewang/ui/core/form/form_field_row.dart';
+import 'package:oewang/ui/core/form/select_date_field.dart';
+import 'package:oewang/ui/core/form/select_entity_field.dart';
 import 'package:oewang/ui/transactions/view_models/transaction_form_view_model.dart';
-import 'package:oewang/ui/transactions/widgets/amount_calculator_sheet.dart';
-import 'package:oewang/ui/transactions/widgets/entity_picker_sheet.dart';
 import 'package:oewang/ui/transactions/widgets/segmented_pill_tabs.dart';
 
 final transactionFormVmProvider = ChangeNotifierProvider.autoDispose
@@ -23,6 +25,14 @@ final transactionFormVmProvider = ChangeNotifierProvider.autoDispose
         editing: editing,
       ),
     );
+
+/// Returns the first element matching [test], or `null`.
+T? _firstOrNull<T>(Iterable<T> items, bool Function(T) test) {
+  for (final item in items) {
+    if (test(item)) return item;
+  }
+  return null;
+}
 
 class TransactionFormScreen extends ConsumerWidget {
   const TransactionFormScreen({super.key, this.transaction});
@@ -69,15 +79,19 @@ class TransactionFormScreen extends ConsumerWidget {
         ],
       ),
       body: SafeArea(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            SegmentedPillTabs(
+        child: FormDrawerHost(
+          child: ListView(
+            padding: EdgeInsets.zero,
+            children: [
+              SegmentedPillTabs(
               selected: vm.state.type,
               onChanged: vm.setType,
             ),
             Divider(height: 1, color: palette.border),
-            _DateRow(vm: vm),
+            SelectDateField(
+              value: vm.state.date,
+              onChanged: vm.setDate,
+            ),
             Divider(height: 1, color: palette.border),
             _AmountRow(vm: vm),
             Divider(height: 1, color: palette.border),
@@ -85,9 +99,34 @@ class TransactionFormScreen extends ConsumerWidget {
               _TransferWalletsRow(vm: vm),
               Divider(height: 1, color: palette.border),
             ] else ...[
-              _CategoryRow(vm: vm),
+              SelectEntityField<Category>(
+                label: 'Category',
+                placeholder: 'Choose a category',
+                gridColumns: 3,
+                leadingOf: (c) => c.emoji,
+                value: _firstOrNull(
+                  vm.categoryOptions,
+                  (c) => c.id == vm.state.categoryId,
+                ),
+                items: vm.categoryOptions,
+                labelOf: (c) => c.name,
+                idOf: (c) => c.id,
+                onSelected: (c) => vm.setCategory(c.id),
+              ),
               Divider(height: 1, color: palette.border),
-              _AccountRow(vm: vm),
+              SelectEntityField<Wallet>(
+                label: 'Account',
+                placeholder: 'Choose an account',
+                gridColumns: 3,
+                value: _firstOrNull(
+                  vm.walletOptions,
+                  (w) => w.id == vm.state.walletId,
+                ),
+                items: vm.walletOptions,
+                labelOf: (w) => w.name,
+                idOf: (w) => w.id,
+                onSelected: (w) => vm.setWallet(w.id),
+              ),
               Divider(height: 1, color: palette.border),
             ],
             _NoteRow(vm: vm),
@@ -104,62 +143,8 @@ class TransactionFormScreen extends ConsumerWidget {
                 ),
               ),
             _ActionRow(vm: vm, saveTint: saveTint),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _LabelledRow extends StatelessWidget {
-  const _LabelledRow({required this.label, required this.child});
-  final String label;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          SizedBox(
-            width: 84,
-            child: Text(
-              label,
-              style: OewangFonts.sans(color: context.palette.mutedForeground),
-            ),
+            ],
           ),
-          Expanded(child: child),
-        ],
-      ),
-    );
-  }
-}
-
-class _DateRow extends StatelessWidget {
-  const _DateRow({required this.vm});
-  final TransactionFormViewModel vm;
-
-  @override
-  Widget build(BuildContext context) {
-    final formatted =
-        DateFormat('EEE, dd/MM/yyyy').format(vm.state.date);
-    return _LabelledRow(
-      label: 'Date',
-      child: InkWell(
-        onTap: () async {
-          final picked = await showDatePicker(
-            context: context,
-            initialDate: vm.state.date,
-            firstDate: DateTime(2000),
-            lastDate: DateTime(2100),
-          );
-          if (picked != null) vm.setDate(picked);
-        },
-        child: Text(
-          formatted,
-          style: OewangFonts.sans(color: context.palette.foreground),
         ),
       ),
     );
@@ -174,48 +159,27 @@ class _AmountRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final tx = Theme.of(context).extension<TransactionColors>()!;
     final palette = context.palette;
-    final color = vm.state.type == TransactionType.income
-        ? tx.income
-        : (vm.state.type == TransactionType.expense
-              ? tx.expense
-              : palette.foreground);
+    final color = switch (vm.state.type) {
+      TransactionType.income => tx.income,
+      TransactionType.expense => tx.expense,
+      _ => palette.foreground,
+    };
     final isTransfer = vm.state.type == TransactionType.transfer;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          SizedBox(
-            width: 84,
-            child: Text(
-              'Amount',
-              style: OewangFonts.sans(color: palette.mutedForeground),
-            ),
-          ),
-          Expanded(
-            child: InkWell(
-              onTap: () async {
-                final result = await AmountCalculatorSheet.show(
-                  context,
-                  initial: vm.state.amount,
-                );
-                if (result != null) vm.setAmount(result);
-              },
-              child: Text(
-                Money(amount: vm.state.amount).format(),
-                style: OewangFonts.currency(color: color, fontSize: 16),
+
+    return AmountInputField(
+      label: 'Amount',
+      value: vm.state.amount,
+      valueColor: color,
+      onChanged: vm.setAmount,
+      trailing: isTransfer
+          ? OutlinedButton(
+              onPressed: () => openAmountDrawer(
+                context,
+                id: 'Fees',
+                initial: vm.state.fees,
+                title: 'Fees',
+                onChanged: vm.setFees,
               ),
-            ),
-          ),
-          if (isTransfer)
-            OutlinedButton(
-              onPressed: () async {
-                final value = await AmountCalculatorSheet.show(
-                  context,
-                  initial: vm.state.fees,
-                );
-                if (value != null) vm.setFees(value);
-              },
               style: OutlinedButton.styleFrom(
                 foregroundColor: vm.state.fees > 0
                     ? palette.foreground
@@ -232,85 +196,12 @@ class _AmountRow extends StatelessWidget {
               ),
               child: Text(
                 vm.state.fees > 0
-                    ? 'Fees ${vm.state.fees}'
+                    ? 'Fees ${AmountFormat.number(vm.state.fees)}'
                     : 'Fees',
                 style: OewangFonts.sans(fontSize: 13),
               ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CategoryRow extends StatelessWidget {
-  const _CategoryRow({required this.vm});
-  final TransactionFormViewModel vm;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.palette;
-    final selected = vm.categoryOptions.where(
-      (c) => c.id == vm.state.categoryId,
-    );
-    final label = selected.isEmpty ? '' : selected.first.name;
-    return _LabelledRow(
-      label: 'Category',
-      child: InkWell(
-        onTap: () async {
-          final picked = await EntityPickerSheet.show<Category>(
-            context,
-            title: 'Category',
-            items: vm.categoryOptions,
-            labelOf: (c) => c.name,
-            idOf: (c) => c.id,
-          );
-          if (picked != null) vm.setCategory(picked.id);
-        },
-        child: Text(
-          label.isEmpty ? 'Choose a category' : label,
-          style: OewangFonts.sans(
-            color: label.isEmpty
-                ? palette.mutedForeground
-                : palette.foreground,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _AccountRow extends StatelessWidget {
-  const _AccountRow({required this.vm});
-  final TransactionFormViewModel vm;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.palette;
-    final selected = vm.walletOptions.where((w) => w.id == vm.state.walletId);
-    final label = selected.isEmpty ? '' : selected.first.name;
-    return _LabelledRow(
-      label: 'Account',
-      child: InkWell(
-        onTap: () async {
-          final picked = await EntityPickerSheet.show<Wallet>(
-            context,
-            title: 'Account',
-            items: vm.walletOptions,
-            labelOf: (w) => w.name,
-            idOf: (w) => w.id,
-          );
-          if (picked != null) vm.setWallet(picked.id);
-        },
-        child: Text(
-          label.isEmpty ? 'Choose an account' : label,
-          style: OewangFonts.sans(
-            color: label.isEmpty
-                ? palette.mutedForeground
-                : palette.foreground,
-          ),
-        ),
-      ),
+            )
+          : null,
     );
   }
 }
@@ -322,102 +213,45 @@ class _TransferWalletsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    final from = vm.walletOptions
-        .where((w) => w.id == vm.state.walletId)
-        .map((w) => w.name)
-        .firstOrNull;
-    final to = vm.walletOptions
-        .where((w) => w.id == vm.state.toWalletId)
-        .map((w) => w.name)
-        .firstOrNull;
+    final from = _firstOrNull(vm.walletOptions, (w) => w.id == vm.state.walletId);
+    final to = _firstOrNull(vm.walletOptions, (w) => w.id == vm.state.toWalletId);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _PickRow(
-                  label: 'From',
-                  value: from,
-                  onTap: () async {
-                    final picked = await EntityPickerSheet.show<Wallet>(
-                      context,
-                      title: 'From',
-                      items: vm.walletOptions,
-                      labelOf: (w) => w.name,
-                      idOf: (w) => w.id,
-                    );
-                    if (picked != null) vm.setWallet(picked.id);
-                  },
-                ),
-                Divider(height: 1, color: palette.border),
-                _PickRow(
-                  label: 'To',
-                  value: to,
-                  onTap: () async {
-                    final picked = await EntityPickerSheet.show<Wallet>(
-                      context,
-                      title: 'To',
-                      items: vm.walletOptions,
-                      labelOf: (w) => w.name,
-                      idOf: (w) => w.id,
-                    );
-                    if (picked != null) vm.setToWallet(picked.id);
-                  },
-                ),
-              ],
-            ),
-          ),
-          IconButton(
-            tooltip: 'Swap',
-            onPressed: vm.swapWallets,
-            icon: Icon(Icons.swap_vert, color: palette.mutedForeground),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PickRow extends StatelessWidget {
-  const _PickRow({required this.label, required this.value, required this.onTap});
-
-  final String label;
-  final String? value;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.palette;
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 84,
-              child: Text(
-                label,
-                style: OewangFonts.sans(color: palette.mutedForeground),
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SelectEntityField<Wallet>(
+                label: 'From',
+                placeholder: 'Choose an account',
+                gridColumns: 3,
+                value: from,
+                items: vm.walletOptions,
+                labelOf: (w) => w.name,
+                idOf: (w) => w.id,
+                onSelected: (w) => vm.setWallet(w.id),
               ),
-            ),
-            Expanded(
-              child: Text(
-                value ?? 'Choose an account',
-                style: OewangFonts.sans(
-                  color: value == null
-                      ? palette.mutedForeground
-                      : palette.foreground,
-                ),
+              Divider(height: 1, color: palette.border),
+              SelectEntityField<Wallet>(
+                label: 'To',
+                placeholder: 'Choose an account',
+                gridColumns: 3,
+                value: to,
+                items: vm.walletOptions,
+                labelOf: (w) => w.name,
+                idOf: (w) => w.id,
+                onSelected: (w) => vm.setToWallet(w.id),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
+        IconButton(
+          tooltip: 'Swap',
+          onPressed: vm.swapWallets,
+          icon: Icon(Icons.swap_vert, color: palette.mutedForeground),
+        ),
+      ],
     );
   }
 }
@@ -428,9 +262,10 @@ class _NoteRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _LabelledRow(
+    return FormFieldRow(
       label: 'Note',
       child: TextField(
+        onTap: () => FormDrawerScope.maybeOf(context)?.close(),
         onChanged: vm.setNote,
         decoration: const InputDecoration(
           hintText: '',
@@ -461,6 +296,7 @@ class _DescriptionRow extends StatelessWidget {
         children: [
           Expanded(
             child: TextField(
+              onTap: () => FormDrawerScope.maybeOf(context)?.close(),
               onChanged: vm.setDescription,
               decoration: InputDecoration(
                 hintText: 'Description',

@@ -52,7 +52,11 @@ class _DailyList extends StatelessWidget {
     }
     final palette = context.palette;
     final groups = groupByDay(items);
-    return CustomScrollView(
+    // Subtle backdrop shows through the gaps between groups; each day group
+    // paints a white (background) card on top.
+    return ColoredBox(
+      color: palette.border.withValues(alpha: 0.5),
+      child: CustomScrollView(
       slivers: [
         for (final group in groups) ...[
           // Each group is its own axis group so the pinned header sticks only
@@ -69,7 +73,7 @@ class _DailyList extends StatelessWidget {
                 itemBuilder: (context, i) {
                   final t = group.items[i];
                   return ColoredBox(
-                    color: palette.card,
+                    color: palette.background,
                     child: TransactionRow(
                       transaction: t,
                       onTap: () =>
@@ -83,6 +87,7 @@ class _DailyList extends StatelessWidget {
           const SliverToBoxAdapter(child: SizedBox(height: 8)),
         ],
       ],
+      ),
     );
   }
 }

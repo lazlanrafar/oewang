@@ -25,7 +25,10 @@ class DailyGroupHeader extends StatelessWidget {
         : (isSaturday ? OewangColors.blue : palette.mutedForeground);
 
     return Container(
-      color: palette.card,
+      decoration: BoxDecoration(
+        color: palette.background,
+        border: Border(bottom: BorderSide(color: palette.border)),
+      ),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [

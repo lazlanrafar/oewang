@@ -5,10 +5,11 @@ import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_radius.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
-import 'package:oewang/domain/models/money.dart';
 import 'package:oewang/domain/models/wallet_group.dart';
-import 'package:oewang/ui/transactions/widgets/amount_calculator_sheet.dart';
-import 'package:oewang/ui/transactions/widgets/entity_picker_sheet.dart';
+import 'package:oewang/ui/core/form/amount_input_field.dart';
+import 'package:oewang/ui/core/form/form_drawer.dart';
+import 'package:oewang/ui/core/form/form_field_row.dart';
+import 'package:oewang/ui/core/form/select_entity_field.dart';
 import 'package:oewang/ui/wallets/view_models/account_form_view_model.dart';
 
 final accountFormVmProvider =
@@ -19,10 +20,20 @@ final accountFormVmProvider =
       ),
     );
 
+/// Returns the first element matching [test], or `null`.
+T? _firstOrNull<T>(Iterable<T> items, bool Function(T) test) {
+  for (final item in items) {
+    if (test(item)) return item;
+  }
+  return null;
+}
+
 /// IMG_1836 — minimal create-wallet form. Description is captured locally but
 /// dropped on save (the API doesn't accept it).
 class AccountFormScreen extends ConsumerWidget {
   const AccountFormScreen({super.key});
+
+  static const _labelWidth = 100.0;
 
   Future<void> _onSave(BuildContext context, WidgetRef ref) async {
     final vm = ref.read(accountFormVmProvider);
@@ -41,10 +52,6 @@ class AccountFormScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final vm = ref.watch(accountFormVmProvider);
     final palette = context.palette;
-    final selectedGroupName = vm.groupOptions
-        .where((g) => g.id == vm.state.groupId)
-        .map((g) => g.name)
-        .firstOrNull;
 
     return Scaffold(
       appBar: AppBar(
@@ -62,46 +69,40 @@ class AccountFormScreen extends ConsumerWidget {
         title: Text('Add', style: OewangFonts.sans(fontSize: 17)),
       ),
       body: SafeArea(
-        child: Column(
+        child: FormDrawerHost(
+          child: Column(
           children: [
             Expanded(
               child: ListView(
                 padding: EdgeInsets.zero,
                 children: [
-                  _Row(
+                  SelectEntityField<WalletGroup>(
                     label: 'Group',
-                    child: InkWell(
-                      onTap: () async {
-                        final picked =
-                            await EntityPickerSheet.show<WalletGroup>(
-                          context,
-                          title: 'Group',
-                          items: vm.groupOptions,
-                          labelOf: (g) => g.name,
-                          idOf: (g) => g.id,
-                        );
-                        if (picked != null) vm.setGroup(picked.id);
-                      },
-                      child: Text(
-                        selectedGroupName ?? 'Choose a group',
-                        style: OewangFonts.sans(
-                          color: selectedGroupName == null
-                              ? palette.mutedForeground
-                              : palette.foreground,
-                        ),
-                      ),
+                    labelWidth: _labelWidth,
+                    gridColumns: 3,
+                    placeholder: 'Choose a group',
+                    value: _firstOrNull(
+                      vm.groupOptions,
+                      (g) => g.id == vm.state.groupId,
                     ),
+                    items: vm.groupOptions,
+                    labelOf: (g) => g.name,
+                    idOf: (g) => g.id,
+                    onSelected: (g) => vm.setGroup(g.id),
                   ),
                   Divider(height: 1, color: palette.border),
-                  _Row(
+                  FormFieldRow(
                     label: 'Name',
+                    labelWidth: _labelWidth,
                     child: TextField(
+                      onTap: () => FormDrawerScope.maybeOf(context)?.close(),
                       onChanged: vm.setName,
                       decoration: const InputDecoration(
                         hintText: '',
                         border: InputBorder.none,
                         enabledBorder: InputBorder.none,
                         focusedBorder: InputBorder.none,
+                        contentPadding: EdgeInsets.zero,
                         fillColor: Colors.transparent,
                         filled: false,
                       ),
@@ -109,35 +110,25 @@ class AccountFormScreen extends ConsumerWidget {
                     ),
                   ),
                   Divider(height: 1, color: palette.border),
-                  _Row(
+                  AmountInputField(
                     label: 'Amount',
-                    child: InkWell(
-                      onTap: () async {
-                        final value = await AmountCalculatorSheet.show(
-                          context,
-                          initial: vm.state.balance,
-                        );
-                        if (value != null) vm.setBalance(value);
-                      },
-                      child: Text(
-                        Money(amount: vm.state.balance).format(),
-                        style: OewangFonts.currency(
-                          color: palette.foreground,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ),
+                    labelWidth: _labelWidth,
+                    value: vm.state.balance,
+                    onChanged: vm.setBalance,
                   ),
                   Divider(height: 1, color: palette.border),
-                  _Row(
+                  FormFieldRow(
                     label: 'Description',
+                    labelWidth: _labelWidth,
                     child: TextField(
+                      onTap: () => FormDrawerScope.maybeOf(context)?.close(),
                       onChanged: vm.setDescription,
                       decoration: const InputDecoration(
                         hintText: '',
                         border: InputBorder.none,
                         enabledBorder: InputBorder.none,
                         focusedBorder: InputBorder.none,
+                        contentPadding: EdgeInsets.zero,
                         fillColor: Colors.transparent,
                         filled: false,
                       ),
@@ -196,33 +187,8 @@ class AccountFormScreen extends ConsumerWidget {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _Row extends StatelessWidget {
-  const _Row({required this.label, required this.child});
-  final String label;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          SizedBox(
-            width: 100,
-            child: Text(
-              label,
-              style: OewangFonts.sans(color: context.palette.mutedForeground),
-            ),
           ),
-          Expanded(child: child),
-        ],
+        ),
       ),
     );
   }
