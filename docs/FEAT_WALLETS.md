@@ -127,9 +127,12 @@ Every mutation triggers `RealtimeService.notifyValueChange(workspaceId, "wallets
 | Utils      | `apps/api/modules/wallets/wallets.utils.ts`                 |
 | Tests      | `apps/api/modules/wallets/wallets.utils.test.ts` (44 tests) |
 | E2E        | `apps/app/e2e/accounts.spec.ts`                             |
-| Mobile     | `apps/native/lib/components/organisms/wallets/wallets_account_group_screen.dart` (list: delete/edit/drag-reorder) |
-| Mobile     | `apps/native/lib/components/organisms/wallets/wallets_account_group_form_screen.dart` (add/edit, nullable group arg) |
-| Mobile     | `apps/native/lib/data/repositories/wallet_groups_repository.dart` (+ remote/fake — full CRUD + reorder) |
+| Mobile     | `apps/native/lib/components/organisms/wallets/wallets_account_group_screen.dart` (group list: delete/edit/drag-reorder) |
+| Mobile     | `apps/native/lib/components/organisms/wallets/wallets_account_group_form_screen.dart` (group add/edit, nullable group arg) |
+| Mobile     | `apps/native/lib/components/organisms/wallets/wallets_account_simple_list_screen.dart` (accounts grouped; delete/edit CRUD, empty groups hidden, no drag) |
+| Mobile     | `apps/native/lib/components/organisms/wallets/wallets_account_form_screen.dart` (account add/edit, nullable wallet arg; currency row = workspace main (IDR base) + workspace sub-currencies (loaded from `subCurrenciesRepositoryProvider`), shown by ISO **code** (IDR/SGD/USD, via `AmountFormat.currency(useCode: true)`), default main, display-only; amount keypad hides currency tabs via `AmountInputField(showCurrencyTabs: false)`) |
+| Mobile     | `apps/native/lib/components/molecules/swipe_action_row.dart` (shared swipe-delete + edit + optional drag row) |
+| Mobile     | `apps/native/lib/data/repositories/wallets_repository.dart` & `wallet_groups_repository.dart` (+ remote/fake — full CRUD; groups also reorder) |
 
 ---
 

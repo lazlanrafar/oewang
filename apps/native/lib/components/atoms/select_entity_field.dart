@@ -24,6 +24,8 @@ class SelectEntityField<T> extends StatelessWidget {
     this.leadingOf,
     this.gridColumns,
     this.labelWidth = 84,
+    this.height,
+    this.showBorder = false,
     super.key,
   });
 
@@ -53,6 +55,10 @@ class SelectEntityField<T> extends StatelessWidget {
   final int? gridColumns;
   final double labelWidth;
 
+  /// Fixed row height + own bottom border (forwarded to [FormFieldRow]).
+  final double? height;
+  final bool showBorder;
+
   String _displayLabel() {
     final v = value;
     if (v == null) return '';
@@ -66,6 +72,8 @@ class SelectEntityField<T> extends StatelessWidget {
     return SelectField(
       label: label,
       labelWidth: labelWidth,
+      height: height,
+      showBorder: showBorder,
       value: _displayLabel(),
       placeholder: placeholder,
       onTap: () {

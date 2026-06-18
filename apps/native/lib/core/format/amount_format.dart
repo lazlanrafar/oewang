@@ -49,6 +49,7 @@ class AmountFormat {
     int maxDecimals = 2,
     int? decimals,
     bool symbolFront = true,
+    bool useCode = false,
   }) {
     final body = number(
       value,
@@ -56,7 +57,8 @@ class AmountFormat {
       maxDecimals: maxDecimals,
       decimals: decimals,
     );
-    final symbol = symbolFor(currency);
+    // Use the ISO code (e.g. "IDR") instead of the symbol (e.g. "Rp").
+    final symbol = useCode ? '$currency ' : symbolFor(currency);
     return symbolFront ? '$symbol$body' : '$body ${symbol.trim()}';
   }
 }

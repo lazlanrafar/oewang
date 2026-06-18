@@ -54,4 +54,44 @@ class WalletsRepositoryRemote implements WalletsRepository {
       return const Failure(UnknownError());
     }
   }
+
+  @override
+  Future<Result<Wallet, AppError>> update(
+    String id,
+    NewWalletDraft draft,
+  ) async {
+    try {
+      final res = await _api.put(
+        '/wallets/$id',
+        data: {
+          'name': draft.name,
+          'groupId': draft.groupId,
+          'balance': draft.balance.toString(),
+        },
+      );
+      final json = (res.data as Map<String, dynamic>)['data'];
+      if (json is! Map<String, dynamic>) {
+        return const Failure(
+          ServerError(statusCode: 500, message: 'Unexpected update response'),
+        );
+      }
+      return Success(WalletDto.fromJson(json).toDomain());
+    } on DioException catch (e) {
+      return Failure(mapDioError(e));
+    } on Exception {
+      return const Failure(UnknownError());
+    }
+  }
+
+  @override
+  Future<Result<void, AppError>> delete(String id) async {
+    try {
+      await _api.delete('/wallets/$id');
+      return const Success(null);
+    } on DioException catch (e) {
+      return Failure(mapDioError(e));
+    } on Exception {
+      return const Failure(UnknownError());
+    }
+  }
 }

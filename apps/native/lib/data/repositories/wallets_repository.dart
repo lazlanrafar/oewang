@@ -16,4 +16,6 @@ class NewWalletDraft {
 abstract class WalletsRepository {
   Future<Result<List<Wallet>, AppError>> list();
   Future<Result<Wallet, AppError>> create(NewWalletDraft draft);
+  Future<Result<Wallet, AppError>> update(String id, NewWalletDraft draft);
+  Future<Result<void, AppError>> delete(String id);
 }

@@ -361,7 +361,7 @@ Each field is a labelled row that opens an input panel on tap. They report chang
 
 | Widget                  | Use                                                                                              |
 | ----------------------- | ------------------------------------------------------------------------------------------------ |
-| `FormFieldRow`          | Base labelled row (fixed-width label + child). Every other field and text row builds on it.       |
+| `FormFieldRow`          | Base labelled row (fixed-width label + child). Every other field and text row builds on it. Opt-in: `height` (uniform row height), `showBorder` (own bottom border instead of a separate `Divider`), `focusNode` (bottom border turns `foreground`/black while focused + tapping the label focuses the field), `onTap`. All default off so existing dividers-based forms are unaffected; the account form uses them. `height`/`showBorder` are forwarded through `SelectField`/`SelectEntityField`/`AmountInputField`. |
 | `SelectField`           | Tappable row showing a value or muted placeholder; opens any picker via `onTap`.                  |
 | `SelectDateField`       | Opens the calendar panel; reports the chosen `DateTime`.                                          |
 | `SelectEntityField<T>`  | Picks one item from a list. `gridColumns` → grid picker (with optional `leadingOf` emoji); else a list. |
@@ -388,6 +388,10 @@ Pickers render as a **non-modal split panel** pinned to the bottom — a flat, s
 The Daily transactions list (`transactions_daily_screen.dart`) groups by day: each day group (header + rows) paints a white `background` card, separated by gaps that reveal a faint `border`-tinted backdrop behind the `CustomScrollView`. Keep group cards opaque and let the backdrop show through the inter-group `SizedBox` gaps.
 
 The same pattern drives grouped settings/menu lists. The shared pieces are `SectionLabel` (`components/atoms/section_label.dart`) — a section header whose leading transparent gap lets the backdrop show through — and `ListRow` (`components/molecules/list_row.dart`) — a tappable icon + title/subtitle/trailing row painting a `background` card. Put a `ColoredBox(color: border.withValues(alpha: 0.5))` behind the `ListView` and compose these; don't re-roll row/label widgets per screen.
+
+### CRUD setting lists (swipe-to-delete + edit)
+
+Editable catalog lists (Categories, Account Group, Accounts) share `SwipeActionRow` (`components/molecules/swipe_action_row.dart`): a red minus toggle slides the row left to reveal a Delete action, plus an edit button and an **optional** drag handle. Pass `dragIndex: i` (inside a `ReorderableListView.builder`) for reorderable lists; omit it for plain CRUD lists. Tapping the row body while open cancels the reveal. Use `leading:` for an emoji/icon. Don't re-roll the swipe/reveal Stack per screen — extend `SwipeActionRow`. Mutations go through the repo then bump a revision `NotifierProvider` to refetch.
 
 ---
 

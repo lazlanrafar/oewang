@@ -37,4 +37,31 @@ class WalletsRepositoryFake implements WalletsRepository {
     _store.add(created);
     return Success(created);
   }
+
+  @override
+  Future<Result<Wallet, AppError>> update(
+    String id,
+    NewWalletDraft draft,
+  ) async {
+    final i = _store.indexWhere((w) => w.id == id);
+    if (i == -1) {
+      return const Failure(
+        ServerError(statusCode: 404, message: 'Wallet not found'),
+      );
+    }
+    final updated = Wallet(
+      id: id,
+      name: draft.name,
+      groupId: draft.groupId,
+      balance: draft.balance,
+    );
+    _store[i] = updated;
+    return Success(updated);
+  }
+
+  @override
+  Future<Result<void, AppError>> delete(String id) async {
+    _store.removeWhere((w) => w.id == id);
+    return const Success(null);
+  }
 }

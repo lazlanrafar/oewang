@@ -19,6 +19,9 @@ class FormDrawerController extends ChangeNotifier {
 
   void open(String id, WidgetBuilder builder) {
     if (_id == id && _builder != null) return; // already showing this field
+    // Drop any text-field focus so its row stops looking "active" while a
+    // picker/keypad panel is open.
+    FocusManager.instance.primaryFocus?.unfocus();
     _id = id;
     _builder = builder;
     notifyListeners();
@@ -148,6 +151,7 @@ void openAmountDrawer(
   String title = 'Amount',
   String currency = 'IDR',
   ValueChanged<String>? onCurrencyChanged,
+  bool showCurrencyTabs = true,
 }) {
   final controller = FormDrawerScope.maybeOf(context);
   if (controller != null) {
@@ -157,6 +161,7 @@ void openAmountDrawer(
         initial: initial,
         title: title,
         currency: currency,
+        showCurrencyTabs: showCurrencyTabs,
         onChanged: onChanged,
         onCurrencyChanged: onCurrencyChanged,
         onSubmit: (_) => controller.close(),
@@ -170,6 +175,7 @@ void openAmountDrawer(
       onChanged: onChanged,
       title: title,
       currency: currency,
+      showCurrencyTabs: showCurrencyTabs,
       onCurrencyChanged: onCurrencyChanged,
     );
   }

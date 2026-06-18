@@ -26,6 +26,7 @@ class AmountKeypad extends StatefulWidget {
     this.onCurrencyChanged,
     this.currency = 'IDR',
     this.title = 'Amount',
+    this.showCurrencyTabs = true,
     super.key,
   });
 
@@ -36,6 +37,10 @@ class AmountKeypad extends StatefulWidget {
   final ValueChanged<String>? onCurrencyChanged;
   final String currency;
   final String title;
+
+  /// When false, the currency tabs (and the language header action) are hidden
+  /// — used by forms that pick currency elsewhere (e.g. the account form).
+  final bool showCurrencyTabs;
 
   @override
   State<AmountKeypad> createState() => _AmountKeypadState();
@@ -156,12 +161,15 @@ class _AmountKeypadState extends State<AmountKeypad> {
         FormDrawerHeader(
           title: widget.title,
           onClose: widget.onClose,
-          actions: const [
-            Icon(Icons.language, color: DrawerMetrics.onHeader, size: 22),
-            SizedBox(width: 8),
-          ],
+          actions: widget.showCurrencyTabs
+              ? const [
+                  Icon(Icons.language, color: DrawerMetrics.onHeader, size: 22),
+                  SizedBox(width: 8),
+                ]
+              : const [],
         ),
-        _CurrencyTabs(selected: _currency, onSelected: _onCurrency),
+        if (widget.showCurrencyTabs)
+          _CurrencyTabs(selected: _currency, onSelected: _onCurrency),
         Expanded(
           child: Column(
             children: [
@@ -315,6 +323,7 @@ class AmountKeypadSheet {
     ValueChanged<String>? onCurrencyChanged,
     String currency = 'IDR',
     String title = 'Amount',
+    bool showCurrencyTabs = true,
   }) {
     return showModalBottomSheet<num>(
       context: context,
@@ -328,6 +337,7 @@ class AmountKeypadSheet {
             initial: initial,
             title: title,
             currency: currency,
+            showCurrencyTabs: showCurrencyTabs,
             onChanged: onChanged,
             onCurrencyChanged: onCurrencyChanged,
             onSubmit: (v) => Navigator.of(sheetContext).pop(v),

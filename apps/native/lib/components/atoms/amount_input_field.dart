@@ -22,6 +22,10 @@ class AmountInputField extends StatefulWidget {
     this.valueColor,
     this.labelWidth = 84,
     this.trailing,
+    this.showCurrencyTabs = true,
+    this.useCurrencyCode = false,
+    this.height,
+    this.showBorder = false,
     super.key,
   });
 
@@ -44,6 +48,17 @@ class AmountInputField extends StatefulWidget {
   /// Optional widget after the amount (e.g. the transfer "Fees" button).
   final Widget? trailing;
 
+  /// Whether the keypad shows currency tabs. Off for forms that pick currency
+  /// elsewhere (e.g. the account form's Currency row).
+  final bool showCurrencyTabs;
+
+  /// Show the ISO code ("IDR") instead of the symbol ("Rp") in the value.
+  final bool useCurrencyCode;
+
+  /// Fixed row height + own bottom border (forwarded to [FormFieldRow]).
+  final double? height;
+  final bool showBorder;
+
   @override
   State<AmountInputField> createState() => _AmountInputFieldState();
 }
@@ -62,29 +77,39 @@ class _AmountInputFieldState extends State<AmountInputField> {
     widget.onCurrencyChanged?.call(code);
   }
 
+  void _openKeypad(BuildContext context) => openAmountDrawer(
+    context,
+    id: widget.drawerId ?? widget.label,
+    initial: widget.value,
+    title: widget.label,
+    currency: _currency,
+    showCurrencyTabs: widget.showCurrencyTabs,
+    onChanged: widget.onChanged,
+    onCurrencyChanged: _onCurrencyChanged,
+  );
+
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
     return FormFieldRow(
       label: widget.label,
       labelWidth: widget.labelWidth,
+      height: widget.height,
+      showBorder: widget.showBorder,
+      onTap: () => _openKeypad(context),
       child: Row(
         children: [
           Expanded(
             child: InkWell(
-              onTap: () => openAmountDrawer(
-                context,
-                id: widget.drawerId ?? widget.label,
-                initial: widget.value,
-                title: widget.label,
-                currency: _currency,
-                onChanged: widget.onChanged,
-                onCurrencyChanged: _onCurrencyChanged,
-              ),
+              onTap: () => _openKeypad(context),
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 2),
                 child: Text(
-                  AmountFormat.currency(widget.value, currency: _currency),
+                  AmountFormat.currency(
+                    widget.value,
+                    currency: _currency,
+                    useCode: widget.useCurrencyCode,
+                  ),
                   style: OewangFonts.currency(
                     color: widget.valueColor ?? palette.foreground,
                     fontSize: 16,

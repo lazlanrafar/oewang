@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:oewang/components/organisms/wallets/wallets_account_form_view_model.dart';
+import 'package:oewang/data/repositories_fake/sub_currencies_repository_fake.dart';
 import 'package:oewang/data/repositories_fake/wallet_groups_repository_fake.dart';
 import 'package:oewang/data/repositories_fake/wallets_repository_fake.dart';
 
@@ -11,6 +12,7 @@ void main() {
       vm = AccountFormViewModel(
         wallets: WalletsRepositoryFake(),
         groups: WalletGroupsRepositoryFake(),
+        subCurrencies: SubCurrenciesRepositoryFake(),
       );
       await Future<void>.delayed(const Duration(milliseconds: 30));
     });

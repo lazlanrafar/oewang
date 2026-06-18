@@ -15,6 +15,8 @@ class SelectField extends StatelessWidget {
     this.labelWidth = 84,
     this.valueColor,
     this.trailing,
+    this.height,
+    this.showBorder = false,
     super.key,
   });
 
@@ -32,6 +34,10 @@ class SelectField extends StatelessWidget {
   /// Optional widget rendered after the value (e.g. a "Fees" button).
   final Widget? trailing;
 
+  /// Fixed row height + own bottom border (forwarded to [FormFieldRow]).
+  final double? height;
+  final bool showBorder;
+
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
@@ -41,6 +47,9 @@ class SelectField extends StatelessWidget {
     return FormFieldRow(
       label: label,
       labelWidth: labelWidth,
+      height: height,
+      showBorder: showBorder,
+      onTap: onTap,
       child: Row(
         children: [
           Expanded(

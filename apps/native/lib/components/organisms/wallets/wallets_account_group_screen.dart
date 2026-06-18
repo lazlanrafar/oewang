@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:oewang/components/molecules/page_app_bar.dart';
+import 'package:oewang/components/molecules/swipe_action_row.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/router/app_router.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
@@ -110,10 +111,10 @@ class _AccountGroupScreenState extends ConsumerState<AccountGroupScreen> {
             return ReorderableListView.builder(
               itemCount: list.length,
               onReorder: _reorder,
-              itemBuilder: (context, i) => _GroupRow(
+              itemBuilder: (context, i) => SwipeActionRow(
                 key: ValueKey(list[i].id),
-                index: i,
-                group: list[i],
+                dragIndex: i,
+                title: list[i].name,
                 isOpen: _openId == list[i].id,
                 onToggleOpen: () => setState(
                   () => _openId = _openId == list[i].id ? null : list[i].id,
@@ -131,116 +132,6 @@ class _AccountGroupScreenState extends ConsumerState<AccountGroupScreen> {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-// Width of the revealed Delete action (also how far the row slides left).
-const double _kDeleteWidth = 96;
-const double _kRowHeight = 56;
-
-class _GroupRow extends StatelessWidget {
-  const _GroupRow({
-    required this.index,
-    required this.group,
-    required this.isOpen,
-    required this.onToggleOpen,
-    required this.onEdit,
-    required this.onDelete,
-    super.key,
-  });
-  final int index;
-  final WalletGroup group;
-  final bool isOpen;
-  final VoidCallback onToggleOpen;
-  final VoidCallback onEdit;
-  final VoidCallback onDelete;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.palette;
-    return SizedBox(
-      height: _kRowHeight,
-      child: Stack(
-        children: [
-          // Delete action behind, pinned to the right edge.
-          Positioned(
-            top: 0,
-            bottom: 0,
-            right: 0,
-            width: _kDeleteWidth,
-            child: GestureDetector(
-              onTap: onDelete,
-              child: ColoredBox(
-                color: OewangColors.coral,
-                child: Center(
-                  child: Text(
-                    'Delete',
-                    style: OewangFonts.sans(color: Colors.white, fontSize: 15),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          // Foreground row — slides left to reveal the Delete action.
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 180),
-            curve: Curves.easeOut,
-            top: 0,
-            bottom: 0,
-            left: isOpen ? -_kDeleteWidth : 0,
-            right: isOpen ? _kDeleteWidth : 0,
-            // Tapping the row body (anywhere but the action buttons) while the
-            // Delete action is revealed cancels it.
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: isOpen ? onToggleOpen : null,
-              child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: palette.background,
-                border: Border(bottom: BorderSide(color: palette.border)),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Row(
-                  children: [
-                    IconButton(
-                      tooltip: 'Delete',
-                      onPressed: onToggleOpen,
-                      icon: const Icon(
-                        Icons.remove_circle,
-                        color: OewangColors.coral,
-                        size: 18,
-                      ),
-                    ),
-                    Expanded(
-                      child: Text(
-                        group.name,
-                        style: OewangFonts.sans(color: palette.foreground),
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: 'Edit',
-                      onPressed: onEdit,
-                      icon: Icon(Icons.edit_outlined,
-                          color: palette.mutedForeground),
-                    ),
-                    ReorderableDragStartListener(
-                      index: index,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        child: Icon(Icons.drag_handle,
-                            color: palette.mutedForeground),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            ),
-          ),
-        ],
       ),
     );
   }

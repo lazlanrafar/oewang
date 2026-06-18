@@ -24,6 +24,7 @@ import 'package:oewang/components/organisms/wallets/wallets_screen.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/domain/models/category.dart' as cat;
 import 'package:oewang/domain/models/transaction.dart';
+import 'package:oewang/domain/models/wallet.dart';
 import 'package:oewang/domain/models/wallet_group.dart';
 
 class AppRoutes {
@@ -50,6 +51,7 @@ class AppRoutes {
   static const String includeInTotals = '/settings/accounts/include';
   static const String transferExpense = '/settings/accounts/transfer-expense';
 
+  static String accountEditFor(String id) => '/accounts/edit/$id';
   static String categoryEditFor(String id) => '/settings/categories/edit/$id';
   static String accountGroupEditFor(String id) =>
       '/settings/accounts/group/edit/$id';
@@ -104,6 +106,16 @@ GoRouter buildAppRouter(Ref ref) {
       GoRoute(
         path: AppRoutes.accountForm,
         builder: (context, state) => const AccountFormScreen(),
+      ),
+      GoRoute(
+        path: '/accounts/edit/:id',
+        builder: (context, state) {
+          final wallet = state.extra as Wallet?;
+          if (wallet == null) {
+            return const Scaffold(body: Center(child: Text('Missing account')));
+          }
+          return AccountFormScreen(wallet: wallet);
+        },
       ),
       GoRoute(
         path: AppRoutes.transactionSettings,
