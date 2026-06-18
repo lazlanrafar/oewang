@@ -191,7 +191,12 @@ class _CategoryRow extends StatelessWidget {
             bottom: 0,
             left: isOpen ? -_kDeleteWidth : 0,
             right: isOpen ? _kDeleteWidth : 0,
-            child: DecoratedBox(
+            // Tapping the row body (anywhere but the action buttons) while the
+            // Delete action is revealed cancels it.
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: isOpen ? onToggleOpen : null,
+              child: DecoratedBox(
               decoration: BoxDecoration(
                 color: palette.background,
                 border: Border(bottom: BorderSide(color: palette.border)),
@@ -203,9 +208,9 @@ class _CategoryRow extends StatelessWidget {
                     IconButton(
                       tooltip: 'Delete',
                       onPressed: onToggleOpen,
-                      icon: Icon(
+                      icon: const Icon(
                         Icons.remove_circle,
-                        color: palette.mutedForeground,
+                        color: OewangColors.coral,
                         size: 18,
                       ),
                     ),
@@ -237,6 +242,7 @@ class _CategoryRow extends StatelessWidget {
                   ],
                 ),
               ),
+            ),
             ),
           ),
         ],

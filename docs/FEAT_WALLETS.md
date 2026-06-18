@@ -10,6 +10,7 @@
 - Adding endpoints to `apps/api/modules/wallets/wallets.controller.ts`
 - Changing business rules in `apps/api/modules/wallets/wallets.service.ts`
 - Adding wallet-related UI components in `apps/app/components/`
+- Changing the **mobile** account/group screens in `apps/native/lib/components/organisms/wallets/`
 
 ---
 
@@ -126,6 +127,9 @@ Every mutation triggers `RealtimeService.notifyValueChange(workspaceId, "wallets
 | Utils      | `apps/api/modules/wallets/wallets.utils.ts`                 |
 | Tests      | `apps/api/modules/wallets/wallets.utils.test.ts` (44 tests) |
 | E2E        | `apps/app/e2e/accounts.spec.ts`                             |
+| Mobile     | `apps/native/lib/components/organisms/wallets/wallets_account_group_screen.dart` (list: delete/edit/drag-reorder) |
+| Mobile     | `apps/native/lib/components/organisms/wallets/wallets_account_group_form_screen.dart` (add/edit, nullable group arg) |
+| Mobile     | `apps/native/lib/data/repositories/wallet_groups_repository.dart` (+ remote/fake — full CRUD + reorder) |
 
 ---
 

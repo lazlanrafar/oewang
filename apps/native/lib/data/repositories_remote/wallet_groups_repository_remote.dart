@@ -30,4 +30,75 @@ class WalletGroupsRepositoryRemote implements WalletGroupsRepository {
       return const Failure(UnknownError());
     }
   }
+
+  @override
+  Future<Result<WalletGroup, AppError>> create({required String name}) async {
+    try {
+      final res = await _api.post('/wallet-groups', data: {'name': name});
+      final json = (res.data as Map<String, dynamic>)['data'];
+      if (json is! Map<String, dynamic>) {
+        return const Failure(
+          ServerError(statusCode: 500, message: 'Unexpected response'),
+        );
+      }
+      return Success(WalletGroupDto.fromJson(json).toDomain());
+    } on DioException catch (e) {
+      return Failure(mapDioError(e));
+    } on Exception {
+      return const Failure(UnknownError());
+    }
+  }
+
+  @override
+  Future<Result<WalletGroup, AppError>> update({
+    required String id,
+    required String name,
+  }) async {
+    try {
+      final res = await _api.put('/wallet-groups/$id', data: {'name': name});
+      final json = (res.data as Map<String, dynamic>)['data'];
+      if (json is! Map<String, dynamic>) {
+        return const Failure(
+          ServerError(statusCode: 500, message: 'Unexpected response'),
+        );
+      }
+      return Success(WalletGroupDto.fromJson(json).toDomain());
+    } on DioException catch (e) {
+      return Failure(mapDioError(e));
+    } on Exception {
+      return const Failure(UnknownError());
+    }
+  }
+
+  @override
+  Future<Result<void, AppError>> delete(String id) async {
+    try {
+      await _api.delete('/wallet-groups/$id');
+      return const Success(null);
+    } on DioException catch (e) {
+      return Failure(mapDioError(e));
+    } on Exception {
+      return const Failure(UnknownError());
+    }
+  }
+
+  @override
+  Future<Result<void, AppError>> reorder(List<String> orderedIds) async {
+    try {
+      await _api.put(
+        '/wallet-groups/reorder',
+        data: {
+          'updates': [
+            for (var i = 0; i < orderedIds.length; i++)
+              {'id': orderedIds[i], 'sortOrder': i},
+          ],
+        },
+      );
+      return const Success(null);
+    } on DioException catch (e) {
+      return Failure(mapDioError(e));
+    } on Exception {
+      return const Failure(UnknownError());
+    }
+  }
 }

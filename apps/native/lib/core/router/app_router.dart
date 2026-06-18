@@ -14,6 +14,7 @@ import 'package:oewang/components/organisms/stats/stats_screen.dart';
 import 'package:oewang/components/organisms/transactions/transactions_form_screen.dart';
 import 'package:oewang/components/organisms/transactions/transactions_screen.dart';
 import 'package:oewang/components/organisms/wallets/wallets_account_form_screen.dart';
+import 'package:oewang/components/organisms/wallets/wallets_account_group_form_screen.dart';
 import 'package:oewang/components/organisms/wallets/wallets_account_group_screen.dart';
 import 'package:oewang/components/organisms/wallets/wallets_account_simple_list_screen.dart';
 import 'package:oewang/components/organisms/wallets/wallets_accounts_settings_screen.dart';
@@ -23,6 +24,7 @@ import 'package:oewang/components/organisms/wallets/wallets_screen.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/domain/models/category.dart' as cat;
 import 'package:oewang/domain/models/transaction.dart';
+import 'package:oewang/domain/models/wallet_group.dart';
 
 class AppRoutes {
   const AppRoutes._();
@@ -43,11 +45,14 @@ class AppRoutes {
   static const String style = '/settings/style';
   static const String accountsSettings = '/settings/accounts';
   static const String accountGroup = '/settings/accounts/group';
+  static const String accountGroupAdd = '/settings/accounts/group/add';
   static const String accountSimpleList = '/settings/accounts/list';
   static const String includeInTotals = '/settings/accounts/include';
   static const String transferExpense = '/settings/accounts/transfer-expense';
 
   static String categoryEditFor(String id) => '/settings/categories/edit/$id';
+  static String accountGroupEditFor(String id) =>
+      '/settings/accounts/group/edit/$id';
 }
 
 /// Re-runs go_router's `redirect` whenever the session value changes.
@@ -147,6 +152,20 @@ GoRouter buildAppRouter(Ref ref) {
       GoRoute(
         path: AppRoutes.accountGroup,
         builder: (context, state) => const AccountGroupScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.accountGroupAdd,
+        builder: (context, state) => const AccountGroupFormScreen(),
+      ),
+      GoRoute(
+        path: '/settings/accounts/group/edit/:id',
+        builder: (context, state) {
+          final group = state.extra as WalletGroup?;
+          if (group == null) {
+            return const Scaffold(body: Center(child: Text('Missing group')));
+          }
+          return AccountGroupFormScreen(group: group);
+        },
       ),
       GoRoute(
         path: AppRoutes.accountSimpleList,
