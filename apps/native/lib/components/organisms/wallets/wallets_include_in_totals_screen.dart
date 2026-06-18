@@ -120,18 +120,20 @@ class _Body extends StatelessWidget {
         Expanded(
           child: ListView(
             children: [
-              for (final g in groups) ...[
-                _GroupHeader(
-                  name: g.name,
-                  subtotal: _subtotal(byGroup[g.id] ?? const [], excluded),
-                ),
-                for (final w in byGroup[g.id] ?? const <Wallet>[])
-                  _Row(
-                    wallet: w,
-                    excluded: excluded.contains(w.id),
-                    onToggle: () => onToggle(w.id),
+              // Only render a group header when it actually has accounts.
+              for (final g in groups)
+                if ((byGroup[g.id] ?? const []).isNotEmpty) ...[
+                  _GroupHeader(
+                    name: g.name,
+                    subtotal: _subtotal(byGroup[g.id]!, excluded),
                   ),
-              ],
+                  for (final w in byGroup[g.id]!)
+                    _Row(
+                      wallet: w,
+                      excluded: excluded.contains(w.id),
+                      onToggle: () => onToggle(w.id),
+                    ),
+                ],
             ],
           ),
         ),
@@ -260,13 +262,18 @@ class _Row extends StatelessWidget {
     final palette = context.palette;
     return InkWell(
       onTap: onToggle,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: palette.border)),
+        ),
         child: Row(
           children: [
             Checkbox(
               value: !excluded,
               onChanged: (_) => onToggle(),
+              visualDensity: VisualDensity.compact,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
               fillColor: WidgetStateProperty.resolveWith(
                 (states) => states.contains(WidgetState.selected)
                     ? palette.foreground
@@ -274,7 +281,7 @@ class _Row extends StatelessWidget {
               ),
               checkColor: palette.background,
             ),
-            const SizedBox(width: 4),
+            const SizedBox(width: 12),
             Expanded(
               child: Text(
                 wallet.name,

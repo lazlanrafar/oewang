@@ -49,18 +49,6 @@ class _AccountsSettingsScreenState extends State<AccountsSettingsScreen> {
               onTap: () => context.push(AppRoutes.includeInTotals),
             ),
             _Row(
-              label: 'Transfer-Expense setting',
-              onTap: () => context.push(AppRoutes.transferExpense),
-            ),
-            _Row(
-              label: 'Deleted accounts',
-              onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Deleted accounts — coming soon'),
-                ),
-              ),
-            ),
-            _Row(
               label: 'Card expenses display config',
               trailing: Text(
                 _cardMode == CardExpensesDisplayMode.atTheTime

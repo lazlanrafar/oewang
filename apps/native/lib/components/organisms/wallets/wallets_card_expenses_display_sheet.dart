@@ -72,24 +72,6 @@ class CardExpensesDisplaySheet extends StatelessWidget {
                 Navigator.of(context).pop(CardExpensesDisplayMode.lumpSum),
           ),
           const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-            child: SizedBox(
-              width: double.infinity,
-              height: 44,
-              child: TextButton(
-                style: TextButton.styleFrom(
-                  backgroundColor: palette.muted,
-                  foregroundColor: palette.foreground,
-                ),
-                onPressed: () => Navigator.of(context).pop(),
-                child: Text(
-                  'Cancel',
-                  style: OewangFonts.sans(fontSize: 15),
-                ),
-              ),
-            ),
-          ),
         ],
       ),
     );

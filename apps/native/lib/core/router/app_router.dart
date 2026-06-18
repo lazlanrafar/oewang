@@ -19,7 +19,6 @@ import 'package:oewang/components/organisms/wallets/wallets_account_group_screen
 import 'package:oewang/components/organisms/wallets/wallets_account_simple_list_screen.dart';
 import 'package:oewang/components/organisms/wallets/wallets_accounts_settings_screen.dart';
 import 'package:oewang/components/organisms/wallets/wallets_include_in_totals_screen.dart';
-import 'package:oewang/components/organisms/wallets/wallets_transfer_expense_setting_screen.dart';
 import 'package:oewang/components/organisms/wallets/wallets_screen.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/domain/models/category.dart' as cat;
@@ -49,7 +48,6 @@ class AppRoutes {
   static const String accountGroupAdd = '/settings/accounts/group/add';
   static const String accountSimpleList = '/settings/accounts/list';
   static const String includeInTotals = '/settings/accounts/include';
-  static const String transferExpense = '/settings/accounts/transfer-expense';
 
   static String accountEditFor(String id) => '/accounts/edit/$id';
   static String categoryEditFor(String id) => '/settings/categories/edit/$id';
@@ -186,10 +184,6 @@ GoRouter buildAppRouter(Ref ref) {
       GoRoute(
         path: AppRoutes.includeInTotals,
         builder: (context, state) => const IncludeInTotalsScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.transferExpense,
-        builder: (context, state) => const TransferExpenseSettingScreen(),
       ),
       GoRoute(
         path: AppRoutes.style,

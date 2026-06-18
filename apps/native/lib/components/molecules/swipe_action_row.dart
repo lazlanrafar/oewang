@@ -5,7 +5,8 @@ import 'package:oewang/core/theme/oewang_typography.dart';
 
 // Width of the revealed Delete action (also how far the row slides left).
 const double _kDeleteWidth = 96;
-const double _kRowHeight = 56;
+// Matches the transaction list row height (≈ vertical:10 padding around text).
+const double _kRowHeight = 44;
 
 /// A settings-list row with a red minus toggle that slides the row left to
 /// reveal a Delete action, an edit button, and an optional drag handle.
