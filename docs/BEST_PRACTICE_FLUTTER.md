@@ -456,9 +456,15 @@ Rules:
 
 ## Logging
 
-- One logger in `core/logging/`. Pino-style key/value style to keep grep-parity with the API.
-- **NEVER** log secrets (JWT, encryption key, decrypted payloads). Same rule as the API.
-- In release builds, log levels above `warning` go to Sentry; everything else is dropped.
+- One logger in `core/logging/app_logger.dart`, a thin wrapper over `dart:developer` (no extra dependency). `createLogger("module")` mirrors the API's logger so logging reads the same across apps:
+  ```dart
+  final _log = createLogger('auth');
+  _log.warn('401 — clearing session', {'path': path});
+  _log.error('upload failed', error: e, stackTrace: st);
+  ```
+- Key/value `fields` are JSON-encoded for grep-parity with the API. Levels: `debug` / `info` / `warn` / `error`.
+- **NEVER** log secrets (JWT, encryption key, decrypted payloads). Same rule as the API — e.g. `mapDioError` logs method/path/status, never the response body.
+- In release builds `debug`/`info` are dropped; only `warn`/`error` escalate. Hook a remote sink (Sentry) into `AppLogger._emit` when crash reporting ships.
 
 ---
 

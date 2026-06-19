@@ -1,5 +1,8 @@
 import 'package:dio/dio.dart';
+import 'package:oewang/core/logging/app_logger.dart';
 import 'package:oewang/data/services/storage/secure_storage_service.dart';
+
+final _log = createLogger('auth');
 
 /// Injects `Authorization: Bearer <jwt>` on every outgoing request when a
 /// session is in secure storage. On 401 the matching response handler clears
@@ -35,6 +38,7 @@ class AuthInterceptor extends Interceptor {
     ErrorInterceptorHandler handler,
   ) async {
     if (err.response?.statusCode == 401) {
+      _log.warn('401 — clearing session', {'path': err.requestOptions.path});
       await storage.deleteToken(sessionKey);
       await onUnauthorized?.call();
     }
