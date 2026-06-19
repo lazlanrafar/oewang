@@ -4,11 +4,13 @@ import 'package:oewang/components/atoms/inputs/contexts/input_context_date.dart'
 import 'package:oewang/components/atoms/inputs/contexts/input_context_select.dart';
 import 'package:oewang/components/atoms/inputs/contexts/input_context_text.dart';
 import 'package:oewang/components/atoms/inputs/input_context.dart';
+import 'package:oewang/components/atoms/inputs/input_label_position.dart';
 import 'package:oewang/components/atoms/inputs/input_variant.dart';
 
 export 'package:oewang/components/atoms/inputs/contexts/input_context_select.dart'
     show EntitySelect;
 export 'package:oewang/components/atoms/inputs/input_context.dart';
+export 'package:oewang/components/atoms/inputs/input_label_position.dart';
 export 'package:oewang/components/atoms/inputs/input_variant.dart';
 
 /// The one input component for the app. Pick a [context] for behaviour and a
@@ -37,6 +39,7 @@ class Input extends StatefulWidget {
     this.variant = InputVariant.underline,
     this.label,
     // row layout (currency / date / select)
+    this.labelPosition = InputLabelPosition.left,
     this.labelWidth = 84,
     this.height,
     this.showBorder = false,
@@ -89,6 +92,11 @@ class Input extends StatefulWidget {
   final String? label;
 
   // row layout
+
+  /// `left` keeps the plain two-column row (variant ignored); `top` stacks the
+  /// label above a bordered field that renders [variant]. Currency / date /
+  /// select only.
+  final InputLabelPosition labelPosition;
   final double labelWidth;
   final double? height;
   final bool showBorder;

@@ -377,6 +377,7 @@ class _MonthlyStartDateScreenState
                 child: Input(
                   context: InputContext.select,
                   label: 'Start Date',
+                  variant: InputVariant.none,
                   displayValue: _date.toString(),
                   onTap: () => _pickStartDate(ctx),
                 ),

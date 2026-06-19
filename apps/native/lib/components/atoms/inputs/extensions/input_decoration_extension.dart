@@ -25,7 +25,10 @@ extension InputDecorationVariant on InputDecoration {
           suffixIcon: suffixIcon,
           filled: true,
           fillColor: palette.background,
-          contentPadding: const EdgeInsets.symmetric(vertical: 10),
+          // Dense + v8 so a text row matches the `Text`-based currency/date/
+          // select rows (which also pad v8).
+          isDense: true,
+          contentPadding: const EdgeInsets.symmetric(vertical: 8),
           border: border,
           enabledBorder: border,
           focusedBorder: border.copyWith(
@@ -66,6 +69,16 @@ extension InputDecorationVariant on InputDecoration {
             borderRadius: BorderRadius.zero,
             borderSide: BorderSide.none,
           ),
+        );
+      case InputVariant.none:
+        return copyWith(
+          hintStyle: hint,
+          suffixIcon: suffixIcon,
+          isDense: true,
+          contentPadding: const EdgeInsets.symmetric(vertical: 8),
+          border: InputBorder.none,
+          enabledBorder: InputBorder.none,
+          focusedBorder: InputBorder.none,
         );
     }
   }

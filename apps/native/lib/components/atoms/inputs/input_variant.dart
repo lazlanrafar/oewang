@@ -8,4 +8,7 @@ enum InputVariant {
 
   /// Grey filled box, no visible border.
   filled,
+
+  /// No border or fill — the plain WMoney row look.
+  none,
 }

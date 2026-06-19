@@ -108,6 +108,7 @@ class _AccountFormScreenState extends ConsumerState<AccountFormScreen> {
                   Input(
                     context: InputContext.select,
                     label: 'Group',
+                    variant: InputVariant.none,
                     labelWidth: _labelWidth,
                     height: _rowHeight,
                     showBorder: true,
@@ -142,6 +143,7 @@ class _AccountFormScreenState extends ConsumerState<AccountFormScreen> {
                   Input(
                     context: InputContext.currency,
                     label: 'Amount',
+                    variant: InputVariant.none,
                     labelWidth: _labelWidth,
                     height: _rowHeight,
                     showBorder: true,

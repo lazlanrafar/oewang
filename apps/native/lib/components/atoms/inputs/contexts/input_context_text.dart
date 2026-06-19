@@ -42,6 +42,7 @@ Widget buildTextContext(
     inputFormatters: style.formatters(),
     validator: style.validator(),
     autofillHints: widget.autofillHints,
+    onTap: widget.onTap,
     onChanged: widget.onChanged,
     onFieldSubmitted: widget.onSubmitted,
     style: OewangFonts.sans(color: palette.foreground, fontSize: 14),

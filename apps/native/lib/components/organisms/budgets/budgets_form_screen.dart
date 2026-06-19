@@ -86,6 +86,7 @@ class BudgetFormScreen extends ConsumerWidget {
                       Input(
                         context: InputContext.select,
                         label: 'Category',
+                        variant: InputVariant.none,
                         labelWidth: _labelWidth,
                         height: _rowHeight,
                         showBorder: true,
@@ -106,6 +107,7 @@ class BudgetFormScreen extends ConsumerWidget {
                     Input(
                       context: InputContext.currency,
                       label: 'Monthly Limit',
+                      variant: InputVariant.none,
                       labelWidth: _labelWidth,
                       height: _rowHeight,
                       showBorder: true,

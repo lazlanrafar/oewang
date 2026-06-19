@@ -73,73 +73,78 @@ class TransactionFormScreen extends ConsumerWidget {
           child: ListView(
             padding: EdgeInsets.zero,
             children: [
-              SegmentedPillTabs(
-              selected: vm.state.type,
-              onChanged: vm.setType,
-            ),
-            Divider(height: 1, color: palette.border),
-            Input(
-              context: InputContext.date,
-              date: vm.state.date,
-              onDateChanged: vm.setDate,
-            ),
-            Divider(height: 1, color: palette.border),
-            _AmountRow(vm: vm),
-            Divider(height: 1, color: palette.border),
-            if (vm.state.type == TransactionType.transfer) ...[
-              _TransferWalletsRow(vm: vm),
-              Divider(height: 1, color: palette.border),
-            ] else ...[
-              Input(
-                context: InputContext.select,
-                label: 'Category',
-                placeholder: 'Choose a category',
-                entity: EntitySelect<Category>(
-                  gridColumns: 3,
-                  leadingOf: (c) => c.emoji,
-                  value: _firstOrNull(
-                    vm.categoryOptions,
-                    (c) => c.id == vm.state.categoryId,
-                  ),
-                  items: vm.categoryOptions,
-                  labelOf: (c) => c.name,
-                  idOf: (c) => c.id,
-                  onSelected: (c) => vm.setCategory(c.id),
-                ),
-              ),
+              SegmentedPillTabs(selected: vm.state.type, onChanged: vm.setType),
               Divider(height: 1, color: palette.border),
               Input(
-                context: InputContext.select,
-                label: 'Account',
-                placeholder: 'Choose an account',
-                entity: EntitySelect<Wallet>(
-                  gridColumns: 3,
-                  value: _firstOrNull(
-                    vm.walletOptions,
-                    (w) => w.id == vm.state.walletId,
+                context: InputContext.date,
+                date: vm.state.date,
+                onDateChanged: vm.setDate,
+                labelPosition: InputLabelPosition.left,
+                variant: InputVariant.underline,
+              ),
+
+              _AmountRow(vm: vm),
+
+              if (vm.state.type == TransactionType.transfer) ...[
+                _TransferWalletsRow(vm: vm),
+              ] else ...[
+                Input(
+                  context: InputContext.select,
+                  label: 'Category',
+                  placeholder: 'Choose a category',
+                  labelPosition: InputLabelPosition.left,
+                  variant: InputVariant.underline,
+                  entity: EntitySelect<Category>(
+                    gridColumns: 3,
+                    leadingOf: (c) => c.emoji,
+                    value: _firstOrNull(
+                      vm.categoryOptions,
+                      (c) => c.id == vm.state.categoryId,
+                    ),
+                    items: vm.categoryOptions,
+                    labelOf: (c) => c.name,
+                    idOf: (c) => c.id,
+                    onSelected: (c) => vm.setCategory(c.id),
                   ),
-                  items: vm.walletOptions,
-                  labelOf: (w) => w.name,
-                  idOf: (w) => w.id,
-                  onSelected: (w) => vm.setWallet(w.id),
+                ),
+                Input(
+                  context: InputContext.select,
+                  label: 'Account',
+                  placeholder: 'Choose an account',
+                  entity: EntitySelect<Wallet>(
+                    gridColumns: 3,
+                    value: _firstOrNull(
+                      vm.walletOptions,
+                      (w) => w.id == vm.state.walletId,
+                    ),
+                    items: vm.walletOptions,
+                    labelOf: (w) => w.name,
+                    idOf: (w) => w.id,
+                    onSelected: (w) => vm.setWallet(w.id),
+                  ),
+                ),
+              ],
+              FormFieldRow(
+                label: 'Note',
+                child: Input(
+                  variant: InputVariant.underline,
+                  onChanged: vm.setNote,
+                  onTap: () => FormDrawerScope.maybeOf(context)?.close(),
                 ),
               ),
-              Divider(height: 1, color: palette.border),
-            ],
-            _NoteRow(vm: vm),
-            const SizedBox(height: 24),
-            _DescriptionRow(vm: vm),
-            const SizedBox(height: 12),
-            if (vm.save.error != null)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  vm.save.error!.message,
-                  textAlign: TextAlign.center,
-                  style: OewangFonts.sans(color: OewangColors.coral),
+              const SizedBox(height: 24),
+              _DescriptionRow(vm: vm),
+              const SizedBox(height: 12),
+              if (vm.save.error != null)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(
+                    vm.save.error!.message,
+                    textAlign: TextAlign.center,
+                    style: OewangFonts.sans(color: OewangColors.coral),
+                  ),
                 ),
-              ),
-            _ActionRow(vm: vm, saveTint: saveTint),
+              _ActionRow(vm: vm, saveTint: saveTint),
             ],
           ),
         ),
@@ -211,8 +216,14 @@ class _TransferWalletsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    final from = _firstOrNull(vm.walletOptions, (w) => w.id == vm.state.walletId);
-    final to = _firstOrNull(vm.walletOptions, (w) => w.id == vm.state.toWalletId);
+    final from = _firstOrNull(
+      vm.walletOptions,
+      (w) => w.id == vm.state.walletId,
+    );
+    final to = _firstOrNull(
+      vm.walletOptions,
+      (w) => w.id == vm.state.toWalletId,
+    );
 
     return Row(
       children: [
@@ -260,32 +271,6 @@ class _TransferWalletsRow extends StatelessWidget {
   }
 }
 
-class _NoteRow extends StatelessWidget {
-  const _NoteRow({required this.vm});
-  final TransactionFormViewModel vm;
-
-  @override
-  Widget build(BuildContext context) {
-    return FormFieldRow(
-      label: 'Note',
-      child: TextField(
-        onTap: () => FormDrawerScope.maybeOf(context)?.close(),
-        onChanged: vm.setNote,
-        decoration: const InputDecoration(
-          hintText: '',
-          border: InputBorder.none,
-          enabledBorder: InputBorder.none,
-          focusedBorder: InputBorder.none,
-          contentPadding: EdgeInsets.zero,
-          fillColor: Colors.transparent,
-          filled: false,
-        ),
-        style: OewangFonts.sans(color: context.palette.foreground),
-      ),
-    );
-  }
-}
-
 class _DescriptionRow extends StatelessWidget {
   const _DescriptionRow({required this.vm});
   final TransactionFormViewModel vm;
@@ -304,9 +289,7 @@ class _DescriptionRow extends StatelessWidget {
               onChanged: vm.setDescription,
               decoration: InputDecoration(
                 hintText: 'Description',
-                hintStyle: OewangFonts.sans(
-                  color: palette.mutedForeground,
-                ),
+                hintStyle: OewangFonts.sans(color: palette.mutedForeground),
                 border: InputBorder.none,
                 enabledBorder: InputBorder.none,
                 focusedBorder: InputBorder.none,
@@ -345,7 +328,9 @@ class _ActionRow extends ConsumerWidget {
           Navigator.of(context).pop(true);
         }
       },
-      (_) {/* error rendered by VM */},
+      (_) {
+        /* error rendered by VM */
+      },
     );
   }
 

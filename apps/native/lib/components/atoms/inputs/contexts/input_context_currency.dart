@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:oewang/components/atoms/inputs/bases/input_base_drawer_header.dart';
 import 'package:oewang/components/atoms/inputs/bases/input_base_drawer_host.dart';
 import 'package:oewang/components/atoms/inputs/bases/input_base_drawer_metrics.dart';
-import 'package:oewang/components/atoms/inputs/bases/input_base_field_row.dart';
+import 'package:oewang/components/atoms/inputs/contexts/input_context_row.dart';
 import 'package:oewang/components/atoms/inputs/input.dart';
 import 'package:oewang/core/format/amount_format.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
@@ -31,35 +31,21 @@ Widget buildCurrencyContext(
     onCurrencyChanged: onCurrencyChange,
   );
 
-  return FormFieldRow(
+  return inputFieldLayout(
+    context,
+    widget,
     label: label,
-    labelWidth: widget.labelWidth,
-    height: widget.height,
-    showBorder: widget.showBorder,
     onTap: open,
-    child: Row(
-      children: [
-        Expanded(
-          child: InkWell(
-            onTap: open,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2),
-              child: Text(
-                AmountFormat.currency(
-                  widget.amount,
-                  currency: currency,
-                  useCode: widget.useCurrencyCode,
-                ),
-                style: OewangFonts.currency(
-                  color: widget.valueColor ?? palette.foreground,
-                  fontSize: 16,
-                ),
-              ),
-            ),
-          ),
-        ),
-        if (widget.trailing != null) widget.trailing!,
-      ],
+    value: Text(
+      AmountFormat.currency(
+        widget.amount,
+        currency: currency,
+        useCode: widget.useCurrencyCode,
+      ),
+      style: OewangFonts.currency(
+        color: widget.valueColor ?? palette.foreground,
+        fontSize: 16,
+      ),
     ),
   );
 }
