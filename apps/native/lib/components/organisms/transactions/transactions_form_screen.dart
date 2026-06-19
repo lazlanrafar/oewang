@@ -1,5 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:oewang/components/atoms/button.dart';
 import 'package:oewang/components/atoms/inputs/bases/input_base_drawer_host.dart';
 import 'package:oewang/components/atoms/inputs/bases/input_base_field_row.dart';
 import 'package:oewang/components/atoms/inputs/contexts/input_context_currency.dart';
@@ -43,13 +47,7 @@ class TransactionFormScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final vm = ref.watch(transactionFormVmProvider(transaction));
-    final tx = Theme.of(context).extension<TransactionColors>()!;
     final palette = context.palette;
-    final saveTint = switch (vm.state.type) {
-      TransactionType.income => tx.income,
-      TransactionType.expense => tx.expense,
-      _ => palette.foreground,
-    };
 
     final title = switch (vm.state.type) {
       TransactionType.income => 'Income',
@@ -133,6 +131,7 @@ class TransactionFormScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 24),
+              Container(height: 8, color: palette.muted),
               _DescriptionRow(vm: vm),
               const SizedBox(height: 12),
               if (vm.save.error != null)
@@ -144,7 +143,7 @@ class TransactionFormScreen extends ConsumerWidget {
                     style: OewangFonts.sans(color: OewangColors.coral),
                   ),
                 ),
-              _ActionRow(vm: vm, saveTint: saveTint),
+              _ActionRow(vm: vm),
             ],
           ),
         ),
@@ -174,6 +173,9 @@ class _AmountRow extends StatelessWidget {
       amount: vm.state.amount,
       valueColor: color,
       onAmountChanged: vm.setAmount,
+      // ponytail: compact inline chip — the Button atom is full-width-only, so
+      // the Fees toggle stays a bespoke OutlinedButton. Promote to the atom if
+      // it grows a compact/inline variant.
       trailing: isTransfer
           ? OutlinedButton(
               onPressed: () => openAmountDrawer(
@@ -271,35 +273,107 @@ class _TransferWalletsRow extends StatelessWidget {
   }
 }
 
-class _DescriptionRow extends StatelessWidget {
+/// Multi-line description (variant-styled [Input]) plus a receipt image
+/// attachment. ponytail: the picked receipt is preview-only — there's no
+/// transaction attachment endpoint yet (only `POST /users/me/avatar`). Wire it
+/// to a multipart POST + a `receiptUrl` field on the draft when the API lands.
+class _DescriptionRow extends StatefulWidget {
   const _DescriptionRow({required this.vm});
   final TransactionFormViewModel vm;
 
   @override
+  State<_DescriptionRow> createState() => _DescriptionRowState();
+}
+
+class _DescriptionRowState extends State<_DescriptionRow> {
+  XFile? _receipt;
+
+  Future<void> _pickReceipt() async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: const Text('Take photo'),
+              onTap: () => Navigator.of(ctx).pop(ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Choose from gallery'),
+              onTap: () => Navigator.of(ctx).pop(ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null) return;
+    final picked = await ImagePicker().pickImage(
+      source: source,
+      maxWidth: 1600,
+      imageQuality: 85,
+    );
+    if (picked == null || !mounted) return;
+    setState(() => _receipt = picked);
+  }
+
+  @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    return Container(
-      color: palette.card,
+    return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: TextField(
-              onTap: () => FormDrawerScope.maybeOf(context)?.close(),
-              onChanged: vm.setDescription,
-              decoration: InputDecoration(
-                hintText: 'Description',
-                hintStyle: OewangFonts.sans(color: palette.mutedForeground),
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                fillColor: Colors.transparent,
-                filled: false,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Input(
+                  hintText: 'Description',
+                  variant: InputVariant.underline,
+                  maxLines: 5,
+                  minLines: 3,
+                  onChanged: widget.vm.setDescription,
+                  onTap: () => FormDrawerScope.maybeOf(context)?.close(),
+                ),
               ),
-              style: OewangFonts.sans(color: palette.foreground),
-            ),
+              IconButton(
+                onPressed: _pickReceipt,
+                tooltip: 'Attach receipt',
+                icon: Icon(
+                  Icons.photo_camera_outlined,
+                  color: palette.mutedForeground,
+                ),
+              ),
+            ],
           ),
-          Icon(Icons.photo_camera_outlined, color: palette.mutedForeground),
+          if (_receipt != null) ...[
+            const SizedBox(height: 8),
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.file(
+                    File(_receipt!.path),
+                    width: 96,
+                    height: 96,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                Positioned(
+                  top: -8,
+                  right: -8,
+                  child: IconButton(
+                    onPressed: () => setState(() => _receipt = null),
+                    icon: Icon(Icons.cancel, color: palette.foreground),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -307,10 +381,9 @@ class _DescriptionRow extends StatelessWidget {
 }
 
 class _ActionRow extends ConsumerWidget {
-  const _ActionRow({required this.vm, required this.saveTint});
+  const _ActionRow({required this.vm});
 
   final TransactionFormViewModel vm;
-  final Color saveTint;
 
   Future<void> _onSave(
     BuildContext context,
@@ -336,60 +409,30 @@ class _ActionRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final palette = context.palette;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       child: Row(
         children: [
           Expanded(
-            child: SizedBox(
+            child: Button(
+              label: 'Save',
               height: 48,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: saveTint,
-                  foregroundColor: Colors.white,
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.zero,
-                  ),
-                ),
-                onPressed: vm.canSave
-                    ? () => _onSave(context, ref, keepOpen: false)
-                    : null,
-                child: vm.save.running
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : Text(
-                        'Save',
-                        style: OewangFonts.sans(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-              ),
+              loading: vm.save.running,
+              onPressed: vm.canSave
+                  ? () => _onSave(context, ref, keepOpen: false)
+                  : null,
             ),
           ),
           const SizedBox(width: 12),
           SizedBox(
-            height: 48,
-            child: OutlinedButton(
+            width: 130,
+            child: Button(
+              label: 'Continue',
+              height: 48,
+              variant: ButtonVariant.outlined,
               onPressed: vm.canSave
                   ? () => _onSave(context, ref, keepOpen: true)
                   : null,
-              style: OutlinedButton.styleFrom(
-                foregroundColor: palette.foreground,
-                side: BorderSide(color: palette.border),
-                shape: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.zero,
-                ),
-              ),
-              child: Text('Continue', style: OewangFonts.sans(fontSize: 15)),
             ),
           ),
         ],

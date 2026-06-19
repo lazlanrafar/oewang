@@ -52,6 +52,8 @@ class Input extends StatefulWidget {
     this.hintText,
     this.autofocus = false,
     this.obscureText = false,
+    this.maxLines = 1,
+    this.minLines,
     this.keyboardType,
     this.autofillHints,
     this.onChanged,
@@ -119,6 +121,12 @@ class Input extends StatefulWidget {
   final String? hintText;
   final bool autofocus;
   final bool obscureText;
+
+  /// `text` only. `> 1` (or null) makes a multi-line editor; pair with
+  /// [minLines] for a min height. Newlines + multiline keyboard kick in
+  /// automatically when this isn't 1.
+  final int? maxLines;
+  final int? minLines;
   final TextInputType? keyboardType;
   final Iterable<String>? autofillHints;
   final ValueChanged<String>? onChanged;

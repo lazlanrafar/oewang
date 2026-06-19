@@ -34,11 +34,15 @@ Widget buildTextContext(
   var base = style.decoration(context);
   if (widget.hintText != null) base = base.copyWith(hintText: widget.hintText);
 
+  final multiline = widget.maxLines != 1;
   final field = TextFormField(
     controller: controller,
     autofocus: widget.autofocus,
     obscureText: obscured,
-    keyboardType: widget.keyboardType ?? style.keyboardType(),
+    maxLines: obscured ? 1 : widget.maxLines,
+    minLines: widget.minLines,
+    keyboardType: widget.keyboardType ??
+        (multiline ? TextInputType.multiline : style.keyboardType()),
     inputFormatters: style.formatters(),
     validator: style.validator(),
     autofillHints: widget.autofillHints,

@@ -362,7 +362,7 @@ The Transaction Form (IMG_1830–32) and the Account Form (IMG_1836) are the can
 
 | `context`  | Behaviour                                                                                                   |
 | ---------- | ----------------------------------------------------------------------------------------------------------- |
-| `text`     | Typed [TextField]. `variant`: `underline` (default — in-app forms), `outlined` (boxed login), `filled` (grey box), `none` (no border/fill). `label`/`hintText`/`obscureText`/`keyboardType`/`autofillHints`/`onChanged`/`onSubmitted`. |
+| `text`     | Typed [TextField]. `variant`: `underline` (default — in-app forms), `outlined` (boxed login), `filled` (grey box), `none` (no border/fill). `label`/`hintText`/`obscureText`/`keyboardType`/`autofillHints`/`onChanged`/`onSubmitted`. `maxLines` (≠1 → multi-line editor, auto multiline keyboard) + `minLines` for a min-height text area. |
 | `accounts` | Like `text` but required + whitespace-tidied (account names).                                               |
 | `currency` | Labelled row → **keypad drawer**, live `Rp 1.000.000`. `amount`/`onAmountChanged`, `currency`, `showCurrencyTabs`, `useCurrencyCode`, `valueColor`, `trailing`. |
 | `date`     | Labelled row → **calendar drawer**. `date`/`onDateChanged`, `datePattern`, `firstDate`/`lastDate`.          |
