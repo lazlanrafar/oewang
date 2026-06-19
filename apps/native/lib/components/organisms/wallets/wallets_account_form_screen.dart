@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oewang/components/atoms/button.dart';
-import 'package:oewang/components/atoms/amount_input_field.dart';
-import 'package:oewang/components/atoms/form_field_row.dart';
-import 'package:oewang/components/atoms/select_entity_field.dart';
-import 'package:oewang/components/molecules/form_drawer.dart';
+import 'package:oewang/components/atoms/inputs/bases/input_base_drawer_host.dart';
+import 'package:oewang/components/atoms/inputs/bases/input_base_field_row.dart';
+import 'package:oewang/components/atoms/inputs/input.dart';
 import 'package:oewang/components/molecules/page_app_bar.dart';
 import 'package:oewang/components/organisms/wallets/wallets_account_form_view_model.dart';
 import 'package:oewang/config/dependencies.dart';
@@ -106,21 +105,24 @@ class _AccountFormScreenState extends ConsumerState<AccountFormScreen> {
               child: ListView(
                 padding: EdgeInsets.zero,
                 children: [
-                  SelectEntityField<WalletGroup>(
+                  Input(
+                    context: InputContext.select,
                     label: 'Group',
                     labelWidth: _labelWidth,
                     height: _rowHeight,
                     showBorder: true,
-                    gridColumns: 3,
                     placeholder: 'Choose a group',
-                    value: _firstOrNull(
-                      vm.groupOptions,
-                      (g) => g.id == vm.state.groupId,
+                    entity: EntitySelect<WalletGroup>(
+                      gridColumns: 3,
+                      value: _firstOrNull(
+                        vm.groupOptions,
+                        (g) => g.id == vm.state.groupId,
+                      ),
+                      items: vm.groupOptions,
+                      labelOf: (g) => g.name,
+                      idOf: (g) => g.id,
+                      onSelected: (g) => vm.setGroup(g.id),
                     ),
-                    items: vm.groupOptions,
-                    labelOf: (g) => g.name,
-                    idOf: (g) => g.id,
-                    onSelected: (g) => vm.setGroup(g.id),
                   ),
                   FormFieldRow(
                     label: 'Name',
@@ -137,13 +139,14 @@ class _AccountFormScreenState extends ConsumerState<AccountFormScreen> {
                       style: OewangFonts.sans(color: palette.foreground),
                     ),
                   ),
-                  AmountInputField(
+                  Input(
+                    context: InputContext.currency,
                     label: 'Amount',
                     labelWidth: _labelWidth,
                     height: _rowHeight,
                     showBorder: true,
-                    value: vm.state.balance,
-                    onChanged: vm.setBalance,
+                    amount: vm.state.balance,
+                    onAmountChanged: vm.setBalance,
                     currency: vm.state.currencyCode,
                     useCurrencyCode: true,
                     showCurrencyTabs: false,

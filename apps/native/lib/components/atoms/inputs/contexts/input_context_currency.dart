@@ -1,8 +1,111 @@
 import 'package:flutter/material.dart';
-import 'package:oewang/components/atoms/drawer_header.dart';
-import 'package:oewang/components/atoms/drawer_metrics.dart';
+import 'package:oewang/components/atoms/inputs/bases/input_base_drawer_header.dart';
+import 'package:oewang/components/atoms/inputs/bases/input_base_drawer_host.dart';
+import 'package:oewang/components/atoms/inputs/bases/input_base_drawer_metrics.dart';
+import 'package:oewang/components/atoms/inputs/bases/input_base_field_row.dart';
+import 'package:oewang/components/atoms/inputs/input.dart';
+import 'package:oewang/core/format/amount_format.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
+
+
+/// `InputContext.currency` — a labelled row that opens the keypad drawer and
+/// shows the live-grouped amount. [currency] is the active code (the keypad's
+/// Rp/S$/US$ tabs report changes through [onCurrencyChange]).
+Widget buildCurrencyContext(
+  BuildContext context,
+  Input widget, {
+  required String currency,
+  required ValueChanged<String> onCurrencyChange,
+}) {
+  final palette = context.palette;
+  final label = widget.label ?? 'Amount';
+  void open() => openAmountDrawer(
+    context,
+    id: widget.drawerId ?? label,
+    initial: widget.amount,
+    title: label,
+    currency: currency,
+    showCurrencyTabs: widget.showCurrencyTabs,
+    onChanged: widget.onAmountChanged!,
+    onCurrencyChanged: onCurrencyChange,
+  );
+
+  return FormFieldRow(
+    label: label,
+    labelWidth: widget.labelWidth,
+    height: widget.height,
+    showBorder: widget.showBorder,
+    onTap: open,
+    child: Row(
+      children: [
+        Expanded(
+          child: InkWell(
+            onTap: open,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: Text(
+                AmountFormat.currency(
+                  widget.amount,
+                  currency: currency,
+                  useCode: widget.useCurrencyCode,
+                ),
+                style: OewangFonts.currency(
+                  color: widget.valueColor ?? palette.foreground,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          ),
+        ),
+        if (widget.trailing != null) widget.trailing!,
+      ],
+    ),
+  );
+}
+
+// ── Keypad drawer ───────────────────────────────────────────────────────────
+
+/// Opens the amount keypad — in the shared panel when a [FormDrawerHost] is an
+/// ancestor, otherwise as a modal bottom sheet.
+void openAmountDrawer(
+  BuildContext context, {
+  required String id,
+  required num initial,
+  required ValueChanged<num> onChanged,
+  String title = 'Amount',
+  String currency = 'IDR',
+  ValueChanged<String>? onCurrencyChanged,
+  bool showCurrencyTabs = true,
+}) {
+  final controller = FormDrawerScope.maybeOf(context);
+  if (controller != null) {
+    controller.open(
+      id,
+      (_) => AmountKeypad(
+        initial: initial,
+        title: title,
+        currency: currency,
+        showCurrencyTabs: showCurrencyTabs,
+        onChanged: onChanged,
+        onCurrencyChanged: onCurrencyChanged,
+        onSubmit: (_) => controller.close(),
+        onClose: controller.close,
+      ),
+    );
+  } else {
+    AmountKeypadSheet.show(
+      context,
+      initial: initial,
+      onChanged: onChanged,
+      title: title,
+      currency: currency,
+      showCurrencyTabs: showCurrencyTabs,
+      onCurrencyChanged: onCurrencyChanged,
+    );
+  }
+}
+
 
 /// Currency code → tab label, mirroring [Money]'s symbols.
 const Map<String, String> _kCurrencyTabs = {

@@ -10,9 +10,9 @@ import 'package:oewang/components/organisms/budgets/budgets_setting_screen.dart'
 import 'package:oewang/components/organisms/categories/categories_form_screen.dart';
 import 'package:oewang/components/organisms/categories/categories_list_screen.dart';
 import 'package:oewang/components/organisms/settings/currency/settings_main_currency_screen.dart';
+import 'package:oewang/components/organisms/settings/currency/settings_sub_currency_screen.dart';
 import 'package:oewang/components/organisms/settings/settings_screen.dart';
 import 'package:oewang/components/organisms/settings/style/settings_style_screen.dart';
-import 'package:oewang/components/organisms/settings/currency/settings_sub_currency_screen.dart';
 import 'package:oewang/components/organisms/settings/transactions/settings_transaction_screen.dart';
 import 'package:oewang/components/organisms/stats/stats_screen.dart';
 import 'package:oewang/components/organisms/transactions/transactions_form_screen.dart';
@@ -25,8 +25,8 @@ import 'package:oewang/components/organisms/wallets/wallets_accounts_settings_sc
 import 'package:oewang/components/organisms/wallets/wallets_include_in_totals_screen.dart';
 import 'package:oewang/components/organisms/wallets/wallets_screen.dart';
 import 'package:oewang/config/dependencies.dart';
-import 'package:oewang/domain/models/category.dart' as cat;
 import 'package:oewang/domain/models/budget_status.dart';
+import 'package:oewang/domain/models/category.dart' as cat;
 import 'package:oewang/domain/models/transaction.dart';
 import 'package:oewang/domain/models/wallet.dart';
 import 'package:oewang/domain/models/wallet_group.dart';

@@ -1,10 +1,74 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:oewang/components/atoms/drawer_header.dart';
-import 'package:oewang/components/atoms/drawer_metrics.dart';
+import 'package:oewang/components/atoms/inputs/bases/input_base_drawer_header.dart';
+import 'package:oewang/components/atoms/inputs/bases/input_base_drawer_host.dart';
+import 'package:oewang/components/atoms/inputs/bases/input_base_drawer_metrics.dart';
+import 'package:oewang/components/atoms/inputs/contexts/input_context_row.dart';
+import 'package:oewang/components/atoms/inputs/decorators/input_decorator_date.dart';
+import 'package:oewang/components/atoms/inputs/input.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
+
+
+/// `InputContext.date` — a labelled row that opens the calendar drawer and
+/// shows the formatted day.
+Widget buildDateContext(BuildContext context, Input widget) {
+  final label = widget.label ?? 'Date';
+  return inputSelectRow(
+    context,
+    widget,
+    label: label,
+    value: DateFormatter.format(widget.date!, pattern: widget.datePattern),
+    onTap: () => openDateDrawer(
+      context,
+      id: widget.drawerId ?? label,
+      initial: widget.date!,
+      firstDate: widget.firstDate,
+      lastDate: widget.lastDate,
+      onSelected: widget.onDateChanged!,
+    ),
+  );
+}
+
+// ── Calendar drawer ─────────────────────────────────────────────────────────
+
+/// Opens the calendar — shared panel when hosted, else modal.
+void openDateDrawer(
+  BuildContext context, {
+  required String id,
+  required DateTime initial,
+  required ValueChanged<DateTime> onSelected,
+  DateTime? firstDate,
+  DateTime? lastDate,
+}) {
+  final controller = FormDrawerScope.maybeOf(context);
+  if (controller != null) {
+    controller.open(
+      id,
+      (_) => CalendarContent(
+        initial: initial,
+        firstDate: firstDate,
+        lastDate: lastDate,
+        onSelected: (d) {
+          onSelected(d);
+          controller.close();
+        },
+        onClose: controller.close,
+      ),
+    );
+  } else {
+    CalendarPickerSheet.show(
+      context,
+      initial: initial,
+      firstDate: firstDate,
+      lastDate: lastDate,
+    ).then((picked) {
+      if (picked != null) onSelected(picked);
+    });
+  }
+}
+
 
 /// WMoney-style calendar content: a black "Date / Today / close" header, month
 /// navigation, a Sunday-start weekday row (Sun red, Sat blue) and a full-bleed
@@ -166,7 +230,6 @@ class _MonthGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = context.palette;
     final first = DateTime(month.year, month.month);
     final leading = first.weekday % 7; // Sunday-start leading days
     final start = first.subtract(Duration(days: leading));

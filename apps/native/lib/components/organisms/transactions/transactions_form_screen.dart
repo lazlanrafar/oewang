@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:oewang/components/atoms/amount_input_field.dart';
-import 'package:oewang/components/atoms/form_field_row.dart';
-import 'package:oewang/components/atoms/select_date_field.dart';
-import 'package:oewang/components/atoms/select_entity_field.dart';
-import 'package:oewang/components/molecules/form_drawer.dart';
+import 'package:oewang/components/atoms/inputs/bases/input_base_drawer_host.dart';
+import 'package:oewang/components/atoms/inputs/bases/input_base_field_row.dart';
+import 'package:oewang/components/atoms/inputs/contexts/input_context_currency.dart';
+import 'package:oewang/components/atoms/inputs/input.dart';
 import 'package:oewang/components/molecules/page_app_bar.dart';
-import 'package:oewang/components/organisms/transactions/transactions_segmented_pill_tabs.dart';
 import 'package:oewang/components/organisms/transactions/transactions_form_view_model.dart';
+import 'package:oewang/components/organisms/transactions/transactions_segmented_pill_tabs.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/format/amount_format.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
@@ -79,9 +78,10 @@ class TransactionFormScreen extends ConsumerWidget {
               onChanged: vm.setType,
             ),
             Divider(height: 1, color: palette.border),
-            SelectDateField(
-              value: vm.state.date,
-              onChanged: vm.setDate,
+            Input(
+              context: InputContext.date,
+              date: vm.state.date,
+              onDateChanged: vm.setDate,
             ),
             Divider(height: 1, color: palette.border),
             _AmountRow(vm: vm),
@@ -90,33 +90,39 @@ class TransactionFormScreen extends ConsumerWidget {
               _TransferWalletsRow(vm: vm),
               Divider(height: 1, color: palette.border),
             ] else ...[
-              SelectEntityField<Category>(
+              Input(
+                context: InputContext.select,
                 label: 'Category',
                 placeholder: 'Choose a category',
-                gridColumns: 3,
-                leadingOf: (c) => c.emoji,
-                value: _firstOrNull(
-                  vm.categoryOptions,
-                  (c) => c.id == vm.state.categoryId,
+                entity: EntitySelect<Category>(
+                  gridColumns: 3,
+                  leadingOf: (c) => c.emoji,
+                  value: _firstOrNull(
+                    vm.categoryOptions,
+                    (c) => c.id == vm.state.categoryId,
+                  ),
+                  items: vm.categoryOptions,
+                  labelOf: (c) => c.name,
+                  idOf: (c) => c.id,
+                  onSelected: (c) => vm.setCategory(c.id),
                 ),
-                items: vm.categoryOptions,
-                labelOf: (c) => c.name,
-                idOf: (c) => c.id,
-                onSelected: (c) => vm.setCategory(c.id),
               ),
               Divider(height: 1, color: palette.border),
-              SelectEntityField<Wallet>(
+              Input(
+                context: InputContext.select,
                 label: 'Account',
                 placeholder: 'Choose an account',
-                gridColumns: 3,
-                value: _firstOrNull(
-                  vm.walletOptions,
-                  (w) => w.id == vm.state.walletId,
+                entity: EntitySelect<Wallet>(
+                  gridColumns: 3,
+                  value: _firstOrNull(
+                    vm.walletOptions,
+                    (w) => w.id == vm.state.walletId,
+                  ),
+                  items: vm.walletOptions,
+                  labelOf: (w) => w.name,
+                  idOf: (w) => w.id,
+                  onSelected: (w) => vm.setWallet(w.id),
                 ),
-                items: vm.walletOptions,
-                labelOf: (w) => w.name,
-                idOf: (w) => w.id,
-                onSelected: (w) => vm.setWallet(w.id),
               ),
               Divider(height: 1, color: palette.border),
             ],
@@ -157,11 +163,12 @@ class _AmountRow extends StatelessWidget {
     };
     final isTransfer = vm.state.type == TransactionType.transfer;
 
-    return AmountInputField(
+    return Input(
+      context: InputContext.currency,
       label: 'Amount',
-      value: vm.state.amount,
+      amount: vm.state.amount,
       valueColor: color,
-      onChanged: vm.setAmount,
+      onAmountChanged: vm.setAmount,
       trailing: isTransfer
           ? OutlinedButton(
               onPressed: () => openAmountDrawer(
@@ -213,26 +220,32 @@ class _TransferWalletsRow extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              SelectEntityField<Wallet>(
+              Input(
+                context: InputContext.select,
                 label: 'From',
                 placeholder: 'Choose an account',
-                gridColumns: 3,
-                value: from,
-                items: vm.walletOptions,
-                labelOf: (w) => w.name,
-                idOf: (w) => w.id,
-                onSelected: (w) => vm.setWallet(w.id),
+                entity: EntitySelect<Wallet>(
+                  gridColumns: 3,
+                  value: from,
+                  items: vm.walletOptions,
+                  labelOf: (w) => w.name,
+                  idOf: (w) => w.id,
+                  onSelected: (w) => vm.setWallet(w.id),
+                ),
               ),
               Divider(height: 1, color: palette.border),
-              SelectEntityField<Wallet>(
+              Input(
+                context: InputContext.select,
                 label: 'To',
                 placeholder: 'Choose an account',
-                gridColumns: 3,
-                value: to,
-                items: vm.walletOptions,
-                labelOf: (w) => w.name,
-                idOf: (w) => w.id,
-                onSelected: (w) => vm.setToWallet(w.id),
+                entity: EntitySelect<Wallet>(
+                  gridColumns: 3,
+                  value: to,
+                  items: vm.walletOptions,
+                  labelOf: (w) => w.name,
+                  idOf: (w) => w.id,
+                  onSelected: (w) => vm.setToWallet(w.id),
+                ),
               ),
             ],
           ),

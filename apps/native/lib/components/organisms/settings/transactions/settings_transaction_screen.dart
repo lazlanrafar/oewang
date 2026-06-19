@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oewang/components/atoms/button.dart';
-import 'package:oewang/components/atoms/select_field.dart';
-import 'package:oewang/components/molecules/form_drawer.dart';
+import 'package:oewang/components/atoms/inputs/bases/input_base_drawer_host.dart';
+import 'package:oewang/components/atoms/inputs/contexts/input_context_select.dart';
+import 'package:oewang/components/atoms/inputs/input.dart';
 import 'package:oewang/components/molecules/page_app_bar.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
@@ -373,9 +374,10 @@ class _MonthlyStartDateScreenState
             Builder(
               builder: (ctx) => InkWell(
                 onTap: () => _pickStartDate(ctx),
-                child: SelectField(
+                child: Input(
+                  context: InputContext.select,
                   label: 'Start Date',
-                  value: _date.toString(),
+                  displayValue: _date.toString(),
                   onTap: () => _pickStartDate(ctx),
                 ),
               ),

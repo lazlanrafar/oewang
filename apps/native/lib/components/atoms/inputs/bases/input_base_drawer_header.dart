@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:oewang/components/atoms/drawer_metrics.dart';
+import 'package:oewang/components/atoms/inputs/bases/input_base_drawer_metrics.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 
 /// The solid black header bar shared by every input panel: a title on the left,

@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:oewang/components/atoms/amount_input_field.dart';
 import 'package:oewang/components/atoms/button.dart';
-import 'package:oewang/components/atoms/form_field_row.dart';
-import 'package:oewang/components/atoms/select_entity_field.dart';
-import 'package:oewang/components/molecules/form_drawer.dart';
+import 'package:oewang/components/atoms/inputs/bases/input_base_drawer_host.dart';
+import 'package:oewang/components/atoms/inputs/bases/input_base_field_row.dart';
+import 'package:oewang/components/atoms/inputs/input.dart';
 import 'package:oewang/components/molecules/page_app_bar.dart';
 import 'package:oewang/components/organisms/budgets/budgets_form_view_model.dart';
 import 'package:oewang/config/dependencies.dart';
@@ -84,31 +83,35 @@ class BudgetFormScreen extends ConsumerWidget {
                         ),
                       )
                     else
-                      SelectEntityField<Category>(
+                      Input(
+                        context: InputContext.select,
                         label: 'Category',
                         labelWidth: _labelWidth,
                         height: _rowHeight,
                         showBorder: true,
-                        gridColumns: 3,
                         placeholder: 'Choose a category',
-                        leadingOf: (c) => c.emoji,
-                        value: _firstOrNull(
-                          vm.categoryOptions,
-                          (c) => c.id == vm.state.categoryId,
+                        entity: EntitySelect<Category>(
+                          gridColumns: 3,
+                          leadingOf: (c) => c.emoji,
+                          value: _firstOrNull(
+                            vm.categoryOptions,
+                            (c) => c.id == vm.state.categoryId,
+                          ),
+                          items: vm.categoryOptions,
+                          labelOf: (c) => c.name,
+                          idOf: (c) => c.id,
+                          onSelected: (c) => vm.setCategory(c.id),
                         ),
-                        items: vm.categoryOptions,
-                        labelOf: (c) => c.name,
-                        idOf: (c) => c.id,
-                        onSelected: (c) => vm.setCategory(c.id),
                       ),
-                    AmountInputField(
+                    Input(
+                      context: InputContext.currency,
                       label: 'Monthly Limit',
                       labelWidth: _labelWidth,
                       height: _rowHeight,
                       showBorder: true,
                       showCurrencyTabs: false,
-                      value: vm.state.amount,
-                      onChanged: vm.setAmount,
+                      amount: vm.state.amount,
+                      onAmountChanged: vm.setAmount,
                     ),
                     if (vm.save.error != null)
                       Padding(

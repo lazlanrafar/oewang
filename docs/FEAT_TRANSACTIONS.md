@@ -178,7 +178,7 @@ The `apps/native` transaction and account forms were rebuilt on a reusable, WMon
 
 ### Currency note
 
-The keypad currency tabs currently change only the **displayed** symbol locally; the selected currency is not yet persisted onto the transaction (storage still defaults to `IDR`). To persist it, thread `onCurrencyChanged`/`currency` from `AmountInputField` into the form ViewModel and the `NewTransactionDraft`, and wire it to the Main Currency Setting once that setting is backed by a provider.
+The keypad currency tabs currently change only the **displayed** symbol locally; the selected currency is not yet persisted onto the transaction (storage still defaults to `IDR`). To persist it, thread `onCurrencyChanged`/`currency` from `Input(context: currency)` into the form ViewModel and the `NewTransactionDraft`, and wire it to the Main Currency Setting once that setting is backed by a provider.
 
 ### Mobile Source Files
 
@@ -187,7 +187,7 @@ The keypad currency tabs currently change only the **displayed** symbol locally;
 | Transaction form        | `apps/native/lib/components/organisms/transactions/transactions_form_screen.dart` |
 | Account form            | `apps/native/lib/components/organisms/wallets/wallets_account_form_screen.dart` |
 | Form ViewModel          | `apps/native/lib/components/organisms/transactions/transactions_form_view_model.dart` |
-| Reusable fields + panels | `apps/native/lib/components/atoms/` (field rows, `drawer_*`) & `lib/components/molecules/` (pickers, `form_drawer`/`FormDrawerHost`) |
+| Reusable fields + panels | `apps/native/lib/components/atoms/inputs/` — the one `Input` system: `contexts/` (render + opener + sheet per context), `bases/` (`FormDrawerHost`, `FormFieldRow`, drawer header/metrics) |
 | Amount formatting       | `apps/native/lib/core/format/amount_format.dart`                           |
 | Daily list cards        | `apps/native/lib/components/organisms/transactions/transactions_daily_screen.dart`, `transactions_daily_group_header.dart` |
 

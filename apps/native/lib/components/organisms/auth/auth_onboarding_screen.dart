@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oewang/components/atoms/button.dart';
-import 'package:oewang/components/atoms/input.dart';
+import 'package:oewang/components/atoms/inputs/input.dart';
 import 'package:oewang/components/organisms/auth/auth_onboarding_view_model.dart';
 import 'package:oewang/components/organisms/settings/currency/settings_currency_picker_screen.dart';
 import 'package:oewang/config/dependencies.dart';

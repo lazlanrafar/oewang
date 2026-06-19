@@ -36,10 +36,11 @@ The UI layer is `lib/components/`, organized by [Atomic Design](https://atomicde
 
 ```
 components/
-  atoms/        ← smallest reusable widgets (button, input, money_text, section_label,
-                  + form field-level pieces: form_field_row, select_field, amount_input_field, drawer_*)
-  molecules/    ← compositions of atoms (page_app_bar, segmented_tabs, list_row,
-                  + form drawer/sheets: form_drawer, amount_keypad_sheet, *_picker_sheet)
+  atoms/        ← smallest reusable widgets (button, money_text, section_label)
+    inputs/     ← the one Input system: input.dart (dispatch), contexts/ (one self-contained
+                  file per context: render + opener + sheet), bases/ (shared drawer host/row/
+                  header/metrics), input_styles/ decorators/ validators/ extensions/
+  molecules/    ← compositions of atoms (page_app_bar, segmented_tabs, list_row)
   organisms/    ← feature-complete UI, ALWAYS grouped by module folder + {module}_ filename prefix
     {module}/   ← auth, categories, settings, stats, transactions, wallets
                   screens AND their view-models live flat here (no widgets/ or view_models/ subfolder)
@@ -346,7 +347,7 @@ Rules:
 
 ## Forms
 
-The Transaction Form (IMG_1830–32) and the Account Form (IMG_1836) are the canonical examples. Both are assembled entirely from the reusable field + input-panel system — field-level pieces live in `lib/components/atoms/` and the drawer/sheets in `lib/components/molecules/`. Do not hand-roll new row/sheet widgets for a form; compose these.
+The Transaction Form (IMG_1830–32) and the Account Form (IMG_1836) are the canonical examples. Both are assembled entirely from the reusable field + input-panel system — **everything input-related lives under `lib/components/atoms/inputs/`** (the `Input` widget, its styles/decorators/validators, `FormFieldRow`, the `FormDrawerHost` infra, and the keypad/calendar/picker sheets). Do not hand-roll new row/sheet widgets for a form; compose these.
 
 ### ViewModel rules
 
@@ -355,24 +356,25 @@ The Transaction Form (IMG_1830–32) and the Account Form (IMG_1836) are the can
 3. `Command<NewTransactionDraft, Transaction>` drives the Save button's disabled / spinner / error states. **No manual `isLoading` booleans on buttons.**
 4. Plain `TextField`s with `onChanged` feed the ViewModel directly; the form has no `TextEditingController`s for these simple fields.
 
-### Reusable form fields (`lib/components/atoms/`)
+### The one input component — `Input` (`atoms/inputs/input.dart`)
 
-Each field is a labelled row that opens an input panel on tap. They report changes through callbacks and never mutate the ViewModel themselves.
+**There is no other input/field/select widget** — `SelectField`, `SelectDateField`, `SelectEntityField` and `AmountInputField` were merged into `Input` and deleted. Pick a `variant` for the look and a `context` for the behaviour:
 
-| Widget                  | Use                                                                                              |
-| ----------------------- | ------------------------------------------------------------------------------------------------ |
-| `FormFieldRow`          | Base labelled row (fixed-width label + child). Every other field and text row builds on it. Opt-in: `height` (uniform row height), `showBorder` (own bottom border instead of a separate `Divider`), `focusNode` (bottom border turns `foreground`/black while focused + tapping the label focuses the field), `onTap`. All default off so existing dividers-based forms are unaffected; the account form uses them. `height`/`showBorder` are forwarded through `SelectField`/`SelectEntityField`/`AmountInputField`. |
-| `SelectField`           | Tappable row showing a value or muted placeholder; opens any picker via `onTap`.                  |
-| `SelectDateField`       | Opens the calendar panel; reports the chosen `DateTime`.                                          |
-| `SelectEntityField<T>`  | Picks one item from a list. `gridColumns` → grid picker (with optional `leadingOf` emoji); else a list. |
-| `AmountInputField`      | Shows a live-grouped amount (`Rp 1.000.000`) and opens the keypad; `onChanged` fires per keystroke. Tracks the selected currency (Rp/S$/US$) locally. |
+| `context`  | Behaviour                                                                                                   |
+| ---------- | ----------------------------------------------------------------------------------------------------------- |
+| `text`     | Typed [TextField]. `variant`: `underline` (default — in-app forms), `outlined` (boxed login), `filled` (grey box). `label`/`hintText`/`obscureText`/`keyboardType`/`autofillHints`/`onChanged`/`onSubmitted`. |
+| `accounts` | Like `text` but required + whitespace-tidied (account names).                                               |
+| `currency` | Labelled row → **keypad drawer**, live `Rp 1.000.000`. `amount`/`onAmountChanged`, `currency`, `showCurrencyTabs`, `useCurrencyCode`, `valueColor`, `trailing`. |
+| `date`     | Labelled row → **calendar drawer**. `date`/`onDateChanged`, `datePattern`, `firstDate`/`lastDate`.          |
+| `select`   | Labelled row → **entity picker drawer** via `entity: EntitySelect<T>(...)` (`gridColumns` → grid with optional `leadingOf` emoji, else list); or a plain tappable row via `displayValue` + `onTap`. |
 
-### Standalone input + button atoms
+Row-layout opt-ins shared by `currency`/`date`/`select`: `labelWidth`, `height` (uniform row height), `showBorder` (own bottom border instead of a `Divider`), `drawerId`, `placeholder`. They report changes through callbacks and never mutate the ViewModel themselves.
 
-For plain text entry outside the field/drawer system (auth, dialogs) use the two variant-based atoms — don't hand-roll a `TextField`/`OutlinedButton`:
+Folder structure under `atoms/inputs/`: `input.dart` (the widget) just **dispatches** by context — each context is **self-contained** in `contexts/`, holding its render code, its `open…Drawer` opener, and its sheet(s): `input_context_currency.dart` (keypad + `openAmountDrawer`), `input_context_date.dart` (calendar + `openDateDrawer`), `input_context_select.dart` (`EntitySelect<T>` + grid/list pickers + `openGridDrawer`/`openListDrawer`), `input_context_text.dart`, and the shared `input_context_row.dart`. The stateful contexts (text/currency) receive their mutable state from `_InputState`. Shared building blocks live in `bases/`: `input_base_drawer_host.dart` (`FormDrawerHost`/`Scope`/`Controller`), `input_base_field_row.dart` (`FormFieldRow`), `input_base_drawer_header.dart`, `input_base_drawer_metrics.dart`. Plus `input_variant.dart`, `input_context.dart`, `input_style.dart` (contract + `InputStyleResolver`, typed contexts only), `input_styles/` (one `InputStyle` per typed context), `decorators/`, `validators/`, `extensions/input_decoration_extension.dart`. Add a context → add a self-contained `contexts/` file + a dispatch arm; promote anything reused by 2+ contexts into `bases/`.
 
-- `Input` (`atoms/input.dart`) — `variant`: `underline` (default — in-app forms), `outlined` (boxed, used by login — Image #50), `filled` (grey box). Optional `label` renders a label above the field. Standard `hintText`/`obscureText`/`keyboardType`/`autofillHints`/`onChanged`/`onSubmitted`.
-- `Button` (`atoms/button.dart`) — `variant`: `primary` (default, filled), `outlined` (bordered, e.g. social buttons), `danger` (coral), `ghost` (transparent). Optional `leading` glyph; built-in `loading` spinner; full-width with square corners.
+`FormFieldRow` (`atoms/inputs/bases/input_base_field_row.dart`) is the base labelled row (fixed-width label + child) that `Input`'s drawer contexts build on; use it directly only for a bare text editor inside a form row (its chrome supplies the label/border, so don't wrap a bordered `Input` in it). Opt-ins: `height`, `showBorder`, `focusNode`, `onTap`.
+
+`Button` (`atoms/button.dart`) — `variant`: `primary` (default, filled), `outlined` (bordered, e.g. social buttons), `danger` (coral), `ghost` (transparent). Optional `leading` glyph; built-in `loading` spinner; full-width with square corners.
 
 ### In-form input panels (`FormDrawerHost`)
 
@@ -381,7 +383,7 @@ Pickers render as a **non-modal split panel** pinned to the bottom — a flat, s
 1. Wrap a form body in `FormDrawerHost(child: …)`. It supplies a `FormDrawerController` via `FormDrawerScope` and renders the bottom panel.
 2. Fields call the `openAmountDrawer` / `openGridDrawer` / `openListDrawer` / `openDateDrawer` helpers. When a host is an ancestor they open in the shared panel; with no host they **fall back to a modal bottom sheet** — so the fields work anywhere.
 3. Tapping a different field **swaps** the panel content (e.g. Amount → Category) instead of stacking sheets, because the form behind is never blocked. Tapping a text field closes the panel via `FormDrawerScope.maybeOf(context)?.close()`.
-4. Every panel is the same fixed height (`DrawerMetrics.height`) with the same black header (`FormDrawerHeader`). All panel sizing/colors live in `components/atoms/drawer_metrics.dart` — change them in one place.
+4. Every panel is the same fixed height (`DrawerMetrics.height`) with the same black header (`FormDrawerHeader`). All panel sizing/colors live in `components/atoms/inputs/bases/input_base_drawer_metrics.dart` — change them in one place.
 5. Sheet contents are Navigator-free widgets (`AmountKeypad`, `GridPickerContent`, `EntityListContent`, `CalendarContent`) wired with `onSelected`/`onChanged`/`onClose`; the modal `*Sheet.show()` wrappers and the host both reuse them.
 
 ### Money formatting

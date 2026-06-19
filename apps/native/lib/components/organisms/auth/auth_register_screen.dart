@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:oewang/components/atoms/button.dart';
-import 'package:oewang/components/atoms/input.dart';
+import 'package:oewang/components/atoms/inputs/input.dart';
 import 'package:oewang/components/organisms/auth/auth_register_view_model.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/router/app_router.dart';
