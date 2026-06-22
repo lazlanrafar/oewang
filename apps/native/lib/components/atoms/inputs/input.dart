@@ -63,8 +63,6 @@ class Input extends StatefulWidget {
     this.onAmountChanged,
     this.currency = 'IDR',
     this.onCurrencyChanged,
-    this.showCurrencyTabs = true,
-    this.useCurrencyCode = false,
     // date
     this.date,
     this.onDateChanged,
@@ -77,8 +75,9 @@ class Input extends StatefulWidget {
     this.onTap,
     super.key,
   }) : assert(
-         context != InputContext.currency || onAmountChanged != null,
-         'currency Input needs onAmountChanged',
+         (context != InputContext.currency && context != InputContext.amount) ||
+             onAmountChanged != null,
+         'currency/amount Input needs onAmountChanged',
        ),
        assert(
          context != InputContext.date || (date != null && onDateChanged != null),
@@ -137,8 +136,6 @@ class Input extends StatefulWidget {
   final ValueChanged<num>? onAmountChanged;
   final String currency;
   final ValueChanged<String>? onCurrencyChanged;
-  final bool showCurrencyTabs;
-  final bool useCurrencyCode;
 
   // date
   final DateTime? date;
@@ -191,10 +188,14 @@ class _InputState extends State<Input> {
           onToggleObscure: () => setState(() => _obscured = !_obscured),
         );
       case InputContext.currency:
+      case InputContext.amount:
         return buildCurrencyContext(
           context,
           widget,
           currency: _currency,
+          // Workspace currency tabs only for the currency context; the plain
+          // amount context never shows them.
+          workspaceTabs: widget.context == InputContext.currency,
           onCurrencyChange: (code) {
             setState(() => _currency = code);
             widget.onCurrencyChanged?.call(code);

@@ -6,13 +6,11 @@ import 'package:image_picker/image_picker.dart';
 import 'package:oewang/components/atoms/button.dart';
 import 'package:oewang/components/atoms/inputs/bases/input_base_drawer_host.dart';
 import 'package:oewang/components/atoms/inputs/bases/input_base_field_row.dart';
-import 'package:oewang/components/atoms/inputs/contexts/input_context_currency.dart';
 import 'package:oewang/components/atoms/inputs/input.dart';
 import 'package:oewang/components/molecules/page_app_bar.dart';
 import 'package:oewang/components/organisms/transactions/transactions_form_view_model.dart';
 import 'package:oewang/components/organisms/transactions/transactions_segmented_pill_tabs.dart';
 import 'package:oewang/config/dependencies.dart';
-import 'package:oewang/core/format/amount_format.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
@@ -165,7 +163,6 @@ class _AmountRow extends StatelessWidget {
       TransactionType.expense => tx.expense,
       _ => palette.foreground,
     };
-    final isTransfer = vm.state.type == TransactionType.transfer;
 
     return Input(
       context: InputContext.currency,
@@ -173,40 +170,6 @@ class _AmountRow extends StatelessWidget {
       amount: vm.state.amount,
       valueColor: color,
       onAmountChanged: vm.setAmount,
-      // ponytail: compact inline chip — the Button atom is full-width-only, so
-      // the Fees toggle stays a bespoke OutlinedButton. Promote to the atom if
-      // it grows a compact/inline variant.
-      trailing: isTransfer
-          ? OutlinedButton(
-              onPressed: () => openAmountDrawer(
-                context,
-                id: 'Fees',
-                initial: vm.state.fees,
-                title: 'Fees',
-                onChanged: vm.setFees,
-              ),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: vm.state.fees > 0
-                    ? palette.foreground
-                    : palette.mutedForeground,
-                side: BorderSide(color: palette.border),
-                shape: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.zero,
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                minimumSize: Size.zero,
-              ),
-              child: Text(
-                vm.state.fees > 0
-                    ? 'Fees ${AmountFormat.number(vm.state.fees)}'
-                    : 'Fees',
-                style: OewangFonts.sans(fontSize: 13),
-              ),
-            )
-          : null,
     );
   }
 }
@@ -246,7 +209,6 @@ class _TransferWalletsRow extends StatelessWidget {
                   onSelected: (w) => vm.setWallet(w.id),
                 ),
               ),
-              Divider(height: 1, color: palette.border),
               Input(
                 context: InputContext.select,
                 label: 'To',

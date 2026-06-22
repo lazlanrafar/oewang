@@ -7,8 +7,14 @@ enum InputContext {
   /// Account name — required, whitespace tidied.
   accounts,
 
-  /// Money amount — number keyboard, live thousands grouping, must be > 0.
+  /// Money amount with the workspace currency switcher — the keypad shows a
+  /// tab per workspace currency (hidden when the workspace has only its main
+  /// currency). Used where the entry's currency is chosen inline (transactions).
   currency,
+
+  /// Plain money amount — same keypad without the currency tabs. Used where the
+  /// currency is fixed or picked elsewhere (budgets, wallet balance).
+  amount,
 
   /// Date — opens the calendar drawer, shows the formatted day.
   date,

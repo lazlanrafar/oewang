@@ -11,33 +11,6 @@ import 'package:oewang/data/dto/currency_catalog.dart';
 import 'package:oewang/domain/models/currency.dart';
 import 'package:oewang/domain/models/sub_currency.dart';
 
-/// Bumped after add/delete so the list provider re-fetches.
-class _SubCurrenciesRevision extends Notifier<int> {
-  @override
-  int build() => 0;
-  void bump() => state = state + 1;
-}
-
-final _subCurrenciesRevisionProvider =
-    NotifierProvider<_SubCurrenciesRevision, int>(_SubCurrenciesRevision.new);
-
-final _subCurrenciesProvider = FutureProvider.autoDispose<List<SubCurrency>>((
-  ref,
-) async {
-  ref.watch(_subCurrenciesRevisionProvider);
-  final res = await ref.watch(subCurrenciesRepositoryProvider).list();
-  return res.fold((ok) => ok, (_) => const <SubCurrency>[]);
-});
-
-/// Rates against IDR — `1 IDR = N units of code`. The screen inverts.
-final _ratesProvider = FutureProvider.autoDispose<Map<String, double>>((
-  ref,
-) async {
-  ref.watch(_subCurrenciesRevisionProvider);
-  final res = await ref.watch(ratesRepositoryProvider).rates(base: 'IDR');
-  return res.fold((ok) => ok, (_) => const <String, double>{});
-});
-
 /// IMG_2260 — Sub Currency Setting backed by the workspace API.
 class SubCurrencyScreen extends ConsumerWidget {
   const SubCurrencyScreen({super.key});
@@ -45,8 +18,8 @@ class SubCurrencyScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final palette = context.palette;
-    final subs = ref.watch(_subCurrenciesProvider);
-    final rates = ref.watch(_ratesProvider);
+    final subs = ref.watch(subCurrenciesProvider);
+    final rates = ref.watch(ratesProvider);
 
     return Scaffold(
       appBar: PageAppBar(
@@ -97,8 +70,11 @@ class SubCurrencyScreen extends ConsumerWidget {
         foregroundColor: palette.foreground,
         elevation: 0,
         shape: const CircleBorder(),
-        onPressed: () =>
-            ref.read(_subCurrenciesRevisionProvider.notifier).bump(),
+        onPressed: () {
+          ref
+            ..invalidate(subCurrenciesProvider)
+            ..invalidate(ratesProvider);
+        },
         child: const Icon(Icons.refresh),
       ),
     );
@@ -124,7 +100,7 @@ class SubCurrencyScreen extends ConsumerWidget {
         .create(picked.code);
     if (!context.mounted) return;
     res.fold(
-      (_) => ref.read(_subCurrenciesRevisionProvider.notifier).bump(),
+      (_) => ref.invalidate(subCurrenciesProvider),
       (e) => ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.message)),
       ),
@@ -141,7 +117,7 @@ class SubCurrencyScreen extends ConsumerWidget {
         .delete(sub.id);
     if (!context.mounted) return;
     res.fold(
-      (_) => ref.read(_subCurrenciesRevisionProvider.notifier).bump(),
+      (_) => ref.invalidate(subCurrenciesProvider),
       (e) => ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.message)),
       ),

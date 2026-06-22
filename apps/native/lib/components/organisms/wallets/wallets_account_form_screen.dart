@@ -10,6 +10,9 @@ import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
+import 'package:oewang/data/dto/currency_catalog.dart';
+import 'package:oewang/domain/models/currency.dart';
+import 'package:oewang/domain/models/sub_currency.dart';
 import 'package:oewang/domain/models/wallet.dart';
 import 'package:oewang/domain/models/wallet_group.dart';
 
@@ -18,10 +21,26 @@ final accountFormVmProvider = ChangeNotifierProvider.autoDispose
       (ref, editing) => AccountFormViewModel(
         wallets: ref.watch(walletsRepositoryProvider),
         groups: ref.watch(walletGroupsRepositoryProvider),
-        subCurrencies: ref.watch(subCurrenciesRepositoryProvider),
         editing: editing,
       ),
     );
+
+/// Main currency (IDR) first, then the workspace sub-currencies that exist in
+/// the catalog. Derived from the global [subCurrenciesProvider] so the form
+/// shares the cached fetch with the currency settings screen.
+List<CurrencyInfo> _currencyOptionsFrom(List<SubCurrency> subs) {
+  final main = CurrencyCatalog.all.firstWhere((c) => c.code == mainCurrencyCode);
+  final options = <CurrencyInfo>[main];
+  for (final s in subs) {
+    if (s.currencyCode == mainCurrencyCode) continue;
+    final info = _firstOrNull(
+      CurrencyCatalog.all,
+      (c) => c.code == s.currencyCode,
+    );
+    if (info != null) options.add(info);
+  }
+  return options;
+}
 
 /// Returns the first element matching [test], or `null`.
 T? _firstOrNull<T>(Iterable<T> items, bool Function(T) test) {
@@ -77,6 +96,8 @@ class _AccountFormScreenState extends ConsumerState<AccountFormScreen> {
   @override
   Widget build(BuildContext context) {
     final vm = ref.watch(accountFormVmProvider(widget.wallet));
+    final subs = ref.watch(subCurrenciesProvider).valueOrNull ?? const [];
+    final currencyOptions = _currencyOptionsFrom(subs);
 
     return Scaffold(
       appBar: PageAppBar(
@@ -120,21 +141,23 @@ class _AccountFormScreenState extends ConsumerState<AccountFormScreen> {
                     ),
                   ),
                   Input(
-                    context: InputContext.currency,
+                    context: InputContext.amount,
                     label: 'Amount',
                     variant: InputVariant.underline,
                     labelWidth: _labelWidth,
                     amount: vm.state.balance,
                     onAmountChanged: vm.setBalance,
                     currency: vm.state.currencyCode,
-                    useCurrencyCode: true,
-                    showCurrencyTabs: false,
                   ),
                   FormFieldRow(
                     label: 'Currency',
                     labelWidth: _labelWidth,
                     underline: true,
-                    child: _CurrencyPicker(vm: vm),
+                    child: _CurrencyPicker(
+                      options: currencyOptions,
+                      selectedCode: vm.state.currencyCode,
+                      onSelect: vm.setCurrency,
+                    ),
                   ),
                   FormFieldRow(
                     label: 'Description',
@@ -179,32 +202,38 @@ class _AccountFormScreenState extends ConsumerState<AccountFormScreen> {
 /// Main + sub currency toggle (main selected by default). Flat square chips
 /// in the foreground colour — no rounded corners, no accent red.
 class _CurrencyPicker extends StatelessWidget {
-  const _CurrencyPicker({required this.vm});
-  final AccountFormViewModel vm;
+  const _CurrencyPicker({
+    required this.options,
+    required this.selectedCode,
+    required this.onSelect,
+  });
+  final List<CurrencyInfo> options;
+  final String selectedCode;
+  final void Function(String code) onSelect;
 
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
     return Row(
       children: [
-        for (final c in vm.currencyOptions)
+        for (final c in options)
           Padding(
             padding: const EdgeInsets.only(right: 8),
             child: GestureDetector(
               onTap: () {
                 FocusManager.instance.primaryFocus?.unfocus();
                 FormDrawerScope.maybeOf(context)?.close();
-                vm.setCurrency(c.code);
+                onSelect(c.code);
               },
               child: Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 decoration: BoxDecoration(
-                  color: vm.state.currencyCode == c.code
+                  color: selectedCode == c.code
                       ? palette.foreground.withValues(alpha: 0.06)
                       : null,
                   border: Border.all(
-                    color: vm.state.currencyCode == c.code
+                    color: selectedCode == c.code
                         ? palette.foreground
                         : palette.border,
                   ),
@@ -214,7 +243,7 @@ class _CurrencyPicker extends StatelessWidget {
                   style: OewangFonts.sans(
                     color: palette.foreground,
                     fontSize: 13,
-                    fontWeight: vm.state.currencyCode == c.code
+                    fontWeight: selectedCode == c.code
                         ? FontWeight.w600
                         : FontWeight.w400,
                   ),

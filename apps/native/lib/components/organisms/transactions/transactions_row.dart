@@ -21,6 +21,7 @@ class TransactionRow extends StatelessWidget {
       TransactionType.expense || TransactionType.transferOut => tx.expense,
       TransactionType.transfer => palette.foreground,
     };
+    final title = transaction.category?.name ?? transaction.name;
     return InkWell(
       onTap: onTap,
       child: Padding(
@@ -32,12 +33,12 @@ class TransactionRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    transaction.category?.name ??
-                        transaction.name ??
-                        'Uncategorized',
-                    style: OewangFonts.sans(color: palette.foreground),
-                  ),
+                  // Blank when uncategorized — no category, no name.
+                  if (title != null && title.isNotEmpty)
+                    Text(
+                      title,
+                      style: OewangFonts.sans(color: palette.foreground),
+                    ),
                   if (transaction.wallet != null) ...[
                     const SizedBox(height: 2),
                     Text(

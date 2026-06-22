@@ -29,6 +29,7 @@ import 'package:oewang/data/services/api/api_client.dart';
 import 'package:oewang/data/services/storage/preferences_service.dart';
 import 'package:oewang/data/services/storage/secure_storage_service.dart';
 import 'package:oewang/domain/models/session.dart';
+import 'package:oewang/domain/models/sub_currency.dart';
 import 'package:oewang/domain/models/transaction_settings.dart';
 
 /// Root env provider. Loaded once at startup by main.dart.
@@ -122,6 +123,22 @@ final subCurrenciesRepositoryProvider = Provider<SubCurrenciesRepository>((
 
 final ratesRepositoryProvider = Provider<RatesRepository>((ref) {
   return RatesRepositoryRemote(ref.watch(apiClientProvider));
+});
+
+/// Workspace sub-currencies (the extra currencies the workspace tracks beyond
+/// the IDR base). Global + cached so the currency settings screen and the
+/// wallet form share one fetch. Not autoDispose — survives navigation.
+/// `ref.invalidate(subCurrenciesProvider)` after a create/delete refetches.
+final subCurrenciesProvider = FutureProvider<List<SubCurrency>>((ref) async {
+  final res = await ref.watch(subCurrenciesRepositoryProvider).list();
+  return res.fold((ok) => ok, (_) => const <SubCurrency>[]);
+});
+
+/// FX rates keyed by currency code, against the IDR base. Shares the global
+/// cache with [subCurrenciesProvider].
+final ratesProvider = FutureProvider<Map<String, double>>((ref) async {
+  final res = await ref.watch(ratesRepositoryProvider).rates(base: 'IDR');
+  return res.fold((ok) => ok, (_) => const <String, double>{});
 });
 
 final usersRepositoryProvider = Provider<UsersRepository>((ref) {

@@ -1,22 +1,37 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oewang/components/atoms/inputs/bases/input_base_drawer_header.dart';
 import 'package:oewang/components/atoms/inputs/bases/input_base_drawer_host.dart';
 import 'package:oewang/components/atoms/inputs/bases/input_base_drawer_metrics.dart';
 import 'package:oewang/components/atoms/inputs/contexts/input_context_row.dart';
 import 'package:oewang/components/atoms/inputs/input.dart';
+import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/format/amount_format.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 
+/// Workspace currencies for the keypad tabs: the main currency (IDR) first,
+/// then the workspace sub-currencies. Read from the global
+/// [subCurrenciesProvider] so callers never pass a currency list.
+List<String> workspaceCurrencyCodes(WidgetRef ref) {
+  final subs = ref.watch(subCurrenciesProvider).valueOrNull ?? const [];
+  return [
+    'IDR',
+    for (final s in subs)
+      if (s.currencyCode != 'IDR') s.currencyCode,
+  ];
+}
 
-/// `InputContext.currency` — a labelled row that opens the keypad drawer and
-/// shows the live-grouped amount. [currency] is the active code (the keypad's
-/// Rp/S$/US$ tabs report changes through [onCurrencyChange]).
+/// `InputContext.currency` / `InputContext.amount` — a labelled row that opens
+/// the keypad drawer and shows the live-grouped amount (always with the ISO
+/// code, e.g. "IDR 1.000"). [workspaceTabs] enables the workspace currency
+/// switcher in the keypad.
 Widget buildCurrencyContext(
   BuildContext context,
   Input widget, {
   required String currency,
   required ValueChanged<String> onCurrencyChange,
+  required bool workspaceTabs,
 }) {
   final palette = context.palette;
   final label = widget.label ?? 'Amount';
@@ -26,7 +41,7 @@ Widget buildCurrencyContext(
     initial: widget.amount,
     title: label,
     currency: currency,
-    showCurrencyTabs: widget.showCurrencyTabs,
+    workspaceTabs: workspaceTabs,
     onChanged: widget.onAmountChanged!,
     onCurrencyChanged: onCurrencyChange,
   );
@@ -37,11 +52,7 @@ Widget buildCurrencyContext(
     label: label,
     onTap: open,
     value: Text(
-      AmountFormat.currency(
-        widget.amount,
-        currency: currency,
-        useCode: widget.useCurrencyCode,
-      ),
+      AmountFormat.currency(widget.amount, currency: currency, useCode: true),
       style: OewangFonts.currency(
         color: widget.valueColor ?? palette.foreground,
         fontSize: 16,
@@ -62,7 +73,7 @@ void openAmountDrawer(
   String title = 'Amount',
   String currency = 'IDR',
   ValueChanged<String>? onCurrencyChanged,
-  bool showCurrencyTabs = true,
+  bool workspaceTabs = false,
 }) {
   final controller = FormDrawerScope.maybeOf(context);
   if (controller != null) {
@@ -72,7 +83,7 @@ void openAmountDrawer(
         initial: initial,
         title: title,
         currency: currency,
-        showCurrencyTabs: showCurrencyTabs,
+        workspaceTabs: workspaceTabs,
         onChanged: onChanged,
         onCurrencyChanged: onCurrencyChanged,
         onSubmit: (_) => controller.close(),
@@ -86,19 +97,12 @@ void openAmountDrawer(
       onChanged: onChanged,
       title: title,
       currency: currency,
-      showCurrencyTabs: showCurrencyTabs,
+      workspaceTabs: workspaceTabs,
       onCurrencyChanged: onCurrencyChanged,
     );
   }
 }
 
-
-/// Currency code → tab label, mirroring [Money]'s symbols.
-const Map<String, String> _kCurrencyTabs = {
-  'IDR': 'Rp',
-  'SGD': r'S$',
-  'USD': r'US$',
-};
 
 /// A full-bleed numeric keypad (no in-panel display) for entering an amount.
 ///
@@ -106,7 +110,7 @@ const Map<String, String> _kCurrencyTabs = {
 /// field above. [onSubmit] is called with the evaluated value (OK) and
 /// [onClose] when the close button is tapped. This widget never touches the
 /// Navigator itself.
-class AmountKeypad extends StatefulWidget {
+class AmountKeypad extends ConsumerStatefulWidget {
   const AmountKeypad({
     this.initial = 0,
     this.onChanged,
@@ -115,7 +119,7 @@ class AmountKeypad extends StatefulWidget {
     this.onCurrencyChanged,
     this.currency = 'IDR',
     this.title = 'Amount',
-    this.showCurrencyTabs = true,
+    this.workspaceTabs = false,
     super.key,
   });
 
@@ -127,12 +131,13 @@ class AmountKeypad extends StatefulWidget {
   final String currency;
   final String title;
 
-  /// When false, the currency tabs (and the language header action) are hidden
-  /// — used by forms that pick currency elsewhere (e.g. the account form).
-  final bool showCurrencyTabs;
+  /// When true the keypad shows a tab per workspace currency (read from the
+  /// global [subCurrenciesProvider]); the tabs auto-hide when the workspace
+  /// has only its main currency. When false the keypad is a plain amount entry.
+  final bool workspaceTabs;
 
   @override
-  State<AmountKeypad> createState() => _AmountKeypadState();
+  ConsumerState<AmountKeypad> createState() => _AmountKeypadState();
 }
 
 enum _CellKind { digit, op, ok }
@@ -152,7 +157,7 @@ class _Cell {
   final VoidCallback onTap;
 }
 
-class _AmountKeypadState extends State<AmountKeypad> {
+class _AmountKeypadState extends ConsumerState<AmountKeypad> {
   late String _display = _initialDisplay();
   late String _currency = widget.currency;
   String _pending = '';
@@ -244,21 +249,32 @@ class _AmountKeypadState extends State<AmountKeypad> {
 
   @override
   Widget build(BuildContext context) {
+    // Workspace currencies drive the tabs; show them only when the workspace
+    // tracks more than its main currency.
+    final codes = widget.workspaceTabs
+        ? workspaceCurrencyCodes(ref)
+        : const <String>[];
+    final showTabs = codes.length > 1;
+
     return Column(
       mainAxisSize: MainAxisSize.max,
       children: [
         FormDrawerHeader(
           title: widget.title,
           onClose: widget.onClose,
-          actions: widget.showCurrencyTabs
+          actions: showTabs
               ? const [
                   Icon(Icons.language, color: DrawerMetrics.onHeader, size: 22),
                   SizedBox(width: 8),
                 ]
               : const [],
         ),
-        if (widget.showCurrencyTabs)
-          _CurrencyTabs(selected: _currency, onSelected: _onCurrency),
+        if (showTabs)
+          _CurrencyTabs(
+            codes: codes,
+            selected: _currency,
+            onSelected: _onCurrency,
+          ),
         Expanded(
           child: Column(
             children: [
@@ -311,8 +327,13 @@ class _AmountKeypadState extends State<AmountKeypad> {
 }
 
 class _CurrencyTabs extends StatelessWidget {
-  const _CurrencyTabs({required this.selected, required this.onSelected});
+  const _CurrencyTabs({
+    required this.codes,
+    required this.selected,
+    required this.onSelected,
+  });
 
+  final List<String> codes;
   final String selected;
   final ValueChanged<String> onSelected;
 
@@ -322,11 +343,11 @@ class _CurrencyTabs extends StatelessWidget {
       color: DrawerMetrics.currencyBar,
       child: Row(
         children: [
-          for (final entry in _kCurrencyTabs.entries)
+          for (final code in codes)
             InkWell(
-              onTap: () => onSelected(entry.key),
+              onTap: () => onSelected(code),
               child: Container(
-                color: entry.key == selected
+                color: code == selected
                     ? DrawerMetrics.currencyBarSelected
                     : null,
                 padding: const EdgeInsets.symmetric(
@@ -334,11 +355,11 @@ class _CurrencyTabs extends StatelessWidget {
                   vertical: 12,
                 ),
                 child: Text(
-                  entry.value,
+                  code,
                   style: OewangFonts.sans(
                     color: DrawerMetrics.onHeader,
                     fontSize: 15,
-                    fontWeight: entry.key == selected
+                    fontWeight: code == selected
                         ? FontWeight.w600
                         : FontWeight.w400,
                   ),
@@ -412,7 +433,7 @@ class AmountKeypadSheet {
     ValueChanged<String>? onCurrencyChanged,
     String currency = 'IDR',
     String title = 'Amount',
-    bool showCurrencyTabs = true,
+    bool workspaceTabs = false,
   }) {
     return showModalBottomSheet<num>(
       context: context,
@@ -426,7 +447,7 @@ class AmountKeypadSheet {
             initial: initial,
             title: title,
             currency: currency,
-            showCurrencyTabs: showCurrencyTabs,
+            workspaceTabs: workspaceTabs,
             onChanged: onChanged,
             onCurrencyChanged: onCurrencyChanged,
             onSubmit: (v) => Navigator.of(sheetContext).pop(v),

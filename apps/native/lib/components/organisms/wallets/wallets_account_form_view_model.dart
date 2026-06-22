@@ -2,26 +2,24 @@ import 'package:flutter/foundation.dart';
 import 'package:oewang/core/command/command.dart';
 import 'package:oewang/core/result/app_error.dart';
 import 'package:oewang/core/result/result.dart';
-import 'package:oewang/data/dto/currency_catalog.dart';
-import 'package:oewang/data/repositories/sub_currencies_repository.dart';
 import 'package:oewang/data/repositories/wallet_groups_repository.dart';
 import 'package:oewang/data/repositories/wallets_repository.dart';
-import 'package:oewang/domain/models/currency.dart';
 import 'package:oewang/domain/models/wallet.dart';
 import 'package:oewang/domain/models/wallet_group.dart';
 
 // ponytail: the workspace base/main currency is IDR app-wide (the rates API
 // uses IDR as its base and there's no workspace main-currency endpoint yet).
-// Sub-currencies come from the workspace (SubCurrenciesRepository). Currency is
-// display-only on this form because the wallet API has no currency field.
-const _mainCurrencyCode = 'IDR';
+// Currency is display-only on this form because the wallet API has no currency
+// field; the selectable options come from the global subCurrenciesProvider,
+// resolved in the screen.
+const mainCurrencyCode = 'IDR';
 
 class AccountFormState {
   const AccountFormState({
     this.groupId,
     this.name = '',
     this.balance = 0,
-    this.currencyCode = _mainCurrencyCode,
+    this.currencyCode = mainCurrencyCode,
     this.description = '',
   });
 
@@ -54,22 +52,18 @@ class AccountFormViewModel extends ChangeNotifier {
   AccountFormViewModel({
     required WalletsRepository wallets,
     required WalletGroupsRepository groups,
-    required SubCurrenciesRepository subCurrencies,
     Wallet? editing,
   }) : _wallets = wallets,
        _groups = groups,
-       _subCurrencies = subCurrencies,
        _editingId = editing?.id {
     if (editing != null) _state = _stateFrom(editing);
     save = Command<NewWalletDraft, Wallet>(_runSave)
       ..addListener(notifyListeners);
     _loadGroups();
-    _loadCurrencies();
   }
 
   final WalletsRepository _wallets;
   final WalletGroupsRepository _groups;
-  final SubCurrenciesRepository _subCurrencies;
   final String? _editingId;
 
   bool get isEditing => _editingId != null;
@@ -80,15 +74,8 @@ class AccountFormViewModel extends ChangeNotifier {
 
   late final Command<NewWalletDraft, Wallet> save;
 
-  static final CurrencyInfo _mainCurrency =
-      CurrencyCatalog.all.firstWhere((c) => c.code == _mainCurrencyCode);
-
-  // Workspace main currency first (default), then the workspace sub-currencies.
-  List<CurrencyInfo> _currencyOptions = [_mainCurrency];
-
   AccountFormState get state => _state;
   List<WalletGroup> get groupOptions => _groupOptions;
-  List<CurrencyInfo> get currencyOptions => _currencyOptions;
   bool get loadingGroups => _loadingGroups;
   bool get canSave => _state.isValid && !save.running;
 
@@ -151,24 +138,6 @@ class AccountFormViewModel extends ChangeNotifier {
     final res = await _groups.list();
     res.fold((gs) => _groupOptions = gs, (_) => _groupOptions = const []);
     _loadingGroups = false;
-    notifyListeners();
-  }
-
-  Future<void> _loadCurrencies() async {
-    final res = await _subCurrencies.list();
-    res.fold((subs) {
-      final infos = <CurrencyInfo>[_mainCurrency];
-      for (final s in subs) {
-        if (s.currencyCode == _mainCurrencyCode) continue;
-        for (final c in CurrencyCatalog.all) {
-          if (c.code == s.currencyCode) {
-            infos.add(c);
-            break;
-          }
-        }
-      }
-      _currencyOptions = infos;
-    }, (_) {/* keep main-only on failure */});
     notifyListeners();
   }
 

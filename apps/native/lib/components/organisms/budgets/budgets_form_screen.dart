@@ -101,11 +101,10 @@ class BudgetFormScreen extends ConsumerWidget {
                         ),
                       ),
                     Input(
-                      context: InputContext.currency,
+                      context: InputContext.amount,
                       label: 'Monthly Limit',
                       variant: InputVariant.underline,
                       labelWidth: _labelWidth,
-                      showCurrencyTabs: false,
                       amount: vm.state.amount,
                       onAmountChanged: vm.setAmount,
                     ),
