@@ -6,6 +6,8 @@ import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/data/repositories/auth_repository.dart';
 import 'package:oewang/data/repositories/budgets_repository.dart';
 import 'package:oewang/data/repositories/categories_repository.dart';
+import 'package:oewang/data/repositories/contacts_repository.dart';
+import 'package:oewang/data/repositories/debts_repository.dart';
 import 'package:oewang/data/repositories/rates_repository.dart';
 import 'package:oewang/data/repositories/settings_repository.dart';
 import 'package:oewang/data/repositories/sub_currencies_repository.dart';
@@ -17,6 +19,8 @@ import 'package:oewang/data/repositories/workspaces_repository.dart';
 import 'package:oewang/data/repositories_remote/auth_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/budgets_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/categories_repository_remote.dart';
+import 'package:oewang/data/repositories_remote/contacts_repository_remote.dart';
+import 'package:oewang/data/repositories_remote/debts_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/rates_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/settings_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/sub_currencies_repository_remote.dart';
@@ -115,6 +119,25 @@ final budgetsRevisionProvider =
       BudgetsRevisionController.new,
     );
 
+final contactsRepositoryProvider = Provider<ContactsRepository>((ref) {
+  return ContactsRepositoryRemote(ref.watch(apiClientProvider));
+});
+
+final debtsRepositoryProvider = Provider<DebtsRepository>((ref) {
+  return DebtsRepositoryRemote(ref.watch(apiClientProvider));
+});
+
+/// Bumped after a debt is created/edited/deleted/paid so the Debt screen reloads.
+class DebtsRevisionController extends Notifier<int> {
+  @override
+  int build() => 0;
+  void bump() => state = state + 1;
+}
+
+final debtsRevisionProvider = NotifierProvider<DebtsRevisionController, int>(
+  DebtsRevisionController.new,
+);
+
 final subCurrenciesRepositoryProvider = Provider<SubCurrenciesRepository>((
   ref,
 ) {
@@ -166,7 +189,8 @@ final transactionsRevisionProvider =
 /// Active income/expense color scheme. Boots from local prefs (so the choice
 /// survives restart), then hydrates from `/v1/settings/transaction` whenever
 /// a session is active — server is authoritative.
-class TransactionColorSchemeController extends Notifier<TransactionColorScheme> {
+class TransactionColorSchemeController
+    extends Notifier<TransactionColorScheme> {
   @override
   TransactionColorScheme build() {
     // Re-hydrate only once the session has a workspace. A logged-in user
@@ -227,8 +251,7 @@ final transactionColorSchemeProvider =
 /// Full workspace transaction settings for the Transaction Settings screen.
 /// Color changes are delegated to [transactionColorSchemeProvider] so the
 /// rest of the app re-colors immediately; all other fields PATCH directly.
-class TransactionSettingsController
-    extends AsyncNotifier<TransactionSettings> {
+class TransactionSettingsController extends AsyncNotifier<TransactionSettings> {
   @override
   Future<TransactionSettings> build() async {
     final res = await ref

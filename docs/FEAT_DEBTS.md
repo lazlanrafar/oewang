@@ -117,3 +117,18 @@ The billing lifecycle job (cron) checks for debts with `dueDate` approaching and
 | Utils      | `apps/api/modules/debts/debts.utils.ts`                 |
 | Tests      | `apps/api/modules/debts/debts.utils.test.ts` (50 tests) |
 | E2E        | `apps/app/e2e/contacts-debts.spec.ts`                   |
+| Mobile     | `apps/native/lib/components/organisms/debts/debts_screen.dart` (Debt tab — position summary, All/You owe/Owed to you filter, swipe-delete, tap → record payment / edit / delete) |
+| Mobile     | `apps/native/lib/components/organisms/debts/debts_form_screen.dart` (+ `_view_model`; create/edit, type + contact locked on edit, inline "New contact") |
+| Mobile     | `apps/native/lib/data/repositories/debts_repository.dart` (+ remote — `list` / create / update / delete / `pay`) |
+| Mobile     | `apps/native/lib/data/repositories/contacts_repository.dart` (+ remote — `list` / create, for the debt contact picker) |
+| Mobile     | `apps/native/lib/domain/models/debt.dart` (`Debt`, `DebtType`, `DebtStatus`, `DebtTotals`) · `contact.dart` |
+| Mobile     | Unit: `apps/native/test/unit/debt_test.dart` (wire enums, totals, overdue) |
+
+### Mobile (apps/native)
+
+A dedicated **Debt** tab sits between Transactions and Stats in the bottom nav. It mirrors the web feature against the same `/debts` and `/contacts` endpoints:
+
+- **List + summary** — header shows _Owed to you_ (receivable remaining), _You owe_ (payable remaining), and _Net_; a sub-tab bar filters All / You owe / Owed to you.
+- **Create/edit** — type toggle (receivable/payable, hidden on edit), contact picker (`/contacts`, with inline create), amount, optional due date, notes. Contact + type are locked on edit, matching the web.
+- **Record payment** — a bottom sheet posts to `/debts/:id/pay` with an optional account; when an account is chosen the API creates the matching income/expense transaction.
+- The mobile client uses the list endpoint only (no `GET /debts/:id`); amounts are `decimal` strings parsed to `num` in `DebtDto`.

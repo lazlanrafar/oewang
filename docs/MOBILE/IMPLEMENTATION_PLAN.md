@@ -10,11 +10,12 @@
 
 ## 1. Information Architecture (from screenshots)
 
-The reference is a personal-finance app with a four-tab bottom navigation bar:
+The app uses a five-tab bottom navigation bar (the reference's four tabs plus a Debt tab inserted after Trans):
 
 | Tab          | Active label / icon  | Primary screen                                 |
 | ------------ | -------------------- | ---------------------------------------------- |
 | **Trans.**   | "05/01" (today) icon | Transactions (Daily / Calendar / Monthly / Summary sub-tabs) |
+| **Debt**     | handshake icon       | Debts (position summary + All / You owe / Owed to you filter; record payment / edit / delete) — see [FEAT_DEBTS.md](../FEAT_DEBTS.md) |
 | **Stats**    | bar-chart icon       | Stats (Stats / Budget / Note sub-tabs) — interactive pie + category list / monthly budget summary / notes breakdown |
 | **Accounts** | stacked-coins icon   | Accounts list grouped by Cash / Accounts / Debit Card |
 | **More**     | "•••" icon           | Settings hub                                   |

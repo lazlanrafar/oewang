@@ -9,6 +9,8 @@ import 'package:oewang/components/organisms/budgets/budgets_form_screen.dart';
 import 'package:oewang/components/organisms/budgets/budgets_setting_screen.dart';
 import 'package:oewang/components/organisms/categories/categories_form_screen.dart';
 import 'package:oewang/components/organisms/categories/categories_list_screen.dart';
+import 'package:oewang/components/organisms/debts/debts_form_screen.dart';
+import 'package:oewang/components/organisms/debts/debts_screen.dart';
 import 'package:oewang/components/organisms/settings/currency/settings_main_currency_screen.dart';
 import 'package:oewang/components/organisms/settings/currency/settings_sub_currency_screen.dart';
 import 'package:oewang/components/organisms/settings/settings_screen.dart';
@@ -28,6 +30,7 @@ import 'package:oewang/components/organisms/wallets/wallets_screen.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/domain/models/budget_status.dart';
 import 'package:oewang/domain/models/category.dart' as cat;
+import 'package:oewang/domain/models/debt.dart';
 import 'package:oewang/domain/models/transaction.dart';
 import 'package:oewang/domain/models/wallet.dart';
 import 'package:oewang/domain/models/wallet_group.dart';
@@ -39,6 +42,7 @@ class AppRoutes {
   static const String register = '/register';
   static const String onboarding = '/onboarding';
   static const String trans = '/trans';
+  static const String debts = '/debts';
   static const String stats = '/stats';
   static const String accounts = '/accounts';
   static const String more = '/more';
@@ -59,9 +63,11 @@ class AppRoutes {
   static const String includeInTotals = '/settings/accounts/include';
   static const String budgetSettings = '/settings/budget';
   static const String budgetForm = '/settings/budget/add';
+  static const String debtForm = '/debts/new';
 
   static String accountEditFor(String id) => '/accounts/edit/$id';
   static String budgetEditFor(String id) => '/settings/budget/edit/$id';
+  static String debtEditFor(String id) => '/debts/edit/$id';
   static String categoryEditFor(String id) => '/settings/categories/edit/$id';
   static String accountGroupEditFor(String id) =>
       '/settings/accounts/group/edit/$id';
@@ -70,10 +76,7 @@ class AppRoutes {
 /// Re-runs go_router's `redirect` whenever the session value changes.
 class _SessionRefresh extends ChangeNotifier {
   _SessionRefresh(Ref ref) {
-    _sub = ref.listen(
-      sessionControllerProvider,
-      (_, _) => notifyListeners(),
-    );
+    _sub = ref.listen(sessionControllerProvider, (_, _) => notifyListeners());
   }
 
   late final ProviderSubscription<dynamic> _sub;
@@ -175,7 +178,8 @@ GoRouter buildAppRouter(Ref ref) {
       GoRoute(
         path: AppRoutes.categoryAdd,
         builder: (context, state) => CategoryFormScreen(
-          createType: state.extra as cat.CategoryType? ?? cat.CategoryType.expense,
+          createType:
+              state.extra as cat.CategoryType? ?? cat.CategoryType.expense,
         ),
       ),
       GoRoute(
@@ -250,6 +254,20 @@ GoRouter buildAppRouter(Ref ref) {
         path: AppRoutes.style,
         builder: (context, state) => const StyleScreen(),
       ),
+      GoRoute(
+        path: AppRoutes.debtForm,
+        builder: (context, state) => const DebtFormScreen(),
+      ),
+      GoRoute(
+        path: '/debts/edit/:id',
+        builder: (context, state) {
+          final debt = state.extra as Debt?;
+          if (debt == null) {
+            return const Scaffold(body: Center(child: Text('Missing debt')));
+          }
+          return DebtFormScreen(debt: debt);
+        },
+      ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
             MainShell(navigationShell: navigationShell),
@@ -258,9 +276,17 @@ GoRouter buildAppRouter(Ref ref) {
             routes: [
               GoRoute(
                 path: AppRoutes.trans,
-                pageBuilder: (context, state) => const NoTransitionPage(
-                  child: TransactionsScreen(),
-                ),
+                pageBuilder: (context, state) =>
+                    const NoTransitionPage(child: TransactionsScreen()),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.debts,
+                pageBuilder: (context, state) =>
+                    const NoTransitionPage(child: DebtsScreen()),
               ),
             ],
           ),
