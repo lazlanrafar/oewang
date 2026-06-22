@@ -62,9 +62,8 @@ class AppTheme {
         shape: _squareShape,
       ),
       bottomSheetTheme: const BottomSheetThemeData(
-        backgroundColor: OewangColors.card,
-        // Bottom sheets are the ONE place where rounded corners stay (top
-        // edge only). Per-call shapes can still override this default.
+        backgroundColor: OewangColors.background,
+        shape: _squareShape,
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(shape: _squareShape),
@@ -147,7 +146,8 @@ class AppTheme {
         shape: _squareShape,
       ),
       bottomSheetTheme: const BottomSheetThemeData(
-        backgroundColor: OewangColorsLight.card,
+        backgroundColor: OewangColorsLight.background,
+        shape: _squareShape,
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(shape: _squareShape),

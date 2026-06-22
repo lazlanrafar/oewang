@@ -2,21 +2,70 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:oewang/components/atoms/money_text.dart';
 import 'package:oewang/components/organisms/stats/stats_view_model.dart';
-import 'package:oewang/components/organisms/transactions/transactions_month_controller.dart';
-import 'package:oewang/components/organisms/transactions/transactions_month_picker_bar.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/format/amount_format.dart';
 import 'package:oewang/core/router/app_router.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
+import 'package:oewang/data/repositories/transactions_repository.dart';
 import 'package:oewang/domain/models/budget_status.dart';
 import 'package:oewang/domain/models/money.dart';
+import 'package:oewang/domain/models/transaction.dart';
+
+/// Period the Stats header filters by (the "M / W / Y" button).
+enum StatsPeriod {
+  month('M'),
+  week('W'),
+  year('Y');
+
+  const StatsPeriod(this.short);
+
+  /// Single-letter label shown on the header button.
+  final String short;
+
+  String get label => switch (this) {
+    StatsPeriod.month => 'Month',
+    StatsPeriod.week => 'Week',
+    StatsPeriod.year => 'Year',
+  };
+}
+
+/// Inclusive `[from, to]` date range for [anchor] under [period].
+({DateTime from, DateTime to}) rangeFor(DateTime anchor, StatsPeriod period) {
+  switch (period) {
+    case StatsPeriod.month:
+      return (
+        from: DateTime(anchor.year, anchor.month),
+        to: DateTime(anchor.year, anchor.month + 1, 0),
+      );
+    case StatsPeriod.year:
+      return (from: DateTime(anchor.year), to: DateTime(anchor.year, 12, 31));
+    case StatsPeriod.week:
+      // Monday-start week containing the anchor.
+      final start = anchor.subtract(Duration(days: anchor.weekday - 1));
+      final from = DateTime(start.year, start.month, start.day);
+      return (from: from, to: from.add(const Duration(days: 6)));
+  }
+}
+
+/// Transactions in an inclusive `(from, to)` range. Keyed by the record so each
+/// distinct range caches separately; rebuilt on the transactions revision.
+final _rangeTransactionsProvider = FutureProvider.autoDispose
+    .family<List<Transaction>, (DateTime, DateTime)>((ref, range) async {
+      ref.watch(transactionsRevisionProvider);
+      final res = await ref
+          .watch(transactionsRepositoryProvider)
+          .list(TransactionsListQuery(from: range.$1, to: range.$2));
+      return res.fold((txs) => txs, (_) => <Transaction>[]);
+    });
 
 /// Per-category budget status for [month], keyed so each month caches its own.
 /// Bumped with the budgets revision so edits in Budget Setting reflect here.
+/// (The budget API is monthly, so the Budget tab always uses the anchor month.)
 final _budgetStatusProvider = FutureProvider.autoDispose
     .family<List<BudgetStatus>, DateTime>((ref, month) async {
       ref.watch(budgetsRevisionProvider);
@@ -38,6 +87,9 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
   static const _topLabels = ['Stats', 'Budget', 'Note'];
   int _topIndex = 0;
   bool _incomeMode = false;
+  StatsPeriod _period = StatsPeriod.month;
+  // Day-granular reference; the period nav steps it by the active unit.
+  DateTime _anchor = DateTime.now();
 
   static const _chartPalette = <Color>[
     OewangColors.coral,
@@ -48,11 +100,93 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
     Color(0xFF7DD3A1),
   ];
 
+  void _step(int dir) {
+    setState(() {
+      _anchor = switch (_period) {
+        StatsPeriod.month => DateTime(_anchor.year, _anchor.month + dir),
+        StatsPeriod.year => DateTime(_anchor.year + dir),
+        StatsPeriod.week => _anchor.add(Duration(days: 7 * dir)),
+      };
+    });
+  }
+
+  String _periodLabel() {
+    final r = rangeFor(_anchor, _period);
+    return switch (_period) {
+      StatsPeriod.month => DateFormat('MMM yyyy').format(r.from),
+      StatsPeriod.year => DateFormat('yyyy').format(r.from),
+      StatsPeriod.week =>
+        '${DateFormat('d MMM').format(r.from)} – '
+            '${DateFormat('d MMM yyyy').format(r.to)}',
+    };
+  }
+
+  Future<void> _pickPeriod() async {
+    final picked = await showModalBottomSheet<StatsPeriod>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (sheet) {
+        final palette = sheet.palette;
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Options card.
+                ColoredBox(
+                  color: palette.background,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      for (final p in StatsPeriod.values) ...[
+                        if (p != StatsPeriod.values.first)
+                          Divider(height: 1, color: palette.border),
+                        ListTile(
+                          title: Text(p.label),
+                          trailing: p == _period
+                              ? const Icon(
+                                  Icons.check,
+                                  color: OewangColors.coral,
+                                )
+                              : null,
+                          onTap: () => Navigator.of(sheet).pop(p),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                // Cancel button.
+                InkWell(
+                  onTap: () => Navigator.of(sheet).pop(),
+                  child: Container(
+                    width: double.infinity,
+                    color: palette.background,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    alignment: Alignment.center,
+                    child: Text(
+                      'Cancel',
+                      style: OewangFonts.sans(
+                        color: palette.foreground,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    if (picked != null) setState(() => _period = picked);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final monthCtl = ref.read(monthControllerProvider.notifier);
-    final month = ref.watch(monthControllerProvider);
-    final async = ref.watch(monthTransactionsProvider(month));
+    final range = rangeFor(_anchor, _period);
+    final async = ref.watch(_rangeTransactionsProvider((range.from, range.to)));
     final palette = context.palette;
 
     return Scaffold(
@@ -64,12 +198,14 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
               labels: _topLabels,
               currentIndex: _topIndex,
               onSelect: (i) => setState(() => _topIndex = i),
+              periodShort: _period.short,
+              onTapPeriod: _pickPeriod,
             ),
             const SizedBox(height: 4),
-            MonthPickerBar(
-              month: month,
-              onPrev: monthCtl.prev,
-              onNext: monthCtl.next,
+            _PeriodBar(
+              label: _periodLabel(),
+              onPrev: () => _step(-1),
+              onNext: () => _step(1),
             ),
             _ModeToggle(
               incomeMode: _incomeMode,
@@ -97,7 +233,11 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                     chartPalette: _chartPalette,
                   ),
                   1 => _BudgetBody(
-                    statusAsync: ref.watch(_budgetStatusProvider(month)),
+                    statusAsync: ref.watch(
+                      _budgetStatusProvider(
+                        DateTime(_anchor.year, _anchor.month),
+                      ),
+                    ),
                     slices: aggregateStats(
                       transactions: txs,
                       incomeMode: _incomeMode,
@@ -126,11 +266,15 @@ class _TopPills extends StatelessWidget {
     required this.labels,
     required this.currentIndex,
     required this.onSelect,
+    required this.periodShort,
+    required this.onTapPeriod,
   });
 
   final List<String> labels;
   final int currentIndex;
   final ValueChanged<int> onSelect;
+  final String periodShort;
+  final VoidCallback onTapPeriod;
 
   @override
   Widget build(BuildContext context) {
@@ -173,29 +317,78 @@ class _TopPills extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              border: Border.all(color: palette.border),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'M',
-                  style: OewangFonts.sans(
-                    color: palette.foreground,
-                    fontSize: 13,
+          GestureDetector(
+            onTap: onTapPeriod,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                border: Border.all(color: palette.border),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    periodShort,
+                    style: OewangFonts.sans(
+                      color: palette.foreground,
+                      fontSize: 13,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 2),
-                Icon(
-                  Icons.arrow_drop_down,
-                  size: 18,
-                  color: palette.foreground,
-                ),
-              ],
+                  const SizedBox(width: 2),
+                  Icon(
+                    Icons.arrow_drop_down,
+                    size: 18,
+                    color: palette.foreground,
+                  ),
+                ],
+              ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// `< period label >` bar — like MonthPickerBar but renders an arbitrary label
+/// (month / week range / year) for the Stats period filter.
+class _PeriodBar extends StatelessWidget {
+  const _PeriodBar({
+    required this.label,
+    required this.onPrev,
+    required this.onNext,
+  });
+
+  final String label;
+  final VoidCallback onPrev;
+  final VoidCallback onNext;
+
+  @override
+  Widget build(BuildContext context) {
+    final fg = context.palette.foreground;
+    return SizedBox(
+      height: 36,
+      child: Row(
+        children: [
+          IconButton(
+            onPressed: onPrev,
+            icon: Icon(Icons.chevron_left, color: fg),
+          ),
+          Expanded(
+            child: Center(
+              child: Text(
+                label,
+                style: OewangFonts.sans(
+                  color: fg,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ),
+          IconButton(
+            onPressed: onNext,
+            icon: Icon(Icons.chevron_right, color: fg),
           ),
         ],
       ),
