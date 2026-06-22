@@ -1,14 +1,30 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:oewang/components/atoms/money_text.dart';
 import 'package:oewang/components/organisms/stats/stats_view_model.dart';
 import 'package:oewang/components/organisms/transactions/transactions_month_controller.dart';
 import 'package:oewang/components/organisms/transactions/transactions_month_picker_bar.dart';
+import 'package:oewang/config/dependencies.dart';
+import 'package:oewang/core/format/amount_format.dart';
+import 'package:oewang/core/router/app_router.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
+import 'package:oewang/domain/models/budget_status.dart';
 import 'package:oewang/domain/models/money.dart';
+
+/// Per-category budget status for [month], keyed so each month caches its own.
+/// Bumped with the budgets revision so edits in Budget Setting reflect here.
+final _budgetStatusProvider = FutureProvider.autoDispose
+    .family<List<BudgetStatus>, DateTime>((ref, month) async {
+      ref.watch(budgetsRevisionProvider);
+      final res = await ref
+          .watch(budgetsRepositoryProvider)
+          .status(month: month.month, year: month.year);
+      return res.fold((s) => s, (_) => const <BudgetStatus>[]);
+    });
 
 /// IMG_1834 — Stats tab.
 class StatsScreen extends ConsumerStatefulWidget {
@@ -71,20 +87,32 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
             ),
             Divider(height: 1, color: palette.border),
             Expanded(
-              child: _topIndex == 0
-                  ? async.when(
-                      data: (txs) => _StatsBody(
-                        slices: aggregateStats(
-                          transactions: txs,
-                          incomeMode: _incomeMode,
-                        ),
-                        chartPalette: _chartPalette,
-                      ),
-                      loading: () =>
-                          const Center(child: CircularProgressIndicator()),
-                      error: (e, _) => _ErrorView(message: e.toString()),
-                    )
-                  : _ComingSoon(label: _topLabels[_topIndex]),
+              child: async.when(
+                data: (txs) => switch (_topIndex) {
+                  0 => _StatsBody(
+                    slices: aggregateStats(
+                      transactions: txs,
+                      incomeMode: _incomeMode,
+                    ),
+                    chartPalette: _chartPalette,
+                  ),
+                  1 => _BudgetBody(
+                    statusAsync: ref.watch(_budgetStatusProvider(month)),
+                    slices: aggregateStats(
+                      transactions: txs,
+                      incomeMode: _incomeMode,
+                    ),
+                  ),
+                  _ => _NoteBody(
+                    rows: aggregateNotes(
+                      transactions: txs,
+                      incomeMode: _incomeMode,
+                    ),
+                  ),
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, _) => _ErrorView(message: e.toString()),
+              ),
             ),
           ],
         ),
@@ -400,6 +428,368 @@ class _CategoryRow extends StatelessWidget {
   }
 }
 
+// ── Note tab ─────────────────────────────────────────────────────────────────
+
+/// Note tab — transactions grouped by note (`name`) with a count + summed
+/// amount, sorted by count then amount.
+class _NoteBody extends StatelessWidget {
+  const _NoteBody({required this.rows});
+  final List<NoteRow> rows;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.palette;
+    if (rows.isEmpty) {
+      return Center(
+        child: Text(
+          'No data for this month',
+          style: OewangFonts.sans(color: palette.mutedForeground),
+        ),
+      );
+    }
+    return Column(
+      children: [
+        // Column header: Note · count (sorted desc) · Amount.
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: palette.border)),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Note',
+                  style: OewangFonts.sans(color: palette.mutedForeground),
+                ),
+              ),
+              const Icon(Icons.sort, size: 18, color: OewangColors.coral),
+              Expanded(
+                child: Text(
+                  'Amount',
+                  textAlign: TextAlign.right,
+                  style: OewangFonts.sans(color: palette.mutedForeground),
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: ListView.separated(
+            itemCount: rows.length,
+            separatorBuilder: (_, _) =>
+                Divider(height: 1, color: palette.border),
+            itemBuilder: (context, i) => _NoteRowTile(row: rows[i]),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _NoteRowTile extends StatelessWidget {
+  const _NoteRowTile({required this.row});
+  final NoteRow row;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.palette;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 5,
+            child: Text(
+              row.label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: OewangFonts.sans(color: palette.foreground),
+            ),
+          ),
+          SizedBox(
+            width: 40,
+            child: Text(
+              '${row.count}',
+              textAlign: TextAlign.center,
+              style: OewangFonts.sans(color: palette.mutedForeground),
+            ),
+          ),
+          Expanded(
+            flex: 4,
+            child: MoneyText(
+              amount: row.amount,
+              color: palette.foreground,
+              textAlign: TextAlign.right,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Budget tab ───────────────────────────────────────────────────────────────
+
+/// Budget tab — monthly budget summary (remaining + progress) over the
+/// per-category spending list for the active mode.
+class _BudgetBody extends StatelessWidget {
+  const _BudgetBody({required this.statusAsync, required this.slices});
+
+  final AsyncValue<List<BudgetStatus>> statusAsync;
+  final List<StatsSlice> slices;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.palette;
+    final totals = BudgetTotals.fromStatuses(
+      statusAsync.valueOrNull ?? const [],
+    );
+    return ListView(
+      padding: EdgeInsets.zero,
+      children: [
+        _BudgetHeader(totals: totals),
+        Container(height: 8, color: palette.muted),
+        for (var i = 0; i < slices.length; i++)
+          _BudgetSpendRow(slice: slices[i]),
+      ],
+    );
+  }
+}
+
+class _BudgetHeader extends StatelessWidget {
+  const _BudgetHeader({required this.totals});
+  final BudgetTotals totals;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.palette;
+    final remaining = totals.totalBudget - totals.totalSpent;
+    // Fraction of the current month elapsed — drives the "Today" marker.
+    final now = DateTime.now();
+    final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
+    final todayFrac = (now.day / daysInMonth).clamp(0.0, 1.0);
+    final spentFrac = totals.totalBudget.amount <= 0
+        ? 0.0
+        : (totals.totalSpent.amount / totals.totalBudget.amount).clamp(
+            0.0,
+            1.0,
+          );
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Remaining (Monthly)',
+                      style: OewangFonts.sans(
+                        color: palette.mutedForeground,
+                        fontSize: 13,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    MoneyText(
+                      amount: remaining,
+                      color: palette.foreground,
+                      fontSize: 26,
+                    ),
+                  ],
+                ),
+              ),
+              GestureDetector(
+                onTap: () => context.push(AppRoutes.budgetSettings),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  color: palette.muted,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Budget Setting',
+                        style: OewangFonts.sans(color: palette.foreground),
+                      ),
+                      Icon(
+                        Icons.chevron_right,
+                        size: 18,
+                        color: palette.mutedForeground,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          _MonthlyBar(
+            spentFrac: spentFrac,
+            todayFrac: todayFrac,
+            percent: totals.percent,
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  AmountFormat.number(totals.totalBudget.amount, decimals: 2),
+                  style: OewangFonts.currency(color: palette.foreground),
+                ),
+              ),
+              Expanded(
+                child: Text(
+                  AmountFormat.number(totals.totalSpent.amount, decimals: 2),
+                  textAlign: TextAlign.center,
+                  style: OewangFonts.currency(color: OewangColors.blue),
+                ),
+              ),
+              Expanded(
+                child: Text(
+                  AmountFormat.number(remaining.amount, decimals: 2),
+                  textAlign: TextAlign.right,
+                  style: OewangFonts.currency(color: palette.foreground),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The grey track with a spent fill, a "Today" marker bubble, and the percent.
+class _MonthlyBar extends StatelessWidget {
+  const _MonthlyBar({
+    required this.spentFrac,
+    required this.todayFrac,
+    required this.percent,
+  });
+
+  final double spentFrac;
+  final double todayFrac;
+  final int percent;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.palette;
+    return Row(
+      children: [
+        SizedBox(
+          width: 60,
+          child: Text(
+            'Monthly',
+            style: OewangFonts.sans(
+              color: palette.mutedForeground,
+              fontSize: 13,
+            ),
+          ),
+        ),
+        Expanded(
+          child: LayoutBuilder(
+            builder: (context, c) => SizedBox(
+              height: 28,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  // Track + spent fill.
+                  Positioned.fill(
+                    top: 10,
+                    child: Container(
+                      color: palette.muted,
+                      alignment: Alignment.centerLeft,
+                      child: FractionallySizedBox(
+                        widthFactor: spentFrac,
+                        child: Container(color: OewangColors.coral),
+                      ),
+                    ),
+                  ),
+                  // "Today" bubble pinned at the elapsed fraction.
+                  Positioned(
+                    left: (c.maxWidth * todayFrac - 22).clamp(
+                      0.0,
+                      c.maxWidth - 44,
+                    ),
+                    top: -2,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 1,
+                      ),
+                      decoration: BoxDecoration(
+                        color: palette.mutedForeground,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        'Today',
+                        style: OewangFonts.sans(
+                          color: palette.background,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        SizedBox(
+          width: 44,
+          child: Text(
+            '$percent%',
+            textAlign: TextAlign.right,
+            style: OewangFonts.sans(color: palette.foreground),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// A category spend row in the Budget tab: emoji+label (label already carries
+/// the emoji from the API) + amount, no `Rp` prefix.
+class _BudgetSpendRow extends StatelessWidget {
+  const _BudgetSpendRow({required this.slice});
+  final StatsSlice slice;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.palette;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: palette.border)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              slice.label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: OewangFonts.sans(color: palette.foreground),
+            ),
+          ),
+          Text(
+            AmountFormat.number(slice.amount.amount, decimals: 2),
+            style: OewangFonts.currency(color: palette.foreground),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ErrorView extends StatelessWidget {
   const _ErrorView({required this.message});
   final String message;
@@ -412,18 +802,6 @@ class _ErrorView extends StatelessWidget {
         textAlign: TextAlign.center,
         style: OewangFonts.sans(color: OewangColors.coral),
       ),
-    ),
-  );
-}
-
-class _ComingSoon extends StatelessWidget {
-  const _ComingSoon({required this.label});
-  final String label;
-  @override
-  Widget build(BuildContext context) => Center(
-    child: Text(
-      '$label — coming soon',
-      style: OewangFonts.sans(color: context.palette.mutedForeground),
     ),
   );
 }

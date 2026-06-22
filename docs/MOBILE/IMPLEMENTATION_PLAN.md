@@ -15,7 +15,7 @@ The reference is a personal-finance app with a four-tab bottom navigation bar:
 | Tab          | Active label / icon  | Primary screen                                 |
 | ------------ | -------------------- | ---------------------------------------------- |
 | **Trans.**   | "05/01" (today) icon | Transactions (Daily / Calendar / Monthly / Summary sub-tabs) |
-| **Stats**    | bar-chart icon       | Stats (Stats / Budget / Note sub-tabs) — pie chart, category list |
+| **Stats**    | bar-chart icon       | Stats (Stats / Budget / Note sub-tabs) — interactive pie + category list / monthly budget summary / notes breakdown |
 | **Accounts** | stacked-coins icon   | Accounts list grouped by Cash / Accounts / Debit Card |
 | **More**     | "•••" icon           | Settings hub                                   |
 
@@ -39,7 +39,7 @@ A floating circular **coral "+" FAB** (bottom-right) opens the Transaction Form 
 - `amount_calculator_sheet.dart` — IMG_1833: full-screen calculator keypad (+ − × ÷, 0/00/000, OK).
 
 **Stats tab**
-- `stats_screen.dart` — IMG_1834: Stats / Budget / Note tab, "M" (period) dropdown, Income/Exp toggle, pie chart, category list with % badge.
+- `stats_screen.dart` — IMG_1834: Stats / Budget / Note tabs, "M" (period) dropdown, Income/Exp toggle. **Stats** = interactive pie (tap a slice/row to select — it pops out + shows %) over a category list with % badge. **Budget** = "Remaining (Monthly)" header + "Budget Setting >" (→ `/settings/budget`) + a Monthly progress bar with a "Today" marker (from `budgetsRepository.status(month, year)` via `_budgetStatusProvider`), over the per-category spend list. **Note** = transactions grouped by note (`aggregateNotes`): note · count · amount, sorted by count then amount.
 
 **Accounts tab**
 - `accounts_screen.dart` — IMG_1835: Assets / Liabilities / Total summary header; sections per Account Group; pencil (edit-mode) + plus (add) icons.
