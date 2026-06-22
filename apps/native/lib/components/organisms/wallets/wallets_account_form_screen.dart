@@ -45,22 +45,20 @@ class AccountFormScreen extends ConsumerStatefulWidget {
 
 class _AccountFormScreenState extends ConsumerState<AccountFormScreen> {
   static const _labelWidth = 100.0;
-  static const _rowHeight = 56.0;
 
-  final _nameFocus = FocusNode();
-  final _descFocus = FocusNode();
+  late final TextEditingController _nameCtl;
+
+  @override
+  void initState() {
+    super.initState();
+    final vm = ref.read(accountFormVmProvider(widget.wallet));
+    _nameCtl = TextEditingController(text: vm.state.name);
+  }
 
   @override
   void dispose() {
-    _nameFocus.dispose();
-    _descFocus.dispose();
+    _nameCtl.dispose();
     super.dispose();
-  }
-
-  /// Tapping a text row's label focuses the field (and dismisses any open panel).
-  void _focusText(FocusNode node) {
-    FormDrawerScope.maybeOf(context)?.close();
-    node.requestFocus();
   }
 
   Future<void> _onSave() async {
@@ -76,21 +74,9 @@ class _AccountFormScreenState extends ConsumerState<AccountFormScreen> {
     );
   }
 
-  InputDecoration get _bareInput => const InputDecoration(
-    isDense: true,
-    hintText: '',
-    border: InputBorder.none,
-    enabledBorder: InputBorder.none,
-    focusedBorder: InputBorder.none,
-    contentPadding: EdgeInsets.zero,
-    fillColor: Colors.transparent,
-    filled: false,
-  );
-
   @override
   Widget build(BuildContext context) {
     final vm = ref.watch(accountFormVmProvider(widget.wallet));
-    final palette = context.palette;
 
     return Scaffold(
       appBar: PageAppBar(
@@ -108,10 +94,8 @@ class _AccountFormScreenState extends ConsumerState<AccountFormScreen> {
                   Input(
                     context: InputContext.select,
                     label: 'Group',
-                    variant: InputVariant.none,
+                    variant: InputVariant.underline,
                     labelWidth: _labelWidth,
-                    height: _rowHeight,
-                    showBorder: true,
                     placeholder: 'Choose a group',
                     entity: EntitySelect<WalletGroup>(
                       gridColumns: 3,
@@ -128,25 +112,18 @@ class _AccountFormScreenState extends ConsumerState<AccountFormScreen> {
                   FormFieldRow(
                     label: 'Name',
                     labelWidth: _labelWidth,
-                    height: _rowHeight,
-                    focusNode: _nameFocus,
-                    onTap: () => _focusText(_nameFocus),
-                    child: TextFormField(
-                      focusNode: _nameFocus,
-                      onTap: () => FormDrawerScope.maybeOf(context)?.close(),
+                    child: Input(
+                      controller: _nameCtl,
+                      variant: InputVariant.underline,
                       onChanged: vm.setName,
-                      initialValue: vm.state.name,
-                      decoration: _bareInput,
-                      style: OewangFonts.sans(color: palette.foreground),
+                      onTap: () => FormDrawerScope.maybeOf(context)?.close(),
                     ),
                   ),
                   Input(
                     context: InputContext.currency,
                     label: 'Amount',
-                    variant: InputVariant.none,
+                    variant: InputVariant.underline,
                     labelWidth: _labelWidth,
-                    height: _rowHeight,
-                    showBorder: true,
                     amount: vm.state.balance,
                     onAmountChanged: vm.setBalance,
                     currency: vm.state.currencyCode,
@@ -156,22 +133,16 @@ class _AccountFormScreenState extends ConsumerState<AccountFormScreen> {
                   FormFieldRow(
                     label: 'Currency',
                     labelWidth: _labelWidth,
-                    height: _rowHeight,
-                    showBorder: true,
+                    underline: true,
                     child: _CurrencyPicker(vm: vm),
                   ),
                   FormFieldRow(
                     label: 'Description',
                     labelWidth: _labelWidth,
-                    height: _rowHeight,
-                    focusNode: _descFocus,
-                    onTap: () => _focusText(_descFocus),
-                    child: TextField(
-                      focusNode: _descFocus,
-                      onTap: () => FormDrawerScope.maybeOf(context)?.close(),
+                    child: Input(
+                      variant: InputVariant.underline,
                       onChanged: vm.setDescription,
-                      decoration: _bareInput,
-                      style: OewangFonts.sans(color: palette.foreground),
+                      onTap: () => FormDrawerScope.maybeOf(context)?.close(),
                     ),
                   ),
                   if (vm.save.error != null)

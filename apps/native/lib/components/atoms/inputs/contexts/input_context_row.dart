@@ -7,12 +7,12 @@ import 'package:oewang/core/theme/oewang_typography.dart';
 
 /// Shared layout for the `currency`, `date` and `select` contexts. Renders the
 /// already-styled [value] widget plus any `widget.trailing`, laid out by
-/// `widget.labelPosition`:
+/// `widget.labelPosition`. The `variant` border is drawn around the value/input
+/// area (not the label) in both layouts — use `InputVariant.none` for the plain
+/// WMoney row look.
 ///
-/// - `left` — the plain two-column row (muted label left, value right). The
-///   `variant` is not drawn — this is the unchanged WMoney look.
-/// - `top` — the label stacked above a bordered field that draws the
-///   `InputVariant` (outlined box / underline / filled).
+/// - `left` — two-column row (muted label left, value right).
+/// - `top` — the label stacked above the bordered field.
 Widget inputFieldLayout(
   BuildContext context,
   Input widget, {

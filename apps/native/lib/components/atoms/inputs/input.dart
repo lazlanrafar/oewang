@@ -95,9 +95,9 @@ class Input extends StatefulWidget {
 
   // row layout
 
-  /// `left` keeps the plain two-column row (variant ignored); `top` stacks the
-  /// label above a bordered field that renders [variant]. Currency / date /
-  /// select only.
+  /// `left` is the two-column row (label left, value right); `top` stacks the
+  /// label above the field. Either way [variant] is drawn around the value area
+  /// (use `InputVariant.none` for plain). Currency / date / select only.
   final InputLabelPosition labelPosition;
   final double labelWidth;
   final double? height;

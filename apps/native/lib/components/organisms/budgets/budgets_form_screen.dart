@@ -38,7 +38,6 @@ class BudgetFormScreen extends ConsumerWidget {
   final BudgetStatus? budget;
 
   static const _labelWidth = 110.0;
-  static const _rowHeight = 56.0;
 
   Future<void> _onSave(BuildContext context, WidgetRef ref) async {
     final vm = ref.read(budgetFormVmProvider(budget));
@@ -75,8 +74,7 @@ class BudgetFormScreen extends ConsumerWidget {
                       FormFieldRow(
                         label: 'Category',
                         labelWidth: _labelWidth,
-                        height: _rowHeight,
-                        showBorder: true,
+                        underline: true,
                         child: Text(
                           vm.editingCategoryName,
                           style: OewangFonts.sans(color: palette.foreground),
@@ -86,10 +84,8 @@ class BudgetFormScreen extends ConsumerWidget {
                       Input(
                         context: InputContext.select,
                         label: 'Category',
-                        variant: InputVariant.none,
+                        variant: InputVariant.underline,
                         labelWidth: _labelWidth,
-                        height: _rowHeight,
-                        showBorder: true,
                         placeholder: 'Choose a category',
                         entity: EntitySelect<Category>(
                           gridColumns: 3,
@@ -107,10 +103,8 @@ class BudgetFormScreen extends ConsumerWidget {
                     Input(
                       context: InputContext.currency,
                       label: 'Monthly Limit',
-                      variant: InputVariant.none,
+                      variant: InputVariant.underline,
                       labelWidth: _labelWidth,
-                      height: _rowHeight,
-                      showBorder: true,
                       showCurrencyTabs: false,
                       amount: vm.state.amount,
                       onAmountChanged: vm.setAmount,

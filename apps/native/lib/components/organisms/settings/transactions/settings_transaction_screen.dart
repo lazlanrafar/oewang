@@ -372,18 +372,14 @@ class _MonthlyStartDateScreenState
           padding: const EdgeInsets.symmetric(vertical: 8),
           children: [
             Builder(
-              builder: (ctx) => InkWell(
+              builder: (ctx) => Input(
+                context: InputContext.select,
+                label: 'Start Date',
+                variant: InputVariant.underline,
+                displayValue: _date.toString(),
                 onTap: () => _pickStartDate(ctx),
-                child: Input(
-                  context: InputContext.select,
-                  label: 'Start Date',
-                  variant: InputVariant.none,
-                  displayValue: _date.toString(),
-                  onTap: () => _pickStartDate(ctx),
-                ),
               ),
             ),
-            Divider(height: 1, color: palette.border),
             const SizedBox(height: 16),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),

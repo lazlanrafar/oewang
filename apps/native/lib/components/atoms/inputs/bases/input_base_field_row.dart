@@ -8,9 +8,12 @@ import 'package:oewang/core/theme/oewang_typography.dart';
 ///
 /// Optional behaviours (all default off, so existing callers are unchanged):
 /// - [height] gives every row the same fixed height.
-/// - [showBorder] draws the row's own bottom border (no separate `Divider`).
-/// - [focusNode] makes the bottom border black while the field is focused and
-///   lets a tap anywhere on the row focus it.
+/// - [showBorder] draws the row's own full-width bottom border (a divider).
+/// - [underline] draws a bottom border under the **value column only** (not the
+///   label) — the `InputVariant.underline` look for non-[Input] children. Turns
+///   foreground while [focusNode] has focus. Takes precedence over [showBorder].
+/// - [focusNode] makes the border black while the field is focused and lets a
+///   tap anywhere on the row focus it.
 /// - [onTap] runs when the row (label / empty area) is tapped; defaults to
 ///   focusing [focusNode] when one is given.
 class FormFieldRow extends StatelessWidget {
@@ -21,6 +24,7 @@ class FormFieldRow extends StatelessWidget {
     this.padding = const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
     this.height,
     this.showBorder = false,
+    this.underline = false,
     this.focusNode,
     this.onTap,
     super.key,
@@ -32,6 +36,7 @@ class FormFieldRow extends StatelessWidget {
   final EdgeInsetsGeometry padding;
   final double? height;
   final bool showBorder;
+  final bool underline;
   final FocusNode? focusNode;
   final VoidCallback? onTap;
 
@@ -53,6 +58,21 @@ class FormFieldRow extends StatelessWidget {
     required VoidCallback? tap,
   }) {
     final palette = context.palette;
+    final value = underline
+        ? DecoratedBox(
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(
+                  color: focused ? palette.foreground : palette.border,
+                ),
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: child,
+            ),
+          )
+        : child;
     final row = Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -63,7 +83,7 @@ class FormFieldRow extends StatelessWidget {
             style: OewangFonts.sans(color: palette.mutedForeground),
           ),
         ),
-        Expanded(child: child),
+        Expanded(child: value),
       ],
     );
 
@@ -77,7 +97,7 @@ class FormFieldRow extends StatelessWidget {
           )
         : Padding(padding: padding, child: row);
 
-    if (showBorder || focusNode != null) {
+    if (!underline && (showBorder || focusNode != null)) {
       body = DecoratedBox(
         decoration: BoxDecoration(
           border: Border(
