@@ -29,7 +29,6 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     'Calendar',
     'Monthly',
     'Summary',
-    'Description',
   ];
   int _index = 0;
   // ponytail: not plan-gated (plan isn't in the JWT); shown until dismissed.
@@ -87,8 +86,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                 0 => const TransactionsDailyScreen(),
                 1 => const TransactionsCalendarScreen(),
                 2 => const TransactionsMonthlyScreen(),
-                3 => const TransactionsSummaryScreen(),
-                _ => const _Description(),
+                _ => const TransactionsSummaryScreen(),
               },
             ),
           ],
@@ -137,19 +135,6 @@ class _UpgradeBanner extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _Description extends StatelessWidget {
-  const _Description();
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Text(
-        'Description — coming soon',
-        style: OewangFonts.sans(color: context.palette.mutedForeground),
       ),
     );
   }

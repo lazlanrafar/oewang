@@ -14,7 +14,7 @@ The reference is a personal-finance app with a four-tab bottom navigation bar:
 
 | Tab          | Active label / icon  | Primary screen                                 |
 | ------------ | -------------------- | ---------------------------------------------- |
-| **Trans.**   | "05/01" (today) icon | Transactions (Daily / Calendar / Monthly / Summary / Description sub-tabs) |
+| **Trans.**   | "05/01" (today) icon | Transactions (Daily / Calendar / Monthly / Summary sub-tabs) |
 | **Stats**    | bar-chart icon       | Stats (Stats / Budget / Note sub-tabs) — pie chart, category list |
 | **Accounts** | stacked-coins icon   | Accounts list grouped by Cash / Accounts / Debit Card |
 | **More**     | "•••" icon           | Settings hub                                   |
@@ -461,7 +461,7 @@ These are *layout* components driven by the screenshots, themed with the web tok
 - **`SegmentedPillTabs`** — IMG_1830/31/32. Three pills, the active one outlined with the type color (Income = blue, Expense = red, Transfer = white).
 - **`MoneyText`** — Serif + `FontFeature.tabularFigures()`, sign-aware coloring (positive blue, negative red), uses `intl` `NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 2)`.
 - **`MonthPickerBar`** — `<` `Jan 2026` `>` with horizontal `PageView` for swipe.
-- **`SubTabBar`** — Daily / Calendar / Monthly / Summary / Description with red underline under the active label (matches the consistent header across IMG_1826–29).
+- **`SubTabBar`** — Daily / Calendar / Monthly / Summary with red underline under the active label (matches the consistent header across IMG_1826–29).
 - **`CategoryPieChart`** — `fl_chart` `PieChart`, label leaders matching IMG_1834.
 - **`AmountCalculatorSheet`** — full-height `ModalBottomSheet` with custom keypad, returns a `Decimal` to the form.
 - **`SectionedAccountsList`** — IMG_1835 / IMG_1849: section header (muted) + rows with right-aligned `MoneyText`.
