@@ -27,12 +27,35 @@ class TransactionsSummaryRow extends StatelessWidget {
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
-        child: Row(
-          children: [
-            Expanded(child: _SummaryCell(label: 'Income', value: income, color: tx.income)),
-            Expanded(child: _SummaryCell(label: 'Exp.', value: expense, color: tx.expense)),
-            Expanded(child: _SummaryCell(label: 'Total', value: total, color: palette.foreground)),
-          ],
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: _SummaryCell(
+                  label: 'Income',
+                  value: income,
+                  color: tx.income,
+                ),
+              ),
+              VerticalDivider(width: 17, thickness: 1, color: palette.border),
+              Expanded(
+                child: _SummaryCell(
+                  label: 'Exp.',
+                  value: expense,
+                  color: tx.expense,
+                ),
+              ),
+              VerticalDivider(width: 17, thickness: 1, color: palette.border),
+              Expanded(
+                child: _SummaryCell(
+                  label: 'Total',
+                  value: total,
+                  color: palette.foreground,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -54,16 +77,17 @@ class _SummaryCell extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = context.palette;
     return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Text(
           label,
-          style: OewangFonts.sans(
-            color: palette.mutedForeground,
-            fontSize: 12,
-          ),
+          style: OewangFonts.sans(color: palette.mutedForeground, fontSize: 12),
         ),
         const SizedBox(height: 2),
-        MoneyText(amount: value, color: color),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: MoneyText(amount: value, color: color),
+        ),
       ],
     );
   }

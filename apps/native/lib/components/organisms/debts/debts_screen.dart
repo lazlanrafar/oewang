@@ -250,28 +250,38 @@ class _SummaryHeader extends StatelessWidget {
     final palette = context.palette;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        children: [
-          Expanded(
-            child: _cell(
-              'Owed to you',
-              totals.owedToYou,
-              OewangColors.blue,
-              palette,
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: _cell(
+                'Owed to you',
+                totals.owedToYou,
+                OewangColors.blue,
+                palette,
+              ),
             ),
-          ),
-          Expanded(
-            child: _cell('You owe', totals.youOwe, OewangColors.coral, palette),
-          ),
-          Expanded(
-            child: _cell(
-              'Net',
-              totals.net,
-              totals.net.isNegative ? OewangColors.coral : palette.foreground,
-              palette,
+            VerticalDivider(width: 17, thickness: 1, color: palette.border),
+            Expanded(
+              child: _cell(
+                'You owe',
+                totals.youOwe,
+                OewangColors.coral,
+                palette,
+              ),
             ),
-          ),
-        ],
+            VerticalDivider(width: 17, thickness: 1, color: palette.border),
+            Expanded(
+              child: _cell(
+                'Net',
+                totals.net,
+                totals.net.isNegative ? OewangColors.coral : palette.foreground,
+                palette,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -282,13 +292,17 @@ class _SummaryHeader extends StatelessWidget {
     Color color,
     OewangPalette palette,
   ) => Column(
+    mainAxisAlignment: MainAxisAlignment.center,
     children: [
       Text(
         label,
         style: OewangFonts.sans(color: palette.mutedForeground, fontSize: 12),
       ),
       const SizedBox(height: 2),
-      MoneyText(amount: amount, color: color),
+      FittedBox(
+        fit: BoxFit.scaleDown,
+        child: MoneyText(amount: amount, color: color),
+      ),
     ],
   );
 }

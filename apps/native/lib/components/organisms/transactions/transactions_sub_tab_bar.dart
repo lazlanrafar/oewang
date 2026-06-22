@@ -20,7 +20,7 @@ class SubTabBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = context.palette;
     return SizedBox(
-      height: 40,
+      height: 32,
       child: Row(
         children: [
           for (var i = 0; i < labels.length; i++)
@@ -28,7 +28,7 @@ class SubTabBar extends StatelessWidget {
               child: InkWell(
                 onTap: () => onSelect(i),
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     Text(
                       labels[i],
@@ -42,7 +42,7 @@ class SubTabBar extends StatelessWidget {
                             : FontWeight.w400,
                       ),
                     ),
-                    const Spacer(),
+                    const SizedBox(height: 6),
                     Container(
                       height: 2,
                       color: i == currentIndex
