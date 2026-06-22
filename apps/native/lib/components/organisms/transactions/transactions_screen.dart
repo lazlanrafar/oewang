@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:oewang/components/organisms/transactions/transactions_calendar_screen.dart';
 import 'package:oewang/components/organisms/transactions/transactions_daily_screen.dart';
 import 'package:oewang/components/organisms/transactions/transactions_header.dart';
@@ -9,6 +10,7 @@ import 'package:oewang/components/organisms/transactions/transactions_monthly_sc
 import 'package:oewang/components/organisms/transactions/transactions_sub_tab_bar.dart';
 import 'package:oewang/components/organisms/transactions/transactions_summary_row.dart';
 import 'package:oewang/components/organisms/transactions/transactions_summary_screen.dart';
+import 'package:oewang/core/router/app_router.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/domain/models/money.dart';
 
@@ -42,7 +44,9 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            const TransactionsHeader(),
+            TransactionsHeader(
+              onSearchTap: () => context.push(AppRoutes.transactionSearch),
+            ),
             SubTabBar(
               labels: _labels,
               currentIndex: _index,

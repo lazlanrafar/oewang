@@ -31,7 +31,7 @@ A floating circular **coral "+" FAB** (bottom-right) opens the Transaction Form 
 - `transactions_description_screen.dart` — placeholder description tab (low priority).
 
 **Trans tab — chrome / actions**
-- `transactions_header.dart` — search · "Trans." title (favorites/filter icons removed).
+- `transactions_header.dart` — search · "Trans." title (favorites/filter icons removed). The search icon pushes `transactions_search_screen.dart` (`/transactions/search`): a full-screen search-bar over a wide (~2yr) transaction pool (`_searchPoolProvider`), filtered client-side by `matchesQuery` (note/category/account/amount) since the list API has no text-search param; results reuse `TransactionRow` → edit form.
 - `month_picker_bar.dart` — `< Jan 2026 >` with horizontal swipe to change month.
 
 **Transaction form**

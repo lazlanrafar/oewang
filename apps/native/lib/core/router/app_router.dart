@@ -17,6 +17,7 @@ import 'package:oewang/components/organisms/settings/transactions/settings_trans
 import 'package:oewang/components/organisms/stats/stats_screen.dart';
 import 'package:oewang/components/organisms/transactions/transactions_form_screen.dart';
 import 'package:oewang/components/organisms/transactions/transactions_screen.dart';
+import 'package:oewang/components/organisms/transactions/transactions_search_screen.dart';
 import 'package:oewang/components/organisms/wallets/wallets_account_form_screen.dart';
 import 'package:oewang/components/organisms/wallets/wallets_account_group_form_screen.dart';
 import 'package:oewang/components/organisms/wallets/wallets_account_group_screen.dart';
@@ -42,6 +43,7 @@ class AppRoutes {
   static const String accounts = '/accounts';
   static const String more = '/more';
   static const String transactionForm = '/transactions/new';
+  static const String transactionSearch = '/transactions/search';
   static const String accountForm = '/accounts/new';
   static const String transactionSettings = '/settings/transaction';
   static const String categoriesIncome = '/settings/categories/income';
@@ -137,6 +139,10 @@ GoRouter buildAppRouter(Ref ref) {
         path: AppRoutes.transactionForm,
         builder: (context, state) =>
             TransactionFormScreen(transaction: state.extra as Transaction?),
+      ),
+      GoRoute(
+        path: AppRoutes.transactionSearch,
+        builder: (context, state) => const TransactionSearchScreen(),
       ),
       GoRoute(
         path: AppRoutes.accountForm,
