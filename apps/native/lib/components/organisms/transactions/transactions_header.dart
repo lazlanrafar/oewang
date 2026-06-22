@@ -2,18 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 
-/// Top chrome of the Trans. tab: search · "Trans." · favorites · filters.
+/// Top chrome of the Trans. tab: search · "Trans.".
 class TransactionsHeader extends StatelessWidget {
-  const TransactionsHeader({
-    this.onSearchTap,
-    this.onFavoritesTap,
-    this.onFiltersTap,
-    super.key,
-  });
+  const TransactionsHeader({this.onSearchTap, super.key});
 
   final VoidCallback? onSearchTap;
-  final VoidCallback? onFavoritesTap;
-  final VoidCallback? onFiltersTap;
 
   @override
   Widget build(BuildContext context) {
@@ -39,16 +32,8 @@ class TransactionsHeader extends StatelessWidget {
               ),
             ),
           ),
-          IconButton(
-            tooltip: 'Favorites',
-            onPressed: onFavoritesTap,
-            icon: Icon(Icons.star_border, color: fg),
-          ),
-          IconButton(
-            tooltip: 'Filters',
-            onPressed: onFiltersTap,
-            icon: Icon(Icons.tune, color: fg),
-          ),
+          // Balances the leading search button so the title stays centered.
+          const SizedBox(width: 48),
         ],
       ),
     );

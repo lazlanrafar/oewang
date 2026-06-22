@@ -31,7 +31,7 @@ A floating circular **coral "+" FAB** (bottom-right) opens the Transaction Form 
 - `transactions_description_screen.dart` — placeholder description tab (low priority).
 
 **Trans tab — chrome / actions**
-- `transactions_header.dart` — search · "Trans." title · favorites star · filter sliders icon.
+- `transactions_header.dart` — search · "Trans." title (favorites/filter icons removed).
 - `month_picker_bar.dart` — `< Jan 2026 >` with horizontal swipe to change month.
 
 **Transaction form**
