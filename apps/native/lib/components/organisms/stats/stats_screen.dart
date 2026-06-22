@@ -242,15 +242,34 @@ class _ModeToggle extends StatelessWidget {
   }
 }
 
-class _StatsBody extends StatelessWidget {
+class _StatsBody extends StatefulWidget {
   const _StatsBody({required this.slices, required this.chartPalette});
 
   final List<StatsSlice> slices;
   final List<Color> chartPalette;
 
   @override
+  State<_StatsBody> createState() => _StatsBodyState();
+}
+
+class _StatsBodyState extends State<_StatsBody> {
+  int? _selected;
+
+  void _toggle(int? i) => setState(() => _selected = _selected == i ? null : i);
+
+  @override
+  void didUpdateWidget(covariant _StatsBody old) {
+    super.didUpdateWidget(old);
+    // Drop a stale selection when the data set changes (month/mode switch).
+    if (_selected != null && _selected! >= widget.slices.length) {
+      _selected = null;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final palette = context.palette;
+    final slices = widget.slices;
     if (slices.isEmpty) {
       return Center(
         child: Text(
@@ -264,14 +283,21 @@ class _StatsBody extends StatelessWidget {
       children: [
         SizedBox(
           height: 260,
-          child: _Pie(slices: slices, chartPalette: chartPalette),
+          child: _Pie(
+            slices: slices,
+            chartPalette: widget.chartPalette,
+            selectedIndex: _selected,
+            onTouched: _toggle,
+          ),
         ),
         const SizedBox(height: 12),
         Divider(height: 1, color: palette.border),
         for (var i = 0; i < slices.length; i++)
           _CategoryRow(
             slice: slices[i],
-            color: chartPalette[i % chartPalette.length],
+            color: widget.chartPalette[i % widget.chartPalette.length],
+            selected: _selected == i,
+            onTap: () => _toggle(i),
           ),
       ],
     );
@@ -279,9 +305,16 @@ class _StatsBody extends StatelessWidget {
 }
 
 class _Pie extends StatelessWidget {
-  const _Pie({required this.slices, required this.chartPalette});
+  const _Pie({
+    required this.slices,
+    required this.chartPalette,
+    required this.selectedIndex,
+    required this.onTouched,
+  });
   final List<StatsSlice> slices;
   final List<Color> chartPalette;
+  final int? selectedIndex;
+  final ValueChanged<int?> onTouched;
 
   @override
   Widget build(BuildContext context) {
@@ -290,13 +323,26 @@ class _Pie extends StatelessWidget {
         sectionsSpace: 0,
         centerSpaceRadius: 0,
         startDegreeOffset: -90,
+        pieTouchData: PieTouchData(
+          touchCallback: (event, response) {
+            // Select on tap-up only; ignore the stream of move/down events.
+            if (event is! FlTapUpEvent) return;
+            onTouched(response?.touchedSection?.touchedSectionIndex);
+          },
+        ),
         sections: [
           for (var i = 0; i < slices.length; i++)
             PieChartSectionData(
               value: slices[i].amount.amount.toDouble(),
               color: chartPalette[i % chartPalette.length],
-              radius: 100,
-              title: '',
+              // Selected slice pops out and shows its share.
+              radius: i == selectedIndex ? 114 : 100,
+              title: i == selectedIndex ? '${slices[i].percent.round()}%' : '',
+              titleStyle: OewangFonts.sans(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
             ),
         ],
       ),
@@ -305,39 +351,50 @@ class _Pie extends StatelessWidget {
 }
 
 class _CategoryRow extends StatelessWidget {
-  const _CategoryRow({required this.slice, required this.color});
+  const _CategoryRow({
+    required this.slice,
+    required this.color,
+    required this.selected,
+    required this.onTap,
+  });
 
   final StatsSlice slice;
   final Color color;
+  final bool selected;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            color: color,
-            child: Text(
-              '${slice.percent.round()}%',
-              style: OewangFonts.sans(
-                color: Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        color: selected ? palette.muted : null,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              color: color,
+              child: Text(
+                '${slice.percent.round()}%',
+                style: OewangFonts.sans(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              slice.label,
-              style: OewangFonts.sans(color: palette.foreground),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                slice.label,
+                style: OewangFonts.sans(color: palette.foreground),
+              ),
             ),
-          ),
-          MoneyText(amount: slice.amount, color: palette.foreground),
-        ],
+            MoneyText(amount: slice.amount, color: palette.foreground),
+          ],
+        ),
       ),
     );
   }
