@@ -171,14 +171,15 @@ The `apps/native` transaction and account forms were rebuilt on a reusable, WMon
 
 ### What it does
 
-- **Live amount entry.** Tapping the Amount row opens a numeric keypad and the value updates in the row in real time with locale grouping (`Rp 1.000.000`) — the number is no longer shown only inside the keypad. `Rp / S$ / US$` tabs switch the displayed currency (`IDR`/`USD`/`SGD`).
+- **Live amount entry.** Tapping the Amount row opens a numeric keypad and the value updates in the row in real time with locale grouping and the ISO **code** (`IDR 1.000`) — the number is no longer shown only inside the keypad. The keypad shows one tab per **workspace currency** (main `IDR` + sub-currencies, read from the global `subCurrenciesProvider`), labelled by code; the tabs auto-hide when the workspace tracks only its main currency.
 - **Non-modal input panels.** Date, Amount, Category and Account each open a flat, full-width panel pinned to the bottom (a split "second screen", not a floating modal). The form above stays visible and tappable, so tapping another field **swaps** the panel instead of requiring you to close it first. All panels share one fixed height and a black header.
 - **Pickers.** Category and Account use a 3-column grid (categories show their emoji); the Date picker is a custom in-app calendar (Sunday-start, colored weekends, square selected day) replacing the OS dialog.
-- **Daily list.** The day-grouped list renders each day as a white card on a faint gray gap.
+- **Daily list.** The day-grouped list renders each day as a white card on a faint gray gap. Each row's title is `category.name ?? transaction.name`; an uncategorized transaction with no name shows **no title line** (just the wallet name), not an "Uncategorized" placeholder.
+- **Transfer.** The Transfer tab has no inline "Fees" button next to the Amount, and From/To are separated only by each field's own underline (no extra divider).
 
 ### Currency note
 
-The keypad currency tabs currently change only the **displayed** symbol locally; the selected currency is not yet persisted onto the transaction (storage still defaults to `IDR`). To persist it, thread `onCurrencyChanged`/`currency` from `Input(context: currency)` into the form ViewModel and the `NewTransactionDraft`, and wire it to the Main Currency Setting once that setting is backed by a provider.
+The keypad currency tabs are populated from the workspace's currencies (`subCurrenciesProvider`), but selecting one still only changes the **displayed** code locally — the choice is not yet persisted onto the transaction (storage defaults to the `IDR` main currency). To persist it, thread `onCurrencyChanged`/`currency` from `Input(context: currency)` into the form ViewModel and the `NewTransactionDraft`.
 
 ### Mobile Source Files
 
