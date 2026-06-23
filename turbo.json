@@ -22,7 +22,9 @@
     "NEXT_PUBLIC_VAPID_PUBLIC_KEY",
     "VAPID_PUBLIC_KEY",
     "VAPID_PRIVATE_KEY",
-    "VAPID_SUBJECT"
+    "VAPID_SUBJECT",
+    "AI_SERVICE_URL",
+    "AI_SERVICE_API_KEY"
   ],
   "globalPassThroughEnv": ["NODE_ENV", "PLAYWRIGHT_*"],
   "tasks": {

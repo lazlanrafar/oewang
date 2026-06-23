@@ -63,6 +63,10 @@ const serverSchema = z.object({
   EVOLUTION_API_TOKEN: z.string().optional(),
   EVOLUTION_API_INSTANCE: z.string().optional(),
 
+  // Python AI sidecar (apps/ai). When AI_SERVICE_URL is set, chat is served by it.
+  AI_SERVICE_URL: z.string().url().optional(),
+  AI_SERVICE_API_KEY: z.string().optional(),
+
   // S3-compatible Storage
   BUCKET_ENDPOINT: z.string().min(1).optional(),
   BUCKET_REGION: z.string().optional().default("us-east-1"),

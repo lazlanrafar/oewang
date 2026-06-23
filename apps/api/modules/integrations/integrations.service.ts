@@ -10,6 +10,7 @@ import { TransactionsService } from "../transactions/transactions.service";
 import { VaultService as vaultService } from "../vault/vault.service";
 import { WalletsRepository as walletsRepository } from "../wallets/wallets.repository";
 import { WorkspacesService } from "../workspaces/workspaces.service";
+import { chatViaSidecar } from "./ai-sidecar";
 import { IntegrationsRepository } from "./integrations.repository";
 
 const INTEGRATIONS_TTL = 60 * 60 * 24; // 24h — integration configs rarely change
@@ -306,7 +307,9 @@ export abstract class IntegrationsService {
 
       if (connectPayload) {
         const { workspaceIdentifier, userIdCandidate } = connectPayload;
-        const targetWorkspaceId = IntegrationsService.isUuid(workspaceIdentifier)
+        const targetWorkspaceId = IntegrationsService.isUuid(
+          workspaceIdentifier,
+        )
           ? workspaceIdentifier
           : await IntegrationsRepository.findWorkspaceIdBySlugOrId(
               workspaceIdentifier,
@@ -465,12 +468,14 @@ export abstract class IntegrationsService {
         // Handle AI Chat
         try {
           const chatSessionId = (settings as any)?.chatSessionId;
-          const chatResponse = await AiService.chat(
-            [{ role: "user", content: text }],
-            workspaceId,
-            userId,
-            chatSessionId,
-          );
+          const chatResponse =
+            (await chatViaSidecar(text, workspaceId, userId, chatSessionId)) ??
+            (await AiService.chat(
+              [{ role: "user", content: text }],
+              workspaceId,
+              userId,
+              chatSessionId,
+            ));
 
           if (chatResponse && chatResponse.reply) {
             // Save current session ID if it's new
@@ -701,12 +706,14 @@ export abstract class IntegrationsService {
       } else if (text) {
         // AI Chat
         const chatSessionId = (settings as any)?.chatSessionId;
-        const chatResponse = await AiService.chat(
-          [{ role: "user", content: text }],
-          workspaceId,
-          userId,
-          chatSessionId,
-        );
+        const chatResponse =
+          (await chatViaSidecar(text, workspaceId, userId, chatSessionId)) ??
+          (await AiService.chat(
+            [{ role: "user", content: text }],
+            workspaceId,
+            userId,
+            chatSessionId,
+          ));
 
         if (chatResponse?.reply) {
           if (
@@ -758,17 +765,14 @@ export abstract class IntegrationsService {
     // Normalize number: strip non-digits except leading +, then strip the +
     const number = to.replace(/[^0-9]/g, "");
 
-    const response = await fetch(
-      `${baseUrl}/message/sendText/${instance}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: token,
-        },
-        body: JSON.stringify({ number, text }),
+    const response = await fetch(`${baseUrl}/message/sendText/${instance}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: token,
       },
-    );
+      body: JSON.stringify({ number, text }),
+    });
 
     if (!response.ok) {
       logger.error("Failed to send Evolution WhatsApp message", {

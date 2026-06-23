@@ -16,6 +16,14 @@ async function main() {
         WITH (m = 16, ef_construction = 64)`,
   );
   console.log("✓ HNSW index created on vault_file_chunks.embedding");
+
+  await db.execute(
+    sql`CREATE INDEX IF NOT EXISTS ai_knowledge_chunks_embedding_idx
+        ON ai_knowledge_chunks
+        USING hnsw (embedding vector_cosine_ops)
+        WITH (m = 16, ef_construction = 64)`,
+  );
+  console.log("✓ HNSW index created on ai_knowledge_chunks.embedding");
 }
 
 main()

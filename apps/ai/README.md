@@ -1,0 +1,91 @@
+# apps/ai
+
+Python **FastAPI** AI service for oewang. Four capabilities, replying in English,
+reading the same Postgres as the rest of the monorepo (read-only):
+
+| Endpoint    | Method | Purpose                                                            |
+| ----------- | ------ | ----------------------------------------------------------------- |
+| `/health`   | GET    | Health check (no auth)                                            |
+| `/docs`     | GET    | Swagger UI (FastAPI built-in, no auth)                           |
+| `/chat`     | POST   | Finance chatbot — context-aware (saldo + riwayat transaksi)      |
+| `/analyze`  | POST   | NLP: kategorisasi + merchant + intent + sentiment (batch)        |
+| `/advisor`  | POST   | RAG advisor over a finance/tax knowledge base                    |
+| `/anomaly`  | POST   | Anomaly detection (IsolationForest + category spikes)            |
+
+Standalone — not part of Turborepo/Bun. Elysia (`apps/api`) calls `/chat` when
+`AI_SERVICE_URL` is set, otherwise it uses its in-process AiService.
+
+## Setup
+
+The venv was made with uv but is pip-compatible. With **uv**:
+
+```bash
+cd apps/ai
+uv sync                      # or: uv pip install -e ".[dev]"
+```
+
+…or with plain **pip** (no uv needed):
+
+```bash
+cd apps/ai
+python3.12 -m venv .venv && source .venv/bin/activate   # if no .venv yet
+.venv/bin/python -m ensurepip --upgrade                 # if venv has no pip
+pip install -e ".[dev]"
+```
+
+Env vars live in the **single root `.env`** (see `.env.example` for the keys).
+
+## Database prerequisites (run once, from repo root)
+
+```bash
+bun run db:push                              # creates ai_knowledge_chunks
+bun run packages/database/setup-vector.ts    # pgvector + HNSW indexes
+cd apps/ai && python scripts/seed_knowledge.py   # embeds knowledge/*.md
+```
+
+## Run
+
+```bash
+cd apps/ai
+uvicorn app.main:app --reload --port 3004
+# open http://localhost:3004/docs
+```
+
+## Auth
+
+All feature endpoints require the `x-api-key` header matching `AI_SERVICE_API_KEY`.
+Leave that var empty in dev to disable auth. `/health` and `/docs` are always open.
+
+## Request shapes
+
+```jsonc
+POST /chat     { "message": "...", "workspace_id": "...", "user_id": "...", "session_id": "..." }
+POST /analyze  { "items": [{ "description": "...", "amount": 25000 }], "workspace_id": "..." }
+POST /advisor  { "question": "...", "workspace_id": "..." }
+POST /anomaly  { "workspace_id": "..." }
+```
+
+Currency is formatted per the workspace's `workspace_settings` (mirrors
+`packages/utils/currency.ts`); categories come from the workspace's `categories`
+table. The anomaly background scan is opt-in via `ANOMALY_SCAN_HOURS` (> 0).
+
+## Test
+
+```bash
+pytest        # 15 tests — pure logic, no DB/LLM/network
+```
+
+## Layout
+
+```
+app/
+  main.py              FastAPI app, /health, routers, rate limit, scheduler
+  config.py            Settings (reads root .env)
+  core/                database (asyncpg), llm + embeddings (OpenAI), currency
+  api/routes/          chatbot, analyzer, advisor, anomaly
+  api/middleware/      auth (x-api-key)
+  modules/             one package per capability (service + helpers + knowledge)
+  schemas/             Pydantic request/response models
+scripts/seed_knowledge.py
+tests/
+```

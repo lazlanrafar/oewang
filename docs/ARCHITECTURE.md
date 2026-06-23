@@ -15,6 +15,7 @@ oewang/
 │   ├── admin/      # Next.js — Internal admin dashboard (port 3001)
 │   ├── api/        # ElysiaJS/Bun — REST API + MCP server (port 3002)
 │   ├── website/    # Next.js — Marketing website (port 3003)
+│   ├── ai/         # FastAPI/Python — AI sidecar: chatbot, NLP, RAG, anomaly (port 3004)
 │   └── native/     # Flutter — Mobile app (Dart/Flutter 3.11+)
 └── packages/
     ├── ai/             # AI orchestration (Vercel AI SDK, OpenAI, Anthropic, Gemini)
