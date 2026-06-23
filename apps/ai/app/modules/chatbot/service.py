@@ -46,3 +46,36 @@ async def chat(
     reply = llm.complete(system, messages)
     # Elysia owns ai_messages persistence; we just echo the session id back.
     return {"reply": reply, "session_id": session_id}
+
+
+async def web_chat(
+    messages: list,
+    workspace_id: str,
+    user_id: str | None,
+    session_id: str | None,
+    web_search: bool,
+) -> dict:
+    """Website-shaped chat: takes the full message array, returns the rich contract.
+
+    Phase 1: plain reply + token usage. Tools/canvas (artifact) and session
+    persistence land in later phases via Elysia call-back endpoints; until then
+    the website stays on the TS AiService.
+    """
+    balance = await _balance(workspace_id)
+    txns = await _recent_transactions(workspace_id)
+    currency = await get_currency_settings(workspace_id)
+
+    system = prompts.system_prompt(balance, txns, currency)
+    convo = [
+        {"role": m.role, "content": m.content}
+        for m in messages
+        if m.role in ("user", "assistant")
+    ]
+    result = llm.complete_raw(system, convo, max_tokens=1200)
+    return {
+        "session_id": session_id,
+        "reply": result["reply"],
+        "usage": result["usage"],
+        "artifact": None,  # ponytail: phase 2 — analytics tools emit canvas here
+        "provider": {"name": "openai", "response_id": result["response_id"]},
+    }

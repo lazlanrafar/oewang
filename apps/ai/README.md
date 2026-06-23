@@ -3,17 +3,36 @@
 Python **FastAPI** AI service for oewang. Four capabilities, replying in English,
 reading the same Postgres as the rest of the monorepo (read-only):
 
-| Endpoint    | Method | Purpose                                                            |
-| ----------- | ------ | ----------------------------------------------------------------- |
-| `/health`   | GET    | Health check (no auth)                                            |
-| `/docs`     | GET    | Swagger UI (FastAPI built-in, no auth)                           |
-| `/chat`     | POST   | Finance chatbot — context-aware (saldo + riwayat transaksi)      |
-| `/analyze`  | POST   | NLP: kategorisasi + merchant + intent + sentiment (batch)        |
-| `/advisor`  | POST   | RAG advisor over a finance/tax knowledge base                    |
-| `/anomaly`  | POST   | Anomaly detection (IsolationForest + category spikes)            |
+| Endpoint     | Method | Purpose                                                          |
+| ------------ | ------ | --------------------------------------------------------------- |
+| `/health`    | GET    | Health check (no auth)                                          |
+| `/docs`      | GET    | Swagger UI (FastAPI built-in, no auth)                          |
+| `/chat`      | POST   | Finance chatbot — context-aware (balance + recent transactions) |
+| `/chat/web`  | POST   | Website-shaped chat (message array → rich contract). Phase 1.   |
+| `/analyze`   | POST   | NLP: category + merchant + intent + sentiment (batch)           |
+| `/advisor`   | POST   | RAG advisor over a finance/tax knowledge base                   |
+| `/anomaly`   | POST   | Anomaly detection (IsolationForest + category spikes)           |
 
-Standalone — not part of Turborepo/Bun. Elysia (`apps/api`) calls `/chat` when
-`AI_SERVICE_URL` is set, otherwise it uses its in-process AiService.
+Standalone — not part of Turborepo/Bun. Elysia (`apps/api`) calls `/chat` for the
+WhatsApp/Telegram path when `AI_SERVICE_URL` is set, otherwise it uses its
+in-process AiService.
+
+## Website chat port (in progress)
+
+Goal: let the website's `/v1/ai/chat` be served by this Python service **without
+breaking the canvas/artifact + in-chat tools**. Architecture: Python orchestrates
+the LLM + tool-calling loop; tool execution, analytics (canvas payloads), and
+quota stay in Elysia behind internal endpoints (one source of truth for the money
+path). The website is **not** switched over until parity is proven.
+
+- **Phase 1 (done):** `/chat/web` matches the request/response contract
+  (`messages[]` → `{ reply, session_id, usage, artifact, provider }`), plain reply
+  + real token usage, `artifact: null`.
+- **Phase 2:** tool-calling loop; tools call a new Elysia internal endpoint that
+  wraps `executeAiTool`; analytics tools return canvas payloads → `artifact`.
+- **Phase 3:** session persistence, title generation, usage/quota parity, dry-run.
+- **Phase 4:** flip `ai.controller.ts` to the sidecar behind a flag; verify
+  canvas/tools at parity; default on.
 
 ## Setup
 

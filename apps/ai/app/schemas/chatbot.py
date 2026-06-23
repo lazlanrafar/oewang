@@ -18,3 +18,37 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     reply: str
     session_id: str | None = None
+
+
+# --- Website-compatible contract (mirrors apps/api ChatRequestDto/ChatResponse) ---
+
+
+class WebChatMessage(BaseModel):
+    role: str  # user | assistant | system
+    content: str
+
+
+class WebChatRequest(BaseModel):
+    workspace_id: str = Field(min_length=1)
+    user_id: str | None = None
+    messages: list[WebChatMessage] = Field(min_length=1)
+    session_id: str | None = None
+    web_search: bool = False
+
+
+class Usage(BaseModel):
+    input_tokens: int = 0
+    output_tokens: int = 0
+
+
+class Provider(BaseModel):
+    name: str = "openai"
+    response_id: str | None = None
+
+
+class WebChatResponse(BaseModel):
+    session_id: str | None = None
+    reply: str
+    usage: Usage | None = None
+    artifact: dict | None = None  # phase 2: canvas artifacts
+    provider: Provider | None = None
