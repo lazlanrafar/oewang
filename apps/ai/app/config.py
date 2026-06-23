@@ -16,6 +16,11 @@ class Settings(BaseSettings):
     AI_EMBED_MODEL: str = "text-embedding-3-small"
     AI_SERVICE_API_KEY: str = ""
     AI_PORT: int = 3004
+    # Elysia base URL the sidecar calls back to for tool execution + the system
+    # prompt (the money path stays in TS). Reuses AI_SERVICE_API_KEY as the
+    # shared secret in both directions.
+    API_INTERNAL_URL: str = "http://localhost:3002"
+    AI_MAX_STEPS: int = 10
     ALERT_CALLBACK_URL: str = ""
     ANOMALY_SCAN_HOURS: int = 0  # 0 = periodic scan disabled (opt-in)
 

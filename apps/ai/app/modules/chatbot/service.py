@@ -1,7 +1,8 @@
 from app.core import llm
 from app.core.currency import get_currency_settings
 from app.core.database import fetch, fetchrow
-from app.modules.chatbot import prompts
+from app.config import get_settings
+from app.modules.chatbot import prompts, tools
 from app.modules.chatbot.memory import load_history
 
 
@@ -55,27 +56,50 @@ async def web_chat(
     session_id: str | None,
     web_search: bool,
 ) -> dict:
-    """Website-shaped chat: takes the full message array, returns the rich contract.
+    """Website-shaped chat: full message array → rich contract with canvas.
 
-    Phase 1: plain reply + token usage. Tools/canvas (artifact) and session
-    persistence land in later phases via Elysia call-back endpoints; until then
-    the website stays on the TS AiService.
+    Phase 2: Python drives the LLM tool-calling loop; each tool call is forwarded
+    to the Elysia internal endpoint (DB writes, audit logs, analytics + canvas
+    rules stay in TS). The last canvas an analysis tool returns becomes `artifact`.
+    Session persistence and quota still belong to Elysia (Phase 3); the website is
+    not switched to this path until parity is proven (Phase 4).
     """
-    balance = await _balance(workspace_id)
-    txns = await _recent_transactions(workspace_id)
-    currency = await get_currency_settings(workspace_id)
-
-    system = prompts.system_prompt(balance, txns, currency)
+    system = await _web_system_prompt(workspace_id)
     convo = [
         {"role": m.role, "content": m.content}
         for m in messages
         if m.role in ("user", "assistant")
     ]
-    result = llm.complete_raw(system, convo, max_tokens=1200)
+
+    async def run_tool(name: str, args: dict) -> dict:
+        return await tools.execute_tool(name, args, workspace_id, user_id or "")
+
+    result = await llm.complete_with_tools(
+        system,
+        convo,
+        tools.WEB_TOOLS,
+        run_tool,
+        max_steps=get_settings().AI_MAX_STEPS,
+    )
     return {
         "session_id": session_id,
         "reply": result["reply"],
         "usage": result["usage"],
-        "artifact": None,  # ponytail: phase 2 — analytics tools emit canvas here
+        "artifact": result["artifact"],
         "provider": {"name": "openai", "response_id": result["response_id"]},
     }
+
+
+async def _web_system_prompt(workspace_id: str) -> str:
+    """Elysia builds the website prompt (single source of truth). Fall back to the
+    local context-rich prompt if the call-back is unavailable."""
+    try:
+        prompt = await tools.get_system_prompt(workspace_id)
+        if prompt:
+            return prompt
+    except Exception:
+        pass
+    balance = await _balance(workspace_id)
+    txns = await _recent_transactions(workspace_id)
+    currency = await get_currency_settings(workspace_id)
+    return prompts.system_prompt(balance, txns, currency)

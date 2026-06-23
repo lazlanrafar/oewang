@@ -58,7 +58,10 @@ export const encryptionPlugin = (app: Elysia) =>
           path.startsWith("/oauth") ||
           path.includes("/mayar/webhook") ||
           path.includes("/integrations/whatsapp/webhook") ||
-          path.includes("/integrations/telegram/webhook"))
+          path.includes("/integrations/telegram/webhook") ||
+          // Internal sidecar surface (Python AI service) — plain JSON, gated by
+          // the shared AI_SERVICE_API_KEY, not the encrypted client transport.
+          path.includes("/ai/internal"))
       )
         return;
 

@@ -39,27 +39,19 @@ def test_chat_requires_valid_api_key():
 
 
 async def test_web_chat_returns_full_contract(monkeypatch):
-    async def fake_balance(ws):
-        return 1000.0
+    async def fake_prompt(ws):
+        return "SYSTEM"
 
-    async def fake_txns(ws, limit=10):
-        return []
-
-    async def fake_currency(ws):
-        return None
-
-    monkeypatch.setattr(cbsvc, "_balance", fake_balance)
-    monkeypatch.setattr(cbsvc, "_recent_transactions", fake_txns)
-    monkeypatch.setattr(cbsvc, "get_currency_settings", fake_currency)
-    monkeypatch.setattr(
-        cbsvc.llm,
-        "complete_raw",
-        lambda *a, **k: {
+    async def fake_loop(system, convo, tool_specs, run_tool, max_steps=10):
+        return {
             "reply": "Hello",
             "usage": {"input_tokens": 10, "output_tokens": 5},
+            "artifact": {"type": "spending-canvas", "payload": {}},
             "response_id": "resp_1",
-        },
-    )
+        }
+
+    monkeypatch.setattr(cbsvc.tools, "get_system_prompt", fake_prompt)
+    monkeypatch.setattr(cbsvc.llm, "complete_with_tools", fake_loop)
 
     res = await cbsvc.web_chat(
         [WebChatMessage(role="user", content="hi")], "w1", "u1", "s1", False
@@ -68,4 +60,94 @@ async def test_web_chat_returns_full_contract(monkeypatch):
     assert res["session_id"] == "s1"
     assert res["usage"]["output_tokens"] == 5
     assert res["provider"]["name"] == "openai"
-    assert res["artifact"] is None
+    assert res["artifact"]["type"] == "spending-canvas"
+
+
+# ── Tool-loop logic (the canvas/money path) ─────────────────────────────────
+
+
+class _FakeFn:
+    def __init__(self, name, arguments):
+        self.name = name
+        self.arguments = arguments
+
+
+class _FakeToolCall:
+    def __init__(self, id, name, arguments):
+        self.id = id
+        self.function = _FakeFn(name, arguments)
+
+
+class _FakeMsg:
+    def __init__(self, content=None, tool_calls=None):
+        self.content = content
+        self.tool_calls = tool_calls
+
+    def model_dump(self, exclude_none=False):
+        return {"role": "assistant", "tool_calls": "<opaque>"}
+
+
+class _FakeUsage:
+    prompt_tokens = 10
+    completion_tokens = 5
+
+
+class _FakeResp:
+    def __init__(self, msg):
+        self.id = "resp_x"
+        self.usage = _FakeUsage()
+        self.choices = [type("C", (), {"message": msg})()]
+
+
+class _FakeClient:
+    """Returns canned responses in order; emulates client.chat.completions.create."""
+
+    def __init__(self, responses):
+        self._responses = responses
+        self._i = 0
+
+    @property
+    def chat(self):
+        return self
+
+    @property
+    def completions(self):
+        return self
+
+    def create(self, **kwargs):
+        r = self._responses[self._i]
+        self._i += 1
+        return r
+
+
+async def test_tool_loop_captures_artifact_and_usage(monkeypatch):
+    import app.core.llm as llm_mod
+
+    step1 = _FakeMsg(tool_calls=[_FakeToolCall("tc1", "getSpendingAnalysis", "{}")])
+    step2 = _FakeMsg(content="You spent a lot this month.")
+    client = _FakeClient([_FakeResp(step1), _FakeResp(step2)])
+    monkeypatch.setattr(llm_mod, "get_client", lambda: client)
+
+    seen = []
+
+    async def fake_execute(name, args):
+        seen.append(name)
+        return {
+            "result": {"data": {"metrics": {"totalSpending": 500}}},
+            "artifact": {"type": "spending-canvas", "payload": {"x": 1}},
+        }
+
+    out = await llm_mod.complete_with_tools(
+        "sys",
+        [{"role": "user", "content": "how much did I spend?"}],
+        [],
+        fake_execute,
+        max_steps=5,
+    )
+
+    assert seen == ["getSpendingAnalysis"]
+    assert out["reply"] == "You spent a lot this month."
+    assert out["artifact"]["type"] == "spending-canvas"
+    # two completion calls, 5 output tokens each
+    assert out["usage"]["output_tokens"] == 10
+    assert out["usage"]["input_tokens"] == 20

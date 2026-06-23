@@ -26,10 +26,17 @@ quota stay in Elysia behind internal endpoints (one source of truth for the mone
 path). The website is **not** switched over until parity is proven.
 
 - **Phase 1 (done):** `/chat/web` matches the request/response contract
-  (`messages[]` → `{ reply, session_id, usage, artifact, provider }`), plain reply
-  + real token usage, `artifact: null`.
-- **Phase 2:** tool-calling loop; tools call a new Elysia internal endpoint that
-  wraps `executeAiTool`; analytics tools return canvas payloads → `artifact`.
+  (`messages[]` → `{ reply, session_id, usage, artifact, provider }`).
+- **Phase 2 (done):** Python drives the LLM tool-calling loop
+  (`core/llm.py::complete_with_tools`, tool specs in `modules/chatbot/tools.py`
+  mirroring the orchestrator's `buildTools`). Each tool call is forwarded to the
+  Elysia internal endpoint `POST /v1/ai/internal/execute-tool` (wraps
+  `executeAiTool` + the context/RAG tools); the analysis tools' canvas payload
+  comes back as `artifact`. The system prompt is fetched from
+  `GET /v1/ai/internal/system-prompt` (single source of truth). Both internal
+  endpoints are exempt from the encrypted transport + rate limit and gated by the
+  shared `AI_SERVICE_API_KEY`. _Not yet ported: the `webSearch` tool (its fetch
+  logic lives only in the TS orchestrator)._
 - **Phase 3:** session persistence, title generation, usage/quota parity, dry-run.
 - **Phase 4:** flip `ai.controller.ts` to the sidecar behind a flag; verify
   canvas/tools at parity; default on.
@@ -91,7 +98,7 @@ table. The anomaly background scan is opt-in via `ANOMALY_SCAN_HOURS` (> 0).
 ## Test
 
 ```bash
-pytest        # 15 tests — pure logic, no DB/LLM/network
+pytest        # 17 tests — pure logic, no DB/LLM/network
 ```
 
 ## Layout

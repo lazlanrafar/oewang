@@ -137,6 +137,13 @@ export const rateLimitPlugin = new Elysia({
     return;
   }
 
+  // Internal sidecar surface (Python AI service) is unauthenticated (no JWT) so
+  // it would share the tight IP bucket; a single multi-tool chat fans out into
+  // many internal calls. The shared AI_SERVICE_API_KEY gates it instead.
+  if (path.includes("/ai/internal")) {
+    return;
+  }
+
   let config: RateLimitConfig;
 
   if (isAuthEndpoint(path)) {
