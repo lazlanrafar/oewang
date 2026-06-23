@@ -1,4 +1,3 @@
-import { Env } from "@workspace/constants";
 import { and, db, eq, isNull, vaultFileChunks } from "@workspace/database";
 import { createLogger } from "@workspace/logger";
 import { AiSidecarClient } from "../ai/ai-sidecar-client";
@@ -18,14 +17,8 @@ export abstract class VaultIndexingService {
     mimeType: string,
     fileName: string,
   ): Promise<void> {
-    if (!Env.OPENAI_API_KEY) {
-      log.warn(
-        "VaultIndexingService: OPENAI_API_KEY not set — skipping indexing",
-        { vaultFileId },
-      );
-      return;
-    }
-
+    // Embedding happens in the Python sidecar (it holds OPENAI_API_KEY), so the API
+    // no longer needs the key — just forwards the file.
     log.info("VaultIndexingService: starting indexing", {
       vaultFileId,
       mimeType,

@@ -3,8 +3,14 @@ from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Single root .env (CLAUDE.md: no per-app env files). config.py is at apps/ai/app/.
-_ROOT_ENV = Path(__file__).resolve().parents[3] / ".env"
+# Single root .env locally (CLAUDE.md: no per-app env files). Walk up to find the
+# nearest .env; None in containers/Railway (no file copied) — pydantic-settings then
+# reads from the injected environment variables. (Avoids a hard parents[N] index that
+# crashes when the tree is shallower than expected, e.g. /srv/app in Docker.)
+_ROOT_ENV = next(
+    (p / ".env" for p in Path(__file__).resolve().parents if (p / ".env").exists()),
+    None,
+)
 
 
 class Settings(BaseSettings):

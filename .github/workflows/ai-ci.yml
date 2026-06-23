@@ -1,0 +1,56 @@
+name: apps/ai CI
+
+# Gate the Python AI service: run its tests and prove the Docker image builds +
+# boots (binding $PORT) before Railway deploys it. Only runs when apps/ai changes.
+on:
+  push:
+    branches: [main]
+    paths: ["apps/ai/**", ".github/workflows/ai-ci.yml"]
+  pull_request:
+    paths: ["apps/ai/**", ".github/workflows/ai-ci.yml"]
+
+defaults:
+  run:
+    working-directory: apps/ai
+
+jobs:
+  test:
+    name: Pytest
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install
+        run: pip install -e ".[dev]"
+
+      # Tests are pure logic — no DB/LLM/network. The DB round-trip test self-skips
+      # unless RUN_DB_TESTS=1, so CI never touches a database.
+      - name: Run tests
+        run: pytest -q
+
+  docker:
+    name: Docker build + boot
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t oewang-ai:ci .
+
+      # Boot with a Railway-style injected $PORT and confirm /health responds, so a
+      # broken Dockerfile / port binding fails CI instead of failing in production.
+      - name: Boot + healthcheck
+        run: |
+          docker run -d --name ai -e PORT=8080 -p 8080:8080 oewang-ai:ci
+          for i in $(seq 1 20); do
+            if curl -fsS http://localhost:8080/health; then echo "\nhealthy"; exit 0; fi
+            sleep 1
+          done
+          echo "service did not become healthy"; docker logs ai; exit 1
