@@ -1,12 +1,16 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { aiToolDefinitions } from "@workspace/ai";
 import { z } from "zod";
-import { executeAiTool } from "../ai/ai.tools";
+import { AiSidecarClient } from "../ai/ai-sidecar-client";
 
-export function createMcpServer(
+/**
+ * Build the per-request MCP server. Tool schemas + execution come from the Python
+ * AI sidecar (apps/ai) — the same source the WhatsApp/website chat uses. Async
+ * because the schemas are fetched over HTTP at build time.
+ */
+export async function createMcpServer(
   workspaceId: string,
   userId: string,
-): McpServer {
+): Promise<McpServer> {
   const server = new McpServer({
     name: "oewang",
     version: "1.0.0",
@@ -15,12 +19,19 @@ export function createMcpServer(
       "Financial management — transactions, budgets, wallets, invoices, and reports",
   });
 
-  for (const tool of aiToolDefinitions) {
+  const tools = await AiSidecarClient.toolDefinitions();
+
+  for (const entry of tools) {
+    // Sidecar tools are OpenAI function specs: { function: { name, description, parameters } }
+    const fn = entry.function ?? entry;
+    const name: string = fn.name;
+    const description: string = fn.description ?? "";
+    const params = fn.parameters ?? {};
     const shape: Record<string, z.ZodTypeAny> = {};
 
-    if (tool.input_schema?.properties) {
+    if (params.properties) {
       for (const [key, prop] of Object.entries(
-        tool.input_schema.properties as Record<string, any>,
+        params.properties as Record<string, any>,
       )) {
         if (prop.anyOf) {
           shape[key] = z
@@ -33,7 +44,7 @@ export function createMcpServer(
             .string()
             .optional()
             .describe(prop.description ?? "");
-        } else if (prop.type === "number") {
+        } else if (prop.type === "number" || prop.type === "integer") {
           shape[key] = z
             .number()
             .optional()
@@ -52,13 +63,18 @@ export function createMcpServer(
       }
     }
 
-    server.tool(tool.name, tool.description ?? "", shape, async (args) => {
-      const result = await executeAiTool(tool.name, args, workspaceId, userId);
-      if (!result.success) {
+    server.tool(name, description, shape, async (args) => {
+      const { result } = await AiSidecarClient.executeTool(
+        name,
+        args,
+        workspaceId,
+        userId,
+      );
+      if (!result?.success) {
         return {
           isError: true,
           content: [
-            { type: "text" as const, text: result.error ?? "Tool failed" },
+            { type: "text" as const, text: result?.error ?? "Tool failed" },
           ],
         };
       }

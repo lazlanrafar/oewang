@@ -573,7 +573,10 @@ export const mcpController = new Elysia()
       sessionIdGenerator: undefined, // stateless mode
     });
 
-    const server = createMcpServer(tokenRow.workspace_id, tokenRow.user_id);
+    const server = await createMcpServer(
+      tokenRow.workspace_id,
+      tokenRow.user_id,
+    );
     await server.connect(transport);
 
     // Elysia consumes the body stream before the handler runs.

@@ -8,7 +8,7 @@ from slowapi.middleware import SlowAPIMiddleware
 from slowapi.util import get_remote_address
 
 from app.api.middleware.auth import require_api_key
-from app.api.routes import advisor, analyzer, anomaly, chatbot
+from app.api.routes import advisor, analyzer, anomaly, capabilities, chatbot
 from app.config import get_settings
 from app.core.database import close_pool
 from app.modules.anomaly.service import scan_all_workspaces
@@ -51,3 +51,4 @@ app.include_router(chatbot.router, dependencies=_auth)
 app.include_router(analyzer.router, dependencies=_auth)
 app.include_router(advisor.router, dependencies=_auth)
 app.include_router(anomaly.router, dependencies=_auth)
+app.include_router(capabilities.router, dependencies=_auth)

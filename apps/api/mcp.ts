@@ -5,11 +5,10 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import * as Sentry from "@sentry/bun";
-
-// We import the same exact tools Oewang uses for WhatsApp / Chat
-import { aiToolDefinitions } from "@workspace/ai";
 import { db } from "@workspace/database";
-import { executeAiTool } from "./modules/ai/ai.tools";
+// The same tools Oewang uses for WhatsApp / Chat — schemas + execution come from
+// the Python AI sidecar (apps/ai).
+import { AiSidecarClient } from "./modules/ai/ai-sidecar-client";
 import { TransactionsService } from "./modules/transactions/transactions.service";
 // Initialize Sentry just like the main API, though optional for local MCP
 import "./instrument";
@@ -46,7 +45,8 @@ async function getLocalActor() {
 
 // 1. Register the Tools List
 server.setRequestHandler(ListToolsRequestSchema, async () => {
-  // We append a simple 'get_transactions' tool to the existing AI tools
+  const tools = await AiSidecarClient.toolDefinitions();
+  // We append a simple 'get_transactions' tool to the sidecar AI tools
   const mcpTools = [
     {
       name: "get_transactions",
@@ -62,11 +62,14 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         },
       },
     },
-    ...aiToolDefinitions.map((t) => ({
-      name: t.name,
-      description: t.description,
-      inputSchema: t.input_schema,
-    })),
+    ...tools.map((entry: any) => {
+      const fn = entry.function ?? entry;
+      return {
+        name: fn.name,
+        description: fn.description,
+        inputSchema: fn.parameters,
+      };
+    }),
   ];
 
   return {
@@ -98,18 +101,19 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       };
     }
 
-    // For all other tools, route them through the exact same logic the WhatsApp bot uses!
-    const result = await executeAiTool(
+    // For all other tools, route them through the Python sidecar (same logic the
+    // WhatsApp/website chat uses).
+    const { result } = await AiSidecarClient.executeTool(
       name,
       args,
       actor.workspaceId,
       actor.userId,
     );
 
-    if (!result.success) {
+    if (!result?.success) {
       return {
         isError: true,
-        content: [{ type: "text", text: result.error }],
+        content: [{ type: "text", text: result?.error ?? "Tool failed" }],
       };
     }
 

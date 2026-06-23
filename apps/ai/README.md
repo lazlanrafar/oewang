@@ -3,15 +3,33 @@
 Python **FastAPI** AI service for oewang. Four capabilities, replying in English,
 reading the same Postgres as the rest of the monorepo (read-only):
 
-| Endpoint     | Method | Purpose                                                          |
-| ------------ | ------ | --------------------------------------------------------------- |
-| `/health`    | GET    | Health check (no auth)                                          |
-| `/docs`      | GET    | Swagger UI (FastAPI built-in, no auth)                          |
-| `/chat`      | POST   | Finance chatbot — context-aware (balance + recent transactions) |
-| `/chat/web`  | POST   | Website canvas chat — called directly by the Next.js server action (JWT + x-api-key). Drives the tool loop; money path via Elysia internal endpoints. |
-| `/analyze`   | POST   | NLP: category + merchant + intent + sentiment (batch)           |
-| `/advisor`   | POST   | RAG advisor over a finance/tax knowledge base                   |
-| `/anomaly`   | POST   | Anomaly detection (IsolationForest + category spikes)           |
+| Endpoint             | Method | Purpose                                                          |
+| -------------------- | ------ | --------------------------------------------------------------- |
+| `/health`            | GET    | Health check (no auth)                                          |
+| `/docs`              | GET    | Swagger UI (FastAPI built-in, no auth)                          |
+| `/chat`              | POST   | Finance chatbot — context-aware (balance + recent transactions) |
+| `/chat/web`          | POST   | Website canvas chat — called directly by the Next.js server action (JWT + x-api-key). Drives the tool loop; identity/session/quota via Elysia internal endpoints. |
+| `/chat/run`          | POST   | Service-to-service LLM tool loop (WhatsApp/Telegram + in-process fallback). Elysia builds prompt/history + persists; Python runs the loop. |
+| `/tools/execute`     | POST   | Run one AI tool — **DB writes, audit, quota, canvas** (the money path, in Python). Used by the MCP server. |
+| `/tools/definitions` | GET    | Canonical AI tool schemas (MCP registers these at startup).     |
+| `/receipt/parse`     | POST   | Receipt OCR (image/PDF) → transaction + line items.             |
+| `/import/extract`    | POST   | CSV/XLSX file → extracted transactions (Elysia writes them).    |
+| `/vault/chunk`       | POST   | Extract + chunk + embed a document for RAG (Elysia writes chunks). |
+| `/analyze`           | POST   | NLP: category + merchant + intent + sentiment (batch)           |
+| `/advisor`           | POST   | RAG advisor over a finance/tax knowledge base                   |
+| `/anomaly`           | POST   | Anomaly detection (IsolationForest + category spikes)           |
+
+## All AI logic lives here (packages/ai was removed)
+
+The former TS `packages/ai` was deleted; this service now owns **all** AI logic —
+chat orchestration + tool execution (transaction/debt/wallet DB writes, audit logs,
+quota), receipt OCR, CSV import, vault chunking, RAG, and the canvas tools. The
+money path (`app/core/{audit,quota,sessions,ids}.py`, `app/modules/execution/`) writes
+the same Postgres tables the Drizzle schema owns, using CUID2 ids + `Decimal` money.
+`apps/api` reaches this service via `apps/api/modules/ai/ai-sidecar-client.ts` and
+**requires `AI_SERVICE_URL`** (no in-process fallback). Elysia keeps only the
+identity/session/quota plumbing for the website chat (`/ai/internal/chat-begin`,
+`chat-end`, `system-prompt`) so the JWT secret stays in TS.
 
 Standalone — not part of Turborepo/Bun. When `AI_SERVICE_URL` is set, this service
 runs the WhatsApp/Telegram path (`/chat`, called by Elysia) and the website canvas
@@ -41,9 +59,10 @@ Next.js ◀── { reply, usage, artifact, provider }
   quota check (throws `PLAN_LIMIT_REACHED` 422 with `reset_at`, forwarded verbatim
   to the browser); `chat-end` increments `current_tokens + spent`. Identical math
   to the in-process path — both call the shared `AiService.chatBegin/chatEnd`.
-- **Tools + canvas:** each tool call hits `execute-tool` (Phase 2); the analysis
-  tools' payload returns as `artifact`. Dry-run still honored (it lives in
-  `executeAiTool`). All `/v1/ai/internal/*` endpoints are exempt from the
+- **Tools + canvas:** tool calls run **locally** in `app/modules/execution/` — DB
+  writes, audit, quota, and the analysis-tool `artifact` (canvas) all happen in
+  Python now. Dry-run is honored via `RECEIPT_DRY_RUN`. The remaining
+  `/v1/ai/internal/*` endpoints (chat-begin/end/system-prompt) are exempt from the
   encrypted transport + rate limit and gated by the shared `AI_SERVICE_API_KEY`.
 - **Fallback:** if `AI_SERVICE_URL` is unset or Python is **unreachable** (network
   error), the server action falls back to the encrypted in-process `/v1/ai/chat`
@@ -115,7 +134,8 @@ table. The anomaly background scan is opt-in via `ANOMALY_SCAN_HOURS` (> 0).
 ## Test
 
 ```bash
-pytest        # 18 tests — pure logic, no DB/LLM/network
+pytest        # 34 tests — pure logic, no DB/LLM/network (+1 DB round-trip, skipped
+              # unless RUN_DB_TESTS=1 and DATABASE_URL is local)
 ```
 
 ## Layout

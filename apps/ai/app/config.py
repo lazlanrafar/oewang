@@ -23,6 +23,11 @@ class Settings(BaseSettings):
     AI_MAX_STEPS: int = 10
     ALERT_CALLBACK_URL: str = ""
     ANOMALY_SCAN_HOURS: int = 0  # 0 = periodic scan disabled (opt-in)
+    # Money-path flags (mirror apps/api API_CONFIG). RECEIPT_DRY_RUN previews
+    # transaction/item writes without persisting; MOCK_AI_QUOTA skips the limit
+    # check. Dev defaults match the TS side.
+    RECEIPT_DRY_RUN: bool = False
+    MOCK_AI_QUOTA: bool = True
 
 
 @lru_cache

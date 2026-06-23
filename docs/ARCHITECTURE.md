@@ -55,7 +55,10 @@ oewang/
 │  pages / components → apps/api (ElysiaJS REST)              │
 │                         → packages/database                 │
 │                         → packages/integrations             │
-│                         → packages/ai                       │
+│                                                             │
+│  AI (chat, receipt, import, RAG, MCP tools)                 │
+│    → apps/ai (Python, x-api-key) — LLM loop + tool exec     │
+│        → PostgreSQL (writes + audit + quota directly)       │
 └─────────────────────────────────────────────────────────────┘
           ↑ Encrypted REST (AES-256-GCM)
           ↓ x-encrypted: true header

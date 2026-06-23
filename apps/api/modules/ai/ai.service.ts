@@ -1,10 +1,4 @@
-import {
-  AiOrchestrator,
-  buildSystemPrompt,
-  ReceiptService,
-  type ChatMessage as RepoChatMessage,
-} from "@workspace/ai";
-import { API_CONFIG, Env } from "@workspace/constants";
+import { API_CONFIG } from "@workspace/constants";
 import { createLogger } from "@workspace/logger";
 import { redis } from "@workspace/redis";
 import { ErrorCode } from "@workspace/types";
@@ -20,10 +14,28 @@ import { VaultService } from "../vault/vault.service";
 import { WalletsRepository } from "../wallets/wallets.repository";
 import { AgentSettingsService } from "./agent-settings.service";
 import type { ChatMessage, ChatResponse } from "./ai.dto";
+import { buildSystemPrompt } from "./ai.prompts";
 import { AiRepository } from "./ai.repository";
-import { executeAiTool } from "./ai.tools";
+import { AiSidecarClient } from "./ai-sidecar-client";
 
 const log = createLogger("ai-service");
+
+// History turns handed to the sidecar LLM loop (was @workspace/ai ChatMessage).
+type RepoChatMessage = {
+  role: "user" | "assistant" | "system" | "tool";
+  content: string;
+  attachments?: any;
+};
+
+/**
+ * Short chat-session title. Was AiOrchestrator.generateTitle (an LLM call); the
+ * title is cosmetic, so we derive it from the first message instead of spending a
+ * round-trip. # ponytail: call the sidecar if you want LLM-written titles.
+ */
+function deriveTitle(firstMessage: string): string {
+  const clean = firstMessage.replace(/\s+/g, " ").trim();
+  return clean.length > 60 ? `${clean.slice(0, 57)}…` : clean || "New chat";
+}
 
 type ChatAttachment = NonNullable<ChatMessage["attachments"]>[number];
 type WalletRef = { id: string; name: string };
@@ -211,15 +223,10 @@ async function buildInvoiceDraftFromAttachments(
         });
       }
 
-      const parsed = await ReceiptService.parse(
+      const parsed = await AiSidecarClient.parseReceipt(
         attachment.data,
         attachment.type,
         categoryContext,
-        {
-          geminiKey: Env.GEMINI_API_KEY,
-          openaiKey: Env.OPENAI_API_KEY,
-          anthropicKey: Env.ANTHROPIC_API_KEY,
-        },
       );
 
       if (!parsed || !Number(parsed.amount)) {
@@ -469,11 +476,7 @@ export abstract class AiService {
 
     // 2. Session management
     if (!currentSessionId) {
-      const title = await AiOrchestrator.generateTitle(
-        latestUserMessage.content,
-        Env.OPENAI_API_KEY,
-        Env.ANTHROPIC_API_KEY,
-      );
+      const title = deriveTitle(latestUserMessage.content);
       const newSession = await AiRepository.createSession(workspaceId, title);
       currentSessionId = newSession!.id;
 
@@ -709,26 +712,24 @@ export abstract class AiService {
       return { sessionId: begin.sessionId, reply: begin.reply };
     }
 
-    const agentSettings = await AgentSettingsService.getCached(workspaceId);
-    const response = await AiOrchestrator.chat(
-      begin.history,
-      {
-        workspaceId,
-        userId,
-        openaiKey: Env.OPENAI_API_KEY,
-        anthropicKey: Env.ANTHROPIC_API_KEY,
-        geminiKey: Env.GEMINI_API_KEY,
-        settings: agentSettings,
-        webSearch,
-      },
-      (name, args) => executeAiTool(name, args, workspaceId, userId),
+    // The LLM tool loop + tool execution run in the Python sidecar now.
+    const response = await AiSidecarClient.runChat(
       begin.systemPrompt,
+      begin.history,
+      workspaceId,
+      userId,
+      webSearch,
     );
 
     await AiService.chatEnd(
       workspaceId,
       begin.sessionId,
-      response,
+      {
+        reply: response.reply,
+        usage: response.usage,
+        artifact: response.artifact ?? undefined,
+        provider: { name: "openai", response_id: response.response_id },
+      },
       begin.currentTokens,
     );
 
@@ -736,7 +737,7 @@ export abstract class AiService {
       sessionId: begin.sessionId,
       reply: response.reply,
       usage: response.usage,
-      artifact: response.artifact,
+      artifact: response.artifact ?? undefined,
     };
   }
 
@@ -754,15 +755,10 @@ export abstract class AiService {
       .map((c: any) => `- ${c.name} (ID: ${c.id})`)
       .join("\n");
 
-    const parsed = await ReceiptService.parse(
+    const parsed = await AiSidecarClient.parseReceipt(
       base64Image,
       mediaType,
       categoryContext,
-      {
-        geminiKey: Env.GEMINI_API_KEY,
-        openaiKey: Env.OPENAI_API_KEY,
-        anthropicKey: Env.ANTHROPIC_API_KEY,
-      },
     );
 
     if (parsed) {

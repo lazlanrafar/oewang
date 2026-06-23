@@ -23,7 +23,6 @@
     "@google/generative-ai": "^0.24.1",
     "@modelcontextprotocol/sdk": "^1.27.1",
     "@sentry/bun": "^10.18.0",
-    "@workspace/ai": "workspace:*",
     "@workspace/bucket": "workspace:*",
     "@workspace/currencyfreaks": "workspace:*",
     "@workspace/database": "workspace:*",

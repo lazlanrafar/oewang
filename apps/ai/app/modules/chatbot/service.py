@@ -53,6 +53,34 @@ async def chat(
     return {"reply": reply, "session_id": session_id}
 
 
+async def run_chat(
+    system_prompt: str,
+    history: list[dict],
+    workspace_id: str,
+    user_id: str,
+) -> dict:
+    """Service-to-service LLM tool loop for the WhatsApp/Telegram + in-process
+    fallback path. Elysia owns chat-begin/chat-end (identity, session, quota); this
+    just runs the loop and executes tools locally. Returns {reply, usage, artifact,
+    response_id}."""
+
+    async def run_tool(name: str, args: dict) -> dict:
+        return await tools.execute_tool(name, args, workspace_id, user_id)
+
+    convo = [
+        {"role": m["role"], "content": m["content"]}
+        for m in history
+        if m.get("role") in ("user", "assistant")
+    ]
+    return await llm.complete_with_tools(
+        system_prompt,
+        convo,
+        tools.WEB_TOOLS,
+        run_tool,
+        max_steps=get_settings().AI_MAX_STEPS,
+    )
+
+
 async def web_chat(
     messages: list[dict],
     token: str,

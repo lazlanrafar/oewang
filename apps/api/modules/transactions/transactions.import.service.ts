@@ -1,13 +1,11 @@
-import {
-  type ExtractedTransaction,
-  ExtractionService,
-  parseFileToAiInput,
-} from "@workspace/ai";
-import { Env } from "@workspace/constants";
 import { logger } from "@workspace/logger";
 import { ErrorCode } from "@workspace/types";
 import { buildError, buildSuccess } from "@workspace/utils";
 import { status } from "elysia";
+import {
+  AiSidecarClient,
+  type SidecarExtractedTransaction,
+} from "../ai/ai-sidecar-client";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { CategoriesRepository } from "../categories/categories.repository";
 import { WalletsRepository } from "../wallets/wallets.repository";
@@ -40,33 +38,17 @@ export abstract class TransactionsImportService {
       existingCategories.map((c: any) => [c.name.toLowerCase(), c]),
     );
 
-    // 2. Parse file → AI input
-    const aiInput = parseFileToAiInput(fileBuffer, mimeType, filename);
-
-    // 3. Call AI
-    let extracted: ExtractedTransaction[];
+    // 2 + 3. Parse file → rows → extract transactions, all in the Python sidecar.
+    let extracted: SidecarExtractedTransaction[];
     try {
-      extracted = await ExtractionService.extractTransactions(
-        aiInput,
+      extracted = await AiSidecarClient.extractTransactions(
+        fileBuffer.toString("base64"),
+        mimeType,
         walletNames,
         categoryNames,
-        {
-          geminiKey: Env.GEMINI_API_KEY,
-          openaiKey: Env.OPENAI_API_KEY,
-          anthropicKey: Env.ANTHROPIC_API_KEY,
-        },
       );
     } catch (err: any) {
       logger.error("[AI Import Error]", { err });
-      if (err.message?.includes("No AI provider configured")) {
-        throw status(
-          422,
-          buildError(
-            ErrorCode.VALIDATION_ERROR,
-            "No AI provider configured. Add Gemini/OpenAI/Anthropic keys.",
-          ),
-        );
-      }
       throw status(
         500,
         buildError(

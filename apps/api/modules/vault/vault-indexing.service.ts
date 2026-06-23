@@ -1,7 +1,7 @@
-import { ChunkingService, EmbeddingService } from "@workspace/ai";
 import { Env } from "@workspace/constants";
-import { db, vaultFileChunks, eq, isNull, and } from "@workspace/database";
+import { and, db, eq, isNull, vaultFileChunks } from "@workspace/database";
 import { createLogger } from "@workspace/logger";
+import { AiSidecarClient } from "../ai/ai-sidecar-client";
 
 const log = createLogger("vault-indexing");
 
@@ -26,14 +26,6 @@ export abstract class VaultIndexingService {
       return;
     }
 
-    if (!ChunkingService.isIndexable(mimeType)) {
-      log.debug("VaultIndexingService: file type not indexable, skipping", {
-        mimeType,
-        vaultFileId,
-      });
-      return;
-    }
-
     log.info("VaultIndexingService: starting indexing", {
       vaultFileId,
       mimeType,
@@ -41,29 +33,32 @@ export abstract class VaultIndexingService {
     });
 
     try {
-      // 1. Extract text
-      const text = await ChunkingService.extractText(
-        buffer,
+      // 1. Extract + chunk + embed in the Python sidecar (DB write stays here).
+      const { indexable, chunks } = await AiSidecarClient.chunkFile(
+        buffer.toString("base64"),
         mimeType,
         fileName,
       );
-      if (!text || text.trim().length < 50) {
-        log.info("VaultIndexingService: no usable text extracted", {
+      if (!indexable) {
+        log.debug("VaultIndexingService: file type not indexable, skipping", {
+          mimeType,
           vaultFileId,
         });
         return;
       }
-
-      // 2. Chunk text
-      const chunks = ChunkingService.chunk(text);
-      if (!chunks.length) return;
+      if (!chunks.length) {
+        log.info("VaultIndexingService: no usable chunks extracted", {
+          vaultFileId,
+        });
+        return;
+      }
 
       log.info("VaultIndexingService: chunks created", {
         vaultFileId,
         count: chunks.length,
       });
 
-      // 3. Delete any previous chunks for this file (re-indexing case)
+      // 2. Delete any previous chunks for this file (re-indexing case)
       await db
         .update(vaultFileChunks)
         .set({ deleted_at: new Date() })
@@ -74,18 +69,12 @@ export abstract class VaultIndexingService {
           ),
         );
 
-      // 4. Generate embeddings in batch
-      const embeddings = await EmbeddingService.embed(
-        chunks.map((c) => c.content),
-        Env.OPENAI_API_KEY,
-      );
-
-      // 5. Persist chunks + embeddings
-      const rows = chunks.map((chunk, i) => ({
+      // 3. Persist chunks + embeddings
+      const rows = chunks.map((chunk) => ({
         vault_file_id: vaultFileId,
         workspace_id: workspaceId,
         content: chunk.content,
-        embedding: embeddings[i] ?? null,
+        embedding: chunk.embedding ?? null,
         chunk_index: chunk.index,
         token_count: chunk.tokenCount,
       }));

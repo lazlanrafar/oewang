@@ -263,25 +263,11 @@ WEB_TOOLS = [
 async def execute_tool(
     name: str, arguments: dict, workspace_id: str, user_id: str
 ) -> dict:
-    """Forward one tool call to Elysia. Returns {"result", "artifact"}."""
-    settings = get_settings()
-    headers = {"content-type": "application/json"}
-    if settings.AI_SERVICE_API_KEY:
-        headers["x-api-key"] = settings.AI_SERVICE_API_KEY
-    async with httpx.AsyncClient(timeout=30) as client:
-        resp = await client.post(
-            f"{settings.API_INTERNAL_URL}/v1/ai/internal/execute-tool",
-            headers=headers,
-            json={
-                "tool": name,
-                "input": arguments,
-                "workspace_id": workspace_id,
-                "user_id": user_id,
-            },
-        )
-        resp.raise_for_status()
-        data = resp.json()
-    return {"result": data.get("result"), "artifact": data.get("artifact")}
+    """Run one tool locally — DB writes, audit, and canvas all happen in Python now
+    (the money path moved here from Elysia). Returns {"result", "artifact"}."""
+    from app.modules.execution.executor import execute_tool as run
+
+    return await run(name, arguments, workspace_id, user_id)
 
 
 class ApiError(Exception):

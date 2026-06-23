@@ -3,7 +3,7 @@ import { logger } from "@workspace/logger";
 import { buildSuccess } from "@workspace/utils";
 import { cacheDel, cacheGet, cacheSet } from "../../lib/cache";
 import { AiService } from "../ai/ai.service";
-import { executeAiTool } from "../ai/ai.tools";
+import { AiSidecarClient } from "../ai/ai-sidecar-client";
 import { NotificationsService } from "../notifications/notifications.service";
 import { TransactionItemsService } from "../transactions/items/transaction-items.service";
 import { TransactionsService } from "../transactions/transactions.service";
@@ -110,7 +110,7 @@ export abstract class IntegrationsService {
       return (remaining || rawReply).trim();
     }
 
-    const createResult = await executeAiTool(
+    const { result: createResult } = await AiSidecarClient.executeTool(
       "create_transaction",
       payload,
       workspaceId,
