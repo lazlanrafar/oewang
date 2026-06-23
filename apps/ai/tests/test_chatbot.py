@@ -6,7 +6,6 @@ import app.modules.chatbot.service as cbsvc
 from app.api.middleware.auth import require_api_key
 from app.config import Settings
 from app.main import app
-from app.schemas.chatbot import WebChatMessage
 
 client = TestClient(app)
 
@@ -39,10 +38,24 @@ def test_chat_requires_valid_api_key():
 
 
 async def test_web_chat_returns_full_contract(monkeypatch):
-    async def fake_prompt(ws):
-        return "SYSTEM"
+    # chat_begin (identity/session/quota/prompt) + chat_end (persist/usage) live
+    # in Elysia; web_chat just drives the loop between them.
+    async def fake_begin(token, messages, session_id, web_search):
+        assert token == "tok"
+        return {
+            "kind": "ready",
+            "workspace_id": "w1",
+            "user_id": "u1",
+            "session_id": "s1",
+            "system_prompt": "SYS",
+            "history": [{"role": "user", "content": "hi"}],
+            "current_tokens": 100,
+        }
+
+    captured = {}
 
     async def fake_loop(system, convo, tool_specs, run_tool, max_steps=10):
+        captured["system"] = system
         return {
             "reply": "Hello",
             "usage": {"input_tokens": 10, "output_tokens": 5},
@@ -50,47 +63,39 @@ async def test_web_chat_returns_full_contract(monkeypatch):
             "response_id": "resp_1",
         }
 
-    monkeypatch.setattr(cbsvc.tools, "get_system_prompt", fake_prompt)
-    monkeypatch.setattr(cbsvc.llm, "complete_with_tools", fake_loop)
+    async def fake_end(workspace_id, session_id, result, current_tokens):
+        captured["ended"] = (workspace_id, session_id, current_tokens)
 
-    res = await cbsvc.web_chat(
-        [WebChatMessage(role="user", content="hi")], "w1", "u1", "s1", False
-    )
+    monkeypatch.setattr(cbsvc.tools, "chat_begin", fake_begin)
+    monkeypatch.setattr(cbsvc.llm, "complete_with_tools", fake_loop)
+    monkeypatch.setattr(cbsvc.tools, "chat_end", fake_end)
+
+    res = await cbsvc.web_chat([{"role": "user", "content": "hi"}], "tok", "s1", False)
     assert res["reply"] == "Hello"
     assert res["session_id"] == "s1"
     assert res["usage"]["output_tokens"] == 5
     assert res["provider"]["name"] == "openai"
     assert res["artifact"]["type"] == "spending-canvas"
+    assert captured["system"] == "SYS"
+    # tokens incremented against the count read at begin
+    assert captured["ended"] == ("w1", "s1", 100)
 
 
-async def test_web_chat_uses_provided_system_prompt(monkeypatch):
-    # When Elysia passes system_prompt, the sidecar must NOT call back for it.
-    async def boom(ws):
-        raise AssertionError("get_system_prompt should not be called")
+async def test_web_chat_early_reply_skips_loop(monkeypatch):
+    # Receipt-draft turns return an early reply from chat_begin; no LLM/chat_end.
+    async def fake_begin(token, messages, session_id, web_search):
+        return {"kind": "early", "session_id": "s9", "reply": "Confirm the receipt."}
 
-    captured = {}
+    def boom(*a, **k):
+        raise AssertionError("loop must not run on an early reply")
 
-    async def fake_loop(system, convo, tool_specs, run_tool, max_steps=10):
-        captured["system"] = system
-        return {
-            "reply": "ok",
-            "usage": {"input_tokens": 1, "output_tokens": 1},
-            "artifact": None,
-            "response_id": "r",
-        }
+    monkeypatch.setattr(cbsvc.tools, "chat_begin", fake_begin)
+    monkeypatch.setattr(cbsvc.llm, "complete_with_tools", boom)
 
-    monkeypatch.setattr(cbsvc.tools, "get_system_prompt", boom)
-    monkeypatch.setattr(cbsvc.llm, "complete_with_tools", fake_loop)
-
-    await cbsvc.web_chat(
-        [WebChatMessage(role="user", content="hi")],
-        "w1",
-        "u1",
-        "s1",
-        False,
-        system_prompt="PASSED-IN",
-    )
-    assert captured["system"] == "PASSED-IN"
+    res = await cbsvc.web_chat([{"role": "user", "content": "hi"}], "tok", None, False)
+    assert res["reply"] == "Confirm the receipt."
+    assert res["session_id"] == "s9"
+    assert res["artifact"] is None
 
 
 # ── Tool-loop logic (the canvas/money path) ─────────────────────────────────

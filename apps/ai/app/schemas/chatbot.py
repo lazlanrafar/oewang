@@ -26,17 +26,16 @@ class ChatResponse(BaseModel):
 class WebChatMessage(BaseModel):
     role: str  # user | assistant | system
     content: str
+    attachments: object | None = None
 
 
 class WebChatRequest(BaseModel):
-    workspace_id: str = Field(min_length=1)
-    user_id: str | None = None
+    # Identity (workspace/user) is NOT trusted from the body — it is resolved in
+    # Elysia from the forwarded JWT (Authorization header). Body carries only the
+    # conversation.
     messages: list[WebChatMessage] = Field(min_length=1)
     session_id: str | None = None
     web_search: bool = False
-    # When the caller (Elysia AiService) already built the system prompt, it
-    # passes it here to avoid a redundant call-back. Falls back to fetching it.
-    system_prompt: str | None = None
 
 
 class Usage(BaseModel):

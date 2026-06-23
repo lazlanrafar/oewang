@@ -1,10 +1,13 @@
 import asyncio
 import json
+import logging
 from collections.abc import Awaitable, Callable
 
 from openai import OpenAI
 
 from app.config import get_settings
+
+log = logging.getLogger("ai.llm")
 
 _client: OpenAI | None = None
 
@@ -107,8 +110,14 @@ async def complete_with_tools(
             except json.JSONDecodeError:
                 args = {}
             out = await execute_tool(tc.function.name, args)
-            if out.get("artifact"):
-                artifact = out["artifact"]
+            art = out.get("artifact")
+            log.info(
+                "tool=%s artifact=%s",
+                tc.function.name,
+                art.get("type") if art else None,
+            )
+            if art:
+                artifact = art
             convo.append(
                 {
                     "role": "tool",

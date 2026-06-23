@@ -22,7 +22,6 @@ import { AgentSettingsService } from "./agent-settings.service";
 import type { ChatMessage, ChatResponse } from "./ai.dto";
 import { AiRepository } from "./ai.repository";
 import { executeAiTool } from "./ai.tools";
-import { chatWebViaSidecar } from "./ai-sidecar-web";
 
 const log = createLogger("ai-service");
 
@@ -53,6 +52,19 @@ type InvoiceDraftState = {
   wallets: WalletRef[];
   entries: ReceiptDraftEntry[];
 };
+
+// chatBegin resolves the pre-LLM money path (session, quota, prompt). "early"
+// means a receipt-draft turn already produced + persisted a reply, so the caller
+// skips the LLM loop entirely. "ready" hands back what the loop needs.
+export type ChatBeginResult =
+  | { kind: "early"; sessionId: string; reply: string }
+  | {
+      kind: "ready";
+      sessionId: string;
+      systemPrompt: string;
+      history: RepoChatMessage[];
+      currentTokens: number;
+    };
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -437,15 +449,17 @@ async function handlePendingInvoiceDraft(
 
 export abstract class AiService {
   /**
-   * Chat with the AI using the user's financial data and save to DB.
+   * Pre-LLM money path: session management, user-message persistence, the
+   * receipt-draft flow (which can short-circuit to an "early" reply), the quota
+   * check, and system-prompt construction. Shared by the in-process chat() and
+   * the internal sidecar endpoint so there is exactly one implementation.
    */
-  static async chat(
+  static async chatBegin(
     messages: ChatMessage[],
     workspaceId: string,
     userId: string,
     sessionId?: string,
-    webSearch?: boolean,
-  ): Promise<ChatResponse> {
+  ): Promise<ChatBeginResult> {
     let currentSessionId = sessionId;
     const latestUserMessage = messages[messages.length - 1];
     if (!latestUserMessage) throw new Error("No messages provided");
@@ -512,7 +526,12 @@ export abstract class AiService {
         latestDraft,
         currentSessionId as string,
       );
-      if (draftResponse) return draftResponse;
+      if (draftResponse)
+        return {
+          kind: "early",
+          sessionId: currentSessionId as string,
+          reply: draftResponse.reply,
+        };
     }
 
     if (hasReceiptAttachments(latestUserMessage.attachments)) {
@@ -529,7 +548,11 @@ export abstract class AiService {
           preview.reply,
           { invoiceDraft: preview.draft },
         );
-        return { sessionId: currentSessionId, reply: preview.reply };
+        return {
+          kind: "early",
+          sessionId: currentSessionId as string,
+          reply: preview.reply,
+        };
       }
     }
 
@@ -609,49 +632,35 @@ export abstract class AiService {
       responseLanguage: agentSettings.responseLanguage,
     });
 
-    // 7. Orchestrate — AI SDK multi-step tool loop
+    // 7. Hand back what the LLM loop needs.
     const consolidatedMessages: RepoChatMessage[] = history.map((m: any) => ({
       role: m.role as any,
       content: m.content as string,
       attachments: m.attachments as any,
     }));
 
-    let response: ChatResponse;
-    // When AI_SERVICE_URL is set, the Python sidecar drives the LLM + tool loop
-    // (it calls back into Elysia for tool execution). Everything around this —
-    // session, title, quota, persistence, dry-run — is unchanged, so parity is
-    // automatic. Falls back to the in-process orchestrator on any miss, so the
-    // canvas chat never breaks.
-    const viaSidecar = await chatWebViaSidecar(
-      consolidatedMessages,
-      workspaceId,
-      userId,
+    return {
+      kind: "ready",
+      sessionId: currentSessionId,
       systemPrompt,
-      webSearch,
-      currentSessionId,
-    );
-    if (viaSidecar) {
-      response = viaSidecar;
-    } else {
-      response = await AiOrchestrator.chat(
-        consolidatedMessages,
-        {
-          workspaceId,
-          userId,
-          openaiKey: Env.OPENAI_API_KEY,
-          anthropicKey: Env.ANTHROPIC_API_KEY,
-          geminiKey: Env.GEMINI_API_KEY,
-          settings: agentSettings,
-          webSearch,
-        },
-        (name, args) => executeAiTool(name, args, workspaceId, userId),
-        systemPrompt,
-      );
-    }
+      history: consolidatedMessages,
+      currentTokens,
+    };
+  }
 
-    // 8. Persist response and token usage
+  /**
+   * Post-LLM money path: persist the assistant reply (+ artifact/provider) and
+   * increment token usage against the count read at chatBegin. Shared by the
+   * in-process chat() and the internal sidecar endpoint.
+   */
+  static async chatEnd(
+    workspaceId: string,
+    sessionId: string,
+    response: Pick<ChatResponse, "reply" | "usage" | "artifact" | "provider">,
+    currentTokens: number,
+  ): Promise<void> {
     await AiRepository.saveMessage(
-      currentSessionId,
+      sessionId,
       workspaceId,
       "assistant",
       response.reply,
@@ -677,9 +686,54 @@ export abstract class AiService {
     if (tokensSpent > 0) {
       RealtimeService.notifyValueChange(workspaceId, "workspace.usage");
     }
+  }
+
+  /**
+   * In-process chat — the fallback path used when the website cannot reach the
+   * Python sidecar directly. Runs the LLM loop in TS via AiOrchestrator.
+   */
+  static async chat(
+    messages: ChatMessage[],
+    workspaceId: string,
+    userId: string,
+    sessionId?: string,
+    webSearch?: boolean,
+  ): Promise<ChatResponse> {
+    const begin = await AiService.chatBegin(
+      messages,
+      workspaceId,
+      userId,
+      sessionId,
+    );
+    if (begin.kind === "early") {
+      return { sessionId: begin.sessionId, reply: begin.reply };
+    }
+
+    const agentSettings = await AgentSettingsService.getCached(workspaceId);
+    const response = await AiOrchestrator.chat(
+      begin.history,
+      {
+        workspaceId,
+        userId,
+        openaiKey: Env.OPENAI_API_KEY,
+        anthropicKey: Env.ANTHROPIC_API_KEY,
+        geminiKey: Env.GEMINI_API_KEY,
+        settings: agentSettings,
+        webSearch,
+      },
+      (name, args) => executeAiTool(name, args, workspaceId, userId),
+      begin.systemPrompt,
+    );
+
+    await AiService.chatEnd(
+      workspaceId,
+      begin.sessionId,
+      response,
+      begin.currentTokens,
+    );
 
     return {
-      sessionId: currentSessionId,
+      sessionId: begin.sessionId,
       reply: response.reply,
       usage: response.usage,
       artifact: response.artifact,

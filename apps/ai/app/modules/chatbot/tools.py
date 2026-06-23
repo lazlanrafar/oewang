@@ -284,6 +284,85 @@ async def execute_tool(
     return {"result": data.get("result"), "artifact": data.get("artifact")}
 
 
+class ApiError(Exception):
+    """Non-2xx from an Elysia internal endpoint. status_code < 500 carries a
+    real answer (quota/auth) the route forwards to the browser verbatim."""
+
+    def __init__(self, status_code: int, body: dict):
+        self.status_code = status_code
+        self.body = body
+        super().__init__(f"api error {status_code}")
+
+
+def _internal_headers(token: str | None = None) -> dict:
+    headers = {"content-type": "application/json"}
+    key = get_settings().AI_SERVICE_API_KEY
+    if key:
+        headers["x-api-key"] = key
+    if token:
+        headers["authorization"] = f"Bearer {token}"
+    return headers
+
+
+async def chat_begin(
+    token: str, messages: list[dict], session_id: str | None, web_search: bool
+) -> dict:
+    """Pre-LLM money path. Identity is resolved server-side from the JWT in TS;
+    raises ApiError on quota/auth/404 so the route can forward it."""
+    settings = get_settings()
+    payload_messages = [
+        {
+            "role": m["role"],
+            "content": m["content"],
+            **({"attachments": m["attachments"]} if m.get("attachments") else {}),
+        }
+        for m in messages
+    ]
+    async with httpx.AsyncClient(timeout=30) as client:
+        resp = await client.post(
+            f"{settings.API_INTERNAL_URL}/v1/ai/internal/chat-begin",
+            headers=_internal_headers(token),
+            json={
+                "messages": payload_messages,
+                "session_id": session_id,
+                "web_search": web_search,
+            },
+        )
+    if resp.status_code >= 400:
+        try:
+            body = resp.json()
+        except Exception:
+            body = {"message": resp.text}
+        raise ApiError(resp.status_code, body)
+    return resp.json()
+
+
+async def chat_end(
+    workspace_id: str, session_id: str, result: dict, current_tokens: int
+) -> None:
+    """Post-LLM money path: persist reply + increment tokens (against the count
+    read at chat_begin)."""
+    settings = get_settings()
+    async with httpx.AsyncClient(timeout=30) as client:
+        resp = await client.post(
+            f"{settings.API_INTERNAL_URL}/v1/ai/internal/chat-end",
+            headers=_internal_headers(),
+            json={
+                "workspace_id": workspace_id,
+                "session_id": session_id,
+                "reply": result["reply"],
+                "usage": result["usage"],
+                "artifact": result.get("artifact"),
+                "provider": {
+                    "name": "openai",
+                    "response_id": result.get("response_id"),
+                },
+                "current_tokens": current_tokens,
+            },
+        )
+        resp.raise_for_status()
+
+
 async def get_system_prompt(workspace_id: str) -> str:
     """Fetch the website system prompt from Elysia (single source of truth)."""
     settings = get_settings()
