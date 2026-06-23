@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-> **Documentation:** [ARCHITECTURE.md](./docs/ARCHITECTURE.md) · [FEATURES.md](./docs/FEATURES.md) · [STYLE_GUIDE.md](./docs/STYLE_GUIDE.md) · [BEST_PRACTICE_ELYSIA.md](./docs/BEST_PRACTICE_ELYSIA.md) · [BEST_PRACTICE_NEXT_JS.md](./docs/BEST_PRACTICE_NEXT_JS.md) · [ENGINEERING_STANDARDS.md](./docs/ENGINEERING_STANDARDS.md) · [IMPLEMENTATION_PLAN.md](./docs/IMPLEMENTATION_PLAN.md) · [SHEET_GUIDE.md](./docs/SHEET_GUIDE.md) · [DATA_TABLE_PAGE_GUIDE.md](./docs/DATA_TABLE_PAGE_GUIDE.md)
+> **Documentation:** [ARCHITECTURE.md](./docs/ARCHITECTURE.md) · [FEATURES.md](./docs/FEATURES.md) · [STYLE_GUIDE.md](./docs/STYLE_GUIDE.md) · [BEST_PRACTICE_ELYSIA.md](./docs/BEST_PRACTICE_ELYSIA.md) · [BEST_PRACTICE_NEXT_JS.md](./docs/BEST_PRACTICE_NEXT_JS.md) · [BEST_PRACTICE_FLUTTER.md](./docs/BEST_PRACTICE_FLUTTER.md) · [ENGINEERING_STANDARDS.md](./docs/ENGINEERING_STANDARDS.md) · [IMPLEMENTATION_PLAN.md](./docs/IMPLEMENTATION_PLAN.md) · [SHEET_GUIDE.md](./docs/SHEET_GUIDE.md) · [DATA_TABLE_PAGE_GUIDE.md](./docs/DATA_TABLE_PAGE_GUIDE.md)
 > **References:** [REFERENCE_MIDDAY_AI.md](./docs/REFERENCE_MIDDAY_AI.md) — Midday AI chat, MCP server, and external app integration patterns
 > **Testing:** [TESTING_UNIT.md](./docs/TESTING_UNIT.md) · [TESTING_E2E.md](./docs/TESTING_E2E.md)
 
@@ -62,13 +62,14 @@ This is a **Turborepo monorepo** using **Bun** as package manager and runtime. S
 | `apps/admin`   | Next.js                | 3001 | Admin dashboard                 |
 | `apps/api`     | ElysiaJS (Bun)         | 3002 | REST API + MCP server           |
 | `apps/website` | Next.js                | 3003 | Marketing website               |
+| `apps/ai`      | FastAPI (Python 3.12)  | 3004 | All AI logic — chat + tool execution (DB writes/audit/quota), receipt OCR, CSV import, RAG, chunking, anomaly |
 | `apps/native`  | Flutter                | —    | Mobile app (Dart/Flutter 3.11+) |
 
 ### Key packages
 
 - **`packages/database`** — Drizzle ORM + PostgreSQL. Schema lives here (33 tables); all DB access goes through this package. Primary keys use CUID2 (`@paralleldrive/cuid2`).
 - **`packages/modules`** — Server actions and data-fetching logic. Next.js `app/` calls into these rather than hitting the API or DB directly.
-- **`packages/ai`** — AI service abstractions over OpenAI, Anthropic Claude, and Google Generative AI. Includes agent, memory, artifact, and store tooling.
+- **AI logic lives in `apps/ai`** (Python), not a TS package. The former `packages/ai` was removed — chat orchestration, tool execution (DB writes/audit/quota), receipt OCR, CSV import, RAG, chunking, and the canvas tools are all in the Python sidecar. `apps/api` reaches it via `apps/api/modules/ai/ai-sidecar-client.ts` (HTTP, `x-api-key`); it requires `AI_SERVICE_URL` (no in-process fallback).
 - **`packages/integrations`** — 40+ third-party integrations (Telegram, WhatsApp, Stripe, etc.).
 - **`packages/ui`** — Shared React components built on shadcn + Radix UI + Tailwind CSS v4.
 - **`packages/types`** — Central TypeScript type definitions and `ErrorCode` constants.
@@ -86,7 +87,13 @@ Next.js pages/components
 
 Next.js pages/components
   → apps/api (ElysiaJS REST — AES-256-GCM encrypted transport)
-    → packages/database / packages/integrations / packages/ai
+    → packages/database / packages/integrations
+
+AI (chat, receipt, import, vault RAG, MCP tools)
+  → apps/ai (Python FastAPI, x-api-key) — runs the LLM loop + executes tools
+    → PostgreSQL (writes + audit + quota, directly)
+  apps/app website chat calls apps/ai directly; apps/api keeps only the
+  identity/session/quota plumbing (/ai/internal/chat-begin · chat-end · system-prompt)
 ```
 
 **Auth flow** — custom JWT (HS256):
@@ -219,7 +226,7 @@ app/(main)/[locale]/
 | [TESTING_E2E.md](./docs/TESTING_E2E.md)   | Playwright setup, fixture system, dictionary selectors, auth setup, spec file inventory, debugging                       |
 | [TESTING.md](./TESTING.md)                | Full test inventory and metrics summary                                                                                  |
 
-**Current baseline:** 399 unit tests (~134ms) · 115+ E2E tests
+**Current baseline:** 401 unit tests (~134ms) · 115+ E2E tests (recall aggregation moved to the Python sidecar; `apps/ai` has its own `pytest` suite — see `apps/ai/README.md`)
 
 ```bash
 bun run test              # all unit tests

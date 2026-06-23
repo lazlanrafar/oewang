@@ -128,6 +128,15 @@ export function SubCurrencyList({ dictionary }: SubCurrencyListProps) {
       <div className="grid gap-4">
         {subCurrencies.map((sc) => {
           const rate = rates[sc.currencyCode];
+          const rateNum = rate ? parseFloat(rate) : null;
+          // rates[sc.code] = how many `sc` you get for 1 main, e.g. 1 IDR = 0.0000613 USD.
+          // Inverse: 1 sc = X main, e.g. 1 USD = 16,302 IDR.
+          const inverseNum = rateNum && rateNum > 0 ? 1 / rateNum : null;
+          // Choose enough precision to be meaningful for both very small and very
+          // large rates. Significant digits work better than fixed fraction digits
+          // here (0.00006135 vs. 16,302.45).
+          const fmt = (n: number) =>
+            n.toLocaleString(undefined, { maximumSignificantDigits: 6 });
           return (
             <div key={sc.id} className="flex items-center justify-between rounded-none border p-4">
               <div className="flex flex-col">
@@ -142,15 +151,12 @@ export function SubCurrencyList({ dictionary }: SubCurrencyListProps) {
                   {isLoadingRates ? (
                     <Loader2 className="h-4 w-4 animate-spin opacity-50" />
                   ) : (
-                    <div className="flex flex-col">
-                      <span className="font-medium text-sm">
-                        1 {settings.mainCurrencyCode} ={" "}
-                        {rate
-                          ? parseFloat(rate).toLocaleString(undefined, {
-                              maximumFractionDigits: 4,
-                            })
-                          : "---"}{" "}
-                        {sc.currencyCode}
+                    <div className="flex flex-col gap-0.5">
+                      <span className="font-medium text-sm tabular-nums">
+                        1 {settings.mainCurrencyCode} = {rateNum ? fmt(rateNum) : "---"} {sc.currencyCode}
+                      </span>
+                      <span className="font-medium text-sm tabular-nums">
+                        1 {sc.currencyCode} = {inverseNum ? fmt(inverseNum) : "---"} {settings.mainCurrencyCode}
                       </span>
                       <span className="text-[10px] text-muted-foreground uppercase">
                         {dictionary.settings.sub_currencies.rate_now}

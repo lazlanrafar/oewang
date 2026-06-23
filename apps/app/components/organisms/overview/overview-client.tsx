@@ -145,32 +145,16 @@ export function OverviewClient({
               placeholder="Select date range"
             />
 
-            <div className="relative ml-2 flex w-fit items-stretch bg-[#f7f7f7] dark:bg-[#131313]">
-              <TabsList className="flex h-auto items-stretch bg-transparent p-0">
-                <TabsTrigger
-                  value="overview"
-                  className={cn(
-                    "group relative flex h-9 min-h-9 items-center gap-1.5 whitespace-nowrap border border-transparent px-3 py-1.5 text-[14px] transition-all",
-                    "relative z-1 mb-0 bg-[#f7f7f7] text-[#707070] hover:text-black dark:bg-[#131313] dark:text-[#666666] dark:hover:text-white",
-                    "data-[state=active]:-mb-px data-[state=active]:z-10 data-[state=active]:bg-[#e6e6e6] data-[state=active]:text-black dark:data-[state=active]:bg-[#1d1d1d] dark:data-[state=active]:text-white",
-                  )}
-                >
-                  <Grid2X2 className="h-4 w-4" />
-                  {dictionary.overview.tabs.overview}
-                </TabsTrigger>
-                <TabsTrigger
-                  value="metrics"
-                  className={cn(
-                    "group relative flex h-9 min-h-9 items-center gap-1.5 whitespace-nowrap border border-transparent px-3 py-1.5 text-[14px] transition-all",
-                    "relative z-1 mb-0 bg-[#f7f7f7] text-[#707070] hover:text-black dark:bg-[#131313] dark:text-[#666666] dark:hover:text-white",
-                    "data-[state=active]:-mb-px data-[state=active]:z-10 data-[state=active]:bg-[#e6e6e6] data-[state=active]:text-black dark:data-[state=active]:bg-[#1d1d1d] dark:data-[state=active]:text-white",
-                  )}
-                >
-                  <LineChart className="h-4 w-4" />
-                  {dictionary.overview.tabs.metrics}
-                </TabsTrigger>
-              </TabsList>
-            </div>
+            <TabsList variant="segmented" className="ml-2">
+              <TabsTrigger value="overview" variant="segmented">
+                <Grid2X2 className="h-4 w-4" />
+                {dictionary.overview.tabs.overview}
+              </TabsTrigger>
+              <TabsTrigger value="metrics" variant="segmented">
+                <LineChart className="h-4 w-4" />
+                {dictionary.overview.tabs.metrics}
+              </TabsTrigger>
+            </TabsList>
           </div>
         </div>
       </div>

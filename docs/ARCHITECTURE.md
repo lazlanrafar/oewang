@@ -15,6 +15,7 @@ oewang/
 │   ├── admin/      # Next.js — Internal admin dashboard (port 3001)
 │   ├── api/        # ElysiaJS/Bun — REST API + MCP server (port 3002)
 │   ├── website/    # Next.js — Marketing website (port 3003)
+│   ├── ai/         # FastAPI/Python — AI sidecar: chatbot, NLP, RAG, anomaly (port 3004)
 │   └── native/     # Flutter — Mobile app (Dart/Flutter 3.11+)
 └── packages/
     ├── ai/             # AI orchestration (Vercel AI SDK, OpenAI, Anthropic, Gemini)
@@ -54,7 +55,10 @@ oewang/
 │  pages / components → apps/api (ElysiaJS REST)              │
 │                         → packages/database                 │
 │                         → packages/integrations             │
-│                         → packages/ai                       │
+│                                                             │
+│  AI (chat, receipt, import, RAG, MCP tools)                 │
+│    → apps/ai (Python, x-api-key) — LLM loop + tool exec     │
+│        → PostgreSQL (writes + audit + quota directly)       │
 └─────────────────────────────────────────────────────────────┘
           ↑ Encrypted REST (AES-256-GCM)
           ↓ x-encrypted: true header

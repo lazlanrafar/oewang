@@ -29,6 +29,12 @@ export const transactions = pgTable("transactions", {
     onDelete: "set null",
   }),
   amount: decimal("amount", { precision: 19, scale: 4 }).notNull(),
+  // Multicurrency: when set, `amount` is the main-currency value computed as
+  // originalAmount * exchangeRate. When null, the transaction is in the main
+  // currency and these fields can be ignored.
+  originalAmount: decimal("original_amount", { precision: 19, scale: 4 }),
+  originalCurrencyCode: text("original_currency_code"),
+  exchangeRate: decimal("exchange_rate", { precision: 19, scale: 8 }),
   date: timestamp("date", { mode: "string" }).notNull(),
   type: text("type").notNull(), // 'income' | 'expense' | 'transfer'
   description: text("description"),

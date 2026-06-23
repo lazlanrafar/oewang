@@ -1,6 +1,16 @@
 import { redis } from "@workspace/redis";
-import type { AgentSettings } from "@workspace/ai";
 import { AgentSettingsRepository } from "./agent-settings.repository";
+
+// Was imported from @workspace/ai (removed). The agent's LLM model/temperature
+// overrides aren't plumbed to the Python sidecar yet (it's OpenAI-only,
+// temperature 0.7); customInstructions + responseLanguage shape the system prompt.
+export type AgentSettings = {
+  model: string;
+  temperature: number;
+  maxSteps: number;
+  customInstructions: string | null;
+  responseLanguage: "auto" | "english" | "indonesian";
+};
 
 const CACHE_TTL = 300; // 5 minutes
 

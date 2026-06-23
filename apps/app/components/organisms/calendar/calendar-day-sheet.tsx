@@ -47,7 +47,7 @@ export function CalendarDaySheet({
             <div className="grid grid-cols-2 gap-4">
               <div className="border bg-muted/20 p-4">
                 <p className="mb-1 text-muted-foreground text-sm">{t.income_total}</p>
-                <p className="font-semibold text-emerald-600 text-lg dark:text-emerald-400">
+                <p className="font-serif font-semibold text-emerald-600 text-lg tabular-nums dark:text-emerald-400">
                   {formatCurrency(
                     transactions.filter((t) => t.type === "income").reduce((acc, t) => acc + Number(t.amount), 0),
                   )}
@@ -55,7 +55,7 @@ export function CalendarDaySheet({
               </div>
               <div className="border bg-muted/20 p-4">
                 <p className="mb-1 text-muted-foreground text-sm">{t.expense_total}</p>
-                <p className="font-semibold text-lg text-red-600 dark:text-red-400">
+                <p className="font-serif font-semibold text-lg text-red-600 tabular-nums dark:text-red-400">
                   {formatCurrency(
                     transactions.filter((t) => t.type === "expense").reduce((acc, t) => acc + Number(t.amount), 0),
                   )}

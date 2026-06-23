@@ -17,6 +17,7 @@ import { db } from "@workspace/database";
 import { ErrorCode } from "@workspace/types";
 import { buildError } from "@workspace/utils";
 import { aiController } from "./modules/ai/ai.controller";
+import { aiInternalController } from "./modules/ai/ai-internal.controller";
 import { authController } from "./modules/auth/auth.controller";
 import { budgets } from "./modules/budgets/budgets.controller";
 import { categoriesController } from "./modules/categories/categories.controller";
@@ -33,6 +34,7 @@ import { invoicesController } from "./modules/invoices/invoices.controller";
 import { publicInvoicesController } from "./modules/invoices/public-invoices.controller";
 import { billingInvoicesController } from "./modules/mayar/billing-invoices.controller";
 import { mayarController } from "./modules/mayar/mayar.controller";
+import { mcpController } from "./modules/mcp/mcp.controller";
 import { metricsController } from "./modules/metrics/metrics.controller";
 import { notificationSettingsController } from "./modules/notification-settings/notification-settings.controller";
 import { notificationsController } from "./modules/notifications/notifications.controller";
@@ -50,7 +52,6 @@ import { usersController } from "./modules/users/users.controller";
 import { vaultController } from "./modules/vault/vault.controller";
 import { walletsController } from "./modules/wallets/wallets.controller";
 import { workspacesController } from "./modules/workspaces/workspaces.controller";
-import { mcpController } from "./modules/mcp/mcp.controller";
 import { authPlugin, getAuth } from "./plugins/auth";
 import { encryptionPlugin } from "./plugins/encryption";
 import { loggerPlugin } from "./plugins/logger";
@@ -102,6 +103,7 @@ const apiControllers1 = new Elysia()
   .use(transactions);
 
 const apiControllers2 = new Elysia()
+  .use(aiInternalController)
   .use(aiController)
   .use(metricsController)
   .use(integrationsController)
@@ -127,7 +129,11 @@ const APP_ORIGINS = [
   "https://console.oewang.com",
   "https://oewang.com",
   ...(process.env.NODE_ENV !== "production"
-    ? ["http://localhost:3000", "http://localhost:3001", "http://localhost:3003"]
+    ? [
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://localhost:3003",
+      ]
     : []),
 ];
 
@@ -268,8 +274,7 @@ const app = new Elysia()
       // DrizzleQueryError wraps the underlying postgres error in `.cause`,
       // and its `.message` only shows the SQL — surface the real reason.
       const cause = (error as { cause?: unknown })?.cause;
-      const causeMessage =
-        cause instanceof Error ? cause.message : undefined;
+      const causeMessage = cause instanceof Error ? cause.message : undefined;
       const causeStack = cause instanceof Error ? cause.stack : undefined;
       const causeCode =
         cause && typeof cause === "object"

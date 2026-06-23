@@ -1,0 +1,9 @@
+{
+  "enabledPlugins": {
+    "ponytail@ponytail": true
+  },
+  "models": {
+    "chat": "claude-haiku-4-5",
+    "code": "claude-opus-4-5"
+  }
+}

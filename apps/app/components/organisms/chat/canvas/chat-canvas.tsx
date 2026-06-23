@@ -10,7 +10,9 @@ import { parseAsString, useQueryState } from "nuqs";
 import { useAppStore } from "@/stores/app";
 
 import { getDictionaryText } from "../chat-i18n";
+import { BudgetCanvas } from "./chat-canvas-budget";
 import { BurnRateCanvas } from "./chat-canvas-burn-rate";
+import { DebtCanvas } from "./chat-canvas-debt";
 import { CanvasErrorBoundary } from "./chat-canvas-error-boundary";
 import { CanvasErrorFallback } from "./chat-canvas-error-fallback";
 import { RevenueCanvas } from "./chat-canvas-revenue";
@@ -418,6 +420,10 @@ export function Canvas() {
         return <SpendingCanvas dataOverride={selectedPayload as Record<string, unknown> | null} />;
       case "burn-rate-canvas":
         return <BurnRateCanvas dataOverride={selectedPayload as Record<string, unknown> | null} />;
+      case "debt-canvas":
+        return <DebtCanvas dataOverride={selectedPayload as Record<string, unknown> | null} />;
+      case "budget-canvas":
+        return <BudgetCanvas dataOverride={selectedPayload as Record<string, unknown> | null} />;
       default:
         if (selectedType) {
           return (

@@ -5,6 +5,7 @@ import { logger } from "@workspace/logger";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { normalizeWorkspaceRole } from "../workspaces/workspace-permissions";
 import { UsersRepository } from "./users.repository";
+import { pickActiveWorkspaceId } from "./users.utils";
 import { WorkspacesRepository } from "../workspaces/workspaces.repository";
 
 export abstract class UsersService {
@@ -37,11 +38,11 @@ export abstract class UsersService {
    * Returns the user's stored workspace_id, or falls back to the first active membership.
    */
   static async resolveWorkspaceId(user_id: string): Promise<string> {
-    const stored = await UsersRepository.getWorkspaceId(user_id);
-    if (stored) return stored;
-
-    const memberships = await UsersRepository.getMemberships(user_id);
-    return memberships[0]?.workspace_id ?? "";
+    const [activeIds, stored] = await Promise.all([
+      UsersRepository.getActiveWorkspaceIds(user_id),
+      UsersRepository.getWorkspaceId(user_id),
+    ]);
+    return pickActiveWorkspaceId(stored, activeIds);
   }
 
   /**

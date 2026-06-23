@@ -22,7 +22,10 @@ export interface Transaction {
   walletId: string;
   toWalletId?: string | null;
   categoryId?: string | null;
-  amount: string; // Decimal is string in JS
+  amount: string; // Decimal is string in JS, in workspace main currency
+  originalAmount?: string | null;
+  originalCurrencyCode?: string | null;
+  exchangeRate?: string | null;
   date: string;
   type: string; // 'income' | 'expense' | 'transfer' | 'transfer-in' | 'transfer-out'
   name?: string | null;

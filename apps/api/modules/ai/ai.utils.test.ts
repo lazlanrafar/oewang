@@ -8,7 +8,6 @@ import {
   isCancelIntent,
   isConfirmIntent,
   isReceiptAttachment,
-  isUuid,
   parseInputDate,
   resolveDateRange,
   resolveWalletByName,
@@ -18,25 +17,6 @@ import {
 } from "./ai.utils";
 
 describe("ai.utils", () => {
-  describe("isUuid", () => {
-    test("returns true for valid UUID", () => {
-      expect(isUuid("123e4567-e89b-12d3-a456-426614174000")).toBe(true);
-      expect(isUuid("550e8400-e29b-41d4-a716-446655440000")).toBe(true);
-    });
-
-    test("returns false for invalid UUID", () => {
-      expect(isUuid("not-a-uuid")).toBe(false);
-      expect(isUuid("123")).toBe(false);
-      expect(isUuid("")).toBe(false);
-      expect(isUuid("123e4567-e89b-12d3-a456")).toBe(false); // Too short
-    });
-
-    test("is case-insensitive", () => {
-      expect(isUuid("123E4567-E89B-12D3-A456-426614174000")).toBe(true);
-      expect(isUuid("123e4567-E89B-12d3-A456-426614174000")).toBe(true);
-    });
-  });
-
   describe("parseInputDate", () => {
     test("parses valid ISO date string", () => {
       const result = parseInputDate("2024-01-15");

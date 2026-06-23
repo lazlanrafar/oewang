@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { resolveWorkspaceIdFromBody } from "./users.utils";
+import {
+  pickActiveWorkspaceId,
+  resolveWorkspaceIdFromBody,
+} from "./users.utils";
 
 describe("users.utils", () => {
   test("should return workspaceId when camelCase key exists", () => {
@@ -26,5 +29,23 @@ describe("users.utils", () => {
     });
 
     expect(result).toBeNull();
+  });
+});
+
+describe("pickActiveWorkspaceId", () => {
+  test("should keep the stored workspace when it is an active membership", () => {
+    expect(pickActiveWorkspaceId("ws_a", ["ws_a", "ws_b"])).toBe("ws_a");
+  });
+
+  test("should fall back to the first active membership when stored is stale", () => {
+    // The poisoned-token case: users.workspace_id points to a workspace the
+    // user is no longer a member of — must not be embedded in the JWT.
+    expect(pickActiveWorkspaceId("ws_stale", ["ws_b"])).toBe("ws_b");
+  });
+
+  test("should return empty string when the user has no active memberships", () => {
+    expect(pickActiveWorkspaceId("ws_stale", [])).toBe("");
+    expect(pickActiveWorkspaceId(null, [])).toBe("");
+    expect(pickActiveWorkspaceId(undefined, [])).toBe("");
   });
 });

@@ -1,8 +1,21 @@
 "use client";
 
+import { useState, useTransition } from "react";
+
+import { useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
-import type { SystemAdminWorkspace, SystemAdminPlan } from "@workspace/types";
+import { updateWorkspacePlanAction } from "@workspace/modules/system-admin/system-admin.action";
+import type { SystemAdminPlan, SystemAdminWorkspace } from "@workspace/types";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  Badge,
   Button,
   DropdownMenu,
   DropdownMenuContent,
@@ -10,24 +23,19 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  Badge,
 } from "@workspace/ui";
-import { MoreHorizontal, ShieldCheck, Zap, Star, Layout } from "lucide-react";
-import { updateWorkspacePlanAction } from "@workspace/modules/system-admin/system-admin.action";
-import { useQueryClient } from "@tanstack/react-query";
+import { Layout, MoreHorizontal, ShieldCheck, Star, Zap } from "lucide-react";
 import { toast } from "sonner";
-import { useTransition } from "react";
 
-const CellActions = ({
-  row,
-  plans,
-}: {
-  row: { original: SystemAdminWorkspace };
-  plans: SystemAdminPlan[];
-}) => {
+const CellActions = ({ row, plans }: { row: { original: SystemAdminWorkspace }; plans: SystemAdminPlan[] }) => {
   const workspace = row.original;
   const queryClient = useQueryClient();
   const [isPending, startTransition] = useTransition();
+  // Manually overriding a paid plan is billing-sensitive — confirm first.
+  const [pendingPlan, setPendingPlan] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   const handlePlanChange = async (planId: string, planName: string) => {
     startTransition(async () => {
@@ -51,43 +59,66 @@ const CellActions = ({
   };
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="h-8 w-8 p-0" disabled={isPending}>
-          <span className="sr-only">Open menu</span>
-          <MoreHorizontal className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
-          Change Plan
-        </DropdownMenuLabel>
-        {plans.map((plan) => (
-          <DropdownMenuItem
-            key={plan.id}
-            onClick={() => handlePlanChange(plan.id, plan.name)}
-            disabled={workspace.plan_id === plan.id}
-          >
-            {plan.name.toLowerCase().includes("pro") ? (
-              <Zap className="mr-2 h-4 w-4 text-amber-500" />
-            ) : plan.name.toLowerCase().includes("business") ? (
-              <Star className="mr-2 h-4 w-4 text-blue-500" />
-            ) : (
-              <Layout className="mr-2 h-4 w-4 text-slate-400" />
-            )}
-            <span>{plan.name}</span>
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" className="h-8 w-8 p-0" disabled={isPending}>
+            <span className="sr-only">Open menu</span>
+            <MoreHorizontal className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">Change Plan</DropdownMenuLabel>
+          {plans.map((plan) => (
+            <DropdownMenuItem
+              key={plan.id}
+              onClick={() => setPendingPlan({ id: plan.id, name: plan.name })}
+              disabled={workspace.plan_id === plan.id}
+            >
+              {plan.name.toLowerCase().includes("pro") ? (
+                <Zap className="mr-2 h-4 w-4 text-amber-500" />
+              ) : plan.name.toLowerCase().includes("business") ? (
+                <Star className="mr-2 h-4 w-4 text-blue-500" />
+              ) : (
+                <Layout className="mr-2 h-4 w-4 text-slate-400" />
+              )}
+              <span>{plan.name}</span>
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <AlertDialog open={pendingPlan !== null} onOpenChange={(open) => !open && setPendingPlan(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Change workspace plan?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This manually overrides {workspace.name || "this workspace"}&apos;s plan to{" "}
+              <strong>{pendingPlan?.name}</strong>, affecting their billing and feature access immediately.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingPlan) {
+                  handlePlanChange(pendingPlan.id, pendingPlan.name);
+                  setPendingPlan(null);
+                }
+              }}
+            >
+              Confirm
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };
 
-export const getWorkspaceColumns = (
-  plans: SystemAdminPlan[],
-): ColumnDef<SystemAdminWorkspace>[] => [
+export const getWorkspaceColumns = (plans: SystemAdminPlan[]): ColumnDef<SystemAdminWorkspace>[] => [
   {
     accessorKey: "name",
     header: "Name",
@@ -106,9 +137,7 @@ export const getWorkspaceColumns = (
     cell: ({ row }) => (
       <div className="flex flex-col truncate">
         <span className="font-medium truncate">{row.original.name}</span>
-        <span className="text-[10px] text-muted-foreground truncate">
-          {row.original.slug}
-        </span>
+        <span className="text-[10px] text-muted-foreground truncate">{row.original.slug}</span>
       </div>
     ),
   },
@@ -142,9 +171,7 @@ export const getWorkspaceColumns = (
           >
             {planName}
           </Badge>
-          <span className="text-[10px] text-muted-foreground uppercase">
-            {status}
-          </span>
+          <span className="text-[10px] text-muted-foreground uppercase">{status}</span>
         </div>
       );
     },
@@ -157,11 +184,7 @@ export const getWorkspaceColumns = (
       headerLabel: "AI Tokens",
       skeleton: { type: "text", width: "w-16" },
     },
-    cell: ({ getValue }) => (
-      <span className="text-sm">
-        {(getValue<number>() || 0).toLocaleString()}
-      </span>
-    ),
+    cell: ({ getValue }) => <span className="text-sm">{(getValue<number>() || 0).toLocaleString()}</span>,
   },
   {
     accessorKey: "created_at",

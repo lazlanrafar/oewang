@@ -665,10 +665,10 @@ export function TransactionsClient({
                           </span>
 
                           <div className="ml-auto flex items-center gap-4">
-                            <span className={cn("font-bold text-[10px]", getTransactionColor("income"))}>
+                            <span className={cn("font-serif font-bold text-[10px] tabular-nums", getTransactionColor("income"))}>
                               {formatCurrency(item.income)}
                             </span>
-                            <span className={cn("font-bold text-[10px]", getTransactionColor("expense"))}>
+                            <span className={cn("font-serif font-bold text-[10px] tabular-nums", getTransactionColor("expense"))}>
                               {formatCurrency(item.expense)}
                             </span>
                           </div>

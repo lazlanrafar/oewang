@@ -1,5 +1,6 @@
 "use server";
 
+import { Env } from "@workspace/constants";
 import { axiosInstance as api } from "../lib/axios.server";
 
 export interface ChatMessage {
@@ -42,26 +43,107 @@ export interface AiQuota {
   created_at: string;
 }
 
+/**
+ * Direct web→ai path: calls the Python sidecar straight from this server action,
+ * so Elysia is freed from holding the long multi-step LLM request. Identity is the
+ * user's session JWT (resolved server-side, never from the client); Python calls
+ * Elysia internal endpoints for tools + the money path (session, quota, token
+ * usage), so billing stays exact and server-side.
+ *
+ * Returns null ONLY when the sidecar is unset or unreachable (network error), so
+ * the caller transparently falls back to the in-process /ai/chat path. Any HTTP
+ * response — 4xx (quota/auth) or 5xx — is surfaced, never retried: chat_begin may
+ * have already created the session, so falling back would duplicate it and
+ * re-spend tokens.
+ */
+async function chatViaPythonDirect(
+  messages: ChatMessage[],
+  sessionId?: string,
+  webSearch?: boolean,
+): Promise<AiChatResponse | null> {
+  const baseUrl = Env.AI_SERVICE_URL;
+  if (!baseUrl) return null;
+
+  let token: string | undefined;
+  try {
+    const { cookies } = await import("next/headers");
+    const cookieStore = await cookies();
+    const cookieName = Env.NEXT_PUBLIC_SESSION_COOKIE_NAME || "oewang-session";
+    token = cookieStore.get(cookieName)?.value;
+  } catch {}
+  if (!token) return null; // no session → let the encrypted api path handle auth
+
+  try {
+    const res = await fetch(`${baseUrl}/chat/web`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+        ...(Env.AI_SERVICE_API_KEY
+          ? { "x-api-key": Env.AI_SERVICE_API_KEY }
+          : {}),
+      },
+      body: JSON.stringify({
+        messages,
+        session_id: sessionId,
+        web_search: webSearch ?? false,
+      }),
+    });
+
+    const body = (await res.json().catch(() => null)) as any;
+    if (!res.ok) {
+      // Reachable but errored (quota/auth/5xx) → surface; do NOT fall back, or we
+      // risk a duplicate session + double token spend from a partial chat_begin.
+      return {
+        success: false,
+        error: body?.message ?? "Failed to get AI response",
+        code: body?.code,
+        meta: body?.meta,
+      };
+    }
+
+    return {
+      success: true,
+      data: {
+        sessionId: body?.session_id,
+        reply: body?.reply,
+        usage: body?.usage,
+        artifact: body?.artifact ?? undefined,
+      } as ChatData,
+    };
+  } catch {
+    return null; // network error → fall back
+  }
+}
+
 export async function sendChatMessage(
   messages: ChatMessage[],
   sessionId?: string,
   attachments?: { name: string; type: string; data: string }[],
   webSearch?: boolean,
 ): Promise<AiChatResponse> {
-  try {
-    const messagesWithAttachments = [...messages];
-    if (attachments && attachments.length > 0) {
-      for (let i = messagesWithAttachments.length - 1; i >= 0; i--) {
-        if (messagesWithAttachments[i]?.role === "user") {
-          messagesWithAttachments[i] = {
-            ...messagesWithAttachments[i]!,
-            attachments,
-          };
-          break;
-        }
+  const messagesWithAttachments = [...messages];
+  if (attachments && attachments.length > 0) {
+    for (let i = messagesWithAttachments.length - 1; i >= 0; i--) {
+      if (messagesWithAttachments[i]?.role === "user") {
+        messagesWithAttachments[i] = {
+          ...messagesWithAttachments[i]!,
+          attachments,
+        };
+        break;
       }
     }
+  }
 
+  // Prefer the direct sidecar path; fall back to the in-process API on any miss.
+  const direct = await chatViaPythonDirect(
+    messagesWithAttachments,
+    sessionId,
+    webSearch,
+  );
+  if (direct) return direct;
+
+  try {
     const response = await api.post("/ai/chat", {
       messages: messagesWithAttachments,
       sessionId,

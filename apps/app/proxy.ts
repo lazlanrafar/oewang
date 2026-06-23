@@ -60,19 +60,25 @@ export async function proxy(request: NextRequest) {
 
   const token = request.cookies.get("oewang-session")?.value;
 
-  const isDashboardRoute =
-    pathAfterLocale.startsWith("/overview") ||
-    pathAfterLocale.startsWith("/budget") ||
-    pathAfterLocale.startsWith("/transactions") ||
-    pathAfterLocale.startsWith("/accounts") ||
-    pathAfterLocale.startsWith("/calendar") ||
-    pathAfterLocale.startsWith("/settings") ||
-    pathAfterLocale.startsWith("/contacts") ||
-    pathAfterLocale.startsWith("/vault") ||
-    pathAfterLocale.startsWith("/billing-invoice");
+  // Routes reachable WITHOUT authentication. Everything else is protected by
+  // default (deny-by-default) so newly added dashboard routes are never left
+  // silently exposed by forgetting to add them to an allowlist.
+  const PUBLIC_PREFIXES = [
+    "/login",
+    "/register",
+    "/accept-invite",
+    "/oauth", // OAuth provider callbacks
+    "/sync", // post-login session sync
+    "/invoice", // public shareable invoice (token-gated by the page itself)
+  ];
+  const isPublicRoute = PUBLIC_PREFIXES.some((p) => pathAfterLocale === p || pathAfterLocale.startsWith(`${p}/`));
 
   const isAuthRoute = pathAfterLocale === "/login" || pathAfterLocale === "/register";
   const isCreateWorkspaceRoute = pathAfterLocale === "/create-workspace";
+
+  // Authenticated app area: anything not public and not the workspace-creation
+  // step (which needs a token but not yet a workspace_id).
+  const isDashboardRoute = !isPublicRoute && !isCreateWorkspaceRoute;
   const isProtectedRoute = isDashboardRoute || isCreateWorkspaceRoute;
 
   // 1. Auth guard — no token → login
