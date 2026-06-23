@@ -72,8 +72,15 @@ class _DailyList extends StatelessWidget {
                 itemCount: group.items.length,
                 itemBuilder: (context, i) {
                   final t = group.items[i];
-                  return ColoredBox(
-                    color: palette.background,
+                  // Hairline between rows of the same day (not after the last).
+                  final last = i == group.items.length - 1;
+                  return DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: palette.background,
+                      border: last
+                          ? null
+                          : Border(bottom: BorderSide(color: palette.border)),
+                    ),
                     child: TransactionRow(
                       transaction: t,
                       onTap: () =>
