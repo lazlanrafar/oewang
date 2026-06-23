@@ -34,6 +34,9 @@ class WebChatRequest(BaseModel):
     messages: list[WebChatMessage] = Field(min_length=1)
     session_id: str | None = None
     web_search: bool = False
+    # When the caller (Elysia AiService) already built the system prompt, it
+    # passes it here to avoid a redundant call-back. Falls back to fetching it.
+    system_prompt: str | None = None
 
 
 class Usage(BaseModel):

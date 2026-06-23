@@ -83,6 +83,9 @@ async def complete_with_tools(
             lambda ut=use_tools: client.chat.completions.create(
                 model=model,
                 messages=convo,
+                # Match the TS orchestrator default. ponytail: per-workspace
+                # temperature/model overrides aren't plumbed to the sidecar yet.
+                temperature=0.7,
                 **({"tools": tools, "tool_choice": "auto"} if ut else {}),
             )
         )

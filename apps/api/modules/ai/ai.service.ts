@@ -1,7 +1,7 @@
 import {
   AiOrchestrator,
-  ReceiptService,
   buildSystemPrompt,
+  ReceiptService,
   type ChatMessage as RepoChatMessage,
 } from "@workspace/ai";
 import { API_CONFIG, Env } from "@workspace/constants";
@@ -18,10 +18,11 @@ import { TransactionItemsService } from "../transactions/items/transaction-items
 import { TransactionsService } from "../transactions/transactions.service";
 import { VaultService } from "../vault/vault.service";
 import { WalletsRepository } from "../wallets/wallets.repository";
+import { AgentSettingsService } from "./agent-settings.service";
 import type { ChatMessage, ChatResponse } from "./ai.dto";
 import { AiRepository } from "./ai.repository";
-import { AgentSettingsService } from "./agent-settings.service";
 import { executeAiTool } from "./ai.tools";
+import { chatWebViaSidecar } from "./ai-sidecar-web";
 
 const log = createLogger("ai-service");
 
@@ -616,7 +617,22 @@ export abstract class AiService {
     }));
 
     let response: ChatResponse;
-    try {
+    // When AI_SERVICE_URL is set, the Python sidecar drives the LLM + tool loop
+    // (it calls back into Elysia for tool execution). Everything around this —
+    // session, title, quota, persistence, dry-run — is unchanged, so parity is
+    // automatic. Falls back to the in-process orchestrator on any miss, so the
+    // canvas chat never breaks.
+    const viaSidecar = await chatWebViaSidecar(
+      consolidatedMessages,
+      workspaceId,
+      userId,
+      systemPrompt,
+      webSearch,
+      currentSessionId,
+    );
+    if (viaSidecar) {
+      response = viaSidecar;
+    } else {
       response = await AiOrchestrator.chat(
         consolidatedMessages,
         {
@@ -631,8 +647,6 @@ export abstract class AiService {
         (name, args) => executeAiTool(name, args, workspaceId, userId),
         systemPrompt,
       );
-    } catch (error: any) {
-      throw error;
     }
 
     // 8. Persist response and token usage

@@ -63,7 +63,9 @@ const serverSchema = z.object({
   EVOLUTION_API_TOKEN: z.string().optional(),
   EVOLUTION_API_INSTANCE: z.string().optional(),
 
-  // Python AI sidecar (apps/ai). When AI_SERVICE_URL is set, chat is served by it.
+  // Python AI sidecar (apps/ai). When AI_SERVICE_URL is set, chat (WhatsApp/
+  // Telegram AND the website canvas chat) is served by it, with an in-process
+  // fallback if the sidecar is unreachable.
   AI_SERVICE_URL: z.string().url().optional(),
   AI_SERVICE_API_KEY: z.string().optional(),
 

@@ -20,6 +20,11 @@ async def post_chat(req: ChatRequest) -> ChatResponse:
 @router.post("/chat/web", response_model=WebChatResponse)
 async def post_chat_web(req: WebChatRequest) -> WebChatResponse:
     result = await web_chat(
-        req.messages, req.workspace_id, req.user_id, req.session_id, req.web_search
+        req.messages,
+        req.workspace_id,
+        req.user_id,
+        req.session_id,
+        req.web_search,
+        req.system_prompt,
     )
     return WebChatResponse(**result)

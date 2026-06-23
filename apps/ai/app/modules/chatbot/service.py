@@ -55,6 +55,7 @@ async def web_chat(
     user_id: str | None,
     session_id: str | None,
     web_search: bool,
+    system_prompt: str | None = None,
 ) -> dict:
     """Website-shaped chat: full message array → rich contract with canvas.
 
@@ -64,7 +65,7 @@ async def web_chat(
     Session persistence and quota still belong to Elysia (Phase 3); the website is
     not switched to this path until parity is proven (Phase 4).
     """
-    system = await _web_system_prompt(workspace_id)
+    system = system_prompt or await _web_system_prompt(workspace_id)
     convo = [
         {"role": m.role, "content": m.content}
         for m in messages

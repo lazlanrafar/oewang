@@ -13,9 +13,10 @@ reading the same Postgres as the rest of the monorepo (read-only):
 | `/advisor`   | POST   | RAG advisor over a finance/tax knowledge base                   |
 | `/anomaly`   | POST   | Anomaly detection (IsolationForest + category spikes)           |
 
-Standalone — not part of Turborepo/Bun. Elysia (`apps/api`) calls `/chat` for the
-WhatsApp/Telegram path when `AI_SERVICE_URL` is set, otherwise it uses its
-in-process AiService.
+Standalone — not part of Turborepo/Bun. When `AI_SERVICE_URL` is set, Elysia
+(`apps/api`) routes both the WhatsApp/Telegram path (`/chat`) and the website
+canvas chat (`/chat/web`) through this service; if it's unset or unreachable it
+falls back to the in-process AiService.
 
 ## Website chat port (in progress)
 
@@ -37,9 +38,19 @@ path). The website is **not** switched over until parity is proven.
   endpoints are exempt from the encrypted transport + rate limit and gated by the
   shared `AI_SERVICE_API_KEY`. _Not yet ported: the `webSearch` tool (its fetch
   logic lives only in the TS orchestrator)._
-- **Phase 3:** session persistence, title generation, usage/quota parity, dry-run.
-- **Phase 4:** flip `ai.controller.ts` to the sidecar behind a flag; verify
-  canvas/tools at parity; default on.
+- **Phase 3 (done):** parity by reuse, not duplication. `AiService.chat` (TS)
+  already owns session create/load, title generation, the quota check + token
+  increment, message/artifact persistence, and dry-run (`executeAiTool` honors
+  `receiptDryRun`). Phase 3 adds the bridge `chatWebViaSidecar` and swaps **only**
+  the orchestrator step for the sidecar's `/chat/web` — everything around it is
+  unchanged, so all of the above flows through automatically. Elysia passes the
+  prebuilt `system_prompt` to the sidecar to avoid a call-back. _Known divergence:
+  the sidecar is OpenAI-only and uses `temperature=0.7`; per-workspace
+  model/temperature overrides aren't plumbed._
+- **Phase 4 (done):** the website canvas chat is served by the sidecar whenever
+  `AI_SERVICE_URL` is set — same gate as the WhatsApp/Telegram path, no separate
+  flag. If the sidecar is unset or unreachable, `AiService.chat` falls back to the
+  in-process orchestrator, so the canvas never breaks.
 
 ## Setup
 
@@ -98,7 +109,7 @@ table. The anomaly background scan is opt-in via `ANOMALY_SCAN_HOURS` (> 0).
 ## Test
 
 ```bash
-pytest        # 17 tests — pure logic, no DB/LLM/network
+pytest        # 18 tests — pure logic, no DB/LLM/network
 ```
 
 ## Layout

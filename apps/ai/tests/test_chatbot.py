@@ -63,6 +63,36 @@ async def test_web_chat_returns_full_contract(monkeypatch):
     assert res["artifact"]["type"] == "spending-canvas"
 
 
+async def test_web_chat_uses_provided_system_prompt(monkeypatch):
+    # When Elysia passes system_prompt, the sidecar must NOT call back for it.
+    async def boom(ws):
+        raise AssertionError("get_system_prompt should not be called")
+
+    captured = {}
+
+    async def fake_loop(system, convo, tool_specs, run_tool, max_steps=10):
+        captured["system"] = system
+        return {
+            "reply": "ok",
+            "usage": {"input_tokens": 1, "output_tokens": 1},
+            "artifact": None,
+            "response_id": "r",
+        }
+
+    monkeypatch.setattr(cbsvc.tools, "get_system_prompt", boom)
+    monkeypatch.setattr(cbsvc.llm, "complete_with_tools", fake_loop)
+
+    await cbsvc.web_chat(
+        [WebChatMessage(role="user", content="hi")],
+        "w1",
+        "u1",
+        "s1",
+        False,
+        system_prompt="PASSED-IN",
+    )
+    assert captured["system"] == "PASSED-IN"
+
+
 # ── Tool-loop logic (the canvas/money path) ─────────────────────────────────
 
 
