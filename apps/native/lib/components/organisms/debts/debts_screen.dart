@@ -91,7 +91,10 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> {
                   Icons.payments_outlined,
                   color: palette.foreground,
                 ),
-                title: Text('Record payment', style: OewangFonts.sans()),
+                title: Text(
+                  'Record payment',
+                  style: OewangFonts.sans(color: palette.foreground),
+                ),
                 onTap: () {
                   Navigator.of(sheet).pop();
                   _recordPayment(d);
@@ -99,7 +102,10 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> {
               ),
             ListTile(
               leading: Icon(Icons.edit_outlined, color: palette.foreground),
-              title: Text('Edit', style: OewangFonts.sans()),
+              title: Text(
+                'Edit',
+                style: OewangFonts.sans(color: palette.foreground),
+              ),
               onTap: () {
                 Navigator.of(sheet).pop();
                 _edit(d);
