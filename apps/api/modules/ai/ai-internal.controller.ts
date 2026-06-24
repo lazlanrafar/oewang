@@ -68,7 +68,7 @@ export const aiInternalController = new Elysia({ prefix: "/ai/internal" })
         body.messages as any,
         auth.workspace_id,
         auth.user_id,
-        body.session_id,
+        body.session_id ?? undefined,
       );
       if (result.kind === "early") {
         return {
@@ -97,7 +97,7 @@ export const aiInternalController = new Elysia({ prefix: "/ai/internal" })
           }),
           { minItems: 1 },
         ),
-        session_id: t.Optional(t.String()),
+        session_id: t.Optional(t.Nullable(t.String())),
         web_search: t.Optional(t.Boolean()),
       }),
       detail: { summary: "Begin chat (internal sidecar)", tags: ["AI"] },

@@ -9,6 +9,12 @@ from app.core.database import fetch, fetchrow
 from app.modules.execution.resolvers import resolve_date_range, workspace_currency
 
 
+def _ts(v) -> datetime:
+    # asyncpg binds timestamp params by Python type, ignoring the ::timestamp cast,
+    # so a date string must become a datetime before it reaches the driver.
+    return v if isinstance(v, (date, datetime)) else datetime.fromisoformat(v)
+
+
 async def _list_tx(workspace_id: str, t_type: str, start: str, end: str, limit: int):
     return await fetch(
         """
@@ -16,11 +22,11 @@ async def _list_tx(workspace_id: str, t_type: str, start: str, end: str, limit: 
         FROM transactions t
         LEFT JOIN categories c ON t.category_id = c.id
         WHERE t.workspace_id = $1 AND t.deleted_at IS NULL AND t.type = $2
-          AND t.date >= $3::timestamp AND t.date <= $4::timestamp
+          AND t.date >= $3 AND t.date <= $4
         ORDER BY t.amount DESC
         LIMIT $5
         """,
-        workspace_id, t_type, start, end, limit,
+        workspace_id, t_type, _ts(start), _ts(end), limit,
     )
 
 
@@ -211,12 +217,12 @@ async def budget(workspace_id: str, inp: dict) -> dict:
         JOIN categories c ON b.category_id = c.id
         LEFT JOIN transactions t ON b.category_id = t.category_id
             AND t.workspace_id = $1 AND t.type = 'expense'
-            AND t.date >= $2::timestamp AND t.date <= $3::timestamp
+            AND t.date >= $2 AND t.date <= $3
             AND t.deleted_at IS NULL
         WHERE b.workspace_id = $1 AND b.deleted_at IS NULL
         GROUP BY b.id, c.id
         """,
-        workspace_id, start.isoformat(), end.isoformat(),
+        workspace_id, _ts(start), _ts(end),
     )
 
     items = []

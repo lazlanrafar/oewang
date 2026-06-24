@@ -36,7 +36,7 @@ async def _insert_debt(conn, **d) -> dict:
         INSERT INTO debts
           (id, workspace_id, contact_id, source_transaction_id, type, origin,
            amount, remaining_amount, status, description, due_date)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'unpaid',$9,$10::timestamp)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'unpaid',$9,$10::text::timestamp)
         RETURNING *
         """,
         new_id(),
@@ -92,7 +92,7 @@ async def split_bill(workspace_id: str, user_id: str, body: dict) -> dict:
                 INSERT INTO transactions
                   (id, workspace_id, wallet_id, category_id, assigned_user_id,
                    amount, date, type, name)
-                VALUES ($1,$2,$3,$4,$5,$6,$7::timestamp,'expense',$8)
+                VALUES ($1,$2,$3,$4,$5,$6,$7::text::timestamp,'expense',$8)
                 RETURNING id
                 """,
                 new_id(), workspace_id, wallet_id, body.get("category_id"), user_id,

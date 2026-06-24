@@ -156,10 +156,10 @@ async def _recent_transactions(workspace_id: str, inp: dict) -> dict:
     args: list = [workspace_id]
     if inp.get("from"):
         args.append(inp["from"])
-        conds.append(f"t.date >= ${len(args)}::timestamp")
+        conds.append(f"t.date >= ${len(args)}::text::timestamp")
     if inp.get("to"):
         args.append(inp["to"])
-        conds.append(f"t.date <= ${len(args)}::timestamp")
+        conds.append(f"t.date <= ${len(args)}::text::timestamp")
     args.append(limit)
     rows = await fetch(
         f"""
