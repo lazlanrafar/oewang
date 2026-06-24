@@ -22,7 +22,7 @@ _INSERT = """
       (id, workspace_id, wallet_id, to_wallet_id, category_id, assigned_user_id,
        amount, original_amount, original_currency_code, exchange_rate,
        date, type, description, name)
-    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::timestamp,$12,$13,$14)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::text::timestamp,$12,$13,$14)
     RETURNING *
 """
 
