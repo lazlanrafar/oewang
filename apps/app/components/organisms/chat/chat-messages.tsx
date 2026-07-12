@@ -139,7 +139,7 @@ export function ChatMessages({ messages, isStreaming = false, dictionary }: Chat
           <div key={`${message.id}-${index}`} className="group">
             {/* Render file attachments */}
             {fileParts.length > 0 && (
-              <Message from={message.role === "data" ? "system" : (message.role as any)}>
+              <Message from={(message.role as string) === "data" ? "system" : (message.role as any)}>
                 <MessageContent className="max-w-[80%]">
                   <div className="mb-2 flex flex-wrap gap-2">
                     {fileParts.map((part) => {
@@ -199,7 +199,7 @@ export function ChatMessages({ messages, isStreaming = false, dictionary }: Chat
 
             {/* Render text content in message (skip if we rendered insight) */}
             {textParts.length > 0 && !insightData && (
-              <Message from={message.role === "data" ? "system" : (message.role as any)}>
+              <Message from={(message.role as string) === "data" ? "system" : (message.role as any)}>
                 <MessageContent className="max-w-[80%]">
                   <Response>{textContent}</Response>
                 </MessageContent>

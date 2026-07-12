@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { useQuery } from "@tanstack/react-query";
 import { getBudgetStatus } from "@workspace/modules/client";
@@ -47,10 +47,10 @@ export function BudgetClient({ initialData, locale }: Props) {
     staleTime: 60000,
   });
 
-  const handleEdit = (budget: BudgetStatus) => {
+  const handleEdit = useCallback((budget: BudgetStatus) => {
     setSelectedBudget(budget);
     setIsFormOpen(true);
-  };
+  }, []);
 
   const handleAdd = () => {
     setSelectedBudget(undefined);
@@ -75,7 +75,7 @@ export function BudgetClient({ initialData, locale }: Props) {
 
   const columnsWithActions = useMemo(
     () => budgetColumns(handleEdit, settings, locale),
-    [settings, locale],
+    [handleEdit, settings, locale],
   );
 
   return (

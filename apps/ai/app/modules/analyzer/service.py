@@ -74,9 +74,10 @@ async def analyze(items, workspace_id: str) -> list[dict]:
         "You are a precise financial transaction classifier for an Indonesian "
         "finance app. Respond with ONLY a JSON array, no prose."
     )
-    raw = llm.complete(
+    raw = await llm.complete_metered(
         system,
         [{"role": "user", "content": _build_user_prompt(items, categories, currency)}],
+        workspace_id,
         max_tokens=2048,
     )
     parsed = extract_json(raw) or []

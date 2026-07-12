@@ -21,6 +21,10 @@ const serverSchema = z.object({
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   GITHUB_CLIENT_ID: z.string().optional(),
   GITHUB_CLIENT_SECRET: z.string().optional(),
+  // Server-to-server secret gating /auth/oauth/connect. Only the Next.js OAuth
+  // callback (which has already verified the user with the provider) may mint a
+  // session. Optional in schema, but the endpoint fails closed when unset.
+  OAUTH_CONNECT_SECRET: z.string().min(16).optional(),
 
   // JWT
   JWT_SECRET: z.string().min(32),
@@ -37,7 +41,14 @@ const serverSchema = z.object({
   ANTHROPIC_API_KEY: z.string().min(1).optional().or(z.literal("")),
 
   // Encryption
+  // ENCRYPTION_KEY is the TRANSPORT key — it is bundled into the web/native
+  // clients so they can decrypt API responses. Never use it for at-rest data.
   ENCRYPTION_KEY: z.string().length(32),
+  // DATA_ENCRYPTION_KEY is the AT-REST key for stored secrets (integration OAuth
+  // tokens, workspace API keys, vault). SERVER-ONLY — never shipped to a client.
+  // Optional so existing deploys don't break; at-rest crypto falls back to
+  // ENCRYPTION_KEY when unset. Set a distinct 32-char key + re-encrypt to rotate.
+  DATA_ENCRYPTION_KEY: z.string().length(32).optional(),
 
   // Redis
   REDIS_URL: z.string().min(1).optional(),
@@ -67,7 +78,10 @@ const serverSchema = z.object({
   // Telegram AND the website canvas chat) is served by it, with an in-process
   // fallback if the sidecar is unreachable.
   AI_SERVICE_URL: z.string().url().optional(),
-  AI_SERVICE_API_KEY: z.string().optional(),
+  // Shared secret gating the sidecar<->api round trip. Required: a missing key
+  // must fail closed (reject), never disable auth. See ai-internal.controller.ts
+  // and apps/ai auth middleware.
+  AI_SERVICE_API_KEY: z.string().min(16),
 
   // S3-compatible Storage
   BUCKET_ENDPOINT: z.string().min(1).optional(),

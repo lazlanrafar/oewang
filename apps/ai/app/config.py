@@ -33,7 +33,9 @@ class Settings(BaseSettings):
     # transaction/item writes without persisting; MOCK_AI_QUOTA skips the limit
     # check. Dev defaults match the TS side.
     RECEIPT_DRY_RUN: bool = False
-    MOCK_AI_QUOTA: bool = True
+    # Enforce by default (fail closed): an unset flag in prod must not silently
+    # disable quota. Set MOCK_AI_QUOTA=true locally to bypass the limit.
+    MOCK_AI_QUOTA: bool = False
 
 
 @lru_cache

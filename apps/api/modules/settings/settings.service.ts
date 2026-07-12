@@ -1,5 +1,4 @@
-import { Env } from "@workspace/constants";
-import { encrypt } from "@workspace/encryption";
+import { encryptAtRest } from "../../lib/at-rest-crypto";
 import { buildSuccess } from "@workspace/utils";
 import { cacheDel, cacheGet, cacheSet } from "../../lib/cache";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
@@ -61,14 +60,10 @@ export abstract class SettingsService {
       await SettingsRepository.create(workspaceId);
     }
 
-    const encryptionSecret = Env.ENCRYPTION_KEY || "";
     const updateData = { ...data };
 
     if (updateData.r2AccessKeyId && updateData.r2AccessKeyId !== "********") {
-      updateData.r2AccessKeyId = encrypt(
-        updateData.r2AccessKeyId,
-        encryptionSecret,
-      );
+      updateData.r2AccessKeyId = encryptAtRest(updateData.r2AccessKeyId);
     } else {
       delete updateData.r2AccessKeyId;
     }
@@ -77,10 +72,7 @@ export abstract class SettingsService {
       updateData.r2SecretAccessKey &&
       updateData.r2SecretAccessKey !== "********"
     ) {
-      updateData.r2SecretAccessKey = encrypt(
-        updateData.r2SecretAccessKey,
-        encryptionSecret,
-      );
+      updateData.r2SecretAccessKey = encryptAtRest(updateData.r2SecretAccessKey);
     } else {
       delete updateData.r2SecretAccessKey;
     }

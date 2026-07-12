@@ -15,6 +15,9 @@ export const push_subscriptions = pgTable("push_subscriptions", {
   // JSON string of the full PushSubscription object
   subscription: text("subscription").notNull(),
   created_at: timestamp("created_at").defaultNow().notNull(),
+  // Soft delete (project rule: workspace-scoped rows are never hard-deleted).
+  // Re-subscribing the same endpoint revives the row via upsert (see repository).
+  deleted_at: timestamp("deleted_at"),
 });
 
 export type PushSubscription = typeof push_subscriptions.$inferSelect;

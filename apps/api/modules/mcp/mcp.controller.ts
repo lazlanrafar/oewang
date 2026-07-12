@@ -15,6 +15,7 @@ import { Elysia } from "elysia";
 import { randomBytes, createHash } from "crypto";
 import * as jose from "jose";
 import { getAuth } from "../../plugins/auth";
+import { rateLimitAuthEndpoint } from "../../plugins/rate-limit";
 import { createMcpServer } from "./mcp-server";
 
 const log = createLogger("mcp");
@@ -275,6 +276,19 @@ export const mcpController = new Elysia()
       if (!email || !password) {
         set.status = 400;
         return "Email and password required";
+      }
+
+      // This route is mounted before rateLimitPlugin, so the global limiter
+      // never sees it — enforce the strict auth-endpoint limit here to stop
+      // password brute-force. Key by client IP.
+      const ip =
+        (headers["x-forwarded-for"] as string | undefined)
+          ?.split(",")[0]
+          ?.trim() ?? "unknown";
+      const rl = await rateLimitAuthEndpoint(`mcp-login:${ip}`);
+      if (!rl.allowed) {
+        set.status = 429;
+        return "Too many attempts. Please try again later.";
       }
 
       const [user] = await db

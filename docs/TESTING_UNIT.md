@@ -8,11 +8,11 @@
 
 All backend tests use **Bun's built-in test runner** (`bun:test`). Tests are fast, require no database, and run in ~134ms.
 
-**Current baseline: 401 unit tests across 14 test files — all must pass before merging.** (Quick-recall aggregation moved to the Python sidecar `apps/ai`; covered by its `pytest` suite.)
+**Current baseline: 403 unit tests across 15 test files — all must pass before merging.** (Quick-recall aggregation moved to the Python sidecar `apps/ai`; covered by its `pytest` suite.)
 
 ```bash
 # From repo root
-bun run test              # run all 401 tests
+bun run test              # run all 403 tests
 bun run test:watch        # watch mode (auto-rerun on change)
 bun run test:coverage     # generate coverage report
 
@@ -74,7 +74,8 @@ apps/api/modules/{feature}/
 | `mayar`        | `mayar/billing-lifecycle.service.test.ts`  | 2       | Subscription expiration → `past_due`, grace period → downgrade to free                                                                                     |
 | `mayar`        | `mayar/mayar.controller.test.ts`           | 2       | Public webhook HTTP status behavior on success/failure paths                                                                                               |
 | `users`        | `users/users.utils.test.ts`                | 3       | Workspace ID resolution from mixed `workspaceId`/`workspace_id` payloads and empty input handling                                                          |
-| **TOTAL**      | **14 files**                               | **401** | **All core business logic**                                                                                                                                |
+| `lib`          | `lib/at-rest-crypto.test.ts`               | 2       | At-rest encryption round-trip with the data key; legacy decrypt fallback to the transport key                                                              |
+| **TOTAL**      | **15 files**                               | **403** | **All core business logic**                                                                                                                                |
 
 ---
 

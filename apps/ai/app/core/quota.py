@@ -111,3 +111,11 @@ async def increment_ai_tokens(
         workspace_id,
         current_tokens + tokens_spent,
     )
+
+
+async def record_usage(
+    workspace_id: str, current_tokens: int, usage: dict
+) -> None:
+    """Add an LLM call's token spend to the workspace counter."""
+    spent = int(usage.get("input_tokens", 0)) + int(usage.get("output_tokens", 0))
+    await increment_ai_tokens(workspace_id, current_tokens, spent)

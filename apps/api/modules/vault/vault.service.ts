@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { BucketClient } from "@workspace/bucket";
 import { Env } from "@workspace/constants";
-import { decrypt } from "@workspace/encryption";
+import { decryptAtRest } from "../../lib/at-rest-crypto";
 import { logger } from "@workspace/logger";
 import type { PaginationQuery } from "@workspace/types";
 import { ErrorCode } from "@workspace/types";
@@ -32,7 +32,6 @@ export abstract class VaultService {
   private static async getBucketClient(workspaceId: string) {
     const settings = await VaultRepository.getWorkspaceSettings(workspaceId);
 
-    const secret = Env.ENCRYPTION_KEY || "";
     const cacheKey = VaultService.buildBucketCacheKey(workspaceId, settings);
     const cached = VaultService.bucketClientCache.get(cacheKey);
     if (cached) return cached;
@@ -46,8 +45,8 @@ export abstract class VaultService {
     ) {
       const client = new BucketClient({
         endpoint: settings.r2Endpoint,
-        accessKeyId: decrypt(settings.r2AccessKeyId, secret),
-        secretAccessKey: decrypt(settings.r2SecretAccessKey, secret),
+        accessKeyId: decryptAtRest(settings.r2AccessKeyId),
+        secretAccessKey: decryptAtRest(settings.r2SecretAccessKey),
         bucketName: settings.r2BucketName,
         region: Env.BUCKET_REGION,
       });
@@ -312,7 +311,7 @@ export abstract class VaultService {
     }
 
     for (const [workspaceId, files] of byWorkspace) {
-      let bucket;
+      let bucket: Awaited<ReturnType<typeof VaultService.getBucketClient>>;
       try {
         bucket = await VaultService.getBucketClient(workspaceId);
       } catch (err) {

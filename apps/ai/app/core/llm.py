@@ -50,6 +50,23 @@ def complete(
     return complete_raw(system, messages, max_tokens)["reply"]
 
 
+async def complete_metered(
+    system: str,
+    messages: list[dict],
+    workspace_id: str,
+    max_tokens: int = 1024,
+) -> str:
+    """complete() gated by the workspace's AI token quota: check the limit before
+    the call (raises quota.PlanLimitReached → 422 when over) and record spend
+    after. For entry points NOT already metered by Elysia's chat-begin/chat-end."""
+    from app.core import quota
+
+    current = await quota.check_quota(workspace_id)
+    result = complete_raw(system, messages, max_tokens)
+    await quota.record_usage(workspace_id, current, result["usage"])
+    return result["reply"]
+
+
 # execute_tool(name, args) -> {"result": any, "artifact": {type, payload} | None}
 ToolExecutor = Callable[[str, dict], Awaitable[dict]]
 

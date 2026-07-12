@@ -48,7 +48,7 @@ async def chat(
 
     system = prompts.system_prompt(balance, txns, currency)
     messages = history + [{"role": "user", "content": message}]
-    reply = llm.complete(system, messages)
+    reply = await llm.complete_metered(system, messages, workspace_id)
     # Elysia owns ai_messages persistence; we just echo the session id back.
     return {"reply": reply, "session_id": session_id}
 

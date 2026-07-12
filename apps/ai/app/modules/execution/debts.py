@@ -10,6 +10,7 @@ from app.core import audit
 from app.core.database import fetchrow, transaction
 from app.core.ids import new_id
 from app.core.serde import row_to_dict
+from app.modules.execution.resolvers import parse_amount
 
 
 async def _find_or_create_contact(conn, workspace_id: str, name: str) -> dict:
@@ -55,7 +56,7 @@ async def _insert_debt(conn, **d) -> dict:
 
 async def create_debt(workspace_id: str, user_id: str, body: dict) -> dict:
     """body: contactName, type ('payable'|'receivable'), amount, description?, dueDate?."""
-    amount = Decimal(str(body["amount"]))
+    amount = parse_amount(body["amount"])
     async with transaction() as conn:
         contact = await _find_or_create_contact(conn, workspace_id, body["contactName"])
         debt = await _insert_debt(
@@ -78,7 +79,7 @@ async def create_debt(workspace_id: str, user_id: str, body: dict) -> dict:
 
 async def split_bill(workspace_id: str, user_id: str, body: dict) -> dict:
     """body: amount, name, wallet_id (resolved), category_id (resolved), contactNames[]."""
-    total = Decimal(str(body["amount"]))
+    total = parse_amount(body["amount"])
     names = body.get("contactNames") or []
     num_people = len(names) + 1  # + the user
     split_amount = (total / num_people).quantize(Decimal("0.01"))

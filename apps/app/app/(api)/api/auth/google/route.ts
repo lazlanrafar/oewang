@@ -3,14 +3,13 @@ import { NextResponse } from "next/server";
 import { Env } from "@workspace/constants";
 
 function getRequestOrigin(request: Request): string {
-  const host = request.headers.get("x-forwarded-host") || request.headers.get("host");
-  const proto = request.headers.get("x-forwarded-proto") || "https";
-  if (host) {
-    const isLocal = host.includes("localhost") || host.includes("127.0.0.1");
-    const scheme = isLocal ? "http" : proto;
-    return `${scheme}://${host}`;
-  }
-  return Env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
+  // Pin the origin to the configured app URL. Deriving it from Host /
+  // X-Forwarded-* headers lets an attacker poison the OAuth redirect_uri and the
+  // post-login redirect (host-header injection / open redirect).
+  return (Env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin).replace(
+    /\/$/,
+    "",
+  );
 }
 
 export async function GET(request: Request) {

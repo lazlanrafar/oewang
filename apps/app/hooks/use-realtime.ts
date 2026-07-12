@@ -62,7 +62,9 @@ export function useRealtime() {
       try {
         const urlObj = new URL(apiUrl);
         if (urlObj.port) port = urlObj.port;
-      } catch {}
+      } catch {
+        // malformed apiUrl — fall back to the default port
+      }
       baseWsUrl = `ws://localhost:${port}`;
     }
 

@@ -287,6 +287,7 @@ export abstract class BillingInvoicesService {
         and(
           eq(billingInvoices.workspaceId, workspaceId),
           eq(billingInvoices.id, id),
+          sql`${billingInvoices.deletedAt} IS NULL`,
         ),
       )
       .limit(1);
@@ -302,6 +303,7 @@ export abstract class BillingInvoicesService {
         and(
           eq(billingInvoices.workspaceId, workspaceId),
           eq(billingInvoices.orderId, orderId),
+          sql`${billingInvoices.deletedAt} IS NULL`,
         ),
       )
       .limit(1);

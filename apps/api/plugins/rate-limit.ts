@@ -122,6 +122,18 @@ async function checkRateLimit(
   return checkRateLimitMemory(key, config);
 }
 
+/**
+ * Apply the strict auth-endpoint limit (10 / 15min) to a caller keyed by the
+ * given string. For routes mounted OUTSIDE the plugin chain (e.g. the MCP
+ * OAuth login, which is registered before rateLimitPlugin), which the global
+ * onBeforeHandle hook never sees.
+ */
+export function rateLimitAuthEndpoint(
+  key: string,
+): Promise<{ allowed: boolean; remaining: number; reset: number }> {
+  return checkRateLimit(`auth:${key}`, AUTH_ENDPOINT_LIMIT);
+}
+
 export const rateLimitPlugin = new Elysia({
   name: "rate-limit",
 }).onBeforeHandle(async (ctx: any) => {

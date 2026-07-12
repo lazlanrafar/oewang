@@ -33,14 +33,18 @@ export const agentSettingsController = new Elysia({
   )
   .put(
     "/",
-    async ({ body, workspaceId }) => {
-      const updated = await AgentSettingsService.update(workspaceId!, {
-        model: body.model,
-        temperature: body.temperature,
-        max_steps: body.max_steps,
-        custom_instructions: body.custom_instructions,
-        response_language: body.response_language,
-      });
+    async ({ body, workspaceId, auth }) => {
+      const updated = await AgentSettingsService.update(
+        workspaceId!,
+        auth!.user_id,
+        {
+          model: body.model,
+          temperature: body.temperature,
+          max_steps: body.max_steps,
+          custom_instructions: body.custom_instructions,
+          response_language: body.response_language,
+        },
+      );
       return buildSuccess(updated, "Agent settings updated");
     },
     {
