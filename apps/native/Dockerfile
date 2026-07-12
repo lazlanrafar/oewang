@@ -1,5 +1,5 @@
 # Flutter web build for mobile.oewang.com (Railway)
-FROM ghcr.io/cirruslabs/flutter:3.44.4 AS build
+FROM ghcr.io/cirruslabs/flutter:3.44.0 AS build
 
 WORKDIR /app
 COPY pubspec.yaml pubspec.lock ./
