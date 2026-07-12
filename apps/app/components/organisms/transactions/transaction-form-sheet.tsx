@@ -238,6 +238,7 @@ export function TransactionFormSheet({
     ? Number(watchedAmount || 0) * Number(watchedRate || 0)
     : 0;
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: defaultWalletId is intentionally read at reset time only; the dedicated effect below fills it in when wallets load late, without wiping user input.
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -314,6 +315,7 @@ export function TransactionFormSheet({
   // Auto-populate exchange rate when user picks a non-main currency, unless the
   // user has manually edited the rate this session.
   const [rateManuallyEdited, setRateManuallyEdited] = useState(false);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: rate auto-populate keyed on currency/ratesResp only; liveRateFor/watchedRate/form.setValue are stable-or-derived and re-running on them would fight the user's manual edits.
   useEffect(() => {
     if (isMainCurrency) {
       if (Number(watchedRate) !== 1) form.setValue("exchangeRate", 1);
@@ -324,8 +326,6 @@ export function TransactionFormSheet({
     if (live != null && Number.isFinite(live) && Number(watchedRate || 0) !== live) {
       form.setValue("exchangeRate", Number(live.toFixed(8)));
     }
-    // liveRateFor depends on ratesMap which is stable per render
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [watchedCurrency, ratesResp, isMainCurrency, rateManuallyEdited]);
 
   async function onSubmit(data: TransactionFormValues) {

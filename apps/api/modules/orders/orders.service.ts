@@ -5,7 +5,12 @@ import {
   buildPagination,
   buildSuccess,
 } from "@workspace/utils";
+import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { OrdersRepository } from "./orders.repository";
+
+// Orders are largely payment-provider (Mayar webhook) driven, so the actor may
+// be the system rather than a signed-in user — fall back to "system".
+const SYSTEM_ACTOR = "system";
 
 export abstract class OrdersService {
   static async createOrder(
@@ -30,11 +35,28 @@ export abstract class OrdersService {
           invoiceId,
           { status: data.status, amount: data.amount, currency: data.currency },
         );
+        await AuditLogsService.log({
+          workspace_id: data.workspace_id,
+          user_id: data.user_id ?? SYSTEM_ACTOR,
+          action: "order.updated",
+          entity: "order",
+          entity_id: existing.id,
+          before: existing,
+          after: updated,
+        });
         return buildSuccess(updated, "Order updated");
       }
     }
 
     const order = await OrdersRepository.create(data, tx);
+    await AuditLogsService.log({
+      workspace_id: data.workspace_id,
+      user_id: data.user_id ?? SYSTEM_ACTOR,
+      action: "order.created",
+      entity: "order",
+      entity_id: order.id,
+      after: order,
+    });
     return buildSuccess(order, "Order created");
   }
 
@@ -46,6 +68,14 @@ export abstract class OrdersService {
     if (!updated) {
       return buildError(ErrorCode.NOT_FOUND, "Order not found");
     }
+    await AuditLogsService.log({
+      workspace_id: updated.workspace_id ?? "",
+      user_id: updated.user_id ?? SYSTEM_ACTOR,
+      action: "order.updated",
+      entity: "order",
+      entity_id: updated.id,
+      after: updated,
+    });
     return buildSuccess(updated, "Order updated");
   }
 

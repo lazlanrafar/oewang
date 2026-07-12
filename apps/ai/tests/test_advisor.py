@@ -15,10 +15,13 @@ async def test_advise_dedups_and_sorts_sources(monkeypatch):
     async def fake_profile(ws, currency):
         return ""
 
+    async def fake_metered(*a, **k):
+        return "Jawaban."
+
     monkeypatch.setattr(svc, "search", fake_search)
     monkeypatch.setattr(svc, "get_currency_settings", fake_currency)
     monkeypatch.setattr(svc, "_spending_profile", fake_profile)
-    monkeypatch.setattr(svc.llm, "complete", lambda *a, **k: "Jawaban.")
+    monkeypatch.setattr(svc.llm, "complete_metered", fake_metered)
 
     res = await svc.advise("pajak umkm", "w1")
     assert res["answer"] == "Jawaban."

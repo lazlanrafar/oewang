@@ -1,4 +1,5 @@
 import { redis } from "@workspace/redis";
+import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { AgentSettingsRepository } from "./agent-settings.repository";
 
 // Was imported from @workspace/ai (removed). The agent's LLM model/temperature
@@ -65,6 +66,7 @@ export abstract class AgentSettingsService {
 
   static async update(
     workspaceId: string,
+    userId: string,
     patch: {
       model?: string | undefined;
       temperature?: number | undefined;
@@ -83,6 +85,15 @@ export abstract class AgentSettingsService {
     if (patch.response_language !== undefined)
       dbPatch.response_language = patch.response_language;
     const row = await AgentSettingsRepository.upsert(workspaceId, dbPatch);
+
+    await AuditLogsService.log({
+      workspace_id: workspaceId,
+      user_id: userId,
+      action: "ai_agent_settings.updated",
+      entity: "ai_agent_settings",
+      entity_id: workspaceId,
+      after: row,
+    });
 
     // Bust cache so next request picks up the new settings
     try {

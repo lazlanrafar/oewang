@@ -42,6 +42,8 @@ async def advise(question: str, workspace_id: str) -> dict:
         user += f"USER SPENDING PROFILE (top categories): {profile}\n\n"
     user += f"QUESTION: {question}"
 
-    answer = llm.complete(system, [{"role": "user", "content": user}])
+    answer = await llm.complete_metered(
+        system, [{"role": "user", "content": user}], workspace_id
+    )
     sources = sorted({c["source"] for c in chunks})
     return {"answer": answer, "sources": sources}

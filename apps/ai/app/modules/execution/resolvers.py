@@ -5,9 +5,24 @@ apps/api/modules/ai/ai.tools.ts so AI writes land on the right rows.
 
 import re
 from datetime import date, datetime, timedelta
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 from app.core.database import fetch, fetchrow
+
+
+def parse_amount(v, *, allow_zero: bool = False, field: str = "amount") -> Decimal:
+    """Parse an LLM-supplied money value, rejecting NaN/Infinity/negative.
+    json.loads accepts NaN/Infinity and a negative/NaN amount poisons wallet
+    balances (NaN propagates), so validate at every money write."""
+    try:
+        d = Decimal(str(v))
+    except (InvalidOperation, TypeError, ValueError):
+        raise ValueError(f"invalid {field}: {v!r}")
+    if not d.is_finite():
+        raise ValueError(f"{field} must be finite, got {v!r}")
+    if d < 0 or (d == 0 and not allow_zero):
+        raise ValueError(f"{field} must be positive, got {v!r}")
+    return d
 
 
 def _clean(s: str) -> str:
@@ -111,15 +126,17 @@ def resolve_multicurrency(inp: dict) -> dict:
     orig = inp.get("originalAmount")
     rate = inp.get("exchangeRate")
     if code is not None and orig is not None and rate is not None:
-        main = (Decimal(str(orig)) * Decimal(str(rate))).quantize(Decimal("0.0001"))
+        orig_dec = parse_amount(orig, field="originalAmount")
+        rate_dec = parse_amount(rate, field="exchangeRate")
+        main = (orig_dec * rate_dec).quantize(Decimal("0.0001"))
         return {
             "amount": main,
-            "original_amount": Decimal(str(orig)),
+            "original_amount": orig_dec,
             "original_currency_code": code,
-            "exchange_rate": Decimal(str(rate)),
+            "exchange_rate": rate_dec,
         }
     return {
-        "amount": Decimal(str(inp["amount"])),
+        "amount": parse_amount(inp["amount"]),
         "original_amount": None,
         "original_currency_code": None,
         "exchange_rate": None,

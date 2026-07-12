@@ -29,7 +29,28 @@ async def add_transaction_items(
 
     created = []
     async with transaction() as conn:
+        # Tenant isolation: the LLM supplies transaction_id/categoryId, so never
+        # trust them. The parent transaction MUST belong to this workspace, and
+        # any category id must too (foreign ids are dropped, not written).
+        owns_txn = await conn.fetchrow(
+            "SELECT id FROM transactions WHERE id = $1 AND workspace_id = $2 "
+            "AND deleted_at IS NULL",
+            transaction_id, workspace_id,
+        )
+        if not owns_txn:
+            raise ValueError("transaction not found in workspace")
+        valid_cats = {
+            r["id"]
+            for r in await conn.fetch(
+                "SELECT id FROM categories WHERE workspace_id = $1 "
+                "AND deleted_at IS NULL",
+                workspace_id,
+            )
+        }
         for it in items:
+            category_id = it.get("categoryId")
+            if category_id not in valid_cats:
+                category_id = None
             row = await conn.fetchrow(
                 """
                 INSERT INTO transaction_items
@@ -40,7 +61,7 @@ async def add_transaction_items(
                 """,
                 new_id(), workspace_id, transaction_id, it["name"], it.get("brand"),
                 _dec(it.get("quantity")), it.get("unit"), _dec(it.get("unitPrice")),
-                _dec(it.get("amount")), it.get("categoryId"), it.get("notes"),
+                _dec(it.get("amount")), category_id, it.get("notes"),
             )
             created.append(row_to_dict(row))
         await audit.log(

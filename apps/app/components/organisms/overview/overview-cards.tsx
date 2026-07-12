@@ -43,6 +43,7 @@ export function CountUp({
 }) {
   const [count, setCount] = useState(0);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: animate from the current count once when value/duration change; adding count restarts the tween every frame.
   useEffect(() => {
     const controls = animate(count, value, {
       duration,

@@ -19,12 +19,22 @@ mock.module("@workspace/email", () => ({
   }),
 }));
 
+// Bun's mock.module is global across the run, so export BOTH symbols the real
+// module has — otherwise whichever logger mock runs last breaks a sibling
+// test's `import { logger }`.
 mock.module("@workspace/logger", () => ({
   createLogger: () => ({
     info: mock(() => {}),
     warn: mock(() => {}),
     error: mock(() => {}),
+    debug: mock(() => {}),
   }),
+  logger: {
+    info: mock(() => {}),
+    warn: mock(() => {}),
+    error: mock(() => {}),
+    debug: mock(() => {}),
+  },
 }));
 
 mock.module("../notifications/notifications.service", () => ({

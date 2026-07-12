@@ -1,3 +1,5 @@
+import { timingSafeEqual } from "node:crypto";
+import { Env } from "@workspace/constants";
 import { t } from "elysia";
 import { Elysia } from "elysia";
 import { ErrorCode } from "@workspace/types";
@@ -131,7 +133,23 @@ export const authController = new Elysia({ prefix: "/auth" })
    */
   .post(
     "/oauth/connect",
-    async ({ body }) => {
+    async ({ body, headers, set }) => {
+      // This endpoint mints a session from a caller-supplied email, so it MUST
+      // only be reachable by the trusted Next.js OAuth callback (which has
+      // already verified the user with the provider). Gate on a server-to-server
+      // shared secret; fail closed when unconfigured. See OAUTH_CONNECT_SECRET.
+      const expected = Env.OAUTH_CONNECT_SECRET;
+      const provided = headers["x-oauth-connect-secret"];
+      const ok =
+        !!expected &&
+        !!provided &&
+        provided.length === expected.length &&
+        timingSafeEqual(Buffer.from(provided), Buffer.from(expected));
+      if (!ok) {
+        set.status = 401;
+        return buildError(ErrorCode.UNAUTHORIZED, "Unauthorized");
+      }
+
       const { provider, provider_user_id, email, name, avatar_url } = body;
 
       const user = await UsersService.upsertFromOAuth({

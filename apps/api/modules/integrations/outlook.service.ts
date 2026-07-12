@@ -1,5 +1,5 @@
 import { Env } from "@workspace/constants";
-import { decrypt, encrypt } from "@workspace/encryption";
+import { decryptAtRest, encryptAtRest } from "../../lib/at-rest-crypto";
 import { logger } from "@workspace/logger";
 import { sendReceiptProcessedEmail } from "@workspace/email";
 import { cacheDel } from "../../lib/cache";
@@ -37,16 +37,14 @@ export abstract class OutlookService {
   // ── State ──────────────────────────────────────────────────────────────────
 
   static encryptState(data: object): string {
-    const key = Env.ENCRYPTION_KEY;
-    if (!key) throw new Error("ENCRYPTION_KEY not set");
-    return Buffer.from(encrypt(JSON.stringify(data), key)).toString("base64url");
+    return Buffer.from(encryptAtRest(JSON.stringify(data))).toString(
+      "base64url",
+    );
   }
 
   static decryptState(state: string): Record<string, string> {
-    const key = Env.ENCRYPTION_KEY;
-    if (!key) throw new Error("ENCRYPTION_KEY not set");
     const raw = Buffer.from(state, "base64url").toString("utf8");
-    return JSON.parse(decrypt(raw, key));
+    return JSON.parse(decryptAtRest(raw));
   }
 
   // ── OAuth ──────────────────────────────────────────────────────────────────
@@ -119,7 +117,6 @@ export abstract class OutlookService {
     };
     const email = profile.mail || profile.userPrincipalName || "";
 
-    const encKey = Env.ENCRYPTION_KEY!;
     const expiryDate = Date.now() + tokens.expires_in * 1000;
 
     await IntegrationsRepository.upsert({
@@ -127,9 +124,9 @@ export abstract class OutlookService {
       provider: "outlook",
       settings: {
         email,
-        accessToken: encrypt(tokens.access_token, encKey),
+        accessToken: encryptAtRest(tokens.access_token),
         refreshToken: tokens.refresh_token
-          ? encrypt(tokens.refresh_token, encKey)
+          ? encryptAtRest(tokens.refresh_token)
           : null,
         expiryDate,
         lastSyncAt: null,
@@ -161,8 +158,7 @@ export abstract class OutlookService {
 
   private static async getValidAccessToken(integration: any): Promise<string> {
     const settings = integration.settings as any;
-    const encKey = Env.ENCRYPTION_KEY!;
-    const accessToken = decrypt(settings.accessToken, encKey);
+    const accessToken = decryptAtRest(settings.accessToken);
     const expiryDate = settings.expiryDate as number;
 
     if (expiryDate && Date.now() < expiryDate - TOKEN_EXPIRY_BUFFER_MS) {
@@ -170,7 +166,7 @@ export abstract class OutlookService {
     }
 
     const refreshToken = settings.refreshToken
-      ? decrypt(settings.refreshToken, encKey)
+      ? decryptAtRest(settings.refreshToken)
       : null;
     if (!refreshToken) throw new Error("No Outlook refresh token — re-auth required");
 
@@ -196,11 +192,11 @@ export abstract class OutlookService {
     const newExpiry = Date.now() + refreshed.expires_in * 1000;
     const newSettings: any = {
       ...settings,
-      accessToken: encrypt(refreshed.access_token, encKey),
+      accessToken: encryptAtRest(refreshed.access_token),
       expiryDate: newExpiry,
     };
     if (refreshed.refresh_token) {
-      newSettings.refreshToken = encrypt(refreshed.refresh_token, encKey);
+      newSettings.refreshToken = encryptAtRest(refreshed.refresh_token);
     }
 
     await IntegrationsRepository.updateSettings(

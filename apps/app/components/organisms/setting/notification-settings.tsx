@@ -228,7 +228,8 @@ export function NotificationSettings({ dictionary }: { dictionary: Dictionary })
             <TooltipProvider delayDuration={200}>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <span tabIndex={0} aria-label={dict.mandatory_tooltip || "This category cannot be disabled"}>
+                  {/* biome-ignore lint/a11y/useSemanticElements: a real <button> would nest inside Radix Switch's own button (invalid HTML); role keeps the tooltip keyboard-focusable. */}
+                  <span role="button" tabIndex={0} aria-label={dict.mandatory_tooltip || "This category cannot be disabled"}>
                     <Switch checked disabled className="cursor-not-allowed opacity-60" />
                   </span>
                 </TooltipTrigger>

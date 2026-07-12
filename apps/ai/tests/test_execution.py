@@ -8,8 +8,31 @@ from decimal import Decimal
 from app.core.audit import _sanitize
 from app.core.serde import to_jsonable
 from app.modules.execution.executor import _artifact_for
-from app.modules.execution.resolvers import resolve_date_range, resolve_multicurrency
+from app.modules.execution.resolvers import (
+    parse_amount,
+    resolve_date_range,
+    resolve_multicurrency,
+)
 from app.modules.execution.transactions import _apply_delta_sign
+
+import pytest
+
+
+def test_parse_amount_accepts_positive():
+    assert parse_amount(1500) == Decimal("1500")
+    assert parse_amount("0", allow_zero=True) == Decimal("0")
+
+
+def test_parse_amount_rejects_negative_nan_and_infinity():
+    for bad in (-1, "-0.01", float("nan"), float("inf"), "NaN", "Infinity"):
+        with pytest.raises(ValueError):
+            parse_amount(bad)
+
+
+def test_multicurrency_rejects_nan_amount():
+    # A NaN amount would poison wallet balances (NaN propagates), so reject it.
+    with pytest.raises(ValueError):
+        resolve_multicurrency({"amount": float("nan")})
 
 
 def test_multicurrency_passthrough_when_main_currency():

@@ -5,14 +5,13 @@ import { Env } from "@workspace/constants";
 import { axiosInstance } from "@workspace/modules/server";
 
 function getRequestOrigin(request: Request): string {
-  const host = request.headers.get("x-forwarded-host") || request.headers.get("host");
-  const proto = request.headers.get("x-forwarded-proto") || "https";
-  if (host) {
-    const isLocal = host.includes("localhost") || host.includes("127.0.0.1");
-    const scheme = isLocal ? "http" : proto;
-    return `${scheme}://${host}`;
-  }
-  return Env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
+  // Pin the origin to the configured app URL. Deriving it from Host /
+  // X-Forwarded-* headers lets an attacker poison the OAuth redirect_uri and the
+  // post-login redirect (host-header injection / open redirect).
+  return (Env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin).replace(
+    /\/$/,
+    "",
+  );
 }
 
 export async function GET(request: Request) {
@@ -93,13 +92,17 @@ export async function GET(request: Request) {
     if (!primaryEmail) throw new Error("No verified email from GitHub");
 
     // Use axiosInstance — handles request encryption + response decryption automatically
-    const connectRes = await axiosInstance.post("auth/oauth/connect", {
-      provider: "github",
-      provider_user_id: String(githubUser.id),
-      email: primaryEmail,
-      name: (githubUser.name as string | null) ?? (githubUser.login as string),
-      avatar_url: githubUser.avatar_url as string | undefined,
-    });
+    const connectRes = await axiosInstance.post(
+      "auth/oauth/connect",
+      {
+        provider: "github",
+        provider_user_id: String(githubUser.id),
+        email: primaryEmail,
+        name: (githubUser.name as string | null) ?? (githubUser.login as string),
+        avatar_url: githubUser.avatar_url as string | undefined,
+      },
+      { headers: { "x-oauth-connect-secret": Env.OAUTH_CONNECT_SECRET ?? "" } },
+    );
 
     const { token, workspace_id } = connectRes.data.data as {
       token: string;

@@ -14,7 +14,8 @@ import { AiService } from "./ai.service";
 export const aiInternalController = new Elysia({ prefix: "/ai/internal" })
   .onBeforeHandle(({ headers, set }) => {
     const expected = Env.AI_SERVICE_API_KEY;
-    if (expected && headers["x-api-key"] !== expected) {
+    // Fail closed: no key configured -> reject everything (never disable auth).
+    if (!expected || headers["x-api-key"] !== expected) {
       set.status = 401;
       return { error: "Unauthorized" };
     }

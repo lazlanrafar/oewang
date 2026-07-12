@@ -294,9 +294,11 @@ const app = new Elysia()
 
     // 1. Validation errors (TypeBox/Elysia)
     if (code === "VALIDATION") {
+      // Do NOT log body/headers — they carry plaintext passwords, JWTs, and
+      // session cookies on auth requests. The validation summary names the
+      // offending fields without their values.
       log.error("[API] Validation Error", {
-        body: (error as any).body,
-        headers: (error as any).headers,
+        path,
         summary: (error as any).summary,
       });
       set.status = 400;
