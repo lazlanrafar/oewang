@@ -1,0 +1,8 @@
+build/
+.dart_tool/
+android/
+ios/
+.env
+.idea/
+*.iml
+flutter_01.png

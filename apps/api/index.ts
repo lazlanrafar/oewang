@@ -127,6 +127,7 @@ const apiControllers3 = new Elysia()
 const APP_ORIGINS = [
   "https://app.oewang.com",
   "https://console.oewang.com",
+  "https://mobile.oewang.com",
   "https://oewang.com",
   ...(process.env.NODE_ENV !== "production"
     ? [
