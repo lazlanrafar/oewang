@@ -1,0 +1,29 @@
+name: Deploy Mobile Web
+
+# Railway's GitHub integration couldn't be attached to the mobile service via
+# CLI, so this workflow replicates it: push to main touching apps/native →
+# railway up. Requires the RAILWAY_TOKEN repo secret (Railway project token).
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/native/**"
+
+concurrency:
+  group: mobile-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Railway Deploy (mobile)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy to Railway
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: npx -y @railway/cli@latest up apps/native --path-as-root --service mobile --ci
