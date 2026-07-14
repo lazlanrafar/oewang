@@ -9,7 +9,9 @@ import { Menu, X } from "lucide-react";
 
 import type { WebsiteDictionary } from "@/lib/translations";
 import { NAV_ITEMS } from "@/navigation/nav-items";
+
 import { Brand } from "./brand";
+import { ThemeToggle } from "./theme-toggle";
 
 export function Header({
   isLoggedIn,
@@ -63,9 +65,10 @@ export function Header({
             </div>
 
             <div className="hidden items-center gap-2 xl:flex">
+              <ThemeToggle />
               {isLoggedIn ? (
                 <Button asChild size="sm">
-                  <Link href={`${appUrl}/`}>Dashboard</Link>
+                  <Link href={`${appUrl}/`}>{dictionary.hero.ctaGoToDashboard}</Link>
                 </Button>
               ) : (
                 <>
@@ -113,13 +116,17 @@ export function Header({
 
             {isLoggedIn ? (
               <Button asChild size="lg" className="w-full">
-                <Link href={`${appUrl}/`}>Dashboard</Link>
+                <Link href={`${appUrl}/`}>{dictionary.hero.ctaGoToDashboard}</Link>
               </Button>
             ) : (
               <Button variant="outline" size="lg" className="w-full" asChild>
                 <Link href={`${appUrl}/login`}>{dictionary.nav.signIn}</Link>
               </Button>
             )}
+
+            <div className="mt-4 flex items-center justify-end">
+              <ThemeToggle />
+            </div>
           </div>
         </div>
       </nav>

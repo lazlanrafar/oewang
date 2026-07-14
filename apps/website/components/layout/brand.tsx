@@ -6,13 +6,8 @@ import { Icons } from "@workspace/ui/atoms";
 // text-foreground; the parent link supplies the accessible name.
 export function Brand({ className = "" }: { className?: string }) {
   return (
-    <span
-      className={`font-serif text-foreground text-xl tracking-tight ${className}`}
-    >
-      <Icons.LogoSmall
-        aria-hidden
-        className="inline-block size-[0.94em] align-[-0.14em]"
-      />
+    <span className={`font-serif text-foreground text-xl tracking-tight ${className}`}>
+      <Icons.LogoSmall aria-hidden className="inline-block size-[0.94em] align-[-0.14em]" />
       <span aria-hidden>ewang</span>
     </span>
   );

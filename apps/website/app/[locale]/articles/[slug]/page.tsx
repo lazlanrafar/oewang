@@ -60,7 +60,7 @@ export default async function ArticleDetailPage({ params }: { params: Promise<{ 
             className="mb-8 inline-flex items-center text-muted-foreground text-sm transition-colors hover:text-foreground"
           >
             <ArrowLeft className="mr-2 size-4" />
-            All articles
+            {dictionary.articles.all}
           </Link>
 
           <h1 className="font-serif text-4xl text-foreground leading-tight tracking-tight sm:text-5xl">
@@ -68,11 +68,10 @@ export default async function ArticleDetailPage({ params }: { params: Promise<{ 
           </h1>
           {article.published_at ? (
             <p className="mt-4 text-muted-foreground text-sm">
-              {new Date(article.published_at).toLocaleDateString("en-US", {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })}
+              {new Date(article.published_at).toLocaleDateString(
+                locale === "ja" ? "ja-JP" : locale === "id" ? "id-ID" : "en-US",
+                { year: "numeric", month: "long", day: "numeric" },
+              )}
             </p>
           ) : null}
 

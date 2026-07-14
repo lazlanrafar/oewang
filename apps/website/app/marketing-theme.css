@@ -6,20 +6,20 @@
  */
 
 body {
-  /* Deeper than the shared .dark (0 0% 5%) for a true near-black canvas. */
-  --background: 0 0% 4%;
-  --foreground: 0 0% 98%;
+  /* LIGHT (default) — clean pure white with near-black text. */
+  --background: 0 0% 100%;
+  --foreground: 0 0% 9%;
 
   /* Elevated surfaces + hairline borders for the editorial card system. */
-  --card: 0 0% 6%;
-  --surface: 0 0% 8%;
-  --border: 0 0% 14%;
-  --muted: 0 0% 9%;
-  --muted-foreground: 0 0% 55%;
+  --card: 0 0% 100%;
+  --surface: 0 0% 97%;
+  --border: 0 0% 90%;
+  --muted: 0 0% 96%;
+  --muted-foreground: 0 0% 40%;
 
   /* The single accent — a refined teal. Used sparingly (CTAs, marks, italics). */
-  --brand-accent: 168 84% 45%;
-  --brand-accent-foreground: 0 0% 4%;
+  --brand-accent: 168 84% 40%;
+  --brand-accent-foreground: 0 0% 100%;
 
   /* Brand guideline: sharp corners everywhere. Zero every radius token so even
    * shared @workspace/ui components (buttons, inputs) render square on the
@@ -35,6 +35,22 @@ body {
 
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
+}
+
+/* DARK — the original "dark fintech" near-black canvas. next-themes toggles
+ * `.dark` on <html>; only the color tokens differ (radii/layout unchanged). */
+.dark body {
+  --background: 0 0% 4%;
+  --foreground: 0 0% 98%;
+
+  --card: 0 0% 6%;
+  --surface: 0 0% 8%;
+  --border: 0 0% 14%;
+  --muted: 0 0% 9%;
+  --muted-foreground: 0 0% 55%;
+
+  --brand-accent: 168 84% 45%;
+  --brand-accent-foreground: 0 0% 4%;
 }
 
 /* Selection uses the accent so even micro-interactions stay on-brand. */

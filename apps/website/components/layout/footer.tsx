@@ -1,27 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 
 import type { WebsiteDictionary } from "@/lib/translations";
 
 import { Brand } from "./brand";
-
-const LANGUAGE_OPTIONS = [
-  { code: "en", label: "EN" },
-  { code: "id", label: "ID" },
-  { code: "ja", label: "JP" },
-] as const;
+import { LanguageSwitch } from "./language-switch";
 
 export function Footer({ locale, dictionary }: { locale: string; dictionary: WebsiteDictionary }) {
-  const pathname = usePathname();
   const withLocale = (path: string) => `/${locale}${path === "/" ? "" : path}`;
-
-  const getLocaleHref = (code: string) => {
-    const segments = pathname.split("/").filter(Boolean);
-    const pathAfterLocale = segments.length > 1 ? `/${segments.slice(1).join("/")}` : "/";
-    return `/${code}${pathAfterLocale === "/" ? "" : pathAfterLocale}`;
-  };
 
   return (
     <footer className="border-border/70 border-t bg-[hsl(var(--background))]">
@@ -58,19 +45,19 @@ export function Footer({ locale, dictionary }: { locale: string; dictionary: Web
                 href={withLocale("/articles")}
                 className="text-foreground/80 text-sm transition-colors hover:text-foreground"
               >
-                Articles
+                {dictionary.footer.articles}
               </Link>
               <Link
                 href={withLocale("/terms")}
                 className="text-foreground/80 text-sm transition-colors hover:text-foreground"
               >
-                Terms
+                {dictionary.footer.terms}
               </Link>
               <Link
                 href={withLocale("/policy")}
                 className="text-foreground/80 text-sm transition-colors hover:text-foreground"
               >
-                Privacy
+                {dictionary.footer.privacy}
               </Link>
             </nav>
           </div>
@@ -80,21 +67,7 @@ export function Footer({ locale, dictionary }: { locale: string; dictionary: Web
           <p className="text-muted-foreground text-xs">
             © {new Date().getFullYear()} Latoe. {dictionary.footer.rights}
           </p>
-          <div className="flex items-center gap-2">
-            {LANGUAGE_OPTIONS.map((item) => (
-              <Link
-                key={item.code}
-                href={getLocaleHref(item.code)}
-                className={`border px-2.5 py-1 text-[11px] transition-colors ${
-                  item.code === locale
-                    ? "border-foreground bg-foreground text-background"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {item.label}
-              </Link>
-            ))}
-          </div>
+          <LanguageSwitch locale={locale} />
         </div>
       </div>
     </footer>

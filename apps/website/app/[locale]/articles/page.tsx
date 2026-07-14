@@ -10,11 +10,12 @@ import { getDictionary } from "@/lib/translations";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
+  const dictionary = getDictionary(locale);
   return createPageMetadata({
     locale,
     path: "/articles",
-    title: "Articles — Oewang",
-    description: "Guides and updates on tracking money, receipts, and AI-powered finance from the Oewang team.",
+    title: dictionary.articles.metaTitle,
+    description: dictionary.articles.metaDescription,
     keywords: ["Oewang blog", "finance articles", "money management guides"],
   });
 }
@@ -36,13 +37,13 @@ export default async function ArticlesPage({ params }: { params: Promise<{ local
 
       <main className="flex-1 pt-32 pb-24">
         <Container>
-          <SectionLabel>Articles</SectionLabel>
+          <SectionLabel>{dictionary.articles.label}</SectionLabel>
           <h1 className="mt-5 max-w-2xl font-serif text-4xl text-foreground leading-tight tracking-tight sm:text-5xl">
-            From the Oewang team.
+            {dictionary.articles.heading}
           </h1>
 
           {articles.length === 0 ? (
-            <p className="mt-12 text-muted-foreground">No articles yet. Check back soon.</p>
+            <p className="mt-12 text-muted-foreground">{dictionary.articles.empty}</p>
           ) : (
             <div className="mt-14 grid grid-cols-1 gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
               {articles.map((a) => (

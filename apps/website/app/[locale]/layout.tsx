@@ -51,7 +51,7 @@ export default async function RootLayout({
   const { locale } = await params;
 
   return (
-    <html lang={locale} className="dark" suppressHydrationWarning>
+    <html lang={locale} suppressHydrationWarning>
       <head>
         {/* Mark JS present before first paint so reveal headlines only hide when
             they can actually be animated back in (no-JS keeps them visible). */}
