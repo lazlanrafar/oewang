@@ -10,6 +10,8 @@ import {
   lt,
   pricing,
   sql,
+  user_workspaces,
+  users,
   vaultFiles,
   workspaceAddons,
   workspaceSettings,
@@ -269,11 +271,24 @@ export abstract class VaultRepository {
     const ws = await db
       .select({
         id: workspaces.id,
+        name: workspaces.name,
         vault_size_used_bytes: workspaces.vault_size_used_bytes,
         extra_vault_size_mb: workspaces.extra_vault_size_mb,
         storage_violation_at: workspaces.storage_violation_at,
+        owner_id: users.id,
+        owner_name: users.name,
+        owner_email: users.email,
       })
       .from(workspaces)
+      .leftJoin(
+        user_workspaces,
+        and(
+          eq(user_workspaces.workspace_id, workspaces.id),
+          eq(user_workspaces.role, "owner"),
+          isNull(user_workspaces.deleted_at),
+        ),
+      )
+      .leftJoin(users, eq(users.id, user_workspaces.user_id))
       .where(isNull(workspaces.deleted_at));
 
     const results = [];
@@ -283,9 +298,13 @@ export abstract class VaultRepository {
       if (quota) {
         results.push({
           workspaceId: w.id,
+          workspaceName: w.name,
           used: Number(w.vault_size_used_bytes),
           maxMb: quota.maxMb,
           storage_violation_at: w.storage_violation_at,
+          owner_id: w.owner_id,
+          owner_name: w.owner_name,
+          owner_email: w.owner_email,
         });
       }
     }

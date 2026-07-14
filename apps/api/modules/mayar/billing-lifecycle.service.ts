@@ -1,6 +1,7 @@
 import {
   sendSubscriptionDowngradedEmail,
   sendSubscriptionPaymentReminderEmail,
+  sendVaultStorageLimitEmail,
 } from "@workspace/email";
 import { createLogger } from "@workspace/logger";
 import { NotificationsService } from "../notifications/notifications.service";
@@ -8,6 +9,9 @@ import { MayarRepository } from "./mayar.repository";
 
 const log = createLogger("billing-lifecycle");
 const GRACE_PERIOD_DAYS = 7;
+// Days a workspace has to clear a storage overage before files are hidden.
+// Mirrors VaultService.processStorageViolations so the warning we send matches.
+const STORAGE_GRACE_DAYS = 30;
 // How often (in days) to re-send payment reminders during the grace period.
 // e.g. remind at day 0, day 3, day 6 → downgrade at day 7.
 const REMINDER_INTERVAL_DAYS = 3;
@@ -23,9 +27,11 @@ export abstract class BillingLifecycleService {
   ) {
     if (!workspace.owner_id) return;
 
-    const dueDate = workspace.plan_current_period_end
-      ? new Date(workspace.plan_current_period_end)
-      : overdueStartedAt;
+    // The deadline the user must act by is when the grace period ends, not the
+    // already-passed period end. Show that so the email reads a future date.
+    const dueDate = new Date(
+      overdueStartedAt.getTime() + GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000,
+    );
 
     await NotificationsService.create({
       workspace_id: workspace.workspaceId,
@@ -47,6 +53,55 @@ export abstract class BillingLifecycleService {
     }
   }
 
+  /**
+   * If the workspace's vault usage exceeds `planVaultMb`, start the storage
+   * grace period now and warn the owner (in-app + email). Returns the value to
+   * write into `storage_violation_at` (a Date if over, else null) so callers can
+   * fold it into their own subscription update.
+   *
+   * Starting the countdown here — instead of waiting for the vault cron — gives
+   * the user a predictable deadline the moment their plan changes.
+   */
+  private static async flagStorageIfOverPlan(
+    workspace: any,
+    planVaultMb: number,
+    now: Date,
+  ): Promise<Date | null> {
+    const usedMb = (workspace.vault_size_used_bytes ?? 0) / (1024 * 1024);
+    if (usedMb <= planVaultMb) return null;
+
+    const deadline = new Date(
+      now.getTime() + STORAGE_GRACE_DAYS * 24 * 60 * 60 * 1000,
+    );
+
+    if (workspace.owner_id) {
+      await NotificationsService.create({
+        workspace_id: workspace.workspaceId,
+        user_id: workspace.owner_id,
+        type: "vault.storage_limit_exceeded",
+        title: "Vault is over the storage limit",
+        message: `Your vault contains ${usedMb.toFixed(0)} MB but your new plan allows ${planVaultMb} MB. You have ${STORAGE_GRACE_DAYS} days to remove files or upgrade — after that, files will be hidden and eventually deleted.`,
+        link: "/vault",
+      }).catch(() => {});
+    }
+
+    if (workspace.owner_email) {
+      await sendVaultStorageLimitEmail(
+        workspace.owner_email,
+        workspace.owner_name || "there",
+        workspace.workspaceName || "Workspace",
+        usedMb,
+        planVaultMb,
+        STORAGE_GRACE_DAYS,
+        deadline,
+      ).catch((err) =>
+        log.warn("Storage limit email failed (non-fatal)", { err }),
+      );
+    }
+
+    return now;
+  }
+
   private static async downgradeWorkspace(
     workspace: any,
     reason: "past_due" | "cancelled",
@@ -54,12 +109,13 @@ export abstract class BillingLifecycleService {
     const starterPlan = await MayarRepository.findStarterPlan();
     const now = new Date();
 
-    // Check if the workspace's current vault usage exceeds the Starter limit.
-    // If so, start the storage-violation grace period RIGHT NOW so the user has
-    // immediate clarity instead of waiting for the next vault cron to detect it.
     const starterVaultMb = starterPlan?.max_vault_size_mb ?? 50;
-    const usedMb = (workspace.vault_size_used_bytes ?? 0) / (1024 * 1024);
-    const willExceedVault = usedMb > starterVaultMb;
+    const storageViolationAt =
+      await BillingLifecycleService.flagStorageIfOverPlan(
+        workspace,
+        starterVaultMb,
+        now,
+      );
 
     await MayarRepository.updateWorkspaceSubscription(workspace.workspaceId, {
       plan_id: starterPlan?.id || null,
@@ -72,10 +128,7 @@ export abstract class BillingLifecycleService {
       mayar_transaction_id: null,
       ai_tokens_used: 0,
       ai_tokens_reset_at: now,
-      // Start the 30-day storage grace period at the moment of downgrade so
-      // the countdown is predictable. If the workspace is already below limit
-      // (e.g. they deleted files just before), leave it null.
-      storage_violation_at: willExceedVault ? now : null,
+      storage_violation_at: storageViolationAt,
       updated_at: now,
     });
 
@@ -91,19 +144,6 @@ export abstract class BillingLifecycleService {
             : "Your workspace has been downgraded to Starter after 7 days without payment.",
         link: "/settings/billing",
       });
-
-      // If they're over the Starter vault limit, send a separate explicit warning
-      // so they can act before the 30-day grace period expires.
-      if (willExceedVault) {
-        await NotificationsService.create({
-          workspace_id: workspace.workspaceId,
-          user_id: workspace.owner_id,
-          type: "vault.storage_limit_exceeded",
-          title: "Vault is over the Starter limit",
-          message: `Your vault contains ${usedMb.toFixed(0)} MB but Starter allows ${starterVaultMb} MB. You have 30 days to remove files or upgrade — after that, files will be hidden and eventually deleted.`,
-          link: "/vault",
-        });
-      }
     }
 
     if (workspace.owner_email) {
@@ -142,6 +182,19 @@ export abstract class BillingLifecycleService {
       // payment.received webhook reactivates the subscription. The user gets a
       // payment reminder pointing at the new plan's checkout.
       if (workspace.plan_status === "active" && workspace.pending_plan_id) {
+        // If switching to a smaller plan whose vault limit the workspace already
+        // exceeds, start the storage grace period now (same as a downgrade) so
+        // the user isn't silently walked toward file deletion by the vault cron.
+        const targetPlan = await MayarRepository.findPlanById(
+          workspace.pending_plan_id,
+        );
+        const storageViolationAt =
+          await BillingLifecycleService.flagStorageIfOverPlan(
+            workspace,
+            targetPlan?.max_vault_size_mb ?? 0,
+            now,
+          );
+
         await MayarRepository.updateWorkspaceSubscription(
           workspace.workspaceId,
           {
@@ -152,6 +205,9 @@ export abstract class BillingLifecycleService {
             plan_status: "past_due",
             plan_overdue_started_at: now,
             plan_last_reminder_at: now,
+            ...(storageViolationAt
+              ? { storage_violation_at: storageViolationAt }
+              : {}),
             updated_at: now,
           },
         );

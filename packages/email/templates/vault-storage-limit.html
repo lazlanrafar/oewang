@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Payment overdue for your subscription</title>
+    <title>Vault storage limit exceeded</title>
 </head>
 <body style="background-color:#ffffff;margin:0;padding:0;font-family:'Hedvig Letters Sans', system-ui, Arial, sans-serif;">
     <table border="0" width="100%" cellpadding="0" cellspacing="0" role="presentation" align="center">
@@ -20,28 +20,31 @@
                             <tr>
                                 <td>
                                     <h1 style="font-family: 'Hedvig Letters Serif', Georgia, serif; font-size: 21px; font-weight: 400; text-align: center; margin: 30px 0; color: #121212;">
-                                        Your payment is overdue
+                                        Your vault is over its storage limit
                                     </h1>
                                     <p style="font-size: 14px; line-height: 24px; color: #121212; margin: 16px 0;">
                                         Hi {{userName}},
                                     </p>
                                     <p style="font-size: 14px; line-height: 24px; color: #121212; margin: 16px 0;">
-                                        The subscription for your workspace <strong>{{workspaceName}}</strong> is overdue. Please renew by <strong>{{dueDate}}</strong> to keep your paid plan active.
+                                        Your workspace <strong>{{workspaceName}}</strong> is using <strong>{{usedMb}} MB</strong> of vault storage, but your current plan allows <strong>{{limitMb}} MB</strong>.
                                     </p>
                                     <p style="font-size: 14px; line-height: 24px; color: #121212; margin: 16px 0;">
-                                        If payment isn't received by then, your workspace will be downgraded to the <strong>Starter</strong> plan.
+                                        You have <strong>{{graceDays}} days</strong> — until <strong>{{deadline}}</strong> — to remove files or upgrade your plan. After that, files will be hidden and eventually deleted permanently.
                                     </p>
                                     <table align="center" width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation" style="text-align: center; margin: 50px 0;">
                                         <tbody>
                                             <tr>
                                                 <td>
-                                                    <a href="{{billingUrl}}" style="line-height: 100%; text-decoration: none; display: inline-block; padding: 12px 24px; font-size: 14px; font-weight: 500; text-align: center; border: 1px solid #121212; color: #121212; background-color: transparent;" target="_blank">
-                                                        Renew now
+                                                    <a href="{{vaultUrl}}" style="line-height: 100%; text-decoration: none; display: inline-block; padding: 12px 24px; font-size: 14px; font-weight: 500; text-align: center; border: 1px solid #121212; color: #121212; background-color: transparent;" target="_blank">
+                                                        Manage your vault
                                                     </a>
                                                 </td>
                                             </tr>
                                         </tbody>
                                     </table>
+                                    <p style="font-size: 14px; line-height: 24px; color: #121212; margin: 16px 0;">
+                                        Prefer to keep everything? <a href="{{billingUrl}}" style="color: #121212;">Upgrade your plan</a> to raise the limit.
+                                    </p>
                                     <p style="font-size: 14px; line-height: 24px; color: #121212; margin: 16px 0;">
                                         Best,<br>The Oewang Team
                                     </p>
