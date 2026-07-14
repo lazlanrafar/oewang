@@ -46,6 +46,7 @@ export abstract class TransactionsImportService {
         mimeType,
         walletNames,
         categoryNames,
+        workspaceId,
       );
     } catch (err: any) {
       logger.error("[AI Import Error]", { err });

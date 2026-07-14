@@ -1,8 +1,8 @@
 import { createId } from "@paralleldrive/cuid2";
-import { pgTable, text, timestamp, decimal, index } from "drizzle-orm/pg-core";
-import { workspaces } from "./workspaces";
-import { transactions } from "./transactions";
+import { decimal, index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { categories } from "./categories";
+import { transactions } from "./transactions";
+import { workspaces } from "./workspaces";
 
 export const transactionItems = pgTable(
   "transaction_items",

@@ -1,16 +1,16 @@
 import { createId } from "@paralleldrive/cuid2";
+import { sql } from "drizzle-orm";
 import {
+  boolean,
+  decimal,
+  integer,
+  jsonb,
   pgTable,
   text,
   timestamp,
-  integer,
-  decimal,
-  boolean,
-  jsonb,
 } from "drizzle-orm/pg-core";
-import { sql } from "drizzle-orm";
-import { workspaces } from "./workspaces";
 import { walletGroups } from "./wallet-groups";
+import { workspaces } from "./workspaces";
 
 export const wallets = pgTable("wallets", {
   id: text("id").$defaultFn(createId).primaryKey().notNull(),

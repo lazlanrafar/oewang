@@ -136,68 +136,72 @@ export function rateLimitAuthEndpoint(
 
 export const rateLimitPlugin = new Elysia({
   name: "rate-limit",
-}).onBeforeHandle(async (ctx: any) => {
-  const { request, set, auth } = ctx;
-  const account = auth as { workspace_id?: string; user_id?: string } | null;
-  const path = new URL(request.url).pathname;
+})
+  .onBeforeHandle(async (ctx: any) => {
+    const { request, set, auth } = ctx;
+    const account = auth as { workspace_id?: string; user_id?: string } | null;
+    const path = new URL(request.url).pathname;
 
-  // Public provider webhooks (Telegram, WhatsApp/Evolution, Mayar) hit this
-  // server at high frequency from a small set of provider IPs. Rate-limiting
-  // them would silently drop legitimate bot traffic, so skip the limit here —
-  // signature/secret verification still gates these endpoints downstream.
-  if (isPublicWebhookEndpoint(path)) {
-    return;
-  }
-
-  // Internal sidecar surface (Python AI service) is unauthenticated (no JWT) so
-  // it would share the tight IP bucket; a single multi-tool chat fans out into
-  // many internal calls. The shared AI_SERVICE_API_KEY gates it instead.
-  if (path.includes("/ai/internal")) {
-    return;
-  }
-
-  let config: RateLimitConfig;
-
-  if (isAuthEndpoint(path)) {
-    config = AUTH_ENDPOINT_LIMIT;
-  } else if (account?.workspace_id) {
-    config = AUTHENTICATED_LIMIT;
-  } else {
-    config = UNAUTHENTICATED_LIMIT;
-  }
-
-  const key = getClientKey(request, account);
-  const result = await checkRateLimit(key, config);
-
-  set.headers["X-RateLimit-Limit"] = String(config.max_requests);
-  set.headers["X-RateLimit-Remaining"] = String(result.remaining);
-  set.headers["X-RateLimit-Reset"] = String(result.reset);
-
-  if (!result.allowed) {
-    set.status = 429;
-    const error_response = buildError(
-      ErrorCode.RATE_LIMIT_EXCEEDED,
-      "Too many requests. Please try again later.",
-    );
-
-    const secret = Env.ENCRYPTION_KEY;
-    if (secret) {
-      try {
-        const encrypted = encrypt(JSON.stringify(error_response), secret);
-        return new Response(JSON.stringify({ data: encrypted }), {
-          status: 429,
-          headers: {
-            "Content-Type": "application/json",
-            "x-encrypted": "true",
-            "X-RateLimit-Limit": String(config.max_requests),
-            "X-RateLimit-Remaining": "0",
-            "X-RateLimit-Reset": String(result.reset),
-          },
-        });
-      } catch {
-        return error_response;
-      }
+    // Public provider webhooks (Telegram, WhatsApp/Evolution, Mayar) hit this
+    // server at high frequency from a small set of provider IPs. Rate-limiting
+    // them would silently drop legitimate bot traffic, so skip the limit here —
+    // signature/secret verification still gates these endpoints downstream.
+    if (isPublicWebhookEndpoint(path)) {
+      return;
     }
-    return error_response;
-  }
-});
+
+    // Internal sidecar surface (Python AI service) is unauthenticated (no JWT) so
+    // it would share the tight IP bucket; a single multi-tool chat fans out into
+    // many internal calls. The shared AI_SERVICE_API_KEY gates it instead.
+    if (path.includes("/ai/internal")) {
+      return;
+    }
+
+    let config: RateLimitConfig;
+
+    if (isAuthEndpoint(path)) {
+      config = AUTH_ENDPOINT_LIMIT;
+    } else if (account?.workspace_id) {
+      config = AUTHENTICATED_LIMIT;
+    } else {
+      config = UNAUTHENTICATED_LIMIT;
+    }
+
+    const key = getClientKey(request, account);
+    const result = await checkRateLimit(key, config);
+
+    set.headers["X-RateLimit-Limit"] = String(config.max_requests);
+    set.headers["X-RateLimit-Remaining"] = String(result.remaining);
+    set.headers["X-RateLimit-Reset"] = String(result.reset);
+
+    if (!result.allowed) {
+      set.status = 429;
+      const error_response = buildError(
+        ErrorCode.RATE_LIMIT_EXCEEDED,
+        "Too many requests. Please try again later.",
+      );
+
+      const secret = Env.ENCRYPTION_KEY;
+      if (secret) {
+        try {
+          const encrypted = encrypt(JSON.stringify(error_response), secret);
+          return new Response(JSON.stringify({ data: encrypted }), {
+            status: 429,
+            headers: {
+              "Content-Type": "application/json",
+              "x-encrypted": "true",
+              "X-RateLimit-Limit": String(config.max_requests),
+              "X-RateLimit-Remaining": "0",
+              "X-RateLimit-Reset": String(result.reset),
+            },
+          });
+        } catch {
+          return error_response;
+        }
+      }
+      return error_response;
+    }
+    // Without .as("scoped") this hook stays local to the plugin instance and
+    // never runs for routes on the parent app — i.e. no rate limiting at all.
+  })
+  .as("scoped");

@@ -1,14 +1,14 @@
 import { createId } from "@paralleldrive/cuid2";
 import {
+  boolean,
+  decimal,
+  jsonb,
   pgTable,
   text,
   timestamp,
-  decimal,
-  jsonb,
-  boolean,
 } from "drizzle-orm/pg-core";
-import { workspaces } from "./workspaces";
 import { contacts } from "./contacts";
+import { workspaces } from "./workspaces";
 
 export const invoices = pgTable("invoices", {
   id: text("id").$defaultFn(createId).primaryKey().notNull(),

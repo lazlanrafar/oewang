@@ -1,8 +1,8 @@
 import { createId } from "@paralleldrive/cuid2";
-import { pgTable, timestamp, text } from "drizzle-orm/pg-core";
-import { workspaces } from "./workspaces";
+import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { transactions } from "./transactions";
 import { vaultFiles } from "./vault-files";
+import { workspaces } from "./workspaces";
 
 export const transactionAttachments = pgTable("transaction_attachments", {
   id: text("id").$defaultFn(createId).primaryKey(),

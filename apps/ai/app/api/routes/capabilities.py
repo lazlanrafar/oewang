@@ -7,6 +7,7 @@ import asyncio
 
 from fastapi import APIRouter
 
+from app.core import quota
 from app.core.embeddings import embed
 from app.modules.chatbot.service import run_chat
 from app.modules.chatbot.tools import WEB_TOOLS
@@ -27,20 +28,28 @@ router = APIRouter(tags=["capabilities"])
 
 @router.post("/receipt/parse")
 async def post_receipt_parse(req: ReceiptParseRequest) -> dict:
-    parsed = await asyncio.to_thread(
+    if req.workspace_id:
+        await quota.check_quota(req.workspace_id)
+    parsed, usage = await asyncio.to_thread(
         parse_receipt, req.file.data, req.file.type, req.categoryContext
     )
+    if req.workspace_id:
+        await quota.record_usage(req.workspace_id, usage)
     return {"parsed": parsed}
 
 
 @router.post("/import/extract")
 async def post_import_extract(req: ImportExtractRequest) -> dict:
+    if req.workspace_id:
+        await quota.check_quota(req.workspace_id)
     rows = req.rows
     if rows is None and req.data and req.mimeType:
         rows = await asyncio.to_thread(parse_file_to_rows, req.data, req.mimeType)
-    txns = await asyncio.to_thread(
+    txns, usage = await asyncio.to_thread(
         extract_transactions, rows or [], req.walletNames, req.categoryNames
     )
+    if req.workspace_id:
+        await quota.record_usage(req.workspace_id, usage)
     return {"transactions": txns}
 
 

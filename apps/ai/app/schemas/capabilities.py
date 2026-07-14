@@ -12,6 +12,9 @@ class FilePayload(BaseModel):
 class ReceiptParseRequest(BaseModel):
     file: FilePayload
     categoryContext: str = ""
+    # Optional for wire compat with older callers; when set, the call is
+    # quota-checked and metered against the workspace.
+    workspace_id: str | None = None
 
 
 class ImportExtractRequest(BaseModel):
@@ -21,6 +24,7 @@ class ImportExtractRequest(BaseModel):
     rows: list[dict] | None = None
     walletNames: list[str] = []
     categoryNames: list[str] = []
+    workspace_id: str | None = None
 
 
 class VaultChunkRequest(BaseModel):

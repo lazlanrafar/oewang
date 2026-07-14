@@ -1,8 +1,8 @@
 import { createId } from "@paralleldrive/cuid2";
-import { pgTable, text, timestamp, decimal } from "drizzle-orm/pg-core";
-import { workspaces } from "./workspaces";
+import { decimal, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { debts } from "./debts";
 import { transactions } from "./transactions";
+import { workspaces } from "./workspaces";
 
 export const debtPayments = pgTable("debt_payments", {
   id: text("id").$defaultFn(createId).primaryKey().notNull(),

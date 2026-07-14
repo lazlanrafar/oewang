@@ -1,7 +1,7 @@
 import { createId } from "@paralleldrive/cuid2";
 import { integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
-import { workspaces } from "./workspaces";
 import { pricing } from "./pricing";
+import { workspaces } from "./workspaces";
 
 export const workspaceAddons = pgTable("workspace_addons", {
   id: text("id").primaryKey().$defaultFn(createId),

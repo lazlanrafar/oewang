@@ -78,42 +78,6 @@ async function verifyJwt(token: string): Promise<{
   }
 }
 
-async function getActiveMembershipWorkspaceIds(user_id: string) {
-  const memberships = await db
-    .select({ workspace_id: user_workspaces.workspace_id })
-    .from(user_workspaces)
-    .innerJoin(workspaces, eq(user_workspaces.workspace_id, workspaces.id))
-    .where(
-      and(
-        eq(user_workspaces.user_id, user_id),
-        isNull(user_workspaces.deleted_at),
-        isNull(workspaces.deleted_at),
-      ),
-    );
-
-  return memberships.map((m) => m.workspace_id);
-}
-
-async function getMembershipRole(user_id: string, workspace_id: string) {
-  if (!workspace_id) {
-    return normalizeWorkspaceRole(null);
-  }
-
-  const [membership] = await db
-    .select({ role: user_workspaces.role })
-    .from(user_workspaces)
-    .where(
-      and(
-        eq(user_workspaces.user_id, user_id),
-        eq(user_workspaces.workspace_id, workspace_id),
-        isNull(user_workspaces.deleted_at),
-      ),
-    )
-    .limit(1);
-
-  return normalizeWorkspaceRole(membership?.role);
-}
-
 function resolveWorkspaceId(
   preferredWorkspaceId: string | null | undefined,
   membershipWorkspaceIds: string[],
@@ -128,85 +92,84 @@ function resolveWorkspaceId(
   return membershipWorkspaceIds[0] ?? "";
 }
 
-// Legacy tokens issued before the CUID2 migration carry a UUID-format
-// user_id that no longer matches any row in users.id. Detect that shape so
-// we can resolve those sessions by email (the stable identifier) instead
-// of treating them as unauthenticated.
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 /**
  * Auth plugin — provides derive context and guard macro.
  * Verifies the oewang-session JWT (HS256). Sets auth on context, null if unauthenticated.
+ *
+ * Runs before every handler, so this is the hottest DB path in the API: the
+ * user row and all active memberships (+ roles) come back in ONE round trip
+ * instead of the previous three sequential queries.
  */
 export async function getAuth(token: string) {
-  // Try app JWT first
   const jwt_payload = await verifyJwt(token);
-  if (jwt_payload) {
-    const isLegacyUuid = UUID_PATTERN.test(jwt_payload.user_id);
+  if (!jwt_payload) return null;
 
-    const [db_user] =
-      isLegacyUuid && jwt_payload.email
-        ? await db
-            .select({
-              id: users.id,
-              email: users.email,
-              workspace_id: users.workspace_id,
-              system_role: users.system_role,
-            })
-            .from(users)
-            .where(eq(users.email, jwt_payload.email))
-            .limit(1)
-        : await db
-            .select({
-              id: users.id,
-              email: users.email,
-              workspace_id: users.workspace_id,
-              system_role: users.system_role,
-            })
-            .from(users)
-            .where(eq(users.id, jwt_payload.user_id))
-            .limit(1);
+  const rows = await db
+    .select({
+      id: users.id,
+      email: users.email,
+      default_workspace_id: users.workspace_id,
+      system_role: users.system_role,
+      membership_workspace_id: user_workspaces.workspace_id,
+      membership_role: user_workspaces.role,
+      // Non-null only when the membership's workspace is alive.
+      live_workspace_id: workspaces.id,
+    })
+    .from(users)
+    .leftJoin(
+      user_workspaces,
+      and(
+        eq(user_workspaces.user_id, users.id),
+        isNull(user_workspaces.deleted_at),
+      ),
+    )
+    .leftJoin(
+      workspaces,
+      and(
+        eq(workspaces.id, user_workspaces.workspace_id),
+        isNull(workspaces.deleted_at),
+      ),
+    )
+    .where(eq(users.id, jwt_payload.user_id));
 
-    if (!db_user) return null;
+  const db_user = rows[0];
+  if (!db_user) return null;
 
-    // For legacy UUID tokens, switch to the real (CUID2) user id from the
-    // DB row so downstream membership / audit queries hit the right rows.
-    const resolved_user_id = isLegacyUuid ? db_user.id : jwt_payload.user_id;
-
-    const membershipWorkspaceIds =
-      await getActiveMembershipWorkspaceIds(resolved_user_id);
-
-    // Enforce workspace-scoped access: if token requests a workspace,
-    // the user must still be an active member of that workspace.
-    if (
-      jwt_payload.workspace_id &&
-      !membershipWorkspaceIds.includes(jwt_payload.workspace_id)
-    ) {
-      return null;
+  const membershipWorkspaceIds: string[] = [];
+  const roleByWorkspace = new Map<string, string | null>();
+  for (const row of rows) {
+    if (row.membership_workspace_id && row.live_workspace_id) {
+      membershipWorkspaceIds.push(row.membership_workspace_id);
+      roleByWorkspace.set(row.membership_workspace_id, row.membership_role);
     }
-
-    const workspace_id = resolveWorkspaceId(
-      jwt_payload.workspace_id || db_user.workspace_id,
-      membershipWorkspaceIds,
-    );
-    const workspace_role = await getMembershipRole(
-      resolved_user_id,
-      workspace_id,
-    );
-
-    return {
-      user_id: resolved_user_id,
-      workspace_id,
-      workspaceId: workspace_id,
-      workspace_role,
-      workspaceRole: workspace_role,
-      email: jwt_payload.email || db_user.email,
-      system_role: db_user.system_role || jwt_payload.system_role || "user",
-    } as const;
   }
 
-  return null;
+  // Enforce workspace-scoped access: if token requests a workspace,
+  // the user must still be an active member of that workspace.
+  if (
+    jwt_payload.workspace_id &&
+    !membershipWorkspaceIds.includes(jwt_payload.workspace_id)
+  ) {
+    return null;
+  }
+
+  const workspace_id = resolveWorkspaceId(
+    jwt_payload.workspace_id || db_user.default_workspace_id,
+    membershipWorkspaceIds,
+  );
+  const workspace_role = normalizeWorkspaceRole(
+    workspace_id ? (roleByWorkspace.get(workspace_id) ?? null) : null,
+  );
+
+  return {
+    user_id: jwt_payload.user_id,
+    workspace_id,
+    workspaceId: workspace_id,
+    workspace_role,
+    workspaceRole: workspace_role,
+    email: jwt_payload.email || db_user.email,
+    system_role: db_user.system_role || jwt_payload.system_role || "user",
+  } as const;
 }
 
 export const authPlugin = new Elysia({ name: "auth" })

@@ -7,8 +7,8 @@ import {
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
-import { workspaces } from "./workspaces";
 import { users } from "./users";
+import { workspaces } from "./workspaces";
 
 export const workspaceIntegrations = pgTable(
   "workspace_integrations",
