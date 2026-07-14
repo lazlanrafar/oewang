@@ -4,11 +4,20 @@
 // assignments, so the plugin must be imported dynamically.
 process.env.ENCRYPTION_KEY = "a".repeat(32);
 process.env.DATA_ENCRYPTION_KEY = "b".repeat(32);
+// Force the in-memory limiter: with a Redis backend the counters would leak
+// between test runs (15-min auth window). Empty string wins over .env because
+// dotenv never overrides keys already present in process.env.
+process.env.REDIS_URL = "";
+process.env.UPSTASH_REDIS_REST_URL = "";
+process.env.UPSTASH_REDIS_REST_TOKEN = "";
 
 import { describe, expect, it } from "bun:test";
 import { Elysia } from "elysia";
 
-const { rateLimitPlugin } = await import("./rate-limit");
+// require, not import: static imports hoist above the env pins, and top-level
+// await is unavailable in this CJS-typechecked package.
+// biome-ignore lint/style/noCommonJs: intentional load-order control
+const { rateLimitPlugin } = require("./rate-limit");
 
 function makeApp() {
   return new Elysia()

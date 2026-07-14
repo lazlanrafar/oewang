@@ -108,7 +108,10 @@ export const bulkCreateTransactions = async (
         failed: number;
         failures?: { index: number; reason: string }[];
       }>
-    >("/transactions/bulk", data);
+    >("/transactions/bulk", data, {
+      // CSV imports can be hundreds of rows — exempt from the 15s default.
+      timeout: 120_000,
+    });
     const apiResponse = (response as any)._api_response as ApiResponse<{
       imported: number;
       failed: number;

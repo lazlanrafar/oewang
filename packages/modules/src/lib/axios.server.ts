@@ -6,6 +6,9 @@ import axios from "axios";
 // Create a configured axios instance
 export const axiosInstance = axios.create({
   baseURL: `${Env.NEXT_PUBLIC_API_URL ?? "http://localhost:3002"}/v1`,
+  // Server actions block page renders — a hung API call must fail fast rather
+  // than hang the request forever (axios default is no timeout).
+  timeout: 15_000,
   headers: {
     "Content-Type": "application/json",
   },
@@ -37,8 +40,6 @@ axiosInstance.interceptors.request.use(async (config) => {
 
   // Server-side: Try to get token from Next.js cookies
   try {
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-expect-error — next/headers is available at runtime in Next.js server context
     const { cookies, headers } = await import("next/headers");
     const cookieStore = await cookies();
     token = cookieStore.get(cookieName)?.value;

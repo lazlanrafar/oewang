@@ -144,11 +144,12 @@ export async function sendChatMessage(
   if (direct) return direct;
 
   try {
-    const response = await api.post("/ai/chat", {
-      messages: messagesWithAttachments,
-      sessionId,
-      webSearch,
-    });
+    // AI endpoints run multi-step LLM loops — exempt from the 15s default.
+    const response = await api.post(
+      "/ai/chat",
+      { messages: messagesWithAttachments, sessionId, webSearch },
+      { timeout: 120_000 },
+    );
     const apiResponse = (response as any)._api_response;
     const data = (apiResponse?.data ??
       response.data?.data ??
@@ -235,7 +236,11 @@ export async function parseReceipt(file: {
   data: string;
 }): Promise<{ success: boolean; data?: ParsedReceipt; error?: string }> {
   try {
-    const response = await api.post("/ai/parse-receipt", { file });
+    const response = await api.post(
+      "/ai/parse-receipt",
+      { file },
+      { timeout: 120_000 },
+    );
     const apiResponse = (response as any)._api_response;
     return {
       success: true,

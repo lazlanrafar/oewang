@@ -4,6 +4,7 @@ import { redis } from "@workspace/redis";
 import { ErrorCode } from "@workspace/types";
 import { buildError } from "@workspace/utils";
 import { status } from "elysia";
+import { cacheDel, cacheGet, cacheSet } from "../../lib/cache";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { CategoriesRepository } from "../categories/categories.repository";
 import { RealtimeService } from "../realtime/realtime.service";
@@ -19,6 +20,9 @@ import { AiRepository } from "./ai.repository";
 import { AiSidecarClient } from "./ai-sidecar-client";
 
 const log = createLogger("ai-service");
+
+const QUOTA_TTL = 60;
+const quotaKey = (workspaceId: string) => `oewang:ai:quota:${workspaceId}`;
 
 // History turns handed to the sidecar LLM loop (was @workspace/ai ChatMessage).
 type RepoChatMessage = {
@@ -679,6 +683,7 @@ export abstract class AiService {
       (response.usage?.input_tokens ?? 0) +
       (response.usage?.output_tokens ?? 0);
     await AiRepository.incrementAiTokens(workspaceId, tokensSpent);
+    await cacheDel(quotaKey(workspaceId));
 
     // Notify connected WebSocket clients that AI usage has changed so the
     // NavUsage widget can refresh without polling.
@@ -785,7 +790,17 @@ export abstract class AiService {
     return AiRepository.getSession(sessionId, workspaceId);
   }
 
+  // Display-only cache for GET /ai/quota (fetched on every page load). Quota
+  // ENFORCEMENT (chat-begin, sidecar check_quota) reads the DB directly and is
+  // never cached. The Python sidecar also increments tokens straight in the DB
+  // (receipt/import), so the displayed number can lag up to QUOTA_TTL.
   static async getUsageAndQuota(workspaceId: string) {
-    return AiRepository.getUsageAndQuota(workspaceId);
+    // Workspace-less sessions would all share one empty-suffix key.
+    if (!workspaceId) return AiRepository.getUsageAndQuota(workspaceId);
+    const cached = await cacheGet<object>(quotaKey(workspaceId));
+    if (cached) return cached;
+    const usage = await AiRepository.getUsageAndQuota(workspaceId);
+    await cacheSet(quotaKey(workspaceId), usage, QUOTA_TTL);
+    return usage;
   }
 }

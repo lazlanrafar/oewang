@@ -17,6 +17,7 @@ import { NotificationsService } from "../notifications/notifications.service";
 import { OrdersService } from "../orders/orders.service";
 import { SettingsRepository } from "../settings/settings.repository";
 import { UsersRepository } from "../users/users.repository";
+import { profileKey } from "../users/users.service";
 import { WalletGroupsRepository } from "../wallets/groups/groups.repository";
 import { WalletsRepository } from "../wallets/wallets.repository";
 import {
@@ -474,7 +475,7 @@ export abstract class WorkspacesService {
       entity_id: invitation.id,
     });
 
-    await cacheDel(membersKey(invitation.workspaceId));
+    await cacheDel(membersKey(invitation.workspaceId), profileKey(user_id));
 
     return invitation.workspaceId;
   }
@@ -560,7 +561,7 @@ export abstract class WorkspacesService {
       }).catch(() => {});
     }
 
-    await cacheDel(membersKey(invitation.workspaceId));
+    await cacheDel(membersKey(invitation.workspaceId), profileKey(user_id));
 
     return invitation.workspaceId;
   }

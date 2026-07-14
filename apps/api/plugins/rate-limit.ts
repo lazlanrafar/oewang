@@ -4,12 +4,15 @@ import { ErrorCode } from "@workspace/types";
 import { buildError } from "@workspace/utils";
 import { Elysia } from "elysia";
 
+// Use whatever Redis the environment provides (ioredis via REDIS_URL, or
+// Upstash REST) — same init as lib/cache.ts. Without this, prod (REDIS_URL
+// only) silently rate-limits per-instance in memory.
 let redis: typeof import("@workspace/redis").redis | null = null;
-if (Env.UPSTASH_REDIS_REST_URL && Env.UPSTASH_REDIS_REST_TOKEN) {
-  import("@workspace/redis").then((mod) => {
+import("@workspace/redis")
+  .then((mod) => {
     redis = mod.redis;
-  });
-}
+  })
+  .catch(() => {});
 
 type RateLimitConfig = {
   max_requests: number;
@@ -60,24 +63,26 @@ async function checkRateLimitRedis(
   key: string,
   config: RateLimitConfig,
 ): Promise<{ allowed: boolean; remaining: number; reset: number }> {
+  // Fixed window via INCR on a window-indexed key: one code path that works on
+  // both ioredis and the Upstash REST client (their zadd/pipeline syntaxes
+  // differ). ponytail: fixed window, switch to a sliding window only if
+  // boundary bursts ever matter.
   const now = Date.now();
-  const windowKey = `ratelimit:${key}`;
-  const windowStart = now - config.window_ms;
+  const window_index = Math.floor(now / config.window_ms);
+  const windowKey = `ratelimit:${key}:${window_index}`;
+  const reset = Math.ceil(((window_index + 1) * config.window_ms) / 1000);
 
   try {
-    const pipeline = redis!.pipeline();
-    pipeline.zremrangebyscore(windowKey, 0, windowStart);
-    pipeline.zcard(windowKey);
-    pipeline.zadd(windowKey, { score: now, member: `${now}:${Math.random()}` });
-    pipeline.expire(windowKey, Math.ceil(config.window_ms / 1000));
-    const results = (await pipeline.exec()) as [any, number][] | null;
+    const count = (await redis!.incr(windowKey)) as number;
+    if (count === 1) {
+      await redis!.expire(windowKey, Math.ceil(config.window_ms / 1000));
+    }
 
-    const currentCount = results?.[1]?.[1] ?? 0;
-    const allowed = currentCount < config.max_requests;
-    const remaining = Math.max(0, config.max_requests - currentCount - 1);
-    const reset = Math.ceil((now + config.window_ms) / 1000);
-
-    return { allowed, remaining, reset };
+    return {
+      allowed: count <= config.max_requests,
+      remaining: Math.max(0, config.max_requests - count),
+      reset,
+    };
   } catch {
     return checkRateLimitMemory(key, config);
   }
