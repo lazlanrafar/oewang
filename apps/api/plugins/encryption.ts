@@ -56,6 +56,9 @@ export const encryptionPlugin = (app: Elysia) =>
           path.startsWith("/mcp") ||
           path.startsWith("/.well-known") ||
           path.startsWith("/oauth") ||
+          // Public marketing endpoint — plaintext JSON so the website (and any
+          // external consumer) can read it with a plain fetch, no shared key.
+          path.includes("/public/pricing") ||
           path.includes("/mayar/webhook") ||
           path.includes("/integrations/whatsapp/webhook") ||
           path.includes("/integrations/telegram/webhook") ||

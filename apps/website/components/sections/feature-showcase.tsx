@@ -1,109 +1,93 @@
 "use client";
 
-import { useRef } from "react";
+import { Check } from "lucide-react";
 
 import type { WebsiteDictionary } from "@/lib/translations";
-import { useGsapReveal } from "@/lib/use-gsap-reveal";
-
+import { useHeadlineReveal } from "@/lib/motion";
 import { ChatWireframe } from "./wireframe/chat-wireframe";
 import { DashboardWireframe } from "./wireframe/dashboard-wireframe";
 import { TransactionsWireframe } from "./wireframe/transactions-wireframe";
+import { Container, SectionLabel } from "./_shared";
 
 type WireframeComponent = React.ComponentType;
+const WIREFRAMES: WireframeComponent[] = [
+  TransactionsWireframe,
+  ChatWireframe,
+  DashboardWireframe,
+];
 
 function FeatureChapter({
-  id,
-  label,
-  title,
-  subtitle,
-  items,
+  chapter,
   Wireframe,
   reverse,
 }: {
-  id: string;
-  label: string;
-  title: string;
-  subtitle: string;
-  items: readonly string[];
+  chapter: WebsiteDictionary["features"]["chapters"][number];
   Wireframe: WireframeComponent;
   reverse: boolean;
 }) {
-  const ref = useRef<HTMLElement>(null);
-  useGsapReveal(ref);
+  const title = useHeadlineReveal<HTMLHeadingElement>();
 
   return (
-    <section id={id} ref={ref} className="bg-background py-14 sm:py-18">
-      <div className="mx-auto max-w-[1300px] px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-2">
-          <div className={reverse ? "lg:order-2" : ""}>
-            <p className="mb-3 text-muted-foreground text-xs uppercase tracking-[0.22em]">{label}</p>
-            <h2 className="mb-3 font-serif text-2xl text-foreground tracking-tight sm:text-3xl">{title}</h2>
-            <p className="mb-5 text-base text-muted-foreground leading-relaxed">{subtitle}</p>
-            <ul className="space-y-2.5">
-              {items.map((item) => (
-                <li key={item} className="flex items-start gap-2.5">
-                  <span className="mt-1.5 size-1.5 shrink-0 rounded-none bg-foreground" />
-                  <span className="text-foreground text-sm">{item}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
+    <div className="grid grid-cols-1 items-center gap-12 py-16 sm:py-20 lg:grid-cols-2">
+      <div className={reverse ? "lg:order-2" : ""}>
+        <SectionLabel>{chapter.label}</SectionLabel>
+        <h3
+          ref={title}
+          className="reveal-headline mt-5 font-serif text-3xl text-foreground leading-tight tracking-tight sm:text-4xl"
+        >
+          {chapter.title}
+        </h3>
+        <p className="mt-4 max-w-md text-muted-foreground leading-relaxed">
+          {chapter.description}
+        </p>
+        <ul className="mt-7 space-y-3">
+          {chapter.points.map((point) => (
+            <li key={point} className="flex items-center gap-3">
+              <Check className="size-4 shrink-0 text-[hsl(var(--brand-accent))]" />
+              <span className="text-foreground/90 text-sm">{point}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
 
-          <div className={reverse ? "lg:order-1" : ""}>
-            <div className="rounded-none border border-border/70 bg-muted/25 p-4 sm:p-5">
-              <Wireframe />
-            </div>
-          </div>
+      <div className={reverse ? "lg:order-1" : ""}>
+        <div
+          data-speed={reverse ? "1.06" : "0.94"}
+          className="border border-border bg-[hsl(var(--card))] p-2 shadow-2xl shadow-black/40"
+        >
+          <Wireframe />
         </div>
       </div>
-    </section>
+    </div>
   );
 }
 
-export function FeatureShowcases({ dictionary }: { dictionary: WebsiteDictionary }) {
+export function FeatureShowcases({
+  dictionary,
+}: {
+  dictionary: WebsiteDictionary;
+}) {
   return (
-    <>
-      <div className="mx-auto max-w-[1300px] px-4 sm:px-6 lg:px-8">
-        <div className="h-px w-full border-border/70 border-t" />
-      </div>
+    <section id="features" className="py-16 sm:py-24">
+      <Container>
+        <div className="max-w-2xl">
+          <SectionLabel>{dictionary.features.label}</SectionLabel>
+          <h2 className="mt-5 font-serif text-3xl text-foreground leading-tight tracking-tight sm:text-5xl">
+            {dictionary.features.title}
+          </h2>
+        </div>
 
-      <FeatureChapter
-        id="clarity"
-        label={dictionary.clarity.label}
-        title={dictionary.clarity.title}
-        subtitle={dictionary.clarity.subtitle}
-        items={dictionary.clarity.items}
-        Wireframe={TransactionsWireframe}
-        reverse={false}
-      />
-
-      <div className="mx-auto max-w-[1300px] px-4 sm:px-6 lg:px-8">
-        <div className="h-px w-full border-border/70 border-t" />
-      </div>
-
-      <FeatureChapter
-        id="ai"
-        label={dictionary.ai.label}
-        title={dictionary.ai.title}
-        subtitle={dictionary.ai.subtitle}
-        items={dictionary.ai.items}
-        Wireframe={ChatWireframe}
-        reverse={true}
-      />
-
-      <div className="mx-auto max-w-[1300px] px-4 sm:px-6 lg:px-8">
-        <div className="h-px w-full border-border/70 border-t" />
-      </div>
-
-      <FeatureChapter
-        id="workspaces"
-        label={dictionary.workspaces.label}
-        title={dictionary.workspaces.title}
-        subtitle={dictionary.workspaces.subtitle}
-        items={dictionary.workspaces.items}
-        Wireframe={DashboardWireframe}
-        reverse={false}
-      />
-    </>
+        <div className="mt-6 divide-y divide-border">
+          {dictionary.features.chapters.map((chapter, i) => (
+            <FeatureChapter
+              key={chapter.label}
+              chapter={chapter}
+              Wireframe={WIREFRAMES[i % WIREFRAMES.length] ?? DashboardWireframe}
+              reverse={i % 2 === 1}
+            />
+          ))}
+        </div>
+      </Container>
+    </section>
   );
 }

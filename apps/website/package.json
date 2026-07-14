@@ -13,7 +13,9 @@
   },
   "dependencies": {
     "@formatjs/intl-localematcher": "^0.8.1",
+    "@gsap/react": "^2.1.2",
     "@workspace/constants": "workspace:*",
+    "@workspace/encryption": "workspace:*",
     "@workspace/ui": "workspace:*",
     "gsap": "^3.15.0",
     "lucide-react": "catalog:",

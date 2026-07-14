@@ -4,11 +4,12 @@ import { useState } from "react";
 
 import Link from "next/link";
 
-import { Button, Icons } from "@workspace/ui/atoms";
+import { Button } from "@workspace/ui/atoms";
 import { Menu, X } from "lucide-react";
 
 import type { WebsiteDictionary } from "@/lib/translations";
 import { NAV_ITEMS } from "@/navigation/nav-items";
+import { Brand } from "./brand";
 
 export function Header({
   isLoggedIn,
@@ -43,11 +44,10 @@ export function Header({
           <div className="flex min-h-[56px] items-center justify-between border border-border/60 bg-background/95 px-4 py-2.5 backdrop-blur-md sm:px-5">
             <Link
               href={withLocale("/")}
-              className="flex items-center gap-2 transition-opacity duration-200 hover:opacity-80"
-              aria-label="oewang homepage"
+              className="inline-flex items-center transition-opacity duration-200 hover:opacity-80"
+              aria-label="Oewang homepage"
             >
-              <Icons.LogoSmall className="size-6 text-foreground" />
-              <span className="font-serif text-xl tracking-tight">oewang</span>
+              <Brand />
             </Link>
 
             <div className="hidden items-center gap-0.5 xl:flex">
@@ -68,9 +68,14 @@ export function Header({
                   <Link href={`${appUrl}/`}>Dashboard</Link>
                 </Button>
               ) : (
-                <Button asChild variant="outline" size="sm">
-                  <Link href={`${appUrl}/login`}>{dictionary.nav.signIn}</Link>
-                </Button>
+                <>
+                  <Button asChild variant="ghost" size="sm">
+                    <Link href={`${appUrl}/login`}>{dictionary.nav.signIn}</Link>
+                  </Button>
+                  <Button asChild size="sm">
+                    <Link href={`${appUrl}/register`}>{dictionary.hero.ctaStartFree}</Link>
+                  </Button>
+                </>
               )}
             </div>
 

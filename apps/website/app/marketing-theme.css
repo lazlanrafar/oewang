@@ -1,0 +1,119 @@
+/*
+ * Marketing-only theme overrides. Scoped to the website body so we never touch
+ * the shared design system in packages/ui/globals.css (used by the app).
+ * The website is always dark ("dark fintech"): near-black canvas, white type,
+ * one teal accent. Editorial serif display via Hedvig Letters Serif.
+ */
+
+body {
+  /* Deeper than the shared .dark (0 0% 5%) for a true near-black canvas. */
+  --background: 0 0% 4%;
+  --foreground: 0 0% 98%;
+
+  /* Elevated surfaces + hairline borders for the editorial card system. */
+  --card: 0 0% 6%;
+  --surface: 0 0% 8%;
+  --border: 0 0% 14%;
+  --muted: 0 0% 9%;
+  --muted-foreground: 0 0% 55%;
+
+  /* The single accent — a refined teal. Used sparingly (CTAs, marks, italics). */
+  --brand-accent: 168 84% 45%;
+  --brand-accent-foreground: 0 0% 4%;
+
+  /* Brand guideline: sharp corners everywhere. Zero every radius token so even
+   * shared @workspace/ui components (buttons, inputs) render square on the
+   * marketing site. App design system is untouched (this is body-scoped). */
+  --radius: 0px;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --radius-2xl: 0px;
+  --radius-3xl: 0px;
+  --radius-4xl: 0px;
+
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+/* Selection uses the accent so even micro-interactions stay on-brand. */
+body ::selection {
+  background: hsl(var(--brand-accent) / 0.25);
+  color: hsl(var(--foreground));
+}
+
+/*
+ * ScrollSmoother requires this fixed wrapper/content structure. The wrapper is
+ * pinned to the viewport and the content is transformed for momentum scrolling.
+ * The header lives OUTSIDE #smooth-content (position: fixed) so it isn't
+ * transformed. When JS/GSAP is absent, these are inert and the page scrolls
+ * natively — nothing depends on them for layout.
+ */
+#smooth-wrapper {
+  overflow: hidden;
+}
+
+/* Only fix the wrapper once ScrollSmoother is active (adds .smoother-ready). */
+.smoother-ready #smooth-wrapper {
+  position: fixed;
+  inset: 0;
+}
+
+/* Seamless logo/channel marquee. The track holds two copies of the list, so
+ * translating by -50% loops without a seam. Paused for reduced-motion. */
+@keyframes marquee-x {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.marquee-track {
+  animation: marquee-x 32s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track {
+    animation: none;
+  }
+}
+
+/* Chat bubble enter — used when the sticky phone swaps scenarios. Each bubble
+ * sets its own animation-delay inline for a stagger. Off for reduced motion. */
+@keyframes msg-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.animate-msg {
+  opacity: 0;
+  animation: msg-in 0.5s ease forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-msg {
+    opacity: 1;
+    animation: none;
+  }
+}
+
+/* SplitText masked line reveals: clip each line so it rises out of a mask. */
+.split-line-mask {
+  overflow: hidden;
+  display: block;
+}
+
+/* Reveal headlines start hidden ONLY when JS is present (html.js, set by an
+ * inline script before paint) AND motion is allowed. No-JS or reduced-motion
+ * keeps the text visible — nothing is gated behind JS for crawlers. GSAP then
+ * flips visibility and animates the lines in (see lib/motion.ts). */
+@media (prefers-reduced-motion: no-preference) {
+  html.js .reveal-headline {
+    visibility: hidden;
+  }
+}

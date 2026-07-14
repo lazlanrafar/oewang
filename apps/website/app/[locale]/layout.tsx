@@ -6,6 +6,7 @@ import type { Metadata } from "next";
 
 import { Providers } from "@/components/providers";
 import "@workspace/ui/globals.css";
+import "@/app/marketing-theme.css";
 
 import { WEBSITE_CONFIG } from "@workspace/constants";
 
@@ -50,7 +51,17 @@ export default async function RootLayout({
   const { locale } = await params;
 
   return (
-    <html lang={locale} suppressHydrationWarning>
+    <html lang={locale} className="dark" suppressHydrationWarning>
+      <head>
+        {/* Mark JS present before first paint so reveal headlines only hide when
+            they can actually be animated back in (no-JS keeps them visible). */}
+        <script
+          // biome-ignore lint/security/noDangerouslySetInnerHtml: tiny synchronous no-flash bootstrap
+          dangerouslySetInnerHTML={{
+            __html: "document.documentElement.classList.add('js')",
+          }}
+        />
+      </head>
       <body className={`${fontVars} min-h-screen antialiased`}>
         <Providers>
           {children}

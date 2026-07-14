@@ -1,8 +1,12 @@
+"use client";
+
 import Link from "next/link";
 
 import { Button } from "@workspace/ui/atoms";
 
 import type { WebsiteDictionary } from "@/lib/translations";
+import { useHeadlineReveal } from "@/lib/motion";
+import { Container, SectionLabel } from "./_shared";
 
 export function HeroSection({
   isLoggedIn,
@@ -13,86 +17,65 @@ export function HeroSection({
   appUrl: string;
   dictionary: WebsiteDictionary;
 }) {
+  const headline = useHeadlineReveal<HTMLHeadingElement>({ start: "top 92%" });
+
   return (
-    <section id="overview" className="relative overflow-hidden pt-36 pb-16 sm:pt-40 sm:pb-24">
+    <section
+      id="overview"
+      className="relative overflow-hidden pt-32 pb-4"
+    >
+      {/* Ambient teal glow — centered behind the headline. */}
       <div
+        aria-hidden
         className="-z-10 pointer-events-none absolute inset-0"
         style={{
           background:
-            "radial-gradient(1200px 500px at 80% -10%, hsl(var(--foreground)/0.12), transparent 60%), radial-gradient(900px 500px at 10% 0%, hsl(var(--muted-foreground)/0.12), transparent 65%)",
+            "radial-gradient(1000px 520px at 50% -6%, hsl(var(--brand-accent)/0.16), transparent 62%), radial-gradient(760px 460px at 50% 10%, hsl(var(--foreground)/0.05), transparent 68%)",
         }}
       />
 
-      <div className="mx-auto max-w-[1300px] px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-2">
-          <div>
-            <div className="mb-6 inline-flex items-center rounded-none border border-border/80 bg-background px-3 py-1 text-muted-foreground text-xs">
-              <span className="mr-2 inline-block size-1.5 rounded-none bg-green-500" />
-              {dictionary.hero.badge}
-            </div>
+      <Container>
+        <div className="mx-auto flex max-w-4xl flex-col items-center text-center">
+          <SectionLabel>{dictionary.hero.badge}</SectionLabel>
 
-            <h1 className="font-serif text-4xl text-foreground leading-[1.05] tracking-tight sm:text-5xl md:text-6xl">
-              {dictionary.hero.title}
-            </h1>
+          <h1
+            ref={headline}
+            className="reveal-headline mt-7 font-serif text-[2.75rem] text-foreground leading-[1.02] tracking-tight sm:text-6xl md:text-7xl"
+          >
+            {dictionary.hero.titleLead}{" "}
+            <em className="text-[hsl(var(--brand-accent))] italic">
+              {dictionary.hero.titleAccent}
+            </em>
+          </h1>
 
-            <p className="mt-5 max-w-xl text-base text-muted-foreground leading-relaxed sm:text-lg">
-              {dictionary.hero.subtitle}
-            </p>
+          <p className="mt-7 max-w-2xl text-balance text-base text-muted-foreground leading-relaxed sm:text-lg">
+            {dictionary.hero.subtitle}
+          </p>
 
-            <div className="mt-8 flex flex-wrap items-center gap-3">
-              {isLoggedIn ? (
+          <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
+            {isLoggedIn ? (
+              <Button size="lg" asChild>
+                <Link href={`${appUrl}/`}>{dictionary.hero.ctaGoToDashboard}</Link>
+              </Button>
+            ) : (
+              <>
                 <Button size="lg" asChild>
-                  <Link href={`${appUrl}/`}>{dictionary.hero.ctaGoToDashboard}</Link>
+                  <Link href={`${appUrl}/register`}>
+                    {dictionary.hero.ctaStartFree}
+                  </Link>
                 </Button>
-              ) : (
-                <>
-                  <Button size="lg" asChild>
-                    <Link href={`${appUrl}/register`}>{dictionary.hero.ctaStartFree}</Link>
-                  </Button>
-                  <Button size="lg" variant="outline" asChild>
-                    <a href="#capture">{dictionary.hero.ctaSeeHow}</a>
-                  </Button>
-                </>
-              )}
-            </div>
-
-            <p className="mt-4 text-muted-foreground text-xs">{dictionary.hero.trialNote}</p>
+                <Button size="lg" variant="outline" asChild>
+                  <a href="#overview-flow">{dictionary.hero.ctaSeeHow}</a>
+                </Button>
+              </>
+            )}
           </div>
 
-          <div className="relative">
-            <div className="rounded-none border border-border/70 bg-background/90 p-5 backdrop-blur-sm sm:p-6">
-              <div className="flex items-center justify-between border-border/70 border-b pb-4">
-                <p className="text-muted-foreground text-xs uppercase tracking-[0.2em]">Workspace Snapshot</p>
-                <p className="text-green-600 text-xs">Live sync</p>
-              </div>
-
-              <div className="mt-4 grid grid-cols-2 gap-3">
-                <div className="rounded-none border border-border bg-muted/30 p-4">
-                  <p className="text-muted-foreground text-xs">Transactions</p>
-                  <p className="mt-1 font-serif text-2xl">1,284</p>
-                  <p className="mt-1 text-green-600 text-xs">+12% this month</p>
-                </div>
-                <div className="rounded-none border border-border bg-muted/30 p-4">
-                  <p className="text-muted-foreground text-xs">Uncategorized</p>
-                  <p className="mt-1 font-serif text-2xl">18</p>
-                  <p className="mt-1 text-muted-foreground text-xs">Auto-rules active</p>
-                </div>
-                <div className="col-span-2 rounded-none border border-border bg-muted/30 p-4">
-                  <p className="text-muted-foreground text-xs">Teams and personal workspaces in one account</p>
-                  <div className="mt-3 flex items-center justify-between text-sm">
-                    <span>Personal</span>
-                    <span className="text-muted-foreground">Synced</span>
-                  </div>
-                  <div className="mt-2 flex items-center justify-between text-sm">
-                    <span>Studio Workspace</span>
-                    <span className="text-muted-foreground">4 members</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <p className="mt-5 text-muted-foreground text-xs">
+            {dictionary.hero.trialNote}
+          </p>
         </div>
-      </div>
+      </Container>
     </section>
   );
 }
