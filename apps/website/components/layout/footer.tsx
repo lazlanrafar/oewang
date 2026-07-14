@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { Icons } from "@workspace/ui/atoms";
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 
@@ -38,7 +39,11 @@ export function Footer({ locale, dictionary }: { locale: string; dictionary: Web
       <div className="mx-auto max-w-[1300px] px-4 py-10 sm:px-6 lg:px-8">
         <div className="flex flex-col items-start justify-between gap-8 sm:flex-row sm:items-start">
           <div>
-            <Link href={withLocale("/")} className="mb-3 inline-block">
+            <Link
+              href={withLocale("/")}
+              className="mb-3 inline-flex items-center gap-2"
+            >
+              <Icons.LogoSmall className="size-6 text-foreground" />
               <span className="font-serif text-xl tracking-tight">oewang</span>
             </Link>
             <p className="mb-4 text-muted-foreground text-sm">{dictionary.footer.tagline}</p>
