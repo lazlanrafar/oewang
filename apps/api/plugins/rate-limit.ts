@@ -157,17 +157,24 @@ export const rateLimitPlugin = new Elysia({
       return;
     }
 
+    // Each tier gets its own counter key: a burst of unauthenticated traffic
+    // (e.g. 401s on the login page) must not consume the strict 10/15min auth
+    // bucket and block the login itself.
     let config: RateLimitConfig;
+    let bucket: string;
 
     if (isAuthEndpoint(path)) {
       config = AUTH_ENDPOINT_LIMIT;
+      bucket = "auth";
     } else if (account?.workspace_id) {
       config = AUTHENTICATED_LIMIT;
+      bucket = "authed";
     } else {
       config = UNAUTHENTICATED_LIMIT;
+      bucket = "unauth";
     }
 
-    const key = getClientKey(request, account);
+    const key = `${bucket}:${getClientKey(request, account)}`;
     const result = await checkRateLimit(key, config);
 
     set.headers["X-RateLimit-Limit"] = String(config.max_requests);
