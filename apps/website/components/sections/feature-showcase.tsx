@@ -4,25 +4,23 @@ import { Check } from "lucide-react";
 
 import type { WebsiteDictionary } from "@/lib/translations";
 import { useHeadlineReveal } from "@/lib/motion";
-import { ChatWireframe } from "./wireframe/chat-wireframe";
-import { DashboardWireframe } from "./wireframe/dashboard-wireframe";
-import { TransactionsWireframe } from "./wireframe/transactions-wireframe";
+import { AiChatCard } from "./visuals/ai-chat-card";
+import { TransactionsTable } from "./visuals/transactions-table";
+import { WorkspacesCard } from "./visuals/workspaces-card";
 import { Container, SectionLabel } from "./_shared";
 
-type WireframeComponent = React.ComponentType;
-const WIREFRAMES: WireframeComponent[] = [
-  TransactionsWireframe,
-  ChatWireframe,
-  DashboardWireframe,
-];
+type VisualComponent = React.ComponentType;
+// Real rendered visual per chapter: Clarity → table, AI → chat, Workspaces →
+// switcher.
+const VISUALS: VisualComponent[] = [TransactionsTable, AiChatCard, WorkspacesCard];
 
 function FeatureChapter({
   chapter,
-  Wireframe,
+  Visual,
   reverse,
 }: {
   chapter: WebsiteDictionary["features"]["chapters"][number];
-  Wireframe: WireframeComponent;
+  Visual: VisualComponent;
   reverse: boolean;
 }) {
   const title = useHeadlineReveal<HTMLHeadingElement>();
@@ -53,9 +51,9 @@ function FeatureChapter({
       <div className={reverse ? "lg:order-1" : ""}>
         <div
           data-speed={reverse ? "1.06" : "0.94"}
-          className="border border-border bg-[hsl(var(--card))] p-2 shadow-2xl shadow-black/40"
+          className="overflow-hidden border border-border bg-[hsl(var(--background))] shadow-2xl shadow-black/40"
         >
-          <Wireframe />
+          <Visual />
         </div>
       </div>
     </div>
@@ -82,7 +80,7 @@ export function FeatureShowcases({
             <FeatureChapter
               key={chapter.label}
               chapter={chapter}
-              Wireframe={WIREFRAMES[i % WIREFRAMES.length] ?? DashboardWireframe}
+              Visual={VISUALS[i % VISUALS.length] ?? TransactionsTable}
               reverse={i % 2 === 1}
             />
           ))}

@@ -41,7 +41,7 @@ export function Header({
 
       <nav className="fixed top-0 right-0 left-0 z-50 w-full">
         <div className="motion-safe:fade-in motion-safe:slide-in-from-top-2 mx-auto max-w-[1300px] px-4 pt-3 duration-500 motion-safe:animate-in sm:px-6 xl:px-8">
-          <div className="flex min-h-[56px] items-center justify-between border border-border/60 bg-background/95 px-4 py-2.5 backdrop-blur-md sm:px-5">
+          <div className="flex min-h-[56px] items-center justify-between border border-border/50 bg-background/40 px-4 py-2.5 shadow-lg shadow-black/20 backdrop-blur-xl backdrop-saturate-150 sm:px-5">
             <Link
               href={withLocale("/")}
               className="inline-flex items-center transition-opacity duration-200 hover:opacity-80"

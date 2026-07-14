@@ -7,14 +7,20 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 import type { WebsiteDictionary } from "@/lib/translations";
-import { ChatWireframe } from "./wireframe/chat-wireframe";
-import { DashboardWireframe } from "./wireframe/dashboard-wireframe";
-import { TransactionsWireframe } from "./wireframe/transactions-wireframe";
+import { CaptureCard } from "./visuals/capture-card";
+import { InsightsPanel } from "./visuals/insights-panel";
+import { TransactionsTable } from "./visuals/transactions-table";
 import { Container, SectionLabel } from "./_shared";
 
 gsap.registerPlugin(useGSAP, ScrollTrigger);
 
-const VISUALS = [DashboardWireframe, TransactionsWireframe, ChatWireframe];
+// Real rendered visuals per step: capture (receipt → parsed) → organized table
+// → spending insights.
+const VISUALS = [
+  <CaptureCard key="capture" />,
+  <TransactionsTable key="organize" />,
+  <InsightsPanel key="insights" />,
+];
 
 /**
  * Pinned + scrubbed showcase — the signature scroll moment. The section pins
@@ -120,16 +126,18 @@ export function ProductShowcase({
               ))}
             </ol>
 
-            {/* Stacked visuals */}
-            <div className="relative order-1 min-h-[280px] lg:order-2 lg:min-h-[380px]">
-              {VISUALS.map((Visual, i) => (
+            {/* Stacked visuals — during the reveal GSAP sets each to
+                position:absolute inset-0, so the solid bg fully covers the one
+                behind it (fixes shorter panels showing the table underneath). */}
+            <div className="relative order-1 min-h-[440px] lg:order-2 lg:min-h-[500px]">
+              {VISUALS.map((visual, i) => (
                 <div
                   // biome-ignore lint/suspicious/noArrayIndexKey: fixed visual order
                   key={i}
                   data-visual
-                  className="border border-border bg-[hsl(var(--card))] p-2 shadow-2xl shadow-black/40"
+                  className="overflow-hidden border border-border bg-[hsl(var(--background))] shadow-2xl shadow-black/40"
                 >
-                  <Visual />
+                  {visual}
                 </div>
               ))}
             </div>

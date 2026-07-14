@@ -6,6 +6,7 @@ import { Button } from "@workspace/ui/atoms";
 
 import type { WebsiteDictionary } from "@/lib/translations";
 import { useHeadlineReveal } from "@/lib/motion";
+import { RotatingWord } from "./rotating-word";
 import { Container, SectionLabel } from "./_shared";
 
 export function HeroSection({
@@ -24,16 +25,6 @@ export function HeroSection({
       id="overview"
       className="relative overflow-hidden pt-32 pb-4"
     >
-      {/* Ambient teal glow — centered behind the headline. */}
-      <div
-        aria-hidden
-        className="-z-10 pointer-events-none absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(1000px 520px at 50% -6%, hsl(var(--brand-accent)/0.16), transparent 62%), radial-gradient(760px 460px at 50% 10%, hsl(var(--foreground)/0.05), transparent 68%)",
-        }}
-      />
-
       <Container>
         <div className="mx-auto flex max-w-4xl flex-col items-center text-center">
           <SectionLabel>{dictionary.hero.badge}</SectionLabel>
@@ -43,12 +34,13 @@ export function HeroSection({
             className="reveal-headline mt-7 font-serif text-[2.75rem] text-foreground leading-[1.02] tracking-tight sm:text-6xl md:text-7xl"
           >
             {dictionary.hero.titleLead}{" "}
-            <em className="text-[hsl(var(--brand-accent))] italic">
-              {dictionary.hero.titleAccent}
-            </em>
+            <RotatingWord
+              words={dictionary.hero.titleAccents}
+              className="inline-block text-[hsl(var(--brand-accent))] italic"
+            />
           </h1>
 
-          <p className="mt-7 max-w-2xl text-balance text-base text-muted-foreground leading-relaxed sm:text-lg">
+          <p className="mt-7 max-w-xl text-pretty text-base text-muted-foreground leading-relaxed sm:text-lg">
             {dictionary.hero.subtitle}
           </p>
 

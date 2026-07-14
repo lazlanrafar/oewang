@@ -5,7 +5,11 @@ import { Container } from "./_shared";
 // the -50% translate loops seamlessly.
 export function SocialProof({ dictionary }: { dictionary: WebsiteDictionary }) {
   const channels = dictionary.socialProof.channels;
-  const loop = [...channels, ...channels];
+  // Duplicate the list enough that a single -50% half is always wider than any
+  // viewport (6 short items alone leave a gap on wide screens). Two identical
+  // halves keep the -50% loop seamless.
+  const half = [...channels, ...channels, ...channels];
+  const loop = [...half, ...half];
 
   return (
     <section className="border-border/60 border-y bg-[hsl(var(--card))]/40 py-10">

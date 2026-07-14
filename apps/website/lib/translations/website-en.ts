@@ -11,6 +11,13 @@ export const websiteEn = {
     badge: "AI finance workspace",
     titleLead: "Understand your money,",
     titleAccent: "effortlessly.",
+    titleAccents: [
+      "effortlessly.",
+      "instantly.",
+      "automatically.",
+      "beautifully.",
+      "together.",
+    ],
     subtitle:
       "Oewang captures every transaction — snap a receipt, forward a chat, or just ask the AI — and turns daily spending into clarity across personal and team workspaces.",
     ctaStartFree: "Start free",

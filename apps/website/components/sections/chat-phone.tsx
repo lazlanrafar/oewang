@@ -37,10 +37,10 @@ const SCREEN_PATH =
 
 /* ---------- iOS chrome ---------- */
 
-function StatusBar() {
+function StatusBar({ time }: { time: string }) {
   return (
     <div className="flex items-center justify-between px-8 pt-3.5 text-[13px] text-foreground">
-      <span className="font-medium">9:41</span>
+      <span className="font-medium">{time}</span>
       <div className="flex items-center gap-1.5">
         <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor" aria-hidden="true">
           <rect x="0" y="7" width="3" height="4" rx="0.5" />
@@ -198,16 +198,24 @@ function LockScreen({
 
 /* ---------- Phone screen content (authored at 418×890) ---------- */
 
-function PhoneScreen({ active, dictionary }: { active: number; dictionary: WebsiteDictionary }) {
+function PhoneScreen({
+  active,
+  dictionary,
+  clock,
+}: {
+  active: number;
+  dictionary: WebsiteDictionary;
+  clock: { time: string; date: string };
+}) {
   const d = dictionary.chatDemo;
   const scenario = CHAT_SCENARIOS[active] ?? CHAT_SCENARIOS[0];
   if (!scenario) return null;
 
   return (
     <div className="h-full w-full bg-[hsl(var(--background))] text-foreground">
-      <StatusBar />
+      <StatusBar time={clock.time} />
       {scenario.kind === "lock" ? (
-        <LockScreen key={active} time={d.lockTime} date={d.lockDate} notif={scenario.notif} />
+        <LockScreen key={active} time={clock.time} date={clock.date} notif={scenario.notif} />
       ) : (
         <>
           <ChatHeader appName={d.appName} status={d.status} />
@@ -233,10 +241,12 @@ function Phone({
   active,
   dictionary,
   scale,
+  clock,
 }: {
   active: number;
   dictionary: WebsiteDictionary;
   scale: number;
+  clock: { time: string; date: string };
 }) {
   return (
     <div style={{ transform: `scale(${scale})`, transformOrigin: "top center" }}>
@@ -254,7 +264,7 @@ function Phone({
               transformOrigin: "top left",
             }}
           >
-            <PhoneScreen active={active} dictionary={dictionary} />
+            <PhoneScreen active={active} dictionary={dictionary} clock={clock} />
           </div>
         </div>
         {/* Titanium frame overlay (transparent screen reveals content beneath) */}
@@ -279,8 +289,40 @@ export function ChatPhone({ dictionary }: { dictionary: WebsiteDictionary }) {
   const [scale, setScale] = useState(1);
   const [mounted, setMounted] = useState(false);
   const [railVisible, setRailVisible] = useState(false);
+  // Live phone clock. Starts on the dictionary defaults (so SSR and first client
+  // render match), then shows the user's real local time and ticks — updating
+  // only when the minute actually changes.
+  const [clock, setClock] = useState({
+    time: dictionary.chatDemo.lockTime,
+    date: dictionary.chatDemo.lockDate,
+  });
 
   useEffect(() => setMounted(true), []);
+
+  useEffect(() => {
+    const format = () => {
+      const d = new Date();
+      const h = d.getHours() % 12 || 12;
+      const m = String(d.getMinutes()).padStart(2, "0");
+      return {
+        time: `${h}:${m}`,
+        date: d.toLocaleDateString(undefined, {
+          weekday: "long",
+          day: "numeric",
+          month: "long",
+        }),
+      };
+    };
+    setClock(format());
+    const id = setInterval(() => {
+      setClock((prev) => {
+        const next = format();
+        // Bail (no re-render) unless the minute/date changed.
+        return next.time === prev.time && next.date === prev.date ? prev : next;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, []);
 
   // Size the phone to roughly fill the viewport height and bleed a little below
   // the fold (like midday), so the floating rail sits in front of its bottom.
@@ -368,13 +410,15 @@ export function ChatPhone({ dictionary }: { dictionary: WebsiteDictionary }) {
           aria-hidden="true"
           className="pointer-events-none absolute inset-0"
           style={{
-            background: "radial-gradient(720px 540px at 50% 24%, hsl(var(--brand-accent)/0.10), transparent 65%)",
+            background: "radial-gradient(720px 540px at 50% 40%, hsl(var(--brand-accent)/0.10), transparent 65%)",
+            maskImage: "linear-gradient(to bottom, transparent, black 22%)",
+            WebkitMaskImage: "linear-gradient(to bottom, transparent, black 22%)",
           }}
         />
 
         {/* Phone anchored near the top so it peeks at the bottom of the hero. */}
         <div className="absolute inset-x-0 top-[80px] flex justify-center">
-          <Phone active={active} dictionary={dictionary} scale={scale} />
+          <Phone active={active} dictionary={dictionary} scale={scale} clock={clock} />
         </div>
       </div>
 
