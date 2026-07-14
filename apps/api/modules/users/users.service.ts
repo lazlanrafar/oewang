@@ -2,11 +2,17 @@ import * as path from "node:path";
 import { BucketClient } from "@workspace/bucket";
 import { Env } from "@workspace/constants";
 import { logger } from "@workspace/logger";
+import { cacheDel, cacheGet, cacheSet } from "../../lib/cache";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { normalizeWorkspaceRole } from "../workspaces/workspace-permissions";
+import { WorkspacesRepository } from "../workspaces/workspaces.repository";
 import { UsersRepository } from "./users.repository";
 import { pickActiveWorkspaceId } from "./users.utils";
-import { WorkspacesRepository } from "../workspaces/workspaces.repository";
+
+// GET /users/me runs on every page load; 5 min is short enough that a signed
+// avatar URL (valid ~1h) never expires inside the cache window.
+const PROFILE_TTL = 300;
+export const profileKey = (user_id: string) => `oewang:users:me:${user_id}`;
 
 export abstract class UsersService {
   private static async getBucketClient() {
@@ -178,6 +184,9 @@ export abstract class UsersService {
   }
 
   static async getProfile(user_id: string) {
+    const cached = await cacheGet<object>(profileKey(user_id));
+    if (cached) return cached;
+
     const user = await UsersRepository.findById(user_id);
     if (!user) return null;
 
@@ -208,7 +217,7 @@ export abstract class UsersService {
       }
     }
 
-    return {
+    const profile = {
       user: {
         id: user.id,
         email: user.email,
@@ -222,6 +231,8 @@ export abstract class UsersService {
         role: normalizeWorkspaceRole(workspace.role),
       })),
     };
+    await cacheSet(profileKey(user_id), profile, PROFILE_TTL);
+    return profile;
   }
 
   static async updateActiveWorkspace(user_id: string, workspaceId: string) {
@@ -233,6 +244,7 @@ export abstract class UsersService {
     }
 
     await UsersRepository.setWorkspaceId(user_id, workspaceId);
+    await cacheDel(profileKey(user_id));
 
     await AuditLogsService.log({
       workspace_id: workspaceId,
@@ -252,6 +264,7 @@ export abstract class UsersService {
     },
   ) {
     await UsersRepository.update(user_id, data);
+    await cacheDel(profileKey(user_id));
   }
 
   static async updateAvatar(
@@ -277,6 +290,7 @@ export abstract class UsersService {
 
     await bucket.upload(key, file.buffer, file.type);
     await UsersRepository.update(user_id, { profile_picture: key });
+    await cacheDel(profileKey(user_id));
     return bucket.getSignedUrl(key);
   }
 
@@ -307,5 +321,6 @@ export abstract class UsersService {
     await UsersRepository.update(user_id, {
       providers: remaining.map((r) => r.provider),
     });
+    await cacheDel(profileKey(user_id));
   }
 }

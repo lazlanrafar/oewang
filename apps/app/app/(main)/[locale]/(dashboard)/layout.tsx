@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 import { cookies } from "next/headers";
 
-import { getMe } from "@workspace/modules/server";
+import { getMeCached } from "@/lib/cached-requests";
 import {
   cn,
   Separator,
@@ -24,7 +24,7 @@ import { getPreference } from "@/server/server-actions";
 
 async function getUserAndWorkspaces() {
   try {
-    const result = await getMe();
+    const result = await getMeCached();
     if (result.success) {
       return result.data;
     }

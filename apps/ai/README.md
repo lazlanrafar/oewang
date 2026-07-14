@@ -92,6 +92,12 @@ pip install -e ".[dev]"
 
 Env vars live in the **single root `.env`** (see `.env.example` for the keys).
 
+Receipt-parsing cost knobs (defaults in `app/config.py`): `AI_VISION_MODEL`
+(`gpt-4.1-mini` — patch-based vision pricing, ~1–2k image tokens per receipt vs
+~25k on `gpt-4o-mini`) and `AI_RECEIPT_DETAIL` (`low`/`auto`/`high`; `low` is a
+flat minimal token cost but may misread dense receipts). Images are also
+downscaled server-side to 1536px before hitting the API.
+
 ## Database prerequisites (run once, from repo root)
 
 ```bash

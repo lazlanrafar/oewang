@@ -19,6 +19,10 @@ class Settings(BaseSettings):
     DATABASE_URL: str = ""
     OPENAI_API_KEY: str = ""  # used for both chat and embeddings
     AI_CHAT_MODEL: str = "gpt-4o-mini"
+    # Receipt/image parsing only. gpt-4.1-mini uses patch-based vision pricing:
+    # ~1-2k image tokens per receipt vs ~25k on gpt-4o-mini (33x tile multiplier).
+    AI_VISION_MODEL: str = "gpt-4.1-mini"
+    AI_RECEIPT_DETAIL: str = "auto"  # low | auto | high
     AI_EMBED_MODEL: str = "text-embedding-3-small"
     AI_SERVICE_API_KEY: str = ""
     AI_PORT: int = 3004

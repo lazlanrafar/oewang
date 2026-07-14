@@ -118,73 +118,34 @@ export abstract class TransactionsService {
       await WalletsRepository.updateBalance(body.toWalletId, workspaceId, val);
     }
 
-    await AuditLogsService.log({
-      workspace_id: workspaceId,
-      user_id: userId,
-      action: "transaction.created",
-      entity: "transaction",
-      entity_id: transaction.id,
-      after: transaction,
-    });
-
-    await NotificationsService.create({
-      workspace_id: workspaceId,
-      user_id: userId,
-      type: "transaction.created",
-      title: "New Transaction",
-      message: `A new ${body.type} of ${amount} was recorded.`,
-      link: "/transactions",
-    });
-
-    // Check if this expense exceeds an active budget
-    if (body.type === "expense" && categoryId) {
-      const budget = await BudgetsRepository.findByCategory(
-        categoryId,
-        workspaceId,
-      );
-      if (budget) {
-        const now = new Date();
-        const startDate = new Date(
-          now.getFullYear(),
-          now.getMonth(),
-          1,
-        ).toISOString();
-        const endDate = new Date(
-          now.getFullYear(),
-          now.getMonth() + 1,
-          0,
-          23,
-          59,
-          59,
-        ).toISOString();
-        const budgetStatuses = await BudgetsRepository.getStatus(
-          workspaceId,
-          startDate,
-          endDate,
-        );
-        const budgetStatus = budgetStatuses.find(
-          (s) => s.categoryId === categoryId,
-        );
-        if (
-          budgetStatus &&
-          Number(budgetStatus.spent) >= Number(budgetStatus.amount)
-        ) {
-          await NotificationsService.create({
-            workspace_id: workspaceId,
-            user_id: userId,
-            type: "budget.exceeded",
-            title: "Budget Exceeded",
-            message: `Your ${budgetStatus.categoryName} budget of ${Number(budgetStatus.amount).toLocaleString()} has been exceeded this month.`,
-            link: "/budget",
-          });
-        }
-      }
-    }
-
     RealtimeService.notifyValueChange(workspaceId, "transactions");
     RealtimeService.notifyValueChange(workspaceId, "wallets");
 
+    // Independent side effects — run concurrently after the money writes.
     await Promise.all([
+      AuditLogsService.log({
+        workspace_id: workspaceId,
+        user_id: userId,
+        action: "transaction.created",
+        entity: "transaction",
+        entity_id: transaction.id,
+        after: transaction,
+      }),
+      NotificationsService.create({
+        workspace_id: workspaceId,
+        user_id: userId,
+        type: "transaction.created",
+        title: "New Transaction",
+        message: `A new ${body.type} of ${amount} was recorded.`,
+        link: "/transactions",
+      }),
+      body.type === "expense" && categoryId
+        ? TransactionsService.notifyIfBudgetExceeded(
+            workspaceId,
+            userId,
+            categoryId,
+          )
+        : Promise.resolve(),
       MetricsService.invalidateWorkspaceCache(workspaceId),
       BudgetsService.invalidateCurrentMonthCache(workspaceId),
     ]);
@@ -194,6 +155,55 @@ export abstract class TransactionsService {
       "Transaction created successfully",
       "CREATED",
     );
+  }
+
+  /** Post-write side effect: notify when an expense pushes its budget over. */
+  private static async notifyIfBudgetExceeded(
+    workspaceId: string,
+    userId: string,
+    categoryId: string,
+  ) {
+    const budget = await BudgetsRepository.findByCategory(
+      categoryId,
+      workspaceId,
+    );
+    if (!budget) return;
+
+    const now = new Date();
+    const startDate = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      1,
+    ).toISOString();
+    const endDate = new Date(
+      now.getFullYear(),
+      now.getMonth() + 1,
+      0,
+      23,
+      59,
+      59,
+    ).toISOString();
+    const budgetStatuses = await BudgetsRepository.getStatus(
+      workspaceId,
+      startDate,
+      endDate,
+    );
+    const budgetStatus = budgetStatuses.find(
+      (s) => s.categoryId === categoryId,
+    );
+    if (
+      budgetStatus &&
+      Number(budgetStatus.spent) >= Number(budgetStatus.amount)
+    ) {
+      await NotificationsService.create({
+        workspace_id: workspaceId,
+        user_id: userId,
+        type: "budget.exceeded",
+        title: "Budget Exceeded",
+        message: `Your ${budgetStatus.categoryName} budget of ${Number(budgetStatus.amount).toLocaleString()} has been exceeded this month.`,
+        link: "/budget",
+      });
+    }
   }
 
   static async bulkCreate(
@@ -537,20 +547,19 @@ export abstract class TransactionsService {
       );
     }
 
-    await AuditLogsService.log({
-      workspace_id: workspaceId,
-      user_id: userId,
-      action: "transaction.updated",
-      entity: "transaction",
-      entity_id: updated.id,
-      before: transaction,
-      after: updated,
-    });
-
     RealtimeService.notifyValueChange(workspaceId, "transactions");
     RealtimeService.notifyValueChange(workspaceId, "wallets");
 
     await Promise.all([
+      AuditLogsService.log({
+        workspace_id: workspaceId,
+        user_id: userId,
+        action: "transaction.updated",
+        entity: "transaction",
+        entity_id: updated.id,
+        before: transaction,
+        after: updated,
+      }),
       MetricsService.invalidateWorkspaceCache(workspaceId),
       BudgetsService.invalidateCurrentMonthCache(workspaceId),
     ]);
@@ -596,19 +605,18 @@ export abstract class TransactionsService {
       );
     }
 
-    await AuditLogsService.log({
-      workspace_id: workspaceId,
-      user_id: userId,
-      action: "transaction.deleted",
-      entity: "transaction",
-      entity_id: id,
-      before: transaction,
-    });
-
     RealtimeService.notifyValueChange(workspaceId, "transactions");
     RealtimeService.notifyValueChange(workspaceId, "wallets");
 
     await Promise.all([
+      AuditLogsService.log({
+        workspace_id: workspaceId,
+        user_id: userId,
+        action: "transaction.deleted",
+        entity: "transaction",
+        entity_id: id,
+        before: transaction,
+      }),
       MetricsService.invalidateWorkspaceCache(workspaceId),
       BudgetsService.invalidateCurrentMonthCache(workspaceId),
     ]);

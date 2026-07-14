@@ -25,6 +25,8 @@ export const importTransactions = async (
   try {
     const res = await api.post("/transactions/import", formData, {
       headers: { "Content-Type": "multipart/form-data" },
+      // Runs LLM extraction on the whole file — exempt from the 15s default.
+      timeout: 120_000,
     });
     return { success: true, data: res.data };
   } catch (error: any) {

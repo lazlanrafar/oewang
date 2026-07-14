@@ -1,4 +1,5 @@
-import { type DebtWithContact, getDebts, getTransactionSettings, getWallets } from "@workspace/modules/server";
+import { type DebtWithContact, getDebts, getWallets } from "@workspace/modules/server";
+import { getTransactionSettingsCached } from "@/lib/cached-requests";
 import type { TransactionSettings, Wallet } from "@workspace/types";
 import type { Metadata } from "next";
 
@@ -27,7 +28,7 @@ export default async function DebtsPage({
     const [debtsRes, walletsRes, settingsRes, dictionary] = await Promise.all([
       getDebts(),
       getWallets(),
-      getTransactionSettings(),
+      getTransactionSettingsCached(),
       getDictionary(locale),
     ]);
 

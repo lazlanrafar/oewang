@@ -1,7 +1,7 @@
-import { Resend } from "resend";
+import { Env } from "@workspace/constants";
 import fs from "fs";
 import path from "path";
-import { Env } from "@workspace/constants";
+import { Resend } from "resend";
 
 // Initialize Resend with API key from environment
 const resend = new Resend(Env.RESEND_API_KEY || "re_123456789");
@@ -133,6 +133,38 @@ export async function sendSubscriptionDowngradedEmail(
 }
 
 /**
+ * Warn the workspace owner that their vault exceeds the plan's storage limit
+ * and the grace period before files are hidden/deleted has started.
+ */
+export async function sendVaultStorageLimitEmail(
+  to: string,
+  userName: string,
+  workspaceName: string,
+  usedMb: number,
+  limitMb: number,
+  graceDays: number,
+  deadline: Date,
+) {
+  const appUrl = Env.NEXT_PUBLIC_APP_URL || "https://app.oewang.com";
+  const html = renderTemplate("vault-storage-limit", {
+    userName,
+    workspaceName,
+    usedMb: String(Math.round(usedMb)),
+    limitMb: String(Math.round(limitMb)),
+    graceDays: String(graceDays),
+    deadline: deadline.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    }),
+    vaultUrl: `${appUrl}/en/vault`,
+    billingUrl: `${appUrl}/en/settings/billing`,
+  });
+
+  return sendEmail(to, `Vault storage limit exceeded — ${workspaceName}`, html);
+}
+
+/**
  * Send a payment failed notification to the workspace owner.
  */
 export async function sendPaymentFailedEmail(
@@ -234,7 +266,11 @@ export async function sendReceiptProcessedEmail(
     source,
     appUrl,
   });
-  return sendEmail(to, `Receipt from ${source} processed — ${receiptName}`, html);
+  return sendEmail(
+    to,
+    `Receipt from ${source} processed — ${receiptName}`,
+    html,
+  );
 }
 
 /**

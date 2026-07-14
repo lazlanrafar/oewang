@@ -2,9 +2,7 @@ import {
   getBurnRateMetrics,
   getCategoryBreakdown,
   getExpenseMetrics,
-  getMe,
   getRevenueMetrics,
-  getTransactionSettings,
 } from "@workspace/modules/server";
 import { endOfMonth, startOfMonth, subMonths } from "date-fns";
 import type { Metadata } from "next";
@@ -13,6 +11,10 @@ import ChatInterface from "@/components/organisms/chat/chat-interface";
 import { ChatProviderWrapper } from "@/components/organisms/chat/chat-provider-wrapper";
 import { OverviewClient } from "@/components/organisms/overview/overview-client";
 import { getDictionary } from "@/get-dictionary";
+import {
+  getMeCached,
+  getTransactionSettingsCached,
+} from "@/lib/cached-requests";
 import type { Locale } from "@/i18n-config";
 
 export const metadata: Metadata = {
@@ -44,11 +46,11 @@ export default async function OverviewPage(props: {
     incomeCategoryResult,
     dictionary,
   ] = await Promise.all([
-    getMe(),
+    getMeCached(),
     getRevenueMetrics(metricsParams),
     getExpenseMetrics(metricsParams),
     getBurnRateMetrics(metricsParams),
-    getTransactionSettings(),
+    getTransactionSettingsCached(),
     getCategoryBreakdown("expense", metricsParams),
     getCategoryBreakdown("income", metricsParams),
     getDictionary(locale),

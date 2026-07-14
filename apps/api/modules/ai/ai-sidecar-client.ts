@@ -30,6 +30,9 @@ async function sidecarPost<T>(path: string, body: unknown): Promise<T> {
         : {}),
     },
     body: JSON.stringify(body),
+    // Chat tool-loops and receipt OCR are legitimately slow, but a wedged
+    // sidecar must not pin API workers forever.
+    signal: AbortSignal.timeout(120_000),
   });
   if (!res.ok) {
     const text = await res.text().catch(() => "");

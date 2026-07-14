@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import Link from "next/link";
 
-import { Button } from "@workspace/ui/atoms";
+import { Button, Icons } from "@workspace/ui/atoms";
 import { Menu, X } from "lucide-react";
 
 import type { WebsiteDictionary } from "@/lib/translations";
@@ -46,6 +46,7 @@ export function Header({
               className="flex items-center gap-2 transition-opacity duration-200 hover:opacity-80"
               aria-label="oewang homepage"
             >
+              <Icons.LogoSmall className="size-6 text-foreground" />
               <span className="font-serif text-xl tracking-tight">oewang</span>
             </Link>
 

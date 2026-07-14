@@ -257,6 +257,20 @@ const app = new Elysia()
   .use(publicPricingController)
   // Global error handler — sanitizes and logs all unhandled exceptions
   .onError(({ error, code, set, path }) => {
+    // Thrown `status(n, body)` reaches here with code "UNKNOWN" — unwrap it
+    // instead of mis-reporting a deliberate 401/403 as an unhandled 500.
+    const thrown = error as { code?: unknown; response?: unknown };
+    if (
+      typeof thrown?.code === "number" &&
+      thrown.code >= 400 &&
+      thrown.code < 600 &&
+      thrown.response !== undefined
+    ) {
+      set.status = thrown.code;
+      if (thrown.code >= 500) Sentry.captureException(error);
+      return thrown.response;
+    }
+
     const numericCode =
       typeof code === "number"
         ? code
@@ -320,16 +334,6 @@ const app = new Elysia()
       set.status = numericCode;
 
       // If the error body is already a buildError result (ApiResponse)
-      if (
-        error &&
-        typeof error === "object" &&
-        "success" in error &&
-        "code" in error
-      ) {
-        return error;
-      }
-
-      // If it's a wrapped error response
       if (
         error &&
         typeof error === "object" &&

@@ -67,6 +67,32 @@ Rules:
 - Return ONLY the JSON object, no markdown, no extra text"""
 
 
+# Longest side after downscale. Matches what OpenAI's high-detail preprocessing
+# keeps anyway, so this only removes bytes the API would discard — no accuracy
+# cost — while bounding tile count for uncompressed web uploads.
+_MAX_IMAGE_DIM = 1536
+
+
+def _downscale(data_b64: str, mime_type: str) -> tuple[str, str]:
+    """Resize oversized receipt photos before they hit the vision API.
+
+    Fail-open: anything Pillow can't handle is passed through unchanged.
+    """
+    try:
+        from PIL import Image
+
+        img = Image.open(io.BytesIO(b64.b64decode(data_b64)))
+        if max(img.size) <= _MAX_IMAGE_DIM:
+            return data_b64, mime_type
+        img.thumbnail((_MAX_IMAGE_DIM, _MAX_IMAGE_DIM), Image.LANCZOS)
+        buf = io.BytesIO()
+        img.convert("RGB").save(buf, format="JPEG", quality=80)
+        return b64.b64encode(buf.getvalue()).decode(), "image/jpeg"
+    except Exception as e:  # noqa: BLE001 — never block parsing on resize
+        log.warning("Image downscale failed, sending original: %s", e)
+        return data_b64, mime_type
+
+
 def _pdf_text(data_b64: str) -> str:
     try:
         from pypdf import PdfReader
@@ -96,14 +122,21 @@ def parse_receipt(
     if pdf_text:
         content = [{"type": "text", "text": prompt}]
     else:
+        data_b64, mime_type = _downscale(data_b64, mime_type)
         content = [
             {"type": "text", "text": prompt},
-            {"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{data_b64}"}},
+            {
+                "type": "image_url",
+                "image_url": {
+                    "url": f"data:{mime_type};base64,{data_b64}",
+                    "detail": get_settings().AI_RECEIPT_DETAIL,
+                },
+            },
         ]
 
     try:
         resp = get_client().chat.completions.create(
-            model=get_settings().AI_CHAT_MODEL,
+            model=get_settings().AI_VISION_MODEL,
             max_tokens=2500,
             messages=[
                 {"role": "system", "content": _system_prompt(category_context)},

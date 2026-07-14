@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { BucketClient } from "@workspace/bucket";
 import { Env } from "@workspace/constants";
-import { decryptAtRest } from "../../lib/at-rest-crypto";
+import { sendVaultStorageLimitEmail } from "@workspace/email";
 import { logger } from "@workspace/logger";
 import type { PaginationQuery } from "@workspace/types";
 import { ErrorCode } from "@workspace/types";
@@ -11,7 +11,9 @@ import {
   parsePaginationQuery,
 } from "@workspace/utils";
 import { status } from "elysia";
+import { decryptAtRest } from "../../lib/at-rest-crypto";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
+import { NotificationsService } from "../notifications/notifications.service";
 import { RealtimeService } from "../realtime/realtime.service";
 import { VaultRepository } from "./vault.repository";
 
@@ -361,6 +363,42 @@ export abstract class VaultService {
     }
   }
 
+  private static async notifyStorageViolationStarted(
+    ws: {
+      workspaceId: string;
+      workspaceName?: string | null;
+      maxMb: number;
+      owner_id?: string | null;
+      owner_name?: string | null;
+      owner_email?: string | null;
+    },
+    info: { usedMb: number; gracePeriodDays: number; deadline: Date },
+  ) {
+    if (ws.owner_id) {
+      await NotificationsService.create({
+        workspace_id: ws.workspaceId,
+        user_id: ws.owner_id,
+        type: "vault.storage_limit_exceeded",
+        title: "Vault is over the storage limit",
+        message: `Your vault uses ${info.usedMb.toFixed(0)} MB but your plan allows ${ws.maxMb} MB. You have ${info.gracePeriodDays} days to remove files or upgrade — after that, files will be hidden and eventually deleted.`,
+        link: "/vault",
+      }).catch(() => {});
+    }
+    if (ws.owner_email) {
+      await sendVaultStorageLimitEmail(
+        ws.owner_email,
+        ws.owner_name || "there",
+        ws.workspaceName || "Workspace",
+        info.usedMb,
+        ws.maxMb,
+        info.gracePeriodDays,
+        info.deadline,
+      ).catch((err) =>
+        logger.warn("[Vault] Storage limit email failed (non-fatal)", { err }),
+      );
+    }
+  }
+
   static async processStorageViolations() {
     const workspaces = await VaultRepository.findAllWorkspacesWithUsage();
     const now = new Date();
@@ -379,6 +417,15 @@ export abstract class VaultService {
           logger.info(
             `[Vault] Started storage violation grace period for workspace ${ws.workspaceId}`,
           );
+          // Warn the owner NOW — this is the only signal before files are hidden
+          // (after 30 days) and eventually deleted. Silent otherwise.
+          await VaultService.notifyStorageViolationStarted(ws, {
+            usedMb,
+            gracePeriodDays,
+            deadline: new Date(
+              now.getTime() + gracePeriodDays * 24 * 60 * 60 * 1000,
+            ),
+          });
         } else {
           // Check if grace period has expired
           const violationDate = new Date(ws.storage_violation_at);

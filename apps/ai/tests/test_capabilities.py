@@ -54,6 +54,7 @@ class _FakeResp:
 class _FakeClient:
     def __init__(self, content):
         self._content = content
+        self.last_kwargs = None
 
     @property
     def chat(self):
@@ -64,6 +65,7 @@ class _FakeClient:
         return self
 
     def create(self, **kwargs):
+        self.last_kwargs = kwargs
         return _FakeResp(self._content)
 
 
@@ -76,6 +78,48 @@ def test_parse_receipt_returns_structured_dict(monkeypatch):
     assert out["amount"] == 42.0
     assert out["name"] == "Toko"
     assert set(usage) == {"input_tokens", "output_tokens"}
+
+
+def test_parse_receipt_uses_vision_model_and_detail(monkeypatch):
+    payload = {"amount": 1.0, "date": "2026-06-23T00:00:00.000Z", "name": "X",
+               "categoryId": None, "items": []}
+    client = _FakeClient(json.dumps(payload))
+    monkeypatch.setattr(receipt_svc, "get_client", lambda: client)
+    monkeypatch.setattr(receipt_svc.get_settings(), "OPENAI_API_KEY", "x", raising=False)
+    receipt_svc.parse_receipt(base64.b64encode(b"img").decode(), "image/jpeg", "")
+    settings = receipt_svc.get_settings()
+    assert client.last_kwargs["model"] == settings.AI_VISION_MODEL
+    image_part = client.last_kwargs["messages"][1]["content"][1]
+    assert image_part["image_url"]["detail"] == settings.AI_RECEIPT_DETAIL
+
+
+def test_downscale_shrinks_oversized_image():
+    import io as _io
+
+    from PIL import Image
+
+    buf = _io.BytesIO()
+    Image.new("RGB", (3000, 4000), "white").save(buf, format="JPEG")
+    out_b64, out_mime = receipt_svc._downscale(
+        base64.b64encode(buf.getvalue()).decode(), "image/jpeg"
+    )
+    out = Image.open(_io.BytesIO(base64.b64decode(out_b64)))
+    assert max(out.size) <= receipt_svc._MAX_IMAGE_DIM
+    assert out_mime == "image/jpeg"
+
+
+def test_downscale_passes_small_and_garbage_through():
+    import io as _io
+
+    from PIL import Image
+
+    buf = _io.BytesIO()
+    Image.new("RGB", (400, 800), "white").save(buf, format="PNG")
+    small_b64 = base64.b64encode(buf.getvalue()).decode()
+    assert receipt_svc._downscale(small_b64, "image/png") == (small_b64, "image/png")
+
+    garbage = base64.b64encode(b"not an image").decode()
+    assert receipt_svc._downscale(garbage, "image/jpeg") == (garbage, "image/jpeg")
 
 
 def test_extract_transactions_returns_list(monkeypatch):

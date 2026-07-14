@@ -35,7 +35,13 @@ export const loggerPlugin = (app: Elysia) =>
       } else if (error && typeof (error as any).status === "number") {
         statusCode = (error as any).status;
       } else {
-        const numericCode = typeof code === "string" ? parseInt(code, 10) : NaN;
+        // `code` is a number for thrown status(n, ...) and a string otherwise.
+        const numericCode =
+          typeof code === "number"
+            ? code
+            : typeof code === "string"
+              ? parseInt(code, 10)
+              : NaN;
         if (!isNaN(numericCode) && numericCode >= 400 && numericCode < 600) {
           statusCode = numericCode;
         }

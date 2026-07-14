@@ -1,11 +1,14 @@
+import { Env } from "@workspace/constants";
 import { decrypt } from "@workspace/encryption";
 import type { ApiResponse } from "@workspace/types";
 import axios from "axios";
-import { Env } from "@workspace/constants";
 
 // Create a configured axios instance
 export const axiosInstance = axios.create({
   baseURL: `${Env.NEXT_PUBLIC_API_URL ?? "http://localhost:3002"}/v1`,
+  // Server actions block page renders — a hung API call must fail fast rather
+  // than hang the request forever (axios default is no timeout).
+  timeout: 15_000,
   headers: {
     "Content-Type": "application/json",
   },
@@ -37,11 +40,18 @@ axiosInstance.interceptors.request.use(async (config) => {
 
   // Server-side: Try to get token from Next.js cookies
   try {
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore — next/headers is available at runtime in Next.js server context
-    const { cookies } = await import("next/headers");
+    const { cookies, headers } = await import("next/headers");
     const cookieStore = await cookies();
     token = cookieStore.get(cookieName)?.value;
+
+    // Forward the real client IP: every server action leaves this box with
+    // the app server's IP, so without this all users share one API
+    // rate-limit bucket (the strict auth one would break login for everyone).
+    const incoming = await headers();
+    const forwarded_for = incoming.get("x-forwarded-for");
+    if (forwarded_for && !config.headers["x-forwarded-for"]) {
+      config.headers["x-forwarded-for"] = forwarded_for;
+    }
   } catch (e) {
     // Ignore
   }
