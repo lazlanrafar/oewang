@@ -5,9 +5,18 @@ import { useState } from "react";
 import { Minus, Plus } from "lucide-react";
 
 import type { WebsiteDictionary } from "@/lib/translations";
+
 import { Container, SectionLabel } from "./_shared";
 
-export function FaqSection({ dictionary }: { dictionary: WebsiteDictionary }) {
+export function FaqSection({
+  dictionary,
+  items,
+}: {
+  dictionary: WebsiteDictionary;
+  // Live FAQs from the API; falls back to the dictionary copy when empty.
+  items?: { q: string; a: string }[];
+}) {
+  const faqItems = items && items.length > 0 ? items : dictionary.faq.items;
   const [open, setOpen] = useState(0);
 
   return (
@@ -22,7 +31,7 @@ export function FaqSection({ dictionary }: { dictionary: WebsiteDictionary }) {
           </div>
 
           <div className="divide-y divide-border border-border border-t">
-            {dictionary.faq.items.map((item, i) => {
+            {faqItems.map((item, i) => {
               const isOpen = open === i;
               return (
                 <div key={item.q}>
@@ -32,9 +41,7 @@ export function FaqSection({ dictionary }: { dictionary: WebsiteDictionary }) {
                     className="flex w-full items-center justify-between gap-4 py-5 text-left"
                     aria-expanded={isOpen}
                   >
-                    <span className="font-serif text-foreground text-lg tracking-tight">
-                      {item.q}
-                    </span>
+                    <span className="font-serif text-foreground text-lg tracking-tight">{item.q}</span>
                     {isOpen ? (
                       <Minus className="size-4 shrink-0 text-[hsl(var(--brand-accent))]" />
                     ) : (
@@ -48,9 +55,7 @@ export function FaqSection({ dictionary }: { dictionary: WebsiteDictionary }) {
                     }}
                   >
                     <div className="overflow-hidden">
-                      <p className="pb-5 text-muted-foreground text-sm leading-relaxed">
-                        {item.a}
-                      </p>
+                      <p className="pb-5 text-muted-foreground text-sm leading-relaxed">{item.a}</p>
                     </div>
                   </div>
                 </div>

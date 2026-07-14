@@ -26,7 +26,9 @@
     "./invoice/invoice.action": "./src/invoice/invoice.action.ts",
     "./orders/orders.action": "./src/orders/orders.action.ts",
     "./debt/debt.action": "./src/debt/debt.action.ts",
-    "./budget/budget.action": "./src/budget/budget.action.ts"
+    "./budget/budget.action": "./src/budget/budget.action.ts",
+    "./article/article.action": "./src/article/article.action.ts",
+    "./faq/faq.action": "./src/faq/faq.action.ts"
   },
   "scripts": {
     "lint": "biome lint",

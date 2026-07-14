@@ -41,6 +41,10 @@ import { notificationsController } from "./modules/notifications/notifications.c
 import { ordersController } from "./modules/orders/orders.controller";
 import { pricingController } from "./modules/pricing/pricing.controller";
 import { publicPricingController } from "./modules/pricing/public-pricing.controller";
+import { articlesController } from "./modules/articles/articles.controller";
+import { publicArticlesController } from "./modules/articles/public-articles.controller";
+import { faqsController } from "./modules/faqs/faqs.controller";
+import { publicFaqsController } from "./modules/faqs/public-faqs.controller";
 import { privacyController } from "./modules/privacy/privacy.controller";
 import { pushSubscriptionsController } from "./modules/push-subscriptions/push-subscriptions.controller";
 import { RealtimeService } from "./modules/realtime/realtime.service";
@@ -109,6 +113,8 @@ const apiControllers2 = new Elysia()
   .use(integrationsController)
   .use(systemAdminsController)
   .use(pricingController)
+  .use(articlesController)
+  .use(faqsController)
   .use(mayarController)
   .use(billingInvoicesController)
   .use(ordersController)
@@ -255,6 +261,8 @@ const app = new Elysia()
   )
   // Public routes (no auth required)
   .use(publicPricingController)
+  .use(publicArticlesController)
+  .use(publicFaqsController)
   // Global error handler — sanitizes and logs all unhandled exceptions
   .onError(({ error, code, set, path }) => {
     // Thrown `status(n, body)` reaches here with code "UNKNOWN" — unwrap it

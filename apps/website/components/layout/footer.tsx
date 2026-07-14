@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import type { WebsiteDictionary } from "@/lib/translations";
+
 import { Brand } from "./brand";
 
 const LANGUAGE_OPTIONS = [
@@ -27,11 +28,7 @@ export function Footer({ locale, dictionary }: { locale: string; dictionary: Web
       <div className="mx-auto max-w-[1300px] px-4 py-14 sm:px-6 lg:px-8">
         <div className="flex flex-col justify-between gap-10 sm:flex-row">
           <div className="max-w-xs">
-            <Link
-              href={withLocale("/")}
-              className="mb-4 inline-flex items-center"
-              aria-label="Oewang homepage"
-            >
+            <Link href={withLocale("/")} className="mb-4 inline-flex items-center" aria-label="Oewang homepage">
               <Brand />
             </Link>
             <p className="text-muted-foreground text-sm">{dictionary.footer.tagline}</p>
@@ -57,10 +54,22 @@ export function Footer({ locale, dictionary }: { locale: string; dictionary: Web
               <span className="text-muted-foreground/70 text-xs uppercase tracking-[0.2em]">
                 {dictionary.footer.company}
               </span>
-              <Link href={withLocale("/terms")} className="text-foreground/80 text-sm transition-colors hover:text-foreground">
+              <Link
+                href={withLocale("/articles")}
+                className="text-foreground/80 text-sm transition-colors hover:text-foreground"
+              >
+                Articles
+              </Link>
+              <Link
+                href={withLocale("/terms")}
+                className="text-foreground/80 text-sm transition-colors hover:text-foreground"
+              >
                 Terms
               </Link>
-              <Link href={withLocale("/policy")} className="text-foreground/80 text-sm transition-colors hover:text-foreground">
+              <Link
+                href={withLocale("/policy")}
+                className="text-foreground/80 text-sm transition-colors hover:text-foreground"
+              >
                 Privacy
               </Link>
             </nav>

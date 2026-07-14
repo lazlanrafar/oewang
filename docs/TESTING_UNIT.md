@@ -8,7 +8,7 @@
 
 All backend tests use **Bun's built-in test runner** (`bun:test`). Tests are fast, require no database, and run in ~134ms.
 
-**Current baseline: 403 unit tests across 15 test files — all must pass before merging.** (Quick-recall aggregation moved to the Python sidecar `apps/ai`; covered by its `pytest` suite.)
+**Current baseline: 410 unit tests across 17 test files — all must pass before merging.** (Quick-recall aggregation moved to the Python sidecar `apps/ai`; covered by its `pytest` suite.)
 
 ```bash
 # From repo root
@@ -74,9 +74,10 @@ apps/api/modules/{feature}/
 | `mayar`        | `mayar/billing-lifecycle.service.test.ts`  | 2       | Subscription expiration → `past_due`, grace period → downgrade to free                                                                                     |
 | `mayar`        | `mayar/mayar.controller.test.ts`           | 2       | Public webhook HTTP status behavior on success/failure paths                                                                                               |
 | `users`        | `users/users.utils.test.ts`                | 3       | Workspace ID resolution from mixed `workspaceId`/`workspace_id` payloads and empty input handling                                                          |
+| `articles`     | `articles/articles.utils.test.ts`          | 4       | Slug generation: lowercasing, punctuation-run collapse, dash trimming, empty fallback                                                                       |
 | `lib`          | `lib/at-rest-crypto.test.ts`               | 2       | At-rest encryption round-trip with the data key; legacy decrypt fallback to the transport key                                                              |
 | `plugins`      | `plugins/rate-limit.test.ts`               | 3       | Scoped hook propagates to parent routes; per-tier bucket isolation (unauth burst can't exhaust the auth bucket); 429 when the auth bucket is exhausted     |
-| **TOTAL**      | **16 files**                               | **406** | **All core business logic**                                                                                                                                |
+| **TOTAL**      | **17 files**                               | **410** | **All core business logic**                                                                                                                                |
 
 ---
 

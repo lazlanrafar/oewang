@@ -8,6 +8,7 @@ import * as categories from "./schema/categories";
 import * as contacts from "./schema/contacts";
 import * as debt_payments from "./schema/debt-payments";
 import * as debts from "./schema/debts";
+import * as faqs from "./schema/faqs";
 import * as invoices from "./schema/invoices";
 import * as orders from "./schema/orders";
 import * as pricing from "./schema/pricing";
@@ -54,6 +55,7 @@ const schema = {
   ...contacts,
   ...debts,
   ...debt_payments,
+  ...faqs,
   ...webhook_events,
   ...mcp_oauth_clients,
   ...mcp_auth_codes,

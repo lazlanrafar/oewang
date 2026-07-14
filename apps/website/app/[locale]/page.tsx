@@ -15,6 +15,7 @@ import { ProductShowcase } from "@/components/sections/product-showcase";
 import { SocialProof } from "@/components/sections/social-proof";
 import { StatsSection } from "@/components/sections/stats";
 import { ValuePillars } from "@/components/sections/value-pillars";
+import { getPublicFaqs } from "@/lib/faq.server";
 import { getPublicPlans } from "@/lib/pricing.server";
 import { createPageMetadata, getPageUrl } from "@/lib/seo";
 import { getDictionary } from "@/lib/translations";
@@ -73,8 +74,10 @@ export default async function Page({ params }: { params: Promise<{ locale: strin
   const isLoggedIn = cookieStore.has(process.env.NEXT_PUBLIC_SESSION_COOKIE_NAME ?? "oewang-session");
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
-  // Live plans from the API's public pricing endpoint (base tiers only).
-  const plans = await getPublicPlans();
+  // Live plans + FAQs from the API's public endpoints. FAQs fall back to the
+  // dictionary copy when the endpoint returns nothing.
+  const [plans, liveFaqs] = await Promise.all([getPublicPlans(), getPublicFaqs()]);
+  const faqItems = liveFaqs.length > 0 ? liveFaqs : dictionary.faq.items;
 
   const seo = SEO_COPY[locale as keyof typeof SEO_COPY] ?? SEO_COPY.en;
   const pageUrl = getPageUrl(locale);
@@ -108,7 +111,7 @@ export default async function Page({ params }: { params: Promise<{ locale: strin
       },
       {
         "@type": "FAQPage",
-        mainEntity: dictionary.faq.items.map((item) => ({
+        mainEntity: faqItems.map((item) => ({
           "@type": "Question",
           name: item.q,
           acceptedAnswer: { "@type": "Answer", text: item.a },
@@ -138,7 +141,7 @@ export default async function Page({ params }: { params: Promise<{ locale: strin
           <FeatureShowcases dictionary={dictionary} />
           <StatsSection dictionary={dictionary} />
           <PricingSection appUrl={appUrl} dictionary={dictionary} plans={plans} />
-          <FaqSection dictionary={dictionary} />
+          <FaqSection dictionary={dictionary} items={faqItems} />
           <CTASection isLoggedIn={isLoggedIn} appUrl={appUrl} locale={locale} dictionary={dictionary} />
         </main>
 
