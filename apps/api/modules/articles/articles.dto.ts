@@ -12,6 +12,10 @@ export const CreateArticleDto = t.Object({
 
 export const UpdateArticleDto = t.Partial(CreateArticleDto);
 
+export const UploadArticleImageBody = t.Object({
+  file: t.File({ maxSize: "10m", type: "image" }),
+});
+
 export const ArticleListQuery = t.Object({
   page: t.Optional(
     t

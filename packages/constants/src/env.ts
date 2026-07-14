@@ -89,6 +89,10 @@ const serverSchema = z.object({
   BUCKET_ACCESS_KEY_ID: z.string().optional(),
   BUCKET_SECRET_ACCESS_KEY: z.string().optional(),
   BUCKET_NAME: z.string().optional(),
+  // Public base URL for permanently-readable assets (e.g. article images).
+  // When unset, a path-style URL is built from BUCKET_ENDPOINT/BUCKET_NAME.
+  // The target bucket/prefix must allow anonymous GET for these to load publicly.
+  BUCKET_PUBLIC_URL: z.string().optional(),
 
   // Monitoring
   SENTRY_DSN: z.string().optional(),

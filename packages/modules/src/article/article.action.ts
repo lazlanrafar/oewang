@@ -47,6 +47,25 @@ export const getArticles = async (params?: {
   }
 };
 
+export const getArticle = async (
+  id: string,
+): Promise<ActionResponse<Article>> => {
+  try {
+    const response = await api.get(`/articles/${id}`);
+    const apiResponse = (response as any)._api_response as
+      | ApiResponse<Article>
+      | undefined;
+    const data = apiResponse?.data ?? response.data?.data ?? null;
+    if (!data) return { success: false, error: "Article not found" };
+    return { success: true, data };
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.response?.data?.message || "Failed to fetch article",
+    };
+  }
+};
+
 export const getArticleStats = async (): Promise<
   ActionResponse<ArticleStats>
 > => {
@@ -116,6 +135,27 @@ export const deleteArticleAction = async (
     return {
       success: false,
       error: error.response?.data?.message || "Failed to delete article",
+    };
+  }
+};
+
+export const uploadArticleImageAction = async (
+  formData: FormData,
+): Promise<ActionResponse<{ url: string }>> => {
+  try {
+    const response = await api.post("/articles/upload-image", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    const apiResponse = (response as any)._api_response as
+      | ApiResponse<{ url: string }>
+      | undefined;
+    const url = apiResponse?.data?.url ?? response.data?.data?.url;
+    if (!url) return { success: false, error: "Upload returned no URL" };
+    return { success: true, data: { url } };
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.response?.data?.message || "Failed to upload image",
     };
   }
 };

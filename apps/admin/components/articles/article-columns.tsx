@@ -2,6 +2,8 @@
 
 import React from "react";
 
+import { useRouter } from "next/navigation";
+
 import { useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import { deleteArticleAction, updateArticleAction } from "@workspace/modules/article/article.action";
@@ -19,12 +21,14 @@ import {
 import { CheckCircle, Edit, MoreHorizontal, Trash, XCircle } from "lucide-react";
 import { toast } from "sonner";
 
-import { useArticleStore } from "@/stores/articles";
+import { useLocalizedRoute } from "@/utils/localized-route";
 
 const CellActions = ({ row }: { row: { original: Article } }) => {
   const article = row.original;
   const queryClient = useQueryClient();
-  const { openEdit } = useArticleStore();
+  const router = useRouter();
+  const { getLocalizedUrl } = useLocalizedRoute();
+  const openEdit = () => router.push(getLocalizedUrl(`/articles/${article.id}/edit`));
   const [isLoading, setIsLoading] = React.useState(false);
 
   const invalidate = () =>
@@ -77,7 +81,7 @@ const CellActions = ({ row }: { row: { original: Article } }) => {
       <DropdownMenuContent align="end">
         <DropdownMenuLabel>Actions</DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => openEdit(article)}>
+        <DropdownMenuItem onClick={openEdit}>
           <Edit className="mr-2 h-4 w-4" />
           <span>Edit Article</span>
         </DropdownMenuItem>

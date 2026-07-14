@@ -2,6 +2,8 @@
 
 import { type ComponentProps, useMemo, useRef, useState } from "react";
 
+import { useRouter } from "next/navigation";
+
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import { getArticleStats, getArticles } from "@workspace/modules/article/article.action";
@@ -9,6 +11,7 @@ import type { Article, ArticleStats } from "@workspace/types";
 import { DataTable, type DataTableColumnsVisibility, DataTableEmptyState, TableSkeleton } from "@workspace/ui";
 
 import { useArticleStore } from "@/stores/articles";
+import { useLocalizedRoute } from "@/utils/localized-route";
 
 import { articleColumns } from "./article-columns";
 import { ArticlesClientCards } from "./articles-client-cards";
@@ -32,8 +35,10 @@ export function ArticlesClient({ initialData, rowCount, pageCount, initialPage, 
   const containerRef = useRef<HTMLDivElement>(null);
   const [columns, setColumnsLocal] = useState<ComponentProps<typeof DataTableColumnsVisibility>["columns"]>([]);
   const setColumnsStore = useArticleStore((s) => s.setColumns);
-  const openEdit = useArticleStore((s) => s.openEdit);
-  const openCreate = useArticleStore((s) => s.openCreate);
+  const router = useRouter();
+  const { getLocalizedUrl } = useLocalizedRoute();
+  const openCreate = () => router.push(getLocalizedUrl("/articles/new"));
+  const openEdit = (article: Article) => router.push(getLocalizedUrl(`/articles/${article.id}/edit`));
 
   const [filters, setFilters] = useState<ArticleFilters>({
     q: "",

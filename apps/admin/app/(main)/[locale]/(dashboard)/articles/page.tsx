@@ -2,7 +2,6 @@ import { getArticleStats, getArticles } from "@workspace/modules/article/article
 import type { Article, ArticleStats } from "@workspace/types";
 import type { Metadata } from "next";
 
-import { ArticleSheet } from "@/components/articles/article-sheet";
 import { ArticlesClient } from "@/components/articles/articles-client";
 
 export const metadata: Metadata = { title: "Articles" };
@@ -57,8 +56,6 @@ export default async function ArticlesPage(props: {
           initialStats={initialStats}
         />
       </div>
-
-      <ArticleSheet />
     </div>
   );
 }

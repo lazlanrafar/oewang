@@ -1,3 +1,6 @@
+import { createId } from "@paralleldrive/cuid2";
+import { BucketClient } from "@workspace/bucket";
+import { Env } from "@workspace/constants";
 import { ErrorCode } from "@workspace/types";
 import {
   buildError,
@@ -160,6 +163,42 @@ export abstract class ArticlesService {
     await ArticlesService.invalidatePublic(existing.slug);
 
     return buildSuccess(null);
+  }
+
+  // Upload an inline/cover image to the system bucket under a public prefix and
+  // return a PERMANENT public URL (unlike vault which returns 1h signed URLs).
+  // The `articles/` prefix must allow anonymous GET on the target bucket.
+  static async uploadImage(file: {
+    name: string;
+    type: string;
+    buffer: Buffer;
+  }) {
+    const endpoint = Env.BUCKET_ENDPOINT;
+    const bucketName = Env.BUCKET_NAME;
+    if (!endpoint || !Env.BUCKET_ACCESS_KEY_ID || !bucketName) {
+      return buildError(
+        ErrorCode.INTERNAL_ERROR,
+        "Image storage is not configured",
+      );
+    }
+
+    const bucket = new BucketClient({
+      endpoint,
+      accessKeyId: Env.BUCKET_ACCESS_KEY_ID,
+      secretAccessKey: Env.BUCKET_SECRET_ACCESS_KEY ?? "",
+      bucketName,
+      region: Env.BUCKET_REGION,
+    });
+
+    const ext = (file.name.split(".").pop() || "png").toLowerCase();
+    const key = `articles/${createId()}.${ext}`;
+    await bucket.upload(key, file.buffer, file.type);
+
+    const base = Env.BUCKET_PUBLIC_URL
+      ? Env.BUCKET_PUBLIC_URL.replace(/\/$/, "")
+      : `${endpoint.replace(/\/$/, "")}/${bucketName}`;
+
+    return buildSuccess({ url: `${base}/${key}` }, "Image uploaded");
   }
 
   static async getPublicList() {

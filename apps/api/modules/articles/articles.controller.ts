@@ -7,6 +7,7 @@ import {
   ArticleListQuery,
   CreateArticleDto,
   UpdateArticleDto,
+  UploadArticleImageBody,
 } from "./articles.dto";
 import { ArticlesService } from "./articles.service";
 
@@ -44,6 +45,21 @@ export const articlesController = new Elysia({
     { detail: { summary: "Get Article Details", tags: ["Articles"] } },
   )
   .use(requireAdminAccess)
+  .post(
+    "/upload-image",
+    async ({ body: { file } }) => {
+      const buffer = Buffer.from(await file.arrayBuffer());
+      return ArticlesService.uploadImage({
+        name: file.name,
+        type: file.type,
+        buffer,
+      });
+    },
+    {
+      body: UploadArticleImageBody,
+      detail: { summary: "Upload Article Image", tags: ["Articles"] },
+    },
+  )
   .post(
     "/",
     async ({ body, auth, workspaceId }) => {
