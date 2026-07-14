@@ -1,6 +1,6 @@
 import { createId } from "@paralleldrive/cuid2";
-import { pgTable, text, timestamp, integer } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
+import { integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { workspaces } from "./workspaces";
 
 export const walletGroups = pgTable("wallet_groups", {

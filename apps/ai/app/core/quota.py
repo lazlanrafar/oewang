@@ -103,19 +103,19 @@ async def check_quota(workspace_id: str) -> int:
     return used
 
 
-async def increment_ai_tokens(
-    workspace_id: str, current_tokens: int, tokens_spent: int
-) -> None:
+async def increment_ai_tokens(workspace_id: str, tokens_spent: int) -> None:
+    # Atomic increment — computing the sum in app code loses updates when two
+    # chats in the same workspace finish concurrently.
     await execute(
-        "UPDATE workspaces SET ai_tokens_used = $2, updated_at = now() WHERE id = $1",
+        "UPDATE workspaces SET ai_tokens_used = ai_tokens_used + $2, "
+        "updated_at = now() WHERE id = $1",
         workspace_id,
-        current_tokens + tokens_spent,
+        tokens_spent,
     )
 
 
-async def record_usage(
-    workspace_id: str, current_tokens: int, usage: dict
-) -> None:
+async def record_usage(workspace_id: str, usage: dict) -> None:
     """Add an LLM call's token spend to the workspace counter."""
     spent = int(usage.get("input_tokens", 0)) + int(usage.get("output_tokens", 0))
-    await increment_ai_tokens(workspace_id, current_tokens, spent)
+    if spent:
+        await increment_ai_tokens(workspace_id, spent)

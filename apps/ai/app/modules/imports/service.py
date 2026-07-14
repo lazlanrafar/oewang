@@ -76,9 +76,11 @@ _SCHEMA = {
 
 def extract_transactions(
     rows: list[dict], wallet_names: list[str], category_names: list[str]
-) -> list[dict]:
+) -> tuple[list[dict], dict]:
+    """Returns (transactions, token usage) so callers can meter."""
+    usage = {"input_tokens": 0, "output_tokens": 0}
     if not rows or not get_settings().OPENAI_API_KEY:
-        return []
+        return [], usage
 
     wallets = "\n".join(f"- {w}" for w in wallet_names)
     cats = "\n".join(f"- {c}" for c in category_names)
@@ -111,9 +113,14 @@ Tabular Data:
                 "json_schema": {"name": "extracted_transactions", "strict": True, "schema": _SCHEMA},
             },
         )
+        if resp.usage:
+            usage = {
+                "input_tokens": resp.usage.prompt_tokens,
+                "output_tokens": resp.usage.completion_tokens,
+            }
         parsed = json.loads(resp.choices[0].message.content or '{"transactions":[]}')
         txns = parsed.get("transactions")
-        return txns if isinstance(txns, list) else []
+        return (txns if isinstance(txns, list) else []), usage
     except Exception as e:  # noqa: BLE001
         log.error("extract_transactions failed: %s", e)
-        return []
+        return [], usage

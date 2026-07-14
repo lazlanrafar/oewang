@@ -227,6 +227,7 @@ async function buildInvoiceDraftFromAttachments(
         attachment.data,
         attachment.type,
         categoryContext,
+        workspaceId,
       );
 
       if (!parsed || !Number(parsed.amount)) {
@@ -653,14 +654,13 @@ export abstract class AiService {
 
   /**
    * Post-LLM money path: persist the assistant reply (+ artifact/provider) and
-   * increment token usage against the count read at chatBegin. Shared by the
-   * in-process chat() and the internal sidecar endpoint.
+   * atomically increment token usage. Shared by the in-process chat() and the
+   * internal sidecar endpoint.
    */
   static async chatEnd(
     workspaceId: string,
     sessionId: string,
     response: Pick<ChatResponse, "reply" | "usage" | "artifact" | "provider">,
-    currentTokens: number,
   ): Promise<void> {
     await AiRepository.saveMessage(
       sessionId,
@@ -678,11 +678,7 @@ export abstract class AiService {
     const tokensSpent =
       (response.usage?.input_tokens ?? 0) +
       (response.usage?.output_tokens ?? 0);
-    await AiRepository.incrementAiTokens(
-      workspaceId,
-      currentTokens,
-      tokensSpent,
-    );
+    await AiRepository.incrementAiTokens(workspaceId, tokensSpent);
 
     // Notify connected WebSocket clients that AI usage has changed so the
     // NavUsage widget can refresh without polling.
@@ -721,17 +717,12 @@ export abstract class AiService {
       webSearch,
     );
 
-    await AiService.chatEnd(
-      workspaceId,
-      begin.sessionId,
-      {
-        reply: response.reply,
-        usage: response.usage,
-        artifact: response.artifact ?? undefined,
-        provider: { name: "openai", response_id: response.response_id },
-      },
-      begin.currentTokens,
-    );
+    await AiService.chatEnd(workspaceId, begin.sessionId, {
+      reply: response.reply,
+      usage: response.usage,
+      artifact: response.artifact ?? undefined,
+      provider: { name: "openai", response_id: response.response_id },
+    });
 
     return {
       sessionId: begin.sessionId,
@@ -759,6 +750,7 @@ export abstract class AiService {
       base64Image,
       mediaType,
       categoryContext,
+      workspaceId,
     );
 
     if (parsed) {

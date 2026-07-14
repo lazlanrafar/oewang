@@ -1,5 +1,5 @@
 import { createId } from "@paralleldrive/cuid2";
-import { pgTable, text, timestamp, integer, bigint } from "drizzle-orm/pg-core";
+import { bigint, integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { pricing } from "./pricing";
 
 export const workspaces = pgTable("workspaces", {
@@ -15,9 +15,9 @@ export const workspaces = pgTable("workspaces", {
   /** Plan the workspace has scheduled to switch to at the next renewal. */
   pending_plan_id: text("pending_plan_id").references(() => pricing.id),
   /** Billing interval for the pending plan switch. */
-  pending_plan_billing_interval: text(
-    "pending_plan_billing_interval",
-  ).$type<"monthly" | "annual">(),
+  pending_plan_billing_interval: text("pending_plan_billing_interval").$type<
+    "monthly" | "annual"
+  >(),
   mayar_customer_email: text("mayar_customer_email"),
   mayar_transaction_id: text("mayar_transaction_id").unique(),
   plan_started_at: timestamp("plan_started_at"),

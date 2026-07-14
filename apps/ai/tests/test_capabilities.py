@@ -48,6 +48,7 @@ class _FakeMsg:
 class _FakeResp:
     def __init__(self, content):
         self.choices = [_FakeMsg(content)]
+        self.usage = None
 
 
 class _FakeClient:
@@ -71,9 +72,10 @@ def test_parse_receipt_returns_structured_dict(monkeypatch):
                "categoryId": "cat1", "items": []}
     monkeypatch.setattr(receipt_svc, "get_client", lambda: _FakeClient(json.dumps(payload)))
     monkeypatch.setattr(receipt_svc.get_settings(), "OPENAI_API_KEY", "x", raising=False)
-    out = receipt_svc.parse_receipt(base64.b64encode(b"img").decode(), "image/jpeg", "cat1: Food")
+    out, usage = receipt_svc.parse_receipt(base64.b64encode(b"img").decode(), "image/jpeg", "cat1: Food")
     assert out["amount"] == 42.0
     assert out["name"] == "Toko"
+    assert set(usage) == {"input_tokens", "output_tokens"}
 
 
 def test_extract_transactions_returns_list(monkeypatch):
@@ -83,6 +85,7 @@ def test_extract_transactions_returns_list(monkeypatch):
     ]}
     monkeypatch.setattr(imports_svc, "get_client", lambda: _FakeClient(json.dumps(payload)))
     monkeypatch.setattr(imports_svc.get_settings(), "OPENAI_API_KEY", "x", raising=False)
-    out = imports_svc.extract_transactions([{"date": "2026-06-01", "amt": "5"}], ["Cash"], ["Food"])
+    out, usage = imports_svc.extract_transactions([{"date": "2026-06-01", "amt": "5"}], ["Cash"], ["Food"])
     assert len(out) == 1
     assert out[0]["name"] == "Coffee"
+    assert set(usage) == {"input_tokens", "output_tokens"}

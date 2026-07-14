@@ -78,10 +78,13 @@ def _pdf_text(data_b64: str) -> str:
         return ""
 
 
-def parse_receipt(data_b64: str, mime_type: str, category_context: str) -> dict | None:
-    """Returns ParsedReceipt dict {amount, date, name, categoryId, items[]} or None."""
+def parse_receipt(
+    data_b64: str, mime_type: str, category_context: str
+) -> tuple[dict | None, dict]:
+    """Returns (ParsedReceipt dict or None, token usage) so callers can meter."""
+    usage = {"input_tokens": 0, "output_tokens": 0}
     if not get_settings().OPENAI_API_KEY:
-        return None
+        return None, usage
 
     pdf_text = _pdf_text(data_b64) if mime_type == "application/pdf" else ""
     prompt = (
@@ -111,7 +114,12 @@ def parse_receipt(data_b64: str, mime_type: str, category_context: str) -> dict 
                 "json_schema": {"name": "parsed_receipt", "strict": True, "schema": _SCHEMA},
             },
         )
-        return json.loads(resp.choices[0].message.content or "{}")
+        if resp.usage:
+            usage = {
+                "input_tokens": resp.usage.prompt_tokens,
+                "output_tokens": resp.usage.completion_tokens,
+            }
+        return json.loads(resp.choices[0].message.content or "{}"), usage
     except Exception as e:  # noqa: BLE001
         log.error("OpenAI parseReceipt failed: %s", e)
-        return None
+        return None, usage

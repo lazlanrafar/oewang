@@ -1,8 +1,8 @@
 import { createId } from "@paralleldrive/cuid2";
-import { pgTable, text, timestamp, decimal, pgEnum } from "drizzle-orm/pg-core";
-import { workspaces } from "./workspaces";
-import { transactions } from "./transactions";
+import { decimal, pgEnum, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { contacts } from "./contacts";
+import { transactions } from "./transactions";
+import { workspaces } from "./workspaces";
 
 export const debtTypeEnum = pgEnum("debt_type", ["payable", "receivable"]);
 export const debtOriginEnum = pgEnum("debt_origin", [

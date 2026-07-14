@@ -1,5 +1,5 @@
 import { createId } from "@paralleldrive/cuid2";
-import { pgTable, text, timestamp, bigint, jsonb } from "drizzle-orm/pg-core";
+import { bigint, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { workspaces } from "./workspaces";
 
 export const vaultFiles = pgTable("vault_files", {

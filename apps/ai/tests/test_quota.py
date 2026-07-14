@@ -39,10 +39,14 @@ async def test_check_quota_returns_used_when_under_limit(monkeypatch):
 async def test_record_usage_increments_by_total_tokens(monkeypatch):
     captured = {}
 
-    async def fake_execute(_sql, ws, total):
+    async def fake_execute(sql, ws, spent):
+        captured["sql"] = sql
         captured["ws"] = ws
-        captured["total"] = total
+        captured["spent"] = spent
 
     monkeypatch.setattr(quota, "execute", fake_execute)
-    await quota.record_usage("w1", 200, {"input_tokens": 30, "output_tokens": 70})
-    assert captured == {"ws": "w1", "total": 300}
+    await quota.record_usage("w1", {"input_tokens": 30, "output_tokens": 70})
+    assert captured["ws"] == "w1"
+    assert captured["spent"] == 100
+    # Must be an atomic in-database increment, not app-computed.
+    assert "ai_tokens_used + $2" in captured["sql"]

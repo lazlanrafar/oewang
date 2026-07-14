@@ -59,8 +59,14 @@ export abstract class AiRepository {
     return session || null;
   }
 
-  static async getSessionMessages(sessionId: string, workspaceId: string) {
-    return db
+  static async getSessionMessages(
+    sessionId: string,
+    workspaceId: string,
+    limit = 20,
+  ) {
+    // Last `limit` messages, oldest-first. Unbounded history gets resent to
+    // the LLM on every tool-loop step — O(n²) input tokens per session.
+    const rows = await db
       .select()
       .from(aiMessages)
       .where(
@@ -70,7 +76,9 @@ export abstract class AiRepository {
           isNull(aiMessages.deleted_at),
         ),
       )
-      .orderBy(aiMessages.created_at);
+      .orderBy(desc(aiMessages.created_at))
+      .limit(limit);
+    return rows.reverse();
   }
 
   static async getSessions(workspaceId: string) {
@@ -137,15 +145,13 @@ export abstract class AiRepository {
     };
   }
 
-  static async incrementAiTokens(
-    workspaceId: string,
-    currentTokens: number,
-    tokensSpent: number,
-  ) {
+  static async incrementAiTokens(workspaceId: string, tokensSpent: number) {
+    // Atomic increment — a read-modify-write here loses updates when two
+    // chats in the same workspace finish concurrently.
     return db
       .update(workspaces)
       .set({
-        ai_tokens_used: currentTokens + tokensSpent,
+        ai_tokens_used: sql`${workspaces.ai_tokens_used} + ${tokensSpent}`,
         updated_at: new Date(),
       })
       .where(eq(workspaces.id, workspaceId));

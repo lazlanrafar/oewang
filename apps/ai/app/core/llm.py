@@ -61,9 +61,9 @@ async def complete_metered(
     after. For entry points NOT already metered by Elysia's chat-begin/chat-end."""
     from app.core import quota
 
-    current = await quota.check_quota(workspace_id)
-    result = complete_raw(system, messages, max_tokens)
-    await quota.record_usage(workspace_id, current, result["usage"])
+    await quota.check_quota(workspace_id)
+    result = await asyncio.to_thread(complete_raw, system, messages, max_tokens)
+    await quota.record_usage(workspace_id, result["usage"])
     return result["reply"]
 
 
@@ -103,6 +103,9 @@ async def complete_with_tools(
             lambda ut=use_tools: client.chat.completions.create(
                 model=model,
                 messages=convo,
+                # Cap output like every other call site; without it a runaway
+                # reply can emit up to the model max at output-token prices.
+                max_tokens=1024,
                 # Match the TS orchestrator default. ponytail: per-workspace
                 # temperature/model overrides aren't plumbed to the sidecar yet.
                 temperature=0.7,

@@ -76,17 +76,20 @@ export type SidecarChunk = {
 };
 
 export abstract class AiSidecarClient {
-  /** Parse a receipt image/PDF → structured transaction + line items. */
+  /** Parse a receipt image/PDF → structured transaction + line items.
+   * workspaceId makes the sidecar quota-check and meter the vision call. */
   static async parseReceipt(
     base64: string,
     mimeType: string,
     categoryContext: string,
+    workspaceId: string,
   ): Promise<SidecarParsedReceipt | null> {
     const { parsed } = await sidecarPost<{
       parsed: SidecarParsedReceipt | null;
     }>("/receipt/parse", {
       file: { data: base64, type: mimeType },
       categoryContext,
+      workspace_id: workspaceId,
     });
     return parsed;
   }
@@ -97,6 +100,7 @@ export abstract class AiSidecarClient {
     mimeType: string,
     walletNames: string[],
     categoryNames: string[],
+    workspaceId: string,
   ): Promise<SidecarExtractedTransaction[]> {
     const { transactions } = await sidecarPost<{
       transactions: SidecarExtractedTransaction[];
@@ -105,6 +109,7 @@ export abstract class AiSidecarClient {
       mimeType,
       walletNames,
       categoryNames,
+      workspace_id: workspaceId,
     });
     return transactions;
   }
