@@ -1,11 +1,4 @@
-import {
-  Banknote,
-  LayoutDashboard,
-  LayoutGrid,
-  type LucideIcon,
-  Users,
-  Smartphone,
-} from "lucide-react";
+import { Banknote, FileText, HelpCircle, LayoutDashboard, LayoutGrid, type LucideIcon, Users } from "lucide-react";
 
 export interface NavSubItem {
   title: string;
@@ -68,9 +61,14 @@ export const sidebarItems: NavGroup[] = [
         icon: Banknote,
       },
       {
-        title: "Apps",
-        url: "/apps",
-        icon: Smartphone,
+        title: "FAQs",
+        url: "/faqs",
+        icon: HelpCircle,
+      },
+      {
+        title: "Articles",
+        url: "/articles",
+        icon: FileText,
       },
     ],
   },

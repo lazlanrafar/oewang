@@ -152,7 +152,19 @@
           "label": "現在の残高",
           "placeholder": "0.00"
         }
-      }
+      },
+      "by": "作成者",
+      "cancelled": "キャンセル済み",
+      "close": "閉じる",
+      "copied": "コピーしました",
+      "copy_link": "リンクをコピー",
+      "create": "作成",
+      "email": "メール",
+      "empty": "空",
+      "loading": "読み込み中...",
+      "loading_more": "さらに読み込み中...",
+      "saving": "保存中...",
+      "system": "システム"
     },
     "language": {
       "title": "言語",
@@ -1065,7 +1077,12 @@
       "qty_unit": "{qty} {unit}"
     },
     "uploading_files": "{count}件のファイルをアップロード中...",
-    "all_uploads_success": "すべてのファイルをアップロードしました"
+    "all_uploads_success": "すべてのファイルをアップロードしました",
+    "exchange_rate_label": "為替レート",
+    "exchange_rate_hint": "1 {from} = {rate} {to}",
+    "original_amount_label": "元の金額",
+    "converted_amount_label": "{currency}に換算",
+    "converted_amount_hint": "レポート用に{main}で保存"
   },
   "contacts": {
     "title": "連絡先",
@@ -1149,7 +1166,11 @@
       "saving": "保存中...",
       "create": "連絡先を作成",
       "creating": "作成中...",
-      "cancel": "キャンセル"
+      "cancel": "キャンセル",
+      "errors": {
+        "invalid_email": "メールアドレスが無効です",
+        "name_required": "名前は必須です"
+      }
     },
     "toasts": {
       "created": "連絡先を作成しました",
@@ -1345,30 +1366,7 @@
     "account_label": "アカウント",
     "billing_label": "請求",
     "notifications_label": "通知",
-    "logout_label": "ログアウト",
-    "dashboard": "ダッシュボード",
-    "finance": "財務",
-    "people": "ピープル",
-    "workspace": "ワークスペース",
-    "system": "システム",
-    "overview": "概要",
-    "transactions": "取引",
-    "calendar": "カレンダー",
-    "planning": "計画",
-    "accounts": "アカウント",
-    "budget": "予算",
-    "debts": "借金",
-    "contacts": "連絡先",
-    "vault": "保管庫",
-    "apps": "アプリ",
-    "settings": "設定",
-    "invoices": "請求書",
-    "customers": "顧客",
-    "coming_soon": "まもなく",
-    "account": "アカウント",
-    "billing": "請求",
-    "notifications": "通知",
-    "logout": "ログアウト"
+    "logout_label": "ログアウト"
   },
   "search": {
     "placeholder": "何でも探す...",

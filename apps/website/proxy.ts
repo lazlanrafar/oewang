@@ -78,5 +78,7 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+  // Exclude API, Next internals, and any static file (paths containing a dot,
+  // e.g. /iphone.svg, /logo.png) so public assets aren't locale-redirected.
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*)"],
 };

@@ -64,13 +64,19 @@ export async function GET(request: Request) {
 
     const googleUser = await userRes.json();
 
-    const connectRes = await axiosInstance.post("auth/oauth/connect", {
-      provider: "google",
-      provider_user_id: googleUser.sub as string,
-      email: googleUser.email as string,
-      name: googleUser.name as string | undefined,
-      avatar_url: googleUser.picture as string | undefined,
-    });
+    const connectRes = await axiosInstance.post(
+      "auth/oauth/connect",
+      {
+        provider: "google",
+        provider_user_id: googleUser.sub as string,
+        email: googleUser.email as string,
+        name: googleUser.name as string | undefined,
+        avatar_url: googleUser.picture as string | undefined,
+      },
+      // Server-to-server secret gating /auth/oauth/connect (API fails closed
+      // without it — this was the 401). Mirrors apps/app's callback.
+      { headers: { "x-oauth-connect-secret": Env.OAUTH_CONNECT_SECRET ?? "" } },
+    );
 
     const { token } = connectRes.data.data as {
       token: string;

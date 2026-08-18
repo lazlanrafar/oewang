@@ -130,6 +130,10 @@ export abstract class PricingService {
       description: plan.description,
       prices: plan.prices,
       features: plan.features,
+      // Base plan vs add-on so consumers (e.g. the marketing site) can show
+      // subscription tiers separately from AI/storage add-ons.
+      is_addon: plan.is_addon,
+      addon_type: plan.addon_type,
       is_highlighted: plan.name.toLowerCase() === "pro",
       comingSoon: plan.name.toLowerCase() !== "starter",
     }));

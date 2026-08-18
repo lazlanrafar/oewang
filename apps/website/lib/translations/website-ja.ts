@@ -1,85 +1,183 @@
-export const websiteJa = {
+import type { WebsiteDictionary } from "./website-en";
+
+// Full Japanese translation of the marketing site. Shape mirrors websiteEn
+// (enforced by the WebsiteDictionary annotation). Brand/product names
+// (Oewang, AI, Telegram, WhatsApp, CSV) are kept as-is.
+export const websiteJa: WebsiteDictionary = {
   nav: {
     overview: "概要",
-    capture: "キャプチャ",
-    clarity: "明瞭性",
-    ai: "AI",
-    workspaces: "ワークスペース",
-    signIn: "サインイン",
-    signOut: "サインアウト",
+    features: "機能",
+    pricing: "料金",
+    faq: "よくある質問",
+    signIn: "ログイン",
+    signOut: "ログアウト",
   },
   hero: {
-    badge: "毎日の家計管理アプリ",
-    title: "スプレッドシートなしで全ての支出を管理。",
-    subtitle: "oewangは毎日の取引入力、支出の把握、AIによる自動分類でお金の流れを明確にします。",
-    ctaStartFree: "無料試用を開始",
-    ctaSeeHow: "仕組みを見る",
-    ctaGetStarted: "無料で始める",
+    badge: "AI家計ワークスペース",
+    titleLead: "お金を、",
+    titleAccent: "かんたんに。",
+    titleAccents: ["かんたんに。", "すぐに。", "自動で。", "美しく。", "みんなで。"],
+    subtitle:
+      "Oewangはすべての取引を記録します——レシートを撮影、チャットを転送、またはAIに聞くだけ——日々の支出を、個人とチームのワークスペース全体で明確にします。",
+    ctaStartFree: "無料で始める",
+    ctaSeeHow: "使い方を見る",
     ctaGoToDashboard: "ダッシュボードへ",
-    ctaViewDemo: "デモを見る",
-    trialNote: "14日間無料 · いつでもキャンセル可能",
-    noCreditCard: "クレジットカード不要",
+    trialNote: "無料プランあり · クレジットカード不要",
   },
-  capture: {
-    label: "キャプチャ",
-    title: "数秒で全取引を記録。",
-    subtitle: "支出、収入、レシートをその場で入力 — どのチャンネルからでも。",
-    transactions: {
-      title: "取引",
-      description: "すべての収入と支出が自動的に整理・分類。手作業を減らす。",
-    },
-    receipt: {
-      title: "レシートキャプチャ",
-      description: "TelegramやWhatsAppでレシートを転送。oewangが自動で読み取り保存。",
-    },
-    invoices: {
-      title: "請求書",
-      description: "プロフェッショナルな請求書、自動追跡でお支払い迅速化。",
-    },
+  chatDemo: {
+    appName: "Oewang AI",
+    status: "オンライン",
+    receiptLabel: "receipt.jpg",
+    lockTime: "9:41",
+    lockDate: "6月9日 月曜日",
   },
-  clarity: {
-    label: "明瞭性",
-    title: "すべての取引を一元管理。",
-    subtitle: "収入と支出をすべて追跡・検索・分類。日々のお金が明確に。",
-    items: ["AIによる自動分類", "瞬時の検索とフィルター", "複数通貨対応", "一括編集"],
+  socialProof: {
+    heading: "いつもの場所から支出を記録",
+    channels: ["レシート写真", "Telegram", "WhatsApp", "メール転送", "CSVインポート", "多通貨対応"],
   },
-  ai: {
-    label: "AI",
-    title: "財務について何でも質問。",
-    subtitle: "支出、収益、トレンドについて即座に回答。レポートを検索する必要はありません。",
-    items: ["自然言語クエリ", "リアルタイムインサイト", "週間サマリー", "マルチエージェントAI"],
-  },
-  workspaces: {
-    label: "ワークスペース",
-    title: "1つのアカウント、複数の世界。",
-    subtitle: "個人、家族、チームのワークスペースを記録を混在させずに切り替え。",
+  pillars: {
+    label: "Oewangの理由",
+    title: "お金の実際の動きに合わせて設計。",
     items: [
-      "ロールベースのアクセス",
-      "ワークスペースごとの独立した記録",
-      "共有ダッシュボード",
-      "1アカウントで複数ワークスペース",
+      {
+        title: "数秒で記録",
+        description: "レシートを転送するか一行入力するだけ。Oewangが読み取り、分類し、自動で保存します。",
+      },
+      {
+        title: "表計算ではなく、明確さ",
+        description: "すべての収入と支出を統合し、検索でき、自動分類——手作業の列は不要です。",
+      },
+      {
+        title: "AIに何でも質問",
+        description: "「今月は食費にいくら使った？」レポートを掘らずに本当の答えが得られます。",
+      },
+      {
+        title: "個人もチームも",
+        description: "個人・家族・チームのワークスペースを、記録を混ぜることなく切り替えられます。",
+      },
+    ],
+  },
+  showcase: {
+    label: "使い方",
+    title: "レシートから意思決定まで——ひとつの流れで。",
+    subtitle: "1件の取引が、表計算に触れずに記録から洞察へと進む様子をご覧ください。",
+    steps: [
+      {
+        title: "記録",
+        caption: "レシートを撮影または転送。AIが店名・金額・カテゴリを即座に読み取ります。",
+      },
+      {
+        title: "整理",
+        caption: "取引一覧に追加——分類され、検索でき、多通貨にも対応。",
+      },
+      {
+        title: "把握",
+        caption: "何が変わり、何が期限で、お金が実際どこへ行くのかをアシスタントに尋ねましょう。",
+      },
+    ],
+  },
+  features: {
+    label: "機能",
+    title: "日々のお金を明確に保つすべて。",
+    chapters: [
+      {
+        label: "明確さ",
+        title: "すべての取引を、ひとつに。",
+        description: "すべての収入と支出を記録・検索・分類し、日々のお金を明確に保ちます。",
+        points: ["AIによる自動分類", "即座に検索・絞り込み", "多通貨対応", "取引の一括編集"],
+      },
+      {
+        label: "AI",
+        title: "お金について何でも質問。",
+        description: "支出・収益・傾向への即答——もうレポートを掘る必要はありません。",
+        points: ["自然言語での質問", "リアルタイムの洞察", "週次サマリー", "マルチエージェントAI"],
+      },
+      {
+        label: "ワークスペース",
+        title: "ひとつのアカウント、多くの世界。",
+        description: "個人・家族・チームのワークスペースを、記録を混ぜずに切り替え。",
+        points: [
+          "役割ベースのメンバー権限",
+          "ワークスペースごとに分離された記録",
+          "共有ダッシュボード",
+          "アカウントごとに複数のワークスペース",
+        ],
+      },
+    ],
+  },
+  stats: {
+    label: "数字で見る",
+    title: "手間は少なく。明確さは多く。",
+    items: [
+      { value: "2秒", label: "レシートから取引を記録" },
+      { value: "40+", label: "連携と記録チャネル" },
+      { value: "6", label: "標準対応の通貨数" },
+      { value: "100%", label: "あなたの記録をひとつのワークスペースに" },
+    ],
+  },
+  pricing: {
+    label: "料金",
+    title: "無料で開始。成長に合わせてアップグレード。",
+    subtitle: "すべてのプランにAI記録、統合取引、Vaultストレージが含まれます。",
+    note: "USD表示 · 月額または年額請求",
+    ctaGet: "始める",
+    ctaComingSoon: "順番待ちに登録",
+  },
+  faq: {
+    label: "よくある質問",
+    title: "疑問に、お答えします。",
+    items: [
+      {
+        q: "Oewangはどうやって取引を記録しますか？",
+        a: "レシートを撮影、TelegramやWhatsAppで転送、CSVをインポート、または一行入力するだけ。OewangのAIが店名・金額・カテゴリを読み取り、自動で保存します。",
+      },
+      {
+        q: "私の財務データは安全ですか？",
+        a: "はい。記録はワークスペースごとに分離され、通信時も保存時も暗号化され、個人とチームのワークスペース間で共有されることはありません。",
+      },
+      {
+        q: "個人とビジネスの両方に使えますか？",
+        a: "まさにそのためのものです。ひとつのアカウントに複数のワークスペース——個人・家族・チーム——があり、それぞれ独自の記録と役割ベースのアクセスを持ちます。",
+      },
+      {
+        q: "対応している通貨は？",
+        a: "6通貨が標準対応で、多通貨を自動処理するため、混在した支出も明確なままです。",
+      },
+      {
+        q: "始めるのにクレジットカードは必要ですか？",
+        a: "いいえ。無料のStarterプランで始め、必要になったときだけアップグレードできます——開始にカードは不要です。",
+      },
     ],
   },
   cta: {
-    title: "毎日お金を追跡する準備ができましたか？",
-    subtitle: "oewangを使って取引を入力し、支出を理解し、請求書を把握しましょう。",
+    title: "お金を、はっきり見てみませんか？",
+    subtitle: "取引を記録し、支出を把握し、あらゆる請求に先回り——今日から始めましょう。",
     getStarted: "無料で始める",
     viewPricing: "料金を見る",
-    trialNote: "14日間無料 · クレジットカード不要",
+    trialNote: "無料プランあり · クレジットカード不要",
+  },
+  articles: {
+    label: "記事",
+    heading: "Oewangチームから。",
+    empty: "まだ記事がありません。近日公開予定です。",
+    all: "すべての記事",
+    metaTitle: "記事 — Oewang",
+    metaDescription: "お金やレシートの管理、AIを活用した家計について、Oewangチームによるガイドと最新情報。",
   },
   footer: {
-    tagline: "日常生活のためのお金の明瞭性。",
-    rights: "All rights reserved.",
-    lightMode: "ライトモード",
-    darkMode: "ダークモード",
+    tagline: "実生活のためのお金の明確さ。",
+    rights: "無断転載を禁じます。",
+    product: "プロダクト",
+    company: "会社",
+    articles: "記事",
+    terms: "利用規約",
+    privacy: "プライバシー",
   },
   notFound: {
     title: "404",
     heading: "ページが見つかりません",
-    description: "お探しのページは存在しないか、移動した可能性があります。",
+    description: "お探しのページは存在しないか、移動された可能性があります。",
     goHome: "ホームへ",
     goToApp: "アプリへ",
   },
 };
-
-export type WebsiteDictionaryJa = typeof websiteJa;

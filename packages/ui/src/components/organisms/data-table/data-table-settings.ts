@@ -17,7 +17,9 @@ export type TableId =
   | "invoices"
   | "debts"
   | "workspaces"
-  | "budgets";
+  | "budgets"
+  | "faqs"
+  | "articles";
 
 /**
  * Settings for a single table
@@ -54,6 +56,8 @@ export const defaultHiddenColumns: Record<TableId, string[]> = {
   debts: [],
   workspaces: [],
   budgets: [],
+  faqs: [],
+  articles: [],
 };
 
 /**

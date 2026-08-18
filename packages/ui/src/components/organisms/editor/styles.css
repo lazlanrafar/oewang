@@ -29,3 +29,36 @@
   height: 0;
   pointer-events: none;
 }
+
+/* Notion-style rich blocks: inline images, dividers, quotes, code. */
+.tiptap img {
+  @apply my-3 h-auto max-w-full rounded-md;
+}
+
+.tiptap img.ProseMirror-selectednode {
+  @apply outline outline-2 outline-ring;
+}
+
+.tiptap hr {
+  @apply my-6 border-border border-t;
+}
+
+.tiptap blockquote {
+  @apply my-3 border-border border-l-2 pl-4 text-muted-foreground italic;
+}
+
+.tiptap ul {
+  @apply my-2 list-disc pl-6;
+}
+
+.tiptap ol {
+  @apply my-2 list-decimal pl-6;
+}
+
+.tiptap pre {
+  @apply my-3 overflow-x-auto rounded-md bg-muted p-3 font-mono text-sm;
+}
+
+.tiptap code {
+  @apply rounded bg-muted px-1 py-0.5 font-mono text-sm;
+}

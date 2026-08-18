@@ -24,6 +24,8 @@ export const STICKY_COLUMNS: Record<TableId, StickyColumnConfig[]> = {
   ],
   workspaces: [{ id: "name", width: 220 }],
   budgets: [{ id: "categoryName", width: 220 }],
+  faqs: [{ id: "question", width: 320 }],
+  articles: [{ id: "title", width: 300 }],
 };
 
 /**
@@ -93,6 +95,15 @@ export const SORT_FIELD_MAPS: Record<TableId, Record<string, string>> = {
     spent: "spent",
     percentage: "percentage",
   },
+  faqs: {
+    question: "question",
+    sort_order: "sort_order",
+    created_at: "created_at",
+  },
+  articles: {
+    title: "title",
+    created_at: "created_at",
+  },
 };
 
 /**
@@ -109,6 +120,8 @@ export const NON_REORDERABLE_COLUMNS: Record<TableId, Set<string>> = {
   debts: new Set(["select", "contactName", "actions"]),
   workspaces: new Set(["name", "actions"]),
   budgets: new Set(["categoryName", "actions"]),
+  faqs: new Set(["question", "actions"]),
+  articles: new Set(["title", "actions"]),
 };
 
 /**
@@ -125,6 +138,8 @@ export const ROW_HEIGHTS: Record<TableId, number> = {
   debts: 45,
   workspaces: 45,
   budgets: 45,
+  faqs: 45,
+  articles: 45,
 };
 
 /**
@@ -205,6 +220,20 @@ export const TABLE_CONFIGS: Record<TableId, TableConfig> = {
     sortFieldMap: SORT_FIELD_MAPS.budgets,
     nonReorderableColumns: NON_REORDERABLE_COLUMNS.budgets,
     rowHeight: ROW_HEIGHTS.budgets,
+  },
+  faqs: {
+    tableId: "faqs",
+    stickyColumns: STICKY_COLUMNS.faqs,
+    sortFieldMap: SORT_FIELD_MAPS.faqs,
+    nonReorderableColumns: NON_REORDERABLE_COLUMNS.faqs,
+    rowHeight: ROW_HEIGHTS.faqs,
+  },
+  articles: {
+    tableId: "articles",
+    stickyColumns: STICKY_COLUMNS.articles,
+    sortFieldMap: SORT_FIELD_MAPS.articles,
+    nonReorderableColumns: NON_REORDERABLE_COLUMNS.articles,
+    rowHeight: ROW_HEIGHTS.articles,
   },
 };
 

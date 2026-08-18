@@ -64,7 +64,7 @@ export function TestimonialsSection() {
             >
               <p className="flex-1 text-muted-foreground text-sm leading-6">&ldquo;{t.quote}&rdquo;</p>
               <div className="flex items-center gap-3 border-border border-t pt-4">
-                <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted font-medium text-foreground text-xs">
+                <div className="flex size-9 shrink-0 items-center justify-center bg-muted font-medium text-foreground text-xs">
                   {t.initials}
                 </div>
                 <div>
