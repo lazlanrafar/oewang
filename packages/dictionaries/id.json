@@ -1077,7 +1077,12 @@
       "qty_unit": "{qty} {unit}"
     },
     "uploading_files": "Mengunggah {count} file...",
-    "all_uploads_success": "Semua file berhasil diunggah"
+    "all_uploads_success": "Semua file berhasil diunggah",
+    "exchange_rate_label": "Nilai tukar",
+    "exchange_rate_hint": "1 {from} = {rate} {to}",
+    "original_amount_label": "Jumlah asli",
+    "converted_amount_label": "Dikonversi ke {currency}",
+    "converted_amount_hint": "Disimpan dalam {main} untuk laporan"
   },
   "contacts": {
     "title": "Kontak",
@@ -1161,7 +1166,11 @@
       "saving": "Menyimpan...",
       "create": "Buat Kontak",
       "creating": "Membuat...",
-      "cancel": "Batal"
+      "cancel": "Batal",
+      "errors": {
+        "invalid_email": "Alamat email tidak valid",
+        "name_required": "Nama wajib diisi"
+      }
     },
     "toasts": {
       "created": "Kontak berhasil dibuat",
@@ -1357,30 +1366,7 @@
     "account_label": "Akun",
     "billing_label": "Penagihan",
     "notifications_label": "Notifikasi",
-    "logout_label": "Keluar",
-    "dashboard": "Dasbor",
-    "finance": "Keuangan",
-    "people": "Orang",
-    "workspace": "Ruang Kerja",
-    "system": "Sistem",
-    "overview": "Ringkasan",
-    "transactions": "Transaksi",
-    "calendar": "Kalender",
-    "planning": "Perencanaan",
-    "accounts": "Akun",
-    "budget": "Anggaran",
-    "debts": "Hutang",
-    "contacts": "Kontak",
-    "vault": "Brankas",
-    "apps": "Aplikasi",
-    "settings": "Pengaturan",
-    "invoices": "Tagihan",
-    "customers": "Pelanggan",
-    "coming_soon": "Segera Hadir",
-    "account": "Akun",
-    "billing": "Penagihan",
-    "notifications": "Notifikasi",
-    "logout": "Keluar"
+    "logout_label": "Keluar"
   },
   "search": {
     "placeholder": "Cari apa saja...",
