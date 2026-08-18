@@ -70,3 +70,8 @@ scripts/test-*-token.ts
 .wwebjs_cache/
 **/.wwebjs_auth/
 **/.wwebjs_cache/
+
+# Local scratch / experiments (untracked)
+scratch/
+tmp/
+test-contacts-query.ts

@@ -110,3 +110,12 @@ class OewangCrypto {
     return out;
   }
 }
+
+/// Top-level entry points for `compute()` — they construct a fresh [OewangCrypto]
+/// inside the worker isolate (the instance itself, holding a SecureRandom, is not
+/// sendable). Records are sendable, so we pass (secret, text) across the boundary.
+String encryptInIsolate((String, String) args) =>
+    OewangCrypto(secret: args.$1).encrypt(args.$2);
+
+String decryptInIsolate((String, String) args) =>
+    OewangCrypto(secret: args.$1).decrypt(args.$2);

@@ -13,8 +13,8 @@ import("@workspace/redis")
   })
   .catch(() => {});
 
-export async function cacheGet<T>(key: string): Promise<T | null> {
-  if (!redis) return null;
+export async function cacheGet<T>(key: string | null): Promise<T | null> {
+  if (!redis || !key) return null;
   try {
     const val = await redis.get(key);
     if (!val) return null;
@@ -26,11 +26,11 @@ export async function cacheGet<T>(key: string): Promise<T | null> {
 }
 
 export async function cacheSet(
-  key: string,
+  key: string | null,
   value: unknown,
   ttlSeconds: number,
 ): Promise<void> {
-  if (!redis) return;
+  if (!redis || !key) return;
   try {
     const serialized = JSON.stringify(value);
     if (isIoredis) {
@@ -45,11 +45,14 @@ export async function cacheSet(
   }
 }
 
-export async function cacheDel(...keys: string[]): Promise<void> {
-  if (!redis || keys.length === 0) return;
+export async function cacheDel(
+  ...keys: (string | null | undefined)[]
+): Promise<void> {
+  const real = keys.filter((k): k is string => !!k);
+  if (!redis || real.length === 0) return;
   try {
-    await redis.del(...keys);
+    await redis.del(...real);
   } catch (err) {
-    log.warn("Cache del failed", { keys, err });
+    log.warn("Cache del failed", { keys: real, err });
   }
 }

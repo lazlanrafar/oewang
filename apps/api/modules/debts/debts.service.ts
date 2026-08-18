@@ -221,16 +221,19 @@ export abstract class DebtsService {
         // Debt Payable (you owe them): Settling means Expense for you.
         // Debt Receivable (they owe you): Settling means Income for you.
         const txType = debt.type === "payable" ? "expense" : "income";
-        const newTx = await TransactionsRepository.create({
-          workspaceId,
-          amount: payAmount.toString(),
-          date: new Date().toISOString(),
-          name: `Debt Settlement: ${debt.description || "Payment"}`,
-          type: txType,
-          walletId: data.walletId,
-          categoryId: null, // Ideally uncategorized, or a 'Transfer' type? Expense/Income is easiest.
-          assignedUserId: userId,
-        });
+        const newTx = await TransactionsRepository.create(
+          {
+            workspaceId,
+            amount: payAmount.toString(),
+            date: new Date().toISOString(),
+            name: `Debt Settlement: ${debt.description || "Payment"}`,
+            type: txType,
+            walletId: data.walletId,
+            categoryId: null, // Ideally uncategorized, or a 'Transfer' type? Expense/Income is easiest.
+            assignedUserId: userId,
+          },
+          tx,
+        );
         generatedTxId = newTx?.id;
       }
 
@@ -347,30 +350,36 @@ export abstract class DebtsService {
 
       if (data.walletId) {
         if (totalExpense > 0) {
-          const expenseTx = await TransactionsRepository.create({
-            workspaceId,
-            amount: totalExpense.toString(),
-            date: new Date().toISOString(),
-            name: `Debt Settlement: ${descName}`,
-            type: "expense",
-            walletId: data.walletId,
-            categoryId: null,
-            assignedUserId: userId,
-          });
+          const expenseTx = await TransactionsRepository.create(
+            {
+              workspaceId,
+              amount: totalExpense.toString(),
+              date: new Date().toISOString(),
+              name: `Debt Settlement: ${descName}`,
+              type: "expense",
+              walletId: data.walletId,
+              categoryId: null,
+              assignedUserId: userId,
+            },
+            tx,
+          );
           generatedExpenseTxId = expenseTx?.id;
         }
 
         if (totalIncome > 0) {
-          const incomeTx = await TransactionsRepository.create({
-            workspaceId,
-            amount: totalIncome.toString(),
-            date: new Date().toISOString(),
-            name: `Debt Settlement: ${descName}`,
-            type: "income",
-            walletId: data.walletId,
-            categoryId: null,
-            assignedUserId: userId,
-          });
+          const incomeTx = await TransactionsRepository.create(
+            {
+              workspaceId,
+              amount: totalIncome.toString(),
+              date: new Date().toISOString(),
+              name: `Debt Settlement: ${descName}`,
+              type: "income",
+              walletId: data.walletId,
+              categoryId: null,
+              assignedUserId: userId,
+            },
+            tx,
+          );
           generatedIncomeTxId = incomeTx?.id;
         }
       }
@@ -436,16 +445,19 @@ export abstract class DebtsService {
 
       // Create primary transaction if needed
       if (!sourceTxId && data.walletId) {
-        const newTx = await TransactionsRepository.create({
-          workspaceId,
-          amount: totalAmount.toString(),
-          date: new Date().toISOString(),
-          name: data.name,
-          type: "expense",
-          walletId: data.walletId,
-          categoryId: data.categoryId || null,
-          assignedUserId: userId,
-        });
+        const newTx = await TransactionsRepository.create(
+          {
+            workspaceId,
+            amount: totalAmount.toString(),
+            date: new Date().toISOString(),
+            name: data.name,
+            type: "expense",
+            walletId: data.walletId,
+            categoryId: data.categoryId || null,
+            assignedUserId: userId,
+          },
+          tx,
+        );
         if (newTx) sourceTxId = newTx.id;
       }
 

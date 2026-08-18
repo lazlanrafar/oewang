@@ -13,6 +13,7 @@ from app.api.routes import advisor, analyzer, anomaly, capabilities, chatbot
 from app.config import get_settings
 from app.core.database import close_pool
 from app.core.quota import PlanLimitReached
+from app.modules.chatbot.tools import close_http
 from app.modules.anomaly.service import scan_all_workspaces
 from app.utils.logger import get_logger
 
@@ -34,6 +35,7 @@ async def lifespan(_: FastAPI):
     yield
     if scheduler.running:
         scheduler.shutdown(wait=False)
+    await close_http()
     await close_pool()
 
 

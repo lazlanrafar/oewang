@@ -8,6 +8,12 @@ const currentDir = dirname(fileURLToPath(import.meta.url));
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactCompiler: true,
+  experimental: {
+    // Tree-shake heavy barrels so a single import doesn't pull the whole
+    // package into a route bundle. Next auto-handles lucide-react/date-fns/
+    // @radix-ui; these are the ones it doesn't cover by default.
+    optimizePackageImports: ["@workspace/ui", "recharts", "simple-icons", "react-icons"],
+  },
   compiler: {
     removeConsole: process.env.NODE_ENV === "production",
   },

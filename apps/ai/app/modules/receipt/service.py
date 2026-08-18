@@ -93,12 +93,18 @@ def _downscale(data_b64: str, mime_type: str) -> tuple[str, str]:
         return data_b64, mime_type
 
 
+# A receipt's useful text is short; cap so a long multi-page PDF can't inflate
+# input tokens on the (pricier) vision model.
+_PDF_TEXT_MAX_CHARS = 12_000
+
+
 def _pdf_text(data_b64: str) -> str:
     try:
         from pypdf import PdfReader
 
         reader = PdfReader(io.BytesIO(b64.b64decode(data_b64)))
-        return "\n".join((p.extract_text() or "") for p in reader.pages).strip()
+        text = "\n".join((p.extract_text() or "") for p in reader.pages).strip()
+        return text[:_PDF_TEXT_MAX_CHARS]
     except Exception as e:  # noqa: BLE001 — any pdf failure → fall back to no text
         log.warning("PDF parse failed: %s", e)
         return ""

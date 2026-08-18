@@ -11,6 +11,7 @@ import {
   workspaceInvitations,
   workspaces,
 } from "@workspace/database";
+import { invalidateAuthCache } from "../../plugins/auth";
 
 /**
  * Workspaces repository — ONLY layer with DB access.
@@ -99,6 +100,9 @@ export abstract class WorkspacesRepository {
     tx: any = db,
   ) {
     await tx.insert(user_workspaces).values(data);
+    // Membership changed: drop the cached auth snapshot so the new workspace
+    // is visible on the next request instead of after the 30s TTL.
+    await invalidateAuthCache(data.user_id);
   }
 
   static async getMemberWorkspaces(user_id: string) {

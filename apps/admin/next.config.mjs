@@ -7,6 +7,14 @@ const currentDir = dirname(fileURLToPath(import.meta.url));
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactCompiler: true,
+  experimental: {
+    optimizePackageImports: [
+      "@workspace/ui",
+      "recharts",
+      "simple-icons",
+      "react-icons",
+    ],
+  },
   compiler: {
     removeConsole: process.env.NODE_ENV === "production",
   },

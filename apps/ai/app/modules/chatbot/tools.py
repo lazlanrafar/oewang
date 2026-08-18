@@ -13,6 +13,25 @@ import httpx
 
 from app.config import get_settings
 
+# Shared keep-alive client so repeated internal calls (chat_begin, chat_end,
+# system-prompt) reuse pooled connections instead of a new TLS handshake each
+# time. Lazily created on first use; closed on app shutdown via close_http().
+_http_client: httpx.AsyncClient | None = None
+
+
+def _http() -> httpx.AsyncClient:
+    global _http_client
+    if _http_client is None:
+        _http_client = httpx.AsyncClient(timeout=30)
+    return _http_client
+
+
+async def close_http() -> None:
+    global _http_client
+    if _http_client is not None:
+        await _http_client.aclose()
+        _http_client = None
+
 _PERIOD_SPENDING = [
     "this-month",
     "last-month",
@@ -304,16 +323,15 @@ async def chat_begin(
         }
         for m in messages
     ]
-    async with httpx.AsyncClient(timeout=30) as client:
-        resp = await client.post(
-            f"{settings.API_INTERNAL_URL}/v1/ai/internal/chat-begin",
-            headers=_internal_headers(token),
-            json={
-                "messages": payload_messages,
-                "session_id": session_id,
-                "web_search": web_search,
-            },
-        )
+    resp = await _http().post(
+        f"{settings.API_INTERNAL_URL}/v1/ai/internal/chat-begin",
+        headers=_internal_headers(token),
+        json={
+            "messages": payload_messages,
+            "session_id": session_id,
+            "web_search": web_search,
+        },
+    )
     if resp.status_code >= 400:
         try:
             body = resp.json()
@@ -329,24 +347,23 @@ async def chat_end(
     """Post-LLM money path: persist reply + increment tokens (against the count
     read at chat_begin)."""
     settings = get_settings()
-    async with httpx.AsyncClient(timeout=30) as client:
-        resp = await client.post(
-            f"{settings.API_INTERNAL_URL}/v1/ai/internal/chat-end",
-            headers=_internal_headers(),
-            json={
-                "workspace_id": workspace_id,
-                "session_id": session_id,
-                "reply": result["reply"],
-                "usage": result["usage"],
-                "artifact": result.get("artifact"),
-                "provider": {
-                    "name": "openai",
-                    "response_id": result.get("response_id"),
-                },
-                "current_tokens": current_tokens,
+    resp = await _http().post(
+        f"{settings.API_INTERNAL_URL}/v1/ai/internal/chat-end",
+        headers=_internal_headers(),
+        json={
+            "workspace_id": workspace_id,
+            "session_id": session_id,
+            "reply": result["reply"],
+            "usage": result["usage"],
+            "artifact": result.get("artifact"),
+            "provider": {
+                "name": "openai",
+                "response_id": result.get("response_id"),
             },
-        )
-        resp.raise_for_status()
+            "current_tokens": current_tokens,
+        },
+    )
+    resp.raise_for_status()
 
 
 async def get_system_prompt(workspace_id: str) -> str:
@@ -355,11 +372,11 @@ async def get_system_prompt(workspace_id: str) -> str:
     headers = {}
     if settings.AI_SERVICE_API_KEY:
         headers["x-api-key"] = settings.AI_SERVICE_API_KEY
-    async with httpx.AsyncClient(timeout=15) as client:
-        resp = await client.get(
-            f"{settings.API_INTERNAL_URL}/v1/ai/internal/system-prompt",
-            headers=headers,
-            params={"workspace_id": workspace_id},
-        )
-        resp.raise_for_status()
-        return resp.json().get("system_prompt", "")
+    resp = await _http().get(
+        f"{settings.API_INTERNAL_URL}/v1/ai/internal/system-prompt",
+        headers=headers,
+        params={"workspace_id": workspace_id},
+        timeout=15,
+    )
+    resp.raise_for_status()
+    return resp.json().get("system_prompt", "")

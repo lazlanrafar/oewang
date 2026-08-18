@@ -10,6 +10,9 @@ import * as debt_payments from "./schema/debt-payments";
 import * as debts from "./schema/debts";
 import * as faqs from "./schema/faqs";
 import * as invoices from "./schema/invoices";
+import * as mcp_auth_codes from "./schema/mcp-auth-codes";
+import * as mcp_oauth_clients from "./schema/mcp-oauth-clients";
+import * as mcp_tokens from "./schema/mcp-tokens";
 import * as orders from "./schema/orders";
 import * as pricing from "./schema/pricing";
 import * as privacy_requests from "./schema/privacy-requests";
@@ -20,9 +23,6 @@ import * as users from "./schema/users";
 import * as vault_files from "./schema/vault-files";
 import * as wallet_groups from "./schema/wallet-groups";
 import * as wallets from "./schema/wallets";
-import * as mcp_auth_codes from "./schema/mcp-auth-codes";
-import * as mcp_oauth_clients from "./schema/mcp-oauth-clients";
-import * as mcp_tokens from "./schema/mcp-tokens";
 import * as webhook_events from "./schema/webhook-events";
 import * as workspace_integrations from "./schema/workspace-integrations";
 import * as workspace_invitations from "./schema/workspace-invitations";
@@ -71,6 +71,13 @@ const client = postgres(process.env.DATABASE_URL!, {
   connect_timeout: parseInt(process.env.DATABASE_CONNECT_TIMEOUT ?? "10", 10),
   max_lifetime: 60 * 30, // 30 min — recycles stale connections from hot-reloads
   onnotice: () => {}, // suppress NOTICE logs from migrations
+  connection: {
+    // Backstop against a runaway query holding a pooled connection open (ms).
+    statement_timeout: parseInt(
+      process.env.DATABASE_STATEMENT_TIMEOUT ?? "30000",
+      10,
+    ),
+  },
 });
 
 export const db = drizzle(client, { schema });

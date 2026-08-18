@@ -16,6 +16,7 @@ import {
   users,
   workspaces,
 } from "@workspace/database";
+import { invalidateAuthCache } from "../../plugins/auth";
 
 export abstract class PrivacyRepository {
   static async runTransaction<T>(
@@ -227,6 +228,7 @@ export abstract class PrivacyRepository {
           isNull(user_workspaces.deleted_at),
         ),
       );
+    await invalidateAuthCache(userId);
   }
 
   static async anonymizeUser(userId: string, data: any, tx: any = db) {

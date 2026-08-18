@@ -1,3 +1,4 @@
+import asyncio
 from collections import defaultdict
 
 from app.config import get_settings
@@ -33,8 +34,12 @@ async def detect(workspace_id: str) -> list[dict]:
 
     anomalies: list[dict] = []
 
-    # 1) per-transaction outliers
-    for r, amt, is_out in zip(rows, amounts, model.detect_outliers(amounts, dows, cat_codes)):
+    # 1) per-transaction outliers — IsolationForest.fit_predict is CPU-bound
+    # numpy/sklearn work; keep it off the event loop.
+    outliers = await asyncio.to_thread(
+        model.detect_outliers, amounts, dows, cat_codes
+    )
+    for r, amt, is_out in zip(rows, amounts, outliers):
         if is_out:
             anomalies.append(
                 {

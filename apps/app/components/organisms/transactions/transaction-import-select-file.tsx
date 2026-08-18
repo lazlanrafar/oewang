@@ -4,10 +4,9 @@ import { useCallback, useState } from "react";
 
 import { cn } from "@workspace/ui";
 import { FileUp, Loader2 } from "lucide-react";
-import Papa from "papaparse";
+import type { ParseResult } from "papaparse";
 import Dropzone from "react-dropzone";
 import { Controller } from "react-hook-form";
-import * as XLSX from "xlsx";
 
 import { useCsvContext } from "./transaction-import-context";
 
@@ -31,6 +30,9 @@ export function SelectFile() {
       const reader = new FileReader();
 
       if (isExcel) {
+        // Load the heavy xlsx parser only when an Excel file is actually
+        // dropped, keeping it out of the transactions route bundle.
+        const XLSX = await import("xlsx");
         reader.onload = (e) => {
           try {
             const data = new Uint8Array(e.target?.result as ArrayBuffer);
@@ -74,12 +76,13 @@ export function SelectFile() {
         };
         reader.readAsArrayBuffer(file);
       } else {
+        const Papa = (await import("papaparse")).default;
         reader.onload = (e) => {
           const text = e.target?.result as string;
           Papa.parse(text, {
             header: true,
             skipEmptyLines: true,
-            complete: (results: Papa.ParseResult<Record<string, string>>) => {
+            complete: (results: ParseResult<Record<string, string>>) => {
               if (results.data.length < 1) {
                 setError("CSV file looks empty.");
                 setIsLoading(false);
