@@ -56,23 +56,17 @@ export abstract class ArticlesRepository {
           : desc(articles.created_at);
     }
 
-    const [data, totalCount] = await Promise.all([
-      db
-        .select()
-        .from(articles)
-        .where(and(...conditions))
-        .orderBy(orderByClause)
-        .limit(limit)
-        .offset(offset),
-      db
-        .select({ count: sql<number>`count(*)` })
-        .from(articles)
-        .where(and(...conditions)),
-    ]);
+    const rows = await db
+      .select({ row: articles, total: sql<number>`count(*) over()` })
+      .from(articles)
+      .where(and(...conditions))
+      .orderBy(orderByClause)
+      .limit(limit)
+      .offset(offset);
 
     return {
-      rows: data,
-      total: Number(totalCount[0]?.count || 0),
+      rows: rows.map((r) => r.row),
+      total: rows.length ? Number(rows[0]?.total ?? 0) : 0,
     };
   }
 

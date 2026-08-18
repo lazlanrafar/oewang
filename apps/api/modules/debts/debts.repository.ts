@@ -156,6 +156,7 @@ export abstract class DebtsRepository {
       .select({
         debt: debts,
         contactName: contacts.name,
+        total: sql<number>`count(*) over()`,
       })
       .from(debts)
       .leftJoin(contacts, eq(debts.contactId, contacts.id))
@@ -164,15 +165,9 @@ export abstract class DebtsRepository {
       .limit(limit)
       .offset(offset);
 
-    const [stats] = await db
-      .select({ total: sql<number>`count(*)` })
-      .from(debts)
-      .leftJoin(contacts, eq(debts.contactId, contacts.id))
-      .where(and(...conditions));
-
     return {
       rows: rows.map((r) => ({ ...r.debt, contactName: r.contactName })),
-      total: Number(stats?.total ?? 0),
+      total: rows.length ? Number(rows[0]?.total ?? 0) : 0,
     };
   }
 

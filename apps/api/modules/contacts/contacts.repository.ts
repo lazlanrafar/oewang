@@ -113,22 +113,19 @@ export abstract class ContactsRepository {
       conditions.push(ilike(contacts.name, `%${filters.search}%`));
     }
 
+    // Single scan: count(*) over() rides along with the page instead of a
+    // second count query over the same predicate.
     const rows = await db
-      .select()
+      .select({ row: contacts, total: sql<number>`count(*) over()` })
       .from(contacts)
       .where(and(...conditions))
       .orderBy(desc(contacts.createdAt))
       .limit(limit)
       .offset(offset);
 
-    const [stats] = await db
-      .select({ total: sql<number>`count(*)` })
-      .from(contacts)
-      .where(and(...conditions));
-
     return {
-      rows: rows as unknown as Contact[],
-      total: Number(stats?.total ?? 0),
+      rows: rows.map((r) => r.row) as unknown as Contact[],
+      total: rows.length ? Number(rows[0]?.total ?? 0) : 0,
     };
   }
 

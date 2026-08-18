@@ -30,27 +30,22 @@ export abstract class InvoicesRepository {
       status ? eq(invoices.status, status) : undefined,
     );
 
-    const [data, [countResult]] = await Promise.all([
-      db
-        .select({
-          invoice: invoices,
-          contact: contacts,
-        })
-        .from(invoices)
-        .leftJoin(contacts, eq(invoices.contactId, contacts.id))
-        .where(where)
-        .limit(limit)
-        .offset(offset)
-        .orderBy(desc(invoices.createdAt)),
-      db
-        .select({ count: sql`count(*)` })
-        .from(invoices)
-        .where(where),
-    ]);
+    const rows = await db
+      .select({
+        invoice: invoices,
+        contact: contacts,
+        total: sql<number>`count(*) over()`,
+      })
+      .from(invoices)
+      .leftJoin(contacts, eq(invoices.contactId, contacts.id))
+      .where(where)
+      .limit(limit)
+      .offset(offset)
+      .orderBy(desc(invoices.createdAt));
 
     return {
-      data,
-      total: Number((countResult as any)?.count ?? 0),
+      data: rows.map(({ total, ...rest }) => rest),
+      total: rows.length ? Number(rows[0]?.total ?? 0) : 0,
     };
   }
 

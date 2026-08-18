@@ -18,7 +18,7 @@ export abstract class NotificationsRepository {
     limit: number = 20,
   ) {
     const rows = await db
-      .select()
+      .select({ row: notifications, total: sql<number>`count(*) over()` })
       .from(notifications)
       .where(
         and(
@@ -31,18 +31,10 @@ export abstract class NotificationsRepository {
       .offset((page - 1) * limit)
       .orderBy(desc(notifications.created_at));
 
-    const [countResult] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(notifications)
-      .where(
-        and(
-          eq(notifications.workspace_id, workspace_id),
-          eq(notifications.user_id, user_id),
-          isNull(notifications.deleted_at),
-        ),
-      );
-
-    return { rows, total: Number(countResult?.count || 0) };
+    return {
+      rows: rows.map((r) => r.row),
+      total: rows.length ? Number(rows[0]?.total ?? 0) : 0,
+    };
   }
 
   static async create(data: InsertNotification) {

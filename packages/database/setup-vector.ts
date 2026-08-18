@@ -50,6 +50,11 @@ async function main() {
         USING gin (prices)`,
   );
   console.log("✓ GIN index created on pricing.prices");
+
+  // Refresh planner statistics so the newly created indexes are costed
+  // correctly (CREATE INDEX does not run ANALYZE).
+  await db.execute(sql`ANALYZE`);
+  console.log("✓ ANALYZE complete (planner stats refreshed)");
 }
 
 main()

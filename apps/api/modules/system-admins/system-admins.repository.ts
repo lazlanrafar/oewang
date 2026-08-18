@@ -71,7 +71,7 @@ export abstract class SystemAdminsRepository {
       }
     }
 
-    const query = db
+    const raw = await db
       .select({
         id: users.id,
         email: users.email,
@@ -79,6 +79,7 @@ export abstract class SystemAdminsRepository {
         profile_picture: users.profile_picture,
         system_role: users.system_role,
         created_at: users.created_at,
+        total: sql<number>`count(*) over()`,
       })
       .from(users)
       .where(whereClause)
@@ -86,15 +87,10 @@ export abstract class SystemAdminsRepository {
       .limit(params.limit)
       .offset((params.page - 1) * params.limit);
 
-    const rows = await query;
-
-    const countQuery = await db
-      .select({ count: sql`count(*)` })
-      .from(users)
-      .where(whereClause);
-    const totalResult = Number(countQuery[0]?.count || 0);
-
-    return { rows, total: totalResult };
+    return {
+      rows: raw.map(({ total, ...rest }) => rest),
+      total: raw.length ? Number(raw[0]?.total ?? 0) : 0,
+    };
   }
 
   /**
@@ -128,7 +124,7 @@ export abstract class SystemAdminsRepository {
       }
     }
 
-    const rows = await db
+    const raw = await db
       .select({
         id: workspaces.id,
         name: workspaces.name,
@@ -139,6 +135,7 @@ export abstract class SystemAdminsRepository {
         created_at: workspaces.created_at,
         ai_tokens_used: workspaces.ai_tokens_used,
         vault_size_used_bytes: workspaces.vault_size_used_bytes,
+        total: sql<number>`count(*) over()`,
       })
       .from(workspaces)
       .leftJoin(pricing, eq(workspaces.plan_id, pricing.id))
@@ -147,13 +144,10 @@ export abstract class SystemAdminsRepository {
       .limit(params.limit)
       .offset((params.page - 1) * params.limit);
 
-    const countResult = await db
-      .select({ count: sql`count(*)` })
-      .from(workspaces)
-      .where(whereClause);
-    const total = Number(countResult[0]?.count || 0);
-
-    return { rows, total };
+    return {
+      rows: raw.map(({ total, ...rest }) => rest),
+      total: raw.length ? Number(raw[0]?.total ?? 0) : 0,
+    };
   }
 
   /**

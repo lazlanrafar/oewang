@@ -214,11 +214,6 @@ export abstract class TransactionsRepository {
       filters.push(isNull(transactions.categoryId));
     }
 
-    const [countResult] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(transactions)
-      .where(and(...filters));
-
     const results = await db
       .select({
         transaction: transactions,
@@ -231,6 +226,9 @@ export abstract class TransactionsRepository {
           email: users.email,
           profile_picture: users.profile_picture,
         },
+        // Single scan: total rides along with the page (leftJoins are all
+        // to-one, so this equals count of matching transactions).
+        total: sql<number>`count(*) over()`,
       })
       .from(transactions)
       .leftJoin(fromWallet, eq(transactions.walletId, fromWallet.id))
@@ -309,7 +307,7 @@ export abstract class TransactionsRepository {
 
     return {
       data: dataWithAttachments as unknown as Transaction[],
-      total: Number(countResult?.count || 0),
+      total: results.length ? Number(results[0]?.total ?? 0) : 0,
     };
   }
 
