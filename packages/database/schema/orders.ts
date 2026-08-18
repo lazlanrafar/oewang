@@ -2,6 +2,7 @@ import { createId } from "@paralleldrive/cuid2";
 import { sql } from "drizzle-orm";
 import {
   boolean,
+  index,
   integer,
   pgTable,
   serial,
@@ -32,5 +33,8 @@ export const orders = pgTable(
   },
   (table) => [
     uniqueIndex("orders_mayar_invoice_id_unique").on(table.mayar_invoice_id),
+    index("orders_workspace_idx")
+      .on(table.workspace_id, table.created_at.desc())
+      .where(sql`${table.deleted_at} IS NULL`),
   ],
 );

@@ -19,15 +19,11 @@ export abstract class TransactionItemsRepository {
       isNull(transactionItems.deletedAt),
     ];
 
-    const [countResult] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(transactionItems)
-      .where(and(...filters));
-
     const rows = await db
       .select({
         item: transactionItems,
         category: { id: categories.id, name: categories.name },
+        total: sql<number>`count(*) over()`,
       })
       .from(transactionItems)
       .leftJoin(categories, eq(transactionItems.categoryId, categories.id))
@@ -38,7 +34,7 @@ export abstract class TransactionItemsRepository {
 
     const data = rows.map((r) => ({ ...r.item, category: r.category }));
 
-    return { data, total: Number(countResult?.count || 0) };
+    return { data, total: rows.length ? Number(rows[0]?.total ?? 0) : 0 };
   }
 
   static async findById(

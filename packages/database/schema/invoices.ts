@@ -1,7 +1,9 @@
 import { createId } from "@paralleldrive/cuid2";
+import { sql } from "drizzle-orm";
 import {
   boolean,
   decimal,
+  index,
   jsonb,
   pgTable,
   text,
@@ -10,51 +12,65 @@ import {
 import { contacts } from "./contacts";
 import { workspaces } from "./workspaces";
 
-export const invoices = pgTable("invoices", {
-  id: text("id").$defaultFn(createId).primaryKey().notNull(),
-  workspaceId: text("workspace_id")
-    .notNull()
-    .references(() => workspaces.id, { onDelete: "cascade" }),
-  contactId: text("contact_id")
-    .notNull()
-    .references(() => contacts.id, { onDelete: "restrict" }),
-  invoiceNumber: text("invoice_number").notNull(),
-  status: text("status").notNull().default("draft"), // 'draft', 'unpaid', 'paid', 'overdue', 'canceled'
+export const invoices = pgTable(
+  "invoices",
+  {
+    id: text("id").$defaultFn(createId).primaryKey().notNull(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    contactId: text("contact_id")
+      .notNull()
+      .references(() => contacts.id, { onDelete: "restrict" }),
+    invoiceNumber: text("invoice_number").notNull(),
+    status: text("status").notNull().default("draft"), // 'draft', 'unpaid', 'paid', 'overdue', 'canceled'
 
-  issueDate: timestamp("issue_date", { mode: "string" }),
-  dueDate: timestamp("due_date", { mode: "string" }),
+    issueDate: timestamp("issue_date", { mode: "string" }),
+    dueDate: timestamp("due_date", { mode: "string" }),
 
-  amount: decimal("amount", { precision: 19, scale: 4 }).notNull().default("0"),
-  vat: decimal("vat", { precision: 19, scale: 4 }).default("0"),
-  tax: decimal("tax", { precision: 19, scale: 4 }).default("0"),
-  currency: text("currency").notNull().default("USD"),
+    amount: decimal("amount", { precision: 19, scale: 4 })
+      .notNull()
+      .default("0"),
+    vat: decimal("vat", { precision: 19, scale: 4 }).default("0"),
+    tax: decimal("tax", { precision: 19, scale: 4 }).default("0"),
+    currency: text("currency").notNull().default("USD"),
 
-  internalNote: text("internal_note"),
-  noteDetails: text("note_details"),
-  paymentDetails: text("payment_details"),
-  logoUrl: text("logo_url"),
+    internalNote: text("internal_note"),
+    noteDetails: text("note_details"),
+    paymentDetails: text("payment_details"),
+    logoUrl: text("logo_url"),
 
-  lineItems: jsonb("line_items").notNull().default([]), // Array of { name: string, quantity: number, price: number }
-  invoiceSize: text("invoice_size").notNull().default("A4"),
-  dateFormat: text("date_format").notNull().default("DD/MM/YYYY"),
-  paymentTerms: text("payment_terms").notNull().default("Due on Receipt"),
-  templateName: text("template_name").notNull().default("Default"),
-  invoiceSettings: jsonb("invoice_settings").notNull().default({
-    salesTax: false,
-    vat: false,
-    lineItemTax: false,
-    discount: false,
-    decimals: false,
-    units: false,
-    qrCode: true,
-  }),
+    lineItems: jsonb("line_items").notNull().default([]), // Array of { name: string, quantity: number, price: number }
+    invoiceSize: text("invoice_size").notNull().default("A4"),
+    dateFormat: text("date_format").notNull().default("DD/MM/YYYY"),
+    paymentTerms: text("payment_terms").notNull().default("Due on Receipt"),
+    templateName: text("template_name").notNull().default("Default"),
+    invoiceSettings: jsonb("invoice_settings").notNull().default({
+      salesTax: false,
+      vat: false,
+      lineItemTax: false,
+      discount: false,
+      decimals: false,
+      units: false,
+      qrCode: true,
+    }),
 
-  isPublic: boolean("is_public").notNull().default(false),
-  accessCode: text("access_code"),
-  createdAt: timestamp("created_at", { mode: "string" }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().notNull(),
-  deletedAt: timestamp("deleted_at", { mode: "string" }),
-});
+    isPublic: boolean("is_public").notNull().default(false),
+    accessCode: text("access_code"),
+    createdAt: timestamp("created_at", { mode: "string" })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { mode: "string" })
+      .defaultNow()
+      .notNull(),
+    deletedAt: timestamp("deleted_at", { mode: "string" }),
+  },
+  (t) => [
+    index("invoices_workspace_idx")
+      .on(t.workspaceId)
+      .where(sql`${t.deletedAt} IS NULL`),
+  ],
+);
 
 export type Invoice = typeof invoices.$inferSelect;
 export type NewInvoice = typeof invoices.$inferInsert;

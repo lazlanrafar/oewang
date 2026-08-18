@@ -13,9 +13,12 @@ export const metadata: Metadata = {
 export default async function BillingPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   await requireSensitiveWorkspaceAccess(locale);
-  const dictionary = await getDictionary(locale as Locale);
-  const pricingResult = await getPricing({ is_addon: "false" });
-  const addonsResult = await getPricing({ is_addon: "true" });
+  // Independent fetches after the auth gate — run them in parallel.
+  const [dictionary, pricingResult, addonsResult] = await Promise.all([
+    getDictionary(locale as Locale),
+    getPricing({ is_addon: "false" }),
+    getPricing({ is_addon: "true" }),
+  ]);
 
   const plans = pricingResult.success ? (pricingResult.data?.pricingList ?? []) : [];
 

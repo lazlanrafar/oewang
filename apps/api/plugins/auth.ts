@@ -10,7 +10,26 @@ import {
 } from "@workspace/database";
 import { Elysia } from "elysia";
 import * as jose from "jose";
+import { cacheDel, cacheGet, cacheSet } from "../lib/cache";
 import { normalizeWorkspaceRole } from "../modules/workspaces/workspace-permissions";
+
+// Per-user membership snapshot cached in Redis to keep the auth resolution off
+// the DB on the hot path. Short TTL bounds staleness; mutations that change
+// membership/role should call invalidateAuthCache(user_id) for immediacy.
+const AUTH_CACHE_TTL = 30;
+const authCacheKey = (userId: string) => `auth:user:${userId}`;
+
+type AuthUserData = {
+  id: string;
+  email: string;
+  default_workspace_id: string | null;
+  system_role: import("@workspace/constants").SystemRole | null;
+  memberships: { workspace_id: string; role: string | null }[];
+};
+
+export async function invalidateAuthCache(userId: string): Promise<void> {
+  await cacheDel(authCacheKey(userId));
+}
 
 const JWT_SECRET_KEY = () => new TextEncoder().encode(Env.JWT_SECRET!);
 
@@ -100,9 +119,9 @@ function resolveWorkspaceId(
  * user row and all active memberships (+ roles) come back in ONE round trip
  * instead of the previous three sequential queries.
  */
-export async function getAuth(token: string) {
-  const jwt_payload = await verifyJwt(token);
-  if (!jwt_payload) return null;
+async function fetchAuthUserData(userId: string): Promise<AuthUserData | null> {
+  const cached = await cacheGet<AuthUserData>(authCacheKey(userId));
+  if (cached) return cached;
 
   const rows = await db
     .select({
@@ -130,19 +149,43 @@ export async function getAuth(token: string) {
         isNull(workspaces.deleted_at),
       ),
     )
-    .where(eq(users.id, jwt_payload.user_id));
+    .where(eq(users.id, userId));
 
   const db_user = rows[0];
   if (!db_user) return null;
 
-  const membershipWorkspaceIds: string[] = [];
-  const roleByWorkspace = new Map<string, string | null>();
+  const memberships: AuthUserData["memberships"] = [];
   for (const row of rows) {
     if (row.membership_workspace_id && row.live_workspace_id) {
-      membershipWorkspaceIds.push(row.membership_workspace_id);
-      roleByWorkspace.set(row.membership_workspace_id, row.membership_role);
+      memberships.push({
+        workspace_id: row.membership_workspace_id,
+        role: row.membership_role,
+      });
     }
   }
+
+  const data: AuthUserData = {
+    id: db_user.id,
+    email: db_user.email,
+    default_workspace_id: db_user.default_workspace_id,
+    system_role: db_user.system_role,
+    memberships,
+  };
+  await cacheSet(authCacheKey(userId), data, AUTH_CACHE_TTL);
+  return data;
+}
+
+export async function getAuth(token: string) {
+  const jwt_payload = await verifyJwt(token);
+  if (!jwt_payload) return null;
+
+  const db_user = await fetchAuthUserData(jwt_payload.user_id);
+  if (!db_user) return null;
+
+  const membershipWorkspaceIds = db_user.memberships.map((m) => m.workspace_id);
+  const roleByWorkspace = new Map<string, string | null>(
+    db_user.memberships.map((m) => [m.workspace_id, m.role]),
+  );
 
   // Enforce workspace-scoped access: if token requests a workspace,
   // the user must still be an active member of that workspace.

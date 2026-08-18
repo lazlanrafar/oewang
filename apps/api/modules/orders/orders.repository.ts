@@ -113,13 +113,7 @@ export abstract class OrdersRepository {
       ...(conditions.length > 0 ? conditions : []),
     );
 
-    const [totalResult] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(orders)
-      .leftJoin(users, eq(orders.user_id, users.id))
-      .where(whereClause);
-
-    const rows = await db
+    const raw = await db
       .select({
         id: orders.id,
         code: sql<string>`'INV' || to_char(${orders.created_at}, 'IYYY') || lpad(${orders.sequence_number}::text, 4, '0')`,
@@ -133,6 +127,7 @@ export abstract class OrdersRepository {
         mayar_payment_id: orders.mayar_payment_id,
         mayar_invoice_id: orders.mayar_invoice_id,
         mayar_transaction_id: orders.mayar_transaction_id,
+        total: sql<number>`count(*) over()`,
       })
       .from(orders)
       .leftJoin(workspaces, eq(orders.workspace_id, workspaces.id))
@@ -142,7 +137,10 @@ export abstract class OrdersRepository {
       .limit(limit)
       .offset(offset);
 
-    return { rows, total: Number(totalResult?.count ?? 0) };
+    return {
+      rows: raw.map(({ total, ...rest }) => rest),
+      total: raw.length ? Number(raw[0]?.total ?? 0) : 0,
+    };
   }
 
   static async getStats(start?: string, end?: string) {

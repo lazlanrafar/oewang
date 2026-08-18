@@ -78,8 +78,8 @@ export const TransactionModel = {
     attachmentIds: t.Optional(t.Array(t.String())),
   }),
   listQuery: t.Object({
-    page: t.Optional(t.Numeric()),
-    limit: t.Optional(t.Numeric()),
+    page: t.Optional(t.Numeric({ minimum: 1 })),
+    limit: t.Optional(t.Numeric({ minimum: 1, maximum: 100, default: 20 })),
     type: t.Optional(
       t.Union([
         t.Literal("income"),

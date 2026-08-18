@@ -12,7 +12,6 @@ import { Check, Copy, Download, Loader2, Lock, Printer } from "lucide-react";
 import { toast } from "sonner";
 
 import { InvoiceA4 } from "@/components/organisms/invoices/invoice-a4";
-import { downloadInvoiceAsPdf } from "@/lib/invoice-download";
 
 export default function PublicInvoicePage() {
   const params = useParams();
@@ -47,6 +46,9 @@ export default function PublicInvoicePage() {
   const handleDownload = async () => {
     if (!invoiceRef.current || !response?.data?.invoice) return;
 
+    // Load the PDF libs (jspdf + html-to-image) only on click so they stay out
+    // of this public page's initial bundle.
+    const { downloadInvoiceAsPdf } = await import("@/lib/invoice-download");
     await downloadInvoiceAsPdf({
       element: invoiceRef.current,
       filename: `Invoice-${response.data.invoice.invoiceNumber}`,

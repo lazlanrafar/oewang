@@ -1,15 +1,12 @@
 from openai import OpenAI
 
 from app.config import get_settings
-
-_client: OpenAI | None = None
+from app.core.llm import get_client
 
 
 def _get() -> OpenAI:
-    global _client
-    if _client is None:
-        _client = OpenAI(api_key=get_settings().OPENAI_API_KEY or None)
-    return _client
+    # Reuse the single shared client (configured with timeout + retries).
+    return get_client()
 
 
 def embed(texts: list[str]) -> list[list[float]]:

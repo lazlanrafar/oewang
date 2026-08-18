@@ -15,7 +15,13 @@ _client: OpenAI | None = None
 def get_client() -> OpenAI:
     global _client
     if _client is None:
-        _client = OpenAI(api_key=get_settings().OPENAI_API_KEY or None)
+        # Explicit timeout so a hung request can't tie up a worker thread for the
+        # ~600s SDK default; bounded retries smooth over transient 429/5xx.
+        _client = OpenAI(
+            api_key=get_settings().OPENAI_API_KEY or None,
+            timeout=30,
+            max_retries=2,
+        )
     return _client
 
 

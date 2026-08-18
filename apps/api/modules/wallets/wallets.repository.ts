@@ -122,24 +122,19 @@ export abstract class WalletsRepository {
     }
 
     const rows = await db
-      .select()
+      .select({ row: wallets, total: sql<number>`count(*) over()` })
       .from(wallets)
       .where(and(...conditions))
       .orderBy(asc(wallets.sortOrder), desc(wallets.createdAt))
       .limit(limit)
       .offset(offset);
 
-    const [stats] = await db
-      .select({ total: sql<number>`count(*)` })
-      .from(wallets)
-      .where(and(...conditions));
-
     return {
-      rows: rows.map((wallet) => ({
+      rows: rows.map(({ row: wallet }) => ({
         ...wallet,
         balance: Number(wallet.balance),
       })),
-      total: Number(stats?.total ?? 0),
+      total: rows.length ? Number(rows[0]?.total ?? 0) : 0,
     };
   }
 

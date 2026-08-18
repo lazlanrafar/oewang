@@ -241,14 +241,19 @@ bun run --cwd packages/database drizzle-kit generate
 bun run --cwd packages/database drizzle-kit migrate
 ```
 
-**pgvector setup (one-time per environment):**
+**Raw-index setup (one-time per environment, run after every `db:push`):**
 
 ```bash
-# Enable vector extension + create HNSW index on vault_file_chunks.embedding
+# Enable pgvector + pg_trgm, then create the indexes Drizzle can't express:
+#   - HNSW on vault_file_chunks.embedding + ai_knowledge_chunks.embedding (RAG)
+#   - GIN trgm on contacts.name (ILIKE '%..%' contact/debt search)
+#   - GIN on pricing.prices (Mayar webhook jsonb @> lookup)
 bun run db:setup-vector
 ```
 
-Required for RAG document search. Railway production: already enabled (June 2025). Safe to re-run (idempotent).
+Required for RAG document search, fuzzy contact search, and Mayar plan resolution. Idempotent (all `CREATE ... IF NOT EXISTS`), safe to re-run. **Verify these exist in each environment** — as of Aug 2026 the HNSW indexes were found missing in Railway production (RAG had been doing brute-force scans) and were created; always re-run this after a schema push.
+
+**Workspace-scoped indexing convention:** every table filtered by `workspaceId AND deletedAt IS NULL` on its list path carries a partial index `index(...).on(workspaceId).where(deletedAt IS NULL)` (see `transactions.ts` for the canonical pattern). Add one when you create a new workspace-scoped table.
 
 ---
 
@@ -308,7 +313,7 @@ Login (email/password or OAuth)
 
 **Cookie settings:** `httpOnly: true`, `sameSite: lax`, `maxAge: 7 days`. In production: `domain: ".oewang.com"`, `secure: true`.
 
-**`authPlugin`** (`apps/api/plugins/auth.ts`) verifies the HS256 JWT, validates workspace membership, resolves active workspace, and sets `auth` on context.
+**`authPlugin`** (`apps/api/plugins/auth.ts`) verifies the HS256 JWT, validates workspace membership, resolves active workspace, and sets `auth` on context. The per-user membership snapshot is cached in Redis (`auth:user:<id>`, 30s TTL) so this hot path skips a DB round-trip on most requests; `invalidateAuthCache(userId)` is called on membership changes (`addMember`, membership soft-delete) for immediacy.
 
 **NEVER** trust `workspace_id` from request body or query params. Always use `auth.workspace_id` from the plugin.
 

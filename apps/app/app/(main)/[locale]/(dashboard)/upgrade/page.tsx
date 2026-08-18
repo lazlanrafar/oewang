@@ -11,8 +11,10 @@ export const metadata: Metadata = {
 
 export default async function UpgradePage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
-  const dictionary = await getDictionary(locale as Locale);
-  const pricingResult = await getPricing({ is_addon: "false" });
+  const [dictionary, pricingResult] = await Promise.all([
+    getDictionary(locale as Locale),
+    getPricing({ is_addon: "false" }),
+  ]);
 
   const plans = pricingResult.success ? (pricingResult.data?.pricingList ?? []) : [];
 

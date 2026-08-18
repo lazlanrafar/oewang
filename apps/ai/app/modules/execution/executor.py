@@ -6,6 +6,8 @@ DB writes, audit, and artifact rules now live here in Python.
 Returns {"result": <tool result>, "artifact": {"type", "payload"} | None}.
 """
 
+import asyncio
+
 from app.core.database import fetch, fetchrow
 from app.core.embeddings import embed_one
 from app.core.serde import to_jsonable
@@ -193,7 +195,8 @@ async def _outstanding_debts(workspace_id: str) -> dict:
 
 async def _search_documents(workspace_id: str, query: str, limit: int) -> dict:
     """Cosine search over the workspace's vault file chunks (RagRepository port)."""
-    vec = embed_one(query)
+    # embed_one is a blocking OpenAI call; keep it off the event loop.
+    vec = await asyncio.to_thread(embed_one, query)
     rows = await fetch(
         """
         SELECT vfc.content, vf.name AS file_name,

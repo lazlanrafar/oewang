@@ -28,8 +28,9 @@ import {
 export abstract class TransactionsRepository {
   static async create(
     data: typeof transactions.$inferInsert,
+    tx: any = db,
   ): Promise<Transaction> {
-    const [transaction] = await db
+    const [transaction] = await tx
       .insert(transactions)
       .values(data)
       .returning();
@@ -213,11 +214,6 @@ export abstract class TransactionsRepository {
       filters.push(isNull(transactions.categoryId));
     }
 
-    const [countResult] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(transactions)
-      .where(and(...filters));
-
     const results = await db
       .select({
         transaction: transactions,
@@ -230,6 +226,9 @@ export abstract class TransactionsRepository {
           email: users.email,
           profile_picture: users.profile_picture,
         },
+        // Single scan: total rides along with the page (leftJoins are all
+        // to-one, so this equals count of matching transactions).
+        total: sql<number>`count(*) over()`,
       })
       .from(transactions)
       .leftJoin(fromWallet, eq(transactions.walletId, fromWallet.id))
@@ -308,8 +307,63 @@ export abstract class TransactionsRepository {
 
     return {
       data: dataWithAttachments as unknown as Transaction[],
-      total: Number(countResult?.count || 0),
+      total: results.length ? Number(results[0]?.total ?? 0) : 0,
     };
+  }
+
+  /**
+   * Lean projection for CSV export: only the columns the CSV needs, no
+   * attachment batch, no count, no user join. Caller pages via offset/limit so
+   * a large export never materializes the whole table at once.
+   */
+  static async listForExport(
+    workspaceId: string,
+    params: {
+      startDate?: string;
+      endDate?: string;
+      offset: number;
+      limit: number;
+    },
+  ): Promise<
+    {
+      date: string;
+      type: string;
+      amount: string;
+      categoryName: string | null;
+      walletName: string | null;
+      toWalletName: string | null;
+      description: string | null;
+    }[]
+  > {
+    const fromWallet = aliasedTable(wallets, "fromWallet");
+    const toWallet = aliasedTable(wallets, "toWallet");
+
+    const filters = [
+      eq(transactions.workspaceId, workspaceId),
+      isNull(transactions.deletedAt),
+    ];
+    if (params.startDate)
+      filters.push(gte(transactions.date, params.startDate));
+    if (params.endDate) filters.push(lte(transactions.date, params.endDate));
+
+    return db
+      .select({
+        date: transactions.date,
+        type: transactions.type,
+        amount: transactions.amount,
+        categoryName: categories.name,
+        walletName: fromWallet.name,
+        toWalletName: toWallet.name,
+        description: transactions.description,
+      })
+      .from(transactions)
+      .leftJoin(fromWallet, eq(transactions.walletId, fromWallet.id))
+      .leftJoin(toWallet, eq(transactions.toWalletId, toWallet.id))
+      .leftJoin(categories, eq(transactions.categoryId, categories.id))
+      .where(and(...filters))
+      .orderBy(desc(transactions.date), desc(transactions.createdAt))
+      .limit(params.limit)
+      .offset(params.offset);
   }
 
   /**

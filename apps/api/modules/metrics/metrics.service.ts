@@ -16,12 +16,16 @@ import type { ChartDataPoint } from "./metrics.dto";
 import { MetricsRepository } from "./metrics.repository";
 
 const METRICS_TTL = 60 * 60; // 1h
+// Only the default dashboard range is cached. Custom user-picked ranges return
+// null here so they compute fresh — otherwise their keys would never be cleared
+// by invalidateWorkspaceCache and could serve stale data for up to METRICS_TTL.
 const metricsKey = (
   workspaceId: string,
   type: string,
   start?: string,
   end?: string,
-) => `oewang:metrics:${workspaceId}:${type}:${start ?? "d"}:${end ?? "d"}`;
+): string | null =>
+  start || end ? null : `oewang:metrics:${workspaceId}:${type}:d:d`;
 
 export abstract class MetricsService {
   private static getDefaultDateRange() {

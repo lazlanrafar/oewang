@@ -54,23 +54,17 @@ export abstract class PricingRepository {
           : asc(pricing.created_at);
     }
 
-    const [data, totalCount] = await Promise.all([
-      db
-        .select()
-        .from(pricing)
-        .where(and(...conditions))
-        .orderBy(orderByClause)
-        .limit(limit)
-        .offset(offset),
-      db
-        .select({ count: sql<number>`count(*)` })
-        .from(pricing)
-        .where(and(...conditions)),
-    ]);
+    const rows = await db
+      .select({ row: pricing, total: sql<number>`count(*) over()` })
+      .from(pricing)
+      .where(and(...conditions))
+      .orderBy(orderByClause)
+      .limit(limit)
+      .offset(offset);
 
     return {
-      rows: data,
-      total: Number(totalCount[0]?.count || 0),
+      rows: rows.map((r) => r.row),
+      total: rows.length ? Number(rows[0]?.total ?? 0) : 0,
     };
   }
 

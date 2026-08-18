@@ -1,5 +1,11 @@
 import { createId } from "@paralleldrive/cuid2";
-import { pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import {
+  index,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+} from "drizzle-orm/pg-core";
 import { users } from "./users";
 import { workspaces } from "./workspaces";
 
@@ -21,6 +27,12 @@ export const user_workspaces = pgTable(
     workspaceUserIdx: uniqueIndex("workspace_user_idx").on(
       table.workspace_id,
       table.user_id,
+    ),
+    // Auth resolves membership by user_id alone on every request; the composite
+    // unique index above (led by workspace_id) can't serve that lookup.
+    userIdx: index("user_workspaces_user_idx").on(
+      table.user_id,
+      table.deleted_at,
     ),
   }),
 );

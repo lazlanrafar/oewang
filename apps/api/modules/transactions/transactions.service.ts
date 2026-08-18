@@ -15,6 +15,7 @@ import { RealtimeService } from "../realtime/realtime.service";
 import { WalletsRepository } from "../wallets/wallets.repository";
 
 const log = createLogger("transactions");
+
 import type {
   CreateTransactionInput,
   ExportTransactionsQueryInput,
@@ -72,12 +73,8 @@ export abstract class TransactionsService {
     userId: string,
     body: CreateTransactionInput,
   ) {
-    const {
-      amount,
-      originalAmount,
-      originalCurrencyCode,
-      exchangeRate,
-    } = resolveMulticurrency(body);
+    const { amount, originalAmount, originalCurrencyCode, exchangeRate } =
+      resolveMulticurrency(body);
 
     // Sanitize optional UUID fields: empty strings from the frontend are not valid UUIDs.
     const toWalletId = body.toWalletId || undefined;
@@ -377,14 +374,6 @@ export abstract class TransactionsService {
     workspaceId: string,
     query: ExportTransactionsQueryInput,
   ) {
-    const { data } = await TransactionsRepository.list(workspaceId, {
-      page: 1,
-      limit: 100000,
-      startDate: query.allData === true ? undefined : query.startDate,
-      endDate: query.allData === true ? undefined : query.endDate,
-    });
-
-    // Create CSV payload
     const headers = [
       "Date",
       "Type",
@@ -394,19 +383,38 @@ export abstract class TransactionsService {
       "To Wallet",
       "Description",
     ];
-    const rows = data.map((t: any) => {
-      return [
-        t.date ? new Date(t.date).toISOString().split("T")[0] : "",
-        t.type || "",
-        t.amount || "0",
-        t.category?.name || "",
-        t.wallet?.name || "",
-        t.toWallet?.name || "",
-        `"${(t.description || "").replace(/"/g, '""')}"`,
-      ].join(",");
-    });
 
-    return [headers.join(","), ...rows].join("\n");
+    // Page through a lean projection so a large export never loads the whole
+    // table (with joins + attachments) into memory at once.
+    const PAGE_SIZE = 10000;
+    const startDate = query.allData === true ? undefined : query.startDate;
+    const endDate = query.allData === true ? undefined : query.endDate;
+
+    const lines = [headers.join(",")];
+    for (let offset = 0; ; offset += PAGE_SIZE) {
+      const batch = await TransactionsRepository.listForExport(workspaceId, {
+        startDate,
+        endDate,
+        offset,
+        limit: PAGE_SIZE,
+      });
+      for (const t of batch) {
+        lines.push(
+          [
+            t.date ? new Date(t.date).toISOString().split("T")[0] : "",
+            t.type || "",
+            t.amount || "0",
+            t.categoryName || "",
+            t.walletName || "",
+            t.toWalletName || "",
+            `"${(t.description || "").replace(/"/g, '""')}"`,
+          ].join(","),
+        );
+      }
+      if (batch.length < PAGE_SIZE) break;
+    }
+
+    return lines.join("\n");
   }
 
   static async update(

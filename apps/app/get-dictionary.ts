@@ -1,5 +1,7 @@
 import "server-only";
 
+import { cache } from "react";
+
 import type { Locale } from "@/i18n-config";
 
 const dictionaries = {
@@ -10,5 +12,8 @@ const dictionaries = {
 
 import type { Dictionary } from "@workspace/dictionaries";
 
-export const getDictionary = async (locale: Locale): Promise<Dictionary> =>
-  (dictionaries[locale]?.() ?? dictionaries.en()) as Promise<Dictionary>;
+// Wrapped in React cache(): root/dashboard/settings layouts and the page all
+// call this in one render pass — cache() collapses them into a single load.
+export const getDictionary = cache(
+  async (locale: Locale): Promise<Dictionary> => (dictionaries[locale]?.() ?? dictionaries.en()) as Promise<Dictionary>,
+);

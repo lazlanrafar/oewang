@@ -18,11 +18,15 @@ import { ErrorCode } from "@workspace/types";
 import { buildError } from "@workspace/utils";
 import { aiController } from "./modules/ai/ai.controller";
 import { aiInternalController } from "./modules/ai/ai-internal.controller";
+import { articlesController } from "./modules/articles/articles.controller";
+import { publicArticlesController } from "./modules/articles/public-articles.controller";
 import { authController } from "./modules/auth/auth.controller";
 import { budgets } from "./modules/budgets/budgets.controller";
 import { categoriesController } from "./modules/categories/categories.controller";
 import { contactsController } from "./modules/contacts/contacts.controller";
 import { debtsController } from "./modules/debts/debts.controller";
+import { faqsController } from "./modules/faqs/faqs.controller";
+import { publicFaqsController } from "./modules/faqs/public-faqs.controller";
 import { healthController } from "./modules/health/health.controller";
 import { integrationsController } from "./modules/integrations/integrations.controller";
 import {
@@ -41,10 +45,6 @@ import { notificationsController } from "./modules/notifications/notifications.c
 import { ordersController } from "./modules/orders/orders.controller";
 import { pricingController } from "./modules/pricing/pricing.controller";
 import { publicPricingController } from "./modules/pricing/public-pricing.controller";
-import { articlesController } from "./modules/articles/articles.controller";
-import { publicArticlesController } from "./modules/articles/public-articles.controller";
-import { faqsController } from "./modules/faqs/faqs.controller";
-import { publicFaqsController } from "./modules/faqs/public-faqs.controller";
 import { privacyController } from "./modules/privacy/privacy.controller";
 import { pushSubscriptionsController } from "./modules/push-subscriptions/push-subscriptions.controller";
 import { RealtimeService } from "./modules/realtime/realtime.service";
@@ -192,6 +192,12 @@ const app = new Elysia()
       .use(apiControllers2)
       .use(apiControllers3)
       .derive(async ({ query, auth, request }) => {
+        // This derive only feeds the /realtime WebSocket route. Skip all work
+        // (and logging) for the ordinary HTTP requests that dominate /v1.
+        if (request.headers.get("upgrade")?.toLowerCase() !== "websocket") {
+          return { wsAuth: auth };
+        }
+
         // Log basic info about the incoming connection attempt
         const ip =
           request.headers.get("x-forwarded-for")?.split(",")[0] ?? "unknown";
