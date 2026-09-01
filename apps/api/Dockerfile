@@ -8,7 +8,10 @@ RUN bunx turbo@2.8.5 prune api --docker
 
 FROM base AS installer
 COPY --from=pruner /app/out/json/ .
-RUN bun install --frozen-lockfile
+# turbo prune's pruned bun.lock isn't reliably frozen-installable (real
+# version drift vs the root lockfile) — bun regenerates a correct one
+# for the pruned subset instead.
+RUN bun install
 COPY --from=pruner /app/out/full/ .
 RUN bunx turbo build --filter=api
 
