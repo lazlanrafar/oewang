@@ -11,19 +11,19 @@ import type { WebsiteDictionary } from "@/lib/translations";
 import { NAV_ITEMS } from "@/navigation/nav-items";
 
 import { Brand } from "./brand";
+import { useIsLoggedIn } from "@/hooks/use-is-logged-in";
 import { ThemeToggle } from "./theme-toggle";
 
 export function Header({
-  isLoggedIn,
   appUrl,
   locale,
   dictionary,
 }: {
-  isLoggedIn: boolean;
   appUrl: string;
   locale: string;
   dictionary: WebsiteDictionary;
 }) {
+  const isLoggedIn = useIsLoggedIn();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const withLocale = (path: string) => `/${locale}${path === "/" ? "" : path}`;

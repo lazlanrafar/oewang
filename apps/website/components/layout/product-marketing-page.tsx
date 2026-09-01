@@ -34,7 +34,6 @@ type FaqItem = {
 
 type ProductMarketingPageProps = {
   locale: string;
-  isLoggedIn: boolean;
   appUrl: string;
   dictionary: WebsiteDictionary;
   eyebrow: string;
@@ -54,7 +53,6 @@ type ProductMarketingPageProps = {
 
 export function ProductMarketingPage({
   locale,
-  isLoggedIn,
   appUrl,
   dictionary,
   eyebrow,
@@ -81,7 +79,7 @@ export function ProductMarketingPage({
         />
       ) : null}
 
-      <Header appUrl={appUrl} dictionary={dictionary} isLoggedIn={isLoggedIn} locale={locale} />
+      <Header appUrl={appUrl} dictionary={dictionary} locale={locale} />
 
       <main className="flex-1 pt-24">
         <section className="border-border/70 border-b py-16 sm:py-24">
@@ -206,7 +204,7 @@ export function ProductMarketingPage({
           </section>
         ) : null}
 
-        <CTASection appUrl={appUrl} dictionary={dictionary} isLoggedIn={isLoggedIn} locale={locale} />
+        <CTASection appUrl={appUrl} dictionary={dictionary} locale={locale} />
       </main>
 
       <Footer dictionary={dictionary} locale={locale} />

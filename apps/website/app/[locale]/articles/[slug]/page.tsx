@@ -1,4 +1,3 @@
-import { cookies } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -37,6 +36,8 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   });
 }
 
+export const revalidate = 3600;
+
 export default async function ArticleDetailPage({ params }: { params: Promise<{ locale: string; slug: string }> }) {
   const { locale, slug } = await params;
   const article = await getPublicArticleBySlug(slug);
@@ -45,13 +46,11 @@ export default async function ArticleDetailPage({ params }: { params: Promise<{ 
   const dictionary = getDictionary(locale);
   const prefix = locale === "en" ? "" : `/${locale}`;
 
-  const cookieStore = await cookies();
-  const isLoggedIn = cookieStore.has(process.env.NEXT_PUBLIC_SESSION_COOKIE_NAME ?? "oewang-session");
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
   return (
     <div className="flex min-h-screen flex-col">
-      <Header isLoggedIn={isLoggedIn} appUrl={appUrl} locale={locale} dictionary={dictionary} />
+      <Header appUrl={appUrl} locale={locale} dictionary={dictionary} />
 
       <main className="flex-1 pt-32 pb-24">
         <Container className="max-w-3xl!">

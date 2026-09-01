@@ -1,7 +1,7 @@
 import type { CreateBudgetInput, UpdateBudgetInput } from "@workspace/types";
 import { ErrorCode } from "@workspace/types";
 import { buildApiResponse } from "@workspace/utils";
-import { cacheDel, cacheGet, cacheSet } from "../../lib/cache";
+import { cacheDel, getOrSet } from "../../lib/cache";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { CategoriesRepository } from "../categories/categories.repository";
 import { NotificationsService } from "../notifications/notifications.service";
@@ -185,10 +185,6 @@ export abstract class BudgetsService {
     const cacheMonth = month !== undefined ? month : now.getMonth() + 1;
     const cacheYear = year !== undefined ? year : now.getFullYear();
 
-    const key = budgetStatusKey(workspaceId, cacheYear, cacheMonth);
-    const cached = await cacheGet<object[]>(key);
-    if (cached) return buildApiResponse({ success: true, data: cached });
-
     const startDate = new Date(targetYear, targetMonth, 1).toISOString();
     const endDate = new Date(
       targetYear,
@@ -199,13 +195,10 @@ export abstract class BudgetsService {
       59,
     ).toISOString();
 
-    const budgetStatus = await BudgetsRepository.getStatus(
-      workspaceId,
-      startDate,
-      endDate,
+    const key = budgetStatusKey(workspaceId, cacheYear, cacheMonth);
+    const budgetStatus = await getOrSet(key, BUDGET_STATUS_TTL, () =>
+      BudgetsRepository.getStatus(workspaceId, startDate, endDate),
     );
-
-    await cacheSet(key, budgetStatus, BUDGET_STATUS_TTL);
 
     return buildApiResponse({
       success: true,

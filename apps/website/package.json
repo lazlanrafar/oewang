@@ -14,9 +14,13 @@
   "dependencies": {
     "@formatjs/intl-localematcher": "^0.8.1",
     "@gsap/react": "^2.1.2",
+    "@sentry/nextjs": "^10.18.0",
     "@workspace/constants": "workspace:*",
+    "@workspace/dictionaries": "workspace:*",
     "@workspace/encryption": "workspace:*",
+    "@workspace/integrations": "workspace:*",
     "@workspace/ui": "workspace:*",
+    "@workspace/utils": "workspace:*",
     "gsap": "^3.15.0",
     "lucide-react": "catalog:",
     "negotiator": "^1.0.0",
@@ -26,6 +30,7 @@
     "react-dom": "catalog:"
   },
   "devDependencies": {
+    "babel-plugin-react-compiler": "^1.0.0",
     "@biomejs/biome": "catalog:",
     "@tailwindcss/postcss": "^4.1.18",
     "@types/negotiator": "^0.6.4",

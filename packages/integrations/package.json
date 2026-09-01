@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@workspace/modules": "workspace:*",
     "zod": "catalog:"
   },
   "devDependencies": {

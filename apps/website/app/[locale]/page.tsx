@@ -1,7 +1,7 @@
-import { cookies } from "next/headers";
 
 import { WEBSITE_CONFIG } from "@workspace/constants";
 
+import { i18n } from "@/i18n-config";
 import { Footer } from "@/components/layout/footer";
 import { Header } from "@/components/layout/header";
 import { SmoothScroll } from "@/components/motion/smooth-scroll";
@@ -66,12 +66,21 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   });
 }
 
+// ISR: prerender each locale to static HTML, revalidate hourly (matches the lib
+// fetch window). No cookies() here, so the route can be cached. The [locale]
+// dynamic segment needs generateStaticParams to be prerendered.
+export const revalidate = 3600;
+
+export function generateStaticParams() {
+  return i18n.locales.map((locale) => ({ locale }));
+}
+
 export default async function Page({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   const dictionary = getDictionary(locale);
 
-  const cookieStore = await cookies();
-  const isLoggedIn = cookieStore.has(process.env.NEXT_PUBLIC_SESSION_COOKIE_NAME ?? "oewang-session");
+  // No cookies() here: login-aware CTA is resolved client-side (useIsLoggedIn)
+  // so this route stays statically renderable / CDN-cacheable.
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
   // Live plans + FAQs from the API's public endpoints. FAQs fall back to the
@@ -129,11 +138,11 @@ export default async function Page({ params }: { params: Promise<{ locale: strin
       />
 
       {/* Header stays OUTSIDE SmoothScroll (fixed, not transformed by the smoother). */}
-      <Header isLoggedIn={isLoggedIn} appUrl={appUrl} locale={locale} dictionary={dictionary} />
+      <Header appUrl={appUrl} locale={locale} dictionary={dictionary} />
 
       <SmoothScroll>
         <main className="flex-1">
-          <HeroSection isLoggedIn={isLoggedIn} appUrl={appUrl} dictionary={dictionary} />
+          <HeroSection appUrl={appUrl} dictionary={dictionary} />
           <ChatPhone dictionary={dictionary} />
           <SocialProof dictionary={dictionary} />
           <ValuePillars dictionary={dictionary} />
@@ -142,7 +151,7 @@ export default async function Page({ params }: { params: Promise<{ locale: strin
           <StatsSection dictionary={dictionary} />
           <PricingSection appUrl={appUrl} dictionary={dictionary} plans={plans} />
           <FaqSection dictionary={dictionary} items={faqItems} />
-          <CTASection isLoggedIn={isLoggedIn} appUrl={appUrl} locale={locale} dictionary={dictionary} />
+          <CTASection appUrl={appUrl} locale={locale} dictionary={dictionary} />
         </main>
 
         <Footer locale={locale} dictionary={dictionary} />

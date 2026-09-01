@@ -98,6 +98,7 @@ export async function proxy(request: NextRequest) {
       if (!jwtSecret) {
         const redirectResponse = NextResponse.redirect(new URL(`/${locale}/login`, request.url));
         redirectResponse.cookies.delete("oewang-session");
+        redirectResponse.cookies.delete("oewang-session-authed");
         return redirectResponse;
       }
 
@@ -110,6 +111,7 @@ export async function proxy(request: NextRequest) {
     } catch {
       const redirectResponse = NextResponse.redirect(new URL(`/${locale}/login`, request.url));
       redirectResponse.cookies.delete("oewang-session");
+      redirectResponse.cookies.delete("oewang-session-authed");
       return redirectResponse;
     }
   }

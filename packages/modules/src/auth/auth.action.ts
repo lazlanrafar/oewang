@@ -23,10 +23,21 @@ function sessionCookieOptions(isProduction: boolean) {
   };
 }
 
+// Non-httpOnly companion flag the marketing site can read client-side (the real
+// session cookie is httpOnly and invisible to JS). Only signals presence, no
+// token. Must be set/cleared everywhere the session cookie is.
+const AUTHED_FLAG_COOKIE = `${Env.NEXT_PUBLIC_SESSION_COOKIE_NAME}-authed`;
+
+function authedFlagOptions(isProduction: boolean) {
+  return { ...sessionCookieOptions(isProduction), httpOnly: false };
+}
+
 async function setSessionCookie(token: string) {
   const isProduction = Env.NODE_ENV === "production";
   const cookieName = Env.NEXT_PUBLIC_SESSION_COOKIE_NAME;
-  (await cookies()).set(cookieName, token, sessionCookieOptions(isProduction));
+  const store = await cookies();
+  store.set(cookieName, token, sessionCookieOptions(isProduction));
+  store.set(AUTHED_FLAG_COOKIE, "1", authedFlagOptions(isProduction));
 }
 
 export async function login(
@@ -100,7 +111,9 @@ export async function loginWithOAuth(
 }
 
 export async function logout() {
-  (await cookies()).delete(Env.NEXT_PUBLIC_SESSION_COOKIE_NAME);
+  const store = await cookies();
+  store.delete(Env.NEXT_PUBLIC_SESSION_COOKIE_NAME);
+  store.delete(AUTHED_FLAG_COOKIE);
   redirect("/login");
 }
 

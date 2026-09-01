@@ -298,8 +298,18 @@ export abstract class DebtsService {
       let contactId: string | null = null;
       let count = 0;
 
+      // Batch-load all debts once instead of one findById per payment.
+      const debtById = new Map(
+        (
+          await DebtsRepository.findByIds(
+            workspaceId,
+            data.payments.map((p) => p.id),
+          )
+        ).map((d) => [d.id, d]),
+      );
+
       for (const p of data.payments) {
-        const debt = await DebtsRepository.findById(workspaceId, p.id);
+        const debt = debtById.get(p.id);
         if (!debt)
           throw status(404, buildError(ErrorCode.NOT_FOUND, `Debt not found`));
         if (!contactId) contactId = debt.contactId;
@@ -468,19 +478,26 @@ export abstract class DebtsService {
 
       const createdDebts = [];
 
+      // Batch-resolve existing contacts once (case-insensitive), then create
+      // only the missing ones — inside tx so a failure rolls everything back.
+      const existingByName = new Map(
+        (
+          await ContactsRepository.findByNames(workspaceId, data.contactNames)
+        ).map((c) => [c.name.toLowerCase(), c]),
+      );
+
       for (const contactName of data.contactNames) {
-        // Look for existing contact or create new one
-        let contact = await ContactsRepository.findByName(
-          workspaceId,
-          contactName,
-        );
+        let contact = existingByName.get(contactName.toLowerCase());
         if (!contact) {
-          contact = await ContactsRepository.create({
-            workspaceId,
-            name: contactName,
-          });
+          const created = await ContactsRepository.create(
+            { workspaceId, name: contactName },
+            tx,
+          );
+          if (!created) continue;
+          contact = created;
+          // Dedupe repeated names within the same split.
+          existingByName.set(contactName.toLowerCase(), created);
         }
-        if (!contact) continue;
 
         const debt = await DebtsRepository.create(
           {

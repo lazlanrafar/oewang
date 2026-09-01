@@ -24,6 +24,7 @@
     "@modelcontextprotocol/sdk": "^1.27.1",
     "@sentry/bun": "^10.18.0",
     "@workspace/bucket": "workspace:*",
+    "@workspace/constants": "workspace:*",
     "@workspace/currencyfreaks": "workspace:*",
     "@workspace/database": "workspace:*",
     "@workspace/email": "workspace:*",

@@ -121,6 +121,17 @@ async def complete_with_tools(
         if resp.usage:
             usage_in += resp.usage.prompt_tokens
             usage_out += resp.usage.completion_tokens
+            # Prompt-cache visibility: how many input tokens hit OpenAI's
+            # automatic cache (the stable system+tools prefix). >0 confirms the
+            # cacheable-prefix restructure is working.
+            details = getattr(resp.usage, "prompt_tokens_details", None)
+            cached = getattr(details, "cached_tokens", 0) if details else 0
+            if cached:
+                log.info(
+                    "prompt_cache hit: cached=%d/%d input tokens",
+                    cached,
+                    resp.usage.prompt_tokens,
+                )
         response_id = resp.id
 
         msg = resp.choices[0].message
