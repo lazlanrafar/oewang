@@ -17,11 +17,14 @@ RUN bunx turbo build --filter=website
 
 FROM base AS runner
 ENV NODE_ENV=production
-COPY --from=installer /app/node_modules ./node_modules
-COPY --from=installer /app/apps/website/.next ./apps/website/.next
-COPY --from=installer /app/apps/website/public ./apps/website/public
-COPY --from=installer /app/apps/website/package.json ./apps/website/package.json
-COPY --from=installer /app/apps/website/next.config.mjs ./apps/website/next.config.mjs
+# bun's hoisting isn't deterministic across installs in this monorepo — "next"
+# sometimes lands in root node_modules/.bin, sometimes in the workspace-local
+# apps/website/node_modules/.bin. Copying only curated paths risks missing
+# wherever it actually landed ("next: command not found" at runtime). Copying
+# the whole installer output instead — root package.json/bun.lock included —
+# so bun run's workspace-root detection and node_modules resolution both work
+# regardless of the layout bun picked.
+COPY --from=installer /app ./
 
 WORKDIR /app/apps/website
 EXPOSE 3003

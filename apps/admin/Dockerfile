@@ -17,10 +17,14 @@ RUN bunx turbo build --filter=admin
 
 FROM base AS runner
 ENV NODE_ENV=production
-COPY --from=installer /app/node_modules ./node_modules
-COPY --from=installer /app/apps/admin/.next ./apps/admin/.next
-COPY --from=installer /app/apps/admin/package.json ./apps/admin/package.json
-COPY --from=installer /app/apps/admin/next.config.mjs ./apps/admin/next.config.mjs
+# bun's hoisting isn't deterministic across installs in this monorepo — "next"
+# sometimes lands in root node_modules/.bin, sometimes in the workspace-local
+# apps/admin/node_modules/.bin. Copying only curated paths risks missing
+# wherever it actually landed ("next: command not found" at runtime). Copying
+# the whole installer output instead — root package.json/bun.lock included —
+# so bun run's workspace-root detection and node_modules resolution both work
+# regardless of the layout bun picked.
+COPY --from=installer /app ./
 
 WORKDIR /app/apps/admin
 EXPOSE 3001
