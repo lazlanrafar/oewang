@@ -11,7 +11,7 @@ import {
   startOfMonth,
   subMonths,
 } from "date-fns";
-import { cacheDel, cacheGet, cacheSet } from "../../lib/cache";
+import { cacheDel, getOrSet } from "../../lib/cache";
 import type { ChartDataPoint } from "./metrics.dto";
 import { MetricsRepository } from "./metrics.repository";
 
@@ -102,30 +102,27 @@ export abstract class MetricsService {
     startDate?: string,
     endDate?: string,
   ) {
-    const key = metricsKey(workspaceId, "revenue", startDate, endDate);
-    const cached = await cacheGet<ChartDataPoint[]>(key);
-    if (cached) return buildSuccess(cached, "Revenue metrics retrieved");
-
     const range = MetricsService.resolveDateRange(startDate, endDate);
 
     if (!range) {
       return buildError(ErrorCode.VALIDATION_ERROR, "Invalid date range");
     }
 
-    const rawData = await MetricsRepository.getMonthlyTotalsByType(
-      workspaceId,
-      "income",
-      range.startDate,
-      range.endDate,
-    );
+    const key = metricsKey(workspaceId, "revenue", startDate, endDate);
+    const formatted = await getOrSet(key, METRICS_TTL, async () => {
+      const rawData = await MetricsRepository.getMonthlyTotalsByType(
+        workspaceId,
+        "income",
+        range.startDate,
+        range.endDate,
+      );
+      return MetricsService.fillMissingMonths(
+        rawData,
+        range.startDate,
+        range.endDate,
+      );
+    });
 
-    const formatted = MetricsService.fillMissingMonths(
-      rawData,
-      range.startDate,
-      range.endDate,
-    );
-
-    await cacheSet(key, formatted, METRICS_TTL);
     return buildSuccess(formatted, "Revenue metrics retrieved");
   }
 
@@ -134,30 +131,27 @@ export abstract class MetricsService {
     startDate?: string,
     endDate?: string,
   ) {
-    const key = metricsKey(workspaceId, "expenses", startDate, endDate);
-    const cached = await cacheGet<ChartDataPoint[]>(key);
-    if (cached) return buildSuccess(cached, "Expenses metrics retrieved");
-
     const range = MetricsService.resolveDateRange(startDate, endDate);
 
     if (!range) {
       return buildError(ErrorCode.VALIDATION_ERROR, "Invalid date range");
     }
 
-    const rawData = await MetricsRepository.getMonthlyTotalsByType(
-      workspaceId,
-      "expense",
-      range.startDate,
-      range.endDate,
-    );
+    const key = metricsKey(workspaceId, "expenses", startDate, endDate);
+    const formatted = await getOrSet(key, METRICS_TTL, async () => {
+      const rawData = await MetricsRepository.getMonthlyTotalsByType(
+        workspaceId,
+        "expense",
+        range.startDate,
+        range.endDate,
+      );
+      return MetricsService.fillMissingMonths(
+        rawData,
+        range.startDate,
+        range.endDate,
+      );
+    });
 
-    const formatted = MetricsService.fillMissingMonths(
-      rawData,
-      range.startDate,
-      range.endDate,
-    );
-
-    await cacheSet(key, formatted, METRICS_TTL);
     return buildSuccess(formatted, "Expenses metrics retrieved");
   }
 
@@ -166,30 +160,27 @@ export abstract class MetricsService {
     startDate?: string,
     endDate?: string,
   ) {
-    const key = metricsKey(workspaceId, "burn-rate", startDate, endDate);
-    const cached = await cacheGet<ChartDataPoint[]>(key);
-    if (cached) return buildSuccess(cached);
-
     const range = MetricsService.resolveDateRange(startDate, endDate);
 
     if (!range) {
       return buildError(ErrorCode.VALIDATION_ERROR, "Invalid date range");
     }
 
-    const rawData = await MetricsRepository.getMonthlyTotalsByType(
-      workspaceId,
-      "expense",
-      range.startDate,
-      range.endDate,
-    );
+    const key = metricsKey(workspaceId, "burn-rate", startDate, endDate);
+    const formatted = await getOrSet(key, METRICS_TTL, async () => {
+      const rawData = await MetricsRepository.getMonthlyTotalsByType(
+        workspaceId,
+        "expense",
+        range.startDate,
+        range.endDate,
+      );
+      return MetricsService.fillMissingMonths(
+        rawData,
+        range.startDate,
+        range.endDate,
+      );
+    });
 
-    const formatted = MetricsService.fillMissingMonths(
-      rawData,
-      range.startDate,
-      range.endDate,
-    );
-
-    await cacheSet(key, formatted, METRICS_TTL);
     return buildSuccess(formatted);
   }
 
@@ -209,35 +200,32 @@ export abstract class MetricsService {
     startDate?: string,
     endDate?: string,
   ) {
-    const key = metricsKey(
-      workspaceId,
-      `breakdown-${type}`,
-      startDate,
-      endDate,
-    );
-    const cached = await cacheGet<object[]>(key);
-    if (cached) return buildSuccess(cached, "Category breakdown retrieved");
-
     const range = MetricsService.resolveDateRange(startDate, endDate);
 
     if (!range) {
       return buildError(ErrorCode.VALIDATION_ERROR, "Invalid date range");
     }
 
-    const rawData = await MetricsRepository.getCategoryBreakdown(
+    const key = metricsKey(
       workspaceId,
-      type,
-      range.startDate,
-      range.endDate,
+      `breakdown-${type}`,
+      startDate,
+      endDate,
     );
+    const formatted = await getOrSet(key, METRICS_TTL, async () => {
+      const rawData = await MetricsRepository.getCategoryBreakdown(
+        workspaceId,
+        type,
+        range.startDate,
+        range.endDate,
+      );
+      return rawData.map((row) => ({
+        categoryId: row.categoryId,
+        name: row.categoryName,
+        value: Number(row.total || 0),
+      }));
+    });
 
-    const formatted = rawData.map((row) => ({
-      categoryId: row.categoryId,
-      name: row.categoryName,
-      value: Number(row.total || 0),
-    }));
-
-    await cacheSet(key, formatted, METRICS_TTL);
     return buildSuccess(formatted, "Category breakdown retrieved");
   }
 }

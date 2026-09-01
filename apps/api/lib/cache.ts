@@ -56,3 +56,55 @@ export async function cacheDel(
     log.warn("Cache del failed", { keys: real, err });
   }
 }
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+// Acquire a short SET NX lock. Returns true if this caller won the lock.
+async function acquireLock(key: string, ttlSeconds: number): Promise<boolean> {
+  if (!redis) return false;
+  try {
+    const res = isIoredis
+      ? await (redis as any).set(key, "1", "EX", ttlSeconds, "NX")
+      : await redis.set(key, "1", { ex: ttlSeconds, nx: true });
+    return res === "OK" || res === true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Single-flight cache: return the cached value, or recompute exactly once under
+ * a short Redis lock so a TTL expiry doesn't let concurrent requests all run the
+ * expensive recompute (cache stampede). Losers of the lock wait briefly and
+ * re-read; if still cold they compute rather than block. Falls back to a plain
+ * recompute when Redis is absent or the key is null (uncacheable).
+ */
+export async function getOrSet<T>(
+  key: string | null,
+  ttlSeconds: number,
+  recompute: () => Promise<T>,
+): Promise<T> {
+  const hit = await cacheGet<T>(key);
+  if (hit !== null) return hit;
+  if (!redis || !key) return recompute();
+
+  const lockKey = `lock:${key}`;
+  if (await acquireLock(lockKey, 5)) {
+    try {
+      const value = await recompute();
+      await cacheSet(key, value, ttlSeconds);
+      return value;
+    } finally {
+      await cacheDel(lockKey);
+    }
+  }
+
+  // Another caller holds the lock — wait a moment and re-read before falling
+  // back to computing ourselves (never block indefinitely).
+  for (let i = 0; i < 5; i++) {
+    await sleep(100);
+    const retry = await cacheGet<T>(key);
+    if (retry !== null) return retry;
+  }
+  return recompute();
+}

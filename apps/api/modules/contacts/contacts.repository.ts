@@ -5,29 +5,33 @@ import {
   desc,
   eq,
   ilike,
+  inArray,
   isNull,
   sql,
 } from "@workspace/database";
 import type { Contact } from "@workspace/types";
 
 export abstract class ContactsRepository {
-  static async create(data: {
-    workspaceId: string;
-    name: string;
-    email?: string;
-    phone?: string;
-    addressLine1?: string;
-    addressLine2?: string;
-    city?: string;
-    state?: string;
-    country?: string;
-    zip?: string;
-    website?: string;
-    note?: string;
-    vatNumber?: string;
-    billingEmails?: string;
-  }): Promise<Contact | null> {
-    const [contact] = await db.insert(contacts).values(data).returning();
+  static async create(
+    data: {
+      workspaceId: string;
+      name: string;
+      email?: string;
+      phone?: string;
+      addressLine1?: string;
+      addressLine2?: string;
+      city?: string;
+      state?: string;
+      country?: string;
+      zip?: string;
+      website?: string;
+      note?: string;
+      vatNumber?: string;
+      billingEmails?: string;
+    },
+    tx: any = db,
+  ): Promise<Contact | null> {
+    const [contact] = await tx.insert(contacts).values(data).returning();
     return contact
       ? ({
           ...contact,
@@ -165,5 +169,25 @@ export abstract class ContactsRepository {
       .limit(1);
 
     return contact ? (contact as unknown as Contact) : null;
+  }
+
+  // Batch case-insensitive lookup by name for split-bill (avoids N queries).
+  static async findByNames(
+    workspaceId: string,
+    names: string[],
+  ): Promise<Contact[]> {
+    if (names.length === 0) return [];
+    const lowered = names.map((n) => n.toLowerCase());
+    const rows = await db
+      .select()
+      .from(contacts)
+      .where(
+        and(
+          inArray(sql`lower(${contacts.name})`, lowered),
+          eq(contacts.workspaceId, workspaceId),
+          isNull(contacts.deletedAt),
+        ),
+      );
+    return rows as unknown as Contact[];
   }
 }

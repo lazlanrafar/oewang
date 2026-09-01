@@ -5,20 +5,20 @@ import Link from "next/link";
 import { Button } from "@workspace/ui/atoms";
 
 import type { WebsiteDictionary } from "@/lib/translations";
+import { useIsLoggedIn } from "@/hooks/use-is-logged-in";
 import { useHeadlineReveal } from "@/lib/motion";
 import { Container } from "./_shared";
 
 export function CTASection({
-  isLoggedIn,
   appUrl,
   locale,
   dictionary,
 }: {
-  isLoggedIn: boolean;
   appUrl: string;
   locale: string;
   dictionary: WebsiteDictionary;
 }) {
+  const isLoggedIn = useIsLoggedIn();
   const title = useHeadlineReveal<HTMLHeadingElement>();
 
   return (

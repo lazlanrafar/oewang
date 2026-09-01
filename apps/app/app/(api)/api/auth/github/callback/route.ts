@@ -114,13 +114,21 @@ export async function GET(request: Request) {
     const next = workspace_id ? "/overview" : "/create-workspace";
     const response = NextResponse.redirect(`${origin}${next}`);
 
-    response.cookies.set("oewang-session", token, {
+    const cookieBase = {
       path: "/",
-      httpOnly: true,
       secure: isProduction,
-      sameSite: "lax",
+      sameSite: "lax" as const,
       maxAge: 60 * 60 * 24 * 7,
       ...(isProduction ? { domain: ".oewang.com" } : {}),
+    };
+    response.cookies.set("oewang-session", token, {
+      ...cookieBase,
+      httpOnly: true,
+    });
+    // Non-httpOnly companion flag the marketing site reads client-side.
+    response.cookies.set("oewang-session-authed", "1", {
+      ...cookieBase,
+      httpOnly: false,
     });
     response.cookies.delete("oauth_state");
 

@@ -35,6 +35,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@workspace/constants": "workspace:*",
     "@workspace/encryption": "workspace:*",
     "@workspace/types": "workspace:*",
     "axios": "^1.6.0",

@@ -4,7 +4,7 @@ import { redis } from "@workspace/redis";
 import { ErrorCode } from "@workspace/types";
 import { buildError } from "@workspace/utils";
 import { status } from "elysia";
-import { cacheDel, cacheGet, cacheSet } from "../../lib/cache";
+import { cacheDel, getOrSet } from "../../lib/cache";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { CategoriesRepository } from "../categories/categories.repository";
 import { RealtimeService } from "../realtime/realtime.service";
@@ -797,10 +797,8 @@ export abstract class AiService {
   static async getUsageAndQuota(workspaceId: string) {
     // Workspace-less sessions would all share one empty-suffix key.
     if (!workspaceId) return AiRepository.getUsageAndQuota(workspaceId);
-    const cached = await cacheGet<object>(quotaKey(workspaceId));
-    if (cached) return cached;
-    const usage = await AiRepository.getUsageAndQuota(workspaceId);
-    await cacheSet(quotaKey(workspaceId), usage, QUOTA_TTL);
-    return usage;
+    return getOrSet(quotaKey(workspaceId), QUOTA_TTL, () =>
+      AiRepository.getUsageAndQuota(workspaceId),
+    );
   }
 }

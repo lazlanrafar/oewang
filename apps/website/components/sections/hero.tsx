@@ -5,19 +5,19 @@ import Link from "next/link";
 import { Button } from "@workspace/ui/atoms";
 
 import type { WebsiteDictionary } from "@/lib/translations";
+import { useIsLoggedIn } from "@/hooks/use-is-logged-in";
 import { useHeadlineReveal } from "@/lib/motion";
 import { RotatingWord } from "./rotating-word";
 import { Container, SectionLabel } from "./_shared";
 
 export function HeroSection({
-  isLoggedIn,
   appUrl,
   dictionary,
 }: {
-  isLoggedIn: boolean;
   appUrl: string;
   dictionary: WebsiteDictionary;
 }) {
+  const isLoggedIn = useIsLoggedIn();
   const headline = useHeadlineReveal<HTMLHeadingElement>({ start: "top 92%" });
 
   return (

@@ -7,7 +7,6 @@ export function MarketingPage({
   title,
   subtitle,
   locale,
-  isLoggedIn,
   appUrl,
   dictionary,
   sections,
@@ -15,7 +14,6 @@ export function MarketingPage({
   title: string;
   subtitle: string;
   locale: string;
-  isLoggedIn: boolean;
   appUrl: string;
   dictionary: WebsiteDictionary;
   sections: Array<{
@@ -26,7 +24,7 @@ export function MarketingPage({
 }) {
   return (
     <div className="flex min-h-screen flex-col">
-      <Header isLoggedIn={isLoggedIn} appUrl={appUrl} locale={locale} dictionary={dictionary} />
+      <Header appUrl={appUrl} locale={locale} dictionary={dictionary} />
 
       <main className="flex-1 pt-24">
         <section className="border-border/70 border-b py-16 sm:py-20">
@@ -57,7 +55,7 @@ export function MarketingPage({
           </div>
         </section>
 
-        <CTASection isLoggedIn={isLoggedIn} appUrl={appUrl} locale={locale} dictionary={dictionary} />
+        <CTASection appUrl={appUrl} locale={locale} dictionary={dictionary} />
       </main>
 
       <Footer locale={locale} dictionary={dictionary} />

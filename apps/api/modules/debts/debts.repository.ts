@@ -8,6 +8,7 @@ import {
   eq,
   gte,
   ilike,
+  inArray,
   isNull,
   lte,
   or,
@@ -185,6 +186,22 @@ export abstract class DebtsRepository {
       .limit(1);
 
     return debt ? (debt as unknown as Debt) : null;
+  }
+
+  // Batch-load debts by id for bulk operations (avoids per-id round trips).
+  static async findByIds(workspaceId: string, ids: string[]): Promise<Debt[]> {
+    if (ids.length === 0) return [];
+    const rows = await db
+      .select()
+      .from(debts)
+      .where(
+        and(
+          inArray(debts.id, ids),
+          eq(debts.workspaceId, workspaceId),
+          isNull(debts.deletedAt),
+        ),
+      );
+    return rows as unknown as Debt[];
   }
 
   static async addPayment(

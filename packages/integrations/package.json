@@ -10,11 +10,13 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@workspace/modules": "workspace:*",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.10",
+    "@workspace/typescript-config": "workspace:*",
     "typescript": "catalog:"
   },
   "exports": {
