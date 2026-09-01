@@ -12,31 +12,21 @@ COPY --from=pruner /app/out/json/ .
 # version drift vs the root lockfile) — bun regenerates a correct one
 # for the pruned subset instead.
 RUN bun install
-# bun's hoisting isn't deterministic across installs in this monorepo — "next"
-# sometimes lands in root node_modules/.bin, sometimes only in the
-# workspace-local apps/admin/node_modules/.bin (or is missing from root
-# entirely). The real binary always ends up inside root node_modules/.bun/
-# (bun's central package store) regardless, so resolve it here — while the
-# full pruned workspace is still available — and guarantee a root .bin/next
-# symlink exists no matter what bun picked.
-RUN test -e node_modules/.bin/next || { \
-      NEXT_BIN=$(find . -path "*/node_modules/.bun/next@*/node_modules/next/dist/bin/next" 2>/dev/null | head -1); \
-      test -n "$NEXT_BIN" && mkdir -p node_modules/.bin && ln -sf "/app/${NEXT_BIN#./}" node_modules/.bin/next; \
-    }
 COPY --from=pruner /app/out/full/ .
 RUN bunx turbo build --filter=admin
 
 FROM base AS runner
 ENV NODE_ENV=production
-# WORKDIR below is apps/admin, but only root node_modules is copied — bun run
-# can't walk up to find node_modules/.bin without root package.json (not
-# copied), so point PATH at it directly. The symlink guaranteed above ensures
-# next resolves regardless of where bun's hoisting put it.
-ENV PATH="/app/node_modules/.bin:${PATH}"
-COPY --from=installer /app/node_modules ./node_modules
-COPY --from=installer /app/apps/admin/.next ./apps/admin/.next
-COPY --from=installer /app/apps/admin/package.json ./apps/admin/package.json
-COPY --from=installer /app/apps/admin/next.config.mjs ./apps/admin/next.config.mjs
+# bun's hoisting isn't deterministic across installs in this monorepo — ANY
+# directly-imported package (next's own binary, @sentry/nextjs in
+# next.config.mjs, etc.) can end up in root node_modules or in the
+# workspace-local apps/admin/node_modules depending on the install. Copying
+# only curated paths risks missing wherever a given package actually landed
+# ("next: command not found", "Cannot find module '@sentry/nextjs'", etc. —
+# hit both in practice). Copying the whole installer output instead — root
+# package.json/bun.lock included — so resolution works regardless of the
+# layout bun picked, at the cost of a slower/larger image build.
+COPY --from=installer /app ./
 
 WORKDIR /app/apps/admin
 EXPOSE 3001
