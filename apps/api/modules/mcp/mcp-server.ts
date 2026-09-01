@@ -63,7 +63,12 @@ export async function createMcpServer(
       }
     }
 
-    server.tool(name, description, shape, async (args) => {
+    // shape is built dynamically from the sidecar's JSON schema response, so its
+    // static type carries no useful info — cast avoids a TS2589 "excessively deep"
+    // error from server.tool()'s generic inference colliding with the MCP SDK's
+    // own nested zod instance (which resolves to a different major version than
+    // the repo's top-level zod).
+    server.tool(name, description, shape as any, async (args: any) => {
       const { result } = await AiSidecarClient.executeTool(
         name,
         args,
