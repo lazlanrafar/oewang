@@ -1,11 +1,12 @@
-name: PR Checks
+name: CI
 
 on:
+  push:
+    branches: [main]
   pull_request:
-    types: [opened, synchronize, reopened]
 
 concurrency:
-  group: pr-checks-${{ github.event.pull_request.number }}
+  group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 env:
