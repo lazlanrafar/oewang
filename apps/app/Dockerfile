@@ -12,19 +12,32 @@ COPY --from=pruner /app/out/json/ .
 # tuple for the xlsx tarball-URL dep, plus real version drift on other
 # apps) — bun regenerates a correct lockfile for the pruned subset instead.
 RUN bun install
+# bun's hoisting isn't deterministic across installs in this monorepo — "next"
+# sometimes lands in root node_modules/.bin, sometimes only in the
+# workspace-local apps/app/node_modules/.bin (or is missing from root
+# entirely). The real binary always ends up inside root node_modules/.bun/
+# (bun's central package store) regardless, so resolve it here — while the
+# full pruned workspace is still available — and guarantee a root .bin/next
+# symlink exists no matter what bun picked.
+RUN test -e node_modules/.bin/next || { \
+      NEXT_BIN=$(find . -path "*/node_modules/.bun/next@*/node_modules/next/dist/bin/next" 2>/dev/null | head -1); \
+      test -n "$NEXT_BIN" && mkdir -p node_modules/.bin && ln -sf "/app/${NEXT_BIN#./}" node_modules/.bin/next; \
+    }
 COPY --from=pruner /app/out/full/ .
 RUN bunx turbo build --filter=app
 
 FROM base AS runner
 ENV NODE_ENV=production
-# bun's hoisting isn't deterministic across installs in this monorepo — "next"
-# sometimes lands in root node_modules/.bin, sometimes in the workspace-local
-# apps/app/node_modules/.bin. Copying only curated paths risks missing
-# wherever it actually landed ("next: command not found" at runtime). Copying
-# the whole installer output instead — root package.json/bun.lock included —
-# so bun run's workspace-root detection and node_modules resolution both work
-# regardless of the layout bun picked.
-COPY --from=installer /app ./
+# WORKDIR below is apps/app, but only root node_modules is copied — bun run
+# can't walk up to find node_modules/.bin without root package.json (not
+# copied), so point PATH at it directly. The symlink guaranteed above ensures
+# next resolves regardless of where bun's hoisting put it.
+ENV PATH="/app/node_modules/.bin:${PATH}"
+COPY --from=installer /app/node_modules ./node_modules
+COPY --from=installer /app/apps/app/.next ./apps/app/.next
+COPY --from=installer /app/apps/app/public ./apps/app/public
+COPY --from=installer /app/apps/app/package.json ./apps/app/package.json
+COPY --from=installer /app/apps/app/next.config.mjs ./apps/app/next.config.mjs
 
 WORKDIR /app/apps/app
 EXPOSE 3000
