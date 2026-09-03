@@ -139,5 +139,65 @@ async def web_chat(
         "reply": result["reply"],
         "usage": result["usage"],
         "artifact": result["artifact"],
-        "provider": {"name": "openai", "response_id": result.get("response_id")},
+        "provider": {"name": "9router", "response_id": result.get("response_id")},
     }
+
+
+async def stream_web_chat(
+    messages: list[dict],
+    token: str,
+    session_id: str | None,
+    web_search: bool,
+):
+    """Streaming web chat: yields SSE events for live thinking and text tokens."""
+    begin = await tools.chat_begin(token, messages, session_id, web_search)
+
+    if begin.get("kind") == "early":
+        yield {
+            "event": "content",
+            "data": {"text": begin["reply"]},
+        }
+        yield {
+            "event": "done",
+            "data": {
+                "session_id": begin["session_id"],
+                "reply": begin["reply"],
+                "usage": {"input_tokens": 0, "output_tokens": 0},
+                "artifact": None,
+                "provider": None,
+            },
+        }
+        return
+
+    workspace_id = begin["workspace_id"]
+    user_id = begin["user_id"]
+    current_tokens = begin["current_tokens"]
+    session_id = begin["session_id"]
+
+    convo = [
+        {"role": m["role"], "content": m["content"]}
+        for m in begin["history"]
+        if m["role"] in ("user", "assistant")
+    ]
+
+    async def run_tool(name: str, args: dict) -> dict:
+        return await tools.execute_tool(name, args, workspace_id, user_id)
+
+    final_result = None
+    async for event in llm.complete_with_tools_stream(
+        begin["system_prompt"],
+        convo,
+        tools.WEB_TOOLS,
+        run_tool,
+        max_steps=get_settings().AI_MAX_STEPS,
+    ):
+        if event["event"] == "done":
+            final_result = event["data"]
+            final_result["session_id"] = session_id
+            try:
+                await tools.chat_end(workspace_id, session_id, final_result, current_tokens)
+            except Exception:
+                log.exception("chat_end failed; stream completed but persist incomplete")
+            yield {"event": "done", "data": final_result}
+        else:
+            yield event

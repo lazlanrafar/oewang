@@ -96,6 +96,135 @@ export function ChatProviderWrapper({ children, initialMessages }: Props) {
             });
 
             isAbortedRef.current = false;
+
+            // Attempt streaming via /api/chat/stream
+            let streamedSuccessfully = false;
+            try {
+              const streamRes = await fetch("/api/chat/stream", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  messages: backendMessages,
+                  session_id: chatId || undefined,
+                  web_search: webSearch ?? false,
+                }),
+              });
+
+              if (streamRes.ok && streamRes.body) {
+                const reader = streamRes.body.getReader();
+                const decoder = new TextDecoder();
+                let accumulatedReply = "";
+                let accumulatedThinking = "";
+                let currentArtifact: any = null;
+                let buffer = "";
+
+                const assistantMsgId = (Date.now() + 1).toString();
+
+                const updateAssistantMessage = (isFinal = false) => {
+                  const parts: any[] = [];
+                  if (accumulatedThinking) {
+                    parts.push({
+                      type: "thinking",
+                      thinking: accumulatedThinking,
+                    });
+                  }
+                  if (accumulatedReply) {
+                    parts.push({
+                      type: "text",
+                      text: accumulatedReply,
+                    });
+                  }
+                  if (currentArtifact) {
+                    parts.push({
+                      type: `data-artifact-${currentArtifact.type}`,
+                      id: currentArtifact.type,
+                      artifactType: currentArtifact.type,
+                      data: {
+                        id: currentArtifact.type,
+                        type: currentArtifact.type,
+                        status: isFinal ? "complete" : "streaming",
+                        version: 1,
+                        createdAt: Date.now(),
+                        updatedAt: Date.now(),
+                        payload: currentArtifact.payload,
+                        progress: isFinal ? 1 : 0.5,
+                      },
+                      artifact: currentArtifact,
+                    });
+                  }
+
+                  const assistantMessage: UIMessage = {
+                    id: assistantMsgId,
+                    role: "assistant",
+                    parts: parts.length > 0 ? parts : [{ type: "text", text: "" }],
+                    createdAt: new Date(),
+                  } as any;
+
+                  state.setMessages([...updatedMessages, assistantMessage]);
+                };
+
+                while (true) {
+                  if (isAbortedRef.current) break;
+                  const { done, value } = await reader.read();
+                  if (done) break;
+
+                  buffer += decoder.decode(value, { stream: true });
+                  const lines = buffer.split("\n\n");
+                  buffer = lines.pop() || "";
+
+                  for (const block of lines) {
+                    if (!block.trim()) continue;
+                    let eventType = "message";
+                    let eventData: any = null;
+
+                    for (const line of block.split("\n")) {
+                      if (line.startsWith("event: ")) {
+                        eventType = line.slice(7).trim();
+                      } else if (line.startsWith("data: ")) {
+                        try {
+                          eventData = JSON.parse(line.slice(6));
+                        } catch {
+                          eventData = line.slice(6);
+                        }
+                      }
+                    }
+
+                    if (eventType === "thinking" && eventData?.text) {
+                      accumulatedThinking += eventData.text;
+                      updateAssistantMessage(false);
+                    } else if (eventType === "content" && eventData?.text) {
+                      accumulatedReply += eventData.text;
+                      updateAssistantMessage(false);
+                    } else if (eventType === "artifact" && eventData) {
+                      currentArtifact = eventData;
+                      updateAssistantMessage(false);
+                    } else if (eventType === "done" && eventData) {
+                      if (eventData.reply && !accumulatedReply) {
+                        accumulatedReply = eventData.reply;
+                      }
+                      if (eventData.artifact) {
+                        currentArtifact = eventData.artifact;
+                      }
+                      updateAssistantMessage(true);
+                      if (!chatId && eventData.session_id) {
+                        state.setId(eventData.session_id);
+                        setChatId(eventData.session_id);
+                      }
+                    }
+                  }
+                }
+
+                updateAssistantMessage(true);
+                state.setStatus("ready");
+                streamedSuccessfully = true;
+              }
+            } catch (err) {
+              console.warn("Stream failed, falling back to server action", err);
+            }
+
+            if (streamedSuccessfully || isAbortedRef.current) return;
+
+            // Fallback non-streaming path
             const response = await sendChatMessage(backendMessages, chatId || undefined, attachments as any, webSearch);
 
             if (isAbortedRef.current) return;

@@ -24,7 +24,12 @@
     "VAPID_PRIVATE_KEY",
     "VAPID_SUBJECT",
     "AI_SERVICE_URL",
-    "AI_SERVICE_API_KEY"
+    "AI_SERVICE_API_KEY",
+    "MODEL_BASE_URL",
+    "MODEL_API_KEY",
+    "AI_CHAT_MODEL",
+    "AI_VISION_MODEL",
+    "AI_EMBED_MODEL"
   ],
   "globalPassThroughEnv": ["NODE_ENV", "PLAYWRIGHT_*"],
   "tasks": {

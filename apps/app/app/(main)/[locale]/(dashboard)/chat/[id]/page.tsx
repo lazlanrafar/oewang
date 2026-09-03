@@ -1,9 +1,6 @@
-import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 
-import { geolocation } from "@vercel/functions";
 import { getChatSession, getChatSessionMessages } from "@workspace/modules/ai/ai.action";
-import type { UIMessage as Message } from "ai";
 import type { Metadata } from "next";
 
 import ChatInterface from "@/components/organisms/chat/chat-interface";
@@ -33,11 +30,6 @@ import { ChatProviderWrapper } from "@/components/organisms/chat/chat-provider-w
 
 export default async function ChatPage(props: Props) {
   const { id, locale } = await props.params;
-
-  const headersList = await headers();
-  const geo = geolocation({
-    headers: headersList,
-  });
 
   const [response, dictionary] = await Promise.all([getChatSessionMessages(id), getDictionary(locale)]);
 

@@ -19,6 +19,13 @@ const appEnvSchema = z.object({
   NEXT_PUBLIC_WHATSAPP_NUMBER: z.string().optional(),
   NEXT_PUBLIC_TELEGRAM_BOT_USER: z.string().optional().default("oewangbot"),
 
+  // Model Provider
+  MODEL_BASE_URL: z.string().url().optional(),
+  MODEL_API_KEY: z.string().optional(),
+  AI_CHAT_MODEL: z.string().optional(),
+  AI_VISION_MODEL: z.string().optional(),
+  AI_EMBED_MODEL: z.string().optional(),
+
   // Server-side used in NextJS App
   ENCRYPTION_KEY: z.string().length(32).optional(),
   // Must match the API's JWT_SECRET — proxy.ts verifies the session JWT with

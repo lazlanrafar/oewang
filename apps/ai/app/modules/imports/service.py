@@ -79,7 +79,7 @@ def extract_transactions(
 ) -> tuple[list[dict], dict]:
     """Returns (transactions, token usage) so callers can meter."""
     usage = {"input_tokens": 0, "output_tokens": 0}
-    if not rows or not get_settings().OPENAI_API_KEY:
+    if not rows or (not get_settings().MODEL_API_KEY and not get_settings().MODEL_BASE_URL):
         return [], usage
 
     wallets = "\n".join(f"- {w}" for w in wallet_names)

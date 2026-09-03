@@ -74,7 +74,7 @@ async def test_web_chat_returns_full_contract(monkeypatch):
     assert res["reply"] == "Hello"
     assert res["session_id"] == "s1"
     assert res["usage"]["output_tokens"] == 5
-    assert res["provider"]["name"] == "openai"
+    assert res["provider"]["name"] == "9router"
     assert res["artifact"]["type"] == "spending-canvas"
     assert captured["system"] == "SYS"
     # tokens incremented against the count read at begin

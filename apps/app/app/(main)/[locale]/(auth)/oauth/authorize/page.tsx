@@ -56,9 +56,9 @@ export default async function OAuthAuthorizePage({
 
   return (
     <OAuthConsentClient
-      clientId={client_id!}
+      clientId={client_id}
       clientName={clientName}
-      redirectUri={redirect_uri!}
+      redirectUri={redirect_uri}
       state={state}
       codeChallenge={code_challenge}
     />

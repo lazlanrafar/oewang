@@ -15,10 +15,12 @@ _client: OpenAI | None = None
 def get_client() -> OpenAI:
     global _client
     if _client is None:
+        settings = get_settings()
         # Explicit timeout so a hung request can't tie up a worker thread for the
         # ~600s SDK default; bounded retries smooth over transient 429/5xx.
         _client = OpenAI(
-            api_key=get_settings().OPENAI_API_KEY or None,
+            base_url=settings.MODEL_BASE_URL or None,
+            api_key=settings.MODEL_API_KEY or "9router",
             timeout=30,
             max_retries=2,
         )
@@ -168,4 +170,164 @@ async def complete_with_tools(
         "usage": {"input_tokens": usage_in, "output_tokens": usage_out},
         "artifact": artifact,
         "response_id": response_id,
+    }
+
+
+async def complete_with_tools_stream(
+    system: str,
+    messages: list[dict],
+    tools: list[dict],
+    execute_tool: ToolExecutor,
+    max_steps: int = 10,
+):
+    """Streaming multi-step tool-calling loop.
+    Yields event dicts:
+      {"event": "thinking", "data": {"text": "..."}}
+      {"event": "tool_call", "data": {"name": "...", "args": {...}}}
+      {"event": "content", "data": {"text": "..."}}
+      {"event": "artifact", "data": {...}}
+      {"event": "done", "data": {"reply": "...", "usage": {...}, "artifact": {...}}}
+    """
+    client = get_client()
+    model = get_settings().AI_CHAT_MODEL
+    convo: list[dict] = [{"role": "system", "content": system}, *messages]
+
+    usage_in = 0
+    usage_out = 0
+    artifact: dict | None = None
+    response_id: str | None = None
+    full_reply = ""
+    in_think_tag = False
+
+    for step in range(max_steps):
+        use_tools = step < max_steps - 1
+        
+        # Stream completions
+        kwargs = {
+            "model": model,
+            "messages": convo,
+            "max_tokens": 1024,
+            "temperature": 0.7,
+            "stream": True,
+        }
+        if use_tools:
+            kwargs["tools"] = tools
+            kwargs["tool_choice"] = "auto"
+
+        stream = await asyncio.to_thread(lambda: client.chat.completions.create(**kwargs))
+
+        tool_calls_map: dict[int, dict] = {}
+        curr_content = ""
+
+        for chunk in stream:
+            if not chunk.choices:
+                continue
+            delta = chunk.choices[0].delta
+
+            # 1. Reasoning/Thinking extraction (DeepSeek-R1 / Qwen style reasoning_content)
+            reasoning = getattr(delta, "reasoning_content", None)
+            if reasoning:
+                yield {"event": "thinking", "data": {"text": reasoning}}
+
+            # 2. Regular content streaming + inline <think> tags support
+            content = delta.content or ""
+            if content:
+                # Handle inline <think>...</think> tags if reasoning emitted in content
+                while content:
+                    if not in_think_tag:
+                        if "<think>" in content:
+                            before, after = content.split("<think>", 1)
+                            if before:
+                                yield {"event": "content", "data": {"text": before}}
+                                curr_content += before
+                            in_think_tag = True
+                            content = after
+                        else:
+                            yield {"event": "content", "data": {"text": content}}
+                            curr_content += content
+                            content = ""
+                    else:
+                        if "</think>" in content:
+                            think_text, after = content.split("</think>", 1)
+                            if think_text:
+                                yield {"event": "thinking", "data": {"text": think_text}}
+                            in_think_tag = False
+                            content = after
+                        else:
+                            yield {"event": "thinking", "data": {"text": content}}
+                            content = ""
+
+            # 3. Tool call deltas
+            if delta.tool_calls:
+                for tc in delta.tool_calls:
+                    idx = tc.index
+                    if idx not in tool_calls_map:
+                        tool_calls_map[idx] = {
+                            "id": tc.id or "",
+                            "name": tc.function.name if tc.function else "",
+                            "arguments": tc.function.arguments if tc.function else "",
+                        }
+                    else:
+                        if tc.id:
+                            tool_calls_map[idx]["id"] += tc.id
+                        if tc.function and tc.function.name:
+                            tool_calls_map[idx]["name"] += tc.function.name
+                        if tc.function and tc.function.arguments:
+                            tool_calls_map[idx]["arguments"] += tc.function.arguments
+
+            if chunk.usage:
+                usage_in += chunk.usage.prompt_tokens or 0
+                usage_out += chunk.usage.completion_tokens or 0
+
+        # End of stream chunk iteration
+        if not tool_calls_map:
+            full_reply = curr_content
+            break
+
+        # We had tool calls, execute them
+        assistant_tool_calls = [
+            {
+                "id": tc_data["id"],
+                "type": "function",
+                "function": {
+                    "name": tc_data["name"],
+                    "arguments": tc_data["arguments"],
+                },
+            }
+            for tc_data in sorted(tool_calls_map.values(), key=lambda x: x["id"])
+        ]
+        convo.append({
+            "role": "assistant",
+            "content": curr_content or None,
+            "tool_calls": assistant_tool_calls,
+        })
+
+        for tc_data in tool_calls_map.values():
+            name = tc_data["name"]
+            try:
+                args = json.loads(tc_data["arguments"] or "{}")
+            except json.JSONDecodeError:
+                args = {}
+
+            yield {"event": "tool_call", "data": {"name": name, "args": args}}
+            out = await execute_tool(name, args)
+            art = out.get("artifact")
+            if art:
+                artifact = art
+                yield {"event": "artifact", "data": art}
+
+            convo.append({
+                "role": "tool",
+                "tool_call_id": tc_data["id"],
+                "content": json.dumps(out.get("result")),
+            })
+
+    yield {
+        "event": "done",
+        "data": {
+            "reply": full_reply,
+            "usage": {"input_tokens": usage_in, "output_tokens": usage_out},
+            "artifact": artifact,
+            "provider": {"name": "9router", "response_id": response_id},
+        },
     }

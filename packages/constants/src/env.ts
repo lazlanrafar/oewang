@@ -35,10 +35,12 @@ const serverSchema = z.object({
   MAYAR_API_KEY: z.string().optional(),
   MAYAR_WEBHOOK_TOKEN: z.string().optional(),
 
-  // AI
-  OPENAI_API_KEY: z.string().min(1).optional().or(z.literal("")),
-  GEMINI_API_KEY: z.string().min(1).optional().or(z.literal("")),
-  ANTHROPIC_API_KEY: z.string().min(1).optional().or(z.literal("")),
+  // AI / Model Provider
+  MODEL_BASE_URL: z.string().url().optional().default("http://localhost:20128/v1"),
+  MODEL_API_KEY: z.string().optional().default("9router"),
+  AI_CHAT_MODEL: z.string().optional().default("coder"),
+  AI_VISION_MODEL: z.string().optional().default("coder"),
+  AI_EMBED_MODEL: z.string().optional().default("coder"),
 
   // Encryption
   // ENCRYPTION_KEY is the TRANSPORT key — it is bundled into the web/native

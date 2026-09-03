@@ -73,7 +73,7 @@ def test_parse_receipt_returns_structured_dict(monkeypatch):
     payload = {"amount": 42.0, "date": "2026-06-23T00:00:00.000Z", "name": "Toko",
                "categoryId": "cat1", "items": []}
     monkeypatch.setattr(receipt_svc, "get_client", lambda: _FakeClient(json.dumps(payload)))
-    monkeypatch.setattr(receipt_svc.get_settings(), "OPENAI_API_KEY", "x", raising=False)
+    monkeypatch.setattr(receipt_svc.get_settings(), "MODEL_API_KEY", "x", raising=False)
     out, usage = receipt_svc.parse_receipt(base64.b64encode(b"img").decode(), "image/jpeg", "cat1: Food")
     assert out["amount"] == 42.0
     assert out["name"] == "Toko"
@@ -85,7 +85,7 @@ def test_parse_receipt_uses_vision_model_and_detail(monkeypatch):
                "categoryId": None, "items": []}
     client = _FakeClient(json.dumps(payload))
     monkeypatch.setattr(receipt_svc, "get_client", lambda: client)
-    monkeypatch.setattr(receipt_svc.get_settings(), "OPENAI_API_KEY", "x", raising=False)
+    monkeypatch.setattr(receipt_svc.get_settings(), "MODEL_API_KEY", "x", raising=False)
     receipt_svc.parse_receipt(base64.b64encode(b"img").decode(), "image/jpeg", "")
     settings = receipt_svc.get_settings()
     assert client.last_kwargs["model"] == settings.AI_VISION_MODEL
@@ -128,7 +128,7 @@ def test_extract_transactions_returns_list(monkeypatch):
          "walletName": "Cash", "categoryName": "Food", "description": None}
     ]}
     monkeypatch.setattr(imports_svc, "get_client", lambda: _FakeClient(json.dumps(payload)))
-    monkeypatch.setattr(imports_svc.get_settings(), "OPENAI_API_KEY", "x", raising=False)
+    monkeypatch.setattr(imports_svc.get_settings(), "MODEL_API_KEY", "x", raising=False)
     out, usage = imports_svc.extract_transactions([{"date": "2026-06-01", "amt": "5"}], ["Cash"], ["Food"])
     assert len(out) == 1
     assert out[0]["name"] == "Coffee"

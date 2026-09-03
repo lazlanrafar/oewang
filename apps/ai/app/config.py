@@ -17,13 +17,13 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=_ROOT_ENV, extra="ignore")
 
     DATABASE_URL: str = ""
-    OPENAI_API_KEY: str = ""  # used for both chat and embeddings
-    AI_CHAT_MODEL: str = "gpt-4o-mini"
-    # Receipt/image parsing only. gpt-4.1-mini uses patch-based vision pricing:
-    # ~1-2k image tokens per receipt vs ~25k on gpt-4o-mini (33x tile multiplier).
-    AI_VISION_MODEL: str = "gpt-4.1-mini"
+    # Model provider endpoint (9router or OpenAI-compatible proxy)
+    MODEL_BASE_URL: str = "http://localhost:20128/v1"
+    MODEL_API_KEY: str = "9router"
+    AI_CHAT_MODEL: str = "coder"
+    AI_VISION_MODEL: str = "coder"
     AI_RECEIPT_DETAIL: str = "auto"  # low | auto | high
-    AI_EMBED_MODEL: str = "text-embedding-3-small"
+    AI_EMBED_MODEL: str = "coder"
     AI_SERVICE_API_KEY: str = ""
     AI_PORT: int = 3004
     # Elysia base URL the sidecar calls back to for tool execution + the system

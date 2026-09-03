@@ -1,7 +1,7 @@
 """Populate ai_knowledge_chunks from the advisor knowledge markdown.
 
 Usage (from apps/ai): python scripts/seed_knowledge.py
-Prereqs: DATABASE_URL + OPENAI_API_KEY set, db:push run, setup-vector run.
+Prereqs: DATABASE_URL + MODEL_BASE_URL/MODEL_API_KEY set, db:push run, setup-vector run.
 Idempotent — deletes existing rows per source before inserting.
 """
 

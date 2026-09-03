@@ -17,8 +17,8 @@ export abstract class VaultIndexingService {
     mimeType: string,
     fileName: string,
   ): Promise<void> {
-    // Embedding happens in the Python sidecar (it holds OPENAI_API_KEY), so the API
-    // no longer needs the key — just forwards the file.
+    // Embedding happens in the Python sidecar (it holds MODEL_API_KEY/MODEL_BASE_URL),
+    // so the API no longer needs the key — just forwards the file.
     log.info("VaultIndexingService: starting indexing", {
       vaultFileId,
       mimeType,

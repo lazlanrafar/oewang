@@ -115,7 +115,7 @@ def parse_receipt(
 ) -> tuple[dict | None, dict]:
     """Returns (ParsedReceipt dict or None, token usage) so callers can meter."""
     usage = {"input_tokens": 0, "output_tokens": 0}
-    if not get_settings().OPENAI_API_KEY:
+    if not get_settings().MODEL_API_KEY and not get_settings().MODEL_BASE_URL:
         return None, usage
 
     pdf_text = _pdf_text(data_b64) if mime_type == "application/pdf" else ""

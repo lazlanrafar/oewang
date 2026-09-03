@@ -6,7 +6,8 @@ import { extractArtifactTypeFromMessage, extractInsightData } from "@workspace/c
 import type { Dictionary } from "@workspace/dictionaries";
 import { Message, MessageAvatar, MessageContent, Response } from "@workspace/ui";
 import type { UIMessage } from "ai";
-import { PaperclipIcon } from "lucide-react";
+import { ChevronDown, ChevronRight, Loader2, PaperclipIcon, Sparkles } from "lucide-react";
+import { useState } from "react";
 
 import { ChatArtifactToggle } from "./chat-artifact-toggle";
 import { ChatFaviconStack } from "./chat-favicon-stack";
@@ -81,6 +82,7 @@ function extractFileParts(parts: any[]) {
 }
 
 export function ChatMessages({ messages, isStreaming = false, dictionary }: ChatMessagesProps) {
+  const [showThinking, setShowThinking] = useState<Record<string, boolean>>({});
   const user = {
     avatarUrl: "",
     fullName: "",
@@ -104,6 +106,10 @@ export function ChatMessages({ messages, isStreaming = false, dictionary }: Chat
         // Extract text parts
         const textParts = parts.filter((part) => part.type === "text");
         const textContent = textParts.map((part) => (part.type === "text" ? part.text : "")).join("");
+
+        // Extract thinking parts
+        const thinkingParts = parts.filter((part: any) => part.type === "thinking");
+        const thinkingContent = thinkingParts.map((part: any) => part.thinking || "").join("");
 
         // Extract file parts
         const fileParts = extractFileParts(parts);
@@ -195,6 +201,40 @@ export function ChatMessages({ messages, isStreaming = false, dictionary }: Chat
                   <ChatInsightMessage insight={insightData as any} dictionary={dictionary} />
                 </MessageContent>
               </Message>
+            )}
+
+            {/* Render real-time thinking process if present */}
+            {thinkingContent && message.role === "assistant" && (
+              <div className="mb-2 max-w-[80%] rounded-lg border border-border/50 bg-muted/30 p-2.5 text-xs text-muted-foreground">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShowThinking((prev) => ({
+                      ...prev,
+                      [message.id]: !(prev[message.id] ?? isStreaming),
+                    }))
+                  }
+                  className="flex w-full items-center justify-between font-medium text-xs hover:text-foreground"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <Sparkles className="size-3 text-primary animate-pulse" />
+                    <span>Thinking Process</span>
+                    {isStreaming && isLastMessage && (
+                      <Loader2 className="size-3 animate-spin text-muted-foreground" />
+                    )}
+                  </span>
+                  {(showThinking[message.id] ?? isStreaming) ? (
+                    <ChevronDown className="size-3.5 text-muted-foreground" />
+                  ) : (
+                    <ChevronRight className="size-3.5 text-muted-foreground" />
+                  )}
+                </button>
+                {(showThinking[message.id] ?? isStreaming) && (
+                  <div className="mt-2 max-h-60 overflow-y-auto whitespace-pre-wrap rounded border border-border/30 bg-background/50 p-2 font-mono text-[11px] leading-relaxed text-muted-foreground">
+                    {thinkingContent}
+                  </div>
+                )}
+              </div>
             )}
 
             {/* Render text content in message (skip if we rendered insight) */}

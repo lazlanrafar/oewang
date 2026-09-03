@@ -49,10 +49,12 @@ const apiEnvSchema = z.object({
     })
     .optional(),
 
-  // AI
-  OPENAI_API_KEY: z.string().min(1).optional(),
-  GEMINI_API_KEY: z.string().min(1).optional(),
-  ANTHROPIC_API_KEY: z.string().min(1).optional(),
+  // AI / Model Provider
+  MODEL_BASE_URL: z.string().url().optional(),
+  MODEL_API_KEY: z.string().optional(),
+  AI_CHAT_MODEL: z.string().optional(),
+  AI_VISION_MODEL: z.string().optional(),
+  AI_EMBED_MODEL: z.string().optional(),
 
   // Web Push (VAPID)
   VAPID_PUBLIC_KEY: z.string().optional(),

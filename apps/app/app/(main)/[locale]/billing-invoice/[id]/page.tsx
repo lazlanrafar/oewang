@@ -149,8 +149,8 @@ export default async function BillingInvoiceStandalonePage({
               </tr>
             </thead>
             <tbody>
-              {inv.lineItems.map((li, idx) => (
-                <tr key={idx} className="border-b border-muted/40">
+              {inv.lineItems.map((li) => (
+                <tr key={`${li.description}-${li.amount}`} className="border-b border-muted/40">
                   <td className="py-4 pr-4">{li.description}</td>
                   <td className="py-4 px-2 text-right font-mono">{li.quantity}</td>
                   <td className="py-4 px-2 text-right font-mono">{formatMoney(li.unit_amount, inv.currency)}</td>
