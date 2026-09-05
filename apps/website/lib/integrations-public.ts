@@ -100,27 +100,6 @@ const FALLBACK_INTEGRATIONS = [
     ],
   },
   {
-    id: "whatsapp",
-    slug: "whatsapp",
-    name: "WhatsApp",
-    category: "Messaging",
-    status: "available",
-    description: "Capture finance documents from WhatsApp conversations.",
-    longDescription: "WhatsApp integration helps users send receipts on the go and keep transaction evidence attached.",
-    features: [
-      "Mobile-first receipt capture",
-      "Document-to-transaction linking",
-      "Faster approval workflows",
-      "Less manual upload overhead",
-    ],
-    setupSteps: [
-      "Connect WhatsApp number in integrations.",
-      "Verify your number.",
-      "Forward receipt images or PDFs.",
-      "Review processed documents in Oewang.",
-    ],
-  },
-  {
     id: "google-drive",
     slug: "google-drive",
     name: "Google Drive",

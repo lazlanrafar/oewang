@@ -4,7 +4,6 @@ import { buildError, buildSuccess } from "@workspace/utils";
 import { Elysia, status, t } from "elysia";
 import { authPlugin } from "../../plugins/auth";
 import { assertCanManageSensitiveWorkspace } from "../workspaces/workspace-permissions";
-import { ConnectWhatsAppDto } from "./integrations.dto";
 import { GmailService } from "./gmail.service";
 import { OutlookService } from "./outlook.service";
 import { IntegrationsService } from "./integrations.service";
@@ -194,29 +193,7 @@ export const integrationsController = new Elysia({ prefix: "/integrations" })
     },
   )
 
-  // ── WhatsApp / Telegram connect ────────────────────────────────────────────
-
-  .post(
-    "/whatsapp/connect",
-    async ({ body, auth }) => {
-      if (!auth?.workspaceId || !auth?.user_id) {
-        throw status(401, buildError(ErrorCode.UNAUTHORIZED, "Unauthorized"));
-      }
-      assertCanManageSensitiveWorkspace(auth.workspace_role);
-      return await IntegrationsService.connectWhatsApp(
-        auth.workspaceId,
-        auth.user_id,
-        body.phoneNumber,
-      );
-    },
-    {
-      body: ConnectWhatsAppDto,
-      detail: {
-        summary: "Connect WhatsApp",
-        tags: ["Integrations"],
-      },
-    },
-  )
+  // ── Telegram connect ───────────────────────────────────────────────────────
 
   .post(
     "/telegram/connect",

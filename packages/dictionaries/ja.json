@@ -88,7 +88,7 @@
     "included_in_totals": "合計に含まれる",
     "excluded_from_totals": "合計から除外",
     "default_label": "デフォルトアカウント",
-    "default_description": "WhatsAppやTelegramなどのチャットでアカウントが指定されていない場合にOewang Botが使用します。",
+    "default_description": "Telegramなどのチャットでアカウントが指定されていない場合にOewang Botが使用します。",
     "set_as_default": "デフォルトに設定",
     "created_date": "作成日",
     "created_date_description": "このアカウントがシステムで最初に作成された日付。",
@@ -662,7 +662,7 @@
       "category_billing": "請求とサブスクリプション",
       "category_billing_description": "請求、更新、支払い失敗 — アカウントの安全性のため必須。",
       "category_integration": "接続アプリ",
-      "category_integration_description": "WhatsApp、Telegram、その他の連携接続/切断イベント。",
+      "category_integration_description": "Telegram、その他の連携接続/切断イベント。",
       "category_security": "セキュリティ",
       "category_security_description": "ログインアラートとセキュリティに関わるワークスペース変更。",
       "mandatory_badge": "必須",
@@ -1399,20 +1399,6 @@
         "description": "QRコードをスキャンするかTelegramを開いて、アカウントをOewangに連携してください。",
         "open_bot": "ボットを開く",
         "footer": "スキャンまたはリンクを開いた後、Telegramで「開始」をタップするだけで、アカウントが自動的に連携されます。"
-      },
-      "whatsapp": {
-        "title": "WhatsAppと連携",
-        "description": "WhatsApp Businessを通じて財務更新とレポートを自動化します。",
-        "premium_title": "プレミアム機能",
-        "premium_description": "WhatsApp連携はEnterpriseプランで利用可能なプレミアム機能です。ワークスペースで有効にするには、セールスチームにお問い合わせください。",
-        "coming_soon_title": "近日公開",
-        "features": {
-          "notifications": "リアルタイムの取引通知",
-          "reminders": "自動支払いリマインダー",
-          "reports": "週次財務サマリー"
-        },
-        "button": "ボットを開く",
-        "footer_info": "公式WhatsApp Business連携"
       },
       "secure_connection": "安全なエンドツーエンド接続"
     }

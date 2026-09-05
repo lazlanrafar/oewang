@@ -14,7 +14,6 @@ import {
   SlackLogo,
   StripeLogo,
   TelegramLogo,
-  WhatsAppLogo,
   XeroLogo,
 } from "@workspace/integrations/logos";
 import { ArrowRight } from "lucide-react";
@@ -27,7 +26,6 @@ const LOGOS = {
   quickbooks: QuickBooksLogo,
   xero: XeroLogo,
   telegram: TelegramLogo,
-  whatsapp: WhatsAppLogo,
   "google-drive": GoogleDriveLogo,
   dropbox: DropboxLogo,
   slack: SlackLogo,

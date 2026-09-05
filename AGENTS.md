@@ -69,7 +69,7 @@ This is a **Turborepo monorepo** using **Bun** as package manager and runtime. S
 - **`packages/database`** — Drizzle ORM + PostgreSQL. Schema lives here (33 tables); all DB access goes through this package. Primary keys use CUID2 (`@paralleldrive/cuid2`).
 - **`packages/modules`** — Server actions and data-fetching logic. Next.js `app/` calls into these rather than hitting the API or DB directly.
 - **`packages/ai`** — AI service abstractions over OpenAI, Anthropic Codex, and Google Generative AI. Includes agent, memory, artifact, and store tooling.
-- **`packages/integrations`** — 40+ third-party integrations (Telegram, WhatsApp, Stripe, etc.).
+- **`packages/integrations`** — 40+ third-party integrations (Telegram, Stripe, etc.).
 - **`packages/ui`** — Shared React components built on shadcn + Radix UI + Tailwind CSS v4.
 - **`packages/types`** — Central TypeScript type definitions and `ErrorCode` constants.
 - **`packages/constants`** — Static constants: roles, colors, pricing features, API config.

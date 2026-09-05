@@ -13,13 +13,12 @@ import {
 } from "@workspace/modules/integrations/integrations.action";
 import { getMe } from "@workspace/modules/user/user.action";
 import { FilterToggle, Input } from "@workspace/ui";
-import { Grid2X2, Link as LinkIcon, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { toast } from "sonner";
 
 import { useConfirm } from "../../providers/confirm-modal-provider";
 import { AppsCard } from "./apps-card";
 import { ConnectTelegram } from "./connect-telegram";
-import { ConnectWhatsApp } from "./connect-whatsapp";
 
 interface Props {
   dictionary: Dictionary;
@@ -230,7 +229,6 @@ export function AppsClient({ dictionary }: Props) {
         )}
       </div>
       <ConnectTelegram dictionary={dictionary} />
-      <ConnectWhatsApp dictionary={dictionary} />
     </div>
   );
 }

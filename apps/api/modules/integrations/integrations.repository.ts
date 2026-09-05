@@ -36,26 +36,6 @@ export abstract class IntegrationsRepository {
       );
   }
 
-  static async findByWhatsAppNumber(
-    phoneNumber: string,
-    provider = "whatsapp",
-  ) {
-    // Find the workspace tied to this specific WhatsApp phone number
-    const records = await db
-      .select()
-      .from(workspaceIntegrations)
-      .where(
-        and(
-          eq(workspaceIntegrations.provider, provider),
-          eq(workspaceIntegrations.isActive, true),
-          isNull(workspaceIntegrations.deletedAt),
-          sql`${workspaceIntegrations.settings}->>'phoneNumber' = ${phoneNumber}`,
-        ),
-      )
-      .limit(1);
-    return records[0] || null;
-  }
-
   static async findByTelegramChatId(chatId: string) {
     // Find the workspace tied to this specific Telegram chat ID
     const records = await db

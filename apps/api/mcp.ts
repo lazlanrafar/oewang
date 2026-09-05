@@ -6,7 +6,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import * as Sentry from "@sentry/bun";
 import { db } from "@workspace/database";
-// The same tools Oewang uses for WhatsApp / Chat — schemas + execution come from
+// The same tools Oewang uses for Chat — schemas + execution come from
 // the Python AI sidecar (apps/ai).
 import { AiSidecarClient } from "./modules/ai/ai-sidecar-client";
 import { TransactionsService } from "./modules/transactions/transactions.service";
@@ -102,7 +102,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
 
     // For all other tools, route them through the Python sidecar (same logic the
-    // WhatsApp/website chat uses).
+    // website chat uses).
     const { result } = await AiSidecarClient.executeTool(
       name,
       args,

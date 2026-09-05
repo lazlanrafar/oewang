@@ -28,7 +28,7 @@ export const websiteEn = {
   },
   socialProof: {
     heading: "Capture spending from anywhere you already are",
-    channels: ["Receipt photos", "Telegram", "WhatsApp", "Email forwarding", "CSV import", "Multi-currency"],
+    channels: ["Receipt photos", "Telegram", "Email forwarding", "CSV import", "Multi-currency"],
   },
   pillars: {
     label: "Why Oewang",
@@ -131,7 +131,7 @@ export const websiteEn = {
     items: [
       {
         q: "How does Oewang capture my transactions?",
-        a: "Snap a receipt photo, forward one via Telegram or WhatsApp, import a CSV, or type a single line. Oewang’s AI reads the merchant, amount, and category and files it automatically.",
+        a: "Snap a receipt photo, forward one via Telegram, import a CSV, or type a single line. Oewang’s AI reads the merchant, amount, and category and files it automatically.",
       },
       {
         q: "Is my financial data secure?",

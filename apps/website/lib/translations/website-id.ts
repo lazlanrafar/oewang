@@ -2,7 +2,7 @@ import type { WebsiteDictionary } from "./website-en";
 
 // Full Indonesian translation of the marketing site. Shape mirrors websiteEn
 // (enforced by the WebsiteDictionary annotation). Brand/product names
-// (Oewang, AI, Telegram, WhatsApp, CSV) are kept as-is.
+// (Oewang, AI, Telegram, CSV) are kept as-is.
 export const websiteId: WebsiteDictionary = {
   nav: {
     overview: "Ringkasan",
@@ -33,7 +33,7 @@ export const websiteId: WebsiteDictionary = {
   },
   socialProof: {
     heading: "Catat pengeluaran dari mana pun Anda berada",
-    channels: ["Foto struk", "Telegram", "WhatsApp", "Teruskan email", "Impor CSV", "Multi-mata uang"],
+    channels: ["Foto struk", "Telegram", "Teruskan email", "Impor CSV", "Multi-mata uang"],
   },
   pillars: {
     label: "Kenapa Oewang",
@@ -137,7 +137,7 @@ export const websiteId: WebsiteDictionary = {
     items: [
       {
         q: "Bagaimana Oewang mencatat transaksi saya?",
-        a: "Foto struk, teruskan lewat Telegram atau WhatsApp, impor CSV, atau ketik satu baris. AI Oewang membaca merchant, jumlah, dan kategori lalu menyimpannya otomatis.",
+        a: "Foto struk, teruskan lewat Telegram, impor CSV, atau ketik satu baris. AI Oewang membaca merchant, jumlah, dan kategori lalu menyimpannya otomatis.",
       },
       {
         q: "Apakah data keuangan saya aman?",

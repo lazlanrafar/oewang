@@ -31,7 +31,6 @@ import { healthController } from "./modules/health/health.controller";
 import { integrationsController } from "./modules/integrations/integrations.controller";
 import {
   publicWebhooksController,
-  registerEvolutionWebhook,
   registerTelegramWebhook,
 } from "./modules/integrations/public-webhooks.controller";
 import { invoicesController } from "./modules/invoices/invoices.controller";
@@ -409,7 +408,6 @@ log.info(`🚀 oewang API running at http://localhost:${port}`);
 log.info(`📖 Swagger docs at http://localhost:${port}/swagger`);
 log.info(`🔗 API v1 at http://localhost:${port}/v1`);
 
-registerEvolutionWebhook();
 registerTelegramWebhook();
 
 export { app };

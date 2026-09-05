@@ -8,11 +8,11 @@
 
 All backend tests use **Bun's built-in test runner** (`bun:test`). Tests are fast, require no database, and run in ~134ms.
 
-**Current baseline: 410 unit tests across 17 test files — all must pass before merging.** (Quick-recall aggregation moved to the Python sidecar `apps/ai`; covered by its `pytest` suite.)
+**Current baseline: 406 unit tests across 17 test files — all must pass before merging.** (Quick-recall aggregation moved to the Python sidecar `apps/ai`; covered by its `pytest` suite.)
 
 ```bash
 # From repo root
-bun run test              # run all 403 tests
+bun run test              # run all 399 tests
 bun run test:watch        # watch mode (auto-rerun on change)
 bun run test:coverage     # generate coverage report
 
@@ -68,7 +68,7 @@ apps/api/modules/{feature}/
 | `metrics`      | `metrics/metrics.utils.test.ts`            | 44      | Default date range, date range resolution, time series gap-filling, percentage change, growth rate, category aggregation, peak value detection             |
 | `categories`   | `categories/categories.utils.test.ts`      | 38      | Name validation, name formatting, icon assignment, category grouping, sorting, duplicate detection, default categories                                     |
 | `invoices`     | `invoices/invoices.utils.test.ts`          | 24      | JWT token generation/verification, round-trip encoding, expiration handling, security/tampering                                                            |
-| `integrations` | `integrations/webhook-security.test.ts`    | 23      | URL parsing with forwarded headers, form body parsing, Evolution API signature, Telegram secret, timing-safe comparisons                                  |
+| `integrations` | `integrations/webhook-security.test.ts`    | 19      | URL parsing with forwarded headers, form body parsing, Telegram secret, timing-safe comparisons                                                            |
 | `workspaces`   | `workspaces/workspace-permissions.test.ts` | 22      | Role normalization, edit permissions, sensitive permissions, assertion throws, permission hierarchy                                                        |
 | `mayar`        | `mayar/billing.utils.test.ts`              | 5       | Annual billing detection, period calculations                                                                                                              |
 | `mayar`        | `mayar/billing-lifecycle.service.test.ts`  | 2       | Subscription expiration → `past_due`, grace period → downgrade to free                                                                                     |
@@ -77,7 +77,7 @@ apps/api/modules/{feature}/
 | `articles`     | `articles/articles.utils.test.ts`          | 4       | Slug generation: lowercasing, punctuation-run collapse, dash trimming, empty fallback                                                                       |
 | `lib`          | `lib/at-rest-crypto.test.ts`               | 2       | At-rest encryption round-trip with the data key; legacy decrypt fallback to the transport key                                                              |
 | `plugins`      | `plugins/rate-limit.test.ts`               | 3       | Scoped hook propagates to parent routes; per-tier bucket isolation (unauth burst can't exhaust the auth bucket); 429 when the auth bucket is exhausted     |
-| **TOTAL**      | **17 files**                               | **410** | **All core business logic**                                                                                                                                |
+| **TOTAL**      | **17 files**                               | **406** | **All core business logic**                                                                                                                                |
 
 ---
 

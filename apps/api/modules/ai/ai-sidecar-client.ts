@@ -127,7 +127,7 @@ export abstract class AiSidecarClient {
   }
 
   /**
-   * Run the LLM tool loop in the Python sidecar (WhatsApp/Telegram + in-process
+   * Run the LLM tool loop in the Python sidecar (Telegram + in-process
    * fallback). Elysia builds the prompt/history and persists the reply; the loop
    * + tool execution happen in Python.
    */

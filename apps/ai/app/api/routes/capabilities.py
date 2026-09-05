@@ -83,7 +83,7 @@ async def post_tools_execute(req: ToolExecuteRequest) -> dict:
 
 @router.post("/chat/run")
 async def post_chat_run(req: ChatRunRequest) -> dict:
-    """LLM tool loop for the WhatsApp/Telegram + in-process fallback path. Elysia
+    """LLM tool loop for the Telegram + in-process fallback path. Elysia
     builds the prompt/history (chat-begin) and persists the reply (chat-end); this
     runs the loop and executes tools locally."""
     return await run_chat(

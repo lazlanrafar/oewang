@@ -2,67 +2,9 @@ import { Env } from "@workspace/constants";
 import { logger } from "@workspace/logger";
 import { Elysia } from "elysia";
 import { IntegrationsService } from "./integrations.service";
-import {
-  verifyEvolutionApiKey,
-  verifyTelegramSecret,
-} from "./webhook-security";
+import { verifyTelegramSecret } from "./webhook-security";
 
 export const publicWebhooksController = new Elysia({ prefix: "/integrations" })
-  .post(
-    "/whatsapp/webhook",
-    async ({ request, set, body }) => {
-      let parsedBody: Record<string, any>;
-
-      if (body && typeof body === "object") {
-        parsedBody = body as Record<string, any>;
-      } else if (typeof body === "string") {
-        try {
-          parsedBody = JSON.parse(body);
-        } catch {
-          set.status = 400;
-          return "Invalid JSON payload";
-        }
-      } else {
-        set.status = 400;
-        return "Invalid JSON payload";
-      }
-
-      // Authenticate the webhook. This endpoint is unencrypted and not
-      // rate-limited, so an unverified payload could drive bot/AI actions for
-      // any user. Evolution sends the instance apikey in the body (and can be
-      // configured to send an `apikey`/Bearer header); verify it matches.
-      const expectedToken = Env.EVOLUTION_API_TOKEN;
-      if (process.env.NODE_ENV === "production" && !expectedToken) {
-        set.status = 500;
-        return "WhatsApp webhook is not configured";
-      }
-      if (expectedToken) {
-        const headerToken =
-          request.headers.get("apikey") ??
-          request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ??
-          null;
-        const receivedToken =
-          headerToken ??
-          (typeof parsedBody.apikey === "string" ? parsedBody.apikey : null);
-        if (!verifyEvolutionApiKey({ expectedToken, receivedToken })) {
-          set.status = 403;
-          return "Forbidden";
-        }
-      }
-
-      IntegrationsService.handleEvolutionWhatsAppWebhook(parsedBody).catch(
-        (error) => logger.error("Evolution WhatsApp webhook error", { error }),
-      );
-      return "OK";
-    },
-    {
-      detail: {
-        summary: "WhatsApp Webhook (Evolution API)",
-        tags: ["Webhooks"],
-      },
-    },
-  )
-
   .post(
     "/telegram/webhook",
     async ({ request, set, body }) => {
@@ -115,43 +57,6 @@ export const publicWebhooksController = new Elysia({ prefix: "/integrations" })
       },
     },
   );
-
-export async function registerEvolutionWebhook(): Promise<void> {
-  const baseUrl = Env.EVOLUTION_API_URL;
-  const token = Env.EVOLUTION_API_TOKEN;
-  const instance = Env.EVOLUTION_API_INSTANCE;
-  const apiUrl = Env.NEXT_PUBLIC_API_URL;
-
-  if (!baseUrl || !token || !instance || !apiUrl) return;
-
-  const webhookUrl = `${apiUrl.replace(/\/$/, "")}/v1/integrations/whatsapp/webhook`;
-
-  try {
-    const res = await fetch(`${baseUrl}/webhook/set/${instance}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        apikey: token,
-      },
-      body: JSON.stringify({
-        url: webhookUrl,
-        events: ["MESSAGES_UPSERT"],
-        enabled: true,
-      }),
-    });
-
-    if (res.ok) {
-      logger.info("Evolution API webhook registered", { webhookUrl });
-    } else {
-      logger.warn("Evolution API webhook registration failed", {
-        status: res.status,
-        body: await res.text(),
-      });
-    }
-  } catch (err) {
-    logger.warn("Evolution API webhook registration error", { err });
-  }
-}
 
 export async function registerTelegramWebhook(): Promise<void> {
   const token = Env.TELEGRAM_BOT_TOKEN;

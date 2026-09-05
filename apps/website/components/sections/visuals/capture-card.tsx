@@ -6,7 +6,7 @@ export function CaptureCard() {
     <div className="h-full w-full bg-[hsl(var(--background))] p-5 sm:p-6">
       <div className="flex items-center gap-2 text-[hsl(var(--brand-accent))] text-xs">
         <Sparkles className="size-3.5" />
-        <span className="uppercase tracking-wider">Captured via WhatsApp</span>
+        <span className="uppercase tracking-wider">Captured via Telegram</span>
       </div>
 
       <div className="mt-4 grid grid-cols-[132px_1fr] gap-4">

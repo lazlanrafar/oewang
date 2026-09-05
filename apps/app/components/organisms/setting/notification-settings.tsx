@@ -97,7 +97,7 @@ export function NotificationSettings({ dictionary }: { dictionary: Dictionary })
       label: dict.category_integration || "Connected Apps",
       description:
         dict.category_integration_description ||
-        "WhatsApp, Telegram and other integration connect / disconnect events.",
+        "Telegram and other integration connect / disconnect events.",
     },
     {
       label: dict.category_security || "Security",

@@ -71,13 +71,8 @@ const serverSchema = z.object({
   MICROSOFT_CLIENT_ID: z.string().optional(),
   MICROSOFT_CLIENT_SECRET: z.string().optional(),
 
-  // Evolution API (WhatsApp)
-  EVOLUTION_API_URL: z.string().url().optional(),
-  EVOLUTION_API_TOKEN: z.string().optional(),
-  EVOLUTION_API_INSTANCE: z.string().optional(),
-
-  // Python AI sidecar (apps/ai). When AI_SERVICE_URL is set, chat (WhatsApp/
-  // Telegram AND the website canvas chat) is served by it, with an in-process
+  // Python AI sidecar (apps/ai). When AI_SERVICE_URL is set, chat (Telegram
+  // AND the website canvas chat) is served by it, with an in-process
   // fallback if the sidecar is unreachable.
   AI_SERVICE_URL: z.string().url().optional(),
   // Shared secret gating the sidecar<->api round trip. Required: a missing key
@@ -124,7 +119,6 @@ const clientSchema = z.object({
     .string()
     .optional()
     .default("oewang-session"),
-  NEXT_PUBLIC_WHATSAPP_NUMBER: z.string().optional(),
   NEXT_PUBLIC_TELEGRAM_BOT_USER: z.string().optional().default("OewangBot"),
 });
 
@@ -139,7 +133,6 @@ const clientEnv = {
 
   NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
   NEXT_PUBLIC_SESSION_COOKIE_NAME: process.env.NEXT_PUBLIC_SESSION_COOKIE_NAME,
-  NEXT_PUBLIC_WHATSAPP_NUMBER: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER,
   NEXT_PUBLIC_TELEGRAM_BOT_USER: process.env.NEXT_PUBLIC_TELEGRAM_BOT_USER,
 };
 

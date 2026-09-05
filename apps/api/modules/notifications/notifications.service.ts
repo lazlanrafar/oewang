@@ -16,7 +16,7 @@ const log = createLogger("notifications");
 // Categories that always fire regardless of the user's notification settings.
 // Billing, security and integration health events are too consequential to
 // silence — users still need to know when a charge fails or their connected
-// WhatsApp/Telegram drops.
+// Telegram drops.
 const MANDATORY_CATEGORIES = new Set([
   "billing",
   "subscription",

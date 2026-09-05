@@ -79,11 +79,6 @@ const apiEnvSchema = z.object({
   MICROSOFT_CLIENT_ID: z.string().optional(),
   MICROSOFT_CLIENT_SECRET: z.string().optional(),
 
-  // Evolution API (WhatsApp)
-  EVOLUTION_API_URL: z.string().url().optional(),
-  EVOLUTION_API_TOKEN: z.string().optional(),
-  EVOLUTION_API_INSTANCE: z.string().optional(),
-
   // S3-compatible Storage
   BUCKET_ENDPOINT: z.string().min(1).optional(),
   BUCKET_REGION: z.string().optional().default("us-east-1"),

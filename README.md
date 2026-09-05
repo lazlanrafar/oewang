@@ -155,20 +155,6 @@ Used by `apps/api` vault uploads. Works with MinIO (local), Cloudflare R2, AWS S
 
 #### Integrations
 
-##### WhatsApp (Evolution API)
-
-Self-hosted [Evolution API](https://github.com/EvolutionAPI/evolution-api) instance. The API auto-registers its webhook URL with Evolution on startup when all three vars are set.
-
-| Variable                      | Description                                                                                |
-| ----------------------------- | ------------------------------------------------------------------------------------------ |
-| `EVOLUTION_API_URL`           | Base URL of your Evolution API instance (e.g. `https://evolutionapi.oewang.com`)           |
-| `EVOLUTION_API_TOKEN`         | API key / token from Evolution API                                                         |
-| `EVOLUTION_API_INSTANCE`      | **Instance name** (not UUID) shown in the Evolution dashboard                              |
-| `NEXT_PUBLIC_WHATSAPP_NUMBER` | WhatsApp number tied to the instance, e.g. `628123456789` — shown in the connect QR dialog |
-
-> The webhook is registered at `{API_BASE_URL}/integrations/whatsapp/webhook`.
-> `EVOLUTION_API_INSTANCE` must be the instance **name** (`my-instance`), not the UUID from the manager URL.
-
 ##### Telegram
 
 | Variable                        | Description                                                    |

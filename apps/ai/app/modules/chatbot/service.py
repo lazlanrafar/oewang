@@ -59,7 +59,7 @@ async def run_chat(
     workspace_id: str,
     user_id: str,
 ) -> dict:
-    """Service-to-service LLM tool loop for the WhatsApp/Telegram + in-process
+    """Service-to-service LLM tool loop for the Telegram + in-process
     fallback path. Elysia owns chat-begin/chat-end (identity, session, quota); this
     just runs the loop and executes tools locally. Returns {reply, usage, artifact,
     response_id}."""

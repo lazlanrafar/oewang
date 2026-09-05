@@ -60,7 +60,6 @@ export const encryptionPlugin = (app: Elysia) =>
           // external consumer) can read it with a plain fetch, no shared key.
           path.includes("/public/pricing") ||
           path.includes("/mayar/webhook") ||
-          path.includes("/integrations/whatsapp/webhook") ||
           path.includes("/integrations/telegram/webhook") ||
           // Internal sidecar surface (Python AI service) — plain JSON, gated by
           // the shared AI_SERVICE_API_KEY, not the encrypted client transport.

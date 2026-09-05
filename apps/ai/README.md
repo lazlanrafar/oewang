@@ -9,7 +9,7 @@ reading the same Postgres as the rest of the monorepo (read-only):
 | `/docs`              | GET    | Swagger UI (FastAPI built-in, no auth)                          |
 | `/chat`              | POST   | Finance chatbot — context-aware (balance + recent transactions) |
 | `/chat/web`          | POST   | Website canvas chat — called directly by the Next.js server action (JWT + x-api-key). Drives the tool loop; identity/session/quota via Elysia internal endpoints. |
-| `/chat/run`          | POST   | Service-to-service LLM tool loop (WhatsApp/Telegram + in-process fallback). Elysia builds prompt/history + persists; Python runs the loop. |
+| `/chat/run`          | POST   | Service-to-service LLM tool loop (Telegram + in-process fallback). Elysia builds prompt/history + persists; Python runs the loop. |
 | `/tools/execute`     | POST   | Run one AI tool — **DB writes, audit, quota, canvas** (the money path, in Python). Used by the MCP server. |
 | `/tools/definitions` | GET    | Canonical AI tool schemas (MCP registers these at startup).     |
 | `/receipt/parse`     | POST   | Receipt OCR (image/PDF) → transaction + line items.             |
@@ -32,7 +32,7 @@ identity/session/quota plumbing for the website chat (`/ai/internal/chat-begin`,
 `chat-end`, `system-prompt`) so the JWT secret stays in TS.
 
 Standalone — not part of Turborepo/Bun. When `AI_SERVICE_URL` is set, this service
-runs the WhatsApp/Telegram path (`/chat`, called by Elysia) and the website canvas
+runs the Telegram path (`/chat`, called by Elysia) and the website canvas
 chat (`/chat/web`, called **directly by the Next.js server action**).
 
 ## Website canvas chat — direct web→ai flow

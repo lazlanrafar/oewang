@@ -88,7 +88,7 @@
     "included_in_totals": "Included in totals",
     "excluded_from_totals": "Excluded from totals",
     "default_label": "Default Account",
-    "default_description": "Used by Oewang Bot when no account is specified in a chat (WhatsApp, Telegram, etc.).",
+    "default_description": "Used by Oewang Bot when no account is specified in a chat (Telegram, etc.).",
     "set_as_default": "Set as default",
     "created_date": "Created Date",
     "created_date_description": "The date this account was first created in the system.",
@@ -625,7 +625,7 @@
       "category_billing": "Billing & Subscription",
       "category_billing_description": "Charges, renewals and payment failures — required for account safety.",
       "category_integration": "Connected Apps",
-      "category_integration_description": "WhatsApp, Telegram and other integration connect / disconnect events.",
+      "category_integration_description": "Telegram and other integration connect / disconnect events.",
       "category_security": "Security",
       "category_security_description": "Login alerts and security-sensitive workspace changes.",
       "mandatory_badge": "Required",
@@ -1399,20 +1399,6 @@
         "description": "Scan the QR code or open Telegram to connect your account to Oewang.",
         "open_bot": "Open Bot",
         "footer": "Once you scan or open the link, just tap Start in Telegram to automatically connect your account."
-      },
-      "whatsapp": {
-        "title": "Connect WhatsApp",
-        "description": "Automate your financial updates and reporting via WhatsApp Business.",
-        "premium_title": "Premium Feature",
-        "premium_description": "WhatsApp Integration is a premium feature available on the Enterprise plan. Contact our sales team to enable this for your workspace.",
-        "coming_soon_title": "Coming Soon",
-        "features": {
-          "notifications": "Real-time transaction notifications",
-          "reminders": "Automated payment reminders",
-          "reports": "Weekly financial summaries"
-        },
-        "button": "Open Bot",
-        "footer_info": "Official WhatsApp Business Integration"
       },
       "secure_connection": "Secure End-to-End Connection"
     }

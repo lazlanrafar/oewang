@@ -88,7 +88,7 @@
     "included_in_totals": "Disertakan dalam total",
     "excluded_from_totals": "Dikecualikan dari total",
     "default_label": "Akun Default",
-    "default_description": "Digunakan oleh Oewang Bot saat akun tidak disebutkan dalam chat (WhatsApp, Telegram, dll.).",
+    "default_description": "Digunakan oleh Oewang Bot saat akun tidak disebutkan dalam chat (Telegram, dll.).",
     "set_as_default": "Jadikan default",
     "created_date": "Tanggal Dibuat",
     "created_date_description": "Tanggal akun ini pertama kali dibuat dalam sistem.",
@@ -625,7 +625,7 @@
       "category_billing": "Tagihan & Langganan",
       "category_billing_description": "Pembayaran, perpanjangan, dan kegagalan pembayaran — wajib untuk keamanan akun.",
       "category_integration": "Aplikasi Terhubung",
-      "category_integration_description": "Event koneksi / pemutusan WhatsApp, Telegram, dan integrasi lainnya.",
+      "category_integration_description": "Event koneksi / pemutusan Telegram dan integrasi lainnya.",
       "category_security": "Keamanan",
       "category_security_description": "Peringatan login dan perubahan workspace yang sensitif keamanan.",
       "mandatory_badge": "Wajib",
@@ -1399,20 +1399,6 @@
         "description": "Pindai kode QR atau buka Telegram untuk menghubungkan akun Anda ke Oewang.",
         "open_bot": "Buka Bot",
         "footer": "Setelah memindai atau membuka tautan, cukup ketuk Mulai di Telegram untuk menghubungkan akun Anda secara otomatis."
-      },
-      "whatsapp": {
-        "title": "Hubungkan WhatsApp",
-        "description": "Otomatiskan pembaruan dan pelaporan keuangan Anda melalui WhatsApp Business.",
-        "premium_title": "Fitur Premium",
-        "premium_description": "Integrasi WhatsApp adalah fitur premium yang tersedia di paket Enterprise. Hubungi tim penjualan kami untuk mengaktifkan ini di workspace Anda.",
-        "coming_soon_title": "Segera Hadir",
-        "features": {
-          "notifications": "Notifikasi transaksi real-time",
-          "reminders": "Pengingat pembayaran otomatis",
-          "reports": "Ringkasan keuangan mingguan"
-        },
-        "button": "Buka Bot",
-        "footer_info": "Integrasi Resmi WhatsApp Business"
       },
       "secure_connection": "Koneksi End-to-End Aman"
     }

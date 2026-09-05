@@ -4,7 +4,7 @@ import { AiSidecarClient } from "../ai/ai-sidecar-client";
 
 /**
  * Build the per-request MCP server. Tool schemas + execution come from the Python
- * AI sidecar (apps/ai) — the same source the WhatsApp/website chat uses. Async
+ * AI sidecar (apps/ai) — the same source the website chat uses. Async
  * because the schemas are fetched over HTTP at build time.
  */
 export async function createMcpServer(

@@ -95,7 +95,7 @@ async def scan_all_workspaces() -> None:
             log.error("anomaly scan failed for %s: %s", r["id"], e)
             continue
         if anomalies and settings.ALERT_CALLBACK_URL:
-            # ponytail: callback stub — Elysia endpoint forwards to WhatsApp/Telegram
+            # ponytail: callback stub — Elysia endpoint forwards to Telegram
             import httpx
 
             try:

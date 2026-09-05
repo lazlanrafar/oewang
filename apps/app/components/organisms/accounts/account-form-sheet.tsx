@@ -285,7 +285,7 @@ export function AccountFormSheet({
                       </FormLabel>
                       <FormDescription>
                         {dictionary.accounts.default_description ??
-                          "Used by Oewang Bot when no account is specified in a chat (WhatsApp, Telegram, etc.)."}
+                          "Used by Oewang Bot when no account is specified in a chat (Telegram, etc.)."}
                       </FormDescription>
                     </div>
                     <FormControl>

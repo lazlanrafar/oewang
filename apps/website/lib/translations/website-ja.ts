@@ -2,7 +2,7 @@ import type { WebsiteDictionary } from "./website-en";
 
 // Full Japanese translation of the marketing site. Shape mirrors websiteEn
 // (enforced by the WebsiteDictionary annotation). Brand/product names
-// (Oewang, AI, Telegram, WhatsApp, CSV) are kept as-is.
+// (Oewang, AI, Telegram, CSV) are kept as-is.
 export const websiteJa: WebsiteDictionary = {
   nav: {
     overview: "概要",
@@ -33,7 +33,7 @@ export const websiteJa: WebsiteDictionary = {
   },
   socialProof: {
     heading: "いつもの場所から支出を記録",
-    channels: ["レシート写真", "Telegram", "WhatsApp", "メール転送", "CSVインポート", "多通貨対応"],
+    channels: ["レシート写真", "Telegram", "メール転送", "CSVインポート", "多通貨対応"],
   },
   pillars: {
     label: "Oewangの理由",
@@ -129,7 +129,7 @@ export const websiteJa: WebsiteDictionary = {
     items: [
       {
         q: "Oewangはどうやって取引を記録しますか？",
-        a: "レシートを撮影、TelegramやWhatsAppで転送、CSVをインポート、または一行入力するだけ。OewangのAIが店名・金額・カテゴリを読み取り、自動で保存します。",
+        a: "レシートを撮影、Telegramで転送、CSVをインポート、または一行入力するだけ。OewangのAIが店名・金額・カテゴリを読み取り、自動で保存します。",
       },
       {
         q: "私の財務データは安全ですか？",

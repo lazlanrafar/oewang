@@ -54,7 +54,6 @@ function isAuthEndpoint(path: string): boolean {
 function isPublicWebhookEndpoint(path: string): boolean {
   return (
     path.includes("/integrations/telegram/webhook") ||
-    path.includes("/integrations/whatsapp/webhook") ||
     path.includes("/mayar/webhook")
   );
 }
@@ -147,7 +146,7 @@ export const rateLimitPlugin = new Elysia({
     const account = auth as { workspace_id?: string; user_id?: string } | null;
     const path = new URL(request.url).pathname;
 
-    // Public provider webhooks (Telegram, WhatsApp/Evolution, Mayar) hit this
+    // Public provider webhooks (Telegram, Mayar) hit this
     // server at high frequency from a small set of provider IPs. Rate-limiting
     // them would silently drop legitimate bot traffic, so skip the limit here —
     // signature/secret verification still gates these endpoints downstream.

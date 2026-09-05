@@ -5,5 +5,4 @@ import { onInitialize } from "./initialize";
 export default {
   ...baseConfig,
   onInitialize,
-  // images: [require("./assets/whatsapp.jpg")], // Using existing image for now
 };
