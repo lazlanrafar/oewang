@@ -1,13 +1,13 @@
 services:
   postgres:
     image: pgvector/pgvector:pg16
-    container_name: okane-postgres
+    container_name: oewang-postgres
     ports:
       - "5432:5432"
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
-      POSTGRES_DB: okane
+      POSTGRES_DB: oewang
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -18,7 +18,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: okane-redis
+    container_name: oewang-redis
     ports:
       - "6379:6379"
     volumes:
@@ -31,7 +31,7 @@ services:
 
   minio:
     image: minio/minio:latest
-    container_name: okane-minio
+    container_name: oewang-minio
     ports:
       - "9000:9000"   # S3 API
       - "9001:9001"   # MinIO Console UI
@@ -50,16 +50,16 @@ services:
   # One-shot container that creates the default bucket on startup
   minio-init:
     image: minio/mc:latest
-    container_name: okane-minio-init
+    container_name: oewang-minio-init
     depends_on:
       minio:
         condition: service_healthy
     entrypoint: >
       /bin/sh -c "
         mc alias set local http://minio:9000 minioadmin minioadmin &&
-        mc mb --ignore-existing local/okane &&
-        mc anonymous set public local/okane &&
-        echo 'Bucket okane created successfully'
+        mc mb --ignore-existing local/oewang &&
+        mc anonymous set public local/oewang &&
+        echo 'Bucket oewang created successfully'
       "
     restart: "no"
 

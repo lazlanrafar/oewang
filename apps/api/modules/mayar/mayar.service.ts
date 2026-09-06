@@ -319,7 +319,23 @@ export abstract class MayarService {
 
       // 3. Fulfill based on type and matched plan
       const plans = await MayarRepository.findAllPlans();
-      let matchedPlan = planId ? plans.find((p) => p.id === planId) : null;
+      // extraData.planId echoed back by Mayar is whatever createCheckoutSession
+      // sent as the gateway price id — for standard plan checkouts that's a
+      // Mayar product/price code (e.g. "BUSINESS_YEARLY_IDR"), not our internal
+      // UUID. Match on both so this doesn't silently fall through to the
+      // amount-coincidence fallback below for every real plan purchase.
+      let matchedPlan = planId
+        ? plans.find(
+            (p) =>
+              p.id === planId ||
+              p.prices?.some(
+                (price: any) =>
+                  price.mayar_monthly_id === planId ||
+                  price.mayar_yearly_id === planId ||
+                  price.mayar_product_id === planId,
+              ),
+          )
+        : null;
 
       // If no planId in metadata, or we need to verify type, match by amount
       if (!matchedPlan && amount) {

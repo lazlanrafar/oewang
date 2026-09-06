@@ -20,12 +20,12 @@ const CustomUnorderedList = ({
   children?: React.ReactNode;
   className?: string;
 }) => (
-  <ul className={cn("list-none m-0 p-0 leading-relaxed", className)} {...props}>
+  <ul className={cn("list-disc space-y-1 pl-5 leading-relaxed marker:text-muted-foreground", className)} {...props}>
     {children}
   </ul>
 );
 
-// Custom ol component with customizable className (no numbers)
+// Custom ol component with customizable className
 const CustomOrderedList = ({
   node,
   children,
@@ -37,7 +37,7 @@ const CustomOrderedList = ({
   className?: string;
 }) => (
   <ol
-    className={cn("list-none m-0 p-0 leading-relaxed", className)}
+    className={cn("list-decimal space-y-1 pl-5 leading-relaxed marker:text-muted-foreground", className)}
     {...props}
     data-streamdown="unordered-list"
   >
@@ -45,7 +45,7 @@ const CustomOrderedList = ({
   </ol>
 );
 
-// Custom li component to remove padding
+// Custom li component
 const CustomListItem = ({
   node,
   children,
@@ -56,11 +56,7 @@ const CustomListItem = ({
   children?: React.ReactNode;
   className?: string;
 }) => (
-  <li
-    className={cn("py-0 my-0 leading-relaxed", className)}
-    {...props}
-    data-streamdown="list-item"
-  >
+  <li className={cn("py-0 pl-1 leading-relaxed", className)} {...props} data-streamdown="list-item">
     {children}
   </li>
 );
@@ -68,35 +64,28 @@ const CustomListItem = ({
 export const Response = memo(
   ({ className, ...props }: ResponseProps) => (
     <Streamdown
-      className={cn(
-        "size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 space-y-4 [&>h3+ul]:mt-2! [&>h3+ol]:mt-2! [&>h4+ul]:mt-2! [&>h4+ol]:mt-2! [&>ul]:my-0! [&>ul]:-mt-4! [&>*+ul]:mt-2! [&>ol]:my-0! [&>ol]:-mt-4! [&>*+ol]:mt-2!",
-        className,
-      )}
+      className={cn("size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 space-y-3", className)}
       components={{
         ul: ({ node, ref, ...props }) => <CustomUnorderedList {...props} />,
         ol: ({ node, ref, ...props }) => <CustomOrderedList {...props} />,
         li: ({ node, ref, ...props }) => <CustomListItem {...props} />,
-        h2: ({ children, node, ref, ...props }) => (
-          <h3
-            className="font-medium text-sm text-primary tracking-wide"
-            {...props}
-          >
+        h1: ({ children, node, ref, ...props }) => (
+          <h1 className="font-semibold text-base tracking-tight" {...props}>
             {children}
-          </h3>
+          </h1>
+        ),
+        h2: ({ children, node, ref, ...props }) => (
+          <h2 className="font-semibold text-[0.95rem] tracking-tight" {...props}>
+            {children}
+          </h2>
         ),
         h3: ({ children, node, ref, ...props }) => (
-          <h3
-            className="font-medium text-sm text-primary tracking-wide"
-            {...props}
-          >
+          <h3 className="font-semibold text-sm text-primary tracking-wide" {...props}>
             {children}
           </h3>
         ),
         h4: ({ children, node, ref, ...props }) => (
-          <h4
-            className="font-medium text-sm text-primary tracking-wide"
-            {...props}
-          >
+          <h4 className="font-medium text-muted-foreground text-xs uppercase tracking-wide" {...props}>
             {children}
           </h4>
         ),
@@ -104,6 +93,16 @@ export const Response = memo(
           <p className="leading-relaxed" {...props}>
             {children}
           </p>
+        ),
+        strong: ({ children, node, ref, ...props }) => (
+          <strong className="font-semibold" {...props}>
+            {children}
+          </strong>
+        ),
+        em: ({ children, node, ref, ...props }) => (
+          <em className="italic" {...props}>
+            {children}
+          </em>
         ),
         table: ({ node, ref, ...props }) => (
           <div className="relative overflow-x-auto">

@@ -112,7 +112,7 @@ export function CalendarDaySheet({
                       <div className="flex items-center justify-between text-muted-foreground text-xs">
                         <span className="capitalize">{d.type}</span>
                         <span
-                          className={`rounded-sm px-1.5 py-0.5 capitalize ${
+                          className={`px-1.5 py-0.5 capitalize ${
                             d.status === "paid"
                               ? "bg-emerald-500/10 text-emerald-600"
                               : d.status === "partial"

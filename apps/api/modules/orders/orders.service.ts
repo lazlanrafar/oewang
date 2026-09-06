@@ -35,28 +35,34 @@ export abstract class OrdersService {
           invoiceId,
           { status: data.status, amount: data.amount, currency: data.currency },
         );
-        await AuditLogsService.log({
-          workspace_id: data.workspace_id,
-          user_id: data.user_id ?? SYSTEM_ACTOR,
-          action: "order.updated",
-          entity: "order",
-          entity_id: existing.id,
-          before: existing,
-          after: updated,
-        });
+        await AuditLogsService.log(
+          {
+            workspace_id: data.workspace_id,
+            user_id: data.user_id ?? SYSTEM_ACTOR,
+            action: "order.updated",
+            entity: "order",
+            entity_id: existing.id,
+            before: existing,
+            after: updated,
+          },
+          tx,
+        );
         return buildSuccess(updated, "Order updated");
       }
     }
 
     const order = await OrdersRepository.create(data, tx);
-    await AuditLogsService.log({
-      workspace_id: data.workspace_id,
-      user_id: data.user_id ?? SYSTEM_ACTOR,
-      action: "order.created",
-      entity: "order",
-      entity_id: order.id,
-      after: order,
-    });
+    await AuditLogsService.log(
+      {
+        workspace_id: data.workspace_id,
+        user_id: data.user_id ?? SYSTEM_ACTOR,
+        action: "order.created",
+        entity: "order",
+        entity_id: order.id,
+        after: order,
+      },
+      tx,
+    );
     return buildSuccess(order, "Order created");
   }
 

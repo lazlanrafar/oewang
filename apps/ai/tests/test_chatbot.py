@@ -59,7 +59,7 @@ async def test_web_chat_returns_full_contract(monkeypatch):
         return {
             "reply": "Hello",
             "usage": {"input_tokens": 10, "output_tokens": 5},
-            "artifact": {"type": "spending-canvas", "payload": {}},
+            "artifacts": [{"type": "spending-canvas", "payload": {}}],
             "response_id": "resp_1",
         }
 
@@ -75,7 +75,7 @@ async def test_web_chat_returns_full_contract(monkeypatch):
     assert res["session_id"] == "s1"
     assert res["usage"]["output_tokens"] == 5
     assert res["provider"]["name"] == "9router"
-    assert res["artifact"]["type"] == "spending-canvas"
+    assert res["artifacts"][0]["type"] == "spending-canvas"
     assert captured["system"] == "SYS"
     # tokens incremented against the count read at begin
     assert captured["ended"] == ("w1", "s1", 100)
@@ -95,7 +95,7 @@ async def test_web_chat_early_reply_skips_loop(monkeypatch):
     res = await cbsvc.web_chat([{"role": "user", "content": "hi"}], "tok", None, False)
     assert res["reply"] == "Confirm the receipt."
     assert res["session_id"] == "s9"
-    assert res["artifact"] is None
+    assert res["artifacts"] == []
 
 
 # ── Tool-loop logic (the canvas/money path) ─────────────────────────────────
@@ -182,7 +182,46 @@ async def test_tool_loop_captures_artifact_and_usage(monkeypatch):
 
     assert seen == ["getSpendingAnalysis"]
     assert out["reply"] == "You spent a lot this month."
-    assert out["artifact"]["type"] == "spending-canvas"
+    assert out["artifacts"][0]["type"] == "spending-canvas"
     # two completion calls, 5 output tokens each
     assert out["usage"]["output_tokens"] == 10
     assert out["usage"]["input_tokens"] == 20
+
+
+async def test_tool_loop_keeps_every_artifact_from_a_multi_tool_turn(monkeypatch):
+    """Regression: a "full breakdown" turn calling spending + burn-rate + debt
+    analysis in one turn used to keep only the LAST tool's artifact, silently
+    dropping the others and mislabeling every canvas tab from that turn with
+    the wrong type."""
+    import app.core.llm as llm_mod
+
+    step1 = _FakeMsg(
+        tool_calls=[
+            _FakeToolCall("tc1", "getSpendingAnalysis", "{}"),
+            _FakeToolCall("tc2", "getBurnRate", "{}"),
+            _FakeToolCall("tc3", "getDebtAnalysis", "{}"),
+        ]
+    )
+    step2 = _FakeMsg(content="Here's your full breakdown.")
+    client = _FakeClient([_FakeResp(step1), _FakeResp(step2)])
+    monkeypatch.setattr(llm_mod, "get_client", lambda: client)
+
+    async def fake_execute(name, args):
+        return {
+            "result": {"ok": True},
+            "artifact": {"type": f"{name}-canvas", "payload": {}},
+        }
+
+    out = await llm_mod.complete_with_tools(
+        "sys",
+        [{"role": "user", "content": "give me a full breakdown"}],
+        [],
+        fake_execute,
+        max_steps=5,
+    )
+
+    assert [a["type"] for a in out["artifacts"]] == [
+        "getSpendingAnalysis-canvas",
+        "getBurnRate-canvas",
+        "getDebtAnalysis-canvas",
+    ]

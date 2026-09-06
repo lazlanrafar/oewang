@@ -55,9 +55,14 @@ export default async function ChatPage(props: Props) {
       });
     }
 
-    const artifact = Array.isArray(attachment) ? attachment[0]?.artifact : attachment?.artifact;
+    // New rows store every canvas from the turn as `artifacts: [...]`; older
+    // rows persisted only the last one as a singular `artifact` — read both so
+    // history saved before this change still renders its one canvas.
+    const attachmentObj = Array.isArray(attachment) ? attachment[0] : attachment;
+    const artifacts: Array<{ type: string; payload: unknown }> =
+      attachmentObj?.artifacts ?? (attachmentObj?.artifact ? [attachmentObj.artifact] : []);
 
-    if (artifact) {
+    for (const artifact of artifacts) {
       parts.push({
         type: `data-artifact-${artifact.type}`,
         id: artifact.type,

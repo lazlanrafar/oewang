@@ -52,5 +52,14 @@ class WebChatResponse(BaseModel):
     session_id: str | None = None
     reply: str
     usage: Usage | None = None
-    artifact: dict | None = None  # phase 2: canvas artifacts
+    artifacts: list[dict] = Field(default_factory=list)  # every canvas produced this turn
     provider: Provider | None = None
+
+
+class TitleRequest(BaseModel):
+    message: str = Field(min_length=1)
+    workspace_id: str = Field(min_length=1)
+
+
+class TitleResponse(BaseModel):
+    title: str | None = None

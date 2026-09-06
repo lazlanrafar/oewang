@@ -5,7 +5,18 @@ import { useTransition } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { Dictionary } from "@workspace/dictionaries";
 import { login } from "@workspace/modules/auth/auth.action";
-import { Button, Checkbox, Form, FormControl, FormField, FormItem, FormLabel, FormMessage, Input } from "@workspace/ui";
+import {
+  Button,
+  Checkbox,
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+  Input,
+  PasswordInput,
+} from "@workspace/ui";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -85,8 +96,7 @@ export function LoginForm({ dictionary }: { dictionary: Dictionary }) {
             <FormItem>
               <FormLabel>{auth_form.password_label}</FormLabel>
               <FormControl>
-                <Input
-                  type="password"
+                <PasswordInput
                   placeholder={auth_form.password_placeholder}
                   autoComplete="current-password"
                   disabled={is_pending}

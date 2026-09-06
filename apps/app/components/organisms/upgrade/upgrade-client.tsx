@@ -114,9 +114,9 @@ export function UpgradeClient({ dictionary, settings, workspace }: UpgradeClient
     );
   }
 
-  // Sort plans: Free -> Pro -> Business (fallback to alphabetical if names differ)
+  // Sort plans: Starter -> Personal -> Pro -> Business
   const sortedPlans = [...(pricingData || [])].sort((a, b) => {
-    const order = ["starter", "pro", "business"];
+    const order = ["starter", "personal", "pro", "business"];
     const aPower = order.indexOf(a.name.toLowerCase());
     const bPower = order.indexOf(b.name.toLowerCase());
     return aPower - bPower;

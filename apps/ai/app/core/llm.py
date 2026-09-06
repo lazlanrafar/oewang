@@ -89,9 +89,12 @@ async def complete_with_tools(
     """Multi-step tool-calling loop (mirrors the TS orchestrator).
 
     Runs the OpenAI tool loop, forwarding each tool call to `execute_tool`.
-    Accumulates token usage across steps and keeps the LAST artifact a tool
-    returns (matches the orchestrator's onArtifact behavior). The sync OpenAI
-    client is offloaded with asyncio.to_thread so tool I/O stays concurrent.
+    Accumulates token usage across steps and collects EVERY artifact a tool
+    returns during the turn (a "full breakdown" request can call
+    getSpendingAnalysis + getBurnRate + getDebtAnalysis in one turn — keeping
+    only the last one silently dropped the others and mislabeled the canvas
+    tab). The sync OpenAI client is offloaded with asyncio.to_thread so tool
+    I/O stays concurrent.
     """
     client = get_client()
     model = get_settings().AI_CHAT_MODEL
@@ -99,7 +102,7 @@ async def complete_with_tools(
 
     usage_in = 0
     usage_out = 0
-    artifact: dict | None = None
+    artifacts: list[dict] = []
     response_id: str | None = None
     reply = ""
 
@@ -156,7 +159,7 @@ async def complete_with_tools(
                 art.get("type") if art else None,
             )
             if art:
-                artifact = art
+                artifacts.append(art)
             convo.append(
                 {
                     "role": "tool",
@@ -168,7 +171,7 @@ async def complete_with_tools(
     return {
         "reply": reply,
         "usage": {"input_tokens": usage_in, "output_tokens": usage_out},
-        "artifact": artifact,
+        "artifacts": artifacts,
         "response_id": response_id,
     }
 
@@ -186,7 +189,7 @@ async def complete_with_tools_stream(
       {"event": "tool_call", "data": {"name": "...", "args": {...}}}
       {"event": "content", "data": {"text": "..."}}
       {"event": "artifact", "data": {...}}
-      {"event": "done", "data": {"reply": "...", "usage": {...}, "artifact": {...}}}
+      {"event": "done", "data": {"reply": "...", "usage": {...}, "artifacts": [{...}]}}
     """
     client = get_client()
     model = get_settings().AI_CHAT_MODEL
@@ -194,7 +197,7 @@ async def complete_with_tools_stream(
 
     usage_in = 0
     usage_out = 0
-    artifact: dict | None = None
+    artifacts: list[dict] = []
     response_id: str | None = None
     full_reply = ""
     in_think_tag = False
@@ -313,7 +316,7 @@ async def complete_with_tools_stream(
             out = await execute_tool(name, args)
             art = out.get("artifact")
             if art:
-                artifact = art
+                artifacts.append(art)
                 yield {"event": "artifact", "data": art}
 
             convo.append({
@@ -327,7 +330,7 @@ async def complete_with_tools_stream(
         "data": {
             "reply": full_reply,
             "usage": {"input_tokens": usage_in, "output_tokens": usage_out},
-            "artifact": artifact,
+            "artifacts": artifacts,
             "provider": {"name": "9router", "response_id": response_id},
         },
     }

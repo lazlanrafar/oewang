@@ -113,43 +113,70 @@ export function ChatProviderWrapper({ children, initialMessages }: Props) {
               if (streamRes.ok && streamRes.body) {
                 const reader = streamRes.body.getReader();
                 const decoder = new TextDecoder();
-                let accumulatedReply = "";
-                let accumulatedThinking = "";
-                let currentArtifact: any = null;
+                let fullReply = "";
+                let revealedLength = 0;
+                // Latest tool_call event, surfaced as a real "tool-<name>" part so
+                // the existing ChatStatusIndicators live status line (below the
+                // messages) picks it up and renames itself via getToolMessage —
+                // no separate status UI here, dropped once real reply text starts.
+                let currentToolName: string | null = null;
+                let toolCallCounter = 0;
+                // Every canvas produced this turn — a "full breakdown" request can
+                // call getSpendingAnalysis + getBurnRate + getDebtAnalysis in one
+                // turn, each with its own canvas tab. Collecting them all (instead
+                // of overwriting a single slot with whichever tool ran last) is
+                // what makes chat-canvas.tsx's per-part tab list show every canvas,
+                // correctly typed, instead of the last tool's type mislabeling
+                // every tab from that turn.
+                const currentArtifacts: any[] = [];
+                // Set when the model calls present_choices — rendered as clickable
+                // follow-up buttons below the reply, persists once set (like an
+                // artifact), independent of the ephemeral tool-status line above.
+                let choicesData: { question: string; options: { label: string; message: string }[] } | null = null;
                 let buffer = "";
+                let networkDone = false;
 
                 const assistantMsgId = (Date.now() + 1).toString();
 
                 const updateAssistantMessage = (isFinal = false) => {
+                  const revealedReply = fullReply.slice(0, revealedLength);
                   const parts: any[] = [];
-                  if (accumulatedThinking) {
+                  if (currentToolName && !revealedReply && !isFinal) {
                     parts.push({
-                      type: "thinking",
-                      thinking: accumulatedThinking,
+                      type: `tool-${currentToolName}`,
+                      toolCallId: `${currentToolName}-${toolCallCounter}`,
+                      state: "input-available",
+                      input: {},
                     });
                   }
-                  if (accumulatedReply) {
+                  if (revealedReply) {
                     parts.push({
                       type: "text",
-                      text: accumulatedReply,
+                      text: revealedReply,
                     });
                   }
-                  if (currentArtifact) {
+                  for (const artifact of currentArtifacts) {
                     parts.push({
-                      type: `data-artifact-${currentArtifact.type}`,
-                      id: currentArtifact.type,
-                      artifactType: currentArtifact.type,
+                      type: `data-artifact-${artifact.type}`,
+                      id: artifact.type,
+                      artifactType: artifact.type,
                       data: {
-                        id: currentArtifact.type,
-                        type: currentArtifact.type,
+                        id: artifact.type,
+                        type: artifact.type,
                         status: isFinal ? "complete" : "streaming",
                         version: 1,
                         createdAt: Date.now(),
                         updatedAt: Date.now(),
-                        payload: currentArtifact.payload,
+                        payload: artifact.payload,
                         progress: isFinal ? 1 : 0.5,
                       },
-                      artifact: currentArtifact,
+                      artifact,
+                    });
+                  }
+                  if (choicesData) {
+                    parts.push({
+                      type: "data-choices",
+                      data: choicesData,
                     });
                   }
 
@@ -162,6 +189,32 @@ export function ChatProviderWrapper({ children, initialMessages }: Props) {
 
                   state.setMessages([...updatedMessages, assistantMessage]);
                 };
+
+                // Typewriter reveal — runs independently of chunk arrival so the
+                // reply always types out smoothly on screen, even when the model
+                // (or provider) delivers it in one or two large bursts instead of
+                // token-by-token. Speeds up automatically for a long backlog so a
+                // big reply doesn't take forever to finish appearing.
+                const revealDone = new Promise<void>((resolve) => {
+                  const tick = () => {
+                    if (isAbortedRef.current) {
+                      resolve();
+                      return;
+                    }
+                    if (revealedLength < fullReply.length) {
+                      const remaining = fullReply.length - revealedLength;
+                      revealedLength += Math.max(1, Math.ceil(remaining / 10));
+                      updateAssistantMessage(false);
+                      setTimeout(tick, 20);
+                    } else if (networkDone) {
+                      updateAssistantMessage(true);
+                      resolve();
+                    } else {
+                      setTimeout(tick, 20);
+                    }
+                  };
+                  tick();
+                });
 
                 while (true) {
                   if (isAbortedRef.current) break;
@@ -189,23 +242,31 @@ export function ChatProviderWrapper({ children, initialMessages }: Props) {
                       }
                     }
 
-                    if (eventType === "thinking" && eventData?.text) {
-                      accumulatedThinking += eventData.text;
+                    if (eventType === "tool_call" && eventData?.name) {
+                      currentToolName = eventData.name;
+                      toolCallCounter++;
+                      if (eventData.name === "present_choices" && eventData.args?.options) {
+                        choicesData = {
+                          question: eventData.args.question ?? "",
+                          options: eventData.args.options,
+                        };
+                      }
                       updateAssistantMessage(false);
                     } else if (eventType === "content" && eventData?.text) {
-                      accumulatedReply += eventData.text;
-                      updateAssistantMessage(false);
+                      fullReply += eventData.text;
                     } else if (eventType === "artifact" && eventData) {
-                      currentArtifact = eventData;
+                      currentArtifacts.push(eventData);
                       updateAssistantMessage(false);
                     } else if (eventType === "done" && eventData) {
-                      if (eventData.reply && !accumulatedReply) {
-                        accumulatedReply = eventData.reply;
+                      if (eventData.reply && !fullReply) {
+                        fullReply = eventData.reply;
                       }
-                      if (eventData.artifact) {
-                        currentArtifact = eventData.artifact;
+                      // Each artifact already arrived via its own "artifact" event
+                      // above — this only backfills if that never happened (e.g. a
+                      // non-streaming response shape reusing this same handler).
+                      if (!currentArtifacts.length && eventData.artifacts?.length) {
+                        currentArtifacts.push(...eventData.artifacts);
                       }
-                      updateAssistantMessage(true);
                       if (!chatId && eventData.session_id) {
                         state.setId(eventData.session_id);
                         setChatId(eventData.session_id);
@@ -214,7 +275,8 @@ export function ChatProviderWrapper({ children, initialMessages }: Props) {
                   }
                 }
 
-                updateAssistantMessage(true);
+                networkDone = true;
+                await revealDone;
                 state.setStatus("ready");
                 streamedSuccessfully = true;
               }
@@ -232,10 +294,10 @@ export function ChatProviderWrapper({ children, initialMessages }: Props) {
             if (response.success && response.data) {
               const parts: any[] = [{ type: "text", text: response.data.reply }];
 
-              // If backend returned an artifact, add it as a message part
+              // If backend returned canvases, add each as its own message part.
               // This format is required by @ai-sdk-tools/artifacts/client
-              const artifact = (response.data as any).artifact;
-              if (artifact) {
+              const artifacts = (response.data as any).artifacts ?? [];
+              for (const artifact of artifacts) {
                 parts.push({
                   type: `data-artifact-${artifact.type}`,
                   id: artifact.type,

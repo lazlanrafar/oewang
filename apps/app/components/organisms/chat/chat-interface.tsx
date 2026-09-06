@@ -37,10 +37,10 @@ export default function ChatInterface({ dictionary }: Props) {
   const { state: sidebarState } = useSidebar();
   const { chatId: routeChatId } = useChatInterface();
   const _chatIdFromStore = useSDKChatId();
-  const { reset } = useChatActions();
+  const { reset, sendMessage } = useChatActions();
   const { setScrollY, setIsHome } = useChatStore();
   const containerRef = useRef<HTMLDivElement>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesScrollRef = useRef<HTMLDivElement>(null);
 
   const _chatId = useMemo(() => routeChatId ?? generateId(), [routeChatId]);
   const prevChatIdRef = useRef<string | null>(routeChatId);
@@ -140,16 +140,64 @@ export default function ChatInterface({ dictionary }: Props) {
     setIsHome(effectiveIsHome);
   }, [effectiveIsHome, setIsHome]);
 
-  // Auto-scroll to bottom as new messages/streaming updates arrive
+  // Whether the user has deliberately scrolled away from the bottom to read
+  // history. Set by a real scroll event below — NOT recomputed as "distance
+  // from bottom" on every content tick, because fast-streaming content can
+  // legitimately grow faster than our own catch-up scroll, pushing the
+  // measured distance past any fixed threshold and permanently (mis)reading
+  // as "user scrolled up" for the rest of that stream. Our own programmatic
+  // scrolls only ever move toward the bottom, so `ignoreNextScrollRef` is
+  // enough to keep them from ever flipping this flag.
+  const userScrolledAwayRef = useRef(false);
+  const ignoreNextScrollRef = useRef(false);
+  const NEAR_BOTTOM_PX = 120;
+
   useEffect(() => {
-    if (!messagesEndRef.current) return;
+    const el = messagesScrollRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      if (ignoreNextScrollRef.current) {
+        ignoreNextScrollRef.current = false;
+        return;
+      }
+      const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+      userScrolledAwayRef.current = distFromBottom > NEAR_BOTTOM_PX;
+    };
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, []);
 
-    const behavior = status === "streaming" || status === "submitted" ? "auto" : "smooth";
+  // Auto-scroll to bottom as new messages/streaming updates arrive. Re-runs on
+  // every message content change (not just status transitions) so it keeps
+  // following the reply as it types out, like WhatsApp — but only while the
+  // user hasn't scrolled up to read history. Sending your own message always
+  // snaps down regardless of prior scroll position (checked via the last
+  // message's role, NOT `status === "submitted"` — this app's custom
+  // sendMessage jumps straight from "ready" to "streaming" and never emits
+  // "submitted", so gating on that status value silently never fired).
+  //
+  // Scrolls the container to its true max (scrollHeight), not an end-marker
+  // via scrollIntoView({block:"end"}) — the input bar floats "fixed bottom-0"
+  // on top of the scroll container's own bottom edge, so aligning a
+  // zero-height marker to the viewport edge leaves the last line or two of
+  // text hidden underneath it. Only scrolling all the way to scrollHeight
+  // reaches the trailing `pb-32` clearance reserved for that overlay.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: messages isn't read in the body — it's a re-run trigger so this scrolls again as message content grows during streaming.
+  useEffect(() => {
+    const scrollEl = messagesScrollRef.current;
+    if (!scrollEl) return;
+    const justSentByUser = messages[messages.length - 1]?.role === "user";
+    if (justSentByUser) userScrolledAwayRef.current = false;
+    if (userScrolledAwayRef.current) return;
 
-    requestAnimationFrame(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior, block: "end" });
-    });
-  }, [status]);
+    const behavior = status === "streaming" || justSentByUser ? "auto" : "smooth";
+    // No requestAnimationFrame here — rAF can be throttled or skipped entirely
+    // by the browser for a backgrounded/occluded tab, which would silently
+    // drop every scroll call during a long stream. The DOM is already updated
+    // by the time this effect runs, so scrolling synchronously is safe.
+    ignoreNextScrollRef.current = true;
+    scrollEl.scrollTo({ top: scrollEl.scrollHeight, behavior });
+  }, [status, messages]);
 
   const [, _setSelectedType] = useQueryState("artifact-type", parseAsString);
 
@@ -194,12 +242,13 @@ export default function ChatInterface({ dictionary }: Props) {
                 </div>
               </div>
 
-              <div className="scrollbar-hide flex-1 overflow-y-auto scroll-smooth px-4 md:px-0">
+              <div ref={messagesScrollRef} className="scrollbar-hide flex-1 overflow-y-auto px-4 md:px-0">
                 <div className="mx-auto w-full max-w-2xl pb-32">
                   <ChatMessages
                     messages={messages as any}
                     isStreaming={status === "streaming" || status === "submitted"}
                     dictionary={dictionary}
+                    onQuickReply={(text) => sendMessage({ text })}
                   />
                   <ChatStatusIndicators
                     agentStatus={agentStatus}
@@ -214,7 +263,6 @@ export default function ChatInterface({ dictionary }: Props) {
                     hasTextContent={hasTextContent}
                     hasInsightData={hasInsightData}
                   />
-                  <div ref={messagesEndRef} />
                 </div>
               </div>
             </div>

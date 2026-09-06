@@ -10,11 +10,13 @@ if (!process.env.DATABASE_URL) {
 import { seedPlans } from "./01-plans";
 import { seedAddons } from "./02-addons";
 import { seedAdminUser } from "./03-admin-user";
+import { seedSystemUser } from "./04-system-user";
 
 async function main() {
   await seedPlans();
   await seedAddons();
   await seedAdminUser();
+  await seedSystemUser();
   console.log("✅ All seeders complete.");
 }
 

@@ -11,6 +11,7 @@ import { ErrorCode } from "@workspace/types";
 import { buildError, generateSlug } from "@workspace/utils";
 import { status } from "elysia";
 import { cacheDel, cacheGet, cacheSet } from "../../lib/cache";
+import { invalidateAuthCache } from "../../plugins/auth";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { CategoriesRepository } from "../categories/categories.repository";
 import { NotificationsService } from "../notifications/notifications.service";
@@ -252,6 +253,11 @@ export abstract class WorkspacesService {
         };
       },
     );
+
+    // Membership changed (new workspace + owner row) — drop the cached auth
+    // snapshot now that the transaction has committed, so the new workspace
+    // is visible immediately instead of after the 30s TTL.
+    await invalidateAuthCache(user_id);
 
     // E. Log action (after transaction commits to respect FK constraints)
     AuditLogsService.log({

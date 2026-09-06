@@ -6,24 +6,30 @@ import { AuditLogsRepository } from "./audit-logs.repository";
  * `action` format: "{entity}.{verb}" e.g. "workspace.created"
  */
 export abstract class AuditLogsService {
-  static async log(data: {
-    workspace_id: string;
-    user_id: string;
-    action: string;
-    entity: string;
-    entity_id: string;
-    before?: unknown;
-    after?: unknown;
-  }) {
+  static async log(
+    data: {
+      workspace_id: string;
+      user_id: string;
+      action: string;
+      entity: string;
+      entity_id: string;
+      before?: unknown;
+      after?: unknown;
+    },
+    tx?: any,
+  ) {
     // Strip any sensitive fields from before/after
     const sanitized_before = AuditLogsService.sanitize(data.before);
     const sanitized_after = AuditLogsService.sanitize(data.after);
 
-    await AuditLogsRepository.create({
-      ...data,
-      before: sanitized_before,
-      after: sanitized_after,
-    });
+    await AuditLogsRepository.create(
+      {
+        ...data,
+        before: sanitized_before,
+        after: sanitized_after,
+      },
+      tx,
+    );
   }
 
   static async logMany(

@@ -119,7 +119,11 @@ export function CalendarClient({ dictionary }: Props) {
       getTransactions({
         startDate: format(rangeStart, "yyyy-MM-dd"),
         endDate: `${format(rangeEnd, "yyyy-MM-dd")} 23:59:59`,
-        limit: 1000,
+        // API caps list limit at 100 (transactions.model.ts listQuery) — the
+        // old value of 1000 failed TypeBox validation on every request, so
+        // this query silently returned zero transactions no matter how much
+        // data existed for the visible range.
+        limit: 100,
       }),
   });
 
@@ -436,17 +440,17 @@ function MonthView({
 
                 <div className="mt-0.5 flex flex-col gap-0.5 overflow-hidden">
                   {income > 0 && (
-                    <div className="truncate rounded bg-emerald-500/10 px-1.5 py-0.5 font-serif text-[10px] text-emerald-600 tabular-nums sm:text-[11px] dark:text-emerald-400">
+                    <div className="truncate bg-emerald-500/10 px-1.5 py-0.5 font-serif text-[10px] text-emerald-600 tabular-nums sm:text-[11px] dark:text-emerald-400">
                       +{formatCurrency(income)}
                     </div>
                   )}
                   {expense > 0 && (
-                    <div className="truncate rounded bg-red-500/10 px-1.5 py-0.5 font-serif text-[10px] text-red-600 tabular-nums sm:text-[11px] dark:text-red-400">
+                    <div className="truncate bg-red-500/10 px-1.5 py-0.5 font-serif text-[10px] text-red-600 tabular-nums sm:text-[11px] dark:text-red-400">
                       -{formatCurrency(expense)}
                     </div>
                   )}
                   {dayDebts.length > 0 && (
-                    <div className="truncate rounded bg-amber-500/10 px-1.5 py-0.5 font-medium text-[10px] text-amber-600 sm:text-[11px] dark:text-amber-400">
+                    <div className="truncate bg-amber-500/10 px-1.5 py-0.5 font-medium text-[10px] text-amber-600 sm:text-[11px] dark:text-amber-400">
                       {dayDebts.length === 1
                         ? t.activity.debt.replace("{count}", "1")
                         : t.activity.debts.replace("{count}", dayDebts.length.toString())}
@@ -625,7 +629,7 @@ function WeekView({
                     return (
                       <div
                         key={k}
-                        className="absolute right-1 left-1 z-10 mx-0.5 overflow-hidden rounded px-1.5 py-0.5 font-serif text-[10px] tabular-nums"
+                        className="absolute right-1 left-1 z-10 mx-0.5 overflow-hidden px-1.5 py-0.5 font-serif text-[10px] tabular-nums"
                         style={{
                           top: `calc(${(hour / 24) * 100}% + 2px)`,
                           minHeight: 20,

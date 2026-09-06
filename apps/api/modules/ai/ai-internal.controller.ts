@@ -113,7 +113,7 @@ export const aiInternalController = new Elysia({ prefix: "/ai/internal" })
       await AiService.chatEnd(body.workspace_id, body.session_id, {
         reply: body.reply,
         usage: body.usage,
-        artifact: body.artifact,
+        artifacts: body.artifacts,
         provider: body.provider,
       });
       return { ok: true };
@@ -124,7 +124,7 @@ export const aiInternalController = new Elysia({ prefix: "/ai/internal" })
         session_id: t.String(),
         reply: t.String(),
         usage: t.Optional(t.Any()),
-        artifact: t.Optional(t.Any()),
+        artifacts: t.Optional(t.Any()),
         provider: t.Optional(t.Any()),
         // Deprecated: increment is atomic now; kept optional for sidecar compat.
         current_tokens: t.Optional(t.Number()),

@@ -55,10 +55,7 @@ export const workspacesController = new Elysia({ prefix: "/workspaces" })
         }
 
         set.status = 500;
-        return buildError(
-          ErrorCode.INTERNAL_ERROR,
-          `Failed to create workspace: ${error.message}`,
-        );
+        return buildError(ErrorCode.INTERNAL_ERROR, "Failed to create workspace");
       }
     },
     {
@@ -121,8 +118,15 @@ export const workspacesController = new Elysia({ prefix: "/workspaces" })
         }
         return buildSuccess(workspace, "Active workspace retrieved");
       } catch (error: any) {
+        logger.error("Error getting active workspace", {
+          error,
+          workspaceId: auth.workspace_id,
+        });
         set.status = 500;
-        return buildError(ErrorCode.INTERNAL_ERROR, error.message);
+        return buildError(
+          ErrorCode.INTERNAL_ERROR,
+          "Failed to get active workspace",
+        );
       }
     },
     {
@@ -145,8 +149,12 @@ export const workspacesController = new Elysia({ prefix: "/workspaces" })
         const members = await WorkspacesService.getMembers(auth.workspace_id);
         return buildSuccess(members, "Members retrieved");
       } catch (error: any) {
+        logger.error("Error getting members", {
+          error,
+          workspaceId: auth.workspace_id,
+        });
         set.status = 500;
-        return buildError(ErrorCode.INTERNAL_ERROR, error.message);
+        return buildError(ErrorCode.INTERNAL_ERROR, "Failed to get members");
       }
     },
     {
@@ -209,8 +217,15 @@ export const workspacesController = new Elysia({ prefix: "/workspaces" })
         );
         return buildSuccess(invitations, "Invitations retrieved");
       } catch (error: any) {
+        logger.error("Error getting invitations", {
+          error,
+          workspaceId: auth.workspace_id,
+        });
         set.status = 500;
-        return buildError(ErrorCode.INTERNAL_ERROR, error.message);
+        return buildError(
+          ErrorCode.INTERNAL_ERROR,
+          "Failed to get invitations",
+        );
       }
     },
     {
@@ -292,8 +307,15 @@ export const workspacesController = new Elysia({ prefix: "/workspaces" })
       try {
         return await OrdersService.getWorkspaceOrders(auth.workspace_id);
       } catch (error: any) {
+        logger.error("Error getting billing history", {
+          error,
+          workspaceId: auth.workspace_id,
+        });
         set.status = 500;
-        return buildError(ErrorCode.INTERNAL_ERROR, error.message);
+        return buildError(
+          ErrorCode.INTERNAL_ERROR,
+          "Failed to get billing history",
+        );
       }
     },
     {

@@ -16,10 +16,10 @@ export interface ChatData {
     input_tokens: number;
     output_tokens: number;
   };
-  artifact?: {
+  artifacts?: {
     type: string;
     payload: any;
-  };
+  }[];
 }
 
 export interface AiChatResponse {
@@ -108,7 +108,7 @@ async function chatViaPythonDirect(
         sessionId: body?.session_id,
         reply: body?.reply,
         usage: body?.usage,
-        artifact: body?.artifact ?? undefined,
+        artifacts: body?.artifacts ?? undefined,
       } as ChatData,
     };
   } catch {

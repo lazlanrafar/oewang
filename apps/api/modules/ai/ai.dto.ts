@@ -49,10 +49,10 @@ export type ChatResponse = {
     cached_input_tokens?: number;
     reasoning_tokens?: number;
   };
-  artifact?: {
+  artifacts?: {
     type: string;
     payload: any;
-  };
+  }[];
   provider?: {
     name: "openai" | "gemini" | "anthropic";
     response_id?: string;

@@ -101,8 +101,14 @@ export abstract class WorkspacesRepository {
   ) {
     await tx.insert(user_workspaces).values(data);
     // Membership changed: drop the cached auth snapshot so the new workspace
-    // is visible on the next request instead of after the 30s TTL.
-    await invalidateAuthCache(data.user_id);
+    // is visible on the next request instead of after the 30s TTL. Only safe
+    // when this insert isn't part of an still-open outer transaction — a
+    // concurrent request could re-read the DB before commit, see the old
+    // membership set, and re-cache that wrong snapshot for a fresh 30s. When
+    // called with an explicit tx, the caller must invalidate after commit.
+    if (tx === db) {
+      await invalidateAuthCache(data.user_id);
+    }
   }
 
   static async getMemberWorkspaces(user_id: string) {

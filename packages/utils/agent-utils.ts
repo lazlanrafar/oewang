@@ -125,6 +125,23 @@ export const getToolMessage = (toolName: string | null) => {
 
     // Handoff tools
     handoff_to_agent: "Connecting you with the right specialist...",
+
+    // Oewang finance chatbot tools (apps/ai WEB_TOOLS)
+    get_workspace_context: "Checking your wallets...",
+    get_recent_transactions: "Retrieving your recent transactions...",
+    get_outstanding_debts: "Checking your outstanding debts...",
+    getDebtAnalysis: "Analyzing your debts...",
+    create_transaction: "Recording your transaction...",
+    update_transaction: "Updating your transaction...",
+    delete_transaction: "Removing your transaction...",
+    create_debt: "Recording your debt...",
+    set_default_wallet: "Updating your default account...",
+    split_bill: "Splitting your bill...",
+    getBudgetStatus: "Checking your budget...",
+    add_transaction_items: "Adding transaction items...",
+    search_transaction_items: "Searching your purchase history...",
+    recall_transaction: "Recalling your past purchase...",
+    search_documents: "Searching your documents...",
   };
 
   return toolMessages[toolName] || null;

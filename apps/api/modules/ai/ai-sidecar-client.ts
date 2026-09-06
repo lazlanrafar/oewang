@@ -140,7 +140,7 @@ export abstract class AiSidecarClient {
   ): Promise<{
     reply: string;
     usage?: { input_tokens: number; output_tokens: number };
-    artifact?: { type: string; payload: any } | null;
+    artifacts?: { type: string; payload: any }[];
     response_id?: string;
   }> {
     return sidecarPost("/chat/run", {
@@ -165,6 +165,24 @@ export abstract class AiSidecarClient {
       workspace_id: workspaceId,
       user_id: userId,
     });
+  }
+
+  /** Short LLM-written session title. Cosmetic — callers must tolerate null
+   * (quota exceeded, sidecar error) and keep the existing title. */
+  static async generateTitle(
+    message: string,
+    workspaceId: string,
+  ): Promise<string | null> {
+    try {
+      const { title } = await sidecarPost<{ title: string | null }>(
+        "/chat/title",
+        { message, workspace_id: workspaceId },
+      );
+      return title;
+    } catch (error) {
+      log.warn("title generation failed", { error });
+      return null;
+    }
   }
 
   /** The canonical AI tool schemas (for the MCP server to register at startup). */

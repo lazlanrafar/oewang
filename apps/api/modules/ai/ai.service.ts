@@ -485,6 +485,22 @@ export abstract class AiService {
       const newSession = await AiRepository.createSession(workspaceId, title);
       currentSessionId = newSession!.id;
 
+      // Cosmetic upgrade: replace the truncated-first-message title with a
+      // short LLM-written one once it's ready. Never blocks the chat response.
+      AiSidecarClient.generateTitle(latestUserMessage.content, workspaceId)
+        .then(async (smartTitle) => {
+          if (!smartTitle) return;
+          await AiRepository.updateTitle(
+            currentSessionId as string,
+            workspaceId,
+            smartTitle,
+          );
+          RealtimeService.notifyValueChange(workspaceId, "ai.session_title");
+        })
+        .catch((err) =>
+          log.warn("Session title generation failed", { err }),
+        );
+
       await AuditLogsService.log({
         workspace_id: workspaceId,
         user_id: userId,
@@ -657,23 +673,25 @@ export abstract class AiService {
   }
 
   /**
-   * Post-LLM money path: persist the assistant reply (+ artifact/provider) and
+   * Post-LLM money path: persist the assistant reply (+ artifacts/provider) and
    * atomically increment token usage. Shared by the in-process chat() and the
    * internal sidecar endpoint.
    */
   static async chatEnd(
     workspaceId: string,
     sessionId: string,
-    response: Pick<ChatResponse, "reply" | "usage" | "artifact" | "provider">,
+    response: Pick<ChatResponse, "reply" | "usage" | "artifacts" | "provider">,
   ): Promise<void> {
     await AiRepository.saveMessage(
       sessionId,
       workspaceId,
       "assistant",
       response.reply,
-      response.artifact || response.provider
+      response.artifacts?.length || response.provider
         ? {
-            ...(response.artifact ? { artifact: response.artifact } : {}),
+            ...(response.artifacts?.length
+              ? { artifacts: response.artifacts }
+              : {}),
             ...(response.provider ? { provider: response.provider } : {}),
           }
         : undefined,
@@ -725,7 +743,7 @@ export abstract class AiService {
     await AiService.chatEnd(workspaceId, begin.sessionId, {
       reply: response.reply,
       usage: response.usage,
-      artifact: response.artifact ?? undefined,
+      artifacts: response.artifacts,
       provider: { name: "openai", response_id: response.response_id },
     });
 
@@ -733,7 +751,7 @@ export abstract class AiService {
       sessionId: begin.sessionId,
       reply: response.reply,
       usage: response.usage,
-      artifact: response.artifact ?? undefined,
+      artifacts: response.artifacts,
     };
   }
 

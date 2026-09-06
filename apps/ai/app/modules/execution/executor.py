@@ -125,6 +125,12 @@ async def _dispatch(tool: str, inp: dict, workspace_id: str, user_id: str) -> di
     if tool == "search_documents":
         return await _search_documents(workspace_id, inp["query"], inp.get("limit", 5))
 
+    # ── UI-only (no DB, no audit) ────────────────────────────────────────────
+    if tool == "present_choices":
+        # Passthrough — the frontend renders these as clickable buttons from the
+        # tool_call event args directly; the model just needs a result to continue.
+        return {"success": True, "acknowledged": True}
+
     return {"success": False, "error": f"Unknown tool: {tool}"}
 
 

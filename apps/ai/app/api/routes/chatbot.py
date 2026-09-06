@@ -3,11 +3,13 @@ import json
 from fastapi import APIRouter, Header, HTTPException
 from fastapi.responses import JSONResponse, StreamingResponse
 
-from app.modules.chatbot.service import chat, web_chat, stream_web_chat
+from app.modules.chatbot.service import chat, generate_title, web_chat, stream_web_chat
 from app.modules.chatbot.tools import ApiError
 from app.schemas.chatbot import (
     ChatRequest,
     ChatResponse,
+    TitleRequest,
+    TitleResponse,
     WebChatRequest,
     WebChatResponse,
 )
@@ -19,6 +21,12 @@ router = APIRouter(tags=["chatbot"])
 async def post_chat(req: ChatRequest) -> ChatResponse:
     result = await chat(req.message, req.workspace_id, req.user_id, req.session_id)
     return ChatResponse(**result)
+
+
+@router.post("/chat/title", response_model=TitleResponse)
+async def post_chat_title(req: TitleRequest) -> TitleResponse:
+    title = await generate_title(req.message, req.workspace_id)
+    return TitleResponse(title=title)
 
 
 @router.post("/chat/web")

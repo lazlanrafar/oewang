@@ -24,6 +24,22 @@ export abstract class AiRepository {
     return session || null;
   }
 
+  static async updateTitle(
+    sessionId: string,
+    workspaceId: string,
+    title: string,
+  ) {
+    await db
+      .update(aiSessions)
+      .set({ title })
+      .where(
+        and(
+          eq(aiSessions.id, sessionId),
+          eq(aiSessions.workspace_id, workspaceId),
+        ),
+      );
+  }
+
   static async saveMessage(
     sessionId: string,
     workspaceId: string,

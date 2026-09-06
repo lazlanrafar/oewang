@@ -33,6 +33,7 @@ export * from "./icons";
 export * from "./input";
 export * from "./input-date";
 export * from "./input-otp";
+export * from "./input-password";
 export * from "./kbd";
 export * from "./label";
 export * from "./loader";

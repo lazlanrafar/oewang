@@ -35,6 +35,8 @@ const INVALIDATIONS: Record<string, InvalidationKeys> = {
   workspace: [["workspace", "active"], ["user", "me"]],
   // Emitted by API after AI token consumption or vault file uploads.
   "workspace.usage": [["workspace", "active"], ["ai", "quota"]],
+  // Emitted by API once the LLM-written session title replaces the placeholder.
+  "ai.session_title": [["chat-sessions"]],
 };
 
 export function useRealtime() {

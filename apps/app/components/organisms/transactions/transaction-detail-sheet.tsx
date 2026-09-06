@@ -510,38 +510,40 @@ export function TransactionDetailSheet({
 
             <AccordionItem value="general" className="border-none">
               <AccordionTrigger>{dictionary.transactions.details}</AccordionTrigger>
-              <AccordionContent className="flex flex-col space-y-5 border-t pt-2 pt-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground text-xs">{dictionary.transactions.type_label}</span>
-                  <span className={cn("font-medium text-xs capitalize", getTransactionColor(transaction?.type))}>
-                    {transaction?.type}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground text-xs">{dictionary.transactions.account}</span>
-                  <span className="max-w-[150px] truncate font-medium text-xs">
-                    {transaction?.wallet?.name || dictionary.transactions.no_account}
-                  </span>
-                </div>
-                {transaction?.type === "transfer" && transaction.toWallet?.name && (
+              <AccordionContent className="border-t pt-4">
+                <div className="flex flex-col space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground text-xs">{dictionary.transactions.to_account}</span>
-                    <span className="max-w-[150px] truncate font-medium text-xs">{transaction.toWallet?.name}</span>
-                  </div>
-                )}
-                {transaction?.type !== "transfer" && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground text-xs">{dictionary.transactions.category}</span>
-                    <span className="max-w-[150px] truncate font-medium text-xs">
-                      {transaction?.category?.name || dictionary.transactions.uncategorized}
+                    <span className="text-muted-foreground text-xs">{dictionary.transactions.type_label}</span>
+                    <span className={cn("font-medium text-xs capitalize", getTransactionColor(transaction?.type))}>
+                      {transaction?.type}
                     </span>
                   </div>
-                )}
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground text-xs">{dictionary.transactions.assign}</span>
-                  <span className="max-w-[150px] truncate font-medium text-xs">
-                    {transaction?.user?.name || dictionary.transactions.unassigned}
-                  </span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground text-xs">{dictionary.transactions.account}</span>
+                    <span className="max-w-[150px] truncate font-medium text-xs">
+                      {transaction?.wallet?.name || dictionary.transactions.no_account}
+                    </span>
+                  </div>
+                  {transaction?.type === "transfer" && transaction.toWallet?.name && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground text-xs">{dictionary.transactions.to_account}</span>
+                      <span className="max-w-[150px] truncate font-medium text-xs">{transaction.toWallet?.name}</span>
+                    </div>
+                  )}
+                  {transaction?.type !== "transfer" && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground text-xs">{dictionary.transactions.category}</span>
+                      <span className="max-w-[150px] truncate font-medium text-xs">
+                        {transaction?.category?.name || dictionary.transactions.uncategorized}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground text-xs">{dictionary.transactions.assign}</span>
+                    <span className="max-w-[150px] truncate font-medium text-xs">
+                      {transaction?.user?.name || dictionary.transactions.unassigned}
+                    </span>
+                  </div>
                 </div>
               </AccordionContent>
             </AccordionItem>

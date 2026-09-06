@@ -276,6 +276,43 @@ WEB_TOOLS = [
         },
         ["query"],
     ),
+    _fn(
+        "present_choices",
+        "Render a small set of clickable follow-up buttons under your reply, IN "
+        "ADDITION to asking the question in your normal text — this never replaces "
+        "your text reply, it just gives the user a one-tap shortcut. Use it when you "
+        "just asked the user to pick from a short, known list (e.g. which account to "
+        "use, which of a few matching transactions to edit/delete). Each option's "
+        "`message` is the exact follow-up message to send on the user's behalf when "
+        "they click it — write it as if the user typed it themselves, in their "
+        "language. Do not use this for open-ended questions with no fixed set of "
+        "answers (e.g. asking for an amount).",
+        {
+            "question": {
+                "type": "string",
+                "description": "Short label for this choice group (not shown verbatim — for your own bookkeeping).",
+            },
+            "options": {
+                "type": "array",
+                "maxItems": 4,
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "label": {
+                            "type": "string",
+                            "description": "Short button text, e.g. 'Pakai Cash & jadikan default'.",
+                        },
+                        "message": {
+                            "type": "string",
+                            "description": "Full follow-up message to send when clicked, e.g. 'Pakai Cash dan jadikan akun default'.",
+                        },
+                    },
+                    "required": ["label", "message"],
+                },
+            },
+        },
+        ["question", "options"],
+    ),
 ]
 
 
@@ -355,7 +392,7 @@ async def chat_end(
             "session_id": session_id,
             "reply": result["reply"],
             "usage": result["usage"],
-            "artifact": result.get("artifact"),
+            "artifacts": result.get("artifacts") or [],
             "provider": {
                 "name": "openai",
                 "response_id": result.get("response_id"),

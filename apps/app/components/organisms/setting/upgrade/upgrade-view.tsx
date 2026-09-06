@@ -86,7 +86,7 @@ export function UpgradeView({
   if (!dict) return null;
 
   const sortedPlans = [...(initialPlans || [])].sort((a, b) => {
-    const order = ["starter", "pro", "business"];
+    const order = ["starter", "personal", "pro", "business"];
     return order.indexOf(a.name.toLowerCase()) - order.indexOf(b.name.toLowerCase());
   });
 

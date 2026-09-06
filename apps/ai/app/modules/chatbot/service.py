@@ -38,6 +38,30 @@ async def _recent_transactions(workspace_id: str, limit: int = 10) -> list[dict]
     return [dict(r) for r in rows]
 
 
+_TITLE_SYSTEM_PROMPT = (
+    "Write a 2-4 word title summarizing the topic of this chat message. "
+    "No punctuation, no quotes, title case. Reply with ONLY the title."
+)
+
+
+async def generate_title(message: str, workspace_id: str) -> str | None:
+    """Short LLM-written session title. Cosmetic — callers must tolerate None
+    (quota exceeded, model error) and keep whatever title they already have."""
+    try:
+        title = await llm.complete_metered(
+            _TITLE_SYSTEM_PROMPT,
+            [{"role": "user", "content": message}],
+            workspace_id,
+            max_tokens=12,
+        )
+    except Exception:
+        log.warning("Title generation failed", exc_info=True)
+        return None
+
+    title = title.strip().strip('"').strip("'")
+    return title or None
+
+
 async def chat(
     message: str, workspace_id: str, user_id: str | None, session_id: str | None
 ) -> dict:
@@ -90,8 +114,10 @@ async def web_chat(
     """Direct web→ai chat: the browser's server action calls this. Python drives
     the LLM tool loop, but the money path stays in Elysia: `chat_begin` resolves
     identity (from the forwarded JWT), session, quota + prompt; `chat_end` persists
-    the reply and increments tokens. The last canvas an analysis tool returns
-    becomes `artifact`. Raises tools.ApiError for quota/auth (forwarded by route).
+    the reply and increments tokens. Every canvas an analysis tool returns during
+    the turn is collected into `artifacts` (a turn can call more than one
+    analysis tool, e.g. spending + burn rate + debts). Raises tools.ApiError for
+    quota/auth (forwarded by route).
     """
     begin = await tools.chat_begin(token, messages, session_id, web_search)
 
@@ -101,7 +127,7 @@ async def web_chat(
             "session_id": begin["session_id"],
             "reply": begin["reply"],
             "usage": {"input_tokens": 0, "output_tokens": 0},
-            "artifact": None,
+            "artifacts": [],
             "provider": None,
         }
 
@@ -138,7 +164,7 @@ async def web_chat(
         "session_id": session_id,
         "reply": result["reply"],
         "usage": result["usage"],
-        "artifact": result["artifact"],
+        "artifacts": result["artifacts"],
         "provider": {"name": "9router", "response_id": result.get("response_id")},
     }
 
@@ -163,7 +189,7 @@ async def stream_web_chat(
                 "session_id": begin["session_id"],
                 "reply": begin["reply"],
                 "usage": {"input_tokens": 0, "output_tokens": 0},
-                "artifact": None,
+                "artifacts": [],
                 "provider": None,
             },
         }

@@ -13,16 +13,19 @@ import {
  * Never update or delete audit logs.
  */
 export abstract class AuditLogsRepository {
-  static async create(data: {
-    workspace_id: string;
-    user_id: string;
-    action: string;
-    entity: string;
-    entity_id: string;
-    before?: unknown;
-    after?: unknown;
-  }) {
-    await db.insert(audit_logs).values({
+  static async create(
+    data: {
+      workspace_id: string;
+      user_id: string;
+      action: string;
+      entity: string;
+      entity_id: string;
+      before?: unknown;
+      after?: unknown;
+    },
+    tx: any = db,
+  ) {
+    await tx.insert(audit_logs).values({
       workspace_id: data.workspace_id,
       user_id: data.user_id,
       action: data.action,
