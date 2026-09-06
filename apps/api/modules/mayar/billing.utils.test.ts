@@ -18,7 +18,7 @@ describe("billing.utils", () => {
     ],
     mayar_product_id: null,
     max_vault_size_mb: 15360,
-    max_ai_tokens: 400000,
+    max_ai_tokens: 10000000,
     max_workspaces: 10,
     features: [],
     is_active: true,
