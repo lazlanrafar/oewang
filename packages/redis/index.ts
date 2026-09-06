@@ -16,7 +16,28 @@ const createRedisClient = () => {
     if (process.env.NODE_ENV !== "test") {
       console.log("🚀 Using Standard Redis (TCP)");
     }
-    return new Redis(REDIS_URL);
+    // ioredis's own URL parser never decodeURIComponent()s the userinfo, so a
+    // percent-encoded password (e.g. one containing "/") is sent to Redis
+    // verbatim and AUTH fails — parse the URL ourselves and decode it first.
+    const parsed = new URL(REDIS_URL);
+    const client = new Redis({
+      host: parsed.hostname,
+      port: parsed.port ? Number(parsed.port) : 6379,
+      username: parsed.username ? decodeURIComponent(parsed.username) : undefined,
+      password: parsed.password ? decodeURIComponent(parsed.password) : undefined,
+      db: parsed.pathname.length > 1 ? Number(parsed.pathname.slice(1)) : 0,
+    });
+    // ioredis is an EventEmitter — an "error" event with zero listeners is
+    // thrown and crashes the process. Every caller (cache.ts, rate-limit.ts)
+    // already catches rejected calls and falls back safely, so this listener
+    // only needs to exist to stop connection-level errors (bad credentials,
+    // network blips) from taking the whole process down.
+    client.on("error", (err) => {
+      if (process.env.NODE_ENV !== "test") {
+        console.error("[redis] connection error:", err.message);
+      }
+    });
+    return client;
   }
 
   // 2. If Upstash REST credentials are provided
