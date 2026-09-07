@@ -137,6 +137,7 @@ export const bulkCreateTransactions = async (
       success: false,
       error:
         error.response?.data?.message || "Failed to bulk create transactions",
+      details: error.response?.data?.meta?.details,
     };
   }
 };

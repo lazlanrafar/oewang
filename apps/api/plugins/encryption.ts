@@ -16,7 +16,8 @@ const log = createLogger("encryption");
  */
 export const encryptionPlugin = (app: Elysia) =>
   app
-    .onTransform(async ({ request, body, path }) => {
+    .onTransform(async (context) => {
+      const { request, body, path } = context;
       const isEncryptedHeader = request.headers.get("x-encrypted") === "true";
       const contentType = request.headers.get("content-type") || "";
 
@@ -38,11 +39,17 @@ export const encryptionPlugin = (app: Elysia) =>
           const decrypted = decrypt((body as any).data, secret);
           const parsed = JSON.parse(decrypted);
 
-          // Mutate the body object for subsequent handlers and validation
-          Object.keys(body).forEach((key) => {
-            delete (body as any)[key];
-          });
-          Object.assign(body, parsed);
+          // Replace the body on the context outright — routes whose schema
+          // is a top-level array (e.g. bulkCreate) need `context.body` to
+          // literally BE that array. The previous approach (clear body's
+          // keys, then Object.assign(body, parsed)) only worked for object
+          // payloads: Object.assign onto a plain object copies an array's
+          // enumerable indices but not its non-enumerable `length`, leaving
+          // an array-like `{0:..,1:..,length missing}` that fails
+          // `Array.isArray` — every array-bodied endpoint saw a bogus
+          // "Expected object"/"Expected array" validation error regardless
+          // of how well-formed the decrypted rows actually were.
+          (context as { body: unknown }).body = parsed;
         } catch (error: any) {
           log.error("Decrypt failed", { path, error });
         }

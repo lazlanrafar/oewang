@@ -330,9 +330,23 @@ const app = new Elysia()
         summary: (error as any).summary,
       });
       set.status = 400;
+      // `.all` gives one entry per invalid field (path + human summary) with
+      // no raw value attached — safe to return to the client, unlike the raw
+      // error which can echo submitted values (e.g. a password).
+      const details = ((error as any).all ?? []).map(
+        (e: { path?: string; summary?: string }) => ({
+          path:
+            typeof e.path === "string"
+              ? e.path.replace(/^\//, "").replaceAll("/", ".") || "root"
+              : "unknown",
+          message: e.summary ?? "Invalid value",
+        }),
+      );
       return buildError(
         ErrorCode.VALIDATION_ERROR,
         "The request data is invalid. Please check your input.",
+        undefined,
+        { details },
       );
     }
 

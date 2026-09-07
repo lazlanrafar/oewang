@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useRouter } from "next/navigation";
 
@@ -26,10 +26,98 @@ import { toast } from "sonner";
 
 import { useAppStore } from "@/stores/app";
 
-import { ImportCsvContext, type ImportCsvFormData, importSchema } from "./transaction-import-context";
+import { AiReview, useAiReviewOrchestrator } from "./transaction-import-ai-review";
+import { Approval } from "./transaction-import-approval";
+import {
+  ImportCsvContext,
+  type ImportCsvFormData,
+  type ImportSuggestion,
+  type TransactionDraft,
+  importSchema,
+} from "./transaction-import-context";
 import { FieldMapping } from "./transaction-import-field-mapping";
 import { SelectFile } from "./transaction-import-select-file";
 import { ValueMapping } from "./transaction-import-value-mapping";
+
+// Extracted from onSubmit so both the AI-review orchestration and the final
+// commit can build/rebuild the same row shape from the mapped CSV data.
+function buildTransactionsToCreate(
+  data: ImportCsvFormData,
+  firstRows: Record<string, string>[],
+  valueMappings: { categories: Record<string, string>; wallets: Record<string, string>; types: Record<string, string> },
+): TransactionDraft[] {
+  // Helper to parse date dd/mm/yyyy
+  const parseDate = (dateStr: unknown) => {
+    if (!dateStr) return new Date().toISOString();
+    const str = String(dateStr);
+    const parts = str.split("/");
+    try {
+      if (parts.length === 3) {
+        const y = parts[2] || new Date().getFullYear().toString();
+        const m = parts[1] || "01";
+        const d = parts[0] || "01";
+        return new Date(`${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}T12:00:00Z`).toISOString();
+      }
+      return new Date(str).toISOString();
+    } catch (_e) {
+      return new Date().toISOString();
+    }
+  };
+
+  return firstRows.map((row) => {
+    const rawAmount = row[data.amount] || "0";
+    const amount = parseFloat(String(rawAmount).replace(/[^0-9.-]/g, ""));
+
+    // Resolve type from value mapping
+    const typeValue = data.type ? row[data.type] : undefined;
+    const transactionType = typeValue ? valueMappings.types[typeValue] || "expense" : "expense";
+
+    // Resolve category and wallet from value mappings
+    const categoryValue = data.category ? row[data.category] : undefined;
+    const resolvedCategoryId = categoryValue ? valueMappings.categories[categoryValue] : undefined;
+
+    const walletValue = data.walletIdColumn ? row[data.walletIdColumn] : undefined;
+    const resolvedWalletId = (walletValue ? valueMappings.wallets[walletValue] : undefined) || data.walletId;
+
+    return {
+      walletId: resolvedWalletId,
+      amount: (data.inverted ? -amount : amount).toString(),
+      date: parseDate(row[data.date] || ""),
+      type: transactionType,
+      name: row[data.name] || "Imported Transaction",
+      categoryId: resolvedCategoryId,
+      description: data.category ? `Category: ${row[data.category]}` : "",
+    };
+  });
+}
+
+// Applies accepted suggestions to the drafts right before the final commit:
+// duplicate = exclude the row, category/type-sign = patch the field.
+function applyAcceptedSuggestions(
+  drafts: TransactionDraft[],
+  suggestions: ImportSuggestion[],
+): TransactionDraft[] {
+  const excludeRows = new Set<number>();
+  const patched = drafts.map((d) => ({ ...d }));
+
+  for (const s of suggestions) {
+    if (!s.accepted) continue;
+    if (s.type === "duplicate") {
+      excludeRows.add(s.rowIndex);
+      continue;
+    }
+    const row = patched[s.rowIndex];
+    if (!row || !s.suggestedValue) continue;
+    if (s.type === "category" && s.field === "categoryId") {
+      row.categoryId = s.suggestedValue;
+    } else if (s.type === "type_sign") {
+      if (s.field === "type") row.type = s.suggestedValue;
+      if (s.field === "amount") row.amount = s.suggestedValue;
+    }
+  }
+
+  return patched.filter((_, i) => !excludeRows.has(i));
+}
 
 interface ImportModalProps {
   open: boolean;
@@ -46,7 +134,15 @@ interface WalletOption {
 export function ImportModal({ open, onOpenChange, wallets, onSuccess }: ImportModalProps) {
   const { settings, subCurrencies } = useAppStore();
   const [step, setStep] = useState<
-    "select" | "mapping" | "mapping-values" | "summary" | "uploading" | "success" | "error"
+    | "select"
+    | "mapping"
+    | "mapping-values"
+    | "summary"
+    | "ai-review"
+    | "approval"
+    | "uploading"
+    | "success"
+    | "error"
   >("select");
   const [fileColumns, setFileColumns] = useState<string[] | null>(null);
   const [firstRows, setFirstRows] = useState<Record<string, string>[] | null>(null);
@@ -62,6 +158,23 @@ export function ImportModal({ open, onOpenChange, wallets, onSuccess }: ImportMo
   const [importedCount, setImportedCount] = useState(0);
   const [errorMessage, setErrorMessage] = useState("");
   const [importFailures, setImportFailures] = useState<{ index: number; reason: string }[]>([]);
+  const [errorDetails, setErrorDetails] = useState<{ path: string; message: string }[]>([]);
+
+  const [transactionsToCreate, setTransactionsToCreate] = useState<TransactionDraft[] | null>(null);
+  const [suggestions, setSuggestions] = useState<ImportSuggestion[]>([]);
+  const [aiReviewDegraded, setAiReviewDegraded] = useState(false);
+  const [allSkippedAsDuplicates, setAllSkippedAsDuplicates] = useState(false);
+
+  const {
+    aiStageStatus,
+    run: runAiReview,
+    skip: skipAiReview,
+    reset: resetAiReview,
+  } = useAiReviewOrchestrator(transactionsToCreate, (settled, degraded) => {
+    setSuggestions(settled);
+    setAiReviewDegraded(degraded);
+    setStep("approval");
+  });
 
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -95,6 +208,12 @@ export function ImportModal({ open, onOpenChange, wallets, onSuccess }: ImportMo
       setFileColumns(null);
       setFirstRows(null);
       setValueMappings({ categories: {}, wallets: {}, types: {} });
+      setErrorDetails([]);
+      setTransactionsToCreate(null);
+      setSuggestions([]);
+      setAiReviewDegraded(false);
+      setAllSkippedAsDuplicates(false);
+      resetAiReview();
       reset();
     }
     onOpenChange(v);
@@ -157,7 +276,7 @@ export function ImportModal({ open, onOpenChange, wallets, onSuccess }: ImportMo
     }
   };
 
-  const onSubmit = async (data: ImportCsvFormData) => {
+  const onSubmit = (data: ImportCsvFormData) => {
     if (!data.walletId && !data.walletIdColumn) {
       toast.error("Account is required");
       return;
@@ -172,54 +291,46 @@ export function ImportModal({ open, onOpenChange, wallets, onSuccess }: ImportMo
       return;
     }
 
+    setTransactionsToCreate(buildTransactionsToCreate(data, firstRows, valueMappings));
+    setSuggestions([]);
+    setAiReviewDegraded(false);
+    setAllSkippedAsDuplicates(false);
+    resetAiReview();
+    setStep("ai-review");
+  };
+
+  // Runs the 3 AI-review stages once per entry into "ai-review" — guarded so
+  // React re-renders (or a future strict-mode double-invoke) don't fire it twice.
+  const aiReviewStartedRef = useRef(false);
+  useEffect(() => {
+    if (step === "ai-review" && !aiReviewStartedRef.current) {
+      aiReviewStartedRef.current = true;
+      runAiReview();
+    }
+    if (step !== "ai-review") {
+      aiReviewStartedRef.current = false;
+    }
+  }, [step, runAiReview]);
+
+  const handleConfirmImport = async () => {
+    if (!transactionsToCreate) return;
+    const finalTransactions = applyAcceptedSuggestions(transactionsToCreate, suggestions);
+
+    // Every row got excluded because the user accepted every duplicate
+    // suggestion — that's a deliberate "skip all" outcome, not a failure.
+    // bulkCreate([]) would report imported: 0 and the modal would show the
+    // generic "All transactions failed to import" error, which is wrong here.
+    if (finalTransactions.length === 0 && transactionsToCreate.length > 0) {
+      setImportedCount(0);
+      setImportFailures([]);
+      setAllSkippedAsDuplicates(true);
+      setStep("success");
+      return;
+    }
+
     setStep("uploading");
-
     try {
-      // Helper to parse date dd/mm/yyyy
-      const parseDate = (dateStr: unknown) => {
-        if (!dateStr) return new Date().toISOString();
-        const str = String(dateStr);
-        const parts = str.split("/");
-        try {
-          if (parts.length === 3) {
-            const y = parts[2] || new Date().getFullYear().toString();
-            const m = parts[1] || "01";
-            const d = parts[0] || "01";
-            return new Date(`${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}T12:00:00Z`).toISOString();
-          }
-          return new Date(str).toISOString();
-        } catch (_e) {
-          return new Date().toISOString();
-        }
-      };
-
-      const transactionsToCreate = (firstRows || []).map((row) => {
-        const rawAmount = row[data.amount] || "0";
-        const amount = parseFloat(String(rawAmount).replace(/[^0-9.-]/g, ""));
-
-        // Resolve type from value mapping
-        const typeValue = data.type ? row[data.type] : undefined;
-        const transactionType = typeValue ? valueMappings.types[typeValue] || "expense" : "expense";
-
-        // Resolve category and wallet from value mappings
-        const categoryValue = data.category ? row[data.category] : undefined;
-        const resolvedCategoryId = categoryValue ? valueMappings.categories[categoryValue] : undefined;
-
-        const walletValue = data.walletIdColumn ? row[data.walletIdColumn] : undefined;
-        const resolvedWalletId = (walletValue ? valueMappings.wallets[walletValue] : undefined) || data.walletId;
-
-        return {
-          walletId: resolvedWalletId,
-          amount: (data.inverted ? -amount : amount).toString(),
-          date: parseDate(row[data.date] || ""),
-          type: transactionType,
-          name: row[data.name] || "Imported Transaction",
-          categoryId: resolvedCategoryId,
-          description: data.category ? `Category: ${row[data.category]}` : "",
-        };
-      });
-
-      const res = await bulkCreateTransactions(transactionsToCreate);
+      const res = await bulkCreateTransactions(finalTransactions);
 
       if (res.success && res.data) {
         setImportedCount(res.data.imported);
@@ -237,12 +348,14 @@ export function ImportModal({ open, onOpenChange, wallets, onSuccess }: ImportMo
       } else {
         setErrorMessage(res.error || "Failed to import transactions");
         setImportFailures([]);
+        setErrorDetails(res.details || []);
         setStep("error");
       }
     } catch (error: unknown) {
       console.error("[Import Error]", error);
       const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred during import";
       setErrorMessage(errorMessage);
+      setErrorDetails([]);
       setStep("error");
     }
   };
@@ -298,8 +411,10 @@ export function ImportModal({ open, onOpenChange, wallets, onSuccess }: ImportMo
                   {step === "mapping" && "Field Mapping"}
                   {step === "mapping-values" && "Value Mapping"}
                   {step === "summary" && "Import Summary"}
+                  {step === "ai-review" && "AI Review"}
+                  {step === "approval" && "Review Suggestions"}
                   {step === "uploading" && "Importing..."}
-                  {step === "success" && "Import Successful"}
+                  {step === "success" && (allSkippedAsDuplicates ? "Nothing to Import" : "Import Successful")}
                   {step === "error" && "Import Failed"}
                 </DialogTitle>
               </div>
@@ -308,6 +423,8 @@ export function ImportModal({ open, onOpenChange, wallets, onSuccess }: ImportMo
                 {step === "mapping" && "Map your file columns to the appropriate transaction fields."}
                 {step === "mapping-values" && "Match values from your file to your accounts and categories."}
                 {step === "summary" && "Review your import settings and confirm."}
+                {step === "ai-review" && "Checking your data for duplicates, categories, and unusual amounts."}
+                {step === "approval" && "Accept or reject what the AI review found before importing."}
               </DialogDescription>
             </DialogHeader>
           </div>
@@ -398,6 +515,12 @@ export function ImportModal({ open, onOpenChange, wallets, onSuccess }: ImportMo
               </div>
             )}
 
+            {step === "ai-review" && <AiReview aiStageStatus={aiStageStatus} onSkip={skipAiReview} />}
+
+            {step === "approval" && (
+              <Approval suggestions={suggestions} onChange={setSuggestions} degraded={aiReviewDegraded} />
+            )}
+
             {step === "uploading" && (
               <div className="flex flex-col items-center justify-center gap-4 py-12">
                 <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -411,10 +534,14 @@ export function ImportModal({ open, onOpenChange, wallets, onSuccess }: ImportMo
                   <CheckCircle2 className="h-8 w-8 text-emerald-500" />
                 </div>
                 <div className="space-y-1">
-                  <p className="font-semibold text-lg">Done!</p>
-                  <p className="text-muted-foreground text-sm">Successfully imported {importedCount} transactions.</p>
+                  <p className="font-semibold text-lg">{allSkippedAsDuplicates ? "Nothing imported" : "Done!"}</p>
+                  <p className="text-muted-foreground text-sm">
+                    {allSkippedAsDuplicates
+                      ? "Every row was marked as a duplicate, so nothing new was imported."
+                      : `Successfully imported ${importedCount} transactions.`}
+                  </p>
                   {importFailures.length > 0 && (
-                    <div className="mt-4 rounded-lg border border-amber-500/10 bg-amber-500/5 p-3 text-left">
+                    <div className="mt-4 border border-amber-500/10 bg-amber-500/5 p-3 text-left">
                       <p className="mb-2 flex items-center gap-1 font-semibold text-amber-600 text-xs">
                         <AlertCircle className="h-3 w-3" />
                         {importFailures.length} rows skipped due to errors:
@@ -444,8 +571,41 @@ export function ImportModal({ open, onOpenChange, wallets, onSuccess }: ImportMo
                 <div className="space-y-1">
                   <p className="font-semibold text-lg">Something went wrong</p>
                   <p className="max-w-[300px] text-muted-foreground text-sm">{errorMessage}</p>
-                  {importFailures.length > 0 && (
-                    <div className="mt-4 max-w-[350px] rounded-lg border border-destructive/10 bg-destructive/5 p-3 text-left">
+                  {errorDetails.length > 0 && (
+                    <div className="mt-4 max-w-[350px] border border-destructive/10 bg-destructive/5 p-3 text-left">
+                      <p className="mb-2 font-semibold text-destructive/80 text-xs">What's wrong:</p>
+                      <ul className="max-h-[150px] space-y-1 overflow-y-auto pr-2 text-[11px] text-muted-foreground">
+                        {errorDetails.slice(0, 10).map((d) => {
+                          const [rowIndex, ...rest] = d.path.split(".");
+                          const isRow = rowIndex && /^\d+$/.test(rowIndex);
+                          const label = isRow
+                            ? `Row ${Number(rowIndex) + 1}${rest.length ? ` (${rest.join(".")})` : ""}`
+                            : d.path;
+                          // Row-level errors with no field name mean the whole
+                          // row's data didn't match the expected shape — the
+                          // raw TypeBox message ("Expected object") isn't
+                          // meaningful to a non-technical reader.
+                          const message =
+                            isRow && rest.length === 0
+                              ? "This row's data is missing or formatted incorrectly."
+                              : d.message;
+                          return (
+                            <li key={`${d.path}-${d.message}`} className="flex gap-2">
+                              <span className="w-20 shrink-0 font-medium text-foreground/70">{label}:</span>
+                              <span>{message}</span>
+                            </li>
+                          );
+                        })}
+                        {errorDetails.length > 10 && (
+                          <li className="pt-1 text-center font-medium italic">
+                            ...and {errorDetails.length - 10} more issues
+                          </li>
+                        )}
+                      </ul>
+                    </div>
+                  )}
+                  {errorDetails.length === 0 && importFailures.length > 0 && (
+                    <div className="mt-4 max-w-[350px] border border-destructive/10 bg-destructive/5 p-3 text-left">
                       <p className="mb-2 font-semibold text-destructive/80 text-xs">Common issues:</p>
                       <ul className="max-h-[150px] space-y-1 overflow-y-auto pr-2 text-[11px] text-muted-foreground">
                         {importFailures.slice(0, 10).map((f) => (
@@ -470,7 +630,7 @@ export function ImportModal({ open, onOpenChange, wallets, onSuccess }: ImportMo
             )}
           </div>
 
-          {(step === "mapping" || step === "mapping-values" || step === "summary") && (
+          {(step === "mapping" || step === "mapping-values" || step === "summary" || step === "approval") && (
             <div className="mt-auto flex shrink-0 items-center justify-end gap-3 border-border border-t bg-muted/5 px-6 py-4">
               <Button variant="ghost" size="sm" onClick={() => handleClose(false)}>
                 Cancel
@@ -490,7 +650,13 @@ export function ImportModal({ open, onOpenChange, wallets, onSuccess }: ImportMo
 
               {step === "summary" && (
                 <Button size="sm" disabled={!isValid} onClick={handleSubmit(onSubmit)}>
-                  Confirm Import
+                  Review with AI
+                </Button>
+              )}
+
+              {step === "approval" && (
+                <Button size="sm" onClick={handleConfirmImport}>
+                  Confirm & Import
                 </Button>
               )}
             </div>

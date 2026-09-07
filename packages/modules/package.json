@@ -10,6 +10,7 @@
     "./auth/auth.action": "./src/auth/auth.action.ts",
     "./category/category.action": "./src/category/category.action.ts",
     "./import/import.action": "./src/import/import.action.ts",
+    "./import/import-review.action": "./src/import/import-review.action.ts",
     "./integrations/integrations.action": "./src/integrations/integrations.action.ts",
     "./metrics/metrics.action": "./src/metrics/metrics.action.ts",
     "./setting/setting.action": "./src/setting/setting.action.ts",

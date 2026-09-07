@@ -571,4 +571,47 @@ export abstract class TransactionsRepository {
   ): Promise<T> {
     return db.transaction(callback);
   }
+
+  /** Existing transactions that might match incoming import rows — one
+   * superset query over every wallet + the whole date window the batch
+   * spans, matched in memory by the review service (not a per-row query). */
+  static async findPotentialDuplicates(
+    workspaceId: string,
+    walletIds: string[],
+    startDate: string,
+    endDate: string,
+  ): Promise<
+    {
+      id: string;
+      walletId: string;
+      toWalletId: string | null;
+      amount: string;
+      type: string;
+      date: string;
+      name: string | null;
+    }[]
+  > {
+    if (walletIds.length === 0) return [];
+
+    return db
+      .select({
+        id: transactions.id,
+        walletId: transactions.walletId,
+        toWalletId: transactions.toWalletId,
+        amount: transactions.amount,
+        type: transactions.type,
+        date: transactions.date,
+        name: transactions.name,
+      })
+      .from(transactions)
+      .where(
+        and(
+          eq(transactions.workspaceId, workspaceId),
+          inArray(transactions.walletId, walletIds),
+          gte(transactions.date, startDate),
+          lte(transactions.date, endDate),
+          isNull(transactions.deletedAt),
+        ),
+      );
+  }
 }

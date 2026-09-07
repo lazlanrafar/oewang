@@ -46,3 +46,18 @@ class ChatRunRequest(BaseModel):
     workspace_id: str
     user_id: str
     web_search: bool = False
+
+
+class ReviewRowItem(BaseModel):
+    index: int
+    name: str | None = None
+    description: str | None = None
+    amount: float
+    type: str
+    hasCategoryId: bool = False
+
+
+class ImportReviewRequest(BaseModel):
+    rows: list[ReviewRowItem]
+    categoryNames: list[str] = []
+    workspace_id: str

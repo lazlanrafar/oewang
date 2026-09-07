@@ -5,6 +5,7 @@ import { authPlugin } from "../../plugins/auth";
 import { encryptionPlugin } from "../../plugins/encryption";
 import { assertCanEditWorkspaceData } from "../workspaces/workspace-permissions";
 import { transactionItemsController } from "./items/transaction-items.controller";
+import { transactionsReviewController } from "./transactions-review.controller";
 import { TransactionsImportService } from "./transactions.import.service";
 import { TransactionModel } from "./transactions.model";
 import { TransactionsService } from "./transactions.service";
@@ -221,4 +222,5 @@ export const transactions = new Elysia({
       },
     },
   )
-  .use(transactionItemsController);
+  .use(transactionItemsController)
+  .use(transactionsReviewController);

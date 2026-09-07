@@ -12,12 +12,14 @@ from app.core.embeddings import embed
 from app.modules.chatbot.service import run_chat
 from app.modules.chatbot.tools import WEB_TOOLS
 from app.modules.execution.executor import execute_tool
+from app.modules.imports.review import MAX_ROWS, review_rows
 from app.modules.imports.service import extract_transactions, parse_file_to_rows
 from app.modules.receipt.service import parse_receipt
 from app.modules.vault import chunking
 from app.schemas.capabilities import (
     ChatRunRequest,
     ImportExtractRequest,
+    ImportReviewRequest,
     ReceiptParseRequest,
     ToolExecuteRequest,
     VaultChunkRequest,
@@ -79,6 +81,16 @@ async def post_tools_execute(req: ToolExecuteRequest) -> dict:
     """Run one tool (DB writes, audit, canvas) — the money path, now in Python.
     Used by the MCP server. Identity is passed by the trusted caller (x-api-key)."""
     return await execute_tool(req.tool, req.input or {}, req.workspace_id, req.user_id)
+
+
+@router.post("/import/review-rows")
+async def post_import_review_rows(req: ImportReviewRequest) -> dict:
+    """Review already-mapped import rows (category + type/sign suggestions).
+    Distinct from /import/extract — this reviews rows the CSV wizard's field/
+    value mapping already built, not raw file bytes."""
+    rows = [r.model_dump() for r in req.rows]
+    results = await review_rows(rows, req.categoryNames, req.workspace_id)
+    return {"results": results, "reviewedCount": min(len(rows), MAX_ROWS)}
 
 
 @router.post("/chat/run")

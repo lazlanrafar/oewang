@@ -24,23 +24,23 @@ export const TransactionModel = {
     assignedUserId: t.Optional(t.String()),
     attachmentIds: t.Optional(t.Array(t.String())),
   }),
+  // Bulk import (CSV/Excel) rows can carry malformed values (bad date, an
+  // unmapped type string, a non-numeric amount) for a handful of rows out
+  // of hundreds. Row shape is intentionally loose here — `amount`/`type`
+  // are validated per-row in TransactionsService.bulkCreate, which reports
+  // clear, row-specific reasons instead of rejecting the whole batch on a
+  // single bad row (see docs/FEATURES.md CSV import).
   bulkCreate: t.Array(
     t.Object({
       walletId: t.String(),
       toWalletId: t.Optional(t.String()),
       categoryId: t.Optional(t.String()),
-      amount: t.Numeric(),
+      amount: t.String(),
       originalAmount: t.Optional(t.Nullable(t.Numeric())),
       originalCurrencyCode: t.Optional(t.Nullable(t.String())),
       exchangeRate: t.Optional(t.Nullable(t.Numeric())),
       date: t.String(),
-      type: t.Union([
-        t.Literal("income"),
-        t.Literal("expense"),
-        t.Literal("transfer"),
-        t.Literal("transfer-in"),
-        t.Literal("transfer-out"),
-      ]),
+      type: t.String(),
       name: t.Optional(t.Nullable(t.String())),
       description: t.Optional(t.Nullable(t.String())),
       isReady: t.Optional(t.Boolean()),
@@ -109,6 +109,32 @@ export const TransactionModel = {
 export type CreateTransactionInput = UnwrapSchema<
   typeof TransactionModel.create
 >;
+export type BulkCreateTransactionInput = UnwrapSchema<
+  typeof TransactionModel.bulkCreate
+>[number];
+
+// Same loose row shape as bulkCreate — the AI-review stage runs on the
+// exact array the client will later post to /transactions/bulk.
+const ReviewRow = t.Object({
+  walletId: t.String(),
+  toWalletId: t.Optional(t.String()),
+  categoryId: t.Optional(t.String()),
+  amount: t.String(),
+  date: t.String(),
+  type: t.String(),
+  name: t.Optional(t.Nullable(t.String())),
+  description: t.Optional(t.Nullable(t.String())),
+});
+
+export const TransactionReviewModel = {
+  duplicatesCheck: t.Object({ rows: t.Array(ReviewRow) }),
+  categorize: t.Object({ rows: t.Array(ReviewRow) }),
+  anomalies: t.Object({ rows: t.Array(ReviewRow) }),
+} as const;
+
+export type ReviewRowInput = UnwrapSchema<
+  typeof TransactionReviewModel.duplicatesCheck
+>["rows"][number];
 export type UpdateTransactionInput = UnwrapSchema<
   typeof TransactionModel.update
 >;

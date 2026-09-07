@@ -38,4 +38,9 @@ export type PaginationQuery = {
  */
 export type ActionResponse<T = unknown> =
   | { success: true; data: T; error?: never }
-  | { success: false; error: string; data?: never };
+  | {
+      success: false;
+      error: string;
+      data?: never;
+      details?: { path: string; message: string }[];
+    };

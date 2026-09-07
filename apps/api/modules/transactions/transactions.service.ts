@@ -17,6 +17,7 @@ import { WalletsRepository } from "../wallets/wallets.repository";
 const log = createLogger("transactions");
 
 import type {
+  BulkCreateTransactionInput,
   CreateTransactionInput,
   ExportTransactionsQueryInput,
   GetTransactionsQueryInput,
@@ -206,7 +207,7 @@ export abstract class TransactionsService {
   static async bulkCreate(
     workspaceId: string,
     userId: string,
-    items: CreateTransactionInput[],
+    items: BulkCreateTransactionInput[],
   ) {
     if (items.length === 0) {
       return buildSuccess(
@@ -215,10 +216,23 @@ export abstract class TransactionsService {
       );
     }
 
-    const failures: { index: number; reason: string }[] = [];
-    const validItems: { index: number; item: CreateTransactionInput }[] = [];
+    const VALID_TYPES = [
+      "income",
+      "expense",
+      "transfer",
+      "transfer-in",
+      "transfer-out",
+    ] as const;
 
-    // Pre-validation phase
+    const failures: { index: number; reason: string }[] = [];
+    const validItems: {
+      index: number;
+      item: BulkCreateTransactionInput & { type: (typeof VALID_TYPES)[number] };
+    }[] = [];
+
+    // Pre-validation phase — row-specific, user-facing reasons. A single bad
+    // row (unmapped type string, non-numeric amount, blank date) must not
+    // sink the rest of the import.
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
       if (!item) continue;
@@ -227,18 +241,36 @@ export abstract class TransactionsService {
         continue;
       }
       if (!item.amount || isNaN(Number(item.amount))) {
-        failures.push({ index: i, reason: "Invalid amount" });
+        failures.push({
+          index: i,
+          reason: `Amount must be a number (got "${item.amount || ""}")`,
+        });
         continue;
       }
-      if (!item.date) {
-        failures.push({ index: i, reason: "Date is required" });
+      if (!item.date || isNaN(new Date(item.date).getTime())) {
+        failures.push({
+          index: i,
+          reason: `Date is invalid (got "${item.date || ""}")`,
+        });
         continue;
       }
       if (!item.type) {
         failures.push({ index: i, reason: "Type is required" });
         continue;
       }
-      validItems.push({ index: i, item });
+      if (!VALID_TYPES.includes(item.type as (typeof VALID_TYPES)[number])) {
+        failures.push({
+          index: i,
+          reason: `Type "${item.type}" isn't recognized — expected income, expense, or transfer`,
+        });
+        continue;
+      }
+      validItems.push({
+        index: i,
+        item: item as BulkCreateTransactionInput & {
+          type: (typeof VALID_TYPES)[number];
+        },
+      });
     }
 
     if (validItems.length === 0) {

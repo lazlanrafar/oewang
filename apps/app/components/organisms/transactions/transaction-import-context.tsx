@@ -1,5 +1,6 @@
 import { createContext, useContext } from "react";
 
+import type { ImportReviewSuggestion } from "@workspace/modules/import/import-review.action";
 import type { TransactionImportValueMappings } from "@workspace/types";
 import type { Control, UseFormSetValue, UseFormWatch } from "react-hook-form";
 import { z } from "zod";
@@ -45,6 +46,27 @@ export const importSchema = z.object({
 });
 
 export type ImportCsvFormData = z.infer<typeof importSchema>;
+
+// The row shape built from mapped CSV/Excel data, sent to the AI-review
+// endpoints and (after accepted suggestions are applied) to bulkCreateTransactions.
+export interface TransactionDraft {
+  walletId: string;
+  amount: string;
+  date: string;
+  type: string;
+  name: string;
+  categoryId?: string;
+  description: string;
+}
+
+export type AiStageKey = "duplicates" | "categorize" | "anomalies";
+export type AiStageStatus = "pending" | "running" | "done" | "error" | "skipped";
+
+// Adds the client-only accept/reject state on top of what the server returns.
+export interface ImportSuggestion extends ImportReviewSuggestion {
+  id: string;
+  accepted: boolean;
+}
 
 export const ImportCsvContext = createContext<{
   fileColumns: string[] | null;

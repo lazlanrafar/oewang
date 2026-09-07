@@ -37,7 +37,22 @@ async function sidecarPost<T>(path: string, body: unknown): Promise<T> {
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     log.error("sidecar call failed", { path, status: res.status, text });
-    throw new Error(`AI sidecar ${path} failed (${res.status})`);
+    const error = new Error(`AI sidecar ${path} failed (${res.status})`);
+    // Attach the raw status/body so callers that need to tell "quota
+    // exceeded" (422 PLAN_LIMIT_REACHED) apart from "sidecar is down" don't
+    // have to re-parse .message. Additive — existing catch sites only read
+    // .message and are unaffected.
+    Object.assign(error, {
+      status: res.status,
+      body: (() => {
+        try {
+          return JSON.parse(text);
+        } catch {
+          return text;
+        }
+      })(),
+    });
+    throw error;
   }
   return (await res.json()) as T;
 }
@@ -78,6 +93,20 @@ export type SidecarChunk = {
   embedding?: number[];
 };
 
+export type SidecarRowReviewResult = {
+  index: number;
+  field: "category" | "type";
+  suggestedValue: string;
+  reason: string;
+  confidence: number | null;
+};
+
+export type SidecarAnomalyCandidate = {
+  index: number;
+  reason: string;
+  severity: string;
+};
+
 export abstract class AiSidecarClient {
   /** Parse a receipt image/PDF → structured transaction + line items.
    * workspaceId makes the sidecar quota-check and meter the vision call. */
@@ -115,6 +144,49 @@ export abstract class AiSidecarClient {
       workspace_id: workspaceId,
     });
     return transactions;
+  }
+
+  /** Review already-mapped import rows: category suggestions for blank rows +
+   * type/sign mismatch flags. Distinct from extractTransactions, which reads
+   * raw file bytes — this reviews rows the CSV wizard already built. */
+  static async reviewTransactionRows(
+    rows: {
+      index: number;
+      name: string | null;
+      description: string | null;
+      amount: number;
+      type: string;
+      hasCategoryId: boolean;
+    }[],
+    categoryNames: string[],
+    workspaceId: string,
+  ): Promise<{ results: SidecarRowReviewResult[]; reviewedCount: number }> {
+    return sidecarPost("/import/review-rows", {
+      rows,
+      categoryNames,
+      workspace_id: workspaceId,
+    });
+  }
+
+  /** Score NEW (not-yet-persisted) expense rows against the workspace's
+   * existing transaction history via the same IsolationForest model the
+   * scheduled anomaly scan uses. No LLM call, no quota cost. */
+  static async detectAnomalyCandidates(
+    candidates: {
+      index: number;
+      amount: number;
+      date: string;
+      category: string | null;
+    }[],
+    workspaceId: string,
+  ): Promise<SidecarAnomalyCandidate[]> {
+    const { anomalies } = await sidecarPost<{
+      anomalies: SidecarAnomalyCandidate[];
+    }>("/anomaly/candidates", {
+      candidates,
+      workspace_id: workspaceId,
+    });
+    return anomalies;
   }
 
   /** Extract + chunk + embed a document for RAG. Caller writes vault_file_chunks. */
