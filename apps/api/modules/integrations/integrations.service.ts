@@ -2,13 +2,16 @@ import { Env } from "@workspace/constants";
 import { logger } from "@workspace/logger";
 import { buildSuccess } from "@workspace/utils";
 import { cacheDel, cacheGet, cacheSet } from "../../lib/cache";
-import { AiService } from "../ai/ai.service";
+import { AiRepository } from "../ai/ai.repository";
+import {
+  AiService,
+  buildInvoiceDraftFromAttachments,
+  type ChatAttachment,
+  getLatestDraftState,
+  handlePendingInvoiceDraft,
+} from "../ai/ai.service";
 import { AiSidecarClient } from "../ai/ai-sidecar-client";
 import { NotificationsService } from "../notifications/notifications.service";
-import { TransactionItemsService } from "../transactions/items/transaction-items.service";
-import { TransactionsService } from "../transactions/transactions.service";
-import { VaultService as vaultService } from "../vault/vault.service";
-import { WalletsRepository as walletsRepository } from "../wallets/wallets.repository";
 import { chatViaSidecar } from "./ai-sidecar";
 import { IntegrationsRepository } from "./integrations.repository";
 
@@ -344,9 +347,18 @@ export abstract class IntegrationsService {
       userId = fallbackId;
     }
 
+    const chatSessionId = (settings as any)?.chatSessionId;
+
+    const persistSessionId = async (sessionId: string) => {
+      await IntegrationsRepository.updateSettings(integration.id, workspaceId, {
+        ...((settings as any) || {}),
+        chatSessionId: sessionId,
+      });
+    };
+
     try {
       if (photo && photo.length > 0) {
-        // Handle receipt image
+        // Handle receipt image — same draft/confirm flow as web chat.
         const fileId = photo[photo.length - 1].file_id;
 
         // A. Get file path from Telegram
@@ -368,60 +380,53 @@ export abstract class IntegrationsService {
           const base64Image = Buffer.from(arrayBuffer).toString("base64");
           const mimeType = "image/jpeg"; // Telegram photos are usually jpeg
 
-          // C. Upload to Vault
-          const vaultFile = await vaultService.uploadFile(workspaceId, userId, {
-            name: `receipt-${Date.now()}.jpg`,
-            type: mimeType,
-            size: Buffer.byteLength(base64Image, "base64"),
-            buffer: Buffer.from(base64Image, "base64"),
-          });
+          // Vault upload + parsing happen inside buildInvoiceDraftFromAttachments
+          const attachments: ChatAttachment[] = [
+            {
+              name: `receipt-${Date.now()}.jpg`,
+              type: mimeType,
+              data: base64Image,
+            },
+          ];
 
-          // D. Parse with AI
-          const parsedReceipt = await AiService.parseReceipt(
+          const preview = await buildInvoiceDraftFromAttachments(
             workspaceId,
             userId,
-            base64Image,
-            mimeType,
+            attachments,
           );
 
-          if (parsedReceipt && parsedReceipt.amount) {
-            const walletsResult = await walletsRepository.findMany(workspaceId);
-            const wallets = walletsResult.rows;
-            if (wallets.length > 0) {
-              const defaultWallet = wallets[0];
-              if (!defaultWallet) return "OK";
-
-              const transactionRes = await TransactionsService.create(
+          if (preview) {
+            let sessionId = chatSessionId;
+            if (!sessionId) {
+              const newSession = await AiRepository.createSession(
                 workspaceId,
-                userId,
-                {
-                  walletId: defaultWallet.id,
-                  amount: parsedReceipt.amount,
-                  date: parsedReceipt.date || new Date().toISOString(),
-                  type: "expense",
-                  name: parsedReceipt.name || "Expense",
-                  description: "Parsed automatically from Telegram Receipt",
-                  categoryId: parsedReceipt.categoryId,
-                  attachmentIds: vaultFile ? [vaultFile.id] : undefined,
-                },
+                "Telegram Receipt",
               );
-
-              // Save items if extracted
-              if (parsedReceipt.items && parsedReceipt.items.length > 0) {
-                const transactionId = (transactionRes as any).data.id;
-                await TransactionItemsService.bulkCreate(
-                  workspaceId,
-                  userId,
-                  transactionId,
-                  parsedReceipt.items as any,
-                );
-              }
-
-              const amountStr = Number(parsedReceipt.amount).toLocaleString();
-              const itemsCount = parsedReceipt.items?.length || 0;
-              const replyBody = `✅ Added expense: ${parsedReceipt.name || "Receipt"} for ${amountStr}.${itemsCount > 0 ? ` Included ${itemsCount} line items!` : ""} Includes attached receipt file!`;
-              await IntegrationsService.sendTelegramMessage(chatId, replyBody);
+              sessionId = newSession?.id;
+              if (sessionId) await persistSessionId(sessionId);
             }
+
+            if (sessionId) {
+              await AiRepository.saveMessage(
+                sessionId,
+                workspaceId,
+                "user",
+                "[receipt photo]",
+                attachments,
+              );
+              await AiRepository.saveMessage(
+                sessionId,
+                workspaceId,
+                "assistant",
+                preview.reply,
+                { invoiceDraft: preview.draft },
+              );
+            }
+
+            await IntegrationsService.sendTelegramMessage(
+              chatId,
+              preview.reply,
+            );
           } else {
             await IntegrationsService.sendTelegramMessage(
               chatId,
@@ -430,47 +435,75 @@ export abstract class IntegrationsService {
           }
         }
       } else if (text) {
-        // Handle AI Chat
-        try {
-          const chatSessionId = (settings as any)?.chatSessionId;
-          const chatResponse =
-            (await chatViaSidecar(text, workspaceId, userId, chatSessionId)) ??
-            (await AiService.chat(
-              [{ role: "user", content: text }],
-              workspaceId,
-              userId,
-              chatSessionId,
-            ));
-
-          if (chatResponse && chatResponse.reply) {
-            // Save current session ID if it's new
-            if (
-              chatResponse.sessionId &&
-              chatResponse.sessionId !== chatSessionId
-            ) {
-              await IntegrationsRepository.updateSettings(
-                integration.id,
-                workspaceId,
-                {
-                  ...((settings as any) || {}),
-                  chatSessionId: chatResponse.sessionId,
-                },
-              );
-            }
-
-            const replyText = await IntegrationsService.normalizeAiReplyForChat(
-              chatResponse.reply,
-              workspaceId,
-              userId,
-            );
-            await IntegrationsService.sendTelegramMessage(chatId, replyText);
-          }
-        } catch (chatErr) {
-          logger.error("Telegram AI chat failed", { err: chatErr });
-          await IntegrationsService.sendTelegramMessage(
-            chatId,
-            "❌ Sorry, I encountered an error processing your request.",
+        // If a receipt draft is awaiting confirmation for this chat, let it
+        // own this turn (confirm/cancel/"account: X") before falling back to
+        // normal chat — same precedence as web's chatBegin.
+        let handledByDraft = false;
+        if (chatSessionId) {
+          const history = await AiRepository.getSessionMessages(
+            chatSessionId,
+            workspaceId,
           );
+          const pendingDraft = getLatestDraftState(history);
+          if (pendingDraft?.status === "awaiting_confirmation") {
+            const draftResponse = await handlePendingInvoiceDraft(
+              workspaceId,
+              userId,
+              { role: "user", content: text },
+              pendingDraft,
+              chatSessionId,
+            );
+            if (draftResponse) {
+              await IntegrationsService.sendTelegramMessage(
+                chatId,
+                draftResponse.reply,
+              );
+              handledByDraft = true;
+            }
+          }
+        }
+
+        if (!handledByDraft) {
+          // Handle AI Chat
+          try {
+            const chatResponse =
+              (await chatViaSidecar(
+                text,
+                workspaceId,
+                userId,
+                chatSessionId,
+              )) ??
+              (await AiService.chat(
+                [{ role: "user", content: text }],
+                workspaceId,
+                userId,
+                chatSessionId,
+              ));
+
+            if (chatResponse && chatResponse.reply) {
+              // Save current session ID if it's new
+              if (
+                chatResponse.sessionId &&
+                chatResponse.sessionId !== chatSessionId
+              ) {
+                await persistSessionId(chatResponse.sessionId);
+              }
+
+              const replyText =
+                await IntegrationsService.normalizeAiReplyForChat(
+                  chatResponse.reply,
+                  workspaceId,
+                  userId,
+                );
+              await IntegrationsService.sendTelegramMessage(chatId, replyText);
+            }
+          } catch (chatErr) {
+            logger.error("Telegram AI chat failed", { err: chatErr });
+            await IntegrationsService.sendTelegramMessage(
+              chatId,
+              "❌ Sorry, I encountered an error processing your request.",
+            );
+          }
         }
       }
     } catch (error) {
@@ -506,5 +539,4 @@ export abstract class IntegrationsService {
       });
     }
   }
-
 }
