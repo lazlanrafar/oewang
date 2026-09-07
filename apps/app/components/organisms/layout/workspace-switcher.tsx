@@ -84,7 +84,21 @@ export function WorkspaceSwitcher({
   };
 
   if (!activeWorkspace) {
-    return null;
+    return (
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <SidebarMenuButton size="lg" onClick={() => setIsCreateModalOpen(true)}>
+            <span className="flex aspect-square size-8 items-center justify-center rounded bg-foreground font-semibold text-background text-sm">
+              <Plus className="size-4" />
+            </span>
+            <span className="grid flex-1 text-left text-sm leading-tight">
+              <span className="truncate font-semibold">{t("workspace.switcher.add_workspace")}</span>
+            </span>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+        <CreateWorkspaceDialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen} />
+      </SidebarMenu>
+    );
   }
 
   return (
