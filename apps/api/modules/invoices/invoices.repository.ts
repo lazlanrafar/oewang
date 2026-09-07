@@ -69,6 +69,21 @@ export abstract class InvoicesRepository {
     return result;
   }
 
+  /**
+   * Look up an invoice's workspace_id from its id alone, with no workspace
+   * scoping — used only by the internal (Go worker) mark-overdue route,
+   * whose caller only has the invoice id from its own SELECT and needs the
+   * workspace_id to call the normal, workspace-scoped update path.
+   */
+  static async findWorkspaceIdById(id: string): Promise<string | undefined> {
+    const [result] = await db
+      .select({ workspaceId: invoices.workspaceId })
+      .from(invoices)
+      .where(and(eq(invoices.id, id), isNull(invoices.deletedAt)))
+      .limit(1);
+    return result?.workspaceId;
+  }
+
   static async findPublicById(id: string, workspaceId: string) {
     const [result] = await db
       .select({

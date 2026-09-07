@@ -9,7 +9,7 @@
 - Modifying `packages/database/schema/transactions.ts`, `transaction-items.ts`, or `transaction-attachments.ts`
 - Adding/changing endpoints in `apps/api/modules/transactions/transactions.controller.ts`
 - Changing wallet balance logic in `apps/api/modules/transactions/transactions.service.ts`
-- Adding CSV export fields or import parsing in `transactions.import.service.ts`
+- Adding CSV export fields in `transactions.controller.ts`, or changing the AI import flow in `apps/worker/internal/tasks/transactions_import.go` (the `TransactionsImportService` this doc used to describe was removed — import is now fully owned by the Go worker)
 - Changing the **mobile** transaction/account form or its input panels in `apps/native/lib/components/atoms/` & `lib/components/molecules/` (shared form fields/sheets) or `apps/native/lib/components/organisms/transactions/`
 
 ---
@@ -81,7 +81,8 @@ Base path: `/v1/transactions`
 | `GET`    | `/export` | Any authenticated | Export as CSV download                        |
 | `POST`   | `/`       | Editor+           | Create a transaction (updates wallet balance) |
 | `POST`   | `/bulk`   | Editor+           | Create multiple transactions at once          |
-| `POST`   | `/import` | Editor+           | Import transactions from CSV                  |
+| `POST`   | `/import` | Editor+           | Upload a bank statement image/PDF for AI extraction — enqueues onto `apps/worker`, returns `202 {jobId}` immediately |
+| `GET`    | `/import/:jobId` | Any authenticated | Poll an import job's status (`pending` / `succeeded` / `failed`, plus `imported`/`skipped` counts) |
 | `GET`    | `/:id`    | Any authenticated | Get single transaction                        |
 | `PATCH`  | `/:id`    | Editor+           | Update transaction fields                     |
 | `DELETE` | `/:id`    | Editor+           | Soft-delete; reverses wallet balance change   |
@@ -131,9 +132,19 @@ When a transaction is **updated** (type or amount changed):
 
 After creating an `expense` transaction with a `categoryId`, the service checks if a budget exists for that category for the current month. If the accumulated expenses exceed the budget amount, a notification is dispatched to the workspace.
 
-### CSV Import
+### AI Bank-Statement Import (async, via apps/worker)
 
-`TransactionsImportService` parses the uploaded CSV, validates columns, and bulk-inserts transactions. Supported columns include `date`, `amount`, `type`, `description`, `walletId`, `categoryId`. The import returns a summary of `inserted`, `skipped`, and `errors`.
+`POST /transactions/import` (bank statement image/PDF, not a mapped CSV — that flow is the client-side CSV wizard using `POST /bulk`, see the frontend note below) creates a `transaction_import_jobs` row (`status: "pending"`) and enqueues the file (base64) onto `apps/worker`, then returns `202 {jobId}` immediately. `apps/worker`'s `TransactionsImportHandler` (`transactions_import.go`) does the rest, fully outside the request lifecycle:
+
+1. Fetches the workspace's wallets/categories directly from Postgres.
+2. Calls `apps/ai`'s `POST /import/extract` directly (not through apps/api) to OCR/parse the file into structured rows.
+3. Auto-creates any category referenced by a row that doesn't already exist, inferring `income`/`expense` from the row's own type.
+4. Writes each transaction sequentially (no wrapping DB transaction — a failed row is counted as `skipped`, not rolled back), atomically adjusting the matched wallet's balance and writing an audit log row per transaction.
+5. Writes the final `imported`/`skipped` counts (or an error) back into the `transaction_import_jobs` row apps/api created — bounded to 2 asynq retries before being marked `failed`.
+
+The frontend (`ImportAiModal`, `apps/app/components/organisms/transactions/transaction-import-ai-modal.tsx`) polls `GET /transactions/import/:jobId` every 2s while open until the job reaches a terminal status.
+
+Separately, the **CSV-mapping wizard** (`transaction-import-modal.tsx`) parses the file client-side (papaparse/xlsx) and commits via the synchronous `POST /bulk` endpoint — it doesn't use the AI-import job flow above at all.
 
 ### Attachments
 
@@ -152,15 +163,21 @@ Every mutation calls `AuditLogsService.log()`. Every mutation triggers `Notifica
 | Schema     | `packages/database/schema/transactions.ts`                            |
 | Schema     | `packages/database/schema/transaction-items.ts`                       |
 | Schema     | `packages/database/schema/transaction-attachments.ts`                 |
+| Schema     | `packages/database/schema/transaction-import-jobs.ts`                 |
 | Controller | `apps/api/modules/transactions/transactions.controller.ts`            |
 | Service    | `apps/api/modules/transactions/transactions.service.ts`               |
-| Service    | `apps/api/modules/transactions/transactions.import.service.ts`        |
 | Repository | `apps/api/modules/transactions/transactions.repository.ts`            |
+| Repository | `apps/api/modules/transactions/transaction-import-jobs.repository.ts` |
 | Model      | `apps/api/modules/transactions/transactions.model.ts`                 |
 | Utils      | `apps/api/modules/transactions/transactions.utils.ts`                 |
 | Tests      | `apps/api/modules/transactions/transactions.utils.test.ts` (66 tests) |
 | Sub-module | `apps/api/modules/transactions/items/transaction-items.controller.ts` |
 | Sub-module | `apps/api/modules/transactions/items/transaction-items.service.ts`    |
+| AI import handler (Go) | `apps/worker/internal/tasks/transactions_import.go`        |
+| Postgres access (Go) | `apps/worker/internal/repo/{transactions,import_jobs}.go`    |
+| Worker enqueue client | `apps/api/modules/worker/worker-client.ts`                  |
+| Server action | `packages/modules/src/import/import.action.ts`                     |
+| Frontend modal | `apps/app/components/organisms/transactions/transaction-import-ai-modal.tsx` |
 | E2E        | `apps/app/e2e/transactions.spec.ts`, `transaction-management.spec.ts` |
 
 ---
@@ -199,5 +216,5 @@ The keypad currency tabs are populated from the workspace's currencies (`subCurr
 - `amount` is always positive in storage. Sign (income/expense/transfer direction) is determined by `type`.
 - `toWalletId` must be different from `walletId` for transfers — validate in service.
 - Deleting a transaction reverses the balance change, but does NOT cascade-delete attachments from the vault.
-- CSV import does not update existing transactions — it only inserts new ones. Duplicates are skipped.
+- AI bank-statement import does not update existing transactions — it only inserts new ones, sequentially with no wrapping DB transaction; a row that fails to insert (unresolvable wallet, DB error) is counted as `skipped`, not retried within the same job.
 - `isExported` is a tracking flag — it is set to `true` when the transaction appears in a CSV export.

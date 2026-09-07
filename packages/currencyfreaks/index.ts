@@ -1,7 +1,7 @@
-import axios from "axios";
+import { Env } from "@workspace/constants";
 import { redis } from "@workspace/redis";
 import { loadEnv } from "@workspace/utils/load-env";
-import { Env } from "@workspace/constants";
+import axios from "axios";
 
 loadEnv();
 
@@ -70,22 +70,13 @@ export async function fetchAndCacheRates(): Promise<CurrencyRatesResponse> {
     throw new Error("Currency rates API returned no rates");
   }
 
-  // ioredis exposes `.status` (string like "ready"); Upstash does not.
-  // - ioredis: positional `EX <seconds>` args, payload must be string
-  // - Upstash: object `{ ex }` option, payload can be object
-  const isIoredis = typeof (redis as any).status === "string";
-
   try {
-    if (isIoredis) {
-      await (redis as any).set(
-        CACHE_KEY,
-        JSON.stringify(response.data),
-        "EX",
-        ONE_DAY_SECONDS,
-      );
-    } else {
-      await (redis as any).set(CACHE_KEY, response.data, { ex: ONE_DAY_SECONDS });
-    }
+    await redis.set(
+      CACHE_KEY,
+      JSON.stringify(response.data),
+      "EX",
+      ONE_DAY_SECONDS,
+    );
     console.log(
       `[Currency] ✅ Cached ${Object.keys(response.data.rates).length} rates in Redis`,
     );
@@ -105,11 +96,7 @@ export async function getRates(): Promise<CurrencyRatesResponse> {
   const rawData = await redis.get(CACHE_KEY);
 
   if (rawData) {
-    // If it's a string (likely from ioredis), parse it.
-    // If it's already an object (from Upstash), return it.
-    return typeof rawData === "string"
-      ? (JSON.parse(rawData) as CurrencyRatesResponse)
-      : (rawData as CurrencyRatesResponse);
+    return JSON.parse(rawData) as CurrencyRatesResponse;
   }
 
   return fetchAndCacheRates();

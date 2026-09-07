@@ -1,14 +1,15 @@
 import { ErrorCode } from "@workspace/types";
-import { buildError } from "@workspace/utils";
+import { buildError, buildSuccess } from "@workspace/utils";
 import { Elysia, status, t } from "elysia";
 import { authPlugin } from "../../plugins/auth";
 import { encryptionPlugin } from "../../plugins/encryption";
+import { WorkerClient } from "../worker/worker-client";
 import { assertCanEditWorkspaceData } from "../workspaces/workspace-permissions";
 import { transactionItemsController } from "./items/transaction-items.controller";
-import { transactionsReviewController } from "./transactions-review.controller";
-import { TransactionsImportService } from "./transactions.import.service";
+import { TransactionImportJobsRepository } from "./transaction-import-jobs.repository";
 import { TransactionModel } from "./transactions.model";
 import { TransactionsService } from "./transactions.service";
+import { transactionsReviewController } from "./transactions-review.controller";
 
 // Factory function to create the transactions module
 export const transactions = new Elysia({
@@ -175,22 +176,37 @@ export const transactions = new Elysia({
   )
   .post(
     "/import",
-    async ({ auth, body }) => {
+    async ({ auth, body, set }) => {
       if (!auth?.workspace_id) {
         throw status(401, buildError(ErrorCode.UNAUTHORIZED, "Unauthorized"));
       }
       assertCanEditWorkspaceData(auth.workspace_role);
       const file = body.file as File;
       const arrayBuffer = await file.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
+      const base64 = Buffer.from(arrayBuffer).toString("base64");
 
-      return TransactionsImportService.importFromFile(
-        auth.workspace_id,
-        auth.user_id,
-        buffer,
-        file.type || "application/octet-stream",
-        file.name || "upload",
-      );
+      // Job row created here (status "pending") so the client has an id to
+      // poll immediately; the worker owns the pending -> succeeded/failed
+      // transition (see apps/worker/internal/tasks/transactions_import.go),
+      // writing to this same row directly via Postgres.
+      const job = await TransactionImportJobsRepository.create({
+        workspaceId: auth.workspace_id,
+        userId: auth.user_id,
+      });
+
+      // Enqueued onto the Go worker (apps/worker) instead of processed
+      // in-process — the AI extraction + per-row DB write loop no longer
+      // blocks this request.
+      await WorkerClient.enqueueTransactionsImport({
+        jobId: job.id,
+        workspaceId: auth.workspace_id,
+        userId: auth.user_id,
+        data: base64,
+        mimeType: file.type || "application/octet-stream",
+      });
+
+      set.status = 202;
+      return buildSuccess({ jobId: job.id }, "Import started");
     },
     {
       body: t.Object({
@@ -199,7 +215,39 @@ export const transactions = new Elysia({
       detail: {
         summary: "Import transactions (AI)",
         description:
-          "Analyzes an uploaded bank statement image or PDF using AI to extract and import transactions automatically.",
+          "Enqueues an uploaded bank statement image or PDF for AI extraction and import (async — processed by apps/worker). Returns a jobId to poll via GET /transactions/import/:jobId.",
+        tags: ["Transactions"],
+      },
+    },
+  )
+  .get(
+    "/import/:jobId",
+    async ({ auth, params: { jobId }, set }) => {
+      if (!auth?.workspace_id) {
+        throw status(401, buildError(ErrorCode.UNAUTHORIZED, "Unauthorized"));
+      }
+      const job = await TransactionImportJobsRepository.findByIdForWorkspace(
+        jobId,
+        auth.workspace_id,
+      );
+      if (!job) {
+        set.status = 404;
+        return buildError(ErrorCode.NOT_FOUND, "Import job not found");
+      }
+      return buildSuccess({
+        jobId: job.id,
+        status: job.status,
+        imported: job.imported,
+        skipped: job.skipped,
+        error: job.error,
+      });
+    },
+    {
+      params: t.Object({ jobId: t.String() }),
+      detail: {
+        summary: "Get transaction import job status",
+        description:
+          "Polls the status of an enqueued CSV/bank-statement import job (pending/succeeded/failed).",
         tags: ["Transactions"],
       },
     },

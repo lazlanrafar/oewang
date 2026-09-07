@@ -3,13 +3,10 @@ import { createLogger } from "@workspace/logger";
 const log = createLogger("cache");
 
 let redis: typeof import("@workspace/redis").redis | null = null;
-// ioredis instances expose a 'status' string; @upstash/redis REST client does not.
-let isIoredis = false;
 
 import("@workspace/redis")
   .then((m) => {
     redis = m.redis;
-    isIoredis = typeof (redis as any)?.status === "string";
   })
   .catch(() => {});
 
@@ -33,13 +30,7 @@ export async function cacheSet(
   if (!redis || !key) return;
   try {
     const serialized = JSON.stringify(value);
-    if (isIoredis) {
-      // ioredis: SET key value EX seconds
-      await (redis as any).set(key, serialized, "EX", ttlSeconds);
-    } else {
-      // @upstash/redis: SET key value { ex: seconds }
-      await redis.set(key, serialized, { ex: ttlSeconds });
-    }
+    await redis.set(key, serialized, "EX", ttlSeconds);
   } catch (err) {
     log.warn("Cache set failed", { key, err });
   }
@@ -63,10 +54,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 async function acquireLock(key: string, ttlSeconds: number): Promise<boolean> {
   if (!redis) return false;
   try {
-    const res = isIoredis
-      ? await (redis as any).set(key, "1", "EX", ttlSeconds, "NX")
-      : await redis.set(key, "1", { ex: ttlSeconds, nx: true });
-    return res === "OK" || res === true;
+    const res = await redis.set(key, "1", "EX", ttlSeconds, "NX");
+    return res === "OK";
   } catch {
     return false;
   }

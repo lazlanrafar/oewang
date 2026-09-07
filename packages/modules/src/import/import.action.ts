@@ -1,41 +1,64 @@
 "use server";
 
-import type { ActionResponse } from "@workspace/types";
+import type { ActionResponse, ApiResponse } from "@workspace/types";
 
 import { axiosInstance as api } from "../lib/axios.server";
 
-// Re-export the type so frontend can use it
-export interface ImportedTransaction {
-  id: string;
-  name?: string;
-  amount: string;
-  date: string;
-  type: "income" | "expense" | "transfer";
+// POST /transactions/import now enqueues onto the Go worker (apps/worker)
+// instead of processing synchronously — it returns a jobId immediately, and
+// callers poll getImportJobStatus until it settles.
+export interface StartImportResult {
+  jobId: string;
 }
 
-export interface ImportResult {
-  imported: number;
-  skipped: number;
-  transactions: ImportedTransaction[];
-}
-
-export const importTransactions = async (
+export const startTransactionsImport = async (
   formData: FormData,
-): Promise<ActionResponse<ImportResult>> => {
+): Promise<ActionResponse<StartImportResult>> => {
   try {
-    const res = await api.post("/transactions/import", formData, {
+    const response = await api.post("/transactions/import", formData, {
       headers: { "Content-Type": "multipart/form-data" },
-      // Runs LLM extraction on the whole file — exempt from the 15s default.
-      timeout: 120_000,
     });
-    return { success: true, data: res.data };
+    const apiResponse = (response as any)
+      ._api_response as ApiResponse<StartImportResult>;
+    const result = apiResponse?.data ?? response.data?.data;
+    return { success: true, data: result };
   } catch (error: any) {
     return {
       success: false,
       error:
         error.response?.data?.message ||
         error.response?.data?.error ||
-        "Failed to import transactions",
+        "Failed to start import",
+    };
+  }
+};
+
+export type ImportJobStatus = "pending" | "succeeded" | "failed";
+
+export interface ImportJobResult {
+  jobId: string;
+  status: ImportJobStatus;
+  imported: number | null;
+  skipped: number | null;
+  error: string | null;
+}
+
+export const getImportJobStatus = async (
+  jobId: string,
+): Promise<ActionResponse<ImportJobResult>> => {
+  try {
+    const response = await api.get(`/transactions/import/${jobId}`);
+    const apiResponse = (response as any)
+      ._api_response as ApiResponse<ImportJobResult>;
+    const result = apiResponse?.data ?? response.data?.data;
+    return { success: true, data: result };
+  } catch (error: any) {
+    return {
+      success: false,
+      error:
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        "Failed to get import status",
     };
   }
 };

@@ -103,13 +103,9 @@ All URL configuration uses `NEXT_PUBLIC_*` vars — they work on both the client
 
 #### Redis
 
-Use **one** of the two options. Local Docker uses `REDIS_URL`; Upstash (production) uses the REST vars.
-
-| Variable                   | Description                                             |
-| -------------------------- | ------------------------------------------------------- |
-| `REDIS_URL`                | `redis://localhost:6379` — local ioredis TCP connection |
-| `UPSTASH_REDIS_REST_URL`   | Upstash REST endpoint (production)                      |
-| `UPSTASH_REDIS_REST_TOKEN` | Upstash REST token (production)                         |
+| Variable    | Description                                              |
+| ----------- | --------------------------------------------------------- |
+| `REDIS_URL` | `redis://localhost:6379` — ioredis TCP connection, local or production |
 
 ---
 

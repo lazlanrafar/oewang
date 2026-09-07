@@ -10,7 +10,15 @@ const state = {
   plansById: {} as Record<string, any>,
 };
 
+// Bun's mock.module is global across the run — export every symbol the real
+// module has (mirrors the same discipline applied to the logger mock below),
+// otherwise a sibling test that imports a module which pulls in the real
+// "@workspace/email" (e.g. mayar.service.ts) crashes on a "not found" export
+// this file's own reduced mock never provided.
 mock.module("@workspace/email", () => ({
+  sendInvitationEmail: mock(async () => ({ success: true })),
+  sendPurchaseSuccessEmail: mock(async () => ({ success: true })),
+  sendPackageExpiredEmail: mock(async () => ({ success: true })),
   sendSubscriptionPaymentReminderEmail: mock(async (...args: any[]) => {
     state.reminderEmails.push(args);
     return { success: true };
@@ -23,6 +31,11 @@ mock.module("@workspace/email", () => ({
     state.storageEmails.push(args);
     return { success: true };
   }),
+  sendPaymentFailedEmail: mock(async () => ({ success: true })),
+  sendInvoiceSentEmail: mock(async () => ({ success: true })),
+  sendAddonPurchaseSuccessEmail: mock(async () => ({ success: true })),
+  sendWorkspaceUpgradedEmail: mock(async () => ({ success: true })),
+  sendReceiptProcessedEmail: mock(async () => ({ success: true })),
 }));
 
 // Bun's mock.module is global across the run, so export BOTH symbols the real

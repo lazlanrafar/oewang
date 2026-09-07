@@ -39,11 +39,12 @@ The only app touching the database, Redis, payment provider, and integrations di
 | `ENCRYPTION_KEY` | **Required** | Exactly 32 chars — TRANSPORT key (AES-256-GCM response encryption) |
 | `DATA_ENCRYPTION_KEY` | Optional | Exactly 32 chars — AT-REST key for stored secrets. Falls back to `ENCRYPTION_KEY` when unset |
 | `OAUTH_CONNECT_SECRET` | **Required in practice** | Optional in schema, but `/auth/oauth/connect` returns 401 without it |
-| `REDIS_URL` | One of these two | Local/self-hosted Redis (TCP) |
-| `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` | One of these two | Managed Upstash Redis (REST) |
+| `REDIS_URL` | **Required** | Self-hosted Redis (TCP), local or production — no Upstash/REST support |
 | `MAYAR_API_URL` / `MAYAR_API_KEY` / `MAYAR_WEBHOOK_TOKEN` | **Required in production** | Payment gateway; optional in dev |
 | `AI_SERVICE_URL` | **Required in practice** | Optional in schema, but `ai-sidecar-client.ts` throws if unset — points at `apps/ai` |
 | `AI_SERVICE_API_KEY` | **Required** | Min 16 chars — shared secret with `apps/ai` (must match its `AI_SERVICE_API_KEY`) |
+| `WORKER_URL` | **Required in practice** | Optional in schema, but `public-webhooks.controller.ts`/`mayar.controller.ts` throw if unset when enqueueing — points at `apps/worker`'s internal enqueue endpoint |
+| `WORKER_API_KEY` | **Required** | Min 16 chars — shared secret with `apps/worker` (distinct from `AI_SERVICE_API_KEY`; gates `internal.controller.ts` and is sent as `x-api-key` when enqueueing) |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Optional | Google OAuth verify + Gmail integration fallback |
 | `GOOGLE_GMAIL_CLIENT_ID` / `GOOGLE_GMAIL_CLIENT_SECRET` | Optional | Falls back to the `GOOGLE_CLIENT_*` pair above when unset |
 | `MICROSOFT_CLIENT_ID` / `MICROSOFT_CLIENT_SECRET` | Optional | Outlook integration |
@@ -142,13 +143,33 @@ Separate runtime (`pydantic-settings`, not the TS `Env` proxy). See `apps/ai/app
 | `API_INTERNAL_URL` | Optional | Default `http://localhost:3002` — callback URL the sidecar uses to reach `apps/api` for tool execution and the fire-and-forget usage-notify call after chat_end. The chat money path itself (chat_begin/chat_end) runs in-process here now, not over this URL |
 | `AI_MAX_STEPS` | Optional | Default `10` — tool-loop step cap |
 | `ALERT_CALLBACK_URL` | Optional | Anomaly-alert webhook target |
-| `ANOMALY_SCAN_HOURS` | Optional | Default `0` (disabled) — periodic anomaly scan interval |
+| `ANOMALY_SCAN_HOURS` | Optional | Default `0` — kept in `config.py` for `apps/worker` to read for its own periodic cadence; no longer read inside `apps/ai` itself (the in-process `AsyncIOScheduler` that used to read it was removed in favor of `apps/worker` calling `POST /internal/anomaly/scan-all`) |
 | `RECEIPT_DRY_RUN` | Optional | Default `false` — preview receipt writes without persisting |
 | `MOCK_AI_QUOTA` | Optional | Default `false` — bypass the token-quota check (dev only; **must stay `false` in production**, it fails closed by design) |
 
 **NOT needed by apps/ai**: `REDIS_URL`, `MAYAR_*`, any OAuth client vars, `SENTRY_DSN` — no Redis client, no OAuth, no error-monitoring SDK wired up here.
 
 In Coolify, `MODEL_BASE_URL`/`MODEL_API_KEY`/`AI_CHAT_MODEL`/`AI_VISION_MODEL`/`AI_EMBED_MODEL` and `AI_SERVICE_API_KEY` should reference the same project Shared Variables that `apps/api`'s `.env.api` references — they must resolve to identical values on both sides for the AI path to work end to end (see the 9router internal-networking setup in the deploy runbook).
+
+---
+
+## apps/worker (`.env.worker`) — Go asynq scheduler
+
+Owns scheduling/retry/dead-letter for periodic and offloaded jobs. Billing lifecycle, vault storage sweeps, invoice-overdue detection, and AI quota reset/anomaly-scan still delegate business logic back to `apps/api`'s `/v1/internal/*` endpoints or `apps/ai`'s `/internal/*` endpoints. Telegram webhook processing and CSV/bank-statement transaction import are the exception: the worker owns those end-to-end (calling apps/ai and Postgres directly), not just scheduling/retry around a TS/Python call — see `apps/worker/internal/tasks/{webhook_telegram,transactions_import}.go`.
+
+| Variable | Required | Notes |
+| --- | --- | --- |
+| `WORKER_PORT` | Optional | Health-check + internal enqueue HTTP server port |
+| `WORKER_API_KEY` | **Required** | Min 16 chars — shared secret gating `apps/api`'s `internal.controller.ts`; also sent as `x-api-key` when `apps/api` enqueues onto this worker |
+| `WORKER_URL` | Not read by this app | Consumed by `apps/api`, not `apps/worker` itself — listed here for reference since it points at this resource |
+| `DATABASE_URL` | **Required** | Same Postgres instance as `apps/api`/`apps/ai` — raw `pgx` SQL, no ORM. Used by the two retention-purge jobs, the invoice-overdue query, and now the full Telegram (workspace_integrations/user_workspaces/ai_sessions/ai_messages/notifications) and transactions-import (wallets/categories/transactions/audit_logs) flows |
+| `REDIS_URL` | **Required** | Same TCP Redis instance `apps/api` uses. Also used directly (not just via asynq) to invalidate `apps/api`'s `oewang:integrations:*` cache key after a Telegram connect |
+| `TELEGRAM_BOT_TOKEN` | **Required** | Same bot token `apps/api` uses — the worker now calls the Telegram Bot API directly (sendMessage/editMessageText/getFile/file download/sendChatAction) instead of relaying through `apps/api` |
+| `API_INTERNAL_URL` | **Required in practice** | Base URL for `apps/api`'s internal endpoints (billing, vault, invoice mark-overdue — Telegram/Mayar processing no longer routes through here for Telegram) |
+| `AI_SERVICE_URL` / `AI_SERVICE_API_KEY` | **Required in practice** | Calls `apps/ai`'s `/internal/quota/reset-all`, `/internal/anomaly/scan-all`, `/import/extract`, `/draft/*`, `/tools/execute`, and `/chat/stream` directly — the worker is now a third trusted `x-api-key` caller of apps/ai alongside apps/api and apps/app |
+| `ANOMALY_SCAN_HOURS` | Optional | Same var `apps/ai` reads for its own default — the worker reads it too to decide its periodic anomaly-scan cadence, replacing the old in-process `AsyncIOScheduler` in `apps/ai` |
+
+**NOT needed by apps/worker**: `JWT_SECRET`, `ENCRYPTION_KEY`, `MAYAR_*` (the worker never talks to Mayar or verifies user sessions directly — it only enqueues/dequeues and calls apps/api's Mayar-processing internal endpoint), `BUCKET_*` (the Telegram receipt flow passes attachment bytes to apps/ai inline; it doesn't touch storage directly itself).
 
 ---
 
@@ -181,10 +202,12 @@ key, not an at-rest one (see the note in `.env.example`).
 | --- | --- | --- |
 | `JWT_SECRET` | apps/api, apps/app, apps/admin, apps/ai | Must be byte-identical everywhere it's set — one value signs, the others verify. `apps/ai` verifies it directly for `/chat/web`, `/chat/web/stream` (web chat's chatBegin/chatEnd money path moved in-process; it no longer round-trips to `apps/api` to authenticate) |
 | `ENCRYPTION_KEY` | apps/api, apps/app, apps/admin, apps/website, apps/native | Transport key — must match everywhere |
-| `AI_SERVICE_API_KEY` | apps/api, apps/app, apps/ai | Shared secret gating every hop between the TS side and the Python sidecar |
+| `AI_SERVICE_API_KEY` | apps/api, apps/app, apps/ai, apps/worker | Shared secret gating every hop between the TS side and the Python sidecar; `apps/worker` uses it to call `apps/ai`'s `/internal/*`, `/import/extract`, `/draft/*`, `/tools/execute`, and `/chat/stream` endpoints |
+| `WORKER_API_KEY` | apps/api, apps/worker | Distinct shared secret gating every hop between `apps/api` and the Go worker (both the `internal.controller.ts` gate and the enqueue calls `apps/api` makes) |
+| `TELEGRAM_BOT_TOKEN` | apps/api, apps/worker | `apps/api` still owns webhook registration (`setWebhook`); `apps/worker` calls the Telegram Bot API directly (send/edit message, typing indicator, file download) to process the webhook itself |
 | `BUCKET_ENDPOINT` / `BUCKET_ACCESS_KEY_ID` / `BUCKET_SECRET_ACCESS_KEY` / `BUCKET_NAME` / `BUCKET_REGION` | apps/api, apps/ai | `apps/ai` uses the same system-bucket credentials (no per-workspace custom R2 support there) to upload chat receipt images directly, instead of round-tripping to `apps/api`'s Vault upload |
 | `OAUTH_CONNECT_SECRET` | apps/api, apps/app, apps/admin | Gates the OAuth-callback-mints-session handshake |
-| `DATABASE_URL` | apps/api, apps/ai | Both connect to the same Postgres instance directly |
+| `DATABASE_URL` | apps/api, apps/ai, apps/worker | All three connect to the same Postgres instance directly |
 
 When deploying on Coolify: set each of these **once** as a project-level
 Shared Variable, then reference it as `{{project.KEY}}` from every

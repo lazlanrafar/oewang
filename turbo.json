@@ -29,7 +29,10 @@
     "MODEL_API_KEY",
     "AI_CHAT_MODEL",
     "AI_VISION_MODEL",
-    "AI_EMBED_MODEL"
+    "AI_EMBED_MODEL",
+    "WORKER_PORT",
+    "WORKER_API_KEY",
+    "WORKER_URL"
   ],
   "globalPassThroughEnv": ["NODE_ENV", "PLAYWRIGHT_*"],
   "tasks": {

@@ -54,8 +54,6 @@ const serverSchema = z.object({
 
   // Redis
   REDIS_URL: z.string().min(1).optional(),
-  UPSTASH_REDIS_REST_URL: z.string().min(1).optional(),
-  UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
 
   // External Services
   CURRENCYFREAKS_API_KEY: z.string().optional(),
@@ -79,6 +77,14 @@ const serverSchema = z.object({
   // must fail closed (reject), never disable auth. See ai-internal.controller.ts
   // and apps/ai auth middleware.
   AI_SERVICE_API_KEY: z.string().min(16),
+
+  // Go worker (apps/worker) — asynq/Redis-backed scheduler for periodic jobs
+  // (billing lifecycle, vault storage sweeps, invoice-overdue detection, AI
+  // quota reset, retention purges) and enqueue target for the Telegram/Mayar
+  // webhook offload. A distinct caller from the Python sidecar, so a distinct
+  // shared secret (not AI_SERVICE_API_KEY). See internal.controller.ts.
+  WORKER_URL: z.string().url().optional(),
+  WORKER_API_KEY: z.string().min(16),
 
   // S3-compatible Storage
   BUCKET_ENDPOINT: z.string().min(1).optional(),

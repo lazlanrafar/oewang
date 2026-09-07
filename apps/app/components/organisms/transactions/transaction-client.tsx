@@ -33,6 +33,7 @@ import { transactionColumns } from "./transaction-columns";
 import { TransactionDetailSheet } from "./transaction-detail-sheet";
 import { ExportModal } from "./transaction-export-modal";
 import { TransactionFormSheet } from "./transaction-form-sheet";
+import { ImportAiModal } from "./transaction-import-ai-modal";
 import { ImportModal } from "./transaction-import-modal";
 
 interface TransactionGroup {
@@ -106,6 +107,7 @@ export function TransactionsClient({
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
+  const [isImportAiOpen, setIsImportAiOpen] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | undefined>();
   const [columns, setColumns] = useState<ComponentProps<typeof DataTableColumnsVisibility>["columns"]>([]);
@@ -525,6 +527,7 @@ export function TransactionsClient({
         categories={categories}
         wallets={wallets}
         onImport={() => setIsImportOpen(true)}
+        onImportAi={() => setIsImportAiOpen(true)}
         onExport={() => setIsExportOpen(true)}
         onAdd={handleCreate}
         canEditData={canEditData}
@@ -834,15 +837,26 @@ export function TransactionsClient({
       />
 
       {canEditData ? (
-        <ImportModal
-          open={isImportOpen}
-          onOpenChange={setIsImportOpen}
-          wallets={wallets}
-          onSuccess={() => {
-            setIsImportOpen(false);
-            refetch();
-          }}
-        />
+        <>
+          <ImportModal
+            open={isImportOpen}
+            onOpenChange={setIsImportOpen}
+            wallets={wallets}
+            onSuccess={() => {
+              setIsImportOpen(false);
+              refetch();
+            }}
+          />
+          <ImportAiModal
+            open={isImportAiOpen}
+            onOpenChange={setIsImportAiOpen}
+            dictionary={dictionary}
+            onSuccess={() => {
+              setIsImportAiOpen(false);
+              refetch();
+            }}
+          />
+        </>
       ) : null}
 
       <ExportModal open={isExportOpen} onOpenChange={setIsExportOpen} />

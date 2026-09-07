@@ -1,7 +1,7 @@
 import { Env } from "@workspace/constants";
 import { redis } from "@workspace/redis";
-import { HealthRepository } from "./health.repository";
 import type { HealthStatus } from "./health.controller";
+import { HealthRepository } from "./health.repository";
 
 export abstract class HealthService {
   static async checkStatus(): Promise<{
@@ -26,7 +26,7 @@ export abstract class HealthService {
       overallStatus = "degraded";
     }
 
-    if (Env.UPSTASH_REDIS_REST_URL && Env.UPSTASH_REDIS_REST_TOKEN) {
+    if (Env.REDIS_URL) {
       const redisStart = Date.now();
       try {
         await redis.ping();

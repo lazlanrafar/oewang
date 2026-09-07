@@ -19,8 +19,6 @@ const apiEnvSchema = z.object({
 
   // Redis
   REDIS_URL: z.string().optional(),
-  UPSTASH_REDIS_REST_URL: z.string().min(1).optional(),
-  UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
 
   // Mayar
   MAYAR_API_URL: z.string().url().optional(),

@@ -169,18 +169,17 @@ export abstract class MayarService {
     return timingSafeEqual(a, b);
   }
 
-  static async handleWebhook(event: any, receivedToken?: string) {
-    // 1. Verify Webhook Token
+  /**
+   * Verify a Mayar webhook's token without throwing — the caller decides what
+   * to do with a false result. Extracted from handleWebhook's old inline
+   * step 1 so the controller can check this synchronously *before* enqueueing
+   * to the Go worker (fast 401 on a bad signature, no wasted enqueue).
+   */
+  static verifyWebhookToken(receivedToken?: string): boolean {
     const configuredToken = Env.MAYAR_WEBHOOK_TOKEN;
     if (process.env.NODE_ENV === "production" && !configuredToken) {
       logger.error("[Mayar Webhook] Missing MAYAR_WEBHOOK_TOKEN in production");
-      throw status(
-        500,
-        buildError(
-          ErrorCode.INTERNAL_ERROR,
-          "Webhook configuration is missing",
-        ),
-      );
+      return false;
     }
     if (
       configuredToken &&
@@ -188,6 +187,17 @@ export abstract class MayarService {
     ) {
       // Never log token material (prefixes/lengths leak the secret over time).
       logger.error("[Mayar Webhook] Unauthorized - Invalid or missing token");
+      return false;
+    }
+    return true;
+  }
+
+  static async handleWebhook(event: any, receivedToken?: string) {
+    // 1. Verify Webhook Token — same check the controller now runs
+    // synchronously before enqueueing; kept here too (single source of truth
+    // via verifyWebhookToken) so this method stays self-protecting if ever
+    // called directly, e.g. from the internal endpoint the Go worker hits.
+    if (!MayarService.verifyWebhookToken(receivedToken)) {
       throw status(
         401,
         buildError(ErrorCode.UNAUTHORIZED, "Invalid webhook token"),

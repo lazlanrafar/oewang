@@ -4,9 +4,8 @@ import { ErrorCode } from "@workspace/types";
 import { buildError } from "@workspace/utils";
 import { Elysia } from "elysia";
 
-// Use whatever Redis the environment provides (ioredis via REDIS_URL, or
-// Upstash REST) — same init as lib/cache.ts. Without this, prod (REDIS_URL
-// only) silently rate-limits per-instance in memory.
+// ioredis via REDIS_URL — same init as lib/cache.ts. Without this, prod
+// silently rate-limits per-instance in memory.
 let redis: typeof import("@workspace/redis").redis | null = null;
 import("@workspace/redis")
   .then((mod) => {
@@ -62,10 +61,8 @@ async function checkRateLimitRedis(
   key: string,
   config: RateLimitConfig,
 ): Promise<{ allowed: boolean; remaining: number; reset: number }> {
-  // Fixed window via INCR on a window-indexed key: one code path that works on
-  // both ioredis and the Upstash REST client (their zadd/pipeline syntaxes
-  // differ). ponytail: fixed window, switch to a sliding window only if
-  // boundary bursts ever matter.
+  // Fixed window via INCR on a window-indexed key. ponytail: fixed window,
+  // switch to a sliding window only if boundary bursts ever matter.
   const now = Date.now();
   const window_index = Math.floor(now / config.window_ms);
   const windowKey = `ratelimit:${key}:${window_index}`;

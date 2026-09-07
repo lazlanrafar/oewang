@@ -62,19 +62,20 @@ This is a **Turborepo monorepo** using **Bun** as package manager and runtime. S
 | `apps/admin`   | Next.js                | 3001 | Admin dashboard                 |
 | `apps/api`     | ElysiaJS (Bun)         | 3002 | REST API + MCP server           |
 | `apps/website` | Next.js                | 3003 | Marketing website               |
+| `apps/ai`      | FastAPI (Python 3.12)  | 3004 | AI sidecar — chat, OCR, RAG, quota |
+| `apps/worker`  | Go (asynq)             | 8080 | Background jobs — Telegram webhook, transaction import, billing/vault/invoice sweeps |
 | `apps/native`  | Flutter                | —    | Mobile app (Dart/Flutter 3.11+) |
 
 ### Key packages
 
-- **`packages/database`** — Drizzle ORM + PostgreSQL. Schema lives here (33 tables); all DB access goes through this package. Primary keys use CUID2 (`@paralleldrive/cuid2`).
+- **`packages/database`** — Drizzle ORM + PostgreSQL. Schema lives here (42 tables); all DB access goes through this package. Primary keys use CUID2 (`@paralleldrive/cuid2`) — apps/ai and apps/worker also connect to the same Postgres instance directly and generate their own CUID2-format ids for anything they insert.
 - **`packages/modules`** — Server actions and data-fetching logic. Next.js `app/` calls into these rather than hitting the API or DB directly.
-- **`packages/ai`** — AI service abstractions over OpenAI, Anthropic Codex, and Google Generative AI. Includes agent, memory, artifact, and store tooling.
 - **`packages/integrations`** — 40+ third-party integrations (Telegram, Stripe, etc.).
 - **`packages/ui`** — Shared React components built on shadcn + Radix UI + Tailwind CSS v4.
 - **`packages/types`** — Central TypeScript type definitions and `ErrorCode` constants.
 - **`packages/constants`** — Static constants: roles, colors, pricing features, API config.
 - **`packages/encryption`** — AES-256-GCM encrypt/decrypt. Used in exactly two places: `apps/api/plugins/encryption.ts` and `apps/app/lib/axios.ts`.
-- **`packages/redis`** — Redis client singleton. Uses ioredis (TCP) when `REDIS_URL` is set (local Docker), or Upstash REST when `UPSTASH_REDIS_REST_*` vars are set (production). Consumed by `apps/api/lib/cache.ts` and `apps/api/plugins/rate-limit.ts`.
+- **`packages/redis`** — Redis client singleton. Uses ioredis (TCP) via `REDIS_URL`, local or production. Consumed by `apps/api/lib/cache.ts` and `apps/api/plugins/rate-limit.ts`.
 
 ### Data flow
 

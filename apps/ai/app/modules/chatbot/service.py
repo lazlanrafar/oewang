@@ -1,4 +1,6 @@
+import asyncio
 import logging
+import time
 
 from app.core import llm
 from app.core.currency import get_currency_settings
@@ -62,19 +64,87 @@ async def generate_title(message: str, workspace_id: str) -> str | None:
     return title or None
 
 
+async def _noop_history() -> list[dict]:
+    return []
+
+
+async def _chat_context(
+    workspace_id: str, session_id: str | None
+) -> tuple[float, list[dict], dict, list[dict]]:
+    """Fetch every piece of pre-LLM context concurrently — none of these
+    fetches depends on another's result, so gather() replaces 4 sequential
+    awaits with one round-trip's worth of wall time. Shared by chat() and
+    stream_chat() so the parallelization lives in exactly one place."""
+    balance, txns, currency, history = await asyncio.gather(
+        _balance(workspace_id),
+        _recent_transactions(workspace_id),
+        get_currency_settings(workspace_id),
+        load_history(session_id, workspace_id) if session_id else _noop_history(),
+    )
+    return balance, txns, currency, history
+
+
 async def chat(
     message: str, workspace_id: str, user_id: str | None, session_id: str | None
 ) -> dict:
-    balance = await _balance(workspace_id)
-    txns = await _recent_transactions(workspace_id)
-    currency = await get_currency_settings(workspace_id)
-    history = await load_history(session_id, workspace_id) if session_id else []
+    db_start = time.monotonic()
+    balance, txns, currency, history = await _chat_context(workspace_id, session_id)
+    db_fetch_ms = (time.monotonic() - db_start) * 1000
 
     system = prompts.system_prompt(balance, txns, currency)
     messages = history + [{"role": "user", "content": message}]
-    reply = await llm.complete_metered(system, messages, workspace_id)
+
+    llm_start = time.monotonic()
+    # Telegram replies are short-form chat, not canvas/report generation — cap
+    # well below the 1024 default so a runaway reply doesn't add latency.
+    reply = await llm.complete_metered(system, messages, workspace_id, max_tokens=512)
+    llm_call_ms = (time.monotonic() - llm_start) * 1000
+
+    log.info(
+        "chat() timing: db_fetch_ms=%.1f llm_call_ms=%.1f",
+        db_fetch_ms,
+        llm_call_ms,
+    )
     # Elysia owns ai_messages persistence; we just echo the session id back.
     return {"reply": reply, "session_id": session_id}
+
+
+async def stream_chat(
+    message: str, workspace_id: str, user_id: str | None, session_id: str | None
+):
+    """Streaming variant of chat(): same parallelized DB-fetch setup, but
+    streams the LLM reply as SSE-shaped events (content deltas, then a final
+    done event) instead of returning one completed string — the fake-streaming
+    fix for Telegram's perceived latency (incremental message edits on the
+    apps/api side consume this).
+
+    Quota gating (check before the call, record after) happens inside
+    llm.complete_metered_stream, which this bypasses complete_metered to call
+    directly — that helper is the single place check_quota/record_usage run
+    for this path, exactly once each, mirroring complete_metered's own gating.
+    """
+    db_start = time.monotonic()
+    balance, txns, currency, history = await _chat_context(workspace_id, session_id)
+    db_fetch_ms = (time.monotonic() - db_start) * 1000
+    log.info("stream_chat() timing: db_fetch_ms=%.1f", db_fetch_ms)
+
+    system = prompts.system_prompt(balance, txns, currency)
+    messages = history + [{"role": "user", "content": message}]
+
+    async for chunk in llm.complete_metered_stream(
+        system, messages, workspace_id, max_tokens=512
+    ):
+        if chunk["type"] == "delta":
+            yield {"event": "content", "data": {"text": chunk["text"]}}
+        else:  # "done"
+            yield {
+                "event": "done",
+                "data": {
+                    "reply": chunk["reply"],
+                    "session_id": session_id,
+                    "usage": chunk["usage"],
+                },
+            }
 
 
 async def run_chat(

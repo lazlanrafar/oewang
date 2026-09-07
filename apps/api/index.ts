@@ -33,6 +33,7 @@ import {
   publicWebhooksController,
   registerTelegramWebhook,
 } from "./modules/integrations/public-webhooks.controller";
+import { internalController } from "./modules/internal/internal.controller";
 import { invoicesController } from "./modules/invoices/invoices.controller";
 import { publicInvoicesController } from "./modules/invoices/public-invoices.controller";
 import { billingInvoicesController } from "./modules/mayar/billing-invoices.controller";
@@ -107,6 +108,7 @@ const apiControllers1 = new Elysia()
 
 const apiControllers2 = new Elysia()
   .use(aiInternalController)
+  .use(internalController)
   .use(aiController)
   .use(metricsController)
   .use(integrationsController)

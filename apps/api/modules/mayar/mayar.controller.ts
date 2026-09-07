@@ -1,3 +1,4 @@
+import { Env } from "@workspace/constants";
 import { logger } from "@workspace/logger";
 import { ErrorCode } from "@workspace/types";
 import { buildError, buildSuccess } from "@workspace/utils";
@@ -14,6 +15,35 @@ import {
 import { MayarRepository } from "./mayar.repository";
 import { MayarService } from "./mayar.service";
 
+// Enqueues onto the Go worker (apps/worker) instead of awaiting full
+// processing in-process — asynq gives retry/DLQ for a real payment webhook
+// instead of the old synchronous best-effort processing.
+async function enqueueMayarWebhook(body: unknown, token?: string): Promise<void> {
+  const workerUrl = Env.WORKER_URL;
+  const workerApiKey = Env.WORKER_API_KEY;
+  if (!workerUrl || !workerApiKey) {
+    throw new Error(
+      "Worker is not configured (WORKER_URL/WORKER_API_KEY missing)",
+    );
+  }
+
+  const res = await fetch(
+    `${workerUrl.replace(/\/$/, "")}/internal/enqueue/mayar-webhook`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": workerApiKey,
+      },
+      body: JSON.stringify({ body, token }),
+    },
+  );
+
+  if (!res.ok) {
+    throw new Error(`Worker enqueue failed: ${res.status}`);
+  }
+}
+
 export const mayarController = new Elysia({
   prefix: "/mayar",
   name: "mayar.controller",
@@ -21,27 +51,42 @@ export const mayarController = new Elysia({
   .post(
     "/webhook",
     async ({ body, headers, set }) => {
+      const rawAuthorization = headers["authorization"];
+      const bearerToken =
+        typeof rawAuthorization === "string" &&
+        rawAuthorization.toLowerCase().startsWith("bearer ")
+          ? rawAuthorization.slice(7).trim()
+          : rawAuthorization;
+      const token =
+        headers["x-mayar-token"] ||
+        headers["x-callback-token"] ||
+        bearerToken;
+
+      // Sync token check first — still a fast 401 on a bad signature, same as
+      // before, just via the extracted verifyWebhookToken instead of the
+      // (now-async) handleWebhook. No enqueue happens on a bad token.
+      if (!MayarService.verifyWebhookToken(token)) {
+        set.status = 401;
+        return { success: false, error: "Invalid webhook token" };
+      }
+
       try {
-        const rawAuthorization = headers["authorization"];
-        const bearerToken =
-          typeof rawAuthorization === "string" &&
-          rawAuthorization.toLowerCase().startsWith("bearer ")
-            ? rawAuthorization.slice(7).trim()
-            : rawAuthorization;
-        const token =
-          headers["x-mayar-token"] ||
-          headers["x-callback-token"] ||
-          bearerToken;
-        await MayarService.handleWebhook(body, token);
-        return { success: true };
+        // Enqueue only — actual processing (MayarService.handleWebhook) now
+        // happens inside the internal endpoint the Go worker calls, not here.
+        await enqueueMayarWebhook(body, token);
       } catch (err: any) {
-        logger.error("Mayar webhook failed", {
+        // Unlike the Telegram path, Mayar's own retry semantics depend on a
+        // non-2xx response, so a failed enqueue (worker unreachable) should
+        // still surface as a failure worth retrying — not a silent 200.
+        logger.error("Mayar webhook enqueue failed", {
           err: err.message,
           stack: err.stack,
         });
         set.status = 500;
-        return { success: false, error: "Webhook processing failed" };
+        return { success: false, error: "Webhook enqueue failed" };
       }
+
+      return { success: true };
     },
     {
       body: MayarWebhookDto,

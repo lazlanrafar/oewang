@@ -1,8 +1,42 @@
 import { Env } from "@workspace/constants";
 import { logger } from "@workspace/logger";
 import { Elysia } from "elysia";
-import { IntegrationsService } from "./integrations.service";
 import { verifyTelegramSecret } from "./webhook-security";
+
+// Enqueues onto the Go worker (apps/worker) instead of processing in-process —
+// asynq gives retry/DLQ instead of this handler's old silent `.catch(logger.error)`
+// drop. Telegram's own `update_id` is passed through so the worker can dedup
+// (asynq TaskID/Unique) without a new Postgres table.
+async function enqueueTelegramWebhook(
+  parsedBody: Record<string, any>,
+): Promise<void> {
+  const workerUrl = Env.WORKER_URL;
+  const workerApiKey = Env.WORKER_API_KEY;
+  if (!workerUrl || !workerApiKey) {
+    throw new Error(
+      "Worker is not configured (WORKER_URL/WORKER_API_KEY missing)",
+    );
+  }
+
+  const res = await fetch(
+    `${workerUrl.replace(/\/$/, "")}/internal/enqueue/telegram-webhook`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": workerApiKey,
+      },
+      body: JSON.stringify({
+        update_id: parsedBody.update_id,
+        raw_body: parsedBody,
+      }),
+    },
+  );
+
+  if (!res.ok) {
+    throw new Error(`Worker enqueue failed: ${res.status}`);
+  }
+}
 
 export const publicWebhooksController = new Elysia({ prefix: "/integrations" })
   .post(
@@ -45,8 +79,8 @@ export const publicWebhooksController = new Elysia({ prefix: "/integrations" })
         return "Invalid JSON payload";
       }
 
-      IntegrationsService.handleTelegramWebhook(parsedBody).catch((error) =>
-        logger.error("Telegram webhook error", { error }),
+      enqueueTelegramWebhook(parsedBody).catch((error) =>
+        logger.error("Telegram webhook enqueue error", { error }),
       );
       return "OK";
     },

@@ -3,7 +3,13 @@ import json
 from fastapi import APIRouter, Header, HTTPException
 from fastapi.responses import JSONResponse, StreamingResponse
 
-from app.modules.chatbot.service import chat, generate_title, web_chat, stream_web_chat
+from app.modules.chatbot.service import (
+    chat,
+    generate_title,
+    stream_chat,
+    stream_web_chat,
+    web_chat,
+)
 from app.modules.chatbot.tools import ApiError
 from app.schemas.chatbot import (
     ChatRequest,
@@ -21,6 +27,36 @@ router = APIRouter(tags=["chatbot"])
 async def post_chat(req: ChatRequest) -> ChatResponse:
     result = await chat(req.message, req.workspace_id, req.user_id, req.session_id)
     return ChatResponse(**result)
+
+
+@router.post("/chat/stream")
+async def post_chat_stream(req: ChatRequest):
+    """Streaming variant of the legacy /chat route — same request shape,
+    SSE response shaped like /chat/web/stream (content deltas + a final done
+    event). Consumed by apps/api's Telegram path for fake-streaming via
+    incremental message edits."""
+
+    async def event_generator() -> AsyncGenerator[str, None]:
+        try:
+            async for event in stream_chat(
+                req.message, req.workspace_id, req.user_id, req.session_id
+            ):
+                event_name = event.get("event", "message")
+                data_str = json.dumps(event.get("data", {}))
+                yield f"event: {event_name}\ndata: {data_str}\n\n"
+        except Exception as e:
+            err_data = json.dumps({"error": str(e)})
+            yield f"event: error\ndata: {err_data}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @router.post("/chat/title", response_model=TitleResponse)

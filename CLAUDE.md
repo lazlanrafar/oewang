@@ -36,6 +36,7 @@ docker compose up -d     # PostgreSQL 16 (5432) + Redis 7 (6379)
 | `apps/api`     | ElysiaJS (Bun)         | 3002 | REST API + MCP server           |
 | `apps/website` | Next.js                | 3003 | Marketing website               |
 | `apps/ai`      | FastAPI (Python 3.12)  | 3004 | All AI logic (see below)        |
+| `apps/worker`  | Go (asynq)             | 8080 | Background jobs (see below)     |
 | `apps/native`  | Flutter                | —    | Mobile app (Dart/Flutter 3.11+) |
 
 ### Key packages
@@ -46,15 +47,18 @@ docker compose up -d     # PostgreSQL 16 (5432) + Redis 7 (6379)
 - **`packages/ui`** — shadcn + Radix + Tailwind v4 components.
 - **`packages/types`** — types + `ErrorCode` constants. **`packages/constants`** — roles, colors, pricing, API config.
 - **`packages/encryption`** — AES-256-GCM. Used only in `apps/api/plugins/encryption.ts` + `apps/app/lib/axios.ts`.
-- **`packages/redis`** — Redis singleton (ioredis TCP local / Upstash REST prod). Used by `apps/api/lib/cache.ts` + `plugins/rate-limit.ts`.
+- **`packages/redis`** — Redis singleton (ioredis, TCP via `REDIS_URL`). Used by `apps/api/lib/cache.ts` + `plugins/rate-limit.ts`.
 
-**AI logic lives in `apps/ai` (Python)** — chat orchestration, tool execution (DB writes/audit/quota), receipt OCR, CSV import, RAG, chunking, canvas tools, **and** (as of the chatBegin/chatEnd migration) the web chat money path: JWT auth, session mgmt, the receipt-draft short-circuit, quota enforcement, and system-prompt build all run in-process against Postgres (`apps/ai/app/modules/chatbot/{chat_money_path,draft}.py`, `app/core/{auth,quota,sessions,vault}.py`). The old `packages/ai` was removed. Website chat calls `apps/ai` directly (no TS round-trip per turn); `apps/api` keeps only Telegram's session bookkeeping, the sidecar client (`ai-sidecar-client.ts`, HTTP + `x-api-key`, requires `AI_SERVICE_URL`, no in-process fallback), and a couple of standalone reads (`GET /ai/sessions*`, `GET /ai/quota`, `POST /ai/parse-receipt`). Telegram's receipt-draft flow also calls `apps/ai` directly (`POST /draft/*`, x-api-key only — same trust model as `/tools/execute`).
+**AI logic lives in `apps/ai` (Python)** — chat orchestration, tool execution (DB writes/audit/quota), receipt OCR, CSV import, RAG, chunking, canvas tools, **and** (as of the chatBegin/chatEnd migration) the web chat money path: JWT auth, session mgmt, the receipt-draft short-circuit, quota enforcement, and system-prompt build all run in-process against Postgres (`apps/ai/app/modules/chatbot/{chat_money_path,draft}.py`, `app/core/{auth,quota,sessions,vault}.py`). The old `packages/ai` was removed. Website chat calls `apps/ai` directly (no TS round-trip per turn); `apps/api` keeps the sidecar client (`ai-sidecar-client.ts`, HTTP + `x-api-key`, requires `AI_SERVICE_URL`, no in-process fallback) and a couple of standalone reads (`GET /ai/sessions*`, `GET /ai/quota`, `POST /ai/parse-receipt`).
+
+**Background jobs live in `apps/worker` (Go/asynq)** — Telegram webhook processing and CSV/bank-statement transaction import are owned end-to-end by the worker: it calls `apps/ai`'s internal endpoints (`/draft/*`, `/tools/execute`, `/import/extract`, `/chat/stream`) and Postgres directly, with no TS round-trip (`apps/worker/internal/tasks/{webhook_telegram,transactions_import}.go`). apps/api's `IntegrationsService.handleTelegramWebhook` and `chatViaSidecarStream` were removed — the worker is now the sole Telegram-message handler. Billing lifecycle, vault storage sweeps, invoice-overdue detection, and AI quota reset/anomaly-scan still delegate business logic back to `apps/api`'s `/v1/internal/*` or `apps/ai`'s `/internal/*` endpoints — the worker only owns their scheduling/retry. apps/api enqueues onto the worker via `apps/api/modules/worker/worker-client.ts` (HTTP + `x-api-key`, mirrors `ai-sidecar-client.ts`'s shape) and creates the `transaction_import_jobs` row the worker reports completion status back into.
 
 ### Data flow
 
 - **DB path:** pages → `packages/modules` server actions → `packages/database` (Drizzle) → PostgreSQL.
 - **API path:** pages → `apps/api` (ElysiaJS, AES-256-GCM transport) → database / integrations.
 - **AI path:** `apps/ai` (FastAPI) runs the LLM loop and the full chat money path, both writing to PostgreSQL directly (incl. audit + quota). Web chat verifies the user's `oewang-session` JWT itself (PyJWT, HS256, `JWT_SECRET` shared with the TS apps); Telegram and other service-to-service calls use `x-api-key` only, with `workspace_id`/`user_id` explicit in the body.
+- **Worker path:** `apps/api` enqueues onto `apps/worker` (Go/asynq, `x-api-key`) for Telegram webhook processing and transaction import; the worker calls `apps/ai` and PostgreSQL directly for those two flows, and calls back into `apps/api`'s `/v1/internal/*` for everything else (billing/vault/invoice sweeps).
 - **Auth:** login → `apps/api` issues `oewang-session` JWT (HS256) → `apps/app` sets httpOnly cookie → middleware verifies on every request.
 
 ### Env vars
@@ -133,7 +137,7 @@ Routes: `app/(main)/[locale]/` → `(auth)/` public auth · `(dashboard)/` authe
 
 Guides: [TESTING_UNIT.md](./docs/TESTING_UNIT.md) (Bun runner, mocking, utils/service tests) · [TESTING_E2E.md](./docs/TESTING_E2E.md) (Playwright, fixtures, dictionary selectors) · [TESTING.md](./TESTING.md) (full inventory).
 
-**Baseline:** 413 unit tests (~200ms) · 115+ E2E. Recall aggregation is in the Python sidecar; `apps/ai` has its own `pytest` suite. Test name format: `should {behaviour} when {condition}`.
+**Baseline:** 413 unit tests (~200ms) · 115+ E2E. Recall aggregation is in the Python sidecar; `apps/ai` has its own `pytest` suite; `apps/worker` has its own `go test` suite (see [TESTING_UNIT.md](./docs/TESTING_UNIT.md)'s apps/worker section). Test name format: `should {behaviour} when {condition}`.
 
 ### 🤖 AI Agent Testing Obligations
 

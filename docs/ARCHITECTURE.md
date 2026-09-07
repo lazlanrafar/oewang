@@ -16,14 +16,14 @@ oewang/
 │   ├── api/        # ElysiaJS/Bun — REST API + MCP server (port 3002)
 │   ├── website/    # Next.js — Marketing website (port 3003)
 │   ├── ai/         # FastAPI/Python — AI sidecar: chatbot, NLP, RAG, anomaly (port 3004)
+│   ├── worker/     # Go/asynq — background jobs: Telegram webhook processing,
+│   │               #   transaction import, billing/vault/invoice sweeps, quota reset
 │   └── native/     # Flutter — Mobile app (Dart/Flutter 3.11+)
 └── packages/
-    ├── ai/             # AI orchestration (Vercel AI SDK, OpenAI, Anthropic, Gemini)
-    │                   #   Includes: embedding, RAG, chunking, receipt parsing, artifacts
     ├── bucket/         # S3-compatible object storage client
     ├── constants/      # Shared static constants (roles, colors, config, env)
     ├── currencyfreaks/ # CurrencyFreaks exchange rate client
-    ├── database/       # Drizzle ORM + PostgreSQL (35 tables)
+    ├── database/       # Drizzle ORM + PostgreSQL (42 tables)
     ├── dictionaries/   # i18n JSON files (en, id, ja)
     ├── email/          # Resend email sender + HTML templates
     ├── encryption/     # AES-256-GCM encrypt/decrypt
@@ -32,7 +32,7 @@ oewang/
     ├── logger/         # Pino-based structured logger
     ├── modules/        # Server actions and data-fetching logic (app-side)
     ├── playwright/     # Shared Playwright E2E configuration
-    ├── redis/          # Upstash Redis client singleton
+    ├── redis/          # Redis client singleton (ioredis, TCP)
     ├── types/          # Shared TypeScript types + error codes (no runtime)
     ├── typescript-config/ # Shared tsconfig bases
     ├── ui/             # shadcn/ui + Radix UI + Tailwind CSS v4 components
@@ -68,6 +68,12 @@ oewang/
 │                                          → service          │
 │                                          → repository       │
 │                                          → database         │
+│                                                             │
+│  Background jobs → apps/worker (Go/asynq, x-api-key)        │
+│    Telegram webhook + transaction import: worker owns       │
+│      end-to-end (calls apps/ai + PostgreSQL directly)       │
+│    Billing/vault/invoice sweeps: worker schedules only,     │
+│      delegates business logic back to apps/api /v1/internal │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -371,6 +377,9 @@ bun run lint         # zero Biome violations
 bun run test         # 399+ unit tests pass (~134ms)
 bun run test:e2e     # 115+ Playwright E2E tests pass
 bun run build        # clean production build
+
+# apps/worker (Go, not part of the Bun/Turborepo task graph — run separately)
+cd apps/worker && go build ./... && go vet ./... && go test ./...
 ```
 
 > See [ENGINEERING_STANDARDS.md](./ENGINEERING_STANDARDS.md) for naming, typing, and git branch conventions.

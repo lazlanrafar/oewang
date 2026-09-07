@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import time
 from collections.abc import Awaitable, Callable
 
 from openai import OpenAI
@@ -69,10 +70,118 @@ async def complete_metered(
     after. For entry points NOT already metered by Elysia's chat-begin/chat-end."""
     from app.core import quota
 
+    quota_start = time.monotonic()
     await quota.check_quota(workspace_id)
+    quota_check_ms = (time.monotonic() - quota_start) * 1000
+
+    call_start = time.monotonic()
     result = await asyncio.to_thread(complete_raw, system, messages, max_tokens)
+    completion_call_ms = (time.monotonic() - call_start) * 1000
+
+    log.info(
+        "complete_metered timing: quota_check_ms=%.1f completion_call_ms=%.1f",
+        quota_check_ms,
+        completion_call_ms,
+    )
     await quota.record_usage(workspace_id, result["usage"])
     return result["reply"]
+
+
+def _stream_raw(
+    system: str,
+    messages: list[dict],
+    max_tokens: int,
+) -> dict:
+    """Sync helper: drains an entire OpenAI streaming completion before
+    returning.
+
+    ponytail note on the asyncio.to_thread + streaming question: the OpenAI
+    SDK's sync streaming iterator is a blocking generator bound to the thread
+    that opened the HTTP connection. Handing that iterator back out of
+    asyncio.to_thread and pulling chunks from it on the event loop would just
+    move the blocking socket read onto the loop thread one chunk at a time —
+    it doesn't actually get you concurrent, non-blocking iteration. Rather
+    than build a cross-thread queue/callback bridge for "true" per-chunk
+    yielding (real complexity for a low-volume Telegram chat path), we drain
+    the whole stream inside the one to_thread call — same single blocking
+    HTTP call complete_raw already makes — and hand back the list of deltas
+    for the caller to yield from. This isn't realtime-per-network-chunk, but
+    it's still a real improvement over today: the model's tokens are
+    generated incrementally either way, so the deltas list is ready as soon as
+    generation finishes, same latency complete_raw already had; the caller
+    just gets to emit them as a sequence of small events instead of one big
+    string, which is what Telegram's incremental-edit UI actually needs.
+    """
+    stream = get_client().chat.completions.create(
+        model=get_settings().AI_CHAT_MODEL,
+        max_tokens=max_tokens,
+        messages=[{"role": "system", "content": system}, *messages],
+        stream=True,
+    )
+    deltas: list[str] = []
+    usage_in = 0
+    usage_out = 0
+    response_id: str | None = None
+    for chunk in stream:
+        if chunk.id:
+            response_id = chunk.id
+        if chunk.choices:
+            delta = chunk.choices[0].delta
+            if delta and delta.content:
+                deltas.append(delta.content)
+        if chunk.usage:
+            usage_in = chunk.usage.prompt_tokens or usage_in
+            usage_out = chunk.usage.completion_tokens or usage_out
+    return {
+        "deltas": deltas,
+        "reply": "".join(deltas),
+        "usage": {"input_tokens": usage_in, "output_tokens": usage_out},
+        "response_id": response_id,
+    }
+
+
+async def complete_metered_stream(
+    system: str,
+    messages: list[dict],
+    workspace_id: str,
+    max_tokens: int = 1024,
+):
+    """Streaming counterpart to complete_metered, for the no-tools chat path
+    (Telegram's fake-streaming via incremental message edits). Same quota
+    shape as complete_metered — check before the call, record after — since
+    callers use this INSTEAD of complete_metered, not alongside it; skipping
+    either check here would silently bypass quota for this whole path.
+
+    Yields {"type": "delta", "text": ...} chunks as they become available,
+    followed by exactly one {"type": "done", "reply": ..., "usage": ...,
+    "response_id": ...}.
+    """
+    from app.core import quota
+
+    quota_start = time.monotonic()
+    await quota.check_quota(workspace_id)
+    quota_check_ms = (time.monotonic() - quota_start) * 1000
+
+    call_start = time.monotonic()
+    result = await asyncio.to_thread(_stream_raw, system, messages, max_tokens)
+    completion_call_ms = (time.monotonic() - call_start) * 1000
+
+    log.info(
+        "complete_metered_stream timing: quota_check_ms=%.1f completion_call_ms=%.1f",
+        quota_check_ms,
+        completion_call_ms,
+    )
+
+    for text in result["deltas"]:
+        yield {"type": "delta", "text": text}
+
+    await quota.record_usage(workspace_id, result["usage"])
+    yield {
+        "type": "done",
+        "reply": result["reply"],
+        "usage": result["usage"],
+        "response_id": result["response_id"],
+    }
 
 
 # execute_tool(name, args) -> {"result": any, "artifact": {type, payload} | None}

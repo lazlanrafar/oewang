@@ -26,6 +26,7 @@ export * from "./schema/privacy-requests";
 export * from "./schema/push-subscriptions";
 export * from "./schema/system-settings";
 export * from "./schema/transaction-attachments";
+export * from "./schema/transaction-import-jobs";
 export * from "./schema/transaction-items";
 export * from "./schema/transactions";
 export * from "./schema/user-workspaces";

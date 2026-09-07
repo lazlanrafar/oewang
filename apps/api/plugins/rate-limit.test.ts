@@ -8,8 +8,6 @@ process.env.DATA_ENCRYPTION_KEY = "b".repeat(32);
 // between test runs (15-min auth window). Empty string wins over .env because
 // dotenv never overrides keys already present in process.env.
 process.env.REDIS_URL = "";
-process.env.UPSTASH_REDIS_REST_URL = "";
-process.env.UPSTASH_REDIS_REST_TOKEN = "";
 
 import { describe, expect, it } from "bun:test";
 import { Elysia } from "elysia";

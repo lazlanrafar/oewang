@@ -1,6 +1,5 @@
 from contextlib import asynccontextmanager
 
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import Depends, FastAPI, Request
 from fastapi.responses import JSONResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -9,31 +8,32 @@ from slowapi.middleware import SlowAPIMiddleware
 from slowapi.util import get_remote_address
 
 from app.api.middleware.auth import require_api_key
-from app.api.routes import advisor, analyzer, anomaly, capabilities, chatbot, draft
-from app.config import get_settings
+from app.api.routes import (
+    advisor,
+    analyzer,
+    anomaly,
+    capabilities,
+    chatbot,
+    draft,
+    internal,
+)
 from app.core.database import close_pool
 from app.core.quota import PlanLimitReached
-from app.modules.anomaly.service import scan_all_workspaces
 from app.utils.logger import get_logger
 
 log = get_logger("main")
 
-# ponytail: in-memory rate limit + scheduler — fine for one replica.
-# Move to Redis storage / APScheduler jobstore if you run multiple instances.
+# ponytail: in-memory rate limit — fine for one replica. The anomaly scan's
+# periodic cadence used to live here too (AsyncIOScheduler), explicitly noted
+# as a single-replica gap — it now lives in the Go worker (apps/worker), which
+# calls POST /internal/anomaly/scan-all on the same ANOMALY_SCAN_HOURS cadence
+# instead. Do not re-add an in-process scheduler here.
 limiter = Limiter(key_func=get_remote_address, default_limits=["120/minute"])
-scheduler = AsyncIOScheduler()
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    hours = get_settings().ANOMALY_SCAN_HOURS
-    if hours > 0:
-        scheduler.add_job(scan_all_workspaces, "interval", hours=hours)
-        scheduler.start()
-        log.info("anomaly scan scheduled every %sh", hours)
     yield
-    if scheduler.running:
-        scheduler.shutdown(wait=False)
     await close_pool()
 
 
@@ -64,3 +64,4 @@ app.include_router(analyzer.router, dependencies=_auth)
 app.include_router(advisor.router, dependencies=_auth)
 app.include_router(anomaly.router, dependencies=_auth)
 app.include_router(capabilities.router, dependencies=_auth)
+app.include_router(internal.router, dependencies=_auth)

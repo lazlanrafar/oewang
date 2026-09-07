@@ -2,13 +2,15 @@
 
 > See also: [CLAUDE.md](../CLAUDE.md) · [ARCHITECTURE.md](./ARCHITECTURE.md) · [BEST_PRACTICE_ELYSIA.md](./BEST_PRACTICE_ELYSIA.md) · [ENGINEERING_STANDARDS.md](./ENGINEERING_STANDARDS.md) · [TESTING_E2E.md](./TESTING_E2E.md)
 
+This guide covers `apps/api`'s Bun/TypeScript unit tests. `apps/ai` (Python) has its own `pytest` suite. `apps/worker` (Go) has its own `go test` suite — see [apps/worker tests](#appsworker-go-tests) below.
+
 ---
 
 ## Overview
 
 All backend tests use **Bun's built-in test runner** (`bun:test`). Tests are fast, require no database, and run in ~134ms.
 
-**Current baseline: 349 unit tests across 18 test files — all must pass before merging.** (Quick-recall aggregation and the web-chat money path moved to the Python sidecar `apps/ai`; covered by its `pytest` suite. `ai/ai.utils.test.ts` was removed — the functions it covered were dead TS code, superseded by the Python port in `apps/ai/app/modules/chatbot/draft.py`.)
+**Current baseline: 346 unit tests across 18 test files (rows below) — all must pass before merging.** (Quick-recall aggregation and the web-chat money path moved to the Python sidecar `apps/ai`; covered by its `pytest` suite. `ai/ai.utils.test.ts` was removed — the functions it covered were dead TS code, superseded by the Python port in `apps/ai/app/modules/chatbot/draft.py`. `integrations/telegram-webhook-draft.test.ts`, `integrations/ai-sidecar.test.ts`, and `integrations/integrations.service.test.ts` were removed — `IntegrationsService.handleTelegramWebhook` and `chatViaSidecarStream` were deleted from apps/api; the whole Telegram webhook state machine, including the receipt-draft flow and fake-streaming chat, was ported to Go in `apps/worker/internal/tasks/webhook_telegram.go` and is covered by its own Go test suite instead.)
 
 ```bash
 # From repo root
@@ -69,7 +71,6 @@ apps/api/modules/{feature}/
 | `categories`   | `categories/categories.utils.test.ts`      | 38      | Name validation, name formatting, icon assignment, category grouping, sorting, duplicate detection, default categories                                     |
 | `invoices`     | `invoices/invoices.utils.test.ts`          | 24      | JWT token generation/verification, round-trip encoding, expiration handling, security/tampering                                                            |
 | `integrations` | `integrations/webhook-security.test.ts`    | 19      | URL parsing with forwarded headers, form body parsing, Telegram secret, timing-safe comparisons                                                            |
-| `integrations` | `integrations/telegram-webhook-draft.test.ts` | 5    | `handleTelegramWebhook`'s receipt-draft flow: builds a draft via `AiSidecarClient`, creates a session, replies with the preview; falls back gracefully when nothing parses; pending-draft precedence over normal chat, including the two fall-through cases |
 | `workspaces`   | `workspaces/workspace-permissions.test.ts` | 22      | Role normalization, edit permissions, sensitive permissions, assertion throws, permission hierarchy                                                        |
 | `mayar`        | `mayar/billing.utils.test.ts`              | 5       | Annual billing detection, period calculations                                                                                                              |
 | `mayar`        | `mayar/billing-lifecycle.service.test.ts`  | 2       | Subscription expiration → `past_due`, grace period → downgrade to free                                                                                     |
@@ -78,7 +79,8 @@ apps/api/modules/{feature}/
 | `articles`     | `articles/articles.utils.test.ts`          | 4       | Slug generation: lowercasing, punctuation-run collapse, dash trimming, empty fallback                                                                       |
 | `lib`          | `lib/at-rest-crypto.test.ts`               | 2       | At-rest encryption round-trip with the data key; legacy decrypt fallback to the transport key                                                              |
 | `plugins`      | `plugins/rate-limit.test.ts`               | 3       | Scoped hook propagates to parent routes; per-tier bucket isolation (unauth burst can't exhaust the auth bucket); 429 when the auth bucket is exhausted     |
-| **TOTAL**      | **18 files**                               | **349** | **All core business logic**                                                                                                                                |
+| `worker`       | `worker/worker-client.test.ts`             | 2       | `enqueueTransactionsImport` posts job_id/workspace_id/user_id/data/mime_type with the shared x-api-key header; throws on a non-OK enqueue response          |
+| **TOTAL**      | **18 files**                               | **346** | **All core business logic (some apps/api test files exist outside this table — see repo for the full count)**                                                                                                                                |
 
 ---
 
@@ -401,3 +403,29 @@ bun test --coverage modules/wallets
 | Flaky tests          | Zero               | 0 ✅       |
 
 Tests that require a real database go in `__tests__/` as **integration tests** (run separately, use `.env.test`).
+
+---
+
+## apps/worker (Go tests)
+
+`apps/worker`'s tests use Go's built-in `testing` package + `testify` (`assert`/`require`), colocated as `{file}_test.go` next to the source. Run from `apps/worker`:
+
+```bash
+go build ./...       # compile check
+go vet ./...          # static analysis
+go test ./...          # all tests
+go test ./... -cover   # with per-package coverage
+go test ./internal/tasks/... -v   # single package, verbose
+```
+
+No live Postgres/Redis/Telegram/apps/ai connection is needed — DB-touching handler logic is tested via narrow interfaces (`TransactionsStore`, `ImportJobsStore`, `IntegrationsStore`, `AiSessionsStore`, `TelegramSender`, `AiSidecarClient`, etc., each satisfied by a hand-written fake in the corresponding `_test.go`), and HTTP-calling clients (`aiclient`, `telegram`) are tested against `httptest.NewServer`.
+
+| Package | Coverage | What's tested |
+| --- | --- | --- |
+| `internal/tasks` | ~78% | `TelegramWebhookHandler` (connect flow, receipt-draft OCR, streaming chat, tool-call normalization, Indonesian number formatting), `TransactionsImportHandler` (extraction, category auto-create, wallet balance updates, job-status marking incl. retry-exhaustion fail-safe), the existing billing/storage/invoice/audit/quota/anomaly periodic-task handlers |
+| `internal/aiclient` | ~91% | SSE frame parsing (`ChatStream`: content/done/error frames, missing trailing blank line, context cancellation, non-OK status), draft/tool-execute/import-extract JSON request-response shapes |
+| `internal/telegram` | ~86% | `SendMessage`/`EditMessageText`/`DownloadFile`/`StartTyping` against a redirect-transport-backed `httptest` server, including not-OK and transport-error paths |
+| `internal/apiclient` | ~93% | Retry-once-on-5xx / never-retry-on-4xx HTTP client behavior |
+| `internal/enqueue` | ~81% | `POST /internal/enqueue/{kind}` auth gate, task-building per kind (`telegram-webhook`, `mayar-webhook`, `transactions-import`), unknown-kind rejection |
+| `internal/health` | 100% | `GET /health` DB+Redis ping success/failure paths |
+| `internal/repo`, `internal/db`, `internal/config`, `internal/cuid`, `cmd/worker` | 0% (untested) | Thin Postgres/CUID2/env-loading/bootstrap wrappers — no live-DB test harness exists in this repo yet (matches `apps/api`'s own convention of leaving the raw repository layer untested; see `__tests__/ is currently empty` above) |

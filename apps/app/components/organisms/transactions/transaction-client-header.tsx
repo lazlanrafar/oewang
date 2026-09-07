@@ -50,6 +50,7 @@ interface TransactionClientHeaderProps {
   categories: Category[];
   wallets: Wallet[];
   onImport: () => void;
+  onImportAi: () => void;
   onExport: () => void;
   onAdd: () => void;
   canEditData: boolean;
@@ -68,6 +69,7 @@ export function TransactionClientHeader({
   categories,
   wallets,
   onImport,
+  onImportAi,
   onExport,
   onAdd,
   canEditData,
@@ -131,6 +133,10 @@ export function TransactionClientHeader({
                 <DropdownMenuItem onClick={onImport}>
                   <FileUp className="mr-2 h-4 w-4" />
                   {dictionary.transactions.backup_restore_device}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={onImportAi}>
+                  <FileUp className="mr-2 h-4 w-4" />
+                  {dictionary.transactions.import_statement_ai}
                 </DropdownMenuItem>
                 <DropdownMenuItem disabled>
                   <FileDown className="mr-2 h-4 w-4" />
