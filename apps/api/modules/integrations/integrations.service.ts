@@ -282,17 +282,26 @@ export abstract class IntegrationsService {
           : await IntegrationsRepository.findWorkspaceIdBySlugOrId(
               workspaceIdentifier,
             );
-        let targetUserId = IntegrationsService.isUuid(userIdCandidate || "")
-          ? userIdCandidate
-          : undefined;
-
         if (!targetWorkspaceId) {
+          logger.warn("Telegram connect: workspace not found", {
+            workspaceIdentifier,
+            hasUserIdCandidate: Boolean(userIdCandidate),
+          });
           await IntegrationsService.sendTelegramMessage(
             chatId,
             "❌ I couldn't find that workspace. Please reconnect from your Oewang dashboard.",
           );
           return "OK";
         }
+
+        let targetUserId =
+          userIdCandidate &&
+          (await IntegrationsRepository.isWorkspaceMember(
+            targetWorkspaceId,
+            userIdCandidate,
+          ))
+            ? userIdCandidate
+            : undefined;
 
         // If userId is missing, try to find the first member of the workspace
         if (!targetUserId) {

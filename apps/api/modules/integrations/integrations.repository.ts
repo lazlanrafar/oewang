@@ -108,6 +108,21 @@ export abstract class IntegrationsRepository {
     return updated;
   }
 
+  static async isWorkspaceMember(workspaceId: string, userId: string) {
+    const [membership] = await db
+      .select({ userId: user_workspaces.user_id })
+      .from(user_workspaces)
+      .where(
+        and(
+          eq(user_workspaces.workspace_id, workspaceId),
+          eq(user_workspaces.user_id, userId),
+          isNull(user_workspaces.deleted_at),
+        ),
+      )
+      .limit(1);
+    return Boolean(membership);
+  }
+
   static async findFirstMemberId(workspaceId: string) {
     const [membership] = await db
       .select({ userId: user_workspaces.user_id })
