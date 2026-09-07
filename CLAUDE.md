@@ -2,7 +2,7 @@
 
 Guidance for Claude Code working in this repo.
 
-> **Docs:** [ARCHITECTURE.md](./docs/ARCHITECTURE.md) · [FEATURES.md](./docs/FEATURES.md) · [STYLE_GUIDE.md](./docs/STYLE_GUIDE.md) · [BEST_PRACTICE_ELYSIA.md](./docs/BEST_PRACTICE_ELYSIA.md) · [BEST_PRACTICE_NEXT_JS.md](./docs/BEST_PRACTICE_NEXT_JS.md) · [BEST_PRACTICE_FLUTTER.md](./docs/BEST_PRACTICE_FLUTTER.md) · [ENGINEERING_STANDARDS.md](./docs/ENGINEERING_STANDARDS.md) · [IMPLEMENTATION_PLAN.md](./docs/IMPLEMENTATION_PLAN.md) · [SHEET_GUIDE.md](./docs/SHEET_GUIDE.md) · [DATA_TABLE_PAGE_GUIDE.md](./docs/DATA_TABLE_PAGE_GUIDE.md)
+> **Docs:** [ARCHITECTURE.md](./docs/ARCHITECTURE.md) · [FEATURES.md](./docs/FEATURES.md) · [STYLE_GUIDE.md](./docs/STYLE_GUIDE.md) · [BEST_PRACTICE_ELYSIA.md](./docs/BEST_PRACTICE_ELYSIA.md) · [BEST_PRACTICE_NEXT_JS.md](./docs/BEST_PRACTICE_NEXT_JS.md) · [BEST_PRACTICE_FLUTTER.md](./docs/BEST_PRACTICE_FLUTTER.md) · [ENGINEERING_STANDARDS.md](./docs/ENGINEERING_STANDARDS.md) · [IMPLEMENTATION_PLAN.md](./docs/IMPLEMENTATION_PLAN.md) · [SHEET_GUIDE.md](./docs/SHEET_GUIDE.md) · [DATA_TABLE_PAGE_GUIDE.md](./docs/DATA_TABLE_PAGE_GUIDE.md) · [ENV_VARS.md](./docs/ENV_VARS.md)
 > **Refs:** [REFERENCE_MIDDAY_AI.md](./docs/REFERENCE_MIDDAY_AI.md) — Midday AI chat / MCP / external-app patterns
 > **Testing:** [TESTING_UNIT.md](./docs/TESTING_UNIT.md) · [TESTING_E2E.md](./docs/TESTING_E2E.md)
 
@@ -59,7 +59,7 @@ docker compose up -d     # PostgreSQL 16 (5432) + Redis 7 (6379)
 
 ### Env vars
 
-All in a **single root `.env`**, surfaced via `turbo.json → globalEnv`. **Never** create `.env` inside `apps/*` or `packages/*`.
+All in a **single root `.env`**, surfaced via `turbo.json → globalEnv`. **Never** create `.env` inside `apps/*` or `packages/*` — the sole exception is `apps/native/.env` (Flutter bundles it as an asset, it can't read the root file at runtime). See [ENV_VARS.md](./docs/ENV_VARS.md) for which vars each resource actually needs.
 
 ---
 
