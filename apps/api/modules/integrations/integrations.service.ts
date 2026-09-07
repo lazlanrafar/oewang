@@ -356,6 +356,7 @@ export abstract class IntegrationsService {
       });
     };
 
+    const stopTyping = IntegrationsService.startTelegramTyping(chatId);
     try {
       if (photo && photo.length > 0) {
         // Handle receipt image — same draft/confirm flow as web chat.
@@ -508,9 +509,34 @@ export abstract class IntegrationsService {
       }
     } catch (error) {
       logger.error("Telegram webhook message processing failed", { error });
+    } finally {
+      stopTyping();
     }
 
     return "OK";
+  }
+
+  // ponytail: Telegram's own "typing…" indicator expires after ~5s, so it
+  // must be re-sent while a slow (OCR/LLM) reply is being built.
+  private static startTelegramTyping(chatId: string): () => void {
+    const tick = () =>
+      IntegrationsService.sendTelegramChatAction(chatId, "typing").catch(
+        () => {},
+      );
+    tick();
+    const interval = setInterval(tick, 4000);
+    return () => clearInterval(interval);
+  }
+
+  static async sendTelegramChatAction(chatId: string, action: string) {
+    const token = Env.TELEGRAM_BOT_TOKEN;
+    if (!token) return;
+
+    await fetch(`https://api.telegram.org/bot${token}/sendChatAction`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: chatId, action }),
+    }).catch((err) => logger.debug("Telegram sendChatAction failed", { err }));
   }
 
   static async sendTelegramMessage(chatId: string, text: string) {
