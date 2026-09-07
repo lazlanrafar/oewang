@@ -36,7 +36,7 @@ docker compose up -d     # PostgreSQL 16 (5432) + Redis 7 (6379)
 | `apps/api`     | ElysiaJS (Bun)         | 3002 | REST API + MCP server           |
 | `apps/website` | Next.js                | 3003 | Marketing website               |
 | `apps/ai`      | FastAPI (Python 3.12)  | 3004 | All AI logic (see below)        |
-| `apps/worker`  | Go (asynq)             | 8080 | Background jobs (see below)     |
+| `apps/worker`  | Go (asynq)             | 3005 | Background jobs (see below)     |
 | `apps/native`  | Flutter                | —    | Mobile app (Dart/Flutter 3.11+) |
 
 ### Key packages

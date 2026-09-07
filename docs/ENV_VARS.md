@@ -159,7 +159,7 @@ Owns scheduling/retry/dead-letter for periodic and offloaded jobs. Billing lifec
 
 | Variable | Required | Notes |
 | --- | --- | --- |
-| `WORKER_PORT` | Optional | Health-check + internal enqueue HTTP server port |
+| `PORT` | Optional | Health-check + internal enqueue HTTP server port — the Go binary reads the bare `PORT` var (Coolify/PaaS convention, not a worker-prefixed name), defaulting to `3005` if unset |
 | `WORKER_API_KEY` | **Required** | Min 16 chars — shared secret gating `apps/api`'s `internal.controller.ts`; also sent as `x-api-key` when `apps/api` enqueues onto this worker |
 | `WORKER_URL` | Not read by this app | Consumed by `apps/api`, not `apps/worker` itself — listed here for reference since it points at this resource |
 | `DATABASE_URL` | **Required** | Same Postgres instance as `apps/api`/`apps/ai` — raw `pgx` SQL, no ORM. Used by the two retention-purge jobs, the invoice-overdue query, and now the full Telegram (workspace_integrations/user_workspaces/ai_sessions/ai_messages/notifications) and transactions-import (wallets/categories/transactions/audit_logs) flows |

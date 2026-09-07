@@ -13,6 +13,6 @@ RUN apk add --no-cache ca-certificates
 COPY --from=builder /out/worker /usr/local/bin/worker
 
 # Coolify (and most PaaS) inject $PORT — the binary reads it via config.Load,
-# falling back to 8080 locally.
-EXPOSE 8080
+# falling back to 3005 locally.
+EXPOSE 3005
 CMD ["worker"]

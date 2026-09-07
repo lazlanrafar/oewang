@@ -78,7 +78,7 @@ func Load() (*Config, error) {
 	}
 
 	if cfg.Port == "" {
-		cfg.Port = "8080"
+		cfg.Port = "3005"
 	}
 
 	hoursStr := os.Getenv("ANOMALY_SCAN_HOURS")
