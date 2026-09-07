@@ -41,8 +41,8 @@ function deriveTitle(firstMessage: string): string {
   return clean.length > 60 ? `${clean.slice(0, 57)}…` : clean || "New chat";
 }
 
-type ChatAttachment = NonNullable<ChatMessage["attachments"]>[number];
-type WalletRef = { id: string; name: string };
+export type ChatAttachment = NonNullable<ChatMessage["attachments"]>[number];
+export type WalletRef = { id: string; name: string; isDefault?: boolean };
 type ReceiptDraftItem = {
   name: string;
   brand?: string | null;
@@ -62,7 +62,7 @@ type ReceiptDraftEntry = {
   attachmentIds?: string[];
   items: ReceiptDraftItem[];
 };
-type InvoiceDraftState = {
+export type InvoiceDraftState = {
   status: "awaiting_confirmation" | "confirmed" | "cancelled";
   createdAt: string;
   wallets: WalletRef[];
@@ -150,7 +150,7 @@ function resolveWalletByName(wallets: WalletRef[], name: string | undefined) {
   );
 }
 
-function getLatestDraftState(history: any[]): InvoiceDraftState | null {
+export function getLatestDraftState(history: any[]): InvoiceDraftState | null {
   for (let i = history.length - 1; i >= 0; i--) {
     const m = history[i];
     if (!m || m.role !== "assistant") continue;
@@ -162,7 +162,7 @@ function getLatestDraftState(history: any[]): InvoiceDraftState | null {
 
 // ── Receipt draft helpers ──────────────────────────────────────────────────
 
-async function buildInvoiceDraftFromAttachments(
+export async function buildInvoiceDraftFromAttachments(
   workspaceId: string,
   userId: string,
   attachments: ChatAttachment[] | undefined,
@@ -179,8 +179,9 @@ async function buildInvoiceDraftFromAttachments(
   const wallets = walletResult.rows.map((w: any) => ({
     id: w.id,
     name: w.name,
+    isDefault: Boolean(w.isDefault),
   }));
-  const defaultWallet = wallets[0];
+  const defaultWallet = wallets.find((w) => w.isDefault) ?? wallets[0];
 
   if (!defaultWallet?.id) {
     const emptyDraft: InvoiceDraftState = {
@@ -356,7 +357,7 @@ async function confirmDraftAndCreateTransactions(
   };
 }
 
-async function handlePendingInvoiceDraft(
+export async function handlePendingInvoiceDraft(
   workspaceId: string,
   userId: string,
   latestUserMessage: ChatMessage,
