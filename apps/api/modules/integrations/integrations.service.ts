@@ -263,8 +263,13 @@ export abstract class IntegrationsService {
     if (!message) return "OK";
 
     const chatId = message.chat?.id?.toString();
-    const text = message.text?.trim();
+    const text = (message.text || message.caption)?.trim();
     const photo = message.photo; // Array of PhotoSize, last is biggest
+    const document = message.document; // Sent as file (e.g. dragged from Finder) instead of compressed photo
+    const isReceiptDocument =
+      typeof document?.mime_type === "string" &&
+      (document.mime_type.startsWith("image/") ||
+        document.mime_type === "application/pdf");
 
     if (!chatId) return "OK";
 
@@ -367,13 +372,26 @@ export abstract class IntegrationsService {
 
     const stopTyping = IntegrationsService.startTelegramTyping(chatId);
     try {
-      if (photo && photo.length > 0) {
-        // Handle receipt image — same draft/confirm flow as web chat.
-        const fileId = photo[photo.length - 1].file_id;
+      const receiptFile =
+        photo && photo.length > 0
+          ? {
+              fileId: photo[photo.length - 1].file_id,
+              mimeType: "image/jpeg",
+              fileName: `receipt-${Date.now()}.jpg`,
+            }
+          : isReceiptDocument
+            ? {
+                fileId: document.file_id,
+                mimeType: document.mime_type as string,
+                fileName: document.file_name || `receipt-${Date.now()}`,
+              }
+            : null;
 
+      if (receiptFile) {
+        // Handle receipt image/PDF — same draft/confirm flow as web chat.
         // A. Get file path from Telegram
         const fileResponse = await fetch(
-          `https://api.telegram.org/bot${Env.TELEGRAM_BOT_TOKEN}/getFile?file_id=${fileId}`,
+          `https://api.telegram.org/bot${Env.TELEGRAM_BOT_TOKEN}/getFile?file_id=${receiptFile.fileId}`,
         );
         const fileData = await fileResponse.json();
 
@@ -388,13 +406,12 @@ export abstract class IntegrationsService {
 
           const arrayBuffer = await response.arrayBuffer();
           const base64Image = Buffer.from(arrayBuffer).toString("base64");
-          const mimeType = "image/jpeg"; // Telegram photos are usually jpeg
 
           // Vault upload + parsing happen inside buildInvoiceDraftFromAttachments
           const attachments: ChatAttachment[] = [
             {
-              name: `receipt-${Date.now()}.jpg`,
-              type: mimeType,
+              name: receiptFile.fileName,
+              type: receiptFile.mimeType,
               data: base64Image,
             },
           ];
