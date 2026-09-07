@@ -1,29 +1,9 @@
 import { t } from "elysia";
 
-export const ChatMessageDto = t.Object({
-  role: t.Union([
-    t.Literal("user"),
-    t.Literal("assistant"),
-    t.Literal("system"),
-  ]),
-  content: t.String({ minLength: 1 }),
-  attachments: t.Optional(
-    t.Array(
-      t.Object({
-        name: t.String(),
-        type: t.String(),
-        data: t.String(), // Base64
-      }),
-    ),
-  ),
-});
-
-export const ChatRequestDto = t.Object({
-  sessionId: t.Optional(t.String()),
-  messages: t.Array(ChatMessageDto, { minItems: 1 }),
-  webSearch: t.Optional(t.Boolean()),
-});
-
+// ChatMessage/ChatResponse are still used as plain types (ChatAttachment in
+// ai.service.ts, Telegram's receipt-photo attachments) even though the routes
+// that used to validate against ChatMessageDto/ChatRequestDto (POST /ai/chat)
+// were removed once the chat money path moved fully to apps/ai.
 export type ChatMessage = {
   role: "user" | "assistant" | "system";
   content: string;

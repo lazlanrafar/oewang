@@ -26,9 +26,10 @@ class Settings(BaseSettings):
     AI_EMBED_MODEL: str = "coder"
     AI_SERVICE_API_KEY: str = ""
     AI_PORT: int = 3004
-    # Elysia base URL the sidecar calls back to for tool execution + the system
-    # prompt (the money path stays in TS). Reuses AI_SERVICE_API_KEY as the
-    # shared secret in both directions.
+    # Elysia base URL — this service's one remaining outbound call to apps/api:
+    # the fire-and-forget /ai/internal/notify-usage ping after chat_end (Python
+    # can't reach RealtimeService directly, it's an in-process EventEmitter).
+    # The chat money path itself (chat_begin/chat_end) runs in-process here now.
     API_INTERNAL_URL: str = "http://localhost:3002"
     AI_MAX_STEPS: int = 10
     ALERT_CALLBACK_URL: str = ""
@@ -40,6 +41,25 @@ class Settings(BaseSettings):
     # Enforce by default (fail closed): an unset flag in prod must not silently
     # disable quota. Set MOCK_AI_QUOTA=true locally to bypass the limit.
     MOCK_AI_QUOTA: bool = False
+
+    # Verifies the oewang-session JWT for /chat/web[/stream] (HS256). MUST be
+    # byte-identical to apps/api's/apps/app's/apps/admin's JWT_SECRET.
+    JWT_SECRET: str = ""
+
+    # System-bucket-only R2/S3-compatible storage for the receipt-image vault
+    # upload side effect (buildInvoiceDraftFromAttachments port). No per-workspace
+    # custom bucket support — a workspace with custom R2 credentials configured in
+    # apps/app will have AI-uploaded receipts land here instead. Mirrors apps/api's
+    # Env.BUCKET_* naming.
+    BUCKET_ENDPOINT: str = ""
+    BUCKET_ACCESS_KEY_ID: str = ""
+    BUCKET_SECRET_ACCESS_KEY: str = ""
+    BUCKET_NAME: str = ""
+    BUCKET_REGION: str = "auto"
+
+    # Workspace ids exempt from AI token quota enforcement. Replaces a TS
+    # hardcoded workspace id (ai.service.ts) with a config value.
+    AI_QUOTA_EXEMPT_WORKSPACE_IDS: list[str] = []
 
 
 @lru_cache

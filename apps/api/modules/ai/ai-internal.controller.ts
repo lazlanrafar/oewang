@@ -1,15 +1,15 @@
 import { Env } from "@workspace/constants";
 import { Elysia, t } from "elysia";
-import { getAuth } from "../../plugins/auth";
+import { RealtimeService } from "../realtime/realtime.service";
 import { SettingsRepository } from "../settings/settings.repository";
 import { AgentSettingsService } from "./agent-settings.service";
 import { buildSystemPrompt } from "./ai.prompts";
-import { AiService } from "./ai.service";
 
 // Internal, service-to-service surface for the Python AI sidecar. NOT behind the
-// JWT authPlugin. Tool execution + the LLM loop now run IN the sidecar (the money
-// path moved to Python); Elysia keeps only the identity/session/quota plumbing:
-// the system prompt, and chat-begin/chat-end. Guarded by the shared
+// JWT authPlugin. The chat money path (session, receipt-draft short-circuit,
+// quota, chat_begin/chat_end) now runs entirely in-process in apps/ai — this
+// controller only keeps what apps/ai still needs to reach TS for: the system
+// prompt and the usage-notify fire-and-forget call. Guarded by the shared
 // AI_SERVICE_API_KEY. # ponytail: shared-secret gate; only the sidecar holds the key.
 export const aiInternalController = new Elysia({ prefix: "/ai/internal" })
   .onBeforeHandle(({ headers, set }) => {
@@ -51,84 +51,21 @@ export const aiInternalController = new Elysia({ prefix: "/ai/internal" })
       },
     },
   )
-  // Pre-LLM money path for the direct web→ai flow. Identity comes from the user's
-  // JWT (verified here via getAuth — authoritative workspace resolution), NOT from
-  // the body, so the sidecar never has to hold the JWT secret. Quota/404 errors
-  // throw and propagate as plain-JSON HTTP status (the encryption plugin exempts
-  // /ai/internal), which the sidecar forwards to the browser unchanged.
+  // Fire-and-forget from the sidecar's chat_end_core: RealtimeService is an
+  // in-process EventEmitter, so Python (a separate process) can't notify
+  // connected WebSocket clients directly. Trusts x-api-key + explicit
+  // workspace_id (service-to-service, same model /draft/* uses on the sidecar).
   .post(
-    "/chat-begin",
-    async ({ body, headers, set }) => {
-      const token = headers.authorization?.split(" ")[1];
-      const auth = token ? await getAuth(token) : null;
-      if (!auth) {
-        set.status = 401;
-        return { error: "Unauthorized" };
-      }
-      const result = await AiService.chatBegin(
-        body.messages as any,
-        auth.workspace_id,
-        auth.user_id,
-        body.session_id ?? undefined,
-      );
-      if (result.kind === "early") {
-        return {
-          kind: "early",
-          session_id: result.sessionId,
-          reply: result.reply,
-        };
-      }
-      return {
-        kind: "ready",
-        workspace_id: auth.workspace_id,
-        user_id: auth.user_id,
-        session_id: result.sessionId,
-        system_prompt: result.systemPrompt,
-        history: result.history,
-        current_tokens: result.currentTokens,
-      };
-    },
-    {
-      body: t.Object({
-        messages: t.Array(
-          t.Object({
-            role: t.String(),
-            content: t.String(),
-            attachments: t.Optional(t.Any()),
-          }),
-          { minItems: 1 },
-        ),
-        session_id: t.Optional(t.Nullable(t.String())),
-        web_search: t.Optional(t.Boolean()),
-      }),
-      detail: { summary: "Begin chat (internal sidecar)", tags: ["AI"] },
-    },
-  )
-  // Post-LLM money path: persist reply + increment tokens against the count read
-  // at chat-begin. Trusts the sidecar (x-api-key) for workspace_id, same model as
-  // execute-tool.
-  .post(
-    "/chat-end",
+    "/notify-usage",
     async ({ body }) => {
-      await AiService.chatEnd(body.workspace_id, body.session_id, {
-        reply: body.reply,
-        usage: body.usage,
-        artifacts: body.artifacts,
-        provider: body.provider,
-      });
+      RealtimeService.notifyValueChange(body.workspace_id, body.type);
       return { ok: true };
     },
     {
       body: t.Object({
         workspace_id: t.String(),
-        session_id: t.String(),
-        reply: t.String(),
-        usage: t.Optional(t.Any()),
-        artifacts: t.Optional(t.Any()),
-        provider: t.Optional(t.Any()),
-        // Deprecated: increment is atomic now; kept optional for sidecar compat.
-        current_tokens: t.Optional(t.Number()),
+        type: t.String(),
       }),
-      detail: { summary: "End chat (internal sidecar)", tags: ["AI"] },
+      detail: { summary: "Notify usage change (internal sidecar)", tags: ["AI"] },
     },
   );

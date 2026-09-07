@@ -48,13 +48,13 @@ docker compose up -d     # PostgreSQL 16 (5432) + Redis 7 (6379)
 - **`packages/encryption`** — AES-256-GCM. Used only in `apps/api/plugins/encryption.ts` + `apps/app/lib/axios.ts`.
 - **`packages/redis`** — Redis singleton (ioredis TCP local / Upstash REST prod). Used by `apps/api/lib/cache.ts` + `plugins/rate-limit.ts`.
 
-**AI logic lives in `apps/ai` (Python)** — chat orchestration, tool execution (DB writes/audit/quota), receipt OCR, CSV import, RAG, chunking, canvas tools. The old `packages/ai` was removed. `apps/api` reaches it via `apps/api/modules/ai/ai-sidecar-client.ts` (HTTP, `x-api-key`); requires `AI_SERVICE_URL`, no in-process fallback. Website chat calls `apps/ai` directly; `apps/api` keeps only identity/session/quota plumbing.
+**AI logic lives in `apps/ai` (Python)** — chat orchestration, tool execution (DB writes/audit/quota), receipt OCR, CSV import, RAG, chunking, canvas tools, **and** (as of the chatBegin/chatEnd migration) the web chat money path: JWT auth, session mgmt, the receipt-draft short-circuit, quota enforcement, and system-prompt build all run in-process against Postgres (`apps/ai/app/modules/chatbot/{chat_money_path,draft}.py`, `app/core/{auth,quota,sessions,vault}.py`). The old `packages/ai` was removed. Website chat calls `apps/ai` directly (no TS round-trip per turn); `apps/api` keeps only Telegram's session bookkeeping, the sidecar client (`ai-sidecar-client.ts`, HTTP + `x-api-key`, requires `AI_SERVICE_URL`, no in-process fallback), and a couple of standalone reads (`GET /ai/sessions*`, `GET /ai/quota`, `POST /ai/parse-receipt`). Telegram's receipt-draft flow also calls `apps/ai` directly (`POST /draft/*`, x-api-key only — same trust model as `/tools/execute`).
 
 ### Data flow
 
 - **DB path:** pages → `packages/modules` server actions → `packages/database` (Drizzle) → PostgreSQL.
 - **API path:** pages → `apps/api` (ElysiaJS, AES-256-GCM transport) → database / integrations.
-- **AI path:** `apps/ai` (FastAPI, `x-api-key`) runs the LLM loop + writes to PostgreSQL (incl. audit + quota) directly.
+- **AI path:** `apps/ai` (FastAPI) runs the LLM loop and the full chat money path, both writing to PostgreSQL directly (incl. audit + quota). Web chat verifies the user's `oewang-session` JWT itself (PyJWT, HS256, `JWT_SECRET` shared with the TS apps); Telegram and other service-to-service calls use `x-api-key` only, with `workspace_id`/`user_id` explicit in the body.
 - **Auth:** login → `apps/api` issues `oewang-session` JWT (HS256) → `apps/app` sets httpOnly cookie → middleware verifies on every request.
 
 ### Env vars

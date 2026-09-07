@@ -13,7 +13,9 @@ app/api/routes/anomaly.py
 app/api/routes/capabilities.py
 app/api/routes/chatbot.py
 app/core/__init__.py
+app/core/agent_settings.py
 app/core/audit.py
+app/core/auth.py
 app/core/currency.py
 app/core/database.py
 app/core/embeddings.py
@@ -22,6 +24,7 @@ app/core/llm.py
 app/core/quota.py
 app/core/serde.py
 app/core/sessions.py
+app/core/vault.py
 app/modules/__init__.py
 app/modules/advisor/__init__.py
 app/modules/advisor/retriever.py
@@ -33,8 +36,11 @@ app/modules/anomaly/__init__.py
 app/modules/anomaly/model.py
 app/modules/anomaly/service.py
 app/modules/chatbot/__init__.py
+app/modules/chatbot/chat_money_path.py
+app/modules/chatbot/draft.py
 app/modules/chatbot/memory.py
 app/modules/chatbot/prompts.py
+app/modules/chatbot/prompts_web.py
 app/modules/chatbot/service.py
 app/modules/chatbot/tools.py
 app/modules/execution/__init__.py
@@ -46,6 +52,7 @@ app/modules/execution/resolvers.py
 app/modules/execution/transactions.py
 app/modules/execution/wallets.py
 app/modules/imports/__init__.py
+app/modules/imports/review.py
 app/modules/imports/service.py
 app/modules/receipt/__init__.py
 app/modules/receipt/service.py

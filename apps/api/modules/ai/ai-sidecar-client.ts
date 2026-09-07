@@ -257,6 +257,58 @@ export abstract class AiSidecarClient {
     }
   }
 
+  /** Scan chat history for a pending receipt draft (Telegram's precedence
+   * check before falling back to normal chat — same as web's chatBegin). */
+  static async getLatestDraftState(
+    history: { role: string; content: string; attachments?: any }[],
+  ): Promise<Record<string, any> | null> {
+    const { draft } = await sidecarPost<{ draft: Record<string, any> | null }>(
+      "/draft/latest-state",
+      { history },
+    );
+    return draft;
+  }
+
+  /** Handle a reply while a receipt draft awaits confirmation (confirm/
+   * cancel/"account: X"). Returns null if the message doesn't fit any
+   * recognized branch (caller should fall back to normal chat). */
+  static async handlePendingInvoiceDraft(
+    workspaceId: string,
+    userId: string,
+    message: { role: string; content: string },
+    draft: Record<string, any>,
+    sessionId: string,
+  ): Promise<{ sessionId: string; reply: string } | null> {
+    const { result } = await sidecarPost<{
+      result: { sessionId: string; reply: string } | null;
+    }>("/draft/handle-pending", {
+      workspace_id: workspaceId,
+      user_id: userId,
+      message,
+      draft,
+      session_id: sessionId,
+    });
+    return result;
+  }
+
+  /** Build a receipt draft preview from new attachments (OCR + vault upload
+   * happen inside this call, in the sidecar). Returns null if none of the
+   * attachments were receipts or nothing could be parsed. */
+  static async buildInvoiceDraftFromAttachments(
+    workspaceId: string,
+    userId: string,
+    attachments: { name: string; type: string; data: string }[],
+  ): Promise<{ reply: string; draft: Record<string, any> } | null> {
+    const { result } = await sidecarPost<{
+      result: { reply: string; draft: Record<string, any> } | null;
+    }>("/draft/build-from-attachments", {
+      workspace_id: workspaceId,
+      user_id: userId,
+      attachments,
+    });
+    return result;
+  }
+
   /** The canonical AI tool schemas (for the MCP server to register at startup). */
   static async toolDefinitions(): Promise<any[]> {
     const res = await fetch(`${sidecarBase()}/tools/definitions`, {

@@ -42,14 +42,43 @@ async def save_message(
     return row_to_dict(row)
 
 
-async def get_session_messages(session_id: str, workspace_id: str) -> list[dict]:
-    rows = await fetch(
+async def get_session(session_id: str, workspace_id: str) -> dict | None:
+    row = await fetchrow(
         """
-        SELECT * FROM ai_messages
-        WHERE session_id = $1 AND workspace_id = $2 AND deleted_at IS NULL
-        ORDER BY created_at
+        SELECT * FROM ai_sessions
+        WHERE id = $1 AND workspace_id = $2 AND deleted_at IS NULL
+        LIMIT 1
         """,
         session_id,
         workspace_id,
     )
-    return [row_to_dict(r) for r in rows]
+    return row_to_dict(row)
+
+
+async def get_session_messages(
+    session_id: str, workspace_id: str, limit: int = 20
+) -> list[dict]:
+    # Last `limit` messages, oldest-first. Unbounded history gets resent to
+    # the LLM on every tool-loop step — O(n²) input tokens per session. Matches
+    # AiRepository.getSessionMessages (apps/api).
+    rows = await fetch(
+        """
+        SELECT * FROM ai_messages
+        WHERE session_id = $1 AND workspace_id = $2 AND deleted_at IS NULL
+        ORDER BY created_at DESC
+        LIMIT $3
+        """,
+        session_id,
+        workspace_id,
+        limit,
+    )
+    return [row_to_dict(r) for r in reversed(rows)]
+
+
+async def update_title(session_id: str, workspace_id: str, title: str) -> None:
+    await fetchrow(
+        "UPDATE ai_sessions SET title = $3 WHERE id = $1 AND workspace_id = $2",
+        session_id,
+        workspace_id,
+        title,
+    )

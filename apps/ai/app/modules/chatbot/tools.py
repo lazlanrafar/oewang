@@ -1,36 +1,12 @@
-"""OpenAI function-calling tool specs for website chat + the call-back client.
-
-The specs mirror the live website orchestrator (`packages/ai/core/ai.orchestrator.ts`
-`buildTools`). Execution is NOT done here — every tool call is forwarded to the
-Elysia internal endpoint so DB writes, audit logs, analytics and the canvas
-artifact rules stay in one place (the TS money path).
+"""OpenAI function-calling tool specs for website chat, and chat_begin/chat_end
+— the pre/post-LLM money path (session, receipt-draft short-circuit, quota,
+system prompt; reply persistence + atomic token increment). Both run fully
+in-process against Postgres now (chat_money_path.py); DB writes, audit, and the
+canvas artifact rules for tool execution live in execution/executor.py.
 
 ponytail: webSearch tool is omitted in Phase 2 (its fetch logic lives only in the
 TS orchestrator); add it when web-search parity is needed.
 """
-
-import httpx
-
-from app.config import get_settings
-
-# Shared keep-alive client so repeated internal calls (chat_begin, chat_end,
-# system-prompt) reuse pooled connections instead of a new TLS handshake each
-# time. Lazily created on first use; closed on app shutdown via close_http().
-_http_client: httpx.AsyncClient | None = None
-
-
-def _http() -> httpx.AsyncClient:
-    global _http_client
-    if _http_client is None:
-        _http_client = httpx.AsyncClient(timeout=30)
-    return _http_client
-
-
-async def close_http() -> None:
-    global _http_client
-    if _http_client is not None:
-        await _http_client.aclose()
-        _http_client = None
 
 _PERIOD_SPENDING = [
     "this-month",
@@ -327,8 +303,9 @@ async def execute_tool(
 
 
 class ApiError(Exception):
-    """Non-2xx from an Elysia internal endpoint. status_code < 500 carries a
-    real answer (quota/auth) the route forwards to the browser verbatim."""
+    """Carries an HTTP status + body for the chatbot routes to forward to the
+    browser verbatim (chat_begin/chat_end raise this for auth/quota/session
+    errors — see chatbot.py's post_chat_web / post_chat_web_stream)."""
 
     def __init__(self, status_code: int, body: dict):
         self.status_code = status_code
@@ -336,84 +313,53 @@ class ApiError(Exception):
         super().__init__(f"api error {status_code}")
 
 
-def _internal_headers(token: str | None = None) -> dict:
-    headers = {"content-type": "application/json"}
-    key = get_settings().AI_SERVICE_API_KEY
-    if key:
-        headers["x-api-key"] = key
-    if token:
-        headers["authorization"] = f"Bearer {token}"
-    return headers
-
-
 async def chat_begin(
     token: str, messages: list[dict], session_id: str | None, web_search: bool
 ) -> dict:
-    """Pre-LLM money path. Identity is resolved server-side from the JWT in TS;
-    raises ApiError on quota/auth/404 so the route can forward it."""
-    settings = get_settings()
-    payload_messages = [
-        {
-            "role": m["role"],
-            "content": m["content"],
-            **({"attachments": m["attachments"]} if m.get("attachments") else {}),
-        }
-        for m in messages
-    ]
-    resp = await _http().post(
-        f"{settings.API_INTERNAL_URL}/v1/ai/internal/chat-begin",
-        headers=_internal_headers(token),
-        json={
-            "messages": payload_messages,
-            "session_id": session_id,
-            "web_search": web_search,
-        },
-    )
-    if resp.status_code >= 400:
-        try:
-            body = resp.json()
-        except Exception:
-            body = {"message": resp.text}
-        raise ApiError(resp.status_code, body)
-    return resp.json()
+    """Pre-LLM money path: verifies the oewang-session JWT itself and runs
+    chat_begin_core (session mgmt, receipt-draft short-circuit, quota check,
+    system prompt) directly against Postgres. Raises ApiError on auth/quota/
+    session-not-found so the route can forward it."""
+    from app.core.auth import get_auth
+    from app.core.quota import PlanLimitReached
+    from app.modules.chatbot.chat_money_path import SessionNotFoundError, chat_begin_core
+
+    auth = await get_auth(token)
+    if auth is None:
+        raise ApiError(401, {"error": "Unauthorized"})
+
+    try:
+        result = await chat_begin_core(auth["workspace_id"], auth["user_id"], messages, session_id)
+    except PlanLimitReached as e:
+        raise ApiError(422, {"error": "PLAN_LIMIT_REACHED", "meta": {"reset_at": e.reset_at}}) from e
+    except SessionNotFoundError as e:
+        raise ApiError(500, {"message": str(e)}) from e
+
+    if result["kind"] == "early":
+        return {"kind": "early", "session_id": result["sessionId"], "reply": result["reply"]}
+    return {
+        "kind": "ready",
+        "workspace_id": auth["workspace_id"],
+        "user_id": auth["user_id"],
+        "session_id": result["sessionId"],
+        "system_prompt": result["systemPrompt"],
+        "history": result["history"],
+        "current_tokens": result["currentTokens"],
+    }
 
 
 async def chat_end(
     workspace_id: str, session_id: str, result: dict, current_tokens: int
 ) -> None:
-    """Post-LLM money path: persist reply + increment tokens (against the count
-    read at chat_begin)."""
-    settings = get_settings()
-    resp = await _http().post(
-        f"{settings.API_INTERNAL_URL}/v1/ai/internal/chat-end",
-        headers=_internal_headers(),
-        json={
-            "workspace_id": workspace_id,
-            "session_id": session_id,
-            "reply": result["reply"],
-            "usage": result["usage"],
-            "artifacts": result.get("artifacts") or [],
-            "provider": {
-                "name": "openai",
-                "response_id": result.get("response_id"),
-            },
-            "current_tokens": current_tokens,
-        },
-    )
-    resp.raise_for_status()
+    """Post-LLM money path: persist the reply and atomically increment token
+    usage against Postgres directly."""
+    from app.modules.chatbot.chat_money_path import chat_end_core
 
-
-async def get_system_prompt(workspace_id: str) -> str:
-    """Fetch the website system prompt from Elysia (single source of truth)."""
-    settings = get_settings()
-    headers = {}
-    if settings.AI_SERVICE_API_KEY:
-        headers["x-api-key"] = settings.AI_SERVICE_API_KEY
-    resp = await _http().get(
-        f"{settings.API_INTERNAL_URL}/v1/ai/internal/system-prompt",
-        headers=headers,
-        params={"workspace_id": workspace_id},
-        timeout=15,
+    await chat_end_core(
+        workspace_id,
+        session_id,
+        result["reply"],
+        usage=result.get("usage"),
+        artifacts=result.get("artifacts"),
+        provider={"name": "openai", "response_id": result.get("response_id")},
     )
-    resp.raise_for_status()
-    return resp.json().get("system_prompt", "")

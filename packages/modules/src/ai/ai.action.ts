@@ -135,7 +135,12 @@ export async function sendChatMessage(
     }
   }
 
-  // Prefer the direct sidecar path; fall back to the in-process API on any miss.
+  // Direct call to apps/ai's /chat/web (the JWT is resolved server-side from
+  // the session cookie inside chatViaPythonDirect). Returns null only when
+  // AI_SERVICE_URL is unset, no session cookie was found, or the sidecar is
+  // unreachable (network error) — there is no further in-process fallback:
+  // the chat money path (chatBegin/chatEnd) now lives entirely in apps/ai, so
+  // a TS-side retry would just hit the same unreachable service again.
   const direct = await chatViaPythonDirect(
     messagesWithAttachments,
     sessionId,
@@ -143,26 +148,10 @@ export async function sendChatMessage(
   );
   if (direct) return direct;
 
-  try {
-    // AI endpoints run multi-step LLM loops — exempt from the 15s default.
-    const response = await api.post(
-      "/ai/chat",
-      { messages: messagesWithAttachments, sessionId, webSearch },
-      { timeout: 120_000 },
-    );
-    const apiResponse = (response as any)._api_response;
-    const data = (apiResponse?.data ??
-      response.data?.data ??
-      response.data) as any;
-    return { success: true, data: (data?.data ?? data) as ChatData };
-  } catch (error: any) {
-    return {
-      success: false,
-      error: error.response?.data?.message ?? "Failed to get AI response",
-      code: error.response?.data?.code,
-      meta: error.response?.data?.meta,
-    };
-  }
+  return {
+    success: false,
+    error: "Failed to reach the AI service. Please try again.",
+  };
 }
 
 export async function getChatSessions(): Promise<{

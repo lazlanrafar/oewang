@@ -3,13 +3,7 @@ import { logger } from "@workspace/logger";
 import { buildSuccess } from "@workspace/utils";
 import { cacheDel, cacheGet, cacheSet } from "../../lib/cache";
 import { AiRepository } from "../ai/ai.repository";
-import {
-  AiService,
-  buildInvoiceDraftFromAttachments,
-  type ChatAttachment,
-  getLatestDraftState,
-  handlePendingInvoiceDraft,
-} from "../ai/ai.service";
+import type { ChatAttachment } from "../ai/ai.service";
 import { AiSidecarClient } from "../ai/ai-sidecar-client";
 import { NotificationsService } from "../notifications/notifications.service";
 import { chatViaSidecar } from "./ai-sidecar";
@@ -416,7 +410,7 @@ export abstract class IntegrationsService {
             },
           ];
 
-          const preview = await buildInvoiceDraftFromAttachments(
+          const preview = await AiSidecarClient.buildInvoiceDraftFromAttachments(
             workspaceId,
             userId,
             attachments,
@@ -471,15 +465,17 @@ export abstract class IntegrationsService {
             chatSessionId,
             workspaceId,
           );
-          const pendingDraft = getLatestDraftState(history);
+          const pendingDraft =
+            await AiSidecarClient.getLatestDraftState(history);
           if (pendingDraft?.status === "awaiting_confirmation") {
-            const draftResponse = await handlePendingInvoiceDraft(
-              workspaceId,
-              userId,
-              { role: "user", content: text },
-              pendingDraft,
-              chatSessionId,
-            );
+            const draftResponse =
+              await AiSidecarClient.handlePendingInvoiceDraft(
+                workspaceId,
+                userId,
+                { role: "user", content: text },
+                pendingDraft,
+                chatSessionId,
+              );
             if (draftResponse) {
               await IntegrationsService.sendTelegramMessage(
                 chatId,
@@ -493,21 +489,18 @@ export abstract class IntegrationsService {
         if (!handledByDraft) {
           // Handle AI Chat
           try {
-            const chatResponse =
-              (await chatViaSidecar(
-                text,
-                workspaceId,
-                userId,
-                chatSessionId,
-              )) ??
-              (await AiService.chat(
-                [{ role: "user", content: text }],
-                workspaceId,
-                userId,
-                chatSessionId,
-              ));
+            // apps/ai's legacy (non-tool-loop) /chat is the only chat path
+            // left for Telegram — there's no more TS in-process fallback if
+            // the sidecar is unreachable (AiService.chat/chatBegin/chatEnd
+            // were removed once the chat money path moved fully to Python).
+            const chatResponse = await chatViaSidecar(
+              text,
+              workspaceId,
+              userId,
+              chatSessionId,
+            );
 
-            if (chatResponse && chatResponse.reply) {
+            if (chatResponse?.reply) {
               // Save current session ID if it's new
               if (
                 chatResponse.sessionId &&

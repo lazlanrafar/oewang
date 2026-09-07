@@ -128,21 +128,25 @@ Separate runtime (`pydantic-settings`, not the TS `Env` proxy). See `apps/ai/app
 
 | Variable | Required | Notes |
 | --- | --- | --- |
-| `DATABASE_URL` | **Required** | Same Postgres instance as apps/api — sidecar reads/writes transactions, quota, audit directly |
+| `DATABASE_URL` | **Required** | Same Postgres instance as apps/api — sidecar reads/writes transactions, quota, audit, sessions, and (for web chat) identity/quota directly |
 | `AI_SERVICE_API_KEY` | **Required** | Must match `apps/api`'s value — validates the internal `x-api-key` header both directions |
+| `JWT_SECRET` | **Required for web chat** | Must be byte-identical to `apps/api`/`apps/app`/`apps/admin` — verifies the `oewang-session` JWT for `/chat/web`, `/chat/web/stream` directly (PyJWT, HS256) |
+| `BUCKET_ENDPOINT` / `BUCKET_ACCESS_KEY_ID` / `BUCKET_SECRET_ACCESS_KEY` / `BUCKET_NAME` | Optional (functionally required for receipt uploads in chat) | System-bucket-only S3/R2 credentials for the chat receipt-image upload side effect. No per-workspace custom bucket support here — see `core/vault.py` |
+| `BUCKET_REGION` | Optional | Default `auto` |
+| `AI_QUOTA_EXEMPT_WORKSPACE_IDS` | Optional | Default `[]` — workspace ids exempt from AI token quota enforcement |
 | `AI_PORT` | Optional | Default `3004` |
 | `MODEL_BASE_URL` | Optional | Default `http://localhost:20128/v1` — the 9router (or any OpenAI-compatible) endpoint |
 | `MODEL_API_KEY` | Optional | Default `9router` |
 | `AI_CHAT_MODEL` / `AI_VISION_MODEL` / `AI_EMBED_MODEL` | Optional | Default `coder` each |
 | `AI_RECEIPT_DETAIL` | Optional | `low` \| `auto` \| `high` — default `auto` |
-| `API_INTERNAL_URL` | Optional | Default `http://localhost:3002` — callback URL the sidecar uses to reach `apps/api` for tool execution + system prompt |
+| `API_INTERNAL_URL` | Optional | Default `http://localhost:3002` — callback URL the sidecar uses to reach `apps/api` for tool execution and the fire-and-forget usage-notify call after chat_end. The chat money path itself (chat_begin/chat_end) runs in-process here now, not over this URL |
 | `AI_MAX_STEPS` | Optional | Default `10` — tool-loop step cap |
 | `ALERT_CALLBACK_URL` | Optional | Anomaly-alert webhook target |
 | `ANOMALY_SCAN_HOURS` | Optional | Default `0` (disabled) — periodic anomaly scan interval |
 | `RECEIPT_DRY_RUN` | Optional | Default `false` — preview receipt writes without persisting |
 | `MOCK_AI_QUOTA` | Optional | Default `false` — bypass the token-quota check (dev only; **must stay `false` in production**, it fails closed by design) |
 
-**NOT needed by apps/ai**: `REDIS_URL`, `BUCKET_*`, `MAYAR_*`, any OAuth client vars, `SENTRY_DSN` — this service owns only the LLM loop + its own DB access, nothing else.
+**NOT needed by apps/ai**: `REDIS_URL`, `MAYAR_*`, any OAuth client vars, `SENTRY_DSN` — no Redis client, no OAuth, no error-monitoring SDK wired up here.
 
 In Coolify, `MODEL_BASE_URL`/`MODEL_API_KEY`/`AI_CHAT_MODEL`/`AI_VISION_MODEL`/`AI_EMBED_MODEL` and `AI_SERVICE_API_KEY` should reference the same project Shared Variables that `apps/api`'s `.env.api` references — they must resolve to identical values on both sides for the AI path to work end to end (see the 9router internal-networking setup in the deploy runbook).
 
@@ -175,9 +179,10 @@ key, not an at-rest one (see the note in `.env.example`).
 
 | Variable | Lives in | Notes |
 | --- | --- | --- |
-| `JWT_SECRET` | apps/api, apps/app, apps/admin | Must be byte-identical everywhere it's set — one value signs, the others verify |
+| `JWT_SECRET` | apps/api, apps/app, apps/admin, apps/ai | Must be byte-identical everywhere it's set — one value signs, the others verify. `apps/ai` verifies it directly for `/chat/web`, `/chat/web/stream` (web chat's chatBegin/chatEnd money path moved in-process; it no longer round-trips to `apps/api` to authenticate) |
 | `ENCRYPTION_KEY` | apps/api, apps/app, apps/admin, apps/website, apps/native | Transport key — must match everywhere |
 | `AI_SERVICE_API_KEY` | apps/api, apps/app, apps/ai | Shared secret gating every hop between the TS side and the Python sidecar |
+| `BUCKET_ENDPOINT` / `BUCKET_ACCESS_KEY_ID` / `BUCKET_SECRET_ACCESS_KEY` / `BUCKET_NAME` / `BUCKET_REGION` | apps/api, apps/ai | `apps/ai` uses the same system-bucket credentials (no per-workspace custom R2 support there) to upload chat receipt images directly, instead of round-tripping to `apps/api`'s Vault upload |
 | `OAUTH_CONNECT_SECRET` | apps/api, apps/app, apps/admin | Gates the OAuth-callback-mints-session handshake |
 | `DATABASE_URL` | apps/api, apps/ai | Both connect to the same Postgres instance directly |
 

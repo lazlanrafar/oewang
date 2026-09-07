@@ -100,6 +100,16 @@ async def create_transaction(workspace_id: str, user_id: str, body: dict) -> dic
         else:
             await _update_balance(conn, wallet_id, workspace_id, _apply_delta_sign(t_type, amount))
 
+        for vault_file_id in body.get("attachment_ids") or []:
+            await conn.execute(
+                "INSERT INTO transaction_attachments "
+                "(id, workspace_id, transaction_id, vault_file_id) VALUES ($1, $2, $3, $4)",
+                new_id(),
+                workspace_id,
+                tx["id"],
+                vault_file_id,
+            )
+
         await audit.log(
             workspace_id=workspace_id,
             user_id=user_id,

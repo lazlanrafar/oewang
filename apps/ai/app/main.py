@@ -9,11 +9,10 @@ from slowapi.middleware import SlowAPIMiddleware
 from slowapi.util import get_remote_address
 
 from app.api.middleware.auth import require_api_key
-from app.api.routes import advisor, analyzer, anomaly, capabilities, chatbot
+from app.api.routes import advisor, analyzer, anomaly, capabilities, chatbot, draft
 from app.config import get_settings
 from app.core.database import close_pool
 from app.core.quota import PlanLimitReached
-from app.modules.chatbot.tools import close_http
 from app.modules.anomaly.service import scan_all_workspaces
 from app.utils.logger import get_logger
 
@@ -35,7 +34,6 @@ async def lifespan(_: FastAPI):
     yield
     if scheduler.running:
         scheduler.shutdown(wait=False)
-    await close_http()
     await close_pool()
 
 
@@ -61,6 +59,7 @@ def health() -> dict[str, str]:
 
 _auth = [Depends(require_api_key)]
 app.include_router(chatbot.router, dependencies=_auth)
+app.include_router(draft.router, dependencies=_auth)
 app.include_router(analyzer.router, dependencies=_auth)
 app.include_router(advisor.router, dependencies=_auth)
 app.include_router(anomaly.router, dependencies=_auth)

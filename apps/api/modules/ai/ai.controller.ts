@@ -4,7 +4,7 @@ import { buildError, buildSuccess } from "@workspace/utils";
 import { Elysia } from "elysia";
 import { authPlugin } from "../../plugins/auth";
 import { agentSettingsController } from "./agent-settings.controller";
-import { ChatRequestDto, ParseReceiptDto } from "./ai.dto";
+import { ParseReceiptDto } from "./ai.dto";
 import { AiService } from "./ai.service";
 
 export const aiController = new Elysia({ prefix: "/ai" })
@@ -72,50 +72,6 @@ export const aiController = new Elysia({ prefix: "/ai" })
     {
       detail: {
         summary: "Get AI Quota",
-        tags: ["AI"],
-      },
-    },
-  )
-  .post(
-    "/chat",
-    async ({ body, workspaceId, userId, set }) => {
-      logger.debug("AI chat request received", {
-        bodyType: typeof body,
-        keys: Object.keys(body || {}),
-      });
-      try {
-        const response = await AiService.chat(
-          body.messages,
-          workspaceId!,
-          userId!,
-          body.sessionId,
-          body.webSearch,
-        );
-        return buildSuccess(response, "Chat response generated");
-      } catch (error: any) {
-        if (error.code && error.response) {
-          set.status = error.code;
-          return error.response;
-        }
-        logger.error("Error generating AI response", {
-          error: error?.message ?? String(error),
-          errorName: error?.name,
-          userId,
-          sessionId: body.sessionId,
-        });
-        set.status = 500;
-        return buildError(
-          ErrorCode.INTERNAL_ERROR,
-          error?.message ?? "Failed to generate AI response",
-        );
-      }
-    },
-    {
-      body: ChatRequestDto,
-      detail: {
-        summary: "Chat with AI",
-        description:
-          "Sends messages to the AI and returns a response, optionally within a session. Supports multi-step tool calling for financial tasks.",
         tags: ["AI"],
       },
     },

@@ -8,7 +8,7 @@
 
 All backend tests use **Bun's built-in test runner** (`bun:test`). Tests are fast, require no database, and run in ~134ms.
 
-**Current baseline: 413 unit tests across 18 test files — all must pass before merging.** (Quick-recall aggregation moved to the Python sidecar `apps/ai`; covered by its `pytest` suite.)
+**Current baseline: 349 unit tests across 18 test files — all must pass before merging.** (Quick-recall aggregation and the web-chat money path moved to the Python sidecar `apps/ai`; covered by its `pytest` suite. `ai/ai.utils.test.ts` was removed — the functions it covered were dead TS code, superseded by the Python port in `apps/ai/app/modules/chatbot/draft.py`.)
 
 ```bash
 # From repo root
@@ -60,7 +60,6 @@ apps/api/modules/{feature}/
 
 | Module         | Test File                                  | Tests   | What's Covered                                                                                                                                             |
 | -------------- | ------------------------------------------ | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ai`           | `ai/ai.utils.test.ts`                      | 66      | Date parsing, date ranges, amount formatting, receipt detection, intent recognition, wallet extraction                                                     |
 | `ai`           | `ai/ai.prompts.test.ts`                    | 7       | `buildSystemPrompt` output: complexity-gated reasoning section, ask-before-mutating rules (transactions/edit-delete/debts/split), default-wallet exception preserved, session context ordering, language rule selection |
 | `transactions` | `transactions/transactions.utils.test.ts`  | 66      | Amount sanitization, balance calculations, budget checking/status, amount formatting, amount validation, date ranges                                       |
 | `debts`        | `debts/debts.utils.test.ts`                | 50      | Debt status, payment calculations, payment progress, due date checking, label formatting, payment validation, bill splitting                               |
@@ -70,6 +69,7 @@ apps/api/modules/{feature}/
 | `categories`   | `categories/categories.utils.test.ts`      | 38      | Name validation, name formatting, icon assignment, category grouping, sorting, duplicate detection, default categories                                     |
 | `invoices`     | `invoices/invoices.utils.test.ts`          | 24      | JWT token generation/verification, round-trip encoding, expiration handling, security/tampering                                                            |
 | `integrations` | `integrations/webhook-security.test.ts`    | 19      | URL parsing with forwarded headers, form body parsing, Telegram secret, timing-safe comparisons                                                            |
+| `integrations` | `integrations/telegram-webhook-draft.test.ts` | 5    | `handleTelegramWebhook`'s receipt-draft flow: builds a draft via `AiSidecarClient`, creates a session, replies with the preview; falls back gracefully when nothing parses; pending-draft precedence over normal chat, including the two fall-through cases |
 | `workspaces`   | `workspaces/workspace-permissions.test.ts` | 22      | Role normalization, edit permissions, sensitive permissions, assertion throws, permission hierarchy                                                        |
 | `mayar`        | `mayar/billing.utils.test.ts`              | 5       | Annual billing detection, period calculations                                                                                                              |
 | `mayar`        | `mayar/billing-lifecycle.service.test.ts`  | 2       | Subscription expiration → `past_due`, grace period → downgrade to free                                                                                     |
@@ -78,7 +78,7 @@ apps/api/modules/{feature}/
 | `articles`     | `articles/articles.utils.test.ts`          | 4       | Slug generation: lowercasing, punctuation-run collapse, dash trimming, empty fallback                                                                       |
 | `lib`          | `lib/at-rest-crypto.test.ts`               | 2       | At-rest encryption round-trip with the data key; legacy decrypt fallback to the transport key                                                              |
 | `plugins`      | `plugins/rate-limit.test.ts`               | 3       | Scoped hook propagates to parent routes; per-tier bucket isolation (unauth burst can't exhaust the auth bucket); 429 when the auth bucket is exhausted     |
-| **TOTAL**      | **18 files**                               | **413** | **All core business logic**                                                                                                                                |
+| **TOTAL**      | **18 files**                               | **349** | **All core business logic**                                                                                                                                |
 
 ---
 
