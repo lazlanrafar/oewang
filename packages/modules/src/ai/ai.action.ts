@@ -96,7 +96,7 @@ async function chatViaPythonDirect(
       // risk a duplicate session + double token spend from a partial chat_begin.
       return {
         success: false,
-        error: body?.message ?? "Failed to get AI response",
+        error: body?.error ?? body?.message ?? "Failed to get AI response",
         code: body?.code,
         meta: body?.meta,
       };

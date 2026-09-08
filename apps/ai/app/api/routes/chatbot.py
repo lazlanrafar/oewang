@@ -117,7 +117,17 @@ async def post_chat_web_stream(
                 data_str = json.dumps(event.get("data", {}))
                 yield f"event: {event_name}\ndata: {data_str}\n\n"
         except ApiError as e:
-            err_data = json.dumps({"error": e.body.get("message", "API error"), "code": e.body.get("code")})
+            # ApiError bodies aren't uniformly keyed ("error" for auth/quota,
+            # "message" for the 500 fallback in chat_begin) — check both so the
+            # frontend's SSE error handler always gets real text instead of a
+            # generic fallback.
+            err_data = json.dumps(
+                {
+                    "error": e.body.get("error") or e.body.get("message", "API error"),
+                    "code": e.body.get("code"),
+                    "meta": e.body.get("meta"),
+                }
+            )
             yield f"event: error\ndata: {err_data}\n\n"
         except Exception as e:
             err_data = json.dumps({"error": str(e)})

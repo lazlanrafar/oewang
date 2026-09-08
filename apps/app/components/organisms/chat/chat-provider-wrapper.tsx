@@ -135,6 +135,7 @@ export function ChatProviderWrapper({ children, initialMessages }: Props) {
                 let choicesData: { question: string; options: { label: string; message: string }[] } | null = null;
                 let buffer = "";
                 let networkDone = false;
+                let streamError: { message: string; code?: string; meta?: unknown } | null = null;
 
                 const assistantMsgId = (Date.now() + 1).toString();
 
@@ -269,6 +270,12 @@ export function ChatProviderWrapper({ children, initialMessages }: Props) {
                     } else if (eventType === "artifact" && eventData) {
                       currentArtifacts.push(eventData);
                       updateAssistantMessage(false);
+                    } else if (eventType === "error") {
+                      streamError = {
+                        message: eventData?.error || "Failed to get AI response",
+                        code: eventData?.code,
+                        meta: eventData?.meta,
+                      };
                     } else if (eventType === "done" && eventData) {
                       if (eventData.reply && !fullReply) {
                         fullReply = eventData.reply;
@@ -285,10 +292,26 @@ export function ChatProviderWrapper({ children, initialMessages }: Props) {
                       }
                     }
                   }
+                  if (streamError) break;
                 }
 
                 networkDone = true;
                 await revealDone;
+
+                if (streamError) {
+                  // Auth/quota failures arrive as a normal (200) SSE "error" event,
+                  // not a thrown fetch error — chat_begin may already have created
+                  // the session, so falling back to sendChatMessage here would
+                  // re-run it and risk a duplicate session / double token spend.
+                  // Surface the error as-is instead of retrying.
+                  const errorObj: Error & { code?: string; meta?: unknown } = new Error(streamError.message);
+                  errorObj.code = streamError.code;
+                  errorObj.meta = streamError.meta;
+                  state.setError(errorObj);
+                  state.setStatus("error");
+                  return;
+                }
+
                 state.setStatus("ready");
                 streamedSuccessfully = true;
               }

@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
+
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { useChatMessages } from "@ai-sdk-tools/store";
@@ -16,8 +18,7 @@ import type { AppDictionary } from "@/modules/types/dictionary";
 import { OverviewCards } from "./overview-cards";
 import { OverviewMetrics } from "./overview-metrics";
 
-function getGreeting(dict: AppDictionary) {
-  const hour = new Date().getHours();
+function getGreeting(dict: AppDictionary, hour: number) {
   const greetings = dict.overview.greetings;
   if (hour < 12) return greetings.morning;
   if (hour < 17) return greetings.afternoon;
@@ -83,6 +84,14 @@ export function OverviewClient({
         }
       : undefined;
 
+  // Server clock/timezone can differ from the browser's, so computing this
+  // during SSR causes a hydration text mismatch (React error #418) — start
+  // null on the server and fill it in once mounted on the client.
+  const [greetingHour, setGreetingHour] = useState<number | null>(null);
+  useEffect(() => {
+    setGreetingHour(new Date().getHours());
+  }, []);
+
   // Hide cards/metrics once a chat conversation starts
   const messages = useChatMessages();
   const { chatId } = useChatInterface();
@@ -130,7 +139,7 @@ export function OverviewClient({
         <div className="flex items-end justify-between gap-4">
           <div>
             <h1 className="font-serif text-2xl">
-              {getGreeting(dictionary)} {displayName},
+              {greetingHour !== null ? getGreeting(dictionary, greetingHour) : " "} {displayName},
             </h1>
             <p className="mt-1 text-muted-foreground text-sm">
               {dictionary.overview.descriptions[activeTab as keyof typeof dictionary.overview.descriptions]}
