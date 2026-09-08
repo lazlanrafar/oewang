@@ -42,7 +42,8 @@
     },
     "social": {
       "google": "Googleで続行",
-      "github": "GitHubで続行"
+      "github": "GitHubで続行",
+      "facebook": "Facebookで続行"
     }
   },
   "home": {

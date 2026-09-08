@@ -34,6 +34,7 @@ export default async function RegisterPage({ params }: { params: Promise<{ local
 
       <div className="flex flex-col gap-3">
         <OAuthButton provider="google" dictionary={dictionary} />
+        <OAuthButton provider="facebook" dictionary={dictionary} />
         <OAuthButton provider="github" dictionary={dictionary} />
       </div>
 

@@ -26,6 +26,7 @@ export default async function LoginV2({ params }: { params: Promise<{ locale: Lo
       <div className="space-y-4">
         <div className="flex flex-col gap-3">
           <OAuthButton provider="google" className="" dictionary={dictionary} />
+          <OAuthButton provider="facebook" className="" dictionary={dictionary} />
           <OAuthButton provider="github" className="" dictionary={dictionary} />
         </div>
 

@@ -1,5 +1,8 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:oewang/components/atoms/button.dart';
 import 'package:oewang/components/atoms/inputs/input.dart';
@@ -62,6 +65,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
+  // ponytail: Apple/Facebook sign-in isn't wired yet (needs native Sign in
+  // with Apple + a Facebook OAuth app) — stub the action until it is.
+  void _comingSoon(String provider) => ScaffoldMessenger.of(
+    context,
+  ).showSnackBar(SnackBar(content: Text('$provider sign-in is coming soon')));
+
   @override
   Widget build(BuildContext context) {
     final vm = ref.watch(loginViewModelProvider);
@@ -88,22 +97,34 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 Button(
                   label: 'Continue with Google',
                   variant: ButtonVariant.outlined,
-                  leading: const _GoogleGlyph(),
+                  leading: const _ProviderIcon('ic-google.svg'),
                   loading: vm.oauthSignIn.running,
                   onPressed: vm.oauthSignIn.running
                       ? null
                       : () => _social('google'),
                 ),
                 const SizedBox(height: OewangSpacing.md),
-                Button(
-                  label: 'Continue with GitHub',
-                  variant: ButtonVariant.outlined,
-                  leading: Icon(Icons.code, size: 18, color: palette.foreground),
-                  loading: vm.oauthSignIn.running,
-                  onPressed: vm.oauthSignIn.running
-                      ? null
-                      : () => _social('github'),
-                ),
+                // iOS ships Apple as the second option (App Store guideline
+                // for apps offering third-party login); Android ships
+                // Facebook instead. Both are coming-soon stubs for now —
+                // only Google (native) and Google/GitHub (web) are wired.
+                if (Platform.isIOS)
+                  Button(
+                    label: 'Continue with Apple',
+                    variant: ButtonVariant.outlined,
+                    leading: _ProviderIcon(
+                      'ic-apple.svg',
+                      tint: palette.foreground,
+                    ),
+                    onPressed: () => _comingSoon('Apple'),
+                  )
+                else
+                  Button(
+                    label: 'Continue with Facebook',
+                    variant: ButtonVariant.outlined,
+                    leading: const _ProviderIcon('ic-facebook.svg'),
+                    onPressed: () => _comingSoon('Facebook'),
+                  ),
                 const SizedBox(height: OewangSpacing.lg),
                 _OrDivider(palette: palette),
                 const SizedBox(height: OewangSpacing.lg),
@@ -147,7 +168,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   const SizedBox(height: OewangSpacing.lg),
                   Button(
                     label: 'Login',
-                    height: 48,
                     loading: vm.submit.running,
                     onPressed: vm.canSubmit ? _onSubmit : null,
                   ),
@@ -219,19 +239,23 @@ class _OrDivider extends StatelessWidget {
   }
 }
 
-// ponytail: no brand-icon dependency; render Google's "G" as a styled glyph.
-class _GoogleGlyph extends StatelessWidget {
-  const _GoogleGlyph();
+/// One of `assets/icons/ic-{google,github,apple,facebook}.svg`. Google/Facebook
+/// ship their own brand colors (no [tint]); Apple/GitHub are single-color
+/// glyphs meant to inherit the button's foreground color via [tint].
+class _ProviderIcon extends StatelessWidget {
+  const _ProviderIcon(this.asset, {this.tint});
+  final String asset;
+  final Color? tint;
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      'G',
-      style: OewangFonts.sans(
-        color: context.palette.foreground,
-        fontSize: 16,
-        fontWeight: FontWeight.w700,
-      ),
+    return SvgPicture.asset(
+      'assets/icons/$asset',
+      width: 18,
+      height: 18,
+      colorFilter: tint == null
+          ? null
+          : ColorFilter.mode(tint!, BlendMode.srcIn),
     );
   }
 }
