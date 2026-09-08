@@ -47,7 +47,7 @@ export function NotificationBell({ dictionary }: { dictionary: AppDictionary }) 
       </PopoverTrigger>
       <PopoverContent className="w-80 p-0" align="end">
         <div className="flex items-center justify-between border-b p-4">
-          <h4 className="font-semibold text-muted-foreground text-sm uppercase tracking-wider">
+          <h4 className="font-sans text-[12px] text-muted-foreground uppercase tracking-widest">
             {dictionary.notifications.title || "Notifications"}
           </h4>
           {unreadCount > 0 && (

@@ -37,24 +37,26 @@ export function NotificationList({ dictionary }: { dictionary: Dictionary }) {
     }
   };
 
+  // Oewang only carries two semantic accent colors (green/red, per
+  // STYLE_GUIDE.md's Color Tokens table) — everything else stays
+  // text-muted-foreground instead of the rainbow of ad-hoc Tailwind colors
+  // this used to reach for per notification type.
   const getIcon = (type: string) => {
-    if (type.startsWith("transaction.")) return <TrendingUp className="size-4 text-blue-500" />;
     if (type === "budget.exceeded") return <AlertCircle className="size-4 text-red-500" />;
-    if (type === "budget.created") return <PiggyBank className="size-4 text-emerald-500" />;
-    if (type === "wallet.created") return <Wallet className="size-4 text-green-500" />;
-    if (type.startsWith("debt.paid")) return <CheckCircle className="size-4 text-green-500" />;
-    if (type.startsWith("debt.")) return <HandCoins className="size-4 text-yellow-500" />;
-    if (type === "invoice.paid") return <CheckCircle className="size-4 text-green-500" />;
+    if (type.startsWith("debt.paid")) return <CheckCircle className="size-4 text-emerald-500" />;
+    if (type === "invoice.paid") return <CheckCircle className="size-4 text-emerald-500" />;
     if (type === "invoice.overdue") return <AlertCircle className="size-4 text-red-500" />;
-    if (type.startsWith("invoice.")) return <FileText className="size-4 text-violet-500" />;
-    if (type === "integration.connected") return <Link2 className="size-4 text-green-500" />;
-    if (type === "integration.disconnected") return <Link2Off className="size-4 text-gray-500" />;
-    if (type === "workspace.invitation_sent") return <Users className="size-4 text-blue-500" />;
-    if (type === "workspace.member_joined") return <Users className="size-4 text-green-500" />;
-    if (type === "workspace.joined") return <Users className="size-4 text-emerald-500" />;
-    if (type === "subscription.activated") return <CreditCard className="size-4 text-green-500" />;
-    if (type === "subscription.addon_purchased") return <CreditCard className="size-4 text-violet-500" />;
-    if (type.startsWith("subscription.")) return <Receipt className="size-4 text-orange-500" />;
+    if (type === "subscription.activated") return <CreditCard className="size-4 text-emerald-500" />;
+    if (type.startsWith("transaction.")) return <TrendingUp className="size-4 text-muted-foreground" />;
+    if (type === "budget.created") return <PiggyBank className="size-4 text-muted-foreground" />;
+    if (type === "wallet.created") return <Wallet className="size-4 text-muted-foreground" />;
+    if (type.startsWith("debt.")) return <HandCoins className="size-4 text-muted-foreground" />;
+    if (type.startsWith("invoice.")) return <FileText className="size-4 text-muted-foreground" />;
+    if (type === "integration.connected") return <Link2 className="size-4 text-muted-foreground" />;
+    if (type === "integration.disconnected") return <Link2Off className="size-4 text-muted-foreground" />;
+    if (type.startsWith("workspace.")) return <Users className="size-4 text-muted-foreground" />;
+    if (type === "subscription.addon_purchased") return <CreditCard className="size-4 text-muted-foreground" />;
+    if (type.startsWith("subscription.")) return <Receipt className="size-4 text-muted-foreground" />;
     return <Bell className="size-4 text-muted-foreground" />;
   };
 
@@ -126,7 +128,7 @@ export function NotificationList({ dictionary }: { dictionary: Dictionary }) {
                 {getIcon(notification.type)}
               </div>
               {!notification.is_read && (
-                <span className="-right-0.5 -top-0.5 absolute size-2.5 rounded-full border-2 border-background bg-blue-600" />
+                <span className="-right-0.5 -top-0.5 absolute size-2.5 rounded-full border-2 border-background bg-primary" />
               )}
             </div>
 

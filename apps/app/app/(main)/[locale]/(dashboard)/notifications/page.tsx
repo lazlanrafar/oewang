@@ -17,7 +17,7 @@ export default async function NotificationsPage({ params }: { params: Promise<{ 
       <div className="no-scrollbar min-h-0 flex-1">
         <div className="">
           <div>
-            <h1 className="font-semibold text-lg tracking-tight">{dictionary.notifications.title}</h1>
+            <h1 className="font-medium text-lg tracking-tight">{dictionary.notifications.title}</h1>
             <p className="text-muted-foreground text-sm">{dictionary.notifications.description}</p>
           </div>
           <div className="mx-auto mt-4 max-w-2xl">
