@@ -182,6 +182,7 @@ export abstract class WalletsService {
     workspaceId: string,
     userId: string,
     data: {
+      id?: string;
       name: string;
       groupId?: string | null;
       balance?: string;
@@ -190,7 +191,7 @@ export abstract class WalletsService {
     },
   ) {
     const balance = data.balance ? parseFloat(data.balance) : 0;
-    const wallet = await WalletsRepository.create({
+    const result = await WalletsRepository.create({
       workspaceId,
       ...data,
       balance,
@@ -199,12 +200,18 @@ export abstract class WalletsService {
       isDefault: false,
     });
 
-    if (!wallet) {
+    if (!result) {
       throw status(
         500,
         buildError(ErrorCode.INTERNAL_ERROR, "Failed to create wallet"),
       );
     }
+
+    const { wallet, inserted } = result;
+
+    // Replay of an already-synced offline create (same client-generated id)
+    // — the first attempt already ran setDefault/audit/notification below.
+    if (!inserted) return wallet;
 
     if (data.isDefault) {
       await WalletsRepository.setDefault(workspaceId, wallet.id);

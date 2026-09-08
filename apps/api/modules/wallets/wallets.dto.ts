@@ -45,6 +45,9 @@ export const walletSchema = t.Object({
 });
 
 export const createWalletBody = t.Object({
+  // Client-generated CUID2 (offline-first mobile sync). Omitted by web
+  // callers, which keep getting a server-generated id as before.
+  id: t.Optional(t.String()),
   name: t.String({ minLength: 1 }),
   groupId: t.Optional(t.Union([t.String(), t.Null()])),
   balance: t.Optional(t.String()), // Input as string "100.00"

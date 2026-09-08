@@ -18,8 +18,14 @@ import {
 import type { Debt, DebtPayment } from "@workspace/types";
 
 export abstract class DebtsRepository {
+  /**
+   * `inserted: false` means a mobile sync-flush retry landed on a
+   * client-generated id that a prior attempt already created — the caller
+   * should skip audit/notification side effects for that case.
+   */
   static async create(
     data: {
+      id?: string;
       workspaceId: string;
       contactId: string;
       type: "payable" | "receivable";
@@ -31,10 +37,11 @@ export abstract class DebtsRepository {
       dueDate?: string;
     },
     tx: any = db,
-  ): Promise<Debt | null> {
+  ): Promise<{ debt: Debt; inserted: boolean } | null> {
     const [debt] = await tx
       .insert(debts)
       .values({
+        id: data.id,
         workspaceId: data.workspaceId,
         contactId: data.contactId,
         type: data.type,
@@ -45,15 +52,27 @@ export abstract class DebtsRepository {
         description: data.description,
         dueDate: data.dueDate,
       })
+      .onConflictDoNothing({ target: debts.id })
       .returning();
-    return debt
-      ? ({
+
+    if (debt) {
+      return {
+        debt: {
           ...debt,
           createdAt: debt.createdAt,
           updatedAt: debt.updatedAt,
           deletedAt: debt.deletedAt,
-        } as unknown as Debt)
-      : null;
+        } as unknown as Debt,
+        inserted: true,
+      };
+    }
+    if (!data.id) return null;
+
+    const existing = await DebtsRepository.findById(
+      data.workspaceId,
+      data.id,
+    );
+    return existing ? { debt: existing, inserted: false } : null;
   }
 
   static async update(

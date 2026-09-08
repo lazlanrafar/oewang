@@ -95,6 +95,14 @@ GoRouter buildAppRouter(Ref ref) {
     initialLocation: AppRoutes.trans,
     refreshListenable: refresh,
     redirect: (context, state) {
+      // The OS hands the oewang://oauth-callback deep link to go_router too
+      // (separately from AuthRepositoryRemote's own AppLinks listener, which
+      // already reads the token off it) — go_router has no route for a
+      // custom scheme, so without this it shows its "Page Not Found" page
+      // over whatever screen was up. Bounce it home instead; the actual
+      // login already completed via the other listener by this point.
+      if (state.uri.scheme == 'oewang') return AppRoutes.trans;
+
       final session = ref.read(sessionControllerProvider);
       if (session.isLoading) return null;
 

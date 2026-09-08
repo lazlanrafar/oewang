@@ -12,22 +12,37 @@ import {
 } from "@workspace/database";
 
 export abstract class WalletsRepository {
+  /**
+   * `inserted: false` means a mobile sync-flush retry landed on a
+   * client-generated id that was already created by a prior attempt — the
+   * caller should skip audit/notification side effects for that case.
+   */
   static async create(data: {
+    id?: string;
     workspaceId: string;
     groupId?: string | null;
     name: string;
     balance: number;
     isIncludedInTotals?: boolean;
     isDefault?: boolean;
-  }) {
+  }): Promise<{ wallet: any; inserted: boolean } | null> {
     const [wallet] = await db
       .insert(wallets)
       .values({
         ...data,
         balance: data.balance.toString(),
       })
+      .onConflictDoNothing({ target: wallets.id })
       .returning();
-    return wallet ?? null;
+
+    if (wallet) return { wallet, inserted: true };
+    if (!data.id) return null;
+
+    const existing = await WalletsRepository.findById(
+      data.workspaceId,
+      data.id,
+    );
+    return existing ? { wallet: existing, inserted: false } : null;
   }
 
   static async createMany(

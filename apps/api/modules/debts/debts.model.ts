@@ -10,6 +10,9 @@ export const DebtsModel = {
     limit: t.Optional(t.Numeric({ minimum: 1, maximum: 1000 })),
   }),
   create: t.Object({
+    // Client-generated CUID2 (offline-first mobile sync). Omitted by web
+    // callers and by the split-bill/pay flows, which keep server-generated ids.
+    id: t.Optional(t.String()),
     contactId: t.String(),
     type: t.Union([t.Literal("payable"), t.Literal("receivable")]),
     amount: t.Union([t.String(), t.Number()]),

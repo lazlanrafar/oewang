@@ -516,7 +516,6 @@ Follows Flutter's "Strongly recommend: Test architectural components separately 
 
 - Push notifications (already covered by `apps/api/modules/push-subscriptions` — surface them only after the read flows work).
 - OAuth (Google / Apple sign-in).
-- Offline-first sync (Drift / sqflite) — defer; v1 requires network.
 - Receipt OCR / AI tools (`packages/ai`) — defer.
 - Web/Desktop targets — Flutter project will only declare `ios` and `android` for now.
 

@@ -302,6 +302,18 @@ class ApiClient {
 
 ---
 
+## Offline cache & sync — `data/services/db/`, `data/services/sync/`
+
+`AppDatabase` (Drift/SQLite, `data/services/db/app_database.dart`) is the local mirror. Transactions, wallets, and debts are the three offline-writable entities; categories and contacts are read-only mirrors (just enough to populate the transaction/debt forms' pickers offline). Budgets, settings, and everything else still require connectivity.
+
+- **Repository wiring**: `TransactionsRepositoryOffline` / `WalletsRepositoryOffline` / `DebtsRepositoryOffline` (`data/repositories_remote/*_offline.dart`) decorate the existing `*_remote` repos — same abstract interface, no ViewModel changes. `list()` reads cache-first on a `NetworkError`, else refreshes the cache from the server response (never clobbering a row that's still mid-sync). `create`/`update` always write the cache immediately (optimistic) and return without waiting on the network.
+- **Idempotency**: the client generates the row's id (`cuid2` package, matching the server's CUID2 convention) at creation time — online or offline. The server (`transactions`/`wallets`/`debts` repositories in `apps/api`) upserts on that id (`ON CONFLICT DO NOTHING`), so a retried sync can never insert a duplicate row, and the row never needs an id remap after syncing.
+- **Conflict policy**: last-write-wins. No optimistic-concurrency check — a queued edit just overwrites whatever's on the server when it syncs.
+- **`SyncService`** (`data/services/sync/sync_service.dart`) flushes every `pendingOp`-marked cache row to the server, batching transaction creates through `/transactions/bulk`. Triggered by `ConnectivityService.onOnline`, app-resume (`SyncTrigger`), and immediately after an online write. Backs off failed rows exponentially (5s → 5min) rather than hot-looping; **every flush query is scoped by the current session's `workspaceId`** — a device shared across accounts must never push a row queued under a different session using the current auth token.
+- **Logout wipes the cache** (`SessionController.clear()` → `AppDatabase.clearAll()`) so a shared device doesn't carry one account's financial data into the next session. Trade-off: any offline write still queued at logout time is lost — there's no "block logout while pending syncs exist" UX in v1.
+
+---
+
 ## Auth & Secure Storage
 
 - JWT cookie name is `oewang-session` (matches web).

@@ -37,15 +37,27 @@ T? _firstOrNull<T>(Iterable<T> items, bool Function(T) test) {
   return null;
 }
 
-class TransactionFormScreen extends ConsumerWidget {
+class TransactionFormScreen extends ConsumerStatefulWidget {
   const TransactionFormScreen({super.key, this.transaction});
 
   /// When non-null the form opens in edit mode for this transaction.
   final Transaction? transaction;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final vm = ref.watch(transactionFormVmProvider(transaction));
+  ConsumerState<TransactionFormScreen> createState() =>
+      _TransactionFormScreenState();
+}
+
+class _TransactionFormScreenState
+    extends ConsumerState<TransactionFormScreen> {
+  // Guards the auto-open below to fire exactly once per screen instance —
+  // build() re-runs on every vm change (amount typed, category picked, ...),
+  // but initState-style "on open" behavior needs to survive that.
+  bool _autoOpenedAmount = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final vm = ref.watch(transactionFormVmProvider(widget.transaction));
     final palette = context.palette;
 
     final title = switch (vm.state.type) {
@@ -117,6 +129,24 @@ class TransactionFormScreen extends ConsumerWidget {
           fallbackTitle: 'Category',
         );
       }
+    }
+
+    // Amount is the field you almost always want first — date defaults to
+    // today already. Open its keypad as soon as the screen is up instead of
+    // making the user tap it (or date) first.
+    if (!_autoOpenedAmount) {
+      _autoOpenedAmount = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        openAmountDrawer(
+          context,
+          id: 'Amount',
+          initial: vm.state.amount,
+          workspaceTabs: true,
+          onChanged: vm.setAmount,
+          onSubmitted: (_) => openAfterAmount(),
+        );
+      });
     }
 
     return Scaffold(

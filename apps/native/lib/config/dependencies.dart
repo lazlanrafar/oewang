@@ -18,23 +18,33 @@ import 'package:oewang/data/repositories/wallets_repository.dart';
 import 'package:oewang/data/repositories/workspaces_repository.dart';
 import 'package:oewang/data/repositories_remote/auth_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/budgets_repository_remote.dart';
+import 'package:oewang/data/repositories_remote/categories_repository_offline.dart';
 import 'package:oewang/data/repositories_remote/categories_repository_remote.dart';
+import 'package:oewang/data/repositories_remote/contacts_repository_offline.dart';
 import 'package:oewang/data/repositories_remote/contacts_repository_remote.dart';
+import 'package:oewang/data/repositories_remote/debts_repository_offline.dart';
 import 'package:oewang/data/repositories_remote/debts_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/rates_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/settings_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/sub_currencies_repository_remote.dart';
+import 'package:oewang/data/repositories_remote/transactions_repository_offline.dart';
 import 'package:oewang/data/repositories_remote/transactions_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/users_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/wallet_groups_repository_remote.dart';
+import 'package:oewang/data/repositories_remote/wallets_repository_offline.dart';
 import 'package:oewang/data/repositories_remote/wallets_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/workspaces_repository_remote.dart';
 import 'package:oewang/data/services/api/api_client.dart';
+import 'package:oewang/data/services/connectivity/connectivity_service.dart';
+import 'package:oewang/data/services/db/app_database.dart';
 import 'package:oewang/data/services/storage/preferences_service.dart';
 import 'package:oewang/data/services/storage/secure_storage_service.dart';
+import 'package:oewang/data/services/sync/sync_service.dart';
+import 'package:oewang/data/services/sync/sync_trigger.dart';
 import 'package:oewang/domain/models/session.dart';
 import 'package:oewang/domain/models/sub_currency.dart';
 import 'package:oewang/domain/models/transaction_settings.dart';
+import 'package:rxdart/rxdart.dart';
 
 /// Root env provider. Loaded once at startup by main.dart.
 final envProvider = Provider<EnvConfig>((ref) {
@@ -62,6 +72,58 @@ final apiClientProvider = Provider<ApiClient>((ref) {
   );
 });
 
+/// Local offline cache (Drift/SQLite). One instance for the app's lifetime —
+/// wiped on logout via [SessionController.clear].
+final appDatabaseProvider = Provider<AppDatabase>((ref) {
+  final db = AppDatabase();
+  ref.onDispose(db.close);
+  return db;
+});
+
+final connectivityServiceProvider = Provider<ConnectivityService>((ref) {
+  return ConnectivityService();
+});
+
+final syncServiceProvider = Provider<SyncService>((ref) {
+  return SyncService(
+    db: ref.watch(appDatabaseProvider),
+    api: ref.watch(apiClientProvider),
+    workspaceId: () => _currentWorkspaceId(ref),
+  );
+});
+
+/// Kept alive for the app's lifetime by [OewangApp] watching it once at the
+/// root — see app.dart. Subscribes to connectivity + app-resume and flushes
+/// the offline sync queue on both.
+final syncTriggerProvider = Provider<SyncTrigger>((ref) {
+  final trigger = SyncTrigger(
+    connectivity: ref.watch(connectivityServiceProvider),
+    sync: ref.watch(syncServiceProvider),
+  );
+  ref.onDispose(trigger.dispose);
+  return trigger;
+});
+
+/// Current workspace id, read lazily by the offline repositories at call
+/// time (mirrors how [apiClientProvider] itself isn't rebuilt on workspace
+/// switches — the server scopes requests via the JWT either way).
+String _currentWorkspaceId(Ref ref) =>
+    ref.read(sessionControllerProvider).valueOrNull?.workspaceId ?? '';
+
+/// Pending offline-write count across transactions/wallets/debts for the
+/// current workspace — drives the small sync-status badge in the UI.
+final pendingSyncCountProvider = StreamProvider<int>((ref) {
+  final db = ref.watch(appDatabaseProvider);
+  // watch (not read) — switching workspaces should rebuild this stream.
+  final ws = ref.watch(sessionControllerProvider).valueOrNull?.workspaceId ?? '';
+  return Rx.combineLatest3<int, int, int, int>(
+    db.watchPendingTransactionsCount(ws),
+    db.watchPendingWalletsCount(ws),
+    db.watchPendingDebtsCount(ws),
+    (a, b, c) => a + b + c,
+  );
+});
+
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return AuthRepositoryRemote(
     api: ref.watch(apiClientProvider),
@@ -71,11 +133,23 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
 });
 
 final transactionsRepositoryProvider = Provider<TransactionsRepository>((ref) {
-  return TransactionsRepositoryRemote(ref.watch(apiClientProvider));
+  return TransactionsRepositoryOffline(
+    remote: TransactionsRepositoryRemote(ref.watch(apiClientProvider)),
+    db: ref.watch(appDatabaseProvider),
+    connectivity: ref.watch(connectivityServiceProvider),
+    sync: ref.watch(syncServiceProvider),
+    workspaceId: () => _currentWorkspaceId(ref),
+  );
 });
 
 final walletsRepositoryProvider = Provider<WalletsRepository>((ref) {
-  return WalletsRepositoryRemote(ref.watch(apiClientProvider));
+  return WalletsRepositoryOffline(
+    remote: WalletsRepositoryRemote(ref.watch(apiClientProvider)),
+    db: ref.watch(appDatabaseProvider),
+    connectivity: ref.watch(connectivityServiceProvider),
+    sync: ref.watch(syncServiceProvider),
+    workspaceId: () => _currentWorkspaceId(ref),
+  );
 });
 
 final walletGroupsRepositoryProvider = Provider<WalletGroupsRepository>((ref) {
@@ -96,7 +170,11 @@ final walletsRevisionProvider =
     );
 
 final categoriesRepositoryProvider = Provider<CategoriesRepository>((ref) {
-  return CategoriesRepositoryRemote(ref.watch(apiClientProvider));
+  return CategoriesRepositoryOffline(
+    remote: CategoriesRepositoryRemote(ref.watch(apiClientProvider)),
+    db: ref.watch(appDatabaseProvider),
+    workspaceId: () => _currentWorkspaceId(ref),
+  );
 });
 
 final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
@@ -120,11 +198,21 @@ final budgetsRevisionProvider =
     );
 
 final contactsRepositoryProvider = Provider<ContactsRepository>((ref) {
-  return ContactsRepositoryRemote(ref.watch(apiClientProvider));
+  return ContactsRepositoryOffline(
+    remote: ContactsRepositoryRemote(ref.watch(apiClientProvider)),
+    db: ref.watch(appDatabaseProvider),
+    workspaceId: () => _currentWorkspaceId(ref),
+  );
 });
 
 final debtsRepositoryProvider = Provider<DebtsRepository>((ref) {
-  return DebtsRepositoryRemote(ref.watch(apiClientProvider));
+  return DebtsRepositoryOffline(
+    remote: DebtsRepositoryRemote(ref.watch(apiClientProvider)),
+    db: ref.watch(appDatabaseProvider),
+    connectivity: ref.watch(connectivityServiceProvider),
+    sync: ref.watch(syncServiceProvider),
+    workspaceId: () => _currentWorkspaceId(ref),
+  );
 });
 
 /// Bumped after a debt is created/edited/deleted/paid so the Debt screen reloads.
@@ -320,6 +408,9 @@ class SessionController extends Notifier<AsyncValue<Session?>> {
 
   Future<void> clear() async {
     await ref.read(authRepositoryProvider).logout();
+    // A shared device must not carry one account's cached financial data
+    // (and any not-yet-synced offline writes) into the next session.
+    await ref.read(appDatabaseProvider).clearAll();
     state = const AsyncValue.data(null);
   }
 }

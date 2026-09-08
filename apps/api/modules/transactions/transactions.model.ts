@@ -2,6 +2,11 @@ import { t, type UnwrapSchema } from "elysia";
 
 export const TransactionModel = {
   create: t.Object({
+    // Client-generated CUID2 (offline-first mobile sync). Omitted by web/CSV
+    // callers, which keep getting a server-generated id as before. When
+    // present, a retried sync with the same id is idempotent (see
+    // TransactionsRepository.createIdempotent).
+    id: t.Optional(t.String()),
     walletId: t.String(),
     toWalletId: t.Optional(t.String()),
     categoryId: t.Optional(t.String()),
@@ -32,6 +37,9 @@ export const TransactionModel = {
   // single bad row (see docs/FEATURES.md CSV import).
   bulkCreate: t.Array(
     t.Object({
+      // Same client-generated CUID2 as `create` — used by the mobile offline
+      // sync flush; omitted (and irrelevant to dedup) for CSV/Excel import.
+      id: t.Optional(t.String()),
       walletId: t.String(),
       toWalletId: t.Optional(t.String()),
       categoryId: t.Optional(t.String()),

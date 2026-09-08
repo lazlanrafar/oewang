@@ -84,7 +84,7 @@ export abstract class TransactionsService {
     // Strip non-DB fields before insert
     const { attachmentIds, ...dbBody } = body;
 
-    const transaction = await TransactionsRepository.create({
+    const { transaction, inserted } = await TransactionsRepository.createIdempotent({
       ...dbBody,
       workspaceId,
       amount,
@@ -95,6 +95,17 @@ export abstract class TransactionsService {
       categoryId,
       assignedUserId,
     });
+
+    // A replay of an already-synced offline create (same client-generated
+    // id) — the first attempt already ran every side effect below. Return
+    // the same success so the caller (mobile sync flush) can safely retry.
+    if (!inserted) {
+      return buildSuccess(
+        transaction,
+        "Transaction created successfully",
+        "CREATED",
+      );
+    }
 
     // Sync attachments
     if (attachmentIds && attachmentIds.length > 0) {
@@ -282,7 +293,6 @@ export abstract class TransactionsService {
 
     try {
       return await TransactionsRepository.runTransaction(async (tx) => {
-        const walletDeltas: Record<string, number> = {};
         const dbTransactionsToInsert: any[] = [];
 
         for (const { item } of validItems) {
@@ -308,29 +318,39 @@ export abstract class TransactionsService {
             categoryId,
             assignedUserId,
           });
-
-          const val = Number(amountStr);
-          if (item.type === "expense") {
-            walletDeltas[item.walletId] =
-              (walletDeltas[item.walletId] || 0) - val;
-          } else if (item.type === "income") {
-            walletDeltas[item.walletId] =
-              (walletDeltas[item.walletId] || 0) + val;
-          } else if (item.type === "transfer" && item.toWalletId) {
-            walletDeltas[item.walletId] =
-              (walletDeltas[item.walletId] || 0) - val;
-            walletDeltas[item.toWalletId] =
-              (walletDeltas[item.toWalletId] || 0) + val;
-          }
         }
 
-        // 1. Bulk insert transactions
+        // 1. Bulk insert transactions (idempotent on the client-generated
+        // `id`, when present — a mobile sync-flush retry lands on the same
+        // rows instead of duplicating them).
         const results = await TransactionsRepository.createMany(
           dbTransactionsToInsert,
           tx,
         );
+        const transactionsOut = results.map((r) => r.transaction);
+        // Only genuinely new rows should move money or write an audit trail —
+        // a replayed row (inserted: false) was already accounted for by the
+        // attempt that first created it.
+        const newlyInserted = results
+          .filter((r) => r.inserted)
+          .map((r) => r.transaction);
 
-        // 2. Apply batched wallet balance updates
+        // 2. Apply batched wallet balance updates, computed from the
+        // authoritative inserted rows (not the raw input) so a replay never
+        // double-counts a balance change.
+        const walletDeltas: Record<string, number> = {};
+        for (const t of newlyInserted) {
+          const val = Number(t.amount);
+          if (t.type === "expense") {
+            walletDeltas[t.walletId] = (walletDeltas[t.walletId] || 0) - val;
+          } else if (t.type === "income") {
+            walletDeltas[t.walletId] = (walletDeltas[t.walletId] || 0) + val;
+          } else if (t.type === "transfer" && t.toWalletId) {
+            walletDeltas[t.walletId] = (walletDeltas[t.walletId] || 0) - val;
+            walletDeltas[t.toWalletId] =
+              (walletDeltas[t.toWalletId] || 0) + val;
+          }
+        }
         const walletUpdatePromises = Object.entries(walletDeltas).map(
           ([wId, diff]) => {
             if (diff === 0) return Promise.resolve();
@@ -339,8 +359,8 @@ export abstract class TransactionsService {
         );
         await Promise.all(walletUpdatePromises);
 
-        // 3. Prepare and bulk insert audit logs
-        const auditLogsToInsert = results.map((transaction) => ({
+        // 3. Prepare and bulk insert audit logs — new rows only.
+        const auditLogsToInsert = newlyInserted.map((transaction) => ({
           workspace_id: workspaceId,
           user_id: userId,
           action: "transaction.imported",
@@ -361,12 +381,12 @@ export abstract class TransactionsService {
 
         return buildSuccess(
           {
-            imported: results.length,
+            imported: newlyInserted.length,
             failed: failures.length,
-            transactions: results,
+            transactions: transactionsOut,
             failures,
           },
-          `Successfully imported ${results.length} transactions`,
+          `Successfully imported ${newlyInserted.length} transactions`,
         );
       });
     } catch (err: any) {

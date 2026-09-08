@@ -50,24 +50,96 @@ export abstract class TransactionsRepository {
     } as unknown as Transaction;
   }
 
+  /**
+   * Idempotent counterpart to `create`, used by the mobile offline sync
+   * flush: the client generates the row's CUID2 up front, so a retried sync
+   * (interrupted before the client saw the response) must land on the same
+   * row instead of inserting a duplicate. `inserted: false` tells the caller
+   * this is a replay — skip wallet-balance deltas, audit logs, and
+   * notifications, since the first successful attempt already ran them.
+   */
+  static async createIdempotent(
+    data: typeof transactions.$inferInsert,
+    tx: any = db,
+  ): Promise<{ transaction: Transaction; inserted: boolean }> {
+    const [inserted] = await tx
+      .insert(transactions)
+      .values(data)
+      .onConflictDoNothing({ target: transactions.id })
+      .returning();
+
+    if (inserted) {
+      return {
+        transaction: {
+          ...inserted,
+          date: inserted.date,
+          createdAt: inserted.createdAt,
+          updatedAt: inserted.updatedAt,
+          isReady: inserted.isReady,
+          isExported: inserted.isExported,
+          deletedAt: inserted.deletedAt,
+        } as unknown as Transaction,
+        inserted: true,
+      };
+    }
+
+    // Conflict: a prior attempt already created this row.
+    const existing = await TransactionsRepository.findById(
+      data.workspaceId as string,
+      data.id as string,
+    );
+    if (!existing) {
+      throw new Error("Failed to create transaction");
+    }
+    return { transaction: existing, inserted: false };
+  }
+
   static async createMany(
     data: (typeof transactions.$inferInsert)[],
     tx: any = db,
-  ): Promise<Transaction[]> {
+  ): Promise<{ transaction: Transaction; inserted: boolean }[]> {
     if (data.length === 0) return [];
 
-    const results = await tx.insert(transactions).values(data).returning();
+    // onConflictDoNothing + returning() yields only the rows genuinely
+    // inserted here — rows whose (client-generated) id already existed from
+    // a prior sync attempt are silently skipped by Postgres, not returned.
+    const insertedRows = await tx
+      .insert(transactions)
+      .values(data)
+      .onConflictDoNothing({ target: transactions.id })
+      .returning();
 
-    return results.map(
-      (transaction: any) =>
-        ({
-          ...transaction,
-          date: transaction.date,
-          createdAt: transaction.createdAt,
-          updatedAt: transaction.updatedAt,
-          deletedAt: transaction.deletedAt,
-        }) as unknown as Transaction,
-    );
+    const insertedIds = new Set(insertedRows.map((r: any) => r.id));
+    const skippedIds = data
+      .map((d) => d.id)
+      .filter((id): id is string => !!id && !insertedIds.has(id));
+
+    // Re-fetch the skipped (already-existing) rows so the response still
+    // accounts for every requested id — the mobile sync flush needs to clear
+    // its local pending flag for those too, not just the freshly-inserted ones.
+    const existingRows =
+      skippedIds.length > 0
+        ? await tx
+            .select()
+            .from(transactions)
+            .where(inArray(transactions.id, skippedIds))
+        : [];
+
+    const mapRow = (row: any, inserted: boolean) => ({
+      transaction: {
+        ...row,
+        date: row.date,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+        deletedAt: row.deletedAt,
+      } as unknown as Transaction,
+      inserted,
+    });
+
+    return [
+      ...insertedRows.map((r: any) => mapRow(r, true)),
+      ...existingRows.map((r: any) => mapRow(r, false)),
+    ];
   }
 
   static async findById(

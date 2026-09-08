@@ -9,8 +9,12 @@ environment:
 dependencies:
   app_links: ^6.3.2
   cached_network_image: ^3.4.1
+  connectivity_plus: ^7.3.1
+  cuid2: ^4.0.0
   cupertino_icons: ^1.0.8
   dio: ^5.7.0
+  drift: ^2.27.0
+  drift_flutter: ^0.2.7
   equatable: ^2.0.7
   fl_chart: ^0.69.2
   flutter:
@@ -27,12 +31,14 @@ dependencies:
   json_annotation: ^4.9.0
   pointycastle: ^3.9.1
   riverpod_annotation: ^2.6.1
+  rxdart: ^0.28.0
   shared_preferences: ^2.3.3
   table_calendar: ^3.1.2
   url_launcher: ^6.3.2
 
 dev_dependencies:
   build_runner: ^2.4.13
+  drift_dev: ^2.27.0
   flutter_test:
     sdk: flutter
   freezed: ^2.5.7

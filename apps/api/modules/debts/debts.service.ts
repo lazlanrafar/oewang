@@ -47,7 +47,7 @@ export abstract class DebtsService {
       origin = "from_transaction";
     }
 
-    const debt = await DebtsRepository.create({
+    const result = await DebtsRepository.create({
       workspaceId,
       contactId: data.contactId,
       type: data.type,
@@ -59,11 +59,19 @@ export abstract class DebtsService {
       dueDate: data.dueDate,
     });
 
-    if (!debt) {
+    if (!result) {
       throw status(
         500,
         buildError(ErrorCode.INTERNAL_ERROR, "Failed to create debt"),
       );
+    }
+
+    const { debt, inserted } = result;
+
+    // Replay of an already-synced offline create (same client-generated id)
+    // — the first attempt already ran the audit/notification below.
+    if (!inserted) {
+      return buildSuccess(debt, "Debt created successfully", "CREATED");
     }
 
     await AuditLogsService.log({
@@ -499,7 +507,7 @@ export abstract class DebtsService {
           existingByName.set(contactName.toLowerCase(), created);
         }
 
-        const debt = await DebtsRepository.create(
+        const result = await DebtsRepository.create(
           {
             workspaceId,
             contactId: contact.id,
@@ -513,7 +521,7 @@ export abstract class DebtsService {
           tx,
         );
 
-        createdDebts.push(debt);
+        createdDebts.push(result?.debt ?? null);
       }
 
       await AuditLogsService.log({
