@@ -4,6 +4,8 @@
 
 This guide covers `apps/api`'s Bun/TypeScript unit tests. `apps/ai` (Python) has its own `pytest` suite. `apps/worker` (Go) has its own `go test` suite — see [apps/worker tests](#appsworker-go-tests) below.
 
+**Continuous Integration:** `.github/workflows/ci.yml` runs all three suites on every push to `main` and every PR — `checks` (apps/api: `bun run lint`/`typecheck`/`test`), `worker` (`go build`/`vet`/`test -cover` in `apps/worker`), `ai` (`uv run pytest` in `apps/ai`).
+
 ---
 
 ## Overview
@@ -418,14 +420,18 @@ go test ./... -cover   # with per-package coverage
 go test ./internal/tasks/... -v   # single package, verbose
 ```
 
-No live Postgres/Redis/Telegram/apps/ai connection is needed — DB-touching handler logic is tested via narrow interfaces (`TransactionsStore`, `ImportJobsStore`, `IntegrationsStore`, `AiSessionsStore`, `TelegramSender`, `AiSidecarClient`, etc., each satisfied by a hand-written fake in the corresponding `_test.go`), and HTTP-calling clients (`aiclient`, `telegram`) are tested against `httptest.NewServer`.
+No live Postgres/Redis/Telegram/apps/ai connection is needed — DB-touching handler logic is tested via narrow interfaces (`TransactionsStore`, `ImportJobsStore`, `IntegrationsStore`, `AiSessionsStore`, `TelegramSender`, `AiSidecarClient`, etc., each satisfied by a hand-written fake in the corresponding `_test.go`), HTTP-calling clients (`aiclient`, `telegram`) are tested against `httptest.NewServer`, `internal/repo`'s raw SQL is tested against `github.com/pashagolub/pgxmock/v4` (pgx-v5-compatible mock, satisfying the package's own `Pool` interface), and `internal/tasks`'s `RedisCache` is tested against an in-memory `github.com/alicebob/miniredis/v2` server. Both are test-only dependencies (never imported outside `_test.go` files).
 
 | Package | Coverage | What's tested |
 | --- | --- | --- |
-| `internal/tasks` | ~78% | `TelegramWebhookHandler` (connect flow, receipt-draft OCR, streaming chat, tool-call normalization, Indonesian number formatting), `TransactionsImportHandler` (extraction, category auto-create, wallet balance updates, job-status marking incl. retry-exhaustion fail-safe), the existing billing/storage/invoice/audit/quota/anomaly periodic-task handlers |
+| `internal/tasks` | ~79% | `TelegramWebhookHandler` (connect flow, receipt-draft OCR, streaming chat, tool-call normalization, Indonesian number formatting), `TransactionsImportHandler` (extraction, category auto-create, wallet balance updates, job-status marking incl. retry-exhaustion fail-safe), the existing billing/storage/invoice/audit/quota/anomaly periodic-task handlers, `RedisCache.Del` (miniredis) |
 | `internal/aiclient` | ~91% | SSE frame parsing (`ChatStream`: content/done/error frames, missing trailing blank line, context cancellation, non-OK status), draft/tool-execute/import-extract JSON request-response shapes |
 | `internal/telegram` | ~86% | `SendMessage`/`EditMessageText`/`DownloadFile`/`StartTyping` against a redirect-transport-backed `httptest` server, including not-OK and transport-error paths |
 | `internal/apiclient` | ~93% | Retry-once-on-5xx / never-retry-on-4xx HTTP client behavior |
 | `internal/enqueue` | ~81% | `POST /internal/enqueue/{kind}` auth gate, task-building per kind (`telegram-webhook`, `mayar-webhook`, `transactions-import`), unknown-kind rejection |
 | `internal/health` | 100% | `GET /health` DB+Redis ping success/failure paths |
-| `internal/repo`, `internal/db`, `internal/config`, `internal/cuid`, `cmd/worker` | 0% (untested) | Thin Postgres/CUID2/env-loading/bootstrap wrappers — no live-DB test harness exists in this repo yet (matches `apps/api`'s own convention of leaving the raw repository layer untested; see `__tests__/ is currently empty` above) |
+| `internal/repo` | ~88% | `TransactionsRepo`/`ImportJobsRepo`/`IntegrationsRepo`/`AiRepo`/`NotificationsRepo` query/insert/update SQL (rows + args asserted via pgxmock), `ConnectTelegram`'s insert-vs-update branch, `sanitizeAuditPayload` redaction |
+| `internal/config` | 100% | `Load()`: happy path, missing-required-vars error, `Port`/`ANOMALY_SCAN_HOURS` defaults and parse errors |
+| `internal/cuid` | ~80% | `New()` output format (`@paralleldrive/cuid2`-compatible) and uniqueness |
+| `internal/db` | ~91% | `NewPool()`: invalid-DSN parse error, valid-DSN pool creation with configured `MaxConns` (pgxpool connects lazily — no live Postgres needed) |
+| `cmd/worker` | 0% (untested) | Pure wiring/bootstrap (config → pool → asynq server → HTTP server) — no branchy logic to extract |

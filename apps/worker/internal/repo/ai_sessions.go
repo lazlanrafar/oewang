@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/oewang/worker/internal/cuid"
 )
 
@@ -18,7 +17,7 @@ type AiMessage struct {
 // AiRepo wraps the pgxpool.Pool for ai_sessions/ai_messages access, ported
 // from apps/api/modules/ai/ai.repository.ts's AiRepository.
 type AiRepo struct {
-	Pool *pgxpool.Pool
+	Pool Pool
 }
 
 // CreateSession mirrors AiRepository.createSession — inserts a new
@@ -85,7 +84,7 @@ func (r *AiRepo) GetSessionMessages(ctx context.Context, sessionID, workspaceID 
 // NotificationsRepo wraps the pgxpool.Pool for the notifications table,
 // ported from NotificationsService.create's single insert.
 type NotificationsRepo struct {
-	Pool *pgxpool.Pool
+	Pool Pool
 }
 
 // Create mirrors NotificationsService.create — a plain insert, no returning

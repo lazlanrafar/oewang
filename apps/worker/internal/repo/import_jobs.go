@@ -2,8 +2,6 @@ package repo
 
 import (
 	"context"
-
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // ImportJobsRepo writes to apps/api's transaction_import_jobs table
@@ -12,7 +10,7 @@ import (
 // of the pending -> succeeded/failed transition, matching the
 // direct-Postgres-write pattern used elsewhere in this service.
 type ImportJobsRepo struct {
-	Pool *pgxpool.Pool
+	Pool Pool
 }
 
 // MarkSucceeded records a completed import (including "0 rows found", which

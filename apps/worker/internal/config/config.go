@@ -1,15 +1,21 @@
 // Package config loads apps/worker's configuration from process env vars.
 //
-// This monorepo's convention is a single root .env surfaced via
-// turbo.json's globalEnv — apps/worker doesn't load a .env file itself,
-// it just reads os.Getenv (same as apps/ai's pydantic Settings does under
-// the hood).
+// This monorepo's convention is a single root .env, symlinked into every
+// app dir (apps/worker/.env -> ../../.env) the same way apps/api and
+// apps/app are. Unlike Bun/Next (which auto-load a cwd .env) or apps/ai's
+// pydantic-settings (which reads env_file directly), Go has no built-in
+// .env support, so Load bridges that gap with godotenv. In production
+// (Coolify) no .env file exists in the container — godotenv.Load's error
+// is ignored and real injected env vars are read as before; godotenv never
+// overrides a var that's already set in the environment either way.
 package config
 
 import (
 	"fmt"
 	"os"
 	"strconv"
+
+	"github.com/joho/godotenv"
 )
 
 // Config holds every env var apps/worker needs. Required fields fail fast
@@ -49,6 +55,8 @@ type Config struct {
 // if any required var is missing. Callers should log.Fatal / os.Exit(1) on
 // error rather than proceeding with a half-configured worker.
 func Load() (*Config, error) {
+	_ = godotenv.Load()
+
 	cfg := &Config{
 		DatabaseURL:      os.Getenv("DATABASE_URL"),
 		RedisURL:         os.Getenv("REDIS_URL"),

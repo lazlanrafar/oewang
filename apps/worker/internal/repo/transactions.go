@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/oewang/worker/internal/cuid"
 )
 
@@ -26,7 +25,7 @@ type Category struct {
 // apps/api/modules/transactions/{transactions,wallets,categories}.repository.ts
 // and audit-logs.service.ts.
 type TransactionsRepo struct {
-	Pool *pgxpool.Pool
+	Pool Pool
 }
 
 // FindWallets mirrors WalletsRepository.findMany(workspaceId).

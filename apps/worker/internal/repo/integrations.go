@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/oewang/worker/internal/cuid"
 )
 
@@ -27,7 +26,7 @@ type Integration struct {
 // IntegrationsRepo wraps the pgxpool.Pool for workspace_integrations,
 // user_workspaces, and workspaces reads/writes.
 type IntegrationsRepo struct {
-	Pool *pgxpool.Pool
+	Pool Pool
 }
 
 func scanSettings(raw []byte) map[string]any {
