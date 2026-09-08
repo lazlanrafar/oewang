@@ -51,8 +51,10 @@ void openDateDrawer(
         firstDate: firstDate,
         lastDate: lastDate,
         onSelected: (d) {
-          onSelected(d);
+          // Close first — onSelected may open the next field's drawer, and
+          // that must win over this stale close().
           controller.close();
+          onSelected(d);
         },
         onClose: controller.close,
       ),

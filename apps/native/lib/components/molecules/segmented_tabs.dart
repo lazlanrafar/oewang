@@ -25,7 +25,7 @@ class OewangSegmentedTabs<T> extends StatelessWidget {
     required this.selected,
     required this.onChanged,
     this.padding = const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-    this.height = 40,
+    this.height = 44,
     super.key,
   });
 

@@ -32,6 +32,7 @@ Widget buildCurrencyContext(
   required String currency,
   required ValueChanged<String> onCurrencyChange,
   required bool workspaceTabs,
+  ValueChanged<num>? onAmountSubmitted,
 }) {
   final palette = context.palette;
   final label = widget.label ?? 'Amount';
@@ -44,6 +45,7 @@ Widget buildCurrencyContext(
     workspaceTabs: workspaceTabs,
     onChanged: widget.onAmountChanged!,
     onCurrencyChanged: onCurrencyChange,
+    onSubmitted: onAmountSubmitted,
   );
 
   return inputFieldLayout(
@@ -74,6 +76,7 @@ void openAmountDrawer(
   String currency = 'IDR',
   ValueChanged<String>? onCurrencyChanged,
   bool workspaceTabs = false,
+  ValueChanged<num>? onSubmitted,
 }) {
   final controller = FormDrawerScope.maybeOf(context);
   if (controller != null) {
@@ -86,7 +89,12 @@ void openAmountDrawer(
         workspaceTabs: workspaceTabs,
         onChanged: onChanged,
         onCurrencyChanged: onCurrencyChanged,
-        onSubmit: (_) => controller.close(),
+        onSubmit: (v) {
+          // Close first — onSubmitted may open the next field's drawer, and
+          // that must win over this stale close().
+          controller.close();
+          onSubmitted?.call(v);
+        },
         onClose: controller.close,
       ),
     );

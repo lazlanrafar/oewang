@@ -131,7 +131,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 const SizedBox(height: OewangSpacing.lg),
                 Button(
                   label: 'Create account',
-                  height: 48,
                   loading: vm.submit.running,
                   onPressed: vm.canSubmit ? _onSubmit : null,
                 ),

@@ -128,8 +128,10 @@ void openGridDrawer<T>(
         selectedId: selectedId,
         columns: columns,
         onSelected: (item) {
-          onSelected(item);
+          // Close first — onSelected may open the next field's drawer, and
+          // that must win over this stale close().
           controller.close();
+          onSelected(item);
         },
         onClose: controller.close,
       ),
@@ -171,8 +173,10 @@ void openListDrawer<T>(
         labelOf: labelOf,
         subtitleOf: subtitleOf,
         onSelected: (item) {
-          onSelected(item);
+          // Close first — onSelected may open the next field's drawer, and
+          // that must win over this stale close().
           controller.close();
+          onSelected(item);
         },
         onClose: controller.close,
       ),

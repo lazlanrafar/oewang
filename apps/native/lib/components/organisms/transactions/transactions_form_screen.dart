@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:oewang/components/atoms/button.dart';
 import 'package:oewang/components/atoms/inputs/bases/input_base_drawer_host.dart';
 import 'package:oewang/components/atoms/inputs/bases/input_base_field_row.dart';
+import 'package:oewang/components/atoms/inputs/contexts/input_context_currency.dart';
 import 'package:oewang/components/atoms/inputs/input.dart';
 import 'package:oewang/components/molecules/page_app_bar.dart';
 import 'package:oewang/components/organisms/transactions/transactions_form_view_model.dart';
@@ -53,6 +54,71 @@ class TransactionFormScreen extends ConsumerWidget {
       _ => 'Transfer',
     };
 
+    // Step-through chain: date -> amount -> (category -> account) or
+    // (from -> to) for transfer. Each entity's onSelected both commits the
+    // value and opens the next field's drawer, so the user never has to tap
+    // the next field themselves — see FormDrawerController.open/close in
+    // input_base_drawer_host.dart for why close() runs before opening next.
+    final toWalletEntity = EntitySelect<Wallet>(
+      sheetTitle: 'To',
+      gridColumns: 3,
+      value: _firstOrNull(
+        vm.walletOptions,
+        (w) => w.id == vm.state.toWalletId,
+      ),
+      items: vm.walletOptions,
+      labelOf: (w) => w.name,
+      idOf: (w) => w.id,
+      onSelected: (w) => vm.setToWallet(w.id),
+    );
+    final fromWalletEntity = EntitySelect<Wallet>(
+      sheetTitle: 'From',
+      gridColumns: 3,
+      value: _firstOrNull(vm.walletOptions, (w) => w.id == vm.state.walletId),
+      items: vm.walletOptions,
+      labelOf: (w) => w.name,
+      idOf: (w) => w.id,
+      onSelected: (w) {
+        vm.setWallet(w.id);
+        toWalletEntity.open(context, id: 'To', fallbackTitle: 'To');
+      },
+    );
+    final accountEntity = EntitySelect<Wallet>(
+      gridColumns: 3,
+      value: _firstOrNull(vm.walletOptions, (w) => w.id == vm.state.walletId),
+      items: vm.walletOptions,
+      labelOf: (w) => w.name,
+      idOf: (w) => w.id,
+      onSelected: (w) => vm.setWallet(w.id),
+    );
+    final categoryEntity = EntitySelect<Category>(
+      gridColumns: 3,
+      leadingOf: (c) => c.emoji,
+      value: _firstOrNull(
+        vm.categoryOptions,
+        (c) => c.id == vm.state.categoryId,
+      ),
+      items: vm.categoryOptions,
+      labelOf: (c) => c.name,
+      idOf: (c) => c.id,
+      onSelected: (c) {
+        vm.setCategory(c.id);
+        accountEntity.open(context, id: 'Account', fallbackTitle: 'Account');
+      },
+    );
+
+    void openAfterAmount() {
+      if (vm.state.type == TransactionType.transfer) {
+        fromWalletEntity.open(context, id: 'From', fallbackTitle: 'From');
+      } else {
+        categoryEntity.open(
+          context,
+          id: 'Category',
+          fallbackTitle: 'Category',
+        );
+      }
+    }
+
     return Scaffold(
       appBar: PageAppBar(
         title: title,
@@ -74,15 +140,29 @@ class TransactionFormScreen extends ConsumerWidget {
               Input(
                 context: InputContext.date,
                 date: vm.state.date,
-                onDateChanged: vm.setDate,
+                onDateChanged: (d) {
+                  vm.setDate(d);
+                  openAmountDrawer(
+                    context,
+                    id: 'Amount',
+                    initial: vm.state.amount,
+                    workspaceTabs: true,
+                    onChanged: vm.setAmount,
+                    onSubmitted: (_) => openAfterAmount(),
+                  );
+                },
                 labelPosition: InputLabelPosition.left,
                 variant: InputVariant.underline,
               ),
 
-              _AmountRow(vm: vm),
+              _AmountRow(vm: vm, onSubmitted: (_) => openAfterAmount()),
 
               if (vm.state.type == TransactionType.transfer) ...[
-                _TransferWalletsRow(vm: vm),
+                _TransferWalletsRow(
+                  vm: vm,
+                  fromEntity: fromWalletEntity,
+                  toEntity: toWalletEntity,
+                ),
               ] else ...[
                 Input(
                   context: InputContext.select,
@@ -90,34 +170,13 @@ class TransactionFormScreen extends ConsumerWidget {
                   placeholder: 'Choose a category',
                   labelPosition: InputLabelPosition.left,
                   variant: InputVariant.underline,
-                  entity: EntitySelect<Category>(
-                    gridColumns: 3,
-                    leadingOf: (c) => c.emoji,
-                    value: _firstOrNull(
-                      vm.categoryOptions,
-                      (c) => c.id == vm.state.categoryId,
-                    ),
-                    items: vm.categoryOptions,
-                    labelOf: (c) => c.name,
-                    idOf: (c) => c.id,
-                    onSelected: (c) => vm.setCategory(c.id),
-                  ),
+                  entity: categoryEntity,
                 ),
                 Input(
                   context: InputContext.select,
                   label: 'Account',
                   placeholder: 'Choose an account',
-                  entity: EntitySelect<Wallet>(
-                    gridColumns: 3,
-                    value: _firstOrNull(
-                      vm.walletOptions,
-                      (w) => w.id == vm.state.walletId,
-                    ),
-                    items: vm.walletOptions,
-                    labelOf: (w) => w.name,
-                    idOf: (w) => w.id,
-                    onSelected: (w) => vm.setWallet(w.id),
-                  ),
+                  entity: accountEntity,
                 ),
               ],
               FormFieldRow(
@@ -151,8 +210,12 @@ class TransactionFormScreen extends ConsumerWidget {
 }
 
 class _AmountRow extends StatelessWidget {
-  const _AmountRow({required this.vm});
+  const _AmountRow({required this.vm, this.onSubmitted});
   final TransactionFormViewModel vm;
+
+  /// Fires once the keypad's OK is tapped — the parent uses this to open the
+  /// next field's drawer (category/account, or from/to for a transfer).
+  final ValueChanged<num>? onSubmitted;
 
   @override
   Widget build(BuildContext context) {
@@ -170,25 +233,24 @@ class _AmountRow extends StatelessWidget {
       amount: vm.state.amount,
       valueColor: color,
       onAmountChanged: vm.setAmount,
+      onAmountSubmitted: onSubmitted,
     );
   }
 }
 
 class _TransferWalletsRow extends StatelessWidget {
-  const _TransferWalletsRow({required this.vm});
+  const _TransferWalletsRow({
+    required this.vm,
+    required this.fromEntity,
+    required this.toEntity,
+  });
   final TransactionFormViewModel vm;
+  final EntitySelect<Wallet> fromEntity;
+  final EntitySelect<Wallet> toEntity;
 
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    final from = _firstOrNull(
-      vm.walletOptions,
-      (w) => w.id == vm.state.walletId,
-    );
-    final to = _firstOrNull(
-      vm.walletOptions,
-      (w) => w.id == vm.state.toWalletId,
-    );
 
     return Row(
       children: [
@@ -200,27 +262,13 @@ class _TransferWalletsRow extends StatelessWidget {
                 context: InputContext.select,
                 label: 'From',
                 placeholder: 'Choose an account',
-                entity: EntitySelect<Wallet>(
-                  gridColumns: 3,
-                  value: from,
-                  items: vm.walletOptions,
-                  labelOf: (w) => w.name,
-                  idOf: (w) => w.id,
-                  onSelected: (w) => vm.setWallet(w.id),
-                ),
+                entity: fromEntity,
               ),
               Input(
                 context: InputContext.select,
                 label: 'To',
                 placeholder: 'Choose an account',
-                entity: EntitySelect<Wallet>(
-                  gridColumns: 3,
-                  value: to,
-                  items: vm.walletOptions,
-                  labelOf: (w) => w.name,
-                  idOf: (w) => w.id,
-                  onSelected: (w) => vm.setToWallet(w.id),
-                ),
+                entity: toEntity,
               ),
             ],
           ),
@@ -378,7 +426,6 @@ class _ActionRow extends ConsumerWidget {
           Expanded(
             child: Button(
               label: 'Save',
-              height: 48,
               loading: vm.save.running,
               onPressed: vm.canSave
                   ? () => _onSave(context, ref, keepOpen: false)
@@ -390,7 +437,6 @@ class _ActionRow extends ConsumerWidget {
             width: 130,
             child: Button(
               label: 'Continue',
-              height: 48,
               variant: ButtonVariant.outlined,
               onPressed: vm.canSave
                   ? () => _onSave(context, ref, keepOpen: true)

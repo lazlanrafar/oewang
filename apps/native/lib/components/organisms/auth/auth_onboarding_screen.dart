@@ -132,7 +132,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               const Spacer(),
               Button(
                 label: 'Continue',
-                height: 48,
                 loading: vm.submitting,
                 onPressed: vm.canSubmit ? _submit : null,
               ),

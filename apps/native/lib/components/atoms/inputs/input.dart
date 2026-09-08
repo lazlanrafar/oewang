@@ -61,6 +61,7 @@ class Input extends StatefulWidget {
     // currency
     this.amount = 0,
     this.onAmountChanged,
+    this.onAmountSubmitted,
     this.currency = 'IDR',
     this.onCurrencyChanged,
     // date
@@ -134,6 +135,11 @@ class Input extends StatefulWidget {
   // currency
   final num amount;
   final ValueChanged<num>? onAmountChanged;
+
+  /// Fires once, when the keypad's OK is tapped — unlike [onAmountChanged]
+  /// (which fires on every keystroke), this is the "field committed" signal
+  /// a caller can use to advance to the next field.
+  final ValueChanged<num>? onAmountSubmitted;
   final String currency;
   final ValueChanged<String>? onCurrencyChanged;
 
@@ -193,6 +199,7 @@ class _InputState extends State<Input> {
           context,
           widget,
           currency: _currency,
+          onAmountSubmitted: widget.onAmountSubmitted,
           // Workspace currency tabs only for the currency context; the plain
           // amount context never shows them.
           workspaceTabs: widget.context == InputContext.currency,
