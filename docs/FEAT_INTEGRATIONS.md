@@ -107,7 +107,7 @@ When a user sends an image/receipt file via Telegram, `apps/worker`'s `handleRec
 When a text message is received, `apps/worker`'s `handleTextMessage`/`streamChatReply` (`webhook_telegram.go`):
 
 1. **Draft Precedence**: If a receipt draft is awaiting confirmation for this chat's session (`apps/ai`'s `POST /draft/latest-state` reports `status: "awaiting_confirmation"`), that turn is handled by `POST /draft/handle-pending` first — normal chat is skipped.
-2. **Streaming AI Reply**: Otherwise calls `apps/ai`'s `POST /chat/stream` directly and fake-streams the reply into Telegram via incremental `editMessageText` calls (throttled to ~1.3s), matching the web chat's perceived-latency behavior.
+2. **Streaming AI Reply**: Otherwise calls `apps/ai`'s `POST /internal/chat/stream` directly (the tool-loop chat path — `prompts_web.py`/`WEB_TOOLS`, keyed by `workspace_id`/`user_id` via `x-api-key`) and fake-streams the reply into Telegram via incremental `editMessageText` calls (throttled to ~1.3s), matching the web chat's perceived-latency behavior.
 3. **Structured Commands**: If the final reply starts with a JSON transaction-draft object (e.g. `{ "amount": 20000, "name": "Susu", "walletId": "wallet1", "type": "expense" }`), `normalizeAiReplyForChat` calls `apps/ai`'s `POST /tools/execute` (`create_transaction`) and rewrites the reply into a friendly confirmation (e.g. `✅ Sudah dicatat: Susu Rp20.000 dari Kas.`).
 4. **Reply Broadcast**: The final reply replaces the streaming placeholder via `editMessageText` (Markdown), or is sent fresh via `sendMessage` if no placeholder exists.
 

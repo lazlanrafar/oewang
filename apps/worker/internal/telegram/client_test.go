@@ -101,6 +101,35 @@ func TestEditMessageText_OmitsParseModeWhenEmpty(t *testing.T) {
 	assert.False(t, hasParseMode)
 }
 
+func TestSendDocument_SendsURLAndCaption(t *testing.T) {
+	var gotBody map[string]any
+	c, srv := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "/bottest-token/sendDocument", r.URL.Path)
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&gotBody))
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"ok":true}`))
+	})
+	defer srv.Close()
+
+	c.SendDocument(context.Background(), "chat-1", "https://r2/export.csv", "export.csv")
+	assert.Equal(t, "https://r2/export.csv", gotBody["document"])
+	assert.Equal(t, "export.csv", gotBody["caption"])
+}
+
+func TestSendDocument_OmitsCaptionWhenEmpty(t *testing.T) {
+	var gotBody map[string]any
+	c, srv := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&gotBody))
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"ok":true}`))
+	})
+	defer srv.Close()
+
+	c.SendDocument(context.Background(), "chat-1", "https://r2/export.csv", "")
+	_, hasCaption := gotBody["caption"]
+	assert.False(t, hasCaption)
+}
+
 func TestDownloadFile_Success(t *testing.T) {
 	c, srv := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch {

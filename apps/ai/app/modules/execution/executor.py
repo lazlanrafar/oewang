@@ -11,9 +11,10 @@ import asyncio
 from app.core.database import fetch, fetchrow
 from app.core.embeddings import embed_one
 from app.core.serde import to_jsonable
-from app.modules.execution import analysis, debts, items, transactions, wallets
+from app.modules.execution import analysis, attachments, debts, exports, items, transactions, wallets
 from app.modules.execution.resolvers import (
     resolve_category_id,
+    resolve_or_create_category_id,
     resolve_wallet_id,
     workspace_currency,
 )
@@ -36,7 +37,13 @@ def _num(payload: dict, key: str) -> float:
         return 0.0
 
 
+_ATTACHMENT_TOOLS = {"export_transactions", "get_receipt_attachment"}
+
+
 def _artifact_for(tool: str, result: dict):
+    if tool in _ATTACHMENT_TOOLS:
+        return _attachment_artifact(result)
+
     spec = _ARTIFACTS.get(tool)
     if not spec or not isinstance(result, dict):
         return None
@@ -45,6 +52,21 @@ def _artifact_for(tool: str, result: dict):
         return None
     canvas_type, ok = spec
     return {"type": canvas_type, "payload": payload} if ok(payload) else None
+
+
+def _attachment_artifact(result: dict):
+    """Unlike _ARTIFACTS' threshold-gated analysis canvases, a file
+    attachment always renders when its tool succeeded — there's no "empty"
+    case worth hiding."""
+    if not isinstance(result, dict) or not result.get("success"):
+        return None
+    payload = result.get("data")
+    if not isinstance(payload, dict) or not payload.get("url"):
+        return None
+    return {
+        "type": "file-attachment",
+        "payload": {"url": payload["url"], "name": payload.get("name"), "mimeType": payload.get("mime_type")},
+    }
 
 
 async def execute_tool(tool: str, inp: dict, workspace_id: str, user_id: str) -> dict:
@@ -64,7 +86,9 @@ async def _dispatch(tool: str, inp: dict, workspace_id: str, user_id: str) -> di
             "description": inp.get("description"),
             "wallet_id": await resolve_wallet_id(workspace_id, inp.get("walletId")),
             "to_wallet_id": await resolve_wallet_id(workspace_id, inp.get("toWalletId")) if inp.get("toWalletId") else None,
-            "category_id": await resolve_category_id(workspace_id, inp.get("categoryId")),
+            "category_id": await resolve_or_create_category_id(
+                workspace_id, user_id, inp.get("categoryId"), inp.get("type")
+            ),
         }
         return await transactions.create_transaction(workspace_id, user_id, body)
 
@@ -110,6 +134,12 @@ async def _dispatch(tool: str, inp: dict, workspace_id: str, user_id: str) -> di
         return {"success": True, "data": await analysis.debt(workspace_id, inp)}
     if tool == "getBudgetStatus":
         return {"success": True, "data": await analysis.budget(workspace_id, inp)}
+
+    # ── File attachments ─────────────────────────────────────────────────────
+    if tool == "export_transactions":
+        return await exports.export_transactions_csv(workspace_id, inp)
+    if tool == "get_receipt_attachment":
+        return await attachments.get_receipt_attachment(workspace_id, inp["transactionId"])
 
     # ── Reads ─────────────────────────────────────────────────────────────────
     if tool == "search_transaction_items":

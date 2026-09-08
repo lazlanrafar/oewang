@@ -171,7 +171,13 @@ export function ChatMessages({ messages, isStreaming = false, dictionary, onQuic
 
                       if (isImage && file.url) {
                         return (
-                          <div key={fileKey} className="relative overflow-hidden rounded-lg border">
+                          <a
+                            key={fileKey}
+                            href={file.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="relative overflow-hidden rounded-lg border"
+                          >
                             <Image
                               src={file.url}
                               alt={file.filename || attachmentAlt}
@@ -180,17 +186,23 @@ export function ChatMessages({ messages, isStreaming = false, dictionary, onQuic
                               height={192}
                               unoptimized
                             />
-                          </div>
+                          </a>
                         );
                       }
 
                       return (
-                        <div key={fileKey} className="flex items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2">
+                        <a
+                          key={fileKey}
+                          href={file.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2 hover:bg-muted"
+                        >
                           <PaperclipIcon className="size-4 shrink-0 text-muted-foreground" />
                           <span className="font-medium text-sm">
                             {file.filename || dictionary.common.na || unknownFile}
                           </span>
-                        </div>
+                        </a>
                       );
                     })}
                   </div>

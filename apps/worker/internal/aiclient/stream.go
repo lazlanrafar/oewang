@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-// StreamEvent is one parsed SSE frame from apps/ai's POST /chat/stream.
+// StreamEvent is one parsed SSE frame from apps/ai's POST /internal/chat/stream.
 // Data holds the raw JSON bytes for the frame's "data:" line(s) — callers
 // unmarshal into whatever shape that event name implies (content/done/error
 // each carry different fields, per apps/api/modules/integrations/ai-sidecar.ts).
@@ -19,11 +19,14 @@ type StreamEvent struct {
 	Data  json.RawMessage
 }
 
-// ChatStream opens POST /chat/stream and returns a channel of parsed events,
-// closed when the stream ends or ctx is canceled. A transport/HTTP-status
-// failure surfaces as an immediate error return (no channel produced) —
-// matching ai-sidecar.ts's chatViaSidecarStream, which throws before
-// yielding anything if the initial request itself fails.
+// ChatStream opens POST /internal/chat/stream (the tool-loop chat path, keyed
+// by workspace_id/user_id via x-api-key — no JWT) and returns a channel of
+// parsed events, closed when the stream ends or ctx is canceled. Do NOT point
+// this at /chat/stream: that's the legacy no-tool-loop path and can't call
+// create_transaction/etc. A transport/HTTP-status failure surfaces as an
+// immediate error return (no channel produced) — matching ai-sidecar.ts's
+// chatViaSidecarStream, which throws before yielding anything if the initial
+// request itself fails.
 func (c *Client) ChatStream(ctx context.Context, message, workspaceID, userID, sessionID string) (<-chan StreamEvent, error) {
 	body := map[string]any{"message": message, "workspace_id": workspaceID}
 	if userID != "" {
@@ -37,7 +40,7 @@ func (c *Client) ChatStream(ctx context.Context, message, workspaceID, userID, s
 		return nil, fmt.Errorf("aiclient: encode chat/stream body: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.BaseURL+"/chat/stream", bytes.NewReader(payload))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.BaseURL+"/internal/chat/stream", bytes.NewReader(payload))
 	if err != nil {
 		return nil, fmt.Errorf("aiclient: build chat/stream request: %w", err)
 	}
@@ -116,6 +119,19 @@ type StreamContentData struct {
 type StreamDoneData struct {
 	Reply     string `json:"reply"`
 	SessionID string `json:"session_id"`
+}
+
+// StreamArtifactData is the payload shape for event:"artifact" frames — one
+// per tool call this turn whose result carries a canvas or file attachment
+// (apps/ai's execution/executor.py `_artifact_for`). Only `Type` ==
+// "file-attachment" matters to the Telegram handler; other types (the
+// analysis canvases) have no Telegram-side rendering and are ignored.
+type StreamArtifactData struct {
+	Type    string `json:"type"`
+	Payload struct {
+		URL  string `json:"url"`
+		Name string `json:"name"`
+	} `json:"payload"`
 }
 
 // StreamErrorData is the payload shape for event:"error" frames.

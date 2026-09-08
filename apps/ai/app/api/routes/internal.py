@@ -4,13 +4,19 @@ scheduling now lives in Go but whose actual logic stays here — the same
 x-api-key (applied in main.py), same trust model as every other router here.
 """
 
+from collections.abc import AsyncGenerator
 from datetime import datetime, timezone
+import json
 
 from fastapi import APIRouter
+from fastapi.responses import StreamingResponse
 
 from app.core import quota
 from app.core.database import execute, fetch
 from app.modules.anomaly.service import scan_all_workspaces
+from app.modules.chatbot.chat_money_path import SessionNotFoundError
+from app.modules.chatbot.service import stream_service_chat
+from app.schemas.chatbot import ChatRequest
 
 router = APIRouter(tags=["internal"])
 
@@ -52,3 +58,47 @@ async def post_anomaly_scan_all() -> dict:
     directly (removed from main.py's lifespan)."""
     result = await scan_all_workspaces()
     return result if isinstance(result, dict) else {"ok": True}
+
+
+@router.post("/internal/chat/stream")
+async def post_internal_chat_stream(req: ChatRequest):
+    """Streaming tool-loop chat for the Telegram bot: same SSE shape as
+    /chat/web/stream (content deltas + a final done event with reply/usage/
+    artifacts), but keyed by workspace_id/user_id from the trusted x-api-key
+    caller instead of a browser JWT. /chat/stream is the legacy no-tool-loop
+    path — do not point Telegram at that one."""
+    if not req.user_id:
+        err_data = json.dumps({"error": "user_id is required"})
+        return StreamingResponse(
+            iter([f"event: error\ndata: {err_data}\n\n"]),
+            media_type="text/event-stream",
+        )
+    user_id: str = req.user_id
+
+    async def event_generator() -> AsyncGenerator[str, None]:
+        try:
+            async for event in stream_service_chat(
+                req.workspace_id, user_id, req.message, req.session_id
+            ):
+                event_name = event.get("event", "message")
+                data_str = json.dumps(event.get("data", {}))
+                yield f"event: {event_name}\ndata: {data_str}\n\n"
+        except quota.PlanLimitReached as e:
+            err_data = json.dumps({"error": "PLAN_LIMIT_REACHED", "reset_at": e.reset_at})
+            yield f"event: error\ndata: {err_data}\n\n"
+        except SessionNotFoundError as e:
+            err_data = json.dumps({"error": str(e)})
+            yield f"event: error\ndata: {err_data}\n\n"
+        except Exception as e:
+            err_data = json.dumps({"error": str(e)})
+            yield f"event: error\ndata: {err_data}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )

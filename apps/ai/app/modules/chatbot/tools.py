@@ -103,7 +103,12 @@ WEB_TOOLS = [
             "name": {"type": "string", "description": "Name or merchant."},
             "walletId": {"type": "string", "description": "Source wallet ID."},
             "toWalletId": {"type": "string", "description": "Destination wallet ID (transfers only)."},
-            "categoryId": {"type": "string", "description": "Category ID."},
+            "categoryId": {
+                "type": "string",
+                "description": "Category ID or exact name from get_workspace_context. If the "
+                "name doesn't match any existing category, a new one is created automatically "
+                "with that exact name and used for this transaction.",
+            },
             "description": {"type": "string"},
         },
         ["type", "amount", "name", "walletId"],
@@ -240,6 +245,25 @@ WEB_TOOLS = [
             "limit": {"type": "integer", "minimum": 1, "maximum": 10},
         },
         ["query"],
+    ),
+    _analysis(
+        "export_transactions",
+        "Export the workspace's transactions for a period as a downloadable "
+        "CSV file. Use when the user asks to export, download, or get a "
+        "report/file of their transactions (e.g. 'kirim laporan pengeluaran "
+        "bulan ini', 'export my transactions'). The file is attached to your "
+        "reply automatically — just confirm briefly, never paste a raw URL.",
+        _PERIOD_SPENDING,
+    ),
+    _fn(
+        "get_receipt_attachment",
+        "Resend a receipt/proof-of-payment file that was already attached to "
+        "a transaction (e.g. 'kirim ulang struk kemarin'). Call "
+        "get_recent_transactions or search_transaction_items first to find "
+        "the exact transaction ID — never guess it. The file is attached to "
+        "your reply automatically; if none is attached, say so.",
+        {"transactionId": {"type": "string"}},
+        ["transactionId"],
     ),
     _fn(
         "search_documents",

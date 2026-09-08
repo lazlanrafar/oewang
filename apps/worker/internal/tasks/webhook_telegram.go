@@ -81,6 +81,7 @@ type telegramDocument struct {
 type TelegramSender interface {
 	SendMessage(ctx context.Context, chatID string, text string) int64
 	EditMessageText(ctx context.Context, chatID string, messageID int64, text string, parseMode string)
+	SendDocument(ctx context.Context, chatID, documentURL, caption string)
 	StartTyping(ctx context.Context, chatID string) (stop func())
 	DownloadFile(ctx context.Context, fileID string) ([]byte, error)
 }
@@ -536,11 +537,17 @@ func (h *TelegramWebhookHandler) streamChatReply(
 		firstEditLanded bool
 		finalReplyText  string
 		finalSessionID  string
+		fileAttachment  *aiclient.StreamArtifactData
 		streamErr       error
 	)
 
 	for evt := range events {
 		switch evt.Event {
+		case "artifact":
+			var data aiclient.StreamArtifactData
+			if err := json.Unmarshal(evt.Data, &data); err == nil && data.Type == "file-attachment" && data.Payload.URL != "" {
+				fileAttachment = &data
+			}
 		case "content":
 			var data aiclient.StreamContentData
 			if err := json.Unmarshal(evt.Data, &data); err != nil {
@@ -593,5 +600,9 @@ func (h *TelegramWebhookHandler) streamChatReply(
 		} else {
 			h.Telegram.SendMessage(ctx, chatID, replyText)
 		}
+	}
+
+	if fileAttachment != nil {
+		h.Telegram.SendDocument(ctx, chatID, fileAttachment.Payload.URL, fileAttachment.Payload.Name)
 	}
 }

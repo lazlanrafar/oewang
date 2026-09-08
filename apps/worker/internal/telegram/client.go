@@ -111,6 +111,22 @@ func (c *Client) StartTyping(ctx context.Context, chatID string) (stop func()) {
 	}
 }
 
+// SendDocument sends a file to chatID via Telegram's sendDocument — document
+// is any http(s) URL, which Telegram fetches server-side (no byte handling
+// on our end). caption may be "" (omitted). Errors are logged and swallowed,
+// matching SendMessage's "never let a Telegram API hiccup break the whole
+// webhook handler" behavior.
+func (c *Client) SendDocument(ctx context.Context, chatID, documentURL, caption string) {
+	body := map[string]any{"chat_id": chatID, "document": documentURL}
+	if caption != "" {
+		body["caption"] = caption
+	}
+	var out map[string]any
+	if err := c.postJSON(ctx, "sendDocument", body, &out); err != nil {
+		log.Printf("telegram: sendDocument failed: %v", err)
+	}
+}
+
 type getFileResult struct {
 	Ok     bool `json:"ok"`
 	Result struct {

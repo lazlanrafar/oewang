@@ -424,9 +424,9 @@ No live Postgres/Redis/Telegram/apps/ai connection is needed — DB-touching han
 
 | Package | Coverage | What's tested |
 | --- | --- | --- |
-| `internal/tasks` | ~79% | `TelegramWebhookHandler` (connect flow, receipt-draft OCR, streaming chat, tool-call normalization, Indonesian number formatting), `TransactionsImportHandler` (extraction, category auto-create, wallet balance updates, job-status marking incl. retry-exhaustion fail-safe), the existing billing/storage/invoice/audit/quota/anomaly periodic-task handlers, `RedisCache.Del` (miniredis) |
-| `internal/aiclient` | ~91% | SSE frame parsing (`ChatStream`: content/done/error frames, missing trailing blank line, context cancellation, non-OK status), draft/tool-execute/import-extract JSON request-response shapes |
-| `internal/telegram` | ~86% | `SendMessage`/`EditMessageText`/`DownloadFile`/`StartTyping` against a redirect-transport-backed `httptest` server, including not-OK and transport-error paths |
+| `internal/tasks` | ~79% | `TelegramWebhookHandler` (connect flow, receipt-draft OCR, streaming chat, tool-call normalization, Indonesian number formatting, file-attachment artifact → `SendDocument` forwarding), `TransactionsImportHandler` (extraction, category auto-create, wallet balance updates, job-status marking incl. retry-exhaustion fail-safe), the existing billing/storage/invoice/audit/quota/anomaly periodic-task handlers, `RedisCache.Del` (miniredis) |
+| `internal/aiclient` | ~91% | SSE frame parsing (`ChatStream`: content/done/error frames, missing trailing blank line, context cancellation, non-OK status), draft/tool-execute/import-extract JSON request-response shapes. `ChatStream` posts to `/internal/chat/stream` (the tool-loop path) — never `/chat/stream` (legacy, no tools) |
+| `internal/telegram` | ~86% | `SendMessage`/`EditMessageText`/`SendDocument`/`DownloadFile`/`StartTyping` against a redirect-transport-backed `httptest` server, including not-OK and transport-error paths |
 | `internal/apiclient` | ~93% | Retry-once-on-5xx / never-retry-on-4xx HTTP client behavior |
 | `internal/enqueue` | ~81% | `POST /internal/enqueue/{kind}` auth gate, task-building per kind (`telegram-webhook`, `mayar-webhook`, `transactions-import`), unknown-kind rejection |
 | `internal/health` | 100% | `GET /health` DB+Redis ping success/failure paths |

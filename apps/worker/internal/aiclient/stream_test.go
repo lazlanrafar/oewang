@@ -15,7 +15,7 @@ import (
 
 func TestChatStream_ParsesContentDoneFrames(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "/chat/stream", r.URL.Path)
+		assert.Equal(t, "/internal/chat/stream", r.URL.Path)
 		assert.Equal(t, "test-key", r.Header.Get("x-api-key"))
 		w.Header().Set("Content-Type", "text/event-stream")
 		w.WriteHeader(http.StatusOK)

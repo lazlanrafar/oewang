@@ -297,3 +297,58 @@ async def stream_web_chat(
             yield {"event": "done", "data": final_result}
         else:
             yield event
+
+
+async def stream_service_chat(
+    workspace_id: str, user_id: str, message: str, session_id: str | None
+):
+    """Streaming tool-loop chat for trusted service callers (x-api-key,
+    explicit workspace/user id — no JWT) — apps/worker's Telegram handler.
+    Same money path as stream_web_chat (chat_begin_core/chat_end_core), minus
+    the JWT hop: one latest message in, session history reconstructed by
+    chat_begin_core itself from `session_id`. Raises quota.PlanLimitReached /
+    chat_money_path.SessionNotFoundError — the route catches and emits an
+    "error" SSE event, same shape as the "content"/"done" events below."""
+    from app.modules.chatbot.chat_money_path import chat_begin_core
+
+    begin = await chat_begin_core(
+        workspace_id, user_id, [{"role": "user", "content": message}], session_id
+    )
+
+    if begin["kind"] == "early":
+        yield {"event": "content", "data": {"text": begin["reply"]}}
+        yield {
+            "event": "done",
+            "data": {
+                "session_id": begin["sessionId"],
+                "usage": {"input_tokens": 0, "output_tokens": 0},
+                "artifacts": [],
+            },
+        }
+        return
+
+    current_session_id = begin["sessionId"]
+    current_tokens = begin["currentTokens"]
+    convo = [
+        {"role": m["role"], "content": m["content"]}
+        for m in begin["history"]
+        if m["role"] in ("user", "assistant")
+    ]
+
+    async def run_tool(name: str, args: dict) -> dict:
+        return await tools.execute_tool(name, args, workspace_id, user_id)
+
+    async for event in llm.complete_with_tools_stream(
+        begin["systemPrompt"], convo, tools.WEB_TOOLS, run_tool,
+        max_steps=get_settings().AI_MAX_STEPS,
+    ):
+        if event["event"] == "done":
+            final_result = event["data"]
+            final_result["session_id"] = current_session_id
+            try:
+                await tools.chat_end(workspace_id, current_session_id, final_result, current_tokens)
+            except Exception:
+                log.exception("chat_end failed; stream completed but persist incomplete")
+            yield {"event": "done", "data": final_result}
+        else:
+            yield event

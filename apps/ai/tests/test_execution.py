@@ -8,7 +8,9 @@ from decimal import Decimal
 from app.core.audit import _sanitize
 from app.core.serde import to_jsonable
 from app.modules.execution.executor import _artifact_for
+from app.modules.execution.exports import _rows_to_csv
 from app.modules.execution.resolvers import (
+    _match_category,
     parse_amount,
     resolve_date_range,
     resolve_multicurrency,
@@ -73,6 +75,41 @@ def test_budget_artifact_requires_budgets_list():
 
 def test_non_canvas_tool_has_no_artifact():
     assert _artifact_for("create_transaction", {"success": True, "data": {}}) is None
+
+
+def test_file_attachment_artifact_always_emits_on_success_with_url():
+    result = {"success": True, "data": {"url": "https://r2/x", "name": "a.csv", "mime_type": "text/csv"}}
+    artifact = _artifact_for("export_transactions", result)
+    assert artifact == {
+        "type": "file-attachment",
+        "payload": {"url": "https://r2/x", "name": "a.csv", "mimeType": "text/csv"},
+    }
+
+
+def test_file_attachment_artifact_omitted_when_tool_failed():
+    assert _artifact_for("get_receipt_attachment", {"success": False, "error": "no receipt"}) is None
+
+
+def test_rows_to_csv_writes_header_and_one_row_per_transaction():
+    rows = [{"date": "2026-09-01", "type": "expense", "name": "Kopi", "category_name": "Food",
+             "wallet_name": "Cash", "amount": "15000"}]
+    csv_text = _rows_to_csv(rows)
+    lines = csv_text.strip().splitlines()
+    assert lines[0] == "Date,Type,Name,Category,Wallet,Amount"
+    assert lines[1] == "2026-09-01,expense,Kopi,Food,Cash,15000"
+
+
+def test_match_category_finds_substring_and_word_overlap_matches():
+    rows = [{"id": "c1", "name": "Household"}, {"id": "c2", "name": "Groceries"}]
+    assert _match_category(rows, "household")["id"] == "c1"
+    assert _match_category(rows, "beli groceries bulanan")["id"] == "c2"
+
+
+def test_match_category_returns_none_when_nothing_fits():
+    # No fallback guessing here — resolve_or_create_category_id relies on this
+    # None to decide "create a new category" instead of picking a wrong one.
+    rows = [{"id": "c1", "name": "Household"}, {"id": "c2", "name": "Groceries"}]
+    assert _match_category(rows, "Transportasi") is None
 
 
 def test_audit_redacts_sensitive_keys_recursively():

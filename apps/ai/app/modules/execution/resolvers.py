@@ -72,6 +72,32 @@ async def resolve_wallet_id(workspace_id: str, wallet_ref: str | None) -> str:
     return rows[0]["id"]
 
 
+def _match_category(rows: list, cat_ref: str) -> dict | None:
+    """Steps 0-2 of the old resolve_category_id: id / substring / word-overlap
+    matching only — no guessing fallback. Shared by resolve_category_id (which
+    still falls back to an existing bucket) and resolve_or_create_category_id
+    (which creates a new category instead of guessing wrong)."""
+    for c in rows:  # 0. exact id
+        if c["id"] == cat_ref:
+            return c
+
+    lowered = cat_ref.lower().strip()
+    clean_input = _clean(lowered)
+    # 1. substring (raw + emoji-stripped) either direction
+    for c in rows:
+        cn = c["name"].lower()
+        cc = _clean(c["name"])
+        if lowered in cn or cn in lowered or clean_input in cc or cc in clean_input:
+            return c
+    # 2. word overlap
+    words = clean_input.split()
+    for c in rows:
+        cc = _clean(c["name"])
+        if any(len(w) > 2 and w in cc for w in words):
+            return c
+    return None
+
+
 async def resolve_category_id(workspace_id: str, cat_ref: str | None) -> str | None:
     if not cat_ref:
         return None
@@ -83,30 +109,43 @@ async def resolve_category_id(workspace_id: str, cat_ref: str | None) -> str | N
     if not rows:
         return None
 
-    for c in rows:  # 0. exact id
-        if c["id"] == cat_ref:
-            return c["id"]
+    match = _match_category(rows, cat_ref)
+    if match:
+        return match["id"]
 
-    lowered = cat_ref.lower().strip()
-    clean_input = _clean(lowered)
-    # 1. substring (raw + emoji-stripped) either direction
-    for c in rows:
-        cn = c["name"].lower()
-        cc = _clean(c["name"])
-        if lowered in cn or cn in lowered or clean_input in cc or cc in clean_input:
-            return c["id"]
-    # 2. word overlap
-    words = clean_input.split()
-    for c in rows:
-        cc = _clean(c["name"])
-        if any(len(w) > 2 and w in cc for w in words):
-            return c["id"]
     # 3. an "other"/"lain"/"general" bucket, else first
     for c in rows:
         n = c["name"].lower()
         if "other" in n or "lain" in n or "general" in n:
             return c["id"]
     return rows[0]["id"]
+
+
+async def resolve_or_create_category_id(
+    workspace_id: str, user_id: str, cat_ref: str | None, t_type: str | None
+) -> str | None:
+    """create_transaction-only variant: matches an existing category by id/name
+    like resolve_category_id, but when the model names a category that matches
+    nothing, creates a new one with that name instead of silently guessing an
+    unrelated existing category (see chatbot's expense-confirmation prompt —
+    the model is told to propose a new category name when nothing fits)."""
+    if not cat_ref:
+        return None
+    from app.modules.execution.categories import create_category
+
+    rows = await fetch(
+        "SELECT id, name FROM categories WHERE workspace_id = $1 "
+        "AND deleted_at IS NULL",
+        workspace_id,
+    )
+    match = _match_category(rows, cat_ref) if rows else None
+    if match:
+        return match["id"]
+
+    category = await create_category(
+        workspace_id, user_id, cat_ref.strip(), t_type if t_type in ("income", "expense") else "expense"
+    )
+    return category["id"]
 
 
 async def workspace_currency(workspace_id: str) -> str:

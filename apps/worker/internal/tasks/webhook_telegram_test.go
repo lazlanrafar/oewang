@@ -17,6 +17,7 @@ import (
 type fakeTelegram struct {
 	sent        []string
 	edited      []string
+	documents   []string
 	typingCalls int
 	messageID   int64
 	fileBytes   []byte
@@ -30,6 +31,10 @@ func (f *fakeTelegram) SendMessage(ctx context.Context, chatID string, text stri
 
 func (f *fakeTelegram) EditMessageText(ctx context.Context, chatID string, messageID int64, text string, parseMode string) {
 	f.edited = append(f.edited, text)
+}
+
+func (f *fakeTelegram) SendDocument(ctx context.Context, chatID, documentURL, caption string) {
+	f.documents = append(f.documents, documentURL)
 }
 
 func (f *fakeTelegram) StartTyping(ctx context.Context, chatID string) func() {
@@ -283,6 +288,27 @@ func TestHandle_TextMessage_StreamingChat(t *testing.T) {
 	assert.Equal(t, "…", tg.sent[0])
 	require.NotEmpty(t, tg.edited)
 	assert.Equal(t, "Hello world", tg.edited[len(tg.edited)-1])
+}
+
+func TestHandle_TextMessage_StreamingChat_ForwardsFileAttachment(t *testing.T) {
+	tg := &fakeTelegram{messageID: 555}
+	ai := &fakeAI{
+		streamEvents: []aiclient.StreamEvent{
+			{Event: "content", Data: json.RawMessage(`{"text":"Ini laporannya"}`)},
+			{Event: "artifact", Data: json.RawMessage(`{"type":"file-attachment","payload":{"url":"https://r2/export.csv","name":"export.csv"}}`)},
+			{Event: "done", Data: json.RawMessage(`{"reply":"Ini laporannya","session_id":"sess-3"}`)},
+		},
+	}
+	connectedBy := "user-1"
+	ints := &fakeIntegrations{integration: &repo.Integration{ID: "int-1", WorkspaceID: "ws-1", Settings: map[string]any{}, ConnectedBy: &connectedBy}}
+	h := &TelegramWebhookHandler{Telegram: tg, AI: ai, Integrations: ints, AiSessions: &fakeAiSessions{}}
+
+	task := newTask(t, `{"update_id":1,"message":{"chat":{"id":100},"text":"export pengeluaran bulan ini"}}`, 1)
+	err := h.Handle(context.Background(), task)
+	require.NoError(t, err)
+
+	require.Len(t, tg.documents, 1)
+	assert.Equal(t, "https://r2/export.csv", tg.documents[0])
 }
 
 func TestHandle_TextMessage_StreamError(t *testing.T) {

@@ -156,6 +156,18 @@ export function ChatProviderWrapper({ children, initialMessages }: Props) {
                     });
                   }
                   for (const artifact of currentArtifacts) {
+                    // A file to download (export/receipt), not a canvas — renders
+                    // as a plain message attachment via chat-messages.tsx's
+                    // existing file-part handling, not the canvas tab system.
+                    if (artifact.type === "file-attachment") {
+                      parts.push({
+                        type: "file",
+                        url: artifact.payload?.url,
+                        mediaType: artifact.payload?.mimeType,
+                        filename: artifact.payload?.name,
+                      });
+                      continue;
+                    }
                     parts.push({
                       type: `data-artifact-${artifact.type}`,
                       id: artifact.type,
@@ -298,6 +310,15 @@ export function ChatProviderWrapper({ children, initialMessages }: Props) {
               // This format is required by @ai-sdk-tools/artifacts/client
               const artifacts = (response.data as any).artifacts ?? [];
               for (const artifact of artifacts) {
+                if (artifact.type === "file-attachment") {
+                  parts.push({
+                    type: "file",
+                    url: artifact.payload?.url,
+                    mediaType: artifact.payload?.mimeType,
+                    filename: artifact.payload?.name,
+                  });
+                  continue;
+                }
                 parts.push({
                   type: `data-artifact-${artifact.type}`,
                   id: artifact.type,

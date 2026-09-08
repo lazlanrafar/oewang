@@ -152,3 +152,23 @@ async def upload_receipt_attachment(
         )
 
     return vault_entry["id"]
+
+
+async def get_file_url(workspace_id: str, vault_file_id: str) -> dict | None:
+    """Presigned, time-limited GET URL for a vault_files row — used to hand a
+    stored file (a receipt, or a just-generated export) back to the model as
+    a chat attachment without ever routing the bytes through this process."""
+    row = await fetchrow(
+        "SELECT name, key, type FROM vault_files "
+        "WHERE id = $1 AND workspace_id = $2 AND deleted_at IS NULL",
+        vault_file_id,
+        workspace_id,
+    )
+    if row is None:
+        return None
+    url = _client().generate_presigned_url(
+        "get_object",
+        Params={"Bucket": get_settings().BUCKET_NAME, "Key": row["key"]},
+        ExpiresIn=3600,
+    )
+    return {"url": url, "name": row["name"], "mime_type": row["type"]}
