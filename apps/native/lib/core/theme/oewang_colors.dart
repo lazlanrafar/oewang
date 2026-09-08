@@ -19,7 +19,7 @@ class OewangColors {
   static const Color mutedForeground = Color(0xFF616161); // hsl(0 0% 38%)
   static const Color accent = Color(0xFF1C1C1C);
   static const Color accentForeground = Color(0xFFFAFAFA);
-  static const Color border = Color(0xFF1C1C1C);
+  static const Color border = Color(0xFF333333); // hsl(0 0% 20%)
   static const Color input = Color(0xFF1C1C1C);
 
   // Primary
