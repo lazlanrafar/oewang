@@ -54,6 +54,7 @@ def _patch_common(monkeypatch, *, existing_session=None, latest_draft=None, rece
     monkeypatch.setattr(cmp_mod.draft, "build_invoice_draft_from_attachments", fake_build_draft)
     monkeypatch.setattr(cmp_mod, "_notify_usage", fake_notify)
     monkeypatch.setattr(cmp_mod, "_workspace_currency", _async_return(("IDR", "Rp")))
+    monkeypatch.setattr(cmp_mod, "fetch_wallets_and_categories", _async_return({"wallets": [], "categories": []}))
     # Never spawn the real (network-hitting) title-upgrade task in tests.
     monkeypatch.setattr(cmp_mod, "_upgrade_title", _async_return(None))
 

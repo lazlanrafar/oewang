@@ -11,6 +11,7 @@ from app.core import agent_settings as agent_settings_mod
 from app.core import audit, quota, sessions
 from app.core.database import fetchrow
 from app.modules.chatbot import draft, prompts_web
+from app.modules.execution.executor import fetch_wallets_and_categories
 from app.utils.logger import get_logger
 
 log = get_logger("ai.chatbot.chat_money_path")
@@ -86,8 +87,6 @@ async def chat_begin_core(
     if not messages:
         raise ValueError("No messages provided")
     latest_user_message = messages[-1]
-
-    agent_settings = await agent_settings_mod.get_or_create(workspace_id)
 
     current_session_id = session_id
     if not current_session_id:
@@ -169,15 +168,22 @@ async def chat_begin_core(
             )
             return {"kind": "early", "sessionId": current_session_id, "reply": upload["reply"]}
 
-    # Quota check (raises quota.PlanLimitReached → 422 if over).
-    current_tokens = await quota.check_quota(workspace_id)
-
-    currency_code, currency_symbol = await _workspace_currency(workspace_id)
+    # None of these four depend on each other or on anything above — fetched
+    # together instead of one-after-another. Also means a draft-continuation
+    # turn (which returns early above) never pays for fetches it doesn't use.
+    current_tokens, (currency_code, currency_symbol), agent_settings, workspace_snapshot = await asyncio.gather(
+        quota.check_quota(workspace_id),  # raises quota.PlanLimitReached → 422 if over
+        _workspace_currency(workspace_id),
+        agent_settings_mod.get_or_create(workspace_id),
+        fetch_wallets_and_categories(workspace_id),
+    )
     system_prompt = prompts_web.build_system_prompt(
         currency_code,
         currency_symbol,
         custom_instructions=agent_settings.get("custom_instructions"),
         response_language=agent_settings.get("response_language"),
+        wallets=workspace_snapshot["wallets"],
+        categories=workspace_snapshot["categories"],
     )
 
     consolidated_history = [

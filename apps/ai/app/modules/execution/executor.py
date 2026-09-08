@@ -70,6 +70,11 @@ def _attachment_artifact(result: dict):
     }
 
 
+async def _none():
+    """Placeholder awaitable for an optional slot in an asyncio.gather() call."""
+    return None
+
+
 async def execute_tool(tool: str, inp: dict, workspace_id: str, user_id: str) -> dict:
     inp = inp or {}
     result = await _dispatch(tool, inp, workspace_id, user_id)
@@ -79,17 +84,21 @@ async def execute_tool(tool: str, inp: dict, workspace_id: str, user_id: str) ->
 async def _dispatch(tool: str, inp: dict, workspace_id: str, user_id: str) -> dict:
     # ── Writes ────────────────────────────────────────────────────────────────
     if tool == "create_transaction":
+        # Independent lookups — resolved concurrently instead of one after another.
+        wallet_id, to_wallet_id, category_id = await asyncio.gather(
+            resolve_wallet_id(workspace_id, inp.get("walletId")),
+            resolve_wallet_id(workspace_id, inp["toWalletId"]) if inp.get("toWalletId") else _none(),
+            resolve_or_create_category_id(workspace_id, user_id, inp.get("categoryId"), inp.get("type")),
+        )
         body = {
             "type": inp.get("type"),
             "amount": inp.get("amount"),
             "date": inp.get("date"),
             "name": inp.get("name"),
             "description": inp.get("description"),
-            "wallet_id": await resolve_wallet_id(workspace_id, inp.get("walletId")),
-            "to_wallet_id": await resolve_wallet_id(workspace_id, inp.get("toWalletId")) if inp.get("toWalletId") else None,
-            "category_id": await resolve_or_create_category_id(
-                workspace_id, user_id, inp.get("categoryId"), inp.get("type")
-            ),
+            "wallet_id": wallet_id,
+            "to_wallet_id": to_wallet_id,
+            "category_id": category_id,
         }
         return await transactions.create_transaction(workspace_id, user_id, body)
 
@@ -170,11 +179,11 @@ async def _dispatch(tool: str, inp: dict, workspace_id: str, user_id: str) -> di
         return await vault.delete_file(workspace_id, user_id, inp["vaultFileId"])
 
     if tool == "split_bill":
-        body = {
-            **inp,
-            "wallet_id": await resolve_wallet_id(workspace_id, inp.get("walletId")),
-            "category_id": await resolve_category_id(workspace_id, inp.get("categoryId")),
-        }
+        wallet_id, category_id = await asyncio.gather(
+            resolve_wallet_id(workspace_id, inp.get("walletId")),
+            resolve_category_id(workspace_id, inp.get("categoryId")),
+        )
+        body = {**inp, "wallet_id": wallet_id, "category_id": category_id}
         return await debts.split_bill(workspace_id, user_id, body)
 
     if tool == "set_default_wallet":
@@ -234,8 +243,11 @@ async def _dispatch(tool: str, inp: dict, workspace_id: str, user_id: str) -> di
 # ── Read-tool helpers ─────────────────────────────────────────────────────────
 
 
-async def _workspace_context(workspace_id: str) -> dict:
-    currency = await workspace_currency(workspace_id)
+async def fetch_wallets_and_categories(workspace_id: str) -> dict:
+    """Shared by the get_workspace_context tool (fallback for mid-conversation
+    edge cases) and chat_money_path.py's per-turn system-prompt injection
+    (the common case — avoids the model spending a tool-call round trip on
+    nearly every turn just to learn its own wallet/category IDs)."""
     wallets_rows = await fetch(
         "SELECT id, name, balance, is_default FROM wallets "
         "WHERE workspace_id = $1 AND deleted_at IS NULL ORDER BY sort_order ASC",
@@ -246,11 +258,20 @@ async def _workspace_context(workspace_id: str) -> dict:
         workspace_id,
     )
     return {
+        "wallets": [to_jsonable(dict(r)) for r in wallets_rows],
+        "categories": [dict(r) for r in cat_rows],
+    }
+
+
+async def _workspace_context(workspace_id: str) -> dict:
+    currency = await workspace_currency(workspace_id)
+    wc = await fetch_wallets_and_categories(workspace_id)
+    return {
         "success": True,
         "data": {
             "currency": currency,
-            "wallets": [to_jsonable(dict(r)) for r in wallets_rows],
-            "categories": [dict(r) for r in cat_rows],
+            "wallets": wc["wallets"],
+            "categories": wc["categories"],
         },
     }
 

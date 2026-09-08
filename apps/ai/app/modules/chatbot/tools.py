@@ -69,9 +69,10 @@ def _analysis(name: str, description: str, periods: list[str]):
 WEB_TOOLS = [
     _fn(
         "get_workspace_context",
-        "Get the user's current workspace context: all wallets with names and "
-        "balances, all available categories (with IDs), and currency settings. "
-        "Call this FIRST before creating transactions or answering balance questions.",
+        "Get the user's current wallets and categories. You usually DON'T need "
+        "this — it's already given to you fresh every turn under \"# Your "
+        "Accounts & Categories\" in the system prompt. Only call this if you "
+        "need something not listed there (rare).",
         {},
         [],
     ),
@@ -94,8 +95,8 @@ WEB_TOOLS = [
     ),
     _fn(
         "create_transaction",
-        "Create a new financial transaction (income, expense, or transfer). Call "
-        "get_workspace_context first to get real wallet and category IDs.",
+        "Create a new financial transaction (income, expense, or transfer). Use "
+        "the wallet/category IDs already given in \"# Your Accounts & Categories\".",
         {
             "type": {"type": "string", "enum": ["income", "expense", "transfer"]},
             "amount": {"type": "number", "description": "Confirmed amount."},
@@ -105,7 +106,7 @@ WEB_TOOLS = [
             "toWalletId": {"type": "string", "description": "Destination wallet ID (transfers only)."},
             "categoryId": {
                 "type": "string",
-                "description": "Category ID or exact name from get_workspace_context. If the "
+                "description": "Category ID or exact name from \"# Your Accounts & Categories\". If the "
                 "name doesn't match any existing category, a new one is created automatically "
                 "with that exact name and used for this transaction.",
             },
@@ -224,8 +225,8 @@ WEB_TOOLS = [
     _fn(
         "create_wallet",
         "Create a new wallet/account (e.g. a new bank account, e-wallet, or cash "
-        "pocket). Call get_workspace_context first if unsure whether one already "
-        "exists with this name.",
+        "pocket). Check \"# Your Accounts & Categories\" first if unsure whether "
+        "one already exists with this name.",
         {
             "name": {"type": "string"},
             "balance": {"type": "number", "description": "Starting balance. Defaults to 0."},
@@ -289,9 +290,9 @@ WEB_TOOLS = [
     ),
     _fn(
         "create_budget",
-        "Set a monthly budget limit for an expense category. Call "
-        "get_workspace_context first to get the real category ID — fails if a "
-        "budget already exists for that category (use update_budget instead).",
+        "Set a monthly budget limit for an expense category. Use the real "
+        "category ID from \"# Your Accounts & Categories\" — fails if a budget "
+        "already exists for that category (use update_budget instead).",
         {"categoryId": {"type": "string"}, "amount": {"type": "number"}},
         ["categoryId", "amount"],
     ),
