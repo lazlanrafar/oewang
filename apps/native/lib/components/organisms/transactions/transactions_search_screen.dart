@@ -18,16 +18,24 @@ final _searchPoolProvider = FutureProvider.autoDispose<List<Transaction>>((
 ) async {
   ref.watch(transactionsRevisionProvider);
   final now = DateTime.now();
-  final res = await ref
-      .watch(transactionsRepositoryProvider)
-      .list(
-        TransactionsListQuery(
-          from: DateTime(now.year - 2, now.month),
-          to: DateTime(now.year, now.month + 1, 0),
-          limit: 1000,
-        ),
-      );
-  return res.fold((txs) => txs, (_) => <Transaction>[]);
+  final repo = ref.watch(transactionsRepositoryProvider);
+  final from = DateTime(now.year - 2, now.month);
+  final to = DateTime(now.year, now.month + 1, 0);
+
+  // The API caps `limit` at 100 per request — page through it to still
+  // cover the full 2-year window, up to the original ~1000 cap.
+  const pageSize = 100;
+  const maxPages = 10;
+  final pool = <Transaction>[];
+  for (var page = 1; page <= maxPages; page++) {
+    final res = await repo.list(
+      TransactionsListQuery(from: from, to: to, limit: pageSize, page: page),
+    );
+    final batch = res.fold((txs) => txs, (_) => <Transaction>[]);
+    pool.addAll(batch);
+    if (batch.length < pageSize) break;
+  }
+  return pool;
 });
 
 /// Matches [t] against a lowercased [q] across note, category, wallet, amount.

@@ -8,13 +8,15 @@ class TransactionsListQuery {
     required this.from,
     required this.to,
     this.type,
-    this.limit = 200,
+    this.limit = 100,
+    this.page = 1,
   });
 
   final DateTime from;
   final DateTime to;
   final TransactionType? type;
   final int limit;
+  final int page;
 }
 
 abstract class TransactionsRepository {

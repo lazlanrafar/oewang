@@ -26,6 +26,7 @@ class TransactionsRepositoryRemote implements TransactionsRepository {
           'startDate': _dateFmt.format(query.from),
           'endDate': _dateFmt.format(query.to),
           'limit': query.limit,
+          'page': query.page,
           if (query.type != null) 'type': query.type!.wire,
         },
       );
