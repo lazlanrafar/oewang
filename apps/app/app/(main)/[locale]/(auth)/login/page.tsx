@@ -40,7 +40,7 @@ export default async function LoginV2({ params }: { params: Promise<{ locale: Lo
         </div>
 
         <details className="group">
-          <summary className="flex h-11 w-full cursor-pointer list-none items-center justify-center rounded-md border border-border bg-transparent px-4 py-2 font-normal text-foreground text-sm shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground">
+          <summary className="flex h-9 w-full cursor-pointer list-none items-center justify-center rounded-md border border-border bg-transparent px-4 py-2 font-normal text-foreground text-sm shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground">
             {dictionary.auth.show_other_options}
           </summary>
           <div className="slide-in-from-top-2 fade-in-0 mt-6 animate-in duration-200">
