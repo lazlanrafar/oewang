@@ -1,8 +1,11 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+
 import type { Dictionary } from "@workspace/dictionaries";
+import type { Notification } from "@workspace/types";
 import { Button, cn } from "@workspace/ui";
-import { formatDistanceToNow } from "date-fns";
+import { format, formatDistanceToNow, isToday, isYesterday } from "date-fns";
 import {
   AlertCircle,
   Bell,
@@ -14,6 +17,7 @@ import {
   HandCoins,
   Link2,
   Link2Off,
+  Loader2,
   PiggyBank,
   Receipt,
   Trash2,
@@ -25,9 +29,43 @@ import { toast } from "sonner";
 
 import { useNotifications } from "@/hooks/use-notifications";
 
+/** Today / Yesterday / a plain date — the same buckets as most inbox UIs. */
+function groupLabel(date: Date): string {
+  if (isToday(date)) return "Today";
+  if (isYesterday(date)) return "Yesterday";
+  return format(date, "MMMM d, yyyy");
+}
+
+/** Buckets by [groupLabel], preserving the API's sort order (newest first). */
+function groupByDate(notifications: Notification[]): [string, Notification[]][] {
+  const groups = new Map<string, Notification[]>();
+  for (const n of notifications) {
+    const label = groupLabel(new Date(n.created_at));
+    const bucket = groups.get(label);
+    if (bucket) bucket.push(n);
+    else groups.set(label, [n]);
+  }
+  return [...groups.entries()];
+}
+
 export function NotificationList({ dictionary }: { dictionary: Dictionary }) {
-  const { notifications, isLoading, markAsRead, deleteNotification, unreadCount } = useNotifications();
+  const router = useRouter();
+  const {
+    notifications,
+    isLoading,
+    markAsRead,
+    deleteNotification,
+    unreadCount,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+  } = useNotifications();
   const dict = dictionary.settings.notifications || {};
+
+  const handleNotificationClick = (notification: Notification) => {
+    if (!notification.is_read) markAsRead([notification.id]);
+    if (notification.link) router.push(notification.link);
+  };
 
   const handleMarkAllAsRead = () => {
     const unreadIds = notifications.filter((n) => !n.is_read).map((n) => n.id);
@@ -114,67 +152,96 @@ export function NotificationList({ dictionary }: { dictionary: Dictionary }) {
         )}
       </div>
 
-      <div className="divide-y border bg-card">
-        {notifications.map((notification) => (
-          <div
-            key={notification.id}
-            className={cn(
-              "group relative flex gap-4 p-4 transition-colors hover:bg-accent/50",
-              !notification.is_read && "bg-accent/20",
-            )}
-          >
-            <div className="relative flex-none">
-              <div className="flex size-10 items-center justify-center border bg-background">
-                {getIcon(notification.type)}
-              </div>
-              {!notification.is_read && (
-                <span className="-right-0.5 -top-0.5 absolute size-2.5 border-2 border-background bg-primary" />
-              )}
-            </div>
-
-            <div className="min-w-0 flex-1 space-y-1">
-              <div className="flex items-start justify-between gap-2">
-                <span className={cn("truncate font-medium text-sm leading-none", !notification.is_read && "font-bold")}>
-                  {notification.title}
-                </span>
-                <span className="flex-none text-[10px] text-muted-foreground">
-                  {formatDistanceToNow(new Date(notification.created_at), {
-                    addSuffix: true,
-                  })}
-                </span>
-              </div>
-              <p className="line-clamp-2 text-muted-foreground text-xs">{notification.message}</p>
-
-              <div className="flex items-center gap-2 pt-1 opacity-0 transition-opacity group-hover:opacity-100">
-                {!notification.is_read && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 px-2 text-[10px]"
-                    onClick={() => markAsRead([notification.id])}
-                  >
-                    <Check className="mr-1 size-3" />
-                    {dict.mark_read || "Mark read"}
-                  </Button>
+      {groupByDate(notifications).map(([label, group]) => (
+        <div key={label} className="space-y-2">
+          <h4 className="px-1 font-sans text-[11px] text-muted-foreground uppercase tracking-widest">{label}</h4>
+          <div className="divide-y border bg-card">
+            {group.map((notification) => (
+              <div
+                key={notification.id}
+                className={cn(
+                  "group relative flex cursor-pointer gap-4 p-4 transition-colors hover:bg-accent/50",
+                  !notification.is_read && "bg-accent/20",
                 )}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 px-2 text-[10px] text-destructive hover:bg-destructive/10 hover:text-destructive"
-                  onClick={() => deleteNotification(notification.id)}
-                >
-                  <Trash2 className="mr-1 size-3" />
-                  {dict.delete || "Delete"}
-                </Button>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+                onClick={() => handleNotificationClick(notification)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    handleNotificationClick(notification);
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+              >
+                <div className="relative flex-none">
+                  <div className="flex size-10 items-center justify-center border bg-background">
+                    {getIcon(notification.type)}
+                  </div>
+                  {!notification.is_read && (
+                    <span className="-right-0.5 -top-0.5 absolute size-2.5 border-2 border-background bg-primary" />
+                  )}
+                </div>
 
-      {notifications.length >= 20 && (
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <span
+                      className={cn("truncate text-xs leading-none", !notification.is_read ? "font-bold" : "font-medium")}
+                    >
+                      {notification.title}
+                    </span>
+                    <span className="flex-none text-[10px] text-muted-foreground">
+                      {formatDistanceToNow(new Date(notification.created_at), {
+                        addSuffix: true,
+                      })}
+                    </span>
+                  </div>
+                  <p className="line-clamp-2 text-muted-foreground text-xs">{notification.message}</p>
+
+                  <div className="flex items-center gap-2 pt-1 opacity-0 transition-opacity group-hover:opacity-100">
+                    {!notification.is_read && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2 text-[10px]"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          markAsRead([notification.id]);
+                        }}
+                      >
+                        <Check className="mr-1 size-3" />
+                        {dict.mark_read || "Mark read"}
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-[10px] text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteNotification(notification.id);
+                      }}
+                    >
+                      <Trash2 className="mr-1 size-3" />
+                      {dict.delete || "Delete"}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+
+      {hasNextPage && (
         <div className="flex justify-center pt-2">
-          <Button variant="outline" size="sm" className="h-8 font-semibold text-[10px] uppercase tracking-wider">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 font-semibold text-[10px] uppercase tracking-wider"
+            disabled={isFetchingNextPage}
+            onClick={() => fetchNextPage()}
+          >
+            {isFetchingNextPage && <Loader2 className="mr-2 size-3 animate-spin" />}
             {dict.load_more || "Load More"}
           </Button>
         </div>

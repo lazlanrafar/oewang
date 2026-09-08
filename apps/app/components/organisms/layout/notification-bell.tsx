@@ -94,7 +94,7 @@ export function NotificationBell({ dictionary }: { dictionary: AppDictionary }) 
                   tabIndex={0}
                 >
                   <div className="flex items-start justify-between">
-                    <span className="font-semibold text-sm">{n.title}</span>
+                    <span className="font-semibold text-xs">{n.title}</span>
                     <Button
                       variant="ghost"
                       size="icon"
