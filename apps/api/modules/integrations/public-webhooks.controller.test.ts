@@ -53,11 +53,11 @@ describe("publicWebhooksController /integrations/telegram/webhook", () => {
     expect(await response.text()).toBe("OK");
 
     expect(fetchCalls).toHaveLength(1);
-    expect(fetchCalls[0].url).toBe(
+    expect(fetchCalls[0]!.url).toBe(
       `${WORKER_URL}/internal/enqueue/telegram-webhook`,
     );
-    expect(fetchCalls[0].init.headers["x-api-key"]).toBe(WORKER_KEY);
-    expect(JSON.parse(fetchCalls[0].init.body)).toEqual({
+    expect(fetchCalls[0]!.init.headers["x-api-key"]).toBe(WORKER_KEY);
+    expect(JSON.parse(fetchCalls[0]!.init.body)).toEqual({
       update_id: 555,
       raw_body: payload,
     });

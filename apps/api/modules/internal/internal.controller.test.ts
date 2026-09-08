@@ -31,14 +31,13 @@ mock.module("@workspace/logger", () => ({
   }),
 }));
 
-mock.module("../mayar/billing-lifecycle.service", () => ({
-  BillingLifecycleService: {
-    processLifecycle: mock(async () => {
-      state.processLifecycleCalls += 1;
-    }),
-  },
-}));
-
+// Not mocking "../mayar/billing-lifecycle.service" as a whole module: it's
+// the same absolute path billing-lifecycle.service.test.ts requires the REAL
+// implementation from, and mock.module is global for the whole bun test run
+// — whichever file's mock.module call for that path runs first wins for
+// every later require() of it, silently turning the other file's "real"
+// import into this fake. Spy on the one static method instead (same
+// technique already used below for MayarService.handleWebhook).
 mock.module("../vault/vault.service", () => ({
   VaultService: {
     processStorageViolations: mock(async () => {
@@ -115,6 +114,9 @@ mock.module("../invoices/invoices.service", () => ({
 
 const { internalController } = require("./internal.controller");
 const { MayarService } = require("../mayar/mayar.service");
+const {
+  BillingLifecycleService,
+} = require("../mayar/billing-lifecycle.service");
 
 const ROUTES: Array<{ path: string; body: any }> = [
   { path: "/internal/billing/process-lifecycle", body: {} },
@@ -155,6 +157,7 @@ describe("internal.controller — x-api-key gate", () => {
 
 describe("internal.controller — routes call the correct service", () => {
   let handleWebhookSpy: ReturnType<typeof spyOn>;
+  let processLifecycleSpy: ReturnType<typeof spyOn>;
 
   beforeEach(() => {
     state.processLifecycleCalls = 0;
@@ -169,10 +172,17 @@ describe("internal.controller — routes call the correct service", () => {
         state.mayarWebhookCalls.push({ body, token });
       },
     );
+    processLifecycleSpy = spyOn(
+      BillingLifecycleService,
+      "processLifecycle",
+    ).mockImplementation(async () => {
+      state.processLifecycleCalls += 1;
+    });
   });
 
   afterEach(() => {
     handleWebhookSpy.mockRestore();
+    processLifecycleSpy.mockRestore();
   });
 
   it("calls BillingLifecycleService.processLifecycle exactly once", async () => {

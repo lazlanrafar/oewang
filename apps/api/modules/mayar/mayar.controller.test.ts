@@ -71,11 +71,11 @@ describe("mayar.controller webhook", () => {
     expect(await response.json()).toEqual({ success: true });
 
     expect(fetchCalls).toHaveLength(1);
-    expect(fetchCalls[0].url).toBe(
+    expect(fetchCalls[0]!.url).toBe(
       `${WORKER_URL}/internal/enqueue/mayar-webhook`,
     );
-    expect(fetchCalls[0].init.headers["x-api-key"]).toBe(WORKER_KEY);
-    expect(JSON.parse(fetchCalls[0].init.body)).toEqual({
+    expect(fetchCalls[0]!.init.headers["x-api-key"]).toBe(WORKER_KEY);
+    expect(JSON.parse(fetchCalls[0]!.init.body)).toEqual({
       body: { event: "payment.created" },
       token: "good-token",
     });

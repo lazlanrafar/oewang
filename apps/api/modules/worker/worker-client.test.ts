@@ -50,11 +50,11 @@ describe("WorkerClient.enqueueTransactionsImport", () => {
     });
 
     expect(fetchCalls).toHaveLength(1);
-    expect(fetchCalls[0].url).toBe(
+    expect(fetchCalls[0]!.url).toBe(
       `${WORKER_URL}/internal/enqueue/transactions-import`,
     );
-    expect(fetchCalls[0].init.headers["x-api-key"]).toBe(WORKER_KEY);
-    expect(JSON.parse(fetchCalls[0].init.body)).toEqual({
+    expect(fetchCalls[0]!.init.headers["x-api-key"]).toBe(WORKER_KEY);
+    expect(JSON.parse(fetchCalls[0]!.init.body)).toEqual({
       job_id: "job-1",
       workspace_id: "ws-1",
       user_id: "user-1",
