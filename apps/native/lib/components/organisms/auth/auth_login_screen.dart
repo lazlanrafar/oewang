@@ -49,12 +49,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
-  // ponytail: native OAuth (deep-link round-trip) isn't wired yet; keep the
-  // buttons faithful to the web design and stub the action until it is.
-  void _social(String provider) =>
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$provider sign-in is coming soon')),
-      );
+  Future<void> _social(String provider) async {
+    final vm = ref.read(loginViewModelProvider);
+    final res = await vm.signInWithOAuth(provider);
+    if (!mounted || res == null) return;
+    res.fold(
+      (session) =>
+          ref.read(sessionControllerProvider.notifier).onLoggedIn(session),
+      (error) => ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.message))),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -83,14 +89,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   label: 'Continue with Google',
                   variant: ButtonVariant.outlined,
                   leading: const _GoogleGlyph(),
-                  onPressed: () => _social('Google'),
+                  loading: vm.oauthSignIn.running,
+                  onPressed: vm.oauthSignIn.running
+                      ? null
+                      : () => _social('google'),
                 ),
                 const SizedBox(height: OewangSpacing.md),
                 Button(
                   label: 'Continue with GitHub',
                   variant: ButtonVariant.outlined,
                   leading: Icon(Icons.code, size: 18, color: palette.foreground),
-                  onPressed: () => _social('GitHub'),
+                  loading: vm.oauthSignIn.running,
+                  onPressed: vm.oauthSignIn.running
+                      ? null
+                      : () => _social('github'),
                 ),
                 const SizedBox(height: OewangSpacing.lg),
                 _OrDivider(palette: palette),

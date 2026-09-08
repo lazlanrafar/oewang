@@ -16,11 +16,23 @@ class LoginViewModel extends ChangeNotifier {
     submit = Command<LoginInput, Session>(
       (input) => _repo.login(email: input.email, password: input.password),
     )..addListener(_onCommandChanged);
+    oauthSignIn = Command<String, Session>(_repo.loginWithOAuth)
+      ..addListener(_onCommandChanged);
   }
 
   final AuthRepository _repo;
 
   late final Command<LoginInput, Session> submit;
+  late final Command<String, Session> oauthSignIn;
+
+  Future<Result<Session, AppError>?> signInWithOAuth(String provider) async {
+    await oauthSignIn.run(provider);
+    final s = oauthSignIn.result;
+    if (s != null) return Success<Session, AppError>(s);
+    final e = oauthSignIn.error;
+    if (e != null) return Failure<Session, AppError>(e);
+    return null;
+  }
 
   String _email = '';
   String _password = '';
@@ -58,6 +70,9 @@ class LoginViewModel extends ChangeNotifier {
   @override
   void dispose() {
     submit
+      ..removeListener(_onCommandChanged)
+      ..dispose();
+    oauthSignIn
       ..removeListener(_onCommandChanged)
       ..dispose();
     super.dispose();

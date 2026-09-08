@@ -19,12 +19,18 @@ export async function GET(request: Request) {
   const origin = getRequestOrigin(request);
   const code = searchParams.get("code");
   const state = searchParams.get("state");
+  // Set by the initiating /api/auth/github?mobile=1 request — see its comment.
+  const isMobile = (state ?? "").endsWith(".mobile");
+  const errorRedirect = (error: string) =>
+    isMobile
+      ? `oewang://oauth-callback?error=${error}`
+      : `${origin}/login?error=${error}`;
 
   const cookieStore = await cookies();
   const storedState = cookieStore.get("oauth_state")?.value;
 
   if (!code || !state || state !== storedState) {
-    const res = NextResponse.redirect(`${origin}/login?error=oauth_state_mismatch`);
+    const res = NextResponse.redirect(errorRedirect("oauth_state_mismatch"));
     res.cookies.delete("oauth_state");
     return res;
   }
@@ -33,7 +39,7 @@ export async function GET(request: Request) {
   const client_secret = Env.GITHUB_CLIENT_SECRET;
 
   if (!client_id || !client_secret) {
-    const res = NextResponse.redirect(`${origin}/login?error=oauth_config_missing`);
+    const res = NextResponse.redirect(errorRedirect("oauth_config_missing"));
     res.cookies.delete("oauth_state");
     return res;
   }
@@ -110,6 +116,14 @@ export async function GET(request: Request) {
       workspace_id: string | null;
     };
 
+    if (isMobile) {
+      const res = NextResponse.redirect(
+        `oewang://oauth-callback?${new URLSearchParams({ token, workspace_id: workspace_id ?? "" })}`,
+      );
+      res.cookies.delete("oauth_state");
+      return res;
+    }
+
     const isProduction = Env.NODE_ENV === "production";
     const next = workspace_id ? "/overview" : "/create-workspace";
     const response = NextResponse.redirect(`${origin}${next}`);
@@ -135,7 +149,7 @@ export async function GET(request: Request) {
     return response;
   } catch (err) {
     console.error("[GitHub OAuth]", err);
-    const res = NextResponse.redirect(`${origin}/login?error=oauth_failed`);
+    const res = NextResponse.redirect(errorRedirect("oauth_failed"));
     res.cookies.delete("oauth_state");
     return res;
   }

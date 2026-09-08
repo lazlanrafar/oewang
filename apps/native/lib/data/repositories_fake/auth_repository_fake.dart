@@ -50,6 +50,17 @@ class AuthRepositoryFake implements AuthRepository {
   }
 
   @override
+  Future<Result<Session, AppError>> loginWithOAuth(String provider) async {
+    await Future<void>.delayed(const Duration(milliseconds: 30));
+    _session = const Session(
+      token: 'fake-jwt-token',
+      userId: 'fake-user-id',
+      workspaceId: 'fake-workspace-id',
+    );
+    return Success(_session!);
+  }
+
+  @override
   Future<Session?> currentSession() async => _session;
 
   @override

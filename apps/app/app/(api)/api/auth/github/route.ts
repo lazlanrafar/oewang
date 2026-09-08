@@ -13,7 +13,13 @@ function getRequestOrigin(request: Request): string {
 }
 
 export async function GET(request: Request) {
-  const state = crypto.randomUUID();
+  // `?mobile=1` is set by the native app's browser-based OAuth round-trip —
+  // encoding it into `state` (echoed back verbatim by GitHub) is how the
+  // callback knows to hand off via the oewang:// deep link instead of
+  // setting a web session cookie, without relying on cookie behavior in
+  // whatever browser/webview opened this URL.
+  const isMobile = new URL(request.url).searchParams.get("mobile") === "1";
+  const state = isMobile ? `${crypto.randomUUID()}.mobile` : crypto.randomUUID();
   const origin = getRequestOrigin(request);
   const redirectUri = `${origin}/api/auth/github/callback`;
 
