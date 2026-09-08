@@ -9,6 +9,7 @@ vault_files row insert. Best-effort/non-blocking by contract — callers (draft.
 wrap this in try/except and continue on failure, same as TS.
 """
 
+import base64
 import hashlib
 import json
 from functools import lru_cache
@@ -17,9 +18,13 @@ import boto3
 from botocore.client import Config
 
 from app.config import get_settings
-from app.core.database import execute, fetchrow
+from app.core import audit
+from app.core.database import execute, fetch, fetchrow, transaction
 from app.core.ids import new_id
 from app.core.serde import row_to_dict
+from app.utils.logger import get_logger
+
+log = get_logger("ai.vault")
 
 
 class VaultNotConfigured(Exception):
@@ -172,3 +177,109 @@ async def get_file_url(workspace_id: str, vault_file_id: str) -> dict | None:
         ExpiresIn=3600,
     )
     return {"url": url, "name": row["name"], "mime_type": row["type"]}
+
+
+async def list_files(workspace_id: str, query: str | None = None, limit: int = 20) -> dict:
+    """Mirrors VaultRepository.findMany's filter set: not deleted, not
+    hidden during a storage-violation grace period (`inactive_at`),
+    optional name search."""
+    if query:
+        rows = await fetch(
+            "SELECT id, name, type, size, created_at FROM vault_files "
+            "WHERE workspace_id = $1 AND deleted_at IS NULL AND inactive_at IS NULL "
+            "AND name ILIKE $2 ORDER BY created_at DESC LIMIT $3",
+            workspace_id, f"%{query}%", limit,
+        )
+    else:
+        rows = await fetch(
+            "SELECT id, name, type, size, created_at FROM vault_files "
+            "WHERE workspace_id = $1 AND deleted_at IS NULL AND inactive_at IS NULL "
+            "ORDER BY created_at DESC LIMIT $2",
+            workspace_id, limit,
+        )
+    return {
+        "success": True,
+        "data": [
+            {"id": r["id"], "name": r["name"], "type": r["type"], "size": r["size"],
+             "created_at": r["created_at"].isoformat() if r["created_at"] else None}
+            for r in rows
+        ],
+    }
+
+
+async def rename_file(workspace_id: str, user_id: str, vault_file_id: str, new_name: str) -> dict:
+    before = await fetchrow(
+        "SELECT * FROM vault_files WHERE id = $1 AND workspace_id = $2 AND deleted_at IS NULL",
+        vault_file_id, workspace_id,
+    )
+    if before is None:
+        return {"success": False, "error": "File not found"}
+    before = row_to_dict(before)
+
+    async with transaction() as conn:
+        row = await conn.fetchrow(
+            "UPDATE vault_files SET name = $1, updated_at = now() "
+            "WHERE id = $2 AND workspace_id = $3 AND deleted_at IS NULL RETURNING *",
+            new_name, vault_file_id, workspace_id,
+        )
+        updated = row_to_dict(row)
+        await audit.log(
+            workspace_id=workspace_id, user_id=user_id, action="vault.file_renamed",
+            entity="vault_file", entity_id=vault_file_id, before=before, after=updated, conn=conn,
+        )
+    return {"success": True, "data": updated}
+
+
+async def delete_file(workspace_id: str, user_id: str, vault_file_id: str) -> dict:
+    """Soft-deletes the row; only removes the R2 blob and decrements
+    `vault_size_used_bytes` if no other non-deleted row still shares the
+    same dedup `key` — mirrors VaultService.deleteFile exactly."""
+    before = await fetchrow(
+        "SELECT * FROM vault_files WHERE id = $1 AND workspace_id = $2 AND deleted_at IS NULL",
+        vault_file_id, workspace_id,
+    )
+    if before is None:
+        return {"success": False, "error": "File not found"}
+    before = row_to_dict(before)
+
+    async with transaction() as conn:
+        await conn.execute(
+            "UPDATE vault_files SET deleted_at = now() WHERE id = $1 AND workspace_id = $2",
+            vault_file_id, workspace_id,
+        )
+        other = await conn.fetchrow(
+            "SELECT id FROM vault_files WHERE workspace_id = $1 AND key = $2 AND deleted_at IS NULL LIMIT 1",
+            workspace_id, before["key"],
+        )
+        if other is None:
+            try:
+                _client().delete_object(Bucket=get_settings().BUCKET_NAME, Key=before["key"])
+            except Exception:  # noqa: BLE001 — row is already soft-deleted; an orphaned blob is recoverable, a rolled-back delete isn't
+                log.warning("Failed to delete R2 blob for vault_file=%s key=%s", vault_file_id, before["key"], exc_info=True)
+            await conn.execute(
+                "UPDATE workspaces SET vault_size_used_bytes = GREATEST(0, vault_size_used_bytes - $2) WHERE id = $1",
+                workspace_id, before["size"],
+            )
+        await audit.log(
+            workspace_id=workspace_id, user_id=user_id, action="vault.file_deleted",
+            entity="vault_file", entity_id=vault_file_id, before=before, conn=conn,
+        )
+    return {"success": True, "data": None}
+
+
+async def save_chat_attachment(workspace_id: str, user_id: str, attachment: dict) -> dict:
+    """Standalone chat-initiated vault save (not a receipt draft side effect)
+    — thin wrapper over the already-generic upload_receipt_attachment, plus
+    its own audit entry since this is a distinct user-initiated action."""
+    data = base64.b64decode(attachment["data"])
+    vault_file_id = await upload_receipt_attachment(
+        workspace_id, attachment["name"], attachment["type"], data
+    )
+    if vault_file_id is None:
+        return {"success": False, "error": f'Could not save "{attachment.get("name")}" (storage quota reached)'}
+
+    await audit.log(
+        workspace_id=workspace_id, user_id=user_id, action="vault.file_uploaded",
+        entity="vault_file", entity_id=vault_file_id, after={"name": attachment.get("name")},
+    )
+    return {"success": True, "data": {"vault_file_id": vault_file_id, "name": attachment.get("name")}}

@@ -1,6 +1,7 @@
 """Debt writes for the AI money path — create_debt + split_bill (contact upsert,
-receivable debts, optional primary expense). Port of DebtsService.{createDebt,
-splitBill}. Notifications/realtime dropped (see transactions.py note).
+receivable debts, optional primary expense), plus pay_debt/update_debt/delete_debt.
+Port of DebtsService.{createDebt,splitBill,payDebt,updateDebt,deleteDebt}.
+Notifications/realtime dropped (see transactions.py note).
 """
 
 from datetime import datetime, timezone
@@ -10,7 +11,17 @@ from app.core import audit
 from app.core.database import fetchrow, transaction
 from app.core.ids import new_id
 from app.core.serde import row_to_dict
-from app.modules.execution.resolvers import parse_amount
+from app.modules.execution.resolvers import parse_amount, resolve_wallet_id
+from app.modules.execution.transactions import _apply_delta_sign, _update_balance
+
+
+def _derive_debt_status(remaining: Decimal, amount: Decimal) -> str:
+    """Port of the status re-derivation in DebtsService.{payDebt,updateDebt}."""
+    if remaining <= 0:
+        return "paid"
+    if remaining < amount:
+        return "partial"
+    return "unpaid"
 
 
 async def _find_or_create_contact(conn, workspace_id: str, name: str) -> dict:
@@ -130,3 +141,115 @@ async def split_bill(workspace_id: str, user_id: str, body: dict) -> dict:
         )
 
     return {"success": True, "data": {"sourceTxId": source_tx_id, "createdDebts": created}}
+
+
+async def pay_debt(workspace_id: str, user_id: str, debt_id: str, amount, wallet_id: str | None = None) -> dict:
+    before = await fetchrow(
+        "SELECT * FROM debts WHERE id = $1 AND workspace_id = $2 AND deleted_at IS NULL",
+        debt_id, workspace_id,
+    )
+    if before is None:
+        return {"success": False, "error": "Debt not found"}
+    before = row_to_dict(before)
+
+    pay_amount = parse_amount(amount)
+    remaining = Decimal(str(before["remaining_amount"]))
+    if pay_amount <= 0 or pay_amount > remaining:
+        return {"success": False, "error": f"Payment must be greater than 0 and at most the remaining amount ({remaining})"}
+
+    resolved_wallet_id = await resolve_wallet_id(workspace_id, wallet_id)
+    new_remaining = remaining - pay_amount
+    status = _derive_debt_status(new_remaining, Decimal(str(before["amount"])))
+
+    async with transaction() as conn:
+        tx_id = None
+        if resolved_wallet_id:
+            t_type = "expense" if before["type"] == "payable" else "income"
+            tx = await conn.fetchrow(
+                "INSERT INTO transactions (id, workspace_id, wallet_id, assigned_user_id, amount, date, type, name, description) "
+                "VALUES ($1,$2,$3,$4,$5,now(),$6,$7,$8) RETURNING id",
+                new_id(), workspace_id, resolved_wallet_id, user_id, pay_amount, t_type,
+                "Debt payment", before.get("description") or "Debt payment",
+            )
+            tx_id = tx["id"]
+            await _update_balance(conn, resolved_wallet_id, workspace_id, _apply_delta_sign(t_type, pay_amount))
+
+        await conn.execute(
+            "INSERT INTO debt_payments (id, workspace_id, debt_id, transaction_id, amount) "
+            "VALUES ($1, $2, $3, $4, $5)",
+            new_id(), workspace_id, debt_id, tx_id, pay_amount,
+        )
+        row = await conn.fetchrow(
+            "UPDATE debts SET remaining_amount = $1, status = $2, updated_at = now() "
+            "WHERE id = $3 AND workspace_id = $4 RETURNING *",
+            new_remaining, status, debt_id, workspace_id,
+        )
+        updated = row_to_dict(row)
+        await audit.log(
+            workspace_id=workspace_id, user_id=user_id, action="debt.paid",
+            entity="debt", entity_id=debt_id, before=before, after=updated, conn=conn,
+        )
+    return {"success": True, "data": updated}
+
+
+async def update_debt(workspace_id: str, user_id: str, debt_id: str, fields: dict) -> dict:
+    before = await fetchrow(
+        "SELECT * FROM debts WHERE id = $1 AND workspace_id = $2 AND deleted_at IS NULL",
+        debt_id, workspace_id,
+    )
+    if before is None:
+        return {"success": False, "error": "Debt not found"}
+    before = row_to_dict(before)
+
+    sets, args, i = [], [], 1
+    if fields.get("amount") is not None:
+        old_amount = Decimal(str(before["amount"]))
+        old_remaining = Decimal(str(before["remaining_amount"]))
+        new_amount = parse_amount(fields["amount"])
+        new_remaining = max(Decimal("0"), old_remaining + (new_amount - old_amount))
+        sets.append(f"amount = ${i}"); args.append(new_amount); i += 1
+        sets.append(f"remaining_amount = ${i}"); args.append(new_remaining); i += 1
+        sets.append(f"status = ${i}"); args.append(_derive_debt_status(new_remaining, new_amount)); i += 1
+    if fields.get("description") is not None:
+        sets.append(f"description = ${i}"); args.append(fields["description"]); i += 1
+    if fields.get("dueDate") is not None:
+        sets.append(f"due_date = ${i}::text::timestamp"); args.append(fields["dueDate"]); i += 1
+
+    if not sets:
+        return {"success": True, "data": before}
+    sets.append("updated_at = now()")
+
+    async with transaction() as conn:
+        args2 = [*args, debt_id, workspace_id]
+        row = await conn.fetchrow(
+            f"UPDATE debts SET {', '.join(sets)} "
+            f"WHERE id = ${i} AND workspace_id = ${i + 1} AND deleted_at IS NULL RETURNING *",
+            *args2,
+        )
+        updated = row_to_dict(row)
+        await audit.log(
+            workspace_id=workspace_id, user_id=user_id, action="debt.updated",
+            entity="debt", entity_id=debt_id, before=before, after=updated, conn=conn,
+        )
+    return {"success": True, "data": updated}
+
+
+async def delete_debt(workspace_id: str, user_id: str, debt_id: str) -> dict:
+    before = await fetchrow(
+        "SELECT * FROM debts WHERE id = $1 AND workspace_id = $2 AND deleted_at IS NULL",
+        debt_id, workspace_id,
+    )
+    if before is None:
+        return {"success": False, "error": "Debt not found"}
+    before = row_to_dict(before)
+
+    async with transaction() as conn:
+        await conn.execute(
+            "UPDATE debts SET deleted_at = now() WHERE id = $1 AND workspace_id = $2",
+            debt_id, workspace_id,
+        )
+        await audit.log(
+            workspace_id=workspace_id, user_id=user_id, action="debt.deleted",
+            entity="debt", entity_id=debt_id, before=before, conn=conn,
+        )
+    return {"success": True, "data": None}

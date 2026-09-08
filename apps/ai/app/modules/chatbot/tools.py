@@ -145,11 +145,134 @@ WEB_TOOLS = [
         ["contactName", "type", "amount"],
     ),
     _fn(
+        "pay_debt",
+        "Record a repayment/payment against an existing debt. Reduces the "
+        "remaining amount and posts a matching wallet transaction (expense if "
+        "you owe, income if you're owed). Call get_outstanding_debts first to "
+        "get the exact debt ID — never guess it.",
+        {
+            "debtId": {"type": "string"},
+            "amount": {"type": "number", "description": "Payment amount — must not exceed the remaining balance."},
+            "walletId": {"type": "string", "description": "Optional; defaults to the default account."},
+        },
+        ["debtId", "amount"],
+    ),
+    _fn(
+        "update_debt",
+        "Edit an existing debt's amount, description, or due date. Get the exact "
+        "debt ID from get_outstanding_debts first.",
+        {
+            "debtId": {"type": "string"},
+            "amount": {"type": "number"},
+            "description": {"type": "string"},
+            "dueDate": {"type": "string"},
+        },
+        ["debtId"],
+    ),
+    _fn(
+        "delete_debt",
+        "Delete a debt record. ALWAYS get the user's explicit yes before calling "
+        "this, especially if it still has an outstanding balance.",
+        {"debtId": {"type": "string"}},
+        ["debtId"],
+    ),
+    _fn(
+        "search_contacts",
+        "Search contacts by name. Use this to find the exact contact ID before "
+        "calling update_contact or delete_contact.",
+        {"query": {"type": "string"}},
+        ["query"],
+    ),
+    _fn(
+        "create_contact",
+        "Add a new contact. Fails if a contact with this name already exists — "
+        "search_contacts first if unsure.",
+        {
+            "name": {"type": "string"},
+            "email": {"type": "string"},
+            "phone": {"type": "string"},
+            "note": {"type": "string"},
+        },
+        ["name"],
+    ),
+    _fn(
+        "update_contact",
+        "Edit an existing contact's name, email, phone, or note. Get the exact "
+        "contact ID from search_contacts first.",
+        {
+            "contactId": {"type": "string"},
+            "name": {"type": "string"},
+            "email": {"type": "string"},
+            "phone": {"type": "string"},
+            "note": {"type": "string"},
+        },
+        ["contactId"],
+    ),
+    _fn(
+        "delete_contact",
+        "Delete a contact. ALWAYS get the user's explicit yes before calling this.",
+        {"contactId": {"type": "string"}},
+        ["contactId"],
+    ),
+    _fn(
         "set_default_wallet",
         "Set a wallet as the workspace default account. Use when the user asks to "
         "change/switch/set their default account.",
         {"walletId": {"type": "string"}},
         ["walletId"],
+    ),
+    _fn(
+        "create_wallet",
+        "Create a new wallet/account (e.g. a new bank account, e-wallet, or cash "
+        "pocket). Call get_workspace_context first if unsure whether one already "
+        "exists with this name.",
+        {
+            "name": {"type": "string"},
+            "balance": {"type": "number", "description": "Starting balance. Defaults to 0."},
+            "isIncludedInTotals": {"type": "boolean", "description": "Defaults to true."},
+            "groupId": {"type": "string", "description": "Optional wallet group ID."},
+        },
+        ["name"],
+    ),
+    _fn(
+        "update_wallet",
+        "Update a wallet's name, balance, group, or whether it counts toward total "
+        "balance. Only pass the fields that changed.",
+        {
+            "walletId": {"type": "string"},
+            "name": {"type": "string"},
+            "balance": {"type": "number"},
+            "isIncludedInTotals": {"type": "boolean"},
+            "groupId": {"type": "string"},
+        },
+        ["walletId"],
+    ),
+    _fn(
+        "delete_wallet",
+        "Permanently remove a wallet/account. ALWAYS get the user's explicit yes "
+        "before calling this — never on the same turn you first mention it.",
+        {"walletId": {"type": "string"}},
+        ["walletId"],
+    ),
+    _fn(
+        "create_wallet_group",
+        "Create a wallet group (a folder for organizing accounts, e.g. 'Bank' or "
+        "'E-wallet').",
+        {"name": {"type": "string"}},
+        ["name"],
+    ),
+    _fn(
+        "update_wallet_group",
+        "Rename a wallet group.",
+        {"groupId": {"type": "string"}, "name": {"type": "string"}},
+        ["groupId", "name"],
+    ),
+    _fn(
+        "delete_wallet_group",
+        "Delete a wallet group. Its wallets are NOT deleted, only un-grouped. "
+        "ALWAYS get the user's explicit yes before calling this.",
+        {"groupId": {"type": "string"}},
+        ["groupId"],
     ),
     _fn(
         "split_bill",
@@ -163,6 +286,27 @@ WEB_TOOLS = [
             "contactNames": {"type": "array", "items": {"type": "string"}},
         },
         ["amount", "name", "walletId", "contactNames"],
+    ),
+    _fn(
+        "create_budget",
+        "Set a monthly budget limit for an expense category. Call "
+        "get_workspace_context first to get the real category ID — fails if a "
+        "budget already exists for that category (use update_budget instead).",
+        {"categoryId": {"type": "string"}, "amount": {"type": "number"}},
+        ["categoryId", "amount"],
+    ),
+    _fn(
+        "update_budget",
+        "Change an existing budget's monthly amount. The category can't be "
+        "changed — delete and recreate the budget instead if that's needed.",
+        {"budgetId": {"type": "string"}, "amount": {"type": "number"}},
+        ["budgetId", "amount"],
+    ),
+    _fn(
+        "delete_budget",
+        "Delete a budget. ALWAYS get the user's explicit yes before calling this.",
+        {"budgetId": {"type": "string"}},
+        ["budgetId"],
     ),
     _analysis(
         "getRevenueSummary",
@@ -264,6 +408,27 @@ WEB_TOOLS = [
         "your reply automatically; if none is attached, say so.",
         {"transactionId": {"type": "string"}},
         ["transactionId"],
+    ),
+    _fn(
+        "list_documents",
+        "List files saved in the vault (documents, receipts, exports). Optional "
+        "name search. Use this to find the exact file ID before renaming or "
+        "deleting one.",
+        {"query": {"type": "string"}},
+        [],
+    ),
+    _fn(
+        "rename_document",
+        "Rename a vault file.",
+        {"vaultFileId": {"type": "string"}, "newName": {"type": "string"}},
+        ["vaultFileId", "newName"],
+    ),
+    _fn(
+        "delete_document",
+        "Permanently delete a vault file. ALWAYS get the user's explicit yes "
+        "before calling this.",
+        {"vaultFileId": {"type": "string"}},
+        ["vaultFileId"],
     ),
     _fn(
         "search_documents",

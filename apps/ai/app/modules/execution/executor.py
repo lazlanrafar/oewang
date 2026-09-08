@@ -8,10 +8,11 @@ Returns {"result": <tool result>, "artifact": {"type", "payload"} | None}.
 
 import asyncio
 
+from app.core import vault
 from app.core.database import fetch, fetchrow
 from app.core.embeddings import embed_one
 from app.core.serde import to_jsonable
-from app.modules.execution import analysis, attachments, debts, exports, items, transactions, wallets
+from app.modules.execution import analysis, attachments, budgets, contacts, debts, exports, items, transactions, wallets
 from app.modules.execution.resolvers import (
     resolve_category_id,
     resolve_or_create_category_id,
@@ -104,6 +105,70 @@ async def _dispatch(tool: str, inp: dict, workspace_id: str, user_id: str) -> di
     if tool == "create_debt":
         return await debts.create_debt(workspace_id, user_id, inp)
 
+    if tool == "pay_debt":
+        wallet_id = await resolve_wallet_id(workspace_id, inp.get("walletId")) if inp.get("walletId") else None
+        return await debts.pay_debt(workspace_id, user_id, inp["debtId"], inp["amount"], wallet_id)
+
+    if tool == "update_debt":
+        return await debts.update_debt(workspace_id, user_id, inp["debtId"], inp)
+
+    if tool == "delete_debt":
+        return await debts.delete_debt(workspace_id, user_id, inp["debtId"])
+
+    if tool == "search_contacts":
+        return await contacts.search_contacts(workspace_id, inp["query"])
+
+    if tool == "create_contact":
+        return await contacts.create_contact(
+            workspace_id, user_id, inp["name"], inp.get("email"), inp.get("phone"), inp.get("note")
+        )
+
+    if tool == "update_contact":
+        return await contacts.update_contact(workspace_id, user_id, inp["contactId"], inp)
+
+    if tool == "delete_contact":
+        return await contacts.delete_contact(workspace_id, user_id, inp["contactId"])
+
+    if tool == "create_wallet":
+        return await wallets.create_wallet(
+            workspace_id, user_id, inp["name"], inp.get("balance", 0),
+            inp.get("isIncludedInTotals", True), inp.get("groupId"),
+        )
+
+    if tool == "update_wallet":
+        fields = {
+            "name": inp.get("name"), "balance": inp.get("balance"),
+            "is_included_in_totals": inp.get("isIncludedInTotals"), "group_id": inp.get("groupId"),
+        }
+        return await wallets.update_wallet(workspace_id, user_id, inp["walletId"], fields)
+
+    if tool == "delete_wallet":
+        return await wallets.delete_wallet(workspace_id, user_id, inp["walletId"])
+
+    if tool == "create_wallet_group":
+        return await wallets.create_wallet_group(workspace_id, user_id, inp["name"])
+
+    if tool == "update_wallet_group":
+        return await wallets.update_wallet_group(workspace_id, user_id, inp["groupId"], inp["name"])
+
+    if tool == "delete_wallet_group":
+        return await wallets.delete_wallet_group(workspace_id, user_id, inp["groupId"])
+
+    if tool == "create_budget":
+        return await budgets.create_budget(workspace_id, user_id, inp["categoryId"], inp["amount"])
+
+    if tool == "update_budget":
+        return await budgets.update_budget(workspace_id, user_id, inp["budgetId"], inp["amount"])
+
+    if tool == "delete_budget":
+        return await budgets.delete_budget(workspace_id, user_id, inp["budgetId"])
+
+    if tool == "rename_document":
+        return await vault.rename_file(workspace_id, user_id, inp["vaultFileId"], inp["newName"])
+
+    if tool == "delete_document":
+        return await vault.delete_file(workspace_id, user_id, inp["vaultFileId"])
+
     if tool == "split_bill":
         body = {
             **inp,
@@ -142,6 +207,8 @@ async def _dispatch(tool: str, inp: dict, workspace_id: str, user_id: str) -> di
         return await attachments.get_receipt_attachment(workspace_id, inp["transactionId"])
 
     # ── Reads ─────────────────────────────────────────────────────────────────
+    if tool == "list_documents":
+        return await vault.list_files(workspace_id, inp.get("query"))
     if tool == "search_transaction_items":
         return await items.search_transaction_items(workspace_id, inp["query"], inp.get("limit", 10))
     if tool == "recall_transaction":

@@ -135,10 +135,16 @@ async def chat_begin_core(
         if draft_response:
             return {"kind": "early", "sessionId": current_session_id, "reply": draft_response["reply"]}
 
-    # Receipt-draft short-circuit, part 2: new receipt attachments to preview.
-    if draft.has_receipt_attachments(latest_user_message.get("attachments")):
+    # Receipt-draft short-circuit, part 2: new receipt attachments to preview —
+    # unless the user's message signals "this isn't a receipt" (is_document_upload_intent),
+    # in which case it falls through to the general vault-save branch below.
+    message_attachments = latest_user_message.get("attachments")
+    is_receipt_upload = draft.has_receipt_attachments(message_attachments) and not draft.is_document_upload_intent(
+        latest_user_message.get("content") or ""
+    )
+    if is_receipt_upload:
         preview = await draft.build_invoice_draft_from_attachments(
-            workspace_id, user_id, latest_user_message.get("attachments")
+            workspace_id, user_id, message_attachments
         )
         if preview:
             await sessions.save_message(
@@ -149,6 +155,19 @@ async def chat_begin_core(
                 {"invoiceDraft": preview["draft"]},
             )
             return {"kind": "early", "sessionId": current_session_id, "reply": preview["reply"]}
+
+    # Receipt-draft short-circuit, part 3: any other attachment (a non-receipt
+    # mime type, or an image/PDF the user explicitly flagged as "not a
+    # receipt") gets saved to the vault directly — no OCR, no draft.
+    elif message_attachments:
+        upload = await draft.build_vault_upload_from_attachments(
+            workspace_id, user_id, message_attachments
+        )
+        if upload:
+            await sessions.save_message(
+                current_session_id, workspace_id, "assistant", upload["reply"]
+            )
+            return {"kind": "early", "sessionId": current_session_id, "reply": upload["reply"]}
 
     # Quota check (raises quota.PlanLimitReached → 422 if over).
     current_tokens = await quota.check_quota(workspace_id)

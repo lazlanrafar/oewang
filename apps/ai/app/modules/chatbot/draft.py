@@ -79,6 +79,10 @@ def format_amount(amount) -> str:
 _CONFIRM_RE = re.compile(r"(^|\b)(confirm|confirmed|yes|ok|okay|save|simpan|ya|lanjut)(\b|$)", re.IGNORECASE)
 _CANCEL_RE = re.compile(r"(^|\b)(cancel|batal|jangan|stop|abort)(\b|$)", re.IGNORECASE)
 _WALLET_NAME_RE = re.compile(r"(?:account|wallet|akun)\s*[:=-]\s*([^\n]+)", re.IGNORECASE)
+_DOCUMENT_INTENT_RE = re.compile(
+    r"dokumen|document|bukan struk|not a receipt|simpan (file|dokumen)|save (this )?(file|document)|arsipkan",
+    re.IGNORECASE,
+)
 
 
 def is_confirm_intent(text: str) -> bool:
@@ -87,6 +91,13 @@ def is_confirm_intent(text: str) -> bool:
 
 def is_cancel_intent(text: str) -> bool:
     return bool(_CANCEL_RE.search((text or "").lower().strip()))
+
+
+def is_document_upload_intent(text: str) -> bool:
+    """True when the user's message alongside an attachment signals "this is
+    a plain document, not a receipt" — the escape hatch from the default
+    receipt-OCR short-circuit (see chat_money_path.py's chat_begin_core)."""
+    return bool(_DOCUMENT_INTENT_RE.search((text or "").lower().strip()))
 
 
 def extract_requested_wallet_name(text: str, wallets: list[dict]) -> str | None:
@@ -262,6 +273,37 @@ async def build_invoice_draft_from_attachments(
         lines += ["", "Skipped files:"] + [f"- {l}" for l in failed_lines]
 
     return {"reply": "\n".join(lines), "draft": draft}
+
+
+# ── Save a general (non-receipt) document straight to the vault ────────────────
+
+
+async def build_vault_upload_from_attachments(
+    workspace_id: str, user_id: str, attachments: list[dict] | None
+) -> dict | None:
+    """Returns {"reply"} or None if there's nothing to upload. No OCR, no
+    draft/confirm dance — this is a plain save, not a financial record."""
+    if not attachments:
+        return None
+
+    from app.core.vault import save_chat_attachment
+
+    saved: list[str] = []
+    failed: list[str] = []
+    for attachment in attachments:
+        result = await save_chat_attachment(workspace_id, user_id, attachment)
+        if result.get("success"):
+            saved.append(result["data"]["name"])
+        else:
+            failed.append(f"{attachment.get('name')}: {result.get('error')}")
+
+    if not saved:
+        return {"reply": "\n".join(["Could not save any file."] + [f"- {l}" for l in failed])}
+
+    lines = [f"Tersimpan: {', '.join(saved)}"]
+    if failed:
+        lines += ["", "Gagal disimpan:"] + [f"- {l}" for l in failed]
+    return {"reply": "\n".join(lines)}
 
 
 # ── Confirm a draft → create transactions ───────────────────────────────────────

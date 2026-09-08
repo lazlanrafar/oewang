@@ -7,6 +7,8 @@ from decimal import Decimal
 
 from app.core.audit import _sanitize
 from app.core.serde import to_jsonable
+from app.modules.chatbot.draft import is_document_upload_intent
+from app.modules.execution.debts import _derive_debt_status
 from app.modules.execution.executor import _artifact_for
 from app.modules.execution.exports import _rows_to_csv
 from app.modules.execution.resolvers import (
@@ -127,3 +129,30 @@ def test_date_range_this_month_starts_on_the_first():
     rng = resolve_date_range({"period": "this-month"}, "this-month")
     assert rng["start"].endswith("-01")
     assert rng["label"] == "this-month"
+
+
+def test_derive_debt_status_paid_partial_unpaid_boundaries():
+    from decimal import Decimal
+    assert _derive_debt_status(Decimal("0"), Decimal("100")) == "paid"
+    assert _derive_debt_status(Decimal("-5"), Decimal("100")) == "paid"  # over-payment clamps to paid
+    assert _derive_debt_status(Decimal("50"), Decimal("100")) == "partial"
+    assert _derive_debt_status(Decimal("100"), Decimal("100")) == "unpaid"  # untouched, full amount still owed
+
+
+def test_derive_debt_status_after_amount_increase_past_a_partial_payment():
+    from decimal import Decimal
+    # Debt was 100, user paid 60 (remaining 40, partial). Amount edited up to 150
+    # → remaining grows by the same diff (40 + 50 = 90), still partial.
+    assert _derive_debt_status(Decimal("90"), Decimal("150")) == "partial"
+
+
+def test_is_document_upload_intent_matches_indonesian_and_english_phrases():
+    assert is_document_upload_intent("ini bukan struk, simpan aja ya")
+    assert is_document_upload_intent("please save this document")
+    assert is_document_upload_intent("tolong arsipkan file ini")
+
+
+def test_is_document_upload_intent_false_for_plain_receipt_messages():
+    assert not is_document_upload_intent("")
+    assert not is_document_upload_intent("beli kopi 25k")
+    assert not is_document_upload_intent("ini struk belanja bulanan")
