@@ -64,11 +64,11 @@ export function NotificationList({ dictionary }: { dictionary: Dictionary }) {
     return (
       <div className="space-y-4">
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="flex animate-pulse gap-4 rounded-lg border p-4">
-            <div className="size-10 rounded-full bg-accent" />
+          <div key={i} className="flex animate-pulse gap-4 border p-4">
+            <div className="size-10 bg-accent" />
             <div className="flex-1 space-y-2">
-              <div className="h-4 w-1/4 rounded bg-accent" />
-              <div className="h-3 w-3/4 rounded bg-accent" />
+              <div className="h-4 w-1/4 bg-accent" />
+              <div className="h-3 w-3/4 bg-accent" />
             </div>
           </div>
         ))}
@@ -79,7 +79,7 @@ export function NotificationList({ dictionary }: { dictionary: Dictionary }) {
   if (notifications.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
-        <div className="mb-4 flex size-12 items-center justify-center rounded-full bg-accent/50">
+        <div className="mb-4 flex size-12 items-center justify-center bg-accent/50">
           <Bell className="size-6 text-muted-foreground" />
         </div>
         <h3 className="font-medium text-sm">{dict.no_notifications || "No notifications"}</h3>
@@ -96,7 +96,7 @@ export function NotificationList({ dictionary }: { dictionary: Dictionary }) {
         <h3 className="font-medium text-sm">
           {dict.recent_activity || "Recent Activity"}
           {unreadCount > 0 && (
-            <span className="ml-2 rounded-full bg-foreground px-1.5 py-0.5 font-bold text-[10px] text-background">
+            <span className="ml-2 bg-foreground px-1.5 py-0.5 font-bold text-[10px] text-background">
               {unreadCount}
             </span>
           )}
@@ -114,7 +114,7 @@ export function NotificationList({ dictionary }: { dictionary: Dictionary }) {
         )}
       </div>
 
-      <div className="divide-y rounded-lg border bg-card">
+      <div className="divide-y border bg-card">
         {notifications.map((notification) => (
           <div
             key={notification.id}
@@ -124,11 +124,11 @@ export function NotificationList({ dictionary }: { dictionary: Dictionary }) {
             )}
           >
             <div className="relative flex-none">
-              <div className="flex size-10 items-center justify-center rounded-full border bg-background shadow-sm">
+              <div className="flex size-10 items-center justify-center border bg-background">
                 {getIcon(notification.type)}
               </div>
               {!notification.is_read && (
-                <span className="-right-0.5 -top-0.5 absolute size-2.5 rounded-full border-2 border-background bg-primary" />
+                <span className="-right-0.5 -top-0.5 absolute size-2.5 border-2 border-background bg-primary" />
               )}
             </div>
 

@@ -37,7 +37,7 @@ export function NotificationBell({ dictionary }: { dictionary: AppDictionary }) 
           <Bell className="h-4 w-4" />
           {unreadCount > 0 && (
             <Badge
-              className="-top-1 -right-1 absolute flex h-4 w-4 items-center justify-center bg-destructive p-0 text-[10px] text-destructive-foreground"
+              className="-top-1 -right-1 absolute flex h-4 w-4 items-center justify-center rounded-none bg-destructive p-0 text-[10px] text-destructive-foreground"
               variant="destructive"
             >
               {unreadCount > 9 ? "9+" : unreadCount}
