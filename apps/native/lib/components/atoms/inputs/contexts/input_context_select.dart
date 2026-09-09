@@ -102,7 +102,7 @@ Widget buildSelectContext(BuildContext context, Input widget) {
 
 // ── Picker drawers (grid + list) ────────────────────────────────────────────
 
-/// Opens a grid picker — shared panel when hosted, else modal.
+/// Opens a grid picker in the shared FormDrawerHost.
 void openGridDrawer<T>(
   BuildContext context, {
   required String id,
@@ -116,29 +116,9 @@ void openGridDrawer<T>(
   int columns = 3,
 }) {
   final controller = FormDrawerScope.maybeOf(context);
-  if (controller != null) {
-    controller.open(
-      id,
-      (_) => GridPickerContent<T>(
-        title: title,
-        items: items,
-        labelOf: labelOf,
-        leadingOf: leadingOf,
-        idOf: idOf,
-        selectedId: selectedId,
-        columns: columns,
-        onSelected: (item) {
-          // Close first — onSelected may open the next field's drawer, and
-          // that must win over this stale close().
-          controller.close();
-          onSelected(item);
-        },
-        onClose: controller.close,
-      ),
-    );
-  } else {
-    GridPickerSheet.show<T>(
-      context,
+  controller?.open(
+    id,
+    (_) => GridPickerContent<T>(
       title: title,
       items: items,
       labelOf: labelOf,
@@ -146,13 +126,18 @@ void openGridDrawer<T>(
       idOf: idOf,
       selectedId: selectedId,
       columns: columns,
-    ).then((picked) {
-      if (picked != null) onSelected(picked);
-    });
-  }
+      onSelected: (item) {
+        // Close first — onSelected may open the next field's drawer, and
+        // that must win over this stale close().
+        controller.close();
+        onSelected(item);
+      },
+      onClose: controller.close,
+    ),
+  );
 }
 
-/// Opens a vertical-list picker — shared panel when hosted, else modal.
+/// Opens a vertical-list picker in the shared FormDrawerHost.
 void openListDrawer<T>(
   BuildContext context, {
   required String id,
@@ -164,35 +149,22 @@ void openListDrawer<T>(
   String? Function(T)? subtitleOf,
 }) {
   final controller = FormDrawerScope.maybeOf(context);
-  if (controller != null) {
-    controller.open(
-      id,
-      (_) => EntityListContent<T>(
-        title: title,
-        items: items,
-        labelOf: labelOf,
-        subtitleOf: subtitleOf,
-        onSelected: (item) {
-          // Close first — onSelected may open the next field's drawer, and
-          // that must win over this stale close().
-          controller.close();
-          onSelected(item);
-        },
-        onClose: controller.close,
-      ),
-    );
-  } else {
-    EntityPickerSheet.show<T>(
-      context,
+  controller?.open(
+    id,
+    (_) => EntityListContent<T>(
       title: title,
       items: items,
       labelOf: labelOf,
-      idOf: idOf,
       subtitleOf: subtitleOf,
-    ).then((picked) {
-      if (picked != null) onSelected(picked);
-    });
-  }
+      onSelected: (item) {
+        // Close first — onSelected may open the next field's drawer, and
+        // that must win over this stale close().
+        controller.close();
+        onSelected(item);
+      },
+      onClose: controller.close,
+    ),
+  );
 }
 
 

@@ -114,6 +114,10 @@ Every mutation triggers `RealtimeService.notifyValueChange(workspaceId, "wallets
 
 ---
 
+### Native offline sync (2026-09-09)
+
+Native wallet create/update is queued with a client-generated ID and local revision. Wallet sync precedes dependent transaction sync. `WalletsRepository.updateBalance` rejects an unavailable live workspace wallet, allowing the transaction caller to roll back its money writes. Offline wallet edits retain the cached currency and inclusion flag. Delete/reorder/inclusion changes still require connectivity. See [mobile verification](./MOBILE/OFFLINE_SYNC_VERIFICATION.md).
+
 ## Source Files
 
 | Layer      | File                                                        |
@@ -144,3 +148,6 @@ Every mutation triggers `RealtimeService.notifyValueChange(workspaceId, "wallets
 - `balance` is stored as `decimal(19,4)` — always handle as string in service/DTO to avoid floating-point precision loss.
 - When `isIncludedInTotals = false`, the wallet is excluded from the net-worth calculation on the Overview page.
 - The `reorder` endpoint also functions as a move-to-group endpoint — this is intentional.
+
+
+The native wallet-group list uses `onReorderItem` and inserts at the supplied final destination index. `apps/native/test/widget/catalog_reorder_test.dart` covers both move directions.

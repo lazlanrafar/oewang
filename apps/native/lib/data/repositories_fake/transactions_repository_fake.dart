@@ -110,4 +110,11 @@ class TransactionsRepositoryFake implements TransactionsRepository {
     }).toList()..sort((a, b) => b.date.compareTo(a.date));
     return Success(filtered);
   }
+
+  @override
+  Future<Result<void, AppError>> delete(String id) async {
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+    _store.removeWhere((t) => t.id == id);
+    return const Success(null);
+  }
 }

@@ -30,4 +30,6 @@ abstract class TransactionsRepository {
     String id,
     NewTransactionDraft draft,
   );
+
+  Future<Result<void, AppError>> delete(String id);
 }

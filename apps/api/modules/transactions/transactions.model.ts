@@ -62,8 +62,8 @@ export const TransactionModel = {
   }),
   update: t.Object({
     walletId: t.Optional(t.String()),
-    toWalletId: t.Optional(t.String()),
-    categoryId: t.Optional(t.String()),
+    toWalletId: t.Optional(t.Nullable(t.String())),
+    categoryId: t.Optional(t.Nullable(t.String())),
     amount: t.Optional(t.Numeric()),
     originalAmount: t.Optional(t.Nullable(t.Numeric())),
     originalCurrencyCode: t.Optional(t.Nullable(t.String())),

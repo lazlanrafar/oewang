@@ -4,7 +4,7 @@ import 'package:oewang/components/layouts/bottom_nav.dart';
 import 'package:oewang/core/theme/app_theme.dart';
 
 void main() {
-  testWidgets('Bottom nav renders all four tabs', (tester) async {
+  testWidgets('Bottom nav renders all five tabs', (tester) async {
     var selected = 0;
     await tester.pumpWidget(
       MaterialApp(
@@ -25,6 +25,6 @@ void main() {
     expect(find.text('More'), findsOneWidget);
 
     await tester.tap(find.text('Stats'));
-    expect(selected, 1);
+    expect(selected, 2);
   });
 }

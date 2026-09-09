@@ -42,6 +42,7 @@ export abstract class AuditLogsService {
       before?: unknown;
       after?: unknown;
     }[],
+    tx?: Parameters<typeof AuditLogsRepository.createMany>[1],
   ) {
     if (dataArray.length === 0) return;
 
@@ -51,7 +52,7 @@ export abstract class AuditLogsService {
       after: AuditLogsService.sanitize(data.after),
     }));
 
-    await AuditLogsRepository.createMany(sanitizedArray);
+    await AuditLogsRepository.createMany(sanitizedArray, tx);
   }
 
   /**

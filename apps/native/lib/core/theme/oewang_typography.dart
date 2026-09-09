@@ -31,11 +31,15 @@ class OewangFonts {
     double fontSize = 14,
     FontWeight fontWeight = FontWeight.w400,
     Color color = OewangColors.foreground,
+    double? height,
+    double? letterSpacing,
   }) {
-    return GoogleFonts.hedvigLettersSerif(
+    return GoogleFonts.hedvigLettersSans(
       fontSize: fontSize,
       fontWeight: fontWeight,
       color: color,
+      height: height,
+      letterSpacing: letterSpacing,
       fontFeatures: const [FontFeature.tabularFigures()],
     );
   }

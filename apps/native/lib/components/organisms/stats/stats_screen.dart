@@ -193,7 +193,6 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            const SizedBox(height: 8),
             _TopPills(
               labels: _topLabels,
               currentIndex: _topIndex,
@@ -201,7 +200,6 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
               periodShort: _period.short,
               onTapPeriod: _pickPeriod,
             ),
-            const SizedBox(height: 4),
             _PeriodBar(
               label: _periodLabel(),
               onPrev: () => _step(-1),
@@ -280,7 +278,7 @@ class _TopPills extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = context.palette;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         children: [
           Expanded(

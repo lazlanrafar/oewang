@@ -2,7 +2,6 @@ import 'package:drift/drift.dart';
 import 'package:oewang/core/result/app_error.dart';
 import 'package:oewang/core/result/result.dart';
 import 'package:oewang/data/repositories/contacts_repository.dart';
-import 'package:oewang/data/repositories_remote/contacts_repository_remote.dart';
 import 'package:oewang/data/services/db/app_database.dart';
 import 'package:oewang/domain/models/contact.dart';
 
@@ -12,14 +11,14 @@ import 'package:oewang/domain/models/contact.dart';
 /// connectivity.
 class ContactsRepositoryOffline implements ContactsRepository {
   ContactsRepositoryOffline({
-    required ContactsRepositoryRemote remote,
+    required ContactsRepository remote,
     required AppDatabase db,
     required String Function() workspaceId,
   }) : _remote = remote,
        _db = db,
        _workspaceId = workspaceId;
 
-  final ContactsRepositoryRemote _remote;
+  final ContactsRepository _remote;
   final AppDatabase _db;
   final String Function() _workspaceId;
 
@@ -27,6 +26,7 @@ class ContactsRepositoryOffline implements ContactsRepository {
   Future<Result<List<Contact>, AppError>> list({String? search}) async {
     final ws = _workspaceId();
     final result = await _remote.list(search: search);
+    if (ws != _workspaceId()) return const Failure(UnauthorizedError());
     if (result case Success<List<Contact>, AppError>(value: final contacts)) {
       await _cache(ws, contacts);
       return result;
@@ -47,7 +47,11 @@ class ContactsRepositoryOffline implements ContactsRepository {
       for (final c in contacts) {
         b.insert(
           _db.cachedContacts,
-          CachedContactsCompanion.insert(id: c.id, workspaceId: ws, name: c.name),
+          CachedContactsCompanion.insert(
+            id: c.id,
+            workspaceId: ws,
+            name: c.name,
+          ),
           mode: InsertMode.insertOrReplace,
         );
       }

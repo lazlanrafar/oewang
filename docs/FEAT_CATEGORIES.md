@@ -87,3 +87,8 @@ Every mutation calls `AuditLogsService.log()` and triggers `RealtimeService.noti
 | Tests      | `apps/api/modules/categories/categories.utils.test.ts` (38 tests) |
 | Seeds      | `packages/constants/default/category.ts`                          |
 | E2E        | `apps/app/e2e/categories.spec.ts`                                 |
+
+
+### Native reorder callback (2026-09-09)
+
+The category list uses Flutter's `onReorderItem` callback, whose destination index is already adjusted after removing the source item. Do not decrement it again. `apps/native/test/widget/catalog_reorder_test.dart` covers downward and upward moves for both categories and wallet groups.

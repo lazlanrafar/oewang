@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:oewang/core/logging/app_logger.dart';
 import 'package:oewang/data/services/storage/secure_storage_service.dart';
@@ -29,6 +31,29 @@ class AuthInterceptor extends Interceptor {
         options.headers['Authorization'] = 'Bearer $token';
       }
     }
+    final expected = options.extra['workspaceId'];
+    if (expected != null) {
+      try {
+        final authorization = options.headers['Authorization'];
+        if (authorization is! String) throw const FormatException();
+        final parts = authorization.split(' ').last.split('.');
+        if (parts.length != 3) throw const FormatException();
+        final payload = jsonDecode(
+          utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
+        );
+        if (payload is! Map<String, dynamic>) throw const FormatException();
+        if (payload['workspace_id'] != expected) throw const FormatException();
+      } on Exception {
+        handler.reject(
+          DioException(
+            requestOptions: options,
+            type: DioExceptionType.cancel,
+            message: 'Workspace changed before sync',
+          ),
+        );
+        return;
+      }
+    }
     handler.next(options);
   }
 
@@ -37,7 +62,12 @@ class AuthInterceptor extends Interceptor {
     DioException err,
     ErrorInterceptorHandler handler,
   ) async {
-    if (err.response?.statusCode == 401) {
+    final current = err.response?.statusCode == 401
+        ? await storage.readToken(sessionKey)
+        : null;
+    if (err.response?.statusCode == 401 &&
+        current != null &&
+        err.requestOptions.headers['Authorization'] == 'Bearer $current') {
       _log.warn('401 — clearing session', {'path': err.requestOptions.path});
       await storage.deleteToken(sessionKey);
       await onUnauthorized?.call();

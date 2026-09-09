@@ -527,3 +527,15 @@ Follows Flutter's "Strongly recommend: Test architectural components separately 
 2. **Encryption key delivery** — does the mobile client ship with a static `ENCRYPTION_KEY` (matching the server), or do we move to a per-session derived key? Current axios setup uses a static env var, so we'll mirror that initially.
 3. **Locale** — screenshots show `id_ID` (Rp, comma decimals). Confirm `intl` locale and whether the existing dictionary system in `apps/app` should be ported into Flutter `.arb` files.
 4. **App store identifier** — confirm `com.oewang` bundle ID before iOS provisioning.
+
+
+## Offline-first follow-up — verified implementation (2026-09-09)
+
+Offline create/update for transactions, wallets, and debts is wired through Drift-backed repository decorators. Categories/contacts support cached picker reads; monthly budget status supports a read-only snapshot cache. Last-write-wins and client-generated CUID2 IDs remain the conflict/retry policy.
+
+The implementation includes revision-aware acknowledgements, wallet-before-transaction ordering, foreground retry scheduling, workspace-bound requests, a pending/error banner, and a non-destructive SQLite v1 → v2 migration. Backend debt creation now forwards the supplied ID, bulk replay lookup is tenant-scoped, and transaction money/audit writes commit together.
+
+See [OFFLINE_SYNC_VERIFICATION.md](./OFFLINE_SYNC_VERIFICATION.md) for tests, known limits, and the remaining manual device check. Automated tests are not evidence that an airplane-mode walkthrough against a live API has been performed.
+
+
+Simulator follow-up: `integration_test/offline_sync_test.dart` passes on iPhone 17 Pro / iOS 26.5 with real SQLite persistence and encrypted loopback HTTP. The native suite now has 132 passing unit/widget cases, and analyzer reports no issues. Category/group reorder uses the current `onReorderItem` callback, covered by two regression tests. A live-backend airplane-mode walkthrough is still distinct from this fixture-backed integration test.

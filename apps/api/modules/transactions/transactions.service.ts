@@ -84,62 +84,95 @@ export abstract class TransactionsService {
     // Strip non-DB fields before insert
     const { attachmentIds, ...dbBody } = body;
 
-    const { transaction, inserted } = await TransactionsRepository.createIdempotent({
-      ...dbBody,
-      workspaceId,
-      amount,
-      originalAmount,
-      originalCurrencyCode,
-      exchangeRate,
-      toWalletId,
-      categoryId,
-      assignedUserId,
-    });
+    const result = await TransactionsRepository.runTransaction(async (tx) => {
+      const { transaction, inserted } =
+        await TransactionsRepository.createIdempotent(
+          {
+            ...dbBody,
+            workspaceId,
+            amount,
+            originalAmount,
+            originalCurrencyCode,
+            exchangeRate,
+            toWalletId,
+            categoryId,
+            assignedUserId,
+          },
+          tx,
+        );
 
-    // A replay of an already-synced offline create (same client-generated
-    // id) — the first attempt already ran every side effect below. Return
-    // the same success so the caller (mobile sync flush) can safely retry.
-    if (!inserted) {
+      // A replay of an already-synced offline create (same client-generated
+      // id) — the first attempt already ran every side effect below. Return
+      // the same success so the caller (mobile sync flush) can safely retry.
+      if (!inserted) return { transaction, inserted };
+
+      // Sync attachments
+      if (attachmentIds && attachmentIds.length > 0) {
+        await TransactionsRepository.syncAttachments(
+          transaction.id,
+          workspaceId,
+          attachmentIds,
+          tx,
+        );
+      }
+
+      const val = Number(amount);
+
+      if (body.type === "expense") {
+        await WalletsRepository.updateBalance(
+          body.walletId,
+          workspaceId,
+          -val,
+          tx,
+        );
+      } else if (body.type === "income") {
+        await WalletsRepository.updateBalance(
+          body.walletId,
+          workspaceId,
+          val,
+          tx,
+        );
+      } else if (body.type === "transfer" && body.toWalletId) {
+        await WalletsRepository.updateBalance(
+          body.walletId,
+          workspaceId,
+          -val,
+          tx,
+        );
+        await WalletsRepository.updateBalance(
+          body.toWalletId,
+          workspaceId,
+          val,
+          tx,
+        );
+      }
+
+      await AuditLogsService.log(
+        {
+          workspace_id: workspaceId,
+          user_id: userId,
+          action: "transaction.created",
+          entity: "transaction",
+          entity_id: transaction.id,
+          after: transaction,
+        },
+        tx,
+      );
+      return { transaction, inserted };
+    });
+    const { transaction, inserted } = result;
+    if (!inserted)
       return buildSuccess(
         transaction,
         "Transaction created successfully",
         "CREATED",
       );
-    }
-
-    // Sync attachments
-    if (attachmentIds && attachmentIds.length > 0) {
-      await TransactionsRepository.syncAttachments(
-        transaction.id,
-        workspaceId,
-        attachmentIds,
-      );
-    }
-
-    const val = Number(amount);
-
-    if (body.type === "expense") {
-      await WalletsRepository.updateBalance(body.walletId, workspaceId, -val);
-    } else if (body.type === "income") {
-      await WalletsRepository.updateBalance(body.walletId, workspaceId, val);
-    } else if (body.type === "transfer" && body.toWalletId) {
-      await WalletsRepository.updateBalance(body.walletId, workspaceId, -val);
-      await WalletsRepository.updateBalance(body.toWalletId, workspaceId, val);
-    }
 
     RealtimeService.notifyValueChange(workspaceId, "transactions");
     RealtimeService.notifyValueChange(workspaceId, "wallets");
 
     // Independent side effects — run concurrently after the money writes.
     await Promise.all([
-      AuditLogsService.log({
-        workspace_id: workspaceId,
-        user_id: userId,
-        action: "transaction.created",
-        entity: "transaction",
-        entity_id: transaction.id,
-        after: transaction,
-      }),
       NotificationsService.create({
         workspace_id: workspaceId,
         user_id: userId,
@@ -292,7 +325,7 @@ export abstract class TransactionsService {
     }
 
     try {
-      return await TransactionsRepository.runTransaction(async (tx) => {
+      const result = await TransactionsRepository.runTransaction(async (tx) => {
         const dbTransactionsToInsert: any[] = [];
 
         for (const { item } of validItems) {
@@ -368,16 +401,7 @@ export abstract class TransactionsService {
           entity_id: transaction.id,
           after: transaction,
         }));
-        await AuditLogsService.logMany(auditLogsToInsert);
-
-        // 4. Notify listeners (outside tx if needed, but here fine)
-        RealtimeService.notifyValueChange(workspaceId, "transactions");
-        RealtimeService.notifyValueChange(workspaceId, "wallets");
-
-        await Promise.all([
-          MetricsService.invalidateWorkspaceCache(workspaceId),
-          BudgetsService.invalidateCurrentMonthCache(workspaceId),
-        ]);
+        await AuditLogsService.logMany(auditLogsToInsert, tx);
 
         return buildSuccess(
           {
@@ -389,6 +413,14 @@ export abstract class TransactionsService {
           `Successfully imported ${newlyInserted.length} transactions`,
         );
       });
+      // Readers must only be notified after the transaction has committed.
+      RealtimeService.notifyValueChange(workspaceId, "transactions");
+      RealtimeService.notifyValueChange(workspaceId, "wallets");
+      await Promise.all([
+        MetricsService.invalidateWorkspaceCache(workspaceId),
+        BudgetsService.invalidateCurrentMonthCache(workspaceId),
+      ]);
+      return result;
     } catch (err: any) {
       log.error("Bulk create failed", { err });
       return buildError(
@@ -475,151 +507,175 @@ export abstract class TransactionsService {
     id: string,
     body: UpdateTransactionInput,
   ) {
-    const transaction = await TransactionsRepository.findById(workspaceId, id);
-    if (!transaction) {
-      throw status(
-        404,
-        buildError(ErrorCode.NOT_FOUND, "Transaction not found"),
-      );
-    }
-
-    // Strip non-DB fields and empty strings before update
-    const { attachmentIds, ...bodyWithoutAttachments } = body;
-    const rawData: any = { ...bodyWithoutAttachments };
-
-    // Re-derive main-currency `amount` and the three original-currency fields
-    // whenever the client touches any of them. If the caller explicitly sends
-    // originalCurrencyCode = null we clear the multicurrency state.
-    const touchesCurrency =
-      body.amount !== undefined ||
-      body.originalAmount !== undefined ||
-      body.originalCurrencyCode !== undefined ||
-      body.exchangeRate !== undefined;
-
-    if (touchesCurrency) {
-      const merged = resolveMulticurrency({
-        amount: body.amount ?? transaction.amount,
-        originalAmount:
-          body.originalAmount !== undefined
-            ? body.originalAmount
-            : transaction.originalAmount,
-        originalCurrencyCode:
-          body.originalCurrencyCode !== undefined
-            ? body.originalCurrencyCode
-            : transaction.originalCurrencyCode,
-        exchangeRate:
-          body.exchangeRate !== undefined
-            ? body.exchangeRate
-            : transaction.exchangeRate,
-      });
-      rawData.amount = merged.amount;
-      rawData.originalAmount = merged.originalAmount;
-      rawData.originalCurrencyCode = merged.originalCurrencyCode;
-      rawData.exchangeRate = merged.exchangeRate;
-    }
-
-    const updateData = Object.fromEntries(
-      Object.entries(rawData).filter(([k, v]) => {
-        if (v === undefined) return false;
-        // Allow empty strings for text fields, but filter them out for UUID fields
-        if (
-          v === "" &&
-          ["walletId", "toWalletId", "categoryId", "assignedUserId"].includes(k)
-        ) {
-          return false;
-        }
-        return true;
-      }),
-    );
-
-    const oldVal = Number(transaction.amount);
-    if (transaction.type === "expense") {
-      await WalletsRepository.updateBalance(
-        transaction.walletId,
+    const updated = await TransactionsRepository.runTransaction(async (tx) => {
+      await TransactionsRepository.lockForUpdate(workspaceId, id, tx);
+      const transaction = await TransactionsRepository.findById(
         workspaceId,
-        oldVal,
-      );
-    } else if (transaction.type === "income") {
-      await WalletsRepository.updateBalance(
-        transaction.walletId,
-        workspaceId,
-        -oldVal,
-      );
-    } else if (transaction.type === "transfer" && transaction.toWalletId) {
-      await WalletsRepository.updateBalance(
-        transaction.walletId,
-        workspaceId,
-        oldVal,
-      );
-      await WalletsRepository.updateBalance(
-        transaction.toWalletId,
-        workspaceId,
-        -oldVal,
-      );
-    }
-
-    const updated = await TransactionsRepository.update(
-      workspaceId,
-      id,
-      updateData as any,
-    );
-
-    if (!updated) {
-      throw status(
-        404,
-        buildError(ErrorCode.NOT_FOUND, "Transaction not found"),
-      );
-    }
-
-    // Sync attachments if provided
-    if (attachmentIds !== undefined) {
-      await TransactionsRepository.syncAttachments(
         id,
-        workspaceId,
-        attachmentIds,
+        tx,
       );
-    }
+      if (!transaction) {
+        throw status(
+          404,
+          buildError(ErrorCode.NOT_FOUND, "Transaction not found"),
+        );
+      }
 
-    const newVal = Number(updated.amount);
+      // Strip non-DB fields and empty strings before update
+      const { attachmentIds, ...bodyWithoutAttachments } = body;
+      const rawData: any = { ...bodyWithoutAttachments };
 
-    if (updated.type === "expense") {
-      await WalletsRepository.updateBalance(
-        updated.walletId,
-        workspaceId,
-        -newVal,
+      // Re-derive main-currency `amount` and the three original-currency fields
+      // whenever the client touches any of them. If the caller explicitly sends
+      // originalCurrencyCode = null we clear the multicurrency state.
+      const touchesCurrency =
+        body.amount !== undefined ||
+        body.originalAmount !== undefined ||
+        body.originalCurrencyCode !== undefined ||
+        body.exchangeRate !== undefined;
+
+      if (touchesCurrency) {
+        const merged = resolveMulticurrency({
+          amount: body.amount ?? transaction.amount,
+          originalAmount:
+            body.originalAmount !== undefined
+              ? body.originalAmount
+              : transaction.originalAmount,
+          originalCurrencyCode:
+            body.originalCurrencyCode !== undefined
+              ? body.originalCurrencyCode
+              : transaction.originalCurrencyCode,
+          exchangeRate:
+            body.exchangeRate !== undefined
+              ? body.exchangeRate
+              : transaction.exchangeRate,
+        });
+        rawData.amount = merged.amount;
+        rawData.originalAmount = merged.originalAmount;
+        rawData.originalCurrencyCode = merged.originalCurrencyCode;
+        rawData.exchangeRate = merged.exchangeRate;
+      }
+
+      const updateData = Object.fromEntries(
+        Object.entries(rawData).filter(([k, v]) => {
+          if (v === undefined) return false;
+          // Allow empty strings for text fields, but filter them out for UUID fields
+          if (
+            v === "" &&
+            ["walletId", "toWalletId", "categoryId", "assignedUserId"].includes(
+              k,
+            )
+          ) {
+            return false;
+          }
+          return true;
+        }),
       );
-    } else if (updated.type === "income") {
-      await WalletsRepository.updateBalance(
-        updated.walletId,
+
+      const oldVal = Number(transaction.amount);
+      if (transaction.type === "expense") {
+        await WalletsRepository.updateBalance(
+          transaction.walletId,
+          workspaceId,
+          oldVal,
+          tx,
+        );
+      } else if (transaction.type === "income") {
+        await WalletsRepository.updateBalance(
+          transaction.walletId,
+          workspaceId,
+          -oldVal,
+          tx,
+        );
+      } else if (transaction.type === "transfer" && transaction.toWalletId) {
+        await WalletsRepository.updateBalance(
+          transaction.walletId,
+          workspaceId,
+          oldVal,
+          tx,
+        );
+        await WalletsRepository.updateBalance(
+          transaction.toWalletId,
+          workspaceId,
+          -oldVal,
+          tx,
+        );
+      }
+
+      const updated = await TransactionsRepository.update(
         workspaceId,
-        newVal,
+        id,
+        updateData as any,
+        tx,
       );
-    } else if (updated.type === "transfer" && updated.toWalletId) {
-      await WalletsRepository.updateBalance(
-        updated.walletId,
-        workspaceId,
-        -newVal,
+
+      if (!updated) {
+        throw status(
+          404,
+          buildError(ErrorCode.NOT_FOUND, "Transaction not found"),
+        );
+      }
+
+      // Sync attachments if provided
+      if (attachmentIds !== undefined) {
+        await TransactionsRepository.syncAttachments(
+          id,
+          workspaceId,
+          attachmentIds,
+          tx,
+        );
+      }
+
+      const newVal = Number(updated.amount);
+
+      if (updated.type === "expense") {
+        await WalletsRepository.updateBalance(
+          updated.walletId,
+          workspaceId,
+          -newVal,
+          tx,
+        );
+      } else if (updated.type === "income") {
+        await WalletsRepository.updateBalance(
+          updated.walletId,
+          workspaceId,
+          newVal,
+          tx,
+        );
+      } else if (updated.type === "transfer" && updated.toWalletId) {
+        await WalletsRepository.updateBalance(
+          updated.walletId,
+          workspaceId,
+          -newVal,
+          tx,
+        );
+        await WalletsRepository.updateBalance(
+          updated.toWalletId,
+          workspaceId,
+          newVal,
+          tx,
+        );
+      }
+
+      await AuditLogsService.log(
+        {
+          workspace_id: workspaceId,
+          user_id: userId,
+          action: "transaction.updated",
+          entity: "transaction",
+          entity_id: updated.id,
+          before: transaction,
+          after: updated,
+        },
+        tx,
       );
-      await WalletsRepository.updateBalance(
-        updated.toWalletId,
-        workspaceId,
-        newVal,
-      );
-    }
+      return updated;
+    });
 
     RealtimeService.notifyValueChange(workspaceId, "transactions");
     RealtimeService.notifyValueChange(workspaceId, "wallets");
 
     await Promise.all([
-      AuditLogsService.log({
-        workspace_id: workspaceId,
-        user_id: userId,
-        action: "transaction.updated",
-        entity: "transaction",
-        entity_id: updated.id,
-        before: transaction,
-        after: updated,
-      }),
       MetricsService.invalidateWorkspaceCache(workspaceId),
       BudgetsService.invalidateCurrentMonthCache(workspaceId),
     ]);
@@ -745,7 +801,7 @@ export abstract class TransactionsService {
         await Promise.all(walletUpdatePromises);
 
         // Bulk insert audit logs within tx
-        await AuditLogsService.logMany(auditLogsToInsert);
+        await AuditLogsService.logMany(auditLogsToInsert, tx);
 
         RealtimeService.notifyValueChange(workspaceId, "transactions");
         RealtimeService.notifyValueChange(workspaceId, "wallets");

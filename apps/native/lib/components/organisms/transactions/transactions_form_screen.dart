@@ -66,6 +66,12 @@ class _TransactionFormScreenState
       _ => 'Transfer',
     };
 
+    final settings = ref.watch(transactionSettingsProvider).valueOrNull;
+    final isAutocomplete = settings?.autocomplete ?? true;
+    final isTimeInput = settings?.timeInput != 'None' && settings?.timeInput != null;
+    final showDescriptionSetting = settings?.showDescription ?? false;
+    final inputOrder = settings?.inputOrder ?? 'Amount';
+
     // Step-through chain: date -> amount -> (category -> account) or
     // (from -> to) for transfer. Each entity's onSelected both commits the
     // value and opens the next field's drawer, so the user never has to tap
@@ -131,21 +137,31 @@ class _TransactionFormScreenState
       }
     }
 
-    // Amount is the field you almost always want first — date defaults to
-    // today already. Open its keypad as soon as the screen is up instead of
-    // making the user tap it (or date) first.
+    // Auto open first input based on inputOrder setting
     if (!_autoOpenedAmount) {
       _autoOpenedAmount = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        openAmountDrawer(
-          context,
-          id: 'Amount',
-          initial: vm.state.amount,
-          workspaceTabs: true,
-          onChanged: vm.setAmount,
-          onSubmitted: (_) => openAfterAmount(),
-        );
+        final controller = FormDrawerScope.maybeOf(context);
+        if (inputOrder == 'Account' || inputOrder == 'Category') {
+          openAfterAmount();
+        } else {
+          controller?.open(
+            'Amount',
+            (_) => AmountKeypad(
+              initial: vm.state.amount,
+              title: 'Amount',
+              currency: 'IDR',
+              workspaceTabs: true,
+              onChanged: vm.setAmount,
+              onSubmit: (v) {
+                controller.close();
+                openAfterAmount();
+              },
+              onClose: controller.close,
+            ),
+          );
+        }
       });
     }
 
@@ -172,6 +188,24 @@ class _TransactionFormScreenState
                 date: vm.state.date,
                 onDateChanged: (d) {
                   vm.setDate(d);
+                  if (isTimeInput) {
+                    showTimePicker(
+                      context: context,
+                      initialTime: TimeOfDay.fromDateTime(vm.state.date),
+                    ).then((time) {
+                      if (time != null) {
+                        vm.setDate(
+                          DateTime(
+                            d.year,
+                            d.month,
+                            d.day,
+                            time.hour,
+                            time.minute,
+                          ),
+                        );
+                      }
+                    });
+                  }
                   openAmountDrawer(
                     context,
                     id: 'Amount',
@@ -210,16 +244,66 @@ class _TransactionFormScreenState
                 ),
               ],
               FormFieldRow(
-                label: 'Note',
-                child: Input(
-                  variant: InputVariant.underline,
-                  onChanged: vm.setNote,
-                  onTap: () => FormDrawerScope.maybeOf(context)?.close(),
-                ),
+                label: 'Description',
+                child: isAutocomplete
+                    ? Autocomplete<String>(
+                        initialValue: TextEditingValue(text: vm.state.note),
+                        optionsBuilder: (textEditingValue) {
+                          if (textEditingValue.text.isEmpty) {
+                            return const Iterable<String>.empty();
+                          }
+                          final history = vm.transactionsHistory
+                              .map((t) => t.name ?? t.description ?? '')
+                              .where((s) => s.isNotEmpty)
+                              .toSet()
+                              .toList();
+                          return history.where((opt) => opt
+                              .toLowerCase()
+                              .contains(textEditingValue.text.toLowerCase()));
+                        },
+                        onSelected: vm.setNote,
+                        fieldViewBuilder:
+                            (context, textController, focusNode, onFieldSubmitted) {
+                          return TextField(
+                            controller: textController,
+                            focusNode: focusNode,
+                            onChanged: vm.setNote,
+                            onTap: () =>
+                                FormDrawerScope.maybeOf(context)?.close(),
+                            style: OewangFonts.sans(
+                              color: palette.foreground,
+                              fontSize: 14,
+                            ),
+                            decoration: InputDecoration(
+                              isDense: true,
+                              border: UnderlineInputBorder(
+                                borderSide: BorderSide(color: palette.border),
+                              ),
+                              enabledBorder: UnderlineInputBorder(
+                                borderSide: BorderSide(color: palette.border),
+                              ),
+                              focusedBorder: UnderlineInputBorder(
+                                borderSide: BorderSide(color: palette.primary),
+                              ),
+                            ),
+                          );
+                        },
+                      )
+                    : Input(
+                        variant: InputVariant.underline,
+                        controller: TextEditingController(text: vm.state.note)
+                          ..selection = TextSelection.collapsed(
+                            offset: vm.state.note.length,
+                          ),
+                        onChanged: vm.setNote,
+                        onTap: () => FormDrawerScope.maybeOf(context)?.close(),
+                      ),
               ),
-              const SizedBox(height: 24),
-              Container(height: 8, color: palette.muted),
-              _DescriptionRow(vm: vm),
+              if (showDescriptionSetting) ...[
+                const SizedBox(height: 24),
+                Container(height: 8, color: palette.muted),
+                _DescriptionRow(vm: vm),
+              ],
               const SizedBox(height: 12),
               if (vm.save.error != null)
                 Padding(
@@ -372,10 +456,14 @@ class _DescriptionRowState extends State<_DescriptionRow> {
             children: [
               Expanded(
                 child: Input(
-                  hintText: 'Description',
+                  hintText: 'Note (optional)',
                   variant: InputVariant.underline,
                   maxLines: 5,
                   minLines: 3,
+                  controller: TextEditingController(text: widget.vm.state.description)
+                    ..selection = TextSelection.collapsed(
+                      offset: widget.vm.state.description.length,
+                    ),
                   onChanged: widget.vm.setDescription,
                   onTap: () => FormDrawerScope.maybeOf(context)?.close(),
                 ),

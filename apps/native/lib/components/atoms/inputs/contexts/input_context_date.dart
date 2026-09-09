@@ -43,32 +43,21 @@ void openDateDrawer(
   DateTime? lastDate,
 }) {
   final controller = FormDrawerScope.maybeOf(context);
-  if (controller != null) {
-    controller.open(
-      id,
-      (_) => CalendarContent(
-        initial: initial,
-        firstDate: firstDate,
-        lastDate: lastDate,
-        onSelected: (d) {
-          // Close first — onSelected may open the next field's drawer, and
-          // that must win over this stale close().
-          controller.close();
-          onSelected(d);
-        },
-        onClose: controller.close,
-      ),
-    );
-  } else {
-    CalendarPickerSheet.show(
-      context,
+  controller?.open(
+    id,
+    (_) => CalendarContent(
       initial: initial,
       firstDate: firstDate,
       lastDate: lastDate,
-    ).then((picked) {
-      if (picked != null) onSelected(picked);
-    });
-  }
+      onSelected: (d) {
+        // Close first — onSelected may open the next field's drawer, and
+        // that must win over this stale close().
+        controller.close();
+        onSelected(d);
+      },
+      onClose: controller.close,
+    ),
+  );
 }
 
 

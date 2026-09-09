@@ -17,6 +17,7 @@ import 'package:oewang/data/repositories/wallet_groups_repository.dart';
 import 'package:oewang/data/repositories/wallets_repository.dart';
 import 'package:oewang/data/repositories/workspaces_repository.dart';
 import 'package:oewang/data/repositories_remote/auth_repository_remote.dart';
+import 'package:oewang/data/repositories_remote/budgets_repository_offline.dart';
 import 'package:oewang/data/repositories_remote/budgets_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/categories_repository_offline.dart';
 import 'package:oewang/data/repositories_remote/categories_repository_remote.dart';
@@ -37,6 +38,7 @@ import 'package:oewang/data/repositories_remote/workspaces_repository_remote.dar
 import 'package:oewang/data/services/api/api_client.dart';
 import 'package:oewang/data/services/connectivity/connectivity_service.dart';
 import 'package:oewang/data/services/db/app_database.dart';
+import 'package:oewang/data/services/notifications/notifications_service.dart';
 import 'package:oewang/data/services/storage/preferences_service.dart';
 import 'package:oewang/data/services/storage/secure_storage_service.dart';
 import 'package:oewang/data/services/sync/sync_service.dart';
@@ -92,6 +94,10 @@ final syncServiceProvider = Provider<SyncService>((ref) {
   );
 });
 
+final notificationsServiceProvider = Provider<NotificationsService>((ref) {
+  return NotificationsService()..init();
+});
+
 /// Kept alive for the app's lifetime by [OewangApp] watching it once at the
 /// root — see app.dart. Subscribes to connectivity + app-resume and flushes
 /// the offline sync queue on both.
@@ -115,13 +121,20 @@ String _currentWorkspaceId(Ref ref) =>
 final pendingSyncCountProvider = StreamProvider<int>((ref) {
   final db = ref.watch(appDatabaseProvider);
   // watch (not read) — switching workspaces should rebuild this stream.
-  final ws = ref.watch(sessionControllerProvider).valueOrNull?.workspaceId ?? '';
+  final ws =
+      ref.watch(sessionControllerProvider).valueOrNull?.workspaceId ?? '';
   return Rx.combineLatest3<int, int, int, int>(
     db.watchPendingTransactionsCount(ws),
     db.watchPendingWalletsCount(ws),
     db.watchPendingDebtsCount(ws),
     (a, b, c) => a + b + c,
   );
+});
+
+final syncIssuesProvider = StreamProvider<List<(String, String)>>((ref) {
+  final ws =
+      ref.watch(sessionControllerProvider).valueOrNull?.workspaceId ?? '';
+  return ref.watch(appDatabaseProvider).watchSyncIssues(ws);
 });
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
@@ -178,11 +191,18 @@ final categoriesRepositoryProvider = Provider<CategoriesRepository>((ref) {
 });
 
 final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
-  return SettingsRepositoryRemote(ref.watch(apiClientProvider));
+  return SettingsRepositoryRemote(
+    ref.watch(apiClientProvider),
+    ref.watch(preferencesServiceProvider),
+  );
 });
 
 final budgetsRepositoryProvider = Provider<BudgetsRepository>((ref) {
-  return BudgetsRepositoryRemote(ref.watch(apiClientProvider));
+  return BudgetsRepositoryOffline(
+    remote: BudgetsRepositoryRemote(ref.watch(apiClientProvider)),
+    db: ref.watch(appDatabaseProvider),
+    workspaceId: () => _currentWorkspaceId(ref),
+  );
 });
 
 /// Bumped after a budget is created/edited/deleted so the Budget screen reloads.

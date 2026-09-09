@@ -5,7 +5,6 @@ import 'package:drift/drift.dart';
 import 'package:oewang/core/result/app_error.dart';
 import 'package:oewang/core/result/result.dart';
 import 'package:oewang/data/repositories/debts_repository.dart';
-import 'package:oewang/data/repositories_remote/debts_repository_remote.dart';
 import 'package:oewang/data/services/connectivity/connectivity_service.dart';
 import 'package:oewang/data/services/db/app_database.dart';
 import 'package:oewang/data/services/sync/sync_service.dart';
@@ -17,7 +16,7 @@ import 'package:oewang/domain/models/money.dart';
 /// connectivity — out of v1's offline-write scope (create/update only).
 class DebtsRepositoryOffline implements DebtsRepository {
   DebtsRepositoryOffline({
-    required DebtsRepositoryRemote remote,
+    required DebtsRepository remote,
     required AppDatabase db,
     required ConnectivityService connectivity,
     required SyncService sync,
@@ -28,7 +27,7 @@ class DebtsRepositoryOffline implements DebtsRepository {
        _sync = sync,
        _workspaceId = workspaceId;
 
-  final DebtsRepositoryRemote _remote;
+  final DebtsRepository _remote;
   final AppDatabase _db;
   final ConnectivityService _connectivity;
   final SyncService _sync;
@@ -37,15 +36,20 @@ class DebtsRepositoryOffline implements DebtsRepository {
   @override
   Future<Result<List<Debt>, AppError>> list({String? search}) async {
     final ws = _workspaceId();
+    if (ws.isEmpty) return const Failure(UnauthorizedError());
+    final cachedBase = await _readCachedDebts(ws, pendingOnly: false);
     final remoteResult = await _remote.list(search: search);
+    if (ws != _workspaceId()) return const Failure(UnauthorizedError());
     List<Debt> base;
     if (remoteResult case Success<List<Debt>, AppError>(value: final ok)) {
-      await _cacheRemoteDebts(ws, ok);
+      await _cacheRemoteDebts(ws, ok, search);
       base = ok;
+    } else if (cachedBase.isNotEmpty) {
+      base = cachedBase;
     } else if (remoteResult case Failure<List<Debt>, AppError>(
       error: NetworkError(),
     )) {
-      base = await _readCachedDebts(ws, pendingOnly: false);
+      base = cachedBase;
     } else {
       return remoteResult;
     }
@@ -58,7 +62,9 @@ class DebtsRepositoryOffline implements DebtsRepository {
     var result = byId.values.toList();
     if (search != null && search.isNotEmpty) {
       final q = search.toLowerCase();
-      result = result.where((d) => d.contactName.toLowerCase().contains(q)).toList();
+      result = result
+          .where((d) => d.contactName.toLowerCase().contains(q))
+          .toList();
     }
     return Success(result);
   }
@@ -72,6 +78,7 @@ class DebtsRepositoryOffline implements DebtsRepository {
     DateTime? dueDate,
   }) async {
     final ws = _workspaceId();
+    if (ws.isEmpty) return const Failure(UnauthorizedError());
     final contactName = await _lookupContactName(contactId);
     await _db
         .into(_db.cachedDebts)
@@ -101,9 +108,11 @@ class DebtsRepositoryOffline implements DebtsRepository {
     String? description,
     DateTime? dueDate,
   }) async {
-    final existing = await (_db.select(
-      _db.cachedDebts,
-    )..where((t) => t.id.equals(id))).getSingleOrNull();
+    final existing =
+        await (_db.select(_db.cachedDebts)..where(
+              (t) => t.id.equals(id) & t.workspaceId.equals(_workspaceId()),
+            ))
+            .getSingleOrNull();
     if (existing == null) {
       // Not cached locally (e.g. never listed while online) — nothing to
       // optimistically edit; require connectivity for this one.
@@ -120,19 +129,33 @@ class DebtsRepositoryOffline implements DebtsRepository {
     final keepCreate = existing.pendingOp == kPendingOpCreate;
 
     await (_db.update(
-      _db.cachedDebts,
-    )..where((t) => t.id.equals(id))).write(
-      CachedDebtsCompanion(
-        amount: Value(newAmount),
-        remainingAmount: Value(existing.remainingAmount + amountDiff),
-        description: description != null
-            ? Value(description)
-            : const Value.absent(),
-        dueDate: dueDate != null ? Value(dueDate) : const Value.absent(),
-        pendingOp: Value(keepCreate ? kPendingOpCreate : kPendingOpUpdate),
-        dirtySince: Value(DateTime.now()),
-      ),
-    );
+          _db.cachedDebts,
+        )..where((t) => t.id.equals(id) & t.workspaceId.equals(_workspaceId())))
+        .write(
+          CachedDebtsCompanion(
+            amount: Value(newAmount),
+            remainingAmount: Value(
+              (existing.remainingAmount + amountDiff).clamp(0, double.infinity),
+            ),
+            status: Value(
+              existing.remainingAmount + amountDiff <= 0
+                  ? 'paid'
+                  : existing.remainingAmount + amountDiff < newAmount
+                  ? 'partial'
+                  : 'unpaid',
+            ),
+            description: description != null
+                ? Value(description)
+                : const Value.absent(),
+            dueDate: dueDate != null ? Value(dueDate) : const Value.absent(),
+            pendingOp: Value(keepCreate ? kPendingOpCreate : kPendingOpUpdate),
+            revision: Value(existing.revision + 1),
+            syncError: const Value(null),
+            attemptCount: const Value(0),
+            lastAttemptAt: const Value(null),
+            dirtySince: Value(DateTime.now()),
+          ),
+        );
     _maybeFlush();
     return const Success(null);
   }
@@ -149,42 +172,56 @@ class DebtsRepositoryOffline implements DebtsRepository {
   }) => _remote.pay(id: id, amount: amount, walletId: walletId);
 
   Future<String?> _lookupContactName(String contactId) async {
-    final row = await (_db.select(
-      _db.cachedContacts,
-    )..where((t) => t.id.equals(contactId))).getSingleOrNull();
+    final row =
+        await (_db.select(_db.cachedContacts)..where(
+              (t) =>
+                  t.id.equals(contactId) & t.workspaceId.equals(_workspaceId()),
+            ))
+            .getSingleOrNull();
     return row?.name;
   }
 
-  Future<void> _cacheRemoteDebts(String ws, List<Debt> debts) async {
-    if (debts.isEmpty) return;
-    final pendingIds = await (_db.select(_db.cachedDebts)..where(
-          (t) => t.workspaceId.equals(ws) & t.pendingOp.isNotNull(),
-        ))
-        .map((r) => r.id)
-        .get();
-    final pendingIdSet = pendingIds.toSet();
-
-    await _db.batch((b) {
-      for (final d in debts) {
-        if (pendingIdSet.contains(d.id)) continue;
-        b.insert(
+  Future<void> _cacheRemoteDebts(
+    String ws,
+    List<Debt> debts,
+    String? search,
+  ) async {
+    await _db.transaction(() async {
+      if ((search == null || search.isEmpty) && debts.length < 100) {
+        await (_db.delete(
           _db.cachedDebts,
-          CachedDebtsCompanion.insert(
-            id: d.id,
-            workspaceId: ws,
-            contactId: d.contactId,
-            contactName: Value(d.contactName),
-            type: d.type.wire,
-            amount: d.amount.amount.toDouble(),
-            remainingAmount: d.remainingAmount.amount.toDouble(),
-            currency: Value(d.amount.currency),
-            status: Value(_statusWire(d.status)),
-            description: Value(d.description),
-            dueDate: Value(d.dueDate),
-          ),
-          mode: InsertMode.insertOrReplace,
-        );
+        )..where((t) => t.workspaceId.equals(ws) & t.pendingOp.isNull())).go();
       }
+      final pendingIds =
+          await (_db.select(_db.cachedDebts)..where(
+                (t) => t.workspaceId.equals(ws) & t.pendingOp.isNotNull(),
+              ))
+              .map((r) => r.id)
+              .get();
+      final pendingIdSet = pendingIds.toSet();
+
+      await _db.batch((b) {
+        for (final d in debts) {
+          if (pendingIdSet.contains(d.id)) continue;
+          b.insert(
+            _db.cachedDebts,
+            CachedDebtsCompanion.insert(
+              id: d.id,
+              workspaceId: ws,
+              contactId: d.contactId,
+              contactName: Value(d.contactName),
+              type: d.type.wire,
+              amount: d.amount.amount.toDouble(),
+              remainingAmount: d.remainingAmount.amount.toDouble(),
+              currency: Value(d.amount.currency),
+              status: Value(_statusWire(d.status)),
+              description: Value(d.description),
+              dueDate: Value(d.dueDate),
+            ),
+            mode: InsertMode.insertOrReplace,
+          );
+        }
+      });
     });
   }
 
@@ -196,7 +233,9 @@ class DebtsRepositoryOffline implements DebtsRepository {
         await (_db.select(_db.cachedDebts)..where(
               (t) =>
                   t.workspaceId.equals(ws) &
-                  (pendingOnly ? t.pendingOp.isNotNull() : const Constant(true)),
+                  (pendingOnly
+                      ? t.pendingOp.isNotNull()
+                      : const Constant(true)),
             ))
             .get();
     return rows

@@ -16,8 +16,9 @@ class _GroupsRevision extends Notifier<int> {
   void bump() => state = state + 1;
 }
 
-final _groupsRevisionProvider =
-    NotifierProvider<_GroupsRevision, int>(_GroupsRevision.new);
+final _groupsRevisionProvider = NotifierProvider<_GroupsRevision, int>(
+  _GroupsRevision.new,
+);
 
 final _groupsProvider = FutureProvider.autoDispose<List<WalletGroup>>((
   ref,
@@ -67,9 +68,8 @@ class _AccountGroupScreenState extends ConsumerState<AccountGroupScreen> {
 
   Future<void> _reorder(int oldIndex, int newIndex) async {
     setState(() {
-      final target = newIndex > oldIndex ? newIndex - 1 : newIndex;
       final moved = _items.removeAt(oldIndex);
-      _items.insert(target, moved);
+      _items.insert(newIndex, moved);
     });
     final res = await ref
         .read(walletGroupsRepositoryProvider)
@@ -81,8 +81,8 @@ class _AccountGroupScreenState extends ConsumerState<AccountGroupScreen> {
     });
   }
 
-  void _snack(String msg) => ScaffoldMessenger.of(context)
-      .showSnackBar(SnackBar(content: Text(msg)));
+  void _snack(String msg) =>
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
 
   @override
   Widget build(BuildContext context) {

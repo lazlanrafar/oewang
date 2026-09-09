@@ -292,6 +292,7 @@ export abstract class WalletsRepository {
         ),
       )
       .returning();
-    return wallet ?? null;
+    if (!wallet) throw new Error("Wallet not found in workspace");
+    return wallet;
   }
 }

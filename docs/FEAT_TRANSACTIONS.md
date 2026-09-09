@@ -156,6 +156,14 @@ Every mutation calls `AuditLogsService.log()`. Every mutation triggers `Notifica
 
 ---
 
+### Native offline sync (2026-09-09)
+
+The native app supplies CUID2 IDs for create/retry; web callers may still omit them. `/transactions/bulk` takes string amounts and returns confirmed transaction IDs. Replays return existing live rows only within the authenticated workspace; a conflicting unavailable/deleted/foreign ID rejects the batch.
+
+Single creates and updates now keep the transaction row, wallet balance deltas, attachments, and audit entry in one database transaction. Updates lock the transaction row before reading the old balance effects. Bulk audit inserts share the bulk database transaction, and realtime/cache notifications occur after commit. Missing or deleted wallets cause balance writes to fail and roll back instead of silently losing a delta. The update DTO accepts explicit null for category and destination wallet so offline edits can clear them.
+
+Native sync creates wallets first, batches up to 50 transactions, and retains edits made while a request is in flight using local revisions. See [mobile verification](./MOBILE/OFFLINE_SYNC_VERIFICATION.md).
+
 ## Source Files
 
 | Layer      | File                                                                  |

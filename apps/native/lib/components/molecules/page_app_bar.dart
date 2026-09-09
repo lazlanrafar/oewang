@@ -29,9 +29,19 @@ class PageAppBar extends StatelessWidget implements PreferredSizeWidget {
     return AppBar(
       surfaceTintColor: Colors.transparent,
       leading: IconButton(
+        tooltip: backLabel,
         icon: Row(
           mainAxisSize: MainAxisSize.min,
-          children: [const Icon(Icons.chevron_left), Text(backLabel)],
+          children: [
+            const Icon(Icons.chevron_left),
+            Flexible(
+              child: Text(
+                backLabel,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
         ),
         onPressed: () => Navigator.of(context).maybePop(),
       ),

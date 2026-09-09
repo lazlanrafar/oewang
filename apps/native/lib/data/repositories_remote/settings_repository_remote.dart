@@ -6,21 +6,28 @@ import 'package:oewang/data/dto/transaction_settings_dto.dart';
 import 'package:oewang/data/repositories/settings_repository.dart';
 import 'package:oewang/data/repositories_remote/dio_error_mapper.dart';
 import 'package:oewang/data/services/api/api_client.dart';
+import 'package:oewang/data/services/storage/preferences_service.dart';
 import 'package:oewang/domain/models/transaction_settings.dart';
 
 class SettingsRepositoryRemote implements SettingsRepository {
-  SettingsRepositoryRemote(this._api);
+  SettingsRepositoryRemote(this._api, this._prefs);
   final ApiClient _api;
+  final PreferencesService _prefs;
 
   @override
   Future<Result<TransactionSettings, AppError>>
   fetchTransactionSettings() async {
+    final cached = _prefs.readTransactionSettings();
     try {
       final res = await _api.get('/settings/transaction');
-      return Success(_parse(res.data));
+      final domain = _parse(res.data);
+      await _prefs.writeTransactionSettings(domain);
+      return Success(domain);
     } on DioException catch (e) {
+      if (cached != null) return Success(cached);
       return Failure(mapDioError(e));
     } on Exception {
+      if (cached != null) return Success(cached);
       return const Failure(UnknownError());
     }
   }
@@ -31,7 +38,9 @@ class SettingsRepositoryRemote implements SettingsRepository {
   ) async {
     try {
       final res = await _api.patch('/settings/transaction', data: changes);
-      return Success(_parse(res.data));
+      final domain = _parse(res.data);
+      await _prefs.writeTransactionSettings(domain);
+      return Success(domain);
     } on DioException catch (e) {
       return Failure(mapDioError(e));
     } on Exception {

@@ -80,6 +80,21 @@ class TransactionSettings extends Equatable {
     inputOrder: inputOrder ?? this.inputOrder,
   );
 
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'monthlyStartDate': monthlyStartDate,
+        'monthlyStartDateWeekendHandling': monthlyStartDateWeekendHandling,
+        'weeklyStartDay': weeklyStartDay,
+        'carryOver': carryOver,
+        'period': period,
+        'incomeExpensesColor': incomeExpensesColor.settingValue,
+        'autocomplete': autocomplete,
+        'timeInput': timeInput,
+        'startScreen': startScreen,
+        'swipeAction': swipeAction,
+        'showDescription': showDescription,
+        'inputOrder': inputOrder,
+      };
+
   @override
   List<Object?> get props => [
     monthlyStartDate,

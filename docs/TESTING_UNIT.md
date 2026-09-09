@@ -12,7 +12,7 @@ This guide covers `apps/api`'s Bun/TypeScript unit tests. `apps/ai` (Python) has
 
 All backend tests use **Bun's built-in test runner** (`bun:test`). Tests are fast, require no database, and run in ~134ms.
 
-**Current baseline: 346 unit tests across 18 test files (rows below) — all must pass before merging.** (Quick-recall aggregation and the web-chat money path moved to the Python sidecar `apps/ai`; covered by its `pytest` suite. `ai/ai.utils.test.ts` was removed — the functions it covered were dead TS code, superseded by the Python port in `apps/ai/app/modules/chatbot/draft.py`. `integrations/telegram-webhook-draft.test.ts`, `integrations/ai-sidecar.test.ts`, and `integrations/integrations.service.test.ts` were removed — `IntegrationsService.handleTelegramWebhook` and `chatViaSidecarStream` were deleted from apps/api; the whole Telegram webhook state machine, including the receipt-draft flow and fake-streaming chat, was ported to Go in `apps/worker/internal/tasks/webhook_telegram.go` and is covered by its own Go test suite instead.)
+**Verified API module run (2026-09-09): 372 passing tests across 21 files, including a subprocess wrapper that runs 7 additional isolated service cases.** The historical feature inventory below is partial. (Quick-recall aggregation and the web-chat money path moved to the Python sidecar `apps/ai`; covered by its `pytest` suite. `ai/ai.utils.test.ts` was removed — the functions it covered were dead TS code, superseded by the Python port in `apps/ai/app/modules/chatbot/draft.py`. `integrations/telegram-webhook-draft.test.ts`, `integrations/ai-sidecar.test.ts`, and `integrations/integrations.service.test.ts` were removed — `IntegrationsService.handleTelegramWebhook` and `chatViaSidecarStream` were deleted from apps/api; the whole Telegram webhook state machine, including the receipt-draft flow and fake-streaming chat, was ported to Go in `apps/worker/internal/tasks/webhook_telegram.go` and is covered by its own Go test suite instead.)
 
 ```bash
 # From repo root
@@ -82,7 +82,9 @@ apps/api/modules/{feature}/
 | `lib`          | `lib/at-rest-crypto.test.ts`               | 2       | At-rest encryption round-trip with the data key; legacy decrypt fallback to the transport key                                                              |
 | `plugins`      | `plugins/rate-limit.test.ts`               | 3       | Scoped hook propagates to parent routes; per-tier bucket isolation (unauth burst can't exhaust the auth bucket); 429 when the auth bucket is exhausted     |
 | `worker`       | `worker/worker-client.test.ts`             | 2       | `enqueueTransactionsImport` posts job_id/workspace_id/user_id/data/mime_type with the shared x-api-key header; throws on a non-OK enqueue response          |
-| **TOTAL**      | **18 files**                               | **346** | **All core business logic (some apps/api test files exist outside this table — see repo for the full count)**                                                                                                                                |
+| `transactions` | `transactions/__tests__/offline-sync.repository.test.ts` | 7 | Client IDs, default-ID delegation, workspace/soft-delete replay scope, rejected unavailable IDs, missing-wallet balance writes |
+| `transactions` | `transactions/__tests__/offline-sync.service.test.ts` | 1 wrapper | Runs `apps/api/test/unit/offline-sync.service.test.ts` in a fresh Bun process; 7 cases for debt/wallet replay, transaction atomic-write contract, bulk delta/audit behavior, and update row locking |
+| **TOTAL**      | **20 inventoried files**                    | **354 + 7 isolated cases** | **All core business logic (some apps/api test files exist outside this table — see repo for the full count)**                                                                                                                                |
 
 ---
 
@@ -435,3 +437,13 @@ No live Postgres/Redis/Telegram/apps/ai connection is needed — DB-touching han
 | `internal/cuid` | ~80% | `New()` output format (`@paralleldrive/cuid2`-compatible) and uniqueness |
 | `internal/db` | ~91% | `NewPool()`: invalid-DSN parse error, valid-DSN pool creation with configured `MaxConns` (pgxpool connects lazily — no live Postgres needed) |
 | `cmd/worker` | 0% (untested) | Pure wiring/bootstrap (config → pool → asynq server → HTTP server) — no branchy logic to extract |
+
+
+## Native offline regression tests
+
+The native suite uses real in-memory SQLite plus repository/API fakes, and a file-backed v1 → v2 migration test. The current verified inventory and commands are in [MOBILE/OFFLINE_SYNC_VERIFICATION.md](./MOBILE/OFFLINE_SYNC_VERIFICATION.md). These tests do not connect to production databases, payment gateways, or model providers.
+
+The API service contract suite runs in a subprocess because existing module tests globally replace services with partial `mock.module` exports. This isolation prevents those mocks from replacing the services under test. The repository suite tests query scope and return behavior; it is not a real-Postgres integration test.
+
+
+Native follow-up verification: **132 unit/widget tests pass**, plus **1 iOS simulator integration test** with real SQLite/secure storage/encrypted loopback HTTP. `widget/catalog_reorder_test.dart` adds two cases for category/group index handling. The simulator fixture and its limits are documented in [OFFLINE_SYNC_VERIFICATION.md](./MOBILE/OFFLINE_SYNC_VERIFICATION.md).

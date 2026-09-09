@@ -9,6 +9,7 @@ class OewangApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(syncTriggerProvider);
     final scheme = ref.watch(transactionColorSchemeProvider);
     final mode = ref.watch(themeModeProvider);
     return MaterialApp.router(

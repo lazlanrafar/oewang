@@ -5,7 +5,6 @@ import 'package:drift/drift.dart';
 import 'package:oewang/core/result/app_error.dart';
 import 'package:oewang/core/result/result.dart';
 import 'package:oewang/data/repositories/transactions_repository.dart';
-import 'package:oewang/data/repositories_remote/transactions_repository_remote.dart';
 import 'package:oewang/data/services/connectivity/connectivity_service.dart';
 import 'package:oewang/data/services/db/app_database.dart';
 import 'package:oewang/data/services/sync/sync_service.dart';
@@ -20,7 +19,7 @@ import 'package:oewang/domain/models/transaction.dart';
 /// not) — see docs/MOBILE plan for the full design.
 class TransactionsRepositoryOffline implements TransactionsRepository {
   TransactionsRepositoryOffline({
-    required TransactionsRepositoryRemote remote,
+    required TransactionsRepository remote,
     required AppDatabase db,
     required ConnectivityService connectivity,
     required SyncService sync,
@@ -31,7 +30,7 @@ class TransactionsRepositoryOffline implements TransactionsRepository {
        _sync = sync,
        _workspaceId = workspaceId;
 
-  final TransactionsRepositoryRemote _remote;
+  final TransactionsRepository _remote;
   final AppDatabase _db;
   final ConnectivityService _connectivity;
   final SyncService _sync;
@@ -42,23 +41,36 @@ class TransactionsRepositoryOffline implements TransactionsRepository {
     TransactionsListQuery query,
   ) async {
     final ws = _workspaceId();
+    if (ws.isEmpty) return const Failure(UnauthorizedError());
+
     final remoteResult = await _remote.list(query);
+    if (ws != _workspaceId()) return const Failure(UnauthorizedError());
+
     List<Transaction> base;
     if (remoteResult case Success<List<Transaction>, AppError>(
       value: final ok,
     )) {
-      await _cacheRemoteTransactions(ws, ok);
+      await _cacheRemoteTransactions(ws, ok, query);
       base = ok;
     } else if (remoteResult case Failure<List<Transaction>, AppError>(
       error: NetworkError(),
     )) {
       base = await _readCachedTransactions(ws, query);
     } else {
-      return remoteResult; // non-network failure — surface as-is
+      return remoteResult; // non-network failure (e.g. 401 Unauthorized) — surface as-is
     }
 
-    final pending = await _readPendingTransactions(ws, query);
-    final merged = _mergeById(base, pending)
+    // Remove every locally dirty row from the server snapshot BEFORE applying
+    // filters: an edit may have moved a transaction outside this date/type view.
+    final dirtyIds =
+        await (_db.select(
+              _db.cachedTransactions,
+            )..where((t) => t.workspaceId.equals(ws) & t.pendingOp.isNotNull()))
+            .map((r) => r.id)
+            .get();
+    base = base.where((t) => !dirtyIds.contains(t.id)).toList();
+    final freshPending = await _readPendingTransactions(ws, query);
+    final merged = _mergeById(base, freshPending)
       ..sort((a, b) => b.date.compareTo(a.date));
     return Success(merged);
   }
@@ -68,6 +80,7 @@ class TransactionsRepositoryOffline implements TransactionsRepository {
     NewTransactionDraft draft,
   ) async {
     final ws = _workspaceId();
+    if (ws.isEmpty) return const Failure(UnauthorizedError());
     final id = cuid();
     final walletName = await _lookupWalletName(draft.walletId);
     final toWalletName = draft.toWalletId != null
@@ -118,9 +131,12 @@ class TransactionsRepositoryOffline implements TransactionsRepository {
     NewTransactionDraft draft,
   ) async {
     final ws = _workspaceId();
-    final existing = await (_db.select(
-      _db.cachedTransactions,
-    )..where((t) => t.id.equals(id))).getSingleOrNull();
+    if (ws.isEmpty) return const Failure(UnauthorizedError());
+    final existing =
+        await (_db.select(_db.cachedTransactions)..where(
+              (t) => t.id.equals(id) & t.workspaceId.equals(_workspaceId()),
+            ))
+            .getSingleOrNull();
     final walletName = await _lookupWalletName(draft.walletId);
     final toWalletName = draft.toWalletId != null
         ? await _lookupWalletName(draft.toWalletId!)
@@ -130,7 +146,8 @@ class TransactionsRepositoryOffline implements TransactionsRepository {
         : null;
     // A never-synced local create stays `create` — the sync flush hasn't
     // seen it yet, so there's nothing to PUT an update against.
-    final keepCreate = existing?.pendingOp == kPendingOpCreate;
+    if (existing == null) return _remote.update(id, draft);
+    final keepCreate = existing.pendingOp == kPendingOpCreate;
 
     await _db
         .into(_db.cachedTransactions)
@@ -150,6 +167,10 @@ class TransactionsRepositoryOffline implements TransactionsRepository {
             name: Value(draft.note),
             description: Value(draft.description),
             pendingOp: Value(keepCreate ? kPendingOpCreate : kPendingOpUpdate),
+            revision: Value(existing.revision + 1),
+            syncError: const Value(null),
+            attemptCount: const Value(0),
+            lastAttemptAt: const Value(null),
             dirtySince: Value(DateTime.now()),
           ),
         );
@@ -195,57 +216,82 @@ class TransactionsRepositoryOffline implements TransactionsRepository {
   );
 
   Future<String?> _lookupWalletName(String walletId) async {
-    final row = await (_db.select(
-      _db.cachedWallets,
-    )..where((t) => t.id.equals(walletId))).getSingleOrNull();
+    final row =
+        await (_db.select(_db.cachedWallets)..where(
+              (t) =>
+                  t.id.equals(walletId) & t.workspaceId.equals(_workspaceId()),
+            ))
+            .getSingleOrNull();
     return row?.name;
   }
 
   Future<String?> _lookupCategoryName(String categoryId) async {
-    final row = await (_db.select(
-      _db.cachedCategories,
-    )..where((t) => t.id.equals(categoryId))).getSingleOrNull();
+    final row =
+        await (_db.select(_db.cachedCategories)..where(
+              (t) =>
+                  t.id.equals(categoryId) &
+                  t.workspaceId.equals(_workspaceId()),
+            ))
+            .getSingleOrNull();
     return row?.name;
   }
 
   Future<void> _cacheRemoteTransactions(
     String ws,
     List<Transaction> txs,
+    TransactionsListQuery query,
   ) async {
-    if (txs.isEmpty) return;
     // Never clobber a row that's still mid-sync — the local edit is newer
     // than whatever the server just returned for it.
-    final pendingIds = await (_db.select(_db.cachedTransactions)..where(
-          (t) => t.workspaceId.equals(ws) & t.pendingOp.isNotNull(),
-        ))
-        .map((r) => r.id)
-        .get();
-    final pendingIdSet = pendingIds.toSet();
-
-    await _db.batch((b) {
-      for (final t in txs) {
-        if (pendingIdSet.contains(t.id)) continue;
-        b.insert(
-          _db.cachedTransactions,
-          CachedTransactionsCompanion.insert(
-            id: t.id,
-            workspaceId: ws,
-            type: t.type.wire,
-            amount: t.amount.amount.toDouble(),
-            currency: Value(t.amount.currency),
-            date: t.date,
-            walletId: t.walletId,
-            walletName: Value(t.wallet?.name),
-            toWalletId: Value(t.toWalletId),
-            toWalletName: Value(t.toWallet?.name),
-            categoryId: Value(t.categoryId),
-            categoryName: Value(t.category?.name),
-            name: Value(t.name),
-            description: Value(t.description),
-          ),
-          mode: InsertMode.insertOrReplace,
-        );
+    await _db.transaction(() async {
+      // Only reconcile a complete result window; a paginated response is not
+      // evidence that records on another page were deleted.
+      if (query.page == 1 && txs.length < query.limit) {
+        await (_db.delete(_db.cachedTransactions)..where(
+              (t) =>
+                  t.workspaceId.equals(ws) &
+                  t.pendingOp.isNull() &
+                  t.date.isBiggerOrEqualValue(query.from) &
+                  t.date.isSmallerOrEqualValue(query.to) &
+                  (query.type == null
+                      ? const Constant(true)
+                      : t.type.equals(query.type!.wire)),
+            ))
+            .go();
       }
+      final pendingIds =
+          await (_db.select(_db.cachedTransactions)..where(
+                (t) => t.workspaceId.equals(ws) & t.pendingOp.isNotNull(),
+              ))
+              .map((r) => r.id)
+              .get();
+      final pendingIdSet = pendingIds.toSet();
+
+      await _db.batch((b) {
+        for (final t in txs) {
+          if (pendingIdSet.contains(t.id)) continue;
+          b.insert(
+            _db.cachedTransactions,
+            CachedTransactionsCompanion.insert(
+              id: t.id,
+              workspaceId: ws,
+              type: t.type.wire,
+              amount: t.amount.amount.toDouble(),
+              currency: Value(t.amount.currency),
+              date: t.date,
+              walletId: t.walletId,
+              walletName: Value(t.wallet?.name),
+              toWalletId: Value(t.toWalletId),
+              toWalletName: Value(t.toWallet?.name),
+              categoryId: Value(t.categoryId),
+              categoryName: Value(t.category?.name),
+              name: Value(t.name),
+              description: Value(t.description),
+            ),
+            mode: InsertMode.insertOrReplace,
+          );
+        }
+      });
     });
   }
 
@@ -253,16 +299,17 @@ class TransactionsRepositoryOffline implements TransactionsRepository {
     String ws,
     TransactionsListQuery query,
   ) async {
-    final rows = await (_db.select(_db.cachedTransactions)..where(
-          (t) =>
-              t.workspaceId.equals(ws) &
-              t.date.isBiggerOrEqualValue(query.from) &
-              t.date.isSmallerOrEqualValue(query.to) &
-              (query.type == null
-                  ? const Constant(true)
-                  : t.type.equals(query.type!.wire)),
-        ))
-        .get();
+    final rows =
+        await (_db.select(_db.cachedTransactions)..where(
+              (t) =>
+                  t.workspaceId.equals(ws) &
+                  t.date.isBiggerOrEqualValue(query.from) &
+                  t.date.isSmallerOrEqualValue(query.to) &
+                  (query.type == null
+                      ? const Constant(true)
+                      : t.type.equals(query.type!.wire)),
+            ))
+            .get();
     return rows.map(_rowToTransaction).toList();
   }
 
@@ -270,17 +317,18 @@ class TransactionsRepositoryOffline implements TransactionsRepository {
     String ws,
     TransactionsListQuery query,
   ) async {
-    final rows = await (_db.select(_db.cachedTransactions)..where(
-          (t) =>
-              t.workspaceId.equals(ws) &
-              t.pendingOp.isNotNull() &
-              t.date.isBiggerOrEqualValue(query.from) &
-              t.date.isSmallerOrEqualValue(query.to) &
-              (query.type == null
-                  ? const Constant(true)
-                  : t.type.equals(query.type!.wire)),
-        ))
-        .get();
+    final rows =
+        await (_db.select(_db.cachedTransactions)..where(
+              (t) =>
+                  t.workspaceId.equals(ws) &
+                  t.pendingOp.isNotNull() &
+                  t.date.isBiggerOrEqualValue(query.from) &
+                  t.date.isSmallerOrEqualValue(query.to) &
+                  (query.type == null
+                      ? const Constant(true)
+                      : t.type.equals(query.type!.wire)),
+            ))
+            .get();
     return rows.map(_rowToTransaction).toList();
   }
 
@@ -315,6 +363,18 @@ class TransactionsRepositoryOffline implements TransactionsRepository {
         ? NamedRef(id: row.categoryId!, name: row.categoryName!)
         : null,
   );
+
+  @override
+  Future<Result<void, AppError>> delete(String id) async {
+    final ws = _workspaceId();
+    if (ws.isEmpty) return const Failure(UnauthorizedError());
+
+    await (_db.delete(_db.cachedTransactions)..where(
+      (t) => t.id.equals(id) & t.workspaceId.equals(ws),
+    )).go();
+
+    return _remote.delete(id);
+  }
 
   void _maybeFlush() {
     unawaited(

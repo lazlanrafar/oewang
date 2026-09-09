@@ -94,6 +94,10 @@ This check is non-blocking (does not fail the transaction creation if the budget
 
 ---
 
+### Native offline status cache (2026-09-09)
+
+`BudgetsRepositoryOffline` stores each successful monthly status response in `CachedBudgetSnapshots`, keyed by workspace/month/year. Network failures return that month's cached status; authentication/server errors remain errors. Budget mutations remain online-only. The snapshot reflects the last server read, not a recalculation from unsynced local transactions.
+
 ## Source Files
 
 | Layer      | File                                             |

@@ -163,17 +163,14 @@ export function NotificationList({ dictionary }: { dictionary: Dictionary }) {
                   "group relative flex cursor-pointer gap-4 p-4 transition-colors hover:bg-accent/50",
                   !notification.is_read && "bg-accent/20",
                 )}
-                onClick={() => handleNotificationClick(notification)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    handleNotificationClick(notification);
-                  }
-                }}
-                role="button"
-                tabIndex={0}
               >
-                <div className="relative flex-none">
+                <button
+                  type="button"
+                  className="absolute inset-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring"
+                  aria-label={notification.title}
+                  onClick={() => handleNotificationClick(notification)}
+                />
+                <div className="pointer-events-none relative flex-none">
                   <div className="flex size-10 items-center justify-center border bg-background">
                     {getIcon(notification.type)}
                   </div>
@@ -182,7 +179,7 @@ export function NotificationList({ dictionary }: { dictionary: Dictionary }) {
                   )}
                 </div>
 
-                <div className="min-w-0 flex-1 space-y-1">
+                <div className="pointer-events-none min-w-0 flex-1 space-y-1">
                   <div className="flex items-start justify-between gap-2">
                     <span
                       className={cn("truncate text-xs leading-none", !notification.is_read ? "font-bold" : "font-medium")}
@@ -197,7 +194,7 @@ export function NotificationList({ dictionary }: { dictionary: Dictionary }) {
                   </div>
                   <p className="line-clamp-2 text-muted-foreground text-xs">{notification.message}</p>
 
-                  <div className="flex items-center gap-2 pt-1 opacity-0 transition-opacity group-hover:opacity-100">
+                  <div className="pointer-events-auto relative flex items-center gap-2 pt-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
                     {!notification.is_read && (
                       <Button
                         variant="ghost"

@@ -107,6 +107,7 @@ class TransactionFormViewModel extends ChangeNotifier {
   TransactionFormState _state = TransactionFormState.initial();
   List<Wallet> _walletOptions = const [];
   List<Category> _categoryOptions = const [];
+  List<Transaction> _transactionsHistory = const [];
   bool _loadingPickers = true;
 
   late final Command<NewTransactionDraft, Transaction> save;
@@ -116,6 +117,7 @@ class TransactionFormViewModel extends ChangeNotifier {
   List<Category> get categoryOptions => _categoryOptions
       .where((c) => _categoryMatchesType(c, _state.type))
       .toList();
+  List<Transaction> get transactionsHistory => _transactionsHistory;
   bool get loadingPickers => _loadingPickers;
   bool get canSave => _state.isValid && !save.running;
 
@@ -257,6 +259,8 @@ class TransactionFormViewModel extends ChangeNotifier {
     return _state.note.isEmpty ? feesText : '${_state.note} ($feesText)';
   }
 
+  bool _disposed = false;
+
   Future<void> _loadPickers() async {
     final walletsRes = await _wallets.list();
     walletsRes.fold((w) => _walletOptions = w, (_) => _walletOptions = const []);
@@ -266,7 +270,20 @@ class TransactionFormViewModel extends ChangeNotifier {
       (_) => _categoryOptions = const [],
     );
     _loadingPickers = false;
-    notifyListeners();
+    if (!_disposed) notifyListeners();
+
+    // Background fetch recent history for autocomplete
+    final historyRes = await _transactions.list(
+      TransactionsListQuery(
+        from: DateTime.now().subtract(const Duration(days: 90)),
+        to: DateTime.now(),
+        limit: 100,
+      ),
+    );
+    if (historyRes case Success<List<Transaction>, AppError>(value: final ok)) {
+      _transactionsHistory = ok;
+      if (!_disposed) notifyListeners();
+    }
   }
 
   bool _categoryMatchesType(Category c, TransactionType t) {
@@ -279,6 +296,7 @@ class TransactionFormViewModel extends ChangeNotifier {
 
   @override
   void dispose() {
+    _disposed = true;
     save
       ..removeListener(notifyListeners)
       ..dispose();

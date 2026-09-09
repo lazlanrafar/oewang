@@ -79,36 +79,24 @@ void openAmountDrawer(
   ValueChanged<num>? onSubmitted,
 }) {
   final controller = FormDrawerScope.maybeOf(context);
-  if (controller != null) {
-    controller.open(
-      id,
-      (_) => AmountKeypad(
-        initial: initial,
-        title: title,
-        currency: currency,
-        workspaceTabs: workspaceTabs,
-        onChanged: onChanged,
-        onCurrencyChanged: onCurrencyChanged,
-        onSubmit: (v) {
-          // Close first — onSubmitted may open the next field's drawer, and
-          // that must win over this stale close().
-          controller.close();
-          onSubmitted?.call(v);
-        },
-        onClose: controller.close,
-      ),
-    );
-  } else {
-    AmountKeypadSheet.show(
-      context,
+  controller?.open(
+    id,
+    (_) => AmountKeypad(
       initial: initial,
-      onChanged: onChanged,
       title: title,
       currency: currency,
       workspaceTabs: workspaceTabs,
+      onChanged: onChanged,
       onCurrencyChanged: onCurrencyChanged,
-    );
-  }
+      onSubmit: (v) {
+        // Close first — onSubmitted may open the next field's drawer, and
+        // that must win over this stale close().
+        controller.close();
+        onSubmitted?.call(v);
+      },
+      onClose: controller.close,
+    ),
+  );
 }
 
 

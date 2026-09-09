@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:oewang/components/organisms/transactions/transactions_daily_group_header.dart';
 import 'package:oewang/components/organisms/transactions/transactions_month_controller.dart';
 import 'package:oewang/components/organisms/transactions/transactions_row.dart';
+import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/router/app_router.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
@@ -18,9 +19,14 @@ class TransactionsDailyScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final month = ref.watch(monthControllerProvider);
-    final async = ref.watch(monthTransactionsProvider(month));
+    final async = ref.watch(monthTransactionsNotifierProvider(month));
     return async.when(
-      data: (txs) => _DailyList(items: txs),
+      data: (state) => _DailyList(
+        month: month,
+        items: state.items,
+        hasMore: state.hasMore,
+        isLoadingMore: state.isLoadingMore,
+      ),
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(
         child: Padding(
@@ -36,13 +42,60 @@ class TransactionsDailyScreen extends ConsumerWidget {
   }
 }
 
-class _DailyList extends StatelessWidget {
-  const _DailyList({required this.items});
+class _DailyList extends ConsumerStatefulWidget {
+  const _DailyList({
+    required this.month,
+    required this.items,
+    required this.hasMore,
+    required this.isLoadingMore,
+  });
+
+  final DateTime month;
   final List<Transaction> items;
+  final bool hasMore;
+  final bool isLoadingMore;
+
+  @override
+  ConsumerState<_DailyList> createState() => _DailyListState();
+}
+
+class _DailyListState extends ConsumerState<_DailyList> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController
+      ..removeListener(_onScroll)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      if (widget.hasMore && !widget.isLoadingMore) {
+        ref
+            .read(monthTransactionsNotifierProvider(widget.month).notifier)
+            .fetchNextPage();
+      }
+    }
+  }
+
+  Future<void> _delete(BuildContext context, WidgetRef ref, String id) async {
+    final repo = ref.read(transactionsRepositoryProvider);
+    await repo.delete(id);
+    ref.read(transactionsRevisionProvider.notifier).bump();
+  }
 
   @override
   Widget build(BuildContext context) {
-    if (items.isEmpty) {
+    if (widget.items.isEmpty) {
       return Center(
         child: Text(
           'No transactions this month',
@@ -51,49 +104,106 @@ class _DailyList extends StatelessWidget {
       );
     }
     final palette = context.palette;
-    final groups = groupByDay(items);
-    // Subtle backdrop shows through the gaps between groups; each day group
-    // paints a white (background) card on top.
+    final groups = groupByDay(widget.items);
     return ColoredBox(
       color: palette.border.withValues(alpha: 0.5),
       child: CustomScrollView(
-      slivers: [
-        for (final group in groups) ...[
-          // Each group is its own axis group so the pinned header sticks only
-          // while this day is on screen — once its rows scroll past, the next
-          // day's header takes over the top (one sticky header at a time).
-          SliverMainAxisGroup(
-            slivers: [
-              SliverPersistentHeader(
-                pinned: true,
-                delegate: _DayHeaderDelegate(group: group),
-              ),
-              SliverList.builder(
-                itemCount: group.items.length,
-                itemBuilder: (context, i) {
-                  final t = group.items[i];
-                  // Hairline between rows of the same day (not after the last).
-                  final last = i == group.items.length - 1;
-                  return DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: palette.background,
-                      border: last
-                          ? null
-                          : Border(bottom: BorderSide(color: palette.border)),
-                    ),
-                    child: TransactionRow(
-                      transaction: t,
-                      onTap: () =>
-                          context.push(AppRoutes.transactionForm, extra: t),
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
-          const SliverToBoxAdapter(child: SizedBox(height: 8)),
+        controller: _scrollController,
+        slivers: [
+          for (final group in groups) ...[
+            SliverMainAxisGroup(
+              slivers: [
+                SliverPersistentHeader(
+                  pinned: true,
+                  delegate: _DayHeaderDelegate(group: group),
+                ),
+                SliverList.builder(
+                  itemCount: group.items.length,
+                  itemBuilder: (context, i) {
+                    final t = group.items[i];
+                    return Consumer(
+                      builder: (context, ref, _) {
+                        final settings = ref
+                            .watch(transactionSettingsProvider)
+                            .valueOrNull;
+                        final isDelete = settings?.swipeAction == 'Delete';
+
+                        final rowWidget = DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: palette.background,
+                            border: Border(
+                              bottom: BorderSide(color: palette.border),
+                            ),
+                          ),
+                          child: TransactionRow(
+                            transaction: t,
+                            onTap: () => context.push(
+                              AppRoutes.transactionForm,
+                              extra: t,
+                            ),
+                          ),
+                        );
+
+                        if (!isDelete) {
+                          return rowWidget;
+                        }
+
+                        return Dismissible(
+                          key: ValueKey(t.id),
+                          direction: DismissDirection.endToStart,
+                          confirmDismiss: (_) async {
+                            final confirmed = await showDialog<bool>(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                title: const Text('Delete transaction?'),
+                                content: const Text(
+                                  'Are you sure you want to delete this transaction?',
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.of(ctx).pop(false),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.of(ctx).pop(true),
+                                    child: const Text(
+                                      'Delete',
+                                      style: TextStyle(
+                                        color: OewangColors.coral,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                            if ((confirmed ?? false) && context.mounted) {
+                              await _delete(context, ref, t.id);
+                              return true;
+                            }
+                            return false;
+                          },
+                          background: Container(
+                            alignment: Alignment.centerRight,
+                            padding: const EdgeInsets.only(right: 20),
+                            color: OewangColors.coral,
+                            child: const Icon(
+                              Icons.delete_outline,
+                              color: Colors.white,
+                            ),
+                          ),
+                          child: rowWidget,
+                        );
+                      },
+                    );
+                  },
+                ),
+              ],
+            ),
+            const SliverToBoxAdapter(child: SizedBox(height: 8)),
+          ],
         ],
-      ],
       ),
     );
   }

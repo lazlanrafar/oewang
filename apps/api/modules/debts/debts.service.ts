@@ -48,6 +48,7 @@ export abstract class DebtsService {
     }
 
     const result = await DebtsRepository.create({
+      id: data.id,
       workspaceId,
       contactId: data.contactId,
       type: data.type,

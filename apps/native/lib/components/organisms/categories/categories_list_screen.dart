@@ -13,7 +13,9 @@ import 'package:oewang/domain/models/category.dart' as cat;
 final categoriesByTypeProvider = FutureProvider.autoDispose
     .family<List<cat.Category>, cat.CategoryType>((ref, type) async {
       ref.watch(_categoriesRevisionProvider);
-      final res = await ref.watch(categoriesRepositoryProvider).list(type: type);
+      final res = await ref
+          .watch(categoriesRepositoryProvider)
+          .list(type: type);
       return res.fold((c) => c, (_) => <cat.Category>[]);
     });
 
@@ -23,8 +25,9 @@ class _CategoriesRevision extends Notifier<int> {
   void bump() => state = state + 1;
 }
 
-final _categoriesRevisionProvider =
-    NotifierProvider<_CategoriesRevision, int>(_CategoriesRevision.new);
+final _categoriesRevisionProvider = NotifierProvider<_CategoriesRevision, int>(
+  _CategoriesRevision.new,
+);
 
 /// IMG_1846 (Income) / IMG_1847 (Expense). Delete / edit / drag-to-reorder.
 class CategoryListScreen extends ConsumerStatefulWidget {
@@ -60,9 +63,8 @@ class _CategoryListScreenState extends ConsumerState<CategoryListScreen> {
 
   Future<void> _reorder(int oldIndex, int newIndex) async {
     setState(() {
-      final target = newIndex > oldIndex ? newIndex - 1 : newIndex;
       final moved = _items.removeAt(oldIndex);
-      _items.insert(target, moved);
+      _items.insert(newIndex, moved);
     });
     final res = await ref
         .read(categoriesRepositoryProvider)
@@ -74,8 +76,8 @@ class _CategoryListScreenState extends ConsumerState<CategoryListScreen> {
     });
   }
 
-  void _snack(String msg) => ScaffoldMessenger.of(context)
-      .showSnackBar(SnackBar(content: Text(msg)));
+  void _snack(String msg) =>
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
 
   @override
   Widget build(BuildContext context) {
@@ -103,29 +105,28 @@ class _CategoryListScreenState extends ConsumerState<CategoryListScreen> {
           data: (items) {
             final list = _items.isEmpty ? items : _items;
             return ReorderableListView.builder(
-                itemCount: list.length,
-                onReorder: _reorder,
-                itemBuilder: (context, i) => SwipeActionRow(
-                  key: ValueKey(list[i].id),
-                  dragIndex: i,
-                  title: list[i].name,
-                  leading: list[i].emoji != null
-                      ? Text(list[i].emoji!,
-                          style: const TextStyle(fontSize: 18))
-                      : null,
-                  isOpen: _openId == list[i].id,
-                  onToggleOpen: () => setState(
-                    () => _openId = _openId == list[i].id ? null : list[i].id,
-                  ),
-                  onDelete: () => _delete(list[i]),
-                  onEdit: () async {
-                    final saved = await context.push<bool>(
-                      AppRoutes.categoryEditFor(list[i].id),
-                      extra: list[i],
-                    );
-                    if (saved ?? false) _bump();
-                  },
+              itemCount: list.length,
+              onReorder: _reorder,
+              itemBuilder: (context, i) => SwipeActionRow(
+                key: ValueKey(list[i].id),
+                dragIndex: i,
+                title: list[i].name,
+                leading: list[i].emoji != null
+                    ? Text(list[i].emoji!, style: const TextStyle(fontSize: 18))
+                    : null,
+                isOpen: _openId == list[i].id,
+                onToggleOpen: () => setState(
+                  () => _openId = _openId == list[i].id ? null : list[i].id,
                 ),
+                onDelete: () => _delete(list[i]),
+                onEdit: () async {
+                  final saved = await context.push<bool>(
+                    AppRoutes.categoryEditFor(list[i].id),
+                    extra: list[i],
+                  );
+                  if (saved ?? false) _bump();
+                },
+              ),
             );
           },
           loading: () => const Center(child: CircularProgressIndicator()),

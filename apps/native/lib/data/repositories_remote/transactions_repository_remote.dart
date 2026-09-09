@@ -25,7 +25,7 @@ class TransactionsRepositoryRemote implements TransactionsRepository {
         queryParameters: <String, dynamic>{
           'startDate': _dateFmt.format(query.from),
           'endDate': _dateFmt.format(query.to),
-          'limit': query.limit,
+          'limit': 100,
           'page': query.page,
           if (query.type != null) 'type': query.type!.wire,
         },
@@ -107,6 +107,18 @@ class TransactionsRepositoryRemote implements TransactionsRepository {
         );
       }
       return Success(TransactionDto.fromJson(json).toDomain());
+    } on DioException catch (e) {
+      return Failure(mapDioError(e));
+    } on Exception {
+      return const Failure(UnknownError());
+    }
+  }
+
+  @override
+  Future<Result<void, AppError>> delete(String id) async {
+    try {
+      await _api.delete('/transactions/$id');
+      return const Success(null);
     } on DioException catch (e) {
       return Failure(mapDioError(e));
     } on Exception {

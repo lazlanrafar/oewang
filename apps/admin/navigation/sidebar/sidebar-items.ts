@@ -1,4 +1,14 @@
-import { Banknote, FileText, HelpCircle, LayoutDashboard, LayoutGrid, type LucideIcon, Users } from "lucide-react";
+import {
+  Banknote,
+  Code2,
+  FileText,
+  HelpCircle,
+  LayoutDashboard,
+  LayoutGrid,
+  Receipt,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 
 export interface NavSubItem {
   title: string;
@@ -28,6 +38,7 @@ export interface NavGroup {
 export const sidebarItems: NavGroup[] = [
   {
     id: 1,
+    label: "Main",
     items: [
       {
         title: "Overview",
@@ -35,15 +46,15 @@ export const sidebarItems: NavGroup[] = [
         icon: LayoutDashboard,
       },
       {
-        title: "Orders",
+        title: "Orders & Revenue",
         url: "/orders",
-        icon: Banknote,
+        icon: Receipt,
       },
     ],
   },
   {
     id: 2,
-    label: "Management",
+    label: "Platform Admin",
     items: [
       {
         title: "Users",
@@ -56,19 +67,36 @@ export const sidebarItems: NavGroup[] = [
         icon: LayoutGrid,
       },
       {
-        title: "Pricing",
+        title: "Pricing Plans",
         url: "/pricing",
         icon: Banknote,
+      },
+    ],
+  },
+  {
+    id: 3,
+    label: "Marketing & Content",
+    items: [
+      {
+        title: "Articles",
+        url: "/articles",
+        icon: FileText,
       },
       {
         title: "FAQs",
         url: "/faqs",
         icon: HelpCircle,
       },
+    ],
+  },
+  {
+    id: 4,
+    label: "System",
+    items: [
       {
-        title: "Articles",
-        url: "/articles",
-        icon: FileText,
+        title: "Developer Tools",
+        url: "/developer",
+        icon: Code2,
       },
     ],
   },

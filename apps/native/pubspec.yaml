@@ -20,8 +20,9 @@ dependencies:
   flutter:
     sdk: flutter
   flutter_dotenv: ^5.2.1
+  flutter_local_notifications: ^18.0.1
   flutter_riverpod: ^2.6.1
-  flutter_secure_storage: ^9.2.2
+  flutter_secure_storage: ^11.0.0
   flutter_svg: ^2.0.10+1
   freezed_annotation: ^2.4.4
   go_router: ^14.6.2

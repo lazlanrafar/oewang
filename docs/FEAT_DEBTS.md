@@ -104,6 +104,10 @@ The billing lifecycle job (cron) checks for debts with `dueDate` approaching and
 
 ---
 
+### Native offline sync (2026-09-09)
+
+`DebtsService.createDebt` forwards the optional client-generated `id` to the repository. A create replay therefore returns the same debt and skips duplicate create side effects. Native debt create/update is queued in SQLite; acknowledgement refreshes server-derived remaining amount/status only for the submitted revision. Payments and deletion remain online-only. See [mobile verification](./MOBILE/OFFLINE_SYNC_VERIFICATION.md).
+
 ## Source Files
 
 | Layer      | File                                                    |

@@ -21,7 +21,15 @@ class TransactionRow extends StatelessWidget {
       TransactionType.expense || TransactionType.transferOut => tx.expense,
       TransactionType.transfer => palette.foreground,
     };
-    final title = transaction.category?.name ?? transaction.name;
+    final categoryTitle = transaction.category?.name ??
+        (transaction.type == TransactionType.transfer ? 'Transfer' : 'Uncategorized');
+    final description = (transaction.name != null && transaction.name != categoryTitle)
+        ? transaction.name!
+        : (transaction.description ?? '');
+    final walletName = transaction.type == TransactionType.transfer
+        ? '${transaction.wallet?.name ?? ''} → ${transaction.toWallet?.name ?? ''}'
+        : (transaction.wallet?.name ?? '');
+
     return InkWell(
       onTap: onTap,
       child: Padding(
@@ -29,20 +37,44 @@ class TransactionRow extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
+            // Paling kiri: Kategori Transaksi (dikurangi max width ke 76, font lebih kecil 12px)
+            SizedBox(
+              width: 76,
+              child: Text(
+                categoryTitle,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: OewangFonts.sans(
+                  color: palette.foreground,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            // Tengah: Deskripsi diatas, Akun dibawah
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Blank when uncategorized — no category, no name.
-                  if (title != null && title.isNotEmpty)
-                    Text(
-                      title,
-                      style: OewangFonts.sans(color: palette.foreground),
+                  Text(
+                    description.isNotEmpty ? description : '-',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: OewangFonts.sans(
+                      color: description.isNotEmpty
+                          ? palette.foreground
+                          : palette.mutedForeground,
+                      fontSize: 14,
                     ),
-                  if (transaction.wallet != null) ...[
+                  ),
+                  if (walletName.isNotEmpty) ...[
                     const SizedBox(height: 2),
                     Text(
-                      transaction.wallet!.name,
+                      walletName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: OewangFonts.sans(
                         color: palette.mutedForeground,
                         fontSize: 12,
@@ -53,6 +85,7 @@ class TransactionRow extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 12),
+            // Paling kanan: Harga / Amount
             MoneyText(
               amount: transaction.amount,
               color: amountColor,

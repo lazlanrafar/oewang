@@ -151,3 +151,8 @@ When an event triggers a notification (e.g., budget exceeded in `BudgetsService`
 
 - **VAPID Keys configuration**: VAPID public/private key pairs must be set in environmental variables. If they are missing in dev, the server registers subscriptions but quietly skips sending push events without throwing exceptions.
 - **WebSocket updates**: When a notification is marked as read or deleted, a WebSocket frame is broadcast to update the unread count icon on other browser sessions.
+
+
+### Notification row accessibility (2026-09-09)
+
+`apps/app/components/organisms/notification/notification-list.tsx` uses a native button for the primary row action. Mark-read and delete buttons remain separate sibling actions, avoiding nested interactive controls. Row actions become visible when keyboard focus enters the row as well as on hover.

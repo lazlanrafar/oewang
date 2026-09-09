@@ -28,6 +28,7 @@ class CachedTransactions extends Table {
   TextColumn get pendingOp => text().nullable()();
   DateTimeColumn get dirtySince => dateTime().nullable()();
   TextColumn get syncError => text().nullable()();
+  IntColumn get revision => integer().withDefault(const Constant(0))();
   IntColumn get attemptCount => integer().withDefault(const Constant(0))();
   DateTimeColumn get lastAttemptAt => dateTime().nullable()();
 
@@ -48,6 +49,7 @@ class CachedWallets extends Table {
   TextColumn get pendingOp => text().nullable()();
   DateTimeColumn get dirtySince => dateTime().nullable()();
   TextColumn get syncError => text().nullable()();
+  IntColumn get revision => integer().withDefault(const Constant(0))();
   IntColumn get attemptCount => integer().withDefault(const Constant(0))();
   DateTimeColumn get lastAttemptAt => dateTime().nullable()();
 
@@ -71,6 +73,7 @@ class CachedDebts extends Table {
   TextColumn get pendingOp => text().nullable()();
   DateTimeColumn get dirtySince => dateTime().nullable()();
   TextColumn get syncError => text().nullable()();
+  IntColumn get revision => integer().withDefault(const Constant(0))();
   IntColumn get attemptCount => integer().withDefault(const Constant(0))();
   DateTimeColumn get lastAttemptAt => dateTime().nullable()();
 
@@ -103,6 +106,15 @@ class CachedContacts extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+class CachedBudgetSnapshots extends Table {
+  TextColumn get workspaceId => text()();
+  IntColumn get month => integer()();
+  IntColumn get year => integer()();
+  TextColumn get payload => text()();
+  @override
+  Set<Column> get primaryKey => {workspaceId, month, year};
+}
+
 @DriftDatabase(
   tables: [
     CachedTransactions,
@@ -110,6 +122,7 @@ class CachedContacts extends Table {
     CachedDebts,
     CachedCategories,
     CachedContacts,
+    CachedBudgetSnapshots,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -119,10 +132,21 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.withExecutor(super.executor);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
-  static QueryExecutor _openConnection() =>
-      driftDatabase(name: 'oewang_cache');
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+    onUpgrade: (m, from, to) async {
+      if (from < 2) {
+        await m.addColumn(cachedTransactions, cachedTransactions.revision);
+        await m.addColumn(cachedWallets, cachedWallets.revision);
+        await m.addColumn(cachedDebts, cachedDebts.revision);
+        await m.createTable(cachedBudgetSnapshots);
+      }
+    },
+  );
+
+  static QueryExecutor _openConnection() => driftDatabase(name: 'oewang_cache');
 
   Stream<int> watchPendingTransactionsCount(String workspaceId) =>
       (select(cachedTransactions)..where(
@@ -145,6 +169,24 @@ class AppDatabase extends _$AppDatabase {
           .watch()
           .map((rows) => rows.length);
 
+  Stream<List<(String, String)>> watchSyncIssues(String ws) =>
+      customSelect(
+        'SELECT id, name AS label, sync_error FROM cached_transactions WHERE workspace_id = ? AND pending_op IS NOT NULL AND sync_error IS NOT NULL '
+        'UNION ALL SELECT id, name AS label, sync_error FROM cached_wallets WHERE workspace_id = ? AND pending_op IS NOT NULL AND sync_error IS NOT NULL '
+        'UNION ALL SELECT id, contact_name AS label, sync_error FROM cached_debts WHERE workspace_id = ? AND pending_op IS NOT NULL AND sync_error IS NOT NULL',
+        variables: [Variable(ws), Variable(ws), Variable(ws)],
+        readsFrom: {cachedTransactions, cachedWallets, cachedDebts},
+      ).watch().map(
+        (rows) => rows
+            .map(
+              (r) => (
+                r.readNullable<String>('label') ?? r.read<String>('id'),
+                r.read<String>('sync_error'),
+              ),
+            )
+            .toList(),
+      );
+
   /// Wipes every cached table — called on logout so a shared device never
   /// carries one account's financial data into the next session.
   Future<void> clearAll() async {
@@ -154,7 +196,8 @@ class AppDatabase extends _$AppDatabase {
         ..deleteWhere(cachedWallets, (_) => const Constant(true))
         ..deleteWhere(cachedDebts, (_) => const Constant(true))
         ..deleteWhere(cachedCategories, (_) => const Constant(true))
-        ..deleteWhere(cachedContacts, (_) => const Constant(true));
+        ..deleteWhere(cachedContacts, (_) => const Constant(true))
+        ..deleteWhere(cachedBudgetSnapshots, (_) => const Constant(true));
     });
   }
 }

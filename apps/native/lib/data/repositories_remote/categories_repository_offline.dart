@@ -2,7 +2,6 @@ import 'package:drift/drift.dart';
 import 'package:oewang/core/result/app_error.dart';
 import 'package:oewang/core/result/result.dart';
 import 'package:oewang/data/repositories/categories_repository.dart';
-import 'package:oewang/data/repositories_remote/categories_repository_remote.dart';
 import 'package:oewang/data/services/db/app_database.dart';
 import 'package:oewang/domain/models/category.dart';
 
@@ -11,27 +10,29 @@ import 'package:oewang/domain/models/category.dart';
 /// Every other method delegates straight to [remote] (requires connectivity).
 class CategoriesRepositoryOffline implements CategoriesRepository {
   CategoriesRepositoryOffline({
-    required CategoriesRepositoryRemote remote,
+    required CategoriesRepository remote,
     required AppDatabase db,
     required String Function() workspaceId,
   }) : _remote = remote,
        _db = db,
        _workspaceId = workspaceId;
 
-  final CategoriesRepositoryRemote _remote;
+  final CategoriesRepository _remote;
   final AppDatabase _db;
   final String Function() _workspaceId;
 
   @override
   Future<Result<List<Category>, AppError>> list({CategoryType? type}) async {
     final ws = _workspaceId();
+    final cached = await _readCached(ws, type);
     final result = await _remote.list(type: type);
+    if (ws != _workspaceId()) return const Failure(UnauthorizedError());
     if (result case Success<List<Category>, AppError>(value: final cats)) {
       await _cache(ws, cats);
       return result;
     }
-    if (result case Failure<List<Category>, AppError>(error: NetworkError())) {
-      return Success(await _readCached(ws, type));
+    if (cached.isNotEmpty) {
+      return Success(cached);
     }
     return result;
   }
@@ -91,7 +92,9 @@ class CategoriesRepositoryOffline implements CategoriesRepository {
           (r) => Category(
             id: r.id,
             name: r.name,
-            type: r.type == 'income' ? CategoryType.income : CategoryType.expense,
+            type: r.type == 'income'
+                ? CategoryType.income
+                : CategoryType.expense,
             emoji: r.emoji,
           ),
         )

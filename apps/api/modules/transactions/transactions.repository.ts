@@ -25,6 +25,10 @@ import {
   sql,
 } from "drizzle-orm";
 
+type TransactionConnection =
+  | typeof db
+  | Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 export abstract class TransactionsRepository {
   static async create(
     data: typeof transactions.$inferInsert,
@@ -87,6 +91,7 @@ export abstract class TransactionsRepository {
     const existing = await TransactionsRepository.findById(
       data.workspaceId as string,
       data.id as string,
+      tx,
     );
     if (!existing) {
       throw new Error("Failed to create transaction");
@@ -122,8 +127,18 @@ export abstract class TransactionsRepository {
         ? await tx
             .select()
             .from(transactions)
-            .where(inArray(transactions.id, skippedIds))
+            .where(
+              and(
+                inArray(transactions.id, skippedIds),
+                eq(transactions.workspaceId, data[0]!.workspaceId),
+                isNull(transactions.deletedAt),
+              ),
+            )
         : [];
+
+    if (existingRows.length !== new Set(skippedIds).size) {
+      throw new Error("Transaction ID is unavailable");
+    }
 
     const mapRow = (row: any, inserted: boolean) => ({
       transaction: {
@@ -145,11 +160,12 @@ export abstract class TransactionsRepository {
   static async findById(
     workspaceId: string,
     id: string,
+    tx: TransactionConnection = db,
   ): Promise<Transaction | undefined> {
     const fromWallet = aliasedTable(wallets, "fromWallet");
     const toWallet = aliasedTable(wallets, "toWallet");
 
-    const [result] = await db
+    const [result] = await tx
       .select({
         transaction: transactions,
         wallet: { id: fromWallet.id, name: fromWallet.name },
@@ -492,8 +508,9 @@ export abstract class TransactionsRepository {
     workspaceId: string,
     id: string,
     data: Partial<typeof transactions.$inferInsert>,
+    tx: TransactionConnection = db,
   ): Promise<Transaction | undefined> {
-    const [transaction] = await db
+    const [transaction] = await tx
       .update(transactions)
       .set({ ...data, updatedAt: new Date().toISOString() })
       .where(
@@ -506,7 +523,7 @@ export abstract class TransactionsRepository {
       .returning();
 
     if (transaction) {
-      return TransactionsRepository.findById(workspaceId, id);
+      return TransactionsRepository.findById(workspaceId, id, tx);
     }
 
     return undefined;
@@ -583,9 +600,10 @@ export abstract class TransactionsRepository {
     transactionId: string,
     workspaceId: string,
     vaultFileIds: string[],
+    tx: TransactionConnection = db,
   ) {
     // Soft delete all current attachments for this transaction
-    await db
+    await tx
       .update(transactionAttachments)
       .set({ deletedAt: new Date() })
       .where(
@@ -598,7 +616,7 @@ export abstract class TransactionsRepository {
 
     // Re-insert the new set
     if (vaultFileIds.length > 0) {
-      await db.insert(transactionAttachments).values(
+      await tx.insert(transactionAttachments).values(
         vaultFileIds.map((vaultFileId) => ({
           transactionId,
           workspaceId,
@@ -636,6 +654,24 @@ export abstract class TransactionsRepository {
           isNull(debtPayments.deletedAt),
         ),
       );
+  }
+
+  static async lockForUpdate(
+    workspace_id: string,
+    id: string,
+    tx: TransactionConnection,
+  ): Promise<void> {
+    await tx
+      .select({ id: transactions.id })
+      .from(transactions)
+      .where(
+        and(
+          eq(transactions.id, id),
+          eq(transactions.workspaceId, workspace_id),
+          isNull(transactions.deletedAt),
+        ),
+      )
+      .for("update");
   }
 
   static async runTransaction<T>(
