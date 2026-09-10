@@ -65,7 +65,7 @@ export function PricingForm({ initialData, onSuccess }: PricingFormProps) {
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<PricingFormValues>({
-    resolver: zodResolver(pricingSchema),
+    resolver: zodResolver(pricingSchema) as any,
     defaultValues: {
       name: initialData?.name ?? "",
       description: initialData?.description ?? "",
@@ -110,7 +110,9 @@ export function PricingForm({ initialData, onSuccess }: PricingFormProps) {
       max_vault_size_mb: initialData?.max_vault_size_mb ?? 100,
       max_ai_tokens: initialData?.max_ai_tokens ?? 100,
       is_active: initialData?.is_active ?? true,
-      features: initialData?.features ?? [],
+      features: (initialData?.features || []).map((f) =>
+        typeof f === "string" ? f : f.feature_code,
+      ),
     },
   });
 

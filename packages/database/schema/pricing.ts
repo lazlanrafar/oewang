@@ -29,7 +29,17 @@ export const pricing = pgTable("pricing", {
   max_vault_size_mb: integer("max_vault_size_mb").default(100).notNull(),
   max_ai_tokens: integer("max_ai_tokens").default(100).notNull(),
   max_workspaces: integer("max_workspaces").default(1).notNull(),
-  features: jsonb("features").$type<string[]>().default([]).notNull(),
+  features: jsonb("features")
+    .$type<
+      | string[]
+      | {
+          feature_code: string;
+          value?: string | number | boolean;
+          enabled?: boolean;
+        }[]
+    >()
+    .default([])
+    .notNull(),
   is_active: boolean("is_active").default(true).notNull(),
   is_addon: boolean("is_addon").default(false).notNull(),
   addon_type: text("addon_type").$type<"ai" | "vault">(),

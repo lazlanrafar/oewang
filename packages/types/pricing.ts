@@ -1,3 +1,9 @@
+export type PricingFeatureOverride = {
+  feature_code: string;
+  value?: string | number | boolean;
+  enabled?: boolean;
+};
+
 export interface Pricing {
   id: string;
   name: string;
@@ -14,7 +20,7 @@ export interface Pricing {
   max_vault_size_mb: number;
   max_ai_tokens: number;
   max_workspaces: number;
-  features: string[];
+  features: string[] | PricingFeatureOverride[];
   is_active: boolean;
   is_addon: boolean;
   addon_type: "ai" | "vault" | null;

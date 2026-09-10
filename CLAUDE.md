@@ -148,3 +148,16 @@ When writing code, you MUST:
 - **Add a spec file** in `apps/app/e2e/` when adding a new dashboard route.
 - **Update `TESTING_E2E.md` Spec Inventory** when adding/removing spec files.
 - **Update baseline counts** in `TESTING_UNIT.md`, `TESTING_E2E.md`, `TESTING.md` if counts change significantly.
+
+---
+
+## 🧠 Cross-Agent Memory & Session Continuity (OpenCode · Claude Code · Codex)
+
+To ensure persistent memory and seamless context sharing across **OpenCode**, **Claude Code**, and **Codex**:
+
+1. **Single Source of Truth**:
+   - Long-term architectural decisions, invariants, schema changes, and persistent preferences must be documented in **`AGENTS.md`** and **`CLAUDE.md`**.
+   - Do NOT rely on ephemeral CLI session histories for permanent repo knowledge.
+2. **Context Synchronization**:
+   - When completing non-trivial tasks or introducing new paradigms, record the key decisions and caveats directly into the relevant `docs/*` or `AGENTS.md` sections.
+   - All AI agents (OpenCode, Claude Code, Codex) must read `AGENTS.md` / `CLAUDE.md` before executing modifications to align with the active state of the project.

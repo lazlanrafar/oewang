@@ -21,6 +21,7 @@ export * from "./schema/notification-settings";
 export * from "./schema/notifications";
 export * from "./schema/oauth-accounts";
 export * from "./schema/orders";
+export * from "./schema/plan-features";
 export * from "./schema/pricing";
 export * from "./schema/privacy-requests";
 export * from "./schema/push-subscriptions";

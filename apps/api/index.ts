@@ -43,6 +43,7 @@ import { metricsController } from "./modules/metrics/metrics.controller";
 import { notificationSettingsController } from "./modules/notification-settings/notification-settings.controller";
 import { notificationsController } from "./modules/notifications/notifications.controller";
 import { ordersController } from "./modules/orders/orders.controller";
+import { planFeaturesController } from "./modules/plan-features/plan-features.controller";
 import { pricingController } from "./modules/pricing/pricing.controller";
 import { publicPricingController } from "./modules/pricing/public-pricing.controller";
 import { privacyController } from "./modules/privacy/privacy.controller";
@@ -113,6 +114,7 @@ const apiControllers2 = new Elysia()
   .use(metricsController)
   .use(integrationsController)
   .use(systemAdminsController)
+  .use(planFeaturesController)
   .use(pricingController)
   .use(articlesController)
   .use(faqsController)

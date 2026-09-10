@@ -3,11 +3,90 @@ import * as dotenv from "dotenv";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
+import { plan_features } from "../../schema/plan-features";
 import { pricing } from "../../schema/pricing";
 
 if (!process.env.DATABASE_URL) {
   dotenv.config({ path: path.resolve(__dirname, "../../../../.env") });
 }
+
+const DEFAULT_PLAN_FEATURES = [
+  {
+    code: "max_workspaces",
+    name: "Workspace Quota",
+    description: "Maximum workspaces a user can create or own",
+    type: "numeric_limit" as const,
+    unit: "Workspaces",
+    default_value: "1",
+    is_active: true,
+  },
+  {
+    code: "max_ai_tokens",
+    name: "Monthly AI Token Limit",
+    description: "Total LLM tokens allocated per monthly billing cycle",
+    type: "numeric_limit" as const,
+    unit: "Tokens",
+    default_value: "1000000",
+    is_active: true,
+  },
+  {
+    code: "max_vault_size_mb",
+    name: "Vault Cloud Storage",
+    description: "Total size limit for uploaded receipts and attachments",
+    type: "numeric_limit" as const,
+    unit: "MB",
+    default_value: "250",
+    is_active: true,
+  },
+  {
+    code: "daily_tracking",
+    name: "Daily Transaction Tracking",
+    description: "Track daily expenses and incomes seamlessly",
+    type: "boolean" as const,
+    default_value: "true",
+    is_active: true,
+  },
+  {
+    code: "advanced_analytics",
+    name: "Advanced Analytics & Charts",
+    description: "Financial spending breakdowns and forecasts",
+    type: "boolean" as const,
+    default_value: "true",
+    is_active: true,
+  },
+  {
+    code: "custom_categories",
+    name: "Custom Categories",
+    description: "Custom transaction categories and colors",
+    type: "boolean" as const,
+    default_value: "true",
+    is_active: true,
+  },
+  {
+    code: "invoice_exports",
+    name: "Invoice & Report Exports",
+    description: "Export financial statements to CSV / PDF",
+    type: "boolean" as const,
+    default_value: "true",
+    is_active: true,
+  },
+  {
+    code: "api_access",
+    name: "REST API Access",
+    description: "Programmatic access to workspace financial data",
+    type: "boolean" as const,
+    default_value: "true",
+    is_active: true,
+  },
+  {
+    code: "dedicated_support",
+    name: "Dedicated Account Support",
+    description: "Direct priority support SLA",
+    type: "boolean" as const,
+    default_value: "true",
+    is_active: true,
+  },
+];
 
 const PLANS = [
   {
@@ -168,7 +247,24 @@ export async function seedPlans() {
   const client = postgres(process.env.DATABASE_URL!, { prepare: false });
   const db = drizzle(client);
 
-  console.log("🌱 Seeding subscription plans...");
+  console.log("🌱 Seeding plan features catalog...");
+  for (const feat of DEFAULT_PLAN_FEATURES) {
+    const [existing] = await db
+      .select({ id: plan_features.id })
+      .from(plan_features)
+      .where(eq(plan_features.code, feat.code))
+      .limit(1);
+
+    if (existing) {
+      await db.update(plan_features).set(feat).where(eq(plan_features.id, existing.id));
+      console.log(`  ↻  Updated feature: "${feat.code}"`);
+    } else {
+      await db.insert(plan_features).values(feat);
+      console.log(`  ✓  Inserted feature: "${feat.code}"`);
+    }
+  }
+
+  console.log("\n🌱 Seeding subscription plans...");
 
   for (const plan of PLANS) {
     const [existing] = await db
@@ -195,7 +291,7 @@ export async function seedPlans() {
   }
 
   await client.end();
-  console.log("✅ Plans seeded.\n");
+  console.log("✅ Plans and plan features seeded.\n");
 }
 
 if (process.argv[1]?.endsWith("01-plans.ts")) {

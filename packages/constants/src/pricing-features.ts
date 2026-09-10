@@ -1,6 +1,9 @@
 export const PRICING_FEATURES = [
   "Core Financial Tracking",
   "Advanced Analytics",
+  "AI OCR Receipt Scanning",
+  "Financial Reports Export (CSV / PDF)",
+  "Custom Category Icons & Colors",
   "Priority Customer Service",
   "Custom Domain",
   "API Access",

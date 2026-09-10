@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   LayoutGrid,
   Receipt,
+  Sliders,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -70,6 +71,11 @@ export const sidebarItems: NavGroup[] = [
         title: "Pricing Plans",
         url: "/pricing",
         icon: Banknote,
+      },
+      {
+        title: "Plan Features Setup",
+        url: "/plan-features",
+        icon: Sliders,
       },
     ],
   },

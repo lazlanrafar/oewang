@@ -153,7 +153,13 @@ export function PricingDetailSheet() {
                         >
                           <ShieldCheck className="h-4 w-4 text-green" />
                           <span className="text-sm text-foreground/80">
-                            {feature}
+                            {typeof feature === "string"
+                              ? feature
+                              : `${feature.feature_code}${
+                                  feature.value !== undefined
+                                    ? `: ${feature.value}`
+                                    : ""
+                                }`}
                           </span>
                         </div>
                       ))}
