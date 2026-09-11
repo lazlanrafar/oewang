@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:oewang/components/atoms/inputs/input.dart';
+import 'package:oewang/components/atoms/press_scale.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
@@ -68,9 +69,9 @@ class _BodyState extends ConsumerState<_Body> {
     setState(() => _saving = false);
     res.fold(
       (_) => ref.invalidate(userProfileProvider),
-      (e) => ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message)),
-      ),
+      (e) => ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message))),
     );
   }
 
@@ -78,21 +79,21 @@ class _BodyState extends ConsumerState<_Body> {
     if (_saving) return;
     final newName = await showDialog<String>(
       context: context,
-      builder: (ctx) =>
-          _EditNameDialog(initial: widget.profile.name ?? ''),
+      builder: (ctx) => _EditNameDialog(initial: widget.profile.name ?? ''),
     );
     if (newName == null || newName.isEmpty || !mounted) return;
     if (newName == widget.profile.name) return;
     setState(() => _saving = true);
-    final res =
-        await ref.read(usersRepositoryProvider).updateProfile(name: newName);
+    final res = await ref
+        .read(usersRepositoryProvider)
+        .updateProfile(name: newName);
     if (!mounted) return;
     setState(() => _saving = false);
     res.fold(
       (_) => ref.invalidate(userProfileProvider),
-      (e) => ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message)),
-      ),
+      (e) => ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message))),
     );
   }
 
@@ -103,57 +104,67 @@ class _BodyState extends ConsumerState<_Body> {
       padding: const EdgeInsets.fromLTRB(16, 32, 16, 16),
       child: Column(
         children: [
-          GestureDetector(
-            onTap: _pickAvatar,
-            child: Stack(
-              children: [
-                _Avatar(profile: widget.profile, palette: palette, size: 96),
-                Positioned(
-                  right: 0,
-                  bottom: 0,
-                  child: Material(
-                    color: palette.primary,
-                    shape: const CircleBorder(),
-                    elevation: 2,
-                    child: InkWell(
-                      onTap: _saving ? null : _pickAvatar,
-                      customBorder: const CircleBorder(),
-                      child: Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: Icon(
-                          Icons.photo_camera,
-                          size: 16,
-                          color: palette.primaryForeground,
+          Semantics(
+            button: true,
+            label: 'Change profile picture',
+            excludeSemantics: true,
+            child: PressScale(
+              onTap: _pickAvatar,
+              child: Stack(
+                children: [
+                  _Avatar(profile: widget.profile, palette: palette, size: 96),
+                  Positioned(
+                    right: 0,
+                    bottom: 0,
+                    child: Material(
+                      color: palette.primary,
+                      shape: const CircleBorder(),
+                      elevation: 2,
+                      child: InkWell(
+                        onTap: _saving ? null : _pickAvatar,
+                        customBorder: const CircleBorder(),
+                        child: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Icon(
+                            Icons.photo_camera,
+                            size: 16,
+                            color: palette.primaryForeground,
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 16),
-          GestureDetector(
-            onTap: _editName,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  widget.profile.displayName,
-                  style: OewangFonts.sans(
-                    color: palette.foreground,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w500,
+          Semantics(
+            button: true,
+            label: 'Edit name, ${widget.profile.displayName}',
+            excludeSemantics: true,
+            child: PressScale(
+              onTap: _editName,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    widget.profile.displayName,
+                    style: OewangFonts.sans(
+                      color: palette.foreground,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 6),
-                Icon(
-                  Icons.edit_outlined,
-                  size: 16,
-                  color: palette.mutedForeground,
-                ),
-              ],
+                  const SizedBox(width: 6),
+                  Icon(
+                    Icons.edit_outlined,
+                    size: 16,
+                    color: palette.mutedForeground,
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 4),
@@ -200,10 +211,7 @@ class _Avatar extends StatelessWidget {
     final fallback = Container(
       width: size,
       height: size,
-      decoration: BoxDecoration(
-        color: palette.muted,
-        shape: BoxShape.circle,
-      ),
+      decoration: BoxDecoration(color: palette.muted, shape: BoxShape.circle),
       alignment: Alignment.center,
       child: Text(
         initial,

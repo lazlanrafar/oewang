@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:oewang/components/atoms/press_scale.dart';
 import 'package:oewang/components/organisms/settings/profile/settings_user_profile_header.dart';
 import 'package:oewang/components/organisms/settings/workspace/settings_workspace_switcher_sheet.dart';
 import 'package:oewang/config/dependencies.dart';
@@ -65,75 +66,73 @@ class _Card extends ConsumerWidget {
     final ws = profile.activeWorkspace;
     final subtitle = ws == null
         ? '${profile.workspaces.length} workspaces'
-        : [
-            ws.role,
-            if (ws.planName != null) ws.planName!,
-          ].join(' · ');
-    return InkWell(
-      onTap: () => _openSwitcher(context, ref),
-      child: Container(
-        margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: palette.background,
-          border: Border.all(color: palette.border),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: palette.muted,
-                shape: BoxShape.rectangle,
+        : [ws.role, if (ws.planName != null) ws.planName!].join(' · ');
+    return Semantics(
+      button: true,
+      label: 'Workspace, ${ws?.name ?? 'No active workspace'}. $subtitle',
+      excludeSemantics: true,
+      child: PressScale(
+        onTap: () => _openSwitcher(context, ref),
+        child: Container(
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: palette.background,
+            border: Border.all(color: palette.border),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: palette.muted,
+                  shape: BoxShape.rectangle,
+                ),
+                alignment: Alignment.center,
+                child: Icon(
+                  Icons.business_outlined,
+                  color: palette.foreground,
+                  size: 18,
+                ),
               ),
-              alignment: Alignment.center,
-              child: Icon(
-                Icons.business_outlined,
-                color: palette.foreground,
-                size: 18,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Workspace',
+                      style: OewangFonts.sans(
+                        color: palette.mutedForeground,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: 0.4,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      ws?.name ?? 'No active workspace',
+                      style: OewangFonts.sans(
+                        color: palette.foreground,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      subtitle,
+                      style: OewangFonts.sans(
+                        color: palette.mutedForeground,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Workspace',
-                    style: OewangFonts.sans(
-                      color: palette.mutedForeground,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                      letterSpacing: 0.4,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    ws?.name ?? 'No active workspace',
-                    style: OewangFonts.sans(
-                      color: palette.foreground,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  Text(
-                    subtitle,
-                    style: OewangFonts.sans(
-                      color: palette.mutedForeground,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(
-              Icons.unfold_more,
-              color: palette.mutedForeground,
-              size: 18,
-            ),
-          ],
+              Icon(Icons.unfold_more, color: palette.mutedForeground, size: 18),
+            ],
+          ),
         ),
       ),
     );

@@ -22,7 +22,7 @@ class SettingsScreen extends ConsumerWidget {
       body: SafeArea(
         child: Column(
           children: [
-            const _Header(version: ''),
+            const _Header(),
             Divider(height: 1, color: palette.border),
             Expanded(
               // Gray backdrop shows through the gaps between sections; rows and
@@ -39,19 +39,21 @@ class SettingsScreen extends ConsumerWidget {
                       icon: Icons.menu_book_outlined,
                       title: 'Transaction Settings',
                       subtitle:
-                          'Monthly Start Date, Carry-over Setting, Period, Oth…',
+                          'Monthly Start Date, Carry-over Setting, Period, Other',
                       onTap: () => context.push(AppRoutes.transactionSettings),
                     ),
                     ListRow(
                       icon: Icons.repeat,
                       title: 'Repeat Setting',
                       trailing: const _ComingSoonBadge(),
+                      trailingLabel: 'Coming soon',
                       onTap: () => _comingSoon(context, 'Repeat Setting'),
                     ),
                     ListRow(
                       icon: Icons.content_copy_outlined,
                       title: 'Copy-Paste Settings',
                       trailing: const _ComingSoonBadge(),
+                      trailingLabel: 'Coming soon',
                       onTap: () => _comingSoon(context, 'Copy-Paste Settings'),
                     ),
                     const SectionLabel('Category/Accounts'),
@@ -69,7 +71,7 @@ class SettingsScreen extends ConsumerWidget {
                       icon: Icons.savings_outlined,
                       title: 'Accounts Setting',
                       subtitle:
-                          'Account Group, Accounts, Include in totals, Transf…',
+                          'Account Group, Accounts, Include in totals, Transfer',
                       onTap: () => context.push(AppRoutes.accountsSettings),
                     ),
                     ListRow(
@@ -83,12 +85,14 @@ class SettingsScreen extends ConsumerWidget {
                       title: 'Backup',
                       subtitle: 'Export, Import, A complete reset',
                       trailing: const _ComingSoonBadge(),
+                      trailingLabel: 'Coming soon',
                       onTap: () => _comingSoon(context, 'Backup'),
                     ),
                     ListRow(
                       icon: Icons.lock_outline,
                       title: 'Passcode',
                       trailing: const _ComingSoonBadge(),
+                      trailingLabel: 'Coming soon',
                       onTap: () => _comingSoon(context, 'Passcode'),
                     ),
                     ListRow(
@@ -106,6 +110,7 @@ class SettingsScreen extends ConsumerWidget {
                       icon: Icons.notifications_none,
                       title: 'Alarm Setting',
                       trailing: const _ComingSoonBadge(),
+                      trailingLabel: 'Coming soon',
                       onTap: () => _comingSoon(context, 'Alarm'),
                     ),
                     ListRow(
@@ -117,12 +122,14 @@ class SettingsScreen extends ConsumerWidget {
                       icon: Icons.rocket_launch_outlined,
                       title: 'Application Icon',
                       trailing: const _ComingSoonBadge(),
+                      trailingLabel: 'Coming soon',
                       onTap: () => _comingSoon(context, 'Application Icon'),
                     ),
                     ListRow(
                       icon: Icons.translate,
                       title: 'Language Setting',
                       trailing: const _ComingSoonBadge(),
+                      trailingLabel: 'Coming soon',
                       onTap: () => _comingSoon(context, 'Language'),
                     ),
                     const SizedBox(height: 8),
@@ -184,35 +191,22 @@ class _ComingSoonBadge extends StatelessWidget {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.version});
-  final String version;
+  const _Header();
 
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
     return SizedBox(
       height: 48,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Center(
-            child: Text(
-              'Settings',
-              style: OewangFonts.sans(
-                color: palette.foreground,
-                fontSize: 17,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
+      child: Center(
+        child: Text(
+          'Settings',
+          style: OewangFonts.sans(
+            color: palette.foreground,
+            fontSize: 17,
+            fontWeight: FontWeight.w500,
           ),
-          Positioned(
-            right: 16,
-            child: Text(
-              version,
-              style: OewangFonts.sans(color: palette.mutedForeground),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
