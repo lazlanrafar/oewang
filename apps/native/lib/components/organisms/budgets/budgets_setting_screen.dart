@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:oewang/components/atoms/button.dart';
 import 'package:oewang/components/atoms/money_text.dart';
 import 'package:oewang/components/molecules/confirm_dialog.dart';
 import 'package:oewang/components/molecules/page_app_bar.dart';
@@ -241,14 +242,12 @@ class _BudgetRow extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(2),
-              child: LinearProgressIndicator(
-                value: (budget.percentage / 100).clamp(0.0, 1.0),
-                minHeight: 4,
-                backgroundColor: palette.border,
-                valueColor: AlwaysStoppedAnimation<Color>(barColor),
-              ),
+            LinearProgressIndicator(
+              value: (budget.percentage / 100).clamp(0.0, 1.0),
+              minHeight: 4,
+              borderRadius: BorderRadius.zero,
+              backgroundColor: palette.border,
+              valueColor: AlwaysStoppedAnimation<Color>(barColor),
             ),
             const SizedBox(height: 6),
             Row(
@@ -315,18 +314,7 @@ class _Empty extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          TextButton(
-            onPressed: onAdd,
-            style: TextButton.styleFrom(
-              backgroundColor: palette.foreground,
-              foregroundColor: palette.background,
-              shape: const RoundedRectangleBorder(
-                borderRadius: BorderRadius.zero,
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            ),
-            child: Text('Create Budget', style: OewangFonts.sans()),
-          ),
+          Button(label: 'Create Budget', fullWidth: false, onPressed: onAdd),
         ],
       ),
     );

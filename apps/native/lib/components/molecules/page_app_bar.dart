@@ -30,10 +30,13 @@ class PageAppBar extends StatelessWidget implements PreferredSizeWidget {
       surfaceTintColor: Colors.transparent,
       leading: IconButton(
         tooltip: backLabel,
+        alignment: Alignment.centerLeft,
+        padding: const EdgeInsets.only(left: 16, right: 8),
         icon: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             const Icon(Icons.chevron_left),
+            const SizedBox(width: 6),
             Flexible(
               child: Text(
                 backLabel,

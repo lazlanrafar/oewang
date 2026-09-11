@@ -12,18 +12,23 @@ import 'package:oewang/core/theme/oewang_typography.dart';
 
 
 /// `InputContext.date` — a labelled row that opens the calendar drawer and
-/// shows the formatted day.
+/// shows the formatted day. `widget.date` may be null (e.g. an optional due
+/// date that hasn't been set yet) — `widget.placeholder` shows instead, and
+/// the drawer opens on today so picking one doesn't need an existing value.
 Widget buildDateContext(BuildContext context, Input widget) {
   final label = widget.label ?? 'Date';
   return inputSelectRow(
     context,
     widget,
     label: label,
-    value: DateFormatter.format(widget.date!, pattern: widget.datePattern),
+    value: widget.date == null
+        ? null
+        : DateFormatter.format(widget.date!, pattern: widget.datePattern),
+    placeholder: widget.placeholder,
     onTap: () => openDateDrawer(
       context,
       id: widget.drawerId ?? label,
-      initial: widget.date!,
+      initial: widget.date ?? DateTime.now(),
       firstDate: widget.firstDate,
       lastDate: widget.lastDate,
       onSelected: widget.onDateChanged!,

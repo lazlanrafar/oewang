@@ -3,8 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:oewang/components/atoms/button.dart';
+import 'package:oewang/components/atoms/inputs/bases/input_base_drawer_host.dart';
+import 'package:oewang/components/atoms/inputs/input.dart';
 import 'package:oewang/components/atoms/money_text.dart';
 import 'package:oewang/components/molecules/confirm_dialog.dart';
+import 'package:oewang/components/molecules/page_app_bar.dart';
 import 'package:oewang/components/organisms/transactions/transactions_sub_tab_bar.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/router/app_router.dart';
@@ -121,10 +124,8 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> {
   }
 
   Future<void> _recordPayment(Debt d) async {
-    final paid = await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => _PayDebtSheet(debt: d),
+    final paid = await Navigator.of(context, rootNavigator: true).push<bool>(
+      MaterialPageRoute(builder: (_) => PayDebtScreen(debt: d)),
     );
     if (paid ?? false) _bump();
   }
@@ -410,18 +411,18 @@ class _DebtRow extends StatelessWidget {
   }
 }
 
-/// Bottom sheet to record a payment against [debt]. The optional wallet creates
-/// the matching transaction server-side.
-class _PayDebtSheet extends ConsumerStatefulWidget {
-  const _PayDebtSheet({required this.debt});
+/// Full-screen form to record a payment against [debt]. The optional wallet
+/// creates the matching transaction server-side. Pops `true` on success.
+class PayDebtScreen extends ConsumerStatefulWidget {
+  const PayDebtScreen({required this.debt, super.key});
   final Debt debt;
 
   @override
-  ConsumerState<_PayDebtSheet> createState() => _PayDebtSheetState();
+  ConsumerState<PayDebtScreen> createState() => _PayDebtScreenState();
 }
 
-class _PayDebtSheetState extends ConsumerState<_PayDebtSheet> {
-  final _controller = TextEditingController();
+class _PayDebtScreenState extends ConsumerState<PayDebtScreen> {
+  late num _amount = widget.debt.remainingAmount.amount;
   List<Wallet> _wallets = const [];
   String? _walletId;
   bool _saving = false;
@@ -430,7 +431,6 @@ class _PayDebtSheetState extends ConsumerState<_PayDebtSheet> {
   @override
   void initState() {
     super.initState();
-    _controller.text = widget.debt.remainingAmount.amount.toString();
     _loadWallets();
   }
 
@@ -440,15 +440,15 @@ class _PayDebtSheetState extends ConsumerState<_PayDebtSheet> {
     res.fold((ws) => setState(() => _wallets = ws), (_) {});
   }
 
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
+  Wallet? get _selectedWallet {
+    for (final w in _wallets) {
+      if (w.id == _walletId) return w;
+    }
+    return null;
   }
 
   Future<void> _pay() async {
-    final amount = num.tryParse(_controller.text.trim()) ?? 0;
-    if (amount <= 0) {
+    if (_amount <= 0) {
       setState(() => _error = 'Enter a valid amount');
       return;
     }
@@ -458,7 +458,7 @@ class _PayDebtSheetState extends ConsumerState<_PayDebtSheet> {
     });
     final res = await ref
         .read(debtsRepositoryProvider)
-        .pay(id: widget.debt.id, amount: amount, walletId: _walletId);
+        .pay(id: widget.debt.id, amount: _amount, walletId: _walletId);
     if (!mounted) return;
     res.fold(
       (_) => Navigator.of(context).pop(true),
@@ -472,84 +472,73 @@ class _PayDebtSheetState extends ConsumerState<_PayDebtSheet> {
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 16,
-        right: 16,
-        top: 16,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Record payment',
-            style: OewangFonts.sans(
-              color: palette.foreground,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            '${widget.debt.contactName} · ${widget.debt.remainingAmount.format()} remaining',
-            style: OewangFonts.sans(
-              color: palette.mutedForeground,
-              fontSize: 12,
-            ),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _controller,
-            autofocus: true,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            style: OewangFonts.sans(color: palette.foreground),
-            decoration: InputDecoration(
-              labelText: 'Amount',
-              labelStyle: OewangFonts.sans(color: palette.mutedForeground),
-            ),
-          ),
-          const SizedBox(height: 16),
-          DropdownButton<String?>(
-            value: _walletId,
-            isExpanded: true,
-            hint: Text(
-              'Account (optional)',
-              style: OewangFonts.sans(color: palette.mutedForeground),
-            ),
-            items: [
-              DropdownMenuItem<String?>(
-                child: Text(
-                  'No account',
-                  style: OewangFonts.sans(color: palette.foreground),
+    return Scaffold(
+      appBar: const PageAppBar(title: 'Record payment', backLabel: 'Debts'),
+      body: SafeArea(
+        child: FormDrawerHost(
+          child: Column(
+            children: [
+              Expanded(
+                child: ListView(
+                  padding: EdgeInsets.zero,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                      child: Text(
+                        '${widget.debt.contactName} · ${widget.debt.remainingAmount.format()} remaining',
+                        style: OewangFonts.sans(
+                          color: palette.mutedForeground,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Input(
+                      context: InputContext.amount,
+                      label: 'Amount',
+                      variant: InputVariant.underline,
+                      amount: _amount,
+                      onAmountChanged: (v) => setState(() => _amount = v),
+                    ),
+                    Input(
+                      context: InputContext.select,
+                      label: 'Account',
+                      variant: InputVariant.underline,
+                      placeholder: 'No account',
+                      entity: EntitySelect<Wallet?>(
+                        value: _selectedWallet,
+                        items: [null, ..._wallets],
+                        labelOf: (w) => w?.name ?? 'No account',
+                        idOf: (w) => w?.id ?? '',
+                        onSelected: (w) => setState(() => _walletId = w?.id),
+                      ),
+                    ),
+                    if (_error != null)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        child: Text(
+                          _error!,
+                          textAlign: TextAlign.center,
+                          style: OewangFonts.sans(color: OewangColors.coral),
+                        ),
+                      ),
+                  ],
                 ),
               ),
-              for (final w in _wallets)
-                DropdownMenuItem<String?>(
-                  value: w.id,
-                  child: Text(
-                    w.name,
-                    style: OewangFonts.sans(color: palette.foreground),
-                  ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                child: Button(
+                  label: 'Pay',
+                  loading: _saving,
+                  onPressed: _saving ? null : _pay,
                 ),
+              ),
             ],
-            onChanged: (v) => setState(() => _walletId = v),
           ),
-          if (_error != null) ...[
-            const SizedBox(height: 8),
-            Text(
-              _error!,
-              style: OewangFonts.sans(color: OewangColors.coral, fontSize: 12),
-            ),
-          ],
-          const SizedBox(height: 16),
-          Button(
-            label: 'Pay',
-            loading: _saving,
-            onPressed: _saving ? null : _pay,
-          ),
-        ],
+        ),
       ),
     );
   }

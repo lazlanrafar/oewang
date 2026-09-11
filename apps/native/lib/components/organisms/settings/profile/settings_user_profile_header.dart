@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:oewang/components/atoms/inputs/input.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
@@ -287,12 +288,7 @@ class _EditNameDialogState extends State<_EditNameDialog> {
         'Edit name',
         style: OewangFonts.sans(color: palette.foreground),
       ),
-      content: TextField(
-        controller: _ctl,
-        autofocus: true,
-        decoration: const InputDecoration(hintText: 'Your name'),
-        style: OewangFonts.sans(color: palette.foreground),
-      ),
+      content: Input(controller: _ctl, autofocus: true, hintText: 'Your name'),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),

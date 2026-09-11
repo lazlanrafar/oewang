@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:oewang/components/atoms/button.dart';
 import 'package:oewang/components/atoms/inputs/bases/input_base_drawer_host.dart';
 import 'package:oewang/components/atoms/inputs/bases/input_base_field_row.dart';
@@ -69,28 +68,13 @@ class _DebtFormScreenState extends ConsumerState<DebtFormScreen> {
     );
   }
 
-  Future<void> _pickDate(DebtFormViewModel vm) async {
-    final now = DateTime.now();
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: vm.state.dueDate ?? now,
-      firstDate: DateTime(now.year - 5),
-      lastDate: DateTime(now.year + 10),
-    );
-    if (picked != null) vm.setDueDate(picked);
-  }
-
   Future<void> _newContact(DebtFormViewModel vm) async {
     final controller = TextEditingController();
     final name = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('New contact'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(hintText: 'Name'),
-        ),
+        content: Input(controller: controller, autofocus: true, hintText: 'Name'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
@@ -181,15 +165,14 @@ class _DebtFormScreenState extends ConsumerState<DebtFormScreen> {
                       onAmountChanged: vm.setAmount,
                     ),
                     Input(
-                      context: InputContext.select,
+                      context: InputContext.date,
                       label: 'Due date',
                       variant: InputVariant.underline,
                       labelWidth: _labelWidth,
                       placeholder: 'Optional',
-                      displayValue: dueDate == null
-                          ? null
-                          : DateFormat('EEE, dd/MM/yyyy').format(dueDate),
-                      onTap: () => _pickDate(vm),
+                      date: dueDate,
+                      datePattern: 'EEE, dd/MM/yyyy',
+                      onDateChanged: vm.setDueDate,
                     ),
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),

@@ -82,8 +82,8 @@ class Input extends StatefulWidget {
          'currency/amount Input needs onAmountChanged',
        ),
        assert(
-         context != InputContext.date || (date != null && onDateChanged != null),
-         'date Input needs date + onDateChanged',
+         context != InputContext.date || onDateChanged != null,
+         'date Input needs onDateChanged',
        ),
        assert(
          context != InputContext.select || entity != null || onTap != null,

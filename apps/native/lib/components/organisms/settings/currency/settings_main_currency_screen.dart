@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:oewang/components/atoms/button.dart';
+import 'package:oewang/components/atoms/inputs/bases/input_base_drawer_host.dart';
+import 'package:oewang/components/atoms/inputs/input.dart';
 import 'package:oewang/components/molecules/page_app_bar.dart';
 import 'package:oewang/components/organisms/settings/currency/settings_currency_picker_screen.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
@@ -39,92 +41,81 @@ class _MainCurrencyScreenState extends State<MainCurrencyScreen> {
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 12),
-            child: OutlinedButton(
+            child: Button(
+              label: 'Change',
+              variant: ButtonVariant.outlined,
+              fullWidth: false,
+              height: 32,
               onPressed: _openPicker,
-              style: OutlinedButton.styleFrom(
-                foregroundColor: palette.foreground,
-                side: BorderSide(color: palette.border),
-                shape: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.zero,
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 4,
-                ),
-                minimumSize: Size.zero,
-              ),
-              child: Text(
-                'Change',
-                style: OewangFonts.sans(fontSize: 13),
-              ),
             ),
           ),
         ],
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 24),
-              child: Column(
-                children: [
-                  Text(
-                    '${_currency.code} - ${_currency.country} (${_currency.symbol})',
-                    style: OewangFonts.sans(color: palette.mutedForeground),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${_currency.symbol} ${_preview()}',
-                    style: OewangFonts.currency(
-                      color: palette.foreground,
-                      fontSize: 24,
+        child: FormDrawerHost(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24),
+                child: Column(
+                  children: [
+                    Text(
+                      '${_currency.code} - ${_currency.country} (${_currency.symbol})',
+                      style: OewangFonts.sans(color: palette.mutedForeground),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 4),
+                    Text(
+                      '${_currency.symbol} ${_preview()}',
+                      style: OewangFonts.currency(
+                        color: palette.foreground,
+                        fontSize: 24,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            Divider(height: 1, color: palette.border),
-            _Row(
-              label: 'Unit\nposition',
-              child: DropdownButton<String>(
-                value: _unitPosition,
-                underline: const SizedBox.shrink(),
-                dropdownColor: palette.card,
-                style: OewangFonts.sans(color: palette.foreground),
-                items: const [
-                  DropdownMenuItem(value: 'Front', child: Text('Front')),
-                  DropdownMenuItem(value: 'Back', child: Text('Back')),
-                ],
-                onChanged: (v) =>
-                    setState(() => _unitPosition = v ?? _unitPosition),
+              Divider(height: 1, color: palette.border),
+              Input(
+                context: InputContext.select,
+                label: 'Unit\nposition',
+                labelWidth: 80,
+                variant: InputVariant.none,
+                entity: EntitySelect<String>(
+                  value: _unitPosition,
+                  items: const ['Front', 'Back'],
+                  labelOf: (s) => s,
+                  idOf: (s) => s,
+                  onSelected: (s) => setState(() => _unitPosition = s),
+                ),
               ),
-            ),
-            Divider(height: 1, color: palette.border),
-            _Row(
-              label: 'Decimal\npoint',
-              child: DropdownButton<int>(
-                value: _decimalPoint,
-                underline: const SizedBox.shrink(),
-                dropdownColor: palette.card,
-                style: OewangFonts.sans(color: palette.foreground),
-                items: const [
-                  DropdownMenuItem(value: 0, child: Text('0')),
-                  DropdownMenuItem(value: 2, child: Text('1.00')),
-                  DropdownMenuItem(value: 4, child: Text('1.0000')),
-                ],
-                onChanged: (v) =>
-                    setState(() => _decimalPoint = v ?? _decimalPoint),
+              Divider(height: 1, color: palette.border),
+              Input(
+                context: InputContext.select,
+                label: 'Decimal\npoint',
+                labelWidth: 80,
+                variant: InputVariant.none,
+                entity: EntitySelect<int>(
+                  value: _decimalPoint,
+                  items: const [0, 2, 4],
+                  labelOf: (d) => switch (d) {
+                    0 => '0',
+                    2 => '1.00',
+                    _ => '1.0000',
+                  },
+                  idOf: (d) => '$d',
+                  onSelected: (d) => setState(() => _decimalPoint = d),
+                ),
               ),
-            ),
-            const Spacer(),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Button(
-                label: 'Save',
-                onPressed: () => Navigator.of(context).pop(true),
+              const Spacer(),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Button(
+                  label: 'Save',
+                  onPressed: () => Navigator.of(context).pop(true),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -133,31 +124,5 @@ class _MainCurrencyScreenState extends State<MainCurrencyScreen> {
   String _preview() {
     if (_decimalPoint == 0) return '1';
     return 1.toStringAsFixed(_decimalPoint);
-  }
-}
-
-class _Row extends StatelessWidget {
-  const _Row({required this.label, required this.child});
-  final String label;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          SizedBox(
-            width: 80,
-            child: Text(
-              label,
-              style: OewangFonts.sans(color: context.palette.mutedForeground),
-            ),
-          ),
-          Expanded(child: child),
-        ],
-      ),
-    );
   }
 }

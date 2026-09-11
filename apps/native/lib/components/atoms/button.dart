@@ -29,6 +29,7 @@ class Button extends StatelessWidget {
     this.leading,
     this.loading = false,
     this.height = 44,
+    this.fullWidth = true,
     super.key,
   });
 
@@ -42,6 +43,10 @@ class Button extends StatelessWidget {
   final Widget? leading;
   final bool loading;
   final double height;
+
+  /// `false` sizes the button to its label instead of stretching — for a
+  /// compact/inline action (e.g. an app bar action, an empty-state CTA).
+  final bool fullWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -70,7 +75,7 @@ class Button extends StatelessWidget {
           );
 
     return SizedBox(
-      width: double.infinity,
+      width: fullWidth ? double.infinity : null,
       height: height,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(

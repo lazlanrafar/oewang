@@ -9,7 +9,7 @@ class DrawerMetrics {
   const DrawerMetrics._();
 
   /// Fixed content height for all panels (excludes the bottom safe-area inset).
-  static const double height = 380;
+  static const double height = 340;
 
   /// Panel surface — matches the page background (white in light mode); the
   /// solid black header provides the separation, not elevation.

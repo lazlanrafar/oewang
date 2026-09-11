@@ -170,10 +170,7 @@ class _ComingSoonBadge extends StatelessWidget {
     final palette = context.palette;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: palette.border.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(4),
-      ),
+      color: palette.border.withValues(alpha: 0.6),
       child: Text(
         'Coming soon',
         style: OewangFonts.sans(

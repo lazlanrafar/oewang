@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:oewang/components/atoms/inputs/bases/input_base_drawer_host.dart';
 import 'package:oewang/components/atoms/inputs/extensions/input_decoration_extension.dart';
 import 'package:oewang/components/atoms/inputs/input.dart';
 import 'package:oewang/components/atoms/inputs/input_style.dart';
@@ -48,7 +49,13 @@ Widget buildTextContext(
     inputFormatters: style.formatters(),
     validator: style.validator(),
     autofillHints: widget.autofillHints,
-    onTap: widget.onTap,
+    // A real text field and the shared drawer panel (amount/date/select) are
+    // two competing input surfaces; opening the keyboard here must close
+    // whichever drawer panel is showing so only one is ever on screen.
+    onTap: () {
+      FormDrawerScope.maybeOf(context)?.close();
+      widget.onTap?.call();
+    },
     onChanged: widget.onChanged,
     onFieldSubmitted: widget.onSubmitted,
     style: OewangFonts.sans(color: palette.foreground, fontSize: 14),

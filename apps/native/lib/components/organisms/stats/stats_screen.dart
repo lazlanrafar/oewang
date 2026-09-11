@@ -916,10 +916,7 @@ class _MonthlyBar extends StatelessWidget {
                         horizontal: 6,
                         vertical: 1,
                       ),
-                      decoration: BoxDecoration(
-                        color: palette.mutedForeground,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
+                      color: palette.mutedForeground,
                       child: Text(
                         'Today',
                         style: OewangFonts.sans(
