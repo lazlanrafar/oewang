@@ -199,25 +199,10 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> {
                             : ListView(
                                 children: [
                                   for (final d in visible)
-                                    Dismissible(
+                                    _DebtRow(
                                       key: ValueKey(d.id),
-                                      direction: DismissDirection.endToStart,
-                                      confirmDismiss: (_) => _delete(d),
-                                      background: Container(
-                                        color: OewangColors.coral,
-                                        alignment: Alignment.centerRight,
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 16,
-                                        ),
-                                        child: const Icon(
-                                          Icons.delete,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                      child: _DebtRow(
-                                        debt: d,
-                                        onTap: () => _openActions(d),
-                                      ),
+                                      debt: d,
+                                      onTap: () => _openActions(d),
                                     ),
                                 ],
                               ),
@@ -333,7 +318,7 @@ class _SummaryHeader extends StatelessWidget {
 }
 
 class _DebtRow extends StatelessWidget {
-  const _DebtRow({required this.debt, required this.onTap});
+  const _DebtRow({required this.debt, required this.onTap, super.key});
   final Debt debt;
   final VoidCallback onTap;
 
