@@ -180,17 +180,20 @@ export const systemAdminsController = new Elysia({ prefix: "/system-admins" })
       const result = await SystemAdminsService.changeWorkspacePlan(id, planId);
       if (!result.success) {
         set.status = 400;
+        return result;
       }
       return result;
     },
     {
-      // Superadmin-only: manually overriding a workspace's paid plan is a
-      // billing-sensitive action and must not be reachable by finance/owner.
       beforeHandle({ auth, status }) {
-        if (auth?.system_role !== "superadmin") {
+        if (
+          auth?.system_role !== "superadmin" &&
+          auth?.system_role !== "owner" &&
+          auth?.system_role !== "finance"
+        ) {
           return status(
             403,
-            buildError(ErrorCode.FORBIDDEN, "Superadmin access required."),
+            buildError(ErrorCode.FORBIDDEN, "Admin access required."),
           );
         }
       },
