@@ -41,6 +41,8 @@
 	<string>Oewang needs access to your photos so you can choose a profile picture.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Oewang needs the camera to scan receipts and capture profile pictures.</string>
+	<key>NSContactsUsageDescription</key>
+	<string>Oewang needs access to your contacts so you can import them as debt contacts.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

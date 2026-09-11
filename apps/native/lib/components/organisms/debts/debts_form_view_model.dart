@@ -116,6 +116,23 @@ class DebtFormViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Imports [candidates] (name + optional phone, e.g. from the phone's
+  /// address book), creating each one. Tolerates a per-item failure (e.g. a
+  /// race-condition duplicate-name 409) without aborting the rest. Returns
+  /// how many were actually created.
+  Future<int> importContacts(List<(String name, String? phone)> candidates) async {
+    var created = 0;
+    for (final (name, phone) in candidates) {
+      final res = await _contacts.create(name: name, phone: phone);
+      res.fold((c) {
+        _contactOptions = [c, ..._contactOptions];
+        created++;
+      }, (_) {});
+    }
+    notifyListeners();
+    return created;
+  }
+
   Future<Result<void, AppError>?> submit() async {
     if (!_state.isValid) return null;
     await save.run(null);

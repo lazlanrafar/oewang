@@ -38,8 +38,8 @@ class ContactsRepositoryOffline implements ContactsRepository {
   }
 
   @override
-  Future<Result<Contact, AppError>> create({required String name}) =>
-      _remote.create(name: name);
+  Future<Result<Contact, AppError>> create({required String name, String? phone}) =>
+      _remote.create(name: name, phone: phone);
 
   Future<void> _cache(String ws, List<Contact> contacts) async {
     if (contacts.isEmpty) return;

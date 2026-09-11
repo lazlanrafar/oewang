@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_contacts/flutter_contacts.dart' as fc;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oewang/components/atoms/button.dart';
 import 'package:oewang/components/atoms/inputs/bases/input_base_drawer_host.dart';
+import 'package:oewang/components/atoms/inputs/bases/input_base_drawer_metrics.dart';
 import 'package:oewang/components/atoms/inputs/bases/input_base_field_row.dart';
+import 'package:oewang/components/atoms/inputs/contexts/input_context_select.dart';
 import 'package:oewang/components/atoms/inputs/input.dart';
+import 'package:oewang/components/atoms/section_label.dart';
 import 'package:oewang/components/molecules/page_app_bar.dart';
 import 'package:oewang/components/molecules/segmented_tabs.dart';
 import 'package:oewang/components/organisms/debts/debts_form_view_model.dart';
+import 'package:oewang/components/organisms/debts/import_contacts_screen.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
@@ -46,6 +51,31 @@ class _DebtFormScreenState extends ConsumerState<DebtFormScreen> {
   late final TextEditingController _notes = TextEditingController(
     text: widget.debt?.description ?? '',
   );
+  bool _autoOpenedContact = false;
+
+  void _maybeAutoOpenContact(BuildContext context, DebtFormViewModel vm) {
+    if (_autoOpenedContact ||
+        vm.isEditing ||
+        vm.state.contactId != null ||
+        vm.contactOptions.isEmpty) {
+      return;
+    }
+    _autoOpenedContact = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      openListDrawer<Contact>(
+        context,
+        id: 'Contact',
+        title: 'Contact',
+        items: vm.contactOptions,
+        labelOf: (c) => c.name,
+        idOf: (c) => c.id,
+        searchable: true,
+        extraHeaderActions: [_importContactsButton(vm)],
+        onSelected: (c) => vm.setContact(c.id),
+      );
+    });
+  }
 
   @override
   void dispose() {
@@ -90,6 +120,59 @@ class _DebtFormScreenState extends ConsumerState<DebtFormScreen> {
     if (name != null && name.isNotEmpty) await vm.addContact(name);
   }
 
+  Widget _importContactsButton(DebtFormViewModel vm) {
+    return IconButton(
+      tooltip: 'Import from phone',
+      visualDensity: VisualDensity.compact,
+      onPressed: () => _importFromPhone(vm),
+      icon: const Icon(Icons.contacts, color: DrawerMetrics.onHeader),
+    );
+  }
+
+  Future<void> _importFromPhone(DebtFormViewModel vm) async {
+    final granted = await fc.FlutterContacts.requestPermission();
+    if (!granted) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Contacts permission denied.')),
+      );
+      return;
+    }
+    final device = await fc.FlutterContacts.getContacts(withProperties: true);
+    final existing = vm.contactOptions.map((c) => c.name.toLowerCase()).toSet();
+    final seen = <String>{};
+    final candidates = <(String, String?)>[];
+    for (final c in device) {
+      final name = c.displayName.trim();
+      if (name.isEmpty) continue;
+      final key = name.toLowerCase();
+      if (existing.contains(key) || !seen.add(key)) continue;
+      final phone = c.phones.isEmpty ? null : c.phones.first.number;
+      candidates.add((name, phone));
+    }
+    if (!mounted) return;
+    if (candidates.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No new contacts to import.')),
+      );
+      return;
+    }
+    final picked = await Navigator.of(context).push<List<(String, String?)>>(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => ImportContactsScreen(candidates: candidates),
+      ),
+    );
+    if (picked == null || picked.isEmpty || !mounted) return;
+    final created = await vm.importContacts(picked);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Imported $created contact${created == 1 ? '' : 's'}.'),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final vm = ref.watch(debtFormVmProvider(widget.debt));
@@ -106,7 +189,10 @@ class _DebtFormScreenState extends ConsumerState<DebtFormScreen> {
           child: Column(
             children: [
               Expanded(
-                child: ListView(
+                child: Builder(
+                  builder: (context) {
+                    _maybeAutoOpenContact(context, vm);
+                    return ListView(
                   padding: EdgeInsets.zero,
                   children: [
                     if (!vm.isEditing)
@@ -153,6 +239,8 @@ class _DebtFormScreenState extends ConsumerState<DebtFormScreen> {
                           items: vm.contactOptions,
                           labelOf: (c) => c.name,
                           idOf: (c) => c.id,
+                          searchable: true,
+                          extraHeaderActions: [_importContactsButton(vm)],
                           onSelected: (c) => vm.setContact(c.id),
                         ),
                       ),
@@ -174,13 +262,20 @@ class _DebtFormScreenState extends ConsumerState<DebtFormScreen> {
                       datePattern: 'EEE, dd/MM/yyyy',
                       onDateChanged: vm.setDueDate,
                     ),
+                    const SizedBox(height: 24),
+                    Container(height: 8, color: palette.muted),
+                    const SectionLabel('Notes'),
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
                       child: Input(
-                        label: 'Notes',
                         variant: InputVariant.underline,
                         controller: _notes,
                         hintText: 'Optional note',
+                        maxLines: 5,
+                        minLines: 3,
                         onChanged: vm.setDescription,
                       ),
                     ),
@@ -197,6 +292,8 @@ class _DebtFormScreenState extends ConsumerState<DebtFormScreen> {
                         ),
                       ),
                   ],
+                    );
+                  },
                 ),
               ),
               Padding(

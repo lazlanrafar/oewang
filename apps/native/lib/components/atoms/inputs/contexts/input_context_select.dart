@@ -21,6 +21,8 @@ class EntitySelect<T> {
     this.leadingOf,
     this.gridColumns,
     this.sheetTitle,
+    this.searchable = false,
+    this.extraHeaderActions = const [],
   });
 
   final T? value;
@@ -32,6 +34,14 @@ class EntitySelect<T> {
   final String? Function(T)? leadingOf;
   final int? gridColumns;
   final String? sheetTitle;
+
+  /// Shows a search field in the drawer's header (list picker only) to filter
+  /// [items] by [labelOf]. For long lists — e.g. contacts.
+  final bool searchable;
+
+  /// Extra buttons in the drawer's header (list picker only), before the
+  /// search icon — e.g. "import from phone contacts".
+  final List<Widget> extraHeaderActions;
 
   /// The selected item's display text (with optional leading glyph), or null.
   String? get displayLabel {
@@ -72,6 +82,8 @@ class EntitySelect<T> {
         labelOf: labelOf,
         idOf: idOf,
         subtitleOf: subtitleOf,
+        searchable: searchable,
+        extraHeaderActions: extraHeaderActions,
         onSelected: onSelected,
       );
     }
@@ -147,6 +159,8 @@ void openListDrawer<T>(
   required String Function(T) idOf,
   required ValueChanged<T> onSelected,
   String? Function(T)? subtitleOf,
+  bool searchable = false,
+  List<Widget> extraHeaderActions = const [],
 }) {
   final controller = FormDrawerScope.maybeOf(context);
   controller?.open(
@@ -156,6 +170,8 @@ void openListDrawer<T>(
       items: items,
       labelOf: labelOf,
       subtitleOf: subtitleOf,
+      searchable: searchable,
+      extraHeaderActions: extraHeaderActions,
       onSelected: (item) {
         // Close first — onSelected may open the next field's drawer, and
         // that must win over this stale close().
@@ -333,8 +349,10 @@ class GridPickerSheet {
 
 
 /// Vertical-list picker content for choosing one item from a list. Reports the
-/// picked item through [onSelected]; never touches the Navigator.
-class EntityListContent<T> extends StatelessWidget {
+/// picked item through [onSelected]; never touches the Navigator. With
+/// [searchable] a search field is added to the header (black section) to
+/// filter by [labelOf].
+class EntityListContent<T> extends StatefulWidget {
   const EntityListContent({
     required this.title,
     required this.items,
@@ -342,6 +360,8 @@ class EntityListContent<T> extends StatelessWidget {
     required this.onSelected,
     this.onClose,
     this.subtitleOf,
+    this.searchable = false,
+    this.extraHeaderActions = const [],
     super.key,
   });
 
@@ -351,38 +371,126 @@ class EntityListContent<T> extends StatelessWidget {
   final ValueChanged<T> onSelected;
   final VoidCallback? onClose;
   final String? Function(T)? subtitleOf;
+  final bool searchable;
+  final List<Widget> extraHeaderActions;
+
+  @override
+  State<EntityListContent<T>> createState() => _EntityListContentState<T>();
+}
+
+class _EntityListContentState<T> extends State<EntityListContent<T>> {
+  final _searchCtl = TextEditingController();
+  bool _searching = false;
+  String _query = '';
+
+  @override
+  void dispose() {
+    _searchCtl.dispose();
+    super.dispose();
+  }
+
+  void _toggleSearch() {
+    setState(() {
+      _searching = !_searching;
+      if (!_searching) {
+        _query = '';
+        _searchCtl.clear();
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
+    final filtered = _query.isEmpty
+        ? widget.items
+        : widget.items
+            .where((i) =>
+                widget.labelOf(i).toLowerCase().contains(_query.toLowerCase()))
+            .toList();
     return Column(
       mainAxisSize: MainAxisSize.max,
       children: [
-        FormDrawerHeader(title: title, onClose: onClose),
-        Expanded(
-          child: ListView.builder(
-            padding: EdgeInsets.zero,
-            itemCount: items.length,
-            itemBuilder: (context, index) {
-              final item = items[index];
-              return ListTile(
-                title: Text(
-                  labelOf(item),
-                  style: OewangFonts.sans(color: palette.foreground),
-                ),
-                subtitle: subtitleOf == null
-                    ? null
-                    : Text(
-                        subtitleOf!(item) ?? '',
-                        style: OewangFonts.sans(
-                          color: palette.mutedForeground,
-                          fontSize: 12,
-                        ),
+        FormDrawerHeader(
+          title: widget.title,
+          // While searching the header's own close button cancels the
+          // search instead — one trailing icon at a time, not two.
+          onClose: _searching ? _toggleSearch : widget.onClose,
+          titleWidget: _searching
+              ? TextField(
+                  controller: _searchCtl,
+                  autofocus: true,
+                  onChanged: (v) => setState(() => _query = v),
+                  style: OewangFonts.sans(color: DrawerMetrics.onHeader),
+                  cursorColor: DrawerMetrics.onHeader,
+                  decoration: InputDecoration(
+                    isDense: true,
+                    isCollapsed: true,
+                    filled: false,
+                    border: InputBorder.none,
+                    hintText: 'Search ${widget.title.toLowerCase()}',
+                    hintStyle: OewangFonts.sans(
+                      color: DrawerMetrics.onHeader.withValues(alpha: 0.6),
+                    ),
+                  ),
+                )
+              : null,
+          actions: _searching
+              ? const []
+              : [
+                  ...widget.extraHeaderActions,
+                  if (widget.searchable)
+                    IconButton(
+                      tooltip: 'Search',
+                      visualDensity: VisualDensity.compact,
+                      onPressed: _toggleSearch,
+                      icon: const Icon(
+                        Icons.search,
+                        color: DrawerMetrics.onHeader,
                       ),
-                onTap: () => onSelected(item),
-              );
-            },
-          ),
+                    ),
+                ],
+        ),
+        Expanded(
+          child: filtered.isEmpty
+              ? Center(
+                  child: Text(
+                    'No matches',
+                    style: OewangFonts.sans(color: palette.mutedForeground),
+                  ),
+                )
+              : ListView.separated(
+                  padding: EdgeInsets.zero,
+                  itemCount: filtered.length,
+                  separatorBuilder: (_, _) =>
+                      Divider(height: 1, color: palette.border),
+                  itemBuilder: (context, index) {
+                    final item = filtered[index];
+                    // The shared drawer panel's own DecoratedBox (surface
+                    // color + top border) sits between here and the
+                    // Scaffold's Material, which hides ListTile's ink — give
+                    // it its own.
+                    return Material(
+                      type: MaterialType.transparency,
+                      child: ListTile(
+                        title: Text(
+                          widget.labelOf(item),
+                          style: OewangFonts.sans(color: palette.foreground),
+                        ),
+                        subtitle: widget.subtitleOf == null
+                            ? null
+                            : Text(
+                                widget.subtitleOf!(item) ?? '',
+                                style: OewangFonts.sans(
+                                  color: palette.mutedForeground,
+                                  fontSize: 12,
+                                ),
+                              ),
+                        onTap: () => widget.onSelected(item),
+                      ),
+                    );
+                  },
+                ),
         ),
       ],
     );

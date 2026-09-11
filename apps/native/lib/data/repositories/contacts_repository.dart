@@ -4,5 +4,5 @@ import 'package:oewang/domain/models/contact.dart';
 
 abstract class ContactsRepository {
   Future<Result<List<Contact>, AppError>> list({String? search});
-  Future<Result<Contact, AppError>> create({required String name});
+  Future<Result<Contact, AppError>> create({required String name, String? phone});
 }

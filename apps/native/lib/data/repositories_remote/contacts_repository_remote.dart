@@ -38,9 +38,15 @@ class ContactsRepositoryRemote implements ContactsRepository {
   }
 
   @override
-  Future<Result<Contact, AppError>> create({required String name}) async {
+  Future<Result<Contact, AppError>> create({
+    required String name,
+    String? phone,
+  }) async {
     try {
-      final res = await _api.post('/contacts', data: {'name': name});
+      final res = await _api.post(
+        '/contacts',
+        data: {'name': name, if (phone != null && phone.isNotEmpty) 'phone': phone},
+      );
       final body = res.data;
       final data = body is Map<String, dynamic> ? body['data'] : null;
       if (data is! Map<String, dynamic>) {

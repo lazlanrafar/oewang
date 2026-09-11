@@ -31,7 +31,7 @@ class PageAppBar extends StatelessWidget implements PreferredSizeWidget {
       leading: IconButton(
         tooltip: backLabel,
         alignment: Alignment.centerLeft,
-        padding: const EdgeInsets.only(left: 16, right: 8),
+        padding: const EdgeInsets.only(left: 8, right: 8),
         icon: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
