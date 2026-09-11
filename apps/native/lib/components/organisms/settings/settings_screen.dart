@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:oewang/components/atoms/section_label.dart';
+import 'package:oewang/components/molecules/confirm_dialog.dart';
 import 'package:oewang/components/molecules/list_row.dart';
 import 'package:oewang/components/organisms/settings/profile/settings_user_profile_header.dart';
 import 'package:oewang/components/organisms/settings/workspace/settings_workspace_card.dart';
@@ -148,24 +149,14 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   Future<void> _confirmLogout(BuildContext context, WidgetRef ref) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Log out'),
-        content: const Text('You will need to sign in again to use the app.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Log out'),
-          ),
-        ],
-      ),
+    final confirm = await showConfirmDialog(
+      context,
+      title: 'Log out',
+      message: 'You will need to sign in again to use the app.',
+      confirmLabel: 'Log out',
+      isDestructive: false,
     );
-    if (confirm != true) return;
+    if (!confirm) return;
     await ref.read(sessionControllerProvider.notifier).clear();
   }
 }

@@ -67,6 +67,7 @@ class TransactionsRepositoryRemote implements TransactionsRepository {
         if (draft.categoryId != null) 'categoryId': draft.categoryId,
         if (draft.note != null) 'name': draft.note,
         if (draft.description != null) 'description': draft.description,
+        if (draft.attachmentIds != null) 'attachmentIds': draft.attachmentIds,
       };
       final res = await _api.post('/transactions', data: body);
       final json = (res.data as Map<String, dynamic>)['data'];
@@ -98,6 +99,7 @@ class TransactionsRepositoryRemote implements TransactionsRepository {
         if (draft.categoryId != null) 'categoryId': draft.categoryId,
         if (draft.note != null) 'name': draft.note,
         if (draft.description != null) 'description': draft.description,
+        if (draft.attachmentIds != null) 'attachmentIds': draft.attachmentIds,
       };
       final res = await _api.put('/transactions/$id', data: body);
       final json = (res.data as Map<String, dynamic>)['data'];

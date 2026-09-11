@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:oewang/components/atoms/button.dart';
 import 'package:oewang/components/atoms/money_text.dart';
+import 'package:oewang/components/molecules/confirm_dialog.dart';
 import 'package:oewang/components/organisms/transactions/transactions_sub_tab_bar.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/router/app_router.dart';
@@ -52,24 +53,12 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> {
   }
 
   Future<bool> _delete(Debt d) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Delete debt'),
-        content: Text('Remove the debt with "${d.contactName}"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+    final ok = await showConfirmDialog(
+      context,
+      title: 'Delete debt',
+      message: 'Remove the debt with "${d.contactName}"?',
     );
-    if (ok != true) return false;
+    if (!ok) return false;
     final res = await ref.read(debtsRepositoryProvider).delete(d.id);
     return res.fold((_) {
       _bump();
@@ -160,9 +149,38 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> {
               child: async.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (e, _) => Center(
-                  child: Text(
-                    e.toString(),
-                    style: OewangFonts.sans(color: OewangColors.coral),
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          "Couldn't load debts",
+                          style: OewangFonts.sans(
+                            color: palette.foreground,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Check your connection and try again.',
+                          textAlign: TextAlign.center,
+                          style: OewangFonts.sans(
+                            color: palette.mutedForeground,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: 120,
+                          child: Button(
+                            label: 'Retry',
+                            variant: ButtonVariant.outlined,
+                            onPressed: () => ref.invalidate(_debtsProvider),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 data: (debts) {
@@ -238,6 +256,7 @@ class _Header extends StatelessWidget {
           ),
           const Spacer(),
           IconButton(
+            tooltip: 'Add debt',
             onPressed: onAdd,
             icon: Icon(Icons.add, color: palette.foreground),
           ),
@@ -322,11 +341,15 @@ class _DebtRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = context.palette;
     final overdue = debt.isOverdue();
+    // The coral color alone isn't a reliable overdue signal (colorblind
+    // users, low-attention glances) — say "Overdue" too.
+    final dueLabel = debt.dueDate == null
+        ? null
+        : '${overdue ? 'Overdue · ' : ''}Due ${DateFormat('dd/MM/yyyy').format(debt.dueDate!)}';
     final sub = <String>[
       if (debt.description != null && debt.description!.isNotEmpty)
         debt.description!,
-      if (debt.dueDate != null)
-        'Due ${DateFormat('dd/MM/yyyy').format(debt.dueDate!)}',
+      if (dueLabel != null) dueLabel,
     ].join(' · ');
 
     return InkWell(

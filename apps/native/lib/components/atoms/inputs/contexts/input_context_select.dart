@@ -276,9 +276,14 @@ class _GridCell extends StatelessWidget {
                   style: OewangFonts.sans(
                     color: palette.foreground,
                     fontSize: 14,
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
                   ),
                 ),
               ),
+              if (selected) ...[
+                const SizedBox(width: 6),
+                Icon(Icons.check, size: 16, color: palette.foreground),
+              ],
             ],
           ),
         ),

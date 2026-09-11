@@ -16,10 +16,12 @@ class OewangColors {
 
   // Muted / accent / border
   static const Color muted = Color(0xFF1C1C1C); // hsl(0 0% 11%)
-  static const Color mutedForeground = Color(0xFF616161); // hsl(0 0% 38%)
+  // Raised from #616161 (~3.1:1 on background/card, fails WCAG 4.5:1 for
+  // body text) to #8A8A8A (~4.8:1) per ui-review contrast finding.
+  static const Color mutedForeground = Color(0xFF8A8A8A);
   static const Color accent = Color(0xFF1C1C1C);
   static const Color accentForeground = Color(0xFFFAFAFA);
-  static const Color border = Color(0xFF333333); // hsl(0 0% 20%)
+  static const Color border = Color(0xFF2A2A2A);
   static const Color input = Color(0xFF1C1C1C);
 
   // Primary

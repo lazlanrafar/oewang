@@ -13,11 +13,12 @@ import 'package:oewang/domain/models/transaction.dart';
 /// IMG_1828 — month roll-up row + per-week buckets. The current week (if
 /// today falls in the visible month) is highlighted in the expense color.
 class TransactionsMonthlyScreen extends ConsumerWidget {
-  const TransactionsMonthlyScreen({super.key});
+  const TransactionsMonthlyScreen({required this.month, super.key});
+
+  final DateTime month;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final month = ref.watch(monthControllerProvider);
     final async = ref.watch(monthTransactionsProvider(month));
     return async.when(
       data: (txs) => _MonthlyList(month: month, transactions: txs),

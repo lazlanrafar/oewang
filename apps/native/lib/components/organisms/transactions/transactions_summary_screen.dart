@@ -13,11 +13,12 @@ import 'package:oewang/domain/models/wallet.dart';
 
 /// IMG_1829 — account-group expense card + Budget progress + Export CTA.
 class TransactionsSummaryScreen extends ConsumerWidget {
-  const TransactionsSummaryScreen({super.key});
+  const TransactionsSummaryScreen({required this.month, super.key});
+
+  final DateTime month;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final month = ref.watch(monthControllerProvider);
     final async = ref.watch(monthTransactionsProvider(month));
     final wallets = ref.watch(_walletsSummaryProvider);
     final budgets = ref.watch(_budgetTotalsProvider(month));

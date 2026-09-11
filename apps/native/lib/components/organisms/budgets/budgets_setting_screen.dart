@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:oewang/components/atoms/money_text.dart';
+import 'package:oewang/components/molecules/confirm_dialog.dart';
 import 'package:oewang/components/molecules/page_app_bar.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/router/app_router.dart';
@@ -48,24 +49,12 @@ class BudgetSettingScreen extends ConsumerWidget {
     WidgetRef ref,
     BudgetStatus b,
   ) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Delete budget'),
-        content: Text('Remove the budget for "${b.categoryName}"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+    final ok = await showConfirmDialog(
+      context,
+      title: 'Delete budget',
+      message: 'Remove the budget for "${b.categoryName}"?',
     );
-    if (ok != true) return false;
+    if (!ok) return false;
     final res = await ref.read(budgetsRepositoryProvider).delete(b.id);
     return res.fold((_) {
       _bump(ref);

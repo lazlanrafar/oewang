@@ -102,6 +102,8 @@ class SyncService {
                   '${r.date.month.toString().padLeft(2, '0')}-'
                   '${r.date.day.toString().padLeft(2, '0')}',
               'type': r.type, 'name': r.name, 'description': r.description,
+              if (r.attachmentIds != null && r.attachmentIds!.isNotEmpty)
+                'attachmentIds': r.attachmentIds!.split(','),
             },
           ),
         )
@@ -296,6 +298,13 @@ class SyncService {
           }
           if (e.key == 'date' || e.key == 'dueDate') {
             return '$actual'.split('T').first != '${e.value}'.split('T').first;
+          }
+          if (e.key == 'attachmentIds') {
+            // Lists never compare `==` by identity — compare contents so an
+            // unchanged attachment list doesn't look like a local edit.
+            final a = (actual as List?)?.map((v) => '$v').toList() ?? [];
+            final b = (e.value as List?)?.map((v) => '$v').toList() ?? [];
+            return a.length != b.length || !a.every(b.contains);
           }
           return actual != e.value;
         });

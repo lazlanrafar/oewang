@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,6 +15,7 @@ import 'package:oewang/data/repositories/settings_repository.dart';
 import 'package:oewang/data/repositories/sub_currencies_repository.dart';
 import 'package:oewang/data/repositories/transactions_repository.dart';
 import 'package:oewang/data/repositories/users_repository.dart';
+import 'package:oewang/data/repositories/vault_repository.dart';
 import 'package:oewang/data/repositories/wallet_groups_repository.dart';
 import 'package:oewang/data/repositories/wallets_repository.dart';
 import 'package:oewang/data/repositories/workspaces_repository.dart';
@@ -31,6 +34,7 @@ import 'package:oewang/data/repositories_remote/sub_currencies_repository_remote
 import 'package:oewang/data/repositories_remote/transactions_repository_offline.dart';
 import 'package:oewang/data/repositories_remote/transactions_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/users_repository_remote.dart';
+import 'package:oewang/data/repositories_remote/vault_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/wallet_groups_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/wallets_repository_offline.dart';
 import 'package:oewang/data/repositories_remote/wallets_repository_remote.dart';
@@ -143,6 +147,10 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
     storage: ref.watch(secureStorageProvider),
     env: ref.watch(envProvider),
   );
+});
+
+final vaultRepositoryProvider = Provider<VaultRepository>((ref) {
+  return VaultRepositoryRemote(ref.watch(apiClientProvider));
 });
 
 final transactionsRepositoryProvider = Provider<TransactionsRepository>((ref) {
@@ -416,6 +424,7 @@ class SessionController extends Notifier<AsyncValue<Session?>> {
     try {
       final session = await ref.read(authRepositoryProvider).currentSession();
       state = AsyncValue.data(session);
+      _prefetchWorkspaceData(session);
     } on Exception catch (e, st) {
       state = AsyncValue.error(e, st);
     }
@@ -424,7 +433,22 @@ class SessionController extends Notifier<AsyncValue<Session?>> {
   @visibleForTesting
   void setForTest(Session? session) => state = AsyncValue.data(session);
 
-  void onLoggedIn(Session session) => state = AsyncValue.data(session);
+  void onLoggedIn(Session session) {
+    state = AsyncValue.data(session);
+    _prefetchWorkspaceData(session);
+  }
+
+  /// Warms the offline-cached, workspace-scoped providers the user reaches
+  /// right after Trans. loads (settings, sub-currencies) so their first
+  /// paint doesn't show a loading skeleton. Fire-and-forget: each provider
+  /// caches its own result and callers await it themselves as usual — this
+  /// just gets the request in flight as early as the workspace is known,
+  /// same moment Trans.'s own fetch starts, no extra request once cached.
+  void _prefetchWorkspaceData(Session? session) {
+    if (session == null || (session.workspaceId?.isEmpty ?? true)) return;
+    unawaited(ref.read(transactionSettingsProvider.future));
+    unawaited(ref.read(subCurrenciesProvider.future));
+  }
 
   Future<void> clear() async {
     await ref.read(authRepositoryProvider).logout();

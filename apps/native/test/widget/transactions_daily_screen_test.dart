@@ -48,7 +48,7 @@ void main() {
           ],
           child: MaterialApp(
             theme: AppTheme.dark(),
-            home: const Scaffold(body: TransactionsDailyScreen()),
+            home: Scaffold(body: TransactionsDailyScreen(month: monthStart)),
           ),
         ),
       );

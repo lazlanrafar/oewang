@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:oewang/components/layouts/main_shell.dart';
+import 'package:oewang/components/layouts/splash_screen.dart';
 import 'package:oewang/components/organisms/auth/auth_login_screen.dart';
 import 'package:oewang/components/organisms/auth/auth_onboarding_screen.dart';
 import 'package:oewang/components/organisms/auth/auth_register_screen.dart';
@@ -38,6 +39,7 @@ import 'package:oewang/domain/models/wallet_group.dart';
 class AppRoutes {
   const AppRoutes._();
 
+  static const String splash = '/splash';
   static const String login = '/login';
   static const String register = '/register';
   static const String onboarding = '/onboarding';
@@ -92,7 +94,7 @@ GoRouter buildAppRouter(Ref ref) {
   final refresh = _SessionRefresh(ref);
 
   return GoRouter(
-    initialLocation: AppRoutes.trans,
+    initialLocation: AppRoutes.splash,
     refreshListenable: refresh,
     redirect: (context, state) {
       // The OS hands the oewang://oauth-callback deep link to go_router too
@@ -104,13 +106,24 @@ GoRouter buildAppRouter(Ref ref) {
       if (state.uri.scheme == 'oewang') return AppRoutes.trans;
 
       final session = ref.read(sessionControllerProvider);
-      if (session.isLoading) return null;
+      final loc = state.matchedLocation;
+
+      // Hold every route on the splash screen until the session resolves —
+      // a local secure-storage read + JWT decode, no network call. Letting a
+      // route through earlier used to mount workspace-scoped screens (Trans.,
+      // Wallets, ...) before `workspace_id` was known, so their very first
+      // fetch read it as empty, was treated as unauthorized, and silently
+      // cached an empty result (autoDispose only fixed it once the user
+      // navigated away and back). Gating here fixes it for every screen at
+      // once instead of patching each data provider.
+      if (session.isLoading) {
+        return loc == AppRoutes.splash ? null : AppRoutes.splash;
+      }
 
       final value = session.valueOrNull;
       final loggedIn = value != null;
       final ws = value?.workspaceId;
       final hasWorkspace = ws != null && ws.isNotEmpty;
-      final loc = state.matchedLocation;
       // Public (logged-out) routes. Onboarding is NOT public — it needs a
       // session, so a cleared session there falls back to login instead of
       // stranding the user on a screen whose API calls 401.
@@ -128,11 +141,19 @@ GoRouter buildAppRouter(Ref ref) {
       if (!hasWorkspace) {
         return loc == AppRoutes.onboarding ? null : AppRoutes.onboarding;
       }
-      // Logged in with a workspace → keep them out of the auth flow.
-      if (authFlowRoutes.contains(loc)) return AppRoutes.trans;
+      // Logged in with a workspace → keep them out of the auth flow and off
+      // the now-resolved splash screen.
+      if (authFlowRoutes.contains(loc) || loc == AppRoutes.splash) {
+        return AppRoutes.trans;
+      }
       return null;
     },
     routes: [
+      GoRoute(
+        path: AppRoutes.splash,
+        pageBuilder: (context, state) =>
+            const NoTransitionPage(child: SplashScreen()),
+      ),
       GoRoute(
         path: AppRoutes.login,
         pageBuilder: (context, state) =>

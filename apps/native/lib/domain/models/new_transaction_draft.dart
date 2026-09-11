@@ -14,6 +14,7 @@ class NewTransactionDraft {
     this.categoryId,
     this.note,
     this.description,
+    this.attachmentIds,
   });
 
   final TransactionType type;
@@ -24,4 +25,8 @@ class NewTransactionDraft {
   final String? categoryId;
   final String? note;
   final String? description;
+
+  /// Vault file ids (from `VaultRepository.upload`) to attach — currently at
+  /// most one, the picked receipt image.
+  final List<String>? attachmentIds;
 }

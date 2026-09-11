@@ -15,6 +15,7 @@ Widget buildTextContext(
   required TextEditingController controller,
   required bool obscured,
   required VoidCallback onToggleObscure,
+  FocusNode? focusNode,
 }) {
   final palette = context.palette;
   final style = InputStyleResolver.resolve(widget.context);
@@ -37,6 +38,7 @@ Widget buildTextContext(
   final multiline = widget.maxLines != 1;
   final field = TextFormField(
     controller: controller,
+    focusNode: focusNode,
     autofocus: widget.autofocus,
     obscureText: obscured,
     maxLines: obscured ? 1 : widget.maxLines,

@@ -123,6 +123,7 @@ class _CalendarContentState extends State<CalendarContent> {
           child: Row(
             children: [
               IconButton(
+                tooltip: 'Previous month',
                 onPressed: () => _stepMonth(-1),
                 icon: Icon(Icons.chevron_left, color: palette.foreground),
               ),
@@ -137,6 +138,7 @@ class _CalendarContentState extends State<CalendarContent> {
                 ),
               ),
               IconButton(
+                tooltip: 'Next month',
                 onPressed: () => _stepMonth(1),
                 icon: Icon(Icons.chevron_right, color: palette.foreground),
               ),

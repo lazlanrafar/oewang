@@ -1,13 +1,17 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart' hide Category;
 import 'package:oewang/core/command/command.dart';
 import 'package:oewang/core/result/app_error.dart';
 import 'package:oewang/core/result/result.dart';
 import 'package:oewang/data/repositories/categories_repository.dart';
 import 'package:oewang/data/repositories/transactions_repository.dart';
+import 'package:oewang/data/repositories/vault_repository.dart';
 import 'package:oewang/data/repositories/wallets_repository.dart';
 import 'package:oewang/domain/models/category.dart';
 import 'package:oewang/domain/models/new_transaction_draft.dart';
 import 'package:oewang/domain/models/transaction.dart';
+import 'package:oewang/domain/models/vault_file.dart';
 import 'package:oewang/domain/models/wallet.dart';
 
 class TransactionFormState {
@@ -21,6 +25,7 @@ class TransactionFormState {
     this.fees = 0,
     this.note = '',
     this.description = '',
+    this.attachmentIds = const [],
   });
 
   factory TransactionFormState.initial() => TransactionFormState(
@@ -38,6 +43,11 @@ class TransactionFormState {
   final num fees;
   final String note;
   final String description;
+
+  /// Vault file ids of uploaded receipt images, in add order — grown by
+  /// [TransactionFormViewModel.addAttachment], shrunk by
+  /// [TransactionFormViewModel.removeAttachment].
+  final List<String> attachmentIds;
 
   bool get isValid {
     if (amount <= 0) return false;
@@ -60,6 +70,7 @@ class TransactionFormState {
     num? fees,
     String? note,
     String? description,
+    List<String>? attachmentIds,
   }) {
     return TransactionFormState(
       type: type ?? this.type,
@@ -71,6 +82,7 @@ class TransactionFormState {
       fees: fees ?? this.fees,
       note: note ?? this.note,
       description: description ?? this.description,
+      attachmentIds: attachmentIds ?? this.attachmentIds,
     );
   }
 
@@ -86,10 +98,12 @@ class TransactionFormViewModel extends ChangeNotifier {
     required TransactionsRepository transactions,
     required WalletsRepository wallets,
     required CategoriesRepository categories,
+    required VaultRepository vault,
     Transaction? editing,
   }) : _transactions = transactions,
        _wallets = wallets,
        _categories = categories,
+       _vault = vault,
        _editingId = editing?.id {
     if (editing != null) _state = _stateFrom(editing);
     save = Command<NewTransactionDraft, Transaction>(_runSave)
@@ -100,6 +114,7 @@ class TransactionFormViewModel extends ChangeNotifier {
   final TransactionsRepository _transactions;
   final WalletsRepository _wallets;
   final CategoriesRepository _categories;
+  final VaultRepository _vault;
   final String? _editingId;
 
   bool get isEditing => _editingId != null;
@@ -111,6 +126,27 @@ class TransactionFormViewModel extends ChangeNotifier {
   bool _loadingPickers = true;
 
   late final Command<NewTransactionDraft, Transaction> save;
+
+  /// Uploads a picked receipt image to the vault. Multiple images can be
+  /// in flight at once (one per grid tile), so this is a plain call rather
+  /// than a shared [Command] — the View tracks each tile's own
+  /// loading/error state and calls [addAttachment] on success.
+  Future<Result<VaultFile, AppError>> uploadAttachment(File file) =>
+      _vault.upload(file);
+
+  void addAttachment(String id) {
+    _state = _state.copyWith(attachmentIds: [..._state.attachmentIds, id]);
+    notifyListeners();
+  }
+
+  /// Detaches one receipt image (doesn't delete it from the vault — it may
+  /// still be referenced elsewhere, or the user just changed their mind).
+  void removeAttachment(String id) {
+    _state = _state.copyWith(
+      attachmentIds: _state.attachmentIds.where((a) => a != id).toList(),
+    );
+    notifyListeners();
+  }
 
   TransactionFormState get state => _state;
   List<Wallet> get walletOptions => _walletOptions;
@@ -205,6 +241,8 @@ class TransactionFormViewModel extends ChangeNotifier {
           : _state.categoryId,
       note: note,
       description: _state.description.isEmpty ? null : _state.description,
+      attachmentIds:
+          _state.attachmentIds.isEmpty ? null : _state.attachmentIds,
     );
     await save.run(draft);
     final ok = save.result;
@@ -240,12 +278,23 @@ class TransactionFormViewModel extends ChangeNotifier {
       categoryId: t.categoryId,
       note: t.name ?? '',
       description: t.description ?? '',
+      attachmentIds: t.attachments.map((a) => a.id).toList(),
     );
   }
 
   void resetForContinue() {
     save.reset();
-    _state = _state.copyWith(amount: 0, fees: 0, note: '', description: '');
+    _state = TransactionFormState(
+      type: _state.type,
+      date: _state.date,
+      walletId: _state.walletId,
+      toWalletId: _state.toWalletId,
+      categoryId: _state.categoryId,
+      amount: 0,
+      fees: 0,
+      note: '',
+      description: '',
+    );
     notifyListeners();
   }
 

@@ -3,9 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:oewang/components/layouts/bottom_nav.dart';
 import 'package:oewang/components/layouts/fab.dart';
-import 'package:oewang/components/molecules/sync_status_banner.dart';
 import 'package:oewang/components/organisms/transactions/transactions_month_controller.dart';
-import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/router/app_router.dart';
 
 /// Hosts the 4-tab bottom-nav shell. Each tab is its own [StatefulShellBranch]
@@ -33,16 +31,9 @@ class MainShell extends ConsumerWidget {
     final index = navigationShell.currentIndex;
     final showFab = index == _transactionsTabIndex;
     final month = ref.watch(monthControllerProvider);
-    final pendingCount = ref.watch(pendingSyncCountProvider).valueOrNull ?? 0;
 
     return Scaffold(
-      body: Column(
-        children: [
-          if (pendingCount > 0)
-            const SafeArea(bottom: false, child: SyncStatusBanner()),
-          Expanded(child: navigationShell),
-        ],
-      ),
+      body: navigationShell,
       floatingActionButton: showFab
           ? OewangFab(onPressed: () => _onAddTransaction(context))
           : null,

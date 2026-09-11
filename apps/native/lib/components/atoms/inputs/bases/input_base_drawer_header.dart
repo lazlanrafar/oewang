@@ -34,6 +34,7 @@ class FormDrawerHeader extends StatelessWidget {
             const Spacer(),
             ...actions,
             IconButton(
+              tooltip: 'Close',
               visualDensity: VisualDensity.compact,
               onPressed: onClose,
               icon: const Icon(Icons.close, color: DrawerMetrics.onHeader),

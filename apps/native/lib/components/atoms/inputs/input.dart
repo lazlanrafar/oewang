@@ -49,6 +49,7 @@ class Input extends StatefulWidget {
     this.placeholder = '',
     // text / accounts
     this.controller,
+    this.focusNode,
     this.hintText,
     this.autofocus = false,
     this.obscureText = false,
@@ -118,6 +119,10 @@ class Input extends StatefulWidget {
 
   // text / accounts
   final TextEditingController? controller;
+
+  /// Lets an external widget (e.g. [Autocomplete]'s `fieldViewBuilder`) drive
+  /// focus while still rendering through the shared underline/outlined look.
+  final FocusNode? focusNode;
   final String? hintText;
   final bool autofocus;
   final bool obscureText;
@@ -190,6 +195,7 @@ class _InputState extends State<Input> {
           context,
           widget,
           controller: _controller,
+          focusNode: widget.focusNode,
           obscured: _obscured,
           onToggleObscure: () => setState(() => _obscured = !_obscured),
         );

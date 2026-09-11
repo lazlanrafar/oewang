@@ -24,6 +24,12 @@ class AppTheme {
   }) {
     final base = ThemeData.dark(useMaterial3: true);
     return base.copyWith(
+      // Website has no ripple, just a bg-color change on hover/press — kill
+      // Material's ink splash/highlight app-wide to match.
+      splashFactory: NoSplash.splashFactory,
+      splashColor: Colors.transparent,
+      highlightColor: Colors.transparent,
+      hoverColor: Colors.transparent,
       colorScheme: const ColorScheme.dark(
         surface: OewangColors.background,
         onSurface: OewangColors.foreground,
@@ -105,6 +111,10 @@ class AppTheme {
   }) {
     final base = ThemeData.light(useMaterial3: true);
     return base.copyWith(
+      splashFactory: NoSplash.splashFactory,
+      splashColor: Colors.transparent,
+      highlightColor: Colors.transparent,
+      hoverColor: Colors.transparent,
       colorScheme: const ColorScheme.light(
         surface: OewangColorsLight.background,
         onSurface: OewangColorsLight.foreground,

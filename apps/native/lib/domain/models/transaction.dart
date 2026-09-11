@@ -47,6 +47,18 @@ class NamedRef extends Equatable {
   List<Object?> get props => [id, name];
 }
 
+/// A vault file attached to a transaction (e.g. a receipt photo). `id` is
+/// the vault file id — the same value a transaction's `attachmentIds` sends.
+@immutable
+class TransactionAttachment extends Equatable {
+  const TransactionAttachment({required this.id, this.name, this.type});
+  final String id;
+  final String? name;
+  final String? type;
+  @override
+  List<Object?> get props => [id, name, type];
+}
+
 @immutable
 class Transaction extends Equatable {
   const Transaction({
@@ -62,6 +74,7 @@ class Transaction extends Equatable {
     this.wallet,
     this.toWallet,
     this.category,
+    this.attachments = const [],
   });
 
   final String id;
@@ -82,6 +95,7 @@ class Transaction extends Equatable {
   final NamedRef? wallet;
   final NamedRef? toWallet;
   final NamedRef? category;
+  final List<TransactionAttachment> attachments;
 
   bool get isIncome => type == TransactionType.income;
   bool get isExpense => type == TransactionType.expense;
@@ -100,5 +114,6 @@ class Transaction extends Equatable {
     wallet,
     toWallet,
     category,
+    attachments,
   ];
 }

@@ -6,6 +6,8 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:oewang/components/atoms/button.dart';
 import 'package:oewang/components/atoms/inputs/input.dart';
+import 'package:oewang/components/molecules/or_divider.dart';
+import 'package:oewang/components/molecules/provider_icon.dart';
 import 'package:oewang/components/organisms/auth/auth_login_view_model.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/router/app_router.dart';
@@ -48,7 +50,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     res.fold(
       (session) =>
           ref.read(sessionControllerProvider.notifier).onLoggedIn(session),
-      (_) {/* error is rendered via the VM */},
+      (_) {
+        /* error is rendered via the VM */
+      },
     );
   }
 
@@ -84,20 +88,29 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                Center(
+                  child: SvgPicture.asset(
+                    Theme.of(context).brightness == Brightness.dark
+                        ? 'assets/icons/logo-text-white.svg'
+                        : 'assets/icons/logo-text-black.svg',
+                    width: 96,
+                    height: 96 * 223 / 609,
+                  ),
+                ),
+                const SizedBox(height: OewangSpacing.sm),
                 Text(
-                  'Welcome to Oewang',
+                  'Sign in to track transactions',
                   textAlign: TextAlign.center,
                   style: OewangFonts.sans(
-                    color: palette.foreground,
-                    fontSize: 24,
-                    fontWeight: FontWeight.w600,
+                    color: palette.mutedForeground,
+                    fontSize: 14,
                   ),
                 ),
                 const SizedBox(height: OewangSpacing.xxl),
                 Button(
                   label: 'Continue with Google',
                   variant: ButtonVariant.outlined,
-                  leading: const _ProviderIcon('ic-google.svg'),
+                  leading: const ProviderIcon('ic-google.svg'),
                   loading: vm.oauthSignIn.running,
                   onPressed: vm.oauthSignIn.running
                       ? null
@@ -112,7 +125,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   Button(
                     label: 'Continue with Apple',
                     variant: ButtonVariant.outlined,
-                    leading: _ProviderIcon(
+                    leading: ProviderIcon(
                       'ic-apple.svg',
                       tint: palette.foreground,
                     ),
@@ -122,11 +135,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   Button(
                     label: 'Continue with Facebook',
                     variant: ButtonVariant.outlined,
-                    leading: const _ProviderIcon('ic-facebook.svg'),
+                    leading: const ProviderIcon('ic-facebook.svg'),
                     onPressed: () => _comingSoon('Facebook'),
                   ),
                 const SizedBox(height: OewangSpacing.lg),
-                _OrDivider(palette: palette),
+                OrDivider(palette: palette),
                 const SizedBox(height: OewangSpacing.lg),
                 if (!_showEmail)
                   Button(
@@ -210,52 +223,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _OrDivider extends StatelessWidget {
-  const _OrDivider({required this.palette});
-  final OewangPalette palette;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(child: Divider(color: palette.border)),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Text(
-            'or',
-            style: OewangFonts.sans(
-              color: palette.mutedForeground,
-              fontSize: 13,
-            ),
-          ),
-        ),
-        Expanded(child: Divider(color: palette.border)),
-      ],
-    );
-  }
-}
-
-/// One of `assets/icons/ic-{google,github,apple,facebook}.svg`. Google/Facebook
-/// ship their own brand colors (no [tint]); Apple/GitHub are single-color
-/// glyphs meant to inherit the button's foreground color via [tint].
-class _ProviderIcon extends StatelessWidget {
-  const _ProviderIcon(this.asset, {this.tint});
-  final String asset;
-  final Color? tint;
-
-  @override
-  Widget build(BuildContext context) {
-    return SvgPicture.asset(
-      'assets/icons/$asset',
-      width: 18,
-      height: 18,
-      colorFilter: tint == null
-          ? null
-          : ColorFilter.mode(tint!, BlendMode.srcIn),
     );
   }
 }

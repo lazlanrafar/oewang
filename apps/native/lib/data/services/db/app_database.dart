@@ -25,6 +25,9 @@ class CachedTransactions extends Table {
   TextColumn get categoryName => text().nullable()();
   TextColumn get name => text().nullable()();
   TextColumn get description => text().nullable()();
+  /// Comma-joined vault file ids — currently at most one, the picked receipt
+  /// image. Sent as `attachmentIds` to the server on sync.
+  TextColumn get attachmentIds => text().nullable()();
   TextColumn get pendingOp => text().nullable()();
   DateTimeColumn get dirtySince => dateTime().nullable()();
   TextColumn get syncError => text().nullable()();
@@ -132,7 +135,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.withExecutor(super.executor);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -142,6 +145,12 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(cachedWallets, cachedWallets.revision);
         await m.addColumn(cachedDebts, cachedDebts.revision);
         await m.createTable(cachedBudgetSnapshots);
+      }
+      if (from < 3) {
+        await m.addColumn(
+          cachedTransactions,
+          cachedTransactions.attachmentIds,
+        );
       }
     },
   );

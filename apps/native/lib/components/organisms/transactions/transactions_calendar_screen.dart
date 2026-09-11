@@ -13,11 +13,12 @@ import 'package:oewang/domain/models/transaction.dart';
 /// `table_calendar` package's grid wasn't flexible enough to render two
 /// stacked amounts per cell as the screenshot does.
 class TransactionsCalendarScreen extends ConsumerWidget {
-  const TransactionsCalendarScreen({super.key});
+  const TransactionsCalendarScreen({required this.month, super.key});
+
+  final DateTime month;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final month = ref.watch(monthControllerProvider);
     final async = ref.watch(monthTransactionsProvider(month));
     return async.when(
       data: (txs) => _CalendarGrid(month: month, transactions: txs),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:oewang/components/atoms/button.dart';
 import 'package:oewang/components/atoms/inputs/input.dart';
@@ -57,11 +58,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     final palette = context.palette;
 
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: palette.background,
-        elevation: 0,
-        leading: BackButton(color: palette.foreground),
-      ),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -69,13 +65,22 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                Center(
+                  child: SvgPicture.asset(
+                    Theme.of(context).brightness == Brightness.dark
+                        ? 'assets/icons/logo-text-white.svg'
+                        : 'assets/icons/logo-text-black.svg',
+                    width: 96,
+                    height: 96 * 223 / 609,
+                  ),
+                ),
+                const SizedBox(height: OewangSpacing.sm),
                 Text(
-                  'Create your account',
+                  'Create an account to get started',
                   textAlign: TextAlign.center,
                   style: OewangFonts.sans(
-                    color: palette.foreground,
-                    fontSize: 24,
-                    fontWeight: FontWeight.w600,
+                    color: palette.mutedForeground,
+                    fontSize: 14,
                   ),
                 ),
                 const SizedBox(height: OewangSpacing.xxl),
@@ -116,8 +121,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   onChanged: vm.setConfirm,
                   onSubmitted: (_) => _onSubmit(),
                 ),
-                if (vm.mismatchMessage != null ||
-                    vm.errorMessage != null) ...[
+                if (vm.mismatchMessage != null || vm.errorMessage != null) ...[
                   const SizedBox(height: OewangSpacing.md),
                   Text(
                     vm.mismatchMessage ?? vm.errorMessage!,
@@ -136,6 +140,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 ),
                 const SizedBox(height: OewangSpacing.lg),
                 _SignInRow(palette: palette),
+                const SizedBox(height: OewangSpacing.xxl),
+                Text(
+                  'By signing up you agree to our Terms of service & Privacy policy',
+                  textAlign: TextAlign.center,
+                  style: OewangFonts.sans(
+                    color: palette.mutedForeground,
+                    fontSize: 12,
+                  ),
+                ),
               ],
             ),
           ),

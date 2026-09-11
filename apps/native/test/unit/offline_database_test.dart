@@ -31,6 +31,9 @@ void main() {
         ]) {
           await old.customStatement('ALTER TABLE $table DROP COLUMN revision');
         }
+        await old.customStatement(
+          'ALTER TABLE cached_transactions DROP COLUMN attachment_ids',
+        );
         await old.customStatement('DROP TABLE cached_budget_snapshots');
         await old.customStatement('PRAGMA user_version = 1');
       } finally {

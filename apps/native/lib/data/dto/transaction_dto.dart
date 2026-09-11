@@ -17,6 +17,7 @@ class TransactionDto {
     this.wallet,
     this.toWallet,
     this.category,
+    this.attachments = const [],
   });
 
   factory TransactionDto.fromJson(Map<String, dynamic> json) {
@@ -34,6 +35,7 @@ class TransactionDto {
       wallet: _readRef(json['wallet']),
       toWallet: _readRef(json['toWallet']),
       category: _readRef(json['category']),
+      attachments: _readAttachments(json['attachments']),
     );
   }
 
@@ -50,6 +52,7 @@ class TransactionDto {
   final NamedRef? wallet;
   final NamedRef? toWallet;
   final NamedRef? category;
+  final List<TransactionAttachment> attachments;
 
   Transaction toDomain() {
     return Transaction(
@@ -65,6 +68,7 @@ class TransactionDto {
       wallet: wallet,
       toWallet: toWallet,
       category: category,
+      attachments: attachments,
     );
   }
 
@@ -80,5 +84,22 @@ class TransactionDto {
     final name = v['name'];
     if (id is! String || name is! String) return null;
     return NamedRef(id: id, name: name);
+  }
+
+  static List<TransactionAttachment> _readAttachments(Object? v) {
+    if (v is! List) return const [];
+    return v
+        .whereType<Map<String, dynamic>>()
+        .map((m) {
+          final id = m['id'];
+          if (id is! String) return null;
+          return TransactionAttachment(
+            id: id,
+            name: m['name'] as String?,
+            type: m['type'] as String?,
+          );
+        })
+        .whereType<TransactionAttachment>()
+        .toList();
   }
 }

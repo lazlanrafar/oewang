@@ -8,6 +8,7 @@ import 'package:oewang/components/organisms/transactions/transactions_month_cont
 import 'package:oewang/components/organisms/transactions/transactions_month_picker_bar.dart';
 import 'package:oewang/components/organisms/transactions/transactions_monthly_screen.dart';
 import 'package:oewang/components/organisms/transactions/transactions_sub_tab_bar.dart';
+import 'package:oewang/components/organisms/transactions/transactions_sub_tab_carousel.dart';
 import 'package:oewang/components/organisms/transactions/transactions_summary_row.dart';
 import 'package:oewang/components/organisms/transactions/transactions_summary_screen.dart';
 import 'package:oewang/config/dependencies.dart';
@@ -24,14 +25,47 @@ class TransactionsScreen extends ConsumerStatefulWidget {
 
 class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   static const _labels = ['Daily', 'Calendar', 'Monthly', 'Summary'];
+
+  // Unbounded month carousel: page `_anchorPage` == `_anchorMonth` (captured
+  // once at mount), every other page is `_anchorMonth` shifted by
+  // `page - _anchorPage` months. ±50,000 months is ±~4166 years from mount —
+  // not a real ceiling for this app.
+  static const _anchorPage = 50000;
+  static const _pageCount = 100001;
+
+  late final PageController _monthPageController;
+  late final DateTime _anchorMonth;
+
   int _index = 0;
-  DateTime? _lastMonth;
-  bool _isTransitionForward = true;
+  bool _isSubTabForward = true;
   bool _hasAppliedStartScreen = false;
 
   @override
+  void initState() {
+    super.initState();
+    _anchorMonth = ref.read(monthControllerProvider);
+    _monthPageController = PageController(initialPage: _anchorPage);
+  }
+
+  @override
+  void dispose() {
+    _monthPageController.dispose();
+    super.dispose();
+  }
+
+  int _monthsBetween(DateTime a, DateTime b) =>
+      (b.year - a.year) * 12 + (b.month - a.month);
+
+  DateTime _monthForPage(int page) {
+    final delta = page - _anchorPage;
+    return DateTime(_anchorMonth.year, _anchorMonth.month + delta);
+  }
+
+  int _pageForMonth(DateTime month) =>
+      _anchorPage + _monthsBetween(_anchorMonth, month);
+
+  @override
   Widget build(BuildContext context) {
-    final monthCtl = ref.read(monthControllerProvider.notifier);
     final month = ref.watch(monthControllerProvider);
     final async = ref.watch(monthTransactionsProvider(month));
     final settings = ref.watch(transactionSettingsProvider).valueOrNull;
@@ -46,10 +80,21 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       }
     }
 
-    if (_lastMonth != null && _lastMonth != month) {
-      _isTransitionForward = month.isAfter(_lastMonth!);
-    }
-    _lastMonth = month;
+    // The month carousel is the single source of truth once a drag settles
+    // (see onPageChanged below); this only reacts to EXTERNAL changes to the
+    // shared provider (e.g. the Stats screen, which reads the same
+    // `monthControllerProvider`) by jumping the controller to match. Guarded
+    // against feedback: onPageChanged skips writing back when the value
+    // already matches, so a jump triggered here never re-fires a write.
+    ref.listen<DateTime>(monthControllerProvider, (previous, next) {
+      if (!_monthPageController.hasClients) return;
+      final currentPage =
+          _monthPageController.page?.round() ?? _monthPageController.initialPage;
+      final targetPage = _pageForMonth(next);
+      if (targetPage != currentPage) {
+        _monthPageController.jumpToPage(targetPage);
+      }
+    });
 
     final totals = async.maybeWhen(
       data: computeMonthTotals,
@@ -61,13 +106,6 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     final yearOnlyMonthBar = _index == 2; // Monthly tab shows the year only.
     final palette = context.palette;
 
-    final currentChild = switch (_index) {
-      0 => const TransactionsDailyScreen(),
-      1 => const TransactionsCalendarScreen(),
-      2 => const TransactionsMonthlyScreen(),
-      _ => const TransactionsSummaryScreen(),
-    };
-
     return Scaffold(
       body: SafeArea(
         child: Column(
@@ -78,65 +116,55 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
             SubTabBar(
               labels: _labels,
               currentIndex: _index,
-              onSelect: (i) => setState(() => _index = i),
+              onSelect: (i) => setState(() {
+                _isSubTabForward = i > _index;
+                _index = i;
+              }),
             ),
             Divider(height: 1, color: palette.border),
             MonthPickerBar(
               month: month,
               yearOnly: yearOnlyMonthBar,
-              onPrev: () {
-                _isTransitionForward = false;
-                monthCtl.prev();
-              },
-              onNext: () {
-                _isTransitionForward = true;
-                monthCtl.next();
-              },
+              onPrev: () => _monthPageController.previousPage(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeOutCubic,
+              ),
+              onNext: () => _monthPageController.nextPage(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeOutCubic,
+              ),
             ),
             TransactionsSummaryRow(
               income: totals.income,
               expense: totals.expense,
             ),
             Expanded(
-              child: GestureDetector(
-                behavior: HitTestBehavior.translucent,
-                onHorizontalDragEnd: isChangeDateSwipe
-                    ? (details) {
-                        final velocity = details.primaryVelocity ?? 0;
-                        if (velocity < -200) {
-                          _isTransitionForward = true;
-                          monthCtl.next(); // Swipe kiri -> Bulan berikutnya (Maju)
-                        } else if (velocity > 200) {
-                          _isTransitionForward = false;
-                          monthCtl.prev(); // Swipe kanan -> Bulan sebelumnya (Mundur)
-                        }
-                      }
-                    : null,
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 250),
-                  transitionBuilder: (child, animation) {
-                    final beginOffset = _isTransitionForward
-                        ? const Offset(1, 0)
-                        : const Offset(-1, 0);
-                    final offsetAnimation = Tween<Offset>(
-                      begin: beginOffset,
-                      end: Offset.zero,
-                    ).animate(
-                      CurvedAnimation(
-                        parent: animation,
-                        curve: Curves.easeOutCubic,
-                      ),
-                    );
-                    return SlideTransition(
-                      position: offsetAnimation,
-                      child: child,
-                    );
-                  },
-                  child: KeyedSubtree(
-                    key: ValueKey('${month.year}-${month.month}-$_index'),
-                    child: currentChild,
-                  ),
-                ),
+              child: PageView.builder(
+                controller: _monthPageController,
+                itemCount: _pageCount,
+                physics: isChangeDateSwipe
+                    ? const PageScrollPhysics()
+                    : const NeverScrollableScrollPhysics(),
+                onPageChanged: (page) {
+                  final newMonth = _monthForPage(page);
+                  if (newMonth != ref.read(monthControllerProvider)) {
+                    ref.read(monthControllerProvider.notifier).set(newMonth);
+                  }
+                },
+                itemBuilder: (context, page) {
+                  final pageMonth = _monthForPage(page);
+                  final content = switch (_index) {
+                    0 => TransactionsDailyScreen(month: pageMonth),
+                    1 => TransactionsCalendarScreen(month: pageMonth),
+                    2 => TransactionsMonthlyScreen(month: pageMonth),
+                    _ => TransactionsSummaryScreen(month: pageMonth),
+                  };
+                  return SubTabCarousel(
+                    index: _index,
+                    isForward: _isSubTabForward,
+                    child: content,
+                  );
+                },
               ),
             ),
           ],

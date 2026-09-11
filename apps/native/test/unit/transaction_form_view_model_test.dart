@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:oewang/components/organisms/transactions/transactions_form_view_model.dart';
 import 'package:oewang/data/repositories_fake/categories_repository_fake.dart';
 import 'package:oewang/data/repositories_fake/transactions_repository_fake.dart';
+import 'package:oewang/data/repositories_fake/vault_repository_fake.dart';
 import 'package:oewang/data/repositories_fake/wallets_repository_fake.dart';
 import 'package:oewang/domain/models/transaction.dart';
 
@@ -16,6 +17,7 @@ void main() {
         transactions: txRepo,
         wallets: WalletsRepositoryFake(),
         categories: CategoriesRepositoryFake(),
+        vault: VaultRepositoryFake(),
       );
       // Let the pickers settle.
       await Future<void>.delayed(const Duration(milliseconds: 30));

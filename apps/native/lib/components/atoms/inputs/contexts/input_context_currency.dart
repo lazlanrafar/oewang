@@ -139,17 +139,20 @@ class AmountKeypad extends ConsumerStatefulWidget {
 enum _CellKind { digit, op, ok }
 
 class _Cell {
-  const _Cell({required this.kind, required this.label, required this.onTap});
+  const _Cell({required this.kind, required this.onTap, this.label, this.icon});
 
   factory _Cell.digit(String label, VoidCallback onTap) =>
       _Cell(kind: _CellKind.digit, label: label, onTap: onTap);
   factory _Cell.op(String label, VoidCallback onTap) =>
       _Cell(kind: _CellKind.op, label: label, onTap: onTap);
+  factory _Cell.icon(IconData icon, VoidCallback onTap) =>
+      _Cell(kind: _CellKind.op, icon: icon, onTap: onTap);
   factory _Cell.ok(VoidCallback onTap) =>
       _Cell(kind: _CellKind.ok, label: 'OK', onTap: onTap);
 
   final _CellKind kind;
-  final String label;
+  final String? label;
+  final IconData? icon;
   final VoidCallback onTap;
 }
 
@@ -303,7 +306,7 @@ class _AmountKeypadState extends ConsumerState<AmountKeypad> {
                   _Cell.digit('1', () => _onDigit('1')),
                   _Cell.digit('2', () => _onDigit('2')),
                   _Cell.digit('3', () => _onDigit('3')),
-                  _Cell.op('⌫', _onBackspace),
+                  _Cell.icon(Icons.backspace_outlined, _onBackspace),
                 ],
               ),
               _KeyRow(
@@ -381,34 +384,55 @@ class _KeyRow extends StatelessWidget {
         k == _CellKind.ok ? palette.primary : palette.background;
     Color fg(_CellKind k) =>
         k == _CellKind.ok ? palette.primaryForeground : palette.foreground;
+    // Same token + weight as the category/account grid picker's cell border
+    // (input_context_select.dart's _GridCell) for a consistent grid look
+    // across every drawer panel.
+    final gridLine = palette.border;
     return Expanded(
       child: Row(
         children: [
           for (final cell in cells)
             Expanded(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  border: Border(
-                    right: BorderSide(color: palette.border),
-                    bottom: BorderSide(color: palette.border),
+              // The border lives in a Stack on top of Material, not around
+              // it — Material's opaque fill has zero inset from a
+              // surrounding DecoratedBox, so it was painting directly over
+              // the border on every previous attempt regardless of color.
+              child: Stack(
+                children: [
+                  Material(
+                    color: bg(cell.kind),
+                    child: InkWell(
+                      onTap: cell.onTap,
+                      child: Center(
+                        child: cell.icon != null
+                            ? Icon(cell.icon, size: 24, color: fg(cell.kind))
+                            : Text(
+                                cell.label!,
+                                style: OewangFonts.sans(
+                                  color: fg(cell.kind),
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                      ),
+                    ),
                   ),
-                ),
-                child: Material(
-                  color: bg(cell.kind),
-                  child: InkWell(
-                    onTap: cell.onTap,
-                    child: Center(
-                      child: Text(
-                        cell.label,
-                        style: OewangFonts.sans(
-                          color: fg(cell.kind),
-                          fontSize: 20,
-                          fontWeight: FontWeight.w500,
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: DecoratedBox(
+                        // Right+bottom only — Border.all on every cell
+                        // double-thickness'd each interior seam (this cell's
+                        // right edge plus the next cell's left edge, stacked).
+                        decoration: BoxDecoration(
+                          border: Border(
+                            right: BorderSide(color: gridLine),
+                            bottom: BorderSide(color: gridLine),
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
+                ],
               ),
             ),
         ],

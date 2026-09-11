@@ -35,11 +35,14 @@ class OewangSegmentedTabs<T> extends StatelessWidget {
   final EdgeInsetsGeometry padding;
   final double height;
 
-  // Web track / inactive-text tokens (`#f7f7f7` / `#131313`, `#707070` /
-  // `#666666`) — kept literal so the control matches the website 1:1.
+  // Web track tokens (`#f7f7f7` / `#131313`), kept literal to match the
+  // website. `_inactiveDark` is raised from the web's literal `#666666` —
+  // that pair is only ~3.24:1 against `#131313`, below the 4.5:1 body-text
+  // minimum; `#8A8A8A` (same value already used for `mutedForeground`
+  // elsewhere in the app) clears ~5.4:1.
   static const Color _trackDark = Color(0xFF131313);
   static const Color _trackLight = Color(0xFFF7F7F7);
-  static const Color _inactiveDark = Color(0xFF666666);
+  static const Color _inactiveDark = Color(0xFF8A8A8A);
   static const Color _inactiveLight = Color(0xFF707070);
 
   @override

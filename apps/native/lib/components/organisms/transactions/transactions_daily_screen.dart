@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:oewang/components/molecules/confirm_dialog.dart';
 import 'package:oewang/components/organisms/transactions/transactions_daily_group_header.dart';
 import 'package:oewang/components/organisms/transactions/transactions_month_controller.dart';
 import 'package:oewang/components/organisms/transactions/transactions_row.dart';
@@ -14,11 +15,12 @@ import 'package:oewang/domain/models/transaction.dart';
 /// IMG_1826 — Daily list. Reads the active month + transactions from the
 /// shared `monthTransactionsProvider`, so it never refetches independently.
 class TransactionsDailyScreen extends ConsumerWidget {
-  const TransactionsDailyScreen({super.key});
+  const TransactionsDailyScreen({required this.month, super.key});
+
+  final DateTime month;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final month = ref.watch(monthControllerProvider);
     final async = ref.watch(monthTransactionsNotifierProvider(month));
     return async.when(
       data: (state) => _DailyList(
@@ -152,33 +154,13 @@ class _DailyListState extends ConsumerState<_DailyList> {
                           key: ValueKey(t.id),
                           direction: DismissDirection.endToStart,
                           confirmDismiss: (_) async {
-                            final confirmed = await showDialog<bool>(
-                              context: context,
-                              builder: (ctx) => AlertDialog(
-                                title: const Text('Delete transaction?'),
-                                content: const Text(
+                            final confirmed = await showConfirmDialog(
+                              context,
+                              title: 'Delete transaction?',
+                              message:
                                   'Are you sure you want to delete this transaction?',
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () =>
-                                        Navigator.of(ctx).pop(false),
-                                    child: const Text('Cancel'),
-                                  ),
-                                  TextButton(
-                                    onPressed: () =>
-                                        Navigator.of(ctx).pop(true),
-                                    child: const Text(
-                                      'Delete',
-                                      style: TextStyle(
-                                        color: OewangColors.coral,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
                             );
-                            if ((confirmed ?? false) && context.mounted) {
+                            if (confirmed && context.mounted) {
                               await _delete(context, ref, t.id);
                               return true;
                             }
