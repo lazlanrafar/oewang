@@ -14,6 +14,7 @@ export * from "./schema/debt-payments";
 export * from "./schema/debts";
 export * from "./schema/device-tokens";
 export * from "./schema/faqs";
+export * from "./schema/feedback";
 export * from "./schema/invoices";
 export * from "./schema/mcp-auth-codes";
 export * from "./schema/mcp-oauth-clients";

@@ -59,6 +59,12 @@ export function Footer({ locale, dictionary }: { locale: string; dictionary: Web
               >
                 {dictionary.footer.privacy}
               </Link>
+              <Link
+                href={withLocale("/feedback")}
+                className="text-foreground/80 text-sm transition-colors hover:text-foreground"
+              >
+                {dictionary.footer.feedback}
+              </Link>
             </nav>
           </div>
         </div>

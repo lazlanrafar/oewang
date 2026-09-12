@@ -28,6 +28,8 @@ import { debtsController } from "./modules/debts/debts.controller";
 import { deviceTokensController } from "./modules/device-tokens/device-tokens.controller";
 import { faqsController } from "./modules/faqs/faqs.controller";
 import { publicFaqsController } from "./modules/faqs/public-faqs.controller";
+import { feedbackController } from "./modules/feedback/feedback.controller";
+import { publicFeedbackController } from "./modules/feedback/public-feedback.controller";
 import { healthController } from "./modules/health/health.controller";
 import { integrationsController } from "./modules/integrations/integrations.controller";
 import {
@@ -133,7 +135,8 @@ const apiControllers3 = new Elysia()
   .use(notificationsController)
   .use(notificationSettingsController)
   .use(pushSubscriptionsController)
-  .use(deviceTokensController);
+  .use(deviceTokensController)
+  .use(feedbackController);
 
 const APP_ORIGINS = [
   "https://app.oewang.com",
@@ -274,6 +277,7 @@ const app = new Elysia()
   .use(publicPricingController)
   .use(publicArticlesController)
   .use(publicFaqsController)
+  .use(publicFeedbackController)
   // Global error handler — sanitizes and logs all unhandled exceptions
   .onError(({ error, code, set, path }) => {
     // Thrown `status(n, body)` reaches here with code "UNKNOWN" — unwrap it

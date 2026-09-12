@@ -30,7 +30,8 @@
     "./debt/debt.action": "./src/debt/debt.action.ts",
     "./budget/budget.action": "./src/budget/budget.action.ts",
     "./article/article.action": "./src/article/article.action.ts",
-    "./faq/faq.action": "./src/faq/faq.action.ts"
+    "./faq/faq.action": "./src/faq/faq.action.ts",
+    "./feedback/feedback.action": "./src/feedback/feedback.action.ts"
   },
   "scripts": {
     "lint": "biome lint",

@@ -142,6 +142,11 @@ class SettingsScreen extends ConsumerWidget {
                         mode: LaunchMode.externalApplication,
                       ),
                     ),
+                    ListRow(
+                      icon: Icons.feedback_outlined,
+                      title: 'Send Feedback',
+                      onTap: () => context.push(AppRoutes.feedbackForm),
+                    ),
                     const SizedBox(height: 8),
                     ListRow(
                       icon: Icons.logout,

@@ -11,6 +11,7 @@ import 'package:oewang/data/repositories/categories_repository.dart';
 import 'package:oewang/data/repositories/contacts_repository.dart';
 import 'package:oewang/data/repositories/debts_repository.dart';
 import 'package:oewang/data/repositories/device_tokens_repository.dart';
+import 'package:oewang/data/repositories/feedback_repository.dart';
 import 'package:oewang/data/repositories/rates_repository.dart';
 import 'package:oewang/data/repositories/settings_repository.dart';
 import 'package:oewang/data/repositories/sub_currencies_repository.dart';
@@ -30,6 +31,7 @@ import 'package:oewang/data/repositories_remote/contacts_repository_remote.dart'
 import 'package:oewang/data/repositories_remote/debts_repository_offline.dart';
 import 'package:oewang/data/repositories_remote/debts_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/device_tokens_repository_remote.dart';
+import 'package:oewang/data/repositories_remote/feedback_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/rates_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/settings_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/sub_currencies_repository_remote.dart';
@@ -112,6 +114,10 @@ final notificationsServiceProvider = Provider<NotificationsService>((ref) {
 
 final deviceTokensRepositoryProvider = Provider<DeviceTokensRepository>((ref) {
   return DeviceTokensRepositoryRemote(ref.watch(apiClientProvider));
+});
+
+final feedbackRepositoryProvider = Provider<FeedbackRepository>((ref) {
+  return FeedbackRepositoryRemote(ref.watch(apiClientProvider));
 });
 
 final pushServiceProvider = Provider<PushService>((ref) {

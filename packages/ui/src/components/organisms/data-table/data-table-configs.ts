@@ -26,6 +26,7 @@ export const STICKY_COLUMNS: Record<TableId, StickyColumnConfig[]> = {
   budgets: [{ id: "categoryName", width: 220 }],
   faqs: [{ id: "question", width: 320 }],
   articles: [{ id: "title", width: 300 }],
+  feedback: [{ id: "message", width: 320 }],
 };
 
 /**
@@ -104,6 +105,13 @@ export const SORT_FIELD_MAPS: Record<TableId, Record<string, string>> = {
     title: "title",
     created_at: "created_at",
   },
+  feedback: {
+    message: "message",
+    status: "status",
+    type: "type",
+    source: "source",
+    created_at: "created_at",
+  },
 };
 
 /**
@@ -122,6 +130,7 @@ export const NON_REORDERABLE_COLUMNS: Record<TableId, Set<string>> = {
   budgets: new Set(["categoryName", "actions"]),
   faqs: new Set(["question", "actions"]),
   articles: new Set(["title", "actions"]),
+  feedback: new Set(["message", "actions"]),
 };
 
 /**
@@ -140,6 +149,7 @@ export const ROW_HEIGHTS: Record<TableId, number> = {
   budgets: 45,
   faqs: 45,
   articles: 45,
+  feedback: 45,
 };
 
 /**
@@ -234,6 +244,13 @@ export const TABLE_CONFIGS: Record<TableId, TableConfig> = {
     sortFieldMap: SORT_FIELD_MAPS.articles,
     nonReorderableColumns: NON_REORDERABLE_COLUMNS.articles,
     rowHeight: ROW_HEIGHTS.articles,
+  },
+  feedback: {
+    tableId: "feedback",
+    stickyColumns: STICKY_COLUMNS.feedback,
+    sortFieldMap: SORT_FIELD_MAPS.feedback,
+    nonReorderableColumns: NON_REORDERABLE_COLUMNS.feedback,
+    rowHeight: ROW_HEIGHTS.feedback,
   },
 };
 

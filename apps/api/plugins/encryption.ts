@@ -66,6 +66,8 @@ export const encryptionPlugin = (app: Elysia) =>
           // Public marketing endpoint — plaintext JSON so the website (and any
           // external consumer) can read it with a plain fetch, no shared key.
           path.includes("/public/pricing") ||
+          // Anonymous feedback submission from the website — same reasoning.
+          path.includes("/public/feedback") ||
           path.includes("/mayar/webhook") ||
           path.includes("/integrations/telegram/webhook") ||
           // Internal sidecar surface (Python AI service) — plain JSON, gated by

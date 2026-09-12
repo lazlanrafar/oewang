@@ -20,3 +20,4 @@ export * from "./filters";
 export * from "./currency";
 export * from "./chart";
 export * from "./notification";
+export * from "./feedback";
