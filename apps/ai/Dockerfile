@@ -9,6 +9,9 @@ RUN pip install --no-cache-dir .
 
 COPY scripts ./scripts
 
+RUN useradd --system --uid 1001 oewang && chown -R oewang:oewang /srv
+USER oewang
+
 # Railway (and most PaaS) inject $PORT — bind to it, falling back to 3004 locally.
 # Shell form so ${PORT} is expanded at runtime.
 EXPOSE 3004

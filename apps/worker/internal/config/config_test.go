@@ -13,6 +13,8 @@ func setRequiredEnv(t *testing.T) {
 	t.Setenv("REDIS_URL", "redis://localhost:6379/0")
 	t.Setenv("WORKER_API_KEY", "test-key")
 	t.Setenv("TELEGRAM_BOT_TOKEN", "test-token")
+	t.Setenv("AI_SERVICE_URL", "http://artificial-intelligence:3004")
+	t.Setenv("AI_SERVICE_API_KEY", "ai-key")
 }
 
 func TestLoad_HappyPathReadsAllVars(t *testing.T) {
@@ -66,10 +68,15 @@ func TestLoad_MissingRequiredVarsListsEachName(t *testing.T) {
 	t.Setenv("REDIS_URL", "")
 	t.Setenv("WORKER_API_KEY", "")
 	t.Setenv("TELEGRAM_BOT_TOKEN", "")
+	t.Setenv("AI_SERVICE_URL", "")
+	t.Setenv("AI_SERVICE_API_KEY", "")
 
 	_, err := Load()
 	require.Error(t, err)
-	for _, name := range []string{"DATABASE_URL", "REDIS_URL", "WORKER_API_KEY", "TELEGRAM_BOT_TOKEN"} {
+	for _, name := range []string{
+		"DATABASE_URL", "REDIS_URL", "WORKER_API_KEY", "TELEGRAM_BOT_TOKEN",
+		"AI_SERVICE_URL", "AI_SERVICE_API_KEY",
+	} {
 		assert.Contains(t, err.Error(), name)
 	}
 }

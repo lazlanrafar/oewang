@@ -52,6 +52,7 @@ The only app touching the database, Redis, payment provider, and integrations di
 | `BUCKET_REGION` | Optional | Default `us-east-1` |
 | `BUCKET_PUBLIC_URL` | Optional | Public CDN domain for permanently-public assets (e.g. article images). Falls back to a path-style bucket URL |
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` | Optional | Web push notifications |
+| `FIREBASE_SERVICE_ACCOUNT_JSON` | Optional | Native (iOS/Android) push notifications — the whole Firebase service-account JSON as one env var, sent through `firebase-admin` to FCM |
 | `RESEND_API_KEY` | Optional | Transactional email (`packages/email`) |
 | `CURRENCYFREAKS_API_KEY` | Optional | Currency conversion rates (`packages/currencyfreaks`) |
 | `TELEGRAM_BOT_TOKEN` / `TELEGRAM_WEBHOOK_SECRET` | Optional | Telegram bot integration |
@@ -102,7 +103,7 @@ The only app touching the database, Redis, payment provider, and integrations di
 | `NEXT_PUBLIC_SESSION_COOKIE_NAME` | Optional | Default `oewang-session` |
 | `NEXT_PUBLIC_SENTRY_DSN` | Optional | |
 
-**NOT needed by apps/admin**: everything AI-related (`AI_SERVICE_*`, `MODEL_*`), `MAYAR_*`, `BUCKET_*`, `TELEGRAM_*`, `VAPID_*` — the admin panel manages these resources through the API, it doesn't call the underlying providers itself.
+**NOT needed by apps/admin**: everything AI-related (`AI_SERVICE_*`, `MODEL_*`), `MAYAR_*`, `BUCKET_*`, `TELEGRAM_*`, `VAPID_*`, `FIREBASE_SERVICE_ACCOUNT_JSON` — the admin panel manages these resources through the API, it doesn't call the underlying providers itself.
 
 ---
 
@@ -184,6 +185,7 @@ root). Read via `flutter_dotenv` in `lib/config/env.dart`.
 | `API_URL` | **Required** | Base URL of `apps/api` (e.g. `https://api.oewang.com`); `/v1` is appended by `ApiClient` |
 | `ENCRYPTION_KEY` | **Required** | TRANSPORT key only — must match the server's `ENCRYPTION_KEY` exactly so the app can decrypt API responses |
 | `APP_URL` | Optional | Default `http://localhost:3000` — used to deep-link to web billing/upgrade pages |
+| `WEBSITE_URL` | Optional | Default `https://oewang.com` — used to link to Privacy Policy/Terms |
 | `SESSION_COOKIE_NAME` | Optional | Default `oewang-session` — cosmetic, must match the web session cookie name |
 
 **NOT needed by the mobile app — never bundle these into the client binary**:

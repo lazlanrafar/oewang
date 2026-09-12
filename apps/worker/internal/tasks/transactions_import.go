@@ -79,6 +79,10 @@ type TransactionsStore interface {
 type ImportJobsStore interface {
 	MarkSucceeded(ctx context.Context, jobID string, imported, skipped int) error
 	MarkFailed(ctx context.Context, jobID string, errMsg string) error
+	// GetStatus reports the job's current status ("pending"/"succeeded"/
+	// "failed") so a redelivered task that already completed doesn't
+	// re-run and duplicate every row it already wrote.
+	GetStatus(ctx context.Context, jobID string) (string, error)
 }
 
 // TransactionsImportHandler owns the CSV/bank-statement import flow: fetch
@@ -118,6 +122,20 @@ func (h *TransactionsImportHandler) Handle(ctx context.Context, t *asynq.Task) e
 	var payload TransactionsImportPayload
 	if err := json.Unmarshal(t.Payload(), &payload); err != nil {
 		return fmt.Errorf("tasks: decode transactions import payload: %w", err)
+	}
+
+	// ponytail: guards the narrow case of a redelivered task whose prior
+	// attempt already completed (asynq redelivery after the ack was lost,
+	// a stuck-then-recovered worker, etc.) — it does NOT protect a crash
+	// mid-loop before MarkSucceeded runs, since rows already written by
+	// that attempt aren't tagged with this job anywhere. Closing that gap
+	// needs a per-row dedup key on `transactions` (schema migration) —
+	// flagged, not done here without a call on that.
+	if h.Jobs != nil && payload.JobID != "" {
+		if status, err := h.Jobs.GetStatus(ctx, payload.JobID); err == nil && status == "succeeded" {
+			log.Printf("transactions_import: job %s already succeeded, skipping redelivered task", payload.JobID)
+			return nil
+		}
 	}
 
 	wallets, err := h.Store.FindWallets(ctx, payload.WorkspaceID)

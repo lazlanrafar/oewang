@@ -59,6 +59,9 @@ const apiEnvSchema = z.object({
   VAPID_PRIVATE_KEY: z.string().optional(),
   VAPID_SUBJECT: z.string().optional(),
 
+  // Native Push (Firebase Cloud Messaging)
+  FIREBASE_SERVICE_ACCOUNT_JSON: z.string().optional(),
+
   // Email
   RESEND_API_KEY: z.string().optional(),
 

@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 
 import { LoginForm } from "@/components/organisms/auth/login-form";
 import { OAuthButton } from "@/components/organisms/auth/oauth-button";
+import { getAppEnv } from "@/env";
 import { getDictionary } from "@/get-dictionary";
 import type { Locale } from "@/i18n-config";
 
@@ -18,6 +19,7 @@ export default async function LoginV2({
 }) {
   const { locale } = await params;
   const dictionary = await getDictionary(locale);
+  const websiteUrl = getAppEnv().NEXT_PUBLIC_WEBSITE_URL ?? "https://oewang.com";
 
   return (
     <div className="mx-auto flex w-full flex-col justify-center space-y-10 p-4 sm:w-[400px] sm:p-0">
@@ -75,7 +77,7 @@ export default async function LoginV2({
         <p className="max-w-[400px] text-center text-muted-foreground text-sm">
           {dictionary.auth.terms_privacy_agreement}{" "}
           <Link
-            href="/terms"
+            href={`${websiteUrl}/en/terms`}
             target="_blank"
             rel="noopener noreferrer"
             className="pointer-events-auto underline underline-offset-4 hover:text-foreground"
@@ -84,7 +86,7 @@ export default async function LoginV2({
           </Link>
           {" & "}
           <Link
-            href="/policy"
+            href={`${websiteUrl}/en/policy`}
             target="_blank"
             rel="noopener noreferrer"
             className="pointer-events-auto underline underline-offset-4 hover:text-foreground"

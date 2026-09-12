@@ -69,13 +69,11 @@ axiosInstance.interceptors.request.use(async (config) => {
     const secret = Env.ENCRYPTION_KEY;
     if (secret) {
       const { encrypt: encryptBody } = await import("@workspace/encryption");
-      try {
-        const encrypted = encryptBody(JSON.stringify(config.data), secret);
-        config.data = { data: encrypted };
-        config.headers["x-encrypted"] = "true";
-      } catch (e) {
-        console.error("[Axios Server] Failed to encrypt request body", e);
-      }
+      // Encryption failure must abort the request, not silently send the
+      // body in plaintext — that would downgrade the transport guarantee.
+      const encrypted = encryptBody(JSON.stringify(config.data), secret);
+      config.data = { data: encrypted };
+      config.headers["x-encrypted"] = "true";
     }
   }
 
@@ -95,7 +93,12 @@ axiosInstance.interceptors.response.use(
           response.data = parsed;
           (response as any)._api_response = parsed;
         } catch (e) {
-          console.error("Failed to decrypt response", e);
+          // ponytail: this file is reachable from client-component bundles
+          // via Next.js Server Actions tracing (packages/modules/server.ts),
+          // even though it only executes server-side — @workspace/logger
+          // pulls in node:fs at module scope, which crashes the Turbopack
+          // client chunk. Plain console.error is bundler-safe here.
+          console.error("[axios server] Failed to decrypt response", e);
         }
       }
     }
@@ -118,7 +121,7 @@ axiosInstance.interceptors.response.use(
               error.message = parsed.message;
             }
           } catch (e) {
-            console.error("Failed to decrypt error response", e);
+            console.error("[axios server] Failed to decrypt error response", e);
           }
         }
       }

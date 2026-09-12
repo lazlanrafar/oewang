@@ -6,32 +6,15 @@ import Image from "next/image";
 
 import type { Dictionary } from "@workspace/dictionaries";
 import { Separator } from "@workspace/ui";
+import type { Invoice, InvoiceLineItem } from "@workspace/types";
 import { format } from "date-fns";
 
-interface InvoiceContact {
-  name: string;
-  email?: string | null;
-}
-
-interface InvoiceLineItem {
-  name: string;
-  quantity: number;
-  price: number;
-}
-
-interface InvoiceWithContact {
-  id: string;
-  invoiceNumber: string;
-  issueDate: string | null;
-  dueDate: string | null;
-  amount: number | string;
-  vat?: number;
+// vat_amount isn't a field on the shared Invoice type (only vat/tax are) —
+// no caller currently supplies it, so it's optional and always renders as 0.
+type InvoiceWithContact = Invoice & {
   vat_amount?: number | string;
-  currency: string;
-  noteDetails?: string | null;
-  lineItems: InvoiceLineItem[];
-  contact: InvoiceContact;
-}
+  contact?: { name?: string | null; email?: string | null } | null;
+};
 
 interface InvoiceA4Props {
   invoice: InvoiceWithContact;
@@ -86,8 +69,8 @@ export const InvoiceA4 = forwardRef<HTMLDivElement, InvoiceA4Props>(({ invoice, 
               {dict.details.bill_to || "Bill To"}
             </p>
             <div className="space-y-1">
-              <p className="font-medium font-serif text-foreground/90 text-lg">{invoice.contact.name}</p>
-              <p className="max-w-[200px] text-muted-foreground/80 text-xs leading-relaxed">{invoice.contact.email}</p>
+              <p className="font-medium font-serif text-foreground/90 text-lg">{invoice.contact?.name}</p>
+              <p className="max-w-[200px] text-muted-foreground/80 text-xs leading-relaxed">{invoice.contact?.email}</p>
             </div>
           </div>
         </div>

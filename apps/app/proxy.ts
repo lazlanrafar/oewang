@@ -12,8 +12,6 @@ const IGNORED_LOCALE_PATHS = [
   "/favicon.ico",
   "/robots.txt",
   "/sitemap.xml",
-  "/terms",
-  "/policy",
   "/sw.js",
   "/workbox-",
 ];

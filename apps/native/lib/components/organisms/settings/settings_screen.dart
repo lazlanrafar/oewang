@@ -7,9 +7,11 @@ import 'package:oewang/components/molecules/list_row.dart';
 import 'package:oewang/components/organisms/settings/profile/settings_user_profile_header.dart';
 import 'package:oewang/components/organisms/settings/workspace/settings_workspace_card.dart';
 import 'package:oewang/config/dependencies.dart';
+import 'package:oewang/core/constants/legal_links.dart';
 import 'package:oewang/core/router/app_router.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// IMG_1844 + IMG_2244 — More tab. Grouped list of settings entries.
 class SettingsScreen extends ConsumerWidget {
@@ -132,11 +134,24 @@ class SettingsScreen extends ConsumerWidget {
                       trailingLabel: 'Coming soon',
                       onTap: () => _comingSoon(context, 'Language'),
                     ),
+                    ListRow(
+                      icon: Icons.privacy_tip_outlined,
+                      title: 'Privacy Policy',
+                      onTap: () async => launchUrl(
+                        Uri.parse(privacyPolicyUrl(ref.read(envProvider))),
+                        mode: LaunchMode.externalApplication,
+                      ),
+                    ),
                     const SizedBox(height: 8),
                     ListRow(
                       icon: Icons.logout,
                       title: 'Log out',
                       onTap: () async => _confirmLogout(context, ref),
+                    ),
+                    ListRow(
+                      icon: Icons.delete_forever,
+                      title: 'Delete Account',
+                      onTap: () async => _confirmDeleteAccount(context, ref),
                     ),
                     const SizedBox(height: 24),
                   ],
@@ -165,6 +180,28 @@ class SettingsScreen extends ConsumerWidget {
     );
     if (!confirm) return;
     await ref.read(sessionControllerProvider.notifier).clear();
+  }
+
+  Future<void> _confirmDeleteAccount(BuildContext context, WidgetRef ref) async {
+    final confirm = await showConfirmDialog(
+      context,
+      title: 'Delete Account',
+      message:
+          'This permanently erases your account data. This cannot be undone.',
+      confirmLabel: 'Delete',
+      isDestructive: true,
+    );
+    if (!confirm) return;
+    final result = await ref.read(usersRepositoryProvider).deleteAccount();
+    if (!context.mounted) return;
+    final error = result.fold((_) => null, (error) => error);
+    if (error == null) {
+      await ref.read(sessionControllerProvider.notifier).clear();
+    } else {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.message)));
+    }
   }
 }
 

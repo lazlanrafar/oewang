@@ -21,7 +21,7 @@ const baseLogger = pino({
     res: pino.stdSerializers.res,
     err: pino.stdSerializers.err,
   },
-  // Use pretty printing in development, structured JSON in production
+  // Use pretty printing (+ a local file for tailing) in development.
   ...(isPretty && {
     transport: {
       targets: [
@@ -47,18 +47,16 @@ const baseLogger = pino({
       ],
     },
   }),
-  // In production (non-pretty), write JSON to both stdout and file
+  // ponytail: production writes structured JSON to stdout only — the
+  // container's log driver (Coolify/Docker) captures and retains that.
+  // A second local file target here grew unbounded on a persistent
+  // container (already 68MB from limited use) with nothing rotating it.
   ...(!isPretty && {
     transport: {
       targets: [
         {
           target: "pino/file",
           options: { destination: 1 }, // stdout
-          level: Env.LOG_LEVEL || "info",
-        },
-        {
-          target: "pino/file",
-          options: { destination: logFilePath, mkdir: true },
           level: Env.LOG_LEVEL || "info",
         },
       ],

@@ -65,3 +65,27 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
+
+
+def validate_settings(settings: Settings) -> None:
+    """Fail fast on boot instead of failing confusingly per-request.
+
+    DATABASE_URL/JWT_SECRET default to "" so importing Settings never crashes
+    in tooling/tests — but a real server with either empty must not start.
+    """
+    import os
+
+    if os.getenv("NODE_ENV") == "development":
+        return
+    missing = [
+        name
+        for name, value in (
+            ("DATABASE_URL", settings.DATABASE_URL),
+            ("JWT_SECRET", settings.JWT_SECRET),
+        )
+        if not value
+    ]
+    if missing:
+        raise RuntimeError(
+            f"Missing required env vars: {', '.join(missing)}"
+        )

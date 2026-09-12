@@ -35,6 +35,14 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      # ponytail: `bun audit` always exits 0 even on critical findings (no
+      # built-in fail-on-severity), and apps/admin currently has real
+      # critical/high advisories (Next.js, sharp) that need a version
+      # decision, not a silent CI gate — so this reports, it doesn't block.
+      # Flip to a hard gate once those are resolved.
+      - name: Audit dependencies
+        run: bun audit --audit-level=high || true
+
       - name: Lint
         run: bun run lint
 

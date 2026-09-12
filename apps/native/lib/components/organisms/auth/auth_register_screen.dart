@@ -4,6 +4,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:oewang/components/atoms/button.dart';
 import 'package:oewang/components/atoms/inputs/input.dart';
+import 'package:oewang/components/molecules/legal_disclaimer_text.dart';
 import 'package:oewang/components/organisms/auth/auth_register_view_model.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/router/app_router.dart';
@@ -141,14 +142,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 const SizedBox(height: OewangSpacing.lg),
                 _SignInRow(palette: palette),
                 const SizedBox(height: OewangSpacing.xxl),
-                Text(
-                  'By signing up you agree to our Terms of service & Privacy policy',
-                  textAlign: TextAlign.center,
-                  style: OewangFonts.sans(
-                    color: palette.mutedForeground,
-                    fontSize: 12,
-                  ),
-                ),
+                const LegalDisclaimerText(action: 'signing up'),
               ],
             ),
           ),

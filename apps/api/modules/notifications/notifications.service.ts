@@ -5,6 +5,7 @@ import {
   buildPagination,
   buildSuccess,
 } from "@workspace/utils";
+import { DeviceTokensService } from "../device-tokens/device-tokens.service";
 import { NotificationSettingsRepository } from "../notification-settings/notification-settings.repository";
 import { PushSubscriptionsService } from "../push-subscriptions/push-subscriptions.service";
 import { RealtimeService } from "../realtime/realtime.service";
@@ -145,10 +146,18 @@ export abstract class NotificationsService {
     // Broadcast realtime event so connected clients refresh immediately
     RealtimeService.notifyValueChange(data.workspace_id, "notifications");
 
-    // Browser push respects push_enabled (mandatory in-app messages still show
-    // in the bell, but the user can mute push without losing them).
+    // Browser/native push respects push_enabled (mandatory in-app messages
+    // still show in the bell, but the user can mute push without losing
+    // them).
     if (!settings || settings.push_enabled) {
       PushSubscriptionsService.sendToUser(data.user_id, {
+        title: data.title,
+        body: data.message,
+        url: data.link ?? "/notifications",
+      }).catch(() => {
+        // Non-blocking: push failures should not break the main flow
+      });
+      DeviceTokensService.sendToUser(data.user_id, {
         title: data.title,
         body: data.message,
         url: data.link ?? "/notifications",

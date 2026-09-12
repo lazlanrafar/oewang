@@ -54,12 +54,12 @@ void main() {
       await tester.pumpAndSettle();
       tester
           .widget<ReorderableListView>(find.byType(ReorderableListView))
-          .onReorder!(0, 2);
+          .onReorderItem!(0, 2);
       await tester.pumpAndSettle();
       expect(repo.saved, ['b', 'c', 'a']);
       tester
           .widget<ReorderableListView>(find.byType(ReorderableListView))
-          .onReorder!(2, 0);
+          .onReorderItem!(2, 0);
       await tester.pumpAndSettle();
       expect(repo.saved, ['a', 'b', 'c']);
     },
@@ -80,12 +80,12 @@ void main() {
       await tester.pumpAndSettle();
       tester
           .widget<ReorderableListView>(find.byType(ReorderableListView))
-          .onReorder!(0, 2);
+          .onReorderItem!(0, 2);
       await tester.pumpAndSettle();
       expect(repo.saved, ['g-accounts', 'g-debit', 'g-cash']);
       tester
           .widget<ReorderableListView>(find.byType(ReorderableListView))
-          .onReorder!(2, 0);
+          .onReorderItem!(2, 0);
       await tester.pumpAndSettle();
       expect(repo.saved, ['g-cash', 'g-accounts', 'g-debit']);
     },

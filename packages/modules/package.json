@@ -26,6 +26,7 @@
     "./mayar/mayar.action": "./src/mayar/mayar.action.ts",
     "./invoice/invoice.action": "./src/invoice/invoice.action.ts",
     "./orders/orders.action": "./src/orders/orders.action.ts",
+    "./push-notification/push-notification.action": "./src/push-notification/push-notification.action.ts",
     "./debt/debt.action": "./src/debt/debt.action.ts",
     "./budget/budget.action": "./src/budget/budget.action.ts",
     "./article/article.action": "./src/article/article.action.ts",

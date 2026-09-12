@@ -1,11 +1,10 @@
-import 'dart:io' show Platform;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:oewang/components/atoms/button.dart';
 import 'package:oewang/components/atoms/inputs/input.dart';
+import 'package:oewang/components/molecules/legal_disclaimer_text.dart';
 import 'package:oewang/components/molecules/or_divider.dart';
 import 'package:oewang/components/molecules/provider_icon.dart';
 import 'package:oewang/components/organisms/auth/auth_login_view_model.dart';
@@ -69,12 +68,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
-  // ponytail: Apple/Facebook sign-in isn't wired yet (needs native Sign in
-  // with Apple + a Facebook OAuth app) — stub the action until it is.
-  void _comingSoon(String provider) => ScaffoldMessenger.of(
-    context,
-  ).showSnackBar(SnackBar(content: Text('$provider sign-in is coming soon')));
-
   @override
   Widget build(BuildContext context) {
     final vm = ref.watch(loginViewModelProvider);
@@ -116,28 +109,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ? null
                       : () => _social('google'),
                 ),
-                const SizedBox(height: OewangSpacing.md),
-                // iOS ships Apple as the second option (App Store guideline
-                // for apps offering third-party login); Android ships
-                // Facebook instead. Both are coming-soon stubs for now —
-                // only Google (native) and Google/GitHub (web) are wired.
-                if (Platform.isIOS)
-                  Button(
-                    label: 'Continue with Apple',
-                    variant: ButtonVariant.outlined,
-                    leading: ProviderIcon(
-                      'ic-apple.svg',
-                      tint: palette.foreground,
-                    ),
-                    onPressed: () => _comingSoon('Apple'),
-                  )
-                else
-                  Button(
-                    label: 'Continue with Facebook',
-                    variant: ButtonVariant.outlined,
-                    leading: const ProviderIcon('ic-facebook.svg'),
-                    onPressed: () => _comingSoon('Facebook'),
-                  ),
                 const SizedBox(height: OewangSpacing.lg),
                 OrDivider(palette: palette),
                 const SizedBox(height: OewangSpacing.lg),
@@ -210,14 +181,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ],
                 ),
                 const SizedBox(height: OewangSpacing.xxl),
-                Text(
-                  'By signing in you agree to our Terms of service & Privacy policy',
-                  textAlign: TextAlign.center,
-                  style: OewangFonts.sans(
-                    color: palette.mutedForeground,
-                    fontSize: 12,
-                  ),
-                ),
+                const LegalDisclaimerText(action: 'signing in'),
               ],
             ),
           ),

@@ -144,6 +144,7 @@ void main() {
         env: EnvConfig(
           apiUrl: 'http://127.0.0.1:${backend.port}',
           appUrl: 'http://127.0.0.1',
+          websiteUrl: 'https://oewang.com',
           encryptionKey: '01234567890123456789012345678901',
           sessionCookieName: sessionKey,
         ),

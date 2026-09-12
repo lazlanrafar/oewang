@@ -335,6 +335,16 @@ Login (email/password or OAuth)
 
 **Never attach to Sentry:** passwords · JWT tokens · encryption keys · decrypted API payloads
 
+`apps/ai` and `apps/worker` have no error-tracking SDK wired yet — errors surface only in their own logs/health checks.
+
+---
+
+## Backups & Data Durability
+
+- **PostgreSQL**: backups are Coolify-managed (server-side scheduled snapshots), not scripted in this repo. Confirm the schedule/retention in the Coolify dashboard for the production server, and test a restore at least once — this has not been repo-verified.
+- **Redis**: used for more than caching — `apps/worker`'s asynq job queue (Telegram webhook processing, transaction import, billing/invoice jobs) lives here too. Confirm the Coolify-managed Redis instance has AOF or RDB persistence enabled; without it, a Redis restart loses in-flight jobs, not just warm cache.
+- **Schema migrations in production**: `db:push` is dev-only (no migration files, can silently drop/alter columns). Production uses real Drizzle migration files via `bun run db:migrate:prod` (see `packages/database/drizzle/`). There is no down-migration story — treat schema changes as forward-fix-only; a bad migration is fixed by a new migration, not a rollback.
+
 ---
 
 ## Package Import Matrix

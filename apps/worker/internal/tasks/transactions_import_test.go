@@ -61,6 +61,11 @@ func (f *fakeTransactionsStore) CreateAuditLog(ctx context.Context, workspaceID,
 type fakeImportJobsStore struct {
 	succeededCalls []struct{ imported, skipped int }
 	failedCalls    []string
+	status         string // "" (default) means "no prior successful run"
+}
+
+func (f *fakeImportJobsStore) GetStatus(ctx context.Context, jobID string) (string, error) {
+	return f.status, nil
 }
 
 func (f *fakeImportJobsStore) MarkSucceeded(ctx context.Context, jobID string, imported, skipped int) error {
@@ -90,6 +95,26 @@ func TestTransactionsImportHandler_NoRowsExtracted(t *testing.T) {
 	require.Len(t, jobs.succeededCalls, 1)
 	assert.Equal(t, 0, jobs.succeededCalls[0].imported)
 	assert.Equal(t, 0, jobs.succeededCalls[0].skipped)
+	assert.Empty(t, jobs.failedCalls)
+}
+
+func TestTransactionsImportHandler_AlreadySucceeded_SkipsRedeliveredTask(t *testing.T) {
+	ai := &fakeExtractor{rows: []aiclient.ExtractedTransaction{
+		{Amount: 10, Date: "2026-01-01", Type: "expense", Name: "Coffee"},
+	}}
+	store := &fakeTransactionsStore{wallets: []repo.Wallet{{ID: "w1", Name: "Cash"}}}
+	jobs := &fakeImportJobsStore{status: "succeeded"}
+	h := &TransactionsImportHandler{AI: ai, Store: store, Jobs: jobs}
+
+	task, err := NewTransactionsImportTask(TransactionsImportPayload{JobID: "job-1", WorkspaceID: "ws-1", UserID: "u1", Data: "abc", MimeType: "text/csv"})
+	require.NoError(t, err)
+
+	err = h.Handle(context.Background(), task)
+	require.NoError(t, err)
+	// A redelivered task for an already-succeeded job must not write any
+	// rows again — the whole extract+write loop is skipped up front.
+	assert.Empty(t, store.createdTx)
+	assert.Empty(t, jobs.succeededCalls)
 	assert.Empty(t, jobs.failedCalls)
 }
 

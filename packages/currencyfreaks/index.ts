@@ -1,4 +1,5 @@
 import { Env } from "@workspace/constants";
+import { logger } from "@workspace/logger";
 import { redis } from "@workspace/redis";
 import { loadEnv } from "@workspace/utils/load-env";
 import axios from "axios";
@@ -47,7 +48,7 @@ export async function fetchAndCacheRates(): Promise<CurrencyRatesResponse> {
     throw new Error("Missing CURRENCYFREAKS_API_KEY in environment variables");
   }
 
-  console.log("[Currency] Fetching rates from API");
+  logger.info("[Currency] Fetching rates from API");
 
   let response: { data: CurrencyRatesResponse };
   try {
@@ -60,9 +61,10 @@ export async function fetchAndCacheRates(): Promise<CurrencyRatesResponse> {
       err?.response?.data?.error ||
       err?.message ||
       "unknown";
-    console.error(
-      `[Currency] ❌ Failed to fetch rates from API: ${apiMessage} (status ${err?.response?.status ?? "n/a"})`,
-    );
+    logger.error("[Currency] Failed to fetch rates from API", {
+      apiMessage,
+      status: err?.response?.status ?? "n/a",
+    });
     throw new Error(`Currency rates API request failed: ${apiMessage}`);
   }
 
@@ -77,12 +79,14 @@ export async function fetchAndCacheRates(): Promise<CurrencyRatesResponse> {
       "EX",
       ONE_DAY_SECONDS,
     );
-    console.log(
-      `[Currency] ✅ Cached ${Object.keys(response.data.rates).length} rates in Redis`,
-    );
+    logger.info("[Currency] Cached rates in Redis", {
+      count: Object.keys(response.data.rates).length,
+    });
   } catch (err: any) {
     // Don't fail the whole request if caching fails — return live data anyway
-    console.warn("[Currency] ⚠️ Failed to cache rates in Redis:", err?.message);
+    logger.warn("[Currency] Failed to cache rates in Redis", {
+      error: err?.message,
+    });
   }
 
   return response.data;

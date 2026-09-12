@@ -101,6 +101,21 @@ class UsersRepositoryRemote implements UsersRepository {
     }
   }
 
+  @override
+  Future<Result<void, AppError>> deleteAccount() async {
+    try {
+      await _api.post(
+        '/privacy/me/erase',
+        data: {'confirmation': 'ERASE_MY_DATA'},
+      );
+      return const Success<void, AppError>(null);
+    } on DioException catch (e) {
+      return Failure(mapDioError(e));
+    } on Exception {
+      return const Failure(UnknownError());
+    }
+  }
+
   static String _baseName(File f) {
     final sep = f.path.lastIndexOf(Platform.pathSeparator);
     return sep < 0 ? f.path : f.path.substring(sep + 1);

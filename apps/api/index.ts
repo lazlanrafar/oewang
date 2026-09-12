@@ -25,6 +25,7 @@ import { budgets } from "./modules/budgets/budgets.controller";
 import { categoriesController } from "./modules/categories/categories.controller";
 import { contactsController } from "./modules/contacts/contacts.controller";
 import { debtsController } from "./modules/debts/debts.controller";
+import { deviceTokensController } from "./modules/device-tokens/device-tokens.controller";
 import { faqsController } from "./modules/faqs/faqs.controller";
 import { publicFaqsController } from "./modules/faqs/public-faqs.controller";
 import { healthController } from "./modules/health/health.controller";
@@ -131,7 +132,8 @@ const apiControllers3 = new Elysia()
   .use(debtsController)
   .use(notificationsController)
   .use(notificationSettingsController)
-  .use(pushSubscriptionsController);
+  .use(pushSubscriptionsController)
+  .use(deviceTokensController);
 
 const APP_ORIGINS = [
   "https://app.oewang.com",

@@ -46,13 +46,11 @@ axiosInstance.interceptors.request.use(async (config) => {
     const secret = Env.ENCRYPTION_KEY;
     if (secret) {
       const { encrypt: encryptBody } = await import("@workspace/encryption");
-      try {
-        const encrypted = encryptBody(JSON.stringify(config.data), secret);
-        config.data = { data: encrypted };
-        config.headers["x-encrypted"] = "true";
-      } catch (e) {
-        console.error("Failed to encrypt request body", e);
-      }
+      // Encryption failure must abort the request, not silently send the
+      // body in plaintext — that would downgrade the transport guarantee.
+      const encrypted = encryptBody(JSON.stringify(config.data), secret);
+      config.data = { data: encrypted };
+      config.headers["x-encrypted"] = "true";
     }
   }
 

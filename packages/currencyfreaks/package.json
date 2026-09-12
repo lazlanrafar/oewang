@@ -10,6 +10,7 @@
   "dependencies": {
     "@workspace/redis": "workspace:*",
     "@workspace/constants": "workspace:*",
+    "@workspace/logger": "workspace:*",
     "@workspace/utils": "workspace:*",
     "axios": "^1.7.9"
   },

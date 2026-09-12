@@ -26,8 +26,11 @@ ENV NODE_ENV=production
 # hit both in practice). Copying the whole installer output instead — root
 # package.json/bun.lock included — so resolution works regardless of the
 # layout bun picked, at the cost of a slower/larger image build.
+RUN addgroup --system --gid 1001 oewang && adduser --system --uid 1001 --ingroup oewang oewang
 COPY --from=installer /app ./
+RUN chown -R oewang:oewang /app
 
+USER oewang
 WORKDIR /app/apps/admin
 EXPOSE 3001
 CMD ["bun", "run", "start"]

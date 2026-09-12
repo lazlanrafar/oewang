@@ -32,7 +32,7 @@ export default async function PolicyPage({ params }: { params: Promise<{ locale:
       <div className="space-y-6">
         <div>
           <h1 className="mb-2 font-serif text-2xl tracking-tight">Privacy Policy</h1>
-          <p className="text-muted-foreground text-sm">Last updated: April 22, 2026</p>
+          <p className="text-muted-foreground text-sm">Last updated: September 11, 2026</p>
         </div>
 
         <div className="my-8 h-px w-full bg-border" />
@@ -59,6 +59,15 @@ export default async function PolicyPage({ params }: { params: Promise<{ locale:
               records.
             </li>
             <li>Files you upload: receipts, invoice files, and other documents stored in vault features.</li>
+            <li>
+              Device permissions (mobile app only, requested explicitly and only when you use the related feature):
+              phone contacts (to import a contact as a debt counterparty), and camera/photo library (to scan receipts
+              or set a profile picture).
+            </li>
+            <li>
+              Push notification tokens: if you enable push notifications on the mobile app, we store a device token
+              with Firebase Cloud Messaging/Apple Push Notification service to deliver notifications to your device.
+            </li>
             <li>
               Integration data: data required to operate connected services (for example messaging or email integrations
               you enable).
@@ -111,8 +120,9 @@ export default async function PolicyPage({ params }: { params: Promise<{ locale:
           <h2 className="mt-10 text-lg tracking-tight">Third-Party Processors and Integrations</h2>
           <p className="text-muted-foreground text-sm leading-6">
             We use third-party service providers to operate the product (for example authentication/database
-            infrastructure, payment processing, cloud storage, messaging channels, and AI providers). These providers
-            process data on our behalf under contractual controls.
+            infrastructure, payment processing, cloud storage, messaging channels, and AI providers), including Google
+            Firebase for mobile push notification delivery. These providers process data on our behalf under
+            contractual controls.
           </p>
           <p className="text-muted-foreground text-sm leading-6">
             If you connect optional integrations, data is processed as required to deliver that integration's

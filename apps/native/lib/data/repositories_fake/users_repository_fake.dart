@@ -94,4 +94,17 @@ class UsersRepositoryFake implements UsersRepository {
     );
     return const Success<void, AppError>(null);
   }
+
+  @override
+  Future<Result<void, AppError>> deleteAccount() async {
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+    _profile = UserProfile(
+      id: _profile.id,
+      email: '',
+      name: 'Deleted user',
+      activeWorkspaceId: null,
+      workspaces: const [],
+    );
+    return const Success<void, AppError>(null);
+  }
 }

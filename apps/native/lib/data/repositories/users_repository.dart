@@ -21,4 +21,9 @@ abstract class UsersRepository {
   /// `AuthRepository.refreshToken()` to mint a JWT carrying the new
   /// workspace_id before any subsequent API call.
   Future<Result<void, AppError>> switchWorkspace(String workspaceId);
+
+  /// Permanently erases the user's personal data (anonymizes the user row,
+  /// soft-deletes memberships/notifications, server-side audit logged). The
+  /// caller must clear the local session afterward — this does not log out.
+  Future<Result<void, AppError>> deleteAccount();
 }

@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@types/ioredis": "^5.0.0",
+    "@workspace/logger": "workspace:*",
     "@workspace/utils": "workspace:*",
     "ioredis": "^5.10.1"
   },

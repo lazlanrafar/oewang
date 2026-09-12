@@ -1,4 +1,5 @@
 import { Env } from "@workspace/constants";
+import { logger } from "@workspace/logger";
 import fs from "fs";
 import path from "path";
 import { Resend } from "resend";
@@ -23,9 +24,9 @@ function renderTemplate(
       throw new Error(`Template ${templateName} not found at ${templatePath}`);
     }
   } catch (e) {
-    console.warn(
-      `Could not read email template ${templateName}, using minimal fallback`,
-      e,
+    logger.warn(
+      `[email] Could not read template ${templateName}, using minimal fallback`,
+      { error: e instanceof Error ? e.message : String(e) },
     );
     // Minimal fallback for critical cases
     return Object.entries(variables).reduce(
@@ -278,7 +279,7 @@ export async function sendReceiptProcessedEmail(
  */
 async function sendEmail(to: string, subject: string, html: string) {
   if (!Env.RESEND_API_KEY) {
-    console.log("Mock Sending Email:", { to, subject, html });
+    logger.info("[email] Mock sending email", { to, subject });
     return { success: true, id: "mock-id" };
   }
 
@@ -291,7 +292,9 @@ async function sendEmail(to: string, subject: string, html: string) {
     });
     return { success: true, data };
   } catch (error) {
-    console.error("Failed to send email", error);
+    logger.error("[email] Failed to send email", {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return { success: false, error };
   }
 }

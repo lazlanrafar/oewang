@@ -17,6 +17,7 @@ from app.api.routes import (
     draft,
     internal,
 )
+from app.config import get_settings, validate_settings
 from app.core.database import close_pool
 from app.core.quota import PlanLimitReached
 from app.utils.logger import get_logger
@@ -33,6 +34,7 @@ limiter = Limiter(key_func=get_remote_address, default_limits=["120/minute"])
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    validate_settings(get_settings())
     yield
     await close_pool()
 

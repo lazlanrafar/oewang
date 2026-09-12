@@ -10,6 +10,7 @@ import 'package:oewang/data/repositories/budgets_repository.dart';
 import 'package:oewang/data/repositories/categories_repository.dart';
 import 'package:oewang/data/repositories/contacts_repository.dart';
 import 'package:oewang/data/repositories/debts_repository.dart';
+import 'package:oewang/data/repositories/device_tokens_repository.dart';
 import 'package:oewang/data/repositories/rates_repository.dart';
 import 'package:oewang/data/repositories/settings_repository.dart';
 import 'package:oewang/data/repositories/sub_currencies_repository.dart';
@@ -28,6 +29,7 @@ import 'package:oewang/data/repositories_remote/contacts_repository_offline.dart
 import 'package:oewang/data/repositories_remote/contacts_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/debts_repository_offline.dart';
 import 'package:oewang/data/repositories_remote/debts_repository_remote.dart';
+import 'package:oewang/data/repositories_remote/device_tokens_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/rates_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/settings_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/sub_currencies_repository_remote.dart';
@@ -43,6 +45,7 @@ import 'package:oewang/data/services/api/api_client.dart';
 import 'package:oewang/data/services/connectivity/connectivity_service.dart';
 import 'package:oewang/data/services/db/app_database.dart';
 import 'package:oewang/data/services/notifications/notifications_service.dart';
+import 'package:oewang/data/services/notifications/push_service.dart';
 import 'package:oewang/data/services/storage/preferences_service.dart';
 import 'package:oewang/data/services/storage/secure_storage_service.dart';
 import 'package:oewang/data/services/sync/sync_service.dart';
@@ -98,8 +101,24 @@ final syncServiceProvider = Provider<SyncService>((ref) {
   );
 });
 
+// `.init()` is NOT called here — [PushService.start] calls it explicitly,
+// inside its own async/try-catch flow. Calling it eagerly during this
+// provider's (synchronous) build let a plugin-channel failure throw
+// synchronously out of provider construction itself, which bypasses normal
+// try/catch handling at the read site.
 final notificationsServiceProvider = Provider<NotificationsService>((ref) {
-  return NotificationsService()..init();
+  return NotificationsService();
+});
+
+final deviceTokensRepositoryProvider = Provider<DeviceTokensRepository>((ref) {
+  return DeviceTokensRepositoryRemote(ref.watch(apiClientProvider));
+});
+
+final pushServiceProvider = Provider<PushService>((ref) {
+  return PushService(
+    notifications: ref.watch(notificationsServiceProvider),
+    deviceTokens: ref.watch(deviceTokensRepositoryProvider),
+  );
 });
 
 /// Kept alive for the app's lifetime by [OewangApp] watching it once at the
@@ -448,6 +467,19 @@ class SessionController extends Notifier<AsyncValue<Session?>> {
     if (session == null || (session.workspaceId?.isEmpty ?? true)) return;
     unawaited(ref.read(transactionSettingsProvider.future));
     unawaited(ref.read(subCurrenciesProvider.future));
+    unawaited(_startPush());
+  }
+
+  /// Push registration must never block or crash login — wrapped separately
+  /// (unlike the two prefetches above, resolving [pushServiceProvider] can
+  /// throw synchronously, e.g. a plugin channel issue) so a failure here is
+  /// just silently skipped.
+  Future<void> _startPush() async {
+    try {
+      await ref.read(pushServiceProvider).start();
+    } on Object {
+      // Best-effort.
+    }
   }
 
   Future<void> clear() async {

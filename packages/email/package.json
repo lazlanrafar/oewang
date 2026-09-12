@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@workspace/constants": "workspace:*",
+    "@workspace/logger": "workspace:*",
     "resend": "^6.25.0"
   },
   "devDependencies": {

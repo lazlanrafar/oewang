@@ -33,7 +33,7 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
       <div className="space-y-6">
         <div>
           <h1 className="mb-2 font-serif text-2xl tracking-tight">Terms and Conditions</h1>
-          <p className="text-muted-foreground text-sm">Last updated: {new Date().toLocaleDateString()}</p>
+          <p className="text-muted-foreground text-sm">Last updated: September 11, 2026</p>
         </div>
 
         <div className="my-8 h-px w-full bg-border" />

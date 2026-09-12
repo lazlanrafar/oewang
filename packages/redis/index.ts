@@ -1,3 +1,4 @@
+import { logger } from "@workspace/logger";
 import { loadEnv } from "@workspace/utils/load-env";
 import Redis from "ioredis";
 
@@ -17,7 +18,7 @@ const createRedisClient = () => {
   }
 
   if (process.env.NODE_ENV !== "test") {
-    console.log("🚀 Using Standard Redis (TCP)");
+    logger.info("[redis] Using Standard Redis (TCP)");
   }
   // ioredis's own URL parser never decodeURIComponent()s the userinfo, so a
   // percent-encoded password (e.g. one containing "/") is sent to Redis
@@ -37,7 +38,7 @@ const createRedisClient = () => {
   // network blips) from taking the whole process down.
   client.on("error", (err) => {
     if (process.env.NODE_ENV !== "test") {
-      console.error("[redis] connection error:", err.message);
+      logger.error("[redis] connection error", { error: err.message });
     }
   });
   return client;

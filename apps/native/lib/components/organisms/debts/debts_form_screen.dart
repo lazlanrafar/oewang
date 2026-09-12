@@ -130,7 +130,12 @@ class _DebtFormScreenState extends ConsumerState<DebtFormScreen> {
   }
 
   Future<void> _importFromPhone(DebtFormViewModel vm) async {
-    final granted = await fc.FlutterContacts.requestPermission();
+    final status = await fc.FlutterContacts.permissions.request(
+      fc.PermissionType.readWrite,
+    );
+    final granted =
+        status == fc.PermissionStatus.granted ||
+        status == fc.PermissionStatus.limited;
     if (!granted) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -138,12 +143,14 @@ class _DebtFormScreenState extends ConsumerState<DebtFormScreen> {
       );
       return;
     }
-    final device = await fc.FlutterContacts.getContacts(withProperties: true);
+    final device = await fc.FlutterContacts.getAll(
+      properties: {fc.ContactProperty.phone},
+    );
     final existing = vm.contactOptions.map((c) => c.name.toLowerCase()).toSet();
     final seen = <String>{};
     final candidates = <(String, String?)>[];
     for (final c in device) {
-      final name = c.displayName.trim();
+      final name = (c.displayName ?? '').trim();
       if (name.isEmpty) continue;
       final key = name.toLowerCase();
       if (existing.contains(key) || !seen.add(key)) continue;

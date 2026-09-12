@@ -106,7 +106,7 @@ class _CategoryListScreenState extends ConsumerState<CategoryListScreen> {
             final list = _items.isEmpty ? items : _items;
             return ReorderableListView.builder(
               itemCount: list.length,
-              onReorder: _reorder,
+              onReorderItem: _reorder,
               itemBuilder: (context, i) => SwipeActionRow(
                 key: ValueKey(list[i].id),
                 dragIndex: i,

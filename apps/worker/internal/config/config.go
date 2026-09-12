@@ -81,6 +81,12 @@ func Load() (*Config, error) {
 	if cfg.TelegramBotToken == "" {
 		missing = append(missing, "TELEGRAM_BOT_TOKEN")
 	}
+	if cfg.AIServiceURL == "" {
+		missing = append(missing, "AI_SERVICE_URL")
+	}
+	if cfg.AIServiceAPIKey == "" {
+		missing = append(missing, "AI_SERVICE_API_KEY")
+	}
 	if len(missing) > 0 {
 		return nil, fmt.Errorf("config: missing required env vars: %v", missing)
 	}

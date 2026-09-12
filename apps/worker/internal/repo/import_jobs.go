@@ -2,6 +2,8 @@ package repo
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5"
 )
 
 // ImportJobsRepo writes to apps/api's transaction_import_jobs table
@@ -22,6 +24,21 @@ func (r *ImportJobsRepo) MarkSucceeded(ctx context.Context, jobID string, import
 		WHERE id = $1`
 	_, err := r.Pool.Exec(ctx, q, jobID, imported, skipped)
 	return err
+}
+
+// GetStatus reports the job's current status, or "" if the row doesn't
+// exist (treated by the caller as "not previously succeeded").
+func (r *ImportJobsRepo) GetStatus(ctx context.Context, jobID string) (string, error) {
+	const q = `SELECT status FROM transaction_import_jobs WHERE id = $1`
+	var status string
+	err := r.Pool.QueryRow(ctx, q, jobID).Scan(&status)
+	if err == pgx.ErrNoRows {
+		return "", nil
+	}
+	if err != nil {
+		return "", err
+	}
+	return status, nil
 }
 
 // MarkFailed records a terminal failure (asynq retries exhausted).

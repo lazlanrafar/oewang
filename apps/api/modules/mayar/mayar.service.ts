@@ -139,6 +139,7 @@ export abstract class MayarService {
         "Content-Type": "application/json",
         Authorization: MayarService.getAuthHeader(),
       },
+      signal: AbortSignal.timeout(15_000),
       ...(body && method !== "GET" ? { body: JSON.stringify(body) } : {}),
     });
 

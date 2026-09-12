@@ -314,6 +314,10 @@ func (h *TelegramWebhookHandler) Handle(ctx context.Context, t *asynq.Task) erro
 	if receiptFile != nil {
 		if err := h.handleReceiptAttachment(ctx, chatID, workspaceID, userID, chatSessionID, persistSessionID, *receiptFile); err != nil {
 			log.Printf("telegram: receipt attachment handling error: %v", err)
+			// asynq won't retry this task on a nil return (Handle always
+			// returns nil below) — tell the user instead of leaving them
+			// with no reply at all.
+			h.Telegram.SendMessage(ctx, chatID, "❌ Sorry, something went wrong processing that receipt. Please try again.")
 		}
 	} else if text != "" {
 		h.handleTextMessage(ctx, chatID, workspaceID, userID, chatSessionID, persistSessionID, text, stopTyping)

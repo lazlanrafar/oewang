@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 
 import { OAuthButton } from "@/components/organisms/auth/oauth-button";
 import { RegisterForm } from "@/components/organisms/auth/register-form";
+import { getAppEnv } from "@/env";
 import { getDictionary } from "@/get-dictionary";
 import type { Locale } from "@/i18n-config";
 
@@ -14,6 +15,7 @@ export const metadata: Metadata = {
 export default async function RegisterPage({ params }: { params: Promise<{ locale: Locale }> }) {
   const { locale } = await params;
   const dictionary = await getDictionary(locale);
+  const websiteUrl = getAppEnv().NEXT_PUBLIC_WEBSITE_URL ?? "https://oewang.com";
 
   return (
     <div className="mx-auto flex w-full flex-col justify-center space-y-8 p-4 sm:w-[400px] sm:p-0">
@@ -52,7 +54,7 @@ export default async function RegisterPage({ params }: { params: Promise<{ local
         <p className="max-w-[400px] text-center text-muted-foreground text-xs">
           {dictionary.auth.terms_privacy_agreement}{" "}
           <Link
-            href="/terms"
+            href={`${websiteUrl}/en/terms`}
             target="_blank"
             rel="noopener noreferrer"
             className="pointer-events-auto underline underline-offset-4 hover:text-foreground"
@@ -61,7 +63,7 @@ export default async function RegisterPage({ params }: { params: Promise<{ local
           </Link>
           {" & "}
           <Link
-            href="/policy"
+            href={`${websiteUrl}/en/policy`}
             target="_blank"
             rel="noopener noreferrer"
             className="pointer-events-auto underline underline-offset-4 hover:text-foreground"

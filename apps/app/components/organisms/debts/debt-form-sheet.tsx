@@ -132,25 +132,23 @@ export function DebtFormSheet({
       // Optimistic cache patch on update — covers infinite + regular query shapes
       if (debt && result.data) {
         const updated = { ...debt, ...result.data } as DebtWithContact;
-        queryClient.setQueriesData<any>({ queryKey: ["debts"], exact: false }, (old: any) => {
+        type DebtsPage = { data?: DebtWithContact[] };
+        type DebtsCache = { pages: DebtsPage[] } | { data: DebtWithContact[] };
+        queryClient.setQueriesData<DebtsCache>({ queryKey: ["debts"], exact: false }, (old) => {
           if (!old) return old;
           if ("pages" in old && Array.isArray(old.pages)) {
             return {
               ...old,
-              pages: old.pages.map((page: any) => ({
+              pages: old.pages.map((page) => ({
                 ...page,
-                data: (page.data ?? []).map((d: DebtWithContact) =>
-                  d.id === updated.id ? { ...d, ...updated } : d,
-                ),
+                data: (page.data ?? []).map((d) => (d.id === updated.id ? { ...d, ...updated } : d)),
               })),
             };
           }
           if ("data" in old && Array.isArray(old.data)) {
             return {
               ...old,
-              data: old.data.map((d: DebtWithContact) =>
-                d.id === updated.id ? { ...d, ...updated } : d,
-              ),
+              data: old.data.map((d) => (d.id === updated.id ? { ...d, ...updated } : d)),
             };
           }
           return old;
