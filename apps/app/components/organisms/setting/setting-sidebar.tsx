@@ -12,6 +12,7 @@ import {
   FileText,
   Languages,
   Lock,
+  MessageSquareWarning,
   Monitor,
   Palette,
   PencilRuler,
@@ -43,6 +44,7 @@ interface SidebarNavProps extends React.HTMLAttributes<HTMLElement> {
       language: string;
       billing: string;
       members: string;
+      feedback: string;
       soon: string;
     };
   };
@@ -185,6 +187,11 @@ export function SettingSidebar({ className, dictionary, ...props }: SidebarNavPr
               } satisfies SidebarLinkItem,
             ]
           : []),
+        {
+          title: sidebar.feedback,
+          href: "/settings/feedback",
+          icon: MessageSquareWarning,
+        },
       ],
     },
   ];

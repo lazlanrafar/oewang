@@ -172,6 +172,7 @@
       "language": "Pengaturan Bahasa",
       "billing": "Penagihan & Langganan",
       "members": "Anggota",
+      "feedback": "Masukan",
       "soon": "Segera"
     },
     "appearance": {
@@ -335,6 +336,24 @@
         "saving": "Memperbarui...",
         "success": "Profil berhasil diperbarui"
       }
+    },
+    "feedback": {
+      "title": "Masukan",
+      "description": "Laporkan bug atau ajukan fitur baru. Kami membaca setiap masukan.",
+      "type_label": "Jenis",
+      "type_bug": "Laporan bug",
+      "type_feature_request": "Permintaan fitur",
+      "type_other": "Lainnya",
+      "message_label": "Pesan",
+      "message_placeholder": "Apa yang terjadi, atau apa yang ingin kamu lihat?",
+      "message_error_min": "Mohon tambahkan detail lebih.",
+      "screenshot_label": "Lampirkan screenshot (opsional)",
+      "screenshot_upload": "Unggah screenshot",
+      "screenshot_allowed_formats": "JPG, GIF atau PNG. Maks 10MB.",
+      "submit": "Kirim masukan",
+      "submitting": "Mengirim...",
+      "toast_success": "Terima kasih — masukan kamu sudah kami terima.",
+      "toast_error": "Gagal mengirim masukan"
     },
     "currency": {
       "title": "Mata Uang Utama",

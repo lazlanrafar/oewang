@@ -58,6 +58,7 @@ export abstract class FeedbackService {
     userId: string,
     file?: UploadedFile,
   ) {
+    const source = dto.source ?? "native";
     const screenshot_url = file
       ? await FeedbackService.uploadScreenshot(file)
       : null;
@@ -66,13 +67,13 @@ export abstract class FeedbackService {
       user_id: userId,
       name: null,
       email: null,
-      source: "native",
+      source,
       type: dto.type,
       message: dto.message,
       screenshot_url,
     });
 
-    await FeedbackService.notifyAdmins(created.id, dto.type, "native");
+    await FeedbackService.notifyAdmins(created.id, dto.type, source);
 
     return buildSuccess(created, "Feedback submitted");
   }
@@ -119,7 +120,7 @@ export abstract class FeedbackService {
   private static async notifyAdmins(
     feedbackId: string,
     type: string,
-    source: "website" | "native",
+    source: "website" | "native" | "app",
   ) {
     let admins: Awaited<ReturnType<typeof FeedbackRepository.listAdminUserIds>>;
     try {

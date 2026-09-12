@@ -13,7 +13,7 @@ export const feedback = pgTable(
     user_id: text("user_id").references(() => users.id),
     name: text("name"),
     email: text("email"),
-    source: text("source", { enum: ["website", "native"] }).notNull(),
+    source: text("source", { enum: ["website", "native", "app"] }).notNull(),
     type: text("type", {
       enum: ["bug", "feature_request", "other"],
     }).notNull(),

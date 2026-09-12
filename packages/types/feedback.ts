@@ -1,4 +1,4 @@
-export type FeedbackSource = "website" | "native";
+export type FeedbackSource = "website" | "native" | "app";
 export type FeedbackType = "bug" | "feature_request" | "other";
 export type FeedbackStatus =
   | "new"

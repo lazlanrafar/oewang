@@ -23,10 +23,13 @@ export const CreatePublicFeedbackBody = t.Object({
   file: t.Optional(t.File({ maxSize: "10m", type: "image" })),
 });
 
-// Authenticated (native) submission — identity comes from the JWT.
+// Authenticated (native app / apps/app dashboard) submission — identity
+// comes from the JWT. `source` defaults to "native" (the original caller)
+// when omitted so existing clients keep working unchanged.
 export const CreateAuthedFeedbackBody = t.Object({
   type: FeedbackTypeSchema,
   message: t.String({ minLength: 1, maxLength: 5000 }),
+  source: t.Optional(t.Union([t.Literal("native"), t.Literal("app")])),
   file: t.Optional(t.File({ maxSize: "10m", type: "image" })),
 });
 

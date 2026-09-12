@@ -39,6 +39,7 @@ const FACETS: DataTableFilterFacet[] = [
     options: [
       { id: "website", name: "Website" },
       { id: "native", name: "Native" },
+      { id: "app", name: "App" },
     ],
   },
 ];

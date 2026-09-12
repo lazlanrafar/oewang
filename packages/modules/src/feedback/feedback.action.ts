@@ -99,6 +99,27 @@ export const getFeedbackById = async (
   }
 };
 
+// Authenticated submission (apps/app, apps/native) — identity comes from the
+// session JWT, no email/name needed. formData carries type/message and an
+// optional screenshot file, mirroring updateAvatarAction's multipart pattern.
+export const submitFeedbackAction = async (
+  formData: FormData,
+): Promise<ActionResponse<Feedback>> => {
+  try {
+    const response = await api.post("/feedback", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    const apiResponse = (response as any)._api_response as ApiResponse<Feedback>;
+
+    return { success: true, data: apiResponse?.data ?? response.data.data };
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.response?.data?.message || "Failed to submit feedback",
+    };
+  }
+};
+
 export const updateFeedbackStatusAction = async (
   id: string,
   status: string,

@@ -213,6 +213,7 @@
       "language": "言語設定",
       "billing": "請求 & サブスクリプション",
       "members": "メンバー",
+      "feedback": "フィードバック",
       "soon": "まもなく"
     },
     "appearance": {
@@ -376,6 +377,24 @@
         "saving": "更新中...",
         "success": "プロフィールが正常に更新されました"
       }
+    },
+    "feedback": {
+      "title": "フィードバック",
+      "description": "バグを報告するか、機能をリクエストしてください。すべての送信内容を確認しています。",
+      "type_label": "種類",
+      "type_bug": "バグ報告",
+      "type_feature_request": "機能リクエスト",
+      "type_other": "その他",
+      "message_label": "メッセージ",
+      "message_placeholder": "何が起きましたか？どんな機能が欲しいですか？",
+      "message_error_min": "もう少し詳しく入力してください。",
+      "screenshot_label": "スクリーンショットを添付（任意）",
+      "screenshot_upload": "スクリーンショットをアップロード",
+      "screenshot_allowed_formats": "JPG、GIF、またはPNG。最大10MB。",
+      "submit": "送信する",
+      "submitting": "送信中...",
+      "toast_success": "ありがとうございます。受け取りました。",
+      "toast_error": "フィードバックの送信に失敗しました"
     },
     "currency": {
       "title": "メイン通貨",
