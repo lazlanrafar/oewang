@@ -1,3 +1,5 @@
+"use server";
+
 import { axiosInstance as api } from "../lib/axios.server";
 import type { ActionResponse, ApiResponse } from "@workspace/types";
 
