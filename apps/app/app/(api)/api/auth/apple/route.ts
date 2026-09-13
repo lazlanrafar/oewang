@@ -51,7 +51,10 @@ export async function GET(request: Request) {
     httpOnly: true,
     secure: true,
     sameSite: "none",
-    maxAge: 60 * 10, // 10 minutes
+    // Longer than Google/GitHub's 10 min — Apple's own flow can involve a
+    // trusted-device/2FA prompt that eats into the window before the user
+    // gets back to the form_post callback.
+    maxAge: 60 * 30, // 30 minutes
     path: "/",
   });
 

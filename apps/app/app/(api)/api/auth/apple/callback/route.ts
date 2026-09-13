@@ -54,6 +54,11 @@ export async function POST(request: Request) {
   const storedState = cookieStore.get("oauth_state")?.value;
 
   if (!code || !state || state !== storedState) {
+    console.error("[Apple OAuth] state mismatch", {
+      hasCode: !!code,
+      hasState: !!state,
+      hasStoredState: !!storedState,
+    });
     const res = NextResponse.redirect(errorRedirect("oauth_state_mismatch"));
     res.cookies.delete("oauth_state");
     return res;
@@ -168,7 +173,17 @@ export async function POST(request: Request) {
     return response;
   } catch (err) {
     console.error("[Apple OAuth]", err);
-    const res = NextResponse.redirect(errorRedirect("oauth_failed"));
+    // TEMPORARY (debugging live "oauth_failed" reports): surface the actual
+    // error in the redirect since container stdout isn't visible via the
+    // usual log tooling for this app. Remove once root-caused.
+    const detail = encodeURIComponent(
+      err instanceof Error ? err.message : String(err),
+    );
+    const res = NextResponse.redirect(
+      isMobile
+        ? `oewang://oauth-callback?error=oauth_failed&detail=${detail}`
+        : `${origin}/login?error=oauth_failed&detail=${detail}`,
+    );
     res.cookies.delete("oauth_state");
     return res;
   }
