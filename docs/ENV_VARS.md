@@ -48,7 +48,7 @@ The only app touching the database, Redis, payment provider, and integrations di
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Optional | Google OAuth verify + Gmail integration fallback |
 | `GOOGLE_GMAIL_CLIENT_ID` / `GOOGLE_GMAIL_CLIENT_SECRET` | Optional | Falls back to the `GOOGLE_CLIENT_*` pair above when unset |
 | `MICROSOFT_CLIENT_ID` / `MICROSOFT_CLIENT_SECRET` | Optional | Outlook integration |
-| `BUCKET_ENDPOINT` / `BUCKET_ACCESS_KEY_ID` / `BUCKET_SECRET_ACCESS_KEY` / `BUCKET_NAME` | Optional | S3-compatible storage (Vault, avatars, receipts). Feature throws "not configured" if any is missing |
+| `BUCKET_ENDPOINT` / `BUCKET_ACCESS_KEY_ID` / `BUCKET_SECRET_ACCESS_KEY` / `BUCKET_NAME` | Optional | S3-compatible storage (Vault, avatars, receipts, article images, feedback screenshots). Vault/avatar/article uploads throw "not configured" if any is missing; feedback screenshot upload degrades gracefully instead (logs a warning and submits without the attachment) since a screenshot is optional |
 | `BUCKET_REGION` | Optional | Default `us-east-1` |
 | `BUCKET_PUBLIC_URL` | Optional | Public CDN domain for permanently-public assets (e.g. article images). Falls back to a path-style bucket URL |
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` | Optional | Web push notifications |
