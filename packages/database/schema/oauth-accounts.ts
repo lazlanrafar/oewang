@@ -9,7 +9,7 @@ export const oauth_accounts = pgTable(
     user_id: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    provider: text("provider").notNull(), // "google" | "github"
+    provider: text("provider").notNull(), // "google" | "github" | "apple"
     provider_user_id: text("provider_user_id").notNull(),
     provider_email: text("provider_email"),
     provider_name: text("provider_name"),

@@ -21,6 +21,13 @@ const serverSchema = z.object({
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   GITHUB_CLIENT_ID: z.string().optional(),
   GITHUB_CLIENT_SECRET: z.string().optional(),
+  // Sign in with Apple — client_secret isn't a static string like Google/GitHub;
+  // it's a JWT signed per-request with this key (ES256, kid = APPLE_KEY_ID,
+  // iss = APPLE_TEAM_ID). See apps/app's apple/callback route.
+  APPLE_CLIENT_ID: z.string().optional(),
+  APPLE_TEAM_ID: z.string().optional(),
+  APPLE_KEY_ID: z.string().optional(),
+  APPLE_PRIVATE_KEY: z.string().optional(),
   // Server-to-server secret gating /auth/oauth/connect. Only the Next.js OAuth
   // callback (which has already verified the user with the provider) may mint a
   // session. Optional in schema, but the endpoint fails closed when unset.

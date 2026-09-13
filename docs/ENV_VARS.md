@@ -75,6 +75,7 @@ The only app touching the database, Redis, payment provider, and integrations di
 | `OAUTH_CONNECT_SECRET` | **Required in practice** | Sent by the OAuth callback route when minting a session via `apps/api` |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Optional | Google login button |
 | `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | Optional | GitHub login button |
+| `APPLE_CLIENT_ID` / `APPLE_TEAM_ID` / `APPLE_KEY_ID` / `APPLE_PRIVATE_KEY` | Optional (functionally required for the native app's Apple login button) | Sign in with Apple — from Apple Developer Portal: `APPLE_CLIENT_ID` is the Services ID, `APPLE_PRIVATE_KEY` is the `.p8` key content signed per-request as the OIDC client_secret (ES256, `kid`=`APPLE_KEY_ID`, `iss`=`APPLE_TEAM_ID`) — not a static secret like Google/GitHub's |
 | `NEXT_PUBLIC_APP_URL` | **Required** | |
 | `NEXT_PUBLIC_API_URL` | **Required** | |
 | `NEXT_PUBLIC_ADMIN_URL` / `NEXT_PUBLIC_WEBSITE_URL` | Optional | Cross-app links |

@@ -43,6 +43,7 @@ dependencies:
 dev_dependencies:
   build_runner: ^2.4.13
   drift_dev: ^2.27.0
+  flutter_native_splash: ^2.4.3
   flutter_test:
     sdk: flutter
   freezed: ^2.5.7
@@ -60,3 +61,17 @@ flutter:
     - .env
     - .env.production
     - assets/icons/
+
+flutter_native_splash:
+  color: "#000000"
+  image: ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png
+  color_dark: "#000000"
+  image_dark: ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png
+  android_12:
+    color: "#000000"
+    image: ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png
+    color_dark: "#000000"
+    image_dark: ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png
+  android: true
+  ios: true
+  web: false

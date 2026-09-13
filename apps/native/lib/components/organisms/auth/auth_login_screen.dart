@@ -109,6 +109,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ? null
                       : () => _social('google'),
                 ),
+                const SizedBox(height: OewangSpacing.sm),
+                Button(
+                  label: 'Continue with Apple',
+                  variant: ButtonVariant.outlined,
+                  leading: ProviderIcon('ic-apple.svg', tint: palette.foreground),
+                  loading: vm.oauthSignIn.running,
+                  onPressed: vm.oauthSignIn.running
+                      ? null
+                      : () => _social('apple'),
+                ),
                 const SizedBox(height: OewangSpacing.lg),
                 OrDivider(palette: palette),
                 const SizedBox(height: OewangSpacing.lg),
