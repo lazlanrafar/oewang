@@ -111,9 +111,14 @@ export async function loginWithOAuth(
 }
 
 export async function logout() {
+  const isProduction = Env.NODE_ENV === "production";
   const store = await cookies();
-  store.delete(Env.NEXT_PUBLIC_SESSION_COOKIE_NAME);
-  store.delete(AUTHED_FLAG_COOKIE);
+  // Deletion is keyed by (name, path, domain) — must match what setSessionCookie
+  // used, or this clears a separate host-only cookie and leaves the real
+  // .oewang.com-scoped session cookie (and its valid token) in place.
+  const domain = isProduction ? { domain: ".oewang.com" } : {};
+  store.delete({ name: Env.NEXT_PUBLIC_SESSION_COOKIE_NAME, path: "/", ...domain });
+  store.delete({ name: AUTHED_FLAG_COOKIE, path: "/", ...domain });
   redirect("/login");
 }
 
