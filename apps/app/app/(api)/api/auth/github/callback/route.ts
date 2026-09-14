@@ -126,7 +126,14 @@ export async function GET(request: Request) {
 
     const isProduction = Env.NODE_ENV === "production";
     const next = workspace_id ? "/overview" : "/create-workspace";
-    const response = NextResponse.redirect(`${origin}${next}`);
+    // Redirect through /sync (public route) instead of straight to `next`:
+    // it does the final navigation client-side after mount, so the browser
+    // has fully committed this response's Set-Cookie before proxy.ts's
+    // workspace guard reads it — a direct server redirect can otherwise race
+    // it and bounce back to /login on slow/cold-compiling requests.
+    const response = NextResponse.redirect(
+      `${origin}/sync?returnTo=${encodeURIComponent(next)}`,
+    );
 
     const cookieBase = {
       path: "/",
