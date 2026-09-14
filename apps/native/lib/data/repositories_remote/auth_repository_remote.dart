@@ -103,9 +103,19 @@ class AuthRepositoryRemote implements AuthRepository {
     // app for the separate Safari/Chrome app) while still being a real system
     // browser context, so the oewang:// redirect hands off to this app the
     // same way it would from an external browser.
+    //
+    // Apple's own sign-in page is the one exception: it refuses to render
+    // (blank page, confirmed against the exact same authorize URL working
+    // fine in a normal browser) when loaded inside SFSafariViewController —
+    // Apple's fraud-prevention appears to specifically distrust embedded
+    // browser contexts for its own flow, unlike Google/GitHub. Full Safari
+    // via externalApplication renders it fine and hands off via oewang://
+    // the same way.
     final launched = await launchUrl(
       authUrl,
-      mode: LaunchMode.inAppBrowserView,
+      mode: provider == 'apple'
+          ? LaunchMode.externalApplication
+          : LaunchMode.inAppBrowserView,
     );
     if (!launched) {
       return const Failure(UnknownError('Could not open the browser'));
