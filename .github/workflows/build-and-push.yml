@@ -1,0 +1,234 @@
+name: Build and Push
+
+# Builds each Node app's existing Dockerfile unmodified and pushes it to
+# GHCR. Coolify no longer builds these images itself — it just pulls
+# whatever tag this workflow points it at (see the deploy step in each
+# job). See docs/MOBILE/STORE_RELEASE_RUNBOOK.md's sibling doc for native;
+# this workflow only covers website/app/admin/api.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      apps:
+        description: "Comma-separated apps to force-build (website,app,admin,api) or 'all'"
+        default: "all"
+
+concurrency:
+  group: build-push-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      website: ${{ steps.filter.outputs.website }}
+      app: ${{ steps.filter.outputs.app }}
+      admin: ${{ steps.filter.outputs.admin }}
+      api: ${{ steps.filter.outputs.api }}
+      shared: ${{ steps.filter.outputs.shared }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            website:
+              - 'apps/website/**'
+            app:
+              - 'apps/app/**'
+            admin:
+              - 'apps/admin/**'
+            api:
+              - 'apps/api/**'
+            shared:
+              - 'packages/**'
+              - 'turbo.json'
+              - 'bun.lock'
+              - '.dockerignore'
+              - '.github/workflows/build-and-push.yml'
+
+  build-website:
+    needs: changes
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      (github.event.inputs.apps == 'all' || contains(github.event.inputs.apps, 'website')) ||
+      needs.changes.outputs.shared == 'true' ||
+      needs.changes.outputs.website == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      COOLIFY_BASE_URL: ${{ secrets.COOLIFY_BASE_URL }}
+      COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
+      COOLIFY_WEBSITE_UUID: ${{ secrets.COOLIFY_WEBSITE_UUID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/website/Dockerfile
+          push: true
+          build-args: |
+            NEXT_PUBLIC_WEBSITE_URL=${{ vars.NEXT_PUBLIC_WEBSITE_URL }}
+            NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
+            NEXT_PUBLIC_APP_URL=${{ vars.NEXT_PUBLIC_APP_URL }}
+            NEXT_PUBLIC_SENTRY_DSN=${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
+          tags: |
+            ghcr.io/lazlanrafar/oewang-website:${{ github.sha }}
+            ghcr.io/lazlanrafar/oewang-website:latest
+          cache-from: type=gha,scope=website
+          cache-to: type=gha,mode=max,scope=website
+      - name: Update Coolify image tag and deploy
+        if: env.COOLIFY_API_TOKEN != ''
+        run: |
+          curl -fsS -X PATCH "$COOLIFY_BASE_URL/api/v1/applications/$COOLIFY_WEBSITE_UUID" \
+            -H "Authorization: Bearer $COOLIFY_API_TOKEN" -H "Content-Type: application/json" \
+            -d "{\"docker_registry_image_tag\": \"${{ github.sha }}\"}"
+          curl -fsS -X POST "$COOLIFY_BASE_URL/api/v1/deploy?uuid=$COOLIFY_WEBSITE_UUID&force=true" \
+            -H "Authorization: Bearer $COOLIFY_API_TOKEN"
+
+  build-app:
+    needs: changes
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      (github.event.inputs.apps == 'all' || contains(github.event.inputs.apps, 'app')) ||
+      needs.changes.outputs.shared == 'true' ||
+      needs.changes.outputs.app == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      COOLIFY_BASE_URL: ${{ secrets.COOLIFY_BASE_URL }}
+      COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
+      COOLIFY_APP_UUID: ${{ secrets.COOLIFY_APP_UUID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/app/Dockerfile
+          push: true
+          build-args: |
+            NEXT_PUBLIC_APP_URL=${{ vars.NEXT_PUBLIC_APP_URL }}
+            NEXT_PUBLIC_ADMIN_URL=${{ vars.NEXT_PUBLIC_ADMIN_URL }}
+            NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
+            NEXT_PUBLIC_WEBSITE_URL=${{ vars.NEXT_PUBLIC_WEBSITE_URL }}
+            NEXT_PUBLIC_SENTRY_DSN=${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
+            NEXT_PUBLIC_SESSION_COOKIE_NAME=${{ vars.NEXT_PUBLIC_SESSION_COOKIE_NAME }}
+            NEXT_PUBLIC_TELEGRAM_BOT_USER=${{ vars.NEXT_PUBLIC_TELEGRAM_BOT_USER }}
+            NEXT_PUBLIC_VAPID_PUBLIC_KEY=${{ secrets.NEXT_PUBLIC_VAPID_PUBLIC_KEY }}
+          tags: |
+            ghcr.io/lazlanrafar/oewang-app:${{ github.sha }}
+            ghcr.io/lazlanrafar/oewang-app:latest
+          cache-from: type=gha,scope=app
+          cache-to: type=gha,mode=max,scope=app
+      - name: Update Coolify image tag and deploy
+        if: env.COOLIFY_API_TOKEN != ''
+        run: |
+          curl -fsS -X PATCH "$COOLIFY_BASE_URL/api/v1/applications/$COOLIFY_APP_UUID" \
+            -H "Authorization: Bearer $COOLIFY_API_TOKEN" -H "Content-Type: application/json" \
+            -d "{\"docker_registry_image_tag\": \"${{ github.sha }}\"}"
+          curl -fsS -X POST "$COOLIFY_BASE_URL/api/v1/deploy?uuid=$COOLIFY_APP_UUID&force=true" \
+            -H "Authorization: Bearer $COOLIFY_API_TOKEN"
+
+  build-admin:
+    needs: changes
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      (github.event.inputs.apps == 'all' || contains(github.event.inputs.apps, 'admin')) ||
+      needs.changes.outputs.shared == 'true' ||
+      needs.changes.outputs.admin == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      COOLIFY_BASE_URL: ${{ secrets.COOLIFY_BASE_URL }}
+      COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
+      COOLIFY_ADMIN_UUID: ${{ secrets.COOLIFY_ADMIN_UUID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/admin/Dockerfile
+          push: true
+          build-args: |
+            NEXT_PUBLIC_ADMIN_URL=${{ vars.NEXT_PUBLIC_ADMIN_URL }}
+            NEXT_PUBLIC_APP_URL=${{ vars.NEXT_PUBLIC_APP_URL }}
+            NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
+            NEXT_PUBLIC_SENTRY_DSN=${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
+            NEXT_PUBLIC_SESSION_COOKIE_NAME=${{ vars.NEXT_PUBLIC_SESSION_COOKIE_NAME }}
+          tags: |
+            ghcr.io/lazlanrafar/oewang-admin:${{ github.sha }}
+            ghcr.io/lazlanrafar/oewang-admin:latest
+          cache-from: type=gha,scope=admin
+          cache-to: type=gha,mode=max,scope=admin
+      - name: Update Coolify image tag and deploy
+        if: env.COOLIFY_API_TOKEN != ''
+        run: |
+          curl -fsS -X PATCH "$COOLIFY_BASE_URL/api/v1/applications/$COOLIFY_ADMIN_UUID" \
+            -H "Authorization: Bearer $COOLIFY_API_TOKEN" -H "Content-Type: application/json" \
+            -d "{\"docker_registry_image_tag\": \"${{ github.sha }}\"}"
+          curl -fsS -X POST "$COOLIFY_BASE_URL/api/v1/deploy?uuid=$COOLIFY_ADMIN_UUID&force=true" \
+            -H "Authorization: Bearer $COOLIFY_API_TOKEN"
+
+  build-api:
+    needs: changes
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      (github.event.inputs.apps == 'all' || contains(github.event.inputs.apps, 'api')) ||
+      needs.changes.outputs.shared == 'true' ||
+      needs.changes.outputs.api == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      COOLIFY_BASE_URL: ${{ secrets.COOLIFY_BASE_URL }}
+      COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
+      COOLIFY_API_UUID: ${{ secrets.COOLIFY_API_UUID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/lazlanrafar/oewang-api:${{ github.sha }}
+            ghcr.io/lazlanrafar/oewang-api:latest
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api
+      - name: Update Coolify image tag and deploy
+        if: env.COOLIFY_API_TOKEN != ''
+        run: |
+          curl -fsS -X PATCH "$COOLIFY_BASE_URL/api/v1/applications/$COOLIFY_API_UUID" \
+            -H "Authorization: Bearer $COOLIFY_API_TOKEN" -H "Content-Type: application/json" \
+            -d "{\"docker_registry_image_tag\": \"${{ github.sha }}\"}"
+          curl -fsS -X POST "$COOLIFY_BASE_URL/api/v1/deploy?uuid=$COOLIFY_API_UUID&force=true" \
+            -H "Authorization: Bearer $COOLIFY_API_TOKEN"

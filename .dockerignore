@@ -9,3 +9,5 @@ dist
 **/.turbo
 .env
 **/.env
+references
+apps/ai/.venv
