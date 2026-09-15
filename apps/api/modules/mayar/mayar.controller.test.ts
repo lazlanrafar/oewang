@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 
 const WORKER_URL = "http://worker.test";
 const WORKER_KEY = "test-worker-key-1234567890";
@@ -22,25 +22,22 @@ mock.module("@workspace/logger", () => ({
   }),
 }));
 
-// Deliberately NOT mock.module("./mayar.service", ...): mock.module() has no
-// working undo in Bun 1.3.3 (confirmed — re-registering the same specifier
-// to a different factory, even within the same file, does not change what
-// later require() calls return) and is process-global, so it would
-// permanently break mayar.service.test.ts (which imports the real module)
-// for the rest of the bun test run, in either file order. Monkeypatching the
-// real class's static methods instead mutates the actual MayarService object
-// rather than replacing what require("./mayar.service") resolves to, so it
-// can be installed and reverted per-test without touching the module
-// registry at all.
-const { MayarService } = require("./mayar.service");
-const originalVerifyWebhookToken = MayarService.verifyWebhookToken;
-const originalHandleWebhook = MayarService.handleWebhook;
+// createMayarController() takes MayarService as a constructor parameter
+// (defaulting to the real one in production) specifically so this test can
+// pass a fake instead of mock.module()-ing "./mayar.service" — Bun's
+// mock.module() is process-global with no working undo in 1.3.3, so a mock
+// registered here would leak into mayar.service.test.ts, which tests the
+// real module, for the rest of the bun test run regardless of file order.
+const { createMayarController } = require("./mayar.controller");
+
 const mockVerifyWebhookToken = mock((_token?: string) => true);
 const mockHandleWebhook = mock(async () => {});
-MayarService.verifyWebhookToken = mockVerifyWebhookToken;
-MayarService.handleWebhook = mockHandleWebhook;
+const fakeMayarService = {
+  verifyWebhookToken: mockVerifyWebhookToken,
+  handleWebhook: mockHandleWebhook,
+};
 
-const { mayarController } = require("./mayar.controller");
+const mayarController = createMayarController(fakeMayarService);
 
 describe("mayar.controller webhook", () => {
   const originalFetch = global.fetch;
@@ -59,11 +56,6 @@ describe("mayar.controller webhook", () => {
 
   afterEach(() => {
     global.fetch = originalFetch;
-  });
-
-  afterAll(() => {
-    MayarService.verifyWebhookToken = originalVerifyWebhookToken;
-    MayarService.handleWebhook = originalHandleWebhook;
   });
 
   it("enqueues the webhook to the worker and returns success on a valid token", async () => {
