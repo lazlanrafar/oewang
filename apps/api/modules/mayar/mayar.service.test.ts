@@ -4,14 +4,17 @@ import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 // orders, billing invoices, repository). Mock every module it imports so this
 // test never touches a real DB — mirrors the mock.module() convention used in
 // billing-lifecycle.service.test.ts, just wider because mayar.service.ts is.
-const envState: Record<string, string | undefined> = {
-  MAYAR_WEBHOOK_TOKEN: undefined,
-};
+let mockWebhookToken: string | undefined = undefined;
 
 mock.module("@workspace/constants", () => ({
   Env: new Proxy(
     {},
-    { get: (_target, prop: string) => envState[prop] },
+    {
+      get: (_target, prop: string) => {
+        if (prop === "MAYAR_WEBHOOK_TOKEN") return mockWebhookToken;
+        return undefined;
+      },
+    },
   ),
 }));
 
@@ -74,7 +77,8 @@ describe("MayarService.verifyWebhookToken", () => {
   const originalNodeEnv = process.env.NODE_ENV;
 
   beforeEach(() => {
-    envState.MAYAR_WEBHOOK_TOKEN = undefined;
+    mockWebhookToken = undefined;
+    delete process.env.MAYAR_WEBHOOK_TOKEN;
   });
 
   afterEach(() => {
@@ -82,34 +86,40 @@ describe("MayarService.verifyWebhookToken", () => {
   });
 
   it("returns true when no token is configured (dev/test)", () => {
-    envState.MAYAR_WEBHOOK_TOKEN = undefined;
+    mockWebhookToken = undefined;
+    delete process.env.MAYAR_WEBHOOK_TOKEN;
     expect(MayarService.verifyWebhookToken("anything")).toBe(true);
     expect(MayarService.verifyWebhookToken(undefined)).toBe(true);
   });
 
   it("returns false when no token is configured in production", () => {
     process.env.NODE_ENV = "production";
-    envState.MAYAR_WEBHOOK_TOKEN = undefined;
+    mockWebhookToken = undefined;
+    delete process.env.MAYAR_WEBHOOK_TOKEN;
     expect(MayarService.verifyWebhookToken("anything")).toBe(false);
   });
 
   it("returns true when the received token matches the configured token", () => {
-    envState.MAYAR_WEBHOOK_TOKEN = "secret-token";
+    mockWebhookToken = "secret-token";
+    process.env.MAYAR_WEBHOOK_TOKEN = "secret-token";
     expect(MayarService.verifyWebhookToken("secret-token")).toBe(true);
   });
 
   it("returns false when the received token does not match the configured token", () => {
-    envState.MAYAR_WEBHOOK_TOKEN = "secret-token";
+    mockWebhookToken = "secret-token";
+    process.env.MAYAR_WEBHOOK_TOKEN = "secret-token";
     expect(MayarService.verifyWebhookToken("wrong-token")).toBe(false);
   });
 
   it("returns false when the token is missing but a token is configured", () => {
-    envState.MAYAR_WEBHOOK_TOKEN = "secret-token";
+    mockWebhookToken = "secret-token";
+    process.env.MAYAR_WEBHOOK_TOKEN = "secret-token";
     expect(MayarService.verifyWebhookToken(undefined)).toBe(false);
   });
 
   it("never throws, regardless of input", () => {
-    envState.MAYAR_WEBHOOK_TOKEN = "secret-token";
+    mockWebhookToken = "secret-token";
+    process.env.MAYAR_WEBHOOK_TOKEN = "secret-token";
     expect(() => MayarService.verifyWebhookToken(undefined)).not.toThrow();
     expect(() => MayarService.verifyWebhookToken("")).not.toThrow();
   });
