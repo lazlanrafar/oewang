@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 
 const WORKER_URL = "http://worker.test";
 const WORKER_KEY = "test-worker-key-1234567890";
@@ -38,17 +38,19 @@ mock.module("./mayar.service", () => ({
   },
 }));
 
-// mock.module() replaces "./mayar.service" process-wide for the rest of the
-// bun test run, not just this file — mayar.service.test.ts (which tests the
-// real module) would silently get this stub instead if it runs afterward.
-// mock.restore() does NOT undo mock.module() registrations in Bun 1.3.3, so
-// explicitly re-point the mock factory at the real module (captured above,
-// before it was mocked) once this file's tests are done.
-afterAll(() => {
-  mock.module("./mayar.service", () => realMayarServiceModule);
-});
-
 const { mayarController } = require("./mayar.controller");
+
+// mock.module() replaces "./mayar.service" process-wide for the rest of the
+// bun test run, not just this file — every OTHER test file's top-level
+// require("./mayar.service") (e.g. mayar.service.test.ts, which tests the
+// real module) runs during the same load phase, before any test or afterAll
+// fires, and would silently get this stub instead. mock.restore() does NOT
+// undo mock.module() registrations in Bun 1.3.3, so restore the real module
+// synchronously right here — mayar.controller has already captured the stub
+// it needs via the `require("./mayar.controller")` above, so re-pointing the
+// mock factory back to the real module now is safe and takes effect before
+// any later file's top-level code runs.
+mock.module("./mayar.service", () => realMayarServiceModule);
 
 describe("mayar.controller webhook", () => {
   const originalFetch = global.fetch;
