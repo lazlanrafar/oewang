@@ -85,8 +85,9 @@ jobs:
 
       - name: Install Android SDK 37
         run: |
-          yes | sdkmanager --licenses || true
-          sdkmanager "platforms;android-37" "build-tools;34.0.0"
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKMANAGER" --licenses || true
+          "$SDKMANAGER" "platforms;android-37" "build-tools;34.0.0"
 
       - name: Install Flutter Dependencies
         run: flutter pub get
