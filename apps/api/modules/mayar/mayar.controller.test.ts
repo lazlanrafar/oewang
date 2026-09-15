@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+import { afterAll, afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 
 const WORKER_URL = "http://worker.test";
 const WORKER_KEY = "test-worker-key-1234567890";
@@ -6,6 +6,12 @@ const WORKER_KEY = "test-worker-key-1234567890";
 mock.module("@workspace/constants", () => ({
   Env: { WORKER_URL, WORKER_API_KEY: WORKER_KEY },
 }));
+
+// Captured before mocking "./mayar.service" below so afterAll can restore
+// the real module for any test file that runs after this one in the same
+// bun test process (mock.module() is process-global, not file-scoped, and
+// mock.restore() does not undo it in Bun 1.3.3).
+const realMayarServiceModule = require("./mayar.service");
 
 mock.module("@workspace/logger", () => ({
   logger: {
@@ -31,6 +37,16 @@ mock.module("./mayar.service", () => ({
     handleWebhook: mockHandleWebhook,
   },
 }));
+
+// mock.module() replaces "./mayar.service" process-wide for the rest of the
+// bun test run, not just this file — mayar.service.test.ts (which tests the
+// real module) would silently get this stub instead if it runs afterward.
+// mock.restore() does NOT undo mock.module() registrations in Bun 1.3.3, so
+// explicitly re-point the mock factory at the real module (captured above,
+// before it was mocked) once this file's tests are done.
+afterAll(() => {
+  mock.module("./mayar.service", () => realMayarServiceModule);
+});
 
 const { mayarController } = require("./mayar.controller");
 

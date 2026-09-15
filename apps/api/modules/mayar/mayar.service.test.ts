@@ -71,14 +71,6 @@ mock.module("./mayar.repository", () => ({
   },
 }));
 
-// mock.module() is process-global in Bun's test runner, not file-scoped — if
-// another test file (e.g. internal.controller.test.ts) already required
-// mayar.service.ts under a different @workspace/constants mock before this
-// file's mock.module() calls above ran, the cached module keeps that other
-// mock's Env binding regardless of what we register here. Evicting the cache
-// entry first forces a fresh require() bound to *this* file's mock, making
-// the test independent of cross-file load order.
-delete require.cache[require.resolve("./mayar.service")];
 const { MayarService } = require("./mayar.service");
 
 describe("MayarService.verifyWebhookToken", () => {
@@ -104,21 +96,6 @@ describe("MayarService.verifyWebhookToken", () => {
     process.env.NODE_ENV = "production";
     mockWebhookToken = undefined;
     delete process.env.MAYAR_WEBHOOK_TOKEN;
-    // TEMP DIAGNOSTIC — remove before merge
-    delete require.cache[require.resolve("./mayar.service")];
-    const FreshMayarService = require("./mayar.service").MayarService;
-    console.error(
-      "[DIAG2]",
-      JSON.stringify({
-        NODE_ENV: process.env.NODE_ENV,
-        sameConstructor: FreshMayarService === MayarService,
-        outerResult: MayarService.verifyWebhookToken("anything"),
-        freshResult: FreshMayarService.verifyWebhookToken("anything"),
-        freshFnSource: FreshMayarService.verifyWebhookToken
-          .toString()
-          .slice(0, 300),
-      }),
-    );
     expect(MayarService.verifyWebhookToken("anything")).toBe(false);
   });
 
