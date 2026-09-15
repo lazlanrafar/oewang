@@ -104,19 +104,6 @@ export default async function PolicyPage({ params }: { params: Promise<{ locale:
         </section>
 
         <section className="space-y-4">
-          <h2 className="mt-10 text-lg tracking-tight">Legal Bases (GDPR)</h2>
-          <p className="text-muted-foreground text-sm leading-6">
-            For users in the EEA/UK, we process personal data based on one or more of the following:
-          </p>
-          <ul className="list-disc space-y-2 pl-6 text-muted-foreground text-sm leading-6">
-            <li>Contract necessity: to provide the oewang service.</li>
-            <li>Legitimate interests: security, fraud prevention, reliability.</li>
-            <li>Legal obligations: accounting, tax, and regulatory duties.</li>
-            <li>Consent: where required for optional processing activities.</li>
-          </ul>
-        </section>
-
-        <section className="space-y-4">
           <h2 className="mt-10 text-lg tracking-tight">Third-Party Processors and Integrations</h2>
           <p className="text-muted-foreground text-sm leading-6">
             We use third-party service providers to operate the product (for example authentication/database
@@ -145,8 +132,8 @@ export default async function PolicyPage({ params }: { params: Promise<{ locale:
         <section className="space-y-4">
           <h2 className="mt-10 text-lg tracking-tight">International Data Transfers</h2>
           <p className="text-muted-foreground text-sm leading-6">
-            Your data may be processed in countries outside your place of residence. Where required, we apply
-            appropriate transfer safeguards under applicable law.
+            Your data may be processed in countries outside your place of residence, including Indonesia where our
+            infrastructure is hosted.
           </p>
         </section>
 
