@@ -24,6 +24,7 @@ RUN addgroup --system --gid 1001 oewang && adduser --system --uid 1001 --ingroup
 COPY --from=installer /app/node_modules ./node_modules
 COPY --from=installer /app/apps/api/dist ./apps/api/dist
 COPY --from=installer /app/apps/api/package.json ./apps/api/package.json
+COPY --from=installer /app/apps/api/public ./public
 RUN mkdir -p /app/logs && chown -R oewang:oewang /app
 
 USER oewang
