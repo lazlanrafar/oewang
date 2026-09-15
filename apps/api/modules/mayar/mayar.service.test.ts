@@ -104,6 +104,17 @@ describe("MayarService.verifyWebhookToken", () => {
     process.env.NODE_ENV = "production";
     mockWebhookToken = undefined;
     delete process.env.MAYAR_WEBHOOK_TOKEN;
+    // TEMP DIAGNOSTIC — remove before merge
+    console.error(
+      "[DIAG]",
+      JSON.stringify({
+        NODE_ENV: process.env.NODE_ENV,
+        mockWebhookToken,
+        envMayarToken: process.env.MAYAR_WEBHOOK_TOKEN,
+        EnvModuleValue: require("@workspace/constants").Env.MAYAR_WEBHOOK_TOKEN,
+        result: MayarService.verifyWebhookToken("anything"),
+      }),
+    );
     expect(MayarService.verifyWebhookToken("anything")).toBe(false);
   });
 
