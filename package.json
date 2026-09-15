@@ -31,6 +31,7 @@
     "@biomejs/biome": "catalog:",
     "@faker-js/faker": "^10.4.0",
     "pixelmatch": "^7.2.0",
+    "playwright": "^1.63.0",
     "prettier": "catalog:",
     "tinybench": "^6.0.2",
     "turbo": "catalog:",

@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 
 import app.api.routes.draft as draft_routes
 from app.api.middleware.auth import require_api_key
+from app.config import get_settings
 from app.main import app
 
 client = TestClient(app)
@@ -15,7 +16,8 @@ def _auth_bypass():
     app.dependency_overrides[require_api_key] = lambda: None
 
 
-def test_draft_routes_require_api_key():
+def test_draft_routes_require_api_key(monkeypatch):
+    monkeypatch.setattr(get_settings(), "AI_SERVICE_API_KEY", "test_key")
     r = client.post("/draft/latest-state", json={"history": []})
     assert r.status_code == 401
 
