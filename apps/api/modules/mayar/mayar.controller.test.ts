@@ -22,17 +22,22 @@ mock.module("@workspace/logger", () => ({
   }),
 }));
 
+// createMayarController() takes MayarService as a constructor parameter
+// (defaulting to the real one in production) specifically so this test can
+// pass a fake instead of mock.module()-ing "./mayar.service" — Bun's
+// mock.module() is process-global with no working undo in 1.3.3, so a mock
+// registered here would leak into mayar.service.test.ts, which tests the
+// real module, for the rest of the bun test run regardless of file order.
+const { createMayarController } = require("./mayar.controller");
+
 const mockVerifyWebhookToken = mock((_token?: string) => true);
 const mockHandleWebhook = mock(async () => {});
+const fakeMayarService = {
+  verifyWebhookToken: mockVerifyWebhookToken,
+  handleWebhook: mockHandleWebhook,
+};
 
-mock.module("./mayar.service", () => ({
-  MayarService: {
-    verifyWebhookToken: mockVerifyWebhookToken,
-    handleWebhook: mockHandleWebhook,
-  },
-}));
-
-const { mayarController } = require("./mayar.controller");
+const mayarController = createMayarController(fakeMayarService);
 
 describe("mayar.controller webhook", () => {
   const originalFetch = global.fetch;

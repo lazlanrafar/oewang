@@ -40,6 +40,7 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
+          flutter-version: '3.44.4'
           cache: true
 
       - name: Set up Ruby & Fastlane
@@ -60,6 +61,8 @@ jobs:
           fi
 
       - name: Configure Signing & Environment
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
         run: |
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/upload-keystore.jks
           cat <<EOF > android/key.properties
@@ -79,8 +82,8 @@ jobs:
 
           cp .env .env.production
 
-          if [ -n "${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}" ]; then
-            echo '${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}' > android/fastlane/play-service-account.json
+          if [ -n "$PLAY_SERVICE_ACCOUNT_JSON" ]; then
+            echo "$PLAY_SERVICE_ACCOUNT_JSON" > android/fastlane/play-service-account.json
           fi
 
       - name: Install Android SDK 36
@@ -128,6 +131,7 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
+          flutter-version: '3.44.4'
           cache: true
 
       - name: Set up Ruby & Fastlane
