@@ -83,11 +83,11 @@ jobs:
             echo '${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}' > android/fastlane/play-service-account.json
           fi
 
-      - name: Install Android SDK 37
+      - name: Install Android SDK 36
         run: |
           SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
           yes | "$SDKMANAGER" --licenses || true
-          "$SDKMANAGER" "platforms;android-37" "build-tools;34.0.0"
+          "$SDKMANAGER" "platforms;android-36" "build-tools;34.0.0"
 
       - name: Install Flutter Dependencies
         run: flutter pub get

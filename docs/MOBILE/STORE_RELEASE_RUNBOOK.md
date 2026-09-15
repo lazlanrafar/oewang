@@ -76,20 +76,17 @@ flutter build apk --release
 flutter build ipa --release
 ```
 
-**Known local-environment blocker (2026-09-13, not caused by anything in
-this pass)**: `flutter build apk --release` currently fails on this
-machine with `Failed to find target with hash string 'android-37'`. The
-`flutter_secure_storage` plugin requires compiling against Android SDK 37;
-the SDK 37 platform package Flutter auto-installs on this machine has
-corrupted metadata (`AndroidVersion.ApiLevel=37.0` instead of `37` in
-`source.properties`, mis-named install directory) — a broken package from
-Google's SDK tooling, unrelated to this repo. Fix by deleting
-`~/Library/Android/sdk/platforms/android-37*` and reinstalling SDK
-Platform 37 cleanly via Android Studio's SDK Manager (or `sdkmanager
-"platforms;android-37"` once the CLI tooling is current), then retry the
-build. This blocks verifying the release signing end-to-end for now —
-`android/app/build.gradle.kts`'s signing config itself is correct and
-was confirmed against the generated keystore via `keytool -list -v`.
+**Resolved (2026-09-15)**: an earlier note here claimed `flutter_secure_storage`
+required Android SDK 37 and that a corrupted local SDK 37 install was
+blocking release builds. That was wrong — the pinned version
+(`flutter_secure_storage: 10.3.1` in `pubspec.yaml`) requires `compileSdk =
+36` (see its own `android/build.gradle`), not 37; SDK 37 support only
+appears in that package's 11.0.0 major, which isn't in use here. CI
+(`.github/workflows/mobile-release.yml`) installs `platforms;android-36`
+accordingly — `platforms;android-37` doesn't exist in Google's SDK repo and
+its install step failed outright when first tried. `android/app/build.gradle.kts`'s
+signing config was confirmed correct against the generated keystore via
+`keytool -list -v`.
 
 ## Manual steps (Xcode / store consoles — not automatable from here)
 
@@ -104,7 +101,7 @@ was confirmed against the generated keystore via `keytool -list -v`.
 
 | Fix | Check | Status |
 |---|---|---|
-| Android signing | `apksigner verify` on the built bundle/APK shows the release cert, not debug | Blocked by the SDK 37 environment issue above — keystore itself verified valid via `keytool -list -v` |
+| Android signing | `apksigner verify` on the built bundle/APK shows the release cert, not debug | Pending a clean CI run of `mobile-release.yml` (`platform: android`) — keystore itself verified valid via `keytool -list -v` |
 | Android `POST_NOTIFICATIONS` | Install on API 33+, confirm permission prompt appears, test FCM push | Not yet run |
 | iOS entitlement | `codesign -d --entitlements :- <path>` shows `aps-environment` + `com.apple.developer.applesignin` | Needs an Xcode archive build to check |
 | Apple Sign-In | End-to-end login against Apple's real Service ID | Needs Phase 2 Apple credentials first |
