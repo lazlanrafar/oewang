@@ -1,0 +1,9 @@
+{
+  "name": "native",
+  "private": true,
+  "scripts": {
+    "build:ios": "flutter build ipa --release",
+    "build:android": "flutter build appbundle --release",
+    "build:release": "bun run build:ios && bun run build:android"
+  }
+}
