@@ -1,6 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
-
-console.error("[LOADORDER] mayar.controller.test.ts top-level start", Date.now());
+import { afterAll, afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 
 const WORKER_URL = "http://worker.test";
 const WORKER_KEY = "test-worker-key-1234567890";
@@ -8,12 +6,6 @@ const WORKER_KEY = "test-worker-key-1234567890";
 mock.module("@workspace/constants", () => ({
   Env: { WORKER_URL, WORKER_API_KEY: WORKER_KEY },
 }));
-
-// Captured before mocking "./mayar.service" below so afterAll can restore
-// the real module for any test file that runs after this one in the same
-// bun test process (mock.module() is process-global, not file-scoped, and
-// mock.restore() does not undo it in Bun 1.3.3).
-const realMayarServiceModule = require("./mayar.service");
 
 mock.module("@workspace/logger", () => ({
   logger: {
@@ -30,30 +22,25 @@ mock.module("@workspace/logger", () => ({
   }),
 }));
 
+// Deliberately NOT mock.module("./mayar.service", ...): mock.module() has no
+// working undo in Bun 1.3.3 (confirmed — re-registering the same specifier
+// to a different factory, even within the same file, does not change what
+// later require() calls return) and is process-global, so it would
+// permanently break mayar.service.test.ts (which imports the real module)
+// for the rest of the bun test run, in either file order. Monkeypatching the
+// real class's static methods instead mutates the actual MayarService object
+// rather than replacing what require("./mayar.service") resolves to, so it
+// can be installed and reverted per-test without touching the module
+// registry at all.
+const { MayarService } = require("./mayar.service");
+const originalVerifyWebhookToken = MayarService.verifyWebhookToken;
+const originalHandleWebhook = MayarService.handleWebhook;
 const mockVerifyWebhookToken = mock((_token?: string) => true);
 const mockHandleWebhook = mock(async () => {});
-
-mock.module("./mayar.service", () => ({
-  MayarService: {
-    verifyWebhookToken: mockVerifyWebhookToken,
-    handleWebhook: mockHandleWebhook,
-  },
-}));
+MayarService.verifyWebhookToken = mockVerifyWebhookToken;
+MayarService.handleWebhook = mockHandleWebhook;
 
 const { mayarController } = require("./mayar.controller");
-
-// mock.module() replaces "./mayar.service" process-wide for the rest of the
-// bun test run, not just this file — every OTHER test file's top-level
-// require("./mayar.service") (e.g. mayar.service.test.ts, which tests the
-// real module) runs during the same load phase, before any test or afterAll
-// fires, and would silently get this stub instead. mock.restore() does NOT
-// undo mock.module() registrations in Bun 1.3.3, so restore the real module
-// synchronously right here — mayar.controller has already captured the stub
-// it needs via the `require("./mayar.controller")` above, so re-pointing the
-// mock factory back to the real module now is safe and takes effect before
-// any later file's top-level code runs.
-mock.module("./mayar.service", () => realMayarServiceModule);
-console.error("[LOADORDER] mayar.controller.test.ts restored real mayar.service", Date.now());
 
 describe("mayar.controller webhook", () => {
   const originalFetch = global.fetch;
@@ -72,6 +59,11 @@ describe("mayar.controller webhook", () => {
 
   afterEach(() => {
     global.fetch = originalFetch;
+  });
+
+  afterAll(() => {
+    MayarService.verifyWebhookToken = originalVerifyWebhookToken;
+    MayarService.handleWebhook = originalHandleWebhook;
   });
 
   it("enqueues the webhook to the worker and returns success on a valid token", async () => {
