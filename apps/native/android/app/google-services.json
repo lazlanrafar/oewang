@@ -7,9 +7,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:629430548516:android:4f42de28d252b45a8600b1",
+        "mobilesdk_app_id": "1:629430548516:android:6a63b71a2a60698b8600b1",
         "android_client_info": {
-          "package_name": "com.oewang.oewang"
+          "package_name": "com.oewang.app"
         }
       },
       "oauth_client": [],
@@ -23,7 +23,7 @@
           "other_platform_oauth_client": []
         }
       }
-    }
+    },
   ],
   "configuration_version": "1"
 }

@@ -37,7 +37,7 @@ Added alongside Google as an equivalent login option (App Store guideline
   Xcode-capability step below without opening Xcode.
 
 **Still needed from your Apple Developer account** (I have no access):
-create/confirm App ID `com.oewang.oewang` with Sign In with Apple + Push
+create/confirm App ID `com.oewang.app` with Sign In with Apple + Push
 Notifications capabilities, create a Services ID + private key (`.p8`) for
 Sign in with Apple, and set `APPLE_CLIENT_ID` / `APPLE_TEAM_ID` /
 `APPLE_KEY_ID` / `APPLE_PRIVATE_KEY` in Coolify for `apps/app` (documented
@@ -45,10 +45,9 @@ in `docs/ENV_VARS.md`).
 
 ## iOS bundle ID — done
 
-Changed from `com.oewang.oewang.sandbox` to `com.oewang.oewang` (matches
-Android) across all Runner + RunnerTests build configs in
-`project.pbxproj`. **Before archiving**: create the matching App ID in
-Apple Developer Portal if it doesn't already exist under this bundle id.
+Unified to `com.oewang.app` (matches Android `applicationId`) across all
+Runner + RunnerTests build configs in `project.pbxproj`. **Before archiving**:
+create/confirm the matching App ID in Apple Developer Portal under this bundle id.
 
 ## Splash screen — done
 
@@ -96,7 +95,7 @@ was confirmed against the generated keystore via `keytool -list -v`.
 
 - **Play Console**: Data Safety form, content rating, screenshots, listing
   copy, signing enrollment (Play App Signing, see above).
-- **App Store Connect**: create the app record under `com.oewang.oewang`,
+- **App Store Connect**: create the app record under `com.oewang.app`,
   privacy nutrition label, age rating, App Review notes, TestFlight build
   upload.
 - **Apple Developer Portal**: see the Sign in with Apple section above.
