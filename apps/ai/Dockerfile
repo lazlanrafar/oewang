@@ -12,7 +12,7 @@ COPY scripts ./scripts
 RUN useradd --system --uid 1001 oewang && chown -R oewang:oewang /srv
 USER oewang
 
-# Railway (and most PaaS) inject $PORT — bind to it, falling back to 3004 locally.
+# Coolify (and most PaaS) inject $PORT — bind to it, falling back to 3004 locally.
 # Shell form so ${PORT} is expanded at runtime.
 EXPOSE 3004
 CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-3004}"]

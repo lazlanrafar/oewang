@@ -31,6 +31,8 @@ jobs:
       app: ${{ steps.filter.outputs.app }}
       admin: ${{ steps.filter.outputs.admin }}
       api: ${{ steps.filter.outputs.api }}
+      worker: ${{ steps.filter.outputs.worker }}
+      ai: ${{ steps.filter.outputs.ai }}
       shared: ${{ steps.filter.outputs.shared }}
     steps:
       - uses: actions/checkout@v4
@@ -46,6 +48,10 @@ jobs:
               - 'apps/admin/**'
             api:
               - 'apps/api/**'
+            worker:
+              - 'apps/worker/**'
+            ai:
+              - 'apps/ai/**'
             shared:
               - 'packages/**'
               - 'turbo.json'
@@ -231,4 +237,82 @@ jobs:
             -H "Authorization: Bearer $COOLIFY_API_TOKEN" -H "Content-Type: application/json" \
             -d "{\"docker_registry_image_tag\": \"${{ github.sha }}\"}"
           curl -fsS -X POST "$COOLIFY_BASE_URL/api/v1/deploy?uuid=$COOLIFY_API_UUID&force=true" \
+            -H "Authorization: Bearer $COOLIFY_API_TOKEN"
+
+  build-worker:
+    needs: changes
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      (github.event.inputs.apps == 'all' || contains(github.event.inputs.apps, 'worker')) ||
+      needs.changes.outputs.worker == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      COOLIFY_BASE_URL: ${{ secrets.COOLIFY_BASE_URL }}
+      COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
+      COOLIFY_WORKER_UUID: ${{ secrets.COOLIFY_WORKER_UUID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: apps/worker
+          file: apps/worker/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/lazlanrafar/oewang-worker:${{ github.sha }}
+            ghcr.io/lazlanrafar/oewang-worker:latest
+          cache-from: type=gha,scope=worker
+          cache-to: type=gha,mode=max,scope=worker
+      - name: Update Coolify image tag and deploy
+        if: env.COOLIFY_API_TOKEN != ''
+        run: |
+          curl -fsS -X PATCH "$COOLIFY_BASE_URL/api/v1/applications/$COOLIFY_WORKER_UUID" \
+            -H "Authorization: Bearer $COOLIFY_API_TOKEN" -H "Content-Type: application/json" \
+            -d "{\"docker_registry_image_tag\": \"${{ github.sha }}\"}"
+          curl -fsS -X POST "$COOLIFY_BASE_URL/api/v1/deploy?uuid=$COOLIFY_WORKER_UUID&force=true" \
+            -H "Authorization: Bearer $COOLIFY_API_TOKEN"
+
+  build-ai:
+    needs: changes
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      (github.event.inputs.apps == 'all' || contains(github.event.inputs.apps, 'ai')) ||
+      needs.changes.outputs.ai == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      COOLIFY_BASE_URL: ${{ secrets.COOLIFY_BASE_URL }}
+      COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
+      COOLIFY_AI_UUID: ${{ secrets.COOLIFY_AI_UUID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: apps/ai
+          file: apps/ai/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/lazlanrafar/oewang-ai:${{ github.sha }}
+            ghcr.io/lazlanrafar/oewang-ai:latest
+          cache-from: type=gha,scope=ai
+          cache-to: type=gha,mode=max,scope=ai
+      - name: Update Coolify image tag and deploy
+        if: env.COOLIFY_API_TOKEN != ''
+        run: |
+          curl -fsS -X PATCH "$COOLIFY_BASE_URL/api/v1/applications/$COOLIFY_AI_UUID" \
+            -H "Authorization: Bearer $COOLIFY_API_TOKEN" -H "Content-Type: application/json" \
+            -d "{\"docker_registry_image_tag\": \"${{ github.sha }}\"}"
+          curl -fsS -X POST "$COOLIFY_BASE_URL/api/v1/deploy?uuid=$COOLIFY_AI_UUID&force=true" \
             -H "Authorization: Bearer $COOLIFY_API_TOKEN"
