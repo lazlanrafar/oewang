@@ -105,14 +105,18 @@ describe("MayarService.verifyWebhookToken", () => {
     mockWebhookToken = undefined;
     delete process.env.MAYAR_WEBHOOK_TOKEN;
     // TEMP DIAGNOSTIC — remove before merge
+    delete require.cache[require.resolve("./mayar.service")];
+    const FreshMayarService = require("./mayar.service").MayarService;
     console.error(
-      "[DIAG]",
+      "[DIAG2]",
       JSON.stringify({
         NODE_ENV: process.env.NODE_ENV,
-        mockWebhookToken,
-        envMayarToken: process.env.MAYAR_WEBHOOK_TOKEN,
-        EnvModuleValue: require("@workspace/constants").Env.MAYAR_WEBHOOK_TOKEN,
-        result: MayarService.verifyWebhookToken("anything"),
+        sameConstructor: FreshMayarService === MayarService,
+        outerResult: MayarService.verifyWebhookToken("anything"),
+        freshResult: FreshMayarService.verifyWebhookToken("anything"),
+        freshFnSource: FreshMayarService.verifyWebhookToken
+          .toString()
+          .slice(0, 300),
       }),
     );
     expect(MayarService.verifyWebhookToken("anything")).toBe(false);
