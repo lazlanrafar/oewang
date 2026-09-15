@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 
+console.error("[LOADORDER] mayar.service.test.ts top-level start", Date.now());
+
 // mayar.service.ts pulls in a wide surface (email, audit logs, notifications,
 // orders, billing invoices, repository). Mock every module it imports so this
 // test never touches a real DB — mirrors the mock.module() convention used in
@@ -71,7 +73,12 @@ mock.module("./mayar.repository", () => ({
   },
 }));
 
+console.error("[LOADORDER] mayar.service.test.ts about to require ./mayar.service", Date.now());
 const { MayarService } = require("./mayar.service");
+console.error(
+  "[LOADORDER] mayar.service.test.ts got MayarService, fnSource=",
+  MayarService.verifyWebhookToken.toString().slice(0, 60),
+);
 
 describe("MayarService.verifyWebhookToken", () => {
   const originalNodeEnv = process.env.NODE_ENV;

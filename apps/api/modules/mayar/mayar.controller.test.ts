@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 
+console.error("[LOADORDER] mayar.controller.test.ts top-level start", Date.now());
+
 const WORKER_URL = "http://worker.test";
 const WORKER_KEY = "test-worker-key-1234567890";
 
@@ -51,6 +53,7 @@ const { mayarController } = require("./mayar.controller");
 // mock factory back to the real module now is safe and takes effect before
 // any later file's top-level code runs.
 mock.module("./mayar.service", () => realMayarServiceModule);
+console.error("[LOADORDER] mayar.controller.test.ts restored real mayar.service", Date.now());
 
 describe("mayar.controller webhook", () => {
   const originalFetch = global.fetch;
