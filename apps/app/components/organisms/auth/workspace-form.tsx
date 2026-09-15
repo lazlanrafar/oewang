@@ -7,6 +7,7 @@ import { useParams, useRouter } from "next/navigation";
 import { COUNTRIES } from "@workspace/constants";
 import { onboardingCreateWorkspaceAction } from "@workspace/modules/auth/auth.action";
 import { createCheckoutSession } from "@workspace/modules/mayar/mayar.action";
+import { toFeatureLabel } from "@workspace/types";
 import type { Pricing } from "@workspace/types";
 import { Badge, Button, cn } from "@workspace/ui";
 import { annualSavingsPct, displayPrice, getGatewayPrice, isFree } from "@workspace/utils";
@@ -327,7 +328,7 @@ export function WorkspaceForm({ plans }: WorkspaceFormProps) {
                         {plan.description && <p className="mt-0.5 text-muted-foreground text-xs">{plan.description}</p>}
                         {isSelected && plan.features.length > 0 && (
                           <ul className="mt-3 space-y-1.5">
-                            {plan.features.map((f) => (
+                            {plan.features.map(toFeatureLabel).map((f) => (
                               <li key={f} className="flex items-center gap-2 text-muted-foreground text-xs">
                                 <Check className="size-3 shrink-0 text-foreground" />
                                 {f}

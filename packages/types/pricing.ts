@@ -4,6 +4,10 @@ export type PricingFeatureOverride = {
   enabled?: boolean;
 };
 
+export function toFeatureLabel(feature: string | PricingFeatureOverride): string {
+  return typeof feature === "string" ? feature : feature.feature_code;
+}
+
 export interface Pricing {
   id: string;
   name: string;

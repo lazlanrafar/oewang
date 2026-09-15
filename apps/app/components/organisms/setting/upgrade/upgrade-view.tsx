@@ -5,6 +5,7 @@ import * as React from "react";
 import { useMutation } from "@tanstack/react-query";
 import type { Dictionary } from "@workspace/dictionaries";
 import { cancelSubscription, createCheckoutSession } from "@workspace/modules/mayar/mayar.action";
+import { toFeatureLabel } from "@workspace/types";
 import type { Pricing } from "@workspace/types";
 import {
   Badge,
@@ -182,7 +183,7 @@ export function UpgradeView({
                       )}
                     </div>
                     <ul className="space-y-2.5">
-                      {(plan.features || []).slice(0, 10).map((feature: string) => (
+                      {(plan.features || []).map(toFeatureLabel).slice(0, 10).map((feature) => (
                         <li
                           key={feature}
                           className="flex items-start gap-2.5 text-[11px] text-muted-foreground leading-snug"

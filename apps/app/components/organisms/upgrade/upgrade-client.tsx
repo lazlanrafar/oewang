@@ -9,6 +9,7 @@ import {
   schedulePlanSwitch,
 } from "@workspace/modules/mayar/mayar.action";
 import { getPricing } from "@workspace/modules/pricing/pricing.action";
+import { toFeatureLabel } from "@workspace/types";
 import type { TransactionSettings, Workspace } from "@workspace/types";
 import {
   Accordion,
@@ -273,7 +274,7 @@ export function UpgradeClient({ dictionary, settings, workspace }: UpgradeClient
                     <p className="tracking_widest font-black text-foreground/70 text-xs uppercase">
                       {dictionary.settings.billing.whats_included || "What's included:"}
                     </p>
-                    {plan.features.map((feature) => (
+                    {plan.features.map(toFeatureLabel).map((feature) => (
                       <div key={feature} className="flex items-start gap-3">
                         <div className="mt-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary/10">
                           <Check className="h-2.5 w-2.5 stroke-[4px] text-primary" />

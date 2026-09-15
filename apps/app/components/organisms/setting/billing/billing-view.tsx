@@ -16,6 +16,7 @@ import {
   sendMagicLinkAction,
 } from "@workspace/modules/mayar/mayar.action";
 import { getBillingHistory } from "@workspace/modules/orders/orders.action";
+import { toFeatureLabel } from "@workspace/types";
 import type { Order, Pricing } from "@workspace/types";
 import {
   Alert,
@@ -399,7 +400,7 @@ export function BillingView({
             <div className="">
               <p className="max-w-sm text-muted-foreground text-xs leading-relaxed">{currentPlan.description}</p>
               <ul className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2">
-                {(currentPlan.features || []).slice(0, 8).map((feature: string) => (
+                {(currentPlan.features || []).map(toFeatureLabel).slice(0, 8).map((feature) => (
                   <li key={feature} className="flex items-center gap-2 text-[11px] text-muted-foreground">
                     <Check className="h-3 w-3 shrink-0 text-emerald-500" />
                     <span className="truncate">{feature}</span>

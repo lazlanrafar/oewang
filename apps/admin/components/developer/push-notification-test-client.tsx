@@ -37,9 +37,9 @@ export function PushNotificationTestClient() {
     if (res.success) setClientStatus(res.data);
   };
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only on mount
   useEffect(() => {
     refreshStatus();
-    // biome-ignore lint/correctness/useExhaustiveDependencies: only on mount
   }, []);
 
   const handleSend = async (e: React.FormEvent) => {
