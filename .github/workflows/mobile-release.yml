@@ -1,0 +1,190 @@
+name: Mobile Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 'Platform to build and release'
+        required: true
+        default: 'both'
+        type: choice
+        options:
+          - android
+          - ios
+          - both
+
+concurrency:
+  group: mobile-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  android:
+    name: Build & Release Android (Play Internal)
+    if: inputs.platform == 'android' || inputs.platform == 'both'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/native
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Set up Ruby & Fastlane
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+          working-directory: apps/native/android
+
+      - name: Validate Android Secrets
+        run: |
+          if [ -z "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ] || \
+             [ -z "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" ] || \
+             [ -z "${{ secrets.ANDROID_KEY_ALIAS }}" ] || \
+             [ -z "${{ secrets.ANDROID_KEY_PASSWORD }}" ]; then
+            echo "::error::Missing Android signing secrets!"
+            exit 1
+          fi
+
+      - name: Configure Signing & Environment
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/upload-keystore.jks
+          cat <<EOF > android/key.properties
+          storeFile=upload-keystore.jks
+          storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
+          keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
+          EOF
+
+          cat <<EOF > .env
+          API_URL=${{ vars.NATIVE_API_URL }}
+          APP_URL=${{ vars.NATIVE_APP_URL }}
+          WEBSITE_URL=${{ vars.NATIVE_WEBSITE_URL }}
+          ENCRYPTION_KEY=${{ secrets.NATIVE_ENCRYPTION_KEY }}
+          SESSION_COOKIE_NAME=${{ vars.NATIVE_SESSION_COOKIE_NAME }}
+          EOF
+
+          cp .env .env.production
+
+          if [ -n "${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}" ]; then
+            echo '${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}' > android/fastlane/play-service-account.json
+          fi
+
+      - name: Install Android SDK 37
+        run: |
+          yes | sdkmanager --licenses || true
+          sdkmanager "platforms;android-37" "build-tools;34.0.0"
+
+      - name: Install Flutter Dependencies
+        run: flutter pub get
+
+      - name: Analyze Code
+        run: flutter analyze
+
+      - name: Run Unit Tests
+        run: flutter test
+
+      - name: Build Android App Bundle
+        run: flutter build appbundle --release
+
+      - name: Upload to Google Play Internal
+        if: env.HAS_PLAY_KEY == 'true'
+        env:
+          HAS_PLAY_KEY: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON != '' }}
+        run: |
+          cd android
+          bundle exec fastlane android_internal
+
+  ios:
+    name: Build & Release iOS (TestFlight)
+    if: inputs.platform == 'ios' || inputs.platform == 'both'
+    runs-on: macos-14
+    defaults:
+      run:
+        working-directory: apps/native
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Set up Ruby & Fastlane
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+          working-directory: apps/native/ios
+
+      - name: Validate iOS Secrets
+        run: |
+          if [ -z "${{ secrets.IOS_CERT_P12_BASE64 }}" ] || \
+             [ -z "${{ secrets.IOS_CERT_PASSWORD }}" ] || \
+             [ -z "${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}" ] || \
+             [ -z "${{ secrets.ASC_KEY_ID }}" ] || \
+             [ -z "${{ secrets.ASC_ISSUER_ID }}" ] || \
+             [ -z "${{ secrets.ASC_API_KEY_P8 }}" ]; then
+            echo "::error::Missing iOS signing / App Store Connect secrets!"
+            exit 1
+          fi
+
+      - name: Configure Signing & Environment
+        run: |
+          echo "${{ secrets.IOS_CERT_P12_BASE64 }}" | base64 -d > ios/ios_distribution.p12
+          echo "${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}" | base64 -d > ios/distribution.mobileprovision
+
+          cat <<EOF > .env
+          API_URL=${{ vars.NATIVE_API_URL }}
+          APP_URL=${{ vars.NATIVE_APP_URL }}
+          WEBSITE_URL=${{ vars.NATIVE_WEBSITE_URL }}
+          ENCRYPTION_KEY=${{ secrets.NATIVE_ENCRYPTION_KEY }}
+          SESSION_COOKIE_NAME=${{ vars.NATIVE_SESSION_COOKIE_NAME }}
+          EOF
+
+          cp .env .env.production
+
+      - name: Install Flutter Dependencies
+        run: flutter pub get
+
+      - name: Analyze Code
+        run: flutter analyze
+
+      - name: Run Unit Tests
+        run: flutter test
+
+      - name: Build iOS without signing
+        run: flutter build ios --release --no-codesign
+
+      - name: Install CocoaPods
+        run: |
+          cd ios
+          pod install
+
+      - name: Upload to TestFlight
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
+          IOS_CERT_PASSWORD: ${{ secrets.IOS_CERT_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD || 'temporary-ci-password' }}
+          PROVISIONING_PROFILE_NAME: ${{ secrets.PROVISIONING_PROFILE_NAME || 'match AppStore com.oewang.app' }}
+        run: |
+          cd ios
+          bundle exec fastlane ios_testflight

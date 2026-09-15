@@ -1,0 +1,2 @@
+package_name("com.oewang.app")
+json_key_file("fastlane/play-service-account.json")

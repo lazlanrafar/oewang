@@ -1,0 +1,16 @@
+default_platform(:android)
+
+platform :android do
+  desc "Build and upload release bundle to Google Play Internal track"
+  lane :android_internal do
+    # Bundle is pre-built via flutter build appbundle --release in GitHub Actions step
+    upload_to_play_store(
+      track: "internal",
+      aab: "../build/app/outputs/bundle/release/app-release.aab",
+      skip_upload_metadata: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+      skip_upload_changelogs: true
+    )
+  end
+end

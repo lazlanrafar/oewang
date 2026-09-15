@@ -9,7 +9,7 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.oewang.oewang.sandbox</string>
+	<string>com.oewang.app</string>
 	<key>PROJECT_ID</key>
 	<string>oewang-app</string>
 	<key>STORAGE_BUCKET</key>
@@ -25,6 +25,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:629430548516:ios:c989a42598c57c888600b1</string>
+	<string>1:629430548516:ios:82b110244098e9ec8600b1</string>
 </dict>
 </plist>
