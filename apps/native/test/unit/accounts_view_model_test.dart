@@ -10,7 +10,7 @@ void main() {
         wallets: WalletsRepositoryFake(),
         groups: WalletGroupsRepositoryFake(),
       );
-      await Future<void>.delayed(const Duration(milliseconds: 30));
+      await vm.ready;
 
       // Default fixtures: Cash 625k + Shopee 35.999 = 660.999 positive assets.
       // Liabilities: 131.500 (Gopay) + 1.947.500 (BCA) = 2.079.000.
@@ -28,7 +28,7 @@ void main() {
       // No groups in the fake either.
       final groups = WalletGroupsRepositoryFake(seed: const []);
       final vm = AccountsViewModel(wallets: wallets, groups: groups);
-      await Future<void>.delayed(const Duration(milliseconds: 30));
+      await vm.ready;
       expect(vm.sections, isEmpty);
       vm.dispose();
     });
