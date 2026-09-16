@@ -199,6 +199,8 @@ jobs:
           IOS_CERT_PASSWORD: ${{ secrets.IOS_CERT_PASSWORD }}
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD || 'temporary-ci-password' }}
           PROVISIONING_PROFILE_NAME: ${{ secrets.PROVISIONING_PROFILE_NAME || 'match AppStore com.oewang.app' }}
+          FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT: 30
+          FASTLANE_XCODEBUILD_SETTINGS_RETRIES: 5
         run: |
           cd ios
           bundle exec fastlane ios_testflight
