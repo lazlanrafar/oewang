@@ -1,12 +1,14 @@
 # Testing
 
-Verification snapshot: **2026-09-11**, native contacts-import follow-up.
+Verification snapshot: **2026-09-17**, mobile CI/CD + Play Console pass.
 
 | Area | Command | Verified result |
 | --- | --- | --- |
-| Native unit/widget | `cd apps/native && flutter test` | 134 pass |
+| Native unit/widget | `cd apps/native && flutter test` | 136 pass |
 | iOS simulator integration | `cd apps/native && flutter test integration_test/offline_sync_test.dart -d <simulator-id>` | 1 pass (encrypted loopback HTTP fixture) |
 | API modules | `cd apps/api && bun test modules/` | 372 pass, including a wrapper running 7 additional isolated service cases |
+| AI service | `cd apps/ai && pytest` | 117 collected |
+| Worker | `cd apps/worker && go test ./...` | pass, per-package coverage in [TESTING_UNIT.md](docs/TESTING_UNIT.md) |
 | Workspace TypeScript | `bun run typecheck` | 16/16 successful tasks |
 | Native analysis | `cd apps/native && flutter analyze --no-pub` | No issues |
 | Workspace lint | `bun run lint` | 9/9 successful tasks; non-fatal warnings remain |

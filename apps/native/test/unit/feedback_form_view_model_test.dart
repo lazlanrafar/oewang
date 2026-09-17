@@ -18,9 +18,9 @@ void main() {
     });
 
     test('successful submit reports no error', () async {
-      final vm = FeedbackFormViewModel(feedback: FeedbackRepositoryFake());
-      vm.setType(FeedbackType.featureRequest);
-      vm.setMessage('Add dark mode');
+      final vm = FeedbackFormViewModel(feedback: FeedbackRepositoryFake())
+        ..setType(FeedbackType.featureRequest)
+        ..setMessage('Add dark mode');
 
       await vm.submit();
 

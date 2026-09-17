@@ -168,8 +168,8 @@ Role normalization in `workspace-permissions.ts` translates legacy `member` role
 | Security   | `apps/api/modules/workspaces/workspace-permissions.ts`      |
 | Plugin     | `apps/api/plugins/auth.ts`                                  |
 | Middleware | `apps/app/middleware.ts`                                    |
-| Actions    | `apps/app/actions/auth.actions.ts` · `workspace.actions.ts` |
-| E2E        | `apps/app/e2e/auth.spec.ts` · `workspaces.spec.ts`          |
+| Actions    | `packages/modules/src/auth/auth.action.ts` · `packages/modules/src/workspace/workspace.action.ts` |
+| E2E        | `apps/app/e2e/auth.spec.ts` · `workspace.spec.ts`          |
 | Mobile     | `apps/native/lib/components/organisms/auth/auth_register_screen.dart` + `_view_model.dart` (sign-up: name/email/password/confirm; on success pushes onboarding, **stays logged-out** so the router keeps the auth flow) |
 | Mobile     | `apps/native/lib/components/organisms/auth/auth_onboarding_screen.dart` + `_view_model.dart` (single step: workspace name + base currency via `CurrencyCatalog`/`CurrencyPickerScreen` → `POST /workspaces` (always **Free**) → `refreshToken` + `onLoggedIn` into the app. Paid plans are bought later on the web) |
 | Mobile     | `apps/native/lib/data/repositories/auth_repository.dart` (`register()`), `workspaces_repository.dart` (`create()`) (+ remote/fake each) |

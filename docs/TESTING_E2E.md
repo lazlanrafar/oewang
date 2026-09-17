@@ -8,7 +8,7 @@
 
 All E2E tests use **Playwright** targeting `apps/app` (Next.js 16). Tests run against a real browser (Chromium) with a real authenticated session.
 
-**Current baseline: 115+ E2E tests across 17 spec files — all pages covered.**
+**Current baseline: ~142 E2E tests across 16 spec files (+ `auth.setup.ts`) — all pages covered.**
 
 ```bash
 # From apps/app directory (or use --cwd from root)

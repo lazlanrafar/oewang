@@ -26,11 +26,15 @@ class AccountsViewModel extends ChangeNotifier {
     required WalletGroupsRepository groups,
   }) : _wallets = wallets,
        _groups = groups {
-    load();
+    ready = load();
   }
 
   final WalletsRepository _wallets;
   final WalletGroupsRepository _groups;
+
+  /// Resolves once the initial [load] completes — await in tests instead of
+  /// guessing a delay.
+  late final Future<void> ready;
 
   bool _loading = true;
   AppError? _error;

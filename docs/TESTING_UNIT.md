@@ -16,7 +16,7 @@ All backend tests use **Bun's built-in test runner** (`bun:test`). Tests are fas
 
 ```bash
 # From repo root
-bun run test              # run all 399 tests
+bun run test              # run all 372 tests
 bun run test:watch        # watch mode (auto-rerun on change)
 bun run test:coverage     # generate coverage report
 
@@ -77,6 +77,9 @@ apps/api/modules/{feature}/
 | `mayar`        | `mayar/billing.utils.test.ts`              | 5       | Annual billing detection, period calculations                                                                                                              |
 | `mayar`        | `mayar/billing-lifecycle.service.test.ts`  | 2       | Subscription expiration → `past_due`, grace period → downgrade to free                                                                                     |
 | `mayar`        | `mayar/mayar.controller.test.ts`           | 2       | Public webhook HTTP status behavior on success/failure paths                                                                                               |
+| `mayar`        | `mayar/mayar.service.test.ts`              | 6       | `MayarService` injected into `mayar.controller` (not `mock.module`) — subscription create/verify/cancel behavior                                          |
+| `internal`     | `internal/internal.controller.test.ts`     | 14      | `/v1/internal/*` endpoints called by `apps/worker` (billing lifecycle, vault sweeps, invoice-overdue, AI quota reset/anomaly-scan) — auth gate + happy/error paths |
+| `integrations` | `integrations/public-webhooks.controller.test.ts` | 2 | Telegram webhook enqueue onto `apps/worker`, `x-api-key` auth                                                                                              |
 | `users`        | `users/users.utils.test.ts`                | 3       | Workspace ID resolution from mixed `workspaceId`/`workspace_id` payloads and empty input handling                                                          |
 | `articles`     | `articles/articles.utils.test.ts`          | 4       | Slug generation: lowercasing, punctuation-run collapse, dash trimming, empty fallback                                                                       |
 | `lib`          | `lib/at-rest-crypto.test.ts`               | 2       | At-rest encryption round-trip with the data key; legacy decrypt fallback to the transport key                                                              |
@@ -84,7 +87,7 @@ apps/api/modules/{feature}/
 | `worker`       | `worker/worker-client.test.ts`             | 2       | `enqueueTransactionsImport` posts job_id/workspace_id/user_id/data/mime_type with the shared x-api-key header; throws on a non-OK enqueue response          |
 | `transactions` | `transactions/__tests__/offline-sync.repository.test.ts` | 7 | Client IDs, default-ID delegation, workspace/soft-delete replay scope, rejected unavailable IDs, missing-wallet balance writes |
 | `transactions` | `transactions/__tests__/offline-sync.service.test.ts` | 1 wrapper | Runs `apps/api/test/unit/offline-sync.service.test.ts` in a fresh Bun process; 7 cases for debt/wallet replay, transaction atomic-write contract, bulk delta/audit behavior, and update row locking |
-| **TOTAL**      | **20 inventoried files**                    | **354 + 7 isolated cases** | **All core business logic (some apps/api test files exist outside this table — see repo for the full count)**                                                                                                                                |
+| **TOTAL**      | **23 inventoried files**                    | **372 verified (`bun test modules/`, 21 files — 2 rows above are integration-style `__tests__/` cases run via a subprocess wrapper)** | **All core business logic**                                                                                                                                |
 
 ---
 
@@ -446,4 +449,4 @@ The native suite uses real in-memory SQLite plus repository/API fakes, and a fil
 The API service contract suite runs in a subprocess because existing module tests globally replace services with partial `mock.module` exports. This isolation prevents those mocks from replacing the services under test. The repository suite tests query scope and return behavior; it is not a real-Postgres integration test.
 
 
-Native follow-up verification: **132 unit/widget tests pass**, plus **1 iOS simulator integration test** with real SQLite/secure storage/encrypted loopback HTTP. `widget/catalog_reorder_test.dart` adds two cases for category/group index handling. The simulator fixture and its limits are documented in [OFFLINE_SYNC_VERIFICATION.md](./MOBILE/OFFLINE_SYNC_VERIFICATION.md).
+Native follow-up verification: **136 unit/widget tests pass**, plus **1 iOS simulator integration test** with real SQLite/secure storage/encrypted loopback HTTP. `widget/catalog_reorder_test.dart` adds two cases for category/group index handling. The simulator fixture and its limits are documented in [OFFLINE_SYNC_VERIFICATION.md](./MOBILE/OFFLINE_SYNC_VERIFICATION.md).

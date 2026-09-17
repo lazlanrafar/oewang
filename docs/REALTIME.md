@@ -82,6 +82,7 @@ Use a consistent `noun.verb` or `noun` naming convention.
 | `settings` | `SettingsService` (update), `SubCurrenciesService` (create/delete) | `["settings", "transaction"]`, `["settings", "sub-currencies"]` |
 | `workspace` | `MayarRepository.updateWorkspaceSubscription` (any subscription mutation) | `["workspace", "active"]`, `["user", "me"]` |
 | `workspace.usage` | `AiService` (after token spend), `VaultService` (after upload/delete) | `["workspace", "active"]`, `["ai", "quota"]` |
+| `ai.session_title` | `apps/ai`'s `chat_money_path.py` (after auto-titling a new chat session) | `["chat-sessions"]` |
 
 > The full type → query-key map lives in the `INVALIDATIONS` constant in `apps/app/hooks/use-realtime.ts`. Unhandled types are silently ignored (with a dev-mode warning) so a new server event doesn't accidentally invalidate the whole cache.
 

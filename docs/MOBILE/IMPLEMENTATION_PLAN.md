@@ -175,6 +175,13 @@ Add to root `package.json` `workspaces` (Turborepo can shell out to Flutter via 
 
 ### 3.3 Folder layout — MVVM + Repository (Flutter official architecture)
 
+> **Superseded.** The tree below (`ui/{feature}/view_models,widgets`) was the
+> original plan. Shipped code instead uses an atomic-design layout under
+> `lib/components/{atoms,molecules,organisms,layouts}/{feature}/` —
+> see [BEST_PRACTICE_FLUTTER.md](../BEST_PRACTICE_FLUTTER.md) for the
+> current, accurate structure. Everything else in this section (repository
+> pattern, layer rules, Command pattern, Riverpod) still holds conceptually.
+
 Per Flutter's [App Architecture Recommendations](https://docs.flutter.dev/app-architecture/recommendations), every feature is split into **`ui/` (Views + ViewModels)** and **`data/` (Repositories + Services + DTOs)**. Domain types are shared. Widgets stay "dumb" — all logic lives in ViewModels.
 
 ```
@@ -514,10 +521,10 @@ Follows Flutter's "Strongly recommend: Test architectural components separately 
 
 ## 10. Out of Scope for v1
 
-- Push notifications (already covered by `apps/api/modules/push-subscriptions` — surface them only after the read flows work).
-- OAuth (Google / Apple sign-in).
 - Receipt OCR / AI tools (`packages/ai`) — defer.
 - Web/Desktop targets — Flutter project will only declare `ios` and `android` for now.
+
+> **Shipped since this plan was written:** push notifications (`firebase_messaging`), and OAuth via Google + Sign in with Apple (`auth_login_screen.dart`, provider-agnostic `loginWithOAuth`) — see [STORE_RELEASE_RUNBOOK.md](./STORE_RELEASE_RUNBOOK.md).
 
 ---
 

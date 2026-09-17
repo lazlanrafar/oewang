@@ -21,7 +21,7 @@ Key pillars of our design system:
 
 1. **Strict Flatness**: Avoid heavy elevations and complex drop shadows. Interfaces should rely on clean container borders (`border-[#e6e6e6]` or HSL variables) rather than shadows.
 2. **Typography is UI**: Hierarchy is established using distinct font pairings (e.g. elegant serif headers paired with clean sans numbers) and letter-spacing (tracking).
-3. **Preset-Aware Rendering**: Components must adapt to different visual personalities (such as _Brutalist_, _Soft Pop_, or _Tangerine_) by referencing global CSS variables rather than hardcoding Tailwind utility classes.
+3. **Preset-Aware Rendering**: Components must adapt to different visual personalities by referencing global CSS variables rather than hardcoding Tailwind utility classes. The mechanism is real (`data-theme-preset` attribute, `apps/app/scripts/generate-theme-presets.ts` scans `packages/ui/src/styles/presets/*.css`), but as of 2026-09-17 that directory has no preset CSS files checked in — only the generator's built-in `default` preset exists. Add a preset by dropping a labeled CSS file there and running `npm run generate:presets`, not by hardcoding a name here.
 4. **Micro-Animations**: Transitions and entry effects should feel organic and snappy, using custom slide/fade presets.
 
 ---

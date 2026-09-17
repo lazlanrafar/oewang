@@ -40,6 +40,7 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
+          flutter-version: '3.44.4'
           cache: true
 
       - name: Set up Ruby & Fastlane
@@ -60,6 +61,8 @@ jobs:
           fi
 
       - name: Configure Signing & Environment
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
         run: |
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/upload-keystore.jks
           cat <<EOF > android/key.properties
@@ -79,8 +82,8 @@ jobs:
 
           cp .env .env.production
 
-          if [ -n "${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}" ]; then
-            echo '${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}' > android/fastlane/play-service-account.json
+          if [ -n "$PLAY_SERVICE_ACCOUNT_JSON" ]; then
+            echo "$PLAY_SERVICE_ACCOUNT_JSON" > android/fastlane/play-service-account.json
           fi
 
       - name: Install Android SDK 36
@@ -115,7 +118,7 @@ jobs:
   ios:
     name: Build & Release iOS (TestFlight)
     if: inputs.platform == 'ios' || inputs.platform == 'both'
-    runs-on: macos-14
+    runs-on: macos-15
     defaults:
       run:
         working-directory: apps/native
@@ -124,10 +127,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
+      - name: Select Xcode 26.3
+        run: sudo xcode-select -s /Applications/Xcode_26.3.app
+
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
+          flutter-version: '3.44.4'
           cache: true
 
       - name: Set up Ruby & Fastlane
@@ -192,6 +199,8 @@ jobs:
           IOS_CERT_PASSWORD: ${{ secrets.IOS_CERT_PASSWORD }}
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD || 'temporary-ci-password' }}
           PROVISIONING_PROFILE_NAME: ${{ secrets.PROVISIONING_PROFILE_NAME || 'match AppStore com.oewang.app' }}
+          FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT: 30
+          FASTLANE_XCODEBUILD_SETTINGS_RETRIES: 5
         run: |
           cd ios
           bundle exec fastlane ios_testflight

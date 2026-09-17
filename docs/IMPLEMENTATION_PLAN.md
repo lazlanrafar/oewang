@@ -56,16 +56,16 @@ This document tracks active and planned work for oewang. Update it as features m
 
 | Task                                                                        | Completed | PR  |
 | --------------------------------------------------------------------------- | --------- | --- |
-| Multi-workspace auth with custom JWT (email/password + Google/GitHub OAuth) | —         | —   |
+| Multi-workspace auth with custom JWT (email/password + Google/GitHub/Apple OAuth) | —   | —   |
 | AES-256-GCM end-to-end request/response encryption                          | —         | —   |
 | Redis-backed sliding window rate limiting                                   | —         | —   |
-| AI assistant (OpenAI + Claude + Gemini multi-agent)                         | —         | —   |
+| AI assistant (OpenAI-only, Python/FastAPI service in `apps/ai`)             | —         | —   |
 | Realtime WebSocket workspace pub/sub                                        | —         | —   |
 | Invoice JWT shareable links                                                 | —         | —   |
 | Mayar payment gateway integration                                           | —         | —   |
-| Telegram bot integration                                                    | —         | —   |
-| 399 unit tests across 12 modules                                            | —         | —   |
-| 115+ Playwright E2E tests                                                   | —         | —   |
+| Telegram bot integration (owned end-to-end by `apps/worker`)                | —         | —   |
+| 372 apps/api unit tests · 117 apps/ai pytest tests                          | —         | —   |
+| ~142 Playwright E2E tests                                                   | —         | —   |
 
 ---
 
@@ -148,7 +148,7 @@ Quick reference for key past decisions:
 
 ### ADR-002: Custom JWT Auth (no third-party IdP)
 
-**Decision:** The API owns authentication entirely. Email/password uses `Bun.password.hash/verify`. Google and GitHub OAuth uses Authorization Code flow via Next.js route handlers. The API mints an HS256 JWT on every successful login.
+**Decision:** The API owns authentication entirely. Email/password uses `Bun.password.hash/verify`. Google, GitHub, and Apple OAuth use the Authorization Code flow via Next.js route handlers (Apple's callback is a `POST`, verified against Apple's JWKS). The API mints an HS256 JWT on every successful login.
 
 **Rationale:** The API owns auth entirely. App JWT carries `workspace_id` and `system_role` from the first request. Single auth path simplifies the `authPlugin`.
 

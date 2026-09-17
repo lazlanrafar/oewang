@@ -42,7 +42,7 @@ components/
                   header/metrics), input_styles/ decorators/ validators/ extensions/
   molecules/    ← compositions of atoms (page_app_bar, segmented_tabs, list_row)
   organisms/    ← feature-complete UI, ALWAYS grouped by module folder + {module}_ filename prefix
-    {module}/   ← auth, categories, settings, stats, transactions, wallets
+    {module}/   ← auth, budgets, categories, debts, settings, stats, transactions, wallets
                   screens AND their view-models live flat here (no widgets/ or view_models/ subfolder)
                   e.g. organisms/transactions/transactions_form_screen.dart
                        organisms/transactions/transactions_form_view_model.dart

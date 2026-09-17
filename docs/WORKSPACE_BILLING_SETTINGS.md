@@ -237,7 +237,7 @@ day 30 → processStorageViolations cron marks files inactive (hidden, R2 preser
 day 90 → hardDeleteExtendedInactiveFiles cron permanently deletes R2 blobs
 ```
 
-At any time before day 90, the user can free space or upgrade — `storage_violation_at` clears and files reactivate automatically. The two crons live in `apps/api/scripts/storage-worker.ts`.
+At any time before day 90, the user can free space or upgrade — `storage_violation_at` clears and files reactivate automatically. `apps/api/scripts/storage-worker.ts` still holds the `VaultService` business logic, but scheduling/retry for these sweeps is now owned by `apps/worker` (Go/asynq — see `apps/worker/internal/tasks/storage_violations.go`), which calls back into `apps/api`'s `/v1/internal/*` endpoints to run them.
 
 ### Internal billing invoices
 

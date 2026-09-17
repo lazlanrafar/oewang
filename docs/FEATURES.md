@@ -17,7 +17,7 @@ Each feature document contains detailed documentation on the purpose, data model
 
 | Feature                            | Doc                                                              | Purpose                                                                                               |
 | ---------------------------------- | ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| **AI Assistant**                   | [FEAT_AI.md](./FEAT_AI.md)                                       | Multi-model chatbot (GPT/Claude/Gemini) that responds, processes receipts, and executes actions.      |
+| **AI Assistant**                   | [FEAT_AI.md](./FEAT_AI.md)                                       | OpenAI-powered chatbot (Python/FastAPI service in `apps/ai`) that responds, processes receipts, and executes actions.      |
 | **Billing & Subscription**         | [FEAT_BILLING.md](./FEAT_BILLING.md)                             | Mayar checkout, cancel/resume, scheduled plan switches, internal billing invoices, past-due grace, vault downgrade lifecycle. |
 | **Budgets**                        | [FEAT_BUDGETS.md](./FEAT_BUDGETS.md)                             | Category-specific limits with monthly recurrence, threshold notifications, and rollover options.      |
 | **Categories**                     | [FEAT_CATEGORIES.md](./FEAT_CATEGORIES.md)                       | Transaction classification system (`income` / `expense`) seeded on onboarding.                        |

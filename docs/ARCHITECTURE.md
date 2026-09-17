@@ -146,9 +146,11 @@ apps/api/plugins/
 ### Registered Controllers (apps/api/index.ts)
 
 All routes grouped under `/v1`:
-`health` · `users` · `workspaces` · `auth` · `settings` · `categories` · `budgets` · `wallets` · `vault` · `transactions` · `ai` · `metrics` · `integrations` · `system-admins` · `pricing` · `mayar` · `orders` · `system-metrics` · `privacy` · `invoices` · `contacts` · `debts` · `notifications` · `notification-settings` · `push-subscriptions`
+`health` · `users` · `workspaces` · `auth` · `settings` · `categories` · `budgets` · `wallets` · `vault` · `transactions` · `ai-internal` · `internal` · `ai` · `metrics` · `integrations` · `system-admins` · `plan-features` · `pricing` · `articles` · `faqs` · `mayar` · `billing-invoices` · `orders` · `system-metrics` · `privacy` · `invoices` · `contacts` · `debts` · `notifications` · `notification-settings` · `push-subscriptions` · `device-tokens` · `feedback`
 
-Public routes (no auth): `public-pricing` · `public-invoices`
+Public routes (no auth): `public-pricing` · `public-invoices` · `public-articles` · `public-faqs` · `public-feedback` · `public-webhooks` (integrations, e.g. Telegram)
+
+MCP server: `mcp` — see [REFERENCE_MIDDAY_AI.md](./REFERENCE_MIDDAY_AI.md).
 
 WebSocket: `/v1/realtime` — workspace-scoped pub/sub via Bun server
 
@@ -169,6 +171,8 @@ apps/app/app/
     google/callback/         — GET: exchange code → JWT, set oewang-session cookie
     github/                  — GET: redirect to GitHub OAuth (sets oauth_state cookie)
     github/callback/         — GET: exchange code → JWT, set oewang-session cookie
+    apple/                   — GET: redirect to Sign in with Apple (sets oauth_state cookie)
+    apple/callback/          — POST (response_mode=form_post): verify against Apple JWKS → JWT, set oewang-session cookie
   (main)/[locale]/
     (auth)/
       login/                 — Public login page (email/password + OAuth)
@@ -222,9 +226,9 @@ All routes are under `app/(main)/[locale]/`. Supported locales configured in `i1
 
 Drizzle ORM + PostgreSQL. The **only** package that directly talks to the database.
 
-**35 schema tables** (all in `packages/database/schema/`):
+**45 schema tables** (all in `packages/database/schema/`):
 
-`ai-agent-settings` · `ai-messages` · `ai-sessions` · `articles` · `audit-logs` · `budgets` · `categories` · `contacts` · `debt-payments` · `debts` · `invoices` · `notification-settings` · `notifications` · `oauth-accounts` · `orders` · `pricing` · `privacy-requests` · `push-subscriptions` · `system-settings` · `transaction-attachments` · `transaction-items` · `transactions` · `user-workspaces` · `users` · `vault-file-chunks` · `vault-files` · `wallet-groups` · `wallets` · `webhook-events` · `workspace-addons` · `workspace-integrations` · `workspace-invitations` · `workspace-settings` · `workspace-sub-currencies` · `workspaces`
+`ai-agent-settings` · `ai-knowledge-chunks` · `ai-messages` · `ai-sessions` · `articles` · `audit-logs` · `billing-invoices` · `budgets` · `categories` · `contacts` · `debt-payments` · `debts` · `device-tokens` · `faqs` · `feedback` · `invoices` · `mcp-auth-codes` · `mcp-oauth-clients` · `mcp-tokens` · `notification-settings` · `notifications` · `oauth-accounts` · `orders` · `plan-features` · `pricing` · `privacy-requests` · `push-subscriptions` · `system-settings` · `transaction-attachments` · `transaction-import-jobs` · `transaction-items` · `transactions` · `user-workspaces` · `users` · `vault-file-chunks` · `vault-files` · `wallet-groups` · `wallets` · `webhook-events` · `workspace-addons` · `workspace-integrations` · `workspace-invitations` · `workspace-settings` · `workspace-sub-currencies` · `workspaces`
 
 **Auth-relevant schema notes:**
 
@@ -307,7 +311,7 @@ Login (email/password or OAuth)
 
 **OAuth flow** (Authorization Code + CSRF state cookie):
 
-1. User clicks "Login with Google/GitHub" → navigates to `/api/auth/{provider}`
+1. User clicks "Login with Google/GitHub/Apple" → navigates to `/api/auth/{provider}` (Apple's callback is a `POST`, `response_mode=form_post`, verified against Apple's JWKS — see `apps/app/app/(api)/api/auth/apple/`)
 2. Next.js route handler generates `oauth_state` UUID, stores in 10-min httpOnly cookie, redirects to provider
 3. Provider redirects to `/api/auth/{provider}/callback?code=...&state=...`
 4. Callback verifies state, exchanges code → provider access token, fetches user info
@@ -355,7 +359,6 @@ Login (email/password or OAuth)
 | `bucket`       | ❌ NEVER                  | ✅ vault service only     | ❌ NEVER                                |
 | `encryption`   | ✅ axios interceptor only | ✅ encryption plugin only | ❌ NEVER                                |
 | `redis`        | ❌ NEVER                  | ✅ rate-limit + services  | ❌ NEVER                                |
-| `ai`           | ❌ NEVER                  | ✅ ai module only         | ✅ internally uses `database` + `redis` |
 | `integrations` | ❌ NEVER                  | ✅ integrations module    | ❌ NEVER                                |
 | `email`        | ❌ NEVER                  | ✅ services only          | ❌ NEVER                                |
 | `types`        | ✅ everywhere             | ✅ everywhere             | ✅ everywhere                           |
