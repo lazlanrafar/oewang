@@ -57,6 +57,8 @@ apps/app/app/
     google/callback/         — Exchange code → JWT, set cookie
     github/                  — Redirect to GitHub OAuth
     github/callback/         — Exchange code → JWT, set cookie
+    apple/                   — Redirect to Sign in with Apple
+    apple/callback/          — POST (form_post), verify Apple JWKS → JWT, set cookie
   (main)/[locale]/
     (auth)/                  — Public auth pages (no layout wrapper)
       login/
@@ -70,7 +72,7 @@ apps/app/app/
       accounts/
       budget/ · debts/ · invoices/ · contacts/ · vault/ · chat/[id]/
       apps/ · calendar/ · notifications/
-      settings/              — 12 settings sub-pages
+      settings/              — 13 settings sub-pages
       upgrade/ · payment/
     invoice/[token]/         — Public shareable invoice (no auth required)
 ```

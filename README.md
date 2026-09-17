@@ -18,9 +18,11 @@ oewang is a personal finance tracker for everyone. AI-powered insights, simple t
 - **App**: Next.js 16, React 19, TypeScript, Tailwind CSS, Shadcn UI
 - **API**: ElysiaJS, Bun
 - **Database**: PostgreSQL, Drizzle ORM
-- **Auth**: Custom JWT (HS256), Google/GitHub OAuth
+- **Auth**: Custom JWT (HS256), Google/GitHub/Apple OAuth
 - **Payments**: Mayar (Indonesian Payment Gateway)
-- **AI**: OpenAI, Claude, and multi-agent system
+- **AI**: FastAPI (Python) service in `apps/ai`, OpenAI-only
+- **Background jobs**: Go (asynq) worker in `apps/worker`
+- **Mobile**: Flutter app in `apps/native`
 
 ## Getting Started
 
@@ -123,13 +125,12 @@ All URL configuration uses `NEXT_PUBLIC_*` vars — they work on both the client
 
 #### AI Providers
 
-Set at least one. The AI service tries providers in order: OpenAI → Anthropic → Gemini.
+All AI logic lives in `apps/ai` (Python/FastAPI) and is **OpenAI-only** —
+no Anthropic/Gemini fallback chain.
 
-| Variable            | Description                    |
-| ------------------- | ------------------------------ |
-| `OPENAI_API_KEY`    | OpenAI API key (`sk-proj-...`) |
-| `ANTHROPIC_API_KEY` | Anthropic Claude API key       |
-| `GEMINI_API_KEY`    | Google Gemini API key          |
+| Variable         | Description                    |
+| ---------------- | ------------------------------- |
+| `OPENAI_API_KEY` | OpenAI API key (`sk-proj-...`) |
 
 ---
 
@@ -245,16 +246,19 @@ Indonesian payment gateway. Required for invoice payments and subscriptions.
 
 ---
 
-For production webhook and third-party payment setup, see `docs/PRODUCTION_WEBHOOK_SETUP.md`.
+For the full env var reference (including production webhook and third-party payment setup), see [`docs/ENV_VARS.md`](./docs/ENV_VARS.md).
 
 ## Apps
 
-| App            | Description       | Port |
-| -------------- | ----------------- | ---- |
-| `apps/app`     | Main application  | 3000 |
-| `apps/admin`   | Admin dashboard   | 3001 |
-| `apps/api`     | REST API          | 3002 |
-| `apps/website` | Marketing website | 3003 |
+| App            | Description                        | Port |
+| -------------- | ----------------------------------- | ---- |
+| `apps/app`     | Main application                   | 3000 |
+| `apps/admin`   | Admin dashboard                    | 3001 |
+| `apps/api`     | REST API (ElysiaJS)                | 3002 |
+| `apps/website` | Marketing website                  | 3003 |
+| `apps/ai`      | AI service (FastAPI/Python)        | 3004 |
+| `apps/worker`  | Background jobs (Go/asynq)         | 3005 |
+| `apps/native`  | Mobile app (Flutter)               | —    |
 
 ## License
 

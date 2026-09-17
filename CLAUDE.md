@@ -137,7 +137,7 @@ Routes: `app/(main)/[locale]/` → `(auth)/` public auth · `(dashboard)/` authe
 
 Guides: [TESTING_UNIT.md](./docs/TESTING_UNIT.md) (Bun runner, mocking, utils/service tests) · [TESTING_E2E.md](./docs/TESTING_E2E.md) (Playwright, fixtures, dictionary selectors) · [TESTING.md](./TESTING.md) (full inventory).
 
-**Baseline:** 413 unit tests (~200ms) · 115+ E2E. Recall aggregation is in the Python sidecar; `apps/ai` has its own `pytest` suite; `apps/worker` has its own `go test` suite (see [TESTING_UNIT.md](./docs/TESTING_UNIT.md)'s apps/worker section). Test name format: `should {behaviour} when {condition}`.
+**Baseline:** 372 apps/api unit tests (`bun test modules/`, ~370ms) · 117 apps/ai pytest tests · 142 E2E across 16 spec files. Recall aggregation is in the Python sidecar; `apps/worker` has its own `go test` suite (see [TESTING_UNIT.md](./docs/TESTING_UNIT.md)'s apps/worker section). Test name format: `should {behaviour} when {condition}`.
 
 ### 🤖 AI Agent Testing Obligations
 

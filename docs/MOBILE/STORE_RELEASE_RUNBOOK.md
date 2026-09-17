@@ -2,7 +2,39 @@
 
 Everything needed to cut a signed Android/iOS release build, in one place.
 Companion to the App Store/Play Store readiness pass (2026-09), updated
-after the Sign in with Apple + release-signing pass (2026-09-13).
+after the Sign in with Apple + release-signing pass (2026-09-13), and again
+after `.github/workflows/mobile-release.yml` was verified green end-to-end
+and the Play Console listing was completed (2026-09-17).
+
+## CI pipeline — verified end-to-end (2026-09-17)
+
+`.github/workflows/mobile-release.yml` (`workflow_dispatch`, `platform:
+android|ios|both`) builds, signs, and uploads both platforms from CI —
+Android to the Play internal track via fastlane's `android_internal` lane,
+iOS to TestFlight via `ios_testflight`. Both jobs have completed clean runs.
+Trigger with:
+
+```bash
+gh workflow run mobile-release.yml --ref development -f platform=android
+gh workflow run mobile-release.yml --ref development -f platform=ios
+```
+
+**Always pass `--ref development`** — omitting it defaults to `main`.
+
+Fixes baked into the workflow after real CI failures (not local-only
+issues, so don't revert them):
+- `sdkmanager` isn't on `ubuntu-latest`'s `PATH` — invoked via
+  `$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager`.
+- Android SDK 36 (not 37 — see the resolved note below) installed
+  explicitly before `flutter pub get`.
+- iOS runner pinned to `macos-15` — `macos-14`'s bundled Xcode can't parse
+  Swift 6 syntax in freshly-fetched SPM deps (`firebase-ios-sdk`).
+- Xcode pinned explicitly to `26.3` via `xcode-select` even on `macos-15`
+  — that runner's *default* Xcode (16.4) is too old for `connectivity_plus
+  7.3.1`'s `NWPath.isUltraConstrained` usage.
+- `FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT`/`_RETRIES` env vars on the
+  TestFlight upload step — `xcodebuild -showBuildSettings` can time out
+  under CI load during SPM resolution.
 
 ## Android signing — done
 
@@ -62,6 +94,8 @@ default if ever needed.
 `pubspec.yaml`'s `version: X.Y.Z+N` — `X.Y.Z` is the user-facing version
 (`CFBundleShortVersionString` / `versionName`), `N` is the build number
 (`CFBundleVersion` / `versionCode`), must increase on every store upload.
+Currently `1.0.0+4` (bumped from `+3` after TestFlight rejected a
+re-upload of a build number it had already seen).
 
 ## Build commands
 
@@ -88,10 +122,31 @@ its install step failed outright when first tried. `android/app/build.gradle.kts
 signing config was confirmed correct against the generated keystore via
 `keytool -list -v`.
 
+## Play Console — store listing done, production still gated (2026-09-17)
+
+`com.oewang.app`'s Default store listing is complete: app name, short/full
+description, 512×512 app icon, 1024×500 feature graphic, and 4 phone
+screenshots (padded to 9:16 from the existing device screenshots in
+`docs/MOBILE/UI/`, since Play requires an exact 16:9/9:16 ratio and those
+sources are ~590:1278). All 10 App content declarations are actioned
+(Advertising ID: **No** — no ad/analytics SDK in `pubspec.yaml`; Data
+safety; Content rating; Target audience: 18+; Privacy policy; Ads; Sign-in
+details; Financial features; Health apps; Government apps).
+
+**Still blocking "Send app for review" / production access**: Google
+requires a closed test with **≥12 opted-in testers running for ≥14 days**
+before production access unlocks (Dashboard → Production →
+"Apply for access to production"). Internal testing (active, testers
+assigned) never goes through Google review — that's separate from this
+requirement. This needs real testers and calendar time; it isn't something
+a single console pass can push through.
+
 ## Manual steps (Xcode / store consoles — not automatable from here)
 
-- **Play Console**: Data Safety form, content rating, screenshots, listing
-  copy, signing enrollment (Play App Signing, see above).
+- **Play Console**: ~~Data Safety form, content rating, screenshots,
+  listing copy~~ done (see above) · signing enrollment (Play App Signing,
+  see the Android signing section above) · recruit ≥12 closed testers for
+  the 14-day production-access requirement.
 - **App Store Connect**: create the app record under `com.oewang.app`,
   privacy nutrition label, age rating, App Review notes, TestFlight build
   upload.
@@ -101,8 +156,8 @@ signing config was confirmed correct against the generated keystore via
 
 | Fix | Check | Status |
 |---|---|---|
-| Android signing | `apksigner verify` on the built bundle/APK shows the release cert, not debug | Pending a clean CI run of `mobile-release.yml` (`platform: android`) — keystore itself verified valid via `keytool -list -v` |
+| Android signing | `apksigner verify` on the built bundle/APK shows the release cert, not debug | ✅ confirmed via a clean `mobile-release.yml` (`platform: android`) run — keystore verified valid via `keytool -list -v` |
 | Android `POST_NOTIFICATIONS` | Install on API 33+, confirm permission prompt appears, test FCM push | Not yet run |
-| iOS entitlement | `codesign -d --entitlements :- <path>` shows `aps-environment` + `com.apple.developer.applesignin` | Needs an Xcode archive build to check |
+| iOS entitlement | `codesign -d --entitlements :- <path>` shows `aps-environment` + `com.apple.developer.applesignin` | ✅ implied by a successful signed TestFlight upload via `mobile-release.yml` (`platform: ios`) — no dedicated local archive check done |
 | Apple Sign-In | End-to-end login against Apple's real Service ID | Needs Phase 2 Apple credentials first |
-| Everything else | `flutter analyze` clean, `flutter test` green | ✅ 136 passed, 0 new analyzer issues (2026-09-13) |
+| Everything else | `flutter analyze` clean, `flutter test` green | ✅ 136 passed, 0 new analyzer issues (2026-09-17) |

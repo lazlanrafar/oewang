@@ -407,15 +407,14 @@ const { data } = useQuery({
 
 ## What Needs Fixing (Existing Sheets)
 
-These existing sheets deviate from the standard and should be updated:
+These existing sheets deviate from the standard and should be updated
+(`debt-form-sheet.tsx`, `budget-form-sheet.tsx`, `transaction-form-sheet.tsx`,
+and `transaction-detail-sheet.tsx` were already fixed and are no longer in
+this list — verified 2026-09-17):
 
-| File                           | Issue                                                                                    |
-| ------------------------------ | ---------------------------------------------------------------------------------------- |
-| `debt-form-sheet.tsx`          | Uses `rounded-none border-l shadow-none` — remove these                                  |
-| `debt-detail-sheet.tsx`        | Same — remove `rounded-none border-l shadow-none`                                        |
-| `contact-detail-sheet.tsx`     | Same — remove `rounded-none border-l shadow-none`                                        |
-| `budget-form-sheet.tsx`        | Uses default `<SheetContent>` with no `p-0` — add `className="flex h-full flex-col p-0"` |
-| `invoice-detail-sheet.tsx`     | Uses default `<SheetContent>` — add `className="flex h-full flex-col p-0"`               |
-| `calendar-day-sheet.tsx`       | Uses `p-0` but missing `flex h-full flex-col`                                            |
-| `transaction-form-sheet.tsx`   | Missing `SheetContent` className — add `className="flex h-full flex-col p-0"`            |
-| `transaction-detail-sheet.tsx` | Missing `SheetContent` className — add `className="flex h-full flex-col p-0"`            |
+| File                       | Issue                                                             |
+| -------------------------- | ------------------------------------------------------------------ |
+| `debt-detail-sheet.tsx`    | Uses `rounded-none border-l shadow-none` — remove these            |
+| `contact-detail-sheet.tsx` | Same — remove `rounded-none border-l shadow-none`                  |
+| `invoice-detail-sheet.tsx` | Uses default `<SheetContent>` — add `className="flex h-full flex-col p-0"` |
+| `calendar-day-sheet.tsx`   | Uses `p-0` but missing `flex h-full flex-col`                      |
