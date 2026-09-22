@@ -330,10 +330,15 @@ func (h *TelegramWebhookHandler) Handle(ctx context.Context, t *asynq.Task) erro
 	}
 	chatSessionID, _ := settings["chatSessionId"].(string)
 
+	language, _ := settings["chatLanguage"].(string)
+	ctx = context.WithValue(ctx, telegramLanguageKey{}, language)
 	ctx = aiclient.WithConversation(ctx, chatSessionID, msg.Caption, personal)
-	persistSessionID := func(sessionID string) {
+	persistSessionID := func(sessionID, language string) {
 		newSettings := cloneSettings(settings)
 		newSettings["chatSessionId"] = sessionID
+		if language == "id" || language == "en" {
+			newSettings["chatLanguage"] = language
+		}
 		if err := h.Integrations.UpdateSettings(ctx, integration.ID, workspaceID, newSettings); err != nil {
 			log.Printf("telegram: persist session id failed: %v", err)
 		}
@@ -350,7 +355,7 @@ func (h *TelegramWebhookHandler) Handle(ctx context.Context, t *asynq.Task) erro
 			// Tell the user right away regardless of whether asynq will also
 			// retry — a transient apps/ai outage may take a while to recover,
 			// and the user shouldn't be left with no reply in the meantime.
-			h.Telegram.SendMessage(ctx, chatID, "❌ Sorry, something went wrong processing that receipt. Please try again.")
+			h.Telegram.SendMessage(ctx, chatID, telegramReply(ctx, "❌ Sorry, something went wrong processing that receipt. Please try again.", "❌ Struk belum berhasil diproses. Silakan coba lagi."))
 			if isTransientAIError(err) {
 				return fmt.Errorf("tasks: handle receipt attachment: %w", err)
 			}
@@ -462,7 +467,7 @@ func (h *TelegramWebhookHandler) extractReceiptFile(msg *telegramMessage, isRece
 
 func (h *TelegramWebhookHandler) handleReceiptAttachment(
 	ctx context.Context, chatID, workspaceID, userID, chatSessionID string,
-	persistSessionID func(string), rf receiptFile,
+	persistSessionID func(string, string), rf receiptFile,
 ) error {
 	data, err := h.Telegram.DownloadFile(ctx, rf.FileID)
 	if err != nil {
@@ -481,12 +486,12 @@ func (h *TelegramWebhookHandler) handleReceiptAttachment(
 	}
 
 	if preview == nil {
-		h.Telegram.SendMessage(ctx, chatID, "❌ Sorry, I couldn't extract receipt data from that image.")
+		h.Telegram.SendMessage(ctx, chatID, telegramReply(ctx, "❌ Sorry, I couldn't extract receipt data from that image.", "❌ Saya belum dapat membaca struk dari gambar tersebut."))
 		return nil
 	}
 
 	if preview.SessionID != "" {
-		persistSessionID(preview.SessionID)
+		persistSessionID(preview.SessionID, preview.Language)
 	}
 	h.sendPlainReply(ctx, chatID, preview.Reply)
 
@@ -495,7 +500,7 @@ func (h *TelegramWebhookHandler) handleReceiptAttachment(
 
 func (h *TelegramWebhookHandler) handleTextMessage(
 	ctx context.Context, chatID, workspaceID, userID, chatSessionID string,
-	persistSessionID func(string), text string, stopTyping func(),
+	persistSessionID func(string, string), text string, stopTyping func(),
 ) error {
 	// The sidecar loads the owned session and draft metadata. Never inspect
 	// private history through a workspace-only repository in this worker.
@@ -511,13 +516,13 @@ const editThrottle = 1300 * time.Millisecond
 // same as before — retrying won't change apps/ai's own decision.
 func (h *TelegramWebhookHandler) streamChatReply(
 	ctx context.Context, chatID, workspaceID, userID, chatSessionID string,
-	persistSessionID func(string), text string, stopTyping func(),
+	persistSessionID func(string, string), text string, stopTyping func(),
 ) error {
 	messageID := h.Telegram.SendMessage(ctx, chatID, "…")
 
 	sendError := func(err error) {
 		log.Printf("telegram: chat stream error: %v", err)
-		const errorText = "❌ Sorry, I encountered an error processing your request."
+		errorText := telegramReply(ctx, "❌ Sorry, I encountered an error processing your request.", "❌ Permintaan belum berhasil diproses. Silakan coba lagi.")
 		if messageID != 0 {
 			h.Telegram.EditMessageText(ctx, chatID, messageID, errorText, "")
 		} else {
@@ -543,6 +548,7 @@ func (h *TelegramWebhookHandler) streamChatReply(
 		finalReplyText  string
 		plainText       bool
 		finalSessionID  string
+		finalLanguage   string
 		fileAttachment  *aiclient.StreamArtifactData
 		streamErr       error
 		streamTransient bool
@@ -581,6 +587,7 @@ func (h *TelegramWebhookHandler) streamChatReply(
 					finalReplyText = buffer.String()
 				}
 				finalSessionID = data.SessionID
+				finalLanguage = data.Language
 			}
 		case "error":
 			var data aiclient.StreamErrorData
@@ -608,8 +615,8 @@ func (h *TelegramWebhookHandler) streamChatReply(
 		return nil
 	}
 
-	if finalSessionID != "" && finalSessionID != chatSessionID {
-		persistSessionID(finalSessionID)
+	if finalSessionID != "" {
+		persistSessionID(finalSessionID, finalLanguage)
 	}
 
 	if finalReplyText != "" {
@@ -650,4 +657,13 @@ func (h *TelegramWebhookHandler) sendPlainReply(ctx context.Context, chatID, tex
 	for _, part := range telegram.SplitText(text) {
 		h.Telegram.SendMessage(ctx, chatID, part)
 	}
+}
+
+type telegramLanguageKey struct{}
+
+func telegramReply(ctx context.Context, english, indonesian string) string {
+	if language, _ := ctx.Value(telegramLanguageKey{}).(string); language == "id" {
+		return indonesian
+	}
+	return english
 }

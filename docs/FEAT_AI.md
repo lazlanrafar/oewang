@@ -109,7 +109,7 @@ Every router except `GET /health` requires `x-api-key: AI_SERVICE_API_KEY` (`req
 | Method | Path                            | Auth             | Description                                                                                          |
 | ------ | -------------------------------- | ---------------- | ------------------------------------------------------------------------------------------------------ |
 | `GET`  | `/health`                       | none             | Liveness check                                                                                        |
-| `POST` | `/chat`                         | x-api-key        | **Legacy, no tool loop.** One-shot reply using `chatbot/prompts.py`'s persona + balance/recent-txn context |
+| `POST` | `/chat`                         | x-api-key        | Compatibility endpoint using the shared owner-scoped tool loop |
 | `POST` | `/chat/stream`                  | x-api-key        | Streaming variant of `/chat` — same no-tool-loop path. **Never use for Telegram** (see Known Constraints) |
 | `POST` | `/chat/title`                   | x-api-key        | Generate a short session title from the first message                                                |
 | `POST` | `/chat/web`                     | JWT              | Full tool-loop chat for the website. Runs `chat_begin`/`chat_end` (money path) + the 40-tool loop      |
@@ -152,9 +152,9 @@ Base path `/v1/ai`, JWT-authed (`authPlugin`) unless noted.
 
 ## Business Logic
 
-### Two chat paths — legacy vs tool loop
+### Chat orchestration and compatibility routes
 
-- **Legacy, no tools** (`POST /chat`, `/chat/stream`, `/chat/title`): `chatbot/service.py`'s `chat()`/`stream_chat()`. Builds one system prompt from `chatbot/prompts.py` + `core/persona.md` (workspace balance + last 10 transactions baked in as text), then a single (non-tool) completion via `llm.complete_metered`/`complete_metered_stream`. No mutation capability — read-only Q&A. **Must never be used for Telegram** (per `apps/ai/app/api/routes/internal.py`'s comment and the worker's `aiclient/stream.go`, which points only at `/internal/chat/stream`).
+- **Compatibility routes** (`POST /chat`, `/chat/stream`): use the same owner-scoped orchestration as `/internal/chat/stream`. Personal memory defaults off for unverified service callers. `/chat/title` remains a separate cosmetic completion.
 - **Tool loop** (`POST /chat/web[/stream]`, `POST /internal/chat/stream`, `POST /chat/run`): the money path (`chat_money_path.py`) resolves identity/session/quota/prompt, then `llm.complete_with_tools`/`complete_with_tools_stream` (`core/llm.py`) runs an up-to-`AI_MAX_STEPS`-step (default 10) loop against all 40 `WEB_TOOLS`, forwarding each tool call to `execution/executor.py`. The streaming variant also parses `reasoning_content` deltas and inline `<think>...</think>` tags (DeepSeek-R1/Qwen-style reasoning models) into a separate `thinking` SSE event.
 
 ### Money path — `chat_money_path.py`
@@ -171,7 +171,7 @@ The confirm/cancel/document-intent detection in `draft.py` is **regex-based, not
 
 ### System prompt — two independent builders
 
-- `chatbot/prompts.py` + `core/persona.md`: legacy path only.
+- `chatbot/prompts.py` + `core/persona.md`: historical helpers; conversation routes use the shared web prompt.
 - `chatbot/prompts_web.py`'s `build_system_prompt()`: the tool-loop prompt. A large, **deliberately static, zero-interpolation body** (byte-for-byte, to stay inside OpenAI's automatic prompt-caching prefix — see the file's own comment: don't reword without checking the cache-eligibility tradeoff), plus a per-turn "# Session Context" suffix with today's date, currency, language rule (from `response_language`), `custom_instructions`, and a live wallets/categories snapshot (so the model rarely needs to call `get_workspace_context`).
 
 ### Available tools — 40 total (`chatbot/tools.py` → `WEB_TOOLS`)
@@ -328,7 +328,7 @@ Creates HNSW indexes (`vector_cosine_ops`) on **both** `vault_file_chunks.embedd
 ## Known Constraints
 
 - `ai_agent_settings.model` / `.temperature` / `.max_steps` are stored and editable via `apps/api`'s `PUT /v1/ai/agent-settings`, but **`apps/ai`'s actual chat loop never reads them** — the model comes from the `AI_CHAT_MODEL` env var, temperature is hardcoded to `0.7`, and step count comes from `AI_MAX_STEPS`. Only `custom_instructions` and `response_language` are actually plumbed into the tool-loop system prompt. Treat the other three fields as vestigial until someone wires them through.
-- `/chat` and `/chat/stream` (legacy, `chatbot/prompts.py`) run **no tool loop** — no mutations, no canvas, no RAG. Do not point Telegram or any new integration at them; only `/internal/chat/stream` (worker) and `/chat/run` (via `/tools/execute`) carry the full 40-tool loop. This mirrors the explicit warning already in `CLAUDE.md` and in the route/client code comments themselves.
+- `/chat` and `/chat/stream` use the shared owner-scoped tool-loop orchestration. Telegram uses `/internal/chat/stream`; raw `/chat/run` is a trusted low-level loop and cannot access personal memory without authenticated conversation context.
 - Two separate, non-overlapping RAG corpora exist: `vault_file_chunks` (per-workspace, used by the `search_documents` chat tool) and `ai_knowledge_chunks` (global, used only by `POST /advisor`). No caller of `POST /advisor` was found in `apps/api` or `apps/app` during this audit — verify whether it's actually wired to a live feature before relying on that assumption either way.
 - Embedding calls (vault chunk indexing, `search_documents`, `/advisor`) are **never checked against or metered from the workspace's AI token quota** — only LLM chat/completion/vision calls go through `quota.check_quota`/`record_usage`.
 - Receipt parsing and CSV extraction fail **soft** (return `None`/`[]`) when the model client looks unconfigured, unlike quota enforcement which fails **closed**. `AI_SERVICE_API_KEY` unset makes every non-`/health` route return `503` (fail closed) — the two failure modes are intentionally different.
@@ -338,3 +338,62 @@ Creates HNSW indexes (`vector_cosine_ops`) on **both** `vault_file_chunks.embedd
 - Anomaly candidate scoring (`detect_candidates`) requires at least 30 historical expense rows for the workspace before it will score anything; below that it returns no anomalies rather than fitting IsolationForest on too little data.
 - `JWT_SECRET` must be byte-identical across `apps/ai`, `apps/api`, `apps/app`, and `apps/admin` (HS256, shared secret) — `apps/ai`'s JWT verification (`core/auth.py`) has no Redis cache (unlike the TS side's 30s `auth:user:<id>` cache), so every web chat turn re-runs the user+membership JOIN query once.
 - Document indexing only covers text-extractable types (`text/*`, PDF, XLSX/XLS, JSON, XML) — images and other binary formats are never indexed for RAG, even though they can still be uploaded to the vault.
+
+## Private user memory and receipt conversation (2026-09-22)
+
+`app/core/user_memory.py` owns structured, audited, soft-deleted memories in
+`ai_user_memories`. Language and response style have global user scope; wallet,
+category, and facts have user + workspace scope. A live unique key replaces a
+preference instead of appending duplicates. Financial/personal values require an
+explicit current-user request; tools cannot supply identity or use OCR, assistant
+messages, tool output, or shared history as permission. Language/style may be
+learned automatically. The default is enabled; `users.ai_memory_enabled=false`
+prevents loading values or saving preferences. Active conversation context remains
+available. Memory-store failures degrade to session/workspace language and report
+failed memory mutations honestly.
+
+Chat controls: `apa yang kamu ingat?`, `ingat bahwa …`, `koreksi memori …`,
+`lupakan …`, `matikan memori`, `aktifkan memori`, and English equivalents.
+`hapus semua memori` asks for `konfirmasi hapus semua memori` within ten minutes;
+this removes the user's memories across workspaces. Generic `yes`/`simpan` never
+confirms that deletion. The model's memory tool cannot bypass this confirmation.
+No settings page was added.
+
+Every new session has `ai_sessions.user_id`; list/metadata/message queries filter
+by workspace and owner. Existing null-owner sessions remain shared archives.
+Continuing an archive starts a new private session and does not copy old messages
+or client-supplied history. `personal_memory` on the session prevents a group or
+unverified channel from resuming a personal-memory session. Session `context`
+stores the active language and pending memory-deletion confirmation.
+
+`language.py` resolves Indonesian/English before any receipt branch: explicit
+request, meaningful current text, active session, stored language, workspace,
+then English. Ambiguous mixtures and neutral acknowledgements retain context.
+Captions count as user text; receipt text and image placeholders never do.
+The selected language drives both deterministic messages and the LLM prompt.
+The legacy `/chat` and `/chat/stream` now share the owner-scoped orchestration;
+service callers without verified personal context run with memory off.
+
+Receipt previews contain every readable item, quantity × unit price when both
+are present, subtotal, merchant, date, wallet, and total, grouped by receipt.
+Unreadable fields stay unknown; differences between item sums and receipt totals
+are disclosed. A missing item subtotal blocks saving until a clearer receipt is
+uploaded because the existing item table requires an amount. Missing receipt date
+is shown as unreadable; transaction persistence retains the existing current-date
+fallback. Explicit wallet memory can select the preview wallet, but never removes
+the confirmation requirement. Questions containing “save” are not confirmations.
+
+Confirmation uses persistent transaction/item IDs from the server draft. Each
+receipt's transaction, items, balance delta and audit commit atomically; retrying
+an already inserted ID returns the existing user/workspace transaction without
+another balance delta or audit. Separate receipts remain separate transactions.
+
+Migration `0002_ai_user_memory.sql` is additive and does not infer archive owners.
+It was generated with Drizzle's API by
+`packages/database/scripts/generate-ai-memory-migration.ts`: the checked-in schema
+has unrelated drift, so this generator deliberately scopes the snapshot delta to
+this feature. Never hand-edit the generated migration. Apply migration before
+rolling out API + sidecar + worker together; the sidecar now owns Telegram draft
+persistence. No production migration was applied during this implementation.
+
+Verification: see [AI memory verification](AI_MEMORY_VERIFICATION.md).

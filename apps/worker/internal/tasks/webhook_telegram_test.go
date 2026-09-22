@@ -229,7 +229,7 @@ func TestHandle_ReceiptPhoto_BuildsDraftAndReplies(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Contains(t, tg.sent, "Detected: Rp50.000 at Starbucks")
-	assert.Len(t, sessions.saved, 2) // user "[receipt photo]" + assistant reply
+	assert.Empty(t, sessions.saved) // sidecar owns private session and draft persistence
 }
 
 func TestHandle_ReceiptPhoto_NoDraftExtracted(t *testing.T) {
@@ -250,8 +250,8 @@ func TestHandle_ReceiptPhoto_NoDraftExtracted(t *testing.T) {
 func TestHandle_TextMessage_DraftConfirmation(t *testing.T) {
 	tg := &fakeTelegram{}
 	ai := &fakeAI{
-		draftState:        map[string]any{"status": "awaiting_confirmation"},
-		handlePendingResp: &aiclient.HandlePendingResult{Reply: "Confirmed!", SessionID: "sess-1"},
+		draftState:   map[string]any{"status": "awaiting_confirmation"},
+		streamEvents: []aiclient.StreamEvent{{Event: "done", Data: json.RawMessage(`{"reply":"Confirmed!","session_id":"sess-1","plain_text":true}`)}},
 	}
 	connectedBy := "user-1"
 	ints := &fakeIntegrations{integration: &repo.Integration{ID: "int-1", WorkspaceID: "ws-1", Settings: map[string]any{"chatSessionId": "sess-1"}, ConnectedBy: &connectedBy}}

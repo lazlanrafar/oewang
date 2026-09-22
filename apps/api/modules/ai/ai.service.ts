@@ -63,15 +63,26 @@ export abstract class AiService {
     return parsed;
   }
 
-  static async getSessions(workspaceId: string, userId: string) {
+  static async getSessions(
+    workspaceId: string,
+    userId: string,
+  ): Promise<Awaited<ReturnType<typeof AiRepository.getSessions>>> {
     return AiRepository.getSessions(workspaceId, userId);
   }
 
-  static async getSessionMessages(sessionId: string, workspaceId: string, userId: string) {
+  static async getSessionMessages(
+    sessionId: string,
+    workspaceId: string,
+    userId: string,
+  ): Promise<Awaited<ReturnType<typeof AiRepository.getSessionMessages>>> {
     return AiRepository.getSessionMessages(sessionId, workspaceId, userId);
   }
 
-  static async getSession(sessionId: string, workspaceId: string, userId: string) {
+  static async getSession(
+    sessionId: string,
+    workspaceId: string,
+    userId: string,
+  ): Promise<Awaited<ReturnType<typeof AiRepository.getSession>>> {
     return AiRepository.getSession(sessionId, workspaceId, userId);
   }
 

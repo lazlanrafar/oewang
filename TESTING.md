@@ -27,3 +27,18 @@ cd apps/native
 dart run build_runner build --delete-conflicting-outputs
 flutter test
 ```
+
+## AI memory verification — 2026-09-22
+
+- Python: **163 pass, 1 unrelated DB test skipped**, including 8 opt-in tests on
+  dedicated local PostgreSQL with controlled OCR/model responses.
+- API modules: **373 pass**, including an isolated wrapper for 3 new private-session
+  contracts (plus the existing offline wrapper's 7 cases).
+- Worker: full `go test ./...` and `go vet ./...` pass.
+- API/database typecheck and changed Python Ruff checks pass; changed TypeScript
+  Biome checks have no errors, with existing non-fatal warnings.
+- Generated memory migration applied only to a temporary local test database.
+  Real Telegram validation awaits an identified authorized test chat/workspace.
+
+Details and reproducible scope: [AI memory verification](docs/AI_MEMORY_VERIFICATION.md).
+The historical native/web verification results above were not rerun for this feature.

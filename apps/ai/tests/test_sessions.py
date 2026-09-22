@@ -21,11 +21,11 @@ async def test_get_session_messages_caps_and_reverses(monkeypatch):
         ]
 
     monkeypatch.setattr(sessions_mod, "fetch", fake_fetch)
-    rows = await sessions_mod.get_session_messages("s1", "w1", limit=2)
+    rows = await sessions_mod.get_session_messages("s1", "w1", "u1", limit=2)
 
-    assert "ORDER BY created_at DESC" in captured["query"]
+    assert "ORDER BY m.created_at DESC" in captured["query"]
     assert "LIMIT $3" in captured["query"]
-    assert captured["args"] == ("s1", "w1", 2)
+    assert captured["args"] == ("s1", "w1", 2, "u1")
     # Reversed back to oldest-first for the caller.
     assert [r["id"] for r in rows] == ["m3", "m2", "m1"][::-1]
 
@@ -38,17 +38,17 @@ async def test_get_session_messages_default_limit_is_20(monkeypatch):
         return []
 
     monkeypatch.setattr(sessions_mod, "fetch", fake_fetch)
-    await sessions_mod.get_session_messages("s1", "w1")
-    assert captured["args"][-1] == 20
+    await sessions_mod.get_session_messages("s1", "w1", "u1")
+    assert captured["args"][2] == 20
 
 
 async def test_get_session_found(monkeypatch):
     async def fake_fetchrow(query, *args):
-        assert args == ("s1", "w1")
+        assert args == ("s1", "w1", "u1")
         return {"id": "s1", "workspace_id": "w1", "title": "Chat"}
 
     monkeypatch.setattr(sessions_mod, "fetchrow", fake_fetchrow)
-    result = await sessions_mod.get_session("s1", "w1")
+    result = await sessions_mod.get_session("s1", "w1", "u1")
     assert result == {"id": "s1", "workspace_id": "w1", "title": "Chat"}
 
 
@@ -57,7 +57,7 @@ async def test_get_session_not_found_returns_none(monkeypatch):
         return None
 
     monkeypatch.setattr(sessions_mod, "fetchrow", fake_fetchrow)
-    assert await sessions_mod.get_session("missing", "w1") is None
+    assert await sessions_mod.get_session("missing", "w1", "u1") is None
 
 
 async def test_update_title_calls_fetchrow_with_new_title(monkeypatch):
@@ -66,8 +66,7 @@ async def test_update_title_calls_fetchrow_with_new_title(monkeypatch):
     async def fake_fetchrow(query, *args):
         captured["query"] = query
         captured["args"] = args
-        return None
 
     monkeypatch.setattr(sessions_mod, "fetchrow", fake_fetchrow)
-    await sessions_mod.update_title("s1", "w1", "New Title")
-    assert captured["args"] == ("s1", "w1", "New Title")
+    await sessions_mod.update_title("s1", "w1", "New Title", "u1")
+    assert captured["args"] == ("s1", "w1", "New Title", "u1")

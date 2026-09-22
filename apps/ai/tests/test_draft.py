@@ -106,7 +106,7 @@ async def test_handle_pending_draft_cancel_branch(monkeypatch):
     result = await draft_mod.handle_pending_invoice_draft(
         "ws1", "u1", {"role": "user", "content": "cancel"}, _draft(), "s1"
     )
-    assert result["reply"] == "Cancelled. I did not save any transaction from this receipt."
+    assert result["reply"] == "Cancelled. No further transactions will be saved."
     assert captured["attachments"]["invoiceDraft"]["status"] == "cancelled"
 
 

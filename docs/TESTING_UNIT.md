@@ -450,3 +450,23 @@ The API service contract suite runs in a subprocess because existing module test
 
 
 Native follow-up verification: **136 unit/widget tests pass**, plus **1 iOS simulator integration test** with real SQLite/secure storage/encrypted loopback HTTP. `widget/catalog_reorder_test.dart` adds two cases for category/group index handling. The simulator fixture and its limits are documented in [OFFLINE_SYNC_VERIFICATION.md](./MOBILE/OFFLINE_SYNC_VERIFICATION.md).
+
+## AI private memory regression inventory (2026-09-22)
+
+| Test file | Coverage |
+| --- | --- |
+| `apps/ai/tests/test_user_memory.py` | Language precedence/neutral text, scoped memory controls, disable/failure behavior, explicit evidence, confirmed deletion |
+| `apps/ai/tests/test_receipt_preview.py` | All items, multiple receipts, missing values, decimal quantities, discrepancies, cancellation, failure and question-vs-confirm intent |
+| `apps/ai/tests/test_memory_integration.py` | 8 opt-in local-Postgres cases: persistence/scope, ownership/archive fork, idempotent receipt replay, atomic rollback, outage fallback, nonpersonal-channel denial, cross-channel preferences, controlled LLM identity spoof attempt |
+| `apps/api/modules/ai/__tests__/session-privacy.test.ts` | Isolated wrapper for 3 contracts in `apps/api/test/unit/ai-session-privacy.test.ts` (list, metadata, message owner/workspace/soft-delete predicates) |
+| `apps/worker/internal/tasks/telegram_memory_test.go` | Verified sender/private chat/membership gates and receipt caption/session contract through fake HTTP sidecar |
+| `apps/worker/internal/telegram/text_test.go` | Full-item chunking, Unicode limits and literal OCR special characters |
+
+Existing `test_chat_money_path.py`, `test_sessions.py`, `test_draft_routes.py`,
+`test_service_chat.py`, `test_service_stream_chat.py`, and worker receipt/history
+tests now cover the shared owner-scoped orchestration and retained attachments.
+Verified API module baseline: **373 pass** (privacy wrapper additionally runs
+3 isolated cases; offline wrapper runs its existing 7). Python: **163 pass,
+1 unrelated DB test skipped** when the dedicated AI-memory test DB is enabled;
+8 integration cases skip in normal unit-only runs. Worker full suite/vet pass.
+See [AI memory verification](AI_MEMORY_VERIFICATION.md) for safety gates and limits.

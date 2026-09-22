@@ -1,12 +1,7 @@
-import asyncio
-import time
-
-from app.core import llm
-from app.core.currency import get_currency_settings
-from app.core.database import fetch, fetchrow
 from app.config import get_settings
-from app.modules.chatbot import prompts, tools
-from app.modules.chatbot.memory import load_history
+from app.core import llm
+from app.core.database import fetch, fetchrow
+from app.modules.chatbot import tools
 from app.utils.logger import get_logger
 
 log = get_logger("ai.chatbot")
@@ -64,27 +59,9 @@ async def generate_title(message: str, workspace_id: str) -> str | None:
     return title or None
 
 
-async def _noop_history() -> list[dict]:
-    return []
-
-
-async def _chat_context(
-    workspace_id: str, session_id: str | None
-) -> tuple[float, list[dict], dict, list[dict]]:
-    """Fetch every piece of pre-LLM context concurrently — none of these
-    fetches depends on another's result, so gather() replaces 4 sequential
-    awaits with one round-trip's worth of wall time. Shared by chat() and
-    stream_chat() so the parallelization lives in exactly one place."""
-    balance, txns, currency, history = await asyncio.gather(
-        _balance(workspace_id),
-        _recent_transactions(workspace_id),
-        get_currency_settings(workspace_id),
-        load_history(session_id, workspace_id) if session_id else _noop_history(),
-    )
-    return balance, txns, currency, history
-
-
-async def chat(message: str, workspace_id: str, user_id: str | None, session_id: str | None) -> dict:
+async def chat(
+    message: str, workspace_id: str, user_id: str | None, session_id: str | None
+) -> dict:
     if not user_id:
         raise ValueError("Verified user identity required")
     text = ""
@@ -97,7 +74,9 @@ async def chat(message: str, workspace_id: str, user_id: str | None, session_id:
     return {**result, "reply": result.get("reply", text)}
 
 
-async def stream_chat(message: str, workspace_id: str, user_id: str | None, session_id: str | None):
+async def stream_chat(
+    message: str, workspace_id: str, user_id: str | None, session_id: str | None
+):
     if not user_id:
         raise ValueError("Verified user identity required")
     async for event in stream_service_chat(workspace_id, user_id, message, session_id):
@@ -170,8 +149,14 @@ async def web_chat(
     ]
 
     async def run_tool(name: str, args: dict) -> dict:
-        return await tools.execute_tool(name, args, workspace_id, user_id,
-            memory_evidence=begin.get("memory_evidence", ""), personal_memory=begin.get("personal_memory", False))
+        return await tools.execute_tool(
+            name,
+            args,
+            workspace_id,
+            user_id,
+            memory_evidence=begin.get("memory_evidence", ""),
+            personal_memory=begin.get("personal_memory", False),
+        )
 
     result = await llm.complete_with_tools(
         begin["system_prompt"],
@@ -235,8 +220,14 @@ async def stream_web_chat(
     ]
 
     async def run_tool(name: str, args: dict) -> dict:
-        return await tools.execute_tool(name, args, workspace_id, user_id,
-            memory_evidence=begin.get("memory_evidence", ""), personal_memory=begin.get("personal_memory", False))
+        return await tools.execute_tool(
+            name,
+            args,
+            workspace_id,
+            user_id,
+            memory_evidence=begin.get("memory_evidence", ""),
+            personal_memory=begin.get("personal_memory", False),
+        )
 
     final_result = None
     async for event in llm.complete_with_tools_stream(
@@ -250,16 +241,25 @@ async def stream_web_chat(
             final_result = event["data"]
             final_result["session_id"] = session_id
             try:
-                await tools.chat_end(workspace_id, session_id, final_result, current_tokens)
+                await tools.chat_end(
+                    workspace_id, session_id, final_result, current_tokens
+                )
             except Exception:
-                log.exception("chat_end failed; stream completed but persist incomplete")
+                log.exception(
+                    "chat_end failed; stream completed but persist incomplete"
+                )
             yield {"event": "done", "data": final_result}
         else:
             yield event
 
 
 async def stream_service_chat(
-    workspace_id: str, user_id: str, message: str, session_id: str | None, *, personal_memory: bool = False
+    workspace_id: str,
+    user_id: str,
+    message: str,
+    session_id: str | None,
+    *,
+    personal_memory: bool = False,
 ):
     """Streaming tool-loop chat for trusted service callers (x-api-key,
     explicit workspace/user id — no JWT) — apps/worker's Telegram handler.
@@ -271,7 +271,11 @@ async def stream_service_chat(
     from app.modules.chatbot.chat_money_path import chat_begin_core
 
     begin = await chat_begin_core(
-        workspace_id, user_id, [{"role": "user", "content": message}], session_id, personal_memory=personal_memory
+        workspace_id,
+        user_id,
+        [{"role": "user", "content": message}],
+        session_id,
+        personal_memory=personal_memory,
     )
 
     if begin["kind"] == "early":
@@ -282,6 +286,7 @@ async def stream_service_chat(
                 "session_id": begin["sessionId"],
                 "reply": begin["reply"],
                 "plain_text": True,
+                "language": begin.get("language", "en"),
                 "usage": {"input_tokens": 0, "output_tokens": 0},
                 "artifacts": [],
             },
@@ -297,20 +302,34 @@ async def stream_service_chat(
     ]
 
     async def run_tool(name: str, args: dict) -> dict:
-        return await tools.execute_tool(name, args, workspace_id, user_id,
-            memory_evidence=begin.get("memory_evidence", ""), personal_memory=begin.get("personal_memory", False))
+        return await tools.execute_tool(
+            name,
+            args,
+            workspace_id,
+            user_id,
+            memory_evidence=begin.get("memory_evidence", ""),
+            personal_memory=begin.get("personal_memory", False),
+        )
 
     async for event in llm.complete_with_tools_stream(
-        begin["systemPrompt"], convo, tools.WEB_TOOLS, run_tool,
+        begin["systemPrompt"],
+        convo,
+        tools.WEB_TOOLS,
+        run_tool,
         max_steps=get_settings().AI_MAX_STEPS,
     ):
         if event["event"] == "done":
             final_result = event["data"]
             final_result["session_id"] = current_session_id
+            final_result["language"] = begin.get("language", "en")
             try:
-                await tools.chat_end(workspace_id, current_session_id, final_result, current_tokens)
+                await tools.chat_end(
+                    workspace_id, current_session_id, final_result, current_tokens
+                )
             except Exception:
-                log.exception("chat_end failed; stream completed but persist incomplete")
+                log.exception(
+                    "chat_end failed; stream completed but persist incomplete"
+                )
             yield {"event": "done", "data": final_result}
         else:
             yield event

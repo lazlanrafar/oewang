@@ -80,6 +80,22 @@ async def create_transaction(workspace_id: str, user_id: str, body: dict) -> dic
 
     transaction_id = body.get("id") or new_id()
     async with transaction() as conn:
+        if "receipt_items" in body:
+            wallet = await conn.fetchrow(
+                "SELECT id FROM wallets WHERE id = $1 AND workspace_id = $2 AND deleted_at IS NULL",
+                wallet_id,
+                workspace_id,
+            )
+            if not wallet:
+                return {"success": False, "error": "Account unavailable"}
+            if category_id:
+                category = await conn.fetchrow(
+                    "SELECT id FROM categories WHERE id = $1 AND workspace_id = $2 AND deleted_at IS NULL",
+                    category_id,
+                    workspace_id,
+                )
+                if not category:
+                    category_id = None
         row = await conn.fetchrow(
             _INSERT,
             transaction_id,
@@ -98,7 +114,12 @@ async def create_transaction(workspace_id: str, user_id: str, body: dict) -> dic
             body.get("name"),
         )
         if row is None:
-            existing = await conn.fetchrow("SELECT * FROM transactions WHERE id = $1 AND workspace_id = $2 AND assigned_user_id = $3 AND deleted_at IS NULL", transaction_id, workspace_id, user_id)
+            existing = await conn.fetchrow(
+                "SELECT * FROM transactions WHERE id = $1 AND workspace_id = $2 AND assigned_user_id = $3 AND deleted_at IS NULL",
+                transaction_id,
+                workspace_id,
+                user_id,
+            )
             if not existing:
                 log.error(
                     "create_transaction: insert conflicted on id=%s but no matching row found for workspace=%s user=%s",
@@ -114,7 +135,9 @@ async def create_transaction(workspace_id: str, user_id: str, body: dict) -> dic
             await _update_balance(conn, wallet_id, workspace_id, -amount)
             await _update_balance(conn, to_wallet_id, workspace_id, amount)
         else:
-            await _update_balance(conn, wallet_id, workspace_id, _apply_delta_sign(t_type, amount))
+            await _update_balance(
+                conn, wallet_id, workspace_id, _apply_delta_sign(t_type, amount)
+            )
 
         for vault_file_id in body.get("attachment_ids") or []:
             await conn.execute(
@@ -124,6 +147,13 @@ async def create_transaction(workspace_id: str, user_id: str, body: dict) -> dic
                 workspace_id,
                 tx["id"],
                 vault_file_id,
+            )
+
+        if body.get("receipt_items"):
+            from app.modules.execution.items import add_transaction_items
+
+            await add_transaction_items(
+                workspace_id, user_id, tx["id"], body["receipt_items"], connection=conn
             )
 
         await audit.log(
@@ -139,7 +169,9 @@ async def create_transaction(workspace_id: str, user_id: str, body: dict) -> dic
     return {"success": True, "data": tx}
 
 
-async def update_transaction(workspace_id: str, user_id: str, tx_id: str, body: dict) -> dict:
+async def update_transaction(
+    workspace_id: str, user_id: str, tx_id: str, body: dict
+) -> dict:
     before = await fetchrow(
         "SELECT * FROM transactions WHERE id = $1 AND workspace_id = $2 "
         "AND deleted_at IS NULL LIMIT 1",
@@ -162,8 +194,12 @@ async def update_transaction(workspace_id: str, user_id: str, tx_id: str, body: 
         new_amount = resolve_multicurrency({"amount": body["amount"]})["amount"]
 
     sets, args, i = [], [], 1
-    for col, key in (("amount", "_amount"), ("name", "name"),
-                     ("category_id", "categoryId"), ("description", "description")):
+    for col, key in (
+        ("amount", "_amount"),
+        ("name", "name"),
+        ("category_id", "categoryId"),
+        ("description", "description"),
+    ):
         if col == "amount":
             if body.get("amount") is None:
                 continue
@@ -183,7 +219,9 @@ async def update_transaction(workspace_id: str, user_id: str, tx_id: str, body: 
             await _update_balance(conn, wallet_id, workspace_id, old_val)
             await _update_balance(conn, to_wallet_id, workspace_id, -old_val)
         else:
-            await _update_balance(conn, wallet_id, workspace_id, -_apply_delta_sign(t_type, old_val))
+            await _update_balance(
+                conn, wallet_id, workspace_id, -_apply_delta_sign(t_type, old_val)
+            )
 
         args2 = [*args, tx_id, workspace_id]
         row = await conn.fetchrow(
@@ -198,11 +236,19 @@ async def update_transaction(workspace_id: str, user_id: str, tx_id: str, body: 
             await _update_balance(conn, wallet_id, workspace_id, -new_val)
             await _update_balance(conn, to_wallet_id, workspace_id, new_val)
         else:
-            await _update_balance(conn, wallet_id, workspace_id, _apply_delta_sign(t_type, new_val))
+            await _update_balance(
+                conn, wallet_id, workspace_id, _apply_delta_sign(t_type, new_val)
+            )
 
         await audit.log(
-            workspace_id=workspace_id, user_id=user_id, action="transaction.updated",
-            entity="transaction", entity_id=tx_id, before=before, after=updated, conn=conn,
+            workspace_id=workspace_id,
+            user_id=user_id,
+            action="transaction.updated",
+            entity="transaction",
+            entity_id=tx_id,
+            before=before,
+            after=updated,
+            conn=conn,
         )
 
     return {"success": True, "data": updated}
@@ -235,11 +281,18 @@ async def delete_transaction(workspace_id: str, user_id: str, tx_id: str) -> dic
             await _update_balance(conn, wallet_id, workspace_id, val)
             await _update_balance(conn, to_wallet_id, workspace_id, -val)
         else:
-            await _update_balance(conn, wallet_id, workspace_id, -_apply_delta_sign(t_type, val))
+            await _update_balance(
+                conn, wallet_id, workspace_id, -_apply_delta_sign(t_type, val)
+            )
 
         await audit.log(
-            workspace_id=workspace_id, user_id=user_id, action="transaction.deleted",
-            entity="transaction", entity_id=tx_id, before=before, conn=conn,
+            workspace_id=workspace_id,
+            user_id=user_id,
+            action="transaction.deleted",
+            entity="transaction",
+            entity_id=tx_id,
+            before=before,
+            conn=conn,
         )
 
     return {"success": True, "data": None}

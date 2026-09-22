@@ -133,6 +133,7 @@ type StreamContentData struct {
 
 // StreamDoneData is the payload shape for event:"done" frames.
 type StreamDoneData struct {
+	Language  string `json:"language"`
 	PlainText bool   `json:"plain_text"`
 	Reply     string `json:"reply"`
 	SessionID string `json:"session_id"`

@@ -141,6 +141,7 @@ func (c *Client) HandlePendingInvoiceDraft(ctx context.Context, workspaceID, use
 
 // BuildDraftResult mirrors {reply, draft} from /draft/build-from-attachments.
 type BuildDraftResult struct {
+	Language  string     `json:"language"`
 	SessionID string     `json:"session_id"`
 	Reply     string     `json:"reply"`
 	Draft     DraftState `json:"draft"`

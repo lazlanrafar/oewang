@@ -55,10 +55,10 @@ func TestAiRepo_GetSessionMessages_ReversesNewestFirstToChronological(t *testing
 	repo := &AiRepo{Pool: mock}
 
 	// DB returns newest-first (ORDER BY created_at DESC): C, B, A.
-	rows := pgxmock.NewRows([]string{"role", "content"}).
-		AddRow("assistant", "C - newest").
-		AddRow("user", "B").
-		AddRow("user", "A - oldest")
+	rows := pgxmock.NewRows([]string{"role", "content", "attachments"}).
+		AddRow("assistant", "C - newest", []byte(`{"invoiceDraft":{"status":"awaiting_confirmation"}}`)).
+		AddRow("user", "B", nil).
+		AddRow("user", "A - oldest", nil)
 	mock.ExpectQuery(regexp.QuoteMeta("FROM ai_messages")).
 		WithArgs("sess-1", "ws-1").
 		WillReturnRows(rows)
@@ -69,6 +69,7 @@ func TestAiRepo_GetSessionMessages_ReversesNewestFirstToChronological(t *testing
 	assert.Equal(t, "A - oldest", messages[0].Content)
 	assert.Equal(t, "B", messages[1].Content)
 	assert.Equal(t, "C - newest", messages[2].Content)
+	assert.Contains(t, string(messages[2].Attachments), "invoiceDraft")
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
@@ -78,7 +79,7 @@ func TestAiRepo_GetSessionMessages_EmptyWhenNoRows(t *testing.T) {
 
 	mock.ExpectQuery(regexp.QuoteMeta("FROM ai_messages")).
 		WithArgs("sess-1", "ws-1").
-		WillReturnRows(pgxmock.NewRows([]string{"role", "content"}))
+		WillReturnRows(pgxmock.NewRows([]string{"role", "content", "attachments"}))
 
 	messages, err := repo.GetSessionMessages(context.Background(), "sess-1", "ws-1")
 	require.NoError(t, err)

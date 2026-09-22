@@ -283,3 +283,13 @@ To ensure persistent memory and seamless context sharing across **OpenCode**, **
 2. **Context Synchronization**:
    - When completing non-trivial tasks or introducing new paradigms, record the key decisions and caveats directly into the relevant `docs/*` or `AGENTS.md` sections.
    - All AI agents (OpenCode, Claude Code, Codex) must read `AGENTS.md` / `CLAUDE.md` before executing modifications to align with the active state of the project.
+
+
+## AI private memory and session invariants (2026-09-22)
+
+- Python `core/user_memory.py` owns structured, audited memories. User-global language/style; financial preferences/facts are user + workspace scoped and require explicit current-user evidence. Never infer personal facts from OCR/tool/assistant/shared history. Disabled memory means no value reads or preference writes.
+- New AI sessions have a user owner. All session reads filter workspace and owner (or null-owner legacy archives); continuing archives creates a private session without copying history. Do not create new ownerless sessions in the worker or trust client-provided draft JSON.
+- Telegram private memory requires an authenticated dashboard connection marker, matching sender/private chat, and current membership. First-member fallback and historical raw connect commands never authorize personal memory.
+- Select language before receipt short-circuits. User/session preference overrides workspace defaults; photos, wallet names and short confirmations do not reset it.
+- Receipt confirmations persist one transaction per receipt, items inside the same DB transaction, with stable draft IDs preventing retry balance duplication. Full item previews and Telegram plain-text chunking are required.
+- Migration 0002 is generated and additive; never backfill owners of legacy sessions. See `docs/FEAT_AI.md`, `docs/FEAT_INTEGRATIONS.md`, and `docs/AI_MEMORY_VERIFICATION.md` for rollout and verification limits.

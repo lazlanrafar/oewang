@@ -455,3 +455,13 @@ PLAYWRIGHT_PASS=securepassword
 | CRUD flows (create/update/delete) | ❌         | ✅                           |
 | Role-based UI visibility          | ❌         | ✅                           |
 | i18n string rendering             | ❌         | ✅                           |
+
+### AI memory acceptance update (2026-09-22)
+
+No dashboard route or Playwright spec was added; the ~142 browser E2E baseline
+above is unchanged and was not rerun for this backend/worker feature. Python has
+163 passing tests with the dedicated local memory database enabled (8 integration
+cases), with 1 unrelated DB test skipped. API module baseline is 373 pass plus
+isolated contract cases. Controlled OCR/model and Telegram HTTP fixtures cover
+memory/receipt flows; real Telegram testing remains pending an authorized test
+chat/workspace. See [AI memory verification](AI_MEMORY_VERIFICATION.md).

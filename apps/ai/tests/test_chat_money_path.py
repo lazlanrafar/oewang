@@ -8,20 +8,22 @@ import app.modules.chatbot.chat_money_path as cmp_mod
 from app.core.quota import PlanLimitReached
 
 
-def _patch_common(monkeypatch, *, existing_session=None, latest_draft=None, receipt_preview=None):
+def _patch_common(
+    monkeypatch, *, existing_session=None, latest_draft=None, receipt_preview=None
+):
     async def fake_get_or_create(_ws):
         return {"custom_instructions": None, "response_language": "auto"}
 
-    async def fake_create_session(_ws, title):
+    async def fake_create_session(_ws, title, user_id, **kwargs):
         return {"id": "new-session", "title": title}
 
-    async def fake_get_session(_sid, _ws):
+    async def fake_get_session(_sid, _ws, user_id):
         return existing_session
 
     async def fake_save_message(*a, **k):
         return {"id": "msg1"}
 
-    async def fake_get_session_messages(_sid, _ws):
+    async def fake_get_session_messages(_sid, _ws, user_id):
         return [{"role": "user", "content": "hi", "attachments": None}]
 
     async def fake_audit_log(**k):
@@ -42,19 +44,41 @@ def _patch_common(monkeypatch, *, existing_session=None, latest_draft=None, rece
     async def fake_notify(*a, **k):
         return None
 
-    monkeypatch.setattr(cmp_mod, "agent_settings_mod", type("M", (), {"get_or_create": staticmethod(fake_get_or_create)}))
+    monkeypatch.setattr(
+        cmp_mod,
+        "agent_settings_mod",
+        type("M", (), {"get_or_create": staticmethod(fake_get_or_create)}),
+    )
+    monkeypatch.setattr(
+        cmp_mod.user_memory,
+        "load",
+        _async_return({"enabled": False, "available": True, "memories": []}),
+    )
+    monkeypatch.setattr(cmp_mod.sessions, "update_context", _async_return(None))
     monkeypatch.setattr(cmp_mod.sessions, "create_session", fake_create_session)
     monkeypatch.setattr(cmp_mod.sessions, "get_session", fake_get_session)
     monkeypatch.setattr(cmp_mod.sessions, "save_message", fake_save_message)
-    monkeypatch.setattr(cmp_mod.sessions, "get_session_messages", fake_get_session_messages)
+    monkeypatch.setattr(
+        cmp_mod.sessions, "get_session_messages", fake_get_session_messages
+    )
     monkeypatch.setattr(cmp_mod.audit, "log", fake_audit_log)
     monkeypatch.setattr(cmp_mod.draft, "get_latest_draft_state", lambda h: latest_draft)
-    monkeypatch.setattr(cmp_mod.draft, "handle_pending_invoice_draft", fake_handle_pending)
-    monkeypatch.setattr(cmp_mod.draft, "has_receipt_attachments", lambda a: bool(receipt_preview))
-    monkeypatch.setattr(cmp_mod.draft, "build_invoice_draft_from_attachments", fake_build_draft)
+    monkeypatch.setattr(
+        cmp_mod.draft, "handle_pending_invoice_draft", fake_handle_pending
+    )
+    monkeypatch.setattr(
+        cmp_mod.draft, "has_receipt_attachments", lambda a: bool(receipt_preview)
+    )
+    monkeypatch.setattr(
+        cmp_mod.draft, "build_invoice_draft_from_attachments", fake_build_draft
+    )
     monkeypatch.setattr(cmp_mod, "_notify_usage", fake_notify)
     monkeypatch.setattr(cmp_mod, "_workspace_currency", _async_return(("IDR", "Rp")))
-    monkeypatch.setattr(cmp_mod, "fetch_wallets_and_categories", _async_return({"wallets": [], "categories": []}))
+    monkeypatch.setattr(
+        cmp_mod,
+        "fetch_wallets_and_categories",
+        _async_return({"wallets": [], "categories": []}),
+    )
     # Never spawn the real (network-hitting) title-upgrade task in tests.
     monkeypatch.setattr(cmp_mod, "_upgrade_title", _async_return(None))
 
@@ -74,7 +98,9 @@ async def test_chat_begin_core_creates_new_session_and_returns_ready(monkeypatch
 
     monkeypatch.setattr(cmp_mod.quota, "check_quota", fake_check_quota)
 
-    result = await cmp_mod.chat_begin_core("ws1", "u1", [{"role": "user", "content": "hi"}])
+    result = await cmp_mod.chat_begin_core(
+        "ws1", "u1", [{"role": "user", "content": "hi"}]
+    )
     assert result["kind"] == "ready"
     assert result["sessionId"] == "new-session"
     assert result["currentTokens"] == 42
@@ -82,14 +108,24 @@ async def test_chat_begin_core_creates_new_session_and_returns_ready(monkeypatch
 
 
 async def test_chat_begin_core_loads_existing_session(monkeypatch):
-    _patch_common(monkeypatch, existing_session={"id": "s1", "workspace_id": "ws1"})
+    _patch_common(
+        monkeypatch,
+        existing_session={
+            "id": "s1",
+            "workspace_id": "ws1",
+            "user_id": "u1",
+            "personal_memory": True,
+        },
+    )
 
     async def fake_check_quota(_ws):
         return 0
 
     monkeypatch.setattr(cmp_mod.quota, "check_quota", fake_check_quota)
 
-    result = await cmp_mod.chat_begin_core("ws1", "u1", [{"role": "user", "content": "hi"}], session_id="s1")
+    result = await cmp_mod.chat_begin_core(
+        "ws1", "u1", [{"role": "user", "content": "hi"}], session_id="s1"
+    )
     assert result["kind"] == "ready"
     assert result["sessionId"] == "s1"
 
@@ -98,7 +134,9 @@ async def test_chat_begin_core_raises_when_session_not_found(monkeypatch):
     _patch_common(monkeypatch, existing_session=None)
 
     try:
-        await cmp_mod.chat_begin_core("ws1", "u1", [{"role": "user", "content": "hi"}], session_id="missing")
+        await cmp_mod.chat_begin_core(
+            "ws1", "u1", [{"role": "user", "content": "hi"}], session_id="missing"
+        )
         raised = False
     except cmp_mod.SessionNotFoundError:
         raised = True
@@ -108,7 +146,12 @@ async def test_chat_begin_core_raises_when_session_not_found(monkeypatch):
 async def test_chat_begin_core_pending_draft_short_circuits_before_quota(monkeypatch):
     _patch_common(
         monkeypatch,
-        existing_session={"id": "s1", "workspace_id": "ws1"},
+        existing_session={
+            "id": "s1",
+            "workspace_id": "ws1",
+            "user_id": "u1",
+            "personal_memory": True,
+        },
         latest_draft={"status": "awaiting_confirmation"},
     )
 
@@ -117,14 +160,25 @@ async def test_chat_begin_core_pending_draft_short_circuits_before_quota(monkeyp
 
     monkeypatch.setattr(cmp_mod.quota, "check_quota", fail_check_quota)
 
-    result = await cmp_mod.chat_begin_core("ws1", "u1", [{"role": "user", "content": "confirm"}], session_id="s1")
-    assert result == {"kind": "early", "sessionId": "s1", "reply": "draft handled"}
+    result = await cmp_mod.chat_begin_core(
+        "ws1", "u1", [{"role": "user", "content": "confirm"}], session_id="s1"
+    )
+    assert result == {
+        "kind": "early",
+        "sessionId": "s1",
+        "reply": "draft handled",
+        "draft": None,
+        "language": "en",
+    }
 
 
 async def test_chat_begin_core_new_receipt_short_circuits_before_quota(monkeypatch):
     _patch_common(
         monkeypatch,
-        receipt_preview={"reply": "please confirm", "draft": {"status": "awaiting_confirmation"}},
+        receipt_preview={
+            "reply": "please confirm",
+            "draft": {"status": "awaiting_confirmation"},
+        },
     )
 
     async def fail_check_quota(_ws):
@@ -133,7 +187,15 @@ async def test_chat_begin_core_new_receipt_short_circuits_before_quota(monkeypat
     monkeypatch.setattr(cmp_mod.quota, "check_quota", fail_check_quota)
 
     result = await cmp_mod.chat_begin_core(
-        "ws1", "u1", [{"role": "user", "content": "here's a receipt", "attachments": [{"type": "image/png"}]}]
+        "ws1",
+        "u1",
+        [
+            {
+                "role": "user",
+                "content": "here's a receipt",
+                "attachments": [{"type": "image/png"}],
+            }
+        ],
     )
     assert result["kind"] == "early"
     assert result["reply"] == "please confirm"
@@ -160,8 +222,16 @@ async def test_chat_end_core_persists_reply_and_increments_atomically(monkeypatc
     incremented = {}
     notified = {}
 
-    async def fake_save_message(session_id, workspace_id, role, content, attachments=None):
-        saved.update(session_id=session_id, workspace_id=workspace_id, role=role, content=content, attachments=attachments)
+    async def fake_save_message(
+        session_id, workspace_id, role, content, attachments=None
+    ):
+        saved.update(
+            session_id=session_id,
+            workspace_id=workspace_id,
+            role=role,
+            content=content,
+            attachments=attachments,
+        )
 
     async def fake_increment(workspace_id, tokens_spent):
         incremented.update(workspace_id=workspace_id, tokens_spent=tokens_spent)
@@ -174,8 +244,12 @@ async def test_chat_end_core_persists_reply_and_increments_atomically(monkeypatc
     monkeypatch.setattr(cmp_mod, "_notify_usage", fake_notify)
 
     await cmp_mod.chat_end_core(
-        "ws1", "s1", "the reply", usage={"input_tokens": 30, "output_tokens": 70},
-        artifacts=[{"type": "spending-canvas"}], provider={"name": "openai"},
+        "ws1",
+        "s1",
+        "the reply",
+        usage={"input_tokens": 30, "output_tokens": 70},
+        artifacts=[{"type": "spending-canvas"}],
+        provider={"name": "openai"},
     )
 
     assert saved["role"] == "assistant"
@@ -188,7 +262,9 @@ async def test_chat_end_core_persists_reply_and_increments_atomically(monkeypatc
     assert notified == {"workspace_id": "ws1", "event_type": "workspace.usage"}
 
 
-async def test_chat_end_core_skips_increment_and_notify_when_no_tokens_spent(monkeypatch):
+async def test_chat_end_core_skips_increment_and_notify_when_no_tokens_spent(
+    monkeypatch,
+):
     calls = {"increment": False, "notify": False}
 
     async def fake_save_message(*a, **k):

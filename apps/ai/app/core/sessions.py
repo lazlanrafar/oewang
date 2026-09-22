@@ -9,7 +9,9 @@ from app.core.ids import new_id
 from app.core.serde import row_to_dict
 
 
-async def create_session(workspace_id: str, title: str, user_id: str, *, personal_memory: bool = True) -> dict:
+async def create_session(
+    workspace_id: str, title: str, user_id: str, *, personal_memory: bool = True
+) -> dict:
     row = await fetchrow(
         "INSERT INTO ai_sessions (id, workspace_id, title, user_id, personal_memory) VALUES ($1, $2, $3, $4, $5) RETURNING *",
         new_id(),
@@ -82,7 +84,9 @@ async def get_session_messages(
     return [row_to_dict(r) for r in reversed(rows)]
 
 
-async def update_title(session_id: str, workspace_id: str, title: str, user_id: str) -> None:
+async def update_title(
+    session_id: str, workspace_id: str, title: str, user_id: str
+) -> None:
     await fetchrow(
         "UPDATE ai_sessions SET title = $3 WHERE id = $1 AND workspace_id = $2 AND user_id = $4 AND deleted_at IS NULL",
         session_id,
@@ -92,7 +96,14 @@ async def update_title(session_id: str, workspace_id: str, title: str, user_id: 
     )
 
 
-async def update_context(session_id: str, workspace_id: str, user_id: str, context: dict) -> None:
-    await fetchrow("""UPDATE ai_sessions SET context = $4::jsonb, updated_at = now()
+async def update_context(
+    session_id: str, workspace_id: str, user_id: str, context: dict
+) -> None:
+    await fetchrow(
+        """UPDATE ai_sessions SET context = $4::jsonb, updated_at = now()
         WHERE id = $1 AND workspace_id = $2 AND user_id = $3 AND deleted_at IS NULL RETURNING id""",
-        session_id, workspace_id, user_id, json.dumps(context))
+        session_id,
+        workspace_id,
+        user_id,
+        json.dumps(context),
+    )

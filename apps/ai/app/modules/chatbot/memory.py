@@ -1,22 +1,14 @@
-from app.core.database import fetch
+"""Owner-scoped conversation history. Never use shared history as user memory."""
+
+from app.core.sessions import get_session_messages
 
 
 async def load_history(
-    session_id: str, workspace_id: str, limit: int = 10
+    session_id: str, workspace_id: str, user_id: str, limit: int = 10
 ) -> list[dict]:
-    """Last N user/assistant turns for a session, oldest-first. Read-only."""
-    if not session_id:
-        return []
-    rows = await fetch(
-        """
-        SELECT role, content FROM ai_messages
-        WHERE session_id = $1 AND workspace_id = $2 AND deleted_at IS NULL
-          AND role IN ('user', 'assistant')
-        ORDER BY created_at DESC
-        LIMIT $3
-        """,
-        session_id,
-        workspace_id,
-        limit,
-    )
-    return [{"role": r["role"], "content": r["content"]} for r in reversed(rows)]
+    rows = await get_session_messages(session_id, workspace_id, user_id, limit)
+    return [
+        {"role": r["role"], "content": r["content"]}
+        for r in rows
+        if r["role"] in ("user", "assistant")
+    ]

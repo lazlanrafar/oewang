@@ -1,3 +1,4 @@
+import type { AiMessage, AiSession } from "@workspace/database";
 import {
   aiMessages,
   aiSessions,
@@ -5,17 +6,21 @@ import {
   db,
   desc,
   eq,
-  isNull,
-  pricing,
-  or,
   getTableColumns,
+  isNull,
+  or,
+  pricing,
   sql,
   workspaceAddons,
   workspaces,
 } from "@workspace/database";
 
 export abstract class AiRepository {
-  static async getSession(sessionId: string, workspaceId: string, userId: string) {
+  static async getSession(
+    sessionId: string,
+    workspaceId: string,
+    userId: string,
+  ): Promise<AiSession | null> {
     const [session] = await db
       .select()
       .from(aiSessions)
@@ -36,7 +41,7 @@ export abstract class AiRepository {
     workspaceId: string,
     userId: string,
     limit = 20,
-  ) {
+  ): Promise<AiMessage[]> {
     // Last `limit` messages, oldest-first. Unbounded history gets resent to
     // the LLM on every tool-loop step — O(n²) input tokens per session.
     const rows = await db
@@ -58,7 +63,10 @@ export abstract class AiRepository {
     return rows.reverse();
   }
 
-  static async getSessions(workspaceId: string, userId: string) {
+  static async getSessions(
+    workspaceId: string,
+    userId: string,
+  ): Promise<AiSession[]> {
     return db
       .select()
       .from(aiSessions)

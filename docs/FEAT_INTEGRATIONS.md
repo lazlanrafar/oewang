@@ -135,3 +135,30 @@ When a text message is received, `apps/worker`'s `handleTextMessage`/`streamChat
 
 - **Asynchronous Webhook Processing**: The public webhook route enqueues onto `apps/worker` (asynq, deduped by Telegram's own `update_id` as the task ID) and returns `200 OK` immediately — actual processing (downloading files, querying AI, updating DB, responding back) happens durably in the worker with retry/dead-letter, not as an in-process fire-and-forget promise.
 - If `apps/worker` is unreachable when `apps/api` tries to enqueue, the webhook handler logs the error but still returns `200 OK` to Telegram (Telegram would otherwise retry-storm a failing webhook).
+
+## Telegram private memory and receipt details (2026-09-22)
+
+Telegram uses the same Python conversation pipeline as application chat. The Go
+worker forwards `session_id`, the user's actual `caption`, and `personal_memory`
+for receipt uploads, then persists the session ID returned by the sidecar. It no
+longer duplicates session/draft writes or reads workspace-only history before a
+text reply. `AiMessage` / `DraftMessage` retain `attachments` for other consumers.
+The internal draft response retains `draft` and `sessionId` while adding
+`session_id`; incoming draft JSON is never authoritative for mutations.
+
+Only a dashboard-authenticated `/integrations/telegram/connect` connection marks
+`personalMemoryUserId`. The worker requires this marker to match the connected
+user, live workspace membership, Telegram `chat.type=private`, and sender ID equal
+to chat ID. Groups, legacy raw `/connect` links, absent sender identity and first
+member fallbacks run without private memory. Existing connections must be linked
+through the authenticated endpoint to enable memory; do not backfill the marker
+from `connected_by`, which can originate from the historical fallback.
+
+Receipts are sent as literal plain text (no Telegram parse mode), so OCR Markdown
+characters cannot create links or reject messages. Replies split at item/newline
+boundaries under 3500 UTF-16 units; exceptionally long individual lines split at
+Unicode character boundaries. No item is dropped. Streamed deterministic replies
+also use plain text and preserve all final chunks.
+
+Real-bot verification requires an explicitly identified test chat/workspace.
+Automated tests use HTTP fakes; they do not message production Telegram accounts.
