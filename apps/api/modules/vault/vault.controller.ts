@@ -1,4 +1,4 @@
-import { logger } from "@workspace/logger";
+import { createLogger } from "@workspace/logger";
 import { ErrorCode } from "@workspace/types";
 import {
   buildError,
@@ -16,6 +16,8 @@ import {
 } from "./vault.dto";
 import { VaultIndexingService } from "./vault-indexing.service";
 import { VaultService } from "./vault.service";
+
+const log = createLogger("vault.controller");
 
 export const vaultController = new Elysia({ prefix: "/vault" })
   .use(authPlugin)
@@ -53,37 +55,30 @@ export const vaultController = new Elysia({ prefix: "/vault" })
     "/upload",
     async ({ auth, workspaceId, userId, body: { file }, set }) => {
       assertCanEditWorkspaceData(auth?.workspace_role);
-      try {
-        const buffer = Buffer.from(await file.arrayBuffer());
-        const data = await VaultService.uploadFile(workspaceId!, userId!, {
-          name: file.name,
-          type: file.type,
-          size: file.size,
-          buffer,
-        });
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const data = await VaultService.uploadFile(workspaceId!, userId!, {
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        buffer,
+      });
 
-        // Async background indexing — don't block the upload response
-        VaultIndexingService.indexBuffer(
-          workspaceId!,
-          data.id,
-          buffer,
-          file.type,
-          file.name,
-        ).catch((e) =>
-          logger.error("Vault indexing failed", {
-            error: e?.message,
-            fileId: data.id,
-          }),
-        );
+      // Async background indexing — don't block the upload response
+      VaultIndexingService.indexBuffer(
+        workspaceId!,
+        data.id,
+        buffer,
+        file.type,
+        file.name,
+      ).catch((e) =>
+        log.error("Vault indexing failed", {
+          message: e?.message,
+          fileId: data.id,
+        }),
+      );
 
-        set.status = 201;
-        return buildSuccess(data, "File uploaded successfully");
-      } catch (error: any) {
-        logger.error("Error uploading file to vault", { error, workspaceId });
-
-        set.status = 500;
-        return buildError(ErrorCode.INTERNAL_ERROR, error.message);
-      }
+      set.status = 201;
+      return buildSuccess(data, "File uploaded successfully");
     },
     {
       body: uploadFileBody,

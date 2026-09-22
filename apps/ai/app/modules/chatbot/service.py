@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import time
 
 from app.core import llm
@@ -8,8 +7,9 @@ from app.core.database import fetch, fetchrow
 from app.config import get_settings
 from app.modules.chatbot import prompts, tools
 from app.modules.chatbot.memory import load_history
+from app.utils.logger import get_logger
 
-log = logging.getLogger("ai.chatbot")
+log = get_logger("ai.chatbot")
 
 
 async def _balance(workspace_id: str) -> float:
@@ -84,67 +84,24 @@ async def _chat_context(
     return balance, txns, currency, history
 
 
-async def chat(
-    message: str, workspace_id: str, user_id: str | None, session_id: str | None
-) -> dict:
-    db_start = time.monotonic()
-    balance, txns, currency, history = await _chat_context(workspace_id, session_id)
-    db_fetch_ms = (time.monotonic() - db_start) * 1000
-
-    system = prompts.system_prompt(balance, txns, currency)
-    messages = history + [{"role": "user", "content": message}]
-
-    llm_start = time.monotonic()
-    # Telegram replies are short-form chat, not canvas/report generation — cap
-    # well below the 1024 default so a runaway reply doesn't add latency.
-    reply = await llm.complete_metered(system, messages, workspace_id, max_tokens=512)
-    llm_call_ms = (time.monotonic() - llm_start) * 1000
-
-    log.info(
-        "chat() timing: db_fetch_ms=%.1f llm_call_ms=%.1f",
-        db_fetch_ms,
-        llm_call_ms,
-    )
-    # Elysia owns ai_messages persistence; we just echo the session id back.
-    return {"reply": reply, "session_id": session_id}
+async def chat(message: str, workspace_id: str, user_id: str | None, session_id: str | None) -> dict:
+    if not user_id:
+        raise ValueError("Verified user identity required")
+    text = ""
+    result = {}
+    async for event in stream_service_chat(workspace_id, user_id, message, session_id):
+        if event["event"] == "content":
+            text += event["data"].get("text", "")
+        elif event["event"] == "done":
+            result = event["data"]
+    return {**result, "reply": result.get("reply", text)}
 
 
-async def stream_chat(
-    message: str, workspace_id: str, user_id: str | None, session_id: str | None
-):
-    """Streaming variant of chat(): same parallelized DB-fetch setup, but
-    streams the LLM reply as SSE-shaped events (content deltas, then a final
-    done event) instead of returning one completed string — the fake-streaming
-    fix for Telegram's perceived latency (incremental message edits on the
-    apps/api side consume this).
-
-    Quota gating (check before the call, record after) happens inside
-    llm.complete_metered_stream, which this bypasses complete_metered to call
-    directly — that helper is the single place check_quota/record_usage run
-    for this path, exactly once each, mirroring complete_metered's own gating.
-    """
-    db_start = time.monotonic()
-    balance, txns, currency, history = await _chat_context(workspace_id, session_id)
-    db_fetch_ms = (time.monotonic() - db_start) * 1000
-    log.info("stream_chat() timing: db_fetch_ms=%.1f", db_fetch_ms)
-
-    system = prompts.system_prompt(balance, txns, currency)
-    messages = history + [{"role": "user", "content": message}]
-
-    async for chunk in llm.complete_metered_stream(
-        system, messages, workspace_id, max_tokens=512
-    ):
-        if chunk["type"] == "delta":
-            yield {"event": "content", "data": {"text": chunk["text"]}}
-        else:  # "done"
-            yield {
-                "event": "done",
-                "data": {
-                    "reply": chunk["reply"],
-                    "session_id": session_id,
-                    "usage": chunk["usage"],
-                },
-            }
+async def stream_chat(message: str, workspace_id: str, user_id: str | None, session_id: str | None):
+    if not user_id:
+        raise ValueError("Verified user identity required")
+    async for event in stream_service_chat(workspace_id, user_id, message, session_id):
+        yield event
 
 
 async def run_chat(
@@ -213,7 +170,8 @@ async def web_chat(
     ]
 
     async def run_tool(name: str, args: dict) -> dict:
-        return await tools.execute_tool(name, args, workspace_id, user_id)
+        return await tools.execute_tool(name, args, workspace_id, user_id,
+            memory_evidence=begin.get("memory_evidence", ""), personal_memory=begin.get("personal_memory", False))
 
     result = await llm.complete_with_tools(
         begin["system_prompt"],
@@ -277,7 +235,8 @@ async def stream_web_chat(
     ]
 
     async def run_tool(name: str, args: dict) -> dict:
-        return await tools.execute_tool(name, args, workspace_id, user_id)
+        return await tools.execute_tool(name, args, workspace_id, user_id,
+            memory_evidence=begin.get("memory_evidence", ""), personal_memory=begin.get("personal_memory", False))
 
     final_result = None
     async for event in llm.complete_with_tools_stream(
@@ -300,7 +259,7 @@ async def stream_web_chat(
 
 
 async def stream_service_chat(
-    workspace_id: str, user_id: str, message: str, session_id: str | None
+    workspace_id: str, user_id: str, message: str, session_id: str | None, *, personal_memory: bool = False
 ):
     """Streaming tool-loop chat for trusted service callers (x-api-key,
     explicit workspace/user id — no JWT) — apps/worker's Telegram handler.
@@ -312,7 +271,7 @@ async def stream_service_chat(
     from app.modules.chatbot.chat_money_path import chat_begin_core
 
     begin = await chat_begin_core(
-        workspace_id, user_id, [{"role": "user", "content": message}], session_id
+        workspace_id, user_id, [{"role": "user", "content": message}], session_id, personal_memory=personal_memory
     )
 
     if begin["kind"] == "early":
@@ -321,6 +280,8 @@ async def stream_service_chat(
             "event": "done",
             "data": {
                 "session_id": begin["sessionId"],
+                "reply": begin["reply"],
+                "plain_text": True,
                 "usage": {"input_tokens": 0, "output_tokens": 0},
                 "artifacts": [],
             },
@@ -336,7 +297,8 @@ async def stream_service_chat(
     ]
 
     async def run_tool(name: str, args: dict) -> dict:
-        return await tools.execute_tool(name, args, workspace_id, user_id)
+        return await tools.execute_tool(name, args, workspace_id, user_id,
+            memory_evidence=begin.get("memory_evidence", ""), personal_memory=begin.get("personal_memory", False))
 
     async for event in llm.complete_with_tools_stream(
         begin["systemPrompt"], convo, tools.WEB_TOOLS, run_tool,

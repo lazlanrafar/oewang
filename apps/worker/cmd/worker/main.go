@@ -118,6 +118,28 @@ func main() {
 			"critical": 6,
 			"default":  3,
 		},
+		// Sentry was initialized above but nothing was ever reporting to it —
+		// this is the one place every task failure (any handler, any queue)
+		// passes through. Only payload size is captured, never its content:
+		// receipt images/base64 can be in there.
+		ErrorHandler: asynq.ErrorHandlerFunc(func(ctx context.Context, task *asynq.Task, err error) {
+			log.Printf("worker: task %s failed: %v", task.Type(), err)
+			if !sentryEnabled {
+				return
+			}
+			retried, hasRetried := asynq.GetRetryCount(ctx)
+			maxRetry, hasMaxRetry := asynq.GetMaxRetry(ctx)
+			final := !hasRetried || !hasMaxRetry || retried >= maxRetry
+			sentry.WithScope(func(scope *sentry.Scope) {
+				scope.SetTag("task_type", task.Type())
+				scope.SetContext("asynq_task", sentry.Context{
+					"payload_size_bytes": len(task.Payload()),
+					"retry_count":        retried,
+					"final_attempt":      final,
+				})
+				sentry.CaptureException(err)
+			})
+		}),
 	})
 	if err := asynqServer.Start(mux); err != nil {
 		log.Fatalf("worker: asynq server start: %v", err)

@@ -152,14 +152,14 @@ export function InvoicesClient({ dictionary, initialData: _initialData }: Props)
       if (editInvoice?.id) {
         const res = await updateInvoice(editInvoice.id, formData);
         if (!res.success) {
-          if (!isSilent) toast.error("Failed to update invoice");
+          if (!isSilent) toast.error(res.error || "Failed to update invoice");
           return false;
         }
         result = res.data;
       } else {
         const res = await createInvoice(formData);
         if (!res.success) {
-          if (!isSilent) toast.error("Failed to create invoice");
+          if (!isSilent) toast.error(res.error || "Failed to create invoice");
           return false;
         }
         result = res.data;

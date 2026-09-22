@@ -10,9 +10,28 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 )
+
+// statusErrorBodyLimit caps how much of a non-2xx response body StatusError
+// retains — enough to diagnose apps/ai's failure without risking a huge
+// payload (e.g. an echoed base64 image) ending up in worker logs/Sentry.
+const statusErrorBodyLimit = 1000
+
+// StatusError is returned when apps/ai responds with a non-2xx status.
+// StatusCode is what callers classify transient (5xx) vs permanent (4xx)
+// failures on; Body (truncated to statusErrorBodyLimit) is for diagnostics.
+type StatusError struct {
+	Path       string
+	StatusCode int
+	Body       string
+}
+
+func (e *StatusError) Error() string {
+	return fmt.Sprintf("aiclient: %s returned status %d: %s", e.Path, e.StatusCode, e.Body)
+}
 
 // DefaultTimeout matches ai-sidecar-client.ts's sidecarPost: chat tool-loops
 // and OCR are legitimately slow, but a wedged sidecar must not hang forever.
@@ -31,6 +50,9 @@ func New(baseURL, apiKey string) *Client {
 }
 
 func (c *Client) post(ctx context.Context, path string, body any, out any) error {
+	if data, ok := body.(map[string]any); ok {
+		addConversation(ctx, data)
+	}
 	payload, err := json.Marshal(body)
 	if err != nil {
 		return fmt.Errorf("aiclient: encode %s body: %w", path, err)
@@ -49,7 +71,8 @@ func (c *Client) post(ctx context.Context, path string, body any, out any) error
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("aiclient: %s returned status %d", path, resp.StatusCode)
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, statusErrorBodyLimit))
+		return &StatusError{Path: path, StatusCode: resp.StatusCode, Body: string(body)}
 	}
 	if out == nil {
 		return nil
@@ -62,8 +85,9 @@ func (c *Client) post(ctx context.Context, path string, body any, out any) error
 
 // DraftMessage mirrors ai-sidecar-client.ts's {role, content} shape.
 type DraftMessage struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
+	Attachments json.RawMessage `json:"attachments,omitempty"`
+	Role        string          `json:"role"`
+	Content     string          `json:"content"`
 }
 
 // Attachment mirrors ChatAttachment: {name, type, data} where data is
@@ -117,8 +141,9 @@ func (c *Client) HandlePendingInvoiceDraft(ctx context.Context, workspaceID, use
 
 // BuildDraftResult mirrors {reply, draft} from /draft/build-from-attachments.
 type BuildDraftResult struct {
-	Reply string     `json:"reply"`
-	Draft DraftState `json:"draft"`
+	SessionID string     `json:"session_id"`
+	Reply     string     `json:"reply"`
+	Draft     DraftState `json:"draft"`
 }
 
 // BuildInvoiceDraftFromAttachments calls POST /draft/build-from-attachments.

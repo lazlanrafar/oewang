@@ -38,6 +38,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@sentry/nextjs": "^10.18.0",
     "@workspace/constants": "workspace:*",
     "@workspace/encryption": "workspace:*",
     "@workspace/types": "workspace:*",

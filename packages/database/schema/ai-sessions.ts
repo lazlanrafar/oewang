@@ -1,6 +1,7 @@
 import { createId } from "@paralleldrive/cuid2";
 import { sql } from "drizzle-orm";
-import { index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, index, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { users } from "./users";
 import { workspaces } from "./workspaces";
 
 export const aiSessions = pgTable(
@@ -10,6 +11,9 @@ export const aiSessions = pgTable(
     workspace_id: text("workspace_id")
       .references(() => workspaces.id)
       .notNull(),
+    user_id: text("user_id").references(() => users.id),
+    personal_memory: boolean("personal_memory").default(false).notNull(),
+    context: jsonb("context").$type<Record<string, unknown>>().default({}).notNull(),
     title: text("title").notNull(),
     created_at: timestamp("created_at").defaultNow().notNull(),
     updated_at: timestamp("updated_at").defaultNow().notNull(),

@@ -17,6 +17,12 @@
     "no_account": "Belum punya akun?",
     "sign_in": "Masuk",
     "sign_up": "Daftar",
+    "oauth_errors": {
+      "oauth_state_mismatch": "Tautan masuk Anda kedaluwarsa. Silakan coba lagi.",
+      "oauth_config_missing": "Masuk dengan penyedia ini sementara tidak tersedia.",
+      "oauth_failed": "Kami tidak dapat memproses masuk Anda. Silakan coba lagi.",
+      "generic": "Terjadi kesalahan saat memproses masuk Anda. Silakan coba lagi."
+    },
     "form": {
       "name_label": "Nama Lengkap",
       "name_placeholder": "Budi Santoso",

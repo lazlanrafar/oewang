@@ -3,6 +3,7 @@ package repo
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/oewang/worker/internal/cuid"
 )
@@ -10,8 +11,9 @@ import (
 // AiMessage mirrors an ai_messages row (only the columns the Telegram
 // handler's history/draft-state calls need).
 type AiMessage struct {
-	Role    string
-	Content string
+	Attachments json.RawMessage
+	Role        string
+	Content     string
 }
 
 // AiRepo wraps the pgxpool.Pool for ai_sessions/ai_messages access, ported
@@ -26,7 +28,7 @@ func (r *AiRepo) CreateSession(ctx context.Context, workspaceID, title string) (
 	id := cuid.New()
 	const q = `INSERT INTO ai_sessions (id, workspace_id, title) VALUES ($1, $2, $3)`
 	if _, err := r.Pool.Exec(ctx, q, id, workspaceID, title); err != nil {
-		return "", err
+		return "", fmt.Errorf("repo: create ai session: %w", err)
 	}
 	return id, nil
 }
@@ -37,15 +39,17 @@ func (r *AiRepo) SaveMessage(ctx context.Context, sessionID, workspaceID, role, 
 	if attachments != nil {
 		encoded, err := json.Marshal(attachments)
 		if err != nil {
-			return err
+			return fmt.Errorf("repo: marshal ai message attachments: %w", err)
 		}
 		raw = encoded
 	}
 	const q = `
 		INSERT INTO ai_messages (id, session_id, workspace_id, role, content, attachments)
 		VALUES ($1, $2, $3, $4, $5, $6)`
-	_, err := r.Pool.Exec(ctx, q, cuid.New(), sessionID, workspaceID, role, content, raw)
-	return err
+	if _, err := r.Pool.Exec(ctx, q, cuid.New(), sessionID, workspaceID, role, content, raw); err != nil {
+		return fmt.Errorf("repo: save ai message: %w", err)
+	}
+	return nil
 }
 
 // GetSessionMessages mirrors AiRepository.getSessionMessages: fetches the
@@ -53,26 +57,27 @@ func (r *AiRepo) SaveMessage(ctx context.Context, sessionID, workspaceID, role, 
 // callers (draft-state / chat-history) need oldest-first.
 func (r *AiRepo) GetSessionMessages(ctx context.Context, sessionID, workspaceID string) ([]AiMessage, error) {
 	const q = `
-		SELECT role, content FROM ai_messages
+		SELECT role, content, attachments FROM ai_messages
 		WHERE session_id = $1 AND workspace_id = $2 AND deleted_at IS NULL
+ AND EXISTS (SELECT 1 FROM ai_sessions s WHERE s.id = $1 AND s.workspace_id = $2 AND s.user_id IS NULL AND s.deleted_at IS NULL)
 		ORDER BY created_at DESC
 		LIMIT 20`
 	rows, err := r.Pool.Query(ctx, q, sessionID, workspaceID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("repo: query ai messages: %w", err)
 	}
 	defer rows.Close()
 
 	var messages []AiMessage
 	for rows.Next() {
 		var m AiMessage
-		if err := rows.Scan(&m.Role, &m.Content); err != nil {
-			return nil, err
+		if err := rows.Scan(&m.Role, &m.Content, &m.Attachments); err != nil {
+			return nil, fmt.Errorf("repo: scan ai message: %w", err)
 		}
 		messages = append(messages, m)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("repo: iterate ai messages: %w", err)
 	}
 
 	for i, j := 0, len(messages)-1; i < j; i, j = i+1, j-1 {
@@ -94,6 +99,8 @@ func (r *NotificationsRepo) Create(ctx context.Context, workspaceID, userID, not
 	const q = `
 		INSERT INTO notifications (id, user_id, workspace_id, type, title, message, link)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)`
-	_, err := r.Pool.Exec(ctx, q, cuid.New(), userID, workspaceID, notifType, title, message, link)
-	return err
+	if _, err := r.Pool.Exec(ctx, q, cuid.New(), userID, workspaceID, notifType, title, message, link); err != nil {
+		return fmt.Errorf("repo: create notification: %w", err)
+	}
+	return nil
 }

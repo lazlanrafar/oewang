@@ -1,4 +1,4 @@
-import { logger } from "@workspace/logger";
+import { createLogger } from "@workspace/logger";
 import { ErrorCode } from "@workspace/types";
 import { buildError, buildSuccess } from "@workspace/utils";
 import { Elysia, t } from "elysia";
@@ -13,6 +13,8 @@ import {
 } from "./workspaces.model";
 import { WorkspacesService } from "./workspaces.service";
 
+const log = createLogger("workspaces.controller");
+
 /**
  * Workspaces controller — route definitions + validation + call service.
  * No DB access. No business logic.
@@ -24,8 +26,8 @@ export const workspacesController = new Elysia({ prefix: "/workspaces" })
     "/",
     // biome-ignore lint/suspicious/noExplicitAny: Generic handler
     async ({ body, set, auth }: any) => {
-      logger.info("[WorkspacesController] Create workspace request received", {
-        auth_user: auth,
+      log.info("Create workspace request received", {
+        userId: auth?.user_id,
         workspace_name: body.name,
       });
 
@@ -34,29 +36,13 @@ export const workspacesController = new Elysia({ prefix: "/workspaces" })
         return buildError(ErrorCode.UNAUTHORIZED, "Unauthorized");
       }
 
-      try {
-        const workspace = await WorkspacesService.createWorkspace(
-          auth.user_id,
-          body,
-          auth.email,
-        );
-        set.status = 201;
-        return buildSuccess(workspace, "Workspace created successfully");
-      } catch (error: any) {
-        logger.error("Error creating workspace", {
-          error,
-          userId: auth.user_id,
-        });
-
-        // Handle errors thrown by service using status()
-        if (error.status && error.body) {
-          set.status = error.status;
-          return error.body;
-        }
-
-        set.status = 500;
-        return buildError(ErrorCode.INTERNAL_ERROR, "Failed to create workspace");
-      }
+      const workspace = await WorkspacesService.createWorkspace(
+        auth.user_id,
+        body,
+        auth.email,
+      );
+      set.status = 201;
+      return buildSuccess(workspace, "Workspace created successfully");
     },
     {
       body: CreateWorkspaceBody,
@@ -77,16 +63,8 @@ export const workspacesController = new Elysia({ prefix: "/workspaces" })
         return buildError(ErrorCode.UNAUTHORIZED, "Unauthorized");
       }
 
-      try {
-        const workspaces = await WorkspacesService.listWorkspaces(auth.user_id);
-        return buildSuccess(workspaces, "Workspaces retrieved");
-      } catch (_error) {
-        set.status = 500;
-        return buildError(
-          ErrorCode.INTERNAL_ERROR,
-          "Failed to list workspaces",
-        );
-      }
+      const workspaces = await WorkspacesService.listWorkspaces(auth.user_id);
+      return buildSuccess(workspaces, "Workspaces retrieved");
     },
     {
       detail: {
@@ -105,29 +83,14 @@ export const workspacesController = new Elysia({ prefix: "/workspaces" })
         return buildError(ErrorCode.UNAUTHORIZED, "Unauthorized");
       }
 
-      try {
-        const workspace = await WorkspacesService.getActiveWorkspace(
-          auth.workspace_id,
-        );
-        if (!workspace) {
-          set.status = 404;
-          return buildError(
-            ErrorCode.WORKSPACE_NOT_FOUND,
-            "Workspace not found",
-          );
-        }
-        return buildSuccess(workspace, "Active workspace retrieved");
-      } catch (error: any) {
-        logger.error("Error getting active workspace", {
-          error,
-          workspaceId: auth.workspace_id,
-        });
-        set.status = 500;
-        return buildError(
-          ErrorCode.INTERNAL_ERROR,
-          "Failed to get active workspace",
-        );
+      const workspace = await WorkspacesService.getActiveWorkspace(
+        auth.workspace_id,
+      );
+      if (!workspace) {
+        set.status = 404;
+        return buildError(ErrorCode.WORKSPACE_NOT_FOUND, "Workspace not found");
       }
+      return buildSuccess(workspace, "Active workspace retrieved");
     },
     {
       detail: {
@@ -145,17 +108,8 @@ export const workspacesController = new Elysia({ prefix: "/workspaces" })
         return buildError(ErrorCode.UNAUTHORIZED, "Unauthorized");
       }
       assertCanManageSensitiveWorkspace(auth.workspace_role);
-      try {
-        const members = await WorkspacesService.getMembers(auth.workspace_id);
-        return buildSuccess(members, "Members retrieved");
-      } catch (error: any) {
-        logger.error("Error getting members", {
-          error,
-          workspaceId: auth.workspace_id,
-        });
-        set.status = 500;
-        return buildError(ErrorCode.INTERNAL_ERROR, "Failed to get members");
-      }
+      const members = await WorkspacesService.getMembers(auth.workspace_id);
+      return buildSuccess(members, "Members retrieved");
     },
     {
       detail: {
@@ -174,23 +128,13 @@ export const workspacesController = new Elysia({ prefix: "/workspaces" })
       }
       assertCanManageSensitiveWorkspace(auth.workspace_role);
 
-      try {
-        const invitation = await WorkspacesService.inviteMember(
-          auth.user_id,
-          auth.workspace_id,
-          body.email,
-          body.role,
-        );
-        return buildSuccess(invitation, "Invitation sent successfully");
-      } catch (error: any) {
-        logger.error("Error inviting member", {
-          error,
-          workspaceId: auth.workspace_id,
-        });
-
-        set.status = 400;
-        return buildError(ErrorCode.VALIDATION_ERROR, error.message);
-      }
+      const invitation = await WorkspacesService.inviteMember(
+        auth.user_id,
+        auth.workspace_id,
+        body.email,
+        body.role,
+      );
+      return buildSuccess(invitation, "Invitation sent successfully");
     },
     {
       body: CreateInvitationBody,
@@ -210,23 +154,11 @@ export const workspacesController = new Elysia({ prefix: "/workspaces" })
       }
       assertCanManageSensitiveWorkspace(auth.workspace_role);
 
-      try {
-        // ideally check if user is member of workspace first
-        const invitations = await WorkspacesService.getInvitations(
-          auth.workspace_id,
-        );
-        return buildSuccess(invitations, "Invitations retrieved");
-      } catch (error: any) {
-        logger.error("Error getting invitations", {
-          error,
-          workspaceId: auth.workspace_id,
-        });
-        set.status = 500;
-        return buildError(
-          ErrorCode.INTERNAL_ERROR,
-          "Failed to get invitations",
-        );
-      }
+      // ideally check if user is member of workspace first
+      const invitations = await WorkspacesService.getInvitations(
+        auth.workspace_id,
+      );
+      return buildSuccess(invitations, "Invitations retrieved");
     },
     {
       detail: {
@@ -245,17 +177,12 @@ export const workspacesController = new Elysia({ prefix: "/workspaces" })
       }
       assertCanManageSensitiveWorkspace(auth.workspace_role);
 
-      try {
-        await WorkspacesService.cancelInvitation(
-          auth.user_id,
-          auth.workspace_id,
-          params.invitationId,
-        );
-        return buildSuccess(null, "Invitation cancelled");
-      } catch (error: any) {
-        set.status = 400;
-        return buildError(ErrorCode.VALIDATION_ERROR, error.message);
-      }
+      await WorkspacesService.cancelInvitation(
+        auth.user_id,
+        auth.workspace_id,
+        params.invitationId,
+      );
+      return buildSuccess(null, "Invitation cancelled");
     },
     {
       detail: {
@@ -273,19 +200,11 @@ export const workspacesController = new Elysia({ prefix: "/workspaces" })
         return buildError(ErrorCode.UNAUTHORIZED, "Unauthorized");
       }
 
-      try {
-        const workspaceId = await WorkspacesService.acceptInvitationByToken(
-          body.token,
-          auth.user_id,
-        );
-        return buildSuccess(
-          { workspaceId },
-          "Invitation accepted successfully",
-        );
-      } catch (error: any) {
-        set.status = 400;
-        return buildError(ErrorCode.VALIDATION_ERROR, error.message);
-      }
+      const workspaceId = await WorkspacesService.acceptInvitationByToken(
+        body.token,
+        auth.user_id,
+      );
+      return buildSuccess({ workspaceId }, "Invitation accepted successfully");
     },
     {
       detail: {
@@ -304,19 +223,7 @@ export const workspacesController = new Elysia({ prefix: "/workspaces" })
       }
       assertCanManageSensitiveWorkspace(auth.workspace_role);
 
-      try {
-        return await OrdersService.getWorkspaceOrders(auth.workspace_id);
-      } catch (error: any) {
-        logger.error("Error getting billing history", {
-          error,
-          workspaceId: auth.workspace_id,
-        });
-        set.status = 500;
-        return buildError(
-          ErrorCode.INTERNAL_ERROR,
-          "Failed to get billing history",
-        );
-      }
+      return await OrdersService.getWorkspaceOrders(auth.workspace_id);
     },
     {
       detail: {

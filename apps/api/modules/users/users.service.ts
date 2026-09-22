@@ -2,6 +2,9 @@ import * as path from "node:path";
 import { BucketClient } from "@workspace/bucket";
 import { Env } from "@workspace/constants";
 import { logger } from "@workspace/logger";
+import { ErrorCode } from "@workspace/types";
+import { buildError } from "@workspace/utils";
+import { status } from "elysia";
 import { cacheDel, cacheGet, cacheSet } from "../../lib/cache";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { normalizeWorkspaceRole } from "../workspaces/workspace-permissions";
@@ -240,7 +243,13 @@ export abstract class UsersService {
     const isMember = memberships.some((m) => m.workspace_id === workspaceId);
 
     if (!isMember) {
-      throw new Error("User is not a member of this workspace");
+      throw status(
+        400,
+        buildError(
+          ErrorCode.VALIDATION_ERROR,
+          "User is not a member of this workspace",
+        ),
+      );
     }
 
     await UsersRepository.setWorkspaceId(user_id, workspaceId);
@@ -316,7 +325,11 @@ export abstract class UsersService {
   static async disconnectProvider(user_id: string, provider: string) {
     await UsersRepository.deleteOAuthAccount(user_id, provider);
     const user = await UsersRepository.findById(user_id);
-    if (!user) throw new Error("User not found");
+    if (!user)
+      throw status(
+        400,
+        buildError(ErrorCode.VALIDATION_ERROR, "User not found"),
+      );
     const remaining = await UsersRepository.getOAuthAccounts(user_id);
     await UsersRepository.update(user_id, {
       providers: remaining.map((r) => r.provider),

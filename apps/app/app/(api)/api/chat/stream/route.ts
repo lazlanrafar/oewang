@@ -52,8 +52,13 @@ export async function POST(request: Request) {
       },
     });
   } catch (error: any) {
-    return new Response(JSON.stringify({ error: error.message || "Streaming failed" }), {
-      status: 500,
+    // No HTTP response exists yet here (DNS/connection failure, timeout) —
+    // never forward error.message, it can leak internal hostnames or
+    // connection detail. The `!res.ok` branch above already relays the
+    // AI service's actual structured error when one exists.
+    console.error("[chat/stream]", error);
+    return new Response(JSON.stringify({ error: "Unable to reach the AI service. Please try again." }), {
+      status: 502,
       headers: { "Content-Type": "application/json" },
     });
   }

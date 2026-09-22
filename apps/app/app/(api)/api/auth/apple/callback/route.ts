@@ -180,17 +180,7 @@ export async function POST(request: Request) {
     return response;
   } catch (err) {
     console.error("[Apple OAuth]", err);
-    // TEMPORARY (debugging live "oauth_failed" reports): surface the actual
-    // error in the redirect since container stdout isn't visible via the
-    // usual log tooling for this app. Remove once root-caused.
-    const detail = encodeURIComponent(
-      err instanceof Error ? err.message : String(err),
-    );
-    const res = NextResponse.redirect(
-      isMobile
-        ? `oewang://oauth-callback?error=oauth_failed&detail=${detail}`
-        : `${origin}/login?error=oauth_failed&detail=${detail}`,
-    );
+    const res = NextResponse.redirect(errorRedirect("oauth_failed"));
     res.cookies.delete("oauth_state");
     return res;
   }

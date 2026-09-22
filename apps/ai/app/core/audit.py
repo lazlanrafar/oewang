@@ -15,7 +15,7 @@ def _sanitize(value):
     value = to_jsonable(value)
     if isinstance(value, dict):
         return {
-            k: ("[REDACTED]" if k.lower() in _REDACT else _sanitize(v))
+            k: ("[REDACTED]" if any(r in k.lower() for r in _REDACT) else _sanitize(v))
             for k, v in value.items()
         }
     if isinstance(value, list):

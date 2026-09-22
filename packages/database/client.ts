@@ -2,6 +2,7 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as ai_messages from "./schema/ai-messages";
 import * as ai_sessions from "./schema/ai-sessions";
+import * as ai_user_memories from "./schema/ai-user-memories";
 import * as articles from "./schema/articles";
 import * as audit_logs from "./schema/audit-logs";
 import * as categories from "./schema/categories";
@@ -49,6 +50,7 @@ const schema = {
   ...transaction_attachments,
   ...transaction_import_jobs,
   ...ai_sessions,
+  ...ai_user_memories,
   ...ai_messages,
   ...workspace_integrations,
   ...pricing,

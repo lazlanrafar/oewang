@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { Suspense } from "react";
 
 import type { Metadata } from "next";
 
 import { LoginForm } from "@/components/organisms/auth/login-form";
 import { OAuthButton } from "@/components/organisms/auth/oauth-button";
+import { OAuthErrorToast } from "@/components/organisms/auth/oauth-error-toast";
 import { getAppEnv } from "@/env";
 import { getDictionary } from "@/get-dictionary";
 import type { Locale } from "@/i18n-config";
@@ -23,6 +25,9 @@ export default async function LoginV2({
 
   return (
     <div className="mx-auto flex w-full flex-col justify-center space-y-10 p-4 sm:w-[400px] sm:p-0">
+      <Suspense fallback={null}>
+        <OAuthErrorToast dictionary={dictionary.auth.oauth_errors} />
+      </Suspense>
       <div className="flex flex-col items-center justify-center space-y-4 text-center">
         <div className="space-y-3">
           <h1 className="font-sans text-2xl tracking-tight">

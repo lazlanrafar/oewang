@@ -17,6 +17,12 @@
     "no_account": "Don't have an account?",
     "sign_in": "Sign in",
     "sign_up": "Sign up",
+    "oauth_errors": {
+      "oauth_state_mismatch": "Your sign-in link expired. Please try again.",
+      "oauth_config_missing": "Sign-in with this provider is temporarily unavailable.",
+      "oauth_failed": "We couldn't sign you in. Please try again.",
+      "generic": "Something went wrong signing you in. Please try again."
+    },
     "form": {
       "name_label": "Full Name",
       "name_placeholder": "John Doe",

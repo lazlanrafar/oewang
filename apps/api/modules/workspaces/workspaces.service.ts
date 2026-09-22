@@ -58,8 +58,12 @@ export abstract class WorkspacesService {
     const existingUser = await UsersRepository.findById(user_id);
     if (!existingUser) {
       if (!user_email) {
-        throw new Error(
-          "User profile is not synced yet. Please sign in again.",
+        throw status(
+          400,
+          buildError(
+            ErrorCode.VALIDATION_ERROR,
+            "User profile is not synced yet. Please sign in again.",
+          ),
         );
       }
 
@@ -330,7 +334,13 @@ export abstract class WorkspacesService {
       !actorMembership ||
       !canManageSensitiveWorkspace(actorMembership.role)
     ) {
-      throw new Error("Unauthorized to invite members");
+      throw status(
+        400,
+        buildError(
+          ErrorCode.VALIDATION_ERROR,
+          "Unauthorized to invite members",
+        ),
+      );
     }
 
     // 2. Check if user is already a member
@@ -341,7 +351,13 @@ export abstract class WorkspacesService {
         workspace_id,
       );
       if (existingMembership) {
-        throw new Error("User is already a member of this workspace");
+        throw status(
+          400,
+          buildError(
+            ErrorCode.VALIDATION_ERROR,
+            "User is already a member of this workspace",
+          ),
+        );
       }
     }
 
@@ -367,7 +383,11 @@ export abstract class WorkspacesService {
       expiresAt,
     });
 
-    if (!invitation) throw new Error("Failed to create invitation");
+    if (!invitation)
+      throw status(
+        400,
+        buildError(ErrorCode.VALIDATION_ERROR, "Failed to create invitation"),
+      );
 
     // 5. Send email
     const workspace = await WorkspacesRepository.findById(workspace_id);
@@ -421,7 +441,13 @@ export abstract class WorkspacesService {
       !actorMembership ||
       !canManageSensitiveWorkspace(actorMembership.role)
     ) {
-      throw new Error("Unauthorized to cancel invitations");
+      throw status(
+        400,
+        buildError(
+          ErrorCode.VALIDATION_ERROR,
+          "Unauthorized to cancel invitations",
+        ),
+      );
     }
 
     await WorkspacesRepository.deleteInvitation(invitation_id);
@@ -491,7 +517,10 @@ export abstract class WorkspacesService {
     const invitation = await WorkspacesRepository.findInvitationByToken(token);
 
     if (!invitation || invitation.status !== "pending") {
-      throw new Error("Invalid or expired invitation");
+      throw status(
+        400,
+        buildError(ErrorCode.VALIDATION_ERROR, "Invalid or expired invitation"),
+      );
     }
 
     // 2. Check expiry
@@ -500,7 +529,10 @@ export abstract class WorkspacesService {
         invitation.id,
         "expired",
       );
-      throw new Error("Invitation has expired");
+      throw status(
+        400,
+        buildError(ErrorCode.VALIDATION_ERROR, "Invitation has expired"),
+      );
     }
 
     // 3. Add member if not already a member

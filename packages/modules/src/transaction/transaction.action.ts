@@ -18,6 +18,7 @@ import type {
 } from "@workspace/types";
 
 import { axiosInstance as api } from "../lib/axios.server";
+import { reportActionError } from "../lib/report-error";
 
 export const getTransactions = async (
   params: TransactionQueryParams,
@@ -54,6 +55,7 @@ export const getTransactions = async (
       },
     };
   } catch (error: any) {
+    await reportActionError(error, { action: "getTransactions" });
     return {
       success: false,
       code: error.response?.data?.code || "UNKNOWN_ERROR",
@@ -85,6 +87,7 @@ export const createTransaction = async (
     revalidateTag("transactions", "max");
     return { success: true, data: result };
   } catch (error: any) {
+    await reportActionError(error, { action: "createTransaction" });
     return {
       success: false,
       error: error.response?.data?.message || "Failed to create transaction",
@@ -133,6 +136,7 @@ export const bulkCreateTransactions = async (
       data: result,
     };
   } catch (error: any) {
+    await reportActionError(error, { action: "bulkCreateTransactions" });
     return {
       success: false,
       error:
@@ -158,6 +162,7 @@ export const updateTransaction = async (
     revalidateTag("transactions", "max");
     return { success: true, data: transaction as Transaction };
   } catch (error: any) {
+    await reportActionError(error, { action: "updateTransaction" });
     return {
       success: false,
       error: error.response?.data?.message || "Failed to update transaction",
@@ -174,6 +179,7 @@ export const deleteTransaction = async (
     revalidateTag("transactions", "max");
     return { success: true, data: undefined };
   } catch (error: any) {
+    await reportActionError(error, { action: "deleteTransaction" });
     return {
       success: false,
       error: error.response?.data?.message || "Failed to delete transaction",
@@ -197,6 +203,7 @@ export const bulkDeleteTransactions = async (
     revalidateTag("transactions", "max");
     return { success: true, data: result || { deleted: 0 } };
   } catch (error: any) {
+    await reportActionError(error, { action: "bulkDeleteTransactions" });
     return {
       success: false,
       error:
@@ -213,6 +220,7 @@ export const getTransactionDebts = async (
     const apiResponse = (response as any)._api_response;
     return { success: true, data: apiResponse?.data ?? response.data?.data };
   } catch (error: any) {
+    await reportActionError(error, { action: "getTransactionDebts" });
     return {
       success: false,
       error:
@@ -234,6 +242,7 @@ export const exportTransactions = async (params: {
 
     return { success: true, data: response.data };
   } catch (error: any) {
+    await reportActionError(error, { action: "exportTransactions" });
     return {
       success: false,
       error: error.response?.data?.message || "Failed to export transactions",

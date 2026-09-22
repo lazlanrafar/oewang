@@ -16,6 +16,9 @@ from app.core.database import fetchrow, transaction
 from app.core.ids import new_id
 from app.core.serde import row_to_dict
 from app.modules.execution.resolvers import resolve_multicurrency
+from app.utils.logger import get_logger
+
+log = get_logger("ai.execution.transactions")
 
 _INSERT = """
     INSERT INTO transactions
@@ -23,6 +26,7 @@ _INSERT = """
        amount, original_amount, original_currency_code, exchange_rate,
        date, type, description, name)
     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::text::timestamp,$12,$13,$14)
+    ON CONFLICT (id) DO NOTHING
     RETURNING *
 """
 
@@ -74,10 +78,11 @@ async def create_transaction(workspace_id: str, user_id: str, body: dict) -> dic
             },
         }
 
+    transaction_id = body.get("id") or new_id()
     async with transaction() as conn:
         row = await conn.fetchrow(
             _INSERT,
-            new_id(),
+            transaction_id,
             workspace_id,
             wallet_id,
             to_wallet_id,
@@ -92,6 +97,17 @@ async def create_transaction(workspace_id: str, user_id: str, body: dict) -> dic
             body.get("description"),
             body.get("name"),
         )
+        if row is None:
+            existing = await conn.fetchrow("SELECT * FROM transactions WHERE id = $1 AND workspace_id = $2 AND assigned_user_id = $3 AND deleted_at IS NULL", transaction_id, workspace_id, user_id)
+            if not existing:
+                log.error(
+                    "create_transaction: insert conflicted on id=%s but no matching row found for workspace=%s user=%s",
+                    transaction_id,
+                    workspace_id,
+                    user_id,
+                )
+                return {"success": False, "error": "Transaction unavailable"}
+            return {"success": True, "data": row_to_dict(existing), "replayed": True}
         tx = row_to_dict(row)
 
         if t_type == "transfer" and to_wallet_id:

@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "629430548516",
-    "project_id": "oewang-app",
-    "storage_bucket": "oewang-app.firebasestorage.app"
+    "project_number": "1025505474695",
+    "project_id": "oewang",
+    "storage_bucket": "oewang.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:629430548516:android:6a63b71a2a60698b8600b1",
+        "mobilesdk_app_id": "1:1025505474695:android:29332600514eed920be022",
         "android_client_info": {
           "package_name": "com.oewang.app"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyBG7E_O-MHS6TBd2Tixt03w6oPg8AwIG-o"
+          "current_key": "AIzaSyDyTdJ3cQMV6vnaBfb_JIK6Vrm28oDQsAI"
         }
       ],
       "services": {

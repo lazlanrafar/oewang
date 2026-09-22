@@ -19,12 +19,10 @@ function readMessageFromRecord(
 }
 
 export function extractErrorMessage(error: unknown, fallback: string): string {
-  if (error instanceof Error && error.message.trim().length > 0) {
-    return error.message;
-  }
-
   if (!error || typeof error !== "object") {
-    return fallback;
+    return error instanceof Error && error.message.trim().length > 0
+      ? error.message
+      : fallback;
   }
 
   const errObj = error as MaybeRecord;
@@ -36,6 +34,10 @@ export function extractErrorMessage(error: unknown, fallback: string): string {
 
   const messageFromResponse = readMessageFromRecord(response);
   if (messageFromResponse) return messageFromResponse;
+
+  if (error instanceof Error && error.message.trim().length > 0) {
+    return error.message;
+  }
 
   const messageFromError = readMessageFromRecord(errObj);
   if (messageFromError) return messageFromError;

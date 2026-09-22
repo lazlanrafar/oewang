@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"regexp"
@@ -15,7 +16,24 @@ import (
 
 	"github.com/oewang/worker/internal/aiclient"
 	"github.com/oewang/worker/internal/repo"
+	"github.com/oewang/worker/internal/telegram"
 )
+
+// isTransientAIError classifies an apps/ai call failure as worth an asynq
+// retry (network/5xx — apps/ai is probably just down) vs permanent (4xx —
+// retrying the same request will fail the same way every time).
+func isTransientAIError(err error) bool {
+	if err == nil {
+		return false
+	}
+	var statusErr *aiclient.StatusError
+	if errors.As(err, &statusErr) {
+		return statusErr.StatusCode >= 500
+	}
+	// Anything else reaching here (connection refused, timeout, DNS, context
+	// deadline, ...) is a transport-level failure — treat as transient.
+	return true
+}
 
 // TypeTelegramWebhookProcess is enqueued on demand (not periodic), one per
 // incoming Telegram webhook update.
@@ -56,8 +74,12 @@ type telegramUpdate struct {
 }
 
 type telegramMessage struct {
-	Chat struct {
+	From struct {
 		ID json.Number `json:"id"`
+	} `json:"from"`
+	Chat struct {
+		ID   json.Number `json:"id"`
+		Type string      `json:"type"`
 	} `json:"chat"`
 	Text     string              `json:"text"`
 	Caption  string              `json:"caption"`
@@ -233,12 +255,14 @@ func isUUID(s string) bool {
 func (h *TelegramWebhookHandler) Handle(ctx context.Context, t *asynq.Task) error {
 	var wrapper TelegramWebhookPayload
 	if err := json.Unmarshal(t.Payload(), &wrapper); err != nil {
-		return fmt.Errorf("tasks: decode telegram webhook payload: %w", err)
+		// Malformed payload will never decode on retry — don't burn the
+		// default 25-retry budget on it.
+		return fmt.Errorf("tasks: decode telegram webhook payload: %w: %w", err, asynq.SkipRetry)
 	}
 
 	var update telegramUpdate
 	if err := json.Unmarshal(wrapper.RawBody, &update); err != nil {
-		return fmt.Errorf("tasks: decode telegram update: %w", err)
+		return fmt.Errorf("tasks: decode telegram update: %w: %w", err, asynq.SkipRetry)
 	}
 	if update.Message == nil {
 		return nil // "OK": no message to process
@@ -296,8 +320,17 @@ func (h *TelegramWebhookHandler) Handle(ctx context.Context, t *asynq.Task) erro
 		userID = fallbackID
 	}
 
+	// Only an authenticated dashboard link proves the user identity. Legacy
+	// /connect workspace/user strings and first-member fallbacks do not.
+	verifiedID, _ := settings["personalMemoryUserId"].(string)
+	personal := verifiedID != "" && verifiedID == userID && msg.Chat.Type == "private" && msg.From.ID.String() == chatID
+	if personal {
+		member, err := h.Integrations.IsWorkspaceMember(ctx, workspaceID, userID)
+		personal = err == nil && member
+	}
 	chatSessionID, _ := settings["chatSessionId"].(string)
 
+	ctx = aiclient.WithConversation(ctx, chatSessionID, msg.Caption, personal)
 	persistSessionID := func(sessionID string) {
 		newSettings := cloneSettings(settings)
 		newSettings["chatSessionId"] = sessionID
@@ -314,13 +347,18 @@ func (h *TelegramWebhookHandler) Handle(ctx context.Context, t *asynq.Task) erro
 	if receiptFile != nil {
 		if err := h.handleReceiptAttachment(ctx, chatID, workspaceID, userID, chatSessionID, persistSessionID, *receiptFile); err != nil {
 			log.Printf("telegram: receipt attachment handling error: %v", err)
-			// asynq won't retry this task on a nil return (Handle always
-			// returns nil below) — tell the user instead of leaving them
-			// with no reply at all.
+			// Tell the user right away regardless of whether asynq will also
+			// retry — a transient apps/ai outage may take a while to recover,
+			// and the user shouldn't be left with no reply in the meantime.
 			h.Telegram.SendMessage(ctx, chatID, "❌ Sorry, something went wrong processing that receipt. Please try again.")
+			if isTransientAIError(err) {
+				return fmt.Errorf("tasks: handle receipt attachment: %w", err)
+			}
 		}
 	} else if text != "" {
-		h.handleTextMessage(ctx, chatID, workspaceID, userID, chatSessionID, persistSessionID, text, stopTyping)
+		if err := h.handleTextMessage(ctx, chatID, workspaceID, userID, chatSessionID, persistSessionID, text, stopTyping); err != nil {
+			return fmt.Errorf("tasks: handle text message: %w", err)
+		}
 	}
 
 	return nil
@@ -447,75 +485,34 @@ func (h *TelegramWebhookHandler) handleReceiptAttachment(
 		return nil
 	}
 
-	sessionID := chatSessionID
-	if sessionID == "" {
-		newSessionID, err := h.AiSessions.CreateSession(ctx, workspaceID, "Telegram Receipt")
-		if err != nil {
-			log.Printf("telegram: create session failed: %v", err)
-		} else {
-			sessionID = newSessionID
-			persistSessionID(sessionID)
-		}
+	if preview.SessionID != "" {
+		persistSessionID(preview.SessionID)
 	}
-	if sessionID != "" {
-		if err := h.AiSessions.SaveMessage(ctx, sessionID, workspaceID, "user", "[receipt photo]", attachments); err != nil {
-			log.Printf("telegram: save user message failed: %v", err)
-		}
-		if err := h.AiSessions.SaveMessage(ctx, sessionID, workspaceID, "assistant", preview.Reply, map[string]any{"invoiceDraft": preview.Draft}); err != nil {
-			log.Printf("telegram: save assistant message failed: %v", err)
-		}
-	}
+	h.sendPlainReply(ctx, chatID, preview.Reply)
 
-	h.Telegram.SendMessage(ctx, chatID, preview.Reply)
 	return nil
 }
 
 func (h *TelegramWebhookHandler) handleTextMessage(
 	ctx context.Context, chatID, workspaceID, userID, chatSessionID string,
 	persistSessionID func(string), text string, stopTyping func(),
-) {
-	handledByDraft := false
-
-	if chatSessionID != "" {
-		history, err := h.AiSessions.GetSessionMessages(ctx, chatSessionID, workspaceID)
-		if err != nil {
-			log.Printf("telegram: get session messages failed: %v", err)
-		} else {
-			draftHistory := make([]aiclient.DraftMessage, len(history))
-			for i, m := range history {
-				draftHistory[i] = aiclient.DraftMessage{Role: m.Role, Content: m.Content}
-			}
-			pendingDraft, err := h.AI.GetLatestDraftState(ctx, draftHistory)
-			if err != nil {
-				log.Printf("telegram: get latest draft state failed: %v", err)
-			} else if pendingDraft != nil {
-				if status, _ := pendingDraft["status"].(string); status == "awaiting_confirmation" {
-					draftResponse, err := h.AI.HandlePendingInvoiceDraft(ctx, workspaceID, userID,
-						aiclient.DraftMessage{Role: "user", Content: text}, pendingDraft, chatSessionID)
-					if err != nil {
-						log.Printf("telegram: handle pending draft failed: %v", err)
-					} else if draftResponse != nil {
-						h.Telegram.SendMessage(ctx, chatID, draftResponse.Reply)
-						handledByDraft = true
-					}
-				}
-			}
-		}
-	}
-
-	if handledByDraft {
-		return
-	}
-
-	h.streamChatReply(ctx, chatID, workspaceID, userID, chatSessionID, persistSessionID, text, stopTyping)
+) error {
+	// The sidecar loads the owned session and draft metadata. Never inspect
+	// private history through a workspace-only repository in this worker.
+	return h.streamChatReply(ctx, chatID, workspaceID, userID, chatSessionID, persistSessionID, text, stopTyping)
 }
 
 const editThrottle = 1300 * time.Millisecond
 
+// streamChatReply returns a non-nil error only for a transient apps/ai
+// transport failure (stream never opened, or died mid-stream) worth an asynq
+// retry. A deliberate event:"error" frame from apps/ai (a business-logic
+// failure it already chose to surface) is shown to the user and swallowed,
+// same as before — retrying won't change apps/ai's own decision.
 func (h *TelegramWebhookHandler) streamChatReply(
 	ctx context.Context, chatID, workspaceID, userID, chatSessionID string,
 	persistSessionID func(string), text string, stopTyping func(),
-) {
+) error {
 	messageID := h.Telegram.SendMessage(ctx, chatID, "…")
 
 	sendError := func(err error) {
@@ -530,8 +527,12 @@ func (h *TelegramWebhookHandler) streamChatReply(
 
 	events, err := h.AI.ChatStream(ctx, text, workspaceID, userID, chatSessionID)
 	if err != nil {
-		sendError(fmt.Errorf("open chat stream: %w", err))
-		return
+		wrapped := fmt.Errorf("open chat stream: %w", err)
+		sendError(wrapped)
+		if isTransientAIError(err) {
+			return wrapped
+		}
+		return nil
 	}
 
 	var (
@@ -540,9 +541,11 @@ func (h *TelegramWebhookHandler) streamChatReply(
 		lastEditAt      time.Time
 		firstEditLanded bool
 		finalReplyText  string
+		plainText       bool
 		finalSessionID  string
 		fileAttachment  *aiclient.StreamArtifactData
 		streamErr       error
+		streamTransient bool
 	)
 
 	for evt := range events {
@@ -561,7 +564,7 @@ func (h *TelegramWebhookHandler) streamChatReply(
 			now := time.Now()
 			dueForEdit := now.Sub(lastEditAt) >= editThrottle
 			if messageID != 0 && buffer.String() != lastEditedText && dueForEdit {
-				h.Telegram.EditMessageText(ctx, chatID, messageID, buffer.String(), "")
+				h.Telegram.EditMessageText(ctx, chatID, messageID, telegram.SplitText(buffer.String())[0], "")
 				lastEditedText = buffer.String()
 				lastEditAt = now
 				if !firstEditLanded {
@@ -572,6 +575,7 @@ func (h *TelegramWebhookHandler) streamChatReply(
 		case "done":
 			var data aiclient.StreamDoneData
 			if err := json.Unmarshal(evt.Data, &data); err == nil {
+				plainText = data.PlainText
 				finalReplyText = data.Reply
 				if finalReplyText == "" {
 					finalReplyText = buffer.String()
@@ -585,12 +589,23 @@ func (h *TelegramWebhookHandler) streamChatReply(
 				data.Error = "AI sidecar stream error"
 			}
 			streamErr = fmt.Errorf("%s", data.Error)
+		case "transport_error":
+			var data aiclient.StreamErrorData
+			_ = json.Unmarshal(evt.Data, &data)
+			if data.Error == "" {
+				data.Error = "connection to AI service was lost"
+			}
+			streamErr = fmt.Errorf("stream transport error: %s", data.Error)
+			streamTransient = true
 		}
 	}
 
 	if streamErr != nil {
 		sendError(streamErr)
-		return
+		if streamTransient {
+			return streamErr
+		}
+		return nil
 	}
 
 	if finalSessionID != "" && finalSessionID != chatSessionID {
@@ -598,15 +613,41 @@ func (h *TelegramWebhookHandler) streamChatReply(
 	}
 
 	if finalReplyText != "" {
-		replyText := h.normalizeAiReplyForChat(ctx, finalReplyText, workspaceID, userID)
-		if messageID != 0 {
-			h.Telegram.EditMessageText(ctx, chatID, messageID, replyText, "Markdown")
-		} else {
-			h.Telegram.SendMessage(ctx, chatID, replyText)
+		replyText := finalReplyText
+		if !plainText {
+			replyText = h.normalizeAiReplyForChat(ctx, finalReplyText, workspaceID, userID)
 		}
+		parts := telegram.SplitText(replyText)
+		if len(parts) > 0 && messageID != 0 {
+			mode := "Markdown"
+			if plainText || len(parts) > 1 {
+				mode = ""
+			}
+			h.Telegram.EditMessageText(ctx, chatID, messageID, parts[0], mode)
+			for _, part := range parts[1:] {
+				h.sendPlainReply(ctx, chatID, part)
+			}
+		} else {
+			h.sendPlainReply(ctx, chatID, replyText)
+		}
+
 	}
 
 	if fileAttachment != nil {
 		h.Telegram.SendDocument(ctx, chatID, fileAttachment.Payload.URL, fileAttachment.Payload.Name)
+	}
+
+	return nil
+}
+
+func (h *TelegramWebhookHandler) sendPlainReply(ctx context.Context, chatID, text string) {
+	if sender, ok := h.Telegram.(interface {
+		SendPlainMessage(context.Context, string, string) int64
+	}); ok {
+		sender.SendPlainMessage(ctx, chatID, text)
+		return
+	}
+	for _, part := range telegram.SplitText(text) {
+		h.Telegram.SendMessage(ctx, chatID, part)
 	}
 }

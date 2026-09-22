@@ -112,7 +112,7 @@ Full details in [BEST_PRACTICE_NEXT_JS.md](./docs/BEST_PRACTICE_NEXT_JS.md).
 ### Critical Rules
 
 1. **`actions/` is the only place HTTP calls are made** — `"use server"`, import `axiosInstance` from `@workspace/modules/server` (reads `oewang-session` cookie). Never client axios in server actions.
-2. **Never call `fetch`/`axios` directly** outside `actions/`.
+2. **Never call `fetch`/`axios` directly** outside `actions/`. Exception: Route Handlers under `app/(api)/api/auth/*/callback` and `app/(api)/api/oauth/code` — OAuth token exchange and third-party callback verification run outside a Server/Client Component tree, so they can't use `"use server"` actions. Their error handling must still extract the backend's message with the same `response?.data?.message || fallback` convention `packages/modules`'s action files use.
 3. **Routes dynamic by default** (Next.js 16) — opt into caching with `"use cache"`.
 4. **Always `await params`** — it is a Promise in Next.js 16.
 5. **Keep `"use client"` boundary as low as possible.**

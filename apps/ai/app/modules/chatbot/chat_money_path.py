@@ -8,11 +8,13 @@ enforcement, and system-prompt build all happen here; the LLM tool loop
 import asyncio
 
 from app.core import agent_settings as agent_settings_mod
-from app.core import audit, quota, sessions
+from app.core import audit, quota, sessions, user_memory
 from app.core.database import fetchrow
-from app.modules.chatbot import draft, prompts_web
+from app.modules.chatbot import draft, prompts_web, memory_controls
 from app.modules.execution.executor import fetch_wallets_and_categories
 from app.utils.logger import get_logger
+
+from app.modules.chatbot.language import detect_language, resolve_language
 
 log = get_logger("ai.chatbot.chat_money_path")
 
@@ -30,7 +32,7 @@ def _derive_title(first_message: str) -> str:
     return clean or "New chat"
 
 
-async def _upgrade_title(first_message: str, workspace_id: str, session_id: str) -> None:
+async def _upgrade_title(first_message: str, workspace_id: str, session_id: str, user_id: str) -> None:
     """Cosmetic async title upgrade — fires after chat_begin_core returns,
     never blocks the reply. Mirrors ai.service.ts's .then().catch() pattern."""
     try:
@@ -39,7 +41,7 @@ async def _upgrade_title(first_message: str, workspace_id: str, session_id: str)
         smart_title = await generate_title(first_message, workspace_id)
         if not smart_title:
             return
-        await sessions.update_title(session_id, workspace_id, smart_title)
+        await sessions.update_title(session_id, workspace_id, smart_title, user_id)
         await _notify_usage(workspace_id, "ai.session_title")
     except Exception:  # noqa: BLE001 — cosmetic, never surfaces to the user
         log.warning("Session title generation failed", exc_info=True)
@@ -82,37 +84,46 @@ async def _workspace_currency(workspace_id: str) -> tuple[str, str]:
 
 
 async def chat_begin_core(
-    workspace_id: str, user_id: str, messages: list[dict], session_id: str | None = None
+    workspace_id: str, user_id: str, messages: list[dict], session_id: str | None = None, *, personal_memory: bool = True
 ) -> dict:
     if not messages:
         raise ValueError("No messages provided")
     latest_user_message = messages[-1]
 
-    current_session_id = session_id
-    if not current_session_id:
-        title = _derive_title(latest_user_message["content"])
-        new_session = await sessions.create_session(workspace_id, title)
-        current_session_id = new_session["id"]
-
-        asyncio.create_task(
-            _upgrade_title(latest_user_message["content"], workspace_id, current_session_id)
-        )
-
-        await audit.log(
-            workspace_id=workspace_id,
-            user_id=user_id,
-            action="ai.session_created",
-            entity="ai_session",
-            entity_id=current_session_id,
-            after=new_session,
-        )
-
-        for msg in messages[:-1]:
-            await sessions.save_message(current_session_id, workspace_id, msg["role"], msg["content"])
-    else:
-        session = await sessions.get_session(current_session_id, workspace_id)
-        if session is None:
+    if latest_user_message.get("role") != "user":
+        raise ValueError("The latest message must be from the user")
+    session = None
+    if session_id:
+        session = await sessions.get_session(session_id, workspace_id, user_id)
+        if session is None or (session.get("user_id") and bool(session.get("personal_memory")) != personal_memory):
             raise SessionNotFoundError("Chat session not found or access denied.")
+    # Legacy sessions are shared archives. Continue in a fresh private session;
+    # never import client-supplied history or infer memories from the archive.
+    if not session or not session.get("user_id"):
+        session = await sessions.create_session(workspace_id, _derive_title(latest_user_message["content"]),
+                                                user_id, personal_memory=personal_memory)
+        asyncio.create_task(_upgrade_title(latest_user_message["content"], workspace_id, session["id"], user_id))
+        await audit.log(workspace_id=workspace_id, user_id=user_id, action="ai.session_created",
+                        entity="ai_session", entity_id=session["id"], after={"private": True})
+    current_session_id = session["id"]
+    context = draft.parse_attachments(session.get("context")) or {}
+    agent_settings, memory, workspace_snapshot = await asyncio.gather(
+        agent_settings_mod.get_or_create(workspace_id),
+        user_memory.load(workspace_id, user_id, personal=personal_memory),
+        fetch_wallets_and_categories(workspace_id),
+    )
+    names = [w["name"] for w in workspace_snapshot["wallets"]]
+    language = resolve_language(latest_user_message["content"], context.get("language"),
+        user_memory.value_for(memory, "language"), agent_settings.get("response_language"), names)
+    context["language"] = language
+    control = await memory_controls.handle(workspace_id, user_id, latest_user_message["content"],
+        context, memory, language, personal=personal_memory)
+    if control is None and memory.get("enabled") and detect_language(latest_user_message["content"], names):
+        try:
+            await user_memory.remember(workspace_id, user_id, "language", "language", language, source="inferred")
+        except Exception:
+            log.warning("Could not persist conversation language", exc_info=True)
+    await sessions.update_context(current_session_id, workspace_id, user_id, context)
 
     await sessions.save_message(
         current_session_id,
@@ -122,12 +133,17 @@ async def chat_begin_core(
         latest_user_message.get("attachments"),
     )
 
-    history = await sessions.get_session_messages(current_session_id, workspace_id)
+    if control is not None:
+        await sessions.save_message(current_session_id, workspace_id, "assistant", control)
+        return {"kind": "early", "sessionId": current_session_id, "reply": control}
+
+    history = await sessions.get_session_messages(current_session_id, workspace_id, user_id)
 
     # Receipt-draft short-circuit, part 1: a pending draft awaiting the user's
     # confirm/cancel/wallet-select reply.
     latest_draft = draft.get_latest_draft_state(history)
     if latest_draft:
+        latest_draft["language"] = language
         draft_response = await draft.handle_pending_invoice_draft(
             workspace_id, user_id, latest_user_message, latest_draft, current_session_id
         )
@@ -143,7 +159,7 @@ async def chat_begin_core(
     )
     if is_receipt_upload:
         preview = await draft.build_invoice_draft_from_attachments(
-            workspace_id, user_id, message_attachments
+            workspace_id, user_id, message_attachments, language=language
         )
         if preview:
             await sessions.save_message(
@@ -160,7 +176,7 @@ async def chat_begin_core(
     # receipt") gets saved to the vault directly — no OCR, no draft.
     elif message_attachments:
         upload = await draft.build_vault_upload_from_attachments(
-            workspace_id, user_id, message_attachments
+            workspace_id, user_id, message_attachments, language=language
         )
         if upload:
             await sessions.save_message(
@@ -171,20 +187,18 @@ async def chat_begin_core(
     # None of these four depend on each other or on anything above — fetched
     # together instead of one-after-another. Also means a draft-continuation
     # turn (which returns early above) never pays for fetches it doesn't use.
-    current_tokens, (currency_code, currency_symbol), agent_settings, workspace_snapshot = await asyncio.gather(
-        quota.check_quota(workspace_id),  # raises quota.PlanLimitReached → 422 if over
-        _workspace_currency(workspace_id),
-        agent_settings_mod.get_or_create(workspace_id),
-        fetch_wallets_and_categories(workspace_id),
-    )
+    current_tokens, (currency_code, currency_symbol) = await asyncio.gather(
+        quota.check_quota(workspace_id), _workspace_currency(workspace_id))
     system_prompt = prompts_web.build_system_prompt(
         currency_code,
         currency_symbol,
         custom_instructions=agent_settings.get("custom_instructions"),
-        response_language=agent_settings.get("response_language"),
+        response_language="indonesian" if language == "id" else "english",
         wallets=workspace_snapshot["wallets"],
         categories=workspace_snapshot["categories"],
     )
+
+    system_prompt += user_memory.prompt_context(memory)
 
     consolidated_history = [
         {"role": m["role"], "content": m["content"], "attachments": draft.parse_attachments(m.get("attachments"))}
@@ -197,6 +211,8 @@ async def chat_begin_core(
         "systemPrompt": system_prompt,
         "history": consolidated_history,
         "currentTokens": current_tokens,
+        "personal_memory": personal_memory,
+        "memory_evidence": latest_user_message["content"],
     }
 
 

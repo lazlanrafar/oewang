@@ -11,6 +11,8 @@ import type {
 } from "@workspace/types";
 import type { AxiosResponse } from "axios";
 import { axiosInstance as api } from "../lib/axios.server";
+import { extractErrorMessage } from "../lib/error-message";
+import { reportActionError } from "../lib/report-error";
 
 export type CreateInvoiceData = InvoiceCreateData;
 export type UpdateInvoiceData = InvoiceUpdateData;
@@ -21,26 +23,6 @@ export interface GetInvoicesParams {
   search?: string;
   status?: string;
 }
-
-type ErrorWithResponse = {
-  response?: {
-    data?: {
-      message?: string;
-    };
-  };
-};
-
-const getErrorMessage = (
-  error: Error | ErrorWithResponse | null | undefined,
-  fallback: string,
-) => {
-  if (!error) return fallback;
-  if (error instanceof Error && error.message) return error.message;
-  if ("response" in error) {
-    return error.response?.data?.message || fallback;
-  }
-  return fallback;
-};
 
 type ApiEnvelopeResponse<T> = AxiosResponse<ApiResponse<T>> & {
   _api_response?: ApiResponse<T>;
@@ -75,11 +57,11 @@ export const getInvoices = async (
       },
     };
   } catch (error) {
-    const typedError = error as Error | ErrorWithResponse | null | undefined;
+    await reportActionError(error, { action: "getInvoices" });
     return {
       success: false,
       code: "FETCH_INVOICES_FAILED",
-      message: getErrorMessage(typedError, "Failed to fetch invoices"),
+      message: extractErrorMessage(error, "Failed to fetch invoices"),
       data: [],
       meta: {
         timestamp: Date.now(),
@@ -101,10 +83,10 @@ export const getInvoiceById = async (
     const res = await api.get(`/invoices/${id}`);
     return { success: true, data: res.data?.data };
   } catch (error) {
-    const typedError = error as Error | ErrorWithResponse | null | undefined;
+    await reportActionError(error, { action: "getInvoiceById" });
     return {
       success: false,
-      error: getErrorMessage(typedError, "Failed to fetch invoice"),
+      error: extractErrorMessage(error, "Failed to fetch invoice"),
     };
   }
 };
@@ -116,10 +98,10 @@ export const createInvoice = async (
     const res = await api.post("/invoices", data);
     return { success: true, data: res.data?.data };
   } catch (error) {
-    const typedError = error as Error | ErrorWithResponse | null | undefined;
+    await reportActionError(error, { action: "createInvoice" });
     return {
       success: false,
-      error: getErrorMessage(typedError, "Failed to create invoice"),
+      error: extractErrorMessage(error, "Failed to create invoice"),
     };
   }
 };
@@ -132,10 +114,10 @@ export const updateInvoice = async (
     const res = await api.patch(`/invoices/${id}`, data);
     return { success: true, data: res.data?.data };
   } catch (error) {
-    const typedError = error as Error | ErrorWithResponse | null | undefined;
+    await reportActionError(error, { action: "updateInvoice" });
     return {
       success: false,
-      error: getErrorMessage(typedError, "Failed to update invoice"),
+      error: extractErrorMessage(error, "Failed to update invoice"),
     };
   }
 };
@@ -147,10 +129,10 @@ export const deleteInvoice = async (
     await api.delete(`/invoices/${id}`);
     return { success: true, data: undefined };
   } catch (error) {
-    const typedError = error as Error | ErrorWithResponse | null | undefined;
+    await reportActionError(error, { action: "deleteInvoice" });
     return {
       success: false,
-      error: getErrorMessage(typedError, "Failed to delete invoice"),
+      error: extractErrorMessage(error, "Failed to delete invoice"),
     };
   }
 };
@@ -162,10 +144,10 @@ export const getInvoiceToken = async (
     const res = await api.get(`/invoices/${id}/token`);
     return { success: true, data: res.data?.data };
   } catch (error) {
-    const typedError = error as Error | ErrorWithResponse | null | undefined;
+    await reportActionError(error, { action: "getInvoiceToken" });
     return {
       success: false,
-      error: getErrorMessage(typedError, "Failed to fetch invoice token"),
+      error: extractErrorMessage(error, "Failed to fetch invoice token"),
     };
   }
 };
@@ -177,10 +159,10 @@ export const getInvoiceActivity = async (
     const res = await api.get(`/invoices/${id}/activity`);
     return { success: true, data: res.data?.data };
   } catch (error) {
-    const typedError = error as Error | ErrorWithResponse | null | undefined;
+    await reportActionError(error, { action: "getInvoiceActivity" });
     return {
       success: false,
-      error: getErrorMessage(typedError, "Failed to fetch invoice activity"),
+      error: extractErrorMessage(error, "Failed to fetch invoice activity"),
     };
   }
 };
@@ -195,10 +177,10 @@ export const getPublicInvoice = async (
     });
     return { success: true, data: res.data?.data };
   } catch (error) {
-    const typedError = error as Error | ErrorWithResponse | null | undefined;
+    await reportActionError(error, { action: "getPublicInvoice" });
     return {
       success: false,
-      error: getErrorMessage(typedError, "Failed to fetch public invoice"),
+      error: extractErrorMessage(error, "Failed to fetch public invoice"),
     };
   }
 };

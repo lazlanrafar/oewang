@@ -7,12 +7,12 @@ import base64 as b64
 import csv
 import io
 import json
-import logging
 
 from app.config import get_settings
 from app.core.llm import get_client
+from app.utils.logger import get_logger
 
-log = logging.getLogger("ai.imports")
+log = get_logger("ai.imports")
 
 
 def parse_file_to_rows(data_b64: str, mime_type: str) -> list[dict]:

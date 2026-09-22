@@ -4,6 +4,7 @@ export * from "./schema/ai-agent-settings";
 export * from "./schema/ai-knowledge-chunks";
 export * from "./schema/ai-messages";
 export * from "./schema/ai-sessions";
+export * from "./schema/ai-user-memories";
 export * from "./schema/articles";
 export * from "./schema/audit-logs";
 export * from "./schema/billing-invoices";

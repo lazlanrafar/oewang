@@ -63,16 +63,16 @@ export abstract class AiService {
     return parsed;
   }
 
-  static async getSessions(workspaceId: string) {
-    return AiRepository.getSessions(workspaceId);
+  static async getSessions(workspaceId: string, userId: string) {
+    return AiRepository.getSessions(workspaceId, userId);
   }
 
-  static async getSessionMessages(sessionId: string, workspaceId: string) {
-    return AiRepository.getSessionMessages(sessionId, workspaceId);
+  static async getSessionMessages(sessionId: string, workspaceId: string, userId: string) {
+    return AiRepository.getSessionMessages(sessionId, workspaceId, userId);
   }
 
-  static async getSession(sessionId: string, workspaceId: string) {
-    return AiRepository.getSession(sessionId, workspaceId);
+  static async getSession(sessionId: string, workspaceId: string, userId: string) {
+    return AiRepository.getSession(sessionId, workspaceId, userId);
   }
 
   // Display-only cache for GET /ai/quota (fetched on every page load). Quota

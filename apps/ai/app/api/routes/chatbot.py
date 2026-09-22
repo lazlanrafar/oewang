@@ -19,6 +19,9 @@ from app.schemas.chatbot import (
     WebChatRequest,
     WebChatResponse,
 )
+from app.utils.logger import get_logger
+
+log = get_logger("ai.routes.chatbot")
 
 router = APIRouter(tags=["chatbot"])
 
@@ -44,8 +47,9 @@ async def post_chat_stream(req: ChatRequest):
                 event_name = event.get("event", "message")
                 data_str = json.dumps(event.get("data", {}))
                 yield f"event: {event_name}\ndata: {data_str}\n\n"
-        except Exception as e:
-            err_data = json.dumps({"error": str(e)})
+        except Exception:
+            log.error("unhandled error in /chat/stream", exc_info=True)
+            err_data = json.dumps({"error": "An unexpected error occurred. Please try again."})
             yield f"event: error\ndata: {err_data}\n\n"
 
     return StreamingResponse(
@@ -129,8 +133,9 @@ async def post_chat_web_stream(
                 }
             )
             yield f"event: error\ndata: {err_data}\n\n"
-        except Exception as e:
-            err_data = json.dumps({"error": str(e)})
+        except Exception:
+            log.error("unhandled error in /chat/web/stream", exc_info=True)
+            err_data = json.dumps({"error": "An unexpected error occurred. Please try again."})
             yield f"event: error\ndata: {err_data}\n\n"
 
     return StreamingResponse(

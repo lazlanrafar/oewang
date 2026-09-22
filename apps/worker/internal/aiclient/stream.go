@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 )
@@ -35,6 +36,7 @@ func (c *Client) ChatStream(ctx context.Context, message, workspaceID, userID, s
 	if sessionID != "" {
 		body["session_id"] = sessionID
 	}
+	addConversation(ctx, body)
 	payload, err := json.Marshal(body)
 	if err != nil {
 		return nil, fmt.Errorf("aiclient: encode chat/stream body: %w", err)
@@ -54,8 +56,9 @@ func (c *Client) ChatStream(ctx context.Context, message, workspaceID, userID, s
 		return nil, fmt.Errorf("aiclient: chat/stream request failed: %w", err)
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, statusErrorBodyLimit))
 		resp.Body.Close()
-		return nil, fmt.Errorf("aiclient: chat/stream returned status %d", resp.StatusCode)
+		return nil, &StatusError{Path: "/internal/chat/stream", StatusCode: resp.StatusCode, Body: string(body)}
 	}
 
 	events := make(chan StreamEvent)
@@ -105,6 +108,19 @@ func (c *Client) ChatStream(ctx context.Context, message, workspaceID, userID, s
 			}
 		}
 		flush() // final frame if stream ends without a trailing blank line
+
+		// scanner.Scan() also returns false on a broken connection, not just
+		// a clean EOF — without this check that looks identical to the
+		// stream ending normally, and whatever partial reply was buffered
+		// gets sent to the user with no error surfaced. Emit a distinct event
+		// (not "error", which is apps/ai's own deliberate error frame) so
+		// callers can tell the two apart.
+		if err := scanner.Err(); err != nil {
+			select {
+			case events <- StreamEvent{Event: "transport_error", Data: json.RawMessage(fmt.Sprintf(`{"error":%q}`, err.Error()))}:
+			case <-ctx.Done():
+			}
+		}
 	}()
 
 	return events, nil
@@ -117,6 +133,7 @@ type StreamContentData struct {
 
 // StreamDoneData is the payload shape for event:"done" frames.
 type StreamDoneData struct {
+	PlainText bool   `json:"plain_text"`
 	Reply     string `json:"reply"`
 	SessionID string `json:"session_id"`
 }

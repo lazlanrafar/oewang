@@ -54,6 +54,12 @@ async def _plan_limit_handler(_: Request, exc: PlanLimitReached) -> JSONResponse
     )
 
 
+@app.exception_handler(Exception)
+async def _unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    log.error("Unhandled exception on %s %s", request.method, request.url.path, exc_info=True)
+    return JSONResponse(status_code=500, content={"error": "Internal server error"})
+
+
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}

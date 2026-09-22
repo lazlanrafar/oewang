@@ -11,6 +11,7 @@ import { axiosInstance } from "../lib/axios.server";
 import { createWorkspace } from "../workspace/workspace.action";
 import { Env } from "@workspace/constants";
 import { extractErrorMessage } from "../lib/error-message";
+import { reportActionError } from "../lib/report-error";
 
 function sessionCookieOptions(isProduction: boolean) {
   return {
@@ -62,6 +63,7 @@ export async function login(
     }
   } catch (error: unknown) {
     if (isRedirectError(error)) throw error;
+    await reportActionError(error, { action: "login" });
     return {
       success: false,
       error: extractErrorMessage(error, "Invalid email or password"),
@@ -95,6 +97,7 @@ export async function signup(
     }
   } catch (error: unknown) {
     if (isRedirectError(error)) throw error;
+    await reportActionError(error, { action: "signup" });
     return {
       success: false,
       error: extractErrorMessage(error, "Registration failed"),
@@ -159,6 +162,7 @@ export async function onboardingCreateWorkspaceAction(data: {
     return { success: true, data: workspace };
   } catch (error: unknown) {
     if (isRedirectError(error)) throw error;
+    await reportActionError(error, { action: "onboardingCreateWorkspaceAction" });
     return {
       success: false,
       error: extractErrorMessage(error, "Failed to create workspace"),

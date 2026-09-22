@@ -10,6 +10,9 @@ from app.core import audit
 from app.core.database import fetch, transaction
 from app.core.ids import new_id
 from app.core.serde import row_to_dict, to_jsonable
+from app.utils.logger import get_logger
+
+log = get_logger("ai.execution.items")
 
 
 async def add_transaction_items(
@@ -38,6 +41,11 @@ async def add_transaction_items(
             transaction_id, workspace_id,
         )
         if not owns_txn:
+            log.warning(
+                "add_transaction_items: transaction %s not in workspace %s",
+                transaction_id,
+                workspace_id,
+            )
             raise ValueError("transaction not found in workspace")
         valid_cats = {
             r["id"]
@@ -57,13 +65,15 @@ async def add_transaction_items(
                   (id, workspace_id, transaction_id, name, brand, quantity, unit,
                    unit_price, amount, category_id, notes)
                 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+                ON CONFLICT (id) DO NOTHING
                 RETURNING *
                 """,
-                new_id(), workspace_id, transaction_id, it["name"], it.get("brand"),
+                it.get("id") or new_id(), workspace_id, transaction_id, it["name"], it.get("brand"),
                 _dec(it.get("quantity")), it.get("unit"), _dec(it.get("unitPrice")),
                 _dec(it.get("amount")), category_id, it.get("notes"),
             )
-            created.append(row_to_dict(row))
+            if row is not None:
+                created.append(row_to_dict(row))
         await audit.log(
             workspace_id=workspace_id, user_id=user_id,
             action="transaction_items.bulk_created", entity="transaction_item",

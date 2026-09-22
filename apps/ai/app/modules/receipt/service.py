@@ -6,12 +6,12 @@ images; pypdf text for PDFs. Strict JSON-schema structured output.
 import base64 as b64
 import io
 import json
-import logging
 
 from app.config import get_settings
 from app.core.llm import get_client
+from app.utils.logger import get_logger
 
-log = logging.getLogger("ai.receipt")
+log = get_logger("ai.receipt")
 
 _ITEM_PROPS = {
     "name": {"type": "string"},

@@ -15,6 +15,10 @@ import re
 from datetime import datetime, timezone
 
 from app.core import quota, sessions
+from app.core.quota import PlanLimitReached
+from app.core.ids import new_id
+from app.modules.chatbot.language import say
+from app.modules.chatbot.receipt_preview import render
 from app.core.database import fetch
 from app.core.vault import upload_receipt_attachment
 from app.modules.execution.items import add_transaction_items
@@ -77,7 +81,7 @@ def format_amount(amount) -> str:
 
 
 _CONFIRM_RE = re.compile(r"(^|\b)(confirm|confirmed|yes|ok|okay|save|simpan|ya|lanjut)(\b|$)", re.IGNORECASE)
-_CANCEL_RE = re.compile(r"(^|\b)(cancel|batal|jangan|stop|abort)(\b|$)", re.IGNORECASE)
+_CANCEL_RE = re.compile(r"(^|\b)(cancel|batal|jangan|stop|abort|tidak jadi|do not|don.t)(\b|$)", re.IGNORECASE)
 _WALLET_NAME_RE = re.compile(r"(?:account|wallet|akun)\s*[:=-]\s*([^\n]+)", re.IGNORECASE)
 _DOCUMENT_INTENT_RE = re.compile(
     r"dokumen|document|bukan struk|not a receipt|simpan (file|dokumen)|save (this )?(file|document)|arsipkan",
@@ -166,7 +170,7 @@ async def _expense_category_context(workspace_id: str) -> str:
 
 
 async def build_invoice_draft_from_attachments(
-    workspace_id: str, user_id: str, attachments: list[dict] | None
+    workspace_id: str, user_id: str, attachments: list[dict] | None, *, language: str = "en"
 ) -> dict | None:
     """Returns {"reply", "draft"} or None if there's nothing to build from."""
     if not attachments:
@@ -181,12 +185,13 @@ async def build_invoice_draft_from_attachments(
     if not default_wallet:
         empty_draft = {
             "status": "awaiting_confirmation",
+            "language": language,
             "createdAt": to_valid_iso_date(None),
             "wallets": wallets,
             "entries": [],
         }
         return {
-            "reply": "I found receipt files, but no account is available yet. Please create an account first, then upload again.",
+            "reply": say(language, "No account is available. Please create an account and upload again.", "Belum ada akun. Silakan buat akun, lalu unggah kembali."),
             "draft": empty_draft,
         }
 
@@ -220,10 +225,12 @@ async def build_invoice_draft_from_attachments(
                 failed_lines.append(f"{attachment['name']}: unable to read amount")
                 continue
 
-            items = [i for i in (parsed.get("items") or []) if i.get("name") and float(i.get("amount") or 0) > 0]
+            items = [i for i in (parsed.get("items") or []) if i.get("name")]
             entries.append(
                 {
                     "fileName": attachment["name"],
+                    "transactionId": new_id(),
+                    "receiptDate": parsed.get("date"),
                     "amount": float(parsed["amount"]),
                     "date": to_valid_iso_date(parsed.get("date")),
                     "name": parsed.get("name") or attachment["name"],
@@ -232,54 +239,50 @@ async def build_invoice_draft_from_attachments(
                     "attachmentIds": attachment_ids,
                     "items": [
                         {
-                            "name": i["name"],
+                            "id": new_id(),
+                            "id": i.get("id"),
+                        "name": i["name"],
                             "brand": i.get("brand"),
                             "quantity": i.get("quantity"),
                             "unit": i.get("unit"),
                             "unitPrice": i.get("unitPrice"),
-                            "amount": float(i["amount"]),
+                            "amount": float(i["amount"]) if i.get("amount") is not None else None,
                             "categoryId": i.get("categoryId") or parsed.get("categoryId"),
                         }
                         for i in items
                     ],
                 }
             )
+        except PlanLimitReached:
+            raise
         except Exception as err:  # noqa: BLE001
             failed_lines.append(f"{attachment.get('name')}: {err}")
 
     draft = {
         "status": "awaiting_confirmation",
+            "language": language,
         "createdAt": to_valid_iso_date(None),
         "wallets": wallets,
         "entries": entries,
     }
 
     if not entries:
-        reply = "I could not read any receipt from the uploaded files."
+        reply = say(language, "I could not read any receipt from the uploaded files.", "Saya belum dapat membaca struk yang diunggah.")
         if failed_lines:
             reply += "\n" + "\n".join(f"- {l}" for l in failed_lines)
         return {"reply": reply, "draft": draft}
 
-    wallet_by_id = {w["id"]: w["name"] for w in wallets}
-    lines = ["I parsed your receipt — please confirm before I save."]
-    for i, e in enumerate(entries):
-        date_display = datetime.fromisoformat(e["date"]).strftime("%d/%m/%Y")
-        lines.append(
-            f"{i + 1}. {e['name']} — IDR {format_amount(e['amount'])} | {date_display} | "
-            f"account: {wallet_by_id.get(e['walletId'], '-')}"
-        )
-    lines += ["", "To change account, reply: account: <account name>", "Then reply: confirm"]
+    reply = render(entries, wallets, language)
     if failed_lines:
-        lines += ["", "Skipped files:"] + [f"- {l}" for l in failed_lines]
-
-    return {"reply": "\n".join(lines), "draft": draft}
+        reply += "\n\n" + say(language, "Unreadable files:", "Berkas tidak terbaca:") + "\n" + "\n".join(f"- {line.split(':')[0]}" for line in failed_lines)
+    return {"reply": reply, "draft": draft}
 
 
 # ── Save a general (non-receipt) document straight to the vault ────────────────
 
 
 async def build_vault_upload_from_attachments(
-    workspace_id: str, user_id: str, attachments: list[dict] | None
+    workspace_id: str, user_id: str, attachments: list[dict] | None, *, language: str = "en"
 ) -> dict | None:
     """Returns {"reply"} or None if there's nothing to upload. No OCR, no
     draft/confirm dance — this is a plain save, not a financial record."""
@@ -298,11 +301,11 @@ async def build_vault_upload_from_attachments(
             failed.append(f"{attachment.get('name')}: {result.get('error')}")
 
     if not saved:
-        return {"reply": "\n".join(["Could not save any file."] + [f"- {l}" for l in failed])}
+        return {"reply": "\n".join([say(language, "Could not save any file.", "Berkas belum dapat disimpan.")] + [f"- {l}" for l in failed])}
 
-    lines = [f"Tersimpan: {', '.join(saved)}"]
+    lines = [say(language, "Saved: ", "Tersimpan: ") + ", ".join(saved)]
     if failed:
-        lines += ["", "Gagal disimpan:"] + [f"- {l}" for l in failed]
+        lines += ["", say(language, "Could not save:", "Gagal disimpan:")] + [f"- {l}" for l in failed]
     return {"reply": "\n".join(lines)}
 
 
@@ -312,6 +315,7 @@ async def build_vault_upload_from_attachments(
 async def confirm_draft_and_create_transactions(
     workspace_id: str, user_id: str, draft: dict, wallet_override_id: str | None = None
 ) -> dict:
+    language = draft.get("language", "en")
     created_lines: list[str] = []
     created_count = 0
 
@@ -321,6 +325,7 @@ async def confirm_draft_and_create_transactions(
             workspace_id,
             user_id,
             {
+                "id": entry.get("transactionId"),
                 "wallet_id": wallet_id,
                 "category_id": entry.get("categoryId") or None,
                 "amount": entry["amount"],
@@ -333,6 +338,8 @@ async def confirm_draft_and_create_transactions(
         )
 
         transaction_id = (result.get("data") or {}).get("id")
+        if not result.get("success") or not transaction_id:
+            return {"reply": say(language, "Could not confirm saving the receipt. Please retry.", "Penyimpanan struk belum dapat dikonfirmasi. Silakan coba lagi."), "createdCount": created_count, "complete": False}
         items = entry.get("items") or []
         if transaction_id and items:
             await add_transaction_items(
@@ -341,6 +348,7 @@ async def confirm_draft_and_create_transactions(
                 transaction_id,
                 [
                     {
+                        "id": i.get("id"),
                         "name": i["name"],
                         "brand": i.get("brand"),
                         "quantity": i.get("quantity"),
@@ -358,9 +366,9 @@ async def confirm_draft_and_create_transactions(
         suffix = f" ({len(items)} items)" if items else ""
         created_lines.append(f"{entry['name']} — IDR {format_amount(entry['amount'])}{suffix}")
 
-    reply_lines = [f"Saved {created_count} transaction{'s' if created_count != 1 else ''}."]
+    reply_lines = [say(language, f"Saved {created_count} transaction(s).", f"Berhasil menyimpan {created_count} transaksi.")]
     reply_lines += [f"- {l}" for l in created_lines]
-    return {"reply": "\n".join(reply_lines), "createdCount": created_count}
+    return {"reply": "\n".join(reply_lines), "createdCount": created_count, "complete": True}
 
 
 # ── Handle a reply while a draft is pending confirmation ────────────────────────
@@ -376,6 +384,7 @@ async def handle_pending_invoice_draft(
     if draft.get("status") != "awaiting_confirmation":
         return None
 
+    language = draft.get("language", "en")
     wallets = draft.get("wallets") or []
     content = latest_user_message.get("content") or ""
     requested_wallet_name = extract_requested_wallet_name(content, wallets)
@@ -391,13 +400,13 @@ async def handle_pending_invoice_draft(
 
     if cancel:
         cancelled_draft = {**draft, "status": "cancelled"}
-        return await _reply("Cancelled. I did not save any transaction from this receipt.", cancelled_draft)
+        return await _reply(say(language, "Cancelled. No transaction saved.", "Dibatalkan. Tidak ada transaksi yang disimpan."), cancelled_draft)
 
     if confirm:
         result = await confirm_draft_and_create_transactions(
             workspace_id, user_id, draft, resolved_wallet["id"] if resolved_wallet else None
         )
-        confirmed_draft = {**draft, "status": "confirmed"}
+        confirmed_draft = {**draft, "status": "confirmed" if result.get("complete", True) else "awaiting_confirmation"}
         return await _reply(result["reply"], confirmed_draft)
 
     if requested_wallet_name and not resolved_wallet:
@@ -407,6 +416,8 @@ async def handle_pending_invoice_draft(
             f"Available accounts:\n{options}\n\n"
             f"Reply with: account: <account name>"
         )
+        if language == "id":
+            reply = f'Akun "{requested_wallet_name}" tidak ditemukan.\nAkun tersedia:\n{options}\n\nBalas: akun: <nama akun>'
         return await _reply(reply, draft)
 
     if resolved_wallet:
@@ -415,10 +426,14 @@ async def handle_pending_invoice_draft(
             "entries": [{**e, "walletId": resolved_wallet["id"]} for e in draft.get("entries", [])],
         }
         reply = f'Account updated to "{resolved_wallet["name"]}". Reply "confirm" to save this receipt.'
+        if language == "id":
+            reply = f'Akun diubah menjadi "{resolved_wallet["name"]}". Balas "simpan" untuk menyimpan struk ini.'
         return await _reply(reply, updated_draft)
 
     entries = draft.get("entries") or []
     current_wallet_id = entries[0]["walletId"] if entries else None
     current_wallet = next((w["name"] for w in wallets if w["id"] == current_wallet_id), "-")
     reply = f'Draft is ready. Current account: "{current_wallet}". Reply "confirm" to save, or "account: <name>" to change account.'
+    if language == "id":
+        reply = f'Struk siap. Akun: "{current_wallet}". Balas "simpan", "batal", atau "akun: <nama>".'
     return await _reply(reply, draft)

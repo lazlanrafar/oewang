@@ -23,6 +23,13 @@ export const loggerPlugin = (app: Elysia) =>
         duration,
       });
     })
+    // Access-log only — this fires BEFORE the global onError in index.ts (it's
+    // registered earlier in the chain), so it can't rely on that handler's
+    // set.status yet. It owns exactly one job: the "ERROR method path status -
+    // duration" line. Deciding error *shape* (message, error code, DB-message
+    // sanitization) and calling Sentry belongs solely to index.ts's onError —
+    // duplicating that logic here made every unhandled error log twice with
+    // overlapping, sometimes-inconsistent content.
     .onError(({ request, error, code, set, startTime }) => {
       const duration = startTime ? Date.now() - startTime : 0;
       const { method, url } = request;
@@ -47,40 +54,16 @@ export const loggerPlugin = (app: Elysia) =>
         }
       }
 
-      let errorMessage = "An error occurred";
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      } else if (typeof error === "string") {
-        errorMessage = error;
-      } else if (error && typeof error === "object") {
-        errorMessage =
-          (error as any).message ||
-          (error as any).code ||
-          JSON.stringify(error);
-      }
-
-      const logData: any = {
-        context: "http",
-        method,
-        path,
-        status: statusCode,
-        duration,
-        code,
-        error: errorMessage,
-      };
-
-      // Extract more details if it's a buildError response
-      if (error && typeof error === "object" && "code" in error) {
-        logData.errorCode = (error as any).errorCode || (error as any).code;
-      }
-
       // 401 and 403 are expected client-side auth state transitions - log as info to reduce noise
       const isAuthError = statusCode === 401 || statusCode === 403;
       const logMethod =
         statusCode >= 500 ? "error" : isAuthError ? "info" : "warn";
 
-      log[logMethod](
-        `ERROR ${method} ${path} ${statusCode} - ${duration}ms`,
-        logData,
-      );
+      log[logMethod](`ERROR ${method} ${path} ${statusCode} - ${duration}ms`, {
+        context: "http",
+        method,
+        path,
+        status: statusCode,
+        duration,
+      });
     });

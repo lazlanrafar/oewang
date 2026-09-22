@@ -7,60 +7,15 @@ import {
   eq,
   isNull,
   pricing,
+  or,
+  getTableColumns,
   sql,
   workspaceAddons,
   workspaces,
 } from "@workspace/database";
 
 export abstract class AiRepository {
-  static async createSession(workspaceId: string, title: string) {
-    const [session] = await db
-      .insert(aiSessions)
-      .values({
-        workspace_id: workspaceId,
-        title,
-      })
-      .returning();
-    return session || null;
-  }
-
-  static async updateTitle(
-    sessionId: string,
-    workspaceId: string,
-    title: string,
-  ) {
-    await db
-      .update(aiSessions)
-      .set({ title })
-      .where(
-        and(
-          eq(aiSessions.id, sessionId),
-          eq(aiSessions.workspace_id, workspaceId),
-        ),
-      );
-  }
-
-  static async saveMessage(
-    sessionId: string,
-    workspaceId: string,
-    role: "user" | "assistant" | "system",
-    content: string,
-    attachments?: any,
-  ) {
-    const [message] = await db
-      .insert(aiMessages)
-      .values({
-        session_id: sessionId,
-        workspace_id: workspaceId,
-        role,
-        content,
-        attachments,
-      })
-      .returning();
-    return message || null;
-  }
-
-  static async getSession(sessionId: string, workspaceId: string) {
+  static async getSession(sessionId: string, workspaceId: string, userId: string) {
     const [session] = await db
       .select()
       .from(aiSessions)
@@ -69,6 +24,7 @@ export abstract class AiRepository {
           eq(aiSessions.id, sessionId),
           eq(aiSessions.workspace_id, workspaceId),
           isNull(aiSessions.deleted_at),
+          or(eq(aiSessions.user_id, userId), isNull(aiSessions.user_id)),
         ),
       )
       .limit(1);
@@ -78,18 +34,23 @@ export abstract class AiRepository {
   static async getSessionMessages(
     sessionId: string,
     workspaceId: string,
+    userId: string,
     limit = 20,
   ) {
     // Last `limit` messages, oldest-first. Unbounded history gets resent to
     // the LLM on every tool-loop step — O(n²) input tokens per session.
     const rows = await db
-      .select()
+      .select(getTableColumns(aiMessages))
       .from(aiMessages)
+      .innerJoin(aiSessions, eq(aiSessions.id, aiMessages.session_id))
       .where(
         and(
           eq(aiMessages.session_id, sessionId),
           eq(aiMessages.workspace_id, workspaceId),
           isNull(aiMessages.deleted_at),
+          eq(aiSessions.workspace_id, workspaceId),
+          isNull(aiSessions.deleted_at),
+          or(eq(aiSessions.user_id, userId), isNull(aiSessions.user_id)),
         ),
       )
       .orderBy(desc(aiMessages.created_at))
@@ -97,7 +58,7 @@ export abstract class AiRepository {
     return rows.reverse();
   }
 
-  static async getSessions(workspaceId: string) {
+  static async getSessions(workspaceId: string, userId: string) {
     return db
       .select()
       .from(aiSessions)
@@ -105,6 +66,7 @@ export abstract class AiRepository {
         and(
           eq(aiSessions.workspace_id, workspaceId),
           isNull(aiSessions.deleted_at),
+          or(eq(aiSessions.user_id, userId), isNull(aiSessions.user_id)),
         ),
       )
       .orderBy(desc(aiSessions.updated_at));

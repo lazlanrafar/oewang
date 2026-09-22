@@ -17,6 +17,7 @@ class DraftMessage(BaseModel):
 
 
 class HandlePendingRequest(BaseModel):
+    personal_memory: bool = False
     workspace_id: str
     user_id: str
     message: DraftMessage
@@ -25,6 +26,9 @@ class HandlePendingRequest(BaseModel):
 
 
 class BuildFromAttachmentsRequest(BaseModel):
+    session_id: str | None = None
+    caption: str = ""
+    personal_memory: bool = False
     workspace_id: str
     user_id: str
     attachments: list[dict]

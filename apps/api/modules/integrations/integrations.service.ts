@@ -1,9 +1,10 @@
-import { logger } from "@workspace/logger";
+import { createLogger } from "@workspace/logger";
 import { buildSuccess } from "@workspace/utils";
 import { cacheDel, cacheGet, cacheSet } from "../../lib/cache";
 import { NotificationsService } from "../notifications/notifications.service";
 import { IntegrationsRepository } from "./integrations.repository";
 
+const log = createLogger("integrations.service");
 const INTEGRATIONS_TTL = 60 * 60 * 24; // 24h — integration configs rarely change
 const integrationsKey = (workspaceId: string) =>
   `oewang:integrations:${workspaceId}`;
@@ -17,7 +18,7 @@ export abstract class IntegrationsService {
     const integration = await IntegrationsRepository.upsert({
       workspaceId,
       provider: "telegram",
-      settings: { telegramChatId },
+      settings: { telegramChatId, personalMemoryUserId: userId },
       isActive: true,
       connectedBy: userId,
     });
@@ -31,8 +32,8 @@ export abstract class IntegrationsService {
         "Telegram has been connected to your workspace. You can now chat with your AI assistant via Telegram.",
       link: "/apps",
     }).catch((err) =>
-      logger.error("Failed to create Telegram connected notification", {
-        err,
+      log.error("Failed to create Telegram connected notification", {
+        message: err?.message,
         workspaceId,
         userId,
       }),

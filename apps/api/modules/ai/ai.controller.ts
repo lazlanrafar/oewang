@@ -1,11 +1,13 @@
-import { logger } from "@workspace/logger";
+import { createLogger } from "@workspace/logger";
 import { ErrorCode } from "@workspace/types";
 import { buildError, buildSuccess } from "@workspace/utils";
-import { Elysia } from "elysia";
+import { Elysia, status } from "elysia";
 import { authPlugin } from "../../plugins/auth";
 import { agentSettingsController } from "./agent-settings.controller";
 import { ParseReceiptDto } from "./ai.dto";
 import { AiService } from "./ai.service";
+
+const log = createLogger("ai.controller");
 
 export const aiController = new Elysia({ prefix: "/ai" })
   .use(agentSettingsController)
@@ -22,8 +24,8 @@ export const aiController = new Elysia({ prefix: "/ai" })
   })
   .get(
     "/sessions",
-    async ({ workspaceId }) => {
-      const sessions = await AiService.getSessions(workspaceId!);
+    async ({ workspaceId, userId }) => {
+      const sessions = await AiService.getSessions(workspaceId!, userId!);
       return buildSuccess(sessions, "Sessions retrieved");
     },
     {
@@ -37,8 +39,12 @@ export const aiController = new Elysia({ prefix: "/ai" })
   )
   .get(
     "/sessions/:id",
-    async ({ params: { id }, workspaceId }) => {
-      const messages = await AiService.getSessionMessages(id, workspaceId!);
+    async ({ params: { id }, workspaceId, userId }) => {
+      const messages = await AiService.getSessionMessages(
+        id,
+        workspaceId!,
+        userId!,
+      );
       return buildSuccess(messages, "Session messages retrieved");
     },
     {
@@ -51,8 +57,8 @@ export const aiController = new Elysia({ prefix: "/ai" })
   )
   .get(
     "/sessions/:id/metadata",
-    async ({ params: { id }, workspaceId }) => {
-      const session = await AiService.getSession(id, workspaceId!);
+    async ({ params: { id }, workspaceId, userId }) => {
+      const session = await AiService.getSession(id, workspaceId!, userId!);
       return buildSuccess(session, "Session metadata retrieved");
     },
     {
@@ -78,7 +84,7 @@ export const aiController = new Elysia({ prefix: "/ai" })
   )
   .post(
     "/parse-receipt",
-    async ({ body, workspaceId, userId, set }) => {
+    async ({ body, workspaceId, userId }) => {
       try {
         const result = await AiService.parseReceipt(
           workspaceId!,
@@ -88,15 +94,27 @@ export const aiController = new Elysia({ prefix: "/ai" })
         );
         return buildSuccess(result, "Receipt parsed successfully");
       } catch (error: any) {
-        logger.error("Error parsing receipt", {
-          error: error?.message ?? String(error),
-          errorName: error?.name,
+        log.error("Error parsing receipt", {
+          message: error?.message,
+          name: error?.name,
           workspaceId,
         });
-        set.status = 500;
-        return buildError(
-          ErrorCode.INTERNAL_ERROR,
-          error?.message ?? "Failed to parse receipt",
+        // ai-sidecar-client attaches .status/.body so we can tell a
+        // deliberate 422 quota block apart from a genuine sidecar failure —
+        // rethrow via status() so the global onError handler (index.ts)
+        // Sentry-captures real failures and applies its own message
+        // sanitization consistently with every other module.
+        const httpStatus =
+          typeof error?.status === "number" ? error.status : 500;
+        const sidecarErrorCode =
+          typeof error?.body?.error === "string" ? error.body.error : undefined;
+        const message =
+          httpStatus >= 500
+            ? "Failed to parse receipt"
+            : (sidecarErrorCode ?? error?.message ?? "Failed to parse receipt");
+        throw status(
+          httpStatus,
+          buildError(sidecarErrorCode ?? ErrorCode.INTERNAL_ERROR, message),
         );
       }
     },

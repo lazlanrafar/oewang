@@ -1,4 +1,3 @@
-import { logger } from "@workspace/logger";
 import { ErrorCode } from "@workspace/types";
 import { buildError, buildSuccess } from "@workspace/utils";
 import { Elysia } from "elysia";
@@ -37,17 +36,8 @@ export const usersController = new Elysia({ prefix: "/users" })
         return buildError(ErrorCode.FORBIDDEN, "Forbidden");
       }
 
-      try {
-        const result = await UsersService.syncUser(body);
-        return buildSuccess(result, "User synced successfully");
-      } catch (error) {
-        logger.error("Error in syncUser", {
-          error,
-          userId: body.id,
-        });
-        set.status = 500;
-        return buildError(ErrorCode.INTERNAL_ERROR, "Failed to sync user");
-      }
+      const result = await UsersService.syncUser(body);
+      return buildSuccess(result, "User synced successfully");
     },
     {
       body: SyncUserBody,
@@ -68,22 +58,14 @@ export const usersController = new Elysia({ prefix: "/users" })
         return buildError(ErrorCode.UNAUTHORIZED, "Unauthorized");
       }
 
-      try {
-        const profile = await UsersService.getProfile(auth.user_id);
+      const profile = await UsersService.getProfile(auth.user_id);
 
-        if (!profile) {
-          set.status = 404;
-          return buildError(ErrorCode.USER_NOT_FOUND, "User not found");
-        }
-
-        return buildSuccess(profile, "User profile retrieved");
-      } catch (_error) {
-        set.status = 500;
-        return buildError(
-          ErrorCode.INTERNAL_ERROR,
-          "Failed to get user profile",
-        );
+      if (!profile) {
+        set.status = 404;
+        return buildError(ErrorCode.USER_NOT_FOUND, "User not found");
       }
+
+      return buildSuccess(profile, "User profile retrieved");
     },
     {
       detail: {
@@ -110,15 +92,8 @@ export const usersController = new Elysia({ prefix: "/users" })
         );
       }
 
-      try {
-        await UsersService.updateActiveWorkspace(auth.user_id, workspaceId);
-        return buildSuccess(null, "Workspace switched successfully");
-      } catch (error: unknown) {
-        set.status = 400;
-        const message =
-          error instanceof Error ? error.message : "Failed to switch workspace";
-        return buildError(ErrorCode.VALIDATION_ERROR, message);
-      }
+      await UsersService.updateActiveWorkspace(auth.user_id, workspaceId);
+      return buildSuccess(null, "Workspace switched successfully");
     },
     {
       body: SwitchWorkspaceBody,
@@ -137,13 +112,8 @@ export const usersController = new Elysia({ prefix: "/users" })
         return buildError(ErrorCode.UNAUTHORIZED, "Unauthorized");
       }
 
-      try {
-        await UsersService.updateProfile(auth.user_id, body);
-        return buildSuccess(null, "Profile updated successfully");
-      } catch (error: any) {
-        set.status = 400;
-        return buildError(ErrorCode.VALIDATION_ERROR, error.message);
-      }
+      await UsersService.updateProfile(auth.user_id, body);
+      return buildSuccess(null, "Profile updated successfully");
     },
     {
       body: UpdateProfileBody,
@@ -162,13 +132,8 @@ export const usersController = new Elysia({ prefix: "/users" })
         return buildError(ErrorCode.UNAUTHORIZED, "Unauthorized");
       }
 
-      try {
-        const data = await UsersService.getProviders(auth.user_id);
-        return buildSuccess(data, "Providers retrieved successfully");
-      } catch (error: any) {
-        set.status = 500;
-        return buildError(ErrorCode.INTERNAL_ERROR, error.message);
-      }
+      const data = await UsersService.getProviders(auth.user_id);
+      return buildSuccess(data, "Providers retrieved successfully");
     },
     {
       detail: {
@@ -186,13 +151,8 @@ export const usersController = new Elysia({ prefix: "/users" })
         return buildError(ErrorCode.UNAUTHORIZED, "Unauthorized");
       }
 
-      try {
-        await UsersService.disconnectProvider(auth.user_id, provider);
-        return buildSuccess(null, `Provider ${provider} disconnected`);
-      } catch (error: any) {
-        set.status = 400;
-        return buildError(ErrorCode.VALIDATION_ERROR, error.message);
-      }
+      await UsersService.disconnectProvider(auth.user_id, provider);
+      return buildSuccess(null, `Provider ${provider} disconnected`);
     },
     {
       detail: {
@@ -211,24 +171,15 @@ export const usersController = new Elysia({ prefix: "/users" })
         return buildError(ErrorCode.UNAUTHORIZED, "Unauthorized");
       }
 
-      try {
-        const buffer = Buffer.from(await file.arrayBuffer());
-        const url = await UsersService.updateAvatar(auth.user_id, {
-          name: file.name,
-          type: file.type,
-          size: file.size,
-          buffer,
-        });
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const url = await UsersService.updateAvatar(auth.user_id, {
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        buffer,
+      });
 
-        return buildSuccess({ url }, "Profile picture updated successfully");
-      } catch (error: any) {
-        logger.error("Error in updateAvatar", { error, userId: auth.user_id });
-        set.status = 500;
-        return buildError(
-          ErrorCode.INTERNAL_ERROR,
-          error.message || "Failed to update profile picture",
-        );
-      }
+      return buildSuccess({ url }, "Profile picture updated successfully");
     },
     {
       body: UpdateAvatarBody,

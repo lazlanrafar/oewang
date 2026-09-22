@@ -36,7 +36,17 @@ async function sidecarPost<T>(path: string, body: unknown): Promise<T> {
   });
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    log.error("sidecar call failed", { path, status: res.status, text });
+    // Cap + redact before logging — the sidecar can echo request content
+    // back in validation/error bodies (e.g. receipt image base64), and this
+    // is a Pino log, not a client response.
+    const safeText = text
+      .slice(0, 500)
+      .replace(/[A-Za-z0-9+/]{200,}={0,2}/g, "[base64 omitted]");
+    log.error("sidecar call failed", {
+      path,
+      status: res.status,
+      body: safeText,
+    });
     const error = new Error(`AI sidecar ${path} failed (${res.status})`);
     // Attach the raw status/body so callers that need to tell "quota
     // exceeded" (422 PLAN_LIMIT_REACHED) apart from "sidecar is down" don't

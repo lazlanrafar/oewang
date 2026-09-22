@@ -15,6 +15,13 @@
       "when": 1783997977436,
       "tag": "0001_light_prism",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790044771717,
+      "tag": "0002_ai_user_memory",
+      "breakpoints": true
     }
   ]
 }

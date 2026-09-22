@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field, field_validator
 
 
 class ChatRequest(BaseModel):
+    personal_memory: bool = False
     message: str
     workspace_id: str = Field(min_length=1)
     user_id: str | None = None

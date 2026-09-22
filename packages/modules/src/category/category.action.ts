@@ -3,6 +3,7 @@
 import type { ActionResponse, Category } from "@workspace/types";
 
 import { axiosInstance as api } from "../lib/axios.server";
+import { reportActionError } from "../lib/report-error";
 
 export interface CreateCategoryData {
   name: string;
@@ -20,6 +21,7 @@ export const getCategories = async (
     const res = await api.get("/categories", { params: { type } });
     return { success: true, data: res.data?.data || [] };
   } catch (error: any) {
+    await reportActionError(error, { action: "getCategories" });
     return {
       success: false,
       error: error.response?.data?.message || "Failed to fetch categories",
@@ -46,6 +48,7 @@ export const createCategory = async (
     const res = await api.post("/categories", data);
     return { success: true, data: res.data?.data };
   } catch (error: any) {
+    await reportActionError(error, { action: "createCategory" });
     return {
       success: false,
       error: error.response?.data?.message || "Failed to create category",
@@ -61,6 +64,7 @@ export const updateCategory = async (
     const res = await api.patch(`/categories/${id}`, data);
     return { success: true, data: res.data?.data };
   } catch (error: any) {
+    await reportActionError(error, { action: "updateCategory" });
     return {
       success: false,
       error: error.response?.data?.message || "Failed to update category",
@@ -75,6 +79,7 @@ export const reorderCategories = async (
     const res = await api.put("/categories/reorder", { updates });
     return { success: true, data: res.data?.data };
   } catch (error: any) {
+    await reportActionError(error, { action: "reorderCategories" });
     return {
       success: false,
       error: error.response?.data?.message || "Failed to reorder categories",
@@ -89,6 +94,7 @@ export const deleteCategory = async (
     const res = await api.delete(`/categories/${id}`);
     return { success: true, data: res.data?.data };
   } catch (error: any) {
+    await reportActionError(error, { action: "deleteCategory" });
     return {
       success: false,
       error: error.response?.data?.message || "Failed to delete category",

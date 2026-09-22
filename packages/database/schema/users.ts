@@ -1,9 +1,10 @@
 import { createId } from "@paralleldrive/cuid2";
-import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { workspaces } from "./workspaces";
 
 export const users = pgTable("users", {
   id: text("id").primaryKey().$defaultFn(createId),
+  ai_memory_enabled: boolean("ai_memory_enabled").default(true).notNull(),
   email: text("email").notNull().unique(),
   name: text("name"),
   profile_picture: text("profile_picture"),

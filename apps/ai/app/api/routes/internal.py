@@ -17,6 +17,9 @@ from app.modules.anomaly.service import scan_all_workspaces
 from app.modules.chatbot.chat_money_path import SessionNotFoundError
 from app.modules.chatbot.service import stream_service_chat
 from app.schemas.chatbot import ChatRequest
+from app.utils.logger import get_logger
+
+log = get_logger("ai.routes.internal")
 
 router = APIRouter(tags=["internal"])
 
@@ -78,7 +81,7 @@ async def post_internal_chat_stream(req: ChatRequest):
     async def event_generator() -> AsyncGenerator[str, None]:
         try:
             async for event in stream_service_chat(
-                req.workspace_id, user_id, req.message, req.session_id
+                req.workspace_id, user_id, req.message, req.session_id, personal_memory=req.personal_memory
             ):
                 event_name = event.get("event", "message")
                 data_str = json.dumps(event.get("data", {}))
@@ -89,8 +92,9 @@ async def post_internal_chat_stream(req: ChatRequest):
         except SessionNotFoundError as e:
             err_data = json.dumps({"error": str(e)})
             yield f"event: error\ndata: {err_data}\n\n"
-        except Exception as e:
-            err_data = json.dumps({"error": str(e)})
+        except Exception:
+            log.error("unhandled error in /internal/chat/stream", exc_info=True)
+            err_data = json.dumps({"error": "An unexpected error occurred. Please try again."})
             yield f"event: error\ndata: {err_data}\n\n"
 
     return StreamingResponse(

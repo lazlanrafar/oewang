@@ -51,7 +51,7 @@ export const encryptionPlugin = (app: Elysia) =>
           // of how well-formed the decrypted rows actually were.
           (context as { body: unknown }).body = parsed;
         } catch (error: any) {
-          log.error("Decrypt failed", { path, error });
+          log.error("Decrypt failed", { path, message: error?.message });
         }
       }
     })
@@ -105,7 +105,7 @@ export const encryptionPlugin = (app: Elysia) =>
             },
           });
         } catch (error) {
-          log.error("Encryption failed", { error });
+          log.error("Encryption failed", { message: (error as Error)?.message });
           return;
         }
       }

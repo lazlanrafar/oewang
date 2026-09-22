@@ -5,13 +5,12 @@ imports/service.py: that module extracts transactions from raw file bytes,
 this one only classifies rows the caller already built.
 """
 
-import logging
-
 from app.core import llm
 from app.core.quota import PlanLimitReached
 from app.utils.helpers import extract_json
+from app.utils.logger import get_logger
 
-log = logging.getLogger("ai.imports.review")
+log = get_logger("ai.imports.review")
 
 # Mirrors extract_transactions' 100-row cap convention (imports/service.py) —
 # capped to keep the prompt/latency bounded. Rows beyond this get no

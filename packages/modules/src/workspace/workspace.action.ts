@@ -8,6 +8,7 @@ import type {
 
 import { axiosInstance } from "../lib/axios.server";
 import { extractErrorMessage } from "../lib/error-message";
+import { reportActionError } from "../lib/report-error";
 
 export interface CreateWorkspaceDTO {
   name: string;
@@ -25,6 +26,7 @@ export const createWorkspace = async (
     const response = await axiosInstance.post("workspaces", data, { headers });
     return { success: true, data: response.data.data };
   } catch (error: unknown) {
+    await reportActionError(error, { action: "createWorkspace" });
     return {
       success: false,
       error: extractErrorMessage(error, "Failed to create workspace"),
@@ -39,6 +41,7 @@ export const getMyWorkspaces = async (): Promise<
     const response = await axiosInstance.get("workspaces");
     return { success: true, data: response.data.data };
   } catch (error: unknown) {
+    await reportActionError(error, { action: "getMyWorkspaces" });
     return {
       success: false,
       error: extractErrorMessage(error, "Failed to fetch workspaces"),
@@ -55,6 +58,7 @@ export const getWorkspaceMembers = async (): Promise<ActionResponse<any>> => {
     const response = await axiosInstance.get("workspaces/members");
     return { success: true, data: response.data.data };
   } catch (error: unknown) {
+    await reportActionError(error, { action: "getWorkspaceMembers" });
     return {
       success: false,
       error: extractErrorMessage(error, "Failed to fetch members"),
@@ -73,6 +77,7 @@ export const inviteMember = async (
     });
     return { success: true, data: response.data.data };
   } catch (error: unknown) {
+    await reportActionError(error, { action: "inviteMember" });
     return {
       success: false,
       error: extractErrorMessage(error, "Failed to send invitation"),
@@ -87,6 +92,7 @@ export const getWorkspaceInvitations = async (): Promise<
     const response = await axiosInstance.get("workspaces/invitations");
     return { success: true, data: response.data.data };
   } catch (error: unknown) {
+    await reportActionError(error, { action: "getWorkspaceInvitations" });
     return {
       success: false,
       error: extractErrorMessage(error, "Failed to fetch invitations"),
@@ -103,6 +109,7 @@ export const cancelInvitation = async (
     );
     return { success: true, data: response.data.data };
   } catch (error: unknown) {
+    await reportActionError(error, { action: "cancelInvitation" });
     return {
       success: false,
       error: extractErrorMessage(error, "Failed to cancel invitation"),
@@ -121,6 +128,7 @@ export const acceptInvitationAction = async (
     const resData = response.data as any;
     return { success: true, data: resData.data };
   } catch (error: unknown) {
+    await reportActionError(error, { action: "acceptInvitationAction" });
     return {
       success: false,
       error: extractErrorMessage(error, "Failed to accept invitation"),
@@ -135,6 +143,7 @@ export const getActiveWorkspace = async (): Promise<
     const response = await axiosInstance.get("workspaces/active");
     return { success: true, data: response.data.data };
   } catch (error: unknown) {
+    await reportActionError(error, { action: "getActiveWorkspace" });
     return {
       success: false,
       error: extractErrorMessage(error, "Failed to fetch active workspace"),

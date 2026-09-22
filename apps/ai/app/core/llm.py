@@ -1,14 +1,14 @@
 import asyncio
 import json
-import logging
 import time
 from collections.abc import Awaitable, Callable
 
 from openai import OpenAI
 
 from app.config import get_settings
+from app.utils.logger import get_logger
 
-log = logging.getLogger("ai.llm")
+log = get_logger("ai.llm")
 
 _client: OpenAI | None = None
 
@@ -260,7 +260,16 @@ async def complete_with_tools(
                 args = json.loads(tc.function.arguments or "{}")
             except json.JSONDecodeError:
                 args = {}
-            out = await execute_tool(tc.function.name, args)
+            try:
+                out = await execute_tool(tc.function.name, args)
+            except Exception as exc:  # noqa: BLE001 — keep the turn alive, feed the LLM a tool-result error
+                log.error(
+                    "tool execution failed: name=%s err=%s", tc.function.name, exc, exc_info=True
+                )
+                out = {
+                    "result": {"success": False, "error": f"Tool execution failed: {exc}"},
+                    "artifact": None,
+                }
             art = out.get("artifact")
             log.info(
                 "tool=%s artifact=%s",
@@ -422,7 +431,14 @@ async def complete_with_tools_stream(
                 args = {}
 
             yield {"event": "tool_call", "data": {"name": name, "args": args}}
-            out = await execute_tool(name, args)
+            try:
+                out = await execute_tool(name, args)
+            except Exception as exc:  # noqa: BLE001 — keep the turn alive, feed the LLM a tool-result error
+                log.error("tool execution failed: name=%s err=%s", name, exc, exc_info=True)
+                out = {
+                    "result": {"success": False, "error": f"Tool execution failed: {exc}"},
+                    "artifact": None,
+                }
             art = out.get("artifact")
             if art:
                 artifacts.append(art)
