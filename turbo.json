@@ -5,6 +5,8 @@
     "API_PORT",
     "SENTRY_DSN",
     "SENTRY_AUTH_TOKEN",
+    "SENTRY_ORG",
+    "SENTRY_PROJECT",
     "NEXT_PUBLIC_SENTRY_DSN",
     "LOG_LEVEL",
     "LOG_PRETTY",

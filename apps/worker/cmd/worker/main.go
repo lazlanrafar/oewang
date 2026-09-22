@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/getsentry/sentry-go"
 	"github.com/hibiken/asynq"
 	goredis "github.com/redis/go-redis/v9"
 
@@ -37,6 +38,17 @@ func main() {
 	cfg, err := config.Load()
 	if err != nil {
 		log.Fatalf("worker: config: %v", err)
+	}
+
+	sentryEnabled := cfg.SentryDSN != "" && cfg.NodeEnv != "development"
+	if sentryEnabled {
+		if err := sentry.Init(sentry.ClientOptions{
+			Dsn:              cfg.SentryDSN,
+			TracesSampleRate: 1.0,
+		}); err != nil {
+			log.Printf("worker: sentry.Init failed: %v", err)
+		}
+		defer sentry.Flush(2 * time.Second)
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)

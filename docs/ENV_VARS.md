@@ -170,6 +170,8 @@ Owns scheduling/retry/dead-letter for periodic and offloaded jobs. Billing lifec
 | `API_INTERNAL_URL` | **Required in practice** | Base URL for `apps/api`'s internal endpoints (billing, vault, invoice mark-overdue — Telegram/Mayar processing no longer routes through here for Telegram) |
 | `AI_SERVICE_URL` / `AI_SERVICE_API_KEY` | **Required in practice** | Calls `apps/ai`'s `/internal/quota/reset-all`, `/internal/anomaly/scan-all`, `/import/extract`, `/draft/*`, `/tools/execute`, and `/internal/chat/stream` directly — the worker is now a third trusted `x-api-key` caller of apps/ai alongside apps/api and apps/app |
 | `ANOMALY_SCAN_HOURS` | Optional | Same var `apps/ai` reads for its own default — the worker reads it too to decide its periodic anomaly-scan cadence, replacing the old in-process `AsyncIOScheduler` in `apps/ai` |
+| `NODE_ENV` | Optional | Default `development` if unset — reused for monorepo-wide consistency even though this is a Go binary. Gates Sentry the same way as the TS apps (disabled when `development`); not otherwise read by any other worker code path. **Must be explicitly set to `production` in Coolify** — this Go binary has no build step that bakes it in the way the Dockerfiles for the other apps do |
+| `SENTRY_DSN` | Optional | Server-side error monitoring via `sentry-go` — disabled automatically when unset or when `NODE_ENV=development` |
 
 **NOT needed by apps/worker**: `JWT_SECRET`, `ENCRYPTION_KEY`, `MAYAR_*` (the worker never talks to Mayar or verifies user sessions directly — it only enqueues/dequeues and calls apps/api's Mayar-processing internal endpoint), `BUCKET_*` (the Telegram receipt flow passes attachment bytes to apps/ai inline; it doesn't touch storage directly itself).
 
@@ -188,6 +190,7 @@ root). Read via `flutter_dotenv` in `lib/config/env.dart`.
 | `APP_URL` | Optional | Default `http://localhost:3000` — used to deep-link to web billing/upgrade pages |
 | `WEBSITE_URL` | Optional | Default `https://oewang.com` — used to link to Privacy Policy/Terms |
 | `SESSION_COOKIE_NAME` | Optional | Default `oewang-session` — cosmetic, must match the web session cookie name |
+| `SENTRY_DSN` | Optional | Error monitoring via `sentry_flutter` — no-ops when blank, and is never initialized at all in debug builds (`kReleaseMode == false`), only in release builds |
 
 **NOT needed by the mobile app — never bundle these into the client binary**:
 `DATABASE_URL`, `JWT_SECRET`, `DATA_ENCRYPTION_KEY`, `OAUTH_CONNECT_SECRET`,
@@ -211,6 +214,7 @@ key, not an at-rest one (see the note in `.env.example`).
 | `BUCKET_ENDPOINT` / `BUCKET_ACCESS_KEY_ID` / `BUCKET_SECRET_ACCESS_KEY` / `BUCKET_NAME` / `BUCKET_REGION` | apps/api, apps/ai | `apps/ai` uses the same system-bucket credentials (no per-workspace custom R2 support there) to upload chat receipt images directly, instead of round-tripping to `apps/api`'s Vault upload |
 | `OAUTH_CONNECT_SECRET` | apps/api, apps/app, apps/admin | Gates the OAuth-callback-mints-session handshake |
 | `DATABASE_URL` | apps/api, apps/ai, apps/worker | All three connect to the same Postgres instance directly |
+| `SENTRY_ORG` / `SENTRY_PROJECT` | apps/admin, apps/app, apps/website (build-time only) | Consumed by `withSentryConfig` at `next build` time to upload source maps — not read at runtime by any app code, so they belong in the GitHub Actions build environment, not necessarily `.env.<app>`. GitHub Actions side: one shared `SENTRY_ORG` variable, plus per-app `SENTRY_PROJECT_WEBSITE`/`SENTRY_PROJECT_APP`/`SENTRY_PROJECT_ADMIN` variables (each app has its own Sentry project, so one shared `SENTRY_PROJECT` value would misattribute source maps) — `build-and-push.yml` maps each to the generic `SENTRY_PROJECT` build-arg per job. `SENTRY_AUTH_TOKEN` is a single shared secret (one org-scoped token works across all projects), passed into the Docker build as a BuildKit secret mount (`--mount=type=secret`), never a build-arg — a build-arg/ENV would persist the token in the image layer history. |
 
 When deploying on Coolify: set each of these **once** as a project-level
 Shared Variable, then reference it as `{{project.KEY}}` from every

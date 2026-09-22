@@ -23,18 +23,15 @@ export class CanvasErrorBoundary extends Component<CanvasErrorBoundaryProps, Can
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    // Track error with Sentry in production
-    if (process.env.NODE_ENV === "production") {
-      import("@sentry/nextjs").then((Sentry) => {
-        Sentry.captureException(error, {
-          contexts: {
-            react: {
-              componentStack: errorInfo.componentStack,
-            },
+    import("@sentry/nextjs").then((Sentry) => {
+      Sentry.captureException(error, {
+        contexts: {
+          react: {
+            componentStack: errorInfo.componentStack,
           },
-        });
+        },
       });
-    }
+    });
 
     // Call optional error handler
     this.props.onError?.(error, errorInfo);

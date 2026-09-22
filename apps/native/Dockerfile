@@ -12,10 +12,11 @@ ARG API_URL
 ARG APP_URL
 ARG ENCRYPTION_KEY
 ARG SESSION_COOKIE_NAME=oewang-session
+ARG SENTRY_DSN=
 
 # .env is bundled as a Flutter asset (see pubspec.yaml)
-RUN printf 'API_URL=%s\nAPP_URL=%s\nENCRYPTION_KEY=%s\nSESSION_COOKIE_NAME=%s\n' \
-    "$API_URL" "$APP_URL" "$ENCRYPTION_KEY" "$SESSION_COOKIE_NAME" > .env \
+RUN printf 'API_URL=%s\nAPP_URL=%s\nENCRYPTION_KEY=%s\nSESSION_COOKIE_NAME=%s\nSENTRY_DSN=%s\n' \
+    "$API_URL" "$APP_URL" "$ENCRYPTION_KEY" "$SESSION_COOKIE_NAME" "$SENTRY_DSN" > .env \
   && flutter build web --release
 
 FROM nginx:alpine

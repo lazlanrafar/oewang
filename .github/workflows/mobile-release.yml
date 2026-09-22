@@ -78,6 +78,7 @@ jobs:
           WEBSITE_URL=${{ vars.NATIVE_WEBSITE_URL }}
           ENCRYPTION_KEY=${{ secrets.NATIVE_ENCRYPTION_KEY }}
           SESSION_COOKIE_NAME=${{ vars.NATIVE_SESSION_COOKIE_NAME }}
+          SENTRY_DSN=${{ vars.NATIVE_SENTRY_DSN }}
           EOF
 
           cp .env .env.production
@@ -167,6 +168,7 @@ jobs:
           WEBSITE_URL=${{ vars.NATIVE_WEBSITE_URL }}
           ENCRYPTION_KEY=${{ secrets.NATIVE_ENCRYPTION_KEY }}
           SESSION_COOKIE_NAME=${{ vars.NATIVE_SESSION_COOKIE_NAME }}
+          SENTRY_DSN=${{ vars.NATIVE_SENTRY_DSN }}
           EOF
 
           cp .env .env.production

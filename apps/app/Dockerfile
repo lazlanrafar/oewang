@@ -21,6 +21,8 @@ ARG NEXT_PUBLIC_SENTRY_DSN
 ARG NEXT_PUBLIC_SESSION_COOKIE_NAME
 ARG NEXT_PUBLIC_TELEGRAM_BOT_USER
 ARG NEXT_PUBLIC_VAPID_PUBLIC_KEY
+ARG SENTRY_ORG
+ARG SENTRY_PROJECT
 ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL \
     NEXT_PUBLIC_ADMIN_URL=$NEXT_PUBLIC_ADMIN_URL \
     NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
@@ -28,8 +30,15 @@ ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL \
     NEXT_PUBLIC_SENTRY_DSN=$NEXT_PUBLIC_SENTRY_DSN \
     NEXT_PUBLIC_SESSION_COOKIE_NAME=$NEXT_PUBLIC_SESSION_COOKIE_NAME \
     NEXT_PUBLIC_TELEGRAM_BOT_USER=$NEXT_PUBLIC_TELEGRAM_BOT_USER \
-    NEXT_PUBLIC_VAPID_PUBLIC_KEY=$NEXT_PUBLIC_VAPID_PUBLIC_KEY
-RUN bunx turbo build --filter=app
+    NEXT_PUBLIC_VAPID_PUBLIC_KEY=$NEXT_PUBLIC_VAPID_PUBLIC_KEY \
+    SENTRY_ORG=$SENTRY_ORG \
+    SENTRY_PROJECT=$SENTRY_PROJECT
+# SENTRY_AUTH_TOKEN is mounted as a BuildKit secret (never a build-arg/ENV)
+# so it never lands in an image layer or build cache — only this RUN's
+# process env sees it, for the sentry webpack plugin's source-map upload.
+RUN --mount=type=secret,id=sentry_auth_token \
+    SENTRY_AUTH_TOKEN="$(cat /run/secrets/sentry_auth_token 2>/dev/null || true)" \
+    bunx turbo build --filter=app
 
 FROM base AS runner
 ENV NODE_ENV=production

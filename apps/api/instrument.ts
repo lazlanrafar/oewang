@@ -9,14 +9,18 @@ import { createLogger } from "@workspace/logger";
 
 const log = createLogger("sentry");
 
+const sentryEnabled = !!Env.SENTRY_DSN && Env.NODE_ENV !== "development";
+
 Sentry.init({
   dsn: Env.SENTRY_DSN,
   tracesSampleRate: 1.0,
-  enabled: !!Env.SENTRY_DSN,
+  enabled: sentryEnabled,
 });
 
-if (Env.SENTRY_DSN) {
+if (sentryEnabled) {
   log.info("Sentry initialized for API");
-} else {
+} else if (!Env.SENTRY_DSN) {
   log.warn("SENTRY_DSN not set — Sentry disabled");
+} else {
+  log.info("Sentry disabled in development (NODE_ENV=development)");
 }

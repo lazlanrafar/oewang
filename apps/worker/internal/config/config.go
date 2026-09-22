@@ -49,6 +49,13 @@ type Config struct {
 	AnomalyScanHours int
 	// Port is the health+enqueue HTTP server's bind port.
 	Port string
+	// SentryDSN gates whether Sentry is initialized at all. Empty means
+	// Sentry stays off, same convention as apps/api/apps/admin/apps/app.
+	SentryDSN string
+	// NodeEnv reuses the monorepo-wide NODE_ENV var name for consistency
+	// with the TS/Next apps, even though this is a Go binary. "development"
+	// disables Sentry the same way it does everywhere else.
+	NodeEnv string
 }
 
 // Load reads Config from the environment, failing fast (returning an error)
@@ -66,6 +73,8 @@ func Load() (*Config, error) {
 		AIServiceAPIKey:  os.Getenv("AI_SERVICE_API_KEY"),
 		TelegramBotToken: os.Getenv("TELEGRAM_BOT_TOKEN"),
 		Port:             os.Getenv("PORT"),
+		SentryDSN:        os.Getenv("SENTRY_DSN"),
+		NodeEnv:          os.Getenv("NODE_ENV"),
 	}
 
 	var missing []string
@@ -93,6 +102,10 @@ func Load() (*Config, error) {
 
 	if cfg.Port == "" {
 		cfg.Port = "3005"
+	}
+
+	if cfg.NodeEnv == "" {
+		cfg.NodeEnv = "development"
 	}
 
 	hoursStr := os.Getenv("ANOMALY_SCAN_HOURS")
