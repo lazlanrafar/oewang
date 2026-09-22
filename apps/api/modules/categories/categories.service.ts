@@ -13,7 +13,7 @@ import { CategoriesRepository } from "./categories.repository";
 
 const CATEGORIES_TTL = 60 * 60 * 24; // 24h
 
-function categoryKeys(workspaceId: string): string[] {
+export function categoryKeys(workspaceId: string): string[] {
   return [
     `oewang:categories:${workspaceId}:all`,
     `oewang:categories:${workspaceId}:income`,

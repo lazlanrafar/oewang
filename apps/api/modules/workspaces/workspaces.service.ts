@@ -14,6 +14,7 @@ import { cacheDel, cacheGet, cacheSet } from "../../lib/cache";
 import { invalidateAuthCache } from "../../plugins/auth";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { CategoriesRepository } from "../categories/categories.repository";
+import { categoryKeys } from "../categories/categories.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { OrdersService } from "../orders/orders.service";
 import { SettingsRepository } from "../settings/settings.repository";
@@ -262,6 +263,16 @@ export abstract class WorkspacesService {
     // snapshot now that the transaction has committed, so the new workspace
     // is visible immediately instead of after the 30s TTL.
     await invalidateAuthCache(user_id);
+
+    // Categories were just seeded via a repository call that bypasses
+    // CategoriesService (and its cache-write), so nothing has cached them
+    // yet for this brand-new workspace ID under normal circumstances — but
+    // clear any key anyway as a safety net: `getCategories` caches an empty
+    // result for 24h indistinguishably from a real hit, so if anything ever
+    // reads categories for this workspace ID before this point (a retried
+    // onboarding request racing a prior partial attempt, for example), that
+    // stale empty entry must not be allowed to outlive the seed it precedes.
+    await cacheDel(...categoryKeys(workspaceResult.id));
 
     // E. Log action (after transaction commits to respect FK constraints)
     AuditLogsService.log({

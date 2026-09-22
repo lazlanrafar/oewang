@@ -256,6 +256,27 @@ class _TransactionFormScreenState
                     selected: vm.state.type,
                     onChanged: vm.setType,
                   ),
+                  if (vm.pickersLoadFailed)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              "Couldn't load wallets/categories.",
+                              style: OewangFonts.sans(color: OewangColors.coral),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: vm.retryLoadPickers,
+                            child: const Text('Retry'),
+                          ),
+                        ],
+                      ),
+                    ),
                   Divider(height: 1, color: palette.border),
                   Input(
                     context: InputContext.date,

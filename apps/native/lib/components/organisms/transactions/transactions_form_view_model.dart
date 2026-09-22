@@ -123,6 +123,7 @@ class TransactionFormViewModel extends ChangeNotifier {
   List<Wallet> _walletOptions = const [];
   List<Category> _categoryOptions = const [];
   List<Transaction> _transactionsHistory = const [];
+  bool _pickersLoadFailed = false;
   bool _loadingPickers = true;
 
   late final Command<NewTransactionDraft, Transaction> save;
@@ -155,6 +156,10 @@ class TransactionFormViewModel extends ChangeNotifier {
       .toList();
   List<Transaction> get transactionsHistory => _transactionsHistory;
   bool get loadingPickers => _loadingPickers;
+  /// True when wallets/categories couldn't be loaded even after a retry —
+  /// distinct from "this workspace genuinely has none", so the screen can
+  /// offer a retry instead of rendering an empty picker.
+  bool get pickersLoadFailed => _pickersLoadFailed;
   bool get canSave => _state.isValid && !save.running;
 
   void setType(TransactionType type) {
@@ -310,16 +315,37 @@ class TransactionFormViewModel extends ChangeNotifier {
 
   bool _disposed = false;
 
+  /// Loads wallets/categories, retrying once after a beat before giving up.
+  /// A fetch right after registration can race the just-refreshed workspace
+  /// id (the offline repos discard a stale-workspace result as a failure),
+  /// so a single transient failure here must not be read as "0 wallets/
+  /// categories exist" — that's indistinguishable from a genuine empty
+  /// workspace and leaves the user with no way to tell something went wrong.
   Future<void> _loadPickers() async {
-    final walletsRes = await _wallets.list();
-    walletsRes.fold((w) => _walletOptions = w, (_) => _walletOptions = const []);
-    final catsRes = await _categories.list();
-    catsRes.fold(
-      (c) => _categoryOptions = c,
-      (_) => _categoryOptions = const [],
-    );
+    var walletsRes = await _wallets.list();
+    var catsRes = await _categories.list();
+    if (walletsRes is Failure || catsRes is Failure) {
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+      if (_disposed) return;
+      walletsRes = await _wallets.list();
+      catsRes = await _categories.list();
+    }
+
+    var failed = false;
+    walletsRes.fold((w) => _walletOptions = w, (_) {
+      _walletOptions = const [];
+      failed = true;
+    });
+    catsRes.fold((c) => _categoryOptions = c, (_) {
+      _categoryOptions = const [];
+      failed = true;
+    });
+
+    _pickersLoadFailed = failed;
     _loadingPickers = false;
     if (!_disposed) notifyListeners();
+
+    if (failed) return;
 
     // Background fetch recent history for autocomplete
     final historyRes = await _transactions.list(
@@ -333,6 +359,15 @@ class TransactionFormViewModel extends ChangeNotifier {
       _transactionsHistory = ok;
       if (!_disposed) notifyListeners();
     }
+  }
+
+  /// Re-run the picker load after [pickersLoadFailed] — lets the screen offer
+  /// a retry affordance instead of leaving the form stuck on an empty state.
+  Future<void> retryLoadPickers() async {
+    _loadingPickers = true;
+    _pickersLoadFailed = false;
+    notifyListeners();
+    await _loadPickers();
   }
 
   bool _categoryMatchesType(Category c, TransactionType t) {

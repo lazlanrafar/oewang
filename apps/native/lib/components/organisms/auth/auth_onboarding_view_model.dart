@@ -50,6 +50,7 @@ class OnboardingViewModel extends ChangeNotifier {
     try {
       final created = await _workspaces.create(
         name: _name.trim(),
+        country: _currency.country,
         mainCurrencyCode: _currency.code,
         mainCurrencySymbol: _currency.symbol,
       );
