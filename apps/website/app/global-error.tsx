@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect } from "react";
 
 import type { Metadata } from "next";
 
@@ -10,6 +11,11 @@ export const metadata: Metadata = {
 };
 
 export default function GlobalError({ error }: { error: Error & { digest?: string } }) {
+  useEffect(() => {
+    console.error(error);
+    import("@sentry/nextjs").then((Sentry) => Sentry.captureException(error));
+  }, [error]);
+
   return (
     <html lang="en">
       <body className="flex min-h-screen items-center justify-center bg-background">

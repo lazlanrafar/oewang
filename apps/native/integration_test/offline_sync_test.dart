@@ -147,6 +147,7 @@ void main() {
           websiteUrl: 'https://oewang.com',
           encryptionKey: '01234567890123456789012345678901',
           sessionCookieName: sessionKey,
+          sentryDsn: '',
         ),
         storage: storage,
       );

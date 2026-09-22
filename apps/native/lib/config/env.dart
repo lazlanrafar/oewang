@@ -8,6 +8,7 @@ class EnvConfig {
     required this.websiteUrl,
     required this.encryptionKey,
     required this.sessionCookieName,
+    required this.sentryDsn,
   });
 
   factory EnvConfig.fromDotEnv() {
@@ -18,6 +19,7 @@ class EnvConfig {
       encryptionKey: dotenv.maybeGet('ENCRYPTION_KEY') ?? '',
       sessionCookieName:
           dotenv.maybeGet('SESSION_COOKIE_NAME') ?? 'oewang-session',
+      sentryDsn: dotenv.maybeGet('SENTRY_DSN') ?? '',
     );
   }
 
@@ -30,4 +32,8 @@ class EnvConfig {
   final String websiteUrl;
   final String encryptionKey;
   final String sessionCookieName;
+
+  /// Error monitoring DSN. Blank disables Sentry; also never initialized in
+  /// debug builds regardless of value (see main.dart).
+  final String sentryDsn;
 }

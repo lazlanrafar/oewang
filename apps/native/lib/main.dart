@@ -9,6 +9,7 @@ import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/config/env.dart';
 import 'package:oewang/data/services/notifications/push_service.dart';
 import 'package:oewang/data/services/storage/preferences_service.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,13 +18,32 @@ Future<void> main() async {
   final prefs = await PreferencesService.open();
   await Firebase.initializeApp();
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
-  runApp(
-    ProviderScope(
-      overrides: [
-        envProvider.overrideWithValue(env),
-        preferencesServiceProvider.overrideWithValue(prefs),
-      ],
-      child: const OewangApp(),
-    ),
-  );
+
+  Future<void> runOewangApp() async {
+    runApp(
+      ProviderScope(
+        overrides: [
+          envProvider.overrideWithValue(env),
+          preferencesServiceProvider.overrideWithValue(prefs),
+        ],
+        child: const OewangApp(),
+      ),
+    );
+  }
+
+  // Sentry no-ops on an empty DSN but has no notion of Flutter debug/release
+  // mode on its own, so debug builds are excluded explicitly here.
+  final sentryEnabled = env.sentryDsn.isNotEmpty && kReleaseMode;
+  if (sentryEnabled) {
+    await SentryFlutter.init(
+      (options) {
+        options
+          ..dsn = env.sentryDsn
+          ..tracesSampleRate = 1.0;
+      },
+      appRunner: runOewangApp,
+    );
+  } else {
+    await runOewangApp();
+  }
 }

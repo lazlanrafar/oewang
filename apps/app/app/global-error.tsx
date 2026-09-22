@@ -6,11 +6,8 @@ import { useEffect } from "react";
 // errors below (main)/[locale]/layout.tsx, not in it.
 export default function GlobalError({ error }: { error: Error & { digest?: string } }) {
   useEffect(() => {
-    if (process.env.NODE_ENV === "production") {
-      import("@sentry/nextjs").then((Sentry) => Sentry.captureException(error));
-    } else {
-      console.error(error);
-    }
+    console.error(error);
+    import("@sentry/nextjs").then((Sentry) => Sentry.captureException(error));
   }, [error]);
 
   return (
