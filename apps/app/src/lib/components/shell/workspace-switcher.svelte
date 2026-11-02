@@ -26,7 +26,7 @@
 <div class="flex h-12 items-center gap-2 px-2">
 	<!-- The one place the live app uses a radius; everything else is square. -->
 	<div
-		class="bg-primary text-primary-foreground flex size-8 shrink-0 items-center justify-center rounded-[0.25rem] text-xs font-medium"
+		class="bg-primary text-primary-foreground flex size-8 shrink-0 items-center justify-center rounded-none text-xs font-medium"
 		aria-hidden="true"
 	>
 		{initials}

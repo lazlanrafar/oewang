@@ -208,12 +208,12 @@ values were measured there on 2026-11-02, not estimated from a screenshot.
 | Input | `h-9`, `px-3`, 1px `rgb(219,218,215)`, radius 0, and **no outline when focused** |
 | Select trigger | `h-9`, `px-3`, 1px `rgb(228,228,231)`, radius 0 |
 | Menu surface | `rgb(247,246,243)`, 1px rule, radius 0, no shadow |
-| Menu item | 30px tall, `px-[7.5px]`, `py-[5.625px]`, radius 3.5px |
+| Menu item | 30px tall, `px-2`, `py-1.5`; live radius 3.5px, squared here (D52) |
 | Checkbox | 15px square, 1px border, radius 0 |
 | In-cell editor | a `button` with `aria-haspopup="dialog"`, `h-9`, borderless |
 | Data row | 45px; the rule is `border-bottom` **on the cell**, not the row; no hover state |
 | Day group row | 40px, `rgb(251,251,250)`, with a chevron |
-| Radius scale | `--radius: .5rem`, so `sm` 3.5px, `md` 5.5px, `lg` 7.5px; primitives carry no radius class |
+| Radius scale | Live: `--radius: .5rem`, so `sm` 3.5px, `md` 5.5px, `lg` 7.5px, applied only to menu items. **This rewrite zeroes the whole scale and squares menu items too (D52).** |
 
 Every row above is reproduced and re-measured by the development-only
 [design system page](../best-practices/svelte-app.md#the-design-system-page)

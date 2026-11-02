@@ -7,8 +7,8 @@
 	 *
 	 * Square, a plain border, no shadow and `bg-background` rather than
 	 * `bg-card`: the old card sits flat on the page and is read by its rule,
-	 * not by elevation. The shadow scale above `sm` is `none` anyway
-	 * (app.css), so a `shadow-md` here would be silent.
+	 * not by elevation. Every step of the shadow scale is `none` (D52), so a
+	 * shadow class here would be silent anyway.
 	 */
 	let {
 		ref = $bindable(null),
