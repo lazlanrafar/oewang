@@ -1,0 +1,15 @@
+# Development image: the toolchain lives here, not on the host.
+FROM rust:1-bookworm
+
+WORKDIR /app
+
+# Rebuild on change. cargo-binstall avoids compiling the watcher from source.
+RUN cargo install cargo-watch --locked
+
+# sqlx offline data is committed, so no database is needed to compile.
+ENV SQLX_OFFLINE=true
+ENV CARGO_TARGET_DIR=/cargo-target
+
+EXPOSE 3002
+
+CMD ["cargo", "watch", "-x", "run --bin oewang-api"]

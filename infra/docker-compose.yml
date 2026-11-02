@@ -1,0 +1,133 @@
+name: oewang-dev
+
+# The project name is deliberately not "oewang": a volume set under that name
+# already exists on this machine from an earlier project, and reusing it would
+# mean starting against someone else's database.
+
+# Development environment. Every toolchain lives in a container, so a machine
+# needs only Docker to run the whole stack. See the root README.
+#
+# Source is bind-mounted and build caches live in named volumes, so a rebuild
+# is only needed when a dependency manifest changes.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: oewang
+      POSTGRES_PASSWORD: oewang
+      POSTGRES_DB: oewang
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "psql -U oewang -d oewang -c 'select 1' > /dev/null"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: oewang
+      MINIO_ROOT_PASSWORD: oewang-dev-secret
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # console
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # Creates the bucket once, then exits. Keeps first-run setup out of the README.
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 oewang oewang-dev-secret &&
+      mc mb --ignore-existing local/oewang-vault &&
+      echo 'bucket ready'
+      "
+    restart: "no"
+
+  api:
+    build:
+      context: ../apps/api
+      dockerfile: Dockerfile.dev
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - ../.env
+    environment:
+      DATABASE_URL: postgres://oewang:oewang@postgres:5432/oewang
+      AI_SERVICE_URL: http://ai:3004
+      APP_URL: http://localhost:3000
+      API_PORT: 3002
+      STORAGE_BACKEND: s3
+      S3_ENDPOINT: http://minio:9000
+      S3_BUCKET: oewang-vault
+      S3_ACCESS_KEY_ID: oewang
+      S3_SECRET_ACCESS_KEY: oewang-dev-secret
+      RUST_LOG: oewang_server=debug,tower_http=debug,info
+    ports:
+      - "3002:3002"
+    volumes:
+      - ../apps/api:/app
+      - cargo-registry:/usr/local/cargo/registry
+      - cargo-target:/cargo-target
+
+  ai:
+    build:
+      context: ../apps/ai
+      dockerfile: Dockerfile.dev
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    environment:
+      API_INTERNAL_URL: http://api:3002
+      PORT: 3004
+    ports:
+      # Published for local debugging only. In production this service is
+      # reachable from the internal network alone (OPS-6).
+      - "3004:3004"
+    volumes:
+      - ../apps/ai:/app
+      # Keep the container's venv; do not let the host shadow it.
+      - /app/.venv
+
+  app:
+    build:
+      context: ../apps/app
+      dockerfile: Dockerfile.dev
+    restart: unless-stopped
+    depends_on:
+      - api
+    env_file:
+      - ../.env
+    environment:
+      API_URL: http://api:3002
+      ORIGIN: http://localhost:3000
+    ports:
+      - "3000:3000"
+    volumes:
+      - ../apps/app:/app
+      # node_modules is installed in the image; the bind mount must not hide it.
+      - /app/node_modules
+
+volumes:
+  postgres-data:
+  minio-data:
+  cargo-registry:
+  cargo-target:
