@@ -338,9 +338,17 @@
 		return '';
 	}
 
-	/** The rule belongs between columns, not on the table's outer edge. */
+	/**
+	 * The rule belongs between columns, not on the table's outer edge, and not
+	 * twice at the seam: the sticky actions column draws its own left border,
+	 * so the column before it drops its right one.
+	 */
 	const lastColumnKey = $derived(visibleColumns.at(-1)?.key);
-	const edgeClass = (column: ColumnSpec) => (column.key === lastColumnKey ? 'border-r-0' : '');
+	const beforeStickyRightKey = $derived(
+		visibleColumns.at(-1)?.stickyRight ? visibleColumns.at(-2)?.key : undefined
+	);
+	const edgeClass = (column: ColumnSpec) =>
+		column.key === lastColumnKey || column.key === beforeStickyRightKey ? 'border-r-0' : '';
 
 	/**
 	 * Dragging a header's right edge resizes that column; a double click puts
@@ -510,7 +518,7 @@
 								stickyClass(column),
 								edgeClass(column),
 								column.key === 'select' && 'px-0',
-								column.key === 'actions' && 'justify-center',
+								column.key === 'actions' && 'justify-center px-0',
 								column.alignRight && 'justify-end'
 							)}
 							style={cellStyle(column.key)}
@@ -790,12 +798,15 @@
 									</div>
 								{:else}
 									<div
-										class={cn(CELL, stickyClass(column), edgeClass(column), 'justify-center px-4')}
+										class={cn(CELL, stickyClass(column), edgeClass(column), 'justify-center px-0')}
 										style={cellStyle('actions')}
 										role="cell"
 									>
 										<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-										<div class="flex h-full w-full items-center" onclick={(event) => event.stopPropagation()}>
+										<div
+											class="flex h-full w-full items-center justify-center"
+											onclick={(event) => event.stopPropagation()}
+										>
 										<DropdownMenu.Root>
 											<DropdownMenu.Trigger>
 												{#snippet child({ props })}
