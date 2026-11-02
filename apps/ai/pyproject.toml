@@ -1,0 +1,35 @@
+[project]
+name = "oewang-ai"
+version = "0.1.0"
+description = "oewang AI service: prompts, the Claude tool loop, streaming, extraction"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.120",
+    "uvicorn[standard]>=0.40",
+    "pydantic>=2.12",
+    "pydantic-settings>=2.12",
+    "httpx>=0.28",
+    "anthropic>=0.80",
+    "cryptography>=46",
+    "python-multipart>=0.0.20",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9",
+    "pytest-asyncio>=1.3",
+    "ruff>=0.15",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
