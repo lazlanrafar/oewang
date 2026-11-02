@@ -125,3 +125,34 @@ fn run_handshake(
         signature: handshake::encode(&signature),
     })
 }
+
+#[derive(Debug, Serialize)]
+pub struct SessionStatus {
+    pub session_id: String,
+    pub expires_at: i64,
+    pub server_time: i64,
+}
+
+/// Report the caller's own crypto session.
+///
+/// The first protected route: reaching it at all proves the caller holds live
+/// session keys, so a client can use it to check a session before committing
+/// to a real request. It carries no workspace data, so it needs no auth.
+pub async fn session_status(
+    State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
+) -> Result<Json<SessionStatus>, ApiError> {
+    let session_id = headers
+        .get("x-owe-session")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or_default()
+        .to_string();
+
+    let now = session::now_secs();
+    let expires_at = state
+        .owe1_sessions
+        .expires_at(&session_id)
+        .unwrap_or(now);
+
+    Ok(Json(SessionStatus { session_id, expires_at, server_time: now }))
+}

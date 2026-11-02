@@ -103,6 +103,10 @@ async fn main() -> anyhow::Result<()> {
         // anything, and the handshake creates them (E2, E3).
         .route("/.well-known/oewang-keys", get(owe1::handler::well_known_keys))
         .route("/v1/handshake", post(owe1::handler::handshake_handler))
+        // Everything below this line is OWE1. The exception list is
+        // structural: a route only skips encryption by being registered
+        // above, never by matching a path inside the middleware.
+        .merge(protected_routes(state.clone()))
         // An unknown path answers in the envelope like everything else, not
         // with Axum's empty 404 (docs/api/conventions.md#the-envelope).
         .fallback(not_found)
@@ -138,6 +142,16 @@ async fn main() -> anyhow::Result<()> {
 
     tracing::info!("shutdown complete");
     Ok(())
+}
+
+/// Routes that require a live crypto session.
+fn protected_routes(state: AppState) -> Router<AppState> {
+    Router::new()
+        .route("/v1/session", get(owe1::handler::session_status))
+        .layer(axum::middleware::from_fn_with_state(
+            state,
+            owe1::middleware::owe1_layer,
+        ))
 }
 
 /// Drop expired crypto sessions so memory tracks live sessions rather than

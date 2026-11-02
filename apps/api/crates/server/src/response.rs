@@ -11,6 +11,10 @@ use axum::{
 };
 use oewang_domain::{AppError, Envelope};
 
+/// Marks a response the OWE1 middleware must leave in plaintext, because the
+/// caller may hold no working key (docs/api/encryption.md#errors).
+pub const TRANSPORT_ERROR_HEADER: &str = "x-owe-transport-error";
+
 /// The request id, carried by `tower_http`'s layer and echoed in every
 /// envelope so a log line and a client report name the same request.
 #[derive(Debug, Clone)]
@@ -53,6 +57,7 @@ impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
         let status = StatusCode::from_u16(self.error.status())
             .unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
+        let is_transport = self.error.is_transport();
 
         if let AppError::Internal(source) = &self.error {
             // Logged here and nowhere else, so the source cannot reach a body
@@ -72,6 +77,12 @@ impl IntoResponse for ApiError {
         };
 
         let mut response = (status, Json(body)).into_response();
+
+        if is_transport {
+            response
+                .headers_mut()
+                .insert(TRANSPORT_ERROR_HEADER, HeaderValue::from_static("1"));
+        }
 
         if let AppError::RateLimited { retry_after_secs } = self.error {
             if let Ok(value) = HeaderValue::from_str(&retry_after_secs.to_string()) {

@@ -34,6 +34,7 @@ pub struct Config {
     pub ai_service_api_key: Secret,
 
     pub crypto_signing_key_file: std::path::PathBuf,
+    pub owe1_enabled: bool,
 
     pub request_timeout: Duration,
     pub body_limit_bytes: usize,
@@ -78,6 +79,18 @@ impl Config {
             });
         }
 
+        // Plaintext mode exists only for local development. Anywhere else it
+        // would quietly undo D22, so it is refused rather than warned about.
+        let owe1_enabled = optional("OWE1_ENABLED")
+            .map(|v| v != "false")
+            .unwrap_or(true);
+        if !owe1_enabled && app_env != AppEnv::Development {
+            return Err(ConfigError::Invalid {
+                name: "OWE1_ENABLED",
+                reason: "payload encryption can only be disabled in development".into(),
+            });
+        }
+
         Ok(Self {
             app_env,
             port: parse_or("API_PORT", 3002)?,
@@ -94,6 +107,8 @@ impl Config {
             app_url: optional("APP_URL").unwrap_or_else(|| "http://localhost:3000".into()),
             ai_service_url: optional("AI_SERVICE_URL").unwrap_or_else(|| "http://ai:3004".into()),
             ai_service_api_key: Secret::new(ai_service_api_key),
+
+            owe1_enabled,
 
             crypto_signing_key_file: optional("CRYPTO_SIGNING_KEY_FILE")
                 .unwrap_or_else(|| "./.secrets/owe1-signing-key.pem".into())

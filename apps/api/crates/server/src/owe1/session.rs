@@ -109,6 +109,11 @@ impl SessionStore {
         before - guard.len()
     }
 
+    pub fn expires_at(&self, session_id: &str) -> Option<i64> {
+        let guard = self.inner.read().expect("session store poisoned");
+        guard.get(session_id).map(|s| s.expires_at)
+    }
+
     pub fn len(&self) -> usize {
         self.inner.read().expect("session store poisoned").len()
     }

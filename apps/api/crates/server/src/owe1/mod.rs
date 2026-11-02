@@ -4,6 +4,7 @@
 //! dependency on Axum, so the wire contract can be tested without a server.
 
 pub mod handler;
+pub mod middleware;
 pub mod session;
 pub mod signer;
 

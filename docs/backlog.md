@@ -62,13 +62,13 @@ Requirements: SEC-2, SEC-3, SEC-4
 ### US-005: OWE1 middleware and the two clients
 Requirements: SEC-1, SEC-5, SEC-6, SEC-7
 
-- [ ] Axum middleware decrypts the query header and the body, and encrypts the response, binding the status
-- [ ] Replay protection: a 120 second timestamp window and a 5 minute request-ID LRU
-- [ ] The four plaintext exceptions, and only those, bypass the middleware
-- [ ] Node client in `apps/app/src/lib/server/owe1/`, passing the shared vectors in Vitest
-- [ ] Python client and server middleware in `apps/ai`, passing the shared vectors in pytest
-- [ ] An integration test drives the Node client and the Python client against a live Rust API
-- [ ] A replayed request returns `CRYPTO_REPLAY_DETECTED`; a flipped ciphertext bit returns `CRYPTO_DECRYPT_FAILED`
+- [x] Axum middleware decrypts the query header and the body, and encrypts the response, binding the status
+- [x] Replay protection: a 120 second timestamp window and a 5 minute request-ID LRU
+- [x] The four plaintext exceptions, and only those, bypass the middleware
+- [x] Node client in `apps/app/src/lib/server/owe1/`, passing the shared vectors in Vitest
+- [x] Python client and server middleware in `apps/ai`, passing the shared vectors in pytest
+- [x] An integration test drives the Node client and the Python client against a live Rust API
+- [x] A replayed request returns `CRYPTO_REPLAY_DETECTED`; a flipped ciphertext bit returns `CRYPTO_DECRYPT_FAILED`
 
 ### US-006: SvelteKit shell, design tokens, i18n
 Requirements: UI-1, UI-3, UI-6
