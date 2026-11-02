@@ -4,6 +4,8 @@
 //! is US-004 and US-005; the auth extractor is US-008.
 #![forbid(unsafe_code)]
 
+mod accounts;
+mod audit;
 mod auth;
 mod config;
 mod owe1;
@@ -199,6 +201,40 @@ fn protected_routes(state: AppState) -> Router<AppState> {
             axum::routing::delete(workspaces::handler::revoke_invite),
         )
         .route("/v1/workspaces/accept-invite", post(workspaces::handler::accept_invite))
+        // Wallet groups, wallets and categories. Reads take any member;
+        // writes take `AuthWrite`, which re-reads the membership row.
+        .route(
+            "/v1/wallet-groups",
+            get(accounts::handler::list_groups).post(accounts::handler::create_group),
+        )
+        .route(
+            "/v1/wallet-groups/{id}",
+            axum::routing::patch(accounts::handler::update_group)
+                .delete(accounts::handler::delete_group),
+        )
+        .route(
+            "/v1/wallets",
+            get(accounts::handler::list_wallets).post(accounts::handler::create_wallet),
+        )
+        .route(
+            "/v1/wallets/{id}",
+            get(accounts::handler::get_wallet)
+                .patch(accounts::handler::update_wallet)
+                .delete(accounts::handler::delete_wallet),
+        )
+        .route(
+            "/v1/wallets/{id}/set-default",
+            post(accounts::handler::set_default_wallet),
+        )
+        .route(
+            "/v1/categories",
+            get(accounts::handler::list_categories).post(accounts::handler::create_category),
+        )
+        .route(
+            "/v1/categories/{id}",
+            axum::routing::patch(accounts::handler::update_category)
+                .delete(accounts::handler::delete_category),
+        )
         .layer(axum::middleware::from_fn_with_state(
             state,
             owe1::middleware::owe1_layer,

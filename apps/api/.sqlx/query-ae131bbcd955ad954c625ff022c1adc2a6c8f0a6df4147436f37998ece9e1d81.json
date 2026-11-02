@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id FROM wallets\n           WHERE workspace_id = $1 AND deleted_at IS NULL\n           ORDER BY id\n           FOR UPDATE",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "ae131bbcd955ad954c625ff022c1adc2a6c8f0a6df4147436f37998ece9e1d81"
+}

@@ -85,7 +85,7 @@ Returns `NOT_A_MEMBER` if the user has no live membership row.
 
 | Method | Path | Role | Description |
 |---|---|---|---|
-| GET | `/v1/wallets` | any | List with balances in each wallet's own currency, grouped. Query: `include_deleted=false` |
+| GET | `/v1/wallets` | any | List with balances in each wallet's own currency. Ordered so a group's wallets are contiguous, with `group_name` joined; ungrouped wallets come last |
 | GET | `/v1/wallets/{id}` | any | One wallet |
 | POST | `/v1/wallets` | admin+ | Create. `currency_code` optional, defaults to the workspace currency (WAL-5) |
 | PATCH | `/v1/wallets/{id}` | admin+ | Update name, group, sort order, totals flag. Currency only while the wallet has no live transaction, otherwise `WALLET_CURRENCY_LOCKED` (WAL-6) |

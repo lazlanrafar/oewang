@@ -252,6 +252,27 @@ pub async fn update_workspace(
     .map(|_| ())
 }
 
+/// Move the workspace currency.
+///
+/// Separate from `update_workspace` because it is the only field with a lock
+/// in front of it (WAL-6): a service checks for transactions first, and a
+/// caller that reached this method has already passed that check.
+pub async fn update_workspace_currency(
+    executor: impl PgExecutor<'_>,
+    workspace_id: &str,
+    currency_code: &str,
+) -> Result<(), sqlx::Error> {
+    sqlx::query!(
+        r#"UPDATE workspaces SET currency_code = $2, updated_at = now()
+           WHERE id = $1 AND deleted_at IS NULL"#,
+        workspace_id,
+        currency_code
+    )
+    .execute(executor)
+    .await
+    .map(|_| ())
+}
+
 pub async fn soft_delete_workspace(
     executor: impl PgExecutor<'_>,
     workspace_id: &str,

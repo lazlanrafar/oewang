@@ -177,6 +177,10 @@ CREATE UNIQUE INDEX wallets_one_default_idx
 
 The partial unique index enforces WAL-3 in the database, not only in the service. The old app enforced it in application code alone.
 
+Moving the default is two statements in one transaction, clearing first and setting second, never one statement that does both. The index is checked per row as a statement writes, so a combined statement trips it the moment it reaches the new default before the old one. The service locks every live wallet of the workspace in ascending ID order first (D13), so two concurrent calls serialize rather than race.
+
+Deleting the default wallet hands the flag to the next wallet in display order, because WAL-3 says exactly one, not at most one.
+
 #### `categories`
 
 | Column | Type | Notes |

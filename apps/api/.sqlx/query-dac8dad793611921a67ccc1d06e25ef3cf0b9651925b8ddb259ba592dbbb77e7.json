@@ -1,0 +1,83 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE wallets\n           SET name = COALESCE($3, name),\n               group_id = CASE WHEN $4 THEN $5 ELSE group_id END,\n               currency_code = COALESCE($6, currency_code),\n               is_included_in_totals = COALESCE($7, is_included_in_totals),\n               sort_order = COALESCE($8, sort_order),\n               updated_at = now()\n           WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL\n           RETURNING id, group_id, name, currency_code, balance, is_included_in_totals,\n                     is_default, sort_order, created_at, updated_at",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "group_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "currency_code",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "balance",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 5,
+        "name": "is_included_in_totals",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 6,
+        "name": "is_default",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 7,
+        "name": "sort_order",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 8,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 9,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Bool",
+        "Text",
+        "Text",
+        "Bool",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "dac8dad793611921a67ccc1d06e25ef3cf0b9651925b8ddb259ba592dbbb77e7"
+}

@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE wallets SET group_id = NULL, updated_at = now()\n           WHERE workspace_id = $1 AND group_id = $2 AND deleted_at IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "fae62a0a8bfed741c34bd9b0e3d4062672d9644dd1fb4f43c0a6bb56ecbb8be7"
+}

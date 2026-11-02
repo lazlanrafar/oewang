@@ -57,6 +57,9 @@ pub struct InvitationView {
 pub struct UpdateWorkspaceRequest {
     pub name: Option<String>,
     pub country: Option<String>,
+    /// Locked once any transaction exists (WAL-6). The lock lives in the
+    /// accounts service, where the ledger rules are.
+    pub currency_code: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -130,28 +133,40 @@ pub async fn current_workspace(
     )))
 }
 
-/// Update name and country.
+/// Update name, country and currency.
 ///
-/// `currency_code` is deliberately absent from the payload. It is locked
-/// once a transaction exists (WAL-6), and the endpoint that can change it
-/// arrives with the rule that guards it in US-011.
+/// The currency goes through the accounts service, which refuses it once the
+/// workspace holds a transaction: changing it would silently reinterpret
+/// every `base_amount` already written (WAL-6).
 pub async fn update_workspace(
     State(state): State<AppState>,
     auth: AuthWrite,
     request_id: RequestId,
     Json(body): Json<UpdateWorkspaceRequest>,
 ) -> std::result::Result<StatusCode, ApiError> {
-    let result = rename(&state, &auth, &body).await;
+    let result = apply_update(&state, &auth, &body).await;
     result
         .map(|_| StatusCode::NO_CONTENT)
         .map_err(|error| ApiError::new(error, request_id.0))
 }
 
-async fn rename(
+async fn apply_update(
     state: &AppState,
     auth: &AuthWrite,
     body: &UpdateWorkspaceRequest,
 ) -> Result<()> {
+    // The currency moves first. It is the only field with a lock in front of
+    // it, and running it last would leave a rename committed behind a
+    // rejected currency change.
+    if let Some(currency) = body.currency_code.as_deref() {
+        crate::accounts::service::update_workspace_currency(
+            &state.db,
+            crate::audit::Actor::web(&auth.workspace_id, &auth.user_id),
+            currency,
+        )
+        .await?;
+    }
+
     let name = body.name.as_deref().map(str::trim).filter(|n| !n.is_empty());
 
     // A slug is derived from the name, and two workspaces can legitimately

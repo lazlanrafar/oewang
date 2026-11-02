@@ -157,20 +157,20 @@ Requirements: AUTH-10, AUTH-6
 ### US-011: Wallets and wallet groups API
 Requirements: WAL-1, WAL-2, WAL-3, WAL-4, WAL-5, WAL-6
 
-- [ ] CRUD for both, workspace-scoped, soft delete, audit logged
-- [ ] A wallet carries `currency_code`, defaulting to the workspace currency when the client omits it (WAL-5)
-- [ ] `set-default` clears the previous default in the same transaction; the partial unique index backs it
-- [ ] Deleting a wallet with live transactions returns `WALLET_HAS_TRANSACTIONS`
-- [ ] Balance is not writable through any route
-- [ ] Changing a wallet's currency once it has a live transaction returns `WALLET_CURRENCY_LOCKED`; changing the workspace currency once any transaction exists returns `WORKSPACE_CURRENCY_LOCKED` (WAL-6)
-- [ ] Tests cover the default invariant, the delete guard and both currency locks
+- [x] CRUD for both, workspace-scoped, soft delete, audit logged
+- [x] A wallet carries `currency_code`, defaulting to the workspace currency when the client omits it (WAL-5)
+- [x] `set-default` clears the previous default in the same transaction; the partial unique index backs it
+- [x] Deleting a wallet with live transactions returns `WALLET_HAS_TRANSACTIONS`
+- [x] Balance is not writable through any route
+- [x] Changing a wallet's currency once it has a live transaction returns `WALLET_CURRENCY_LOCKED`; changing the workspace currency once any transaction exists returns `WORKSPACE_CURRENCY_LOCKED` (WAL-6)
+- [x] Tests cover the default invariant, the delete guard and both currency locks
 
 ### US-012: Categories API
 Requirements: CAT-1, CAT-2
 
-- [ ] CRUD, workspace-scoped, type restricted to income or expense
-- [ ] Deleting a category nulls `category_id` on its transactions
-- [ ] Tests cover the null-out behaviour
+- [x] CRUD, workspace-scoped, type restricted to income or expense
+- [x] Deleting a category nulls `category_id` on its transactions
+- [x] Tests cover the null-out behaviour
 
 ### US-013: Wallets and categories settings UI
 Requirements: WAL-1, CAT-1, UI-5

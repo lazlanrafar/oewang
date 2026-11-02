@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT EXISTS(\n             SELECT 1 FROM transactions\n             WHERE workspace_id = $1\n               AND (wallet_id = $2 OR to_wallet_id = $2)\n               AND deleted_at IS NULL\n           ) AS \"exists!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "exists!",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "4b98eb84dc41f0b115b7e85095980d6ad7de30b74a6389ae2c0ecd637e1ed17c"
+}

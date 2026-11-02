@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE transaction_items SET category_id = NULL, updated_at = now()\n           WHERE workspace_id = $1 AND category_id = $2 AND deleted_at IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "314ef084a8676c6a82e370f395d132aa0674302ede2b523ae41707dff404ef55"
+}

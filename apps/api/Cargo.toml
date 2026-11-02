@@ -21,7 +21,7 @@ tower = "0.5"
 tower-http = { version = "0.6", features = ["trace", "timeout", "limit", "catch-panic", "request-id", "compression-gzip", "cors"] }
 
 # Data
-sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "tls-rustls", "postgres", "macros", "migrate", "chrono", "rust_decimal", "uuid"] }
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "tls-rustls", "postgres", "macros", "migrate", "chrono", "rust_decimal", "uuid", "json"] }
 rust_decimal = { version = "1", features = ["serde-with-str"] }
 chrono = { version = "0.4", features = ["serde"] }
 cuid2 = "0.1"

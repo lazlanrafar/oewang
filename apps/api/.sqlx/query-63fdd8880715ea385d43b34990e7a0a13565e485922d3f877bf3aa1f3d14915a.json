@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT DISTINCT w.currency_code AS base_code, ws.currency_code AS quote_code\n           FROM wallets w\n           JOIN workspaces ws ON ws.id = w.workspace_id\n           WHERE w.deleted_at IS NULL\n             AND ws.deleted_at IS NULL\n             AND w.currency_code <> ws.currency_code",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "base_code",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "quote_code",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "63fdd8880715ea385d43b34990e7a0a13565e485922d3f877bf3aa1f3d14915a"
+}

@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE transactions SET deleted_at = now(), updated_at = now()\n           WHERE workspace_id = $1 AND id = ANY($2) AND deleted_at IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "TextArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "823fbb07e63278a0f54e467d446d93fa3474c30bfeaad34010d97e5fd0ebef3b"
+}

@@ -1527,6 +1527,7 @@ dependencies = [
  "oewang-domain",
  "rust_decimal",
  "serde",
+ "serde_json",
  "sqlx",
  "tracing",
 ]
@@ -1567,6 +1568,7 @@ dependencies = [
  "oewang-db",
  "oewang-domain",
  "rand 0.8.8",
+ "rust_decimal",
  "serde",
  "serde_json",
  "sha2",

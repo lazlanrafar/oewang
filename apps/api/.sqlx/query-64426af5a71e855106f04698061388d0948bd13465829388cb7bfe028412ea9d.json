@@ -1,0 +1,167 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT t.id, t.wallet_id, w.name AS wallet_name,\n                  w.currency_code AS wallet_currency_code,\n                  t.to_wallet_id, tw.name AS \"to_wallet_name?\",\n                  t.category_id, c.name AS \"category_name?\",\n                  t.amount, t.to_amount, t.original_amount, t.original_currency_code,\n                  t.exchange_rate, t.base_amount, t.base_rate, t.base_rate_source,\n                  t.base_rate_date, t.date, t.type AS \"type!\", t.name, t.description,\n                  t.is_ready, t.is_exported, t.source, t.created_at\n           FROM transactions t\n           JOIN wallets w ON w.id = t.wallet_id\n           LEFT JOIN wallets tw ON tw.id = t.to_wallet_id\n           LEFT JOIN categories c ON c.id = t.category_id\n           WHERE t.workspace_id = $1 AND t.id = $2 AND t.deleted_at IS NULL",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "wallet_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "wallet_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "wallet_currency_code",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "to_wallet_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "to_wallet_name?",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "category_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "category_name?",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "amount",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 9,
+        "name": "to_amount",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 10,
+        "name": "original_amount",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 11,
+        "name": "original_currency_code",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 12,
+        "name": "exchange_rate",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 13,
+        "name": "base_amount",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 14,
+        "name": "base_rate",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 15,
+        "name": "base_rate_source",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 16,
+        "name": "base_rate_date",
+        "type_info": "Date"
+      },
+      {
+        "ordinal": 17,
+        "name": "date",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 18,
+        "name": "type!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 19,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 20,
+        "name": "description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 21,
+        "name": "is_ready",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 22,
+        "name": "is_exported",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 23,
+        "name": "source",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 24,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "64426af5a71e855106f04698061388d0948bd13465829388cb7bfe028412ea9d"
+}

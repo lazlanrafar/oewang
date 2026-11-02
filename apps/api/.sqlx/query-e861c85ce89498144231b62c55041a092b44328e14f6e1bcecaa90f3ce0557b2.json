@@ -1,0 +1,82 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT w.id, w.group_id, g.name AS \"group_name?\", w.name, w.currency_code,\n                  w.balance, w.is_included_in_totals, w.is_default, w.sort_order,\n                  w.created_at, w.updated_at\n           FROM wallets w\n           LEFT JOIN wallet_groups g\n             ON g.id = w.group_id AND g.deleted_at IS NULL\n           WHERE w.workspace_id = $1 AND w.deleted_at IS NULL\n           ORDER BY g.sort_order NULLS LAST, g.name NULLS LAST,\n                    w.sort_order, w.name",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "group_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "group_name?",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "currency_code",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "balance",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 6,
+        "name": "is_included_in_totals",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 7,
+        "name": "is_default",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 8,
+        "name": "sort_order",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 9,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 10,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "e861c85ce89498144231b62c55041a092b44328e14f6e1bcecaa90f3ce0557b2"
+}

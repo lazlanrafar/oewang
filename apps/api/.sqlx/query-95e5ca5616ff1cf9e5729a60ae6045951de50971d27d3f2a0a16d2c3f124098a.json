@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE wallets\n           SET deleted_at = now(), is_default = false, updated_at = now()\n           WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "95e5ca5616ff1cf9e5729a60ae6045951de50971d27d3f2a0a16d2c3f124098a"
+}
