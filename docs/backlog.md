@@ -31,12 +31,12 @@ Requirements: PLT-1, PLT-5
 ### US-002: Database schema and migrations
 Requirements: all data requirements, OPS-2
 
-- [ ] One sqlx migration per logical group: auth, workspace, wallet, transaction, vault, ai, audit
-- [ ] Every table and column from [data model](data-model.md#tables-in-scope)
-- [ ] Every index, including the partial `WHERE deleted_at IS NULL` ones and the partial unique default-wallet index
-- [ ] `sqlx migrate run` succeeds against an empty database
-- [ ] A seed command creates a demo workspace with wallets, categories and about 200 transactions
-- [ ] `cargo sqlx prepare` succeeds so the build works offline
+- [x] One sqlx migration per logical group: auth, workspace, wallet, transaction, vault, ai, audit
+- [x] Every table and column from [data model](data-model.md#tables-in-scope)
+- [x] Every index, including the partial `WHERE deleted_at IS NULL` ones and the partial unique default-wallet index
+- [x] `sqlx migrate run` succeeds against an empty database
+- [x] A seed command creates a demo workspace with wallets, categories and about 200 transactions
+- [x] `cargo sqlx prepare` succeeds so the build works offline
 
 ### US-003: Axum skeleton, errors, config, logging
 Requirements: PLT-2, OPS-3, OPS-4, SEC-19

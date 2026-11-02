@@ -57,6 +57,24 @@ openssl rand -base64 48   # JWT_SECRET
 openssl rand -hex 32      # AI_SERVICE_API_KEY
 ```
 
+## Database
+
+Migrations and the development seed run through the API container, so no local Rust or psql is needed.
+
+```bash
+# Apply migrations
+docker compose -f infra/docker-compose.yml run --rm api sqlx migrate run --source migrations
+
+# Seed a demo workspace: 2 wallets, 11 categories, 213 transactions, 120 FX rates
+docker compose -f infra/docker-compose.yml exec -T postgres \
+  psql -U oewang -d oewang -q < apps/api/seeds/dev.sql
+
+# Regenerate offline query data after adding or changing a query! macro
+docker compose -f infra/docker-compose.yml run --rm api cargo sqlx prepare --workspace
+```
+
+The seed is idempotent and safe to re-run. It logs in as `demo@oewang.local`.
+
 ## Checks
 
 Run them in the containers, so the result does not depend on what happens to be installed locally.

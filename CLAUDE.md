@@ -29,6 +29,10 @@ Everything runs in containers, so results do not depend on the host.
 docker compose -f infra/docker-compose.yml up          # the whole stack
 docker compose -f infra/docker-compose.yml build api   # after editing Cargo.toml
 
+# Database
+docker compose -f infra/docker-compose.yml run --rm api sqlx migrate run --source migrations
+docker compose -f infra/docker-compose.yml exec -T postgres psql -U oewang -d oewang -q < apps/api/seeds/dev.sql
+
 # Checks
 docker compose -f infra/docker-compose.yml run --rm --no-deps api cargo clippy --all-targets -- -D warnings
 docker compose -f infra/docker-compose.yml run --rm --no-deps api cargo test
