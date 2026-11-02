@@ -1,0 +1,2 @@
+# Keep the bar where docs/best-practices/rust-api.md puts it.
+avoid-breaking-exported-api = false

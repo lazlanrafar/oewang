@@ -1,0 +1,58 @@
+[workspace]
+members = ["crates/server", "crates/domain", "crates/db", "crates/clients"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.84"
+license = "UNLICENSED"
+
+[workspace.dependencies]
+# Local crates
+oewang-domain = { path = "crates/domain" }
+oewang-db = { path = "crates/db" }
+oewang-clients = { path = "crates/clients" }
+
+# HTTP
+axum = { version = "0.8", features = ["macros", "multipart"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "signal"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["trace", "timeout", "limit", "catch-panic", "request-id", "compression-gzip", "cors"] }
+
+# Data
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "tls-rustls", "postgres", "macros", "migrate", "chrono", "rust_decimal", "uuid"] }
+rust_decimal = { version = "1", features = ["serde-with-str"] }
+chrono = { version = "0.4", features = ["serde"] }
+cuid2 = "0.1"
+
+# Serialization and validation
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+validator = { version = "0.19", features = ["derive"] }
+
+# Errors and logging
+thiserror = "2"
+anyhow = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# Auth and crypto. See docs/api/encryption.md for why each one is here.
+argon2 = "0.5"
+jsonwebtoken = "9"
+x25519-dalek = { version = "2", features = ["static_secrets"] }
+ed25519-dalek = { version = "2", features = ["pkcs8", "pem"] }
+aes-gcm = "0.10"
+hkdf = "0.12"
+sha2 = "0.10"
+rand = "0.8"
+base64 = "0.22"
+
+# Clients
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "stream", "multipart"] }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+panic = "abort"
+strip = true
