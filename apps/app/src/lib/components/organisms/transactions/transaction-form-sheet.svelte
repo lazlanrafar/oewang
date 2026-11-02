@@ -51,7 +51,9 @@
 		currencies = ['IDR', 'USD', 'EUR', 'SGD'],
 		baseCurrency = 'IDR',
 		saving = false,
-		onSave
+		onSave,
+		onCreateAccount,
+		onCreateCategory
 	}: {
 		open?: boolean;
 		draft: TransactionDraft;
@@ -61,6 +63,9 @@
 		baseCurrency?: string;
 		saving?: boolean;
 		onSave?: (draft: TransactionDraft) => void;
+		/** Called with a name typed into the account picker that matched nothing. */
+		onCreateAccount?: (name: string) => void;
+		onCreateCategory?: (name: string) => void;
 	} = $props();
 
 	const editing = $derived(!!draft.id);
@@ -135,17 +140,32 @@
 						<Label for="form-account" class={labelClass}>
 							{draft.type === 'transfer' ? 'From account' : 'Account'}
 						</Label>
-						<SelectAccount id="form-account" {accounts} bind:value={draft.accountId} />
+						<SelectAccount
+							id="form-account"
+							{accounts}
+							bind:value={draft.accountId}
+							onCreate={onCreateAccount}
+						/>
 					</div>
 					{#if draft.type === 'transfer'}
 						<div class="grid gap-2">
 							<Label for="form-to-account" class={labelClass}>To account</Label>
-							<SelectAccount id="form-to-account" {accounts} bind:value={draft.toAccountId} />
+							<SelectAccount
+								id="form-to-account"
+								{accounts}
+								bind:value={draft.toAccountId}
+								onCreate={onCreateAccount}
+							/>
 						</div>
 					{:else}
 						<div class="grid gap-2">
 							<Label for="form-category" class={labelClass}>Category</Label>
-							<SelectCategory id="form-category" {categories} bind:value={draft.categoryId} />
+							<SelectCategory
+								id="form-category"
+								{categories}
+								bind:value={draft.categoryId}
+								onCreate={onCreateCategory}
+							/>
 						</div>
 					{/if}
 				</div>

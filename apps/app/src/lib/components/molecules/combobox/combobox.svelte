@@ -37,7 +37,8 @@
 		disabled = false,
 		id,
 		selected,
-		item: itemSnippet
+		item: itemSnippet,
+		create: createSnippet
 	}: {
 		items: ComboboxItem[];
 		value?: string;
@@ -56,6 +57,8 @@
 		selected?: Snippet<[ComboboxItem]>;
 		/** How a row is drawn in the list. */
 		item?: Snippet<[ComboboxItem]>;
+		/** How the create row is drawn, given what was typed. */
+		create?: Snippet<[string]>;
 	} = $props();
 
 	let open = $state(false);
@@ -130,7 +133,11 @@
 							}}
 						>
 							<Check class="size-4 shrink-0 opacity-0" aria-hidden="true" />
-							Create "{search.trim()}"
+							{#if createSnippet}
+								{@render createSnippet(search.trim())}
+							{:else}
+								Create "{search.trim()}"
+							{/if}
 						</Command.Item>
 					{/if}
 				</Command.Group>

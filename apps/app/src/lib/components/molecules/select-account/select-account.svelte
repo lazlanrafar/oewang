@@ -65,6 +65,12 @@
 				<span class="text-body max-w-[90%] truncate text-left font-medium">{item.label}</span>
 			</span>
 		{/snippet}
+		{#snippet create(value)}
+			<span class="flex items-center space-x-2 py-1">
+				<Landmark class="text-subtle size-3 shrink-0" aria-hidden="true" />
+				<span class="text-body">Create "{value}"</span>
+			</span>
+		{/snippet}
 		{#snippet item(entry)}
 			<span class="flex items-center space-x-2 py-1">
 				<Landmark class="text-subtle size-3 shrink-0" aria-hidden="true" />

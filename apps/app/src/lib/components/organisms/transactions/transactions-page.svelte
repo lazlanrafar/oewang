@@ -35,8 +35,8 @@
 
 	let {
 		rows,
-		categories,
-		wallets,
+		categories = $bindable(),
+		wallets = $bindable(),
 		title = 'Transactions',
 		canEdit = true
 	}: {
@@ -70,6 +70,21 @@
 	});
 
 	let draft = $state<TransactionDraft>(emptyDraft());
+
+	/** A slug is good enough for a specimen; a real page takes the API's id. */
+	const slug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+
+	function createAccount(name: string) {
+		const id = slug(name);
+		wallets = [...wallets, { id, name }];
+		draft = { ...draft, accountId: id };
+	}
+
+	function createCategory(name: string) {
+		const id = slug(name);
+		categories = [...categories, { id, name, colorClass: 'bg-subtle' }];
+		draft = { ...draft, categoryId: id };
+	}
 
 	const accountItems = $derived(wallets.map((w) => ({ id: w.id, label: w.name })));
 	const categoryItems = $derived(
@@ -221,6 +236,8 @@
 	bind:draft
 	accounts={accountItems}
 	categories={categoryItems}
+	onCreateAccount={createAccount}
+	onCreateCategory={createCategory}
 />
 
 <TransactionDetailSheet
