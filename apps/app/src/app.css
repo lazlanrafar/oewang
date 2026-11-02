@@ -138,6 +138,21 @@
 	--inset-shadow-xs: none;
 	--inset-shadow-sm: none;
 
+	/*
+	 * The skeleton's sweep, carried over from the old globals.css. The old app
+	 * shimmers a loading block rather than pulsing it.
+	 */
+	--animate-shimmer: shimmer 2s linear infinite;
+
+	@keyframes shimmer {
+		from {
+			background-position: 200% 0;
+		}
+		to {
+			background-position: -200% 0;
+		}
+	}
+
 	/* The muted grey the old table used for header text and secondary
 	   labels. A literal in the old file; a token here so it is themeable. */
 	--color-subtle: hsl(var(--subtle));

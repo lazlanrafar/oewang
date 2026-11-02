@@ -117,17 +117,35 @@ The client returns the envelope. A load or an action maps `error.code` to a dict
 
 ## Component organization
 
+Atomic design, the same three layers as the old app's `packages/ui/src/components`, so a component maps one to one onto the file it was ported from (D56).
+
 ```
 src/lib/components/
-├─ ui/            shadcn-svelte primitives
-├─ shared/        page-header, empty-state, money, date-range-picker, confirm-dialog
-├─ transactions/  table, form sheet, detail sheet, import wizard, bulk bar
-└─ chat/          interface, messages, input, history, tool-call card
+├─ atoms/       one element, no product knowledge: button, badge, input, textarea,
+│               label, checkbox, radio-group, switch, select, separator, table,
+│               tabs, card, avatar, alert, alert-dialog, dialog, sheet, popover,
+│               dropdown-menu, command, tooltip, accordion, collapsible, toggle,
+│               toggle-group, slider, progress, skeleton, spinner, kbd, breadcrumb,
+│               pagination, scroll-area, aspect-ratio, sonner
+├─ molecules/   atoms doing one job together: field, input-group, button-group,
+│               combobox, currency-input, item, empty, stat-card
+├─ organisms/   a whole feature: the transactions table, the chat panel
+└─ shell/       this app's own furniture: sidebar nav, workspace switcher, theme toggle
 ```
 
-- `ui/` is generated and edited only to change the design system, never for a feature.
+- An atom knows nothing about money, workspaces or transactions. The moment it would, it is a molecule.
+- `atoms/` and `molecules/` are the design system. They are edited to change the design system, never for one feature's convenience.
 - A component that fetches is a mistake. Data comes in as a prop.
 - A component over roughly 300 lines is a hint that a sheet is doing a page's job.
+- `components.json` points shadcn-svelte's `ui` alias at `atoms/`, so a generated component lands in the right layer. Generated code is then edited to match the old app (square, flat, no ring) before it is used.
+
+### Ported, and not
+
+Ported from `packages/ui`: every atom above, and the molecules above.
+
+Deliberately not ported, because the feature they serve is out of scope ([non-goals](../prd.md#non-goals-for-v1)) or because the platform differs: `chart`, `ai-chart`, `bar-metric-chart`, `donut-chart`, `line-metric-chart` (charts are out of scope), `canvas`, `carousel`, `context-menu`, `menubar`, `navigation-menu`, `resizable`, `drawer`, `hover-card`, `sidebar` (this app has its own shell), `form` (react-hook-form; SvelteKit form actions replace it), `icons` and `simple-icon` (a React icon registry; `@lucide/svelte` replaces it), `portal`, `animated-size-container`, `animated-status`, `text-shimmer`, `input-otp`, `calendar`, `date-range-picker`, `select-country`, `select-currency`, `scrollable-content`, `horizontal-pagination`, and the chat surface (`conversation`, `message`, `markdown`, `prompt-input`, `response`) which lands with M4.
+
+Two rules override fidelity where they conflict: nothing is rounded and nothing casts a shadow (D52). The old avatar, switch, radio, progress track, kbd and menu item are rounded, and its tooltip and alert dialog cast a shadow; the ports are square and flat.
 
 ## Forms
 

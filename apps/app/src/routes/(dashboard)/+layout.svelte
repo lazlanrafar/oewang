@@ -12,8 +12,8 @@
 	import SidebarNav from '$lib/components/shell/sidebar-nav.svelte';
 	import ThemeToggle from '$lib/components/shell/theme-toggle.svelte';
 	import WorkspaceSwitcher from '$lib/components/shell/workspace-switcher.svelte';
-	import { Button } from '$lib/components/ui/button';
-	import * as Sheet from '$lib/components/ui/sheet';
+	import { Button } from '$lib/components/atoms/button';
+	import * as Sheet from '$lib/components/atoms/sheet';
 	import { t } from '$lib/i18n';
 
 	let { children, data } = $props();

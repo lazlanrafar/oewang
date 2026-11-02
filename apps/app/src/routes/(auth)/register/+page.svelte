@@ -3,8 +3,8 @@
 
 	import FieldError from '$lib/components/shell/field-error.svelte';
 	import FormError from '$lib/components/shell/form-error.svelte';
-	import { Button } from '$lib/components/ui/button';
-	import { Input } from '$lib/components/ui/input';
+	import { Button } from '$lib/components/atoms/button';
+	import { Input } from '$lib/components/atoms/input';
 	import { messageForCode } from '$lib/errors';
 	import { t } from '$lib/i18n';
 

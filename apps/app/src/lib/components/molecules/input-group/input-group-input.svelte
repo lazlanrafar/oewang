@@ -1,0 +1,20 @@
+<script lang="ts">
+	import { Input } from "$lib/components/atoms/input/index.js";
+	import { cn } from "$lib/utils.js";
+	import type { ComponentProps } from "svelte";
+
+	let {
+		ref = $bindable(null),
+		value = $bindable(),
+		class: className,
+		...props
+	}: ComponentProps<typeof Input> = $props();
+</script>
+
+<Input
+	bind:ref
+	data-slot="input-group-control"
+	class={cn("rounded-none border-0 bg-transparent disabled:bg-transparent dark:bg-transparent dark:disabled:bg-transparent flex-1", className)}
+	bind:value
+	{...props}
+/>

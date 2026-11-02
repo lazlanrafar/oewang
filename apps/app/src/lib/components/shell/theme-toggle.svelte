@@ -3,7 +3,7 @@
 	import { mode, setMode, userPrefersMode } from 'mode-watcher';
 
 	import { t } from '$lib/i18n';
-	import { Button } from '$lib/components/ui/button';
+	import { Button } from '$lib/components/atoms/button';
 
 	// Three states, not two: "system" has to stay reachable, or a user who
 	// picks light can never hand the choice back to the OS.

@@ -24,15 +24,15 @@
 	import Plus from '@lucide/svelte/icons/plus';
 	import Search from '@lucide/svelte/icons/search';
 
-	import { Button } from '$lib/components/ui/button';
-	import { Checkbox } from '$lib/components/ui/checkbox';
-	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
-	import * as InputGroup from '$lib/components/ui/input-group';
-	import * as Popover from '$lib/components/ui/popover';
-	import * as Select from '$lib/components/ui/select';
-	import * as Table from '$lib/components/ui/table';
+	import { Button } from '$lib/components/atoms/button';
+	import { Checkbox } from '$lib/components/atoms/checkbox';
+	import * as DropdownMenu from '$lib/components/atoms/dropdown-menu';
+	import * as InputGroup from '$lib/components/molecules/input-group';
+	import * as Popover from '$lib/components/atoms/popover';
+	import * as Select from '$lib/components/atoms/select';
+	import * as Table from '$lib/components/atoms/table';
 
-	import CategoryCombobox from './category-combobox.svelte';
+	import { Combobox } from '$lib/components/molecules/combobox';
 
 	type Row = {
 		id: string;
@@ -415,7 +415,7 @@
 										<Table.Cell class="py-0">
 											<span class="flex items-center gap-2">
 												<span class="bg-red inline-block size-2" aria-hidden="true"></span>
-												<CategoryCombobox
+												<Combobox
 													id={row.id === 'a' ? 'spec-incell' : undefined}
 													options={categories}
 													bind:value={rowCategory[row.id]}

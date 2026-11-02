@@ -1,0 +1,24 @@
+<script lang="ts">
+	import { cn, type WithElementRef } from '$lib/utils.js';
+	import type { HTMLAttributes } from 'svelte/elements';
+
+	let {
+		ref = $bindable(null),
+		class: className,
+		children,
+		...restProps
+	}: WithElementRef<HTMLAttributes<HTMLParagraphElement>> = $props();
+</script>
+
+<p
+	bind:this={ref}
+	data-slot="item-description"
+	class={cn(
+		'text-subtle text-body line-clamp-2 leading-normal font-normal text-balance',
+		'[&>a]:underline [&>a]:underline-offset-4 [&>a:hover]:text-primary',
+		className
+	)}
+	{...restProps}
+>
+	{@render children?.()}
+</p>
