@@ -121,12 +121,12 @@ Requirements: AUTH-7, AUTH-8, AUTH-9
 ### US-009: Login and register UI
 Requirements: AUTH-3, UI-1, UI-7
 
-- [ ] `/login` and `/register` ported from the old auth screens
-- [ ] Form actions call the API and set `oewang-session` with the attributes in [auth](security/auth.md#the-session-cookies)
-- [ ] `hooks.server.ts` redirects an unauthenticated request from `(dashboard)` to `/login`
-- [ ] Field errors render inline; API codes map through the dictionary
-- [ ] Both forms work with JavaScript disabled
-- [ ] Verify in browser
+- [x] `/login` and `/register` ported from the old auth screens
+- [x] Form actions call the API and set `oewang-session` with the attributes in [auth](security/auth.md#the-session-cookies)
+- [x] `hooks.server.ts` redirects an unauthenticated request from `(dashboard)` to `/login`
+- [x] Field errors render inline; API codes map through the dictionary
+- [x] Both forms work with JavaScript disabled
+- [x] Verify in browser
 
 ### US-010: Workspace members and invites
 Requirements: WS-3, WS-4

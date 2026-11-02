@@ -192,6 +192,27 @@ pub async fn slug_exists(executor: impl PgExecutor<'_>, slug: &str) -> Result<bo
     .await
 }
 
+/// Is the slug taken by some other live workspace?
+///
+/// Excludes `except_id` so renaming a workspace to a name that slugifies to
+/// its current slug is not a collision with itself.
+pub async fn slug_taken_by_other(
+    executor: impl PgExecutor<'_>,
+    slug: &str,
+    except_id: &str,
+) -> Result<bool, sqlx::Error> {
+    sqlx::query_scalar!(
+        r#"SELECT EXISTS(
+             SELECT 1 FROM workspaces
+             WHERE slug = $1 AND id <> $2 AND deleted_at IS NULL
+           ) AS "exists!""#,
+        slug,
+        except_id
+    )
+    .fetch_one(executor)
+    .await
+}
+
 pub async fn find_workspace(
     executor: impl PgExecutor<'_>,
     workspace_id: &str,

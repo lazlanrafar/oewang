@@ -13,7 +13,8 @@
 		"toggle_theme": "Toggle theme",
 		"theme_light": "Light",
 		"theme_dark": "Dark",
-		"theme_system": "System"
+		"theme_system": "System",
+		"sign_out": "Sign out"
 	},
 	"common": {
 		"loading": "Loading",
@@ -26,6 +27,50 @@
 	},
 	"shell": {
 		"workspace": "Workspace",
-		"scaffold_notice": "Scaffold. Screens arrive with their stories."
+		"scaffold_notice": "Scaffold. Screens arrive with their stories.",
+		"signed_in_as": "Signed in as {email}"
+	},
+	"auth": {
+		"sign_in": "Sign in",
+		"sign_up": "Create account",
+		"email": "Email",
+		"password": "Password",
+		"name": "Name",
+		"name_optional": "Name (optional)",
+		"workspace_name": "Workspace name",
+		"login_title": "Sign in to oewang",
+		"login_subtitle": "Track daily money without manual spreadsheets.",
+		"register_title": "Create your workspace",
+		"register_subtitle": "One account, one workspace to start. Invite others later.",
+		"no_account": "No account yet?",
+		"have_account": "Already have an account?",
+		"forgot_password": "Forgot your password?",
+		"forgot_title": "Reset your password",
+		"forgot_subtitle": "We will email a link if the address is registered.",
+		"forgot_submit": "Send reset link",
+		"forgot_sent": "If that address is registered, a reset link is on its way. The link works once and expires in one hour.",
+		"reset_title": "Set a new password",
+		"reset_subtitle": "Signing in everywhere else will end.",
+		"reset_submit": "Set password",
+		"reset_done": "Password updated. Sign in with your new password.",
+		"new_password": "New password",
+		"password_hint": "At least 10 characters.",
+		"back_to_login": "Back to sign in",
+		"signing_in": "Signing in",
+		"creating": "Creating"
+	},
+	"errors": {
+		"invalid_credentials": "That email and password do not match.",
+		"email_taken": "That email already has an account.",
+		"unauthenticated": "Your session has ended. Sign in again.",
+		"insufficient_role": "You do not have permission to do that.",
+		"not_a_member": "You are not a member of that workspace.",
+		"last_owner": "A workspace must keep at least one owner.",
+		"invite_invalid": "That invitation is no longer valid.",
+		"reset_token_invalid": "That reset link is no longer valid. Request a new one.",
+		"validation_failed": "Check the highlighted fields.",
+		"rate_limited": "Too many attempts. Wait a moment and try again.",
+		"not_found": "Not found.",
+		"unexpected": "Something went wrong. Try again."
 	}
 }

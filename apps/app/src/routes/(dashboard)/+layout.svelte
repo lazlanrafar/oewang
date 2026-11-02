@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Menu } from '@lucide/svelte';
+	import { LogOut, Menu } from '@lucide/svelte';
 
 	import SidebarNav from '$lib/components/shell/sidebar-nav.svelte';
 	import ThemeToggle from '$lib/components/shell/theme-toggle.svelte';
@@ -7,7 +7,7 @@
 	import * as Sheet from '$lib/components/ui/sheet';
 	import { t } from '$lib/i18n';
 
-	let { children } = $props();
+	let { children, data } = $props();
 
 	// Mobile only. Above the medium breakpoint the sidebar is always present,
 	// so this never applies there.
@@ -56,10 +56,21 @@
 			</Sheet.Root>
 
 			<div class="min-w-0 flex-1">
-				<p class="text-muted-foreground truncate text-sm">{t('shell.workspace')}</p>
+				<p class="truncate text-sm font-medium">{data.me.workspace.name}</p>
+				<p class="text-muted-foreground truncate text-xs">
+					{t('shell.signed_in_as', { email: data.me.user.email })}
+				</p>
 			</div>
 
 			<ThemeToggle />
+
+			<!-- A form, not a link: signing out is a state change, and a
+			     GET that mutates is a GET a prefetcher can fire. -->
+			<form method="POST" action="/logout">
+				<Button type="submit" variant="ghost" size="icon" aria-label={t('nav.sign_out')}>
+					<LogOut class="size-4" />
+				</Button>
+			</form>
 		</header>
 
 		<!-- min-w-0 on every flex ancestor is what keeps a wide table from

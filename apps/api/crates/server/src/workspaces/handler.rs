@@ -141,8 +141,26 @@ pub async fn update_workspace(
     request_id: RequestId,
     Json(body): Json<UpdateWorkspaceRequest>,
 ) -> std::result::Result<StatusCode, ApiError> {
+    let result = rename(&state, &auth, &body).await;
+    result
+        .map(|_| StatusCode::NO_CONTENT)
+        .map_err(|error| ApiError::new(error, request_id.0))
+}
+
+async fn rename(
+    state: &AppState,
+    auth: &AuthWrite,
+    body: &UpdateWorkspaceRequest,
+) -> Result<()> {
     let name = body.name.as_deref().map(str::trim).filter(|n| !n.is_empty());
-    let slug = name.map(slugify);
+
+    // A slug is derived from the name, and two workspaces can legitimately
+    // share a name. Deriving one without checking produced a 500 from the
+    // unique index; find a free one instead.
+    let slug = match name {
+        Some(name) => Some(free_slug(state, &auth.workspace_id, name).await?),
+        None => None,
+    };
 
     accounts::update_workspace(
         &state.db,
@@ -152,9 +170,35 @@ pub async fn update_workspace(
         body.country.as_deref(),
     )
     .await
-    .map_err(|e| ApiError::new(internal(e), request_id.0))?;
+    .map_err(internal)?;
 
-    Ok(StatusCode::NO_CONTENT)
+    Ok(())
+}
+
+/// The first unused slug for this name, ignoring the workspace itself.
+async fn free_slug(state: &AppState, workspace_id: &str, name: &str) -> Result<String> {
+    let base = slugify(name);
+
+    if !accounts::slug_taken_by_other(&state.db, &base, workspace_id)
+        .await
+        .map_err(internal)?
+    {
+        return Ok(base);
+    }
+
+    for suffix in 2..=20 {
+        let candidate = format!("{base}-{suffix}");
+        if !accounts::slug_taken_by_other(&state.db, &candidate, workspace_id)
+            .await
+            .map_err(internal)?
+        {
+            return Ok(candidate);
+        }
+    }
+
+    // Giving up on a readable slug beats an unbounded wait on a contended
+    // name, the same fallback registration uses.
+    Ok(format!("{base}-{}", cuid2::create_id()))
 }
 
 pub async fn delete_workspace(

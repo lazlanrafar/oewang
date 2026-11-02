@@ -462,7 +462,9 @@ def test_a_demoted_member_loses_write_access_before_their_token_expires():
     other.call("POST", "/v1/workspaces/accept-invite", {"token": created["data"]["token"]})
 
     me = owner.call("GET", "/v1/auth/me")[1]["data"]
-    _, switched = other.call("POST", "/v1/auth/switch-workspace", {"workspace_id": me["workspace"]["id"]})
+    _, switched = other.call(
+        "POST", "/v1/auth/switch-workspace", {"workspace_id": me["workspace"]["id"]}
+    )
     other.access_token = switched["data"]["access_token"]
     other_user_id = switched["data"]["user_id"]
 
@@ -524,7 +526,9 @@ def test_forgot_password_answers_the_same_for_a_known_and_unknown_address():
 def test_reset_with_an_invalid_token_is_refused():
     client = Client()
     status, body = client.call(
-        "POST", "/v1/auth/reset-password", {"token": "not-a-real-token", "password": "new-password-long"}
+        "POST",
+        "/v1/auth/reset-password",
+        {"token": "not-a-real-token", "password": "new-password-long"},
     )
     assert status == 404
     assert body["error"]["code"] == "RESET_TOKEN_INVALID"
