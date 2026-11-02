@@ -46,6 +46,14 @@
 		type ColumnSpec
 	} from './columns.js';
 	import type { NamedOption, TransactionRow } from './types.js';
+	import {
+		absDecimal,
+		addDecimals,
+		compareDecimals,
+		formatMoney,
+		isNegative,
+		isZero
+	} from '$lib/money.js';
 	import { cn } from '$lib/utils.js';
 
 	let {
@@ -57,9 +65,19 @@
 		locale = 'en-GB',
 		/** The page can carry the filter and the actions in its own header. */
 		toolbar = true,
+		footer = true,
+		canEdit = true,
+		selection = $bindable([]),
+		emptyTitle = 'No transactions yet',
+		emptyDescription = 'Add one, or import a statement.',
+		emptyActionLabel,
 		onAdd,
 		onOpenRow,
 		onSelectionChange,
+		onEditRow,
+		onDeleteRow,
+		onCategoryChange,
+		onWalletChange,
 		class: className
 	}: {
 		rows: TransactionRow[];
@@ -69,10 +87,23 @@
 		grouping?: 'day' | 'none';
 		locale?: string;
 		toolbar?: boolean;
+		footer?: boolean;
+		/** A member without edit rights sees no add, no row actions, no in-cell editors. */
+		canEdit?: boolean;
+		/** The page owns the selection, so it can clear it after a bulk action. */
+		selection?: string[];
+		emptyTitle?: string;
+		emptyDescription?: string;
+		emptyActionLabel?: string;
 		onAdd?: () => void;
 		/** Called when a row is opened, so the page can show its detail. */
 		onOpenRow?: (row: TransactionRow) => void;
 		onSelectionChange?: (ids: string[]) => void;
+		onEditRow?: (row: TransactionRow) => void;
+		onDeleteRow?: (row: TransactionRow) => void;
+		/** In-cell edits. The page persists them; the cell only reports. */
+		onCategoryChange?: (row: TransactionRow, categoryId: string) => void;
+		onWalletChange?: (row: TransactionRow, walletId: string) => void;
 		class?: string;
 	} = $props();
 
@@ -160,8 +191,13 @@
 	const colourOf = (id: string) =>
 		categories.find((category) => category.id === id)?.colorClass ?? 'bg-subtle';
 
-	/** Minor units, so a sum never touches a float (D12). */
-	const minorUnits = (amount: string) => Math.round(parseFloat(amount) * 100);
+	/*
+	 * Every figure below is a decimal string and stays one. The earlier
+	 * version of this table scaled amounts to minor units with
+	 * `parseFloat(amount) * 100`, which is the rounding D12 exists to
+	 * prevent, and which silently truncates any rupiah figure past about
+	 * ninety trillion. `$lib/money` compares and sums the digits instead.
+	 */
 
 	const matching = $derived(
 		rows.filter((row) => {
@@ -177,11 +213,9 @@
 			const walletFilter = filters.facets.wallet ?? [];
 			if (walletFilter.length > 0 && !walletFilter.includes(walletOf(row))) return false;
 
-			const size = Math.abs(minorUnits(amountOf(row)));
-			const min = filters.amount?.min ? minorUnits(filters.amount.min) : undefined;
-			const max = filters.amount?.max ? minorUnits(filters.amount.max) : undefined;
-			if (min !== undefined && size < min) return false;
-			if (max !== undefined && size > max) return false;
+			const size = absDecimal(amountOf(row));
+			if (filters.amount?.min && compareDecimals(size, filters.amount.min) < 0) return false;
+			if (filters.amount?.max && compareDecimals(size, filters.amount.max) > 0) return false;
 
 			const range = filters.dateRange;
 			if (range?.start) {
@@ -197,7 +231,7 @@
 	const sorted = $derived(
 		[...matching].sort((a, b) => {
 			const direction = sortDescending ? -1 : 1;
-			if (sortKey === 'amount') return (minorUnits(amountOf(a)) - minorUnits(amountOf(b))) * direction;
+			if (sortKey === 'amount') return compareDecimals(amountOf(a), amountOf(b)) * direction;
 			if (sortKey === 'name') return nameOfRow(a).localeCompare(nameOfRow(b)) * direction;
 			return a.day.localeCompare(b.day) * direction || nameOfRow(a).localeCompare(nameOfRow(b));
 		})
@@ -215,7 +249,16 @@
 	const selectedIds = $derived(sorted.filter((r) => selected[r.id]).map((r) => r.id));
 
 	$effect(() => {
+		selection = selectedIds;
 		onSelectionChange?.(selectedIds);
+	});
+
+	/*
+	 * The page clears the selection after a bulk action by emptying its own
+	 * array; the checkboxes follow.
+	 */
+	$effect(() => {
+		if (selection.length === 0 && Object.keys(selected).length > 0) selected = {};
 	});
 	const allSelected = $derived(sorted.length > 0 && selectedIds.length === sorted.length);
 	const someSelected = $derived(selectedIds.length > 0 && !allSelected);
@@ -265,15 +308,9 @@
 		expandedRow = expandedRow === id ? null : id;
 	}
 
+	/** The row's figure, in the wallet's own currency, signed (UI-7). */
 	function money(row: TransactionRow): string {
-		const value = parseFloat(amountOf(row));
-		const sign = value > 0 ? '+' : '-';
-		const absolute = Math.abs(value);
-		const formatted =
-			row.currency === '$'
-				? absolute.toFixed(2).replace('.', ',')
-				: absolute.toLocaleString('de-DE');
-		return `${sign}${row.currency} ${formatted}`;
+		return formatMoney(amountOf(row), row.currency, { signed: true });
 	}
 
 	/**
@@ -282,23 +319,23 @@
 	 * rupiah and dollars shows both rather than one number that is wrong.
 	 */
 	function dayTotal(dayRows: TransactionRow[], direction: 'in' | 'out'): string {
-		const wanted = dayRows.filter((r) =>
-			direction === 'in' ? parseFloat(amountOf(r)) > 0 : parseFloat(amountOf(r)) < 0
-		);
-		const byCurrency = new Map<string, number>();
+		const wanted = dayRows.filter((row) => {
+			const amount = amountOf(row);
+			if (isZero(amount)) return false;
+			return direction === 'in' ? !isNegative(amount) : isNegative(amount);
+		});
+
+		const byCurrency = new Map<string, string[]>();
 		for (const row of wanted) {
-			byCurrency.set(
-				row.currency,
-				(byCurrency.get(row.currency) ?? 0) + Math.abs(minorUnits(amountOf(row)))
-			);
+			const held = byCurrency.get(row.currency) ?? [];
+			held.push(absDecimal(amountOf(row)));
+			byCurrency.set(row.currency, held);
 		}
-		if (byCurrency.size === 0) return 'Rp 0';
+
+		if (byCurrency.size === 0) return formatMoney('0', dayRows[0]?.currency ?? 'IDR');
+
 		return [...byCurrency]
-			.map(([currency, total]) =>
-				currency === '$'
-					? `$ ${(total / 100).toFixed(2).replace('.', ',')}`
-					: `${currency} ${(total / 100).toLocaleString('de-DE')}`
-			)
+			.map(([currency, amounts]) => formatMoney(addDecimals(amounts), currency))
 			.join('  ');
 	}
 
@@ -620,10 +657,12 @@
 			<div role="rowgroup">
 			{#if sorted.length === 0}
 				<div class="border-border border-b">
+					<!-- Two empty states, not one: "none yet" and "none matching"
+					     need different words and different next steps (UI-2). -->
 					<DataTableEmptyState
-						title="No transactions"
-						description="Nothing matches these filters. Clear one, or widen the date range."
-						actionLabel="Add transaction"
+						title={emptyTitle}
+						description={emptyDescription}
+						actionLabel={canEdit ? emptyActionLabel : undefined}
 						onAction={onAdd}
 					/>
 				</div>
@@ -757,7 +796,10 @@
 												categories={categoryItems}
 												value={categoryOf(row)}
 												onChange={(value) =>
-													(rowCategory = { ...rowCategory, [row.id]: value })}
+													{
+														rowCategory = { ...rowCategory, [row.id]: value };
+														onCategoryChange?.(row, value);
+													}}
 												inDataTable
 											/>
 										</div>
@@ -776,7 +818,10 @@
 											<SelectAccount
 												accounts={accountItems}
 												value={walletOf(row)}
-												onChange={(value) => (rowWallet = { ...rowWallet, [row.id]: value })}
+												onChange={(value) => {
+													rowWallet = { ...rowWallet, [row.id]: value };
+													onWalletChange?.(row, value);
+												}}
 												inDataTable
 											/>
 										</div>
@@ -787,13 +832,35 @@
 										style={cellStyle('amount')}
 										role="cell"
 									>
-										<div
-											class={cn(
-												'w-full truncate overflow-hidden text-right font-mono',
-												parseFloat(row.amount) > 0 ? 'text-green' : 'text-red'
-											)}
-										>
-											{money(row)}
+										<div class="w-full overflow-hidden text-right">
+											<!-- The wallet-currency figure is the primary one: it is
+											     what moved the wallet. The whole figure is coloured,
+											     and the sign is there too, so colour is never the
+											     only carrier (UI-7). -->
+											<div
+												class={cn(
+													'truncate font-mono',
+													isNegative(row.amount) ? 'text-red' : 'text-green'
+												)}
+											>
+												{money(row)}
+											</div>
+											{#if row.originalAmount && row.originalCurrency}
+												<!-- What the user typed, muted beside it (TXN-21). A
+												     row entered in the wallet's own currency shows
+												     one line. -->
+												<div class="text-subtle truncate font-mono text-xs">
+													{formatMoney(row.originalAmount, row.originalCurrency)}
+												</div>
+											{/if}
+											{#if row.staleRate}
+												<div
+													class="text-subtle truncate text-xs"
+													title="Converted at the rate for {row.staleRateDate}, the newest one available."
+												>
+													rate {row.staleRateDate}
+												</div>
+											{/if}
 										</div>
 									</div>
 								{:else}
@@ -822,10 +889,14 @@
 												{/snippet}
 											</DropdownMenu.Trigger>
 											<DropdownMenu.Content align="end" class="w-40">
-												<DropdownMenu.Item>Edit</DropdownMenu.Item>
-												<DropdownMenu.Item>Duplicate</DropdownMenu.Item>
+												<DropdownMenu.Item onclick={() => onEditRow?.(row)}>Edit</DropdownMenu.Item>
 												<DropdownMenu.Separator />
-												<DropdownMenu.Item class="text-destructive">Delete</DropdownMenu.Item>
+												<DropdownMenu.Item
+													class="text-destructive"
+													onclick={() => onDeleteRow?.(row)}
+												>
+													Delete
+												</DropdownMenu.Item>
 											</DropdownMenu.Content>
 										</DropdownMenu.Root>
 										</div>
@@ -869,17 +940,22 @@
 		</div>
 	</div>
 
-	<div class="text-subtle text-small flex items-center justify-between gap-4">
-		<span>
-			{#if selectedIds.length > 0}{selectedIds.length} selected,&nbsp;{/if}{sorted.length ===
-			rows.length
-				? `${rows.length} transactions`
-				: `${sorted.length} of ${rows.length} transactions`}
-		</span>
-		<div class="flex items-center gap-2">
-			<Button size="sm" variant="outline" disabled>Previous</Button>
-			<span>Page 1 of 1</span>
-			<Button size="sm" variant="outline" disabled>Next</Button>
+	<!-- The specimen's own footer. A page with server pagination owns the
+	     count and the steps itself and passes `footer={false}`, or the two
+	     disagree about how many rows there are. -->
+	{#if footer}
+		<div class="text-subtle text-small flex items-center justify-between gap-4">
+			<span>
+				{#if selectedIds.length > 0}{selectedIds.length} selected,&nbsp;{/if}{sorted.length ===
+				rows.length
+					? `${rows.length} transactions`
+					: `${sorted.length} of ${rows.length} transactions`}
+			</span>
+			<div class="flex items-center gap-2">
+				<Button size="sm" variant="outline" disabled>Previous</Button>
+				<span>Page 1 of 1</span>
+				<Button size="sm" variant="outline" disabled>Next</Button>
+			</div>
 		</div>
-	</div>
+	{/if}
 </div>

@@ -15,6 +15,8 @@
 	 */
 	import { tick } from 'svelte';
 
+	import { absDecimal, formatMoney, isNegative } from '$lib/money.js';
+
 	import ChevronDown from '@lucide/svelte/icons/chevron-down';
 	import FileDown from '@lucide/svelte/icons/file-down';
 	import FileUp from '@lucide/svelte/icons/file-up';
@@ -31,7 +33,8 @@
 	import TransactionBulkBar from './transaction-bulk-bar.svelte';
 	import TransactionDetailSheet from './transaction-detail-sheet.svelte';
 	import TransactionExportModal from './transaction-export-modal.svelte';
-	import TransactionFormSheet, { type TransactionDraft } from './transaction-form-sheet.svelte';
+	import TransactionFormSheet from './transaction-form-sheet.svelte';
+	import { emptyDraft, type TransactionDraft } from './transaction-form-fields.svelte';
 
 	let {
 		rows,
@@ -56,20 +59,10 @@
 	let exportOpen = $state(false);
 	let detailRow = $state<TransactionRow | null>(null);
 
-	const emptyDraft = (): TransactionDraft => ({
-		type: 'expense',
-		name: '',
-		amount: '',
-		currency: 'IDR',
-		exchangeRate: '',
-		accountId: wallets[0]?.id ?? '',
-		toAccountId: '',
-		categoryId: categories[0]?.id ?? '',
-		date: new Date().toISOString().slice(0, 10),
-		notes: ''
-	});
+	const freshDraft = (): TransactionDraft =>
+		emptyDraft(wallets[0]?.id ?? '', 'IDR', categories[0]?.id ?? '');
 
-	let draft = $state<TransactionDraft>(emptyDraft());
+	let draft = $state<TransactionDraft>(freshDraft());
 
 	/** A slug is good enough for a specimen; a real page takes the API's id. */
 	const slug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
@@ -97,7 +90,7 @@
 		detailRow
 			? {
 					name: detailRow.name,
-					amount: `${parseFloat(detailRow.amount) > 0 ? '+' : '-'}${detailRow.currency} ${Math.abs(parseFloat(detailRow.amount)).toLocaleString('de-DE')}`,
+					amount: formatMoney(detailRow.amount, detailRow.currency, { signed: true }),
 					date: detailRow.date,
 					account: nameOf(wallets, detailRow.walletId),
 					category: nameOf(categories, detailRow.categoryId),
@@ -112,7 +105,7 @@
 	);
 
 	function openNew() {
-		draft = emptyDraft();
+		draft = freshDraft();
 		formOpen = true;
 	}
 
@@ -125,14 +118,13 @@
 	async function openEditFromDetail() {
 		if (!detailRow) return;
 		draft = {
+			...freshDraft(),
 			id: detailRow.id,
-			type: parseFloat(detailRow.amount) > 0 ? 'income' : 'expense',
+			type: isNegative(detailRow.amount) ? 'expense' : 'income',
 			name: detailRow.name,
-			amount: Math.abs(parseFloat(detailRow.amount)).toString(),
-			currency: detailRow.currency === 'Rp' ? 'IDR' : 'USD',
-			exchangeRate: '',
+			amount: absDecimal(detailRow.amount),
+			currency: detailRow.currency,
 			accountId: detailRow.walletId,
-			toAccountId: '',
 			categoryId: detailRow.categoryId,
 			date: detailRow.day,
 			notes: detailRow.note ?? ''

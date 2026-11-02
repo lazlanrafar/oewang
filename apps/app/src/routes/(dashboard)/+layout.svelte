@@ -14,6 +14,7 @@
 	import WorkspaceSwitcher from '$lib/components/shell/workspace-switcher.svelte';
 	import { Button } from '$lib/components/atoms/button';
 	import * as Sheet from '$lib/components/atoms/sheet';
+	import { Toaster } from '$lib/components/atoms/sonner';
 	import { t } from '$lib/i18n';
 
 	let { children, data } = $props();
@@ -21,6 +22,10 @@
 	// Mobile only. Above the medium breakpoint the sidebar is always present.
 	let drawerOpen = $state(false);
 </script>
+
+<!-- One toaster for the whole shell: a confirmation belongs to the app, not
+     to the screen that happened to trigger it. -->
+<Toaster />
 
 <div class="flex min-h-svh w-full">
 	<!-- The rule lives on this wrapper, not on the panel inside it, so the

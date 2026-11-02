@@ -47,11 +47,17 @@
 	let {
 		value = $bindable(),
 		locale = 'en-GB',
+		onValueChange,
 		class: className,
 		id
 	}: {
 		value?: DateRange;
 		locale?: string;
+		/**
+		 * Called when the range changes, so a caller that keeps the range in
+		 * the URL rather than in a variable has something to react to.
+		 */
+		onValueChange?: (range: DateRange | undefined) => void;
 		class?: string;
 		id?: string;
 	} = $props();
@@ -114,6 +120,7 @@
 
 	function apply(range: DateRange) {
 		value = range;
+		onValueChange?.(range);
 		open = false;
 	}
 </script>
@@ -151,7 +158,11 @@
 					</Button>
 				{/if}
 			</div>
-			<RangeCalendar bind:value {locale} />
+			<RangeCalendar
+				bind:value
+				{locale}
+				onValueChange={(range) => onValueChange?.(range as DateRange | undefined)}
+			/>
 		</div>
 	</Popover.Content>
 </Popover.Root>

@@ -155,5 +155,30 @@
 		"delete_category": "Delete category",
 		"delete_category_confirm": "Delete {name}? Transactions keep their money and lose this label.",
 		"saved": "Saved."
+	},
+	"txn": {
+		"search_placeholder": "Search transactions",
+		"group_by_day": "Group by day",
+		"no_grouping": "No grouping",
+		"all_types": "All types",
+		"type_income": "Income",
+		"type_expense": "Expense",
+		"type_transfer": "Transfer",
+		"any_ready": "Any state",
+		"ready": "Ready",
+		"not_ready": "Not ready",
+		"add_transaction": "Add transaction",
+		"empty_title": "No transactions yet",
+		"empty_description": "Add one by hand, or import a statement.",
+		"empty_filtered_title": "Nothing matches",
+		"empty_filtered_description": "No transaction matches these filters. Clear one, or widen the date range.",
+		"row_count": "{count} transaction(s)",
+		"page_of": "Page {page} of {total}",
+		"previous_page": "Previous page",
+		"next_page": "Next page",
+		"created": "Transaction created.",
+		"updated": "Transaction saved.",
+		"deleted": "Transaction deleted.",
+		"delete_confirm": "Delete this transaction? The balance it moved is put back."
 	}
 }

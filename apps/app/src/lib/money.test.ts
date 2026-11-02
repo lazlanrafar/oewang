@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+	absDecimal,
 	addDecimals,
+	compareDecimals,
 	currencyDigits,
 	formatMoney,
 	isNegative,
@@ -121,5 +123,20 @@ describe('signs', () => {
 		expect(isNegative('-1')).toBe(true);
 		expect(negate('-50')).toBe('50');
 		expect(negate('0')).toBe('0');
+	});
+});
+
+describe('compareDecimals', () => {
+	it('should order figures exactly, however large', () => {
+		expect(compareDecimals('1', '2')).toBe(-1);
+		expect(compareDecimals('2', '1')).toBe(1);
+		expect(compareDecimals('1.0000', '1')).toBe(0);
+		// Two figures a double would see as equal.
+		expect(compareDecimals('9007199254740993', '9007199254740992')).toBe(1);
+	});
+
+	it('should take the size of a figure without its sign', () => {
+		expect(absDecimal('-87500.0000')).toBe('87500.0000');
+		expect(absDecimal('87500.0000')).toBe('87500.0000');
 	});
 });

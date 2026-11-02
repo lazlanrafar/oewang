@@ -213,23 +213,23 @@ Requirements: TXN-4, TXN-5
 ### US-017: Transaction table UI
 Requirements: TXN-8, TXN-9, UI-2, UI-6
 
-- [ ] TanStack Table with the old column set
-- [ ] Column visibility, sorting and row selection
-- [ ] Filter bar: search, date range, wallet, category, type, ready flag
-- [ ] Filter state in URL search parameters, surviving reload
-- [ ] Separate empty states for "none yet" and "none matching"
-- [ ] Usable at 375 px
-- [ ] Verify in browser
+- [x] The old column set, widths, sticky columns and resizing. TanStack Table is deliberately absent (see [transactions](features/transactions.md#data-table-what-is-built-and-what-is-not))
+- [x] Column visibility, sorting and row selection
+- [x] Filter bar: search, date range, wallet, category, type, ready flag
+- [x] Filter state in URL search parameters, surviving reload
+- [x] Separate empty states for "none yet" and "none matching"
+- [x] Usable at 375 px
+- [x] Verify in browser
 
 ### US-018: Transaction form sheet
 Requirements: TXN-1, TXN-7, UI-2, UI-5, D12
 
-- [ ] Ported from `transaction-form-sheet.tsx`
-- [ ] Type toggle changes the visible fields; transfer reveals the destination wallet
-- [ ] The amount value is a string end to end, never a JavaScript number
-- [ ] Superforms plus Zod; it works without JavaScript
-- [ ] On success the sheet closes, the list refreshes, a toast confirms
-- [ ] Verify in browser
+- [x] Ported from `transaction-form-sheet.tsx`
+- [x] Type toggle changes the visible fields; transfer reveals the destination wallet
+- [x] The amount value is a string end to end, never a JavaScript number
+- [x] Works without JavaScript, through a form action and a `<noscript>` form sharing one field set. Superforms and Zod are not used: the project validates in the API and maps codes through the dictionary, and a second validation layer would be a second place for a rule to live
+- [x] On success the sheet closes, the list refreshes, a toast confirms
+- [x] Verify in browser
 
 ### US-018b: Wallet currencies and foreign entry
 Requirements: WAL-5, WAL-6, TXN-18, TXN-19, TXN-20, TXN-21, TXN-22

@@ -191,6 +191,22 @@ function scaled(value: string): { units: bigint; scale: number } {
 	return { units: negative ? -units : units, scale: fraction.length };
 }
 
+/**
+ * Compare two decimal strings. Negative, zero or positive, like a sort
+ * comparator wants, and exact at any magnitude.
+ */
+export function compareDecimals(left: string, right: string, digits = 4): number {
+	const difference = addDecimals([left, negate(right)], digits);
+	if (isZero(difference)) return 0;
+	return isNegative(difference) ? -1 : 1;
+}
+
+/** The absolute value of a decimal string. */
+export function absDecimal(value: string): string {
+	const trimmed = value.trim();
+	return trimmed.startsWith('-') ? trimmed.slice(1) : trimmed;
+}
+
 /** Negate a decimal string. */
 export function negate(value: string): string {
 	const trimmed = value.trim();
