@@ -29,6 +29,10 @@ Everything runs in containers, so results do not depend on the host.
 docker compose -f infra/docker-compose.yml up          # the whole stack
 docker compose -f infra/docker-compose.yml build api   # after editing Cargo.toml
 
+# After a dependency change in app or ai, renew the anonymous volume too:
+# an existing node_modules volume survives a rebuild and hides the new layer.
+docker compose -f infra/docker-compose.yml up -d --build --renew-anon-volumes app
+
 # Database
 docker compose -f infra/docker-compose.yml run --rm api sqlx migrate run --source migrations
 docker compose -f infra/docker-compose.yml exec -T postgres psql -U oewang -d oewang -q < apps/api/seeds/dev.sql

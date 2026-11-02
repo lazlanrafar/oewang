@@ -1,7 +1,14 @@
 {
 	"extends": "$app/tsconfig",
 	"compilerOptions": {
-		"strict": true
+		"strict": true,
+		// shadcn-svelte resolves components through tsconfig path aliases, and
+		// the generated scaffold only ships package.json "imports". Both are
+		// declared so either spelling works.
+		"paths": {
+			"$lib": ["./src/lib"],
+			"$lib/*": ["./src/lib/*"]
+		}
 	},
 	"include": ["src", "vite.config.ts"]
 }

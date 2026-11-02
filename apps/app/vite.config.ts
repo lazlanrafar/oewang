@@ -12,7 +12,11 @@ export default defineConfig({
 				runes: ({ filename }) =>
 					filename.split(/[/\\]/).includes('node_modules') ? undefined : true
 			},
-			adapter: adapter()
+			adapter: adapter(),
+			// SvelteKit 3 replaced `$lib` with `#lib`, but shadcn-svelte still
+			// generates `$lib` imports. Keeping the alias is cheaper than
+			// rewriting every component the CLI will regenerate.
+			alias: { $lib: 'src/lib' }
 		})
 	],
 	server: {

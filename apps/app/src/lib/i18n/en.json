@@ -1,5 +1,31 @@
 {
 	"app": {
-		"name": "oewang"
+		"name": "oewang",
+		"tagline": "Track daily money without manual spreadsheets."
+	},
+	"nav": {
+		"overview": "Overview",
+		"transactions": "Transactions",
+		"chat": "Assistant",
+		"settings": "Settings",
+		"finance_group": "Finance",
+		"toggle_sidebar": "Toggle navigation",
+		"toggle_theme": "Toggle theme",
+		"theme_light": "Light",
+		"theme_dark": "Dark",
+		"theme_system": "System"
+	},
+	"common": {
+		"loading": "Loading",
+		"save": "Save",
+		"cancel": "Cancel",
+		"delete": "Delete",
+		"confirm": "Confirm",
+		"search": "Search",
+		"retry": "Try again"
+	},
+	"shell": {
+		"workspace": "Workspace",
+		"scaffold_notice": "Scaffold. Screens arrive with their stories."
 	}
 }

@@ -73,13 +73,13 @@ Requirements: SEC-1, SEC-5, SEC-6, SEC-7
 ### US-006: SvelteKit shell, design tokens, i18n
 Requirements: UI-1, UI-3, UI-6
 
-- [ ] Tailwind 4 theme carries the colour tokens and radii from the old `packages/ui/globals.css`
-- [ ] shadcn-svelte installed; button, input, sheet, dialog, table, dropdown, badge, toast generated
-- [ ] Dashboard layout renders the sidebar and topbar matching the old shell
-- [ ] Dark mode toggles and persists
-- [ ] `src/lib/i18n/en.json` plus the typed `t()` helper and the generated key union; shell strings resolve through it
-- [ ] The layout works at 375 px with no horizontal scroll
-- [ ] Verify in browser
+- [x] Tailwind 4 theme carries the colour tokens and radii from the old `packages/ui/globals.css`
+- [x] shadcn-svelte installed; button, input, sheet, dialog, table, dropdown, badge, toast generated
+- [x] Dashboard layout renders the sidebar and topbar matching the old shell
+- [x] Dark mode toggles and persists
+- [x] `src/lib/i18n/en.json` plus the typed `t()` helper and the generated key union; shell strings resolve through it
+- [x] The layout works at 375 px with no horizontal scroll
+- [x] Verify in browser
 
 ---
 

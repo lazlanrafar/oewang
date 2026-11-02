@@ -50,6 +50,12 @@ Source is bind-mounted and all three apps reload on change. A rebuild is only ne
 docker compose -f infra/docker-compose.yml build api   # after editing Cargo.toml
 ```
 
+After changing a dependency in `apps/app` or `apps/ai`, rebuild **and** renew the anonymous volume. Those containers mount `node_modules` and `.venv` as anonymous volumes so the host cannot shadow them, and an existing volume survives a rebuild, hiding the new layer:
+
+```bash
+docker compose -f infra/docker-compose.yml up -d --build --renew-anon-volumes app
+```
+
 Generate the two required secrets:
 
 ```bash
