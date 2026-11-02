@@ -28,13 +28,14 @@
 	import Foundations from './sections/foundations.svelte';
 	import Molecules from './sections/molecules.svelte';
 	import Organisms from './sections/organisms.svelte';
+	import Pages from './sections/pages.svelte';
 
 	/*
 	 * The open tab lives in `?tab=` (UI-8), so a refresh, a shared link and the
 	 * back button all land on the same one. The URL is the state: reading it
 	 * back is what makes a bad value harmless.
 	 */
-	const TABS = ['foundations', 'atoms', 'molecules', 'organisms'] as const;
+	const TABS = ['foundations', 'atoms', 'molecules', 'organisms', 'pages'] as const;
 	const activeTab = $derived(readParam(page.url, 'tab', TABS, 'foundations'));
 
 	// ------------------------------------------------- measured comparison
@@ -239,6 +240,7 @@
 			<Tabs.Trigger value="atoms" variant="line">Atoms</Tabs.Trigger>
 			<Tabs.Trigger value="molecules" variant="line">Molecules</Tabs.Trigger>
 			<Tabs.Trigger value="organisms" variant="line">Organisms</Tabs.Trigger>
+			<Tabs.Trigger value="pages" variant="line">Pages</Tabs.Trigger>
 		</Tabs.List>
 
 		<Tabs.Content value="foundations" class="space-y-10 pt-4">
@@ -252,6 +254,9 @@
 		</Tabs.Content>
 		<Tabs.Content value="organisms" class="space-y-10 pt-4">
 			<Organisms {heading} />
+		</Tabs.Content>
+		<Tabs.Content value="pages" class="space-y-10 pt-4">
+			<Pages {heading} />
 		</Tabs.Content>
 	</Tabs.Root>
 

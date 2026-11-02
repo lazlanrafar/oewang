@@ -235,6 +235,28 @@ should match it:
 - Above the table: search with a filter control, a grouping selector, a date
   range picker, a column-visibility control, an export menu and an add button.
 
+## The page, built as a specimen first
+
+The whole page exists in the design system's **Pages** tab before it exists as
+a route: `organisms/transactions/transactions-page.svelte` composes the header,
+the filter, the table, the form sheet, the detail sheet, the export modal and
+the bulk bar, with mock rows. Building it there first makes the route a data
+problem rather than a layout one, and it is where the arrangement is agreed.
+
+Layout, from the old `transaction-client-header`: the title on the left, then
+grouping, the date range, the import and export menu and the add button on the
+right, with the filter on its own line underneath. The sheets, the modal and
+the bulk bar hang off the page, not off the table, because they are the page's
+state; the table takes `toolbar={false}` and reports selection and row opening
+back through callbacks.
+
+A member without edit rights sees no add and no import, only export
+([permissions](../security/auth.md)).
+
+One thing the port had to learn: two sheets cannot change places in the same
+tick. The detail closes through the primitive's own `Close`, and the form opens
+once the overlay has gone, or both end up shut.
+
 ## Data table: what is built and what is not
 
 Measured against the old `organisms/data-table` and the transactions page that

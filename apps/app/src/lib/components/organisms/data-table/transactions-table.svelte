@@ -55,7 +55,11 @@
 		filters = $bindable(emptyFilterState()),
 		grouping = $bindable('day'),
 		locale = 'en-GB',
+		/** The page can carry the filter and the actions in its own header. */
+		toolbar = true,
 		onAdd,
+		onOpenRow,
+		onSelectionChange,
 		class: className
 	}: {
 		rows: TransactionRow[];
@@ -64,7 +68,11 @@
 		filters?: DataTableFilterState;
 		grouping?: 'day' | 'none';
 		locale?: string;
+		toolbar?: boolean;
 		onAdd?: () => void;
+		/** Called when a row is opened, so the page can show its detail. */
+		onOpenRow?: (row: TransactionRow) => void;
+		onSelectionChange?: (ids: string[]) => void;
 		class?: string;
 	} = $props();
 
@@ -205,6 +213,10 @@
 	);
 
 	const selectedIds = $derived(sorted.filter((r) => selected[r.id]).map((r) => r.id));
+
+	$effect(() => {
+		onSelectionChange?.(selectedIds);
+	});
 	const allSelected = $derived(sorted.length > 0 && selectedIds.length === sorted.length);
 	const someSelected = $derived(selectedIds.length > 0 && !allSelected);
 
@@ -245,6 +257,11 @@
 	}
 
 	function toggleExpanded(id: string) {
+		if (onOpenRow) {
+			const row = sorted.find((candidate) => candidate.id === id);
+			if (row) onOpenRow(row);
+			return;
+		}
 		expandedRow = expandedRow === id ? null : id;
 	}
 
@@ -396,7 +413,8 @@
 
 <div class={cn('space-y-3', className)}>
 	<!-- ------------------------------------------------------- toolbar -->
-	<div class="flex flex-wrap items-start gap-2">
+	{#if toolbar}
+		<div class="flex flex-wrap items-start gap-2">
 		<DataTableFilter bind:filters {facets} class="flex-1" />
 
 		<div class="flex items-center gap-2">
@@ -450,10 +468,11 @@
 				<Plus />
 				Add
 			</Button>
+			</div>
 		</div>
-	</div>
+	{/if}
 
-	{#if selectedIds.length > 0}
+	{#if toolbar && selectedIds.length > 0}
 		<div class="bg-muted flex flex-wrap items-center gap-2 border px-3 py-2">
 			<span class="text-body">{selectedIds.length} selected</span>
 			<div class="ml-auto flex items-center gap-2">
