@@ -1508,8 +1508,10 @@ dependencies = [
 name = "oewang-clients"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "oewang-domain",
  "reqwest",
+ "rust_decimal",
  "serde",
  "serde_json",
  "thiserror",

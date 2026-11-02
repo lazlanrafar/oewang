@@ -35,6 +35,14 @@ pub struct Config {
     pub ai_service_url: String,
     pub ai_service_api_key: Secret,
 
+    /// The daily rate source (D44). The key is optional: the keyless
+    /// endpoint still answers, and a lookup that fails for any reason just
+    /// moves the resolution ladder down a step (TXN-22).
+    pub fx_api_url: String,
+    pub fx_access_key: Option<Secret>,
+    /// How often the daily job refreshes the cache.
+    pub fx_refresh_interval: Duration,
+
     pub crypto_signing_key_file: std::path::PathBuf,
     pub owe1_enabled: bool,
 
@@ -122,6 +130,11 @@ impl Config {
             ai_service_api_key: Secret::new(ai_service_api_key),
 
             owe1_enabled,
+
+            fx_api_url: optional("FX_API_URL")
+                .unwrap_or_else(|| "https://api.exchangerate.host".into()),
+            fx_access_key: optional("FX_ACCESS_KEY").map(Secret::new),
+            fx_refresh_interval: parse_duration("FX_REFRESH_INTERVAL", "24h")?,
 
             crypto_signing_key_file: optional("CRYPTO_SIGNING_KEY_FILE")
                 .unwrap_or_else(|| "./.secrets/owe1-signing-key.pem".into())

@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use oewang_clients::Mailer;
+use oewang_clients::{Mailer, RatesClient};
 use oewang_db::PgPool;
 
 use crate::{
@@ -19,4 +19,7 @@ pub struct AppState {
     pub owe1_signer: Arc<Owe1Signer>,
     pub owe1_sessions: SessionStore,
     pub mailer: Mailer,
+    /// The daily rate source. Every lookup through it is allowed to fail;
+    /// the resolution ladder has a step for that (TXN-22).
+    pub rates: RatesClient,
 }

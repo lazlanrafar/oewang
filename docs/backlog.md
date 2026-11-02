@@ -183,32 +183,32 @@ Requirements: WAL-1, CAT-1, UI-5
 ### US-014: Transaction list API
 Requirements: TXN-8, SEC-9, SEC-10, SEC-18
 
-- [ ] Every filter in [endpoints](api/endpoints.md#get-v1transactions-query-parameters)
-- [ ] Wallet and category names joined in the same query, no N+1
-- [ ] Pagination meta correct; `limit` capped at 100
-- [ ] Sort maps an enum to a fixed fragment; the search filter binds its `LIKE` pattern as a parameter (SEC-9)
-- [ ] Soft-deleted rows never appear
-- [ ] A 10,000 row workspace returns page 1 under 100 ms locally
+- [x] Every filter in [endpoints](api/endpoints.md#get-v1transactions-query-parameters)
+- [x] Wallet and category names joined in the same query, no N+1
+- [x] Pagination meta correct; `limit` capped at 100
+- [x] Sort maps an enum to a fixed fragment; the search filter binds its `LIKE` pattern as a parameter (SEC-9)
+- [x] Soft-deleted rows never appear
+- [x] A 10,000 row workspace returns page 1 under 100 ms locally
 
 ### US-015: Create transaction with balance update
 Requirements: TXN-1, TXN-2, TXN-3, TXN-6, TXN-7, TXN-15, TXN-18, TXN-19, OPS-1
 
-- [ ] Balance rules applied inside one database transaction
-- [ ] Wallet rows locked with `FOR UPDATE` in ascending ID order
-- [ ] Every validation rule from [transactions](features/transactions.md#validation), including `to_amount` on a transfer (TXN-18)
-- [ ] An audit row written in the same transaction, with `source: "web"`
-- [ ] A `member` is refused on create, update and delete (TXN-15)
-- [ ] Unit tests for income, expense, transfer and each validation failure
-- [ ] A concurrency test: two parallel creates against one wallet give the exact final balance
+- [x] Balance rules applied inside one database transaction
+- [x] Wallet rows locked with `FOR UPDATE` in ascending ID order
+- [x] Every validation rule from [transactions](features/transactions.md#validation), including `to_amount` on a transfer (TXN-18)
+- [x] An audit row written in the same transaction, with `source: "web"`
+- [x] A `member` is refused on create, update and delete (TXN-15)
+- [x] Unit tests for income, expense, transfer and each validation failure
+- [x] A concurrency test: two parallel creates against one wallet give the exact final balance
 
 ### US-016: Update and delete transaction
 Requirements: TXN-4, TXN-5
 
-- [ ] `PATCH` reverses the old effect and applies the new one atomically
-- [ ] All nine type transitions, plus changed amount, wallet and destination, recompute correctly
-- [ ] `DELETE` soft-deletes and reverses
-- [ ] Both write audit rows with `before` and `after`
-- [ ] Unit tests cover every transition and the delete
+- [x] `PATCH` reverses the old effect and applies the new one atomically
+- [x] All nine type transitions, plus changed amount, wallet and destination, recompute correctly
+- [x] `DELETE` soft-deletes and reverses
+- [x] Both write audit rows with `before` and `after`
+- [x] Unit tests cover every transition and the delete
 
 ### US-017: Transaction table UI
 Requirements: TXN-8, TXN-9, UI-2, UI-6

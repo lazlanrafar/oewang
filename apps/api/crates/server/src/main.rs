@@ -8,11 +8,13 @@ mod accounts;
 mod audit;
 mod auth;
 mod config;
+mod fx;
 mod owe1;
 mod workspaces;
 mod response;
 mod routes;
 mod state;
+mod transactions;
 
 use std::{net::SocketAddr, sync::Arc, time::Duration};
 
@@ -99,7 +101,14 @@ async fn main() -> anyhow::Result<()> {
     };
     tracing::info!(mailer = ?mailer, "mailer ready");
 
+    let rates = oewang_clients::RatesClient::new(
+        config.fx_api_url.clone(),
+        config.fx_access_key.as_ref().map(|key| key.expose().to_string()),
+    );
+    tracing::info!(rates = ?rates, "rate source ready");
+
     let request_timeout = config.request_timeout;
+    let fx_refresh_interval = config.fx_refresh_interval;
     let body_limit = config.body_limit_bytes;
     let addr = SocketAddr::from(([0, 0, 0, 0], config.port));
 
@@ -109,7 +118,10 @@ async fn main() -> anyhow::Result<()> {
         owe1_signer,
         owe1_sessions,
         mailer,
+        rates,
     };
+
+    spawn_rate_refresher(state.clone(), fx_refresh_interval);
 
     let app = Router::new()
         .route("/health", get(routes::health::live))
@@ -235,10 +247,69 @@ fn protected_routes(state: AppState) -> Router<AppState> {
             axum::routing::patch(accounts::handler::update_category)
                 .delete(accounts::handler::delete_category),
         )
+        // Exchange rates. A suggestion for the form; nothing reads it on
+        // the way out (D39).
+        .route("/v1/fx/rate", get(fx::handler::rate))
+        // Transactions. The fixed sub-paths are registered before `{id}`,
+        // so `/summary` is never read as a transaction id.
+        .route(
+            "/v1/transactions",
+            get(transactions::handler::list).post(transactions::handler::create),
+        )
+        .route("/v1/transactions/summary", get(transactions::handler::summary))
+        .route("/v1/transactions/export", get(transactions::handler::export))
+        .route("/v1/transactions/bulk", post(transactions::handler::bulk_create))
+        .route(
+            "/v1/transactions/bulk-update",
+            post(transactions::handler::bulk_update),
+        )
+        .route(
+            "/v1/transactions/bulk-delete",
+            post(transactions::handler::bulk_delete),
+        )
+        .route(
+            "/v1/transactions/{id}",
+            get(transactions::handler::get)
+                .patch(transactions::handler::update)
+                .delete(transactions::handler::delete),
+        )
+        .route(
+            "/v1/transactions/{id}/history",
+            get(transactions::handler::history),
+        )
         .layer(axum::middleware::from_fn_with_state(
             state,
             owe1::middleware::owe1_layer,
         ))
+}
+
+/// Fill the rate cache for every pair in use (D44).
+///
+/// In-process rather than a worker service: it is one idempotent statement
+/// loop on a fixed schedule, and a separate process to run it would be more
+/// moving parts than the job is worth. The first run is immediate, so a
+/// fresh deployment has rates without waiting a day.
+fn spawn_rate_refresher(state: AppState, every: Duration) {
+    tokio::spawn(async move {
+        let mut ticker = tokio::time::interval(every);
+        loop {
+            ticker.tick().await;
+
+            match fx::service::refresh_cache(
+                &state.db,
+                &state.rates,
+                chrono::Utc::now().date_naive(),
+            )
+            .await
+            {
+                Ok(0) => tracing::debug!("rate cache: nothing to refresh"),
+                Ok(written) => tracing::info!(written, "rate cache refreshed"),
+                // A rate source that is down is not a reason to stop the
+                // loop: the resolution ladder has a step for exactly this.
+                Err(error) => tracing::warn!(%error, "rate cache refresh failed"),
+            }
+        }
+    });
 }
 
 /// Drop expired crypto sessions so memory tracks live sessions rather than

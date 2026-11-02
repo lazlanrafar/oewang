@@ -5,5 +5,7 @@
 #![forbid(unsafe_code)]
 
 pub mod mailer;
+pub mod rates;
 
 pub use mailer::Mailer;
+pub use rates::RatesClient;
