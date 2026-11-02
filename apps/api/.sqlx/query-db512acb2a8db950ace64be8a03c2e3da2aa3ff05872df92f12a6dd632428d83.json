@@ -1,0 +1,46 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, user_agent, ip, created_at, expires_at\n           FROM refresh_tokens\n           WHERE user_id = $1\n             AND revoked_at IS NULL\n             AND used_at IS NULL\n             AND expires_at > now()\n           ORDER BY created_at DESC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "user_agent",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "ip",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 4,
+        "name": "expires_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "db512acb2a8db950ace64be8a03c2e3da2aa3ff05872df92f12a6dd632428d83"
+}

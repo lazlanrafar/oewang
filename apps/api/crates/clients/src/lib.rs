@@ -1,5 +1,9 @@
-//! Outbound HTTP: the AI service and object storage.
+//! Outbound HTTP: the AI service, object storage and transactional email.
 //!
-//! Both targets come from configuration. No endpoint ever fetches a
-//! user-supplied URL. See docs/security/hardening.md.
+//! Every target comes from configuration. No endpoint ever fetches a
+//! user-supplied URL. See docs/security/hardening.md#outbound-calls.
 #![forbid(unsafe_code)]
+
+pub mod mailer;
+
+pub use mailer::Mailer;

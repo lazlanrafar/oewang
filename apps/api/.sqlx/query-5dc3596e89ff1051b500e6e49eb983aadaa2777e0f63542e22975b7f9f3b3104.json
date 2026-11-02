@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO wallets (id, workspace_id, name, currency_code, is_default, sort_order)\n           VALUES ($1, $2, $3, $4, true, 0)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "5dc3596e89ff1051b500e6e49eb983aadaa2777e0f63542e22975b7f9f3b3104"
+}

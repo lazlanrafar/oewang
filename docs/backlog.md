@@ -88,35 +88,35 @@ Requirements: UI-1, UI-3, UI-6
 ### US-007: Register and login API
 Requirements: AUTH-1, AUTH-2, AUTH-5, WS-5
 
-- [ ] `POST /v1/auth/register` creates user, workspace and an `owner` membership in one transaction
-- [ ] Argon2id hashing runs under `spawn_blocking`; the hash is never in a response type
-- [ ] `POST /v1/auth/login` returns a JWT, or `INVALID_CREDENTIALS`
-- [ ] An unknown email performs a dummy verification so timing matches a wrong password
-- [ ] Seed defaults created for a new workspace (CAT-3)
-- [ ] Unit tests: success, wrong password, unknown email, duplicate email
+- [x] `POST /v1/auth/register` creates user, workspace and an `owner` membership in one transaction
+- [x] Argon2id hashing runs under `spawn_blocking`; the hash is never in a response type
+- [x] `POST /v1/auth/login` returns a JWT, or `INVALID_CREDENTIALS`
+- [x] An unknown email performs a dummy verification so timing matches a wrong password
+- [x] Seed defaults created for a new workspace (CAT-3)
+- [x] Unit tests: success, wrong password, unknown email, duplicate email
 
 ### US-008: JWT extractor and role guard
 Requirements: AUTH-4, WS-1, WS-2
 
-- [ ] An `Auth` extractor rejects a missing, malformed or expired token with 401
-- [ ] `workspace_id` and `role` come only from claims; a body-supplied `workspace_id` is ignored
-- [ ] `RequireRole` returns `INSUFFICIENT_ROLE` for a `member` on a write route
-- [ ] A write path re-reads the membership row rather than trusting the token snapshot
-- [ ] `POST /v1/auth/switch-workspace` re-scopes the token, or returns `NOT_A_MEMBER`
-- [ ] Tests cover every rejection path
+- [x] An `Auth` extractor rejects a missing, malformed or expired token with 401
+- [x] `workspace_id` and `role` come only from claims; a body-supplied `workspace_id` is ignored
+- [x] `RequireRole` returns `INSUFFICIENT_ROLE` for a `member` on a write route
+- [x] A write path re-reads the membership row rather than trusting the token snapshot
+- [x] `POST /v1/auth/switch-workspace` re-scopes the token, or returns `NOT_A_MEMBER`
+- [x] Tests cover every rejection path
 
 ### US-008b: Refresh rotation and revocation
 Requirements: AUTH-7, AUTH-8, AUTH-9
 
-- [ ] `refresh_tokens` table with `token_hash`, `family_id`, `used_at`, `revoked_at`
-- [ ] Login issues a 15 minute access token and a 30 day opaque refresh token; only the SHA-256 is stored
-- [ ] `POST /v1/auth/refresh` rotates: new pair issued, old row marked used
-- [ ] Reusing a rotated token revokes the whole family and returns 401
-- [ ] Logout revokes the row; logout-all revokes every live row for the user
-- [ ] A password change or reset revokes every live row
-- [ ] The SvelteKit client refreshes transparently on a 401 and retries the original request once
-- [ ] `GET /v1/auth/sessions` lists live sessions with user agent and last use
-- [ ] Tests: rotation, reuse detection, expiry, revocation on password change
+- [x] `refresh_tokens` table with `token_hash`, `family_id`, `used_at`, `revoked_at`
+- [x] Login issues a 15 minute access token and a 30 day opaque refresh token; only the SHA-256 is stored
+- [x] `POST /v1/auth/refresh` rotates: new pair issued, old row marked used
+- [x] Reusing a rotated token revokes the whole family and returns 401
+- [x] Logout revokes the row; logout-all revokes every live row for the user
+- [x] A password change or reset revokes every live row
+- [x] The SvelteKit client refreshes transparently on a 401 and retries the original request once
+- [x] `GET /v1/auth/sessions` lists live sessions with user agent and last use
+- [x] Tests: rotation, reuse detection, expiry, revocation on password change
 
 ### US-009: Login and register UI
 Requirements: AUTH-3, UI-1, UI-7
@@ -131,24 +131,24 @@ Requirements: AUTH-3, UI-1, UI-7
 ### US-010: Workspace members and invites
 Requirements: WS-3, WS-4
 
-- [ ] Every route in [endpoints](api/endpoints.md#workspaces-and-members), with role gates
-- [ ] An invite creates a token row; accepting adds a membership row
-- [ ] The last owner cannot be removed or demoted: `LAST_OWNER`
-- [ ] Settings page lists members with role, an invite form and a remove action
-- [ ] Verify in browser
+- [x] Every route in [endpoints](api/endpoints.md#workspaces-and-members), with role gates
+- [x] An invite creates a token row; accepting adds a membership row
+- [x] The last owner cannot be removed or demoted: `LAST_OWNER`
+- [x] Settings page lists members with role, an invite form and a remove action
+- [x] Verify in browser
 
 ### US-010b: Password reset
 Requirements: AUTH-10, AUTH-6
 
-- [ ] `password_reset_tokens` table, SHA-256 stored, 1 hour expiry, single use
-- [ ] `POST /v1/auth/forgot-password` always answers 204, so it cannot enumerate users
-- [ ] The email goes through Resend from a DNS-verified sender (D40)
-- [ ] `POST /v1/auth/reset-password` validates the token, sets the new hash, marks it used, revokes every session
-- [ ] An expired, used or unknown token returns `RESET_TOKEN_INVALID`
-- [ ] Both pages built: request a reset, set a new password
-- [ ] Rate limited with the rest of `/v1/auth/*`
-- [ ] The token never appears in a log line
-- [ ] Verify in browser
+- [x] `password_reset_tokens` table, SHA-256 stored, 1 hour expiry, single use
+- [x] `POST /v1/auth/forgot-password` always answers 204, so it cannot enumerate users
+- [x] The email goes through Resend from a DNS-verified sender (D40)
+- [x] `POST /v1/auth/reset-password` validates the token, sets the new hash, marks it used, revokes every session
+- [x] An expired, used or unknown token returns `RESET_TOKEN_INVALID`
+- [x] Both pages built: request a reset, set a new password
+- [x] Rate limited with the rest of `/v1/auth/*`
+- [x] The token never appears in a log line
+- [x] Verify in browser
 
 ---
 

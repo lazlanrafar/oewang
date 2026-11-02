@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE password_reset_tokens\n           SET used_at = now()\n           WHERE token_hash = $1 AND used_at IS NULL AND expires_at > now()\n           RETURNING user_id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user_id",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "0717f33001a5540e2a1656e661da963663b018c8204b68bcb885d5faef0f8a99"
+}

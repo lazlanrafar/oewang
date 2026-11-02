@@ -2,6 +2,7 @@
 
 use std::sync::Arc;
 
+use oewang_clients::Mailer;
 use oewang_db::PgPool;
 
 use crate::{
@@ -17,4 +18,5 @@ pub struct AppState {
     pub config: Arc<Config>,
     pub owe1_signer: Arc<Owe1Signer>,
     pub owe1_sessions: SessionStore,
+    pub mailer: Mailer,
 }

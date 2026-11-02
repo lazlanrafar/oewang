@@ -6,6 +6,8 @@
 #![forbid(unsafe_code)]
 
 pub mod pool;
+pub mod repositories;
+pub mod seed;
 
 pub use pool::{connect, PoolConfig};
 pub use sqlx::PgPool;

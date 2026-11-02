@@ -30,6 +30,8 @@ pub struct Config {
     pub refresh_token_ttl: Duration,
 
     pub app_url: String,
+    pub resend_api_key: Option<Secret>,
+    pub email_from: String,
     pub ai_service_url: String,
     pub ai_service_api_key: Secret,
 
@@ -91,6 +93,14 @@ impl Config {
             });
         }
 
+        // Without a provider, email is printed to the log. That is a
+        // development convenience and nothing else: in production a password
+        // reset nobody receives is an account nobody can recover (AUTH-10).
+        let resend_api_key = optional("RESEND_API_KEY");
+        if resend_api_key.is_none() && app_env == AppEnv::Production {
+            return Err(ConfigError::Missing("RESEND_API_KEY"));
+        }
+
         Ok(Self {
             app_env,
             port: parse_or("API_PORT", 3002)?,
@@ -105,6 +115,9 @@ impl Config {
             refresh_token_ttl: parse_duration("REFRESH_TOKEN_TTL", "30d")?,
 
             app_url: optional("APP_URL").unwrap_or_else(|| "http://localhost:3000".into()),
+            resend_api_key: resend_api_key.map(Secret::new),
+            email_from: optional("EMAIL_FROM")
+                .unwrap_or_else(|| "oewang <no-reply@localhost>".into()),
             ai_service_url: optional("AI_SERVICE_URL").unwrap_or_else(|| "http://ai:3004".into()),
             ai_service_api_key: Secret::new(ai_service_api_key),
 

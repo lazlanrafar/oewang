@@ -5,11 +5,13 @@
 //! See docs/best-practices/rust-api.md.
 #![forbid(unsafe_code)]
 
+pub mod auth;
 pub mod envelope;
 pub mod error;
 pub mod owe1;
 pub mod secret;
 
+pub use auth::Role;
 pub use envelope::{Envelope, Meta, PageMeta};
 pub use error::{AppError, ErrorBody, FieldErrors};
 pub use secret::Secret;

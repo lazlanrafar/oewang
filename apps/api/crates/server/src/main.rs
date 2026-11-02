@@ -4,8 +4,10 @@
 //! is US-004 and US-005; the auth extractor is US-008.
 #![forbid(unsafe_code)]
 
+mod auth;
 mod config;
 mod owe1;
+mod workspaces;
 mod response;
 mod routes;
 mod state;
@@ -85,6 +87,16 @@ async fn main() -> anyhow::Result<()> {
     let owe1_sessions = SessionStore::new();
     spawn_session_sweeper(owe1_sessions.clone());
 
+    let mailer = match &config.resend_api_key {
+        Some(key) => oewang_clients::Mailer::resend(
+            key.expose().to_string(),
+            config.email_from.clone(),
+            config.app_url.clone(),
+        ),
+        None => oewang_clients::Mailer::console(config.app_url.clone()),
+    };
+    tracing::info!(mailer = ?mailer, "mailer ready");
+
     let request_timeout = config.request_timeout;
     let body_limit = config.body_limit_bytes;
     let addr = SocketAddr::from(([0, 0, 0, 0], config.port));
@@ -94,6 +106,7 @@ async fn main() -> anyhow::Result<()> {
         config: Arc::new(config),
         owe1_signer,
         owe1_sessions,
+        mailer,
     };
 
     let app = Router::new()
@@ -148,6 +161,44 @@ async fn main() -> anyhow::Result<()> {
 fn protected_routes(state: AppState) -> Router<AppState> {
     Router::new()
         .route("/v1/session", get(owe1::handler::session_status))
+        // Auth. register, login, refresh and the two reset routes are
+        // unauthenticated; the rest take the token.
+        .route("/v1/auth/register", post(auth::handler::register))
+        .route("/v1/auth/login", post(auth::handler::login))
+        .route("/v1/auth/refresh", post(auth::handler::refresh))
+        .route("/v1/auth/logout", post(auth::handler::logout))
+        .route("/v1/auth/logout-all", post(auth::handler::logout_all))
+        .route("/v1/auth/me", get(auth::handler::me))
+        .route("/v1/auth/sessions", get(auth::handler::sessions))
+        .route("/v1/auth/switch-workspace", post(auth::handler::switch_workspace))
+        .route("/v1/auth/forgot-password", post(auth::handler::forgot_password))
+        .route("/v1/auth/reset-password", post(auth::handler::reset_password))
+        // Workspaces and members.
+        .route("/v1/workspaces", get(workspaces::handler::list_workspaces))
+        .route(
+            "/v1/workspaces/current",
+            get(workspaces::handler::current_workspace)
+                .patch(workspaces::handler::update_workspace)
+                .delete(workspaces::handler::delete_workspace),
+        )
+        .route(
+            "/v1/workspaces/current/members",
+            get(workspaces::handler::list_members),
+        )
+        .route(
+            "/v1/workspaces/current/members/{user_id}",
+            axum::routing::patch(workspaces::handler::update_member)
+                .delete(workspaces::handler::remove_member),
+        )
+        .route(
+            "/v1/workspaces/current/invites",
+            get(workspaces::handler::list_invites).post(workspaces::handler::create_invite),
+        )
+        .route(
+            "/v1/workspaces/current/invites/{id}",
+            axum::routing::delete(workspaces::handler::revoke_invite),
+        )
+        .route("/v1/workspaces/accept-invite", post(workspaces::handler::accept_invite))
         .layer(axum::middleware::from_fn_with_state(
             state,
             owe1::middleware::owe1_layer,
