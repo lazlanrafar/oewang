@@ -30,6 +30,7 @@
 	import { Input } from '$lib/components/atoms/input';
 	import { Label } from '$lib/components/atoms/label';
 	import * as Tabs from '$lib/components/atoms/tabs';
+	import { ConfirmDialog } from '$lib/components/molecules/confirm-dialog';
 	import * as Empty from '$lib/components/molecules/empty';
 	import FormError from '$lib/components/shell/form-error.svelte';
 	import { messageForCode } from '$lib/errors';
@@ -72,6 +73,23 @@
 		category: (typeof data.categories)[number] | null;
 		type: 'income' | 'expense';
 	}>({ open: false, category: null, type: 'expense' });
+
+	/*
+	 * One confirmation dialog for every delete on this screen (UI-4).
+	 *
+	 * The design system's alert dialog rather than the browser's `confirm`,
+	 * which blocks the renderer until it is dismissed and cannot be
+	 * translated. The form it submits is below, so a delete is still an
+	 * ordinary form action.
+	 */
+	let pendingDelete = $state<{
+		open: boolean;
+		action: string;
+		id: string;
+		title: string;
+		description: string;
+	}>({ open: false, action: '', id: '', title: '', description: '' });
+	let deleteForm = $state<HTMLFormElement | null>(null);
 
 	/**
 	 * Close the dialog once the action it submitted has succeeded.
@@ -178,24 +196,21 @@
 												{t('common.edit')}
 											</DropdownMenu.Item>
 											<DropdownMenu.Separator />
-											<form
-												method="POST"
-												action="?/deleteGroup"
-												use:enhance
-												onsubmit={(event) => {
-													if (!confirm(t('settings.delete_group_confirm', { name: group.name ?? '' })))
-														event.preventDefault();
-												}}
+											<DropdownMenu.Item
+												class="text-destructive"
+												onclick={() =>
+													(pendingDelete = {
+														open: true,
+														action: '?/deleteGroup',
+														id: group.id ?? '',
+														title: t('settings.delete_group'),
+														description: t('settings.delete_group_confirm', {
+															name: group.name ?? ''
+														})
+													})}
 											>
-												<input type="hidden" name="id" value={group.id} />
-												<DropdownMenu.Item closeOnSelect={false}>
-													{#snippet child({ props })}
-														<button {...props} type="submit" class="text-destructive w-full text-left">
-															{t('settings.delete_group')}
-														</button>
-													{/snippet}
-												</DropdownMenu.Item>
-											</form>
+												{t('settings.delete_group')}
+											</DropdownMenu.Item>
 										</DropdownMenu.Content>
 									</DropdownMenu.Root>
 								{/if}
@@ -313,24 +328,21 @@
 													{/if}
 
 													<DropdownMenu.Separator />
-													<form
-														method="POST"
-														action="?/deleteWallet"
-														use:enhance
-														onsubmit={(event) => {
-															if (!confirm(t('settings.delete_wallet_confirm', { name: wallet.name })))
-																event.preventDefault();
-														}}
+													<DropdownMenu.Item
+														class="text-destructive"
+														onclick={() =>
+															(pendingDelete = {
+																open: true,
+																action: '?/deleteWallet',
+																id: wallet.id,
+																title: t('settings.delete_wallet'),
+																description: t('settings.delete_wallet_confirm', {
+																	name: wallet.name
+																})
+															})}
 													>
-														<input type="hidden" name="id" value={wallet.id} />
-														<DropdownMenu.Item closeOnSelect={false}>
-															{#snippet child({ props })}
-																<button {...props} type="submit" class="text-destructive w-full text-left">
-																	{t('settings.delete_wallet')}
-																</button>
-															{/snippet}
-														</DropdownMenu.Item>
-													</form>
+														{t('settings.delete_wallet')}
+													</DropdownMenu.Item>
 												</DropdownMenu.Content>
 											</DropdownMenu.Root>
 										</div>
@@ -430,28 +442,21 @@
 														{t('common.edit')}
 													</DropdownMenu.Item>
 													<DropdownMenu.Separator />
-													<form
-														method="POST"
-														action="?/deleteCategory"
-														use:enhance
-														onsubmit={(event) => {
-															if (
-																!confirm(
-																	t('settings.delete_category_confirm', { name: category.name })
-																)
-															)
-																event.preventDefault();
-														}}
+													<DropdownMenu.Item
+														class="text-destructive"
+														onclick={() =>
+															(pendingDelete = {
+																open: true,
+																action: '?/deleteCategory',
+																id: category.id,
+																title: t('settings.delete_category'),
+																description: t('settings.delete_category_confirm', {
+																	name: category.name
+																})
+															})}
 													>
-														<input type="hidden" name="id" value={category.id} />
-														<DropdownMenu.Item closeOnSelect={false}>
-															{#snippet child({ props })}
-																<button {...props} type="submit" class="text-destructive w-full text-left">
-																	{t('settings.delete_category')}
-																</button>
-															{/snippet}
-														</DropdownMenu.Item>
-													</form>
+														{t('settings.delete_category')}
+													</DropdownMenu.Item>
 												</DropdownMenu.Content>
 											</DropdownMenu.Root>
 										{/if}
@@ -667,3 +672,24 @@
 		</form>
 	</Dialog.Content>
 </Dialog.Root>
+
+<ConfirmDialog
+	bind:open={pendingDelete.open}
+	title={pendingDelete.title}
+	description={pendingDelete.description}
+	confirmLabel={t('common.delete')}
+	cancelLabel={t('common.cancel')}
+	onConfirm={() => deleteForm?.requestSubmit()}
+/>
+
+<!-- The delete every confirmation submits. One form, whichever row it is
+     for, because the action and the id are the only things that differ. -->
+<form
+	bind:this={deleteForm}
+	method="POST"
+	action={pendingDelete.action}
+	class="hidden"
+	use:enhance={closeOnSuccess}
+>
+	<input type="hidden" name="id" value={pendingDelete.id} />
+</form>

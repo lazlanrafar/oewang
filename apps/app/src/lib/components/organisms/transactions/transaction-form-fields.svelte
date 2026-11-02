@@ -57,6 +57,7 @@
 	 */
 	import { formatMoney, multiplyDecimals } from '$lib/money.js';
 	import { Checkbox } from '../../atoms/checkbox/index.js';
+	import { FileDropzone, type UploadedFile } from '../../molecules/file-dropzone/index.js';
 	import { Input } from '../../atoms/input/index.js';
 	import { Label } from '../../atoms/label/index.js';
 	import * as Tabs from '../../atoms/tabs/index.js';
@@ -79,6 +80,7 @@
 		/** A rate suggestion for the form, or null while none is known. */
 		suggestedRate = null,
 		plain = false,
+		attachments = $bindable([]),
 		fieldErrors,
 		onCreateAccount,
 		onCreateCategory
@@ -92,6 +94,8 @@
 		suggestedRate?: string | null;
 		/** Native controls only, for the no-JavaScript form. */
 		plain?: boolean;
+		/** The files this transaction carries (TXN-13). */
+		attachments?: UploadedFile[];
 		fieldErrors?: Record<string, string>;
 		onCreateAccount?: (name: string) => void;
 		onCreateCategory?: (name: string) => void;
@@ -381,6 +385,19 @@
 			placeholder="Optional"
 		/>
 	</div>
+
+	{#if !plain}
+		<!--
+			Files upload on drop, so the form submits ids rather than bytes.
+			Absent from the no-script form: an upload needs script, and a
+			form that silently dropped the file would be worse than one that
+			does not offer it.
+		-->
+		<div class="grid gap-2">
+			<Label class={labelClass}>Attachments</Label>
+			<FileDropzone bind:files={attachments} />
+		</div>
+	{/if}
 
 	<div class="flex items-center gap-2">
 		{#if plain}

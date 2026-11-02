@@ -257,8 +257,8 @@ Requirements: WAL-5, WAL-6, TXN-18, TXN-19, TXN-20, TXN-21, TXN-22
 ### US-019: Transaction detail sheet
 Requirements: TXN-12, TXN-13, UI-4, OPS-8
 
-- [ ] Full detail. Line items and attachments have their place in the sheet and read "none": both tables are empty until US-024 and US-025 fill them
-- [ ] Attachment bytes as encrypted chunks. Blocked on the vault routes in US-023; no object-storage URL exists in the codebase either way
+- [x] Full detail, line items and attachments
+- [x] Attachment bytes are fetched as encrypted chunks and shown from a Blob URL revoked after load; no object-storage URL is used (D23)
 - [x] Edit and delete visible to `admin+`, hidden for `member`
 - [x] Delete asks for confirmation
 - [x] A history section lists audit entries newest first: actor, surface, and what changed (OPS-8)
@@ -320,18 +320,18 @@ Requirements: VLT-1, VLT-2, VLT-3, VLT-4, SEC-8, SEC-12, SEC-13
 ### US-024: Attach files to transactions
 Requirements: TXN-13, VLT-5
 
-- [ ] `attachment_ids` on create and update sync the join rows
-- [ ] The form sheet has a dropzone with upload progress
-- [ ] Removing an attachment soft-deletes the join row, not the file
-- [ ] Verify in browser
+- [x] `attachment_ids` on create and update sync the join rows
+- [x] The form sheet has a dropzone with upload progress
+- [x] Removing an attachment soft-deletes the join row, not the file
+- [x] Verify in browser
 
 ### US-025: Transaction line items
 Requirements: TXN-12
 
-- [ ] Item routes implemented
-- [ ] The detail sheet shows an editable item table
-- [ ] A warning badge when the item total does not match the transaction amount; not blocked
-- [ ] Verify in browser
+- [x] Item routes implemented
+- [x] The detail sheet shows an editable item table
+- [x] A warning badge when the item total does not match the transaction amount; not blocked
+- [x] Verify in browser
 
 ---
 

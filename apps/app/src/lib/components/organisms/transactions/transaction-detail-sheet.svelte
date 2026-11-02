@@ -22,8 +22,23 @@
 		baseRateDate?: string | null;
 		baseRateStale?: boolean;
 		receivedAmount?: string | null;
-		items?: Array<{ id: string; name: string; amount: string }>;
-		attachments?: Array<{ id: string; name: string }>;
+		/** Line items, with the warning the UI raises when they disagree. */
+		items?: Array<{
+			id: string;
+			name: string;
+			amount: string;
+			quantity?: string | null;
+			unit?: string | null;
+		}>;
+		/** How the items add up against the transaction, when they do not. */
+		itemsMismatch?: string | null;
+		attachments?: Array<{
+			id: string;
+			file_id: string;
+			name: string;
+			type: string;
+			size: number;
+		}>;
 		history?: Array<{
 			id: string;
 			at: string;
@@ -45,12 +60,14 @@
 	 * Read first, and read-only: edit and delete are hidden for a member,
 	 * and a delete asks before it happens (UI-4).
 	 */
-	import Paperclip from '@lucide/svelte/icons/paperclip';
 	import Pencil from '@lucide/svelte/icons/pencil';
+	import Plus from '@lucide/svelte/icons/plus';
 	import Trash2 from '@lucide/svelte/icons/trash-2';
+	import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
 
 	import { Badge } from '../../atoms/badge/index.js';
 	import { Button } from '../../atoms/button/index.js';
+	import { AttachmentView } from '../../molecules/attachment-view/index.js';
 	import * as Sheet from '../../atoms/sheet/index.js';
 	import { cn } from '$lib/utils.js';
 
@@ -60,7 +77,10 @@
 		transaction,
 		canEdit = true,
 		onEdit,
-		onDelete
+		onDelete,
+		onAddItem,
+		onEditItem,
+		onDeleteItem
 	}: {
 		open?: boolean;
 		onOpenChange?: (open: boolean) => void;
@@ -68,6 +88,9 @@
 		canEdit?: boolean;
 		onEdit?: () => void;
 		onDelete?: () => void;
+		onAddItem?: () => void;
+		onEditItem?: (itemId: string) => void;
+		onDeleteItem?: (itemId: string) => void;
 	} = $props();
 </script>
 
@@ -208,16 +231,64 @@
 				{/if}
 
 				<div class="space-y-2">
-					<p class="text-subtle text-xs tracking-widest uppercase">Line items</p>
+					<div class="flex items-center justify-between gap-2">
+						<p class="text-subtle text-xs tracking-widest uppercase">Line items</p>
+						{#if canEdit}
+							<Button variant="ghost" size="icon" class="size-6" aria-label="Add line item" onclick={onAddItem}>
+								<Plus class="size-3.5" />
+							</Button>
+						{/if}
+					</div>
+
 					{#if transaction.items?.length}
-						<ul class="space-y-1">
+						<ul class="divide-border divide-y border">
 							{#each transaction.items as item (item.id)}
-								<li class="flex items-center justify-between gap-4 text-sm">
-									<span class="truncate">{item.name}</span>
+								<li class="flex items-center gap-2 px-3 py-2 text-sm">
+									<span class="min-w-0 flex-1 truncate">
+										{item.name}
+										{#if item.quantity}
+											<span class="text-subtle text-xs">
+												· {item.quantity}{item.unit ? ` ${item.unit}` : ''}
+											</span>
+										{/if}
+									</span>
 									<span class="shrink-0 font-mono">{item.amount}</span>
+									{#if canEdit}
+										<Button
+											variant="ghost"
+											size="icon"
+											class="size-6"
+											aria-label="Edit {item.name}"
+											onclick={() => onEditItem?.(item.id)}
+										>
+											<Pencil class="size-3" />
+										</Button>
+										<Button
+											variant="ghost"
+											size="icon"
+											class="text-destructive size-6"
+											aria-label="Remove {item.name}"
+											onclick={() => onDeleteItem?.(item.id)}
+										>
+											<Trash2 class="size-3" />
+										</Button>
+									{/if}
 								</li>
 							{/each}
 						</ul>
+
+						<!--
+							A mismatch is a badge and nothing more: item totals are
+							not forced to match the transaction, because a receipt
+							with a service charge on it legitimately does not add up
+							(TXN-12).
+						-->
+						{#if transaction.itemsMismatch}
+							<Badge variant="outline" class="text-destructive gap-1">
+								<TriangleAlert class="size-3" />
+								Items add up to {transaction.itemsMismatch}
+							</Badge>
+						{/if}
 					{:else}
 						<p class="text-subtle text-sm">None.</p>
 					{/if}
@@ -226,14 +297,15 @@
 				<div class="space-y-2">
 					<p class="text-subtle text-xs tracking-widest uppercase">Attachments</p>
 					{#if transaction.attachments?.length}
+						<!--
+							The bytes arrive as chunks through this app's own server
+							and are shown from an object URL that is revoked when the
+							sheet goes away. No signed object-storage URL exists
+							(VLT-3, D23).
+						-->
 						<ul class="space-y-2">
 							{#each transaction.attachments as file (file.id)}
-								<li
-									class="border-muted/20 bg-muted/5 flex items-center gap-2 border px-3 py-2.5 text-sm"
-								>
-									<Paperclip class="text-subtle size-3.5 shrink-0" />
-									<span class="truncate">{file.name}</span>
-								</li>
+								<li><AttachmentView {file} /></li>
 							{/each}
 						</ul>
 					{:else}

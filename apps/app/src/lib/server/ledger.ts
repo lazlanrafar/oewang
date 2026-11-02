@@ -171,8 +171,16 @@ export function listTransactions(
 	return api<Transaction[]>({ path: '/v1/transactions', query, token });
 }
 
-export function readTransaction(id: string, token?: string): Promise<Envelope<Transaction>> {
-	return api<Transaction>({ path: `/v1/transactions/${id}`, token });
+export type TransactionDetail = Transaction & {
+	items: TransactionItem[];
+	attachments: Attachment[];
+};
+
+export function readTransaction(
+	id: string,
+	token?: string
+): Promise<Envelope<TransactionDetail>> {
+	return api<TransactionDetail>({ path: `/v1/transactions/${id}`, token });
 }
 
 export function transactionSummary(
@@ -202,6 +210,8 @@ export function fxRate(
 // ----------------------------------------------------------------- writes
 
 export type TransactionPayload = {
+	/** The whole set of files, or absent to leave them alone (TXN-13). */
+	attachment_ids?: string[];
 	type: 'income' | 'expense' | 'transfer';
 	wallet_id: string;
 	to_wallet_id?: string | null;
@@ -235,6 +245,120 @@ export function createTransactions(transactions: TransactionPayload[], token?: s
 		method: 'POST',
 		path: '/v1/transactions/bulk',
 		body: { transactions },
+		token
+	});
+}
+
+export type VaultFile = {
+	id: string;
+	name: string;
+	size: number;
+	type: string;
+	sha256: string | null;
+	status: 'pending' | 'ready';
+};
+
+export type BegunUpload = {
+	id: string;
+	chunk_size: number;
+	chunk_count: number;
+	status: string;
+};
+
+/**
+ * Start an upload (VLT-1).
+ *
+ * Nothing is stored yet: the row exists so a chunk can be addressed, and
+ * stays pending until the bytes have been checked against what was
+ * declared.
+ */
+export function beginUpload(
+	body: { filename: string; content_type: string; size_bytes: number },
+	token?: string
+) {
+	return api<BegunUpload>({ method: 'POST', path: '/v1/vault/files', body, token });
+}
+
+/** One chunk, base64 inside the envelope. Never a signed URL (D23). */
+export function putChunk(fileId: string, index: number, data: string, token?: string) {
+	return api<null>({
+		method: 'PUT',
+		path: `/v1/vault/files/${fileId}/chunks/${index}`,
+		body: { data },
+		token
+	});
+}
+
+export function completeUpload(fileId: string, token?: string) {
+	return api<VaultFile>({
+		method: 'POST',
+		path: `/v1/vault/files/${fileId}/complete`,
+		token
+	});
+}
+
+export function readChunk(fileId: string, index: number, token?: string) {
+	return api<{ index: number; data: string }>({
+		path: `/v1/vault/files/${fileId}/chunks/${index}`,
+		token
+	});
+}
+
+export function readFile(fileId: string, token?: string) {
+	return api<VaultFile>({ path: `/v1/vault/files/${fileId}`, token });
+}
+
+export type TransactionItem = {
+	id: string;
+	name: string;
+	brand: string | null;
+	quantity: string | null;
+	unit: string | null;
+	unit_price: string | null;
+	amount: string;
+	category_id: string | null;
+	notes: string | null;
+};
+
+export type Attachment = {
+	id: string;
+	file_id: string;
+	name: string;
+	type: string;
+	size: number;
+};
+
+export function addItem(
+	transactionId: string,
+	body: Record<string, unknown>,
+	token?: string
+) {
+	return api<TransactionItem>({
+		method: 'POST',
+		path: `/v1/transactions/${transactionId}/items`,
+		body,
+		token
+	});
+}
+
+export function replaceItem(
+	transactionId: string,
+	itemId: string,
+	body: Record<string, unknown>,
+	token?: string
+) {
+	return api<TransactionItem>({
+		method: 'PUT',
+		path: `/v1/transactions/${transactionId}/items/${itemId}`,
+		body,
+		token
+	});
+}
+
+export function deleteItem(transactionId: string, itemId: string, token?: string) {
+	return api<null>({
+		method: 'DELETE',
+		path: `/v1/transactions/${transactionId}/items/${itemId}`,
 		token
 	});
 }

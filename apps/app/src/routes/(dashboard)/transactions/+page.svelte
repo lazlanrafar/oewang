@@ -21,12 +21,16 @@
 
 	import { Button } from '$lib/components/atoms/button';
 	import * as Dialog from '$lib/components/atoms/dialog';
+	import { Input } from '$lib/components/atoms/input';
+	import { ConfirmDialog } from '$lib/components/molecules/confirm-dialog';
+	import { Label } from '$lib/components/atoms/label';
 	import * as Select from '$lib/components/atoms/select';
 	import { DateRangePicker } from '$lib/components/molecules/date-range-picker';
 	import { DataTableFilter } from '$lib/components/organisms/data-table-filter';
 	import type { DataTableFilterState } from '$lib/components/organisms/data-table-filter';
 	import { TransactionsTable } from '$lib/components/organisms/data-table';
 	import type { NamedOption, TransactionRow } from '$lib/components/organisms/data-table';
+	import type { UploadedFile } from '$lib/components/molecules/file-dropzone';
 	import {
 		emptyDraft,
 		TransactionBulkBar,
@@ -138,6 +142,8 @@
 	const baseCurrency = $derived(data.me.workspace.currency_code);
 
 	let draft = $state<TransactionDraft>(emptyDraft());
+	/** The files the sheet will submit with the transaction (TXN-13). */
+	let attachments = $state<UploadedFile[]>([]);
 
 	/** Rebuild the draft whenever the sheet points somewhere new. */
 	$effect(() => {
@@ -146,6 +152,17 @@
 			defaultWallet?.currency_code ?? baseCurrency,
 			''
 		);
+
+		attachments = editing
+			? (data.detail?.transaction.id === editing.id
+					? data.detail.transaction.attachments.map((file) => ({
+							id: file.file_id,
+							name: file.name,
+							type: file.type,
+							size: file.size
+						}))
+					: [])
+			: [];
 
 		draft = editing
 			? {
@@ -285,12 +302,49 @@
 		};
 	};
 
+	// ------------------------------------------------------- line items
+
+	let itemDialog = $state<{
+		open: boolean;
+		item: { id: string; name: string; quantity: string | null; unit: string | null; amount: string } | null;
+	}>({ open: false, item: null });
+	let deletingItem = $state('');
+	let deleteItemForm = $state<HTMLFormElement | null>(null);
+
+	/**
+	 * Keep the open sheet in the action's URL.
+	 *
+	 * A bare `?/addItem` replaces the whole query string, so the sheet the
+	 * user is looking at closes the moment they save something in it.
+	 */
+	const keepDetail = (action: string) =>
+		detailParam ? `${action}&detail=${encodeURIComponent(detailParam)}` : action;
+
+	const afterItem: SubmitFunction = () => {
+		return async ({ result, update }) => {
+			if (result.type === 'success') {
+				itemDialog = { open: false, item: null };
+				toast.success(t('txn.item_saved'));
+			}
+			await update();
+		};
+	};
+
 	// ----------------------------------------------------------- export
 
 	let exportOpen = $state(false);
 
 	/* Hidden forms the floating bars and the sheet submit. */
 	let deleteForm = $state<HTMLFormElement | null>(null);
+
+	/*
+	 * Confirmations (UI-4). The design system's alert dialog rather than
+	 * the browser's `confirm`, which blocks the renderer until it is
+	 * dismissed and cannot be translated.
+	 */
+	let confirmDelete = $state(false);
+	let confirmBulkDelete = $state(false);
+	let confirmItemDelete = $state(false);
 	let bulkDeleteForm = $state<HTMLFormElement | null>(null);
 	let readyForm = $state<HTMLFormElement | null>(null);
 
@@ -457,6 +511,7 @@
 	bind:open={sheetOpen}
 	onOpenChange={onSheetOpenChange}
 	bind:draft
+	bind:attachments
 	accounts={accountItems}
 	categories={categoryItems}
 	{baseCurrency}
@@ -499,8 +554,104 @@
 	transaction={detail}
 	{canEdit}
 	onEdit={editFromDetail}
-	onDelete={() => deleteForm?.requestSubmit()}
+	onDelete={() => (confirmDelete = true)}
+	onAddItem={() => (itemDialog = { open: true, item: null })}
+	onEditItem={(itemId) =>
+		(itemDialog = {
+			open: true,
+			item: data.detail?.transaction.items.find((item) => item.id === itemId) ?? null
+		})}
+	onDeleteItem={(itemId) => {
+		deletingItem = itemId;
+		deleteItemForm?.requestSubmit();
+	}}
 />
+
+<!-- Line items (TXN-12). They move no money, so they are their own forms
+     rather than fields on the transaction. -->
+<form
+	bind:this={deleteItemForm}
+	method="POST"
+	action={keepDetail('?/deleteItem')}
+	class="hidden"
+	use:enhance={afterItem}
+>
+	<input type="hidden" name="transaction_id" value={detailParam} />
+	<input type="hidden" name="item_id" value={deletingItem} />
+</form>
+
+<Dialog.Root bind:open={itemDialog.open}>
+	<Dialog.Content class="sm:max-w-sm">
+		<form
+			method="POST"
+			action={keepDetail(itemDialog.item ? '?/saveItem' : '?/addItem')}
+			use:enhance={afterItem}
+		>
+			<Dialog.Header>
+				<Dialog.Title>
+					{itemDialog.item ? t('txn.edit_item') : t('txn.add_item')}
+				</Dialog.Title>
+			</Dialog.Header>
+
+			<input type="hidden" name="transaction_id" value={detailParam} />
+			{#if itemDialog.item}
+				<input type="hidden" name="item_id" value={itemDialog.item.id} />
+			{/if}
+
+			<div class="space-y-4 py-4">
+				<div class="grid gap-2">
+					<Label for="item-name" class="text-subtle text-xs font-normal">
+						{t('common.name')}
+					</Label>
+					<Input id="item-name" name="name" required value={itemDialog.item?.name ?? ''} />
+				</div>
+
+				<div class="grid grid-cols-2 gap-4">
+					<div class="grid gap-2">
+						<Label for="item-quantity" class="text-subtle text-xs font-normal">
+							{t('txn.quantity')}
+						</Label>
+						<Input
+							id="item-quantity"
+							name="quantity"
+							inputmode="decimal"
+							value={itemDialog.item?.quantity ?? ''}
+						/>
+					</div>
+					<div class="grid gap-2">
+						<Label for="item-unit" class="text-subtle text-xs font-normal">
+							{t('txn.unit')}
+						</Label>
+						<Input id="item-unit" name="unit" value={itemDialog.item?.unit ?? ''} />
+					</div>
+				</div>
+
+				<div class="grid gap-2">
+					<Label for="item-amount" class="text-subtle text-xs font-normal">
+						{t('txn.item_amount')}
+					</Label>
+					<Input
+						id="item-amount"
+						name="amount"
+						required
+						inputmode="decimal"
+						value={itemDialog.item?.amount ?? ''}
+					/>
+					<p class="text-subtle text-xs">{t('txn.item_amount_hint')}</p>
+				</div>
+			</div>
+
+			<Dialog.Footer>
+				<Dialog.Close>
+					{#snippet child({ props })}
+						<Button {...props} type="button" variant="outline">{t('common.cancel')}</Button>
+					{/snippet}
+				</Dialog.Close>
+				<Button type="submit">{t('common.save')}</Button>
+			</Dialog.Footer>
+		</form>
+	</Dialog.Content>
+</Dialog.Root>
 
 <!--
 	The delete lives in a form rather than in a fetch, so it is one action
@@ -513,9 +664,6 @@
 	action="?/delete"
 	class="hidden"
 	use:enhance={afterDelete}
-	onsubmit={(event) => {
-		if (!confirm(t('txn.delete_confirm'))) event.preventDefault();
-	}}
 >
 	<input type="hidden" name="id" value={detailParam} />
 </form>
@@ -533,7 +681,7 @@
 		{deleting}
 		onClear={() => (selection = [])}
 		onEditCategory={() => (bulkCategoryOpen = true)}
-		onDelete={() => bulkDeleteForm?.requestSubmit()}
+		onDelete={() => (confirmBulkDelete = true)}
 		onReady={() => readyForm?.requestSubmit()}
 	/>
 
@@ -543,10 +691,6 @@
 		action="?/bulkDelete"
 		class="hidden"
 		use:enhance={afterBulk}
-		onsubmit={(event) => {
-			if (!confirm(t('txn.bulk_delete_confirm', { count: selection.length })))
-				event.preventDefault();
-		}}
 	>
 		<input type="hidden" name="ids" value={selectedIds} />
 	</form>
@@ -598,3 +742,30 @@
 		</Dialog.Content>
 	</Dialog.Root>
 {/if}
+
+<ConfirmDialog
+	bind:open={confirmDelete}
+	title={t('txn.delete_title')}
+	description={t('txn.delete_confirm')}
+	confirmLabel={t('common.delete')}
+	cancelLabel={t('common.cancel')}
+	onConfirm={() => deleteForm?.requestSubmit()}
+/>
+
+<ConfirmDialog
+	bind:open={confirmBulkDelete}
+	title={t('txn.bulk_delete_title', { count: selection.length })}
+	description={t('txn.bulk_delete_confirm', { count: selection.length })}
+	confirmLabel={t('common.delete')}
+	cancelLabel={t('common.cancel')}
+	onConfirm={() => bulkDeleteForm?.requestSubmit()}
+/>
+
+<ConfirmDialog
+	bind:open={confirmItemDelete}
+	title={t('txn.delete_item_title')}
+	description={t('txn.delete_item_confirm')}
+	confirmLabel={t('common.delete')}
+	cancelLabel={t('common.cancel')}
+	onConfirm={() => deleteItemForm?.requestSubmit()}
+/>

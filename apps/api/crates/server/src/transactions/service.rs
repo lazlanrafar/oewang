@@ -11,7 +11,7 @@
 use chrono::{DateTime, NaiveDate, Utc};
 use oewang_clients::RatesClient;
 use oewang_db::{
-    repositories::{accounts, audit, categories, transactions as repo, wallets},
+    repositories::{accounts, audit, categories, transactions as repo, vault, wallets},
     PgPool,
 };
 use oewang_domain::{
@@ -68,6 +68,12 @@ pub struct TransactionInput<'a> {
     pub name: Option<&'a str>,
     pub description: Option<&'a str>,
     pub is_ready: bool,
+    /// The files this transaction carries (TXN-13, VLT-5).
+    ///
+    /// `None` leaves the attachments alone, which is what an import and a
+    /// bulk edit want. `Some` is the whole set: anything not listed is
+    /// detached, and the file itself is never deleted.
+    pub attachment_ids: Option<&'a [String]>,
 }
 
 /// Everything the service worked out before it opened a transaction.
@@ -194,6 +200,8 @@ pub async fn create(
     .await
     .map_err(internal)?;
 
+    sync_attachments(&mut tx, actor.workspace_id, &row.id, input.attachment_ids).await?;
+
     log(&mut tx, actor, "transaction.created", ENTITY, &row.id, None, snapshot(&row)?).await?;
 
     tx.commit().await.map_err(internal)?;
@@ -237,6 +245,8 @@ pub async fn update(
     .map_err(internal)?
     .ok_or(AppError::TransactionNotFound)?;
 
+    sync_attachments(&mut tx, actor.workspace_id, id, input.attachment_ids).await?;
+
     log(
         &mut tx,
         actor,
@@ -250,6 +260,44 @@ pub async fn update(
 
     tx.commit().await.map_err(internal)?;
     Ok(after)
+}
+
+/// Make the join rows match the set the client sent (TXN-13).
+///
+/// A file that is no longer listed has its join row soft-deleted, never
+/// the file: the same receipt may be attached to another transaction, and
+/// removing an attachment is not deleting a document (VLT-5).
+async fn sync_attachments(
+    tx: &mut Transaction<'_, Postgres>,
+    workspace_id: &str,
+    transaction_id: &str,
+    attachment_ids: Option<&[String]>,
+) -> Result<()> {
+    let Some(ids) = attachment_ids else { return Ok(()) };
+
+    for file_id in ids {
+        // A file from another workspace is a file that does not exist.
+        vault::find_file(&mut **tx, workspace_id, file_id)
+            .await
+            .map_err(internal)?
+            .ok_or(AppError::FileNotFound)?;
+
+        vault::attach_file(
+            &mut **tx,
+            &cuid2::create_id(),
+            workspace_id,
+            transaction_id,
+            file_id,
+        )
+        .await
+        .map_err(internal)?;
+    }
+
+    vault::detach_others(&mut **tx, workspace_id, transaction_id, ids)
+        .await
+        .map_err(internal)?;
+
+    Ok(())
 }
 
 // ------------------------------------------------------------------ delete
@@ -452,6 +500,8 @@ pub async fn import_rows(
             name: row.name.as_deref(),
             description: row.description.as_deref(),
             is_ready: false,
+            // An imported row carries no files.
+            attachment_ids: None,
         })
         .collect();
 
@@ -924,4 +974,210 @@ fn fingerprint_for(input: &TransactionInput<'_>, prepared: &Prepared) -> String 
 
 fn internal(error: sqlx::Error) -> AppError {
     AppError::Internal(anyhow::anyhow!(error))
+}
+
+// -------------------------------------------------------------- line items
+
+pub use oewang_db::repositories::vault::{AttachmentRow, ItemRow};
+
+const ITEM_ENTITY: &str = "transaction_item";
+
+/// What one line item holds. Items do not move a balance; only the parent
+/// transaction's `amount` does (TXN-12).
+#[derive(Debug, Clone)]
+pub struct ItemInput<'a> {
+    pub name: &'a str,
+    pub brand: Option<&'a str>,
+    pub quantity: Option<Decimal>,
+    pub unit: Option<&'a str>,
+    pub unit_price: Option<Decimal>,
+    pub amount: Decimal,
+    pub category_id: Option<&'a str>,
+    pub notes: Option<&'a str>,
+}
+
+pub async fn list_items(
+    pool: &PgPool,
+    workspace_id: &str,
+    transaction_id: &str,
+) -> Result<Vec<ItemRow>> {
+    // Through the transaction, so an item request cannot probe for ids in
+    // another workspace.
+    find(pool, workspace_id, transaction_id).await?;
+
+    vault::list_items(pool, workspace_id, transaction_id)
+        .await
+        .map_err(internal)
+}
+
+pub async fn list_attachments(
+    pool: &PgPool,
+    workspace_id: &str,
+    transaction_id: &str,
+) -> Result<Vec<AttachmentRow>> {
+    vault::list_attachments(pool, workspace_id, transaction_id)
+        .await
+        .map_err(internal)
+}
+
+pub async fn add_item(
+    pool: &PgPool,
+    actor: Actor<'_>,
+    transaction_id: &str,
+    input: ItemInput<'_>,
+) -> Result<ItemRow> {
+    validate_item(&input)?;
+
+    let mut tx = pool.begin().await.map_err(internal)?;
+    require_transaction(&mut tx, actor.workspace_id, transaction_id).await?;
+
+    if let Some(category_id) = input.category_id {
+        require_category(&mut tx, actor.workspace_id, category_id).await?;
+    }
+
+    let item = vault::insert_item(
+        &mut *tx,
+        new_item(&cuid2::create_id(), actor.workspace_id, transaction_id, &input),
+    )
+    .await
+    .map_err(internal)?;
+
+    log(&mut tx, actor, "transaction_item.created", ITEM_ENTITY, &item.id, None, snapshot(&item)?)
+        .await?;
+
+    tx.commit().await.map_err(internal)?;
+    Ok(item)
+}
+
+pub async fn replace_item(
+    pool: &PgPool,
+    actor: Actor<'_>,
+    transaction_id: &str,
+    item_id: &str,
+    input: ItemInput<'_>,
+) -> Result<ItemRow> {
+    validate_item(&input)?;
+
+    let mut tx = pool.begin().await.map_err(internal)?;
+    require_transaction(&mut tx, actor.workspace_id, transaction_id).await?;
+
+    if let Some(category_id) = input.category_id {
+        require_category(&mut tx, actor.workspace_id, category_id).await?;
+    }
+
+    let before = vault::list_items(&mut *tx, actor.workspace_id, transaction_id)
+        .await
+        .map_err(internal)?
+        .into_iter()
+        .find(|item| item.id == item_id)
+        .ok_or(AppError::NotFound)?;
+
+    let after = vault::replace_item(
+        &mut *tx,
+        actor.workspace_id,
+        item_id,
+        new_item(item_id, actor.workspace_id, transaction_id, &input),
+    )
+    .await
+    .map_err(internal)?
+    .ok_or(AppError::NotFound)?;
+
+    log(
+        &mut tx,
+        actor,
+        "transaction_item.updated",
+        ITEM_ENTITY,
+        item_id,
+        snapshot(&before)?,
+        snapshot(&after)?,
+    )
+    .await?;
+
+    tx.commit().await.map_err(internal)?;
+    Ok(after)
+}
+
+pub async fn delete_item(
+    pool: &PgPool,
+    actor: Actor<'_>,
+    transaction_id: &str,
+    item_id: &str,
+) -> Result<()> {
+    let mut tx = pool.begin().await.map_err(internal)?;
+    require_transaction(&mut tx, actor.workspace_id, transaction_id).await?;
+
+    let before = vault::list_items(&mut *tx, actor.workspace_id, transaction_id)
+        .await
+        .map_err(internal)?
+        .into_iter()
+        .find(|item| item.id == item_id)
+        .ok_or(AppError::NotFound)?;
+
+    vault::soft_delete_item(&mut *tx, actor.workspace_id, item_id)
+        .await
+        .map_err(internal)?;
+
+    log(
+        &mut tx,
+        actor,
+        "transaction_item.deleted",
+        ITEM_ENTITY,
+        item_id,
+        snapshot(&before)?,
+        None,
+    )
+    .await?;
+
+    tx.commit().await.map_err(internal)?;
+    Ok(())
+}
+
+fn validate_item(input: &ItemInput<'_>) -> Result<()> {
+    if input.name.trim().is_empty() {
+        return Err(AppError::validation([("name", "Enter a name.")]));
+    }
+    // An item may be a refund line, so zero is refused and negative is
+    // not. The item total is never forced to match the transaction; a
+    // mismatch raises a badge in the UI and nothing more (TXN-12).
+    if input.amount == Decimal::ZERO {
+        return Err(AppError::AmountNotPositive);
+    }
+    if input.quantity.is_some_and(|quantity| quantity <= Decimal::ZERO) {
+        return Err(AppError::validation([("quantity", "Enter a quantity greater than zero.")]));
+    }
+
+    Ok(())
+}
+
+fn new_item<'a>(
+    id: &'a str,
+    workspace_id: &'a str,
+    transaction_id: &'a str,
+    input: &'a ItemInput<'a>,
+) -> vault::NewItem<'a> {
+    vault::NewItem {
+        id,
+        workspace_id,
+        transaction_id,
+        name: input.name.trim(),
+        brand: input.brand,
+        quantity: input.quantity,
+        unit: input.unit,
+        unit_price: input.unit_price,
+        amount: round_money(input.amount),
+        category_id: input.category_id,
+        notes: input.notes,
+    }
+}
+
+async fn require_transaction(
+    tx: &mut Transaction<'_, Postgres>,
+    workspace_id: &str,
+    transaction_id: &str,
+) -> Result<()> {
+    repo::find(&mut **tx, workspace_id, transaction_id)
+        .await
+        .map_err(internal)?
+        .ok_or(AppError::TransactionNotFound)
+        .map(|_| ())
 }

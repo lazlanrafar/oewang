@@ -100,7 +100,13 @@
 					ready: false,
 					notes: detailRow.note,
 					baseAmount: formatMoney(detailRow.amount, detailRow.currency),
-					attachments: detailRow.note ? [{ id: 'f1', name: 'receipt-02-11-2026.jpg' }] : [],
+					items: [
+						{ id: 'i1', name: 'Nasi goreng', amount: 'Rp 35.000', quantity: '1', unit: 'pcs' }
+					],
+					itemsMismatch: 'Rp 35.000 of Rp 87.500',
+					// A specimen shows the shape; the real sheet fetches the
+					// bytes as chunks.
+					attachments: [],
 					history: [
 						{ id: 'h1', at: '02/11/2026 09:14', who: 'you', source: 'web', what: 'created this transaction' },
 						{ id: 'h2', at: '02/11/2026 09:15', who: 'the assistant', source: 'chat', what: 'set the category to Food' }

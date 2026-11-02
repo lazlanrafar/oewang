@@ -186,7 +186,18 @@
 		"bulk_category": "Change category",
 		"bulk_category_hint": "Applies to {count} selected transaction(s).",
 		"bulk_delete_confirm": "Delete {count} transaction(s)? Every balance they moved is put back.",
-		"mark_ready": "Mark ready"
+		"mark_ready": "Mark ready",
+		"add_item": "Add line item",
+		"edit_item": "Edit line item",
+		"item_saved": "Line item saved.",
+		"quantity": "Quantity",
+		"unit": "Unit",
+		"item_amount": "Amount",
+		"item_amount_hint": "Items do not move a balance. Only the transaction's own amount does.",
+		"delete_title": "Delete this transaction?",
+		"bulk_delete_title": "Delete {count} transaction(s)?",
+		"delete_item_title": "Remove this line item?",
+		"delete_item_confirm": "The transaction keeps its amount. Only the line goes."
 	},
 	"import": {
 		"title": "Import transactions",

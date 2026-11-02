@@ -114,7 +114,13 @@ On success the sheet closes, the list invalidates, and a toast confirms.
 
 ### Transaction detail sheet
 
-Read-first view of one transaction: all fields, line items, attachments with thumbnails, and its audit history.
+Read-first view of one transaction: all fields, an editable line-item table, its attachments and its audit history.
+
+Attachment bytes arrive as chunks through the SvelteKit server, which reads them from the API inside the envelope, and are shown from an object URL that is revoked when the sheet closes. No signed object-storage URL exists anywhere in the codebase (VLT-3, D23).
+
+Line items move no money: only the transaction's own `amount` does. When the items do not add up to it the sheet raises a badge and nothing more, because a receipt with a service charge on it legitimately does not add up (TXN-12).
+
+Every confirmation on this screen is the design system's alert dialog rather than the browser's `confirm`. The native one blocks the renderer until it is dismissed, which freezes the page, and it cannot be translated (UI-1, UI-4).
 
 The history section answers "why is this number what it is" at the row the user is looking at (OPS-8, D46). Each entry names the actor, the surface (`web`, `chat`, `import`, `receipt`) and what changed:
 
@@ -280,8 +286,7 @@ facets, an amount range and a date range, and a footer count.
 | Persisted table settings | `use-table-settings` keeps column order, visibility and widths per table and per user. Ours reset on reload | Small to medium |
 | Copy link to a row | `meta.onCopyUrl` on the old table. The detail sheet is already addressable as `?detail=`, so this is a button, not a feature | Small |
 | XLSX in the import wizard | The old wizard reads a spreadsheet as well as a CSV. SheetJS is no longer published to npm and the version that is carries a known prototype-pollution advisory, so the dependency is a decision to take rather than to assume | Small once the dependency is chosen |
-| Receipt confirmation | `transaction-receipt-confirmation-modal.tsx`, the sheet that confirms what the model read off a receipt | M3 |
-| Line items and attachments in the detail sheet | Both have their place in the sheet and read "none" | US-024, US-025 |
+| Receipt confirmation | `transaction-receipt-confirmation-modal.tsx`, the sheet that confirms what the model read off a receipt | M4 |
 | The assistant's column mapping | Step two of the wizard arrives empty. The call needs the OWE1 client for the API-to-AI hop, which is US-026 | M4 |
 
 Two of the old table's dependencies are deliberately absent for now, and the

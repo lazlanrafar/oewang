@@ -299,6 +299,15 @@ fn protected_routes(state: AppState) -> Router<AppState> {
             "/v1/transactions/{id}/history",
             get(transactions::handler::history),
         )
+        .route(
+            "/v1/transactions/{id}/items",
+            get(transactions::handler::list_items).post(transactions::handler::add_item),
+        )
+        .route(
+            "/v1/transactions/{id}/items/{item_id}",
+            axum::routing::put(transactions::handler::replace_item)
+                .delete(transactions::handler::delete_item),
+        )
         // Files. Bytes travel as base64 inside the envelope; no signed
         // object-storage URL exists anywhere (D23, VLT-3).
         .route("/v1/vault/files", post(vault::handler::begin))

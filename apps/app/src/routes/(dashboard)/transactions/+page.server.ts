@@ -133,8 +133,48 @@ export const actions: Actions = {
 		),
 
 	bulkDelete: async ({ request, locals }) =>
-		run(request, (form) => ledger.bulkDeleteTransactions(ids(form), locals.accessToken))
+		run(request, (form) => ledger.bulkDeleteTransactions(ids(form), locals.accessToken)),
+
+	// ------------------------------------------------------- line items
+
+	addItem: async ({ request, locals }) =>
+		run(request, (form) =>
+			ledger.addItem(text(form, 'transaction_id'), itemBody(form), locals.accessToken)
+		),
+
+	saveItem: async ({ request, locals }) =>
+		run(request, (form) =>
+			ledger.replaceItem(
+				text(form, 'transaction_id'),
+				text(form, 'item_id'),
+				itemBody(form),
+				locals.accessToken
+			)
+		),
+
+	deleteItem: async ({ request, locals }) =>
+		run(request, (form) =>
+			ledger.deleteItem(
+				text(form, 'transaction_id'),
+				text(form, 'item_id'),
+				locals.accessToken
+			)
+		)
 };
+
+/** A line item, with every figure still a string (D12). */
+function itemBody(form: FormData): Record<string, unknown> {
+	return {
+		name: text(form, 'name'),
+		brand: optional(form, 'brand'),
+		quantity: optional(form, 'quantity'),
+		unit: optional(form, 'unit'),
+		unit_price: optional(form, 'unit_price'),
+		amount: text(form, 'amount'),
+		category_id: optional(form, 'category_id'),
+		notes: optional(form, 'notes')
+	};
+}
 
 /**
  * Build the API payload from the form.
@@ -164,7 +204,14 @@ function payload(form: FormData): ledger.TransactionPayload {
 		date: new Date(`${text(form, 'date')}T12:00:00`).toISOString(),
 		name: optional(form, 'name'),
 		description: optional(form, 'description'),
-		is_ready: form.get('is_ready') === 'true'
+		is_ready: form.get('is_ready') === 'true',
+		// The whole set, every time the sheet saves. The dropzone renders
+		// one hidden input per file, so an empty form means no attachments
+		// rather than "leave them alone" (TXN-13).
+		attachment_ids: form
+			.getAll('attachment_ids')
+			.map((value) => String(value))
+			.filter(Boolean)
 	};
 }
 

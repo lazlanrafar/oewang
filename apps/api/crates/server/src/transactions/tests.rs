@@ -139,6 +139,7 @@ fn expense<'a>(wallet_id: &'a str, amount: &str) -> TransactionInput<'a> {
         name: Some("Lunch"),
         description: None,
         is_ready: false,
+        attachment_ids: None,
     }
 }
 
@@ -1102,4 +1103,241 @@ fn should_keep_every_amount_out_of_what_the_model_is_shown() {
         !wire.chars().any(|c| c.is_ascii_digit()),
         "a mapping carries no figures: {wire}"
     );
+}
+
+// ------------------------------------------------- attachments and items
+
+/// A one-chunk JPEG, uploaded through the vault so the join rows have a
+/// real file to point at.
+async fn uploaded_file(pool: &PgPool, store: &crate::vault::tests::MemoryStore) -> String {
+    let bytes = {
+        let mut jpeg = vec![0xFF, 0xD8, 0xFF, 0xE0];
+        jpeg.resize(64, 0x42);
+        jpeg
+    };
+
+    let begun = crate::vault::service::begin(
+        pool,
+        actor(),
+        "receipt.jpg",
+        "image/jpeg",
+        bytes.len() as i64,
+    )
+    .await
+    .unwrap();
+
+    crate::vault::service::put_chunk(pool, store, WORKSPACE, &begun.file.id, 0, &bytes)
+        .await
+        .unwrap();
+    crate::vault::service::complete(pool, store, actor(), &begun.file.id)
+        .await
+        .unwrap()
+        .id
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_sync_attachments_without_deleting_the_file(pool: PgPool) {
+    fixture(&pool, "IDR").await;
+    let cash = wallet(&pool, "w_cash", "IDR").await;
+    let store = crate::vault::tests::MemoryStore::default();
+    let rates = offline_rates();
+
+    let first = uploaded_file(&pool, &store).await;
+    let second = uploaded_file(&pool, &store).await;
+
+    let attached = vec![first.clone(), second.clone()];
+    let row = service::create(
+        &pool,
+        &rates,
+        actor(),
+        TransactionInput { attachment_ids: Some(&attached), ..expense(&cash, "50000") },
+    )
+    .await
+    .unwrap();
+
+    let files = service::list_attachments(&pool, WORKSPACE, &row.id).await.unwrap();
+    assert_eq!(files.len(), 2);
+
+    // Drop one. The join row goes; the file stays (VLT-5).
+    let kept = vec![first.clone()];
+    service::update(
+        &pool,
+        &rates,
+        actor(),
+        &row.id,
+        TransactionInput { attachment_ids: Some(&kept), ..expense(&cash, "50000") },
+    )
+    .await
+    .unwrap();
+
+    let files = service::list_attachments(&pool, WORKSPACE, &row.id).await.unwrap();
+    assert_eq!(files.len(), 1);
+    assert_eq!(files[0].file_id, first);
+
+    assert!(
+        crate::vault::service::find(&pool, WORKSPACE, &second).await.is_ok(),
+        "the detached file is still a file"
+    );
+
+    // An absent list leaves the attachments alone, which is what a bulk
+    // edit and an import want.
+    service::update(
+        &pool,
+        &rates,
+        actor(),
+        &row.id,
+        TransactionInput { attachment_ids: None, ..expense(&cash, "87500") },
+    )
+    .await
+    .unwrap();
+    assert_eq!(
+        service::list_attachments(&pool, WORKSPACE, &row.id).await.unwrap().len(),
+        1
+    );
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_refuse_a_file_from_another_workspace(pool: PgPool) {
+    fixture(&pool, "IDR").await;
+    let cash = wallet(&pool, "w_cash", "IDR").await;
+    let store = crate::vault::tests::MemoryStore::default();
+    let file = uploaded_file(&pool, &store).await;
+
+    sqlx::query(
+        "INSERT INTO workspaces (id, name, slug, currency_code)
+         VALUES ('ws_other', 'Other', 'other', 'IDR')",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+    sqlx::query("UPDATE vault_files SET workspace_id = 'ws_other' WHERE id = $1")
+        .bind(&file)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+    let ids = vec![file];
+    let error = service::create(
+        &pool,
+        &offline_rates(),
+        actor(),
+        TransactionInput { attachment_ids: Some(&ids), ..expense(&cash, "50000") },
+    )
+    .await
+    .unwrap_err();
+
+    assert!(matches!(error, AppError::FileNotFound), "{error:?}");
+    assert_eq!(balance(&pool, &cash).await, Decimal::ZERO, "and nothing was written");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_keep_line_items_off_the_balance(pool: PgPool) {
+    fixture(&pool, "IDR").await;
+    let cash = wallet(&pool, "w_cash", "IDR").await;
+    let food = category(&pool, "c_food", "expense").await;
+
+    let row = service::create(&pool, &offline_rates(), actor(), expense(&cash, "87500"))
+        .await
+        .unwrap();
+
+    let item = service::add_item(
+        &pool,
+        actor(),
+        &row.id,
+        service::ItemInput {
+            name: "Nasi goreng",
+            brand: None,
+            quantity: Some(decimal("1")),
+            unit: Some("pcs"),
+            unit_price: Some(decimal("35000")),
+            amount: decimal("35000"),
+            category_id: Some(&food),
+            notes: None,
+        },
+    )
+    .await
+    .unwrap();
+
+    assert_eq!(item.amount, decimal("35000.0000"));
+    assert_eq!(
+        balance(&pool, &cash).await,
+        decimal("-87500"),
+        "an item moves no money; only the transaction's own amount does (TXN-12)"
+    );
+
+    // The item total is deliberately not forced to match the transaction.
+    let items = service::list_items(&pool, WORKSPACE, &row.id).await.unwrap();
+    assert_eq!(items.len(), 1);
+
+    service::replace_item(
+        &pool,
+        actor(),
+        &row.id,
+        &item.id,
+        service::ItemInput {
+            name: "Nasi goreng spesial",
+            brand: None,
+            quantity: None,
+            unit: None,
+            unit_price: None,
+            amount: decimal("40000"),
+            category_id: None,
+            notes: None,
+        },
+    )
+    .await
+    .unwrap();
+
+    let items = service::list_items(&pool, WORKSPACE, &row.id).await.unwrap();
+    assert_eq!(items[0].name, "Nasi goreng spesial");
+    assert_eq!(items[0].amount, decimal("40000.0000"));
+
+    service::delete_item(&pool, actor(), &row.id, &item.id).await.unwrap();
+    assert!(service::list_items(&pool, WORKSPACE, &row.id).await.unwrap().is_empty());
+
+    assert_eq!(
+        audit_actions(&pool, &item.id).await,
+        vec![
+            "transaction_item.created",
+            "transaction_item.updated",
+            "transaction_item.deleted"
+        ]
+    );
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_refuse_an_item_on_another_workspaces_transaction(pool: PgPool) {
+    fixture(&pool, "IDR").await;
+    let cash = wallet(&pool, "w_cash", "IDR").await;
+    sqlx::query(
+        "INSERT INTO workspaces (id, name, slug, currency_code)
+         VALUES ('ws_other', 'Other', 'other', 'IDR')",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    let row = service::create(&pool, &offline_rates(), actor(), expense(&cash, "1000"))
+        .await
+        .unwrap();
+
+    let error = service::add_item(
+        &pool,
+        Actor::web("ws_other", USER),
+        &row.id,
+        service::ItemInput {
+            name: "Anything",
+            brand: None,
+            quantity: None,
+            unit: None,
+            unit_price: None,
+            amount: decimal("1"),
+            category_id: None,
+            notes: None,
+        },
+    )
+    .await
+    .unwrap_err();
+
+    assert!(matches!(error, AppError::TransactionNotFound), "{error:?}");
 }

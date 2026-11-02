@@ -30,7 +30,7 @@ fn actor() -> Actor<'static> {
 
 /// A store in memory, so a test never touches MinIO or the disk.
 #[derive(Clone, Default)]
-struct MemoryStore {
+pub struct MemoryStore {
     objects: Arc<Mutex<HashMap<String, Vec<u8>>>>,
 }
 

@@ -135,6 +135,92 @@ pub struct CategoryTotal {
     pub total: Decimal,
 }
 
+/// One line item (TXN-12).
+#[derive(Debug, Serialize)]
+pub struct ItemView {
+    pub id: String,
+    pub name: String,
+    pub brand: Option<String>,
+    #[serde(with = "rust_decimal::serde::str_option")]
+    pub quantity: Option<Decimal>,
+    pub unit: Option<String>,
+    #[serde(with = "rust_decimal::serde::str_option")]
+    pub unit_price: Option<Decimal>,
+    #[serde(with = "rust_decimal::serde::str")]
+    pub amount: Decimal,
+    pub category_id: Option<String>,
+    pub notes: Option<String>,
+}
+
+impl From<service::ItemRow> for ItemView {
+    fn from(row: service::ItemRow) -> Self {
+        Self {
+            id: row.id,
+            name: row.name,
+            brand: row.brand,
+            quantity: row.quantity,
+            unit: row.unit,
+            unit_price: row.unit_price,
+            amount: row.amount,
+            category_id: row.category_id,
+            notes: row.notes,
+        }
+    }
+}
+
+/// One attached file. The bytes come back through the file routes in
+/// encrypted chunks, never as a URL (D23).
+#[derive(Debug, Serialize)]
+pub struct AttachmentView {
+    pub id: String,
+    pub file_id: String,
+    pub name: String,
+    pub r#type: String,
+    pub size: i64,
+}
+
+impl From<service::AttachmentRow> for AttachmentView {
+    fn from(row: service::AttachmentRow) -> Self {
+        Self { id: row.id, file_id: row.file_id, name: row.name, r#type: row.r#type, size: row.size }
+    }
+}
+
+/// One transaction with everything the detail sheet shows.
+#[derive(Debug, Serialize)]
+pub struct TransactionDetailView {
+    #[serde(flatten)]
+    pub transaction: TransactionView,
+    pub items: Vec<ItemView>,
+    pub attachments: Vec<AttachmentView>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ItemBody {
+    pub name: String,
+    pub brand: Option<String>,
+    pub quantity: Option<String>,
+    pub unit: Option<String>,
+    pub unit_price: Option<String>,
+    pub amount: String,
+    pub category_id: Option<String>,
+    pub notes: Option<String>,
+}
+
+impl ItemBody {
+    fn input(&self) -> Result<service::ItemInput<'_>> {
+        Ok(service::ItemInput {
+            name: &self.name,
+            brand: non_empty(self.brand.as_deref()),
+            quantity: optional_money("quantity", self.quantity.as_deref())?,
+            unit: non_empty(self.unit.as_deref()),
+            unit_price: optional_money("unit_price", self.unit_price.as_deref())?,
+            amount: money("amount", &self.amount)?,
+            category_id: non_empty(self.category_id.as_deref()),
+            notes: non_empty(self.notes.as_deref()),
+        })
+    }
+}
+
 /// One audit entry, as the detail sheet's history section renders it.
 #[derive(Debug, Serialize)]
 pub struct HistoryView {
@@ -270,6 +356,9 @@ pub struct TransactionBody {
     pub description: Option<String>,
     #[serde(default)]
     pub is_ready: bool,
+    /// The whole set of files this transaction carries. Absent leaves the
+    /// attachments alone; present replaces them (TXN-13, VLT-5).
+    pub attachment_ids: Option<Vec<String>>,
 }
 
 impl TransactionBody {
@@ -289,6 +378,7 @@ impl TransactionBody {
             name: non_empty(self.name.as_deref()),
             description: non_empty(self.description.as_deref()),
             is_ready: self.is_ready,
+            attachment_ids: self.attachment_ids.as_deref(),
         })
     }
 }
@@ -370,10 +460,116 @@ pub async fn get(
     auth: Auth,
     Path(transaction_id): Path<String>,
     request_id: RequestId,
-) -> std::result::Result<Json<Envelope<TransactionView>>, ApiError> {
+) -> std::result::Result<Json<Envelope<TransactionDetailView>>, ApiError> {
     let id = request_id.0;
-    match service::find(&state.db, &auth.workspace_id, &transaction_id).await {
-        Ok(row) => Ok(Json(Envelope::data(TransactionView::from(row), id))),
+
+    let result = async {
+        let row = service::find(&state.db, &auth.workspace_id, &transaction_id).await?;
+        let items = service::list_items(&state.db, &auth.workspace_id, &transaction_id).await?;
+        let attachments =
+            service::list_attachments(&state.db, &auth.workspace_id, &transaction_id).await?;
+
+        Ok::<_, AppError>(TransactionDetailView {
+            transaction: TransactionView::from(row),
+            items: items.into_iter().map(Into::into).collect(),
+            attachments: attachments.into_iter().map(Into::into).collect(),
+        })
+    }
+    .await;
+
+    match result {
+        Ok(view) => Ok(Json(Envelope::data(view, id))),
+        Err(error) => Err(ApiError::new(error, id)),
+    }
+}
+
+pub async fn list_items(
+    State(state): State<AppState>,
+    auth: Auth,
+    Path(transaction_id): Path<String>,
+    request_id: RequestId,
+) -> std::result::Result<Json<Envelope<Vec<ItemView>>>, ApiError> {
+    let id = request_id.0;
+
+    match service::list_items(&state.db, &auth.workspace_id, &transaction_id).await {
+        Ok(rows) => Ok(Json(Envelope::data(
+            rows.into_iter().map(Into::into).collect(),
+            id,
+        ))),
+        Err(error) => Err(ApiError::new(error, id)),
+    }
+}
+
+pub async fn add_item(
+    State(state): State<AppState>,
+    auth: AuthWrite,
+    Path(transaction_id): Path<String>,
+    request_id: RequestId,
+    Json(body): Json<ItemBody>,
+) -> std::result::Result<(StatusCode, Json<Envelope<ItemView>>), ApiError> {
+    let id = request_id.0;
+
+    let result = async {
+        service::add_item(
+            &state.db,
+            Actor::web(&auth.workspace_id, &auth.user_id),
+            &transaction_id,
+            body.input()?,
+        )
+        .await
+    }
+    .await;
+
+    match result {
+        Ok(item) => Ok((StatusCode::CREATED, Json(Envelope::data(ItemView::from(item), id)))),
+        Err(error) => Err(ApiError::new(error, id)),
+    }
+}
+
+pub async fn replace_item(
+    State(state): State<AppState>,
+    auth: AuthWrite,
+    Path((transaction_id, item_id)): Path<(String, String)>,
+    request_id: RequestId,
+    Json(body): Json<ItemBody>,
+) -> std::result::Result<Json<Envelope<ItemView>>, ApiError> {
+    let id = request_id.0;
+
+    let result = async {
+        service::replace_item(
+            &state.db,
+            Actor::web(&auth.workspace_id, &auth.user_id),
+            &transaction_id,
+            &item_id,
+            body.input()?,
+        )
+        .await
+    }
+    .await;
+
+    match result {
+        Ok(item) => Ok(Json(Envelope::data(ItemView::from(item), id))),
+        Err(error) => Err(ApiError::new(error, id)),
+    }
+}
+
+pub async fn delete_item(
+    State(state): State<AppState>,
+    auth: AuthWrite,
+    Path((transaction_id, item_id)): Path<(String, String)>,
+    request_id: RequestId,
+) -> std::result::Result<StatusCode, ApiError> {
+    let id = request_id.0;
+
+    match service::delete_item(
+        &state.db,
+        Actor::web(&auth.workspace_id, &auth.user_id),
+        &transaction_id,
+        &item_id,
+    )
+    .await
+    {
+        Ok(()) => Ok(StatusCode::NO_CONTENT),
         Err(error) => Err(ApiError::new(error, id)),
     }
 }

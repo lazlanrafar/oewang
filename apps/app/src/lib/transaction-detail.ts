@@ -7,19 +7,33 @@
  */
 
 import type { TransactionDetail } from '$lib/components/organisms/transactions';
-import { formatMoney, signedAmount } from '$lib/money';
-import type { HistoryEntry, Transaction } from '$lib/server/ledger';
+import { addDecimals, compareDecimals, formatMoney, signedAmount } from '$lib/money';
+import type { HistoryEntry, TransactionDetail as ApiDetail } from '$lib/server/ledger';
 
 /** `wallet.balance` before and after, and the fields a reader cares about. */
 const WATCHED = ['amount', 'date', 'category_id', 'wallet_id', 'is_ready', 'name', 'description'];
 
 export function toDetail(
-	transaction: Transaction,
+	transaction: ApiDetail,
 	history: HistoryEntry[],
 	baseCurrency: string,
 	locale = 'en-GB'
 ): TransactionDetail {
 	const signed = signedAmount(transaction.type, transaction.amount);
+	const currency = transaction.wallet_currency_code;
+
+	/*
+	 * The item total against the transaction's own amount.
+	 *
+	 * A mismatch is a warning and never a block: a receipt with a service
+	 * charge on it legitimately does not add up (TXN-12). `null` when the
+	 * two agree, or when there are no items to disagree.
+	 */
+	const itemTotal = addDecimals(transaction.items.map((item) => item.amount));
+	const itemsMismatch =
+		transaction.items.length > 0 && compareDecimals(itemTotal, transaction.amount) !== 0
+			? `${formatMoney(itemTotal, currency)} of ${formatMoney(transaction.amount, currency)}`
+			: null;
 
 	return {
 		id: transaction.id,
@@ -51,10 +65,15 @@ export function toDetail(
 			transaction.to_amount && transaction.to_wallet_name
 				? formatMoney(transaction.to_amount, transaction.wallet_currency_code)
 				: null,
-		// Line items and attachments arrive with M3; the sheet already has a
-		// place for them and says "none" until then.
-		items: [],
-		attachments: [],
+		items: transaction.items.map((item) => ({
+			id: item.id,
+			name: item.name,
+			amount: formatMoney(item.amount, currency),
+			quantity: item.quantity,
+			unit: item.unit
+		})),
+		itemsMismatch,
+		attachments: transaction.attachments,
 		history: history.map((entry) => ({
 			id: entry.id,
 			at: new Intl.DateTimeFormat(locale, {

@@ -24,6 +24,7 @@
 		open = $bindable(false),
 		onOpenChange,
 		draft = $bindable(),
+		attachments = $bindable([]),
 		accounts,
 		categories,
 		currencies = ['IDR', 'USD', 'EUR', 'SGD'],
@@ -42,6 +43,7 @@
 		/** Fires when the primitive closes itself, on Escape or the overlay. */
 		onOpenChange?: (open: boolean) => void;
 		draft: TransactionDraft;
+		attachments?: import('../../molecules/file-dropzone/index.js').UploadedFile[];
 		accounts: ComboboxItem[];
 		categories: CategoryItem[];
 		currencies?: string[];
@@ -85,6 +87,7 @@
 			<div class="flex-1 overflow-y-auto px-6 pt-6 pb-[100px]">
 				<TransactionFormFields
 					bind:draft
+					bind:attachments
 					{accounts}
 					{categories}
 					{currencies}
