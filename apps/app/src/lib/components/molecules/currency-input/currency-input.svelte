@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { Input } from '../../atoms/input/index.js';
 	import * as InputGroup from '../input-group/index.js';
 	import { cn } from '$lib/utils.js';
 
@@ -67,12 +66,11 @@
 	<InputGroup.Addon>
 		<InputGroup.Text>{symbol}</InputGroup.Text>
 	</InputGroup.Addon>
-	<Input
+	<InputGroup.Input
 		{id}
 		{placeholder}
 		{disabled}
 		inputmode="decimal"
-		data-slot="input-group-control"
 		class="font-mono"
 		value={shown}
 		oninput={handleInput}
