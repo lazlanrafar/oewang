@@ -16,6 +16,7 @@
 	let {
 		options,
 		value = $bindable(),
+		onValueChange,
 		inline = false,
 		id,
 		placeholder = 'Search...',
@@ -24,6 +25,8 @@
 	}: {
 		options: Array<string | { value: string; label: string }>;
 		value: string;
+		/** Called with the chosen value, for callers that cannot bind. */
+		onValueChange?: (value: string) => void;
 		inline?: boolean;
 		id?: string;
 		placeholder?: string;
@@ -68,6 +71,7 @@
 							value={item.value}
 							onSelect={() => {
 								value = item.value;
+								onValueChange?.(item.value);
 								open = false;
 							}}
 						>

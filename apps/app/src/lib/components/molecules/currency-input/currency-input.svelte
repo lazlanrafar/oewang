@@ -14,6 +14,7 @@
 	 */
 	let {
 		value = $bindable(''),
+		onValueChange,
 		symbol = 'Rp',
 		decimals = 0,
 		class: className,
@@ -23,6 +24,8 @@
 	}: {
 		/** A decimal string, as the API takes it. Empty means unset. */
 		value?: string;
+		/** Called with the new decimal string, for callers that cannot bind. */
+		onValueChange?: (value: string) => void;
 		symbol?: string;
 		decimals?: number;
 		class?: string;
@@ -56,6 +59,7 @@
 		}
 		const [whole, fraction] = typed.split('.');
 		value = fraction === undefined ? whole : `${whole}.${fraction.slice(0, decimals)}`;
+		onValueChange?.(value);
 	}
 </script>
 

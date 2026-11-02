@@ -81,9 +81,8 @@
 		{ label: 'Table row height', live: '45px', read: () => prop('#spec-row', 'height') },
 		{ label: 'Row rule', live: '1px on the cell', read: () => `${hairlineWidth('#spec-cell', 'borderBottomWidth')} on the cell` },
 		{ label: 'Group row height', live: '40px', read: () => prop('#spec-group-row', 'height') },
-		// The tint sits on the cell, as the rule does; a tr with a background
-		// paints under the cells rather than through them.
-		{ label: 'Group row background', live: 'rgb(251, 251, 250)', read: () => prop('#spec-group-cell', 'backgroundColor') }
+		// The day group row spans the table, so it carries the tint itself.
+		{ label: 'Group row background', live: 'rgb(251, 251, 250)', read: () => prop('#spec-group-row', 'backgroundColor') }
 	];
 
 	let readings = $state<Reading[]>(
