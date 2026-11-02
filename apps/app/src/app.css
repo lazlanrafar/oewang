@@ -258,6 +258,38 @@
 	}
 
 	/*
+	 * Anything that answers a click says so under the pointer.
+	 *
+	 * Tailwind's preflight gives a button `cursor: default`, which leaves the
+	 * in-cell pickers, menu items and sortable headers feeling like text. One
+	 * rule covers them by role rather than per component, so a new control
+	 * gets it by being a control. A disabled one goes back to the arrow.
+	 */
+	button:not(:disabled),
+	summary,
+	a[href],
+	label[for],
+	select:not(:disabled),
+	[role='button']:not([aria-disabled='true']),
+	[role='menuitem'],
+	[role='menuitemcheckbox'],
+	[role='menuitemradio'],
+	[role='option'],
+	[role='tab'],
+	[role='checkbox'],
+	[role='radio'],
+	[role='switch'],
+	[role='combobox'] {
+		cursor: pointer;
+	}
+
+	:disabled,
+	[aria-disabled='true'],
+	[data-disabled] {
+		cursor: default;
+	}
+
+	/*
 	 * The old app's rule, verbatim from packages/ui/src/globals.css.
 	 *
 	 * It suppresses the focus indicator everywhere, and because the ring

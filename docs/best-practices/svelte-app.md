@@ -25,6 +25,7 @@ How the web app is structured and written. It is a BFF as much as a UI: it holds
 | Type scale | Role tokens, not sizes: `text-h1` to `text-h4`, `text-body`, `text-small`, `text-caption`, each carrying line height, weight and letter spacing (D53). `h1`-`h4` take them in the base layer |
 | Shape | The old app's: a live radius scale (`--radius: .5rem`) that almost nothing applies, and a shadow scale where only `sm` paints (D66) |
 | Focus | None, as the old app has none: `*:focus, *:focus-visible { outline: none !important }` (D66). A known WCAG 2.4.7 failure, recorded in UI-7 |
+| Cursor | Anything that answers a click shows the pointer, by role in the base layer rather than per component. Tailwind's preflight gives a button `cursor: default`, and the scaffold gives a menu row the same |
 | Contrast | The old app's colours, which leave income at 2.30:1 and expenses at 3.91:1 against a 4.5:1 requirement (D66, UI-7) |
 | Motion | Opt-in: one base rule collapses durations under `prefers-reduced-motion: reduce` (D64) |
 | Fonts | Hedvig Letters Sans and Serif, Geist Mono, self-hosted through `@fontsource` so the CSP stays `font-src 'self'`. The serif ships one weight (400) and is never set bold: `.font-serif` disables weight synthesis, so a stray `font-semibold` renders unchanged rather than as a faked bold |
