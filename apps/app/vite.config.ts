@@ -16,7 +16,30 @@ export default defineConfig({
 			// SvelteKit 3 replaced `$lib` with `#lib`, but shadcn-svelte still
 			// generates `$lib` imports. Keeping the alias is cheaper than
 			// rewriting every component the CLI will regenerate.
-			alias: { $lib: 'src/lib' }
+			alias: { $lib: 'src/lib' },
+			// The CSP is issued by SvelteKit, not by hooks.server.ts.
+			//
+			// SvelteKit emits an inline bootstrap script on every page. A
+			// hand-written `script-src 'self'` blocks it, and the whole app
+			// silently stops hydrating: forms still submit because they are
+			// real forms, so nothing looks broken until a button that needs
+			// JavaScript does nothing. Configured here, SvelteKit adds a nonce
+			// to its own script and the policy stays strict (SEC-15).
+			csp: {
+				mode: 'nonce',
+				directives: {
+					'default-src': ['self'],
+					'script-src': ['self'],
+					'style-src': ['self', 'unsafe-inline'],
+					'img-src': ['self', 'data:', 'blob:'],
+					'font-src': ['self'],
+					'connect-src': ['self'],
+					'object-src': ['none'],
+					'base-uri': ['none'],
+					'frame-ancestors': ['none'],
+					'form-action': ['self']
+				}
+			}
 		})
 	],
 	server: {

@@ -72,5 +72,17 @@
 		"rate_limited": "Too many attempts. Wait a moment and try again.",
 		"not_found": "Not found.",
 		"unexpected": "Something went wrong. Try again."
+	},
+	"style": {
+		"title": "Design system",
+		"subtitle": "The ported look: square corners, Hedvig Letters, the bordered table grid.",
+		"buttons": "Buttons",
+		"inputs": "Inputs",
+		"table": "Data table",
+		"col_date": "Date",
+		"col_name": "Name",
+		"col_category": "Category",
+		"col_wallet": "Wallet",
+		"col_amount": "Amount"
 	}
 }

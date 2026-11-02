@@ -63,4 +63,14 @@ export type TranslationKey =
 	| 'nav.transactions'
 	| 'shell.scaffold_notice'
 	| 'shell.signed_in_as'
-	| 'shell.workspace';
+	| 'shell.workspace'
+	| 'style.buttons'
+	| 'style.col_amount'
+	| 'style.col_category'
+	| 'style.col_date'
+	| 'style.col_name'
+	| 'style.col_wallet'
+	| 'style.inputs'
+	| 'style.subtitle'
+	| 'style.table'
+	| 'style.title';

@@ -71,23 +71,12 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	const response = await resolve(event);
 
-	// Security headers (SEC-15). The CSP has no 'unsafe-inline' in script-src;
-	// SvelteKit's inlined hydration data is covered by its own nonce.
-	response.headers.set(
-		'Content-Security-Policy',
-		[
-			"default-src 'self'",
-			"script-src 'self'",
-			"style-src 'self' 'unsafe-inline'",
-			"img-src 'self' data: blob:",
-			"connect-src 'self'",
-			"font-src 'self'",
-			"object-src 'none'",
-			"base-uri 'none'",
-			"frame-ancestors 'none'",
-			"form-action 'self'"
-		].join('; ')
-	);
+	// The Content-Security-Policy is issued by SvelteKit itself, configured
+	// in vite.config.ts, because only it can nonce its own inline bootstrap
+	// script. Setting it here instead blocks that script and the app stops
+	// hydrating without any visible error (SEC-15).
+	//
+	// The rest are plain headers with nothing for SvelteKit to sign.
 	response.headers.set('X-Content-Type-Options', 'nosniff');
 	response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
 	response.headers.set('Permissions-Policy', 'camera=(self), microphone=(), geolocation=()');

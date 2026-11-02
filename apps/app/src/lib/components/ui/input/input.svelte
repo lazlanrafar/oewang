@@ -1,12 +1,24 @@
 <script lang="ts">
-	import { cn, type WithElementRef } from "$lib/utils.js";
-	import type { HTMLInputAttributes, HTMLInputTypeAttribute } from "svelte/elements";
+	import { cn, type WithElementRef } from '$lib/utils.js';
+	import type { HTMLInputAttributes, HTMLInputTypeAttribute } from 'svelte/elements';
 
-	type InputType = Exclude<HTMLInputTypeAttribute, "file">;
+	/*
+	 * Ported from the old app's atoms/input.tsx.
+	 *
+	 * Square, a plain border, no ring. The old class string ended with
+	 * `focus-visible:outline-none`; that is dropped so the global
+	 * `:focus-visible` outline in app.css can show (UI-7).
+	 *
+	 * The autofill overrides are carried across verbatim: without them Chrome
+	 * paints its own pale yellow background over a transparent input, which
+	 * looks broken in dark mode.
+	 */
+
+	type InputType = Exclude<HTMLInputTypeAttribute, 'file'>;
 
 	type Props = WithElementRef<
-		Omit<HTMLInputAttributes, "type"> &
-			({ type: "file"; files?: FileList } | { type?: InputType; files?: undefined })
+		Omit<HTMLInputAttributes, 'type'> &
+			({ type: 'file'; files?: FileList } | { type?: InputType; files?: undefined })
 	>;
 
 	let {
@@ -15,19 +27,23 @@
 		type,
 		files = $bindable(),
 		class: className,
-		"data-slot": dataSlot = "input",
+		'data-slot': dataSlot = 'input',
 		...restProps
 	}: Props = $props();
+
+	const base =
+		'flex h-9 w-full border bg-transparent px-3 py-1 text-sm transition-colors ' +
+		'placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 ' +
+		'file:border-0 file:bg-transparent file:text-sm file:font-medium ' +
+		'[&:-webkit-autofill]:bg-transparent! [&:-webkit-autofill]:bg-none! ' +
+		'[&:-webkit-autofill]:shadow-none!';
 </script>
 
-{#if type === "file"}
+{#if type === 'file'}
 	<input
 		bind:this={ref}
 		data-slot={dataSlot}
-		class={cn(
-			"dark:bg-input/30 border-input focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:aria-invalid:border-destructive/50 disabled:bg-input/50 dark:disabled:bg-input/80 h-8 rounded-lg border bg-transparent px-2.5 py-1 text-base transition-colors file:h-6 file:text-sm file:font-medium focus-visible:ring-3 aria-invalid:ring-3 md:text-sm w-full min-w-0 outline-none file:inline-flex file:border-0 file:bg-transparent file:text-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50",
-			className
-		)}
+		class={cn(base, className)}
 		type="file"
 		bind:files
 		bind:value
@@ -37,10 +53,7 @@
 	<input
 		bind:this={ref}
 		data-slot={dataSlot}
-		class={cn(
-			"dark:bg-input/30 border-input focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:aria-invalid:border-destructive/50 disabled:bg-input/50 dark:disabled:bg-input/80 h-8 rounded-lg border bg-transparent px-2.5 py-1 text-base transition-colors file:h-6 file:text-sm file:font-medium focus-visible:ring-3 aria-invalid:ring-3 md:text-sm w-full min-w-0 outline-none file:inline-flex file:border-0 file:bg-transparent file:text-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50",
-			className
-		)}
+		class={cn(base, className)}
 		{type}
 		bind:value
 		{...restProps}

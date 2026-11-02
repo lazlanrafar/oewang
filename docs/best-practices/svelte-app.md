@@ -22,6 +22,7 @@ How the web app is structured and written. It is a BFF as much as a UI: it holds
 | Forms | Superforms with a Zod adapter |
 | Icons | Lucide Svelte |
 | Theme | mode-watcher |
+| Fonts | Hedvig Letters Sans and Serif, Geist Mono, self-hosted through `@fontsource` so the CSP stays `font-src 'self'` |
 | Crypto | `node:crypto` on the server only ([encryption](../api/encryption.md#primitives)) |
 | Tests | Vitest for units, Playwright for journeys |
 | Lint | ESLint with the Svelte plugin, Prettier with the Svelte plugin |

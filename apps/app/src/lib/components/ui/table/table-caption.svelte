@@ -1,7 +1,8 @@
 <script lang="ts">
-	import { cn, type WithElementRef } from "$lib/utils.js";
-	import type { HTMLAttributes } from "svelte/elements";
+	import { cn, type WithElementRef } from '$lib/utils.js';
+	import type { HTMLAttributes } from 'svelte/elements';
 
+	// Ported from the old app's atoms/table.tsx.
 	let {
 		ref = $bindable(null),
 		class: className,
@@ -13,7 +14,7 @@
 <caption
 	bind:this={ref}
 	data-slot="table-caption"
-	class={cn("text-muted-foreground mt-4 text-sm", className)}
+	class={cn('mt-4 text-sm text-muted-foreground', className)}
 	{...restProps}
 >
 	{@render children?.()}

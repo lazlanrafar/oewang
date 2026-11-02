@@ -4,22 +4,39 @@
  * Design tokens, ported from the old app's packages/ui/src/globals.css so the
  * rewrite looks like the product it replaces (UI-2).
  *
- * Tailwind 4 is CSS-first: the @theme block maps semantic names onto the
- * variables below, and the two :root blocks hold the actual values. Dark mode
- * is a class on <html>, driven by mode-watcher.
+ * The old app's look is flat and square: its button, input, card, table and
+ * dropdown carry no `rounded-*` class at all. Rather than strip those classes
+ * out of every generated shadcn-svelte component, where the next
+ * `shadcn-svelte add` would put them back, the radius scale is zero. Every
+ * `rounded-sm|md|lg|xl` utility then resolves to 0 and the components come out
+ * square on their own.
  *
- * Dropped from the old file: the chart variables, the typography plugin and
- * the theme presets. Charts are not in scope, and a preset system for one
- * theme is cost with no benefit.
+ * Self-hosted fonts, so the CSP stays `font-src 'self'` and no request leaves
+ * for a font CDN.
+ *
+ * Dropped from the old file: chart variables, the typography plugin, the
+ * theme-preset system and the font switcher. Charts are out of scope, and a
+ * preset system for one theme is cost with no benefit.
  */
+
+@import '@fontsource/hedvig-letters-sans/400.css';
+@import '@fontsource/hedvig-letters-serif/400.css';
+@import '@fontsource/geist-mono/400.css';
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-	--radius-sm: calc(var(--radius) - 4px);
-	--radius-md: calc(var(--radius) - 2px);
-	--radius-lg: var(--radius);
-	--radius-xl: calc(var(--radius) + 4px);
+	--font-sans: 'Hedvig Letters Sans', system-ui, sans-serif;
+	--font-serif: 'Hedvig Letters Serif', Georgia, serif;
+	--font-mono: 'Geist Mono', ui-monospace, monospace;
+
+	/* Square, like the old app. See the note above. */
+	--radius: 0rem;
+	--radius-sm: 0rem;
+	--radius-md: 0rem;
+	--radius-lg: 0rem;
+	--radius-xl: 0rem;
+	--radius-2xl: 0rem;
 
 	--color-background: hsl(var(--background));
 	--color-foreground: hsl(var(--foreground));
@@ -52,17 +69,22 @@
 	--color-green: hsl(var(--green));
 	--color-red: hsl(var(--red));
 
-	/* The old app deliberately flattened shadows above sm. Kept. */
+	/* The old app deliberately flattened every shadow above sm. Kept. */
 	--shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
 	--shadow-md: none;
 	--shadow-lg: none;
+	--shadow-xl: none;
+	--shadow-2xl: none;
+
+	/* The muted grey the old table used for header text and secondary
+	   labels. A literal in the old file; a token here so it is themeable. */
+	--color-subtle: hsl(var(--subtle));
 }
 
 :root {
-	--radius: 0.5rem;
-
 	--green: 142 71% 45%;
 	--red: 358 75% 59%;
+	--subtle: 0 0% 40%;
 
 	--background: 0 0% 100%;
 	--foreground: 0 0% 7%;
@@ -94,6 +116,7 @@
 .dark {
 	--green: 151 100% 39%;
 	--red: 357 85% 64%;
+	--subtle: 0 0% 40%;
 
 	--background: 0 0% 5%;
 	--foreground: 0 0% 98%;
@@ -123,16 +146,38 @@
 }
 
 @layer base {
+	html {
+		/* The old app's base size. Everything above is relative to it. */
+		font-size: 15px;
+	}
+
 	* {
 		@apply border-border;
 	}
 
 	body {
 		@apply bg-background text-foreground;
+		font-family: var(--font-sans);
 	}
 
-	/* Every interactive element keeps a visible focus ring (UI-7). */
+	/*
+	 * The old app killed every focus indicator:
+	 *
+	 *   *:focus, *:focus-visible { outline: none !important; }
+	 *
+	 * That is not copied. It makes keyboard navigation invisible and fails
+	 * UI-7 and WCAG 2.4.7, which this project committed to. The intent behind
+	 * it, no ring when clicking with a mouse, is kept: `:focus-visible` fires
+	 * for keyboard and assistive-technology focus only, so a pointer user sees
+	 * exactly what they saw in the old app and a keyboard user can see where
+	 * they are.
+	 */
+	:focus {
+		outline: none;
+	}
+
 	:focus-visible {
-		@apply outline-ring outline-2 outline-offset-2;
+		outline: 2px solid hsl(var(--ring));
+		outline-offset: 2px;
 	}
 }
