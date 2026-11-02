@@ -124,7 +124,7 @@
 			<Input
 				{placeholder}
 				bind:value={filters.search}
-				class="bg-secondary/10 placeholder:text-subtle/80 h-9 pr-16 pl-9 text-xs"
+				class="bg-secondary/10 placeholder:text-subtle text-small h-9 pr-16 pl-9"
 			/>
 			<div class="absolute top-1/2 right-1 flex -translate-y-1/2 items-center gap-0.5">
 				{#if filters.search}
@@ -199,7 +199,7 @@
 									<DropdownMenu.SubContent class="min-w-[200px] p-3">
 										<div class="flex flex-col gap-3">
 											<div class="flex flex-col gap-1.5">
-												<span class="text-subtle px-0.5 text-[10px] font-medium uppercase">
+												<span class="text-subtle text-caption px-0.5 font-medium uppercase">
 													At least
 												</span>
 												<CurrencyInput
@@ -210,7 +210,7 @@
 												/>
 											</div>
 											<div class="flex flex-col gap-1.5">
-												<span class="text-subtle px-0.5 text-[10px] font-medium uppercase">
+												<span class="text-subtle text-caption px-0.5 font-medium uppercase">
 													At most
 												</span>
 												<CurrencyInput
@@ -220,7 +220,7 @@
 														(filters = { ...filters, amount: { ...filters.amount, max } })}
 												/>
 											</div>
-											<p class="text-subtle text-[10px]">
+											<p class="text-subtle text-caption">
 												Compared on the absolute amount, so an expense and an income of the
 												same size both match.
 											</p>
@@ -263,7 +263,7 @@
 								class="w-0 scale-0 transition-all group-hover:w-4 group-hover:scale-100"
 								aria-hidden="true"
 							/>
-							<span class="text-foreground/90 text-[11px] font-medium whitespace-nowrap">
+							<span class="text-foreground/90 text-small font-medium whitespace-nowrap">
 								{chip.label}
 							</span>
 						</button>
@@ -271,7 +271,7 @@
 				{/each}
 			</ul>
 			{#if active}
-				<Button variant="ghost" size="sm" class="text-xs" onclick={clearAll}>Clear all</Button>
+				<Button variant="ghost" size="sm" class="text-small" onclick={clearAll}>Clear all</Button>
 			{/if}
 		</div>
 	{/if}

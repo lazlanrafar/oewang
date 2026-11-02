@@ -9,7 +9,7 @@
 			variant: {
 				default: 'bg-background text-foreground',
 				destructive: 'border-destructive/50 text-destructive [&>svg]:text-destructive',
-				warning: 'border-[#e5c07b] bg-[#fff8e6] dark:border-[#4a2800] dark:bg-[#1f1400]'
+				warning: 'border-warning-border bg-warning'
 			}
 		},
 		defaultVariants: { variant: 'default' }

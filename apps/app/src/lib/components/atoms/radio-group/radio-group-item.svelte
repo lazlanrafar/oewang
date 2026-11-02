@@ -18,7 +18,7 @@
 	bind:ref
 	data-slot="radio-group-item"
 	class={cn(
-		'border-primary text-primary aspect-square size-4 border outline-none disabled:cursor-not-allowed disabled:opacity-50',
+		'border-primary text-primary aspect-square size-4 border disabled:cursor-not-allowed disabled:opacity-50',
 		className
 	)}
 	{...restProps}

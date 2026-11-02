@@ -9,6 +9,6 @@
 	let { children } = $props();
 </script>
 
-<div class="min-h-svh px-6 py-8">
+<main class="min-h-svh px-6 py-8">
 	{@render children()}
-</div>
+</main>

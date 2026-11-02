@@ -58,17 +58,22 @@
 		// element the page renders rather than over a chosen specimen.
 		{ label: 'Elements with a radius', live: '0', read: () => count('borderRadius', (v) => v !== '0px') },
 		{ label: 'Elements with a box-shadow', live: '0', read: () => count('boxShadow', (v) => v !== 'none') },
+		// Income and expense are body text, so they need 4.5:1 (D63).
+		{ label: 'Amount contrast, income', live: '4.5:1 or better', read: () => textContrast('.text-green') },
+		{ label: 'Amount contrast, expense', live: '4.5:1 or better', read: () => textContrast('.text-red') },
 		{ label: 'Button radius', live: '0px', read: () => prop('#spec-button', 'borderRadius') },
 		{ label: 'Button height', live: '33.75px', read: () => prop('#spec-button', 'height') },
 		{ label: 'Button weight', live: '500', read: () => prop('#spec-button', 'fontWeight') },
 		{ label: 'Button padding', live: '15px', read: () => prop('#spec-button', 'paddingLeft') },
 		{ label: 'Input height', live: '33.75px', read: () => prop('#spec-input', 'height') },
-		{ label: 'Input border', live: '1px rgb(219, 218, 215)', read: () => hairline('#spec-input') },
+		// The control boundary is deliberately darker than the live app's: its
+		// 1.35:1 hairline fails the 3:1 that a control needs (D63), so this row
+		// checks the rule rather than the colour.
+		{ label: 'Control boundary contrast', live: '3:1 or better', read: boundaryContrast },
 		{ label: 'Input padding', live: '11.25px', read: () => prop('#spec-input', 'paddingLeft') },
 		{ label: 'Select trigger height', live: '33.75px', read: () => prop('#spec-select', 'height') },
 		{ label: 'Checkbox size', live: '15px', read: () => prop('#spec-checkbox', 'width') },
 		{ label: 'Card border', live: '1px rgb(219, 218, 215)', read: () => hairline('#spec-card') },
-		{ label: 'Focus outline', live: 'none', read: focusOutline },
 		{ label: 'Focused input border', live: 'rgb(24, 24, 27)', read: focusBorder },
 		{ label: 'Menu item height', live: '30px', read: () => prop('[data-slot="dropdown-menu-item"]', 'height') },
 		{ label: 'Menu item padding', live: '7.5px', read: () => prop('[data-slot="dropdown-menu-item"]', 'paddingLeft') },
@@ -175,8 +180,40 @@
 		return `${hairlineWidth(selector)} ${prop(selector, 'borderTopColor')}`;
 	}
 
-	function focusOutline(): string {
-		return whileFocused('#spec-input', (style) => style.outlineStyle);
+	/**
+	 * A control's boundary has to clear 3:1 against the page (WCAG 1.4.11).
+	 * The live app's hairline does not, which is the one place the colours
+	 * here deliberately leave it (D63).
+	 */
+	function boundaryContrast(): string {
+		const el = document.querySelector('#spec-input');
+		if (!el) throw OFF_SCREEN;
+		const style = getComputedStyle(el);
+		const page = getComputedStyle(document.body).backgroundColor;
+		const measured = contrast(style.borderTopColor, page);
+		return measured >= 3 ? '3:1 or better' : `${measured.toFixed(2)}:1`;
+	}
+
+	function textContrast(selector: string): string {
+		const el = document.querySelector(selector);
+		if (!el || !el.checkVisibility()) throw OFF_SCREEN;
+		const measured = contrast(getComputedStyle(el).color, getComputedStyle(document.body).backgroundColor);
+		return measured >= 4.5 ? '4.5:1 or better' : `${measured.toFixed(2)}:1`;
+	}
+
+	/** WCAG 2.x relative luminance, so the number is computed, not guessed. */
+	function contrast(a: string, b: string): number {
+		const channel = (colour: string) =>
+			(colour.match(/\d+(\.\d+)?/g) ?? ['0', '0', '0']).slice(0, 3).map((value) => {
+				const v = Number(value) / 255;
+				return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+			});
+		const luminance = (colour: string) => {
+			const [r, g, bl] = channel(colour);
+			return 0.2126 * r + 0.7152 * g + 0.0722 * bl;
+		};
+		const [high, low] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+		return (high + 0.05) / (low + 0.05);
 	}
 
 	/**

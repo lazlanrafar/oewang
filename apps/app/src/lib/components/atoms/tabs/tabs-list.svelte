@@ -13,7 +13,7 @@
 			variant: {
 				default: '',
 				line: 'h-auto gap-1 bg-transparent p-0',
-				segmented: 'h-auto w-fit items-stretch bg-[#f7f7f7] p-0 dark:bg-[#131313]'
+				segmented: 'bg-segment h-auto w-fit items-stretch p-0'
 			}
 		},
 		defaultVariants: { variant: 'default' }

@@ -24,7 +24,9 @@ How the web app is structured and written. It is a BFF as much as a UI: it holds
 | Theme | mode-watcher |
 | Type scale | Role tokens, not sizes: `text-h1` to `text-h4`, `text-body`, `text-small`, `text-caption`, each carrying line height, weight and letter spacing (D53). `h1`-`h4` take them in the base layer |
 | Shape | No radius, no shadow, anywhere (D52, D54). No component carries a `ring-*` or `shadow-*` class, so computed `box-shadow` reads `none`; a surface is read by its 1px rule |
-| Focus | No outline, no ring (D51). A focused field turns its border `primary` on `:focus` (D54); buttons and links show nothing |
+| Focus | A 2px `--ring` outline on `:focus-visible`, unlayered so component utilities cannot beat it (D62). Pointer focus stays silent; a focused field also turns its border `primary` (D54) |
+| Contrast | Text pairs clear 4.5:1 and control boundaries 3:1, measured on the rendered pair (D63). The design system page checks all three on every load |
+| Motion | Opt-in: one base rule collapses durations under `prefers-reduced-motion: reduce` (D64) |
 | Fonts | Hedvig Letters Sans and Serif, Geist Mono, self-hosted through `@fontsource` so the CSP stays `font-src 'self'`. The serif ships one weight (400) and is never set bold: `.font-serif` disables weight synthesis, so a stray `font-semibold` renders unchanged rather than as a faked bold |
 | Crypto | `node:crypto` on the server only ([encryption](../api/encryption.md#primitives)) |
 | Tests | Vitest for units, Playwright for journeys |

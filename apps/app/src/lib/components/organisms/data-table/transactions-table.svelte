@@ -304,6 +304,26 @@
 		handle.addEventListener('pointercancel', stop);
 	}
 
+	/**
+	 * The keyboard's version of the drag: the arrows step the width by 16px,
+	 * Home puts it back. Announced through the handle's own label, so there is
+	 * nothing to learn beyond "this is the Description column's handle".
+	 */
+	function nudgeWidth(event: KeyboardEvent, column: ColumnSpec) {
+		const step = event.shiftKey ? 64 : 16;
+		if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+			event.preventDefault();
+			const direction = event.key === 'ArrowRight' ? 1 : -1;
+			widths = {
+				...widths,
+				[column.key]: Math.max(column.minWidth, widthOf(column) + direction * step)
+			};
+		} else if (event.key === 'Home') {
+			event.preventDefault();
+			resetWidth(column);
+		}
+	}
+
 	function resetWidth(column: ColumnSpec) {
 		const { [column.key]: _removed, ...rest } = widths;
 		widths = rest;
@@ -313,7 +333,7 @@
 	// gives the live table its grid; the last column drops it, since that edge
 	// is the table's own.
 	const CELL =
-		'h-full flex items-center border-r border-b border-border overflow-hidden bg-background transition-colors group-hover:bg-[#F2F1EF] dark:group-hover:bg-[#0f0f0f]';
+		'h-full flex items-center border-r border-b border-border overflow-hidden bg-background transition-colors group-hover:bg-row-hover';
 	// The header's colour and weight come from the old Table head atom, which
 	// this layout replaces: #666666 at 500, measured on the live app.
 	const HEAD =
@@ -393,10 +413,21 @@
 
 	<!-- --------------------------------------------------------- table -->
 	<div class="w-full overflow-x-auto">
-		<div style="min-width: {totalWidth}px">
+		<!--
+			The roles have to sit inside a table to mean anything: a `row` with
+			no `table` ancestor is dropped, and a screen reader is handed a pile
+			of divs with no column names and no counts.
+		-->
+		<div
+			role="table"
+			aria-label="Transactions"
+			aria-rowcount={sorted.length}
+			aria-colcount={visibleColumns.length}
+			style="min-width: {totalWidth}px"
+		>
 			<!-- Header: its own block, as the old table keeps it, so the body
 			     can scroll under it without the columns drifting. -->
-			<div class="bg-background sticky top-0 z-30 block w-full border-0">
+			<div role="rowgroup" class="bg-background sticky top-0 z-30 block w-full border-0">
 				<div class="flex h-[45px] w-full min-w-full items-center" role="row">
 					{#each visibleColumns as column (column.key)}
 						<div
@@ -445,25 +476,29 @@
 									The resize handle: 4px wide, sitting on the column's right
 									edge and half outside it, exactly as the old table draws it.
 									A drag changes the width, a double click puts it back.
+
+									It is a button rather than a bare div, so the arrow keys
+									reach it: dragging was the only way to resize a column, and
+									a pointer-only control is no control for half the users.
 								-->
-								<!-- svelte-ignore a11y_no_static_element_interactions -->
-								<div
+								<button
+									type="button"
 									class={cn(
 										'absolute top-0 right-0 h-full w-1 translate-x-1/2 cursor-col-resize touch-none select-none',
 										resizing === column.key ? 'bg-primary' : 'bg-transparent hover:bg-border'
 									)}
-									role="separator"
-									aria-orientation="vertical"
 									aria-label="Resize {column.label}"
 									onpointerdown={(event) => startResize(event, column)}
 									ondblclick={() => resetWidth(column)}
-								></div>
+									onkeydown={(event) => nudgeWidth(event, column)}
+								></button>
 							{/if}
 						</div>
 					{/each}
 				</div>
 			</div>
 
+			<div role="rowgroup">
 			{#if sorted.length === 0}
 				<div class="border-border border-b">
 					<DataTableEmptyState
@@ -480,7 +515,7 @@
 					<!-- The day group row: the one row that spans every column. -->
 					<div
 						id={groupIndex === 0 ? 'spec-group-row' : undefined}
-						class="border-border flex h-[40px] w-full min-w-full items-center gap-2 border-b bg-[rgb(251,251,250)] px-4 dark:bg-[rgb(20,20,20)]"
+						class="border-border bg-row-group flex h-[40px] w-full min-w-full items-center gap-2 border-b px-4"
 					>
 						<button
 							type="button"
@@ -513,24 +548,23 @@
 							their own stop the event, so a checkbox, the category editor
 							and the actions menu do not also expand the row.
 						-->
+						<!--
+							The row opens its detail on click as a pointer convenience.
+							It is not a widget: the chevron button beside the description
+							carries the name, the state and the keyboard path, so the row
+							itself stays out of the tab order and announces nothing extra.
+						-->
+						<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions, a11y_interactive_supports_focus -->
 						<div
 							id={row.id === sorted[0]?.id ? 'spec-row' : undefined}
 							role="row"
-							tabindex="0"
-							aria-expanded={expandedRow === row.id}
 							class={cn(
 								'group flex w-full min-w-full cursor-pointer items-center border-0 select-text',
-								'hover:bg-[#F2F1EF] dark:hover:bg-[#0f0f0f]',
-								selected[row.id] && 'bg-[#F2F1EF] dark:bg-[#0f0f0f]'
+								'hover:bg-row-hover',
+								selected[row.id] && 'bg-row-hover'
 							)}
 							style="height: {ROW_HEIGHT}px"
 							onclick={() => toggleExpanded(row.id)}
-							onkeydown={(event) => {
-								if (event.key === 'Enter' || event.key === ' ') {
-									event.preventDefault();
-									toggleExpanded(row.id);
-								}
-							}}
 						>
 							{#each visibleColumns as column (column.key)}
 								{#if column.key === 'select'}
@@ -709,6 +743,7 @@
 					{/each}
 				{/if}
 			{/each}
+			</div>
 		</div>
 	</div>
 

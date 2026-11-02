@@ -32,7 +32,7 @@
 	}: Props = $props();
 
 	const base =
-		'flex h-9 w-full border bg-transparent px-3 py-1 text-sm transition-colors ' +
+		'border-input flex h-9 w-full border bg-transparent px-3 py-1 text-sm transition-colors ' +
 		'focus:border-primary focus-visible:border-primary ' +
 		'placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 ' +
 		'file:border-0 file:bg-transparent file:text-sm file:font-medium ' +

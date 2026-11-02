@@ -16,7 +16,7 @@
 		bind:ref
 		data-slot="accordion-trigger"
 		class={cn(
-			'flex flex-1 items-center justify-between py-4 font-medium outline-none transition-all [&[data-state=open]>svg]:rotate-180',
+			'flex flex-1 items-center justify-between py-4 font-medium transition-all [&[data-state=open]>svg]:rotate-180',
 			className
 		)}
 		{...restProps}

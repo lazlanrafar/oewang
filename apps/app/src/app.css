@@ -117,9 +117,23 @@
 	--color-sidebar-border: hsl(var(--sidebar-border));
 
 	/* Income and expense. Colour is never the only carrier of meaning
-	   (UI-7): every amount also shows a sign and a label. */
+	   (UI-7): every amount also shows a sign and a label. Both are dark
+	   enough to clear 4.5:1 on the page background (D63). */
 	--color-green: hsl(var(--green));
 	--color-red: hsl(var(--red));
+
+	/*
+	 * Roles the ported components used to spell out as literals. A hex in a
+	 * component is a value with no job, which dark mode then has to chase
+	 * usage by usage (D63).
+	 */
+	--color-row-hover: hsl(var(--row-hover));
+	--color-row-group: hsl(var(--row-group));
+	--color-switch-off: hsl(var(--switch-off));
+	--color-segment: hsl(var(--segment));
+	--color-segment-foreground: hsl(var(--segment-foreground));
+	--color-warning: hsl(var(--warning));
+	--color-warning-border: hsl(var(--warning-border));
 
 	/*
 	 * No elevation either (D52). The old app already flattened everything
@@ -159,9 +173,22 @@
 }
 
 :root {
-	--green: 142 71% 45%;
-	--red: 358 75% 59%;
+	/*
+	 * Measured, not chosen by eye: the old values rendered at 2.30:1 (green)
+	 * and 3.91:1 (red) on white, where body text needs 4.5:1. These clear it
+	 * at 5.12:1 and 5.99:1 with the hue held (D63).
+	 */
+	--green: 142 65% 30%;
+	--red: 358 65% 45%;
 	--subtle: 0 0% 40%;
+
+	--row-hover: 40 10.3% 94.3%;
+	--row-group: 60 11.1% 98.2%;
+	--switch-off: 240 6% 58%;
+	--segment: 0 0% 97%;
+	--segment-foreground: 0 0% 44%;
+	--warning: 45 100% 95%;
+	--warning-border: 38 61% 69%;
 
 	--background: 0 0% 100%;
 	--foreground: 0 0% 7%;
@@ -180,7 +207,9 @@
 	--destructive: 0 84.2% 60.2%;
 	--destructive-foreground: 0 0% 98%;
 	--border: 45 5% 85%;
-	--input: 240 5.9% 90%;
+	/* Control boundaries, which need 3:1 against the page (WCAG 1.4.11).
+	   The structural `--border` is a hairline and stays one. */
+	--input: 240 6% 58%;
 	--ring: 240 5.9% 10%;
 
 	--sidebar: 0 0% 100%;
@@ -191,9 +220,18 @@
 }
 
 .dark {
+	/* Both already clear 4.5:1 on the dark background: 8.67:1 and 5.74:1. */
 	--green: 151 100% 39%;
 	--red: 357 85% 64%;
 	--subtle: 0 0% 40%;
+
+	--row-hover: 0 0% 6%;
+	--row-group: 0 0% 8%;
+	--switch-off: 240 6% 42%;
+	--segment: 0 0% 7.5%;
+	--segment-foreground: 0 0% 40%;
+	--warning: 30 100% 6%;
+	--warning-border: 30 100% 15%;
 
 	--background: 0 0% 5%;
 	--foreground: 0 0% 98%;
@@ -212,7 +250,7 @@
 	--destructive: 359 100% 61%;
 	--destructive-foreground: 0 0% 100%;
 	--border: 0 0% 20%;
-	--input: 0 0% 11%;
+	--input: 240 6% 42%;
 	--ring: 240 4.9% 83.9%;
 
 	--sidebar: 0 0% 5%;
@@ -284,23 +322,45 @@
 		font-synthesis-weight: none;
 	}
 
+
 	/*
-	 * No focus indicator, matching the live app, which sets
-	 *
-	 *   *:focus, *:focus-visible { outline: none !important; box-shadow: none }
-	 *
-	 * and keeps it even on a focused input. This was measured, not assumed.
-	 *
-	 * It was raised as an accessibility problem (D48) and the owner confirmed
-	 * the match anyway (D51). Fields carry the indication instead: an input,
-	 * textarea, select trigger, input group or checkbox turns its border
-	 * `primary` while focused (D54). Buttons, links and menu items still show
-	 * nothing, so WCAG 2.4.7 is still failed for them; UI-7 says so rather
-	 * than hiding it.
+	 * Motion is opt-in (D64). The two infinite animations, the skeleton
+	 * shimmer and the spinner, are the reason this is a blanket rule rather
+	 * than a guard per component: a reader who asked for stillness should not
+	 * have to wait for either.
 	 */
-	:focus,
-	:focus-visible {
-		outline: none;
-		box-shadow: none;
+	@media (prefers-reduced-motion: reduce) {
+		*,
+		*::before,
+		*::after {
+			animation-duration: 0.01ms !important;
+			animation-iteration-count: 1 !important;
+			transition-duration: 0.01ms !important;
+			scroll-behavior: auto !important;
+		}
 	}
+}
+
+/*
+ * A visible indicator for keyboard focus, and nothing for pointer focus.
+ *
+ * The live app sets `*:focus, *:focus-visible { outline: none !important }`
+ * and this matched it (D51). The match cost every keyboard user any idea of
+ * where they were, on 64 tab stops of the design system page alone, so it is
+ * reversed (D62): `:focus` stays silent, which is what that rule was reaching
+ * for, and `:focus-visible` draws a ring.
+ *
+ * Deliberately outside `@layer base`: a layered rule loses to the unlayered
+ * utilities the components carry, and the ring silently did not draw.
+ *
+ * Fields keep their own cue as well: a focused input turns its border
+ * `primary` (D54).
+ */
+:focus {
+	outline: none;
+}
+
+:focus-visible {
+	outline: 2px solid hsl(var(--ring));
+	outline-offset: 2px;
 }

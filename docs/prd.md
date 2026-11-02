@@ -229,7 +229,7 @@ Requirement IDs are referenced by every other doc and by each backlog story. The
 | UI-4 | Destructive actions require confirmation. |
 | UI-5 | Every monetary value renders with the currency it is denominated in and correct decimal precision. A wallet balance uses its wallet's currency; a total uses the workspace currency. |
 | UI-6 | Every screen is usable at 375 px width. |
-| UI-7 | Interactive elements are reachable by keyboard. There is no focus outline or ring anywhere (D51), the visual match with the live app having been chosen over it. **Fields do mark focus**: an input, textarea, select trigger, input group or checkbox turns its border `primary` while focused (D54). Buttons, links and menu items still show nothing, so WCAG 2.4.7 is still failed for them. Accepted deliberately, and the first thing to revisit if accessibility becomes a requirement. |
+| UI-7 | Interactive elements are reachable by keyboard and show where focus is: a 2px `--ring` outline on `:focus-visible` (D62), with fields also turning their border `primary` (D54). Colour is never the only carrier of meaning, and every text and control pair clears its contrast requirement, measured rather than assumed (D63). Motion is opt-in under `prefers-reduced-motion` (D64). |
 | UI-8 | View state lives in the URL. Every filter, search term, sort, page number, date range, grouping and open tab is a query parameter, so a refresh restores the view, the back button undoes a change, and a pasted link reproduces what the sender saw. Nothing that changes what is on screen is held only in a component. Per-browser conveniences (column visibility, density, sidebar collapsed) stay in `localStorage`; secrets never go in a URL. |
 
 ### 6.9 Security (SEC)

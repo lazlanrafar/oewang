@@ -7,7 +7,7 @@
 	 * settings and the wallet picker are built from it.
 	 */
 	export const itemVariants = tv({
-		base: 'group/item flex flex-wrap items-center gap-4 text-sm transition-colors outline-none',
+		base: 'group/item flex flex-wrap items-center gap-4 text-sm transition-colors',
 		variants: {
 			variant: {
 				default: 'bg-transparent',
