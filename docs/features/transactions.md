@@ -229,7 +229,8 @@ should match it:
 - **The whole amount is coloured**, red for an expense and green for income,
   with the sign as well so colour is never the only carrier (UI-7).
 - Category shows a coloured square plus its name; account shows an icon.
-- Account and category are editable in place from the row.
+- Account and category are editable in place from the row, each opening its picker inside the cell.
+- **The description and the amount are edited by expanding the cell** (D59): the cell becomes an input drawn over its neighbours, wider than the column, Enter or blur commits and Escape restores. The row does not change height and the columns do not move.
 - Above the table: search with a filter control, a grouping selector, a date
   range picker, a column-visibility control, an export menu and an add button.
 

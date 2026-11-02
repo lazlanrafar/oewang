@@ -36,6 +36,7 @@
 	import { DataTableFilter } from '../data-table-filter/index.js';
 	import { emptyFilterState, type DataTableFilterState } from '../data-table-filter/index.js';
 	import DataTableEmptyState from './data-table-empty-state.svelte';
+	import EditableCell from './editable-cell.svelte';
 	import { ROW_HEIGHT, TRANSACTION_COLUMNS, type ColumnKey } from './columns.js';
 	import type { NamedOption, TransactionRow } from './types.js';
 	import { cn } from '$lib/utils.js';
@@ -68,6 +69,11 @@
 	let expandedRow = $state<string | null>(null);
 	let collapsedGroups = $state<Record<string, boolean>>({});
 	let rowCategory = $state<Record<string, string>>({});
+	let rowWallet = $state<Record<string, string>>({});
+	/** Cell edits held locally; a real page sends these to the API. */
+	let edits = $state<Record<string, Partial<Pick<TransactionRow, 'name' | 'amount'>>>>({});
+	/** Which cell is open, so its own cell can drop `overflow-hidden`. */
+	let editingCell = $state<string | null>(null);
 	let hidden = $state<Partial<Record<ColumnKey, boolean>>>({});
 
 	const visibleColumns = $derived(TRANSACTION_COLUMNS.filter((column) => !hidden[column.key]));
@@ -79,6 +85,9 @@
 	const totalWidth = $derived(visibleColumns.reduce((sum, column) => sum + column.width, 0));
 
 	const categoryOf = (row: TransactionRow) => rowCategory[row.id] ?? row.categoryId;
+	const walletOf = (row: TransactionRow) => rowWallet[row.id] ?? row.walletId;
+	const nameOfRow = (row: TransactionRow) => edits[row.id]?.name ?? row.name;
+	const amountOf = (row: TransactionRow) => edits[row.id]?.amount ?? row.amount;
 	const nameOf = (options: NamedOption[], id: string) =>
 		options.find((option) => option.id === id)?.name ?? id;
 	const colourOf = (id: string) =>
@@ -90,7 +99,7 @@
 	const matching = $derived(
 		rows.filter((row) => {
 			const haystack =
-				`${row.name} ${nameOf(categories, categoryOf(row))} ${nameOf(wallets, row.walletId)}`.toLowerCase();
+				`${nameOfRow(row)} ${nameOf(categories, categoryOf(row))} ${nameOf(wallets, walletOf(row))}`.toLowerCase();
 			if (filters.search.trim() && !haystack.includes(filters.search.trim().toLowerCase())) {
 				return false;
 			}
@@ -99,9 +108,9 @@
 			if (categoryFilter.length > 0 && !categoryFilter.includes(categoryOf(row))) return false;
 
 			const walletFilter = filters.facets.wallet ?? [];
-			if (walletFilter.length > 0 && !walletFilter.includes(row.walletId)) return false;
+			if (walletFilter.length > 0 && !walletFilter.includes(walletOf(row))) return false;
 
-			const size = Math.abs(minorUnits(row.amount));
+			const size = Math.abs(minorUnits(amountOf(row)));
 			const min = filters.amount?.min ? minorUnits(filters.amount.min) : undefined;
 			const max = filters.amount?.max ? minorUnits(filters.amount.max) : undefined;
 			if (min !== undefined && size < min) return false;
@@ -121,9 +130,9 @@
 	const sorted = $derived(
 		[...matching].sort((a, b) => {
 			const direction = sortDescending ? -1 : 1;
-			if (sortKey === 'amount') return (minorUnits(a.amount) - minorUnits(b.amount)) * direction;
-			if (sortKey === 'name') return a.name.localeCompare(b.name) * direction;
-			return a.day.localeCompare(b.day) * direction || a.name.localeCompare(b.name);
+			if (sortKey === 'amount') return (minorUnits(amountOf(a)) - minorUnits(amountOf(b))) * direction;
+			if (sortKey === 'name') return nameOfRow(a).localeCompare(nameOfRow(b)) * direction;
+			return a.day.localeCompare(b.day) * direction || nameOfRow(a).localeCompare(nameOfRow(b));
 		})
 	);
 
@@ -176,7 +185,7 @@
 	}
 
 	function money(row: TransactionRow): string {
-		const value = parseFloat(row.amount);
+		const value = parseFloat(amountOf(row));
 		const sign = value > 0 ? '+' : '-';
 		const absolute = Math.abs(value);
 		const formatted =
@@ -193,13 +202,13 @@
 	 */
 	function dayTotal(dayRows: TransactionRow[], direction: 'in' | 'out'): string {
 		const wanted = dayRows.filter((r) =>
-			direction === 'in' ? parseFloat(r.amount) > 0 : parseFloat(r.amount) < 0
+			direction === 'in' ? parseFloat(amountOf(r)) > 0 : parseFloat(amountOf(r)) < 0
 		);
 		const byCurrency = new Map<string, number>();
 		for (const row of wanted) {
 			byCurrency.set(
 				row.currency,
-				(byCurrency.get(row.currency) ?? 0) + Math.abs(minorUnits(row.amount))
+				(byCurrency.get(row.currency) ?? 0) + Math.abs(minorUnits(amountOf(row)))
 			);
 		}
 		if (byCurrency.size === 0) return 'Rp 0';
@@ -432,7 +441,7 @@
 												checked={selected[row.id] ?? false}
 												onCheckedChange={(checked) =>
 													(selected = { ...selected, [row.id]: checked === true })}
-												aria-label="Select {row.name}"
+												aria-label="Select {nameOfRow(row)}"
 											/>
 										</div>
 										</div>
@@ -447,7 +456,15 @@
 										<div class="w-full truncate overflow-hidden">{row.date}</div>
 									</div>
 								{:else if column.key === 'name'}
-									<div class={cn(CELL, 'px-4')} style={cellStyle('name')} role="cell">
+									<div
+										class={cn(
+											CELL,
+											'relative px-4',
+											editingCell === `${row.id}:name` && 'overflow-visible'
+										)}
+										style={cellStyle('name')}
+										role="cell"
+									>
 										<div class="flex w-full items-center gap-2 overflow-hidden">
 											<button
 												type="button"
@@ -455,7 +472,7 @@
 												aria-expanded={expandedRow === row.id}
 												aria-label="{expandedRow === row.id
 													? 'Collapse'
-													: 'Expand'} {row.name}"
+													: 'Expand'} {nameOfRow(row)}"
 												onclick={(event) => {
 													event.stopPropagation();
 													toggleExpanded(row.id);
@@ -467,7 +484,17 @@
 													<ChevronRight class="size-3.5" />
 												{/if}
 											</button>
-											<span class="truncate">{row.name}</span>
+											<EditableCell
+												value={nameOfRow(row)}
+												expandTo={480}
+												label="Description of {nameOfRow(row)}"
+												onCommit={(name) => {
+													edits = { ...edits, [row.id]: { ...edits[row.id], name } };
+													editingCell = null;
+												}}
+												onOpen={() => (editingCell = `${row.id}:name`)}
+												onClose={() => (editingCell = null)}
+											/>
 										</div>
 									</div>
 								{:else if column.key === 'category'}
@@ -492,24 +519,45 @@
 									</div>
 								{:else if column.key === 'wallet'}
 									<div class={cn(CELL, 'px-4')} style={cellStyle('wallet')} role="cell">
-										<div class="w-full truncate overflow-hidden">
-											{nameOf(wallets, row.walletId)}
+										<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+										<div
+											class="flex h-full w-full items-center"
+											onclick={(event) => event.stopPropagation()}
+										>
+											<Combobox
+												options={wallets.map((w) => ({ value: w.id, label: w.name }))}
+												value={walletOf(row)}
+												onValueChange={(value) =>
+													(rowWallet = { ...rowWallet, [row.id]: value })}
+												inline
+											/>
 										</div>
 									</div>
 								{:else if column.key === 'amount'}
 									<div
-										class={cn(CELL, 'justify-end px-4')}
+										class={cn(
+											CELL,
+											'relative justify-end px-4',
+											editingCell === `${row.id}:amount` && 'overflow-visible'
+										)}
 										style={cellStyle('amount')}
 										role="cell"
 									>
-										<div
-											class={cn(
-												'w-full truncate overflow-hidden text-right font-mono',
-												parseFloat(row.amount) > 0 ? 'text-green' : 'text-red'
-											)}
-										>
-											{money(row)}
-										</div>
+										<EditableCell
+											value={amountOf(row)}
+											label="Amount of {nameOfRow(row)}"
+											align="right"
+											mono
+											expandTo={220}
+											display={money(row)}
+											class={parseFloat(amountOf(row)) > 0 ? 'text-green' : 'text-red'}
+											onCommit={(amount) => {
+												edits = { ...edits, [row.id]: { ...edits[row.id], amount } };
+												editingCell = null;
+											}}
+											onOpen={() => (editingCell = `${row.id}:amount`)}
+											onClose={() => (editingCell = null)}
+										/>
 									</div>
 								{:else}
 									<div class={cn(CELL, 'justify-center px-4')} style={cellStyle('actions')} role="cell">
@@ -522,7 +570,7 @@
 														variant="ghost"
 														size="icon"
 														class="size-7"
-														aria-label="Actions for {row.name}"
+														aria-label="Actions for {nameOfRow(row)}"
 														{...props}
 													>
 														<Ellipsis />
@@ -552,7 +600,7 @@
 										</div>
 										<div>
 											<dt class="text-subtle text-small">Wallet</dt>
-											<dd>{nameOf(wallets, row.walletId)}</dd>
+											<dd>{nameOf(wallets, walletOf(row))}</dd>
 										</div>
 										<div>
 											<dt class="text-subtle text-small">Category</dt>
