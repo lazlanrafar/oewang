@@ -18,12 +18,28 @@ pub struct RequestId(pub String);
 
 impl RequestId {
     pub fn from_request(request: &Request) -> Self {
-        let value = request
-            .headers()
+        Self(Self::from_parts(request.headers()))
+    }
+
+    fn from_parts(headers: &axum::http::HeaderMap) -> String {
+        headers
             .get("x-request-id")
-            .and_then(|v| v.to_str().ok())
-            .unwrap_or("unknown");
-        Self(value.to_string())
+            .and_then(|value| value.to_str().ok())
+            .unwrap_or("unknown")
+            .to_string()
+    }
+}
+
+/// Extractable, so a handler can name the request it is answering without
+/// reaching for the whole `Request`.
+impl<S: Send + Sync> axum::extract::FromRequestParts<S> for RequestId {
+    type Rejection = std::convert::Infallible;
+
+    async fn from_request_parts(
+        parts: &mut axum::http::request::Parts,
+        _state: &S,
+    ) -> Result<Self, Self::Rejection> {
+        Ok(Self(Self::from_parts(&parts.headers)))
     }
 }
 

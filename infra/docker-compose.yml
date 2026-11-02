@@ -81,6 +81,9 @@ services:
       S3_ACCESS_KEY_ID: oewang
       S3_SECRET_ACCESS_KEY: oewang-dev-secret
       RUST_LOG: oewang_server=debug,tower_http=debug,info
+      # Created on first start in development; mounted from the secret store
+      # in production (D22).
+      CRYPTO_SIGNING_KEY_FILE: /app/.secrets/owe1-signing-key.pem
     ports:
       - "3002:3002"
     volumes:

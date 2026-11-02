@@ -12,3 +12,14 @@ thiserror = { workspace = true }
 anyhow = { workspace = true }
 rust_decimal = { workspace = true }
 chrono = { workspace = true }
+
+# OWE1 payload encryption. Only these primitives; no other crypto dependency
+# is permitted (docs/api/encryption.md#primitives).
+x25519-dalek = { workspace = true }
+ed25519-dalek = { workspace = true }
+aes-gcm = { workspace = true }
+hkdf = { workspace = true }
+sha2 = { workspace = true }
+rand = { workspace = true }
+base64 = { workspace = true }
+cuid2 = { workspace = true }

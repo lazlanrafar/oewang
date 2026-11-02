@@ -26,3 +26,6 @@ apps/ai/.pytest_cache/
 
 # Docker named-volume stand-ins
 .docker-data/
+
+# OWE1 signing key, created on first start in development
+apps/api/.secrets/

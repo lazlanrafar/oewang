@@ -33,6 +33,8 @@ pub struct Config {
     pub ai_service_url: String,
     pub ai_service_api_key: Secret,
 
+    pub crypto_signing_key_file: std::path::PathBuf,
+
     pub request_timeout: Duration,
     pub body_limit_bytes: usize,
 }
@@ -92,6 +94,10 @@ impl Config {
             app_url: optional("APP_URL").unwrap_or_else(|| "http://localhost:3000".into()),
             ai_service_url: optional("AI_SERVICE_URL").unwrap_or_else(|| "http://ai:3004".into()),
             ai_service_api_key: Secret::new(ai_service_api_key),
+
+            crypto_signing_key_file: optional("CRYPTO_SIGNING_KEY_FILE")
+                .unwrap_or_else(|| "./.secrets/owe1-signing-key.pem".into())
+                .into(),
 
             request_timeout: Duration::from_secs(parse_or("REQUEST_TIMEOUT_SECS", 30)?),
             body_limit_bytes: parse_or("BODY_LIMIT_BYTES", 1024 * 1024)?,

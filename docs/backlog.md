@@ -52,12 +52,12 @@ Requirements: PLT-2, OPS-3, OPS-4, SEC-19
 ### US-004: OWE1 protocol and test vectors
 Requirements: SEC-2, SEC-3, SEC-4
 
-- [ ] `domain::owe1`: key derivation, the handshake transcript, every associated-data string
-- [ ] Ed25519 signing key loaded from a file; created with mode `0600` in development
-- [ ] `GET /.well-known/oewang-keys` publishes public keys with their key IDs
-- [ ] `POST /v1/handshake` establishes a session and signs the transcript
-- [ ] Test vectors written to `owe1-vectors.json`: a handshake, a sealed request, a sealed response, a sealed stream event
-- [ ] Unit tests cover a low-order public key, a bad version and a malformed nonce
+- [x] `domain::owe1`: key derivation, the handshake transcript, every associated-data string
+- [x] Ed25519 signing key loaded from a file; created with mode `0600` in development
+- [x] `GET /.well-known/oewang-keys` publishes public keys with their key IDs
+- [x] `POST /v1/handshake` establishes a session and signs the transcript
+- [x] Test vectors written to `owe1-vectors.json`: a handshake, a sealed request, a sealed response, a sealed stream event
+- [x] Unit tests cover a low-order public key, a bad version and a malformed nonce
 
 ### US-005: OWE1 middleware and the two clients
 Requirements: SEC-1, SEC-5, SEC-6, SEC-7

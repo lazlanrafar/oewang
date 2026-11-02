@@ -5,6 +5,7 @@
 #![forbid(unsafe_code)]
 
 mod config;
+mod owe1;
 mod response;
 mod routes;
 mod state;
@@ -13,7 +14,7 @@ use std::{net::SocketAddr, sync::Arc, time::Duration};
 
 use axum::{
     http::{Request, StatusCode},
-    routing::get,
+    routing::{get, post},
     Router,
 };
 use tower::ServiceBuilder;
@@ -31,6 +32,7 @@ use oewang_domain::AppError;
 
 use crate::{
     config::AppEnv,
+    owe1::{Owe1Signer, SessionStore},
     response::{ApiError, RequestId},
     state::AppState,
 };
@@ -66,15 +68,41 @@ async fn main() -> anyhow::Result<()> {
 
     tracing::info!(max_connections = config.db_max_connections, "database pool ready");
 
+    // Creating a key on first start is a development convenience. In
+    // production it would silently invalidate every pinned client, so that
+    // path refuses and the key must be mounted from the secret store.
+    let allow_create = config.app_env == AppEnv::Development;
+    let owe1_signer = match Owe1Signer::load_or_create(&config.crypto_signing_key_file, allow_create)
+    {
+        Ok(signer) => Arc::new(signer),
+        Err(error) => {
+            tracing::error!(%error, "owe1 signing key unavailable");
+            std::process::exit(1);
+        }
+    };
+    tracing::info!(kid = owe1_signer.key_id(), "owe1 signing key ready");
+
+    let owe1_sessions = SessionStore::new();
+    spawn_session_sweeper(owe1_sessions.clone());
+
     let request_timeout = config.request_timeout;
     let body_limit = config.body_limit_bytes;
     let addr = SocketAddr::from(([0, 0, 0, 0], config.port));
 
-    let state = AppState { db, config: Arc::new(config) };
+    let state = AppState {
+        db,
+        config: Arc::new(config),
+        owe1_signer,
+        owe1_sessions,
+    };
 
     let app = Router::new()
         .route("/health", get(routes::health::live))
         .route("/health/ready", get(routes::health::ready))
+        // Plaintext by design: a client needs the keys before it can do
+        // anything, and the handshake creates them (E2, E3).
+        .route("/.well-known/oewang-keys", get(owe1::handler::well_known_keys))
+        .route("/v1/handshake", post(owe1::handler::handshake_handler))
         // An unknown path answers in the envelope like everything else, not
         // with Axum's empty 404 (docs/api/conventions.md#the-envelope).
         .fallback(not_found)
@@ -110,6 +138,21 @@ async fn main() -> anyhow::Result<()> {
 
     tracing::info!("shutdown complete");
     Ok(())
+}
+
+/// Drop expired crypto sessions so memory tracks live sessions rather than
+/// every session ever opened.
+fn spawn_session_sweeper(sessions: SessionStore) {
+    tokio::spawn(async move {
+        let mut ticker = tokio::time::interval(Duration::from_secs(300));
+        loop {
+            ticker.tick().await;
+            let removed = sessions.sweep(owe1::session::now_secs());
+            if removed > 0 {
+                tracing::debug!(removed, live = sessions.len(), "swept crypto sessions");
+            }
+        }
+    });
 }
 
 /// Unknown path. Returns the standard envelope so a client never has to
