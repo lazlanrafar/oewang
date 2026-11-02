@@ -1,0 +1,6 @@
+@import 'tailwindcss';
+
+/*
+ * Design tokens land in US-006, ported from the old app's packages/ui/globals.css.
+ * This file exists now so every route already has one stylesheet to extend.
+ */
