@@ -1,0 +1,264 @@
+# Feature: Chat
+
+Status: draft v0.1, 2026-11-02. Part of the [oewang docs](../README.md). Implements [PRD](../prd.md) CHAT-1 to CHAT-10 and AI-1 to AI-6.
+
+An in-app assistant that reads and writes the same ledger the UI writes. It answers questions about the workspace's money, records transactions on request, and turns a photographed receipt into a draft.
+
+## Update this doc when
+
+- Changing the chat UI, the session list, or the message rendering.
+- Changing the receipt flow.
+- Adding or removing a tool. The catalog lives in [AI service](../ai/service.md#tool-catalog).
+
+## How it is split
+
+Three processes, one conversation.
+
+| Process | Job |
+|---|---|
+| `apps/app` | Renders the conversation, pipes the stream, uploads attachments |
+| `apps/api` | Verifies the user, loads history and context, persists messages, executes every tool, writes audit rows |
+| `apps/ai` | Builds the prompt, runs the Claude tool loop, emits events |
+
+The AI service holds no database connection (D3) and no user token (D4). It says who it is acting for; the API decides whether that is allowed.
+
+```mermaid
+sequenceDiagram
+    participant B as Browser
+    participant A as SvelteKit
+    participant R as Rust API
+    participant P as AI service
+    participant C as Claude
+
+    B->>A: POST /api/chat/stream { session_id, message }
+    A->>R: POST /v1/ai/chat/stream (Bearer JWT)
+    R->>R: verify JWT, load history + wallets + categories
+    R->>R: persist the user message
+    R->>P: POST /chat/stream (x-api-key, explicit context)
+    P->>C: messages + tools
+    C-->>P: tool_use create_transaction
+    P->>R: POST /v1/internal/tools/execute
+    R->>R: validate args, check role, write row + audit
+    R-->>P: { ok, result, summary }
+    P->>C: tool_result
+    C-->>P: text
+    P-->>R: SSE token events
+    R-->>A: SSE passthrough
+    A-->>B: SSE passthrough
+    P-->>R: done
+    R->>R: persist the assistant message
+```
+
+## Sessions
+
+One conversation is one `ai_sessions` row with its `ai_messages` ([data model](../data-model.md#chat)).
+
+- The session list is ordered by `updated_at` descending.
+- A title is generated from the first user message (CHAT-8), by a separate short call, not by the main loop.
+- Rename and delete are available from the list. Delete is a soft delete and asks for confirmation (UI-4).
+- Routes: `/chat` opens the newest session or an empty one; `/chat/{id}` opens a specific session.
+
+### Message attachments
+
+`ai_messages.attachments` is a JSON object. Only these shapes are written:
+
+```json
+{
+  "tool_calls": [
+    { "id": "t1", "name": "create_transaction",
+      "args": { "…": "…" },
+      "result": { "ok": true, "summary": "Created expense 50,000 in Cash." } }
+  ],
+  "files": [ { "vault_file_id": "clx…", "name": "receipt.jpg", "type": "image/jpeg" } ],
+  "receipt_draft": { "merchant": "…", "date": "2026-11-02", "total": "87500.0000", "items": [] },
+  "usage": { "input": 1204, "output": 311 }
+}
+```
+
+The old app also stored canvas artifacts, provider metadata and invoice drafts here. Those features are out of scope, so those keys do not exist.
+
+## Streaming
+
+Server-sent events, passed through two hops unchanged. The event protocol is specified in [AI service](../ai/service.md#streaming-protocol).
+
+- Tokens render as they arrive. Markdown is parsed after the stream ends, so a half-written table does not flicker.
+- Tool calls render as collapsible cards: the tool name and a one-line summary when collapsed, the arguments and the result when expanded.
+- Aborting the request stops generation and still persists the partial reply (CHAT-9).
+- Buffering is disabled at every hop. A proxy that buffers turns a streaming chat into a slow request.
+
+## Tools
+
+Eleven tools (D17), listed with their schemas in [AI service](../ai/service.md#tool-catalog). Four read, six write, one for asking the user to disambiguate.
+
+| Kind | Tools |
+|---|---|
+| Read | `get_workspace_context`, `get_recent_transactions`, `search_transactions`, `get_spending_summary` |
+| Write | `create_transaction`, `update_transaction`, `delete_transaction`, `add_transaction_items`, `create_wallet`, `create_category` |
+| Interaction | `present_choices` |
+
+Every tool runs through `POST /v1/internal/tools/execute` in the API (CHAT-4). The API validates the arguments against the schema, checks the role, performs the work through the same services the web UI uses, and writes an audit row with `source: "chat"`.
+
+### Role gating
+
+A write tool called by a `member` is refused by the API with `TOOL_FORBIDDEN` ([permission matrix](../security/auth.md#permission-matrix)). The AI service relays the refusal as plain text and does not retry. The system prompt also tells the model what the caller may do, but that is guidance; the gate is the control.
+
+The `role` in the tool-execute body is a claim. The API re-reads the membership row before acting on it (SEC-23, [AI safety](../security/ai-safety.md#layer-1-authorization)).
+
+### Blast radius
+
+Caps enforced in the API per turn, whatever the model asks for (D25): at most 3 write calls, 1 delete, 3 transactions created, and a configurable ceiling on a tool-created amount. There is no bulk write tool and no tool that touches members, settings or the workspace. Full reasoning in [AI safety](../security/ai-safety.md#layer-2-blast-radius).
+
+### Untrusted text
+
+A receipt or a bank statement is text somebody else wrote, and the assistant can write to the ledger. The control is structural: **extraction runs with no tools at all**, so an instruction hidden in a receipt has nothing to call (D24). The tool-capable loop sees only the typed, validated draft, plus a fenced summary. See [AI safety](../security/ai-safety.md).
+
+### Confirmation
+
+`delete_transaction` requires `confirmed: true` (CHAT-6, D20). The first call returns `CONFIRMATION_REQUIRED` with a description of what would be deleted. The assistant presents that to the user and only calls again, with `confirmed: true`, after the user agrees in a later turn.
+
+### Loop safety
+
+- At most 8 tool rounds per user turn (CHAT-5). On exceeding it, the loop stops and returns what it has.
+- A tool failure is returned to the model as a tool result, not raised as an exception. The model reports it rather than crashing the turn.
+- Arguments are validated in the API before execution, so a malformed call becomes `TOOL_ARGS_INVALID`, never a 500.
+
+## Context
+
+Every turn's system prompt carries the workspace's current wallets and categories (CHAT-7), fetched by the API from `GET /v1/internal/context`. This is why `get_workspace_context` is rarely needed: the data is already there. The tool exists for the case where the model needs to re-read after creating a wallet mid-turn.
+
+Workspace-level `custom_instructions` and `response_language` from `ai_agent_settings` are appended (CHAT-10). `response_language` has three values: `auto` (match the user's language), `english`, `indonesian`.
+
+## Receipt OCR
+
+The capture path that makes the assistant worth using (AI-1 to AI-3).
+
+1. The user attaches a photo, from the chat input or from the transaction page.
+2. The file uploads to `POST /v1/vault/files` and gets a `vault_file_id`.
+3. The API calls the AI service's `POST /receipt/parse` with the image bytes.
+4. The model returns a structured draft: merchant, date, total, currency, line items.
+5. The API returns the draft plus the file ID. **Nothing is persisted as a transaction** (AI-2).
+6. The confirmation sheet opens with every field editable. The wallet defaults to the workspace default; the category is preselected when the parsed name matches an existing one.
+7. Confirming calls `POST /v1/transactions` with the items and `attachment_ids`.
+8. Cancelling leaves the uploaded file and creates nothing.
+
+An unreadable image returns `RECEIPT_UNREADABLE` (422), and the sheet offers manual entry with the image already attached (AI-3).
+
+## Entity deep links
+
+The assistant writes entity names as links in a private scheme, and the Markdown renderer intercepts them (D33, CHAT-11):
+
+```
+Transactions: [Warung Tekko](#txn:clx7f2…)
+Wallets:      [Cash](#wallet:clx9k1…)
+Categories:   [Food](#cat:clxa3b…)
+Receipts:     [receipt.jpg](#file:clxb8c…)
+Navigation:   [Settings](#navigate:/settings)
+```
+
+A regex (`/^#(txn|wallet|cat|file|navigate):/`) decides whether a link becomes an anchor or a button. A button opens the detail sheet, the canvas, or a route. Anything else renders as plain text, because an external link in assistant output is an injection surface ([AI safety](../security/ai-safety.md#output-handling)).
+
+The effect: "You spent 50,000 at Warung Tekko on 2 November" becomes clickable, and the answer is an index instead of a dead end. Cost is one regex, one prompt block and one renderer override.
+
+## Canvas
+
+When the assistant produces something the user needs to see rather than read, the UI opens a side panel. The panel holds **the real application component**, not a model-authored artifact (D31, CHAT-13).
+
+| Trigger | Panel contents |
+|---|---|
+| A receipt draft | The receipt confirmation sheet, the same component the transaction page uses |
+| `create_transaction` or `update_transaction` | The transaction form sheet, prefilled, ready to adjust |
+| A transaction the user clicks in an answer | The transaction detail sheet |
+
+Mechanics:
+
+- State lives in URL search parameters (`?canvas=transaction&id=clx…`), so the panel survives a reload and the URL is shareable.
+- The conversation column animates its own margin so it reflows beside the panel instead of being covered.
+- The panel is 100 percent width below the medium breakpoint and a fixed 560 px above it.
+- The prompt tells the model the panel exists: after creating a draft it writes **one short sentence** and stops. No tables, no line items, no totals, no repetition of what the user can already see.
+
+Why this shape: the canvas is the real editor, so it cannot drift from it, its edits go through the normal validation and mutation path, and the model renders nothing. The old oewang built the opposite, a bespoke artifact system under `components/organisms/chat/canvas/` and `charts/` fed by model-produced payloads, which is more code and more ways to be wrong ([research](../research/midday.md#2-the-canvas)).
+
+## Keeping the rest of the app fresh
+
+A chat write leaves every other view stale, because there is no realtime channel ([PRD non-goals](../prd.md#non-goals-for-v1)). The fix is a tool-name to invalidation map in the web app, deduplicated by tool call ID (D32, CHAT-12):
+
+| Tool | Invalidates |
+|---|---|
+| `create_transaction`, `update_transaction`, `delete_transaction`, `add_transaction_items` | Transaction list, transaction detail, summary, wallet balances, overview |
+| `create_wallet` | Wallet list, wallet balances, transaction filters |
+| `create_category` | Category list, transaction filters, summary |
+
+A write invalidates the whole derived surface, not only the table that changed. A new transaction moves a wallet balance and every total computed from it, and a user who switches tabs to a stale balance has lost trust in the number, which is the product.
+
+## Screens
+
+| Area | Contents |
+|---|---|
+| Session list | Sessions newest first, rename, delete, new chat |
+| Message area | User and assistant messages, tool cards, receipt draft cards, copy and regenerate actions |
+| Canvas | Side panel holding the real form or sheet, driven by URL parameters |
+| Input | Auto-growing textarea, Enter to send, Shift and Enter for a newline, attachment button, stop button while streaming |
+| Empty state | Suggestion chips: "How much did I spend on food last month?", "Add a 50,000 lunch expense", "What is my biggest expense this month?" |
+| Status | Thinking, calling a tool (with a human label), streaming |
+
+### Tool call presentation
+
+Tool calls are progress, not output. They never render as JSON.
+
+- Every tool name maps to a human label: `create_transaction` renders as "Creating transaction", `get_spending_summary` as "Calculating summary". A fallback derives a label from the name shape (`noun_verb` to gerund plus noun) so a new tool reads correctly before anyone writes a label.
+- One finished call renders as a check plus its label. Several collapse to "Used 4 tools", expandable.
+- The in-flight call shows a shimmer on the current label.
+- **Assistant text that arrives before the last tool call is suppressed while tools are still running.** This is what makes the prompt rule "do not narrate intermediate calls" actually hold; a prompt alone does not ([research](../research/midday.md#16-tool-call-presentation)).
+
+## UI port map
+
+| New component | Old reference | Old size |
+|---|---|---|
+| `chat/chat-interface.svelte` | `chat-interface.tsx`, `chat-provider-wrapper.tsx` | 694 lines |
+| `chat/chat-messages.svelte` | `chat-messages.tsx` | 288 lines |
+| `chat/message-actions.svelte` | `chat-message-actions.tsx` | 264 lines |
+| `chat/chat-input.svelte` | `chat-input.tsx` | 541 lines |
+| `chat/chat-history.svelte` | `chat-history.tsx` | 262 lines |
+| `chat/chat-header.svelte` | `chat-header.tsx` | 99 lines |
+| `chat/status-indicators.svelte` | `chat-status-indicators.tsx` | 143 lines |
+| `chat/suggestion-button.svelte` | `chat-suggestion-button.tsx` | 46 lines |
+| `chat/tool-call-group.svelte` | new. Pattern from Midday's `tool-call-group.tsx` | |
+| `chat/receipt-draft-card.svelte` | derived from `transaction-receipt-confirmation-modal.tsx` | |
+| `chat/chat-canvas.svelte` | new. Pattern from Midday's `chat-invoice-canvas.tsx`, 90 lines | |
+
+Old files are at `references/oewang-old/apps/app/components/organisms/chat/`. The Midday references are at `references/midday/apps/dashboard/src/components/chat/`.
+
+Not ported from the old app: `canvas/`, `charts/`, `chat-artifact-toggle.tsx`, `chat-favicon-stack.tsx`, `chat-insight-message.tsx`, `chat-web-search-button.tsx`, `chat-command-menu.tsx`, `quota-limit-card.tsx`. Those belong to model-authored canvas artifacts, web search, quotas and the command palette. The canvas is rebuilt on the different shape in [canvas](#canvas) (D31); the rest are out of scope.
+
+## Settings
+
+Two fields, on the settings page (CHAT-10):
+
+- **Custom instructions.** Free text, appended to the system prompt. Takes effect on the next turn.
+- **Response language.** `auto`, `english`, `indonesian`.
+
+The old app also exposed model, temperature and max steps. All three were stored and never read. They are gone ([data model](../data-model.md#ai_agent_settings)).
+
+## Testing
+
+| Layer | Coverage |
+|---|---|
+| Unit (Python) | Tool loop with a mocked model: a single tool call, a chain of calls, the round cap, a tool error |
+| Unit (Rust) | Every tool's happy path and its role refusal; the confirmation gate on delete |
+| Integration | A stream end to end against a stubbed AI service, asserting event order and message persistence |
+| End to end (Playwright) | "Add a 50,000 lunch expense from my Cash wallet" creates the transaction and the list shows it |
+| Fixtures | Three sample receipts with known totals and dates |
+
+No test calls the real model. Model-dependent quality is judged by hand against the fixtures, not asserted in CI.
+
+## Related docs
+
+- [Docs index](../README.md) and [PRD](../prd.md)
+- [AI service](../ai/service.md): tool catalog, prompt, streaming protocol
+- [Data model](../data-model.md#chat)
+- [API endpoints](../api/endpoints.md#chat) and [internal routes](../api/endpoints.md#internal)
+- [AI safety](../security/ai-safety.md): prompt injection and the control layers
+- [Auth and access control](../security/auth.md#permission-matrix)
+- [Payload encryption](../api/encryption.md#chat-stream-events) (how stream events are sealed)
+- [Transactions](transactions.md) (the assistant writes through the same service)
+- [Legacy app](../reference/legacy-app.md#where-to-look-when-porting)

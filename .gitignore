@@ -1,0 +1,28 @@
+# Local reference checkouts, not part of this repo
+references/**
+
+# OS
+.DS_Store
+
+# Env
+.env
+.env.*
+!.env.example
+
+# Rust
+apps/api/target/
+
+# Node
+node_modules/
+apps/app/.svelte-kit/
+apps/app/build/
+
+# Python
+__pycache__/
+*.py[cod]
+apps/ai/.venv/
+apps/ai/.ruff_cache/
+apps/ai/.pytest_cache/
+
+# Docker named-volume stand-ins
+.docker-data/
