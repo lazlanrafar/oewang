@@ -63,6 +63,7 @@ export type TranslationKey =
 	| 'nav.toggle_sidebar'
 	| 'nav.toggle_theme'
 	| 'nav.transactions'
+	| 'nav.user_menu'
 	| 'nav.workspace_group'
 	| 'shell.scaffold_notice'
 	| 'shell.signed_in_as'
@@ -73,7 +74,13 @@ export type TranslationKey =
 	| 'style.col_date'
 	| 'style.col_name'
 	| 'style.col_wallet'
+	| 'style.focus_note'
 	| 'style.inputs'
+	| 'style.measured'
+	| 'style.ours'
+	| 'style.property'
+	| 'style.shell'
 	| 'style.subtitle'
 	| 'style.table'
-	| 'style.title';
+	| 'style.title'
+	| 'style.tokens';

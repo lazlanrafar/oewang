@@ -17,7 +17,8 @@
 		"sign_out": "Sign out",
 		"workspace_group": "Workspace",
 		"system_group": "System",
-		"switch_workspace": "Switch workspace"
+		"switch_workspace": "Switch workspace",
+		"user_menu": "Account"
 	},
 	"common": {
 		"loading": "Loading",
@@ -78,7 +79,7 @@
 	},
 	"style": {
 		"title": "Design system",
-		"subtitle": "The ported look: square corners, Hedvig Letters, the bordered table grid.",
+		"subtitle": "Measured against app.oewang.com, not estimated. Every number below came from getComputedStyle on the live page.",
 		"buttons": "Buttons",
 		"inputs": "Inputs",
 		"table": "Data table",
@@ -86,6 +87,12 @@
 		"col_name": "Name",
 		"col_category": "Category",
 		"col_wallet": "Wallet",
-		"col_amount": "Amount"
+		"col_amount": "Amount",
+		"tokens": "Tokens",
+		"shell": "Shell",
+		"measured": "Measured",
+		"ours": "Ours",
+		"property": "Property",
+		"focus_note": "No focus ring. The live app sets outline:none on :focus and :focus-visible, and this matches it. The cost is in D51."
 	}
 }

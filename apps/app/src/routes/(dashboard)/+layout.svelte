@@ -7,7 +7,7 @@
 	 * inner panel at `bg-sidebar/70` with a blur behind it, and a 45px header
 	 * with a translucent background and a bottom rule.
 	 */
-	import { LogOut, Menu } from '@lucide/svelte';
+	import { LogOut, PanelLeft } from '@lucide/svelte';
 
 	import SidebarNav from '$lib/components/shell/sidebar-nav.svelte';
 	import ThemeToggle from '$lib/components/shell/theme-toggle.svelte';
@@ -35,58 +35,73 @@
 	</div>
 
 	<div class="flex min-w-0 flex-1 flex-col">
+		<!--
+			Header geometry measured on the live app: h-12, translucent with a
+			blur, a bottom rule, an inner row at px-4 (px-6 from lg) with gap-3 and
+			space-between, a size-7 toggle on the left behind a 1px by 15px
+			separator, and size-8 controls on the right.
+
+			Two things the live header carries are not copied, because copying
+			them would mean shipping a control that does nothing: the global
+			search, which has no endpoint here, and the notification bell, which
+			belongs to a feature this rewrite drops.
+
+			The live header shows no identity either; that lives in the sidebar.
+		-->
 		<header
-			class="bg-background/50 sticky top-0 z-20 flex h-12 items-center gap-2 border-b px-3 backdrop-blur-md"
+			class="bg-background/50 sticky top-0 z-20 h-12 border-b backdrop-blur-md"
 		>
-			<Sheet.Root bind:open={drawerOpen}>
-				<Sheet.Trigger>
-					{#snippet child({ props })}
+			<div class="flex h-full w-full items-center justify-between gap-3 px-4 lg:px-6">
+				<div class="flex min-w-0 items-center gap-3">
+					<Sheet.Root bind:open={drawerOpen}>
+						<Sheet.Trigger>
+							{#snippet child({ props })}
+								<Button
+									{...props}
+									variant="ghost"
+									size="icon"
+									class="size-7 md:hidden"
+									aria-label={t('nav.toggle_sidebar')}
+								>
+									<PanelLeft class="size-4" />
+								</Button>
+							{/snippet}
+						</Sheet.Trigger>
+						<Sheet.Content side="left" class="bg-sidebar w-64 p-0">
+							<Sheet.Header class="p-0">
+								<Sheet.Title class="sr-only">{t('nav.toggle_sidebar')}</Sheet.Title>
+								<WorkspaceSwitcher name={data.me.workspace.name} secondary={data.me.role} />
+							</Sheet.Header>
+							<SidebarNav onNavigate={() => (drawerOpen = false)} />
+						</Sheet.Content>
+					</Sheet.Root>
+
+					<div class="bg-border h-[15px] w-px shrink-0 md:hidden" aria-hidden="true"></div>
+				</div>
+
+				<div class="flex items-center gap-1">
+					<ThemeToggle />
+
+					<!-- A form, not a link: signing out is a state change, and a GET
+					     that mutates is a GET a prefetcher can fire. -->
+					<form method="POST" action="/logout">
 						<Button
-							{...props}
+							type="submit"
 							variant="ghost"
 							size="icon"
-							class="size-8 md:hidden"
-							aria-label={t('nav.toggle_sidebar')}
+							class="size-8"
+							aria-label={t('nav.sign_out')}
 						>
-							<Menu class="size-4" />
+							<LogOut class="size-4" />
 						</Button>
-					{/snippet}
-				</Sheet.Trigger>
-				<Sheet.Content side="left" class="bg-sidebar w-64 p-0">
-					<Sheet.Header class="p-0">
-						<Sheet.Title class="sr-only">{t('nav.toggle_sidebar')}</Sheet.Title>
-						<WorkspaceSwitcher name={data.me.workspace.name} secondary={data.me.role} />
-					</Sheet.Header>
-					<SidebarNav onNavigate={() => (drawerOpen = false)} />
-				</Sheet.Content>
-			</Sheet.Root>
-
-			<div class="min-w-0 flex-1">
-				<p class="text-muted-foreground truncate text-xs">
-					{t('shell.signed_in_as', { email: data.me.user.email })}
-				</p>
+					</form>
+				</div>
 			</div>
-
-			<ThemeToggle />
-
-			<!-- A form, not a link: signing out is a state change, and a GET
-			     that mutates is a GET a prefetcher can fire. -->
-			<form method="POST" action="/logout">
-				<Button
-					type="submit"
-					variant="ghost"
-					size="icon"
-					class="size-8"
-					aria-label={t('nav.sign_out')}
-				>
-					<LogOut class="size-4" />
-				</Button>
-			</form>
 		</header>
 
 		<!-- min-w-0 on every flex ancestor is what keeps a wide table from
 		     forcing the page to scroll sideways at 375px (UI-6). -->
-		<main class="min-w-0 flex-1 px-4 py-6">
+		<main class="min-w-0 flex-1 px-4 py-6 lg:px-6">
 			{@render children()}
 		</main>
 	</div>

@@ -161,23 +161,20 @@
 	}
 
 	/*
-	 * The old app killed every focus indicator:
+	 * No focus indicator, matching the live app, which sets
 	 *
-	 *   *:focus, *:focus-visible { outline: none !important; }
+	 *   *:focus, *:focus-visible { outline: none !important; box-shadow: none }
 	 *
-	 * That is not copied. It makes keyboard navigation invisible and fails
-	 * UI-7 and WCAG 2.4.7, which this project committed to. The intent behind
-	 * it, no ring when clicking with a mouse, is kept: `:focus-visible` fires
-	 * for keyboard and assistive-technology focus only, so a pointer user sees
-	 * exactly what they saw in the old app and a keyboard user can see where
-	 * they are.
+	 * and keeps it even on a focused input. This was measured, not assumed.
+	 *
+	 * It was raised as an accessibility problem (D48) and the owner confirmed
+	 * the match anyway (D51). The cost is real and is written down rather than
+	 * hidden: a keyboard user gets no indication of where focus is, which fails
+	 * UI-7 and WCAG 2.4.7. UI-7 is amended to say so.
 	 */
-	:focus {
-		outline: none;
-	}
-
+	:focus,
 	:focus-visible {
-		outline: 2px solid hsl(var(--ring));
-		outline-offset: 2px;
+		outline: none;
+		box-shadow: none;
 	}
 }

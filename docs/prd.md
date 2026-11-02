@@ -229,7 +229,7 @@ Requirement IDs are referenced by every other doc and by each backlog story. The
 | UI-4 | Destructive actions require confirmation. |
 | UI-5 | Every monetary value renders with the currency it is denominated in and correct decimal precision. A wallet balance uses its wallet's currency; a total uses the workspace currency. |
 | UI-6 | Every screen is usable at 375 px width. |
-| UI-7 | Interactive elements are reachable by keyboard, with a visible focus state. |
+| UI-7 | Interactive elements are reachable by keyboard. **There is no visible focus state** (D51): the visual match with the live app was chosen over it. This is a known WCAG 2.4.7 failure, accepted deliberately, and the first thing to revisit if accessibility is ever a requirement. |
 
 ### 6.9 Security (SEC)
 
