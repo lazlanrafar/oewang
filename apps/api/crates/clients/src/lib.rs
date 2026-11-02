@@ -6,6 +6,8 @@
 
 pub mod mailer;
 pub mod rates;
+pub mod storage;
 
 pub use mailer::Mailer;
 pub use rates::RatesClient;
+pub use storage::{FileStore, Storage};

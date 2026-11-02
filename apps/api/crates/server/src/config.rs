@@ -43,6 +43,15 @@ pub struct Config {
     /// How often the daily job refreshes the cache.
     pub fx_refresh_interval: Duration,
 
+    /// `local` or `s3` (D19).
+    pub storage_backend: String,
+    pub storage_local_path: String,
+    pub s3_endpoint: String,
+    pub s3_bucket: String,
+    pub s3_region: String,
+    pub s3_access_key_id: String,
+    pub s3_secret_access_key: Secret,
+
     pub crypto_signing_key_file: std::path::PathBuf,
     pub owe1_enabled: bool,
 
@@ -109,6 +118,22 @@ impl Config {
             return Err(ConfigError::Missing("RESEND_API_KEY"));
         }
 
+        // A bucket nobody configured is a 500 on the first upload rather
+        // than a message at startup, so it fails here instead.
+        let storage_backend = optional("STORAGE_BACKEND").unwrap_or_else(|| "local".into());
+        if storage_backend == "s3" {
+            for name in ["S3_ENDPOINT", "S3_BUCKET", "S3_ACCESS_KEY_ID", "S3_SECRET_ACCESS_KEY"] {
+                if optional(name).is_none() {
+                    return Err(ConfigError::Missing(name));
+                }
+            }
+        } else if storage_backend != "local" {
+            return Err(ConfigError::Invalid {
+                name: "STORAGE_BACKEND",
+                reason: format!("expected local or s3, got {storage_backend:?}"),
+            });
+        }
+
         Ok(Self {
             app_env,
             port: parse_or("API_PORT", 3002)?,
@@ -135,6 +160,15 @@ impl Config {
                 .unwrap_or_else(|| "https://api.exchangerate.host".into()),
             fx_access_key: optional("FX_ACCESS_KEY").map(Secret::new),
             fx_refresh_interval: parse_duration("FX_REFRESH_INTERVAL", "24h")?,
+
+            storage_backend: storage_backend.clone(),
+            storage_local_path: optional("STORAGE_LOCAL_PATH")
+                .unwrap_or_else(|| "./.storage".into()),
+            s3_endpoint: optional("S3_ENDPOINT").unwrap_or_default(),
+            s3_bucket: optional("S3_BUCKET").unwrap_or_default(),
+            s3_region: optional("S3_REGION").unwrap_or_else(|| "auto".into()),
+            s3_access_key_id: optional("S3_ACCESS_KEY_ID").unwrap_or_default(),
+            s3_secret_access_key: Secret::new(optional("S3_SECRET_ACCESS_KEY").unwrap_or_default()),
 
             crypto_signing_key_file: optional("CRYPTO_SIGNING_KEY_FILE")
                 .unwrap_or_else(|| "./.secrets/owe1-signing-key.pem".into())

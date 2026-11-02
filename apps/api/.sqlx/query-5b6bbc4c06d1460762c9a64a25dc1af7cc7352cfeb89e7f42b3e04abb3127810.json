@@ -1,0 +1,47 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT a.id, a.vault_file_id AS file_id, f.name, f.type AS \"type!\", f.size\n           FROM transaction_attachments a\n           JOIN vault_files f ON f.id = a.vault_file_id\n           WHERE a.workspace_id = $1\n             AND a.transaction_id = $2\n             AND a.deleted_at IS NULL\n             AND f.deleted_at IS NULL\n           ORDER BY a.created_at",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "file_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "type!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "size",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "5b6bbc4c06d1460762c9a64a25dc1af7cc7352cfeb89e7f42b3e04abb3127810"
+}

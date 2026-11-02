@@ -9,6 +9,7 @@ pub mod auth;
 pub mod csv_import;
 pub mod envelope;
 pub mod error;
+pub mod files;
 pub mod ledger;
 pub mod money;
 pub mod owe1;

@@ -308,14 +308,14 @@ Requirements: TXN-11, TXN-16, TXN-23, AI-9, SEC-18
 ### US-023: Chunked upload and storage
 Requirements: VLT-1, VLT-2, VLT-3, VLT-4, SEC-8, SEC-12, SEC-13
 
-- [ ] Begin, chunk, complete and chunk-download routes ([endpoints](api/endpoints.md#files))
-- [ ] A `Storage` trait with a local filesystem implementation and an S3 implementation (D19)
-- [ ] Download is chunk-by-chunk through the API. No signed object-storage URL exists anywhere in the codebase (VLT-3, D23)
-- [ ] Type sniffed from the bytes and checked against the declared type; SVG and HTML rejected
-- [ ] The storage key is generated, never derived from the filename
-- [ ] Size capped at 10 MB; the body limit rejects an oversized chunk before the handler reads it
-- [ ] A cross-workspace request returns 404
-- [ ] Tests: type rejection, size rejection, cross-workspace isolation, a renamed executable
+- [x] Begin, chunk, complete and chunk-download routes ([endpoints](api/endpoints.md#files))
+- [x] A `Storage` trait with a local filesystem implementation and an S3 implementation (D19)
+- [x] Download is chunk-by-chunk through the API. No signed object-storage URL exists anywhere in the codebase (VLT-3, D23)
+- [x] Type sniffed from the bytes and checked against the declared type; SVG and HTML rejected
+- [x] The storage key is generated, never derived from the filename
+- [x] Size capped at 10 MB; the body limit rejects an oversized chunk before the handler reads it
+- [x] A cross-workspace request returns 404
+- [x] Tests: type rejection, size rejection, cross-workspace isolation, a renamed executable
 
 ### US-024: Attach files to transactions
 Requirements: TXN-13, VLT-5

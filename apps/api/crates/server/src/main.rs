@@ -15,6 +15,7 @@ mod response;
 mod routes;
 mod state;
 mod transactions;
+mod vault;
 
 use std::{net::SocketAddr, sync::Arc, time::Duration};
 
@@ -107,6 +108,22 @@ async fn main() -> anyhow::Result<()> {
     );
     tracing::info!(rates = ?rates, "rate source ready");
 
+    let files = match config.storage_backend.as_str() {
+        "s3" => oewang_clients::FileStore::S3(oewang_clients::storage::S3Storage::new(
+            oewang_clients::storage::S3Config {
+                endpoint: config.s3_endpoint.clone(),
+                bucket: config.s3_bucket.clone(),
+                region: config.s3_region.clone(),
+                access_key_id: config.s3_access_key_id.clone(),
+                secret_access_key: config.s3_secret_access_key.expose().to_string(),
+            },
+        )),
+        _ => oewang_clients::FileStore::Local(oewang_clients::storage::LocalStorage::new(
+            config.storage_local_path.clone(),
+        )),
+    };
+    tracing::info!(store = ?files, "file storage ready");
+
     let request_timeout = config.request_timeout;
     let fx_refresh_interval = config.fx_refresh_interval;
     let body_limit = config.body_limit_bytes;
@@ -119,6 +136,7 @@ async fn main() -> anyhow::Result<()> {
         owe1_sessions,
         mailer,
         rates,
+        files,
     };
 
     spawn_rate_refresher(state.clone(), fx_refresh_interval);
@@ -281,6 +299,18 @@ fn protected_routes(state: AppState) -> Router<AppState> {
             "/v1/transactions/{id}/history",
             get(transactions::handler::history),
         )
+        // Files. Bytes travel as base64 inside the envelope; no signed
+        // object-storage URL exists anywhere (D23, VLT-3).
+        .route("/v1/vault/files", post(vault::handler::begin))
+        .route(
+            "/v1/vault/files/{id}",
+            get(vault::handler::get_file).delete(vault::handler::delete_file),
+        )
+        .route(
+            "/v1/vault/files/{id}/chunks/{index}",
+            get(vault::handler::get_chunk).put(vault::handler::put_chunk),
+        )
+        .route("/v1/vault/files/{id}/complete", post(vault::handler::complete))
         .layer(axum::middleware::from_fn_with_state(
             state,
             owe1::middleware::owe1_layer,

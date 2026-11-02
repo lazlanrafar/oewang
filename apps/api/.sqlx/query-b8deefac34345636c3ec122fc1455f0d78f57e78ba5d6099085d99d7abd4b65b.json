@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO transaction_attachments (id, workspace_id, transaction_id, vault_file_id)\n           SELECT $1, $2, $3, $4\n           WHERE NOT EXISTS (\n             SELECT 1 FROM transaction_attachments\n             WHERE workspace_id = $2 AND transaction_id = $3 AND vault_file_id = $4\n               AND deleted_at IS NULL\n           )",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b8deefac34345636c3ec122fc1455f0d78f57e78ba5d6099085d99d7abd4b65b"
+}

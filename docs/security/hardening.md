@@ -41,7 +41,7 @@ Receipts and statements are the only uploads. They are also the most common way 
 |---|---|
 | Size | 10 MB maximum, enforced by a body limit layer before the handler reads anything (VLT-1) |
 | Declared type | Must be `image/jpeg`, `image/png`, `image/webp` or `application/pdf` |
-| Actual type | Sniffed from the leading bytes. A mismatch with the declared type is rejected with `UNSUPPORTED_FILE_TYPE` |
+| Actual type | Sniffed from the leading bytes at completion, not on the first chunk: a client could otherwise send a valid header and anything it liked after it. A mismatch is rejected with `UNSUPPORTED_FILE_TYPE`, and the file and its chunks go with it |
 | Filename | Stored as data, never used as a path. The storage key is `wsp/{workspace_id}/{file_id}` |
 | Image handling | The API never decodes, resizes or thumbnails an image. Decoding untrusted images in-process is a known class of memory bug, and nothing here needs it |
 | Serving | Bytes are served back through the API in encrypted chunks, with `Content-Type` fixed to the sniffed type and `Content-Disposition: attachment` ([encryption](../api/encryption.md#file-bytes)) |

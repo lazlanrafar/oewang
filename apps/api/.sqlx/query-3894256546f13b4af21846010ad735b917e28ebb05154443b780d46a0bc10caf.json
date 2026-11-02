@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE transaction_attachments SET deleted_at = now()\n           WHERE workspace_id = $1\n             AND transaction_id = $2\n             AND deleted_at IS NULL\n             AND NOT (vault_file_id = ANY($3))",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "TextArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "3894256546f13b4af21846010ad735b917e28ebb05154443b780d46a0bc10caf"
+}

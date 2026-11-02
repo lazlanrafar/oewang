@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use oewang_clients::{Mailer, RatesClient};
+use oewang_clients::{FileStore, Mailer, RatesClient};
 use oewang_db::PgPool;
 
 use crate::{
@@ -22,4 +22,6 @@ pub struct AppState {
     /// The daily rate source. Every lookup through it is allowed to fail;
     /// the resolution ladder has a step for that (TXN-22).
     pub rates: RatesClient,
+    /// Where file bytes live. Local in development, S3 in production (D19).
+    pub files: FileStore,
 }
