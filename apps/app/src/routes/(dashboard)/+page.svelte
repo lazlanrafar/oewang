@@ -5,7 +5,7 @@
 </script>
 
 <div class="mx-auto max-w-2xl">
-	<h1 class="font-serif text-2xl font-semibold tracking-tight">{data.me.workspace.name}</h1>
+	<h1 class="font-serif text-2xl tracking-tight">{data.me.workspace.name}</h1>
 	<p class="text-muted-foreground mt-2 text-sm">
 		{t('shell.signed_in_as', { email: data.me.user.email })} · {data.me.role}
 	</p>

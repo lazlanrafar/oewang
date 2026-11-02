@@ -193,7 +193,7 @@ values were measured there on 2026-11-02, not estimated from a screenshot.
 | | Value |
 |---|---|
 | Root font size | 15px |
-| Body font | Hedvig Letters Sans |
+| Body font | Hedvig Letters Sans; the serif at 400, never bold |
 | Border radius, every primitive | 0 |
 | Button and input height | 33.75px (`h-9`) |
 | Table header row | 45px (`h-12`), text `#666666`, `font-medium`, vertical rule between columns |
@@ -217,7 +217,7 @@ values were measured there on 2026-11-02, not estimated from a screenshot.
 
 Every row above is reproduced and re-measured by the development-only
 [design system page](../best-practices/svelte-app.md#the-design-system-page)
-at `/style`.
+at `/design-system`.
 
 The transaction table there carries more than this rewrite has built yet. US-017
 should match it:

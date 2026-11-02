@@ -26,7 +26,7 @@ const PUBLIC_PREFIXES = [
 	'/reset-password',
 	// The design system renders primitives and reads no data. Its own load
 	// returns 404 outside development.
-	'/style'
+	'/design-system'
 ];
 
 function isPublic(pathname: string): boolean {

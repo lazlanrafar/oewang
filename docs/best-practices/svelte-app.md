@@ -22,7 +22,7 @@ How the web app is structured and written. It is a BFF as much as a UI: it holds
 | Forms | Superforms with a Zod adapter |
 | Icons | Lucide Svelte |
 | Theme | mode-watcher |
-| Fonts | Hedvig Letters Sans and Serif, Geist Mono, self-hosted through `@fontsource` so the CSP stays `font-src 'self'` |
+| Fonts | Hedvig Letters Sans and Serif, Geist Mono, self-hosted through `@fontsource` so the CSP stays `font-src 'self'`. The serif ships one weight (400) and is never set bold: `.font-serif` disables weight synthesis, so a stray `font-semibold` renders unchanged rather than as a faked bold |
 | Crypto | `node:crypto` on the server only ([encryption](../api/encryption.md#primitives)) |
 | Tests | Vitest for units, Playwright for journeys |
 | Lint | ESLint with the Svelte plugin, Prettier with the Svelte plugin |
@@ -46,7 +46,7 @@ src/routes/
 ├─ (dev)/
 │  ├─ +layout.server.ts         404 outside `dev`
 │  ├─ +layout.svelte            no shell
-│  └─ style/+page.svelte        the design system
+│  └─ design-system/+page.svelte  every primitive, measured
 └─ api/
    └─ chat/stream/+server.ts    SSE passthrough
 ```
@@ -60,9 +60,11 @@ Rules:
 
 ## The design system page
 
-`/style` renders every primitive on a bare page: button, input, select,
-combobox, checkbox, textarea, label, badge, the colour and type scales, and a
-data table with day group rows, in-cell editing and an expanded row.
+`/design-system` renders every primitive in `$lib/components/ui` on a bare
+page, expanded: button, badge, input, input group, label, textarea,
+checkbox, select, combobox, command, dropdown menu, popover, dialog, sheet,
+toast, separator, card, the colour and type scales, and a data table with
+day group rows, in-cell editing and an expanded row.
 
 Two rules make it worth keeping:
 
@@ -71,7 +73,9 @@ Two rules make it worth keeping:
   against a production build, not only by reading the code.
 - **It measures itself.** The table at the foot reads the rendered page with
   `getComputedStyle` and prints each value beside the one measured on
-  `app.oewang.com` (D50), so a drift shows on the page. Two traps are handled
+  `app.oewang.com` (D50), so a drift shows on the page. Four rows describe the
+  inside of a menu and can only be read while one is open: open the dropdown,
+  then press Re-measure. Two traps are handled
   in that code: `getPropertyValue` needs kebab-case, and Chrome reports a
   hairline border already snapped to a device pixel, so a 1px rule reads
   0.5556px at a device pixel ratio of 1.8. Compare in device pixels.

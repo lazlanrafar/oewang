@@ -169,6 +169,18 @@
 	}
 
 	/*
+	 * Hedvig Letters Serif ships one weight, 400, and the old app always set
+	 * it at `font-normal`. Anything heavier is the browser drawing a fake
+	 * bold over the only real face, which is why synthesis is off here: a
+	 * stray `font-semibold` then shows as unchanged rather than as a thicker,
+	 * slightly wrong letterform.
+	 */
+	.font-serif {
+		font-weight: 400;
+		font-synthesis-weight: none;
+	}
+
+	/*
 	 * No focus indicator, matching the live app, which sets
 	 *
 	 *   *:focus, *:focus-visible { outline: none !important; box-shadow: none }
