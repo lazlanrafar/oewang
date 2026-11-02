@@ -36,7 +36,7 @@
 		{id}
 		class={cn(
 			'flex h-9 items-center justify-between gap-2 text-sm',
-			inline ? 'w-full px-0 text-left' : 'w-full border px-3'
+			inline ? 'w-full px-0 text-left' : 'w-full border px-3 focus:border-primary'
 		)}
 		role="combobox"
 		aria-expanded={open}

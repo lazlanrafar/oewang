@@ -94,6 +94,8 @@ Svelte:  Route load or form action -> src/lib/server/api.ts -> API
 
 Every user-facing string resolves through `src/lib/i18n/en.json` (UI-1). No literals in markup.
 
+Every filter, search term, sort, page, date range and open tab lives in the URL query string (UI-8, D55), through `src/lib/url-state.ts`. View state held only in a component is lost on refresh and cannot be shared, so it fails review.
+
 ## Commits
 
 Conventional commits, scoped by app: `feat(api):`, `fix(app):`, `docs:`, `chore(infra):`.

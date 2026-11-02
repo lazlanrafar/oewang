@@ -21,6 +21,8 @@
 	import { onMount, tick } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
+	import { page } from '$app/state';
+
 	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
 	import * as Card from '$lib/components/ui/card';
@@ -39,6 +41,8 @@
 	import * as Table from '$lib/components/ui/table';
 	import * as Tabs from '$lib/components/ui/tabs';
 	import { Textarea } from '$lib/components/ui/textarea';
+
+	import { readParam, writeParams } from '$lib/url-state';
 
 	import CategoryCombobox from './category-combobox.svelte';
 
@@ -87,7 +91,13 @@
 	);
 	let showArchived = $state(true);
 
-	let activeTab = $state('foundations');
+	/*
+	 * The open tab lives in `?tab=` (UI-8), so a refresh, a shared link and the
+	 * back button all land on the same one. The URL is the state: reading it
+	 * back is what makes a bad value harmless.
+	 */
+	const TABS = ['foundations', 'controls', 'forms', 'overlays', 'data'] as const;
+	const activeTab = $derived(readParam(page.url, 'tab', TABS, 'foundations'));
 
 	/** The type scale, by role. Each row is one `--text-*` token. */
 	const typeScale = [
@@ -120,7 +130,7 @@
 		// The two rules the owner set for this rewrite, checked over every
 		// element the page renders rather than over a chosen specimen.
 		{ label: 'Elements with a radius', live: '0', read: () => count('borderRadius', (v) => v !== '0px') },
-		{ label: 'Elements with a shadow', live: '0', read: () => count('boxShadow', paints) },
+		{ label: 'Elements with a box-shadow', live: '0', read: () => count('boxShadow', (v) => v !== 'none') },
 		{ label: 'Button radius', live: '0px', read: () => prop('#spec-button', 'borderRadius') },
 		{ label: 'Button height', live: '33.75px', read: () => prop('#spec-button', 'height') },
 		{ label: 'Button weight', live: '500', read: () => prop('#spec-button', 'fontWeight') },
@@ -132,6 +142,7 @@
 		{ label: 'Checkbox size', live: '15px', read: () => prop('#spec-checkbox', 'width') },
 		{ label: 'Card border', live: '1px rgb(219, 218, 215)', read: () => hairline('#spec-card') },
 		{ label: 'Focus outline', live: 'none', read: focusOutline },
+		{ label: 'Focused input border', live: 'rgb(24, 24, 27)', read: focusBorder },
 		{ label: 'Menu item height', live: '30px', read: () => prop('[data-slot="dropdown-menu-item"]', 'height') },
 		{ label: 'Menu item padding', live: '7.5px', read: () => prop('[data-slot="dropdown-menu-item"]', 'paddingLeft') },
 		{ label: 'In-cell editor height', live: '33.75px', read: () => prop('#spec-incell', 'height') },
@@ -218,28 +229,6 @@
 		return String(n);
 	}
 
-	/**
-	 * Whether a computed box-shadow puts anything on screen.
-	 *
-	 * A cleared shadow does not compute to the keyword `none`: Tailwind
-	 * composes shadow and ring from custom properties, so what comes back is a
-	 * list of layers, some transparent and some opaque but with every offset,
-	 * blur and spread at zero. Either kind paints nothing. Counting layers
-	 * naively reports a problem the page does not have, so a layer counts only
-	 * when its colour is visible and it has some size.
-	 */
-	function paints(shadow: string): boolean {
-		if (shadow === 'none') return false;
-		// Split on commas that are not inside a colour function.
-		return shadow.split(/,(?![^()]*\))/).some((layer) => {
-			const colour = layer.match(/rgba\(([^)]*)\)/i);
-			const alpha = colour ? parseFloat(colour[1].split(',')[3] ?? '1') : 1;
-			if (alpha === 0) return false;
-			const lengths = layer.replace(/rgba?\([^)]*\)/gi, '').match(/-?\d*\.?\d+px/g) ?? [];
-			return lengths.some((length) => parseFloat(length) !== 0);
-		});
-	}
-
 	/*
 	 * Chrome reports a hairline border already snapped to a device pixel, so a
 	 * literal 1px reads as 0.5556px on a 1.8x display. Report the authored
@@ -257,12 +246,31 @@
 	}
 
 	function focusOutline(): string {
-		const el = document.querySelector<HTMLInputElement>('#spec-input');
+		return whileFocused('#spec-input', (style) => style.outlineStyle);
+	}
+
+	/**
+	 * The one indication of focus the product has (D54). There is no outline
+	 * and no ring, so a focused field says so by turning its border `primary`.
+	 */
+	function focusBorder(): string {
+		return whileFocused('#spec-input', (style) => style.borderTopColor);
+	}
+
+	function whileFocused(selector: string, read: (style: CSSStyleDeclaration) => string): string {
+		const el = document.querySelector<HTMLInputElement>(selector);
 		if (!el) throw OFF_SCREEN;
 		if (!el.checkVisibility()) throw OFF_SCREEN;
+		// The field animates its border, and this reads it the moment focus
+		// lands, so the transition is switched off for the measurement.
+		// Otherwise the value is whatever colour it happened to be passing
+		// through, which looks like a mismatch and changes on every press.
+		const transition = el.style.transition;
+		el.style.transition = 'none';
 		el.focus();
-		const value = getComputedStyle(el).outlineStyle;
+		const value = read(getComputedStyle(el));
 		el.blur();
+		el.style.transition = transition;
 		return value;
 	}
 
@@ -294,7 +302,7 @@
 		</p>
 	</header>
 
-	<Tabs.Root bind:value={activeTab}>
+	<Tabs.Root value={activeTab} onValueChange={(tab) => writeParams({ tab })}>
 		<Tabs.List>
 			<Tabs.Trigger value="foundations">Foundations</Tabs.Trigger>
 			<Tabs.Trigger value="controls">Controls</Tabs.Trigger>
@@ -372,9 +380,9 @@
 				<ul class="text-body list-disc space-y-1 pl-5">
 					<li>No radius. The whole scale is zero, so a leftover rounded-lg is square.</li>
 					<li>
-						No shadow. Every step of the shadow scale is none; a surface is read by its
-						rule. The check below counts shadows that paint something, because a cleared
-						Tailwind shadow computes to a transparent one rather than to the keyword.
+						No shadow. Every step of the shadow scale is none, and no component carries a
+						shadow or ring class, so the computed property reads none rather than a
+						cleared-but-present shadow. The check below is exact.
 					</li>
 				</ul>
 			</section>

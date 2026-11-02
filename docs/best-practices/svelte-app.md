@@ -23,7 +23,8 @@ How the web app is structured and written. It is a BFF as much as a UI: it holds
 | Icons | Lucide Svelte |
 | Theme | mode-watcher |
 | Type scale | Role tokens, not sizes: `text-h1` to `text-h4`, `text-body`, `text-small`, `text-caption`, each carrying line height, weight and letter spacing (D53). `h1`-`h4` take them in the base layer |
-| Shape | No radius, no shadow, anywhere (D52). A surface is read by its 1px rule |
+| Shape | No radius, no shadow, anywhere (D52, D54). No component carries a `ring-*` or `shadow-*` class, so computed `box-shadow` reads `none`; a surface is read by its 1px rule |
+| Focus | No outline, no ring (D51). A focused field turns its border `primary` on `:focus` (D54); buttons and links show nothing |
 | Fonts | Hedvig Letters Sans and Serif, Geist Mono, self-hosted through `@fontsource` so the CSP stays `font-src 'self'`. The serif ships one weight (400) and is never set bold: `.font-serif` disables weight synthesis, so a stray `font-semibold` renders unchanged rather than as a faked bold |
 | Crypto | `node:crypto` on the server only ([encryption](../api/encryption.md#primitives)) |
 | Tests | Vitest for units, Playwright for journeys |
@@ -148,7 +149,25 @@ export const transactionSchema = z.object({
 
 ## URL state
 
-Filters, search, sort and page live in URL search parameters (TXN-9), with the same names the API uses ([endpoints](../api/endpoints.md#get-v1transactions-query-parameters)). A shared link reproduces the view.
+**Anything that changes what is on screen goes in the query string** (UI-8, D55): filters, search, sort, page, date range, grouping, the open tab. Not component state. A refresh restores the view, the back button undoes the change, and a pasted link reproduces what the sender saw. Parameter names match the API's ([endpoints](../api/endpoints.md#get-v1transactions-query-parameters)).
+
+Use `src/lib/url-state.ts` rather than hand-rolling it:
+
+```svelte
+<script lang="ts">
+	import { page } from '$app/state';
+	import { readParam, readText, writeParams } from '$lib/url-state';
+
+	const TABS = ['all', 'income', 'expense'] as const;
+	const tab = $derived(readParam(page.url, 'tab', TABS, 'all'));
+	const search = $derived(readText(page.url, 'q'));
+</script>
+
+<Tabs.Root value={tab} onValueChange={(tab) => writeParams({ tab })} />
+<Input value={search} oninput={(e) => writeParams({ q: e.currentTarget.value })} />
+```
+
+`readParam` constrains the value to what the page accepts, because a URL is user input and `?tab=nonsense` must not render a tab that does not exist. `writeParams` deletes a parameter given `null` or an empty string, so a cleared filter leaves no `?q=` behind, and replaces the history entry unless `push: true` is passed: a search box should not leave one back-button step per keystroke, while paging should.
 
 Per-browser conveniences (column visibility, density, sidebar collapsed) live in `localStorage`, wrapped in try and catch because it throws in a private window. Nothing that must persist reliably goes there.
 

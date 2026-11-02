@@ -277,9 +277,11 @@
 	 * and keeps it even on a focused input. This was measured, not assumed.
 	 *
 	 * It was raised as an accessibility problem (D48) and the owner confirmed
-	 * the match anyway (D51). The cost is real and is written down rather than
-	 * hidden: a keyboard user gets no indication of where focus is, which fails
-	 * UI-7 and WCAG 2.4.7. UI-7 is amended to say so.
+	 * the match anyway (D51). Fields carry the indication instead: an input,
+	 * textarea, select trigger, input group or checkbox turns its border
+	 * `primary` while focused (D54). Buttons, links and menu items still show
+	 * nothing, so WCAG 2.4.7 is still failed for them; UI-7 says so rather
+	 * than hiding it.
 	 */
 	:focus,
 	:focus-visible {
