@@ -42,7 +42,9 @@ export const TRANSACTION_COLUMNS: ColumnSpec[] = [
 	{ key: 'amount', label: 'Amount', width: 170, minWidth: 120, sortable: true, resizable: true, alignRight: true },
 	{ key: 'account', label: 'Account', width: 200, minWidth: 120, resizable: true },
 	{ key: 'category', label: 'Category', width: 161, minWidth: 120, resizable: true },
-	{ key: 'actions', label: 'Actions', width: 100, minWidth: 100, stickyRight: true, fixed: true }
+	// 72px, between the old 100, where a 28px button floats, and 56, which
+	// crowds it: the button plus 22px either side.
+	{ key: 'actions', label: 'Actions', width: 72, minWidth: 72, stickyRight: true, fixed: true }
 ];
 
 /** The row height every table in the old app uses. */
