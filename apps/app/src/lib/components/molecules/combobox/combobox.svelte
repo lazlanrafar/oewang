@@ -1,87 +1,138 @@
+<script lang="ts" module>
+	export type ComboboxItem = { id: string; label: string };
+</script>
+
 <script lang="ts">
 	/**
-	 * Ported from the old app's atoms/combobox.tsx, which is a button that
-	 * opens a searchable list rather than a native select.
+	 * Ported from the old app's atoms/combobox.tsx: a button that opens a
+	 * searchable list, rather than a native select.
 	 *
-	 * `inline` is the in-cell editor the transactions table uses: borderless,
-	 * sized to its cell, opening the same list.
+	 * The parts that matter for the data table are kept: the trigger takes a
+	 * button variant and a class, so a cell can hand it `ghost`, no border and
+	 * the cell's full height; the chevron sits absolutely at the right edge;
+	 * and the selected value, the list rows and the create row are rendered by
+	 * the caller, which is how the account and category pickers put an icon
+	 * beside a name.
 	 */
 	import Check from '@lucide/svelte/icons/check';
 	import ChevronsUpDown from '@lucide/svelte/icons/chevrons-up-down';
+	import type { Snippet } from 'svelte';
 
+	import { Button, type ButtonVariant } from '../../atoms/button/index.js';
 	import * as Command from '../../atoms/command/index.js';
 	import * as Popover from '../../atoms/popover/index.js';
 	import { cn } from '$lib/utils.js';
 
 	let {
-		options,
+		items,
 		value = $bindable(),
-		onValueChange,
-		inline = false,
-		id,
-		placeholder = 'Search...',
+		onSelect,
+		onCreate,
+		placeholder = 'Select item...',
+		searchPlaceholder = 'Search',
 		empty = 'No match.',
-		class: className
+		variant = 'outline',
+		triggerClass,
+		showChevron = true,
+		disabled = false,
+		id,
+		selected,
+		item: itemSnippet
 	}: {
-		options: Array<string | { value: string; label: string }>;
-		value: string;
-		/** Called with the chosen value, for callers that cannot bind. */
-		onValueChange?: (value: string) => void;
-		inline?: boolean;
-		id?: string;
+		items: ComboboxItem[];
+		value?: string;
+		onSelect?: (id: string) => void;
+		/** Offers a row that makes a new entry from what was typed. */
+		onCreate?: (label: string) => void;
 		placeholder?: string;
+		searchPlaceholder?: string;
 		empty?: string;
-		class?: string;
+		variant?: ButtonVariant;
+		triggerClass?: string;
+		showChevron?: boolean;
+		disabled?: boolean;
+		id?: string;
+		/** How the chosen value is drawn in the trigger. */
+		selected?: Snippet<[ComboboxItem]>;
+		/** How a row is drawn in the list. */
+		item?: Snippet<[ComboboxItem]>;
 	} = $props();
 
 	let open = $state(false);
+	let search = $state('');
 
-	const items = $derived(
-		options.map((option) =>
-			typeof option === 'string' ? { value: option, label: option } : option
-		)
+	const current = $derived(items.find((entry) => entry.id === value));
+	const canCreate = $derived(
+		!!onCreate &&
+			search.trim() !== '' &&
+			!items.some((entry) => entry.label.toLowerCase() === search.trim().toLowerCase())
 	);
-	const label = $derived(items.find((item) => item.value === value)?.label ?? value);
+
+	function choose(entry: ComboboxItem) {
+		value = entry.id;
+		onSelect?.(entry.id);
+		open = false;
+		search = '';
+	}
 </script>
 
 <Popover.Root bind:open>
-	<Popover.Trigger
-		{id}
-		class={cn(
-			'flex h-9 items-center justify-between gap-2 text-sm',
-			inline ? 'w-full px-0 text-left' : 'focus:border-primary w-full border px-3',
-			className
-		)}
-		role="combobox"
-		aria-expanded={open}
-	>
-		{label}
-		{#if !inline}
-			<ChevronsUpDown class="text-subtle size-4 shrink-0" aria-hidden="true" />
-		{/if}
+	<Popover.Trigger {disabled}>
+		{#snippet child({ props })}
+			<!-- `class` and `id` come after the trigger's own props: it carries
+			     both, and the caller's have to win, or the trigger is neither
+			     styled nor findable. -->
+			<Button
+				{variant}
+				{disabled}
+				aria-expanded={open}
+				{...props}
+				class={cn('relative w-full justify-between font-normal', triggerClass)}
+				{id}
+			>
+				<span class="truncate pr-3 text-ellipsis">
+					{#if current}
+						{#if selected}{@render selected(current)}{:else}{current.label}{/if}
+					{:else}
+						{placeholder}
+					{/if}
+				</span>
+				{#if showChevron}
+					<ChevronsUpDown class="absolute right-2 size-4 opacity-50" />
+				{/if}
+			</Button>
+		{/snippet}
 	</Popover.Trigger>
 	<Popover.Content class="w-56 p-0" align="start">
 		<Command.Root>
-			<Command.Input {placeholder} />
+			<Command.Input placeholder={searchPlaceholder} bind:value={search} />
 			<Command.List>
-				<Command.Empty>{empty}</Command.Empty>
+				{#if !canCreate}
+					<Command.Empty>{empty}</Command.Empty>
+				{/if}
 				<Command.Group>
-					{#each items as item (item.value)}
-						<Command.Item
-							value={item.value}
-							onSelect={() => {
-								value = item.value;
-								onValueChange?.(item.value);
-								open = false;
-							}}
-						>
+					{#each items as entry (entry.id)}
+						<Command.Item value={entry.label} onSelect={() => choose(entry)}>
 							<Check
-								class={cn('size-4', value === item.value ? 'opacity-100' : 'opacity-0')}
+								class={cn('size-4 shrink-0', value === entry.id ? 'opacity-100' : 'opacity-0')}
 								aria-hidden="true"
 							/>
-							{item.label}
+							{#if itemSnippet}{@render itemSnippet(entry)}{:else}{entry.label}{/if}
 						</Command.Item>
 					{/each}
+					{#if canCreate}
+						<Command.Item
+							value={`create-${search}`}
+							onSelect={() => {
+								onCreate?.(search.trim());
+								open = false;
+								search = '';
+							}}
+						>
+							<Check class="size-4 shrink-0 opacity-0" aria-hidden="true" />
+							Create "{search.trim()}"
+						</Command.Item>
+					{/if}
 				</Command.Group>
 			</Command.List>
 		</Command.Root>

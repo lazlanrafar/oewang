@@ -10,6 +10,8 @@
 	import { Switch } from '$lib/components/atoms/switch';
 	import * as ButtonGroup from '$lib/components/molecules/button-group';
 	import { Combobox } from '$lib/components/molecules/combobox';
+	import { SelectAccount } from '$lib/components/molecules/select-account';
+	import { SelectCategory } from '$lib/components/molecules/select-category';
 	import { CurrencyInput } from '$lib/components/molecules/currency-input';
 	import * as Empty from '$lib/components/molecules/empty';
 	import * as Field from '$lib/components/molecules/field';
@@ -19,8 +21,20 @@
 
 	let { heading }: { heading: import('svelte').Snippet<[string, string?]> } = $props();
 
-	const categories = ['Food', 'Transport', 'Shopping', 'Bills', 'Salary'];
-	let picked = $state('Food');
+	const categories = [
+		{ id: 'food', label: 'Food', colorClass: 'bg-red' },
+		{ id: 'transport', label: 'Transport', colorClass: 'bg-subtle' },
+		{ id: 'shopping', label: 'Shopping', colorClass: 'bg-primary' },
+		{ id: 'bills', label: 'Bills', colorClass: 'bg-destructive' },
+		{ id: 'salary', label: 'Salary', colorClass: 'bg-green' }
+	];
+	const accounts = [
+		{ id: 'cash', label: 'Cash' },
+		{ id: 'bca', label: 'BCA' },
+		{ id: 'wise', label: 'Wise' }
+	];
+	let picked = $state('food');
+	let account = $state('bca');
 	let amount = $state('87500');
 	let notify = $state(true);
 </script>
@@ -80,8 +94,42 @@
 			</p>
 		</div>
 		<div class="space-y-2">
-			<Combobox options={categories} bind:value={picked} />
+			<Combobox items={categories} bind:value={picked} />
 			<p class="text-subtle text-small">A button that opens a searchable list.</p>
+		</div>
+	</div>
+</section>
+
+<section class="space-y-4">
+	{@render heading('Account and category pickers', 'The two the transactions table puts in its cells. In a table they are borderless, fill the cell and keep their chevron at the right edge; outside one they are an ordinary outlined control.')}
+	<div class="grid gap-4 sm:grid-cols-2">
+		<SelectAccount {accounts} bind:value={account} />
+		<SelectCategory {categories} bind:value={picked} />
+		<div class="border">
+			<div class="flex h-[45px] items-center border-b">
+				<div class="w-48 border-r px-4 text-subtle text-small">In a data table cell</div>
+				<div class="h-full flex-1"><SelectAccount {accounts} bind:value={account} inDataTable /></div>
+			</div>
+			<div class="flex h-[45px] items-center">
+				<div class="w-48 border-r px-4 text-subtle text-small">With a colour square</div>
+				<div class="h-full flex-1">
+					<SelectCategory {categories} bind:value={picked} inDataTable />
+				</div>
+			</div>
+		</div>
+		<div class="border">
+			<div class="flex h-[45px] items-center border-b">
+				<div class="w-48 border-r px-4 text-subtle text-small">While saving</div>
+				<div class="h-full flex-1">
+					<SelectAccount {accounts} value={account} inDataTable updating />
+				</div>
+			</div>
+			<div class="flex h-[45px] items-center">
+				<div class="w-48 border-r px-4 text-subtle text-small">Disabled</div>
+				<div class="h-full flex-1">
+					<SelectCategory {categories} value={picked} inDataTable disabled />
+				</div>
+			</div>
 		</div>
 	</div>
 </section>

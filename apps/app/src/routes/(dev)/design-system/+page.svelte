@@ -72,8 +72,12 @@
 		{ label: 'Focused input border', live: 'rgb(24, 24, 27)', read: focusBorder },
 		{ label: 'Menu item height', live: '30px', read: () => prop('[data-slot="dropdown-menu-item"]', 'height') },
 		{ label: 'Menu item padding', live: '7.5px', read: () => prop('[data-slot="dropdown-menu-item"]', 'paddingLeft') },
-		{ label: 'In-cell editor height', live: '33.75px', read: () => prop('#spec-incell', 'height') },
-		{ label: 'In-cell editor border', live: '0px', read: () => hairlineWidth('#spec-incell') },
+		// The live in-cell picker is 33.75px inside a 45px row; the old source
+		// the owner asked to follow gives it the cell's full height. The
+		// deliberate difference is recorded in D61, so only the border, which
+		// both agree on, is compared here.
+		{ label: 'In-cell picker border', live: '0px', read: () => hairlineWidth('#spec-incell') },
+		{ label: 'In-cell picker padding', live: '11.25px', read: () => prop('#spec-incell', 'paddingLeft') },
 		{ label: 'Table header height', live: '45px', read: () => prop('#spec-head', 'height') },
 		{ label: 'Table header colour', live: 'rgb(102, 102, 102)', read: () => prop('#spec-head', 'color') },
 		{ label: 'Table header weight', live: '500', read: () => prop('#spec-head', 'fontWeight') },

@@ -32,7 +32,8 @@
 	import { Checkbox } from '../../atoms/checkbox/index.js';
 	import * as DropdownMenu from '../../atoms/dropdown-menu/index.js';
 	import * as Select from '../../atoms/select/index.js';
-	import { Combobox } from '../../molecules/combobox/index.js';
+	import { SelectAccount } from '../../molecules/select-account/index.js';
+	import { SelectCategory } from '../../molecules/select-category/index.js';
 	import { DataTableFilter } from '../data-table-filter/index.js';
 	import { emptyFilterState, type DataTableFilterState } from '../data-table-filter/index.js';
 	import DataTableEmptyState from './data-table-empty-state.svelte';
@@ -154,6 +155,11 @@
 	const selectedIds = $derived(sorted.filter((r) => selected[r.id]).map((r) => r.id));
 	const allSelected = $derived(sorted.length > 0 && selectedIds.length === sorted.length);
 	const someSelected = $derived(selectedIds.length > 0 && !allSelected);
+
+	const accountItems = $derived(wallets.map((w) => ({ id: w.id, label: w.name })));
+	const categoryItems = $derived(
+		categories.map((c) => ({ id: c.id, label: c.name, colorClass: c.colorClass }))
+	);
 
 	const facets = $derived([
 		{ id: 'category', label: 'Category', options: categories },
@@ -584,45 +590,41 @@
 									</div>
 								{:else if column.key === 'category'}
 									<div
-										class={cn(CELL, edgeClass(column), 'px-4')}
+										class={cn(CELL, edgeClass(column), 'p-0')}
 										style={cellStyle('category')}
 										role="cell"
 									>
 										<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-										<div class="flex h-full w-full items-center" onclick={(event) => event.stopPropagation()}>
-										<div class="flex w-full items-center gap-2 overflow-hidden">
-											<span
-												class={cn('inline-block size-2 shrink-0', colourOf(categoryOf(row)))}
-												aria-hidden="true"
-											></span>
-											<Combobox
+										<div
+											class="h-full w-full"
+											onclick={(event) => event.stopPropagation()}
+										>
+											<SelectCategory
 												id={row.id === sorted[0]?.id ? 'spec-incell' : undefined}
-												options={categories.map((c) => ({ value: c.id, label: c.name }))}
+												categories={categoryItems}
 												value={categoryOf(row)}
-												onValueChange={(value) =>
+												onChange={(value) =>
 													(rowCategory = { ...rowCategory, [row.id]: value })}
-												inline
+												inDataTable
 											/>
-										</div>
 										</div>
 									</div>
 								{:else if column.key === 'account'}
 									<div
-										class={cn(CELL, edgeClass(column), 'px-4')}
+										class={cn(CELL, edgeClass(column), 'p-0')}
 										style={cellStyle('account')}
 										role="cell"
 									>
 										<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 										<div
-											class="flex h-full w-full items-center"
+											class="h-full w-full"
 											onclick={(event) => event.stopPropagation()}
 										>
-											<Combobox
-												options={wallets.map((w) => ({ value: w.id, label: w.name }))}
+											<SelectAccount
+												accounts={accountItems}
 												value={walletOf(row)}
-												onValueChange={(value) =>
-													(rowWallet = { ...rowWallet, [row.id]: value })}
-												inline
+												onChange={(value) => (rowWallet = { ...rowWallet, [row.id]: value })}
+												inDataTable
 											/>
 										</div>
 									</div>
