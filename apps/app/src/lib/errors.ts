@@ -20,7 +20,19 @@ const CODE_TO_KEY: Record<string, TranslationKey> = {
 	RESET_TOKEN_INVALID: 'errors.reset_token_invalid',
 	VALIDATION_FAILED: 'errors.validation_failed',
 	RATE_LIMITED: 'errors.rate_limited',
-	NOT_FOUND: 'errors.not_found'
+	NOT_FOUND: 'errors.not_found',
+	WALLET_HAS_TRANSACTIONS: 'errors.wallet_has_transactions',
+	WALLET_CURRENCY_LOCKED: 'errors.wallet_currency_locked',
+	WORKSPACE_CURRENCY_LOCKED: 'errors.workspace_currency_locked',
+	WALLET_NOT_FOUND: 'errors.wallet_not_found',
+	CATEGORY_NOT_FOUND: 'errors.category_not_found',
+	TRANSACTION_NOT_FOUND: 'errors.transaction_not_found',
+	TRANSFER_REQUIRES_DESTINATION: 'errors.transfer_requires_destination',
+	TRANSFER_SAME_WALLET: 'errors.transfer_same_wallet',
+	DESTINATION_NOT_ALLOWED: 'errors.destination_not_allowed',
+	TRANSFER_AMOUNT_REQUIRED: 'errors.transfer_amount_required',
+	AMOUNT_NOT_POSITIVE: 'errors.amount_not_positive',
+	FX_RATE_UNAVAILABLE: 'errors.fx_rate_unavailable'
 };
 
 export function messageForCode(code: string): string {

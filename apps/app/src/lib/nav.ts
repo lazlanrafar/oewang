@@ -36,12 +36,12 @@ export const navGroups: NavGroup[] = [
 	{
 		labelKey: 'nav.finance_group',
 		items: [
-			{ titleKey: 'nav.transactions', href: '/transactions', icon: Banknote, pending: true },
+			{ titleKey: 'nav.transactions', href: '/transactions', icon: Banknote },
 			{ titleKey: 'nav.chat', href: '/chat', icon: MessageSquare, pending: true }
 		]
 	},
 	{
 		labelKey: 'nav.system_group',
-		items: [{ titleKey: 'nav.settings', href: '/settings', icon: Settings, pending: true }]
+		items: [{ titleKey: 'nav.settings', href: '/settings', icon: Settings }]
 	}
 ];

@@ -175,10 +175,10 @@ Requirements: CAT-1, CAT-2
 ### US-013: Wallets and categories settings UI
 Requirements: WAL-1, CAT-1, UI-5
 
-- [ ] Settings manages wallets grouped, with create, edit, reorder and set default
-- [ ] Categories in a separate tab, split by type
-- [ ] Each wallet balance renders in that wallet's own currency, with correct precision; a group total renders in the workspace currency
-- [ ] Verify in browser
+- [x] Settings manages wallets grouped, with create, edit, reorder and set default
+- [x] Categories in a separate tab, split by type
+- [x] Each wallet balance renders in that wallet's own currency, with correct precision; a group total renders in the workspace currency
+- [x] Verify in browser
 
 ### US-014: Transaction list API
 Requirements: TXN-8, SEC-9, SEC-10, SEC-18
