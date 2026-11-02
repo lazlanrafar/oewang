@@ -235,6 +235,42 @@ should match it:
 - Above the table: search with a filter control, a grouping selector, a date
   range picker, a column-visibility control, an export menu and an add button.
 
+## Data table: what is built and what is not
+
+Measured against the old `organisms/data-table` and the transactions page that
+configures it, on 2026-11-02.
+
+**Built**: the flex row layout at 45px, measured column widths, sticky select,
+date and description to the left and actions to the right, column resizing by
+drag and by keyboard, the horizontal arrows in the last sticky column,
+sortable headers, column visibility, day grouping with per-currency totals,
+selection with a bulk bar, a row that expands in place, the in-cell account
+and category pickers, a row-actions menu, the empty state, the filter bar with
+facets, an amount range and a date range, and a footer count.
+
+**Not built yet**, in the order the product will feel the lack:
+
+| Missing | What the old app does | Cost |
+|---|---|---|
+| Real data | The table takes mock rows. Nothing is wired to `GET /v1/transactions` | US-017 |
+| URL state | Search, sort, grouping, page and every filter live in the query string via `nuqs`. Ours are component state, which is the rule in UI-8 and D55 | Small, once the page exists |
+| Form sheet | `transaction-form-sheet.tsx`, 907 lines: add and edit a transaction | US-018 |
+| Detail sheet | `transaction-detail-sheet.tsx`, 611 lines: the full record, its audit history and its receipt | US-019 |
+| Loading state | `data-table-skeleton.tsx` renders skeleton rows per column type while a page loads. Ours renders nothing | Small |
+| Pagination | Infinite scroll with `fetchNextPage`, or server pagination with `manualPagination` and `pageCount`. Our footer is a stub with the buttons disabled | Medium |
+| Row virtualisation | `data-table-virtual-row.tsx` with `@tanstack/react-virtual`, so thousands of rows stay smooth | Medium, only once rows are real |
+| Column reorder | Headers drag to reorder with dnd-kit, excluding the sticky and actions columns | Medium |
+| Persisted table settings | `use-table-settings` keeps column order, visibility and widths per table and per user. Ours reset on reload | Small to medium |
+| Export modal | `transaction-export-modal.tsx` picks a range and the active filters, then downloads. Our menu is a stub | US-022 |
+| Import | The CSV wizard (five files) and the AI import with its review step | US-020, US-021 |
+| Receipt confirmation | `transaction-receipt-confirmation-modal.tsx`, the sheet that confirms what the model read off a receipt | M3 |
+| Bulk edit | Ours shows the bar and the buttons do nothing. The old bar edits category, account and date across the selection | US-018b |
+| Copy link to a row | `meta.onCopyUrl` on the old table | Small |
+
+Two of the old table's dependencies are deliberately absent for now, and the
+component's own comment says so: TanStack Table and the virtualiser. Everything
+above except virtualisation and reordering is reachable without them.
+
 ## UI port map
 
 Each new component has a reference file in the old app. "Port" means reproduce the layout, the states and the interactions, in idiomatic Svelte 5. It does not mean transliterate React.

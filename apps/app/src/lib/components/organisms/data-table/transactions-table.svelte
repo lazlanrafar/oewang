@@ -19,6 +19,8 @@
 	 * integer minor units, never on floats (D12).
 	 */
 	import ArrowDown from '@lucide/svelte/icons/arrow-down';
+	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
+	import ArrowRight from '@lucide/svelte/icons/arrow-right';
 	import ArrowUp from '@lucide/svelte/icons/arrow-up';
 	import ChevronDown from '@lucide/svelte/icons/chevron-down';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
@@ -85,11 +87,61 @@
 	 */
 	let widths = $state<Partial<Record<ColumnKey, number>>>({});
 	let resizing = $state<ColumnKey | null>(null);
+
+	/*
+	 * Horizontal scrolling, with the arrows the old table puts in its last
+	 * sticky column. They step by a column rather than by a fixed distance,
+	 * so a press always lands on a column boundary instead of halfway through
+	 * one, which is what `use-table-scroll` does with `useColumnWidths`.
+	 */
+	let scroller = $state<HTMLDivElement | null>(null);
+	let canScrollLeft = $state(false);
+	let canScrollRight = $state(false);
+	let isScrollable = $state(false);
+
+	$effect(() => {
+		// Re-read when the columns change: hiding one can stop the table
+		// being scrollable at all.
+		totalWidth;
+		readScroll();
+	});
+
+	function readScroll() {
+		if (!scroller) return;
+		const max = scroller.scrollWidth - scroller.clientWidth;
+		isScrollable = max > 1;
+		canScrollLeft = scroller.scrollLeft > 1;
+		canScrollRight = scroller.scrollLeft < max - 1;
+	}
+
+	/** The left edge of every column, in scroll coordinates. */
+	function columnEdges(): number[] {
+		const edges: number[] = [];
+		let left = 0;
+		for (const column of visibleColumns) {
+			edges.push(left);
+			left += widthOf(column);
+		}
+		return edges;
+	}
+
+	function scrollByColumn(direction: -1 | 1) {
+		if (!scroller) return;
+		const edges = columnEdges();
+		const current = scroller.scrollLeft;
+		const next =
+			direction === 1
+				? edges.find((edge) => edge > current + 1)
+				: [...edges].reverse().find((edge) => edge < current - 1);
+		scroller.scrollTo({ left: next ?? (direction === 1 ? scroller.scrollWidth : 0) });
+	}
 	let hidden = $state<Partial<Record<ColumnKey, boolean>>>({});
 
 	const visibleColumns = $derived(TRANSACTION_COLUMNS.filter((column) => !hidden[column.key]));
 	const hideableColumns = TRANSACTION_COLUMNS.filter((column) => !column.fixed);
 	const totalWidth = $derived(visibleColumns.reduce((sum, column) => sum + widthOf(column), 0));
+	/** The arrows live on the last column that stays put while the rest move. */
+	const lastStickyKey = $derived(visibleColumns.filter((column) => column.stickyLeft).at(-1)?.key);
 
 	const categoryOf = (row: TransactionRow) => rowCategory[row.id] ?? row.categoryId;
 	const walletOf = (row: TransactionRow) => rowWallet[row.id] ?? row.walletId;
@@ -340,6 +392,8 @@
 		'text-subtle relative flex h-full items-center border-t border-r border-b border-border bg-background px-4 font-medium';
 </script>
 
+<svelte:window onresize={readScroll} />
+
 <div class={cn('space-y-3', className)}>
 	<!-- ------------------------------------------------------- toolbar -->
 	<div class="flex flex-wrap items-start gap-2">
@@ -412,7 +466,7 @@
 	{/if}
 
 	<!-- --------------------------------------------------------- table -->
-	<div class="w-full overflow-x-auto">
+	<div class="w-full overflow-x-auto" bind:this={scroller} onscroll={readScroll}>
 		<!--
 			The roles have to sit inside a table to mean anything: a `row` with
 			no `table` ancestor is dropped, and a screen reader is handed a pile
@@ -454,21 +508,59 @@
 								</div>
 							{:else if column.key === 'actions'}
 								<span class="sr-only">Actions</span>
-							{:else if column.sortable}
-								<Button
-									variant="ghost"
-									class="max-w-full min-w-0 space-x-2 p-0 hover:bg-transparent"
-									onclick={() => toggleSort(column.key as SortKey)}
-								>
-									<span class="truncate">{column.label}</span>
-									{#if sortKey === column.key && !sortDescending}
-										<ArrowDown class="size-4" />
-									{:else if sortKey === column.key}
-										<ArrowUp class="size-4" />
-									{/if}
-								</Button>
 							{:else}
-								<span class="truncate">{column.label}</span>
+								<div class="flex w-full items-center justify-between overflow-hidden">
+									<div class="min-w-0 overflow-hidden">
+										{#if column.sortable}
+											<Button
+												variant="ghost"
+												class="max-w-full min-w-0 space-x-2 p-0 hover:bg-transparent"
+												onclick={() => toggleSort(column.key as SortKey)}
+											>
+												<span class="truncate">{column.label}</span>
+												{#if sortKey === column.key && !sortDescending}
+													<ArrowDown class="size-4" />
+												{:else if sortKey === column.key}
+													<ArrowUp class="size-4" />
+												{/if}
+											</Button>
+										{:else}
+											<span class="truncate">{column.label}</span>
+										{/if}
+									</div>
+
+									{#if column.key === lastStickyKey && isScrollable}
+										<!--
+											The columns that scroll start here, so this is where the
+											old table puts the arrows: at the seam, not at the far
+											edge where they would scroll away with the content.
+										-->
+										<div class="hidden shrink-0 items-center space-x-2 md:flex">
+											<Button
+												variant="outline"
+												size="sm"
+												class="size-6 p-0"
+												disabled={!canScrollLeft}
+												aria-label="Scroll columns left"
+												onclick={() => scrollByColumn(-1)}
+											>
+												<ArrowLeft class={cn('size-3.5', canScrollLeft && 'text-primary')} />
+											</Button>
+											<Button
+												variant="outline"
+												size="sm"
+												class="size-6 p-0"
+												disabled={!canScrollRight}
+												aria-label="Scroll columns right"
+												onclick={() => scrollByColumn(1)}
+											>
+												<ArrowRight
+													class={cn('size-3.5', canScrollRight && 'text-primary')}
+												/>
+											</Button>
+										</div>
+									{/if}
+								</div>
 							{/if}
 
 							{#if column.resizable}
