@@ -8,8 +8,15 @@
 	 *
 	 * The old component held `value: number` and called `parseFloat` on every
 	 * keystroke, which is exactly the rounding this rewrite forbids (D12).
-	 * Here the bound value is the string the API expects, and only the
-	 * display is formatted.
+	 * Here the bound value is the string the API expects, `87500`, and only
+	 * the display is grouped.
+	 *
+	 * Grouping happens on every keystroke rather than on blur, so the number
+	 * reads as a number while it is being typed. That means rewriting the
+	 * field's own text mid-edit, which moves the caret to the end unless it is
+	 * put back: `caretAfterDigits` counts the digits before the caret and
+	 * finds that spot again in the regrouped string, so typing in the middle
+	 * of 1.234.567 does not throw you to the end.
 	 */
 	let {
 		value = $bindable(''),
@@ -33,32 +40,55 @@
 		disabled?: boolean;
 	} = $props();
 
-	let focused = $state(false);
-
-	const grouped = $derived.by(() => {
-		if (value === '' || value === '-') return value;
-		const [whole, fraction] = value.split('.');
+	/** `-1234.5` reads as `-1.234,5`: dots group, the comma is the decimal. */
+	function group(raw: string): string {
+		if (raw === '' || raw === '-') return raw;
+		const [whole, fraction] = raw.split('.');
 		const sign = whole.startsWith('-') ? '-' : '';
 		const digits = whole.replace('-', '').replace(/^0+(?=\d)/, '');
-		const withSeparators = digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-		return fraction === undefined
-			? `${sign}${withSeparators}`
-			: `${sign}${withSeparators},${fraction}`;
-	});
+		const grouped = digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+		if (fraction === undefined) return `${sign}${grouped}`;
+		// A trailing separator survives, so typing `1234,` does not undo itself.
+		return `${sign}${grouped},${fraction}`;
+	}
 
-	/** While focused the raw string is edited; the grouped form is for reading. */
-	const shown = $derived(focused ? value : grouped);
+	const shown = $derived(group(value));
+
+	const digitCount = (text: string) => (text.match(/\d/g) ?? []).length;
+
+	/** The index in `text` that sits after `count` digits. */
+	function caretAfterDigits(text: string, count: number): number {
+		if (count === 0) return text.search(/\d/) === -1 ? text.length : text.search(/\d/);
+		let seen = 0;
+		for (let i = 0; i < text.length; i += 1) {
+			if (/\d/.test(text[i])) {
+				seen += 1;
+				if (seen === count) return i + 1;
+			}
+		}
+		return text.length;
+	}
 
 	function handleInput(event: Event & { currentTarget: HTMLInputElement }) {
-		const typed = event.currentTarget.value.replace(/\./g, '').replace(',', '.');
+		const el = event.currentTarget;
+		const before = digitCount(el.value.slice(0, el.selectionStart ?? el.value.length));
+		const typed = el.value.replace(/\./g, '').replace(',', '.');
+
 		if (!/^-?\d*\.?\d*$/.test(typed)) {
 			// Reject the keystroke rather than silently dropping characters.
-			event.currentTarget.value = shown;
+			el.value = shown;
 			return;
 		}
+
 		const [whole, fraction] = typed.split('.');
-		value = fraction === undefined ? whole : `${whole}.${fraction.slice(0, decimals)}`;
-		onValueChange?.(value);
+		const next = fraction === undefined ? whole : `${whole}.${fraction.slice(0, decimals)}`;
+		value = next;
+		onValueChange?.(next);
+
+		const formatted = group(next);
+		el.value = formatted;
+		const caret = caretAfterDigits(formatted, before);
+		el.setSelectionRange(caret, caret);
 	}
 </script>
 
@@ -74,7 +104,5 @@
 		class="font-mono"
 		value={shown}
 		oninput={handleInput}
-		onfocus={() => (focused = true)}
-		onblur={() => (focused = false)}
 	/>
 </InputGroup.Root>
