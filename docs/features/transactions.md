@@ -230,7 +230,8 @@ should match it:
   with the sign as well so colour is never the only carrier (UI-7).
 - Category shows a coloured square plus its name; account shows an icon.
 - Account and category are editable in place from the row, each opening its picker inside the cell.
-- **The description and the amount are edited by expanding the cell** (D59): the cell becomes an input drawn over its neighbours, wider than the column, Enter or blur commits and Escape restores. The row does not change height and the columns do not move.
+- **Columns resize and stick** (D60). Every data column has a 4px handle on its right edge: drag to widen, double click to reset. Select, date and description stick to the left at offsets 0, 50 and 160; actions sticks to the right. The rest scroll under them.
+- Measured column widths: select 50, date 110, description 320, amount 170, account 200, category 161, actions 100. Every cell carries a rule on its right as well as under it, except the last.
 - Above the table: search with a filter control, a grouping selector, a date
   range picker, a column-visibility control, an export menu and an add button.
 

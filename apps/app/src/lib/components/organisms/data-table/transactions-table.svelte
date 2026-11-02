@@ -36,8 +36,12 @@
 	import { DataTableFilter } from '../data-table-filter/index.js';
 	import { emptyFilterState, type DataTableFilterState } from '../data-table-filter/index.js';
 	import DataTableEmptyState from './data-table-empty-state.svelte';
-	import EditableCell from './editable-cell.svelte';
-	import { ROW_HEIGHT, TRANSACTION_COLUMNS, type ColumnKey } from './columns.js';
+	import {
+		ROW_HEIGHT,
+		TRANSACTION_COLUMNS,
+		type ColumnKey,
+		type ColumnSpec
+	} from './columns.js';
 	import type { NamedOption, TransactionRow } from './types.js';
 	import { cn } from '$lib/utils.js';
 
@@ -70,24 +74,26 @@
 	let collapsedGroups = $state<Record<string, boolean>>({});
 	let rowCategory = $state<Record<string, string>>({});
 	let rowWallet = $state<Record<string, string>>({});
-	/** Cell edits held locally; a real page sends these to the API. */
-	let edits = $state<Record<string, Partial<Pick<TransactionRow, 'name' | 'amount'>>>>({});
-	/** Which cell is open, so its own cell can drop `overflow-hidden`. */
-	let editingCell = $state<string | null>(null);
+
+	/**
+	 * Column widths, which the handles on the header edges change.
+	 *
+	 * A width lives here rather than in the column spec so a drag can move it
+	 * and a double click can put it back; a real page would also keep it per
+	 * user, as the old app does in its table settings.
+	 */
+	let widths = $state<Partial<Record<ColumnKey, number>>>({});
+	let resizing = $state<ColumnKey | null>(null);
 	let hidden = $state<Partial<Record<ColumnKey, boolean>>>({});
 
 	const visibleColumns = $derived(TRANSACTION_COLUMNS.filter((column) => !hidden[column.key]));
 	const hideableColumns = TRANSACTION_COLUMNS.filter((column) => !column.fixed);
-	/** The last column before the actions column stretches, as the old row does. */
-	const flexingKey = $derived(
-		visibleColumns.filter((column) => column.key !== 'actions').at(-1)?.key
-	);
-	const totalWidth = $derived(visibleColumns.reduce((sum, column) => sum + column.width, 0));
+	const totalWidth = $derived(visibleColumns.reduce((sum, column) => sum + widthOf(column), 0));
 
 	const categoryOf = (row: TransactionRow) => rowCategory[row.id] ?? row.categoryId;
 	const walletOf = (row: TransactionRow) => rowWallet[row.id] ?? row.walletId;
-	const nameOfRow = (row: TransactionRow) => edits[row.id]?.name ?? row.name;
-	const amountOf = (row: TransactionRow) => edits[row.id]?.amount ?? row.amount;
+	const nameOfRow = (row: TransactionRow) => row.name;
+	const amountOf = (row: TransactionRow) => row.amount;
 	const nameOf = (options: NamedOption[], id: string) =>
 		options.find((option) => option.id === id)?.name ?? id;
 	const colourOf = (id: string) =>
@@ -223,19 +229,89 @@
 
 	const dayLabel = (day: string) => dayFormatter.format(new Date(`${day}T00:00:00`)).toUpperCase();
 
-	/** The width of a cell, or nothing when it is the column that flexes. */
+	const widthOf = (column: ColumnSpec) => widths[column.key] ?? column.width;
+
+	/**
+	 * A sticky column's offset is the sum of the sticky columns before it, so
+	 * hiding or resizing one moves the rest. The old app computes the same
+	 * number into `--stick-left`.
+	 */
+	const stickyOffsets = $derived.by(() => {
+		const offsets: Partial<Record<ColumnKey, number>> = {};
+		let left = 0;
+		for (const column of visibleColumns) {
+			if (!column.stickyLeft) continue;
+			offsets[column.key] = left;
+			left += widthOf(column);
+		}
+		return offsets;
+	});
+
+	/** Width, and the offset that makes a sticky column stay put. */
 	function cellStyle(key: ColumnKey): string {
-		const column = TRANSACTION_COLUMNS.find((c) => c.key === key);
+		const column = visibleColumns.find((c) => c.key === key);
 		if (!column) return '';
-		if (key === flexingKey) return 'flex: 1 1 0%; min-width: 0;';
-		return `width: ${column.width}px; min-width: ${column.width}px; max-width: ${column.width}px; flex-shrink: 0;`;
+		const width = widthOf(column);
+		const size = `width: ${width}px; min-width: ${width}px; max-width: ${width}px; flex-shrink: 0;`;
+		if (column.stickyLeft) return `${size} left: ${stickyOffsets[key] ?? 0}px;`;
+		return size;
 	}
 
-	const CELL = 'h-full flex items-center border-b border-border overflow-hidden bg-background transition-colors group-hover:bg-[#F2F1EF] dark:group-hover:bg-[#0f0f0f]';
+	function stickyClass(column: ColumnSpec): string {
+		if (column.stickyLeft) return 'sticky z-20';
+		if (column.stickyRight) return 'sticky right-0 z-20 border-r-0 border-l border-border';
+		return '';
+	}
+
+	/** The rule belongs between columns, not on the table's outer edge. */
+	const lastColumnKey = $derived(visibleColumns.at(-1)?.key);
+	const edgeClass = (column: ColumnSpec) => (column.key === lastColumnKey ? 'border-r-0' : '');
+
+	/**
+	 * Dragging a header's right edge resizes that column; a double click puts
+	 * it back to the measured width. The pointer is captured so the drag
+	 * survives leaving the 4px handle, which is the whole difficulty here.
+	 */
+	function startResize(event: PointerEvent, column: ColumnSpec) {
+		event.preventDefault();
+		event.stopPropagation();
+		const handle = event.currentTarget as HTMLElement;
+		const startX = event.clientX;
+		const startWidth = widthOf(column);
+		resizing = column.key;
+		handle.setPointerCapture(event.pointerId);
+
+		const move = (move: PointerEvent) => {
+			const next = Math.max(column.minWidth, startWidth + (move.clientX - startX));
+			widths = { ...widths, [column.key]: Math.round(next) };
+		};
+		const stop = () => {
+			resizing = null;
+			handle.releasePointerCapture(event.pointerId);
+			handle.removeEventListener('pointermove', move);
+			handle.removeEventListener('pointerup', stop);
+			handle.removeEventListener('pointercancel', stop);
+		};
+
+		handle.addEventListener('pointermove', move);
+		handle.addEventListener('pointerup', stop);
+		handle.addEventListener('pointercancel', stop);
+	}
+
+	function resetWidth(column: ColumnSpec) {
+		const { [column.key]: _removed, ...rest } = widths;
+		widths = rest;
+	}
+
+	// A rule on the right of every cell as well as under it, which is what
+	// gives the live table its grid; the last column drops it, since that edge
+	// is the table's own.
+	const CELL =
+		'h-full flex items-center border-r border-b border-border overflow-hidden bg-background transition-colors group-hover:bg-[#F2F1EF] dark:group-hover:bg-[#0f0f0f]';
 	// The header's colour and weight come from the old Table head atom, which
 	// this layout replaces: #666666 at 500, measured on the live app.
 	const HEAD =
-		'text-subtle relative flex h-full items-center border-t border-b border-border bg-background px-4 font-medium';
+		'text-subtle relative flex h-full items-center border-t border-r border-b border-border bg-background px-4 font-medium';
 </script>
 
 <div class={cn('space-y-3', className)}>
@@ -317,8 +393,20 @@
 			<div class="bg-background sticky top-0 z-30 block w-full border-0">
 				<div class="flex h-[45px] w-full min-w-full items-center" role="row">
 					{#each visibleColumns as column (column.key)}
-						{#if column.key === 'select'}
-							<div class={cn(HEAD, 'px-0')} style={cellStyle('select')} role="columnheader">
+						<div
+							id={column.key === 'date' ? 'spec-head' : undefined}
+							class={cn(
+								HEAD,
+								stickyClass(column),
+								edgeClass(column),
+								column.key === 'select' && 'px-0',
+								column.key === 'actions' && 'justify-center',
+								column.alignRight && 'justify-end'
+							)}
+							style={cellStyle(column.key)}
+							role="columnheader"
+						>
+							{#if column.key === 'select'}
 								<div class="flex h-full w-full items-center justify-center">
 									<Checkbox
 										checked={allSelected}
@@ -327,38 +415,45 @@
 										aria-label="Select every row"
 									/>
 								</div>
-							</div>
-						{:else if column.key === 'actions'}
-							<div
-								class={cn(HEAD, 'justify-center')}
-								style={cellStyle('actions')}
-								role="columnheader"
-							></div>
-						{:else}
-							<div
-								id={column.key === 'date' ? 'spec-head' : undefined}
-								class={cn(HEAD, column.alignRight && 'justify-end')}
-								style={cellStyle(column.key)}
-								role="columnheader"
-							>
-								{#if column.sortable}
-									<Button
-										variant="ghost"
-										class="max-w-full min-w-0 space-x-2 p-0 hover:bg-transparent"
-										onclick={() => toggleSort(column.key as SortKey)}
-									>
-										<span class="truncate">{column.label}</span>
-										{#if sortKey === column.key && !sortDescending}
-											<ArrowDown class="size-4" />
-										{:else if sortKey === column.key}
-											<ArrowUp class="size-4" />
-										{/if}
-									</Button>
-								{:else}
+							{:else if column.key === 'actions'}
+								<span class="sr-only">Actions</span>
+							{:else if column.sortable}
+								<Button
+									variant="ghost"
+									class="max-w-full min-w-0 space-x-2 p-0 hover:bg-transparent"
+									onclick={() => toggleSort(column.key as SortKey)}
+								>
 									<span class="truncate">{column.label}</span>
-								{/if}
-							</div>
-						{/if}
+									{#if sortKey === column.key && !sortDescending}
+										<ArrowDown class="size-4" />
+									{:else if sortKey === column.key}
+										<ArrowUp class="size-4" />
+									{/if}
+								</Button>
+							{:else}
+								<span class="truncate">{column.label}</span>
+							{/if}
+
+							{#if column.resizable}
+								<!--
+									The resize handle: 4px wide, sitting on the column's right
+									edge and half outside it, exactly as the old table draws it.
+									A drag changes the width, a double click puts it back.
+								-->
+								<!-- svelte-ignore a11y_no_static_element_interactions -->
+								<div
+									class={cn(
+										'absolute top-0 right-0 h-full w-1 translate-x-1/2 cursor-col-resize touch-none select-none',
+										resizing === column.key ? 'bg-primary' : 'bg-transparent hover:bg-border'
+									)}
+									role="separator"
+									aria-orientation="vertical"
+									aria-label="Resize {column.label}"
+									onpointerdown={(event) => startResize(event, column)}
+									ondblclick={() => resetWidth(column)}
+								></div>
+							{/if}
+						</div>
 					{/each}
 				</div>
 			</div>
@@ -433,7 +528,11 @@
 						>
 							{#each visibleColumns as column (column.key)}
 								{#if column.key === 'select'}
-									<div class={cn(CELL, 'px-0')} style={cellStyle('select')} role="cell">
+									<div
+										class={cn(CELL, stickyClass(column), edgeClass(column), 'px-0')}
+										style={cellStyle('select')}
+										role="cell"
+									>
 										<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 										<div class="flex h-full w-full items-center" onclick={(event) => event.stopPropagation()}>
 										<div class="flex h-full w-full items-center justify-center">
@@ -449,7 +548,7 @@
 								{:else if column.key === 'date'}
 									<div
 										id={row.id === sorted[0]?.id ? 'spec-cell' : undefined}
-										class={cn(CELL, 'px-4')}
+										class={cn(CELL, stickyClass(column), edgeClass(column), 'px-4')}
 										style={cellStyle('date')}
 										role="cell"
 									>
@@ -457,11 +556,7 @@
 									</div>
 								{:else if column.key === 'name'}
 									<div
-										class={cn(
-											CELL,
-											'relative px-4',
-											editingCell === `${row.id}:name` && 'overflow-visible'
-										)}
+										class={cn(CELL, stickyClass(column), edgeClass(column), 'px-4')}
 										style={cellStyle('name')}
 										role="cell"
 									>
@@ -472,7 +567,7 @@
 												aria-expanded={expandedRow === row.id}
 												aria-label="{expandedRow === row.id
 													? 'Collapse'
-													: 'Expand'} {nameOfRow(row)}"
+													: 'Expand'} {row.name}"
 												onclick={(event) => {
 													event.stopPropagation();
 													toggleExpanded(row.id);
@@ -484,21 +579,15 @@
 													<ChevronRight class="size-3.5" />
 												{/if}
 											</button>
-											<EditableCell
-												value={nameOfRow(row)}
-												expandTo={480}
-												label="Description of {nameOfRow(row)}"
-												onCommit={(name) => {
-													edits = { ...edits, [row.id]: { ...edits[row.id], name } };
-													editingCell = null;
-												}}
-												onOpen={() => (editingCell = `${row.id}:name`)}
-												onClose={() => (editingCell = null)}
-											/>
+											<span class="truncate">{row.name}</span>
 										</div>
 									</div>
 								{:else if column.key === 'category'}
-									<div class={cn(CELL, 'px-4')} style={cellStyle('category')} role="cell">
+									<div
+										class={cn(CELL, edgeClass(column), 'px-4')}
+										style={cellStyle('category')}
+										role="cell"
+									>
 										<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 										<div class="flex h-full w-full items-center" onclick={(event) => event.stopPropagation()}>
 										<div class="flex w-full items-center gap-2 overflow-hidden">
@@ -517,8 +606,12 @@
 										</div>
 										</div>
 									</div>
-								{:else if column.key === 'wallet'}
-									<div class={cn(CELL, 'px-4')} style={cellStyle('wallet')} role="cell">
+								{:else if column.key === 'account'}
+									<div
+										class={cn(CELL, edgeClass(column), 'px-4')}
+										style={cellStyle('account')}
+										role="cell"
+									>
 										<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 										<div
 											class="flex h-full w-full items-center"
@@ -535,32 +628,25 @@
 									</div>
 								{:else if column.key === 'amount'}
 									<div
-										class={cn(
-											CELL,
-											'relative justify-end px-4',
-											editingCell === `${row.id}:amount` && 'overflow-visible'
-										)}
+										class={cn(CELL, edgeClass(column), 'justify-end px-4')}
 										style={cellStyle('amount')}
 										role="cell"
 									>
-										<EditableCell
-											value={amountOf(row)}
-											label="Amount of {nameOfRow(row)}"
-											align="right"
-											mono
-											expandTo={220}
-											display={money(row)}
-											class={parseFloat(amountOf(row)) > 0 ? 'text-green' : 'text-red'}
-											onCommit={(amount) => {
-												edits = { ...edits, [row.id]: { ...edits[row.id], amount } };
-												editingCell = null;
-											}}
-											onOpen={() => (editingCell = `${row.id}:amount`)}
-											onClose={() => (editingCell = null)}
-										/>
+										<div
+											class={cn(
+												'w-full truncate overflow-hidden text-right font-mono',
+												parseFloat(row.amount) > 0 ? 'text-green' : 'text-red'
+											)}
+										>
+											{money(row)}
+										</div>
 									</div>
 								{:else}
-									<div class={cn(CELL, 'justify-center px-4')} style={cellStyle('actions')} role="cell">
+									<div
+										class={cn(CELL, stickyClass(column), edgeClass(column), 'justify-center px-4')}
+										style={cellStyle('actions')}
+										role="cell"
+									>
 										<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 										<div class="flex h-full w-full items-center" onclick={(event) => event.stopPropagation()}>
 										<DropdownMenu.Root>
