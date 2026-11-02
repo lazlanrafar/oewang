@@ -45,50 +45,13 @@
 	import { readParam, writeParams } from '$lib/url-state';
 
 	import CategoryCombobox from './category-combobox.svelte';
+	import TransactionsTable from './transactions-table.svelte';
 
 	// ---------------------------------------------------------------- data
-
-	type Row = {
-		id: string;
-		date: string;
-		name: string;
-		category: string;
-		wallet: string;
-		amount: string;
-		note: string;
-	};
-
-	const groups: Array<{ day: string; income: string; expense: string; rows: Row[] }> = [
-		{
-			day: 'WEDNESDAY, 2 NOV 2026',
-			income: 'Rp 0',
-			expense: 'Rp 111.500',
-			rows: [
-				{ id: 'a', date: '02/11/2026', name: 'Warung Tekko', category: 'Food', wallet: 'Cash', amount: '-Rp 87.500', note: 'Lunch with the team. Receipt attached.' },
-				{ id: 'b', date: '02/11/2026', name: 'Gojek', category: 'Transport', wallet: 'Cash', amount: '-Rp 24.000', note: 'Ride to the office.' }
-			]
-		},
-		{
-			day: 'SUNDAY, 1 NOV 2026',
-			income: 'Rp 9.500.000',
-			expense: '$49,99',
-			rows: [
-				{ id: 'c', date: '01/11/2026', name: 'Salary', category: 'Salary', wallet: 'BCA', amount: '+Rp 9.500.000', note: 'Monthly salary.' },
-				{ id: 'd', date: '01/11/2026', name: 'Figma', category: 'Shopping', wallet: 'Wise', amount: '-$49,99', note: 'Entered in USD, converted at 16.250.' }
-			]
-		}
-	];
-
-	let collapsed = $state<Record<string, boolean>>({});
-	let expanded = $state<string | null>(null);
-	let selected = $state<Record<string, boolean>>({});
 
 	const categories = ['Food', 'Transport', 'Shopping', 'Bills', 'Salary'];
 	let category = $state('Food');
 	let picked = $state('Food');
-	let rowCategory = $state<Record<string, string>>(
-		Object.fromEntries(groups.flatMap((g) => g.rows.map((r) => [r.id, r.category])))
-	);
 	let showArchived = $state(true);
 
 	/*
@@ -708,125 +671,8 @@
 		<!-- ---------------------------------------------------------- data -->
 		<Tabs.Content value="data" class="space-y-10 pt-4">
 			<section class="space-y-4">
-				{@render heading('Data table', 'Rows group by day with that day’s totals on the right, a group collapses, a row expands in place, and the category is edited in the cell. Amounts carry colour and a sign, never colour alone.')}
-
-				<div class="overflow-x-auto border">
-					<Table.Root>
-						<Table.Header>
-							<Table.Row>
-								<Table.Head class="w-10"></Table.Head>
-								<Table.Head id="spec-head">Date</Table.Head>
-								<Table.Head>Description</Table.Head>
-								<Table.Head>Category</Table.Head>
-								<Table.Head>Wallet</Table.Head>
-								<Table.Head class="text-right">Amount</Table.Head>
-							</Table.Row>
-						</Table.Header>
-						<Table.Body>
-							{#each groups as group (group.day)}
-								<Table.Row id={group.day === groups[0].day ? 'spec-group-row' : undefined}>
-									<Table.Cell
-										id={group.day === groups[0].day ? 'spec-group-cell' : undefined}
-										colspan={6}
-										class="h-[40px] bg-[rgb(251,251,250)] px-4 py-0 dark:bg-[rgb(20,20,20)]"
-									>
-										<div class="flex h-full items-center gap-2">
-											<button
-												type="button"
-												class="text-subtle text-small flex items-center gap-2"
-												aria-expanded={!collapsed[group.day]}
-												onclick={() =>
-													(collapsed = { ...collapsed, [group.day]: !collapsed[group.day] })}
-											>
-												<span class="inline-block w-3">
-													{collapsed[group.day] ? '›' : '⌄'}
-												</span>
-												{group.day}
-											</button>
-											<span class="text-green text-small ml-auto font-mono">{group.income}</span>
-											<span class="text-red text-small font-mono">{group.expense}</span>
-										</div>
-									</Table.Cell>
-								</Table.Row>
-
-								{#if !collapsed[group.day]}
-									{#each group.rows as row (row.id)}
-										<Table.Row id={row.id === 'a' ? 'spec-row' : undefined}>
-											<Table.Cell class="w-10 px-4">
-												<Checkbox
-													checked={selected[row.id] ?? false}
-													onCheckedChange={(v) =>
-														(selected = { ...selected, [row.id]: v === true })}
-													aria-label="Select row"
-												/>
-											</Table.Cell>
-											<Table.Cell
-												id={row.id === 'a' ? 'spec-cell' : undefined}
-												class="whitespace-nowrap"
-											>
-												{row.date}
-											</Table.Cell>
-											<Table.Cell>
-												<button
-													type="button"
-													class="text-left underline-offset-2 hover:underline"
-													aria-expanded={expanded === row.id}
-													onclick={() => (expanded = expanded === row.id ? null : row.id)}
-												>
-													{row.name}
-												</button>
-											</Table.Cell>
-											<!-- In-cell editor: borderless, the full height of the
-											     cell, opening the same list as the combobox. -->
-											<Table.Cell class="py-0">
-												<span class="flex items-center gap-2">
-													<span class="bg-red inline-block size-2" aria-hidden="true"></span>
-													<CategoryCombobox
-														id={row.id === 'a' ? 'spec-incell' : undefined}
-														options={categories}
-														bind:value={rowCategory[row.id]}
-														inline
-													/>
-												</span>
-											</Table.Cell>
-											<Table.Cell>{row.wallet}</Table.Cell>
-											<Table.Cell
-												class="text-right font-mono whitespace-nowrap {row.amount.startsWith('+')
-													? 'text-green'
-													: 'text-red'}"
-											>
-												{row.amount}
-											</Table.Cell>
-										</Table.Row>
-
-										{#if expanded === row.id}
-											<!-- The expanded cell: one row's detail, in place,
-											     spanning every column so nothing has to line up. -->
-											<Table.Row>
-												<Table.Cell colspan={6} class="bg-muted/40 px-4 py-3">
-													<dl class="text-body grid gap-x-8 gap-y-1 sm:grid-cols-3">
-														<div>
-															<dt class="text-subtle text-small">Note</dt>
-															<dd>{row.note}</dd>
-														</div>
-														<div>
-															<dt class="text-subtle text-small">Wallet</dt>
-															<dd>{row.wallet}</dd>
-														</div>
-														<div>
-															<dt class="text-subtle text-small">Category</dt>
-															<dd>{rowCategory[row.id]}</dd>
-														</div>
-													</dl>
-												</Table.Cell>
-											</Table.Row>
-										{/if}
-									{/each}
-								{/if}
-							{/each}
-						</Table.Body>
-					</Table.Root>
-				</div>
+				{@render heading('Data table', 'The transactions table, with everything it carries: search, grouping, a date range, column visibility, export, sortable headers, selection with a bulk bar, day group rows with that day\u2019s totals, a row that expands in place, the in-cell category editor, a row-actions menu and a footer count.')}
+				<TransactionsTable />
 			</section>
 
 			<section class="space-y-4">
