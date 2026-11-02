@@ -2,8 +2,7 @@
 	import { cn, type WithElementRef } from '$lib/utils.js';
 	import type { HTMLAttributes } from 'svelte/elements';
 
-	// Ported from the old app's atoms/kbd.tsx. The old one is `rounded-sm`;
-	// nothing here is rounded (D52).
+	// Ported from the old app's atoms/kbd.tsx, rounded-sm and all.
 	let {
 		ref = $bindable(null),
 		class: className,
@@ -16,7 +15,7 @@
 	bind:this={ref}
 	data-slot="kbd"
 	class={cn(
-		'bg-muted text-subtle text-small pointer-events-none inline-flex h-5 w-fit min-w-5 items-center justify-center gap-1 px-1 font-sans font-medium select-none',
+		'bg-muted text-subtle text-small pointer-events-none inline-flex h-5 w-fit min-w-5 items-center justify-center gap-1 rounded-sm px-1 font-sans font-medium select-none',
 		"[&_svg:not([class*='size-'])]:size-3",
 		className
 	)}

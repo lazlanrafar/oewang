@@ -3,9 +3,8 @@
 	import { cn, type WithoutChildrenOrChild } from '$lib/utils.js';
 
 	/*
-	 * Ported from the old app's atoms/radio-group.tsx. A 15px square with a
-	 * filled centre, rather than the old circle (D52): the checked mark is a
-	 * block, not a dot, so the shape still reads at this size.
+	 * Ported from the old app's atoms/radio-group.tsx: a 15px circle with a
+	 * filled dot.
 	 */
 	let {
 		ref = $bindable(null),
@@ -18,7 +17,7 @@
 	bind:ref
 	data-slot="radio-group-item"
 	class={cn(
-		'border-primary text-primary aspect-square size-4 border disabled:cursor-not-allowed disabled:opacity-50',
+		'border-primary text-primary aspect-square size-4 rounded-full border focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50',
 		className
 	)}
 	{...restProps}
@@ -26,7 +25,7 @@
 	{#snippet children({ checked })}
 		<span class="flex items-center justify-center">
 			{#if checked}
-				<span class="bg-primary block size-2"></span>
+				<span class="bg-primary block size-2 rounded-full"></span>
 			{/if}
 		</span>
 	{/snippet}

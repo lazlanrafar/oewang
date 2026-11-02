@@ -94,17 +94,17 @@
 </section>
 
 <section class="space-y-4">
-	{@render heading('Shape', 'Two rules, and the table at the foot of the page checks both over every element it renders.')}
+	{@render heading('Shape', 'Copied from the old app, not invented here, and the table at the foot of the page checks both.')}
 	<ul class="text-body list-disc space-y-1 pl-5">
-		<li>No radius. The whole scale is zero, so a leftover rounded-lg is square.</li>
 		<li>
-			No shadow. Every step of the shadow scale is none and no component carries a shadow or
-			ring class, so the computed property reads none.
+			The radius scale is live: --radius is 0.5rem, so rounded-sm is 3.5px, rounded-md 5.5px
+			and rounded-lg 7.5px. Almost nothing applies it. A button, an input, a card and a table
+			are square because their own class strings carry no radius; an avatar, a switch, a
+			radio, a progress track, a pill badge and a kbd are round because theirs say so.
+		</li>
+		<li>
+			The shadow scale stops at sm: every step above it is none, so a component keeps the
+			shadow-md or shadow-lg class it was written with and paints nothing.
 		</li>
 	</ul>
-	<p class="text-subtle text-small max-w-2xl">
-		These two rules are where the port departs from the old package: the old avatar, switch,
-		radio, progress track, kbd and menu item are rounded, and its tooltip and alert dialog cast a
-		shadow. Everything here is square and flat (D52).
-	</p>
 </section>

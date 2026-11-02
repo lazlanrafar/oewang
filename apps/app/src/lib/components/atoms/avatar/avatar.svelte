@@ -4,11 +4,10 @@
 	/*
 	 * Ported from the old app's atoms/avatar.tsx.
 	 *
-	 * One deliberate difference: the old avatar is `rounded-full`. Nothing in
-	 * this rewrite is rounded (D52), so it is a square.
+	 * Round, as the old one is.
 	 */
 	export const avatarVariants = tv({
-		base: 'relative flex shrink-0 overflow-hidden',
+		base: 'relative flex shrink-0 overflow-hidden rounded-full',
 		variants: { size: { sm: 'size-6', default: 'size-10', lg: 'size-10' } },
 		defaultVariants: { size: 'default' }
 	});

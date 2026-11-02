@@ -90,7 +90,7 @@
 </section>
 
 <section class="space-y-4">
-	{@render heading('Input, label, textarea', 'Square, a plain border, and a primary border while focused.')}
+	{@render heading('Input, label, textarea', 'Square, a plain border, and no focus treatment: the old app suppresses it globally.')}
 	<div class="grid gap-4 sm:grid-cols-2">
 		<div class="space-y-2">
 			<Label id="spec-label" for="spec-input">Input</Label>

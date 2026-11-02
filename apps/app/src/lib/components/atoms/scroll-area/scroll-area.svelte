@@ -2,7 +2,7 @@
 	import { ScrollArea as ScrollAreaPrimitive } from 'bits-ui';
 	import { cn, type WithoutChild } from '$lib/utils.js';
 
-	// Ported from the old app's atoms/scroll-area.tsx, with a square thumb.
+	// Ported from the old app's atoms/scroll-area.tsx, round thumb and all.
 	let {
 		ref = $bindable(null),
 		class: className,
@@ -28,7 +28,7 @@
 			orientation="vertical"
 			class="flex h-full w-2.5 touch-none border-l border-l-transparent p-px transition-colors select-none"
 		>
-			<ScrollAreaPrimitive.Thumb class="bg-border relative flex-1" />
+			<ScrollAreaPrimitive.Thumb class="bg-border relative flex-1 rounded-full" />
 		</ScrollAreaPrimitive.Scrollbar>
 	{/if}
 	{#if orientation !== 'vertical'}
@@ -36,7 +36,7 @@
 			orientation="horizontal"
 			class="flex h-2.5 touch-none flex-col border-t border-t-transparent p-px transition-colors select-none"
 		>
-			<ScrollAreaPrimitive.Thumb class="bg-border relative flex-1" />
+			<ScrollAreaPrimitive.Thumb class="bg-border relative flex-1 rounded-full" />
 		</ScrollAreaPrimitive.Scrollbar>
 	{/if}
 	<ScrollAreaPrimitive.Corner />

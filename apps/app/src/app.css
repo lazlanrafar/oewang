@@ -71,24 +71,20 @@
 	--text-caption--letter-spacing: 0.02em;
 
 	/*
-	 * Nothing is rounded (D52). The whole scale is zero, so a `rounded-sm` or
-	 * `rounded-xl` left behind by a scaffold resolves to a square corner
-	 * rather than quietly reintroducing one.
+	 * The old app's radius scale, verbatim from packages/ui/src/globals.css.
 	 *
-	 * This is the one place the rewrite departs from the measurement: the live
-	 * app keeps a 0.5rem scale and gives its menu items a 3.5px radius. The
-	 * owner asked for no radius anywhere, so menu items are square here too.
-	 * `rounded-full` does not come from this scale, so a class string that
-	 * wants a circle still gets one; none should.
+	 * It is live, not zeroed: the old components are square because their own
+	 * class strings carry no radius, and the handful that are round, avatar,
+	 * switch, radio, progress, kbd, say so themselves (D66).
 	 */
-	--radius: 0rem;
-	--radius-sm: 0rem;
-	--radius-md: 0rem;
-	--radius-lg: 0rem;
-	--radius-xl: 0rem;
-	--radius-2xl: 0rem;
-	--radius-3xl: 0rem;
-	--radius-4xl: 0rem;
+	--radius: 0.5rem;
+	--radius-sm: calc(var(--radius) - 4px);
+	--radius-md: calc(var(--radius) - 2px);
+	--radius-lg: var(--radius);
+	--radius-xl: calc(var(--radius) + 4px);
+	--radius-2xl: calc(var(--radius) + 8px);
+	--radius-3xl: calc(var(--radius) + 12px);
+	--radius-4xl: calc(var(--radius) + 16px);
 
 	--color-background: hsl(var(--background));
 	--color-foreground: hsl(var(--foreground));
@@ -136,21 +132,16 @@
 	--color-warning-border: hsl(var(--warning-border));
 
 	/*
-	 * No elevation either (D52). The old app already flattened everything
-	 * above `sm`; the rest goes too, so a surface is read by its rule alone.
-	 * Every step is defined, including the ones nothing uses yet, so a later
-	 * `shadow-xs` cannot bring a shadow back by the side door.
+	 * The old app's shadows, verbatim: `sm` is the only one that paints, and
+	 * everything above it is `none`. That is what keeps the interface flat
+	 * while the components keep the `shadow-md` and `shadow-lg` classes they
+	 * were written with (D66).
 	 */
-	--shadow-2xs: none;
-	--shadow-xs: none;
-	--shadow-sm: none;
+	--shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
 	--shadow-md: none;
 	--shadow-lg: none;
 	--shadow-xl: none;
 	--shadow-2xl: none;
-	--inset-shadow-2xs: none;
-	--inset-shadow-xs: none;
-	--inset-shadow-sm: none;
 
 	/*
 	 * The skeleton's sweep, carried over from the old globals.css. The old app
@@ -173,13 +164,11 @@
 }
 
 :root {
-	/*
-	 * Measured, not chosen by eye: the old values rendered at 2.30:1 (green)
-	 * and 3.91:1 (red) on white, where body text needs 4.5:1. These clear it
-	 * at 5.12:1 and 5.99:1 with the hue held (D63).
-	 */
-	--green: 142 65% 30%;
-	--red: 358 65% 45%;
+	/* The old app's values, verbatim. They render at 2.30:1 and 3.91:1 on
+	   white, below the 4.5:1 body text needs; kept because the owner asked
+	   for the old look exactly (D66 supersedes that part of D63). */
+	--green: 142 71% 45%;
+	--red: 358 75% 59%;
 	--subtle: 0 0% 40%;
 
 	--row-hover: 40 10.3% 94.3%;
@@ -207,9 +196,7 @@
 	--destructive: 0 84.2% 60.2%;
 	--destructive-foreground: 0 0% 98%;
 	--border: 45 5% 85%;
-	/* Control boundaries, which need 3:1 against the page (WCAG 1.4.11).
-	   The structural `--border` is a hairline and stays one. */
-	--input: 240 6% 58%;
+	--input: 240 5.9% 90%;
 	--ring: 240 5.9% 10%;
 
 	--sidebar: 0 0% 100%;
@@ -250,7 +237,7 @@
 	--destructive: 359 100% 61%;
 	--destructive-foreground: 0 0% 100%;
 	--border: 0 0% 20%;
-	--input: 240 6% 42%;
+	--input: 0 0% 11%;
 	--ring: 240 4.9% 83.9%;
 
 	--sidebar: 0 0% 5%;
@@ -268,6 +255,20 @@
 
 	* {
 		@apply border-border;
+	}
+
+	/*
+	 * The old app's rule, verbatim from packages/ui/src/globals.css.
+	 *
+	 * It suppresses the focus indicator everywhere, and because the ring
+	 * utilities are box-shadows it suppresses those too, which is why the old
+	 * interface shows nothing on focus. The cost is written down in UI-7 and
+	 * in D66: a keyboard user gets no indication of where they are.
+	 */
+	*:focus,
+	*:focus-visible {
+		outline: none !important;
+		box-shadow: none !important;
 	}
 
 	body {
@@ -341,44 +342,21 @@
 	}
 }
 
-/*
- * A visible indicator for keyboard focus, and nothing for pointer focus.
- *
- * The live app sets `*:focus, *:focus-visible { outline: none !important }`
- * and this matched it (D51). The match cost every keyboard user any idea of
- * where they were, on 64 tab stops of the design system page alone, so it is
- * reversed (D62): `:focus` stays silent, which is what that rule was reaching
- * for, and `:focus-visible` draws a ring.
- *
- * Deliberately outside `@layer base`: a layered rule loses to the unlayered
- * utilities the components carry, and the ring silently did not draw.
- *
- * Fields keep their own cue as well: a focused input turns its border
- * `primary` (D54).
- */
-:focus {
-	outline: none;
+/* Carried over from the old globals.css. */
+html {
+	overscroll-behavior: none;
 }
 
-:focus-visible {
-	outline: 2px solid hsl(var(--ring));
-	outline-offset: 2px;
+.disable-transitions * {
+	transition: none !important;
 }
 
-/*
- * A field marks its own focus by turning its border `primary` (D54), so a
- * ring on top of it draws a second box around the first, and a third around
- * the group when the field sits in one. The ring is for controls that have no
- * such cue: buttons, links, tabs, menu items, checkboxes.
- */
-input:focus-visible,
-textarea:focus-visible,
-select:focus-visible {
-	outline: none;
-}
+@layer utilities {
+	.scrollbar-hide {
+		scrollbar-width: none;
 
-/*
- * This covers the borderless fields too: a field inside an input group, and
- * the command palette's search, which is one. In both the group is what holds
- * the border, so the group is what turns `primary`.
- */
+		&::-webkit-scrollbar {
+			display: none;
+		}
+	}
+}

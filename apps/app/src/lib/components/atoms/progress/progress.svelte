@@ -3,8 +3,7 @@
 	import { cn } from '$lib/utils.js';
 
 	/*
-	 * Ported from the old app's atoms/progress.tsx. The track and the
-	 * indicator are square here, where the old ones were `rounded-full` (D52).
+	 * Ported from the old app's atoms/progress.tsx, round track and all.
 	 */
 	let {
 		ref = $bindable(null),
@@ -19,7 +18,7 @@
 <ProgressPrimitive.Root
 	bind:ref
 	data-slot="progress"
-	class={cn('bg-secondary relative h-4 w-full overflow-hidden', className)}
+	class={cn('bg-secondary relative h-4 w-full overflow-hidden rounded-full', className)}
 	{value}
 	{max}
 	{...restProps}

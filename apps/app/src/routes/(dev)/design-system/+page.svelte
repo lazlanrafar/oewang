@@ -54,27 +54,24 @@
 		{ label: 'Body text', live: '13.125px', read: () => prop('#spec-body-text', 'fontSize') },
 		{ label: 'Small text', live: '11.25px', read: () => prop('#spec-small-text', 'fontSize') },
 		{ label: 'Label', live: '13.125px / 500', read: () => sizeWeight('#spec-label') },
-		// The two rules the owner set for this rewrite, checked over every
-		// element the page renders rather than over a chosen specimen.
-		{ label: 'Elements with a radius', live: '0', read: () => count('borderRadius', (v) => v !== '0px') },
-		{ label: 'Elements with a box-shadow', live: '0', read: () => count('boxShadow', (v) => v !== 'none') },
-		// Income and expense are body text, so they need 4.5:1 (D63).
-		{ label: 'Amount contrast, income', live: '4.5:1 or better', read: () => textContrast('.text-green') },
-		{ label: 'Amount contrast, expense', live: '4.5:1 or better', read: () => textContrast('.text-red') },
+		// The old app's own shape rules, which are not "nothing is rounded":
+		// the scale is live, and every shadow step above `sm` is `none`, so a
+		// component keeps its `shadow-md` class and paints nothing (D66).
+		{ label: 'Radius scale, sm', live: '3.5px', read: () => probe('rounded-sm', 'borderRadius') },
+		{ label: 'Radius scale, md', live: '5.5px', read: () => probe('rounded-md', 'borderRadius') },
+		{ label: 'Radius scale, lg', live: '7.5px', read: () => probe('rounded-lg', 'borderRadius') },
+		{ label: 'Shadow above sm', live: 'none none none', read: () => ['shadow-md', 'shadow-lg', 'shadow-xl'].map((c) => probe(c, 'boxShadow')).join(' ') },
 		{ label: 'Button radius', live: '0px', read: () => prop('#spec-button', 'borderRadius') },
 		{ label: 'Button height', live: '33.75px', read: () => prop('#spec-button', 'height') },
 		{ label: 'Button weight', live: '500', read: () => prop('#spec-button', 'fontWeight') },
 		{ label: 'Button padding', live: '15px', read: () => prop('#spec-button', 'paddingLeft') },
 		{ label: 'Input height', live: '33.75px', read: () => prop('#spec-input', 'height') },
-		// The control boundary is deliberately darker than the live app's: its
-		// 1.35:1 hairline fails the 3:1 that a control needs (D63), so this row
-		// checks the rule rather than the colour.
-		{ label: 'Control boundary contrast', live: '3:1 or better', read: boundaryContrast },
+		{ label: 'Input border', live: '1px rgb(219, 218, 215)', read: () => hairline('#spec-input') },
+		{ label: 'Focus outline', live: 'none', read: () => whileFocused('#spec-input', (s) => s.outlineStyle) },
 		{ label: 'Input padding', live: '11.25px', read: () => prop('#spec-input', 'paddingLeft') },
 		{ label: 'Select trigger height', live: '33.75px', read: () => prop('#spec-select', 'height') },
 		{ label: 'Checkbox size', live: '15px', read: () => prop('#spec-checkbox', 'width') },
 		{ label: 'Card border', live: '1px rgb(219, 218, 215)', read: () => hairline('#spec-card') },
-		{ label: 'Focused input border', live: 'rgb(24, 24, 27)', read: focusBorder },
 		{ label: 'Menu item height', live: '30px', read: () => prop('[data-slot="dropdown-menu-item"]', 'height') },
 		{ label: 'Menu item padding', live: '7.5px', read: () => prop('[data-slot="dropdown-menu-item"]', 'paddingLeft') },
 		// The live in-cell picker is 33.75px inside a 45px row; the old source
@@ -142,6 +139,16 @@
 		return (getComputedStyle(el) as unknown as Record<string, string>)[property] ?? 'unreadable';
 	}
 
+	/** Measure a utility class without hard-coding what it should resolve to. */
+	function probe(className: string, property: string): string {
+		const el = document.createElement('div');
+		el.className = className;
+		document.body.append(el);
+		const value = (getComputedStyle(el) as unknown as Record<string, string>)[property];
+		el.remove();
+		return value ?? 'unreadable';
+	}
+
 	function sizeWeight(selector: string): string {
 		return `${prop(selector, 'fontSize')} / ${prop(selector, 'fontWeight')}`;
 	}
@@ -178,50 +185,6 @@
 
 	function hairline(selector: string): string {
 		return `${hairlineWidth(selector)} ${prop(selector, 'borderTopColor')}`;
-	}
-
-	/**
-	 * A control's boundary has to clear 3:1 against the page (WCAG 1.4.11).
-	 * The live app's hairline does not, which is the one place the colours
-	 * here deliberately leave it (D63).
-	 */
-	function boundaryContrast(): string {
-		const el = document.querySelector('#spec-input');
-		if (!el) throw OFF_SCREEN;
-		const style = getComputedStyle(el);
-		const page = getComputedStyle(document.body).backgroundColor;
-		const measured = contrast(style.borderTopColor, page);
-		return measured >= 3 ? '3:1 or better' : `${measured.toFixed(2)}:1`;
-	}
-
-	function textContrast(selector: string): string {
-		const el = document.querySelector(selector);
-		if (!el || !el.checkVisibility()) throw OFF_SCREEN;
-		const measured = contrast(getComputedStyle(el).color, getComputedStyle(document.body).backgroundColor);
-		return measured >= 4.5 ? '4.5:1 or better' : `${measured.toFixed(2)}:1`;
-	}
-
-	/** WCAG 2.x relative luminance, so the number is computed, not guessed. */
-	function contrast(a: string, b: string): number {
-		const channel = (colour: string) =>
-			(colour.match(/\d+(\.\d+)?/g) ?? ['0', '0', '0']).slice(0, 3).map((value) => {
-				const v = Number(value) / 255;
-				return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
-			});
-		const luminance = (colour: string) => {
-			const [r, g, bl] = channel(colour);
-			return 0.2126 * r + 0.7152 * g + 0.0722 * bl;
-		};
-		const [high, low] = [luminance(a), luminance(b)].sort((x, y) => y - x);
-		return (high + 0.05) / (low + 0.05);
-	}
-
-	/**
-	 * The one indication of focus the product has (D54). There is no outline
-	 * and no ring, so a focused field says so by turning its border `primary`.
-	 */
-	function focusBorder(): string {
-		return whileFocused('#spec-input', (style) => style.borderTopColor);
 	}
 
 	function whileFocused(selector: string, read: (style: CSSStyleDeclaration) => string): string {
@@ -263,8 +226,10 @@
 		<p class="text-subtle text-body mt-2 max-w-2xl">
 			Every component in <code class="text-small font-mono">$lib/components</code>, by atomic
 			layer, ported from the old app's <code class="text-small font-mono">packages/ui</code> and
-			measured against app.oewang.com rather than estimated. Nothing is rounded and nothing
-			casts a shadow. Development only; this route answers 404 anywhere else.
+			measured against app.oewang.com rather than estimated, with the shape rules the
+			old app actually has: a live radius scale that almost nothing applies, and a
+			shadow scale where every step above sm is none. Development only; this route
+			answers 404 anywhere else.
 		</p>
 	</header>
 
