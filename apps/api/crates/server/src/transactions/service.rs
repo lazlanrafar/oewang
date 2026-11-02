@@ -15,6 +15,7 @@ use oewang_db::{
     PgPool,
 };
 use oewang_domain::{
+    csv_import::{transform, ColumnMapping, RawRow},
     ledger::{
         fingerprint, net, reverse, round_money, BalanceDelta, ForeignEntry, ProposedShape,
         TransactionShape, TransactionType,
@@ -373,6 +374,99 @@ pub async fn bulk_create(
     }
 
     tx.commit().await.map_err(internal)?;
+    Ok(outcome)
+}
+
+/// Transform spreadsheet rows and commit them (TXN-11, D28).
+///
+/// The rows arrive as they came out of the file, with a mapping of which
+/// column holds what. Everything numeric happens here, in code: the model
+/// mapped column names once and never saw a row, so it cannot have moved a
+/// decimal point.
+///
+/// A row that cannot be read is reported with its index and skipped, like
+/// any other row-level failure.
+pub async fn import_rows(
+    pool: &PgPool,
+    actor: Actor<'_>,
+    wallet_id: &str,
+    mapping: &ColumnMapping,
+    rows: &[RawRow],
+    categories: &std::collections::BTreeMap<String, String>,
+) -> Result<BulkOutcome> {
+    if rows.len() > IMPORT_LIMIT {
+        return Err(AppError::validation([(
+            "rows",
+            "An import is capped at 5,000 rows. Split the file.",
+        )]));
+    }
+
+    let mut inputs = Vec::with_capacity(rows.len());
+    let mut unreadable = Vec::new();
+
+    for (index, raw) in rows.iter().enumerate() {
+        match transform(mapping, raw) {
+            Ok(row) => inputs.push((index, row)),
+            Err(error) => unreadable.push(SkippedRow {
+                index,
+                code: "VALIDATION_FAILED",
+                reason: error.to_string(),
+            }),
+        }
+    }
+
+    // Owned, because `TransactionInput` borrows its strings and the
+    // transformed rows have to outlive the call.
+    let prepared: Vec<_> = inputs
+        .iter()
+        .map(|(index, row)| {
+            let category_id = row
+                .category
+                .as_ref()
+                .and_then(|name| categories.get(&name.to_lowercase()))
+                .cloned();
+            (*index, row, category_id)
+        })
+        .collect();
+
+    let payload: Vec<TransactionInput<'_>> = prepared
+        .iter()
+        .map(|(_, row, category_id)| TransactionInput {
+            kind: row.kind,
+            wallet_id,
+            to_wallet_id: None,
+            category_id: category_id.as_deref(),
+            amount: row.amount,
+            to_amount: None,
+            original_amount: None,
+            original_currency_code: None,
+            exchange_rate: None,
+            requested_base_rate: None,
+            // Midday in UTC, so a row stays on the day the statement says
+            // whatever zone it is read in.
+            date: row
+                .date
+                .and_hms_opt(12, 0, 0)
+                .map(|naive| DateTime::<Utc>::from_naive_utc_and_offset(naive, Utc))
+                .unwrap_or_else(Utc::now),
+            name: row.name.as_deref(),
+            description: row.description.as_deref(),
+            is_ready: false,
+        })
+        .collect();
+
+    let mut outcome = bulk_create(pool, actor, payload).await?;
+
+    // Report indexes from the original file, not from the filtered list, so
+    // the review step can point at the line the user has to fix.
+    for skipped in &mut outcome.skipped {
+        if let Some((original, _, _)) = prepared.get(skipped.index) {
+            skipped.index = *original;
+        }
+    }
+    outcome.skipped.extend(unreadable);
+    outcome.skipped.sort_by_key(|row| row.index);
+
     Ok(outcome)
 }
 

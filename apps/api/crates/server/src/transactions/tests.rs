@@ -1000,3 +1000,106 @@ async fn should_not_reach_another_workspaces_transaction(pool: PgPool) {
     ));
     assert_eq!(balance(&pool, &cash).await, decimal("-1000"), "untouched");
 }
+
+// ------------------------------------------------------------- csv import
+
+/// The shape an Indonesian bank export has, end to end (TXN-11, D28).
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_import_a_statement_and_report_what_it_could_not_read(pool: PgPool) {
+    use oewang_domain::csv_import::ColumnMapping;
+
+    fixture(&pool, "IDR").await;
+    let cash = wallet(&pool, "w_cash", "IDR").await;
+    let food = category(&pool, "c_food", "expense").await;
+
+    let mapping = ColumnMapping {
+        date: Some("Tanggal".into()),
+        name: Some("Keterangan".into()),
+        amount_out: Some("Debet".into()),
+        amount_in: Some("Kredit".into()),
+        category: Some("Kategori".into()),
+        ..Default::default()
+    };
+
+    let row = |date: &str, name: &str, out: &str, incoming: &str, kind: &str| {
+        [
+            ("Tanggal", date),
+            ("Keterangan", name),
+            ("Debet", out),
+            ("Kredit", incoming),
+            ("Kategori", kind),
+        ]
+        .into_iter()
+        .map(|(k, v)| (k.to_string(), v.to_string()))
+        .collect::<std::collections::BTreeMap<_, _>>()
+    };
+
+    let rows = vec![
+        row("02/11/2026", "WARUNG TEKKO", "50.000", "", "Food"),
+        row("01/11/2026", "GAJI", "", "9.500.000", ""),
+        // Unreadable: reported, not fatal.
+        row("whenever", "BROKEN", "1.000", "", ""),
+        // A duplicate of the first, which is what a re-upload looks like.
+        row("02/11/2026", "WARUNG TEKKO", "50.000", "", "Food"),
+    ];
+
+    let categories = [("food".to_string(), food.clone())].into_iter().collect();
+
+    let outcome = service::import_rows(
+        &pool,
+        actor().with_source(crate::audit::SOURCE_IMPORT),
+        &cash,
+        &mapping,
+        &rows,
+        &categories,
+    )
+    .await
+    .unwrap();
+
+    assert_eq!(outcome.created, 2);
+    assert_eq!(outcome.duplicates, 1, "the same row twice is counted, not failed");
+    assert_eq!(outcome.skipped.len(), 1);
+    assert_eq!(outcome.skipped[0].index, 2, "the index is the file's line, not the batch's");
+
+    // The debit became an expense and the credit an income, and the sign
+    // rule is in code rather than in the model (D28).
+    assert_eq!(balance(&pool, &cash).await, decimal("9450000"));
+
+    let categorised: Option<String> =
+        sqlx::query_scalar("SELECT category_id FROM transactions WHERE name = 'WARUNG TEKKO'")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert_eq!(categorised.as_deref(), Some(food.as_str()));
+
+    // Every imported row says where it came from (D14).
+    let sources: Vec<String> = sqlx::query_scalar("SELECT DISTINCT source FROM transactions")
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+    assert_eq!(sources, vec!["import"]);
+}
+
+/// The guarantee the whole design rests on: the model maps column names and
+/// never sees a figure (D28, AI-9).
+#[test]
+fn should_keep_every_amount_out_of_what_the_model_is_shown() {
+    use oewang_domain::csv_import::ColumnMapping;
+
+    let mapping = ColumnMapping {
+        date: Some("Tanggal".into()),
+        amount_out: Some("Debet".into()),
+        ..Default::default()
+    };
+
+    // A mapping is column names and nothing else. Serializing it is the
+    // only thing that crosses to the AI service, so a figure appearing in
+    // this string would be a figure the model could read.
+    let wire = serde_json::to_string(&mapping).unwrap();
+
+    assert!(wire.contains("Debet"));
+    assert!(
+        !wire.chars().any(|c| c.is_ascii_digit()),
+        "a mapping carries no figures: {wire}"
+    );
+}

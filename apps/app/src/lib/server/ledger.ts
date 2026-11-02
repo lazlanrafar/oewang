@@ -239,6 +239,41 @@ export function createTransactions(transactions: TransactionPayload[], token?: s
 	});
 }
 
+export type ColumnMapping = {
+	date?: string | null;
+	name?: string | null;
+	description?: string | null;
+	amount?: string | null;
+	amount_out?: string | null;
+	amount_in?: string | null;
+	currency?: string | null;
+	category?: string | null;
+};
+
+/**
+ * Commit a file's rows (TXN-11).
+ *
+ * The rows go across as the strings the file held. Every figure and every
+ * date is parsed in Rust, because that is where a decimal point cannot
+ * move (D28).
+ */
+export function importRows(
+	body: {
+		wallet_id: string;
+		mapping: ColumnMapping;
+		rows: Array<Record<string, string>>;
+		categories: Record<string, string>;
+	},
+	token?: string
+) {
+	return api<BulkResult>({
+		method: 'POST',
+		path: '/v1/transactions/import/csv',
+		body,
+		token
+	});
+}
+
 export function bulkUpdateTransactions(
 	body: { ids: string[]; category_id?: string | null; is_ready?: boolean },
 	token?: string

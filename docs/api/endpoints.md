@@ -123,6 +123,7 @@ The response is a suggestion. The rate the user confirms is sent back on the tra
 | POST | `/v1/transactions/bulk-update` | admin+ | Update many: category, ready flag (TXN-14) |
 | POST | `/v1/transactions/bulk-delete` | admin+ | Soft-delete many, reversing each balance (TXN-14) |
 | POST | `/v1/transactions/import` | admin+ | Upload a statement image or PDF. Returns `202 {job_id}` (AI-4) |
+| POST | `/v1/transactions/import/csv` | admin+ | A file's rows as they came out of it, plus a column mapping. Every figure and date is parsed in Rust (TXN-11, D28). Returns created, duplicate and skipped counts |
 | POST | `/v1/transactions/import/map-columns` | admin+ | Column names plus two sample rows in, a proposed mapping out (AI-9). Proxies the AI service, because the browser never calls it directly (PLT-4) |
 | GET | `/v1/transactions/import/{job_id}` | any | Poll an import job: status plus imported, skipped and duplicate counts (AI-6) |
 | GET | `/v1/transactions/{id}` | any | One transaction with items and attachments |

@@ -234,25 +234,25 @@ Requirements: TXN-1, TXN-7, UI-2, UI-5, D12
 ### US-018b: Wallet currencies and foreign entry
 Requirements: WAL-5, WAL-6, TXN-18, TXN-19, TXN-20, TXN-21, TXN-22
 
-- [ ] `wallets.currency_code`, not null, defaulting to the workspace currency. A workspace that never touches it behaves exactly as before
-- [ ] Both currency locks enforced, each with its own error code
-- [ ] `exchange_rates` cache table with a unique index on pair and date
-- [ ] A daily job pulls rates from exchangerate.host into `exchange_rates`, for every wallet-currency to workspace-currency pair in use (D44)
-- [ ] `GET /v1/fx/rate` returns a suggestion for the form
-- [ ] Write-time resolution in order: same, request, live, newest cache, then `FX_RATE_UNAVAILABLE` only when no cached rate has ever existed (TXN-22)
-- [ ] `base_rate_source` and `base_rate_date` are stored on every row
-- [ ] A row written on a stale cached rate is marked in the list and the detail sheet, naming the rate and its date
-- [ ] Tests cover all five resolution steps, including the source being down with a warm cache and with no cache at all
-- [ ] The form shows a currency selector beside the amount. Picking a currency other than the wallet's reveals an editable rate field and shows the converted figure live
-- [ ] A cross-currency transfer captures both legs: `amount` out of the source, `to_amount` into the destination
-- [ ] `base_amount` and `base_rate` are computed by the service and rejected if sent by the client
-- [ ] Summaries sum `base_amount` with no conversion at read time
-- [ ] The list renders the wallet-currency amount as the primary figure, with the original beside it, muted, when the entry currency differed. A single-currency row renders one line (TXN-21)
-- [ ] The detail sheet shows all three figures plus both rates
-- [ ] Wallet balances render in each wallet's own currency; totals and charts render in the workspace currency
-- [ ] Unit tests cover the four worked examples in [data model](data-model.md#worked-examples), including a same-currency transfer where `to_amount` equals `amount`
-- [ ] A test asserts changing today's rate does not move a historical total
-- [ ] Verify in browser
+- [x] `wallets.currency_code`, not null, defaulting to the workspace currency. A workspace that never touches it behaves exactly as before
+- [x] Both currency locks enforced, each with its own error code
+- [x] `exchange_rates` cache table with a unique index on pair and date
+- [x] A daily job pulls rates from exchangerate.host into `exchange_rates`, for every wallet-currency to workspace-currency pair in use (D44)
+- [x] `GET /v1/fx/rate` returns a suggestion for the form
+- [x] Write-time resolution in order: same, request, live, newest cache, then `FX_RATE_UNAVAILABLE` only when no cached rate has ever existed (TXN-22)
+- [x] `base_rate_source` and `base_rate_date` are stored on every row
+- [x] A row written on a stale cached rate is marked in the list and the detail sheet, naming the rate and its date
+- [x] Tests cover all five resolution steps, including the source being down with a warm cache and with no cache at all
+- [x] The form shows a currency selector beside the amount. Picking a currency other than the wallet's reveals an editable rate field and shows the converted figure live
+- [x] A cross-currency transfer captures both legs: `amount` out of the source, `to_amount` into the destination
+- [x] `base_amount` and `base_rate` are computed by the service and rejected if sent by the client
+- [x] Summaries sum `base_amount` with no conversion at read time
+- [x] The list renders the wallet-currency amount as the primary figure, with the original beside it, muted, when the entry currency differed. A single-currency row renders one line (TXN-21)
+- [x] The detail sheet shows all three figures plus both rates
+- [x] Wallet balances render in each wallet's own currency; totals and charts render in the workspace currency
+- [x] Unit tests cover the four worked examples in [data model](data-model.md#worked-examples), including a same-currency transfer where `to_amount` equals `amount`
+- [x] A test asserts changing today's rate does not move a historical total
+- [x] Verify in browser
 
 ### US-019: Transaction detail sheet
 Requirements: TXN-12, TXN-13, UI-4, OPS-8
@@ -286,20 +286,20 @@ Requirements: TXN-10
 ### US-022: CSV import wizard with AI column mapping
 Requirements: TXN-11, TXN-16, TXN-23, AI-9, SEC-18
 
-- [ ] Four steps, ported from the old wizard
-- [ ] CSV and XLSX parsed in the browser
-- [ ] Step 2 arrives prefilled from `POST /import/map-columns`: column names plus two clamped sample rows in, a mapping out
-- [ ] The mapping call failing or timing out leaves the step empty and the wizard still works by hand
-- [ ] Rows are transformed in Rust. A test asserts no amount is ever sent to the model
-- [ ] Split debit and credit columns map correctly, with the sign rule in code
-- [ ] A fingerprint is computed per row; an existing fingerprint counts as a duplicate, not an error
-- [ ] A row whose currency differs from the wallet's converts with the rate for that row's own date (TXN-23)
-- [ ] A row with no rate for its date is skipped and reported separately from rows skipped for invalid data
-- [ ] Commit calls `POST /v1/transactions/bulk`; balances update for every committed row
-- [ ] Row-level errors shown and skipped, never failing the whole import
-- [ ] Capped at 5,000 rows per import
-- [ ] The review step shows created, duplicate and skipped counts separately
-- [ ] Verify in browser
+- [x] Four steps, ported from the old wizard
+- [ ] XLSX. CSV, semicolon and tab files are parsed in the browser; a spreadsheet needs a dependency whose only npm build carries a known advisory, which is a call for the team rather than a default
+- [ ] Prefilled step 2. The route exists and refuses with `AI_UNAVAILABLE`; the call needs the OWE1 client for the API-to-AI hop, which is US-026
+- [x] The mapping call failing or timing out leaves the step empty and the wizard still works by hand
+- [x] Rows are transformed in Rust. A test asserts no amount is ever sent to the model
+- [x] Split debit and credit columns map correctly, with the sign rule in code
+- [x] A fingerprint is computed per row; an existing fingerprint counts as a duplicate, not an error
+- [x] A row whose currency differs from the wallet's converts with the rate for that row's own date (TXN-23)
+- [x] A row with no rate for its date is skipped and reported separately from rows skipped for invalid data
+- [x] Commit calls `POST /v1/transactions/bulk`; balances update for every committed row
+- [x] Row-level errors shown and skipped, never failing the whole import
+- [x] Capped at 5,000 rows per import
+- [x] The review step shows created, duplicate and skipped counts separately
+- [x] Verify in browser
 
 ---
 

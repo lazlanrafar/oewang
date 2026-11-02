@@ -260,6 +260,10 @@ fn protected_routes(state: AppState) -> Router<AppState> {
         .route("/v1/transactions/export", get(transactions::handler::export))
         .route("/v1/transactions/bulk", post(transactions::handler::bulk_create))
         .route(
+            "/v1/transactions/import/csv",
+            post(transactions::handler::import_csv),
+        )
+        .route(
             "/v1/transactions/bulk-update",
             post(transactions::handler::bulk_update),
         )

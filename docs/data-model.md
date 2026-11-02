@@ -554,9 +554,13 @@ That is why the 100 ms list target in [success metrics](prd.md#7-success-metrics
 |---|---|---|---|
 | 1 | No conversion | `same` | Wallet currency equals the workspace currency. Rate is 1 and nothing is looked up. This is the ordinary case |
 | 2 | The request | `user` | The client sent a rate the user saw and confirmed in the form |
-| 3 | Live source | `live` | Fetched from exchangerate.host for the transaction's date |
+| 3 | Live source | `live` | The rate for the transaction's date: the cached row for that day if there is one, otherwise fetched from exchangerate.host and cached |
 | 4 | Cache | `cache` | The live source did not answer. The newest cached rate for the pair is used, and `base_rate_date` records how old it is |
 | 5 | Nothing | n/a | No cached rate has ever existed for this pair. `FX_RATE_UNAVAILABLE`, and the form asks the user to type one |
+
+Step 3 reaches for the cache for that exact day before calling out. It is the same number the live source would return, written by the daily job or by an earlier transaction, so going to a third party for it would put a network call in front of a user waiting for a save and change nothing. Both report `live`, because the value came from the live source either way; `cache` means the fallback in step 4, where the day asked for has no rate at all.
+
+Resolution happens before the write transaction opens. A network call inside an open transaction holds wallet locks for as long as the other end takes to answer.
 
 Step 5 is the honest end of the ladder. A rate cannot be invented from nothing, and a brand-new foreign wallet on a day the source is down has no history to fall back on. The form already accepts a typed rate, so the user is never stuck, only asked.
 

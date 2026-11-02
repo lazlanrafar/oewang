@@ -307,6 +307,21 @@ pub struct BulkUpdateBody {
     pub is_ready: Option<bool>,
 }
 
+/// A file's rows, as they came out of it, plus what each column holds.
+///
+/// The amounts are strings exactly as the file wrote them. They are parsed
+/// in Rust, never by the model and never in the browser (D28).
+#[derive(Debug, Deserialize)]
+pub struct ImportBody {
+    pub wallet_id: String,
+    pub mapping: oewang_domain::csv_import::ColumnMapping,
+    pub rows: Vec<oewang_domain::csv_import::RawRow>,
+    /// Category name, lowercased, to the category it was matched to in
+    /// step three of the wizard.
+    #[serde(default)]
+    pub categories: std::collections::BTreeMap<String, String>,
+}
+
 #[derive(Debug, Deserialize)]
 pub struct BulkDeleteBody {
     pub ids: Vec<String>,
@@ -572,22 +587,47 @@ pub async fn bulk_create(
     .await;
 
     match result {
-        Ok(outcome) => Ok(Json(Envelope::data(
-            BulkResultView {
-                created: outcome.created,
-                duplicates: outcome.duplicates,
-                skipped: outcome
-                    .skipped
-                    .into_iter()
-                    .map(|row| SkippedView {
-                        index: row.index,
-                        code: row.code.to_string(),
-                        reason: row.reason,
-                    })
-                    .collect(),
-            },
-            id,
-        ))),
+        Ok(outcome) => Ok(Json(Envelope::data(bulk_view(outcome), id))),
+        Err(error) => Err(ApiError::new(error, id)),
+    }
+}
+
+fn bulk_view(outcome: service::BulkOutcome) -> BulkResultView {
+    BulkResultView {
+        created: outcome.created,
+        duplicates: outcome.duplicates,
+        skipped: outcome
+            .skipped
+            .into_iter()
+            .map(|row| SkippedView {
+                index: row.index,
+                code: row.code.to_string(),
+                reason: row.reason,
+            })
+            .collect(),
+    }
+}
+
+pub async fn import_csv(
+    State(state): State<AppState>,
+    auth: AuthWrite,
+    request_id: RequestId,
+    Json(body): Json<ImportBody>,
+) -> std::result::Result<Json<Envelope<BulkResultView>>, ApiError> {
+    let id = request_id.0;
+
+    let result = service::import_rows(
+        &state.db,
+        Actor::web(&auth.workspace_id, &auth.user_id).with_source(crate::audit::SOURCE_IMPORT),
+        &body.wallet_id,
+        &body.mapping,
+        &body.rows,
+        &body.categories,
+    )
+    .await;
+
+    match result {
+        Ok(outcome) => Ok(Json(Envelope::data(bulk_view(outcome), id))),
         Err(error) => Err(ApiError::new(error, id)),
     }
 }

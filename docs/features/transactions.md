@@ -137,7 +137,7 @@ Two paths, picked by what the file is. The rule behind the split: **deterministi
 
 #### CSV and spreadsheet (TXN-11, D28)
 
-Four steps, ported from the old wizard, with one change: step 2 arrives prefilled.
+Four steps, ported from the old wizard, with one change: step 2 arrives prefilled once the AI service can be reached. Until then it arrives empty, which is the same path a failed mapping call takes.
 
 1. **Select file.** Drop a CSV or XLSX. Parsed in the browser.
 2. **Map fields.** The column names and two sample rows go to the AI service, which returns a proposed mapping ([column mapping](../ai/service.md#csv-column-mapping)). The user confirms or corrects it. A failed or slow mapping call leaves the step empty and the user maps by hand; the wizard never blocks on it.
@@ -274,20 +274,15 @@ facets, an amount range and a date range, and a footer count.
 
 | Missing | What the old app does | Cost |
 |---|---|---|
-| Real data | The table takes mock rows. Nothing is wired to `GET /v1/transactions` | US-017 |
-| URL state | Search, sort, grouping, page and every filter live in the query string via `nuqs`. Ours are component state, which is the rule in UI-8 and D55 | Small, once the page exists |
-| Form sheet | `transaction-form-sheet.tsx`, 907 lines: add and edit a transaction | US-018 |
-| Detail sheet | `transaction-detail-sheet.tsx`, 611 lines: the full record, its audit history and its receipt | US-019 |
 | Loading state | `data-table-skeleton.tsx` renders skeleton rows per column type while a page loads. Ours renders nothing | Small |
-| Pagination | Infinite scroll with `fetchNextPage`, or server pagination with `manualPagination` and `pageCount`. Our footer is a stub with the buttons disabled | Medium |
-| Row virtualisation | `data-table-virtual-row.tsx` with `@tanstack/react-virtual`, so thousands of rows stay smooth | Medium, only once rows are real |
+| Row virtualisation | `data-table-virtual-row.tsx` with `@tanstack/react-virtual`, so thousands of rows stay smooth | Medium, and only once a page holds more than a hundred rows |
 | Column reorder | Headers drag to reorder with dnd-kit, excluding the sticky and actions columns | Medium |
 | Persisted table settings | `use-table-settings` keeps column order, visibility and widths per table and per user. Ours reset on reload | Small to medium |
-| Export modal | `transaction-export-modal.tsx` picks a range and the active filters, then downloads. Our menu is a stub | US-022 |
-| Import | The CSV wizard (five files) and the AI import with its review step | US-020, US-021 |
+| Copy link to a row | `meta.onCopyUrl` on the old table. The detail sheet is already addressable as `?detail=`, so this is a button, not a feature | Small |
+| XLSX in the import wizard | The old wizard reads a spreadsheet as well as a CSV. SheetJS is no longer published to npm and the version that is carries a known prototype-pollution advisory, so the dependency is a decision to take rather than to assume | Small once the dependency is chosen |
 | Receipt confirmation | `transaction-receipt-confirmation-modal.tsx`, the sheet that confirms what the model read off a receipt | M3 |
-| Bulk edit | Ours shows the bar and the buttons do nothing. The old bar edits category, account and date across the selection | US-018b |
-| Copy link to a row | `meta.onCopyUrl` on the old table | Small |
+| Line items and attachments in the detail sheet | Both have their place in the sheet and read "none" | US-024, US-025 |
+| The assistant's column mapping | Step two of the wizard arrives empty. The call needs the OWE1 client for the API-to-AI hop, which is US-026 | M4 |
 
 Two of the old table's dependencies are deliberately absent for now, and the
 component's own comment says so: TanStack Table and the virtualiser. Everything
