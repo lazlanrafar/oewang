@@ -22,11 +22,11 @@ Forty-four stories in six milestones. Each is sized for one focused session. A s
 ### US-001: Scaffold the monorepo
 Requirements: PLT-1, PLT-5
 
-- [ ] `apps/app` (SvelteKit, TypeScript, Tailwind 4), `apps/api` (cargo workspace), `apps/ai` (FastAPI, uv) all build
-- [ ] `infra/docker-compose.yml` starts PostgreSQL 16 and MinIO
-- [ ] `.env.example` lists every variable from [architecture](architecture.md#configuration) with a comment
-- [ ] Root `README.md` documents install and run for all three apps
-- [ ] `cargo check`, `bun run check` and `ruff check` all pass
+- [x] `apps/app` (SvelteKit, TypeScript, Tailwind 4), `apps/api` (cargo workspace), `apps/ai` (FastAPI, uv) all build
+- [x] `infra/docker-compose.yml` starts PostgreSQL 16 and MinIO
+- [x] `.env.example` lists every variable from [architecture](architecture.md#configuration) with a comment
+- [x] Root `README.md` documents install and run for all three apps
+- [x] `cargo check`, `bun run check` and `ruff check` all pass, run in the containers
 
 ### US-002: Database schema and migrations
 Requirements: all data requirements, OPS-2

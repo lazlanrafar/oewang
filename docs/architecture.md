@@ -43,9 +43,32 @@ Four rules hold the shape together.
 
 | App | Stack | Owns | Does not own |
 |---|---|---|---|
-| `apps/app` | SvelteKit 2, Svelte 5 runes, Tailwind 4, shadcn-svelte | Rendering, the session cookie, form handling, proxying to the API | Business rules, database access, LLM calls |
+| `apps/app` | SvelteKit 3, Svelte 5 runes, Tailwind 4, shadcn-svelte | Rendering, the session cookie, form handling, proxying to the API | Business rules, database access, LLM calls |
 | `apps/api` | Rust, Axum, sqlx, tokio | Every business rule, all database access, file storage, tool execution, audit logging, async jobs | Prompt construction, LLM calls |
-| `apps/ai` | Python 3.12, FastAPI, Anthropic SDK | System prompts, the tool loop, streaming, receipt OCR, statement extraction, title generation | Database access, storage, authorization decisions |
+| `apps/ai` | Python 3.13, FastAPI, Anthropic SDK | System prompts, the tool loop, streaming, receipt OCR, statement extraction, title generation | Database access, storage, authorization decisions |
+
+### Landed versions
+
+Recorded at scaffold time (US-001, 2026-11-02) so later drift is visible. The docs name the major version; these are what the lockfiles resolved to.
+
+| Component | Version |
+|---|---|
+| Rust | 1.x via the `rust:1-bookworm` image, `rust-version` pinned at 1.84 |
+| Axum | 0.8 |
+| sqlx | 0.8 |
+| SvelteKit | 3.0 |
+| Svelte | 5.57 |
+| Vite | 8.3 |
+| TypeScript | 6.0 |
+| Tailwind | 4.3 |
+| Bun | 1.3 |
+| Python | 3.13 |
+| FastAPI | 0.162 |
+| Pydantic | 2.14 |
+| anthropic | 2.3 |
+| PostgreSQL | 16.15 |
+
+One deviation from the plan: `httpx` is pinned below 1.0, because only pre-releases satisfy `>=0.30` today.
 
 ## Repo layout
 

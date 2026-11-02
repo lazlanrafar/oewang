@@ -14,7 +14,7 @@ How the web app is structured and written. It is a BFF as much as a UI: it holds
 
 | Concern | Choice |
 |---|---|
-| Framework | SvelteKit 2, `adapter-node`, SSR on |
+| Framework | SvelteKit 3, `adapter-node`, SSR on |
 | Language | Svelte 5 with runes, TypeScript in strict mode |
 | Styling | Tailwind CSS v4, CSS-first config |
 | Components | shadcn-svelte, generated into the repo, owned by the repo |

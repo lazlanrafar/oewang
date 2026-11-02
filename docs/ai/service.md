@@ -2,7 +2,7 @@
 
 Status: draft v0.1, 2026-11-02. Part of the [oewang docs](../README.md). Implements [PRD](../prd.md) PLT-3, CHAT-3 to CHAT-7 and AI-1 to AI-6.
 
-`apps/ai` is a Python 3.12 FastAPI service on port 3004. It owns every call to the model and nothing else.
+`apps/ai` is a Python 3.13 FastAPI service on port 3004. It owns every call to the model and nothing else.
 
 ## Update this doc when
 
@@ -29,7 +29,7 @@ The practical test: if `apps/ai` had `DATABASE_URL` set, it would be a bug. The 
 
 | Concern | Choice |
 |---|---|
-| Runtime | Python 3.12, `uv` for dependency management |
+| Runtime | Python 3.13, `uv` for dependency management. `requires-python` is >=3.12 |
 | Framework | FastAPI, served by uvicorn |
 | Model client | The Anthropic Python SDK (A1) |
 | Chat model | `AI_CHAT_MODEL`, default `claude-sonnet-5-5` |
