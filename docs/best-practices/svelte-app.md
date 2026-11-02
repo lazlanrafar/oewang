@@ -150,6 +150,25 @@ Deliberately not ported, because the feature they serve is out of scope ([non-go
 
 Two rules override fidelity where they conflict: nothing is rounded and nothing casts a shadow (D52). The old avatar, switch, radio, progress track, kbd and menu item are rounded, and its tooltip and alert dialog cast a shadow; the ports are square and flat.
 
+## Sheets
+
+Ported from the old app's `docs/SHEET_GUIDE.md`, which is the contract every sheet follows.
+
+`Sheet.Content` has two layers: a fixed panel carrying `md:p-4`, so the sheet floats 16px off the viewport edges on a desktop, and an inner panel that takes the border, the background and your class. The gap is the look; fighting it with `rounded-none` or a left-only border is what makes a sheet look broken.
+
+Pass `p-0` and manage the padding inside.
+
+**A form sheet** (`transaction-form-sheet`):
+
+- Content `flex h-full flex-col p-0`; header `shrink-0 px-6 pt-6` with no rule; title `text-lg`, no weight or serif override.
+- Body `flex-1 overflow-y-auto px-6 pt-6 pb-[100px]`, fields `space-y-6`, two-column rows as `grid grid-cols-2 gap-4`.
+- Footer `absolute inset-x-0 bottom-0 bg-background p-6`: one full-width submit, **no cancel**, no rule. The overlay and Escape already close the sheet, and `pb-[100px]` keeps the last field clear of it.
+- Labels `text-subtle text-xs font-normal`. Every control keeps its default `h-9`, which is what keeps two fields in a row on the same line.
+
+**A detail sheet** (`transaction-detail-sheet`): header `flex shrink-0 flex-row items-center justify-between border-b bg-muted/5 px-6 py-6`, title `text-xl font-medium`, subtitle `text-subtle text-xs uppercase tracking-widest`, actions in the header row, body `flex-1 space-y-6 overflow-y-auto px-6 py-6`, and no footer.
+
+Two sheets cannot swap in one tick: close the first through its own `Sheet.Close` and open the second once the overlay is gone. When wrapping a control in `Sheet.Close`, call the handler the primitive puts in `props` as well as your own, or the sheet never closes.
+
 ## Forms
 
 Superforms plus Zod, one schema shared between the form and its action.

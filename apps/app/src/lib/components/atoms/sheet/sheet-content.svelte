@@ -1,55 +1,63 @@
 <script lang="ts" module>
-	export type Side = "top" | "right" | "bottom" | "left";
+	import { type VariantProps, tv } from 'tailwind-variants';
+
+	export type Side = 'top' | 'right' | 'bottom' | 'left';
+
+	/*
+	 * Ported from the old app's atoms/sheet.tsx, including its two layers:
+	 * the fixed panel, which carries `md:p-4` so the sheet floats 16px off the
+	 * viewport edges on a desktop, and an inner div that holds the border, the
+	 * background and whatever class the caller passes.
+	 *
+	 * That gap is the look. Fighting it with `rounded-none` or a left-only
+	 * border, as the first port did, is what made the sheet look broken.
+	 */
+	export const sheetVariants = tv({
+		base: 'fixed z-50 gap-4 transition ease-in-out data-open:animate-in data-closed:animate-out data-closed:duration-200 data-open:duration-300 md:p-4',
+		variants: {
+			side: {
+				top: 'inset-x-0 top-0 data-open:slide-in-from-top data-closed:slide-out-to-top',
+				bottom:
+					'inset-x-0 bottom-0 data-open:slide-in-from-bottom data-closed:slide-out-to-bottom',
+				left: 'inset-y-0 left-0 h-full w-3/4 data-open:slide-in-from-left data-closed:slide-out-to-left sm:max-w-sm',
+				right:
+					'inset-y-0 right-0 h-full w-3/4 data-open:slide-in-from-right data-closed:slide-out-to-right sm:max-w-[520px]'
+			}
+		},
+		defaultVariants: { side: 'right' }
+	});
+
+	export type SheetSide = VariantProps<typeof sheetVariants>['side'];
 </script>
 
 <script lang="ts">
-	import { Dialog as SheetPrimitive } from "bits-ui";
-	import XIcon from '@lucide/svelte/icons/x';
-	import { Button } from "$lib/components/atoms/button/index.js";
-	import { cn, type WithoutChildrenOrChild } from "$lib/utils.js";
-	import SheetOverlay from "./sheet-overlay.svelte";
-	import SheetPortal from "./sheet-portal.svelte";
-	import type { Snippet } from "svelte";
-	import type { ComponentProps } from "svelte";
+	import { Dialog as SheetPrimitive } from 'bits-ui';
+	import type { Snippet } from 'svelte';
+
+	import { cn, type WithoutChildrenOrChild } from '$lib/utils.js';
+	import SheetOverlay from './sheet-overlay.svelte';
+	import SheetPortal from './sheet-portal.svelte';
 
 	let {
 		ref = $bindable(null),
 		class: className,
-		side = "right",
-		showCloseButton = true,
-		portalProps,
+		side = 'right',
 		children,
 		...restProps
 	}: WithoutChildrenOrChild<SheetPrimitive.ContentProps> & {
-		portalProps?: WithoutChildrenOrChild<ComponentProps<typeof SheetPortal>>;
 		side?: Side;
-		showCloseButton?: boolean;
 		children: Snippet;
 	} = $props();
 </script>
 
-<SheetPortal {...portalProps}>
+<SheetPortal>
 	<SheetOverlay />
-	<SheetPrimitive.Content
-		bind:ref
-		data-slot="sheet-content"
-		data-side={side}
-		class={cn(
-			"bg-popover text-popover-foreground fixed z-50 flex flex-col gap-4 rounded-[10px] bg-clip-padding text-sm transition duration-200 ease-in-out data-[side=bottom]:inset-x-0 data-[side=bottom]:bottom-0 data-[side=bottom]:h-auto data-[side=bottom]:border-t data-[side=left]:inset-y-0 data-[side=left]:left-0 data-[side=left]:h-full data-[side=left]:w-3/4 data-[side=left]:border-r data-[side=right]:inset-y-0 data-[side=right]:right-0 data-[side=right]:h-full data-[side=right]:w-3/4 data-[side=right]:border-l data-[side=top]:inset-x-0 data-[side=top]:top-0 data-[side=top]:h-auto data-[side=top]:border-b data-[side=left]:sm:max-w-sm data-[side=right]:sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-[side=bottom]:data-open:slide-in-from-bottom-10 data-[side=left]:data-open:slide-in-from-left-10 data-[side=right]:data-open:slide-in-from-right-10 data-[side=top]:data-open:slide-in-from-top-10 data-closed:animate-out data-closed:fade-out-0 data-[side=bottom]:data-closed:slide-out-to-bottom-10 data-[side=left]:data-closed:slide-out-to-left-10 data-[side=right]:data-closed:slide-out-to-right-10 data-[side=top]:data-closed:slide-out-to-top-10",
-			className
-		)}
-		{...restProps}
-	>
-		{@render children?.()}
-		{#if showCloseButton}
-			<SheetPrimitive.Close data-slot="sheet-close">
-				{#snippet child({ props })}
-					<Button variant="ghost" class="absolute top-3 right-3 size-7" size="icon" {...props}>
-						<XIcon  />
-						<span class="sr-only">Close</span>
-					</Button>
-				{/snippet}
-			</SheetPrimitive.Close>
-		{/if}
+	<SheetPrimitive.Content bind:ref data-slot="sheet-content" class={sheetVariants({ side })} {...restProps}>
+		<div
+			data-slot="sheet-panel"
+			class={cn('bg-background relative flex h-full w-full flex-col overflow-visible border p-6', className)}
+		>
+			{@render children?.()}
+		</div>
 	</SheetPrimitive.Content>
 </SheetPortal>

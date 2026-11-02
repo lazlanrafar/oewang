@@ -1,28 +1,4 @@
-<script lang="ts">
-	/**
-	 * Ported from the old app's transaction-form-sheet, trimmed to this
-	 * product's fields: the old one also assigns a member and carries budget
-	 * and quota warnings, which are out of scope.
-	 *
-	 * The amount is a decimal string the whole way through (D12). A foreign
-	 * currency asks for its rate rather than converting here, because the API
-	 * is the only thing allowed to do that arithmetic (D27).
-	 *
-	 * The sheet holds no data: a page passes the accounts and categories in
-	 * and gets a draft back on save.
-	 */
-	import { Button } from '../../atoms/button/index.js';
-	import { Input } from '../../atoms/input/index.js';
-	import { Textarea } from '../../atoms/textarea/index.js';
-	import * as Sheet from '../../atoms/sheet/index.js';
-	import * as Tabs from '../../atoms/tabs/index.js';
-	import * as Field from '../../molecules/field/index.js';
-	import { CurrencyInput } from '../../molecules/currency-input/index.js';
-	import { SelectAccount } from '../../molecules/select-account/index.js';
-	import { SelectCategory } from '../../molecules/select-category/index.js';
-	import type { CategoryItem } from '../../molecules/select-category/index.js';
-	import type { ComboboxItem } from '../../molecules/combobox/index.js';
-
+<script lang="ts" module>
 	export type TransactionDraft = {
 		id?: string;
 		type: 'expense' | 'income' | 'transfer';
@@ -37,6 +13,35 @@
 		date: string;
 		notes: string;
 	};
+</script>
+
+<script lang="ts">
+	/**
+	 * Ported from the old app's transaction-form-sheet, laid out to the rules
+	 * in its SHEET_GUIDE: content at `p-0`, a header with no border, a body
+	 * that scrolls with `pb-[100px]` so the last field clears the footer, and
+	 * a footer absolutely positioned over the body with one full-width submit
+	 * and no cancel, because the overlay and Escape already close the sheet.
+	 *
+	 * Labels are `text-xs font-normal text-muted-foreground` and every control
+	 * keeps its default `h-9`, which is what keeps two fields in a row on the
+	 * same line.
+	 *
+	 * Trimmed from 907 lines to this product's fields: the old sheet also
+	 * assigns a member and carries budget and quota warnings. The amount is a
+	 * decimal string throughout and nothing is converted here (D12, D27).
+	 */
+	import { Button } from '../../atoms/button/index.js';
+	import { Input } from '../../atoms/input/index.js';
+	import { Label } from '../../atoms/label/index.js';
+	import * as Sheet from '../../atoms/sheet/index.js';
+	import * as Tabs from '../../atoms/tabs/index.js';
+	import { Textarea } from '../../atoms/textarea/index.js';
+	import { CurrencyInput } from '../../molecules/currency-input/index.js';
+	import { SelectAccount } from '../../molecules/select-account/index.js';
+	import { SelectCategory } from '../../molecules/select-category/index.js';
+	import type { CategoryItem } from '../../molecules/select-category/index.js';
+	import type { ComboboxItem } from '../../molecules/combobox/index.js';
 
 	let {
 		open = $bindable(false),
@@ -61,104 +66,108 @@
 	const editing = $derived(!!draft.id);
 	const foreign = $derived(draft.currency !== baseCurrency);
 	const symbol = $derived(draft.currency === 'IDR' ? 'Rp' : draft.currency);
+
+	/** The guide's label: small, muted, regular weight. */
+	const labelClass = 'text-subtle text-xs font-normal';
 </script>
 
 <Sheet.Root bind:open>
-	<Sheet.Content side="right" class="w-full sm:max-w-md">
-		<Sheet.Header>
-			<Sheet.Title class="text-h2">
-				{editing ? 'Edit transaction' : 'New transaction'}
+	<Sheet.Content side="right" class="flex h-full flex-col p-0">
+		<Sheet.Header class="shrink-0 px-6 pt-6">
+			<Sheet.Title class="text-lg">
+				{editing ? 'Edit transaction' : 'Create transaction'}
 			</Sheet.Title>
-			<Sheet.Description>
-				{editing ? 'Changes are saved to this transaction.' : 'Add one by hand.'}
+			<Sheet.Description class="sr-only">
+				{editing ? 'Change this transaction.' : 'Add a transaction by hand.'}
 			</Sheet.Description>
 		</Sheet.Header>
 
-		<div class="flex-1 overflow-y-auto px-4">
-			<Tabs.Root
-				value={draft.type}
-				onValueChange={(type) => (draft = { ...draft, type: type as TransactionDraft['type'] })}
-			>
-				<Tabs.List variant="segmented" class="w-full">
-					<Tabs.Trigger value="expense" variant="segmented" class="flex-1">Expense</Tabs.Trigger>
-					<Tabs.Trigger value="income" variant="segmented" class="flex-1">Income</Tabs.Trigger>
-					<Tabs.Trigger value="transfer" variant="segmented" class="flex-1">
-						Transfer
-					</Tabs.Trigger>
-				</Tabs.List>
-			</Tabs.Root>
+		<div class="flex-1 overflow-y-auto px-6 pt-6 pb-[100px]">
+			<div class="space-y-6">
+				<Tabs.Root
+					value={draft.type}
+					onValueChange={(type) => (draft = { ...draft, type: type as TransactionDraft['type'] })}
+				>
+					<Tabs.List variant="segmented" class="w-full">
+						<Tabs.Trigger value="expense" variant="segmented" class="flex-1">
+							Expense
+						</Tabs.Trigger>
+						<Tabs.Trigger value="income" variant="segmented" class="flex-1">Income</Tabs.Trigger>
+						<Tabs.Trigger value="transfer" variant="segmented" class="flex-1">
+							Transfer
+						</Tabs.Trigger>
+					</Tabs.List>
+				</Tabs.Root>
 
-			<Field.Group class="mt-6 gap-5">
-				<Field.Root>
-					<Field.Label for="form-name">Description</Field.Label>
-					<Input id="form-name" bind:value={draft.name} placeholder="Warung Tekko" />
-				</Field.Root>
+				<div class="grid gap-2">
+					<Label for="form-name" class={labelClass}>Description</Label>
+					<Input id="form-name" bind:value={draft.name} placeholder="Warung Tekko" autofocus />
+				</div>
 
-				<div class="grid grid-cols-[1fr_auto] gap-3">
-					<Field.Root>
-						<Field.Label for="form-amount">Amount</Field.Label>
+				<div class="grid grid-cols-2 gap-4">
+					<div class="grid gap-2">
+						<Label for="form-amount" class={labelClass}>Amount</Label>
 						<CurrencyInput id="form-amount" bind:value={draft.amount} {symbol} />
-					</Field.Root>
-					<Field.Root class="w-28">
-						<Field.Label for="form-currency">Currency</Field.Label>
+					</div>
+					<div class="grid gap-2">
+						<Label for="form-currency" class={labelClass}>Currency</Label>
 						<SelectAccount
 							id="form-currency"
 							accounts={currencies.map((code) => ({ id: code, label: code }))}
 							bind:value={draft.currency}
 							placeholder="Currency"
 						/>
-					</Field.Root>
+					</div>
 				</div>
 
 				{#if foreign}
-					<Field.Root>
-						<Field.Label for="form-rate">Rate to {baseCurrency}</Field.Label>
+					<div class="grid gap-2">
+						<Label for="form-rate" class={labelClass}>Rate to {baseCurrency}</Label>
 						<Input id="form-rate" bind:value={draft.exchangeRate} class="font-mono" />
-						<Field.Description>
-							The API converts with this rate and stores both amounts; nothing is
-							converted here.
-						</Field.Description>
-					</Field.Root>
+						<p class="text-subtle text-xs">
+							The API converts with this rate and stores both amounts.
+						</p>
+					</div>
 				{/if}
 
-				<Field.Root>
-					<Field.Label for="form-account">{draft.type === 'transfer' ? 'From account' : 'Account'}</Field.Label>
-					<SelectAccount id="form-account" {accounts} bind:value={draft.accountId} />
-				</Field.Root>
+				<div class="grid grid-cols-2 gap-4">
+					<div class="grid gap-2">
+						<Label for="form-account" class={labelClass}>
+							{draft.type === 'transfer' ? 'From account' : 'Account'}
+						</Label>
+						<SelectAccount id="form-account" {accounts} bind:value={draft.accountId} />
+					</div>
+					{#if draft.type === 'transfer'}
+						<div class="grid gap-2">
+							<Label for="form-to-account" class={labelClass}>To account</Label>
+							<SelectAccount id="form-to-account" {accounts} bind:value={draft.toAccountId} />
+						</div>
+					{:else}
+						<div class="grid gap-2">
+							<Label for="form-category" class={labelClass}>Category</Label>
+							<SelectCategory id="form-category" {categories} bind:value={draft.categoryId} />
+						</div>
+					{/if}
+				</div>
 
-				{#if draft.type === 'transfer'}
-					<Field.Root>
-						<Field.Label for="form-to-account">To account</Field.Label>
-						<SelectAccount id="form-to-account" {accounts} bind:value={draft.toAccountId} />
-					</Field.Root>
-				{:else}
-					<Field.Root>
-						<Field.Label for="form-category">Category</Field.Label>
-						<SelectCategory id="form-category" {categories} bind:value={draft.categoryId} />
-					</Field.Root>
-				{/if}
-
-				<Field.Root>
-					<Field.Label for="form-date">Date</Field.Label>
+				<div class="grid gap-2">
+					<Label for="form-date" class={labelClass}>Date</Label>
 					<Input id="form-date" type="date" bind:value={draft.date} />
-				</Field.Root>
+				</div>
 
-				<Field.Root>
-					<Field.Label for="form-notes">Notes</Field.Label>
+				<div class="grid gap-2">
+					<Label for="form-notes" class={labelClass}>Notes</Label>
 					<Textarea id="form-notes" bind:value={draft.notes} rows={3} placeholder="Optional" />
-				</Field.Root>
-			</Field.Group>
+				</div>
+			</div>
 		</div>
 
-		<Sheet.Footer class="flex-row justify-end gap-2">
-			<Sheet.Close>
-				{#snippet child({ props })}
-					<Button variant="outline" {...props}>Cancel</Button>
-				{/snippet}
-			</Sheet.Close>
-			<Button loading={saving} onclick={() => onSave?.(draft)}>
-				{editing ? 'Save changes' : 'Add transaction'}
+		<!-- Over the body rather than below it, with no rule: the guide's
+		     footer, so the last field scrolls under it cleanly. -->
+		<div class="bg-background absolute inset-x-0 bottom-0 p-6">
+			<Button class="w-full" loading={saving} onclick={() => onSave?.(draft)}>
+				{editing ? 'Save changes' : 'Create transaction'}
 			</Button>
-		</Sheet.Footer>
+		</div>
 	</Sheet.Content>
 </Sheet.Root>
