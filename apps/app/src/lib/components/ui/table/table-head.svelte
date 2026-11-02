@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { cn, type WithElementRef } from '$lib/utils.js';
-	import type { HTMLAttributes } from 'svelte/elements';
+	import type { HTMLThAttributes } from 'svelte/elements';
 
 	// Ported from the old app's atoms/table.tsx.
 	let {
@@ -8,7 +8,7 @@
 		class: className,
 		children,
 		...restProps
-	}: WithElementRef<HTMLAttributes<HTMLElement>> = $props();
+	}: WithElementRef<HTMLThAttributes> = $props();
 </script>
 
 <th

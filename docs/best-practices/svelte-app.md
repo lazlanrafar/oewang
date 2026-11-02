@@ -43,6 +43,10 @@ src/routes/
 │  ├─ transactions/+page.svelte
 │  ├─ chat/[[id]]/+page.svelte
 │  └─ settings/+page.svelte
+├─ (dev)/
+│  ├─ +layout.server.ts         404 outside `dev`
+│  ├─ +layout.svelte            no shell
+│  └─ style/+page.svelte        the design system
 └─ api/
    └─ chat/stream/+server.ts    SSE passthrough
 ```
@@ -53,6 +57,24 @@ Rules:
 - Shared data the whole shell needs (user, workspace, wallets, categories) loads in the layout, once per navigation.
 - A page load fetches only what that page adds.
 - Independent fetches go in one `Promise.all`.
+
+## The design system page
+
+`/style` renders every primitive on a bare page: button, input, select,
+combobox, checkbox, textarea, label, badge, the colour and type scales, and a
+data table with day group rows, in-cell editing and an expanded row.
+
+Two rules make it worth keeping:
+
+- **Development only.** `(dev)/+layout.server.ts` calls `error(404)` outside
+  `dev`, so a production deployment does not admit the route exists. Verified
+  against a production build, not only by reading the code.
+- **It measures itself.** The table at the foot reads the rendered page with
+  `getComputedStyle` and prints each value beside the one measured on
+  `app.oewang.com` (D50), so a drift shows on the page. Two traps are handled
+  in that code: `getPropertyValue` needs kebab-case, and Chrome reports a
+  hairline border already snapped to a device pixel, so a 1px rule reads
+  0.5556px at a device pixel ratio of 1.8. Compare in device pixels.
 
 ## The BFF
 

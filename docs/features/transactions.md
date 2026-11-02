@@ -202,6 +202,22 @@ values were measured there on 2026-11-02, not estimated from a screenshot.
 | Header | 45px (`h-12`), translucent, bottom rule |
 | Nav item | `h-9`, `px-2`, `gap-2`, `text-sm`, square, active background `sidebar-accent` |
 | Group label | `text-xs`, `font-medium`, `foreground/70`, `px-2` |
+| Type scale in use | 13.125px (`text-sm`, dominant), 16.875px (`text-lg`), 11.25px (`text-xs`), 10px |
+| `h2` / `h4` / `p` | 16.875px 500 ls -0.42px / 11.25px 600 `#616161` / 11.25px `#616161` |
+| Label | 13.125px, `font-medium`, `leading-none` |
+| Input | `h-9`, `px-3`, 1px `rgb(219,218,215)`, radius 0, and **no outline when focused** |
+| Select trigger | `h-9`, `px-3`, 1px `rgb(228,228,231)`, radius 0 |
+| Menu surface | `rgb(247,246,243)`, 1px rule, radius 0, no shadow |
+| Menu item | 30px tall, `px-[7.5px]`, `py-[5.625px]`, radius 3.5px |
+| Checkbox | 15px square, 1px border, radius 0 |
+| In-cell editor | a `button` with `aria-haspopup="dialog"`, `h-9`, borderless |
+| Data row | 45px; the rule is `border-bottom` **on the cell**, not the row; no hover state |
+| Day group row | 40px, `rgb(251,251,250)`, with a chevron |
+| Radius scale | `--radius: .5rem`, so `sm` 3.5px, `md` 5.5px, `lg` 7.5px; primitives carry no radius class |
+
+Every row above is reproduced and re-measured by the development-only
+[design system page](../best-practices/svelte-app.md#the-design-system-page)
+at `/style`.
 
 The transaction table there carries more than this rewrite has built yet. US-017
 should match it:

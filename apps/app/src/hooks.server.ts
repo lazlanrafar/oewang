@@ -19,7 +19,15 @@ import {
 } from '$lib/server/session';
 
 /** Routes a signed-out visitor may see. Everything else needs a session. */
-const PUBLIC_PREFIXES = ['/login', '/register', '/forgot-password', '/reset-password'];
+const PUBLIC_PREFIXES = [
+	'/login',
+	'/register',
+	'/forgot-password',
+	'/reset-password',
+	// The design system renders primitives and reads no data. Its own load
+	// returns 404 outside development.
+	'/style'
+];
 
 function isPublic(pathname: string): boolean {
 	return PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix));

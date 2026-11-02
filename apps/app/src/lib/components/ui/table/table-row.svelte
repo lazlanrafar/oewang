@@ -2,7 +2,8 @@
 	import { cn, type WithElementRef } from '$lib/utils.js';
 	import type { HTMLAttributes } from 'svelte/elements';
 
-	// Ported from the old app's atoms/table.tsx.
+	// The horizontal rule is on the cell, not here: that is where the live
+	// app puts it, and it lets the last row drop its rule on its own.
 	let {
 		ref = $bindable(null),
 		class: className,
@@ -14,7 +15,7 @@
 <tr
 	bind:this={ref}
 	data-slot="table-row"
-	class={cn('border-b', className)}
+	class={cn('', className)}
 	{...restProps}
 >
 	{@render children?.()}

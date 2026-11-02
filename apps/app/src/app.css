@@ -4,12 +4,10 @@
  * Design tokens, ported from the old app's packages/ui/src/globals.css so the
  * rewrite looks like the product it replaces (UI-2).
  *
- * The old app's look is flat and square: its button, input, card, table and
- * dropdown carry no `rounded-*` class at all. Rather than strip those classes
- * out of every generated shadcn-svelte component, where the next
- * `shadcn-svelte add` would put them back, the radius scale is zero. Every
- * `rounded-sm|md|lg|xl` utility then resolves to 0 and the components come out
- * square on their own.
+ * The look is flat: button, input, card, table and menu carry no radius.
+ * They are square because their own class strings say so, not because the
+ * scale is crippled. The scale is live, because a few things do use it:
+ * a menu item at 3.5px, an avatar at 0.25rem.
  *
  * Self-hosted fonts, so the CSP stays `font-src 'self'` and no request leaves
  * for a font CDN.
@@ -30,13 +28,23 @@
 	--font-serif: 'Hedvig Letters Serif', Georgia, serif;
 	--font-mono: 'Geist Mono', ui-monospace, monospace;
 
-	/* Square, like the old app. See the note above. */
-	--radius: 0rem;
-	--radius-sm: 0rem;
-	--radius-md: 0rem;
-	--radius-lg: 0rem;
-	--radius-xl: 0rem;
-	--radius-2xl: 0rem;
+	/*
+	 * The radius scale, matching the live app exactly: `--radius` is 0.5rem
+	 * and the steps derive from it, so `rounded-sm` is 3.5px, `rounded-md`
+	 * 5.5px and `rounded-lg` 7.5px.
+	 *
+	 * An earlier version zeroed the whole scale to force square primitives.
+	 * That was wrong: the live app keeps the scale and simply does not apply a
+	 * radius to its button, input, card or table. Zeroing it also squared
+	 * things that should not be, such as menu items at 3.5px. The primitives
+	 * are square because their own class strings carry no radius.
+	 */
+	--radius: 0.5rem;
+	--radius-sm: calc(var(--radius) - 4px);
+	--radius-md: calc(var(--radius) - 2px);
+	--radius-lg: var(--radius);
+	--radius-xl: calc(var(--radius) + 4px);
+	--radius-2xl: calc(var(--radius) + 8px);
 
 	--color-background: hsl(var(--background));
 	--color-foreground: hsl(var(--foreground));
