@@ -364,3 +364,21 @@
 	outline: 2px solid hsl(var(--ring));
 	outline-offset: 2px;
 }
+
+/*
+ * A field marks its own focus by turning its border `primary` (D54), so a
+ * ring on top of it draws a second box around the first, and a third around
+ * the group when the field sits in one. The ring is for controls that have no
+ * such cue: buttons, links, tabs, menu items, checkboxes.
+ */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+	outline: none;
+}
+
+/*
+ * This covers the borderless fields too: a field inside an input group, and
+ * the command palette's search, which is one. In both the group is what holds
+ * the border, so the group is what turns `primary`.
+ */
