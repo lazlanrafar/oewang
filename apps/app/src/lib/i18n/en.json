@@ -14,7 +14,10 @@
 		"theme_light": "Light",
 		"theme_dark": "Dark",
 		"theme_system": "System",
-		"sign_out": "Sign out"
+		"sign_out": "Sign out",
+		"workspace_group": "Workspace",
+		"system_group": "System",
+		"switch_workspace": "Switch workspace"
 	},
 	"common": {
 		"loading": "Loading",

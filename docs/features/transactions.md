@@ -184,6 +184,39 @@ The review step reports skipped-for-missing-rate separately from skipped-for-inv
 
 A modal picks a date range and confirms the active filters, then downloads a CSV from `GET /v1/transactions/export`. Exported rows are marked `is_exported = true` (TXN-10). Amounts in the CSV are unformatted decimals, not display strings.
 
+## Measured reference
+
+The live app at `app.oewang.com` is newer than the snapshot in
+`references/oewang-old`, so it is the reference for anything visual. These
+values were measured there on 2026-11-02, not estimated from a screenshot.
+
+| | Value |
+|---|---|
+| Root font size | 15px |
+| Body font | Hedvig Letters Sans |
+| Border radius, every primitive | 0 |
+| Button and input height | 33.75px (`h-9`) |
+| Table header row | 45px (`h-12`), text `#666666`, `font-medium`, vertical rule between columns |
+| Table cell | `px-4`, `text-sm` |
+| Sidebar | 240px, the rule on the outer wrapper, inner panel `bg-sidebar/70` with a blur |
+| Header | 45px (`h-12`), translucent, bottom rule |
+| Nav item | `h-9`, `px-2`, `gap-2`, `text-sm`, square, active background `sidebar-accent` |
+| Group label | `text-xs`, `font-medium`, `foreground/70`, `px-2` |
+
+The transaction table there carries more than this rewrite has built yet. US-017
+should match it:
+
+- **Rows are grouped by day.** Each group has a header row with the date and
+  that day's income and expense totals on the right.
+- A selection checkbox column, then date, description, amount, account,
+  category, and a row-actions column.
+- **The whole amount is coloured**, red for an expense and green for income,
+  with the sign as well so colour is never the only carrier (UI-7).
+- Category shows a coloured square plus its name; account shows an icon.
+- Account and category are editable in place from the row.
+- Above the table: search with a filter control, a grouping selector, a date
+  range picker, a column-visibility control, an export menu and an add button.
+
 ## UI port map
 
 Each new component has a reference file in the old app. "Port" means reproduce the layout, the states and the interactions, in idiomatic Svelte 5. It does not mean transliterate React.

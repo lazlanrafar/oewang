@@ -1,8 +1,13 @@
 /**
- * The sidebar, ported from the old app's navigation/sidebar/sidebar-items.ts.
+ * The sidebar.
  *
- * Titles are dictionary keys, not strings (UI-1). Routes that do not exist
- * yet are marked so the shell can render them disabled rather than linking
+ * Grouping mirrors the live app: an unlabelled first group, then Finance,
+ * then System. The item set is ours, not the live app's: Calendar, Accounts,
+ * Budget, Debts, Contacts, Vault and Apps belong to features this rewrite
+ * deliberately drops (docs/prd.md#non-goals-for-v1).
+ *
+ * Titles are dictionary keys, not strings (UI-1). A route that does not
+ * exist yet is marked so the shell renders it disabled rather than linking
  * into a 404.
  */
 
@@ -36,6 +41,7 @@ export const navGroups: NavGroup[] = [
 		]
 	},
 	{
+		labelKey: 'nav.system_group',
 		items: [{ titleKey: 'nav.settings', href: '/settings', icon: Settings, pending: true }]
 	}
 ];

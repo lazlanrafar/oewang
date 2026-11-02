@@ -27,6 +27,7 @@
 <Button
 	variant="ghost"
 	size="icon"
+	class="size-8"
 	onclick={next}
 	aria-label={`${t('nav.toggle_theme')}: ${label}`}
 	title={label}

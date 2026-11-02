@@ -77,11 +77,12 @@
 							<Table.Cell>{row.name}</Table.Cell>
 							<Table.Cell>{row.category}</Table.Cell>
 							<Table.Cell>{row.wallet}</Table.Cell>
-							<!-- Sign and colour both, never colour alone (UI-7). -->
+							<!-- The live app colours the whole amount: red out, green
+							     in. Sign and colour both, never colour alone (UI-7). -->
 							<Table.Cell
 								class="text-right font-mono whitespace-nowrap {row.amount.startsWith('+')
 									? 'text-green'
-									: ''}"
+									: 'text-red'}"
 							>
 								{row.amount}
 							</Table.Cell>
