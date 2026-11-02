@@ -20,6 +20,7 @@
 		rowCount,
 		filtered = false,
 		exporting = false,
+		href,
 		onExport
 	}: {
 		open?: boolean;
@@ -28,6 +29,12 @@
 		rowCount: number;
 		filtered?: boolean;
 		exporting?: boolean;
+		/**
+		 * Where the download comes from. A link rather than a fetch: the
+		 * browser saves the file, and a fetched CSV would have to be rebuilt
+		 * into one.
+		 */
+		href?: string;
 		onExport?: (options: { format: 'csv' | 'xlsx'; applyFilters: boolean }) => void;
 	} = $props();
 
@@ -52,14 +59,15 @@
 
 			<div class="space-y-2">
 				<Label>Format</Label>
+				<!--
+					CSV only. The old modal offered Excel too; this product does not
+					write one, and a radio that cannot be chosen is worse than no
+					radio (TXN-10).
+				-->
 				<RadioGroup.Root bind:value={format}>
 					<div class="flex items-center gap-2">
 						<RadioGroup.Item value="csv" id="export-csv" />
 						<Label for="export-csv">CSV</Label>
-					</div>
-					<div class="flex items-center gap-2">
-						<RadioGroup.Item value="xlsx" id="export-xlsx" />
-						<Label for="export-xlsx">Excel</Label>
 					</div>
 				</RadioGroup.Root>
 			</div>
@@ -83,9 +91,13 @@
 					<Button variant="outline" {...props}>Cancel</Button>
 				{/snippet}
 			</Dialog.Close>
-			<Button loading={exporting} onclick={() => onExport?.({ format, applyFilters })}>
-				Export
-			</Button>
+			{#if href}
+				<Button {href} download="transactions.csv" onclick={() => (open = false)}>Export</Button>
+			{:else}
+				<Button loading={exporting} onclick={() => onExport?.({ format, applyFilters })}>
+					Export
+				</Button>
+			{/if}
 		</Dialog.Footer>
 	</Dialog.Content>
 </Dialog.Root>

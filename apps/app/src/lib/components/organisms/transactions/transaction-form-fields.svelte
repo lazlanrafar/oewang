@@ -55,6 +55,7 @@
 	 * `parseFloat`, and nothing here converts: the API computes
 	 * `base_amount` and refuses to take one (D12, D27).
 	 */
+	import { formatMoney, multiplyDecimals } from '$lib/money.js';
 	import { Checkbox } from '../../atoms/checkbox/index.js';
 	import { Input } from '../../atoms/input/index.js';
 	import { Label } from '../../atoms/label/index.js';
@@ -102,6 +103,25 @@
 	/** The wallet itself is foreign to the workspace, so a base rate is needed. */
 	const foreignWallet = $derived(walletCurrency !== baseCurrency);
 
+	/**
+	 * What the entered figure becomes in the wallet's currency, shown live
+	 * while the rate is typed.
+	 *
+	 * This is a preview, not the number that is stored: the API computes the
+	 * figure it writes and refuses one sent by the client. Showing it here
+	 * is what lets a user notice a rate that is out by a factor of ten before
+	 * they save, rather than after.
+	 */
+	const convertedAmount = $derived.by(() => {
+		if (!foreignEntry || !draft.amount || !draft.exchangeRate) return null;
+		try {
+			return multiplyDecimals(draft.amount, draft.exchangeRate);
+		} catch {
+			// Half-typed input is not an error worth showing.
+			return null;
+		}
+	});
+
 	const labelClass = 'text-subtle text-xs font-normal';
 	const selectClass = 'border-input bg-background h-9 w-full border px-3 text-sm';
 </script>
@@ -129,6 +149,14 @@
 	name="original_amount"
 	value={foreignEntry && draft.amount ? draft.amount : ''}
 />
+<!--
+	`amount` is always in the wallet's currency, because that is what moves
+	the balance. When the entry currency differed, what the user typed goes
+	to `original_amount` above and the converted figure is submitted here.
+-->
+{#if foreignEntry}
+	<input type="hidden" name="amount" value={convertedAmount ?? ''} />
+{/if}
 <input type="hidden" name="original_currency_code" value={foreignEntry ? draft.currency : ''} />
 <input type="hidden" name="exchange_rate" value={foreignEntry ? draft.exchangeRate : ''} />
 <input type="hidden" name="base_rate" value={foreignWallet ? draft.baseRate : ''} />
@@ -165,12 +193,20 @@
 		<div class="grid gap-2">
 			<Label for="form-amount" class={labelClass}>Amount</Label>
 			{#if plain}
-				<Input id="form-amount" name="amount" required bind:value={draft.amount} inputmode="decimal" />
+				<Input
+					id="form-amount"
+					name={foreignEntry ? 'typed_amount' : 'amount'}
+					required
+					bind:value={draft.amount}
+					inputmode="decimal"
+				/>
 			{:else}
 				<!-- The hidden input is what submits: the currency input groups
 				     its display and the grouped text is not a number. -->
 				<CurrencyInput id="form-amount" bind:value={draft.amount} symbol={draft.currency} />
-				<input type="hidden" name="amount" value={draft.amount} />
+				{#if !foreignEntry}
+					<input type="hidden" name="amount" value={draft.amount} />
+				{/if}
 			{/if}
 			{#if fieldErrors?.amount}
 				<p class="text-destructive text-xs">{fieldErrors.amount}</p>
@@ -200,9 +236,15 @@
 				Rate, 1 {draft.currency} to {walletCurrency}
 			</Label>
 			<Input id="form-rate" bind:value={draft.exchangeRate} class="font-mono" inputmode="decimal" />
+			{#if convertedAmount}
+				<p class="text-body font-mono">
+					{formatMoney(draft.amount, draft.currency)} =
+					{formatMoney(convertedAmount, walletCurrency)}
+				</p>
+			{/if}
 			<p class="text-subtle text-xs">
-				The amount above is what leaves the wallet, in {walletCurrency}. The API stores both
-				figures and the rate.
+				That figure is what leaves the wallet. It is a preview: the API computes and stores
+				its own, from the amount and the rate.
 			</p>
 		</div>
 	{/if}

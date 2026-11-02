@@ -33,9 +33,16 @@ export const load: PageServerLoad = async ({ locals, url, parent }) => {
 			? await suggestRate(defaultWallet.currency_code, workspaceCurrency, token)
 			: null;
 
+	// The row the detail sheet is showing, with its audit history. Loaded
+	// here rather than fetched from the browser, because the browser never
+	// calls the API (D5), and because `?detail=` is a URL the user can share.
+	const detailId = url.searchParams.get('detail');
+	const detail = detailId ? await loadDetail(detailId, token) : null;
+
 	return {
 		transactions: transactions.data ?? [],
 		suggestedRate: suggestion,
+		detail,
 		meta: transactions.meta,
 		wallets: wallets.data ?? [],
 		categories: categories.data ?? [],
@@ -62,6 +69,25 @@ async function suggestRate(
 		const today = new Date().toISOString().slice(0, 10);
 		const result = await ledger.fxRate(from, to, today, token);
 		return result.data?.rate ?? null;
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * One transaction and its history, or null when the id is stale.
+ *
+ * A link to a row that has since been deleted opens the page rather than
+ * an error: the row is gone, which is the answer.
+ */
+async function loadDetail(id: string, token?: string) {
+	try {
+		const [transaction, history] = await Promise.all([
+			ledger.readTransaction(id, token),
+			ledger.transactionHistory(id, token)
+		]);
+		if (!transaction.data) return null;
+		return { transaction: transaction.data, history: history.data ?? [] };
 	} catch {
 		return null;
 	}

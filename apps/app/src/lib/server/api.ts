@@ -169,6 +169,12 @@ export type RequestOptions = {
 	body?: unknown;
 	/** The caller's access token, read from the cookie by the route. */
 	token?: string;
+	/**
+	 * What the body is, once decrypted. `json` is the envelope; `text` is
+	 * anything that is not, which so far means the CSV export. The OWE1
+	 * layer seals both the same way, so only the parse differs.
+	 */
+	expect?: 'json' | 'text';
 };
 
 /**
@@ -187,6 +193,18 @@ export async function api<T>(options: RequestOptions): Promise<Envelope<T>> {
 		}
 		throw error;
 	}
+}
+
+/**
+ * The same call, for a response that is a file rather than an envelope.
+ *
+ * Returns the decrypted text. A CSV wrapped in JSON would have to be
+ * unwrapped before it could be saved, so the export answers with the file
+ * itself (TXN-10).
+ */
+export async function apiText(options: RequestOptions): Promise<string> {
+	const result = await api<string>({ ...options, expect: 'text' });
+	return typeof result.data === 'string' ? result.data : '';
 }
 
 async function send<T>(options: RequestOptions, active: Session): Promise<Envelope<T>> {
@@ -239,18 +257,29 @@ async function send<T>(options: RequestOptions, active: Session): Promise<Envelo
 	const parsed = JSON.parse(raw);
 
 	// Transport errors answer in plaintext: the caller may hold no key.
-	const envelope: Envelope<T> =
-		'n' in parsed && 'c' in parsed
-			? JSON.parse(
-					owe1
-						.open(
-							active.keys.serverToClient,
-							owe1.aadResponse(active.id, requestId, response.status),
-							parsed
-						)
-						.toString()
+	const sealed = 'n' in parsed && 'c' in parsed;
+	const plaintext = sealed
+		? owe1
+				.open(
+					active.keys.serverToClient,
+					owe1.aadResponse(active.id, requestId, response.status),
+					parsed
 				)
-			: parsed;
+				.toString()
+		: raw;
+
+	if (options.expect === 'text') {
+		// A failure still answers with the envelope, whatever the success
+		// shape is, so an error has to be recognised before the body is
+		// handed back as a file.
+		if (!response.ok) {
+			const envelope = JSON.parse(plaintext) as Envelope<unknown>;
+			if (envelope.error) throw new ApiError(response.status, envelope.error);
+		}
+		return { data: plaintext as T, error: null, meta: { request_id: requestId } };
+	}
+
+	const envelope: Envelope<T> = sealed ? JSON.parse(plaintext) : parsed;
 
 	if (envelope.error) {
 		throw new ApiError(response.status, envelope.error);

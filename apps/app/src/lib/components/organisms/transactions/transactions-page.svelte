@@ -89,16 +89,21 @@
 	const detail = $derived(
 		detailRow
 			? {
+					id: detailRow.id,
 					name: detailRow.name,
 					amount: formatMoney(detailRow.amount, detailRow.currency, { signed: true }),
+					income: !isNegative(detailRow.amount),
 					date: detailRow.date,
 					account: nameOf(wallets, detailRow.walletId),
 					category: nameOf(categories, detailRow.categoryId),
+					type: isNegative(detailRow.amount) ? 'expense' : 'income',
+					ready: false,
 					notes: detailRow.note,
-					attachments: detailRow.note ? ['receipt-02-11-2026.jpg'] : [],
+					baseAmount: formatMoney(detailRow.amount, detailRow.currency),
+					attachments: detailRow.note ? [{ id: 'f1', name: 'receipt-02-11-2026.jpg' }] : [],
 					history: [
-						{ at: '02/11/2026 09:14', who: 'you', what: 'created this transaction' },
-						{ at: '02/11/2026 09:15', who: 'the assistant', what: 'set the category to Food' }
+						{ id: 'h1', at: '02/11/2026 09:14', who: 'you', source: 'web', what: 'created this transaction' },
+						{ id: 'h2', at: '02/11/2026 09:15', who: 'the assistant', source: 'chat', what: 'set the category to Food' }
 					]
 				}
 			: undefined

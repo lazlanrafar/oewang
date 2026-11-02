@@ -9,14 +9,18 @@
 	 */
 	import ChevronLeft from '@lucide/svelte/icons/chevron-left';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
+	import FileDown from '@lucide/svelte/icons/file-down';
+	import FileUp from '@lucide/svelte/icons/file-up';
 	import Plus from '@lucide/svelte/icons/plus';
 
 	import { toast } from 'svelte-sonner';
 
-	import { enhance, type SubmitFunction } from '$app/forms';
+	import { applyAction, deserialize, enhance, type SubmitFunction } from '$app/forms';
+	import { invalidateAll } from '$app/navigation';
 	import { page } from '$app/state';
 
 	import { Button } from '$lib/components/atoms/button';
+	import * as Dialog from '$lib/components/atoms/dialog';
 	import * as Select from '$lib/components/atoms/select';
 	import { DateRangePicker } from '$lib/components/molecules/date-range-picker';
 	import { DataTableFilter } from '$lib/components/organisms/data-table-filter';
@@ -25,6 +29,9 @@
 	import type { NamedOption, TransactionRow } from '$lib/components/organisms/data-table';
 	import {
 		emptyDraft,
+		TransactionBulkBar,
+		TransactionDetailSheet,
+		TransactionExportModal,
 		TransactionFormFields,
 		TransactionFormSheet,
 		type TransactionDraft
@@ -33,6 +40,7 @@
 	import { messageForCode } from '$lib/errors';
 	import { t } from '$lib/i18n';
 	import { absDecimal } from '$lib/money';
+	import { toDetail } from '$lib/transaction-detail';
 	import { isoDay, toRow } from '$lib/transactions';
 	import { readParam, readText, writeParams } from '$lib/url-state';
 
@@ -145,9 +153,11 @@
 					id: editing.id,
 					type: editing.type,
 					name: editing.name ?? '',
-					amount: absDecimal(editing.amount),
-					// A row entered in another currency reopens in that currency,
-					// with the rate it was written at.
+					// The amount field holds what the user typed, which is the
+					// original figure when the entry currency differed. Reopening
+					// it with the wallet-currency figure beside the entry currency
+					// would convert an already converted number.
+					amount: absDecimal(editing.original_amount ?? editing.amount),
 					currency: editing.original_currency_code ?? editing.wallet_currency_code,
 					exchangeRate: editing.exchange_rate ?? '',
 					baseRate: editing.base_rate,
@@ -189,6 +199,107 @@
 			await update();
 		};
 	};
+
+	/*
+	 * The detail sheet, also addressed by the URL so a row can be linked to.
+	 * Its contents are loaded on the server, because the browser never calls
+	 * the API (D5).
+	 */
+	const detailParam = $derived(readText(page.url, 'detail'));
+	let detailOpen = $state(false);
+
+	$effect(() => {
+		detailOpen = detailParam !== '' && data.detail !== null;
+	});
+
+	const detail = $derived(
+		data.detail ? toDetail(data.detail.transaction, data.detail.history, baseCurrency) : undefined
+	);
+
+	const openDetail = (id: string) => writeParams({ detail: id }, { push: true });
+	const closeDetail = () => writeParams({ detail: null }, { push: true });
+
+	/**
+	 * Two sheets cannot change places in the same tick: the overlay the first
+	 * is still unmounting swallows the second. The detail closes itself
+	 * through the primitive, and the form opens once the overlay has gone.
+	 */
+	async function editFromDetail() {
+		const id = detailParam;
+		await writeParams({ detail: null });
+		setTimeout(() => openSheet(id), 260);
+	}
+
+	/**
+	 * An in-cell category change.
+	 *
+	 * Posts to this page's own action the way a form would, because the cell
+	 * is a picker rather than a form and there is nothing to submit. It is
+	 * still the server that talks to the API (D5).
+	 */
+	async function setCategory(id: string, categoryId: string) {
+		const body = new FormData();
+		body.set('id', id);
+		body.set('category_id', categoryId);
+
+		const response = await fetch('?/setCategory', { method: 'POST', body });
+		const result = deserialize(await response.text());
+
+		if (result.type === 'success') {
+			await invalidateAll();
+			toast.success(t('txn.updated'));
+		} else {
+			await applyAction(result);
+		}
+	}
+
+	// ------------------------------------------------------------- bulk
+
+	let selection = $state<string[]>([]);
+	let deleting = $state(false);
+	let bulkCategoryOpen = $state(false);
+
+	/** A bulk form posts the ids as one field, so it works without script too. */
+	const selectedIds = $derived(selection.join(','));
+
+	const afterBulk: SubmitFunction = () => {
+		deleting = true;
+		return async ({ result, update }) => {
+			deleting = false;
+			bulkCategoryOpen = false;
+			if (result.type === 'success') {
+				selection = [];
+				toast.success(t('txn.bulk_applied'));
+			}
+			await update();
+		};
+	};
+
+	const afterDelete: SubmitFunction = () => {
+		return async ({ result, update }) => {
+			if (result.type === 'success') {
+				await closeDetail();
+				toast.success(t('txn.deleted'));
+			}
+			await update();
+		};
+	};
+
+	// ----------------------------------------------------------- export
+
+	let exportOpen = $state(false);
+
+	/* Hidden forms the floating bars and the sheet submit. */
+	let deleteForm = $state<HTMLFormElement | null>(null);
+	let bulkDeleteForm = $state<HTMLFormElement | null>(null);
+	let readyForm = $state<HTMLFormElement | null>(null);
+
+	/**
+	 * The export is a download, so it is a link to a server route rather than
+	 * a fetch: the browser saves the file, and the route carries the same
+	 * filters the page is showing.
+	 */
+	const exportHref = $derived(`/transactions/export?${page.url.searchParams.toString()}`);
 
 	const meta = $derived(data.meta);
 	const currentPage = $derived(meta.page ?? 1);
@@ -257,7 +368,16 @@
 					})}
 			/>
 
+			<Button variant="outline" onclick={() => (exportOpen = true)}>
+				<FileDown />
+				{t('txn.export')}
+			</Button>
+
 			{#if canEdit}
+				<Button href="/transactions/import" variant="outline">
+					<FileUp />
+					{t('txn.import')}
+				</Button>
 				<Button onclick={() => openSheet('new')}>
 					<Plus />
 					{t('common.add')}
@@ -291,8 +411,13 @@
 			? t('txn.empty_filtered_description')
 			: t('txn.empty_description')}
 		emptyActionLabel={t('txn.add_transaction')}
+		bind:selection
 		onAdd={() => openSheet('new')}
+		onOpenRow={(row: TransactionRow) => openDetail(row.id)}
 		onEditRow={(row: TransactionRow) => openSheet(row.id)}
+		onDeleteRow={(row: TransactionRow) => openDetail(row.id)}
+		onCategoryChange={(row: TransactionRow, categoryId: string) =>
+			setCategory(row.id, categoryId)}
 	/>
 
 	<!-- Server pagination: the footer moves `?page=`, and the load does the
@@ -365,3 +490,111 @@
 		</form>
 	</section>
 </noscript>
+
+<TransactionDetailSheet
+	bind:open={detailOpen}
+	onOpenChange={(open) => {
+		if (!open && detailParam !== '') closeDetail();
+	}}
+	transaction={detail}
+	{canEdit}
+	onEdit={editFromDetail}
+	onDelete={() => deleteForm?.requestSubmit()}
+/>
+
+<!--
+	The delete lives in a form rather than in a fetch, so it is one action
+	with one audit trail whichever way it is triggered. It confirms first
+	(UI-4).
+-->
+<form
+	bind:this={deleteForm}
+	method="POST"
+	action="?/delete"
+	class="hidden"
+	use:enhance={afterDelete}
+	onsubmit={(event) => {
+		if (!confirm(t('txn.delete_confirm'))) event.preventDefault();
+	}}
+>
+	<input type="hidden" name="id" value={detailParam} />
+</form>
+
+<TransactionExportModal
+	bind:open={exportOpen}
+	rowCount={total}
+	filtered={data.filtered}
+	href={exportHref}
+/>
+
+{#if canEdit}
+	<TransactionBulkBar
+		count={selection.length}
+		{deleting}
+		onClear={() => (selection = [])}
+		onEditCategory={() => (bulkCategoryOpen = true)}
+		onDelete={() => bulkDeleteForm?.requestSubmit()}
+		onReady={() => readyForm?.requestSubmit()}
+	/>
+
+	<form
+		bind:this={bulkDeleteForm}
+		method="POST"
+		action="?/bulkDelete"
+		class="hidden"
+		use:enhance={afterBulk}
+		onsubmit={(event) => {
+			if (!confirm(t('txn.bulk_delete_confirm', { count: selection.length })))
+				event.preventDefault();
+		}}
+	>
+		<input type="hidden" name="ids" value={selectedIds} />
+	</form>
+
+	<form
+		bind:this={readyForm}
+		method="POST"
+		action="?/bulkUpdate"
+		class="hidden"
+		use:enhance={afterBulk}
+	>
+		<input type="hidden" name="ids" value={selectedIds} />
+		<input type="hidden" name="is_ready" value="true" />
+	</form>
+
+	<Dialog.Root bind:open={bulkCategoryOpen}>
+		<Dialog.Content class="sm:max-w-sm">
+			<form method="POST" action="?/bulkUpdate" use:enhance={afterBulk}>
+				<Dialog.Header>
+					<Dialog.Title>{t('txn.bulk_category')}</Dialog.Title>
+					<Dialog.Description>
+						{t('txn.bulk_category_hint', { count: selection.length })}
+					</Dialog.Description>
+				</Dialog.Header>
+
+				<input type="hidden" name="ids" value={selectedIds} />
+
+				<div class="py-4">
+					<select
+						name="category_id"
+						class="border-input bg-background h-9 w-full border px-3 text-sm"
+					>
+						<option value="">{t('common.none')}</option>
+						{#each data.categories as category (category.id)}
+							<option value={category.id}>{category.name}</option>
+						{/each}
+					</select>
+				</div>
+
+				<Dialog.Footer>
+					<Dialog.Close>
+						{#snippet child({ props })}
+							<Button {...props} type="button" variant="outline">{t('common.cancel')}</Button>
+						{/snippet}
+					</Dialog.Close>
+					<Button type="submit">{t('common.save')}</Button>
+				</Dialog.Footer>
+			</form>
+		</Dialog.Content>
+	</Dialog.Root>
+{/if}

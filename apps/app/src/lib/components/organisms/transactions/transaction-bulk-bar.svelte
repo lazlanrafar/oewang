@@ -19,6 +19,7 @@
 		onClear,
 		onDelete,
 		onEditCategory,
+		onReady,
 		onExport,
 		deleting = false,
 		class: className
@@ -27,6 +28,8 @@
 		onClear: () => void;
 		onDelete?: () => void;
 		onEditCategory?: () => void;
+		/** Flip the ready flag across the selection (TXN-14). */
+		onReady?: () => void;
 		onExport?: () => void;
 		deleting?: boolean;
 		class?: string;
@@ -59,9 +62,14 @@
 				<Button size="sm" variant="ghost" class="text-small h-8 px-3" onclick={onEditCategory}>
 					Edit category
 				</Button>
-				<Button size="sm" variant="ghost" class="text-small h-8 px-3" onclick={onExport}>
-					Export
+				<Button size="sm" variant="ghost" class="text-small h-8 px-3" onclick={onReady}>
+					Mark ready
 				</Button>
+				{#if onExport}
+					<Button size="sm" variant="ghost" class="text-small h-8 px-3" onclick={onExport}>
+						Export
+					</Button>
+				{/if}
 				<Tooltip.Provider>
 					<Tooltip.Root>
 						<Tooltip.Trigger>

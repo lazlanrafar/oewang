@@ -257,31 +257,31 @@ Requirements: WAL-5, WAL-6, TXN-18, TXN-19, TXN-20, TXN-21, TXN-22
 ### US-019: Transaction detail sheet
 Requirements: TXN-12, TXN-13, UI-4, OPS-8
 
-- [ ] Full detail, line items and attachments
-- [ ] Attachment bytes are fetched as encrypted chunks and shown from a Blob URL revoked after load; no object-storage URL is used (D23)
-- [ ] Edit and delete visible to `admin+`, hidden for `member`
-- [ ] Delete asks for confirmation
-- [ ] A history section lists audit entries newest first: actor, surface, and what changed (OPS-8)
-- [ ] `GET /v1/transactions/{id}/history` is workspace-scoped and readable by any member
-- [ ] Verify in browser
+- [ ] Full detail. Line items and attachments have their place in the sheet and read "none": both tables are empty until US-024 and US-025 fill them
+- [ ] Attachment bytes as encrypted chunks. Blocked on the vault routes in US-023; no object-storage URL exists in the codebase either way
+- [x] Edit and delete visible to `admin+`, hidden for `member`
+- [x] Delete asks for confirmation
+- [x] A history section lists audit entries newest first: actor, surface, and what changed (OPS-8)
+- [x] `GET /v1/transactions/{id}/history` is workspace-scoped and readable by any member
+- [x] Verify in browser
 
 ### US-020: Bulk actions
 Requirements: TXN-14, SEC-18
 
-- [ ] Selection shows the bulk bar, ported from `transaction-bulk-edit-bar.tsx`
-- [ ] Bulk category change, ready toggle and delete
-- [ ] The API applies a bulk change in one database transaction, capped at 500 rows
-- [ ] Bulk delete confirms, and reverses every affected balance
-- [ ] Verify in browser
+- [x] Selection shows the bulk bar, ported from `transaction-bulk-edit-bar.tsx`
+- [x] Bulk category change, ready toggle and delete
+- [x] The API applies a bulk change in one database transaction, capped at 500 rows
+- [x] Bulk delete confirms, and reverses every affected balance
+- [x] Verify in browser
 
 ### US-021: CSV export
 Requirements: TXN-10
 
-- [ ] `GET /v1/transactions/export` streams CSV honouring the active filters
-- [ ] Columns match the old export; amounts are unformatted decimals
-- [ ] Exported rows marked `is_exported`
-- [ ] The export modal picks a date range and triggers the download
-- [ ] Verify in browser
+- [x] `GET /v1/transactions/export` streams CSV honouring the active filters
+- [x] Columns match the old export; amounts are unformatted decimals
+- [x] Exported rows marked `is_exported`
+- [x] The export modal picks a date range and triggers the download
+- [x] Verify in browser
 
 ### US-022: CSV import wizard with AI column mapping
 Requirements: TXN-11, TXN-16, TXN-23, AI-9, SEC-18

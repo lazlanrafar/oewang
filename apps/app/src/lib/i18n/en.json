@@ -179,6 +179,13 @@
 		"created": "Transaction created.",
 		"updated": "Transaction saved.",
 		"deleted": "Transaction deleted.",
-		"delete_confirm": "Delete this transaction? The balance it moved is put back."
+		"delete_confirm": "Delete this transaction? The balance it moved is put back.",
+		"export": "Export",
+		"import": "Import",
+		"bulk_applied": "Applied.",
+		"bulk_category": "Change category",
+		"bulk_category_hint": "Applies to {count} selected transaction(s).",
+		"bulk_delete_confirm": "Delete {count} transaction(s)? Every balance they moved is put back.",
+		"mark_ready": "Mark ready"
 	}
 }

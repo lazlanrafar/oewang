@@ -171,6 +171,10 @@ export function listTransactions(
 	return api<Transaction[]>({ path: '/v1/transactions', query, token });
 }
 
+export function readTransaction(id: string, token?: string): Promise<Envelope<Transaction>> {
+	return api<Transaction>({ path: `/v1/transactions/${id}`, token });
+}
+
 export function transactionSummary(
 	query: URLSearchParams,
 	token?: string
