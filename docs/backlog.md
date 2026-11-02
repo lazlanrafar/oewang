@@ -41,13 +41,13 @@ Requirements: all data requirements, OPS-2
 ### US-003: Axum skeleton, errors, config, logging
 Requirements: PLT-2, OPS-3, OPS-4, SEC-19
 
-- [ ] `/health` and `/health/ready` return correctly
-- [ ] Config is read from the environment and fails fast on a missing required variable
-- [ ] `AppError` maps every variant to one code and one status ([conventions](api/conventions.md#error-catalog))
-- [ ] Middleware: request ID, trace, timeout (30 s), body limit (1 MB), catch-panic, compression
-- [ ] Structured JSON logging; a secret newtype prints `[redacted]`
-- [ ] Database pool configured with the limits in [hardening](security/hardening.md#limits)
-- [ ] `cargo clippy --all-targets -- -D warnings` passes
+- [x] `/health` and `/health/ready` return correctly
+- [x] Config is read from the environment and fails fast on a missing required variable
+- [x] `AppError` maps every variant to one code and one status ([conventions](api/conventions.md#error-catalog))
+- [x] Middleware: request ID, trace, timeout (30 s), body limit (1 MB), catch-panic, compression
+- [x] Structured JSON logging; a secret newtype prints `[redacted]`
+- [x] Database pool configured with the limits in [hardening](security/hardening.md#limits)
+- [x] `cargo clippy --all-targets -- -D warnings` passes
 
 ### US-004: OWE1 protocol and test vectors
 Requirements: SEC-2, SEC-3, SEC-4

@@ -3,6 +3,9 @@ FROM rust:1-bookworm
 
 WORKDIR /app
 
+# The slim rust image ships neither clippy nor rustfmt, and both gate CI.
+RUN rustup component add clippy rustfmt
+
 # Rebuild on change, and run migrations. Both are build-time installs so the
 # host needs no Rust toolchain at all.
 RUN cargo install cargo-watch --locked \

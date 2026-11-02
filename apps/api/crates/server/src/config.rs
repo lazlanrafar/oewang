@@ -1,0 +1,184 @@
+//! Configuration, read from the environment and validated at startup.
+//!
+//! A missing or malformed required variable stops the process here rather than
+//! failing at first use, which is the difference between a container that
+//! never starts and a 500 three hours later.
+//!
+//! Every variable is documented in .env.example and
+//! docs/architecture.md#configuration.
+
+use std::time::Duration;
+
+use oewang_domain::Secret;
+
+// Several fields are read only once their feature lands: the JWT settings in
+// US-008, the AI service client in US-026. They are parsed and validated now
+// so a deployment fails at startup rather than at first use.
+#[allow(dead_code)]
+#[derive(Debug)]
+pub struct Config {
+    pub app_env: AppEnv,
+    pub port: u16,
+
+    pub database_url: Secret,
+    pub db_max_connections: u32,
+    pub db_acquire_timeout: Duration,
+    pub db_statement_timeout: Duration,
+
+    pub jwt_secret: Secret,
+    pub access_token_ttl: Duration,
+    pub refresh_token_ttl: Duration,
+
+    pub app_url: String,
+    pub ai_service_url: String,
+    pub ai_service_api_key: Secret,
+
+    pub request_timeout: Duration,
+    pub body_limit_bytes: usize,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AppEnv {
+    Development,
+    Production,
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum ConfigError {
+    #[error("{0} is required but not set")]
+    Missing(&'static str),
+    #[error("{name} is invalid: {reason}")]
+    Invalid { name: &'static str, reason: String },
+}
+
+impl Config {
+    pub fn from_env() -> Result<Self, ConfigError> {
+        let app_env = match optional("APP_ENV").as_deref() {
+            Some("production") => AppEnv::Production,
+            _ => AppEnv::Development,
+        };
+
+        let jwt_secret = required("JWT_SECRET")?;
+        // HS256 with a short key is a weak signature, and a default left in
+        // place is worse. Refuse rather than warn.
+        if jwt_secret.len() < 32 {
+            return Err(ConfigError::Invalid {
+                name: "JWT_SECRET",
+                reason: format!("must be at least 32 characters, got {}", jwt_secret.len()),
+            });
+        }
+
+        let ai_service_api_key = required("AI_SERVICE_API_KEY")?;
+        if app_env == AppEnv::Production && ai_service_api_key.len() < 32 {
+            return Err(ConfigError::Invalid {
+                name: "AI_SERVICE_API_KEY",
+                reason: "must be at least 32 characters in production".into(),
+            });
+        }
+
+        Ok(Self {
+            app_env,
+            port: parse_or("API_PORT", 3002)?,
+
+            database_url: Secret::new(required("DATABASE_URL")?),
+            db_max_connections: parse_or("DB_MAX_CONNECTIONS", 20)?,
+            db_acquire_timeout: Duration::from_secs(parse_or("DB_ACQUIRE_TIMEOUT_SECS", 5)?),
+            db_statement_timeout: Duration::from_secs(parse_or("DB_STATEMENT_TIMEOUT_SECS", 10)?),
+
+            jwt_secret: Secret::new(jwt_secret),
+            access_token_ttl: parse_duration("ACCESS_TOKEN_TTL", "15m")?,
+            refresh_token_ttl: parse_duration("REFRESH_TOKEN_TTL", "30d")?,
+
+            app_url: optional("APP_URL").unwrap_or_else(|| "http://localhost:3000".into()),
+            ai_service_url: optional("AI_SERVICE_URL").unwrap_or_else(|| "http://ai:3004".into()),
+            ai_service_api_key: Secret::new(ai_service_api_key),
+
+            request_timeout: Duration::from_secs(parse_or("REQUEST_TIMEOUT_SECS", 30)?),
+            body_limit_bytes: parse_or("BODY_LIMIT_BYTES", 1024 * 1024)?,
+        })
+    }
+}
+
+fn optional(name: &str) -> Option<String> {
+    match std::env::var(name) {
+        Ok(value) if !value.trim().is_empty() => Some(value),
+        _ => None,
+    }
+}
+
+fn required(name: &'static str) -> Result<String, ConfigError> {
+    optional(name).ok_or(ConfigError::Missing(name))
+}
+
+fn parse_or<T>(name: &'static str, default: T) -> Result<T, ConfigError>
+where
+    T: std::str::FromStr,
+    T::Err: std::fmt::Display,
+{
+    match optional(name) {
+        None => Ok(default),
+        Some(raw) => raw.parse().map_err(|e: T::Err| ConfigError::Invalid {
+            name,
+            reason: e.to_string(),
+        }),
+    }
+}
+
+/// Accepts `15m`, `30d`, `90s`, `12h`, or a bare number of seconds.
+fn parse_duration(name: &'static str, default: &str) -> Result<Duration, ConfigError> {
+    let raw = optional(name).unwrap_or_else(|| default.to_string());
+    let raw = raw.trim();
+
+    let (digits, multiplier) = match raw.chars().last() {
+        Some('s') => (&raw[..raw.len() - 1], 1),
+        Some('m') => (&raw[..raw.len() - 1], 60),
+        Some('h') => (&raw[..raw.len() - 1], 60 * 60),
+        Some('d') => (&raw[..raw.len() - 1], 60 * 60 * 24),
+        _ => (raw, 1),
+    };
+
+    let value: u64 = digits.parse().map_err(|_| ConfigError::Invalid {
+        name,
+        reason: format!("expected a duration like 15m, 24h or 30d, got {raw:?}"),
+    })?;
+
+    Ok(Duration::from_secs(value * multiplier))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn should_parse_duration_suffixes() {
+        std::env::set_var("TEST_TTL", "15m");
+        assert_eq!(parse_duration("TEST_TTL", "1s").unwrap(), Duration::from_secs(900));
+        std::env::set_var("TEST_TTL", "30d");
+        assert_eq!(parse_duration("TEST_TTL", "1s").unwrap(), Duration::from_secs(2_592_000));
+        std::env::set_var("TEST_TTL", "90");
+        assert_eq!(parse_duration("TEST_TTL", "1s").unwrap(), Duration::from_secs(90));
+        std::env::remove_var("TEST_TTL");
+    }
+
+    #[test]
+    fn should_reject_a_malformed_duration() {
+        std::env::set_var("TEST_BAD_TTL", "soon");
+        let error = parse_duration("TEST_BAD_TTL", "1s").unwrap_err();
+        assert!(matches!(error, ConfigError::Invalid { .. }));
+        std::env::remove_var("TEST_BAD_TTL");
+    }
+
+    #[test]
+    fn should_treat_an_empty_variable_as_unset() {
+        std::env::set_var("TEST_EMPTY", "   ");
+        assert!(optional("TEST_EMPTY").is_none());
+        assert!(matches!(required("TEST_EMPTY"), Err(ConfigError::Missing(_))));
+        std::env::remove_var("TEST_EMPTY");
+    }
+
+    #[test]
+    fn should_not_leak_secrets_in_debug_output() {
+        let config_fragment = Secret::new("a-very-real-signing-key-value");
+        assert!(!format!("{config_fragment:?}").contains("real"));
+    }
+}
