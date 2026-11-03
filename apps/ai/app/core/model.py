@@ -25,10 +25,14 @@ _client: Any | None = None
 def model_client() -> Any:
     global _client
     if _client is None:
-        if not settings.anthropic_api_key:
-            raise ModelUnavailable("ANTHROPIC_API_KEY is not set")
+        if not settings.ai_api_key:
+            raise ModelUnavailable("AI_API_KEY is not set")
         _client = AsyncAnthropic(
-            api_key=settings.anthropic_api_key,
+            api_key=settings.ai_api_key,
+            # A gateway speaking the Anthropic protocol, or the default
+            # endpoint when unset (D67). One SDK either way, so the tool
+            # loop and the extraction ladder never learn which it is.
+            **({"base_url": settings.ai_base_url} if settings.ai_base_url else {}),
             # Per-call ceiling from the extraction ladder; a pass that hangs
             # counts as a failed pass rather than stalling the whole ladder
             # (docs/ai/service.md#budget-and-caps).
@@ -36,6 +40,23 @@ def model_client() -> Any:
             max_retries=settings.model_max_retries,
         )
     return _client
+
+
+async def complete(**kwargs: Any) -> Any:
+    """One finished answer, assembled from the streaming API.
+
+    Never `messages.create`. A gateway may answer every request as an
+    event stream whatever the request asked for, and 9Router does (D67),
+    so the non-streaming call returns a body the SDK cannot parse.
+    Streaming and accumulating works against both, which is one path
+    rather than a branch on who is answering.
+
+    Used by everything that wants a whole message: the extraction ladder,
+    column mapping and session titles. The chat loop streams directly,
+    because it forwards the tokens as they arrive.
+    """
+    async with model_client().messages.stream(**kwargs) as stream:
+        return await stream.get_final_message()
 
 
 def set_model_client(client: Any | None) -> None:

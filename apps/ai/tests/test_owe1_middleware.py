@@ -175,7 +175,7 @@ def test_plaintext_mode_is_development_only(plaintext_mode: TestClient, tmp_path
 
     production = Settings(
         ai_service_api_key="a" * 32,
-        anthropic_api_key="set",
+        ai_api_key="set",
         crypto_signing_key_file=tmp_path / "k.pem",
         app_env="production",
         owe1_enabled=False,

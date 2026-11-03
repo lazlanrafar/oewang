@@ -32,13 +32,22 @@ The practical test: if `apps/ai` had `DATABASE_URL` set, it would be a bug. The 
 |---|---|
 | Runtime | Python 3.13, `uv` for dependency management. `requires-python` is >=3.12 |
 | Framework | FastAPI, served by uvicorn |
-| Model client | The Anthropic Python SDK (A1) |
-| Chat model | `AI_CHAT_MODEL`, default `claude-sonnet-5-5` |
+| Model client | The Anthropic Python SDK (A1), pointed at `AI_BASE_URL` when a gateway is configured (D67) |
+| Chat model | `AI_CHAT_MODEL`, default `claude-sonnet-5-5`. A gateway's own alias goes here unchanged |
 | Vision models | A three-step ladder, see [extraction quality ladder](#extraction-quality-ladder). `AI_VISION_PRIMARY` defaults to `claude-haiku-5-5`, `AI_VISION_SECONDARY` to `claude-sonnet-5-5`, `AI_VISION_TERTIARY` to `claude-opus-5` |
 | HTTP client | `httpx`, async, for calls back to the API |
 | Validation | Pydantic models on every request and response |
 | Lint and format | `ruff` |
-| Tests | `pytest`, with the model always mocked |
+| Tests | `pytest`, with the model always mocked, plus an opt-in live set |
+
+### Reaching the model
+
+`AI_BASE_URL` decides where the SDK sends its requests: empty is Anthropic's own endpoint, and a gateway speaking the Anthropic protocol goes there instead (D67). Model ids are whatever that endpoint calls them, so a gateway alias such as `free-main` goes straight into `AI_CHAT_MODEL`.
+
+Two consequences, both load-bearing:
+
+- **Everything goes through the streaming API.** A gateway may answer every request as an event stream whatever the request asked for, which is what 9Router does, and the SDK cannot parse that as a JSON body. `app/core/model.py` exposes `complete()`, which streams and returns the assembled message, and nothing calls `messages.create`.
+- **A gateway's own prompt counts.** The model behind an alias is not fixed and the gateway may prepend its own system prompt, which shows up as input tokens this service did not send. It changes cost accounting and it is a reason the [quality ladder](#extraction-quality-ladder) scores every extraction rather than trusting the model.
 
 ## Endpoints
 
@@ -415,6 +424,7 @@ Token usage is logged for cost visibility. There is no quota enforcement; billin
 | Schemas | `GET /tools/definitions` matches the schema module, so the API and the model cannot drift |
 | Parsing | Three receipt fixtures with known totals and dates, run against a recorded response |
 | Quality score | Pure function, no model. A complete receipt scores 100, each missing field deducts its stated weight |
+| The provider | `tests/test_model_live.py`, opt-in with `RUN_LIVE_MODEL_TESTS=1`. Proves the two things the rest of M4 stands on, a streamed answer and a tool call in the Anthropic shape, actually survive whatever `AI_BASE_URL` points at. Asserts shape, never wording |
 | Ladder | A scripted model client: a clean result stops at pass 1 and makes exactly one call; a poor result escalates; a pass 2 failure still reaches pass 4; the call cap and the time budget both stop the ladder and return a marked result |
 | Merging | Two results with known confidences merge per the stated rules, including the close-confidence field rules |
 | Auth | A request without `x-api-key` is rejected |

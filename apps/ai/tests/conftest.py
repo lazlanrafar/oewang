@@ -21,7 +21,7 @@ def config(tmp_path: Path) -> Settings:
         ai_service_api_key=API_KEY,
         crypto_signing_key_file=tmp_path / "owe1-signing-key.pem",
         app_env="development",
-        anthropic_api_key="",
+        ai_api_key="",
     )
 
 

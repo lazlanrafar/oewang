@@ -22,8 +22,13 @@ class Settings(BaseSettings):
     ai_service_api_key: str = "dev-insecure-change-me"
     api_internal_url: str = "http://api:3002"
 
+    # The model provider (D67). Empty `ai_base_url` talks to Anthropic
+    # directly; set it to a gateway and the same SDK talks to that instead,
+    # which is how a model outside the Claude family reaches this service.
+    ai_base_url: str = ""
+    ai_api_key: str = ""
+
     # Models. The extraction ladder escalates only on evidence (D36).
-    anthropic_api_key: str = ""
     ai_chat_model: str = "claude-sonnet-5-5"
     ai_vision_primary: str = "claude-haiku-5-5"
     ai_vision_secondary: str = "claude-sonnet-5-5"
@@ -71,8 +76,8 @@ class Settings(BaseSettings):
                 raise ValueError("payload encryption can only be disabled in development")
             if len(self.ai_service_api_key) < 32:
                 raise ValueError("AI_SERVICE_API_KEY must be at least 32 characters")
-            if not self.anthropic_api_key:
-                raise ValueError("ANTHROPIC_API_KEY is required outside development")
+            if not self.ai_api_key:
+                raise ValueError("AI_API_KEY is required outside development")
 
 
 settings = Settings()
