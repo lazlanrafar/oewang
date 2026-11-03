@@ -6,6 +6,8 @@
 	 * component itself holds no data and fetches nothing, which is what lets
 	 * it be shown on a page with no server behind it.
 	 */
+	import type { MessageItem, SessionItem } from '$lib/chat';
+	import { ChatHistory, ChatMessages } from '$lib/components/organisms/chat';
 	import { TransactionsTable } from '$lib/components/organisms/data-table';
 	import type { NamedOption, TransactionRow } from '$lib/components/organisms/data-table';
 
@@ -17,6 +19,17 @@
 		{ id: 'shopping', name: 'Shopping', colorClass: 'bg-primary' },
 		{ id: 'bills', name: 'Bills', colorClass: 'bg-destructive' },
 		{ id: 'salary', name: 'Salary', colorClass: 'bg-green' }
+	];
+
+	const chatSessions: SessionItem[] = [
+		{ id: 's1', title: 'Food spending last month', when: '2 minutes ago', preview: 'You spent Rp 1.240.000 on Food.' },
+		{ id: 's2', title: 'Wise balance', when: 'yesterday', preview: '4 messages' },
+		{ id: 's3', title: 'New chat', when: '28 Oct', preview: 'No messages' }
+	];
+
+	const chatMessages: MessageItem[] = [
+		{ id: 'm1', role: 'user', content: 'How much did I spend on food last month?', at: '09:14', who: 'You' },
+		{ id: 'm2', role: 'assistant', content: 'You spent Rp 1.240.000 on Food in October, 12 percent less than September.', at: '09:14', who: 'Assistant' }
 	];
 
 	const wallets: NamedOption[] = [
@@ -42,4 +55,31 @@
 <section class="space-y-4">
 	{@render heading('Empty', 'The same table with every row filtered out.')}
 	<TransactionsTable rows={[]} {categories} {wallets} />
+</section>
+
+<section class="space-y-4">
+	{@render heading('Chat history', 'The conversation list: newest activity first, the open one marked, and a menu per row for renaming and deleting. Rename opens a dialog, delete asks first (UI-4).')}
+	<div class="max-w-sm border p-3">
+		<ChatHistory
+			sessions={chatSessions}
+			activeId="s1"
+			onNew={() => {}}
+			onRename={() => {}}
+			onDelete={() => {}}
+		/>
+	</div>
+</section>
+
+<section class="space-y-4">
+	{@render heading('Chat messages', 'A stored conversation. Markdown, tool cards and the message actions arrive with the stream; this is what a conversation reads like once it is saved.')}
+	<div class="border p-4">
+		<ChatMessages messages={chatMessages} />
+	</div>
+</section>
+
+<section class="space-y-4">
+	{@render heading('Chat messages, empty', 'A conversation with nothing in it yet.')}
+	<div class="h-64 border p-4">
+		<ChatMessages messages={[]} />
+	</div>
 </section>

@@ -1,4 +1,5 @@
 pub mod accounts;
+pub mod ai;
 pub mod audit;
 pub mod categories;
 pub mod fx;

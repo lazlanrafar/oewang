@@ -1,0 +1,54 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT s.id,\n                  s.title,\n                  s.created_at,\n                  s.updated_at,\n                  COALESCE(m.message_count, 0) AS \"message_count!\",\n                  m.last_message\n           FROM ai_sessions s\n           LEFT JOIN LATERAL (\n               SELECT count(*) AS message_count,\n                      (ARRAY_AGG(content ORDER BY created_at DESC))[1] AS last_message\n               FROM ai_messages\n               WHERE session_id = s.id AND deleted_at IS NULL\n           ) m ON true\n           WHERE s.workspace_id = $1 AND s.deleted_at IS NULL\n           ORDER BY s.updated_at DESC\n           LIMIT $2 OFFSET $3",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "title",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 3,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 4,
+        "name": "message_count!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 5,
+        "name": "last_message",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      null,
+      null
+    ]
+  },
+  "hash": "298438ee3d9f4c59e623f8c835e548f51b07577efab1ad412a7f884b3f63e6aa"
+}

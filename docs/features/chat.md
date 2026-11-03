@@ -55,8 +55,9 @@ One conversation is one `ai_sessions` row with its `ai_messages` ([data model](.
 
 - The session list is ordered by `updated_at` descending.
 - A title is generated from the first user message (CHAT-8), by a separate short call, not by the main loop.
-- Rename and delete are available from the list. Delete is a soft delete and asks for confirmation (UI-4).
+- Rename and delete are available from the list. Delete is a soft delete and asks for confirmation (UI-4). The messages are marked deleted with their session rather than left behind a deleted parent.
 - Routes: `/chat` opens the newest session or an empty one; `/chat/{id}` opens a specific session.
+- The list lives in `/chat`'s layout, so it survives switching sessions. A layout cannot own form actions, so rename, delete and new all post to `/chat`'s actions and redirect from there.
 
 ### Message attachments
 

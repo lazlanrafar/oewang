@@ -37,7 +37,7 @@ export const navGroups: NavGroup[] = [
 		labelKey: 'nav.finance_group',
 		items: [
 			{ titleKey: 'nav.transactions', href: '/transactions', icon: Banknote },
-			{ titleKey: 'nav.chat', href: '/chat', icon: MessageSquare, pending: true }
+			{ titleKey: 'nav.chat', href: '/chat', icon: MessageSquare }
 		]
 	},
 	{

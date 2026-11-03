@@ -350,11 +350,15 @@ Requirements: PLT-3, SEC-1
 ### US-027: Chat sessions API and history UI
 Requirements: CHAT-1, CHAT-8
 
-- [ ] Session CRUD, workspace-scoped, soft delete
-- [ ] The chat page lists sessions newest first, ported from `chat-history.tsx`
-- [ ] Selecting a session loads its messages server-side
-- [ ] Rename and delete from the list, with confirmation on delete
-- [ ] Verify in browser
+- [x] Session CRUD, workspace-scoped, soft delete
+- [x] The chat page lists sessions newest first, ported from `chat-history.tsx`
+- [x] Selecting a session loads its messages server-side
+- [x] Rename and delete from the list, with confirmation on delete
+- [x] Verify in browser
+
+CHAT-8's generated title needs a first user message, so the title call itself
+lands with the stream (US-028). What exists here is the stored title, its
+default and its rename.
 
 ### US-028: Streaming chat without tools
 Requirements: CHAT-2, CHAT-9, SEC-7

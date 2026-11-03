@@ -5,6 +5,7 @@
 #![forbid(unsafe_code)]
 
 mod accounts;
+mod ai;
 mod audit;
 mod auth;
 mod config;
@@ -320,6 +321,18 @@ fn protected_routes(state: AppState) -> Router<AppState> {
             "/v1/transactions/{id}/items/{item_id}",
             axum::routing::put(transactions::handler::replace_item)
                 .delete(transactions::handler::delete_item),
+        )
+        // Chat sessions. Any member: a conversation belongs to the
+        // workspace, and a viewer who cannot write can still ask.
+        .route(
+            "/v1/ai/sessions",
+            get(ai::handler::list_sessions).post(ai::handler::create_session),
+        )
+        .route(
+            "/v1/ai/sessions/{id}",
+            get(ai::handler::get_session)
+                .patch(ai::handler::rename_session)
+                .delete(ai::handler::delete_session),
         )
         // Files. Bytes travel as base64 inside the envelope; no signed
         // object-storage URL exists anywhere (D23, VLT-3).

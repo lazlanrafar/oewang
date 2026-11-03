@@ -1,0 +1,57 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO ai_messages (id, workspace_id, session_id, role, content, attachments)\n           VALUES ($1, $2, $3, $4, $5, $6)\n           RETURNING id, session_id, role, content, attachments, created_at",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "session_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "role",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "content",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "attachments",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 5,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Jsonb"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "86f5ed1df8c739cdaf6c0cb244a2c271850a1d5ad64067f28e0a8116a53ceb89"
+}

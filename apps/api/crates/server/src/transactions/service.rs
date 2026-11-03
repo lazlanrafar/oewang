@@ -92,26 +92,9 @@ struct Prepared {
 
 // ------------------------------------------------------------------- reads
 
-#[derive(Debug, Clone, Copy)]
-pub struct Page {
-    pub page: u32,
-    pub limit: u32,
-}
-
-impl Page {
-    /// `limit` is capped at 100 by the conventions, and a page below 1 is a
-    /// typo rather than a request for page zero.
-    pub fn new(page: Option<u32>, limit: Option<u32>) -> Self {
-        Self {
-            page: page.unwrap_or(1).max(1),
-            limit: limit.unwrap_or(25).clamp(1, 100),
-        }
-    }
-
-    fn offset(self) -> i64 {
-        i64::from(self.page - 1) * i64::from(self.limit)
-    }
-}
+/// Pagination lives beside the envelope it is reported in, so the clamp
+/// exists once for every list route.
+pub use oewang_domain::Page;
 
 pub async fn list(
     pool: &PgPool,

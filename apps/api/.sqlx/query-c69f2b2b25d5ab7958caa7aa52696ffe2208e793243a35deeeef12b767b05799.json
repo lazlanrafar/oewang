@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE ai_messages\n           SET deleted_at = now()\n           WHERE workspace_id = $1 AND session_id = $2 AND deleted_at IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c69f2b2b25d5ab7958caa7aa52696ffe2208e793243a35deeeef12b767b05799"
+}

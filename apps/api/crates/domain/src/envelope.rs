@@ -47,6 +47,29 @@ impl<T> Envelope<T> {
     }
 }
 
+/// The request side of pagination: what a caller asked for, clamped.
+///
+/// Beside `PageMeta` because the two carry the same rule, and a second copy
+/// of the clamp in another module is how a limit of 500 eventually gets
+/// through (docs/api/conventions.md#pagination).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Page {
+    pub page: u32,
+    pub limit: u32,
+}
+
+impl Page {
+    /// `limit` is capped at 100 by the conventions, and a page below 1 is a
+    /// typo rather than a request for page zero.
+    pub fn new(page: Option<u32>, limit: Option<u32>) -> Self {
+        Self { page: page.unwrap_or(1).max(1), limit: limit.unwrap_or(25).clamp(1, 100) }
+    }
+
+    pub fn offset(self) -> i64 {
+        i64::from(self.page - 1) * i64::from(self.limit)
+    }
+}
+
 impl PageMeta {
     /// `limit` is capped at 100 by the conventions; callers pass the already
     /// clamped value, and `total_pages` is never zero so a client can always
