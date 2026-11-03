@@ -27,6 +27,7 @@ How code in the API is organized and written. Where a rule exists to serve a req
 | JWT | `jsonwebtoken` |
 | Crypto | `x25519-dalek`, `ed25519-dalek`, `aes-gcm`, `hkdf`, `sha2`, `rand` ([encryption](../api/encryption.md#primitives)) |
 | HTTP client | `reqwest` with `rustls` |
+| Streaming | `tokio-stream`, to hand the chat turn's channel to axum as a response body |
 | Logging | `tracing`, `tracing-subscriber` with a JSON layer |
 | Tests | the built-in harness, plus `sqlx::test` for database tests |
 

@@ -36,6 +36,9 @@ class Settings(BaseSettings):
     ai_quality_threshold: int = 70
     ai_extraction_budget_ms: int = 45_000
     ai_max_steps: int = 8
+    # One turn's ceiling on generated tokens. A bound on the answer is also
+    # a bound on how long the user watches it arrive.
+    ai_max_output_tokens: int = 2048
     # One model call's ceiling, in seconds, and how often the SDK retries a
     # transport failure before the call counts as a failed pass.
     model_timeout_secs: float = 20.0

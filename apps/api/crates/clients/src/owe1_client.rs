@@ -106,6 +106,11 @@ struct Session {
 
 pub struct Owe1Client {
     http: reqwest::Client,
+    /// The same transport with the deadline moved from the whole call to each
+    /// read. A chat turn is slower than any single timeout worth setting, and
+    /// a total timeout would cut a healthy stream off mid-answer; what matters
+    /// there is that events keep arriving.
+    streaming: reqwest::Client,
     base_url: String,
     api_key: Secret,
     pinned: RwLock<HashMap<String, [u8; 32]>>,
@@ -139,8 +144,15 @@ impl Owe1Client {
             .build()
             .map_err(|e| Owe1ClientError::Transport(e.to_string()))?;
 
+        let streaming = reqwest::Client::builder()
+            .connect_timeout(timeout)
+            .read_timeout(timeout)
+            .build()
+            .map_err(|e| Owe1ClientError::Transport(e.to_string()))?;
+
         Ok(Self {
             http,
+            streaming,
             base_url: base_url.into().trim_end_matches('/').to_string(),
             api_key,
             pinned: RwLock::new(pinned.into_iter().collect()),
@@ -195,6 +207,42 @@ impl Owe1Client {
         }
     }
 
+    /// POST a body and read the stream of sealed events it answers with.
+    ///
+    /// A stream is not one body, so it is not opened as one: every event
+    /// carries its own seal, bound to this request id and to its position in
+    /// the stream (docs/api/encryption.md#chat-stream-events). The retries are
+    /// the ones a single call gets, and they apply only while the stream is
+    /// being opened. Once events are flowing there is nothing safe to retry:
+    /// the model has already been paid for and half the answer has been read.
+    pub async fn post_stream<B: Serialize>(
+        &self,
+        path: &str,
+        body: &B,
+    ) -> Result<EventStream, Owe1ClientError> {
+        let payload = serde_json::to_vec(body)
+            .map_err(|e| Owe1ClientError::Malformed(e.to_string()))?;
+
+        let mut retried_session = false;
+        let mut retried_transport = false;
+
+        loop {
+            let session = self.session().await?;
+            match self.open_stream(&session, path, &payload).await {
+                Ok(stream) => return Ok(stream),
+                Err(error) if error.is_session_unknown() && !retried_session => {
+                    retried_session = true;
+                    self.forget(&session.id).await;
+                }
+                Err(error) if error.is_transport() && !retried_transport => {
+                    retried_transport = true;
+                    tokio::time::sleep(RETRY_DELAY).await;
+                }
+                Err(error) => return Err(error),
+            }
+        }
+    }
+
     async fn send<T: DeserializeOwned>(
         &self,
         session: &Session,
@@ -205,42 +253,16 @@ impl Owe1Client {
     ) -> Result<T, Owe1ClientError> {
         let request_id = handshake::new_request_id();
         let timestamp = now_secs();
-
-        let sealed_query = seal::seal(
-            &session.keys.client_to_server,
-            &aad::query(&session.id, method, path, &request_id, timestamp),
-            query.as_bytes(),
+        let request = self.sealed_request(
+            &self.http,
+            session,
+            method,
+            path,
+            query,
+            body,
+            &request_id,
+            timestamp,
         )?;
-
-        let mut request = self
-            .http
-            .request(
-                method
-                    .parse()
-                    .map_err(|_| Owe1ClientError::Malformed(format!("method {method}")))?,
-                // The path carries no query string: it travels in the header.
-                format!("{}{path}", self.base_url),
-            )
-            .header("x-api-key", self.api_key.expose())
-            .header("content-type", CONTENT_TYPE)
-            .header("x-owe-session", &session.id)
-            .header("x-owe-request-id", &request_id)
-            .header("x-owe-timestamp", timestamp.to_string())
-            // Required even when empty, so a stripped filter cannot pass
-            // unnoticed.
-            .header("x-owe-query", format!("{}.{}", sealed_query.n, sealed_query.c));
-
-        if let Some(plaintext) = body {
-            let sealed = seal::seal(
-                &session.keys.client_to_server,
-                &aad::request(&session.id, method, path, &request_id, timestamp),
-                plaintext,
-            )?;
-            request = request.body(
-                serde_json::to_vec(&sealed)
-                    .map_err(|e| Owe1ClientError::Malformed(e.to_string()))?,
-            );
-        }
 
         let response = request
             .send()
@@ -253,6 +275,123 @@ impl Owe1Client {
             .await
             .map_err(|e| Owe1ClientError::Transport(e.to_string()))?;
 
+        self.read_envelope(session, &request_id, status.as_u16(), &raw)
+    }
+
+    /// Open the stream, or report why there is none.
+    ///
+    /// A failure before the stream opens is an ordinary answer: a sealed
+    /// envelope, or a plaintext transport error the caller may hold no key
+    /// for (docs/api/conventions.md#streaming).
+    async fn open_stream(
+        &self,
+        session: &Session,
+        path: &str,
+        payload: &[u8],
+    ) -> Result<EventStream, Owe1ClientError> {
+        let request_id = handshake::new_request_id();
+        let timestamp = now_secs();
+        let request = self.sealed_request(
+            &self.streaming,
+            session,
+            "POST",
+            path,
+            "",
+            Some(payload),
+            &request_id,
+            timestamp,
+        )?;
+
+        let response = request
+            .send()
+            .await
+            .map_err(|e| Owe1ClientError::Transport(e.to_string()))?;
+
+        if !is_event_stream(response.headers()) {
+            let status = response.status();
+            let raw = response
+                .bytes()
+                .await
+                .map_err(|e| Owe1ClientError::Transport(e.to_string()))?;
+
+            // An envelope carrying an error reports it; anything else is an
+            // answer this client asked for a stream and did not get.
+            let _: serde_json::Value =
+                self.read_envelope(session, &request_id, status.as_u16(), &raw)?;
+            return Err(Owe1ClientError::Malformed("expected an event stream".into()));
+        }
+
+        Ok(EventStream {
+            response,
+            key: session.keys.server_to_client,
+            session_id: session.id.clone(),
+            request_id,
+            seq: 0,
+            buffer: Vec::new(),
+            finished: false,
+        })
+    }
+
+    /// One sealed request, built but not sent, so a single body and a stream
+    /// of events are opened by the same code path.
+    #[allow(clippy::too_many_arguments)]
+    fn sealed_request(
+        &self,
+        http: &reqwest::Client,
+        session: &Session,
+        method: &str,
+        path: &str,
+        query: &str,
+        body: Option<&[u8]>,
+        request_id: &str,
+        timestamp: i64,
+    ) -> Result<reqwest::RequestBuilder, Owe1ClientError> {
+        let sealed_query = seal::seal(
+            &session.keys.client_to_server,
+            &aad::query(&session.id, method, path, request_id, timestamp),
+            query.as_bytes(),
+        )?;
+
+        let mut request = http
+            .request(
+                method
+                    .parse()
+                    .map_err(|_| Owe1ClientError::Malformed(format!("method {method}")))?,
+                // The path carries no query string: it travels in the header.
+                format!("{}{path}", self.base_url),
+            )
+            .header("x-api-key", self.api_key.expose())
+            .header("content-type", CONTENT_TYPE)
+            .header("x-owe-session", &session.id)
+            .header("x-owe-request-id", request_id)
+            .header("x-owe-timestamp", timestamp.to_string())
+            // Required even when empty, so a stripped filter cannot pass
+            // unnoticed.
+            .header("x-owe-query", format!("{}.{}", sealed_query.n, sealed_query.c));
+
+        if let Some(plaintext) = body {
+            let sealed = seal::seal(
+                &session.keys.client_to_server,
+                &aad::request(&session.id, method, path, request_id, timestamp),
+                plaintext,
+            )?;
+            request = request.body(
+                serde_json::to_vec(&sealed)
+                    .map_err(|e| Owe1ClientError::Malformed(e.to_string()))?,
+            );
+        }
+
+        Ok(request)
+    }
+
+    /// Open a single-body answer and unwrap its envelope.
+    fn read_envelope<T: DeserializeOwned>(
+        &self,
+        session: &Session,
+        request_id: &str,
+        status: u16,
+        raw: &[u8],
+    ) -> Result<T, Owe1ClientError> {
         if raw.is_empty() {
             return serde_json::from_slice(b"null")
                 .map_err(|e| Owe1ClientError::Malformed(e.to_string()));
@@ -260,18 +399,17 @@ impl Owe1Client {
 
         // A transport error answers in plaintext: the caller may hold no key,
         // which is the whole reason it is an error.
-        let plaintext = match serde_json::from_slice::<SealedBody>(&raw) {
+        let plaintext = match serde_json::from_slice::<SealedBody>(raw) {
             Ok(sealed) => seal::open(
                 &session.keys.server_to_client,
-                &aad::response(&session.id, &request_id, status.as_u16()),
+                &aad::response(&session.id, request_id, status),
                 &sealed,
             )?,
             Err(_) => raw.to_vec(),
         };
 
-        let envelope: Envelope<T> = serde_json::from_slice(&plaintext).map_err(|e| {
-            Owe1ClientError::Malformed(format!("{e} (status {})", status.as_u16()))
-        })?;
+        let envelope: Envelope<T> = serde_json::from_slice(&plaintext)
+            .map_err(|e| Owe1ClientError::Malformed(format!("{e} (status {status})")))?;
 
         if let Some(error) = envelope.error {
             return Err(Owe1ClientError::Api { code: error.code, message: error.message });
@@ -408,6 +546,173 @@ impl Owe1Client {
 }
 
 pub const CONTENT_TYPE: &str = "application/vnd.oewang.owe1+json";
+pub const EVENT_STREAM_CONTENT_TYPE: &str = "text/event-stream";
+
+/// One opened event from the other side of a stream.
+///
+/// `name` is the SSE event name, which travels in the clear like a path does;
+/// `data` is the plaintext that was sealed inside it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StreamEvent {
+    pub name: String,
+    pub data: Vec<u8>,
+}
+
+/// The answer to `post_stream`, read one sealed event at a time.
+///
+/// Fails closed. An event that does not open ends the stream with an error
+/// rather than being skipped, because the sequence number is what makes a
+/// dropped, reordered or swapped event detectable at all: skipping one would
+/// throw away the detection and keep reading
+/// (docs/api/encryption.md#chat-stream-events).
+pub struct EventStream {
+    response: reqwest::Response,
+    key: [u8; 32],
+    session_id: String,
+    request_id: String,
+    seq: u64,
+    buffer: Vec<u8>,
+    finished: bool,
+}
+
+impl std::fmt::Debug for EventStream {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // No key, no buffer: the buffer holds the answer in flight (OPS-3).
+        f.debug_struct("EventStream")
+            .field("request_id", &self.request_id)
+            .field("seq", &self.seq)
+            .finish()
+    }
+}
+
+impl EventStream {
+    /// The next event, or `None` once the other side has stopped sending.
+    pub async fn next_event(&mut self) -> Option<Result<StreamEvent, Owe1ClientError>> {
+        loop {
+            if self.finished {
+                return None;
+            }
+
+            if let Some(frame) = take_frame(&mut self.buffer) {
+                if let Some(event) = self.open(&frame) {
+                    return Some(event);
+                }
+                continue;
+            }
+
+            match self.response.chunk().await {
+                Ok(Some(chunk)) => {
+                    self.buffer.extend_from_slice(&chunk);
+                    normalize_newlines(&mut self.buffer);
+                }
+                Ok(None) => {
+                    self.finished = true;
+                    // A last frame whose blank line never arrived is still a
+                    // whole event, and the seal is what says so.
+                    let rest = std::mem::take(&mut self.buffer);
+                    return self.open(&rest);
+                }
+                Err(error) => {
+                    self.finished = true;
+                    return Some(Err(Owe1ClientError::Transport(error.to_string())));
+                }
+            }
+        }
+    }
+
+    /// `None` for a frame that carries no event, such as a keep-alive comment.
+    fn open(&mut self, frame: &[u8]) -> Option<Result<StreamEvent, Owe1ClientError>> {
+        let (name, data) = parse_frame(frame)?;
+
+        let sealed: SealedBody = match serde_json::from_str(&data) {
+            Ok(sealed) => sealed,
+            Err(_) => {
+                self.finished = true;
+                // The event itself never travels into the message (OPS-3).
+                return Some(Err(Owe1ClientError::Malformed(
+                    "a stream event was not a sealed body".into(),
+                )));
+            }
+        };
+
+        match seal::open(
+            &self.key,
+            &aad::stream_event(&self.session_id, &self.request_id, self.seq),
+            &sealed,
+        ) {
+            Ok(plaintext) => {
+                self.seq += 1;
+                Some(Ok(StreamEvent { name, data: plaintext }))
+            }
+            Err(error) => {
+                self.finished = true;
+                Some(Err(error.into()))
+            }
+        }
+    }
+}
+
+fn is_event_stream(headers: &reqwest::header::HeaderMap) -> bool {
+    headers
+        .get(reqwest::header::CONTENT_TYPE)
+        .and_then(|value| value.to_str().ok())
+        .is_some_and(|value| value.starts_with(EVENT_STREAM_CONTENT_TYPE))
+}
+
+/// `\r\n` is legal in an event stream and nothing below expects it. A chunk
+/// that ends between the two bytes keeps its carriage return until the
+/// newline arrives with the next chunk.
+fn normalize_newlines(buffer: &mut Vec<u8>) {
+    let mut index = 0;
+    while index + 1 < buffer.len() {
+        if buffer[index] == b'\r' && buffer[index + 1] == b'\n' {
+            buffer.remove(index);
+        } else {
+            index += 1;
+        }
+    }
+}
+
+/// One whole frame, taken off the front of the buffer. Nothing is parsed
+/// before its blank line has arrived, because a chunk boundary falls wherever
+/// the network puts it, including inside a field name.
+fn take_frame(buffer: &mut Vec<u8>) -> Option<Vec<u8>> {
+    let end = buffer.windows(2).position(|pair| pair == b"\n\n")?;
+    let frame = buffer[..end].to_vec();
+    buffer.drain(..end + 2);
+    Some(frame)
+}
+
+/// `(event name, data)`, or `None` for a frame carrying neither.
+fn parse_frame(frame: &[u8]) -> Option<(String, String)> {
+    let text = std::str::from_utf8(frame).ok()?;
+    let mut name = String::new();
+    let mut data: Vec<&str> = Vec::new();
+
+    for line in text.split('\n') {
+        // A line opening with a colon is a comment. A server sends one as a
+        // keep-alive, so it is common rather than exotic.
+        if line.is_empty() || line.starts_with(':') {
+            continue;
+        }
+
+        let (field, raw) = line.split_once(':').unwrap_or((line, ""));
+        let value = raw.strip_prefix(' ').unwrap_or(raw);
+
+        match field {
+            "event" => name = value.to_string(),
+            "data" => data.push(value),
+            _ => {}
+        }
+    }
+
+    if name.is_empty() && data.is_empty() {
+        return None;
+    }
+
+    let name = if name.is_empty() { "message".to_string() } else { name };
+    Some((name, data.join("\n")))
+}
 
 /// Parse `kid:base64url,kid:base64url` from configuration.
 pub fn parse_pinned_keys(raw: &str) -> Result<Vec<(String, [u8; 32])>, Owe1ClientError> {
@@ -475,6 +780,9 @@ mod tests {
         forget_sessions: usize,
         /// Hang this many calls for long enough to trip the client timeout.
         hang_calls: usize,
+        /// Seal every event after the first one position further along than
+        /// it was sent, which is what a dropped event looks like.
+        skip_a_sequence_number: bool,
     }
 
     impl TestService {
@@ -649,6 +957,47 @@ mod tests {
         ([(axum::http::header::CONTENT_TYPE, CONTENT_TYPE)], Json(json!(sealed))).into_response()
     }
 
+    /// Three sealed events, exactly as the AI service writes them: the event
+    /// name in the clear, the payload sealed one event at a time.
+    ///
+    /// With `skip_a_sequence_number` the second event is sealed as though a
+    /// third had already gone out, which is what a dropped or reordered event
+    /// looks like to the client.
+    async fn stream(State(service): State<TestService>, request: Request) -> Response {
+        service.counts.lock().unwrap().calls += 1;
+
+        let headers = request.headers().clone();
+        let session_id = header(&headers, "x-owe-session");
+        let request_id = header(&headers, "x-owe-request-id");
+        let keys = service.sessions.lock().unwrap().get(&session_id).cloned().unwrap();
+        let skip = service.script.lock().unwrap().skip_a_sequence_number;
+
+        let mut body = String::new();
+        for (index, (name, payload)) in [
+            ("token", json!({ "text": "You spent " })),
+            ("token", json!({ "text": "50,000." })),
+            ("done", json!({ "message_id": null, "usage": { "input": 12, "output": 4 } })),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            let seq = if skip && index >= 1 { index as u64 + 1 } else { index as u64 };
+            let sealed = seal::seal(
+                &keys.server_to_client,
+                &aad::stream_event(&session_id, &request_id, seq),
+                payload.to_string().as_bytes(),
+            )
+            .unwrap();
+            body.push_str(&format!("event: {name}\ndata: {}\n\n", json!(sealed)));
+        }
+
+        (
+            [(axum::http::header::CONTENT_TYPE, EVENT_STREAM_CONTENT_TYPE)],
+            body,
+        )
+            .into_response()
+    }
+
     fn header(headers: &HeaderMap, name: &str) -> String {
         headers.get(name).and_then(|v| v.to_str().ok()).unwrap_or_default().to_string()
     }
@@ -658,6 +1007,7 @@ mod tests {
             .route("/.well-known/oewang-keys", get(published_keys))
             .route("/v1/handshake", post(handshake_route))
             .route("/v1/echo", any(protected))
+            .route("/chat/stream", post(stream))
             .with_state(service);
 
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -774,6 +1124,60 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn should_open_each_event_of_a_stream_in_turn() {
+        let service = TestService::new();
+        let address = serve(service.clone()).await;
+        let client = client(address, DEFAULT_TIMEOUT);
+
+        let mut stream =
+            client.post_stream("/chat/stream", &json!({ "message": "hi" })).await.unwrap();
+
+        let mut names = Vec::new();
+        let mut text = String::new();
+        while let Some(event) = stream.next_event().await {
+            let event = event.unwrap();
+            if event.name == "token" {
+                let payload: serde_json::Value = serde_json::from_slice(&event.data).unwrap();
+                text.push_str(payload["text"].as_str().unwrap());
+            }
+            names.push(event.name);
+        }
+
+        assert_eq!(names, ["token", "token", "done"]);
+        assert_eq!(text, "You spent 50,000.");
+    }
+
+    #[tokio::test]
+    async fn should_refuse_an_event_that_does_not_open() {
+        // A dropped or reordered event fails the sequence number, and the
+        // stream stops there rather than passing it on.
+        let service = TestService::new();
+        service.script.lock().unwrap().skip_a_sequence_number = true;
+        let address = serve(service).await;
+        let client = client(address, DEFAULT_TIMEOUT);
+
+        let mut stream = client.post_stream("/chat/stream", &json!({})).await.unwrap();
+
+        assert!(stream.next_event().await.unwrap().is_ok(), "the first event is in order");
+        let error = stream.next_event().await.unwrap().unwrap_err();
+        assert!(matches!(error, Owe1ClientError::Crypto(Owe1Error::DecryptFailed)), "{error}");
+        assert!(stream.next_event().await.is_none(), "the stream stops at the first bad event");
+    }
+
+    #[tokio::test]
+    async fn should_report_an_error_answered_instead_of_a_stream() {
+        // A failure before the stream opens is an ordinary envelope, not an
+        // event (docs/api/conventions.md#streaming).
+        let service = TestService::new();
+        let address = serve(service).await;
+        let client = client(address, DEFAULT_TIMEOUT);
+
+        let error = client.post_stream("/v1/echo", &json!({})).await.unwrap_err();
+
+        assert!(matches!(error, Owe1ClientError::Malformed(_)), "{error}");
+    }
+
+    #[tokio::test]
     async fn should_refuse_a_handshake_it_cannot_verify() {
         // Verify or stop. Never fall back to plaintext.
         let service = TestService::new().publishing_another_key();
@@ -818,6 +1222,32 @@ mod tests {
         .unwrap_err();
 
         assert!(matches!(error, Owe1ClientError::NoPinnedKeys));
+    }
+
+    #[test]
+    fn should_hold_a_frame_back_until_its_blank_line_arrives() {
+        let mut buffer = b"event: token\ndata: {\"n\":\"a\"".to_vec();
+        assert!(take_frame(&mut buffer).is_none());
+
+        buffer.extend_from_slice(b"}\n\nevent: done\n");
+        let frame = take_frame(&mut buffer).unwrap();
+
+        assert_eq!(parse_frame(&frame).unwrap(), ("token".into(), "{\"n\":\"a\"}".into()));
+        assert_eq!(buffer, b"event: done\n");
+    }
+
+    #[test]
+    fn should_read_a_frame_written_with_carriage_returns() {
+        let mut buffer = b"event: token\r\ndata: x\r\n\r\n".to_vec();
+        normalize_newlines(&mut buffer);
+        let frame = take_frame(&mut buffer).unwrap();
+
+        assert_eq!(parse_frame(&frame).unwrap(), ("token".into(), "x".into()));
+    }
+
+    #[test]
+    fn should_ignore_a_keep_alive_comment() {
+        assert!(parse_frame(b": keep-alive").is_none());
     }
 
     #[test]

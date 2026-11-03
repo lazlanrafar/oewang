@@ -32,7 +32,8 @@ const CODE_TO_KEY: Record<string, TranslationKey> = {
 	DESTINATION_NOT_ALLOWED: 'errors.destination_not_allowed',
 	TRANSFER_AMOUNT_REQUIRED: 'errors.transfer_amount_required',
 	AMOUNT_NOT_POSITIVE: 'errors.amount_not_positive',
-	FX_RATE_UNAVAILABLE: 'errors.fx_rate_unavailable'
+	FX_RATE_UNAVAILABLE: 'errors.fx_rate_unavailable',
+	STREAM_FAILED: 'errors.stream_failed'
 };
 
 export function messageForCode(code: string): string {

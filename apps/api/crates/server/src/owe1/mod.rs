@@ -8,5 +8,6 @@ pub mod middleware;
 pub mod session;
 pub mod signer;
 
+pub use middleware::Owe1Context;
 pub use session::SessionStore;
 pub use signer::Owe1Signer;

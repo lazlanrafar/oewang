@@ -363,13 +363,19 @@ default and its rename.
 ### US-028: Streaming chat without tools
 Requirements: CHAT-2, CHAT-9, SEC-7
 
-- [ ] `POST /chat/stream` emits sealed `token` and `done` events
-- [ ] The API pipes the stream through and persists both messages
-- [ ] SvelteKit pipes it to the browser with no buffering
-- [ ] Tokens render incrementally; Markdown renders after the stream ends, sanitized
-- [ ] Aborting stops generation and persists the partial reply
+- [x] `POST /chat/stream` emits sealed `token` and `done` events
+- [x] The API pipes the stream through and persists both messages
+- [x] SvelteKit pipes it to the browser with no buffering
+- [x] Tokens render incrementally; Markdown renders after the stream ends, sanitized
+- [x] Aborting stops generation and persists the partial reply
 - [ ] First token under 2 seconds with encryption on
-- [ ] Verify in browser
+- [x] Verify in browser
+
+First token measured at 2.35 seconds end to end through all three hops. The
+encryption is not what costs it: the gateway prepends its own system prompt,
+which made the turn 3,600 input tokens before ours were counted (D67). The
+criterion stands open against the model actually configured, and is a model
+choice rather than a code change.
 
 ### US-029: Tool execution endpoint
 Requirements: CHAT-4, CHAT-15, AI-8, SEC-23, SEC-24, SEC-25, OPS-1

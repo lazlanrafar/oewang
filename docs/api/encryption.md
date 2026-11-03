@@ -304,9 +304,10 @@ Guardrails: the first-token latency test in [chat testing](../features/chat.md#t
 |---|---|
 | Rust protocol: key derivation, transcript, associated data | `apps/api/crates/domain/src/owe1/` |
 | Rust handshake: signing key, sessions, replay cache | `apps/api/crates/server/src/owe1/` |
-| Rust middleware: decrypt query and body, encrypt response | `apps/api/crates/server/src/middleware/owe1.rs` |
-| Rust client transport, used to call the AI service | `apps/api/crates/clients/src/owe1_client.rs` |
-| Node protocol and client, used by the SvelteKit server | `apps/app/src/lib/server/owe1/` |
+| Rust middleware: decrypt query and body, encrypt response, pass an event stream through | `apps/api/crates/server/src/owe1/middleware.rs` |
+| Rust client transport, used to call the AI service, including the event stream | `apps/api/crates/clients/src/owe1_client.rs` |
+| Node protocol and client, used by the SvelteKit server | `apps/app/src/lib/server/owe1/`, `apps/app/src/lib/server/api.ts` |
+| Python per-event sealing on the AI service's streams | `apps/ai/app/core/sse.py` |
 | Python protocol | `apps/ai/app/core/owe1.py` |
 | Python handshake, sessions and middleware | `apps/ai/app/core/{signer,sessions,middleware}.py`, `apps/ai/app/api/routes/handshake.py` |
 | Shared test vectors | `apps/api/crates/domain/testdata/owe1-vectors.json` |

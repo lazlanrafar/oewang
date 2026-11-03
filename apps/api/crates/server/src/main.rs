@@ -334,6 +334,9 @@ fn protected_routes(state: AppState) -> Router<AppState> {
                 .patch(ai::handler::rename_session)
                 .delete(ai::handler::delete_session),
         )
+        // One chat turn, answered as server-sent events. Any member: a
+        // viewer who cannot write can still ask.
+        .route("/v1/ai/chat/stream", post(ai::handler::chat_stream))
         // Files. Bytes travel as base64 inside the envelope; no signed
         // object-storage URL exists anywhere (D23, VLT-3).
         .route("/v1/vault/files", post(vault::handler::begin))

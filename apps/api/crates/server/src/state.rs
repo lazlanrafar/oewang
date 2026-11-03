@@ -24,9 +24,7 @@ pub struct AppState {
     pub rates: RatesClient,
     /// Where file bytes live. Local in development, S3 in production (D19).
     pub files: FileStore,
-    /// The AI service, over OWE1 (hop 3). Chat and extraction reach for
-    /// it from US-028 onward; it is built at startup so a missing pinned
-    /// key fails here rather than on the first chat turn.
-    #[allow(dead_code)]
+    /// The AI service, over OWE1 (hop 3). Built at startup, so a missing
+    /// pinned key fails there rather than on the first chat turn.
     pub ai: Arc<Owe1Client>,
 }

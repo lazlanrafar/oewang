@@ -39,6 +39,7 @@
 		"@lucide/svelte": "^1.66.0",
 		"bits-ui": "^2.20.3",
 		"clsx": "^2.1.1",
+		"markdown-it": "^15.0.3",
 		"mode-watcher": "^1.1.0",
 		"svelte-sonner": "^1.2.2",
 		"tailwind-merge": "^3.7.0",

@@ -71,18 +71,25 @@ async def _read_body(receive: Receive) -> bytes:
     return body
 
 
-def _replay(body: bytes) -> Receive:
-    """A receive channel that hands over one body and then nothing more."""
+def _replay(body: bytes, receive: Receive) -> Receive:
+    """A receive channel that hands over the opened body once, then defers to
+    the real one.
+
+    Deferring rather than reporting a disconnect is what a streaming route
+    needs: after the body, the next message a caller sends is its
+    disconnect, and a route told that immediately stops before it has
+    emitted anything.
+    """
     sent = False
 
-    async def receive() -> Message:
+    async def replayed() -> Message:
         nonlocal sent
         if sent:
-            return {"type": "http.disconnect"}
+            return await receive()
         sent = True
         return {"type": "http.request", "body": body, "more_body": False}
 
-    return receive
+    return replayed
 
 
 class ServiceKeyMiddleware:
@@ -268,7 +275,11 @@ class Owe1Middleware:
             "keys": keys,
         }
 
-        await self.app(inner, _replay(plaintext), _sealing_send(send, keys, session_id, request_id))
+        await self.app(
+            inner,
+            _replay(plaintext, receive),
+            _sealing_send(send, keys, session_id, request_id),
+        )
 
 
 def _sealing_send(

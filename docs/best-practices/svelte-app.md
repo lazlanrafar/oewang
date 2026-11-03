@@ -47,14 +47,14 @@ src/routes/
 │  ├─ +layout.server.ts         auth guard, loads user, workspace, wallets, categories
 │  ├─ +layout.svelte            sidebar and topbar shell
 │  ├─ transactions/+page.svelte
-│  ├─ chat/[[id]]/+page.svelte
+│  ├─ chat/[id]/+page.svelte
 │  └─ settings/+page.svelte
 ├─ (dev)/
 │  ├─ +layout.server.ts         404 outside `dev`
 │  ├─ +layout.svelte            no shell
 │  └─ design-system/+page.svelte  every primitive, measured
 └─ api/
-   └─ chat/stream/+server.ts    SSE passthrough
+   └─ chat/stream/+server.ts    opens each sealed event, writes it on
 ```
 
 Rules:
@@ -236,13 +236,16 @@ src/lib/i18n/
 
 ## Streaming
 
-`src/routes/api/chat/stream/+server.ts` is a passthrough:
+`src/routes/(dashboard)/chat/stream/+server.ts` carries the turn to the browser:
 
-- Read the cookie, attach the JWT, call the API, pipe the response body through unchanged.
-- Do not buffer. Do not transform. Do not parse events.
+- Read the cookie, attach the JWT, call the API, write the events on as they arrive.
+- Do not buffer, and do not collect. A proxy that waits for the turn to end is a slow request wearing a stream's clothes.
+- **Each event is opened and re-emitted, not passed through byte for byte.** Events are sealed one at a time on the hop from the API (D22, [encryption](../api/encryption.md#chat-stream-events)) and the browser holds no key, so this is the hop where they become readable. The sequence number is what makes a dropped or reordered event fail to open, so it is counted here rather than trusted.
+- An unsealed event is refused while encryption is on. Accepting one would let an intermediary that strips the sealing write the assistant's words.
 - Set `Cache-Control: no-store` and disable any proxy buffering ([architecture](../architecture.md#chat-stream)).
+- It answers a `fetch`, not an `EventSource`: the turn carries a body, and `EventSource` can only issue a GET.
 
-The chat UI is the only component that parses the event protocol ([AI service](../ai/service.md#streaming-protocol)).
+The chat UI is the only component that interprets the event protocol ([AI service](../ai/service.md#streaming-protocol)); this route only makes the events legible.
 
 ## Accessibility
 

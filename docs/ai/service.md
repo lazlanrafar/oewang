@@ -97,11 +97,15 @@ Sessions live in process memory for at most 24 hours or 2^24 messages, exactly a
     "categories": [ { "id": "clx…", "name": "Food", "type": "expense" } ]
   },
   "settings": { "custom_instructions": null, "response_language": "auto" },
-  "attachments": [ { "vault_file_id": "clx…", "type": "image/jpeg", "url": "https://…" } ]
+  "attachments": [ { "vault_file_id": "clx…", "type": "image/jpeg", "url": "/v1/vault/files/clx…/chunks/0" } ]
 }
 ```
 
 The workspace context is supplied by the API (CHAT-7). The service does not fetch it unless a tool asks for a refresh mid-turn.
+
+`attachments[].url` is a path on the API, not a signed storage URL: there are none (D23, VLT-3). It is read back through the API like any other file.
+
+`context.timezone` is optional and currently absent: the data model carries no workspace timezone, so `today` is UTC and the prompt drops the timezone line rather than stating one it cannot know.
 
 ## Tool catalog
 
@@ -164,7 +168,7 @@ Assembled per turn, in this order:
 - This month: 2026-11-01 to 2026-11-02
 - This quarter: 2026-10-01 to 2026-11-02
 - This year: 2026-01-01 to 2026-11-02
-- Timezone: Asia/Makassar
+- Timezone: Asia/Makassar        (omitted while the workspace has none)
 - Currency: IDR
 ```
 

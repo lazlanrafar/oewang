@@ -5,8 +5,9 @@
 //! (docs/api/endpoints.md#chat).
 
 use axum::{
-    extract::{Path, Query, State},
+    extract::{Extension, Path, Query, State},
     http::StatusCode,
+    response::Response,
     Json,
 };
 use oewang_db::repositories::ai::{MessageRow, SessionRow, SessionSummaryRow};
@@ -14,9 +15,10 @@ use oewang_domain::{Envelope, Page, PageMeta};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    ai::service,
+    ai::{service, stream},
     audit::Actor,
     auth::extractor::Auth,
+    owe1::Owe1Context,
     response::{ApiError, RequestId},
     state::AppState,
 };
@@ -126,6 +128,16 @@ pub struct RenameBody {
     pub title: String,
 }
 
+/// One user turn. `workspace_id` is not here and never will be: it comes
+/// from the token (AUTH-4).
+#[derive(Debug, Deserialize)]
+pub struct StreamBody {
+    pub session_id: String,
+    pub message: String,
+    #[serde(default)]
+    pub attachment_ids: Vec<String>,
+}
+
 // ---------------------------------------------------------------- handlers
 
 pub async fn list_sessions(
@@ -227,6 +239,38 @@ pub async fn delete_session(
         Ok(()) => Ok(StatusCode::NO_CONTENT),
         Err(error) => Err(ApiError::new(error, id)),
     }
+}
+
+/// One turn, answered as server-sent events rather than the envelope
+/// (docs/api/conventions.md#streaming).
+///
+/// The context is the OWE1 middleware's, and it is optional only because
+/// development may run with encryption off; `stream::start` refuses to send
+/// plaintext events anywhere else.
+pub async fn chat_stream(
+    State(state): State<AppState>,
+    auth: Auth,
+    request_id: RequestId,
+    context: Option<Extension<Owe1Context>>,
+    Json(body): Json<StreamBody>,
+) -> Result<Response, ApiError> {
+    let id = request_id.0;
+
+    let turn = service::begin_turn(
+        &state.db,
+        &auth.workspace_id,
+        &auth.user_id,
+        auth.role,
+        &body.session_id,
+        &body.message,
+        &body.attachment_ids,
+    )
+    .await
+    .map_err(|error| ApiError::new(error, id.clone()))?;
+
+    stream::start(&state, turn, context.map(|Extension(context)| context))
+        .await
+        .map_err(|error| ApiError::new(error, id))
 }
 
 #[cfg(test)]

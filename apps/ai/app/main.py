@@ -4,10 +4,10 @@ Owns every call to the model and nothing else: no database connection, no
 storage credentials, no user JWT. Every side effect goes through the API's
 internal endpoints. See docs/ai/service.md.
 
-The tool loop, chat streaming and the extraction ladder arrive in US-028 to
-US-035. What is here is the shell they run inside: the shared-key check, the
-per-caller ceiling, and the OWE1 layer that opens every request and seals
-every response.
+The tool loop and the extraction ladder arrive in US-030 and US-033. What is
+here is the shell they run inside, plus the chat stream: the shared-key
+check, the per-caller ceiling, and the OWE1 layer that opens every request
+and seals every response.
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ from collections.abc import AsyncIterator
 from fastapi import FastAPI
 from starlette.middleware import Middleware
 
-from app.api.routes import handshake
+from app.api.routes import chat, handshake
 from app.config import Settings, settings
 from app.core.middleware import Owe1Middleware, RateLimitMiddleware, ServiceKeyMiddleware
 from app.core.ratelimit import RateLimiter
@@ -89,6 +89,7 @@ def create_app(config: Settings | None = None) -> FastAPI:
     instance.state.config = config
 
     instance.include_router(handshake.router)
+    instance.include_router(chat.router)
 
     @instance.get("/health")
     async def health() -> dict[str, str]:

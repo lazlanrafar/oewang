@@ -2,11 +2,11 @@
  * Typed calls to the chat endpoints.
  *
  * Server only, like everything under `src/lib/server`: the browser never
- * talks to the API (D5). Sessions and their messages live here; the stream
- * that fills them arrives with US-028.
+ * talks to the API (D5). Sessions and their messages live here, and so does
+ * the turn that fills them.
  */
 
-import { api, type Envelope } from './api';
+import { api, apiStream, type Envelope } from './api';
 
 export type ChatSessionSummary = {
 	id: string;
@@ -73,4 +73,32 @@ export function renameSession(id: string, title: string, token?: string) {
 
 export function deleteSession(id: string, token?: string) {
 	return api<null>({ method: 'DELETE', path: `/v1/ai/sessions/${id}`, token });
+}
+
+export type TurnRequest = {
+	session_id: string;
+	message: string;
+	attachment_ids: string[];
+};
+
+/**
+ * One turn (CHAT-2).
+ *
+ * The API persists both messages and answers with the event stream; this
+ * returns it decrypted, ready to write to the browser. `signal` is the
+ * browser's connection: when it goes, so does this one, and the API stops
+ * generating and keeps what it has (CHAT-9).
+ */
+export function streamTurn(
+	turn: TurnRequest,
+	token?: string,
+	signal?: AbortSignal
+): Promise<ReadableStream<Uint8Array>> {
+	return apiStream({
+		method: 'POST',
+		path: '/v1/ai/chat/stream',
+		body: turn,
+		token,
+		signal
+	});
 }

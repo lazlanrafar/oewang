@@ -240,6 +240,31 @@ pub async fn insert_message(
     .await
 }
 
+/// Per-workspace agent settings (CHAT-10).
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct AgentSettingsRow {
+    pub custom_instructions: Option<String>,
+    pub response_language: String,
+}
+
+/// The row is created lazily, so absent means the defaults rather than a
+/// missing workspace. The table carries no `deleted_at`: there is one row per
+/// workspace and it is edited, never removed.
+pub async fn find_settings(
+    executor: impl PgExecutor<'_>,
+    workspace_id: &str,
+) -> Result<Option<AgentSettingsRow>, sqlx::Error> {
+    sqlx::query_as!(
+        AgentSettingsRow,
+        r#"SELECT custom_instructions, response_language
+           FROM ai_agent_settings
+           WHERE workspace_id = $1"#,
+        workspace_id
+    )
+    .fetch_optional(executor)
+    .await
+}
+
 /// A session's activity timestamp, bumped when a message lands in it.
 pub async fn touch_session(
     executor: impl PgExecutor<'_>,

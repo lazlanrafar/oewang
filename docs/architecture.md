@@ -151,15 +151,17 @@ The audit row is written inside the same database transaction as the mutation (D
 
 ```
 Browser (fetch with a streaming body reader)
-  -> SvelteKit /api/chat/stream
-     attaches the JWT from the cookie, pipes the SSE response through unchanged
+  -> SvelteKit /chat/stream
+     attaches the JWT from the cookie
+     opens each sealed event and writes it on in the clear, event by event
   -> API POST /v1/ai/chat/stream
      verifies the JWT, resolves workspace_id and role
      loads session history, wallets and categories
      persists the user message
      POST to the AI service with x-api-key and an explicit workspace context
-     pipes the SSE response through unchanged
-     persists the assistant message when the stream ends
+     opens each event from that hop and re-seals it for the web app
+     persists the assistant message when the stream ends, or the partial
+     reply when the caller disconnects
   -> AI service POST /chat/stream
      builds the system prompt
      runs the Claude tool loop, at most 8 rounds

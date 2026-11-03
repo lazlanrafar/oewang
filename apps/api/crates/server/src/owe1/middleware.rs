@@ -14,7 +14,7 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use oewang_domain::{
-    owe1::{aad, seal, SealedBody},
+    owe1::{aad, seal, SealedBody, SessionKeys},
     AppError,
 };
 
@@ -25,6 +25,30 @@ use crate::{
 };
 
 pub const CONTENT_TYPE: &str = "application/vnd.oewang.owe1+json";
+pub const EVENT_STREAM_CONTENT_TYPE: &str = "text/event-stream";
+
+/// What a streaming route needs in order to seal its own events.
+///
+/// An event stream has no single body, so the middleware cannot seal it: each
+/// event is sealed on its own, bound to this request id and to its position
+/// in the stream (docs/api/encryption.md#chat-stream-events). The Python
+/// middleware puts the same three values on the ASGI scope.
+#[derive(Clone)]
+pub struct Owe1Context {
+    pub session_id: String,
+    pub request_id: String,
+    pub keys: SessionKeys,
+}
+
+impl std::fmt::Debug for Owe1Context {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // The keys redact themselves; the struct says so too (OPS-3).
+        f.debug_struct("Owe1Context")
+            .field("session_id", &self.session_id)
+            .field("request_id", &self.request_id)
+            .finish()
+    }
+}
 
 const HEADER_SESSION: &str = "x-owe-session";
 const HEADER_REQUEST_ID: &str = "x-owe-request-id";
@@ -141,6 +165,13 @@ async fn handle(
         axum::http::header::CONTENT_TYPE,
         HeaderValue::from_static("application/json"),
     );
+    // A streaming route seals its own events, so it needs the keys
+    // (docs/api/encryption.md#chat-stream-events).
+    inner.extensions_mut().insert(Owe1Context {
+        session_id: session_id.clone(),
+        request_id: request_id.clone(),
+        keys: keys.clone(),
+    });
 
     let response = next.run(inner).await;
     seal_response(&keys.server_to_client, &session_id, &request_id, response).await
@@ -149,8 +180,11 @@ async fn handle(
 /// Seal the response, binding the status so a proxy cannot turn a 403 into a
 /// 200 or move one body onto another request.
 ///
-/// A transport error is left in plaintext: the caller may hold no working key,
-/// which is the whole reason it is an error.
+/// Two bodies pass through untouched. A transport error, because the caller
+/// may hold no working key, which is the whole reason it is an error. And an
+/// event stream, because buffering it here to seal it as one body is exactly
+/// what a stream must not do; its events are sealed one at a time by the
+/// route that writes them (docs/api/encryption.md#chat-stream-events).
 async fn seal_response(
     key: &[u8; 32],
     session_id: &str,
@@ -160,7 +194,7 @@ async fn seal_response(
     let (parts, body) = response.into_parts();
     let status = parts.status;
 
-    if is_transport_error(&parts.headers, status) {
+    if is_transport_error(&parts.headers, status) || is_event_stream(&parts.headers) {
         return Ok(Response::from_parts(parts, body));
     }
 
@@ -202,6 +236,13 @@ async fn seal_response(
 /// have to re-parse the body to decide.
 fn is_transport_error(headers: &HeaderMap, status: StatusCode) -> bool {
     status.is_client_error() && headers.contains_key(crate::response::TRANSPORT_ERROR_HEADER)
+}
+
+fn is_event_stream(headers: &HeaderMap) -> bool {
+    headers
+        .get(axum::http::header::CONTENT_TYPE)
+        .and_then(|value| value.to_str().ok())
+        .is_some_and(|value| value.starts_with(EVENT_STREAM_CONTENT_TYPE))
 }
 
 fn header(headers: &HeaderMap, name: &str) -> Option<String> {
@@ -294,6 +335,22 @@ mod tests {
             open_field(&KEY, &aad, &tampered).unwrap_err().code(),
             "CRYPTO_DECRYPT_FAILED"
         );
+    }
+
+    #[test]
+    fn should_leave_an_event_stream_for_its_route_to_seal() {
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            axum::http::header::CONTENT_TYPE,
+            HeaderValue::from_static("text/event-stream"),
+        );
+        assert!(is_event_stream(&headers));
+
+        headers.insert(
+            axum::http::header::CONTENT_TYPE,
+            HeaderValue::from_static("application/json"),
+        );
+        assert!(!is_event_stream(&headers));
     }
 
     #[test]

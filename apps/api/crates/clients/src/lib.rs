@@ -10,6 +10,6 @@ pub mod rates;
 pub mod storage;
 
 pub use mailer::Mailer;
-pub use owe1_client::{Owe1Client, Owe1ClientError};
+pub use owe1_client::{EventStream, Owe1Client, Owe1ClientError, StreamEvent};
 pub use rates::RatesClient;
 pub use storage::{FileStore, Storage};

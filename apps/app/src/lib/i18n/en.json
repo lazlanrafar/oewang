@@ -63,9 +63,14 @@
 		"delete_title": "Delete this conversation?",
 		"delete_body": "It leaves the list along with its messages. Nothing else is affected.",
 		"open": "Open conversation",
-		"not_connected": "Answering is not wired up yet. Conversations you create here are kept.",
 		"input_placeholder": "Ask about your money",
-		"send": "Send"
+		"input_label": "Message",
+		"input_hint": "Enter sends. Shift and Enter start a new line.",
+		"send": "Send",
+		"stop": "Stop",
+		"status_sending": "Thinking",
+		"status_streaming": "Answering",
+		"status_stopped": "Stopped"
 	},
 	"shell": {
 		"workspace": "Workspace",
@@ -125,7 +130,8 @@
 		"destination_not_allowed": "Only a transfer has a destination wallet.",
 		"transfer_amount_required": "A transfer needs a destination amount.",
 		"amount_not_positive": "Enter an amount greater than zero.",
-		"fx_rate_unavailable": "No exchange rate is available. Enter one by hand."
+		"fx_rate_unavailable": "No exchange rate is available. Enter one by hand.",
+		"stream_failed": "The answer stopped part way. Ask again."
 	},
 	"style": {
 		"title": "Design system",
