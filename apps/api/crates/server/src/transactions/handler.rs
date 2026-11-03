@@ -5,8 +5,8 @@
 //! what keeps a sort out of the SQL string (SEC-10).
 
 use axum::{
-    extract::{Path, Query, State},
-    http::{header, StatusCode},
+    extract::{rejection::QueryRejection, FromRequestParts, Path, Query, State},
+    http::{header, request::Parts, StatusCode},
     response::IntoResponse,
     Json,
 };
@@ -336,17 +336,68 @@ pub struct AffectedView {
 /// parameters so a shared link reproduces the view (TXN-9).
 #[derive(Debug, Default, Deserialize)]
 pub struct ListQuery {
-    pub wallet_id: Option<String>,
-    pub category_id: Option<String>,
+    /// Every `wallet_id` in the query string, because the parameter may
+    /// repeat: `?wallet_id=a&wallet_id=b` filters by both. Filled by this
+    /// struct's own extractor rather than by serde, for the reason given
+    /// on `repeated`.
+    #[serde(skip)]
+    pub wallet_ids: Vec<String>,
+    /// Every `category_id`, repeated the same way.
+    #[serde(skip)]
+    pub category_ids: Vec<String>,
     pub r#type: Option<String>,
     pub start_date: Option<String>,
     pub end_date: Option<String>,
     pub search: Option<String>,
     pub is_ready: Option<bool>,
+    /// Amount bounds, as strings. Money is parsed, never deserialized into
+    /// a float (D12).
+    pub min_amount: Option<String>,
+    pub max_amount: Option<String>,
     pub sort: Option<String>,
     pub order: Option<String>,
     pub page: Option<u32>,
     pub limit: Option<u32>,
+}
+
+/// Every value of a repeated query parameter, in the order it was given.
+///
+/// `axum`'s `Query` deserializes through `serde_urlencoded`, which keeps
+/// only the last value of a repeated key, so `?wallet_id=a&wallet_id=b`
+/// would quietly filter by `b` alone. The scalar parameters still come from
+/// that extractor, unchanged; only the two that may repeat are read from
+/// the raw query string here.
+///
+/// A blank value is dropped, exactly as `non_empty` drops one, so
+/// `?wallet_id=` is the same as sending nothing.
+fn repeated(raw: &str, key: &str) -> Vec<String> {
+    form_urlencoded::parse(raw.as_bytes())
+        .filter(|(name, _)| name == key)
+        .map(|(_, value)| value.trim().to_owned())
+        .filter(|value| !value.is_empty())
+        .collect()
+}
+
+/// `ListQuery` is its own extractor, rather than being read through
+/// `Query<ListQuery>`, so the repeated parameters survive. The change is
+/// deliberately local to these three routes: every other route keeps
+/// `Query`, because no other query parameter repeats.
+impl<S> FromRequestParts<S> for ListQuery
+where
+    S: Send + Sync,
+{
+    type Rejection = QueryRejection;
+
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &S,
+    ) -> std::result::Result<Self, Self::Rejection> {
+        let raw = parts.uri.query().unwrap_or_default().to_owned();
+        let Query(mut query) = Query::<ListQuery>::from_request_parts(parts, state).await?;
+        query.wallet_ids = repeated(&raw, "wallet_id");
+        query.category_ids = repeated(&raw, "category_id");
+        Ok(query)
+    }
 }
 
 impl ListQuery {
@@ -366,17 +417,18 @@ impl ListQuery {
         };
 
         Ok(TransactionFilters {
-            wallet_id: non_empty(self.wallet_id.as_deref()),
-            category_id: non_empty(self.category_id.as_deref()),
+            // An empty list is no filter, and the repository is where that
+            // is decided, so nothing has to be stripped out here.
+            wallet_ids: Some(&self.wallet_ids),
+            category_ids: Some(&self.category_ids),
             kind,
             start_date: parse_day(self.start_date.as_deref(), DayEdge::Start)?,
             end_date: parse_day(self.end_date.as_deref(), DayEdge::End)?,
             search: non_empty(self.search.as_deref()),
             is_ready: self.is_ready,
             ids: None,
-            // The web list has no amount filter; the chat search tool does.
-            min_amount: None,
-            max_amount: None,
+            min_amount: bound("min_amount", self.min_amount.as_deref())?,
+            max_amount: bound("max_amount", self.max_amount.as_deref())?,
         })
     }
 
@@ -386,6 +438,7 @@ impl ListQuery {
     fn sort(&self) -> (SortField, SortOrder) {
         let field = match self.sort.as_deref() {
             Some("amount") => SortField::Amount,
+            Some("name") => SortField::Name,
             Some("created_at") => SortField::CreatedAt,
             _ => SortField::Date,
         };
@@ -527,7 +580,7 @@ where
 pub async fn list(
     State(state): State<AppState>,
     auth: Auth,
-    Query(query): Query<ListQuery>,
+    query: ListQuery,
     request_id: RequestId,
 ) -> std::result::Result<Json<Envelope<Vec<TransactionView>>>, ApiError> {
     let id = request_id.0;
@@ -693,7 +746,7 @@ pub async fn history(
 pub async fn summary(
     State(state): State<AppState>,
     auth: Auth,
-    Query(query): Query<ListQuery>,
+    query: ListQuery,
     request_id: RequestId,
 ) -> std::result::Result<Json<Envelope<SummaryView>>, ApiError> {
     let id = request_id.0;
@@ -747,7 +800,7 @@ pub async fn summary(
 pub async fn export(
     State(state): State<AppState>,
     auth: Auth,
-    Query(query): Query<ListQuery>,
+    query: ListQuery,
     request_id: RequestId,
 ) -> std::result::Result<impl IntoResponse, ApiError> {
     let id = request_id.0;
@@ -1013,6 +1066,17 @@ fn client_source(claimed: Option<&str>) -> Result<&'static str> {
     }
 }
 
+/// An optional amount bound from the query string.
+///
+/// Absent and empty both mean "no bound": a filter the user cleared sends
+/// `?min_amount=` rather than dropping the key, and that is not an error.
+fn bound(field: &'static str, raw: Option<&str>) -> Result<Option<Decimal>> {
+    match non_empty(raw) {
+        None => Ok(None),
+        Some(value) => money(field, value).map(Some),
+    }
+}
+
 fn money(field: &'static str, raw: &str) -> Result<Decimal> {
     raw.trim()
         .parse::<Decimal>()
@@ -1200,6 +1264,48 @@ mod tests {
         assert_eq!(parse_day(Some("  "), DayEdge::Start).unwrap(), None);
         assert_eq!(non_empty(Some("")), None);
         assert_eq!(non_empty(Some(" x ")), Some("x"));
+    }
+
+    #[test]
+    fn should_read_every_value_of_a_repeated_filter() {
+        assert_eq!(
+            repeated("category_id=c_food&category_id=c_rent", "category_id"),
+            vec!["c_food", "c_rent"],
+            "both chips filter, not only the last one"
+        );
+        assert_eq!(
+            repeated("category_id=c_food", "category_id"),
+            vec!["c_food"],
+            "one value is still one filter"
+        );
+        assert_eq!(
+            repeated("wallet_id=w_cash&category_id=c_food", "wallet_id"),
+            vec!["w_cash"],
+            "another key's value is not this key's"
+        );
+        assert!(
+            repeated("category_id=&category_id=%20", "category_id").is_empty(),
+            "a blank value is ignored, the way non_empty ignores one"
+        );
+        assert!(repeated("", "wallet_id").is_empty());
+    }
+
+    /// The extractor as a route sees it: the repeated keys reach the lists
+    /// and every scalar parameter still comes back from `Query`.
+    #[tokio::test]
+    async fn should_keep_every_repeated_id_when_the_query_is_extracted() {
+        let request = axum::http::Request::builder()
+            .uri("/v1/transactions?wallet_id=w_cash&wallet_id=w_bank&category_id=c_food&search=gojek&limit=10")
+            .body(axum::body::Body::empty())
+            .unwrap();
+        let (mut parts, _) = request.into_parts();
+
+        let query = ListQuery::from_request_parts(&mut parts, &()).await.unwrap();
+
+        assert_eq!(query.wallet_ids, vec!["w_cash", "w_bank"]);
+        assert_eq!(query.category_ids, vec!["c_food"]);
+        assert_eq!(query.search.as_deref(), Some("gojek"));
+        assert_eq!(query.limit, Some(10));
     }
 
     #[test]

@@ -99,6 +99,8 @@ The main screen. One page, `/transactions`.
 
 Filter state lives in URL search parameters, so a shared link reproduces the view (TXN-9). Column visibility and density persist in local storage, which is a per-browser convenience, not state the server needs.
 
+The amount range in the filter bar is a bound on the **base amount**, the workspace's own currency, not on the figure the row was entered in (D77). A list holding a USD wallet beside an IDR one has no single scale otherwise, and the filter bar and the assistant both speak in the workspace currency. Clearing the range sends `?min_amount=` rather than dropping the key, and an empty value means no bound rather than an error.
+
 Amounts render right-aligned, with expenses in the foreground colour and income in the positive accent, carried over from the old design.
 
 ### Transaction form sheet
@@ -272,11 +274,51 @@ should match it:
 - **The whole amount is coloured**, red for an expense and green for income,
   with the sign as well so colour is never the only carrier (UI-7).
 - Category shows a coloured square plus its name; account shows an icon.
-- Account and category are editable in place from the row, each opening its picker inside the cell.
+- Account and category are editable in place from the row, each opening its
+  picker inside the cell. The category change is its own one-field action; the
+  account change reads the row back and re-sends it through
+  `PATCH /v1/transactions/:id`, because moving a transaction to another wallet
+  moves money, and the balances, the lock order and the audit row for that
+  already live behind that route. **Moving a row to a wallet in another
+  currency keeps the figure and re-reads it in the new wallet's currency**,
+  exactly as editing the wallet in the form sheet does.
+- The row has no inline expansion. A click opens the detail sheet, and the row
+  actions menu carries the same thing as a named, keyboard-reachable item.
+- **A header sorts in three clicks**: ascending, descending, then back to the
+  order the server sent, which is what the live table does. Until a header is
+  clicked the table does not sort at all.
 - **Columns resize and stick** (D60). Every data column has a 4px handle on its right edge: drag to widen, double click to reset. Select, date and description stick to the left at offsets 0, 50 and 160; actions sticks to the right. The rest scroll under them.
-- Measured column widths: select 50, date 110, description 320, amount 170, account 200, category 161, actions 100. Every cell carries a rule on its right as well as under it, except the last.
-- Above the table: search with a filter control, a grouping selector, a date
-  range picker, a column-visibility control, an export menu and an add button.
+- Measured column widths: select 50, date 110, description 320, amount 170, account 200, category 161, actions 72. Every cell carries a rule on its right as well as under it, except the last.
+- The same file holds the heights, because the sticky rules depend on them:
+  `ROW_HEIGHT` 45, `HEADER_HEIGHT` the same as a row, `GROUP_ROW_HEIGHT` 40 as
+  the live day group row measures, and `GROUP_STICK_TOP`, where a day's header
+  parks while that day is on screen. `GROUP_STICK_TOP` is derived,
+  `HEADER_HEIGHT - 1`, not written as the 44 the live app hard-codes: one pixel
+  short of the column header puts the two rules on top of each other instead of
+  drawing a double line, and a literal would go quietly wrong the moment the
+  header height moved. The analytic group height, `GROUP_ROW_HEIGHT` collapsed
+  and `GROUP_ROW_HEIGHT + rows * ROW_HEIGHT` expanded, is also what lets row
+  virtualisation skip a measurement pass (D76).
+- **The table is always as wide as what holds it.** The last ordinary column,
+  category unless it is hidden, takes whatever the others leave
+  (`flex: 1 1 0%`); every other column keeps its pixel width and does not
+  shrink. A table that stops short of its container leaves a strip of page
+  beside rows that look like they should reach it.
+- **A drag has a ceiling as well as a floor**, both carried on the cell the way
+  the live table carries them: date 90 to 180, description 160 to 560, amount
+  120 to 400, account 120 to 300, category 120 to 400. Without a ceiling one
+  column can be dragged wide enough to push every other one off screen. The
+  filling column has no handle, because its width is the remainder.
+- The table carries its own rule on its left and right edges. The cells draw
+  the grid between columns and the rows between rows, but the two outer sides
+  belong to the scroll container, so they survive a column being hidden and
+  the body being scrolled sideways.
+- Above the table, one row and nothing else, as `transaction-client-header`
+  has it: the search on the left, then grouping, the date range, the
+  column-visibility control, the backup menu and the add button. There is no
+  type filter and no state filter, because the live header has neither;
+  `?type=` and `?is_ready=` are still read by the load function, so a link can
+  still carry them.
 
 ## The page, built as a specimen first
 
@@ -286,9 +328,19 @@ the filter, the table, the form sheet, the detail sheet, the export modal and
 the bulk bar, with mock rows. Building it there first makes the route a data
 problem rather than a layout one, and it is where the arrangement is agreed.
 
-Layout, from the old `transaction-client-header`: the title on the left, then
-grouping, the date range, the import and export menu and the add button on the
-right, with the filter on its own line underneath. The sheets, the modal and
+Layout, from the old `transaction-client-header`: the search on the left, then
+grouping, the date range, the column-visibility menu, the backup menu and the
+add button on the right, all on one line. **There is no page title.** The
+sidebar already says which page this is, and a heading repeating it costs a
+line of the table's height on every screen; the `h1` stays as `sr-only` so a
+screen reader still has the landmark.
+
+The **backup menu** is the old header's one menu for everything that moves
+data in or out: back up or restore on this device, scan a receipt, and export
+to a spreadsheet. Scanning a receipt is in there because it is another way of
+getting a transaction in, and the old header has no button of its own for it.
+A member without edit rights sees the export button alone, as they do in the
+old header. The sheets, the modal and
 the bulk bar hang off the page, not off the table, because they are the page's
 state; the table takes `toolbar={false}` and reports selection and row opening
 back through callbacks.
@@ -313,13 +365,34 @@ selection with a bulk bar, a row that expands in place, the in-cell account
 and category pickers, a row-actions menu, the empty state, the filter bar with
 facets, an amount range and a date range, and a footer count.
 
+Three things about its height and its layers are worth stating, because none
+of them is obvious from the markup:
+
+- **The table is the scrollport, not the page.** The page is a bounded flex
+  column (`min-h-0 flex-1`) inside the shell's `<main>`, and the table's scroll
+  container scrolls both axes. The page itself does not scroll, so the header
+  and the filter bar stay put and the body moves under them. There is no
+  `calc(100svh - ...)` anywhere: that arithmetic would restate the shell's
+  header height and padding in a second place, and the copy goes stale the
+  first time the shell changes.
+- **Day groups are sticky, with no JavaScript.** Each day is its own
+  `role="rowgroup"` with `display: block`, and that is what scopes the
+  stickiness: a sticky box is held inside its containing block, so a day's
+  header travels only as far as the bottom of its own day and is then pushed
+  out by the next one. One rowgroup around the whole body would let the first
+  day's header ride over every other day. No scroll listener, no measurement.
+  The group row carries `role="row"` and a single `role="cell"`, because a
+  rowgroup may hold nothing but rows (D65).
+- **Three sticky things coexist, so there is a z ladder**: the column header at
+  `z-40`, a day group header at `z-30`, the sticky cells at `z-20`. The order
+  is the order they pass each other: a day header slides under the column
+  header, and a sticky column slides under both.
+
 **Not built yet**, in the order the product will feel the lack:
 
 | Missing | What the old app does | Cost |
 |---|---|---|
 | Loading state | `data-table-skeleton.tsx` renders skeleton rows per column type while a page loads. Ours renders nothing | Small |
-| Row virtualisation | `data-table-virtual-row.tsx` with `@tanstack/react-virtual`, so thousands of rows stay smooth | Medium, and only once a page holds more than a hundred rows |
-| Column reorder | Headers drag to reorder with dnd-kit, excluding the sticky and actions columns | Medium |
 | Persisted table settings | `use-table-settings` keeps column order, visibility and widths per table and per user. Ours reset on reload | Small to medium |
 | Copy link to a row | `meta.onCopyUrl` on the old table. The detail sheet is already addressable as `?detail=`, so this is a button, not a feature | Small |
 | XLSX in the import wizard | The old wizard reads a spreadsheet as well as a CSV. SheetJS is no longer published to npm and the version that is carries a known prototype-pollution advisory, so the dependency is a decision to take rather than to assume. **Still open.** A dependency that runs in the browser shares a context with the session ([hardening](../security/hardening.md#dependencies)), which is why this one is the team's call and not a default | Small once the dependency is chosen |
@@ -327,9 +400,21 @@ facets, an amount range and a date range, and a footer count.
 
 Built since: the receipt confirmation sheet, in the [canvas](chat.md#canvas) rather than as a modal, and the assistant's column mapping in step 2 of the wizard.
 
-Two of the old table's dependencies are deliberately absent for now, and the
-component's own comment says so: TanStack Table and the virtualiser. Everything
-above except virtualisation and reordering is reachable without them.
+**In build**, the two the old app solves with a library and this one does not
+(D76): row virtualisation and column reordering. The old app reaches for
+`@tanstack/react-virtual` and dnd-kit; both are written here instead, against
+this table's own row model. The virtualiser's selling point is dynamic
+measurement, and this table needs none: a day group's height is analytic,
+`GROUP_ROW_HEIGHT` collapsed and `GROUP_ROW_HEIGHT + rows * ROW_HEIGHT`
+expanded. A drag library would fight the resize handle's own pointer capture,
+since both want the pointer on the same header edge. TanStack Table itself
+stays out, as D57 had it: the old app fabricates about a hundred lines of fake
+TanStack row objects because grouping plus virtualisation does not fit its row
+model, so adopting it here means adopting that workaround too, while the
+sorting, visibility, sizing and selection it would replace already work and the
+resize already answers the keyboard (D65) where `columnSizing` does not. Net
+new browser dependencies for both features: zero, which counts for more than it
+would on the server ([hardening](../security/hardening.md#dependencies)).
 
 ## UI port map
 

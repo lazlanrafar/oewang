@@ -30,6 +30,9 @@ cuid2 = "0.1"
 
 # Serialization and validation
 serde = { version = "1", features = ["derive"] }
+# Already in the tree under `serde_urlencoded`; named here so the one route
+# whose query parameters may repeat can read them itself.
+form_urlencoded = "1"
 serde_json = "1"
 validator = { version = "0.19", features = ["derive"] }
 

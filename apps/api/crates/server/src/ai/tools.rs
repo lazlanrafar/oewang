@@ -278,9 +278,16 @@ async fn recent(pool: &PgPool, workspace_id: &str, args: RecentArgs) -> Result<T
 }
 
 async fn search(pool: &PgPool, workspace_id: &str, args: SearchArgs) -> Result<ToolOutcome> {
+    // The model still names at most one wallet and one category, and the
+    // tool's schema says so. The repository takes a set, so each answer
+    // becomes a list of one, and no answer becomes an empty list, which the
+    // repository reads as no filter.
+    let wallet_ids: Vec<String> = args.wallet_id.iter().cloned().collect();
+    let category_ids: Vec<String> = args.category_id.iter().cloned().collect();
+
     let filters = repo::TransactionFilters {
-        wallet_id: args.wallet_id.as_deref(),
-        category_id: args.category_id.as_deref(),
+        wallet_ids: Some(&wallet_ids),
+        category_ids: Some(&category_ids),
         kind: args.kind.as_deref(),
         start_date: args.from,
         end_date: args.to,

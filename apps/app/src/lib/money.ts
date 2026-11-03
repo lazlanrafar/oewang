@@ -86,24 +86,17 @@ export type FormatOptions = {
 	withSymbol?: boolean;
 };
 
-/** `Rp` for rupiah, `$` for dollars, the code itself for anything else. */
+/**
+ * The ISO code, which is what this product shows in front of a figure.
+ *
+ * Not a symbol. A workspace can hold wallets in several currencies, and
+ * symbols are ambiguous across them: `$` is four different currencies and
+ * `Rp` is one nobody outside Indonesia reads at a glance. The code is
+ * unambiguous, it is the same width for every currency so a column of
+ * figures stays aligned, and it is what the live app prints.
+ */
 export function currencySymbol(code: string): string {
-	switch (code.toUpperCase()) {
-		case 'IDR':
-			return 'Rp';
-		case 'USD':
-			return '$';
-		case 'EUR':
-			return '€';
-		case 'GBP':
-			return '£';
-		case 'SGD':
-			return 'S$';
-		case 'JPY':
-			return '¥';
-		default:
-			return code.toUpperCase();
-	}
+	return code.trim().toUpperCase();
 }
 
 /**

@@ -14,7 +14,7 @@ use sqlx::PgPool;
 
 use crate::{
     audit::Actor,
-    transactions::service::{self, Page, TransactionInput},
+    transactions::service::{self, Page, SortField, SortOrder, TransactionInput},
 };
 
 /// The configured ceiling, out of the way of these tests: what they
@@ -947,7 +947,7 @@ async fn should_filter_search_and_page_the_list(pool: PgPool) {
         matching(
             &pool,
             service::TransactionFilters {
-                wallet_id: Some(&cash),
+                wallet_ids: Some(std::slice::from_ref(&cash)),
                 ..Default::default()
             }
         )
@@ -958,7 +958,7 @@ async fn should_filter_search_and_page_the_list(pool: PgPool) {
         matching(
             &pool,
             service::TransactionFilters {
-                category_id: Some(&food),
+                category_ids: Some(std::slice::from_ref(&food)),
                 ..Default::default()
             }
         )
@@ -1020,6 +1020,263 @@ async fn should_filter_search_and_page_the_list(pool: PgPool) {
     .unwrap();
     assert_eq!((rows.len(), total), (1, 3), "page two of three rows");
     let _ = page;
+}
+
+/// Several categories are a union, not an intersection: a row carrying any
+/// one of them belongs in the list. The filter bar sends one `category_id`
+/// per chip, so the shape the user sees is the shape the query takes.
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_match_any_of_several_categories(pool: PgPool) {
+    fixture(&pool, "IDR").await;
+    let cash = wallet(&pool, "w_cash", "IDR").await;
+    let food = category(&pool, "c_food", "expense").await;
+    let transport = category(&pool, "c_transport", "expense").await;
+    let rent = category(&pool, "c_rent", "expense").await;
+    let rates = offline_rates();
+
+    for (name, category_id) in [
+        ("Warung Tekko", &food),
+        ("Gojek", &transport),
+        ("Kontrakan", &rent),
+    ] {
+        service::create(
+            &pool,
+            &rates,
+            actor(),
+            TransactionInput {
+                name: Some(name),
+                category_id: Some(category_id.as_str()),
+                ..expense(&cash, "50000")
+            },
+        )
+        .await
+        .unwrap();
+    }
+    // An uncategorized row, which no id can match.
+    service::create(&pool, &rates, actor(), expense(&cash, "1000"))
+        .await
+        .unwrap();
+
+    async fn matching(pool: &PgPool, category_ids: &[String]) -> usize {
+        let (rows, total) = service::list(
+            pool,
+            WORKSPACE,
+            &service::TransactionFilters {
+                category_ids: Some(category_ids),
+                ..Default::default()
+            },
+            Default::default(),
+            Default::default(),
+            Page::new(None, None),
+        )
+        .await
+        .unwrap();
+        assert_eq!(rows.len() as i64, total, "the count matches the page");
+        rows.len()
+    }
+
+    assert_eq!(
+        matching(&pool, &[]).await,
+        4,
+        "an empty list is no filter, not a filter that matches nothing"
+    );
+    assert_eq!(
+        matching(&pool, std::slice::from_ref(&food)).await,
+        1,
+        "one id narrows to that one category, as it always did"
+    );
+    assert_eq!(
+        matching(&pool, &[food.clone(), transport.clone()]).await,
+        2,
+        "two ids are the union of both"
+    );
+    assert_eq!(
+        matching(&pool, &[food.clone(), transport.clone(), rent.clone()]).await,
+        3,
+        "the uncategorized row still belongs to none of them"
+    );
+}
+
+/// The same union over wallets, where a row can sit on either leg. A
+/// transfer belongs to both of its wallets and is still one row.
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_match_any_of_several_wallets(pool: PgPool) {
+    fixture(&pool, "IDR").await;
+    let cash = wallet(&pool, "w_cash", "IDR").await;
+    let bank = wallet(&pool, "w_bank", "IDR").await;
+    let savings = wallet(&pool, "w_savings", "IDR").await;
+    let rates = offline_rates();
+
+    for wallet_id in [&cash, &bank, &savings] {
+        service::create(&pool, &rates, actor(), expense(wallet_id, "50000"))
+            .await
+            .unwrap();
+    }
+    service::create(
+        &pool,
+        &rates,
+        actor(),
+        TransactionInput {
+            kind: TransactionType::Transfer,
+            to_wallet_id: Some(&bank),
+            to_amount: Some(decimal("100000")),
+            amount: decimal("100000"),
+            ..expense(&savings, "0")
+        },
+    )
+    .await
+    .unwrap();
+
+    async fn matching(pool: &PgPool, wallet_ids: &[String]) -> usize {
+        let (rows, total) = service::list(
+            pool,
+            WORKSPACE,
+            &service::TransactionFilters {
+                wallet_ids: Some(wallet_ids),
+                ..Default::default()
+            },
+            Default::default(),
+            Default::default(),
+            Page::new(None, None),
+        )
+        .await
+        .unwrap();
+        assert_eq!(rows.len() as i64, total, "the count matches the page");
+        rows.len()
+    }
+
+    assert_eq!(matching(&pool, &[]).await, 4, "an empty list is no filter");
+    assert_eq!(
+        matching(&pool, std::slice::from_ref(&cash)).await,
+        1,
+        "one id behaves exactly as it did before"
+    );
+    assert_eq!(
+        matching(&pool, std::slice::from_ref(&savings)).await,
+        2,
+        "the transfer out of savings still matches its own wallet"
+    );
+    assert_eq!(
+        matching(&pool, &[cash.clone(), bank.clone()]).await,
+        3,
+        "the union holds both wallets' rows and the transfer that lands in one"
+    );
+    assert_eq!(
+        matching(&pool, &[bank.clone(), savings.clone()]).await,
+        3,
+        "a transfer matching on both legs is still one row"
+    );
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_bound_the_list_by_amount(pool: PgPool) {
+    // The bound is on `base_amount`, the workspace's own currency, so one
+    // number means the same thing whichever wallet a row sits in.
+    fixture(&pool, "IDR").await;
+    let cash = wallet(&pool, "w_cash", "IDR").await;
+    let rates = offline_rates();
+
+    for amount in ["12000", "50000", "412000"] {
+        service::create(&pool, &rates, actor(), expense(&cash, amount))
+            .await
+            .unwrap();
+    }
+
+    async fn matching(pool: &PgPool, filters: service::TransactionFilters<'_>) -> usize {
+        let (rows, _) = service::list(
+            pool,
+            WORKSPACE,
+            &filters,
+            Default::default(),
+            Default::default(),
+            Page::new(None, None),
+        )
+        .await
+        .unwrap();
+        rows.len()
+    }
+
+    assert_eq!(
+        matching(
+            &pool,
+            service::TransactionFilters {
+                min_amount: Some(decimal("50000")),
+                ..Default::default()
+            }
+        )
+        .await,
+        2,
+        "a lower bound is inclusive"
+    );
+    assert_eq!(
+        matching(
+            &pool,
+            service::TransactionFilters {
+                max_amount: Some(decimal("50000")),
+                ..Default::default()
+            }
+        )
+        .await,
+        2,
+        "an upper bound is inclusive"
+    );
+    assert_eq!(
+        matching(
+            &pool,
+            service::TransactionFilters {
+                min_amount: Some(decimal("20000")),
+                max_amount: Some(decimal("100000")),
+                ..Default::default()
+            }
+        )
+        .await,
+        1,
+        "both bounds narrow to the band between them"
+    );
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_sort_the_list_by_name(pool: PgPool) {
+    fixture(&pool, "IDR").await;
+    let cash = wallet(&pool, "w_cash", "IDR").await;
+    let rates = offline_rates();
+
+    for name in ["Warung Tekko", "Gojek", "Electricity"] {
+        service::create(
+            &pool,
+            &rates,
+            actor(),
+            TransactionInput {
+                name: Some(name),
+                ..expense(&cash, "1000")
+            },
+        )
+        .await
+        .unwrap();
+    }
+
+    async fn names(pool: &PgPool, order: SortOrder) -> Vec<String> {
+        let (rows, _) = service::list(
+            pool,
+            WORKSPACE,
+            &Default::default(),
+            SortField::Name,
+            order,
+            Page::new(None, None),
+        )
+        .await
+        .unwrap();
+        rows.into_iter().filter_map(|row| row.name).collect()
+    }
+
+    assert_eq!(
+        names(&pool, SortOrder::Ascending).await,
+        vec!["Electricity", "Gojek", "Warung Tekko"]
+    );
+    assert_eq!(
+        names(&pool, SortOrder::Descending).await,
+        vec!["Warung Tekko", "Gojek", "Electricity"]
+    );
 }
 
 #[sqlx::test(migrations = "../../migrations")]

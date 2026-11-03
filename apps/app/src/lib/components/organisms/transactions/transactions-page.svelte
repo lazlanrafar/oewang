@@ -18,18 +18,22 @@
 	import { absDecimal, formatMoney, isNegative } from '$lib/money.js';
 
 	import ChevronDown from '@lucide/svelte/icons/chevron-down';
+	import Columns3 from '@lucide/svelte/icons/columns-3';
 	import FileDown from '@lucide/svelte/icons/file-down';
 	import FileUp from '@lucide/svelte/icons/file-up';
+	import LayoutGrid from '@lucide/svelte/icons/layout-grid';
 	import Plus from '@lucide/svelte/icons/plus';
+	import ScanLine from '@lucide/svelte/icons/scan-line';
 
 	import { Button } from '../../atoms/button/index.js';
 	import * as DropdownMenu from '../../atoms/dropdown-menu/index.js';
 	import * as Select from '../../atoms/select/index.js';
 	import { DateRangePicker } from '../../molecules/date-range-picker/index.js';
-	import { DataTableFilter } from '../data-table-filter/index.js';
-	import { emptyFilterState, type DataTableFilterState } from '../data-table-filter/index.js';
-	import { TransactionsTable } from '../data-table/index.js';
-	import type { NamedOption, TransactionRow } from '../data-table/index.js';
+	import { DataTableFilter } from '../../molecules/data-table-filter/index.js';
+	import { emptyFilterState, type DataTableFilterState } from '../../molecules/data-table-filter/index.js';
+	import { TransactionsTable, TRANSACTION_COLUMNS } from '../../molecules/data-table/index.js';
+	import { GROUPINGS, type Grouping } from '../../molecules/data-table/grouping.js';
+	import type { ColumnKey, NamedOption, TransactionRow } from '../../molecules/data-table/index.js';
 	import TransactionBulkBar from './transaction-bulk-bar.svelte';
 	import TransactionDetailSheet from './transaction-detail-sheet.svelte';
 	import TransactionExportModal from './transaction-export-modal.svelte';
@@ -40,18 +44,33 @@
 		rows,
 		categories = $bindable(),
 		wallets = $bindable(),
-		title = 'Transactions',
 		canEdit = true
 	}: {
 		rows: TransactionRow[];
 		categories: NamedOption[];
 		wallets: NamedOption[];
-		title?: string;
 		canEdit?: boolean;
 	} = $props();
 
 	let filters = $state<DataTableFilterState>(emptyFilterState());
-	let grouping = $state<'day' | 'none'>('day');
+
+	/**
+	 * Which columns are off. Held here rather than in the table because the
+	 * menu that changes it sits in this page's header, where the live app
+	 * puts it.
+	 */
+	let hiddenColumns = $state<Partial<Record<ColumnKey, boolean>>>({});
+
+	const hideableColumns = TRANSACTION_COLUMNS.filter((column) => !column.fixed);
+	let grouping = $state<Grouping>('daily');
+
+	/** The specimen's own words; the route reads these from the dictionary. */
+	const GROUPING_LABEL: Record<Grouping, string> = {
+		none: 'None',
+		daily: 'Daily',
+		weekly: 'Weekly',
+		monthly: 'Monthly'
+	};
 	let selectedIds = $state<string[]>([]);
 
 	let formOpen = $state(false);
@@ -148,22 +167,73 @@
 </script>
 
 <div class="flex flex-col gap-4">
-	<!-- ------------------------------------------------------- header -->
-	<div class="flex shrink-0 flex-wrap items-center justify-between gap-4">
-		<h1 class="text-h2">{title}</h1>
+	<!--
+		The header, laid out as the live page lays it out: the search on the
+		left, everything that acts on the table on the right, one line. There
+		is no page title. The sidebar already says which page this is, and a
+		heading repeating it costs a line of the table's height on every
+		screen.
+	-->
+	<!--
+		The heading stays for anyone navigating by headings; only its ink is
+		gone. A page whose only `h1` is deleted leaves a screen-reader user
+		with no landmark for what they are on, and the sidebar's current item
+		is a link, not a heading (UI-6).
+	-->
+	<h1 class="sr-only">Transactions</h1>
 
-		<div class="flex flex-wrap items-center gap-2">
+	<div class="flex shrink-0 items-center justify-between gap-4">
+		<!-- The search takes the line; everything that acts on the table sits
+		     at the far end. One row, as the old header is one row. -->
+		<div class="flex flex-1 items-center">
+			<DataTableFilter
+				bind:filters
+				facets={[
+					{ id: 'category', label: 'Category', options: categories },
+					{ id: 'wallet', label: 'Account', options: wallets }
+				]}
+				placeholder="Search transactions"
+				showDate={false}
+				class="w-full"
+			/>
+		</div>
+
+		<div class="flex items-center gap-2">
 			<Select.Root type="single" bind:value={grouping}>
 				<Select.Trigger class="w-36">
-					{grouping === 'day' ? 'Group by day' : 'No grouping'}
+					<LayoutGrid class="text-subtle size-4 shrink-0" />
+					{GROUPING_LABEL[grouping]}
 				</Select.Trigger>
 				<Select.Content>
-					<Select.Item value="day">Group by day</Select.Item>
-					<Select.Item value="none">No grouping</Select.Item>
+					{#each GROUPINGS as option (option)}
+						<Select.Item value={option}>{GROUPING_LABEL[option]}</Select.Item>
+					{/each}
 				</Select.Content>
 			</Select.Root>
 
 			<DateRangePicker bind:value={filters.dateRange} />
+
+			<DropdownMenu.Root>
+				<DropdownMenu.Trigger>
+					{#snippet child({ props })}
+						<Button variant="outline" size="icon" aria-label="Columns" {...props}>
+							<Columns3 />
+						</Button>
+					{/snippet}
+				</DropdownMenu.Trigger>
+				<DropdownMenu.Content align="end" class="w-44">
+					<DropdownMenu.Label>Columns</DropdownMenu.Label>
+					{#each hideableColumns as column (column.key)}
+						<DropdownMenu.CheckboxItem
+							checked={!hiddenColumns[column.key]}
+							onCheckedChange={(on) =>
+								(hiddenColumns = { ...hiddenColumns, [column.key]: !on })}
+						>
+							{column.label}
+						</DropdownMenu.CheckboxItem>
+					{/each}
+				</DropdownMenu.Content>
+			</DropdownMenu.Root>
 
 			{#if canEdit}
 				<DropdownMenu.Root>
@@ -171,24 +241,28 @@
 						{#snippet child({ props })}
 							<Button variant="outline" {...props}>
 								<FileUp />
-								<span class="hidden sm:inline-block">Import</span>
+								<span class="hidden sm:inline-block">Backup</span>
 								<ChevronDown class="text-subtle" />
 							</Button>
 						{/snippet}
 					</DropdownMenu.Trigger>
-					<DropdownMenu.Content align="end" class="w-56">
+					<!-- Everything that moves data in or out, in one menu, as the
+					     old header has it. Scanning a receipt is in here too: it
+					     is another way of getting a transaction in, and the old
+					     header has no button of its own for it. -->
+					<DropdownMenu.Content align="end" class="w-64">
 						<DropdownMenu.Item>
 							<FileUp />
-							Import a CSV
+							Back up or restore on this device
 						</DropdownMenu.Item>
 						<DropdownMenu.Item>
-							<FileUp />
-							Import a statement with the assistant
+							<ScanLine />
+							Scan a receipt
 						</DropdownMenu.Item>
 						<DropdownMenu.Separator />
 						<DropdownMenu.Item onclick={() => (exportOpen = true)}>
 							<FileDown />
-							Export
+							Export data to a spreadsheet
 						</DropdownMenu.Item>
 					</DropdownMenu.Content>
 				</DropdownMenu.Root>
@@ -200,23 +274,11 @@
 			{:else}
 				<Button variant="outline" onclick={() => (exportOpen = true)}>
 					<FileDown />
-					Export
+					Export data to a spreadsheet
 				</Button>
 			{/if}
 		</div>
 	</div>
-
-	<!-- The filter sits on its own line, as the old header lays it out:
-	     full width on the left, actions on the right above it. -->
-	<DataTableFilter
-		bind:filters
-		facets={[
-			{ id: 'category', label: 'Category', options: categories },
-			{ id: 'wallet', label: 'Account', options: wallets }
-		]}
-		placeholder="Search transactions"
-		showDate={false}
-	/>
 
 	<TransactionsTable
 		{rows}
@@ -224,6 +286,7 @@
 		{wallets}
 		bind:filters
 		bind:grouping
+		bind:hidden={hiddenColumns}
 		toolbar={false}
 		onAdd={openNew}
 		onOpenRow={(row) => {

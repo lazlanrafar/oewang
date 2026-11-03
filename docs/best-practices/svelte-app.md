@@ -19,7 +19,7 @@ How the web app is structured and written. It is a BFF as much as a UI: it holds
 | Language | Svelte 5 with runes, TypeScript in strict mode |
 | Styling | Tailwind CSS v4, CSS-first config |
 | Components | shadcn-svelte, generated into the repo, owned by the repo |
-| Table | TanStack Table, Svelte adapter |
+| Table | No table library. `molecules/data-table` is written here: a flex row of fixed-width cells per record, with sorting, column visibility, resizing, selection, sticky columns, sticky day groups, row virtualisation and column reordering all written against its own row model (D57, D76) |
 | Forms | Superforms with a Zod adapter |
 | Icons | Lucide Svelte |
 | Theme | mode-watcher, with the before-paint bootstrap in `app.html` so it can carry the CSP nonce ([hardening](../security/hardening.md#browser-headers)) |
@@ -132,12 +132,16 @@ src/lib/components/
 │               toggle-group, slider, progress, skeleton, spinner, kbd, breadcrumb,
 │               pagination, scroll-area, aspect-ratio, sonner
 ├─ molecules/   atoms doing one job together: field, input-group, button-group,
-│               combobox, currency-input, item, empty, stat-card
-├─ organisms/   a whole feature: the transactions table, the chat panel
-└─ shell/       this app's own furniture: sidebar nav, workspace switcher, theme toggle
+│               combobox, currency-input, item, empty, stat-card, field-error,
+│               form-error, the data table and its filter bar
+└─ organisms/   a whole feature, and the app's own furniture: the transactions
+                page, the chat panel, and layouts/ (the sidebar, its nav, the
+                workspace block, the theme toggle)
 ```
 
 - An atom knows nothing about money, workspaces or transactions. The moment it would, it is a molecule.
+- The data table and its filter bar are molecules, not organisms: they take rows and columns as props and know nothing about transactions. `organisms/transactions` is what knows, and it is the thing that configures them.
+- There is no `shell/`. The app's own furniture is `organisms/layouts/`, because a sidebar that knows the navigation and the workspace is a feature, not a primitive.
 - `atoms/` and `molecules/` are the design system. They are edited to change the design system, never for one feature's convenience.
 - A component that fetches is a mistake. Data comes in as a prop.
 - A component over roughly 300 lines is a hint that a sheet is doing a page's job.
@@ -267,7 +271,7 @@ Treated as part of done, not as a pass at the end (UI-6, UI-7).
 | Keep the `"use client"` equivalent low: push interactivity to leaf components | Less hydration work |
 | Load shared data in the layout, not in every page | One fetch per navigation, not four |
 | `Promise.all` for independent fetches | Latency adds up in series |
-| Paginate at 25, cap at 100 | The table is virtualized only if a measurement says it must be |
+| Paginate at 25, cap at 100 | A page is small enough to render whole. Row virtualisation is written here rather than taken from a library (D76), and a day group's height is analytic, so it needs no measurement pass |
 | No chart library in the initial bundle | Summary charts are imported dynamically |
 | Images: explicit width and height | No layout shift |
 

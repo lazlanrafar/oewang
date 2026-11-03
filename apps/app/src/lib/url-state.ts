@@ -30,6 +30,20 @@ export function readParam<T extends string>(
 	return allowed.includes(value as T) ? (value as T) : fallback;
 }
 
+/**
+ * Read every value of a parameter that may repeat.
+ *
+ * A multi-select filter is `?category_id=a&category_id=b`, which is the
+ * shape both `URLSearchParams` and the API already understand, rather than
+ * a comma-joined string nobody can hold an id containing a comma in.
+ */
+export function readValues(
+	url: { searchParams: { getAll(name: string): string[] } },
+	key: string
+): string[] {
+	return url.searchParams.getAll(key).filter((value) => value !== '');
+}
+
 /** Read a free-text parameter, such as a search box. */
 export function readText(
 	url: { searchParams: { get(name: string): string | null } },
@@ -51,13 +65,24 @@ export function readText(
  * being applied, not a new page being opened.
  */
 export async function writeParams(
-	values: Record<string, string | number | boolean | null | undefined>,
+	values: Record<string, string | number | boolean | string[] | null | undefined>,
 	options: { push?: boolean } = {}
 ): Promise<void> {
 	// `page.url` is readonly, so the change is made on a copy.
 	const url = new URL(page.url.href);
 
 	for (const [key, value] of Object.entries(values)) {
+		// An array is a parameter that may repeat, so the key is cleared and
+		// then appended to. An empty array clears it, which is the same thing
+		// an empty string means for a single value.
+		if (Array.isArray(value)) {
+			url.searchParams.delete(key);
+			for (const entry of value) {
+				if (entry !== '') url.searchParams.append(key, entry);
+			}
+			continue;
+		}
+
 		if (value === null || value === undefined || value === '') {
 			url.searchParams.delete(key);
 		} else {

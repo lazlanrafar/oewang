@@ -114,6 +114,8 @@ export type TransactionQuery = {
 	end_date?: string;
 	search?: string;
 	is_ready?: string;
+	min_amount?: string;
+	max_amount?: string;
 	sort?: string;
 	order?: string;
 	page?: string;
@@ -134,6 +136,8 @@ export const TRANSACTION_FILTER_KEYS = [
 	'end_date',
 	'search',
 	'is_ready',
+	'min_amount',
+	'max_amount',
 	'sort',
 	'order',
 	'page',
@@ -144,8 +148,12 @@ export const TRANSACTION_FILTER_KEYS = [
 export function filterParams(url: URL): URLSearchParams {
 	const params = new URLSearchParams();
 	for (const key of TRANSACTION_FILTER_KEYS) {
-		const value = url.searchParams.get(key);
-		if (value) params.set(key, value);
+		// `getAll`, because a facet may hold several values and arrives as a
+		// repeated parameter. A single value is the one-element case of the
+		// same shape, so nothing special-cases it.
+		for (const value of url.searchParams.getAll(key)) {
+			if (value) params.append(key, value);
+		}
 	}
 	return params;
 }

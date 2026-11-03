@@ -41,7 +41,13 @@ function isServerOnly(path: string): boolean {
 	);
 }
 
-type Rule = { name: string; pattern: RegExp; why: string };
+type Rule = {
+	name: string;
+	pattern: RegExp;
+	why: string;
+	/** Files the rule does not apply to, each with its reason written beside it. */
+	except?: string[];
+};
 
 const RULES: Rule[] = [
 	{
@@ -67,7 +73,13 @@ const RULES: Rule[] = [
 	{
 		name: 'document.cookie',
 		pattern: /document\s*\.\s*cookie/,
-		why: 'the session cookie is HttpOnly and read only by src/lib/server/session.ts'
+		why: 'the session cookie is HttpOnly and read only by src/lib/server/session.ts',
+		// The rule is about the session, not about the word `cookie`. One
+		// file writes a layout preference the server has to read back on the
+		// first paint, which is a cookie for exactly that reason and carries
+		// no identity. It is named here so adding a second one is a decision
+		// someone makes on purpose.
+		except: ['lib/components/organisms/layouts/sidebar.ts']
 	}
 ];
 
@@ -111,6 +123,7 @@ describe('the server boundary', () => {
 			const offenders: string[] = [];
 
 			for (const path of files) {
+				if (rule.except?.includes(relative(src, path))) continue;
 				const lines = readFileSync(path, 'utf8').split('\n');
 
 				lines.forEach((line, index) => {

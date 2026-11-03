@@ -38,9 +38,13 @@ test.describe('creating a transaction', () => {
 		await expect(page).not.toHaveURL(/sheet=/);
 
 		// The row came back from the server: this list is what the load
-		// returned, not something the browser inserted.
-		await expect(page.getByText(name).first()).toBeVisible();
-		await expect(page.getByText('1 transaction(s)')).toBeVisible();
+		// returned, not something the browser inserted. The count line it
+		// used to assert went with the pagination footer, so the proof is
+		// now the row itself, in the one data row the list holds, with the
+		// amount the server formatted.
+		const row = page.getByRole('row').filter({ hasText: name });
+		await expect(row).toHaveCount(1);
+		await expect(row).toContainText('50.000');
 	});
 
 	test('keeps the form sheet open across a reload', async ({ page }) => {
@@ -59,8 +63,18 @@ test.describe('creating a transaction', () => {
 		await page.goto('/transactions?type=income&group=none');
 
 		await expect(page.getByRole('heading', { name: 'Transactions', level: 1 })).toBeVisible();
-		// The control reflects the URL rather than its own default.
-		await expect(page.getByText('Income', { exact: true }).first()).toBeVisible();
+
+		// The view itself, not a control: the header carries no type filter,
+		// as the live header carries none, but `?type=` still narrows the
+		// list. A fresh account has no income, so what the link reproduces is
+		// the filtered empty state, which is a different sentence from the
+		// one an empty account gets.
+		await expect(page.getByText('Nothing matches')).toBeVisible();
+
+		// And the search box, which does have a control, carries what the
+		// link put in it.
+		await page.goto('/transactions?search=Warung');
+		await expect(page.getByPlaceholder('Search transactions')).toHaveValue('Warung');
 	});
 
 	test('opens the receipt canvas from the URL and closes it on Escape', async ({ page }) => {

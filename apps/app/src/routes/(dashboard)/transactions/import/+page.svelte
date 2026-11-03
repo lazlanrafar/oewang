@@ -26,7 +26,7 @@
 	import { Label } from '$lib/components/atoms/label';
 	import type { UploadedFile } from '$lib/components/molecules/file-dropzone';
 	import { ImportAiModal } from '$lib/components/organisms/transactions';
-	import FormError from '$lib/components/shell/form-error.svelte';
+	import { FormError } from '$lib/components/molecules/form-error';
 	import {
 		cleanMapping,
 		isMappable,

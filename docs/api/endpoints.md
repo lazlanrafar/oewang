@@ -135,14 +135,16 @@ The response is a suggestion. The rate the user confirms is sent back on the tra
 
 | Parameter | Type | Notes |
 |---|---|---|
-| `wallet_id` | string | Matches `wallet_id` or `to_wallet_id` |
-| `category_id` | string | |
+| `wallet_id` | string, repeatable | Matches `wallet_id` or `to_wallet_id`, so a transfer shows under both of its wallets. May repeat: `?wallet_id=a&wallet_id=b` is the union, a row in either wallet. Omitted, empty and no values at all mean no filter |
+| `category_id` | string, repeatable | May repeat: `?category_id=a&category_id=b` is the union, a row in either category. Omitted, empty and no values at all mean no filter |
 | `type` | enum | `income`, `expense`, `transfer` |
 | `start_date` | date | Inclusive |
 | `end_date` | date | Inclusive |
 | `search` | string | Matches `name` or `description`, case insensitive |
 | `is_ready` | boolean | |
-| `sort` | enum | `date` (default), `amount`, `created_at` |
+| `min_amount` | string | Inclusive lower bound, compared on the **base amount**, the workspace's own currency, not on the figure the row was entered in (D77). A decimal string, never a number (D12). Omitted and empty both mean no bound: a cleared filter sends `?min_amount=` |
+| `max_amount` | string | Inclusive upper bound, same rules |
+| `sort` | enum | `date` (default), `amount`, `name`, `created_at`. `amount` sorts on the base amount. `name` puts a row with no name last in both directions, so blanks do not jump to the top when the order flips |
 | `order` | enum | `desc` (default), `asc` |
 | `page`, `limit` | integer | `limit` capped at 100 |
 

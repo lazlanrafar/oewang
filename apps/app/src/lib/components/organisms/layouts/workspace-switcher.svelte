@@ -10,8 +10,13 @@
 	 * workspace rather than pretending to be a menu that does nothing.
 	 */
 	import { t } from '$lib/i18n';
+	import { cn } from '$lib/utils';
 
-	let { name, secondary }: { name: string; secondary: string } = $props();
+	let {
+		name,
+		secondary,
+		collapsed = false
+	}: { name: string; secondary: string; collapsed?: boolean } = $props();
 
 	const initials = $derived(
 		name
@@ -23,17 +28,20 @@
 	);
 </script>
 
-<div class="flex h-12 items-center gap-2 px-2">
+<div class={cn('flex h-12 items-center gap-2 px-2', collapsed && 'justify-center px-0')}>
 	<!-- The one place the live app uses a radius; everything else is square. -->
 	<div
 		class="bg-primary text-primary-foreground flex size-8 shrink-0 items-center justify-center rounded-none text-xs font-medium"
+		title={collapsed ? name : undefined}
 		aria-hidden="true"
 	>
 		{initials}
 	</div>
-	<div class="min-w-0 flex-1 leading-tight">
-		<p class="truncate text-sm font-medium">{name}</p>
-		<p class="text-muted-foreground truncate text-xs">{secondary}</p>
-	</div>
-	<span class="sr-only">{t('shell.workspace')}</span>
+	{#if !collapsed}
+		<div class="min-w-0 flex-1 leading-tight">
+			<p class="truncate text-sm font-medium">{name}</p>
+			<p class="text-muted-foreground truncate text-xs">{secondary}</p>
+		</div>
+	{/if}
+	<span class="sr-only">{t('shell.workspace')}: {name}</span>
 </div>

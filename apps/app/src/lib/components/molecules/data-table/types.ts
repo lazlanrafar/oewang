@@ -25,3 +25,14 @@ export type TransactionRow = {
 };
 
 export type NamedOption = { id: string; name: string; colorClass?: string };
+
+/**
+ * The three columns the API can sort by.
+ *
+ * `name` is here because the API gained it for this table; the other
+ * columns have no server-side order, so their headers do not sort.
+ */
+export type SortKey = 'date' | 'name' | 'amount';
+
+/** A sort, or the absence of one, which is the third click. */
+export type TableSort = { key: SortKey | null; descending: boolean };

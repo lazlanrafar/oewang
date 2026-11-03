@@ -183,7 +183,12 @@
 	--foreground: 0 0% 7%;
 	--card: 45 18% 96%;
 	--card-foreground: 240 10% 3.9%;
-	--popover: 45 18% 96%;
+	/* Every surface that floats over the page, a select, a combobox list, a
+	   menu, a dialog, sits on the page's own colour rather than the card
+	   tint: a list that opens in a different shade than the field it belongs
+	   to reads as a second page. The tint stays on `--card`, which is what
+	   the grouped table rows and the tooltip use. */
+	--popover: 0 0% 100%;
 	--popover-foreground: 240 10% 3.9%;
 	--primary: 240 5.9% 10%;
 	--primary-foreground: 0 0% 98%;
@@ -201,6 +206,10 @@
 
 	--sidebar: 0 0% 100%;
 	--sidebar-foreground: 240 10% 3.9%;
+	/* The stroke the active sidebar row is hatched with, and the one the
+	   charts will hatch with when they land. A hex rather than an HSL
+	   triple, because it is fed to `color-mix` rather than to `hsl()`. */
+	--chart-pattern-stroke: #707070;
 	--sidebar-accent: 40 10% 94%;
 	--sidebar-accent-foreground: 240 5.9% 10%;
 	--sidebar-border: 45 5% 85%;
@@ -224,7 +233,7 @@
 	--foreground: 0 0% 98%;
 	--card: 0 0% 7%;
 	--card-foreground: 0 0% 98%;
-	--popover: 0 0% 7%;
+	--popover: 0 0% 5%;
 	--popover-foreground: 0 0% 98%;
 	--primary: 0 0% 98%;
 	--primary-foreground: 240 5.9% 10%;
@@ -242,6 +251,7 @@
 
 	--sidebar: 0 0% 5%;
 	--sidebar-foreground: 0 0% 98%;
+	--chart-pattern-stroke: #666666;
 	--sidebar-accent: 0 0% 11%;
 	--sidebar-accent-foreground: 0 0% 98%;
 	--sidebar-border: 0 0% 20%;

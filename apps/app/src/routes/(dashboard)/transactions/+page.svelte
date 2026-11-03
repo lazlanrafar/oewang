@@ -7,7 +7,10 @@
 	 * to render (TXN-9, UI-8, D55). That is what makes a shared link
 	 * reproduce a view and a refresh keep it.
 	 */
+	import ChevronDown from '@lucide/svelte/icons/chevron-down';
 	import ChevronLeft from '@lucide/svelte/icons/chevron-left';
+	import Columns3 from '@lucide/svelte/icons/columns-3';
+	import LayoutGrid from '@lucide/svelte/icons/layout-grid';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
 	import FileDown from '@lucide/svelte/icons/file-down';
 	import FileUp from '@lucide/svelte/icons/file-up';
@@ -17,20 +20,32 @@
 	import { toast } from 'svelte-sonner';
 
 	import { applyAction, deserialize, enhance, type SubmitFunction } from '$app/forms';
-	import { invalidateAll } from '$app/navigation';
-	import { page } from '$app/state';
+	import { goto, invalidateAll } from '$app/navigation';
+
+	import { untrack } from 'svelte';
+
+	import { parseDate } from '@internationalized/date';
+
+	import { currentMonth } from '$lib/month-range';
+	import { pagedRows } from '$lib/paged-rows.svelte';
+
+	import { navigating, page } from '$app/state';
 
 	import { Button } from '$lib/components/atoms/button';
 	import * as Dialog from '$lib/components/atoms/dialog';
 	import { Input } from '$lib/components/atoms/input';
 	import { ConfirmDialog } from '$lib/components/molecules/confirm-dialog';
 	import { Label } from '$lib/components/atoms/label';
+	import * as DropdownMenu from '$lib/components/atoms/dropdown-menu';
 	import * as Select from '$lib/components/atoms/select';
-	import { DateRangePicker } from '$lib/components/molecules/date-range-picker';
-	import { DataTableFilter } from '$lib/components/organisms/data-table-filter';
-	import type { DataTableFilterState } from '$lib/components/organisms/data-table-filter';
-	import { TransactionsTable } from '$lib/components/organisms/data-table';
-	import type { NamedOption, TransactionRow } from '$lib/components/organisms/data-table';
+	import { DateRangePicker, type DateRange } from '$lib/components/molecules/date-range-picker';
+	import { DataTableFilter } from '$lib/components/molecules/data-table-filter';
+	import { SelectCategory } from '$lib/components/molecules/select-category';
+	import type { DataTableFilterState } from '$lib/components/molecules/data-table-filter';
+	import { TransactionsTable, TRANSACTION_COLUMNS } from '$lib/components/molecules/data-table';
+	import type { ColumnKey, TableSort } from '$lib/components/molecules/data-table';
+	import { GROUPINGS, type Grouping } from '$lib/components/molecules/data-table/grouping';
+	import type { NamedOption, TransactionRow } from '$lib/components/molecules/data-table';
 	import { FileDropzone, type UploadedFile } from '$lib/components/molecules/file-dropzone';
 	import { ChatCanvas } from '$lib/components/organisms/chat';
 	import {
@@ -43,21 +58,44 @@
 		TransactionFormSheet,
 		type TransactionDraft
 	} from '$lib/components/organisms/transactions';
-	import FormError from '$lib/components/shell/form-error.svelte';
+	import { FormError } from '$lib/components/molecules/form-error';
 	import { canvasParams, readCanvas } from '$lib/canvas';
 	import { messageForCode } from '$lib/errors';
 	import { t } from '$lib/i18n';
 	import { absDecimal } from '$lib/money';
 	import { toDetail } from '$lib/transaction-detail';
 	import { isoDay, toRow } from '$lib/transactions';
-	import { readParam, readText, writeParams } from '$lib/url-state';
+	import { readParam, readText, readValues, writeParams } from '$lib/url-state';
 
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
 	const canEdit = $derived(data.me.role !== 'member');
-	const rows = $derived(data.transactions.map((transaction) => toRow(transaction)));
+	/**
+	 * The rows fetched so far, not the rows of the current page.
+	 *
+	 * The list grows as it is scrolled, and the load answers one page at a
+	 * time, so something has to hold what came before. It is keyed by the
+	 * filters: a changed filter is a different list and resets it, while a
+	 * changed page number is more of the same list and appends.
+	 */
+	const held = pagedRows<TransactionRow>();
+
+	$effect(() => {
+		// Only `data` is read inside the tracked part. `update` reads the
+		// rows and the page it is holding, and those are state this effect
+		// writes: tracked, the effect would depend on its own output and run
+		// until the browser gave up, which is exactly what it did.
+		const next = {
+			rows: data.transactions.map((transaction) => toRow(transaction)),
+			page: data.meta.page ?? 1,
+			key: data.filterKey
+		};
+		untrack(() => held.update(next));
+	});
+
+	const rows = $derived(held.rows);
 
 	const wallets = $derived<NamedOption[]>(
 		data.wallets.map((wallet) => ({ id: wallet.id, name: wallet.name }))
@@ -66,13 +104,75 @@
 		data.categories.map((category) => ({ id: category.id, name: category.name }))
 	);
 
-	const TYPES = ['', 'income', 'expense', 'transfer'] as const;
-	const READY = ['', 'true', 'false'] as const;
-	const GROUPING = ['day', 'none'] as const;
+	/**
+	 * How the list divides itself, in the URL like every other view choice.
+	 *
+	 * Four intervals, as the live app offers. `daily` is the default and so
+	 * is the value the parameter is cleared to; an unknown value, including
+	 * the `day` an older link may carry, falls back to it rather than to an
+	 * error.
+	 */
+	const grouping = $derived(readParam(page.url, 'group', GROUPINGS, 'daily'));
 
-	const typeFilter = $derived(readParam(page.url, 'type', TYPES, ''));
-	const readyFilter = $derived(readParam(page.url, 'is_ready', READY, ''));
-	const grouping = $derived(readParam(page.url, 'group', GROUPING, 'day'));
+	const GROUPING_LABEL: Record<Grouping, string> = $derived({
+		none: t('txn.no_grouping'),
+		daily: t('txn.group_by_day'),
+		weekly: t('txn.group_by_week'),
+		monthly: t('txn.group_by_month')
+	});
+
+	/**
+	 * The date range, read back out of the URL.
+	 *
+	 * A day is a plain date, not an instant: `2026-11-03` means that day in
+	 * the reader's own zone, which is why it travels as a `CalendarDate`
+	 * rather than through `new Date()` (TXN-4).
+	 */
+	function readRange(url: {
+		searchParams: { get(name: string): string | null };
+	}): DateRange | undefined {
+		const start = readText(url, 'start_date');
+		const end = readText(url, 'end_date');
+
+		// An empty range is not "no range": the load defaults it to this
+		// month, so the picker has to show the same month or it reports a
+		// view nobody is looking at.
+		if (!start && !end) {
+			const month = currentMonth();
+			return { start: parseDate(month.start), end: parseDate(month.end) };
+		}
+
+		return {
+			start: start ? parseDate(start) : undefined,
+			end: end ? parseDate(end) : undefined
+		};
+	}
+
+	const dateRange = $derived(readRange(page.url));
+
+	/**
+	 * The sort, read from the URL and written back to it.
+	 *
+	 * Server-side, because the list arrives a page at a time: sorting in the
+	 * browser would order the rows fetched so far and call that the answer.
+	 * The three clicks are ascending, descending, then back to the server's
+	 * own order, which is why "no sort" is a cleared parameter rather than a
+	 * third value.
+	 */
+	const SORT_KEYS = ['date', 'name', 'amount'] as const;
+
+	const sort = $derived<TableSort>({
+		key: readText(page.url, 'sort')
+			? readParam(page.url, 'sort', SORT_KEYS, 'date')
+			: null,
+		descending: readText(page.url, 'order') !== 'asc'
+	});
+
+	/*
+	 * `?type=` and `?is_ready=` are still read by the load function and still
+	 * narrow the list; the old header has no control for either, so neither
+	 * has one here. A link or a saved view can still carry them.
+	 */
 
 	/*
 	 * The filter bar's own state, seeded from the URL and written back to it.
@@ -81,13 +181,45 @@
 	 */
 	let filters = $state<DataTableFilterState>({ search: '', facets: {} });
 
+	/**
+	 * Which columns are off. Held here rather than in the table because the
+	 * menu that changes it sits in this page's header, where the live app
+	 * puts it.
+	 */
+	let hiddenColumns = $state<Partial<Record<ColumnKey, boolean>>>({});
+
+	const hideableColumns = TRANSACTION_COLUMNS.filter((column) => !column.fixed);
+
+	/** The column labels the rest of the page already names. */
+	const COLUMN_LABEL: Record<string, string> = {
+		date: 'style.col_date',
+		name: 'style.col_name',
+		amount: 'style.col_amount',
+		account: 'style.col_wallet',
+		category: 'style.col_category'
+	};
+
+	/**
+	 * The URL is the filter bar's source of truth, not its destination only.
+	 *
+	 * Every field the bar can express is hydrated here, including the two
+	 * that were silently dropped before: the amount bounds and the date
+	 * range. Rebuilding the object without them wiped whatever the user had
+	 * typed on the next navigation, which is why the amount control looked
+	 * broken rather than merely unsaved (UI-8, D55).
+	 */
 	$effect(() => {
+		const minAmount = readText(page.url, 'min_amount');
+		const maxAmount = readText(page.url, 'max_amount');
+
 		filters = {
 			search: readText(page.url, 'search'),
 			facets: {
-				category: readText(page.url, 'category_id') ? [readText(page.url, 'category_id')] : [],
-				wallet: readText(page.url, 'wallet_id') ? [readText(page.url, 'wallet_id')] : []
-			}
+				category: readValues(page.url, 'category_id'),
+				wallet: readValues(page.url, 'wallet_id')
+			},
+			amount: minAmount || maxAmount ? { min: minAmount, max: maxAmount } : undefined,
+			dateRange: readRange(page.url)
 		};
 	});
 
@@ -100,14 +232,35 @@
 	 * is a round trip to the server; the facets go straight through.
 	 */
 	function applyFilters(next: DataTableFilterState) {
-		const category = next.facets.category?.[0] ?? '';
-		const wallet = next.facets.wallet?.[0] ?? '';
-		const search = next.search;
+		// The range is the picker's, not the bar's: `showDate` is off here.
+		// Writing it back would put the month the load defaults to into the
+		// address bar on first paint, with nobody having chosen it.
+		const wanted = {
+			search: next.search,
+			category_id: next.facets.category ?? [],
+			wallet_id: next.facets.wallet ?? [],
+			min_amount: next.amount?.min ?? '',
+			max_amount: next.amount?.max ?? ''
+		};
+
+		// Nothing to do unless a filter actually moved.
+		//
+		// This runs on every navigation, because the bar is rebuilt from the
+		// URL each time. Writing unconditionally also wrote `page: null`,
+		// which silently undid every step the infinite scroll took: the list
+		// asked for page two and was put back on page one before the rows
+		// arrived.
+		const unchanged = Object.entries(wanted).every(([key, value]) =>
+			Array.isArray(value)
+				? value.join('\u0000') === readValues(page.url, key).join('\u0000')
+				: value === readText(page.url, key)
+		);
+		if (unchanged) return;
 
 		clearTimeout(searchTimer);
 		searchTimer = setTimeout(
-			() => writeParams({ search, category_id: category, wallet_id: wallet, page: null }),
-			search === readText(page.url, 'search') ? 0 : 300
+			() => writeParams({ ...wanted, page: null }),
+			wanted.search === readText(page.url, 'search') ? 0 : 300
 		);
 	}
 
@@ -258,18 +411,33 @@
 	 * is a picker rather than a form and there is nothing to submit. It is
 	 * still the server that talks to the API (D5).
 	 */
-	async function setCategory(id: string, categoryId: string) {
-		const body = new FormData();
-		body.set('id', id);
-		body.set('category_id', categoryId);
+	function setCategory(id: string, categoryId: string) {
+		return applyInCell('?/setCategory', { id, category_id: categoryId });
+	}
 
-		const response = await fetch('?/setCategory', { method: 'POST', body });
+	function setWallet(id: string, walletId: string) {
+		return applyInCell('?/setWallet', { id, wallet_id: walletId });
+	}
+
+	/**
+	 * One field, changed from a cell.
+	 *
+	 * The cell has already drawn the new value, so a failure has to put the
+	 * row back: `invalidateAll` reloads what the server actually holds,
+	 * which is also what makes a success stick.
+	 */
+	async function applyInCell(action: string, fields: Record<string, string>) {
+		const body = new FormData();
+		for (const [key, value] of Object.entries(fields)) body.set(key, value);
+
+		const response = await fetch(action, { method: 'POST', body });
 		const result = deserialize(await response.text());
 
 		if (result.type === 'success') {
 			await invalidateAll();
 			toast.success(t('txn.updated'));
 		} else {
+			await invalidateAll();
 			await applyAction(result);
 		}
 	}
@@ -279,6 +447,19 @@
 	let selection = $state<string[]>([]);
 	let deleting = $state(false);
 	let bulkCategoryOpen = $state(false);
+
+	/** What the bulk dialog's picker is set to. Empty clears the category. */
+	let bulkCategory = $state('');
+
+	/**
+	 * The picker's own list, with clearing offered as a row. A combobox has
+	 * no empty option the way a native select does, and "no category" has to
+	 * stay reachable: it is the only way to undo a wrong one in bulk.
+	 */
+	const bulkCategoryOptions = $derived([
+		{ id: '', label: t('common.none') },
+		...data.categories.map((category) => ({ id: category.id, label: category.name }))
+	]);
 
 	/** A bulk form posts the ids as one field, so it works without script too. */
 	const selectedIds = $derived(selection.join(','));
@@ -449,63 +630,78 @@
 
 <!-- The page reflows beside the receipt panel rather than being covered by
      it, the same way the conversation column does. -->
+<!--
+	A bounded column, not a growing one. `<main>` in the shell is already a
+	flex column with a definite height, so `min-h-0 flex-1` here resolves to
+	"whatever is left", and the table below can scroll inside it instead of
+	taking the page with it. No `calc(100svh - …)`: the arithmetic would
+	repeat the shell's header height and padding in a second place, and go
+	stale the first time either moves.
+-->
 <div
-	class="flex flex-col gap-4 transition-[margin] duration-200 {canvas ? 'md:me-[560px]' : ''}"
+	class="flex min-h-0 flex-1 flex-col gap-4 transition-[margin] duration-200 {canvas
+		? 'md:me-[560px]'
+		: ''}"
 >
-	<div class="flex shrink-0 flex-wrap items-center justify-between gap-4">
-		<h1 class="text-h2">{t('nav.transactions')}</h1>
+	<!--
+		The header, laid out as the live page lays it out: the search on the
+		left, everything that acts on the table on the right, one line. There
+		is no page title. The sidebar already says which page this is, and a
+		heading repeating it costs a line of the table's height on every
+		screen.
+	-->
+	<!--
+		The heading stays for anyone navigating by headings; only its ink is
+		gone. A page whose only `h1` is deleted leaves a screen-reader user
+		with no landmark for what they are on, and the sidebar's current item
+		is a link, not a heading (UI-6).
+	-->
+	<h1 class="sr-only">{t('nav.transactions')}</h1>
 
-		<div class="flex flex-wrap items-center gap-2">
+	<div class="flex shrink-0 items-center justify-between gap-4">
+		<!-- The search takes the line; everything that acts on the table sits
+		     at the far end. One row, as the old header is one row. -->
+		<div class="flex flex-1 items-center">
+			<DataTableFilter
+				bind:filters
+				facets={[
+					{ id: 'category', label: t('style.col_category'), options: categories, multiple: false },
+					{ id: 'wallet', label: t('style.col_wallet'), options: wallets, multiple: false }
+				]}
+				placeholder={t('txn.search_placeholder')}
+				showDate={false}
+				hideChips={['date']}
+				class="w-full"
+			/>
+		</div>
+
+		<div class="flex items-center gap-2">
 			<Select.Root
 				type="single"
 				value={grouping}
-				onValueChange={(value) => writeParams({ group: value === 'day' ? null : value })}
+				onValueChange={(value) => writeParams({ group: value === 'daily' ? null : value })}
 			>
 				<!-- A `role="combobox"` is not named by its contents the way a
-				     button is, so each of these three carries its own label
-				     (UI-6). Without one a screen reader announces three
-				     unnamed controls in a row. -->
+				     button is, so it carries its own label (UI-6). -->
+				<!-- The icon is the selector's own mark, as the live app draws
+				     it: the trigger names the interval and nothing else, so
+				     the label carries the accessible name instead. -->
 				<Select.Trigger class="w-36" aria-label={t('txn.grouping_label')}>
-					{grouping === 'day' ? t('txn.group_by_day') : t('txn.no_grouping')}
+					<LayoutGrid class="text-subtle size-4 shrink-0" />
+					{GROUPING_LABEL[grouping]}
 				</Select.Trigger>
 				<Select.Content>
-					<Select.Item value="day">{t('txn.group_by_day')}</Select.Item>
-					<Select.Item value="none">{t('txn.no_grouping')}</Select.Item>
+					{#each GROUPINGS as option (option)}
+						<Select.Item value={option}>{GROUPING_LABEL[option]}</Select.Item>
+					{/each}
 				</Select.Content>
 			</Select.Root>
 
-			<Select.Root
-				type="single"
-				value={typeFilter}
-				onValueChange={(value) => writeParams({ type: value || null, page: null })}
-			>
-				<Select.Trigger class="w-32" aria-label={t('txn.type_label')}>
-					{typeFilter === '' ? t('txn.all_types') : t(`txn.type_${typeFilter}` as 'txn.type_income')}
-				</Select.Trigger>
-				<Select.Content>
-					<Select.Item value="">{t('txn.all_types')}</Select.Item>
-					<Select.Item value="income">{t('txn.type_income')}</Select.Item>
-					<Select.Item value="expense">{t('txn.type_expense')}</Select.Item>
-					<Select.Item value="transfer">{t('txn.type_transfer')}</Select.Item>
-				</Select.Content>
-			</Select.Root>
-
-			<Select.Root
-				type="single"
-				value={readyFilter}
-				onValueChange={(value) => writeParams({ is_ready: value || null, page: null })}
-			>
-				<Select.Trigger class="w-32" aria-label={t('txn.ready_label')}>
-					{readyFilter === '' ? t('txn.any_ready') : readyFilter === 'true' ? t('txn.ready') : t('txn.not_ready')}
-				</Select.Trigger>
-				<Select.Content>
-					<Select.Item value="">{t('txn.any_ready')}</Select.Item>
-					<Select.Item value="true">{t('txn.ready')}</Select.Item>
-					<Select.Item value="false">{t('txn.not_ready')}</Select.Item>
-				</Select.Content>
-			</Select.Root>
-
+			<!-- Reads the URL as well as writing it. Write-only, the picker
+			     showed "Pick a date range" on a link that carried one, and
+			     the view a reader shared was not the view they saw. -->
 			<DateRangePicker
+				value={dateRange}
 				onValueChange={(range) =>
 					writeParams({
 						start_date: range?.start?.toString() ?? null,
@@ -514,23 +710,68 @@
 					})}
 			/>
 
-			<Button variant="outline" onclick={() => (exportOpen = true)}>
-				<FileDown />
-				{t('txn.export')}
-			</Button>
+			<DropdownMenu.Root>
+				<DropdownMenu.Trigger>
+					{#snippet child({ props })}
+						<Button variant="outline" size="icon" aria-label={t('txn.columns')} {...props}>
+							<Columns3 />
+						</Button>
+					{/snippet}
+				</DropdownMenu.Trigger>
+				<DropdownMenu.Content align="end" class="w-44">
+					<DropdownMenu.Label>{t('txn.columns')}</DropdownMenu.Label>
+					{#each hideableColumns as column (column.key)}
+						<DropdownMenu.CheckboxItem
+							checked={!hiddenColumns[column.key]}
+							onCheckedChange={(on) =>
+								(hiddenColumns = { ...hiddenColumns, [column.key]: !on })}
+						>
+							{t(COLUMN_LABEL[column.key] as 'style.col_date')}
+						</DropdownMenu.CheckboxItem>
+					{/each}
+				</DropdownMenu.Content>
+			</DropdownMenu.Root>
 
 			{#if canEdit}
-				<Button variant="outline" onclick={() => (scanOpen = true)}>
-					<ScanLine />
-					{t('txn.receipt')}
-				</Button>
-				<Button href="/transactions/import" variant="outline">
-					<FileUp />
-					{t('txn.import')}
-				</Button>
+				<!-- Everything that moves data in or out, in one menu, as the
+				     old header has it. Scanning a receipt is in here too: it is
+				     another way of getting a transaction in, and the old header
+				     has no button of its own for it. -->
+				<DropdownMenu.Root>
+					<DropdownMenu.Trigger>
+						{#snippet child({ props })}
+							<Button variant="outline" {...props}>
+								<FileUp />
+								<span class="hidden sm:inline-block">{t('txn.backup')}</span>
+								<ChevronDown class="text-subtle" />
+							</Button>
+						{/snippet}
+					</DropdownMenu.Trigger>
+					<DropdownMenu.Content align="end" class="w-64">
+						<DropdownMenu.Item onclick={() => goto('/transactions/import')}>
+							<FileUp />
+							{t('txn.backup_device')}
+						</DropdownMenu.Item>
+						<DropdownMenu.Item onclick={() => (scanOpen = true)}>
+							<ScanLine />
+							{t('txn.receipt')}
+						</DropdownMenu.Item>
+						<DropdownMenu.Separator />
+						<DropdownMenu.Item onclick={() => (exportOpen = true)}>
+							<FileDown />
+							{t('txn.backup_export')}
+						</DropdownMenu.Item>
+					</DropdownMenu.Content>
+				</DropdownMenu.Root>
+
 				<Button onclick={() => openSheet('new')}>
 					<Plus />
 					{t('common.add')}
+				</Button>
+			{:else}
+				<Button variant="outline" onclick={() => (exportOpen = true)}>
+					<FileDown />
+					{t('txn.backup_export')}
 				</Button>
 			{/if}
 		</div>
@@ -538,22 +779,24 @@
 
 	<FormError message={form?.code ? messageForCode(form.code) : undefined} />
 
-	<DataTableFilter
-		bind:filters
-		facets={[
-			{ id: 'category', label: t('style.col_category'), options: categories, multiple: false },
-			{ id: 'wallet', label: t('style.col_wallet'), options: wallets, multiple: false }
-		]}
-		placeholder={t('txn.search_placeholder')}
-		showDate={false}
-	/>
-
 	<TransactionsTable
+		class="min-h-0 flex-1"
+		hasMore={currentPage < totalPages}
+		loadingMore={navigating.to !== null}
+		onLoadMore={() => writeParams({ page: currentPage + 1 })}
+		{sort}
+		onSortChange={(next) =>
+			writeParams({
+				sort: next.key,
+				order: next.key === null ? null : next.descending ? 'desc' : 'asc',
+				page: null
+			})}
 		{rows}
 		{categories}
 		{wallets}
 		{canEdit}
-		grouping={grouping as 'day' | 'none'}
+		{grouping}
+		bind:hidden={hiddenColumns}
 		toolbar={false}
 		footer={false}
 		emptyTitle={data.filtered ? t('txn.empty_filtered_title') : t('txn.empty_title')}
@@ -568,39 +811,9 @@
 		onDeleteRow={(row: TransactionRow) => openDetail(row.id)}
 		onCategoryChange={(row: TransactionRow, categoryId: string) =>
 			setCategory(row.id, categoryId)}
+		onWalletChange={(row: TransactionRow, walletId: string) => setWallet(row.id, walletId)}
 	/>
 
-	<!-- Server pagination: the footer moves `?page=`, and the load does the
-	     rest. A page step is a history entry, unlike a filter change. -->
-	<div class="flex flex-wrap items-center justify-between gap-3">
-		<p class="text-subtle text-small">{t('txn.row_count', { count: total })}</p>
-
-		<div class="flex items-center gap-2">
-			<Button
-				variant="outline"
-				size="icon"
-				class="size-8"
-				disabled={currentPage <= 1}
-				aria-label={t('txn.previous_page')}
-				onclick={() => writeParams({ page: currentPage - 1 }, { push: true })}
-			>
-				<ChevronLeft class="size-4" />
-			</Button>
-			<span class="text-subtle text-small tabular-nums">
-				{t('txn.page_of', { page: currentPage, total: totalPages })}
-			</span>
-			<Button
-				variant="outline"
-				size="icon"
-				class="size-8"
-				disabled={currentPage >= totalPages}
-				aria-label={t('txn.next_page')}
-				onclick={() => writeParams({ page: currentPage + 1 }, { push: true })}
-			>
-				<ChevronRight class="size-4" />
-			</Button>
-		</div>
-	</div>
 </div>
 
 <TransactionFormSheet
@@ -883,17 +1096,19 @@
 
 				<input type="hidden" name="ids" value={selectedIds} />
 
+				<!--
+					The same picker the cells use, so choosing a category is one
+					control across the page. It is script-driven, which costs
+					nothing here: the dialog itself only exists with script.
+
+					The wrapper is what spaces the body, as it does in every
+					other dialog here: a `<form>` between the dialog and its
+					parts swallows the dialog's own `gap-4`.
+				-->
 				<div class="py-4">
-					<select
-						name="category_id"
-						class="border-input bg-background h-9 w-full border px-3 text-sm"
-					>
-						<option value="">{t('common.none')}</option>
-						{#each data.categories as category (category.id)}
-							<option value={category.id}>{category.name}</option>
-						{/each}
-					</select>
+					<SelectCategory categories={bulkCategoryOptions} bind:value={bulkCategory} />
 				</div>
+				<input type="hidden" name="category_id" value={bulkCategory} />
 
 				<Dialog.Footer>
 					<Dialog.Close>

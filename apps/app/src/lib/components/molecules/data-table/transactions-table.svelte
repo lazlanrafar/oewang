@@ -36,16 +36,20 @@
 	import * as Select from '../../atoms/select/index.js';
 	import { SelectAccount } from '../../molecules/select-account/index.js';
 	import { SelectCategory } from '../../molecules/select-category/index.js';
-	import { DataTableFilter } from '../data-table-filter/index.js';
-	import { emptyFilterState, type DataTableFilterState } from '../data-table-filter/index.js';
+	import { DataTableFilter } from '../../molecules/data-table-filter/index.js';
+	import { emptyFilterState, type DataTableFilterState } from '../../molecules/data-table-filter/index.js';
+	import { Spinner } from '../../atoms/spinner/index.js';
 	import DataTableEmptyState from './data-table-empty-state.svelte';
 	import {
+		GROUP_ROW_HEIGHT,
+		GROUP_STICK_TOP,
 		ROW_HEIGHT,
 		TRANSACTION_COLUMNS,
 		type ColumnKey,
 		type ColumnSpec
 	} from './columns.js';
-	import type { NamedOption, TransactionRow } from './types.js';
+	import { groupKey, groupLabel, GROUPINGS, type Grouping } from './grouping.js';
+	import type { NamedOption, SortKey, TableSort, TransactionRow } from './types.js';
 	import {
 		absDecimal,
 		addDecimals,
@@ -61,7 +65,16 @@
 		categories,
 		wallets,
 		filters = $bindable(emptyFilterState()),
-		grouping = $bindable('day'),
+		grouping = $bindable('daily'),
+		/** Which columns are off, so a page header can carry the menu. */
+		hidden = $bindable({}),
+		/** The sort the server applied, when the page owns it. */
+		sort,
+		onSortChange,
+		/** Whether another page exists, and how to ask for it. */
+		hasMore = false,
+		loadingMore = false,
+		onLoadMore,
 		locale = 'en-GB',
 		/** The page can carry the filter and the actions in its own header. */
 		toolbar = true,
@@ -84,7 +97,13 @@
 		categories: NamedOption[];
 		wallets: NamedOption[];
 		filters?: DataTableFilterState;
-		grouping?: 'day' | 'none';
+		grouping?: Grouping;
+		hidden?: Partial<Record<ColumnKey, boolean>>;
+		sort?: TableSort;
+		onSortChange?: (next: TableSort) => void;
+		hasMore?: boolean;
+		loadingMore?: boolean;
+		onLoadMore?: () => void;
 		locale?: string;
 		toolbar?: boolean;
 		footer?: boolean;
@@ -107,12 +126,29 @@
 		class?: string;
 	} = $props();
 
-	type SortKey = 'date' | 'name' | 'amount';
 
-	let sortKey = $state<SortKey>('date');
-	let sortDescending = $state(true);
+	/**
+	 * No sort of its own until a header is clicked: the rows arrive in the
+	 * order the server chose, and that order is what a third click returns
+	 * to. The live table cycles a header ascending, descending, off.
+	 */
+	/**
+	 * Uncontrolled unless the page says otherwise.
+	 *
+	 * The specimen in the design system has no URL to write to, so it keeps
+	 * its own sort here. A real page passes `sort` and `onSortChange` and the
+	 * server does the sorting, because sorting only the page you happen to
+	 * have loaded is not sorting (D55).
+	 */
+	let localSort = $state<TableSort>({
+		key: null,
+		descending: false
+	});
+
+	const controlled = $derived(onSortChange !== undefined);
+	const sortKey = $derived(controlled ? (sort?.key ?? null) : localSort.key);
+	const sortDescending = $derived(controlled ? (sort?.descending ?? false) : localSort.descending);
 	let selected = $state<Record<string, boolean>>({});
-	let expandedRow = $state<string | null>(null);
 	let collapsedGroups = $state<Record<string, boolean>>({});
 	let rowCategory = $state<Record<string, string>>({});
 	let rowWallet = $state<Record<string, string>>({});
@@ -126,6 +162,38 @@
 	 */
 	let widths = $state<Partial<Record<ColumnKey, number>>>({});
 	let resizing = $state<ColumnKey | null>(null);
+	let sentinel = $state<HTMLElement | null>(null);
+
+	/**
+	 * Ask for the next page when the foot of the list comes into view.
+	 *
+	 * The margin is 600px, about thirteen rows of warning, so the next page
+	 * is usually there before the reader reaches the end. A pixel margin has
+	 * no unit to get wrong, unlike a row count: the live app counts day
+	 * groups where it means rows and so fetches hundreds of rows early.
+	 *
+	 * The guards matter more than the observer. A list shorter than its own
+	 * viewport leaves the sentinel permanently visible, so without
+	 * `hasMore && !loadingMore` every completed load would immediately ask
+	 * for another.
+	 */
+	$effect(() => {
+		const target = sentinel;
+		const root = scroller;
+		if (!target || !root || !onLoadMore) return;
+
+		const observer = new IntersectionObserver(
+			(entries) => {
+				if (!entries.some((entry) => entry.isIntersecting)) return;
+				if (!hasMore || loadingMore) return;
+				onLoadMore();
+			},
+			{ root, rootMargin: '0px 0px 600px 0px', threshold: 0 }
+		);
+
+		observer.observe(target);
+		return () => observer.disconnect();
+	});
 
 	/*
 	 * Horizontal scrolling, with the arrows the old table puts in its last
@@ -174,11 +242,26 @@
 				: [...edges].reverse().find((edge) => edge < current - 1);
 		scroller.scrollTo({ left: next ?? (direction === 1 ? scroller.scrollWidth : 0) });
 	}
-	let hidden = $state<Partial<Record<ColumnKey, boolean>>>({});
 
 	const visibleColumns = $derived(TRANSACTION_COLUMNS.filter((column) => !hidden[column.key]));
 	const hideableColumns = TRANSACTION_COLUMNS.filter((column) => !column.fixed);
-	const totalWidth = $derived(visibleColumns.reduce((sum, column) => sum + widthOf(column), 0));
+	/**
+	 * The last ordinary column takes whatever the others leave, which is how
+	 * the live table is always as wide as what holds it. The actions column
+	 * is stuck to the right edge and keeps its width, so it is not the one.
+	 */
+	const fillKey = $derived(visibleColumns.filter((column) => !column.stickyRight).at(-1)?.key);
+
+	/**
+	 * What the table needs before it has to scroll sideways: every fixed
+	 * column at its width, and the filling one at its floor.
+	 */
+	const totalWidth = $derived(
+		visibleColumns.reduce(
+			(sum, column) => sum + (column.key === fillKey ? column.minWidth : widthOf(column)),
+			0
+		)
+	);
 	/** The arrows live on the last column that stays put while the rest move. */
 	const lastStickyKey = $derived(visibleColumns.filter((column) => column.stickyLeft).at(-1)?.key);
 
@@ -228,23 +311,39 @@
 		})
 	);
 
-	const sorted = $derived(
-		[...matching].sort((a, b) => {
+	const sorted = $derived.by(() => {
+		// When the page owns the sort, the server has already applied it.
+		// Sorting again here would reorder only the rows fetched so far,
+		// which with an accumulating list is a different list each time.
+		if (controlled || sortKey === null) return matching;
+		return [...matching].sort((a, b) => {
 			const direction = sortDescending ? -1 : 1;
 			if (sortKey === 'amount') return compareDecimals(amountOf(a), amountOf(b)) * direction;
 			if (sortKey === 'name') return nameOfRow(a).localeCompare(nameOfRow(b)) * direction;
 			return a.day.localeCompare(b.day) * direction || nameOfRow(a).localeCompare(nameOfRow(b));
-		})
-	);
+		});
+	});
 
-	const groups = $derived(
-		grouping === 'none'
-			? [{ day: '', rows: sorted }]
-			: [...new Set(sorted.map((r) => r.day))].map((day) => ({
-					day,
-					rows: sorted.filter((r) => r.day === day)
-				}))
-	);
+	/**
+	 * The rows divided into blocks, in the order they already sit in.
+	 *
+	 * Built by walking the sorted list rather than by collecting the keys
+	 * and filtering per key: that was quadratic, and with three months of
+	 * rows accumulating as the list scrolls it is the sort of thing that is
+	 * fine until it is not.
+	 */
+	const groups = $derived.by(() => {
+		if (grouping === 'none') return [{ day: '', rows: sorted }];
+
+		const blocks: { day: string; rows: TransactionRow[] }[] = [];
+		for (const row of sorted) {
+			const key = groupKey(row.day, grouping);
+			const last = blocks.at(-1);
+			if (last && last.day === key) last.rows.push(row);
+			else blocks.push({ day: key, rows: [row] });
+		}
+		return blocks;
+	});
 
 	const selectedIds = $derived(sorted.filter((r) => selected[r.id]).map((r) => r.id));
 
@@ -273,39 +372,31 @@
 		{ id: 'wallet', label: 'Wallet', options: wallets }
 	]);
 
-	const dayFormatter = $derived(
-		new Intl.DateTimeFormat(locale, {
-			weekday: 'long',
-			day: 'numeric',
-			month: 'short',
-			year: 'numeric'
-		})
-	);
-
 	function isoDay(date: { toDate: (zone: string) => Date }): string {
 		return date.toDate(getLocalTimeZone()).toISOString().slice(0, 10);
 	}
 
+	/** Ascending, then descending, then back to the order the rows came in. */
 	function toggleSort(key: SortKey) {
-		if (sortKey === key) {
-			sortDescending = !sortDescending;
-		} else {
-			sortKey = key;
-			sortDescending = true;
-		}
+		const next =
+			sortKey !== key
+				? { key, descending: false }
+				: sortDescending
+					? { key: null, descending: false }
+					: { key, descending: true };
+
+		if (onSortChange) onSortChange(next);
+		else localSort = next;
 	}
 
 	function toggleAll(checked: boolean) {
 		selected = checked ? Object.fromEntries(sorted.map((r) => [r.id, true])) : {};
 	}
 
-	function toggleExpanded(id: string) {
-		if (onOpenRow) {
-			const row = sorted.find((candidate) => candidate.id === id);
-			if (row) onOpenRow(row);
-			return;
-		}
-		expandedRow = expandedRow === id ? null : id;
+	/** A row opens its detail. There is no inline expansion. */
+	function openRow(id: string) {
+		const row = sorted.find((candidate) => candidate.id === id);
+		if (row) onOpenRow?.(row);
 	}
 
 	/** The row's figure, in the wallet's own currency, signed (UI-7). */
@@ -339,7 +430,7 @@
 			.join('  ');
 	}
 
-	const dayLabel = (day: string) => dayFormatter.format(new Date(`${day}T00:00:00`)).toUpperCase();
+	const dayLabel = (key: string) => groupLabel(key, grouping, locale);
 
 	const widthOf = (column: ColumnSpec) => widths[column.key] ?? column.width;
 
@@ -363,8 +454,15 @@
 	function cellStyle(key: ColumnKey): string {
 		const column = visibleColumns.find((c) => c.key === key);
 		if (!column) return '';
+		// The filling column states no width at all: a basis of zero and the
+		// freedom to grow is what makes it take the remainder rather than a
+		// share of it.
+		if (column.key === fillKey) return `flex: 1 1 0%; min-width: ${column.minWidth}px;`;
 		const width = widthOf(column);
-		const size = `width: ${width}px; min-width: ${width}px; max-width: ${width}px; flex-shrink: 0;`;
+		// The floor and the ceiling are the column's own, not today's width:
+		// they are what the drag is allowed to do, and the live table carries
+		// them on the cell for the same reason.
+		const size = `width: ${width}px; min-width: ${column.minWidth}px; max-width: ${column.maxWidth}px; flex-shrink: 0;`;
 		if (column.stickyLeft) return `${size} left: ${stickyOffsets[key] ?? 0}px;`;
 		return size;
 	}
@@ -402,7 +500,8 @@
 		handle.setPointerCapture(event.pointerId);
 
 		const move = (move: PointerEvent) => {
-			const next = Math.max(column.minWidth, startWidth + (move.clientX - startX));
+			const dragged = startWidth + (move.clientX - startX);
+			const next = Math.min(column.maxWidth, Math.max(column.minWidth, dragged));
 			widths = { ...widths, [column.key]: Math.round(next) };
 		};
 		const stop = () => {
@@ -430,7 +529,10 @@
 			const direction = event.key === 'ArrowRight' ? 1 : -1;
 			widths = {
 				...widths,
-				[column.key]: Math.max(column.minWidth, widthOf(column) + direction * step)
+				[column.key]: Math.min(
+					column.maxWidth,
+					Math.max(column.minWidth, widthOf(column) + direction * step)
+				)
 			};
 		} else if (event.key === 'Home') {
 			event.preventDefault();
@@ -446,6 +548,14 @@
 	// A rule on the right of every cell as well as under it, which is what
 	// gives the live table its grid; the last column drops it, since that edge
 	// is the table's own.
+	/** The specimen's labels. A real page reads these from the dictionary. */
+	const GROUPING_LABELS: Record<Grouping, string> = {
+		none: 'None',
+		daily: 'Daily',
+		weekly: 'Weekly',
+		monthly: 'Monthly'
+	};
+
 	const CELL =
 		'h-full flex items-center border-r border-b border-border overflow-hidden bg-background transition-colors group-hover:bg-row-hover';
 	// The header's colour and weight come from the old Table head atom, which
@@ -456,7 +566,7 @@
 
 <svelte:window onresize={readScroll} />
 
-<div class={cn('space-y-3', className)}>
+<div class={cn('flex h-full min-h-0 flex-col gap-3', className)}>
 	<!-- ------------------------------------------------------- toolbar -->
 	{#if toolbar}
 		<div class="flex flex-wrap items-start gap-2">
@@ -464,12 +574,11 @@
 
 		<div class="flex items-center gap-2">
 			<Select.Root type="single" bind:value={grouping}>
-				<Select.Trigger class="w-36">
-					{grouping === 'day' ? 'Group by day' : 'No grouping'}
-				</Select.Trigger>
+				<Select.Trigger class="w-36">{GROUPING_LABELS[grouping]}</Select.Trigger>
 				<Select.Content>
-					<Select.Item value="day">Group by day</Select.Item>
-					<Select.Item value="none">No grouping</Select.Item>
+					{#each GROUPINGS as option (option)}
+						<Select.Item value={option}>{GROUPING_LABELS[option]}</Select.Item>
+					{/each}
 				</Select.Content>
 			</Select.Root>
 
@@ -530,7 +639,15 @@
 	{/if}
 
 	<!-- --------------------------------------------------------- table -->
-	<div class="w-full overflow-x-auto" bind:this={scroller} onscroll={readScroll}>
+	<!-- The outer rule on the left and right edges. The cells draw the grid
+	     between columns and the rows draw it between rows, but the table's own
+	     two sides are the scroller's, so they survive a column being hidden or
+	     the body being scrolled sideways. -->
+	<div
+		class="border-border min-h-0 w-full flex-1 overflow-auto border-x"
+		bind:this={scroller}
+		onscroll={readScroll}
+	>
 		<!--
 			The roles have to sit inside a table to mean anything: a `row` with
 			no `table` ancestor is dropped, and a screen reader is handed a pile
@@ -541,11 +658,12 @@
 			aria-label="Transactions"
 			aria-rowcount={sorted.length}
 			aria-colcount={visibleColumns.length}
+			class="w-full"
 			style="min-width: {totalWidth}px"
 		>
 			<!-- Header: its own block, as the old table keeps it, so the body
 			     can scroll under it without the columns drifting. -->
-			<div role="rowgroup" class="bg-background sticky top-0 z-30 block w-full border-0">
+			<div role="rowgroup" class="bg-background sticky top-0 z-40 block w-full border-0">
 				<div class="flex h-[45px] w-full min-w-full items-center" role="row">
 					{#each visibleColumns as column (column.key)}
 						<div
@@ -578,7 +696,7 @@
 										{#if column.sortable}
 											<Button
 												variant="ghost"
-												class="max-w-full min-w-0 space-x-2 p-0 hover:bg-transparent"
+												class="max-w-full min-w-0 p-0 hover:bg-transparent"
 												onclick={() => toggleSort(column.key as SortKey)}
 											>
 												<span class="truncate">{column.label}</span>
@@ -627,7 +745,9 @@
 								</div>
 							{/if}
 
-							{#if column.resizable}
+							<!-- No handle on the column that fills: its width is the
+							     remainder, so a drag would move nothing. -->
+							{#if column.resizable && column.key !== fillKey}
 								<!--
 									The resize handle: 4px wide, sitting on the column's right
 									edge and half outside it, exactly as the old table draws it.
@@ -654,8 +774,8 @@
 				</div>
 			</div>
 
-			<div role="rowgroup">
 			{#if sorted.length === 0}
+				<div role="rowgroup">
 				<!--
 					A row, because a rowgroup may only hold rows: an empty
 					state parked loose inside one leaves the table's ARIA
@@ -676,15 +796,40 @@
 					/>
 					</div>
 				</div>
+				</div>
 			{/if}
 
+			<!--
+				One rowgroup per day, not one for the whole body.
+
+				That is what scopes the sticky header below: a sticky box is
+				held inside its containing block, so a day's header can only
+				travel as far as the bottom of its own day and is then pushed
+				out by the next one. With a single rowgroup around everything,
+				the first day's header would pin for the whole table. No
+				JavaScript and no scroll listener are involved, which is why
+				`display: block` is explicit: `display: contents` would
+				generate no box and there would be nothing to be held inside.
+			-->
 			{#each groups as group, groupIndex (group.day)}
+				<div role="rowgroup" class="block w-full">
 				{#if group.day}
-					<!-- The day group row: the one row that spans every column. -->
+					<!--
+						The day group row: the one row that spans every column, and
+						the only one that stays put while its day is on screen.
+
+						`z-30` puts it under the column header's `z-40` and over the
+						sticky cells' `z-20`. It carries a `row` and a `cell` role
+						because a rowgroup may hold nothing else, and a bare div
+						here breaks the same contract the comment above protects.
+					-->
 					<div
 						id={groupIndex === 0 ? 'spec-group-row' : undefined}
-						class="border-border bg-row-group flex h-[40px] w-full min-w-full items-center gap-2 border-b px-4"
+						role="row"
+						class="border-border bg-row-group sticky z-30 flex w-full min-w-full items-center gap-2 border-b px-4"
+						style="top: {GROUP_STICK_TOP}px; height: {GROUP_ROW_HEIGHT}px"
 					>
+						<div role="cell" class="flex h-full w-full items-center gap-2">
 						<button
 							type="button"
 							class="text-subtle text-small flex items-center gap-1"
@@ -706,6 +851,7 @@
 							{dayTotal(group.rows, 'in')}
 						</span>
 						<span class="text-red text-small font-mono">{dayTotal(group.rows, 'out')}</span>
+						</div>
 					</div>
 				{/if}
 
@@ -718,9 +864,9 @@
 						-->
 						<!--
 							The row opens its detail on click as a pointer convenience.
-							It is not a widget: the chevron button beside the description
-							carries the name, the state and the keyboard path, so the row
-							itself stays out of the tab order and announces nothing extra.
+							It is not a widget: the row actions menu carries the named,
+							keyboard-reachable way in, so the row itself stays out of the
+							tab order and announces nothing extra.
 						-->
 						<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions, a11y_interactive_supports_focus -->
 						<div
@@ -732,7 +878,7 @@
 								selected[row.id] && 'bg-row-hover'
 							)}
 							style="height: {ROW_HEIGHT}px"
-							onclick={() => toggleExpanded(row.id)}
+							onclick={() => openRow(row.id)}
 						>
 							{#each visibleColumns as column (column.key)}
 								{#if column.key === 'select'}
@@ -769,24 +915,6 @@
 										role="cell"
 									>
 										<div class="flex w-full items-center gap-2 overflow-hidden">
-											<button
-												type="button"
-												class="text-subtle hover:text-foreground flex size-5 shrink-0 items-center justify-center"
-												aria-expanded={expandedRow === row.id}
-												aria-label="{expandedRow === row.id
-													? 'Collapse'
-													: 'Expand'} {row.name}"
-												onclick={(event) => {
-													event.stopPropagation();
-													toggleExpanded(row.id);
-												}}
-											>
-												{#if expandedRow === row.id}
-													<ChevronDown class="size-3.5" />
-												{:else}
-													<ChevronRight class="size-3.5" />
-												{/if}
-											</button>
 											<span class="truncate">{row.name}</span>
 										</div>
 									</div>
@@ -899,6 +1027,7 @@
 												{/snippet}
 											</DropdownMenu.Trigger>
 											<DropdownMenu.Content align="end" class="w-40">
+												<DropdownMenu.Item onclick={() => openRow(row.id)}>Open</DropdownMenu.Item>
 												<DropdownMenu.Item onclick={() => onEditRow?.(row)}>Edit</DropdownMenu.Item>
 												<DropdownMenu.Separator />
 												<DropdownMenu.Item
@@ -915,38 +1044,45 @@
 							{/each}
 						</div>
 
-						{#if expandedRow === row.id}
-							<div class="border-border bg-muted/40 w-full min-w-full border-b px-4 py-3">
-								<div class="space-y-3">
-									<dl class="text-body grid gap-x-8 gap-y-1 sm:grid-cols-4">
-										<div>
-											<dt class="text-subtle text-small">Note</dt>
-											<dd>{row.note ?? 'No note'}</dd>
-										</div>
-										<div>
-											<dt class="text-subtle text-small">Wallet</dt>
-											<dd>{nameOf(wallets, walletOf(row))}</dd>
-										</div>
-										<div>
-											<dt class="text-subtle text-small">Category</dt>
-											<dd>{nameOf(categories, categoryOf(row))}</dd>
-										</div>
-										<div>
-											<dt class="text-subtle text-small">Amount</dt>
-											<dd class="font-mono">{money(row)}</dd>
-										</div>
-									</dl>
-									<div class="flex gap-2">
-										<Button size="sm" variant="outline">Open</Button>
-										<Button size="sm" variant="outline">Attach receipt</Button>
-									</div>
-								</div>
-							</div>
-						{/if}
 					{/each}
 				{/if}
+				</div>
 			{/each}
-			</div>
+
+			{#if hasMore || loadingMore}
+				<!--
+					The foot of the list, as a row: a rowgroup may hold nothing
+					else, and a loose div here is the same ARIA break the empty
+					state above was written to avoid.
+
+					`aria-live="polite"` because the list grows without anyone
+					asking, and a reader who cannot see it arriving should be
+					told once rather than on every row.
+				-->
+				<div role="rowgroup" class="block w-full">
+					<div
+						role="row"
+						class="border-border flex w-full min-w-full items-center justify-center border-b"
+						style="height: {ROW_HEIGHT}px"
+					>
+						<div role="cell" class="text-subtle text-small flex items-center gap-2" aria-live="polite">
+							{#if loadingMore}
+								<Spinner size={14} />
+								Loading more
+							{/if}
+						</div>
+					</div>
+				</div>
+			{/if}
+
+			<!--
+				The trigger. A pixel tall and after everything, so it is only
+				reached at the end of what is loaded, and watched rather than
+				polled: an observer fires once per crossing and costs nothing
+				in between, where a scroll handler runs on every frame of every
+				scroll.
+			-->
+			<div bind:this={sentinel} role="presentation" aria-hidden="true" class="h-px w-full"></div>
 		</div>
 	</div>
 

@@ -15,10 +15,13 @@
 	} = $props();
 </script>
 
+<!-- The bar is furniture, so it is shallower than the body it closes: the
+     negative margins reach the dialog's own edges, which is why they have
+     to track its padding. -->
 <div
 	bind:this={ref}
 	data-slot="dialog-footer"
-	class={cn("bg-muted/50 -mx-4 -mb-4 rounded-none border-t p-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end", className)}
+	class={cn("bg-muted/50 -mx-4 -mb-5 rounded-none border-t px-4 py-2.5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end", className)}
 	{...restProps}
 >
 	{@render children?.()}

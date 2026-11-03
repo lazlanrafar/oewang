@@ -73,17 +73,23 @@ pub struct TransactionListRow {
 /// Every filter the list accepts (docs/api/endpoints.md).
 #[derive(Debug, Default, Clone)]
 pub struct TransactionFilters<'a> {
-    /// Matches either leg, so a transfer shows under both wallets.
-    pub wallet_id: Option<&'a str>,
-    pub category_id: Option<&'a str>,
+    /// Matches either leg, so a transfer shows under both wallets, and
+    /// several ids are a union: a row sitting in any one of them is kept.
+    pub wallet_ids: Option<&'a [String]>,
+    /// Several ids are a union, as above. An uncategorized row matches none
+    /// of them, which is what `category_id = ANY(...)` already answers for a
+    /// `NULL` column.
+    pub category_ids: Option<&'a [String]>,
     pub kind: Option<&'a str>,
     pub start_date: Option<DateTime<Utc>>,
     pub end_date: Option<DateTime<Utc>>,
     pub search: Option<&'a str>,
     pub is_ready: Option<bool>,
     pub ids: Option<&'a [String]>,
-    /// Bounds on the row's own amount, in the wallet's currency. Added for
-    /// the chat search tool; the web list has no amount filter.
+    /// Bounds on the amount, compared on `base_amount` so one bound means
+    /// the same thing across wallets. A list holding a USD wallet beside an
+    /// IDR one has no single scale otherwise, and both the filter bar and
+    /// the assistant speak in the workspace's currency.
     pub min_amount: Option<Decimal>,
     pub max_amount: Option<Decimal>,
 }
@@ -96,6 +102,7 @@ pub enum SortField {
     #[default]
     Date,
     Amount,
+    Name,
     CreatedAt,
 }
 
@@ -117,10 +124,26 @@ impl SortField {
             (SortField::Date, SortOrder::Ascending) => "t.date ASC, t.created_at ASC, t.id ASC",
             (SortField::Amount, SortOrder::Descending) => "t.base_amount DESC, t.id DESC",
             (SortField::Amount, SortOrder::Ascending) => "t.base_amount ASC, t.id ASC",
+            // A row with no name sorts last either way: `NULLS LAST` on the
+            // way up and `NULLS FIRST` reversed would put the blanks first
+            // on one of the two passes, which reads as a bug.
+            (SortField::Name, SortOrder::Descending) => "t.name DESC NULLS LAST, t.id DESC",
+            (SortField::Name, SortOrder::Ascending) => "t.name ASC NULLS LAST, t.id ASC",
             (SortField::CreatedAt, SortOrder::Descending) => "t.created_at DESC, t.id DESC",
             (SortField::CreatedAt, SortOrder::Ascending) => "t.created_at ASC, t.id ASC",
         }
     }
+}
+
+/// The one place an id list decides whether it narrows anything.
+///
+/// An empty list means no filter, not "match nothing". A caller arrives
+/// with zero ids when the user cleared the chips or sent `?wallet_id=`,
+/// and in both cases they are asking for the whole list rather than for an
+/// empty page. Every multi-id clause below goes through here, so that
+/// answer is given once.
+fn selected(ids: Option<&[String]>) -> Option<&[String]> {
+    ids.filter(|ids| !ids.is_empty())
 }
 
 /// Append every filter as bound parameters.
@@ -137,16 +160,22 @@ fn push_filters<'a>(
         .push_bind(workspace_id);
     builder.push(" AND t.deleted_at IS NULL");
 
-    if let Some(wallet_id) = filters.wallet_id {
+    if let Some(wallet_ids) = selected(filters.wallet_ids) {
+        // `= ANY($n)` rather than an `IN` list built here: however many ids
+        // arrive, they are one bound parameter, so the statement's text does
+        // not depend on the query string (SEC-9, SEC-10).
         builder
-            .push(" AND (t.wallet_id = ")
-            .push_bind(wallet_id)
-            .push(" OR t.to_wallet_id = ")
-            .push_bind(wallet_id)
-            .push(")");
+            .push(" AND (t.wallet_id = ANY(")
+            .push_bind(wallet_ids)
+            .push(") OR t.to_wallet_id = ANY(")
+            .push_bind(wallet_ids)
+            .push("))");
     }
-    if let Some(category_id) = filters.category_id {
-        builder.push(" AND t.category_id = ").push_bind(category_id);
+    if let Some(category_ids) = selected(filters.category_ids) {
+        builder
+            .push(" AND t.category_id = ANY(")
+            .push_bind(category_ids)
+            .push(")");
     }
     if let Some(kind) = filters.kind {
         builder.push(" AND t.type = ").push_bind(kind);
@@ -173,10 +202,10 @@ fn push_filters<'a>(
             .push(")");
     }
     if let Some(min_amount) = filters.min_amount {
-        builder.push(" AND t.amount >= ").push_bind(min_amount);
+        builder.push(" AND t.base_amount >= ").push_bind(min_amount);
     }
     if let Some(max_amount) = filters.max_amount {
-        builder.push(" AND t.amount <= ").push_bind(max_amount);
+        builder.push(" AND t.base_amount <= ").push_bind(max_amount);
     }
     if let Some(is_ready) = filters.is_ready {
         builder.push(" AND t.is_ready = ").push_bind(is_ready);

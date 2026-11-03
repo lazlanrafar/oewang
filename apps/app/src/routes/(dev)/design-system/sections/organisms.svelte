@@ -14,8 +14,8 @@
 		ChatSuggestions,
 		ToolCallGroup
 	} from '$lib/components/organisms/chat';
-	import { TransactionsTable } from '$lib/components/organisms/data-table';
-	import type { NamedOption, TransactionRow } from '$lib/components/organisms/data-table';
+	import { TransactionsTable } from '$lib/components/molecules/data-table';
+	import type { NamedOption, TransactionRow } from '$lib/components/molecules/data-table';
 
 	let { heading }: { heading: import('svelte').Snippet<[string, string?]> } = $props();
 
@@ -73,7 +73,7 @@
 </script>
 
 <section class="space-y-4">
-	{@render heading('Transactions table', 'The advanced filter with its date range, grouping by day with that day’s totals, sortable columns, column visibility, selection with a bulk bar, a row that expands on click or chevron, the in-cell category editor, a row-actions menu and a footer count.')}
+	{@render heading('Transactions table', 'The advanced filter with its date range, grouping by day with that day’s totals, sortable columns, column visibility, selection with a bulk bar, a row that expands on click or chevron, the in-cell category editor, a row-actions menu and a footer count. It is always as wide as what holds it: the last ordinary column takes the remainder, and a drag on any other stops at that column’s ceiling, so one column cannot push the rest off screen.')}
 	<TransactionsTable {rows} {categories} {wallets} />
 </section>
 

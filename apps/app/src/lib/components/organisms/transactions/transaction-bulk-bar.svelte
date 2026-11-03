@@ -74,13 +74,26 @@
 					<Tooltip.Root>
 						<Tooltip.Trigger>
 							{#snippet child({ props })}
+								<!--
+									`{...props}` carries the tooltip's own `onclick`, so it has
+									to come first and ours has to come after. Written the other
+									way round the tooltip's handler replaced it and the button
+									did nothing at all: the bar looked right and delete was
+									simply dead. What is given up is the tooltip closing on
+									click, which pointer-leave does anyway.
+
+									The label is on the button rather than only in the tooltip:
+									a tooltip is not an accessible name, and this is the one
+									control here with no text (UI-6).
+								-->
 								<Button
+									{...props}
 									size="sm"
 									variant="ghost"
 									class="text-destructive hover:bg-destructive/10 hover:text-destructive text-small h-8 gap-2 px-3"
 									disabled={deleting}
+									aria-label="Delete selected transactions"
 									onclick={onDelete}
-									{...props}
 								>
 									{#if deleting}
 										<Spinner size={14} />

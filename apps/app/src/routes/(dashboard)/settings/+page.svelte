@@ -33,8 +33,8 @@
 	import { Textarea } from '$lib/components/atoms/textarea';
 	import { ConfirmDialog } from '$lib/components/molecules/confirm-dialog';
 	import * as Empty from '$lib/components/molecules/empty';
-	import FieldError from '$lib/components/shell/field-error.svelte';
-	import FormError from '$lib/components/shell/form-error.svelte';
+	import { FieldError } from '$lib/components/molecules/field-error';
+	import { FormError } from '$lib/components/molecules/form-error';
 	import {
 		instructionsRemaining,
 		instructionsWithinLimit,

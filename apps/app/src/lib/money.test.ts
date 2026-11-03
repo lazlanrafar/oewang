@@ -55,18 +55,20 @@ describe('roundDecimal', () => {
 
 describe('formatMoney', () => {
 	it('should render rupiah with no decimal places', () => {
-		expect(formatMoney('812500.0000', 'IDR')).toBe('Rp 812.500');
-		expect(formatMoney('-87500.0000', 'IDR')).toBe('-Rp 87.500');
+		expect(formatMoney('812500.0000', 'IDR')).toBe('IDR 812.500');
+		expect(formatMoney('-87500.0000', 'IDR')).toBe('-IDR 87.500');
 	});
 
-	it('should render dollars with cents', () => {
-		expect(formatMoney('49.9900', 'USD')).toBe('$ 49,99');
-		expect(formatMoney('1234.5000', 'USD')).toBe('$ 1.234,50');
+	it('should render dollars with cents, and name them by code', () => {
+		// The code, not `$`: a workspace can hold several currencies and a
+		// symbol does not say which one a row is in.
+		expect(formatMoney('49.9900', 'USD')).toBe('USD 49,99');
+		expect(formatMoney('1234.5000', 'USD')).toBe('USD 1.234,50');
 	});
 
 	it('should mark a positive figure when asked, so colour is never alone', () => {
-		expect(formatMoney('50000', 'IDR', { signed: true })).toBe('+Rp 50.000');
-		expect(formatMoney('-50000', 'IDR', { signed: true })).toBe('-Rp 50.000');
+		expect(formatMoney('50000', 'IDR', { signed: true })).toBe('+IDR 50.000');
+		expect(formatMoney('-50000', 'IDR', { signed: true })).toBe('-IDR 50.000');
 	});
 
 	it('should drop the symbol when the column already carries it', () => {

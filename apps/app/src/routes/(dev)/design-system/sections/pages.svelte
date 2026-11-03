@@ -8,7 +8,7 @@
 	 * data problem rather than a layout one.
 	 */
 	import { TransactionsPage } from '$lib/components/organisms/transactions';
-	import type { NamedOption, TransactionRow } from '$lib/components/organisms/data-table';
+	import type { NamedOption, TransactionRow } from '$lib/components/molecules/data-table';
 
 	let { heading }: { heading: import('svelte').Snippet<[string, string?]> } = $props();
 
@@ -36,11 +36,11 @@
 </script>
 
 <section class="space-y-4">
-	{@render heading('Transactions page', 'The header with its filter, grouping, date range, import and export menu and add button; the table under it; and the form sheet, detail sheet, export modal and bulk bar hanging off the page, because they are the page’s state rather than the table’s. Open a row to see the detail sheet, select one to see the bulk bar.')}
+	{@render heading('Transactions page', 'The header with its filter on the left and everything that acts on the table on the right, one line and no page title, as the live page lays it out; the table under it, as wide as the page; and the form sheet, detail sheet, export modal and bulk bar hanging off the page, because they are the page’s state rather than the table’s. Open a row to see the detail sheet, select one to see the bulk bar.')}
 	<TransactionsPage {rows} {categories} {wallets} />
 </section>
 
 <section class="space-y-4">
 	{@render heading('Read only', 'What a member without edit rights sees: no add, no import, export only.')}
-	<TransactionsPage rows={rows.slice(0, 2)} {categories} {wallets} canEdit={false} title="Transactions" />
+	<TransactionsPage rows={rows.slice(0, 2)} {categories} {wallets} canEdit={false} />
 </section>

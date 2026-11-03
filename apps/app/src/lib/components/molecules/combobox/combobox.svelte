@@ -14,7 +14,6 @@
 	 * the caller, which is how the account and category pickers put an icon
 	 * beside a name.
 	 */
-	import Check from '@lucide/svelte/icons/check';
 	import ChevronsUpDown from '@lucide/svelte/icons/chevrons-up-down';
 	import type { Snippet } from 'svelte';
 
@@ -65,6 +64,7 @@
 	let search = $state('');
 
 	const current = $derived(items.find((entry) => entry.id === value));
+
 	const canCreate = $derived(
 		!!onCreate &&
 			search.trim() !== '' &&
@@ -106,33 +106,46 @@
 			</Button>
 		{/snippet}
 	</Popover.Trigger>
-	<Popover.Content class="w-56 p-0" align="start">
-		<Command.Root>
+	<!-- The panel is the width of the field it belongs to, not a width of its
+	     own: a list narrower than its trigger reads as a different control. -->
+	<Popover.Content class="w-(--bits-popover-anchor-width) p-0" align="start">
+		<Command.Root class="p-0">
 			<Command.Input placeholder={searchPlaceholder} bind:value={search} />
 			<Command.List>
 				{#if !canCreate}
 					<Command.Empty>{empty}</Command.Empty>
 				{/if}
-				<Command.Group>
+				<Command.Group class="p-0">
 					{#each items as entry (entry.id)}
-						<Command.Item value={entry.label} onSelect={() => choose(entry)}>
-							<Check
-								class={cn('size-4 shrink-0', value === entry.id ? 'opacity-100' : 'opacity-0')}
-								aria-hidden="true"
-							/>
+						<!--
+							Two marks, and they must not compete. The chosen row
+							carries `accent`, which is the stronger of the two,
+							because which value is set outlasts where the pointer
+							happens to be. The row under the cursor is dimmed to a
+							fraction of `muted`, so it reads as a hint rather than
+							as a second selection.
+						-->
+						<Command.Item
+							value={entry.label}
+							class={cn(
+								'px-3 py-2 data-selected:bg-muted/40',
+								entry.id === value && 'bg-accent data-selected:bg-accent font-medium'
+							)}
+							onSelect={() => choose(entry)}
+						>
 							{#if itemSnippet}{@render itemSnippet(entry)}{:else}{entry.label}{/if}
 						</Command.Item>
 					{/each}
 					{#if canCreate}
 						<Command.Item
 							value={`create-${search}`}
+							class="px-3 py-2 data-selected:bg-muted/40"
 							onSelect={() => {
 								onCreate?.(search.trim());
 								open = false;
 								search = '';
 							}}
 						>
-							<Check class="size-4 shrink-0 opacity-0" aria-hidden="true" />
 							{#if createSnippet}
 								{@render createSnippet(search.trim())}
 							{:else}

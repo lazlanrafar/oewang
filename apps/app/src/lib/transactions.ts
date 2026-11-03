@@ -6,7 +6,7 @@
  * decimal strings the whole way (D12).
  */
 
-import type { TransactionRow } from '$lib/components/organisms/data-table';
+import type { TransactionRow } from '$lib/components/molecules/data-table';
 import { signedAmount } from '$lib/money';
 import type { Transaction } from '$lib/server/ledger';
 

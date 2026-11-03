@@ -2,6 +2,7 @@ import { fail, type Actions } from '@sveltejs/kit';
 
 import { INVALIDATION_KEYS } from '$lib/chat-invalidation';
 import { ApiError } from '$lib/server/api';
+import { currentMonth } from '$lib/month-range';
 import * as ledger from '$lib/server/ledger';
 
 import type { PageServerLoad } from './$types';
@@ -16,6 +17,16 @@ import type { PageServerLoad } from './$types';
 export const load: PageServerLoad = async ({ depends, locals, url, parent }) => {
 	const token = locals.accessToken;
 	const query = ledger.filterParams(url);
+
+	// The list opens on the current month, as the live app does, rather than
+	// on everything ever recorded. The default is applied here rather than
+	// written into the URL, so an empty address bar still means "this
+	// month" and a link that names a range still wins.
+	if (!query.has('start_date') && !query.has('end_date')) {
+		const month = currentMonth();
+		query.set('start_date', month.start);
+		query.set('end_date', month.end);
+	}
 
 	// What a chat write makes stale here (D32, CHAT-12). The map lives in
 	// $lib/chat-invalidation; this is the end that declares the data. The
@@ -62,7 +73,23 @@ export const load: PageServerLoad = async ({ depends, locals, url, parent }) => 
 		wallets: wallets.data ?? [],
 		categories: categories.data ?? [],
 		/** True when the view is filtered, which decides the empty state. */
-		filtered: [...query.keys()].some(
+		/**
+		 * What makes this a different list rather than more of the same one.
+		 *
+		 * The browser accumulates rows as it scrolls, so it has to tell a
+		 * page step from a filter change, and both arrive as a new load. The
+		 * key is built here because this is where the query the API was
+		 * actually asked is known, defaults included.
+		 */
+		filterKey: [...query.entries()]
+			.filter(([key]) => key !== 'page' && key !== 'limit')
+			.sort(([a], [b]) => a.localeCompare(b))
+			.map(([key, value]) => `${key}=${value}`)
+			.join('&'),
+		// Read from the URL, not from `query`: the load defaults a date range
+		// into the latter, and a fresh account would then be told "nothing
+		// matches" when what it means is "nothing yet" (UI-2).
+		filtered: [...ledger.filterParams(url).keys()].some(
 			(key) => !['page', 'limit', 'sort', 'order'].includes(key)
 		)
 	};
@@ -152,6 +179,44 @@ export const actions: Actions = {
 				locals.accessToken
 			)
 		),
+
+	/**
+	 * An in-cell account change.
+	 *
+	 * Not part of `bulkUpdate`, which only touches fields that move no
+	 * money. Changing the account moves the amount off one wallet and onto
+	 * another, and the balances, the locking order and the audit row for
+	 * that already live behind `PATCH /v1/transactions/:id`. So the row is
+	 * read and sent back with one field changed, rather than that work being
+	 * written a second time against the bulk path.
+	 */
+	setWallet: async ({ request, locals }) =>
+		run(request, async (form) => {
+			const id = text(form, 'id');
+			const current = await ledger.readTransaction(id, locals.accessToken);
+			const row = current.data;
+			if (!row) throw new Error('NOT_FOUND');
+
+			return ledger.updateTransaction(
+				id,
+				{
+					type: row.type,
+					wallet_id: text(form, 'wallet_id'),
+					to_wallet_id: row.to_wallet_id,
+					category_id: row.category_id,
+					amount: row.amount,
+					to_amount: row.to_amount,
+					original_amount: row.original_amount,
+					original_currency_code: row.original_currency_code,
+					exchange_rate: row.exchange_rate,
+					date: row.date,
+					name: row.name,
+					description: row.description,
+					is_ready: row.is_ready
+				},
+				locals.accessToken
+			);
+		}),
 
 	bulkUpdate: async ({ request, locals }) =>
 		run(request, (form) =>

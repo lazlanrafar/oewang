@@ -10,10 +10,12 @@
 	let { ...restProps }: SonnerProps = $props();
 </script>
 
+<!-- `--border-radius` is sonner's own, and it defaults to 8px. Nothing else
+     in this app is rounded, so a toast must not be either. -->
 <Sonner
 	theme={mode.current}
 	class="toaster group"
-	style="--normal-bg: var(--color-popover); --normal-text: var(--color-popover-foreground); --normal-border: var(--color-border);"
+	style="--normal-bg: var(--color-popover); --normal-text: var(--color-popover-foreground); --normal-border: var(--color-border); --border-radius: 0px;"
 	toastOptions={{
 		classes: {
 			toast: "cn-toast",

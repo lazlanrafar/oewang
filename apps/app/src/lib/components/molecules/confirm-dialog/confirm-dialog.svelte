@@ -45,7 +45,18 @@
 			</AlertDialog.Cancel>
 			<AlertDialog.Action>
 				{#snippet child({ props })}
-					<Button {...props} variant="destructive" onclick={onConfirm}>
+					<!-- Our handler replaces the primitive's, and the primitive's is
+					     what closed the dialog, so this closes it itself. Without
+					     that the dialog stays open behind whatever the confirm
+					     started. -->
+					<Button
+						{...props}
+						variant="destructive"
+						onclick={() => {
+							open = false;
+							onConfirm();
+						}}
+					>
 						{confirmLabel}
 					</Button>
 				{/snippet}

@@ -33,6 +33,17 @@
 		placeholder = 'Search',
 		showAmount = true,
 		showDate = true,
+		/**
+		 * Chips this bar does not draw, by key.
+		 *
+		 * A filter can be owned by a control outside the bar, and then a chip
+		 * for it is the same fact stated twice: the transactions page has a
+		 * date range picker in its header that already reads the range back,
+		 * so the bar showing `Date: 2026-08-01 - 2026-11-30` beside it is
+		 * noise. The filter still applies; only the chip is withheld. The old
+		 * app does the same thing under the name `excludeKeys`.
+		 */
+		hideChips = [],
 		currencySymbol = 'Rp',
 		class: className
 	}: {
@@ -41,6 +52,7 @@
 		placeholder?: string;
 		showAmount?: boolean;
 		showDate?: boolean;
+		hideChips?: string[];
 		currencySymbol?: string;
 		class?: string;
 	} = $props();
@@ -79,14 +91,18 @@
 	const chips = $derived.by<Chip[]>(() => {
 		const list: Chip[] = [];
 
+		// One chip per facet, naming every value it holds, rather than one
+		// chip per value. Three categories are one answer to one question,
+		// and three chips read as three separate filters.
 		for (const facet of facets) {
-			for (const id of selected(facet.id)) {
-				list.push({
-					key: `${facet.id}:${id}`,
-					label: `${facet.label}: ${nameOf(facet, id)}`,
-					clear: () => clearFacetValue(facet.id, id)
-				});
-			}
+			const values = selected(facet.id);
+			if (values.length === 0) continue;
+
+			list.push({
+				key: facet.id,
+				label: `${facet.label}: ${values.map((id) => nameOf(facet, id)).join(', ')}`,
+				clear: () => (filters = { ...filters, facets: { ...filters.facets, [facet.id]: [] } })
+			});
 		}
 
 		const { min, max } = filters.amount ?? {};
@@ -111,12 +127,18 @@
 			});
 		}
 
-		return list;
+		return list.filter((chip) => !hideChips.includes(chip.key));
 	});
 </script>
 
-<div class={cn('space-y-2', className)}>
-	<div class="group relative w-full max-w-sm shrink-0">
+<!-- The chips sit beside the search box rather than under it. They answer
+     the same question the box does, and a second row costs the table a row
+     of its own height on every screen. -->
+<div class={cn('flex min-w-0 flex-wrap items-center gap-2', className)}>
+	<!-- Sized, not full width: `w-full` would take the whole flex line and
+	     push the chips onto a second row, which is the row this layout
+	     exists to avoid. -->
+	<div class="group relative min-w-0 max-w-sm flex-1 basis-64">
 		<div class="relative flex items-center">
 			<Search
 				class="text-subtle group-focus-within:text-foreground pointer-events-none absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2 transition-colors"
@@ -249,9 +271,13 @@
 		</div>
 	</div>
 
-	{#if chips.length > 0 || active}
-		<div class="flex items-center gap-2 overflow-x-auto py-1">
-			<ul class="flex gap-2">
+	<!-- The row exists only when it has something to say. `active` alone is
+	     not enough: a filter whose chip this bar withholds, such as the date
+	     range the transactions header owns, would otherwise leave a bare
+	     "Clear all" under an empty row. -->
+	{#if chips.length > 0}
+		<div class="flex min-w-0 items-center gap-2">
+			<ul class="flex min-w-0 flex-wrap gap-2">
 				{#each chips as chip (chip.key)}
 					<li>
 						<button
@@ -270,9 +296,6 @@
 					</li>
 				{/each}
 			</ul>
-			{#if active}
-				<Button variant="ghost" size="sm" class="text-small" onclick={clearAll}>Clear all</Button>
-			{/if}
 		</div>
 	{/if}
 </div>

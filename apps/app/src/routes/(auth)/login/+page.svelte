@@ -2,8 +2,8 @@
 	import { enhance } from '$app/forms';
 	import { page } from '$app/state';
 
-	import FieldError from '$lib/components/shell/field-error.svelte';
-	import FormError from '$lib/components/shell/form-error.svelte';
+	import { FieldError } from '$lib/components/molecules/field-error';
+	import { FormError } from '$lib/components/molecules/form-error';
 	import { Button } from '$lib/components/atoms/button';
 	import { Input } from '$lib/components/atoms/input';
 	import { messageForCode } from '$lib/errors';

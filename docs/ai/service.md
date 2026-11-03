@@ -123,7 +123,7 @@ Eleven tools (D17), cut down from thirty-four in the old app. The schemas the mo
 |---|---|---|
 | `get_workspace_context` | none | Wallets and categories. Rarely needed; the prompt already carries them. Use after creating a wallet mid-turn |
 | `get_recent_transactions` | `limit` (1 to 50), `from`, `to` | Recent transactions, newest first |
-| `search_transactions` | `query`, `type`, `category_id`, `wallet_id`, `min_amount`, `max_amount`, `from`, `to`, `limit` | Matching transactions |
+| `search_transactions` | `query`, `type`, `category_id`, `wallet_id`, `min_amount`, `max_amount`, `from`, `to`, `limit` | Matching transactions. It shares the list route's filter, so the two amount bounds compare on the base amount, the workspace's own currency (D77), which is the currency the assistant speaks in anyway |
 | `get_spending_summary` | `from`, `to`, `group_by` (`category`, `wallet`, `type`, `month`) | Totals per group, with a grand total |
 
 ### Write tools
