@@ -43,7 +43,13 @@ pub fn seal_with_nonce(
     let nonce = Nonce::from_slice(nonce_bytes);
 
     let ciphertext = cipher
-        .encrypt(nonce, Payload { msg: plaintext, aad })
+        .encrypt(
+            nonce,
+            Payload {
+                msg: plaintext,
+                aad,
+            },
+        )
         .map_err(|_| Owe1Error::SealFailed)?;
 
     Ok(SealedBody {
@@ -54,17 +60,21 @@ pub fn seal_with_nonce(
 
 pub fn open(key: &[u8; 32], aad: &[u8], body: &SealedBody) -> Result<Vec<u8>, Owe1Error> {
     let nonce_bytes = handshake::decode_fixed::<NONCE_LEN>(&body.n, "n")?;
-    let ciphertext = base64::Engine::decode(
-        &base64::engine::general_purpose::URL_SAFE_NO_PAD,
-        &body.c,
-    )
-    .map_err(|_| Owe1Error::MalformedField("c"))?;
+    let ciphertext =
+        base64::Engine::decode(&base64::engine::general_purpose::URL_SAFE_NO_PAD, &body.c)
+            .map_err(|_| Owe1Error::MalformedField("c"))?;
 
     let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(key));
     let nonce = Nonce::from_slice(&nonce_bytes);
 
     cipher
-        .decrypt(nonce, Payload { msg: &ciphertext, aad })
+        .decrypt(
+            nonce,
+            Payload {
+                msg: &ciphertext,
+                aad,
+            },
+        )
         .map_err(|_| Owe1Error::DecryptFailed)
 }
 
@@ -93,7 +103,10 @@ mod tests {
         let b = seal(&KEY, &aad, b"same plaintext").unwrap();
 
         assert_ne!(a.n, b.n, "nonce must not repeat");
-        assert_ne!(a.c, b.c, "identical plaintext must not produce identical ciphertext");
+        assert_ne!(
+            a.c, b.c,
+            "identical plaintext must not produce identical ciphertext"
+        );
     }
 
     #[test]
@@ -123,21 +136,30 @@ mod tests {
 
         // Same session, same request id, different path.
         let moved = aad::request("cs_a", "POST", "/v1/wallets", "req_1", 1);
-        assert!(matches!(open(&KEY, &moved, &sealed), Err(Owe1Error::DecryptFailed)));
+        assert!(matches!(
+            open(&KEY, &moved, &sealed),
+            Err(Owe1Error::DecryptFailed)
+        ));
     }
 
     #[test]
     fn should_fail_when_the_status_is_swapped() {
         let sealed = seal(&KEY, &aad::response("cs_a", "req_1", 403), b"denied").unwrap();
         let as_ok = aad::response("cs_a", "req_1", 200);
-        assert!(matches!(open(&KEY, &as_ok, &sealed), Err(Owe1Error::DecryptFailed)));
+        assert!(matches!(
+            open(&KEY, &as_ok, &sealed),
+            Err(Owe1Error::DecryptFailed)
+        ));
     }
 
     #[test]
     fn should_fail_when_replayed_onto_another_request() {
         let sealed = seal(&KEY, &aad::response("cs_a", "req_1", 200), b"body").unwrap();
         let other = aad::response("cs_a", "req_2", 200);
-        assert!(matches!(open(&KEY, &other, &sealed), Err(Owe1Error::DecryptFailed)));
+        assert!(matches!(
+            open(&KEY, &other, &sealed),
+            Err(Owe1Error::DecryptFailed)
+        ));
     }
 
     #[test]
@@ -154,12 +176,18 @@ mod tests {
     fn should_fail_when_stream_events_are_reordered() {
         let s0 = seal(&KEY, &aad::stream_event("cs_a", "req_1", 0), b"first").unwrap();
         let as_second = aad::stream_event("cs_a", "req_1", 1);
-        assert!(matches!(open(&KEY, &as_second, &s0), Err(Owe1Error::DecryptFailed)));
+        assert!(matches!(
+            open(&KEY, &as_second, &s0),
+            Err(Owe1Error::DecryptFailed)
+        ));
     }
 
     #[test]
     fn should_reject_a_malformed_nonce_field() {
-        let body = SealedBody { n: "short".into(), c: "AAAA".into() };
+        let body = SealedBody {
+            n: "short".into(),
+            c: "AAAA".into(),
+        };
         assert!(matches!(
             open(&KEY, b"aad", &body),
             Err(Owe1Error::MalformedField("n"))

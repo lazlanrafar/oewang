@@ -85,10 +85,7 @@ pub async fn insert_user(
     .map(|_| ())
 }
 
-pub async fn email_exists(
-    executor: impl PgExecutor<'_>,
-    email: &str,
-) -> Result<bool, sqlx::Error> {
+pub async fn email_exists(executor: impl PgExecutor<'_>, email: &str) -> Result<bool, sqlx::Error> {
     sqlx::query_scalar!(
         r#"SELECT EXISTS(SELECT 1 FROM users WHERE lower(email) = lower($1)) AS "exists!""#,
         email
@@ -140,9 +137,12 @@ pub async fn find_user_id_by_email(
     executor: impl PgExecutor<'_>,
     email: &str,
 ) -> Result<Option<String>, sqlx::Error> {
-    sqlx::query_scalar!(r#"SELECT id FROM users WHERE lower(email) = lower($1)"#, email)
-        .fetch_optional(executor)
-        .await
+    sqlx::query_scalar!(
+        r#"SELECT id FROM users WHERE lower(email) = lower($1)"#,
+        email
+    )
+    .fetch_optional(executor)
+    .await
 }
 
 pub async fn update_password(

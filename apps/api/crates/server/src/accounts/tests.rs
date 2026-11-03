@@ -129,10 +129,14 @@ async fn should_leave_exactly_one_default_when_the_default_moves(pool: PgPool) {
     // set-default, so the invariant has one code path.
     assert_eq!(default_ids(&pool).await, Vec::<String>::new());
 
-    service::set_default_wallet(&pool, actor(), &first).await.unwrap();
+    service::set_default_wallet(&pool, actor(), &first)
+        .await
+        .unwrap();
     assert_eq!(default_ids(&pool).await, vec![first.clone()]);
 
-    service::set_default_wallet(&pool, actor(), &second).await.unwrap();
+    service::set_default_wallet(&pool, actor(), &second)
+        .await
+        .unwrap();
     assert_eq!(
         default_ids(&pool).await,
         vec![second.clone()],
@@ -141,7 +145,9 @@ async fn should_leave_exactly_one_default_when_the_default_moves(pool: PgPool) {
 
     // Setting the one that is already default is a no-op, not a violation of
     // the partial unique index.
-    service::set_default_wallet(&pool, actor(), &second).await.unwrap();
+    service::set_default_wallet(&pool, actor(), &second)
+        .await
+        .unwrap();
     assert_eq!(default_ids(&pool).await, vec![second]);
 }
 
@@ -150,9 +156,13 @@ async fn should_pass_the_default_on_when_the_default_wallet_is_deleted(pool: PgP
     fixture(&pool, "IDR").await;
     let first = make_wallet(&pool, "Cash", None).await;
     let second = make_wallet(&pool, "Bank", None).await;
-    service::set_default_wallet(&pool, actor(), &first).await.unwrap();
+    service::set_default_wallet(&pool, actor(), &first)
+        .await
+        .unwrap();
 
-    service::delete_wallet(&pool, actor(), &first).await.unwrap();
+    service::delete_wallet(&pool, actor(), &first)
+        .await
+        .unwrap();
 
     assert_eq!(
         default_ids(&pool).await,
@@ -170,15 +180,23 @@ async fn should_refuse_to_delete_a_wallet_with_live_transactions(pool: PgPool) {
     let error = service::delete_wallet(&pool, actor(), &wallet)
         .await
         .unwrap_err();
-    assert!(matches!(error, AppError::WalletHasTransactions), "{error:?}");
+    assert!(
+        matches!(error, AppError::WalletHasTransactions),
+        "{error:?}"
+    );
 
     // Soft-deleting the transaction releases the wallet again.
     sqlx::query("UPDATE transactions SET deleted_at = now() WHERE id = 'txn_1'")
         .execute(&pool)
         .await
         .unwrap();
-    service::delete_wallet(&pool, actor(), &wallet).await.unwrap();
-    assert!(service::list_wallets(&pool, WORKSPACE).await.unwrap().is_empty());
+    service::delete_wallet(&pool, actor(), &wallet)
+        .await
+        .unwrap();
+    assert!(service::list_wallets(&pool, WORKSPACE)
+        .await
+        .unwrap()
+        .is_empty());
 }
 
 #[sqlx::test(migrations = "../../migrations")]
@@ -191,7 +209,10 @@ async fn should_lock_a_wallet_currency_once_it_has_a_live_transaction(pool: PgPo
         &pool,
         actor(),
         &wallet,
-        WalletPatchInput { currency_code: Some("EUR"), ..Default::default() },
+        WalletPatchInput {
+            currency_code: Some("EUR"),
+            ..Default::default()
+        },
     )
     .await
     .unwrap();
@@ -203,7 +224,10 @@ async fn should_lock_a_wallet_currency_once_it_has_a_live_transaction(pool: PgPo
         &pool,
         actor(),
         &wallet,
-        WalletPatchInput { currency_code: Some("USD"), ..Default::default() },
+        WalletPatchInput {
+            currency_code: Some("USD"),
+            ..Default::default()
+        },
     )
     .await
     .unwrap_err();
@@ -244,7 +268,10 @@ async fn should_lock_the_workspace_currency_once_any_transaction_exists(pool: Pg
     let error = service::update_workspace_currency(&pool, actor(), "EUR")
         .await
         .unwrap_err();
-    assert!(matches!(error, AppError::WorkspaceCurrencyLocked), "{error:?}");
+    assert!(
+        matches!(error, AppError::WorkspaceCurrencyLocked),
+        "{error:?}"
+    );
 
     // Soft-deleting it does not unlock: a deleted row's base_amount is still
     // a number denominated in the old currency.
@@ -255,7 +282,10 @@ async fn should_lock_the_workspace_currency_once_any_transaction_exists(pool: Pg
     let error = service::update_workspace_currency(&pool, actor(), "EUR")
         .await
         .unwrap_err();
-    assert!(matches!(error, AppError::WorkspaceCurrencyLocked), "{error:?}");
+    assert!(
+        matches!(error, AppError::WorkspaceCurrencyLocked),
+        "{error:?}"
+    );
 
     // Re-sending the current currency is not a change, so it is not refused.
     assert_eq!(
@@ -280,7 +310,10 @@ async fn should_never_move_a_balance_through_a_wallet_patch(pool: PgPool) {
         &pool,
         actor(),
         &wallet,
-        WalletPatchInput { name: Some("Renamed"), ..Default::default() },
+        WalletPatchInput {
+            name: Some("Renamed"),
+            ..Default::default()
+        },
     )
     .await
     .unwrap();
@@ -296,12 +329,19 @@ async fn should_write_an_audit_row_for_every_wallet_mutation(pool: PgPool) {
         &pool,
         actor(),
         &wallet,
-        WalletPatchInput { name: Some("Petty cash"), ..Default::default() },
+        WalletPatchInput {
+            name: Some("Petty cash"),
+            ..Default::default()
+        },
     )
     .await
     .unwrap();
-    service::set_default_wallet(&pool, actor(), &wallet).await.unwrap();
-    service::delete_wallet(&pool, actor(), &wallet).await.unwrap();
+    service::set_default_wallet(&pool, actor(), &wallet)
+        .await
+        .unwrap();
+    service::delete_wallet(&pool, actor(), &wallet)
+        .await
+        .unwrap();
 
     assert_eq!(
         audit_actions(&pool, &wallet).await,
@@ -320,7 +360,9 @@ async fn should_roll_the_audit_row_back_with_a_refused_mutation(pool: PgPool) {
     let wallet = make_wallet(&pool, "Cash", None).await;
     insert_transaction(&pool, "txn_1", &wallet, None).await;
 
-    service::delete_wallet(&pool, actor(), &wallet).await.unwrap_err();
+    service::delete_wallet(&pool, actor(), &wallet)
+        .await
+        .unwrap_err();
 
     assert_eq!(
         audit_actions(&pool, &wallet).await,
@@ -334,7 +376,9 @@ async fn should_roll_the_audit_row_back_with_a_refused_mutation(pool: PgPool) {
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_detach_wallets_when_their_group_is_deleted(pool: PgPool) {
     fixture(&pool, "IDR").await;
-    let group = service::create_group(&pool, actor(), "Banks", None).await.unwrap();
+    let group = service::create_group(&pool, actor(), "Banks", None)
+        .await
+        .unwrap();
 
     let wallet = service::create_wallet(
         &pool,
@@ -351,24 +395,39 @@ async fn should_detach_wallets_when_their_group_is_deleted(pool: PgPool) {
     .unwrap();
     assert_eq!(wallet.group_id.as_deref(), Some(group.id.as_str()));
 
-    service::delete_group(&pool, actor(), &group.id).await.unwrap();
+    service::delete_group(&pool, actor(), &group.id)
+        .await
+        .unwrap();
 
-    let after = service::find_wallet(&pool, WORKSPACE, &wallet.id).await.unwrap();
-    assert_eq!(after.group_id, None, "the wallet survives, the grouping goes");
-    assert!(service::list_groups(&pool, WORKSPACE).await.unwrap().is_empty());
+    let after = service::find_wallet(&pool, WORKSPACE, &wallet.id)
+        .await
+        .unwrap();
+    assert_eq!(
+        after.group_id, None,
+        "the wallet survives, the grouping goes"
+    );
+    assert!(service::list_groups(&pool, WORKSPACE)
+        .await
+        .unwrap()
+        .is_empty());
 }
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_tell_an_absent_group_apart_from_an_explicit_null(pool: PgPool) {
     fixture(&pool, "IDR").await;
-    let group = service::create_group(&pool, actor(), "Banks", None).await.unwrap();
+    let group = service::create_group(&pool, actor(), "Banks", None)
+        .await
+        .unwrap();
     let wallet = make_wallet(&pool, "BCA", None).await;
 
     let attached = service::update_wallet(
         &pool,
         actor(),
         &wallet,
-        WalletPatchInput { group_id: Some(Some(&group.id)), ..Default::default() },
+        WalletPatchInput {
+            group_id: Some(Some(&group.id)),
+            ..Default::default()
+        },
     )
     .await
     .unwrap();
@@ -379,7 +438,10 @@ async fn should_tell_an_absent_group_apart_from_an_explicit_null(pool: PgPool) {
         &pool,
         actor(),
         &wallet,
-        WalletPatchInput { name: Some("BCA Main"), ..Default::default() },
+        WalletPatchInput {
+            name: Some("BCA Main"),
+            ..Default::default()
+        },
     )
     .await
     .unwrap();
@@ -390,7 +452,10 @@ async fn should_tell_an_absent_group_apart_from_an_explicit_null(pool: PgPool) {
         &pool,
         actor(),
         &wallet,
-        WalletPatchInput { group_id: Some(None), ..Default::default() },
+        WalletPatchInput {
+            group_id: Some(None),
+            ..Default::default()
+        },
     )
     .await
     .unwrap();
@@ -418,7 +483,9 @@ async fn should_null_the_category_on_its_transactions_when_it_is_deleted(pool: P
     .await
     .unwrap();
 
-    service::delete_category(&pool, actor(), &category.id).await.unwrap();
+    service::delete_category(&pool, actor(), &category.id)
+        .await
+        .unwrap();
 
     let txn_category: Option<String> =
         sqlx::query_scalar("SELECT category_id FROM transactions WHERE id = 'txn_1'")
@@ -469,7 +536,10 @@ async fn should_restrict_a_category_to_income_or_expense(pool: PgPool) {
     assert_eq!(expenses.len(), 1);
     assert_eq!(expenses[0].r#type, "expense");
     assert_eq!(
-        service::list_categories(&pool, WORKSPACE, None).await.unwrap().len(),
+        service::list_categories(&pool, WORKSPACE, None)
+            .await
+            .unwrap()
+            .len(),
         2
     );
 }
@@ -492,15 +562,21 @@ async fn should_not_reach_another_workspaces_rows(pool: PgPool) {
     let intruder = Actor::web("ws_other", USER);
 
     assert!(matches!(
-        service::find_wallet(&pool, "ws_other", &wallet).await.unwrap_err(),
+        service::find_wallet(&pool, "ws_other", &wallet)
+            .await
+            .unwrap_err(),
         AppError::WalletNotFound
     ));
     assert!(matches!(
-        service::delete_wallet(&pool, intruder, &wallet).await.unwrap_err(),
+        service::delete_wallet(&pool, intruder, &wallet)
+            .await
+            .unwrap_err(),
         AppError::WalletNotFound
     ));
     assert!(matches!(
-        service::set_default_wallet(&pool, intruder, &wallet).await.unwrap_err(),
+        service::set_default_wallet(&pool, intruder, &wallet)
+            .await
+            .unwrap_err(),
         AppError::WalletNotFound
     ));
 }

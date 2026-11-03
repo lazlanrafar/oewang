@@ -132,7 +132,9 @@ fn push_filters<'a>(
     workspace_id: &'a str,
     filters: &TransactionFilters<'a>,
 ) {
-    builder.push(" WHERE t.workspace_id = ").push_bind(workspace_id);
+    builder
+        .push(" WHERE t.workspace_id = ")
+        .push_bind(workspace_id);
     builder.push(" AND t.deleted_at IS NULL");
 
     if let Some(wallet_id) = filters.wallet_id {
@@ -156,7 +158,13 @@ fn push_filters<'a>(
         builder.push(" AND t.date <= ").push_bind(end);
     }
     if let Some(search) = filters.search {
-        let pattern = format!("%{}%", search.replace('\\', "\\\\").replace('%', "\\%").replace('_', "\\_"));
+        let pattern = format!(
+            "%{}%",
+            search
+                .replace('\\', "\\\\")
+                .replace('%', "\\%")
+                .replace('_', "\\_")
+        );
         builder
             .push(" AND (t.name ILIKE ")
             .push_bind(pattern.clone())
@@ -207,7 +215,10 @@ pub async fn list(
     builder.push(" LIMIT ").push_bind(limit);
     builder.push(" OFFSET ").push_bind(offset);
 
-    builder.build_query_as::<TransactionListRow>().fetch_all(executor).await
+    builder
+        .build_query_as::<TransactionListRow>()
+        .fetch_all(executor)
+        .await
 }
 
 /// The same filters, every matching row, no pagination.
@@ -225,7 +236,10 @@ pub async fn list_all(
     push_filters(&mut builder, workspace_id, filters);
     builder.push(" ORDER BY ").push(sort.fragment(order));
 
-    builder.build_query_as::<TransactionListRow>().fetch_all(executor).await
+    builder
+        .build_query_as::<TransactionListRow>()
+        .fetch_all(executor)
+        .await
 }
 
 pub async fn count(
@@ -236,7 +250,10 @@ pub async fn count(
     let mut builder = QueryBuilder::new("SELECT count(*) FROM transactions t");
     push_filters(&mut builder, workspace_id, filters);
 
-    builder.build_query_scalar::<i64>().fetch_one(executor).await
+    builder
+        .build_query_scalar::<i64>()
+        .fetch_one(executor)
+        .await
 }
 
 /// Totals by type, in the workspace currency.
@@ -262,7 +279,10 @@ pub async fn summary(
     push_filters(&mut builder, workspace_id, filters);
     builder.push(" GROUP BY t.type ORDER BY t.type");
 
-    builder.build_query_as::<SummaryRow>().fetch_all(executor).await
+    builder
+        .build_query_as::<SummaryRow>()
+        .fetch_all(executor)
+        .await
 }
 
 /// Totals by category, in the workspace currency.
@@ -288,7 +308,10 @@ pub async fn summary_by_category(
     push_filters(&mut builder, workspace_id, filters);
     builder.push(" GROUP BY t.category_id, c.name, t.type ORDER BY total DESC");
 
-    builder.build_query_as::<CategoryTotalRow>().fetch_all(executor).await
+    builder
+        .build_query_as::<CategoryTotalRow>()
+        .fetch_all(executor)
+        .await
 }
 
 /// The groupings a summary may be asked for.
@@ -318,11 +341,7 @@ impl SummaryGroup {
                 " JOIN wallets w ON w.id = t.wallet_id",
                 " GROUP BY t.wallet_id, w.name",
             ),
-            SummaryGroup::Type => (
-                "t.type AS key, t.type AS label",
-                "",
-                " GROUP BY t.type",
-            ),
+            SummaryGroup::Type => ("t.type AS key, t.type AS label", "", " GROUP BY t.type"),
             SummaryGroup::Month => (
                 "to_char(t.date, 'YYYY-MM') AS key, to_char(t.date, 'YYYY-MM') AS label",
                 "",
@@ -366,7 +385,10 @@ pub async fn summary_grouped(
     builder.push(group_by);
     builder.push(" ORDER BY total DESC");
 
-    builder.build_query_as::<GroupTotalRow>().fetch_all(executor).await
+    builder
+        .build_query_as::<GroupTotalRow>()
+        .fetch_all(executor)
+        .await
 }
 
 pub async fn find(
@@ -718,6 +740,121 @@ pub async fn apply_delta(
         workspace_id,
         wallet_id,
         delta
+    )
+    .execute(executor)
+    .await
+    .map(|result| result.rows_affected())
+}
+
+// ------------------------------------------------------------ import jobs
+
+/// A statement import, running or finished (AI-4, AI-6).
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct ImportJobRow {
+    pub id: String,
+    pub workspace_id: String,
+    pub user_id: String,
+    pub status: String,
+    /// The document the rows were read from, so a retry does not re-upload
+    /// it. Null for a job that predates the column.
+    pub vault_file_id: Option<String>,
+    pub imported: Option<i32>,
+    pub skipped: Option<i32>,
+    pub duplicates: Option<i32>,
+    /// An error code, never a message: the modal renders a dictionary
+    /// string keyed by it, and a message could carry a row's contents.
+    pub error: Option<String>,
+    /// What became of each row, capped by the application. A report, not
+    /// ledger data: written once, read whole, joined to nothing.
+    pub review: Option<serde_json::Value>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+pub async fn insert_import_job(
+    executor: impl PgExecutor<'_>,
+    id: &str,
+    workspace_id: &str,
+    user_id: &str,
+    vault_file_id: &str,
+) -> Result<ImportJobRow, sqlx::Error> {
+    sqlx::query_as!(
+        ImportJobRow,
+        r#"INSERT INTO transaction_import_jobs
+               (id, workspace_id, user_id, vault_file_id)
+           VALUES ($1, $2, $3, $4)
+           RETURNING id, workspace_id, user_id, status, vault_file_id,
+                     imported, skipped, duplicates, error, review,
+                     created_at, updated_at"#,
+        id,
+        workspace_id,
+        user_id,
+        vault_file_id
+    )
+    .fetch_one(executor)
+    .await
+}
+
+pub async fn find_import_job(
+    executor: impl PgExecutor<'_>,
+    workspace_id: &str,
+    id: &str,
+) -> Result<Option<ImportJobRow>, sqlx::Error> {
+    sqlx::query_as!(
+        ImportJobRow,
+        r#"SELECT id, workspace_id, user_id, status, vault_file_id,
+                  imported, skipped, duplicates, error, review, created_at,
+                  updated_at
+           FROM transaction_import_jobs
+           WHERE workspace_id = $1 AND id = $2"#,
+        workspace_id,
+        id
+    )
+    .fetch_optional(executor)
+    .await
+}
+
+/// Write the outcome back. The job row is the only record the modal polls,
+/// so it carries the counts separately: imported, skipped and duplicate are
+/// three different things that happened to a row (TXN-16).
+/// Everything a finished job records, in one value: six positional
+/// arguments at a call site is five chances to transpose two of them, and
+/// `imported` and `skipped` are both counts of rows.
+#[derive(Debug, Default)]
+pub struct JobOutcome<'a> {
+    pub status: &'a str,
+    pub imported: i32,
+    pub skipped: i32,
+    pub duplicates: i32,
+    pub error: Option<&'a str>,
+    pub review: Option<&'a serde_json::Value>,
+}
+
+pub async fn finish_import_job(
+    executor: impl PgExecutor<'_>,
+    id: &str,
+    outcome: JobOutcome<'_>,
+) -> Result<u64, sqlx::Error> {
+    let JobOutcome {
+        status,
+        imported,
+        skipped,
+        duplicates,
+        error,
+        review,
+    } = outcome;
+    sqlx::query!(
+        r#"UPDATE transaction_import_jobs
+           SET status = $2, imported = $3, skipped = $4, duplicates = $5,
+               error = $6, review = $7, updated_at = now()
+           WHERE id = $1"#,
+        id,
+        status,
+        imported,
+        skipped,
+        duplicates,
+        error,
+        review
     )
     .execute(executor)
     .await

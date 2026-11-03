@@ -337,7 +337,15 @@ M2 is the first milestone worth demoing, and it de-risks the stack choice before
 
 ## 10. Open questions
 
-None outstanding.
+Three, all of them the owner's to answer. Each is a trade-off rather than a
+gap in the build, and each is recorded where the work stopped rather than
+quietly dropped.
+
+| # | Question | What is known |
+|---|---|---|
+| Q12 | The first token of a chat turn arrives in about 2.4 seconds, against a 2 second target. Accept it, or change the model? | Measured with encryption on, which is not the cost: the gateway's `free-main` injects roughly 3.6k tokens of its own system prompt ahead of ours and routes to a varying upstream. A faster or dedicated model behind `AI_BASE_URL` is a configuration change (D67), not code. With the tool loop in place a first turn that calls a tool takes far longer again, which is expected and is not what the target measures. |
+| Q13 | XLSX in the import wizard. | Not built, deliberately and twice over. The only npm build of SheetJS carries a known prototype-pollution advisory, and it would run in the browser, in the same context as the session. CSV, semicolon and tab files are parsed today. Taking the dependency is a decision, not a default. |
+| Q14 | CI does not finish in five minutes on a cold cache. | Estimated 4 to 6 minutes warm, 10 to 14 cold, dominated by the Rust job, which compiles the workspace three times over (the sqlx cache check, clippy, the tests). A larger runner for that job alone is the one lever that costs no coverage. Dropping `--all-targets` from clippy would be cheapest and was rejected: it stops linting the test code. |
 
 Resolved, all on 2026-11-02:
 

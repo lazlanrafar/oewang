@@ -98,9 +98,7 @@ async fn fixture(pool: &PgPool) {
         .unwrap();
     }
 
-    for (membership, user, role) in
-        [("m_owner", OWNER, "owner"), ("m_member", MEMBER, "member")]
-    {
+    for (membership, user, role) in [("m_owner", OWNER, "owner"), ("m_member", MEMBER, "member")] {
         sqlx::query(
             "INSERT INTO user_workspaces (id, workspace_id, user_id, role)
              VALUES ($1, $2, $3, $4)",
@@ -167,9 +165,14 @@ async fn an_expense(pool: &PgPool, turns: &TurnStore, amount: &str, name: &str) 
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_refuse_a_tool_that_does_not_exist(pool: PgPool) {
     fixture(&pool).await;
-    let error = run(&pool, &store(), "delete_wallet", json!({ "wallet_id": "wal_cash" }))
-        .await
-        .unwrap_err();
+    let error = run(
+        &pool,
+        &store(),
+        "delete_wallet",
+        json!({ "wallet_id": "wal_cash" }),
+    )
+    .await
+    .unwrap_err();
     assert_eq!(error.code(), "TOOL_NOT_FOUND");
 }
 
@@ -202,9 +205,16 @@ async fn should_read_the_role_from_the_membership_row_not_the_body(pool: PgPool)
 async fn should_let_a_member_read(pool: PgPool) {
     fixture(&pool).await;
 
-    let outcome = call_as(&pool, &store(), MEMBER, "member", "get_recent_transactions", json!({}))
-        .await
-        .unwrap();
+    let outcome = call_as(
+        &pool,
+        &store(),
+        MEMBER,
+        "member",
+        "get_recent_transactions",
+        json!({}),
+    )
+    .await
+    .unwrap();
 
     assert_eq!(outcome.result["meta"]["returned"], json!(0));
 }
@@ -214,16 +224,30 @@ async fn should_refuse_every_write_tool_for_a_member(pool: PgPool) {
     fixture(&pool).await;
 
     let calls = [
-        ("create_transaction", json!({ "type": "expense", "amount": "1", "wallet_id": "wal_cash" })),
-        ("update_transaction", json!({ "transaction_id": "txn_x", "name": "x" })),
+        (
+            "create_transaction",
+            json!({ "type": "expense", "amount": "1", "wallet_id": "wal_cash" }),
+        ),
+        (
+            "update_transaction",
+            json!({ "transaction_id": "txn_x", "name": "x" }),
+        ),
         ("delete_transaction", json!({ "transaction_id": "txn_x" })),
-        ("add_transaction_items", json!({ "transaction_id": "txn_x", "items": [{ "name": "x", "amount": "1" }] })),
+        (
+            "add_transaction_items",
+            json!({ "transaction_id": "txn_x", "items": [{ "name": "x", "amount": "1" }] }),
+        ),
         ("create_wallet", json!({ "name": "Wallet" })),
-        ("create_category", json!({ "name": "Rent", "type": "expense" })),
+        (
+            "create_category",
+            json!({ "name": "Rent", "type": "expense" }),
+        ),
     ];
 
     for (tool, args) in calls {
-        let error = call_as(&pool, &store(), MEMBER, "member", tool, args).await.unwrap_err();
+        let error = call_as(&pool, &store(), MEMBER, "member", tool, args)
+            .await
+            .unwrap_err();
         assert_eq!(error.code(), "TOOL_FORBIDDEN", "{tool}");
     }
 }
@@ -262,14 +286,24 @@ async fn should_refuse_the_fourth_write_in_one_turn(pool: PgPool) {
     let turns = store();
 
     for index in 0..MAX_WRITES_PER_TURN {
-        run(&pool, &turns, "create_category", json!({ "name": format!("Cat {index}"), "type": "expense" }))
-            .await
-            .unwrap();
+        run(
+            &pool,
+            &turns,
+            "create_category",
+            json!({ "name": format!("Cat {index}"), "type": "expense" }),
+        )
+        .await
+        .unwrap();
     }
 
-    let error = run(&pool, &turns, "create_category", json!({ "name": "Too many", "type": "expense" }))
-        .await
-        .unwrap_err();
+    let error = run(
+        &pool,
+        &turns,
+        "create_category",
+        json!({ "name": "Too many", "type": "expense" }),
+    )
+    .await
+    .unwrap_err();
     assert_eq!(error.code(), "TOOL_CAP_EXCEEDED");
 }
 
@@ -305,10 +339,15 @@ async fn should_refuse_a_second_delete_in_one_turn(pool: PgPool) {
     // cap rather than by the challenge.
     for id in [&first, &second] {
         assert_eq!(
-            run(&pool, &turns, "delete_transaction", json!({ "transaction_id": id }))
-                .await
-                .unwrap_err()
-                .code(),
+            run(
+                &pool,
+                &turns,
+                "delete_transaction",
+                json!({ "transaction_id": id })
+            )
+            .await
+            .unwrap_err()
+            .code(),
             "CONFIRMATION_REQUIRED"
         );
     }
@@ -380,9 +419,14 @@ async fn should_challenge_a_delete_and_describe_the_row(pool: PgPool) {
     let turns = store();
     let id = an_expense(&pool, &turns, "87500", "Warung Tekko").await;
 
-    let error = run(&pool, &turns, "delete_transaction", json!({ "transaction_id": id }))
-        .await
-        .unwrap_err();
+    let error = run(
+        &pool,
+        &turns,
+        "delete_transaction",
+        json!({ "transaction_id": id }),
+    )
+    .await
+    .unwrap_err();
 
     assert_eq!(error.code(), "CONFIRMATION_REQUIRED");
     let target = error.fields().unwrap();
@@ -391,12 +435,11 @@ async fn should_challenge_a_delete_and_describe_the_row(pool: PgPool) {
     assert_eq!(target["wallet"], "Cash");
     assert_eq!(target["date"], "2026-11-03");
 
-    let live: i64 = sqlx::query_scalar(
-        "SELECT count(*) FROM transactions WHERE deleted_at IS NULL",
-    )
-    .fetch_one(&pool)
-    .await
-    .unwrap();
+    let live: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM transactions WHERE deleted_at IS NULL")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
     assert_eq!(live, 1, "a challenge deletes nothing");
 }
 
@@ -425,9 +468,14 @@ async fn should_not_carry_a_confirmation_to_another_row(pool: PgPool) {
     let challenged = an_expense(&pool, &turns, "1000", "One").await;
     let other = an_expense(&pool, &turns, "2000", "Two").await;
 
-    run(&pool, &turns, "delete_transaction", json!({ "transaction_id": challenged }))
-        .await
-        .unwrap_err();
+    run(
+        &pool,
+        &turns,
+        "delete_transaction",
+        json!({ "transaction_id": challenged }),
+    )
+    .await
+    .unwrap_err();
 
     let error = run(
         &pool,
@@ -447,7 +495,14 @@ async fn should_soft_delete_a_confirmed_transaction_and_restore_the_balance(pool
     let turns = store();
     let id = an_expense(&pool, &turns, "87500", "Warung Tekko").await;
 
-    run(&pool, &turns, "delete_transaction", json!({ "transaction_id": id })).await.unwrap_err();
+    run(
+        &pool,
+        &turns,
+        "delete_transaction",
+        json!({ "transaction_id": id }),
+    )
+    .await
+    .unwrap_err();
     let outcome = run(
         &pool,
         &turns,
@@ -522,7 +577,10 @@ async fn should_attribute_a_chat_write_to_the_real_user(pool: PgPool) {
     .await
     .unwrap();
 
-    assert_eq!(user_id, OWNER, "the audit row names the person, not the service");
+    assert_eq!(
+        user_id, OWNER,
+        "the audit row names the person, not the service"
+    );
     assert_eq!(source, "chat");
 }
 
@@ -542,14 +600,21 @@ async fn should_patch_only_the_fields_an_update_names(pool: PgPool) {
     .unwrap();
 
     assert_eq!(outcome.result["amount_formatted"], "Rp 90.000");
-    assert_eq!(outcome.result["name"], "Warung Tekko", "an unnamed field keeps its value");
+    assert_eq!(
+        outcome.result["name"], "Warung Tekko",
+        "an unnamed field keeps its value"
+    );
     assert_eq!(outcome.result["category"]["name"], "Food");
 
     let balance: Decimal = sqlx::query_scalar("SELECT balance FROM wallets WHERE id = 'wal_cash'")
         .fetch_one(&pool)
         .await
         .unwrap();
-    assert_eq!(balance, Decimal::new(4_100_000, 1), "reversed and reapplied exactly");
+    assert_eq!(
+        balance,
+        Decimal::new(4_100_000, 1),
+        "reversed and reapplied exactly"
+    );
 }
 
 #[sqlx::test(migrations = "../../migrations")]
@@ -587,13 +652,23 @@ async fn should_create_a_wallet_and_a_category(pool: PgPool) {
     fixture(&pool).await;
     let turns = store();
 
-    let wallet = run(&pool, &turns, "create_wallet", json!({ "name": "Wise" })).await.unwrap();
-    assert_eq!(wallet.result["currency_code"], "IDR", "absent means the workspace currency");
-    assert_eq!(wallet.result["balance_formatted"], "Rp 0");
-
-    let category = run(&pool, &turns, "create_category", json!({ "name": "Rent", "type": "expense" }))
+    let wallet = run(&pool, &turns, "create_wallet", json!({ "name": "Wise" }))
         .await
         .unwrap();
+    assert_eq!(
+        wallet.result["currency_code"], "IDR",
+        "absent means the workspace currency"
+    );
+    assert_eq!(wallet.result["balance_formatted"], "Rp 0");
+
+    let category = run(
+        &pool,
+        &turns,
+        "create_category",
+        json!({ "name": "Rent", "type": "expense" }),
+    )
+    .await
+    .unwrap();
     assert_eq!(category.result["type"], "expense");
 }
 
@@ -601,7 +676,9 @@ async fn should_create_a_wallet_and_a_category(pool: PgPool) {
 async fn should_read_the_workspace_context_with_balances_already_formatted(pool: PgPool) {
     fixture(&pool).await;
 
-    let outcome = run(&pool, &store(), "get_workspace_context", json!({})).await.unwrap();
+    let outcome = run(&pool, &store(), "get_workspace_context", json!({}))
+        .await
+        .unwrap();
 
     assert_eq!(outcome.result["currency_code"], "IDR");
     assert_eq!(outcome.summary, "2 wallets and 2 categories.");
@@ -623,15 +700,24 @@ async fn should_search_by_name_and_by_amount(pool: PgPool) {
     an_expense(&pool, &turns, "87500", "Warung Tekko").await;
     an_expense(&pool, &turns, "12000", "Kopi").await;
 
-    let by_name = run(&pool, &turns, "search_transactions", json!({ "query": "warung" }))
-        .await
-        .unwrap();
+    let by_name = run(
+        &pool,
+        &turns,
+        "search_transactions",
+        json!({ "query": "warung" }),
+    )
+    .await
+    .unwrap();
     assert_eq!(by_name.result["meta"]["returned"], json!(1));
 
-    let by_amount =
-        run(&pool, &turns, "search_transactions", json!({ "min_amount": "50000" }))
-            .await
-            .unwrap();
+    let by_amount = run(
+        &pool,
+        &turns,
+        "search_transactions",
+        json!({ "min_amount": "50000" }),
+    )
+    .await
+    .unwrap();
     assert_eq!(by_amount.result["meta"]["returned"], json!(1));
     assert_eq!(by_amount.result["data"][0]["name"], "Warung Tekko");
 }
@@ -746,8 +832,14 @@ async fn should_pair_every_raw_figure_with_a_formatted_one(pool: PgPool) {
     an_expense(&pool, &turns, "87500", "Warung Tekko").await;
 
     let results = [
-        run(&pool, &turns, "get_workspace_context", json!({})).await.unwrap().result,
-        run(&pool, &turns, "get_recent_transactions", json!({})).await.unwrap().result,
+        run(&pool, &turns, "get_workspace_context", json!({}))
+            .await
+            .unwrap()
+            .result,
+        run(&pool, &turns, "get_recent_transactions", json!({}))
+            .await
+            .unwrap()
+            .result,
         run(
             &pool,
             &turns,
@@ -776,9 +868,7 @@ fn assert_unformatted_figures_are_paired(value: &Value) {
                     .as_str()
                     .is_some_and(|raw| raw.parse::<Decimal>().is_ok());
 
-                if is_decimal
-                    && !NOT_MONEY.contains(&key.as_str())
-                    && !key.ends_with("_formatted")
+                if is_decimal && !NOT_MONEY.contains(&key.as_str()) && !key.ends_with("_formatted")
                 {
                     assert!(
                         map.contains_key(&format!("{key}_formatted")),
@@ -834,9 +924,14 @@ async fn should_say_when_a_list_was_cut(pool: PgPool) {
     an_expense(&pool, &turns, "1000", "One").await;
     an_expense(&pool, &turns, "2000", "Two").await;
 
-    let outcome = run(&pool, &turns, "get_recent_transactions", json!({ "limit": 1 }))
-        .await
-        .unwrap();
+    let outcome = run(
+        &pool,
+        &turns,
+        "get_recent_transactions",
+        json!({ "limit": 1 }),
+    )
+    .await
+    .unwrap();
 
     assert_eq!(outcome.result["meta"]["returned"], json!(1));
     assert_eq!(outcome.result["meta"]["has_next_page"], json!(true));
@@ -884,9 +979,18 @@ mod settings {
         .await
         .unwrap();
 
-        assert_eq!(row.custom_instructions.as_deref(), Some("Always answer in short bullets."));
+        assert_eq!(
+            row.custom_instructions.as_deref(),
+            Some("Always answer in short bullets.")
+        );
         assert_eq!(row.response_language, "indonesian");
-        assert_eq!(service::settings(&pool, WORKSPACE).await.unwrap().response_language, "indonesian");
+        assert_eq!(
+            service::settings(&pool, WORKSPACE)
+                .await
+                .unwrap()
+                .response_language,
+            "indonesian"
+        );
     }
 
     #[sqlx::test(migrations = "../../migrations")]
@@ -896,7 +1000,9 @@ mod settings {
             .await
             .unwrap();
 
-        let row = service::update_settings(&pool, actor(), None, Some("auto")).await.unwrap();
+        let row = service::update_settings(&pool, actor(), None, Some("auto"))
+            .await
+            .unwrap();
         assert_eq!(row.custom_instructions.as_deref(), Some("Keep it brief."));
         assert_eq!(row.response_language, "auto");
     }
@@ -904,9 +1010,13 @@ mod settings {
     #[sqlx::test(migrations = "../../migrations")]
     async fn should_clear_the_instructions_with_an_empty_string(pool: PgPool) {
         fixture(&pool).await;
-        service::update_settings(&pool, actor(), Some("Keep it brief."), None).await.unwrap();
+        service::update_settings(&pool, actor(), Some("Keep it brief."), None)
+            .await
+            .unwrap();
 
-        let row = service::update_settings(&pool, actor(), Some("   "), None).await.unwrap();
+        let row = service::update_settings(&pool, actor(), Some("   "), None)
+            .await
+            .unwrap();
         assert!(row.custom_instructions.is_none());
     }
 
@@ -974,8 +1084,14 @@ mod settings {
         .await
         .unwrap();
 
-        assert_eq!(turn.settings.custom_instructions.as_deref(), Some("Answer in bullets."));
+        assert_eq!(
+            turn.settings.custom_instructions.as_deref(),
+            Some("Answer in bullets.")
+        );
         assert_eq!(turn.settings.response_language, "english");
-        assert!(!turn.turn_id.is_empty(), "every turn carries its own budget id");
+        assert!(
+            !turn.turn_id.is_empty(),
+            "every turn carries its own budget id"
+        );
     }
 }

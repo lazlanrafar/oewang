@@ -28,7 +28,11 @@ pub struct ResolvedRate {
 impl ResolvedRate {
     /// The ordinary case: one currency, nothing looked up.
     pub fn same(date: NaiveDate) -> Self {
-        Self { rate: Decimal::ONE, source: RateSource::Same, date }
+        Self {
+            rate: Decimal::ONE,
+            source: RateSource::Same,
+            date,
+        }
     }
 }
 
@@ -52,7 +56,11 @@ pub async fn resolve(
     // 2. The request.
     if let Some(rate) = requested {
         if rate > Decimal::ZERO {
-            return Ok(ResolvedRate { rate: round_rate(rate), source: RateSource::User, date });
+            return Ok(ResolvedRate {
+                rate: round_rate(rate),
+                source: RateSource::User,
+                date,
+            });
         }
     }
 
@@ -79,7 +87,11 @@ pub async fn resolve(
             .await
             .map_err(internal)?;
 
-        return Ok(ResolvedRate { rate: round_rate(rate), source: RateSource::Live, date });
+        return Ok(ResolvedRate {
+            rate: round_rate(rate),
+            source: RateSource::Live,
+            date,
+        });
     }
 
     // 4. The newest cached rate for the pair, however old.
@@ -122,7 +134,11 @@ pub async fn resolve_cached(
 
     if let Some(rate) = requested {
         if rate > Decimal::ZERO {
-            return Ok(ResolvedRate { rate: round_rate(rate), source: RateSource::User, date });
+            return Ok(ResolvedRate {
+                rate: round_rate(rate),
+                source: RateSource::User,
+                date,
+            });
         }
     }
 

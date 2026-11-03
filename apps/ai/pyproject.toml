@@ -12,6 +12,7 @@ dependencies = [
     "anthropic>=0.80",
     "cryptography>=46",
     "python-multipart>=0.0.20",
+    "pypdf>=6.21.4",
 ]
 
 [dependency-groups]

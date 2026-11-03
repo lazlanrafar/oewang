@@ -12,9 +12,12 @@
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"test": "vitest run",
 		"test:watch": "vitest",
+		"test:e2e": "playwright test",
 		"i18n:keys": "bun run scripts/generate-i18n-keys.ts"
 	},
 	"devDependencies": {
+		"@axe-core/playwright": "^4.14.0",
+		"@playwright/test": "^1.64.1",
 		"@sveltejs/adapter-node": "^6.0.1",
 		"@sveltejs/kit": "^3.0.0",
 		"@sveltejs/vite-plugin-svelte": "^7.2.0",

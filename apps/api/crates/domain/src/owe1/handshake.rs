@@ -63,12 +63,21 @@ pub fn derive_keys(
     let mut client_to_server = [0u8; 32];
     let mut server_to_client = [0u8; 32];
 
-    hk.expand(format!("{INFO_C2S}{session_id}").as_bytes(), &mut client_to_server)
-        .map_err(|_| Owe1Error::KeyDerivation)?;
-    hk.expand(format!("{INFO_S2C}{session_id}").as_bytes(), &mut server_to_client)
-        .map_err(|_| Owe1Error::KeyDerivation)?;
+    hk.expand(
+        format!("{INFO_C2S}{session_id}").as_bytes(),
+        &mut client_to_server,
+    )
+    .map_err(|_| Owe1Error::KeyDerivation)?;
+    hk.expand(
+        format!("{INFO_S2C}{session_id}").as_bytes(),
+        &mut server_to_client,
+    )
+    .map_err(|_| Owe1Error::KeyDerivation)?;
 
-    Ok(SessionKeys { client_to_server, server_to_client })
+    Ok(SessionKeys {
+        client_to_server,
+        server_to_client,
+    })
 }
 
 /// One side's ephemeral key pair, with the agreement that follows it.
@@ -226,22 +235,10 @@ mod tests {
         let cn = [1u8; 16];
         let sn = [2u8; 16];
 
-        let from_server = derive_keys(
-            &server,
-            &PublicKey::from(&client),
-            &cn,
-            &sn,
-            "cs_test",
-        )
-        .unwrap();
-        let from_client = derive_keys(
-            &client,
-            &PublicKey::from(&server),
-            &cn,
-            &sn,
-            "cs_test",
-        )
-        .unwrap();
+        let from_server =
+            derive_keys(&server, &PublicKey::from(&client), &cn, &sn, "cs_test").unwrap();
+        let from_client =
+            derive_keys(&client, &PublicKey::from(&server), &cn, &sn, "cs_test").unwrap();
 
         assert_eq!(from_server, from_client);
     }
@@ -286,8 +283,8 @@ mod tests {
         // The all-zero point is the canonical low-order case: every agreement
         // against it yields the same all-zero shared secret.
         let low_order = PublicKey::from([0u8; 32]);
-        let error = derive_keys(&secret(7), &low_order, &[1u8; 16], &[2u8; 16], "cs_a")
-            .unwrap_err();
+        let error =
+            derive_keys(&secret(7), &low_order, &[1u8; 16], &[2u8; 16], "cs_a").unwrap_err();
         assert!(matches!(error, Owe1Error::LowOrderPoint));
     }
 
@@ -306,7 +303,9 @@ mod tests {
 
     #[test]
     fn should_build_an_unambiguous_transcript() {
-        let t = transcript(&[1u8; 32], &[2u8; 32], &[3u8; 16], &[4u8; 16], "cs_x", 100, 50);
+        let t = transcript(
+            &[1u8; 32], &[2u8; 32], &[3u8; 16], &[4u8; 16], "cs_x", 100, 50,
+        );
         assert!(t.starts_with(TRANSCRIPT_LABEL));
         // label + 32 + 32 + 16 + 16 + len("cs_x") + "|100" + "|50"
         assert_eq!(t.len(), TRANSCRIPT_LABEL.len() + 96 + 4 + 4 + 3);
@@ -347,7 +346,10 @@ mod tests {
     #[test]
     fn should_reject_a_public_key_of_the_wrong_length() {
         let error = decode_fixed::<32>(&encode(&[0u8; 31]), "client_public_key").unwrap_err();
-        assert!(matches!(error, Owe1Error::MalformedField("client_public_key")));
+        assert!(matches!(
+            error,
+            Owe1Error::MalformedField("client_public_key")
+        ));
     }
 
     #[test]
@@ -385,8 +387,12 @@ mod tests {
         let server = Ephemeral::generate();
         let nonce = new_nonce();
 
-        let one = client.derive(server.public_key(), &nonce, &nonce, "cs_a").unwrap();
-        let other = client.derive(server.public_key(), &nonce, &nonce, "cs_b").unwrap();
+        let one = client
+            .derive(server.public_key(), &nonce, &nonce, "cs_a")
+            .unwrap();
+        let other = client
+            .derive(server.public_key(), &nonce, &nonce, "cs_b")
+            .unwrap();
 
         assert_ne!(one, other);
     }
@@ -395,13 +401,18 @@ mod tests {
     fn should_refuse_a_low_order_peer_key() {
         let client = Ephemeral::generate();
         let nonce = new_nonce();
-        let error = client.derive(&[0u8; 32], &nonce, &nonce, "cs_a").unwrap_err();
+        let error = client
+            .derive(&[0u8; 32], &nonce, &nonce, "cs_a")
+            .unwrap_err();
         assert_eq!(error, Owe1Error::LowOrderPoint);
     }
 
     #[test]
     fn should_not_print_an_ephemeral_secret() {
-        assert_eq!(format!("{:?}", Ephemeral::generate()), "Ephemeral([redacted])");
+        assert_eq!(
+            format!("{:?}", Ephemeral::generate()),
+            "Ephemeral([redacted])"
+        );
     }
 
     #[test]

@@ -9,7 +9,8 @@ Transactions are the product. Every movement of money is one row: income, expens
 - Changing the transaction service, in particular the balance arithmetic.
 - Adding or changing a transaction route. The catalog lives in [endpoints](../api/endpoints.md#transactions).
 - Changing a transaction screen, a filter, or a column in the table.
-- Changing the CSV export columns or the import wizard steps.
+- Changing the CSV export columns, the import wizard steps, or the statement import job.
+- Changing the receipt confirmation sheet or what it writes.
 
 ## Data
 
@@ -90,7 +91,7 @@ The main screen. One page, `/transactions`.
 
 | Area | Contents |
 |---|---|
-| Header | Title, date range picker, grouping selector, export button, import button, add button |
+| Header | Title, date range picker, grouping selector, export button, scan-a-receipt button, import button, add button |
 | Filter bar | Search, wallet, category, type, ready flag, clear-all |
 | Table | Date, name, category, wallet, amount, ready flag, row actions |
 | Bulk bar | Appears on selection: change category, toggle ready, delete, clear selection |
@@ -132,6 +133,16 @@ Riwayat
 
 It matters most for writes the assistant made, which is the case where a user is least able to reconstruct what happened. Edit and delete are visible to `admin+` and hidden for `member`. Delete asks for confirmation (UI-4).
 
+### Receipt confirmation
+
+**Scan a receipt** in the header opens the same dropzone the form sheet uses.
+When the upload finishes, the [canvas](chat.md#canvas) opens over the parsed
+draft at `?canvas=receipt&id={vault_file_id}`, and the page reflows beside it.
+It is the same panel and the same confirmation sheet the chat page mounts,
+because a receipt is confirmed the same way wherever it was dropped. The flow,
+the marks on each field and what is and is not stored are in
+[receipt OCR](chat.md#receipt-ocr).
+
 ### Import
 
 Two paths, picked by what the file is. The rule behind the split: **deterministic beats model-driven whenever structure exists.**
@@ -145,7 +156,7 @@ Two paths, picked by what the file is. The rule behind the split: **deterministi
 
 Four steps, ported from the old wizard, with one change: step 2 arrives prefilled once the AI service can be reached. Until then it arrives empty, which is the same path a failed mapping call takes.
 
-1. **Select file.** Drop a CSV or XLSX. Parsed in the browser.
+1. **Select file.** Drop a CSV. Parsed in the browser. XLSX is not read; see [what is not built](#data-table-what-is-built-and-what-is-not).
 2. **Map fields.** The column names and two sample rows go to the AI service, which returns a proposed mapping ([column mapping](../ai/service.md#csv-column-mapping)). The user confirms or corrects it. A failed or slow mapping call leaves the step empty and the user maps by hand; the wizard never blocks on it.
 3. **Map values.** Match the file's category and wallet names to existing rows, or create new ones.
 4. **Review and commit.** Shows what will be created, what is a duplicate, and what will be skipped. Commits through `POST /v1/transactions/bulk`.
@@ -154,14 +165,40 @@ Every row is transformed in code. The model never sees an amount and cannot move
 
 Indonesian bank exports usually split debit and credit into two columns. That is a mapping fact, handled once in step 2, with the sign rule in code.
 
+The proposal is model output, so `src/lib/column-mapping.ts` decides how much of it survives before the step renders it. Three rules, each because the model is answering about a file it has seen two rows of:
+
+- A field this wizard does not have is dropped, because the service may learn one before the app does.
+- A column the file does not have is dropped. Matching ignores case, so a model that answers `date` still maps the file's `Date`, and the file's own spelling comes back, because that is the key the rows are stored under.
+- A column claimed twice keeps its first field. One column cannot be both the date and the amount.
+
+**Every way the call can fail goes the same way**, and that path is the one that matters: a refusal, a timeout at fifteen seconds, a route the API has not registered yet, and an answer that mapped nothing all leave step 2 as it was, say so in one line, and let the user map by hand. The model is the optional half of this step. A wizard that waits on it is a wizard that is sometimes broken.
+
 #### Image and PDF statement (AI-4)
 
-1. Upload. The API returns `202 {job_id}` immediately.
-2. Extraction runs the [quality ladder](../ai/service.md#extraction-quality-ladder): a cheap model first, escalating only when the result scores poorly (D36).
-3. The modal polls `GET /v1/transactions/import/{job_id}` every 2 seconds.
-4. On success it shows the imported, skipped and duplicate counts, and a review list with low confidence rows flagged.
+Reached from the second panel on `/transactions/import`, beside the CSV picker, so the two paths are one screen and the file decides which one the user takes.
+
+1. **Pick a wallet and upload.** A statement is one account's statement: every row has to land somewhere and move a balance, so the modal asks for a wallet first and defaults it to the workspace default. The file goes through the ordinary chunked vault upload.
+2. `POST /v1/transactions/import` takes `{ vault_file_id, wallet_id }` and returns `202 {job_id}` immediately.
+3. Extraction runs the [quality ladder](../ai/service.md#extraction-quality-ladder): a cheap model first, escalating only when the result scores poorly (D36).
+4. The modal polls `GET /v1/transactions/import/{job_id}` every 2 seconds.
+5. On success it shows the imported, skipped and duplicate counts, each counted apart because the fix for each is different.
 
 Because this path is asynchronous, the ladder's wall-clock budget is looser here than for a receipt the user is watching. The budget is per document either way.
+
+Closing the modal stops the watching, not the job. The job is in the API and carries on.
+
+**The review list is not built, and cannot be from the current response.** The poll answers with counts, a status, an error and `stale`, and carries no rows:
+
+```json
+{ "data": { "id": "clx…", "status": "pending|succeeded|failed",
+            "imported": 12, "skipped": 1, "duplicates": 3,
+            "error": null, "stale": false,
+            "created_at": "…", "updated_at": "…" } }
+```
+
+So "a review list with low confidence rows flagged" has nothing to render. The counts are honest and the skipped total is explained in a line. Closing it needs the rows on the response, for example `rows: [{ date, name, amount, confidence, status }]`, which is a change to the job endpoint rather than to this screen.
+
+`stale` is the API's verdict, not the browser's, and the modal trusts it: the job's clock is the server's, and a browser whose clock is wrong would otherwise declare a healthy job dead. A stale or failed job offers **Try again**, which starts a new job over the file already in the vault.
 
 #### Deduplication (TXN-16, D29)
 
@@ -285,9 +322,10 @@ facets, an amount range and a date range, and a footer count.
 | Column reorder | Headers drag to reorder with dnd-kit, excluding the sticky and actions columns | Medium |
 | Persisted table settings | `use-table-settings` keeps column order, visibility and widths per table and per user. Ours reset on reload | Small to medium |
 | Copy link to a row | `meta.onCopyUrl` on the old table. The detail sheet is already addressable as `?detail=`, so this is a button, not a feature | Small |
-| XLSX in the import wizard | The old wizard reads a spreadsheet as well as a CSV. SheetJS is no longer published to npm and the version that is carries a known prototype-pollution advisory, so the dependency is a decision to take rather than to assume | Small once the dependency is chosen |
-| Receipt confirmation | `transaction-receipt-confirmation-modal.tsx`, the sheet that confirms what the model read off a receipt | M4 |
-| The assistant's column mapping | Step two of the wizard arrives empty. The call needs the OWE1 client for the API-to-AI hop, which is US-026 | M4 |
+| XLSX in the import wizard | The old wizard reads a spreadsheet as well as a CSV. SheetJS is no longer published to npm and the version that is carries a known prototype-pollution advisory, so the dependency is a decision to take rather than to assume. **Still open.** A dependency that runs in the browser shares a context with the session ([hardening](../security/hardening.md#dependencies)), which is why this one is the team's call and not a default | Small once the dependency is chosen |
+| A review list for a statement import | The counts are shown; the rows are not, because the job endpoint does not return any. See [image and PDF statement](#image-and-pdf-statement-ai-4) | Small, once the rows are on the response |
+
+Built since: the receipt confirmation sheet, in the [canvas](chat.md#canvas) rather than as a modal, and the assistant's column mapping in step 2 of the wizard.
 
 Two of the old table's dependencies are deliberately absent for now, and the
 component's own comment says so: TanStack Table and the virtualiser. Everything
@@ -309,7 +347,28 @@ Each new component has a reference file in the old app. "Port" means reproduce t
 | `transactions/import-wizard/*.svelte` | `transaction-import-modal.tsx` plus the four mapping components | 1,435 lines |
 | `transactions/import-ai-modal.svelte` | `transaction-import-ai-modal.tsx`, `transaction-import-ai-review.tsx` | 371 lines |
 | `transactions/receipt-confirmation-sheet.svelte` | `transaction-receipt-confirmation-modal.tsx` | 219 lines |
+| `transactions/receipt-canvas.svelte` | new. The panel's contents: the read, its four states and the retry | |
 | `transactions/grouping-selector.svelte` | `transaction-grouping-selector.tsx` | 32 lines |
+
+### One component, two containers
+
+`receipt-confirmation-sheet` and `transaction-form-sheet` each take a
+`container` prop. `sheet` brings a `Sheet.Root` with it, as the transactions
+page mounts them; `panel` renders the same form as the [canvas](chat.md#canvas)'s
+contents, because the canvas is already the container.
+
+The markup is one snippet either way, which is the point (D31, CHAT-13). A
+panel version written separately would be a second place for a validation
+rule, a field name or a footer to live, and the one that is edited less
+often is the one that would be wrong.
+
+`import-ai-modal` holds no fetch: the import page starts the job, polls it
+and hands down what it says. `receipt-canvas` is the one exception to
+"a component that fetches is a mistake"
+([best practices](../best-practices/svelte-app.md#component-organization)):
+the request is `requestReceipt`, tested on its own with a stubbed `fetch`
+and aimed at this app's own route rather than the API (D5), and the
+alternative was the same state machine on two pages.
 
 Old files are at `references/oewang-old/apps/app/components/organisms/transactions/`.
 

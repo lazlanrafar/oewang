@@ -1,0 +1,8 @@
+{
+  "rows": [
+    {"date": "2026-11-02", "description": "WARUNG TEKKO", "amount": "87500.00", "direction": "expense"},
+    {"description": "ILLEGIBLE", "amount": "45000.00"},
+    {"date": "2026-10-30", "description": "SMUDGED"},
+    {"description": "SMUDGED TOO"}
+  ]
+}

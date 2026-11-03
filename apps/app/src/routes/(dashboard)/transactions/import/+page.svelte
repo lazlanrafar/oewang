@@ -17,16 +17,33 @@
 	import FileUp from '@lucide/svelte/icons/file-up';
 
 	import { enhance } from '$app/forms';
+	import { goto, invalidateAll } from '$app/navigation';
 	import { page } from '$app/state';
 
 	import { Badge } from '$lib/components/atoms/badge';
 	import { Button } from '$lib/components/atoms/button';
 	import { Input } from '$lib/components/atoms/input';
 	import { Label } from '$lib/components/atoms/label';
+	import type { UploadedFile } from '$lib/components/molecules/file-dropzone';
+	import { ImportAiModal } from '$lib/components/organisms/transactions';
 	import FormError from '$lib/components/shell/form-error.svelte';
+	import {
+		cleanMapping,
+		isMappable,
+		MAPPING_FIELDS,
+		type ColumnMapping,
+		type MappingField
+	} from '$lib/column-mapping';
 	import { parseDelimited, type ParsedFile } from '$lib/csv';
 	import { messageForCode } from '$lib/errors';
-	import { t } from '$lib/i18n';
+	import { t, type TranslationKey } from '$lib/i18n';
+	import {
+		IMPORT_POLL_INTERVAL,
+		isSettled,
+		jobPhase,
+		parseImportJob,
+		type ImportJob
+	} from '$lib/import-job';
 	import { readParam, writeParams } from '$lib/url-state';
 
 	import type { ActionData, PageData } from './$types';
@@ -36,21 +53,14 @@
 	const STEPS = ['file', 'columns', 'values', 'review'] as const;
 	const step = $derived(readParam(page.url, 'step', STEPS, 'file'));
 
-	const FIELDS = [
-		{ key: 'date', label: 'Date', required: true },
-		{ key: 'name', label: 'Description', required: false },
-		{ key: 'amount', label: 'Amount (one signed column)', required: false },
-		{ key: 'amount_out', label: 'Money out (debit)', required: false },
-		{ key: 'amount_in', label: 'Money in (credit)', required: false },
-		{ key: 'category', label: 'Category', required: false },
-		{ key: 'description', label: 'Notes', required: false }
-	] as const;
+	/** Only the date is required; the figure can be one column or two. */
+	const REQUIRED: readonly MappingField[] = ['date'];
 
-	type FieldKey = (typeof FIELDS)[number]['key'];
+	const fieldLabel = (field: MappingField) => t(`import.field_${field}` as TranslationKey);
 
 	let file = $state<ParsedFile>({ columns: [], rows: [], dropped: 0 });
 	let fileName = $state('');
-	let mapping = $state<Partial<Record<FieldKey, string>>>({});
+	let mapping = $state<ColumnMapping>({});
 	/*
 	 * The wallet every row lands in. It starts at the workspace default and
 	 * follows the load until the user picks one, which is what `$state`
@@ -80,9 +90,7 @@
 	});
 
 	/** The mapping is complete enough to transform rows. */
-	const mappable = $derived(
-		!!mapping.date && (!!mapping.amount || !!mapping.amount_out || !!mapping.amount_in)
-	);
+	const mappable = $derived(isMappable(mapping));
 
 	/** Distinct category names the file holds, as text. */
 	const fileCategories = $derived(
@@ -106,11 +114,18 @@
 	}
 
 	/**
-	 * Ask the assistant which column holds what.
+	 * Ask the assistant which column holds what (AI-9, US-022).
 	 *
 	 * Column names and two sample rows go out; a mapping comes back. The
-	 * call failing or timing out leaves the step empty and the user maps by
-	 * hand: the wizard never blocks on it (AI-9).
+	 * proposal is model output, so `cleanMapping` is what decides how much
+	 * of it survives: a column the file does not have never reaches the
+	 * step.
+	 *
+	 * Every way this can go wrong goes the same way. A refusal, a timeout,
+	 * a route the API has not registered yet and an empty answer all leave
+	 * the step as it was and the user maps by hand. **That is the path that
+	 * matters**: the model is the optional half of this step, and a wizard
+	 * that waits on it is a wizard that is sometimes broken.
 	 */
 	async function proposeMapping() {
 		if (file.columns.length === 0) return;
@@ -130,14 +145,15 @@
 
 			if (!response.ok) throw new Error(String(response.status));
 
-			const proposed = (await response.json()) as Partial<Record<FieldKey, string>>;
-			// Only names the file actually has: a proposal that invented a
-			// column would otherwise map a field to nothing.
-			mapping = Object.fromEntries(
-				Object.entries(proposed).filter(
-					([, column]) => typeof column === 'string' && file.columns.includes(column)
-				)
-			);
+			const proposed = cleanMapping(await response.json(), file.columns);
+			// An answer that mapped nothing is the same as no answer: the
+			// step says so rather than looking like it worked.
+			if (Object.keys(proposed).length === 0) {
+				mappingFailed = true;
+				return;
+			}
+
+			mapping = proposed;
 		} catch {
 			mappingFailed = true;
 		} finally {
@@ -159,6 +175,168 @@
 	});
 
 	const result = $derived(form && 'result' in form ? form.result : null);
+
+	// ------------------------------------------------ the statement path
+
+	/**
+	 * An image or a PDF, which has no columns to map (AI-4).
+	 *
+	 * The deterministic path above maps column names and never shows the
+	 * model a row. A photograph has no columns, so the model reads the rows
+	 * instead, in a job that runs in the background. Everything here is the
+	 * watching: the modal is told what the job says and decides nothing.
+	 */
+	let statementOpen = $state(false);
+	let statementFiles = $state<UploadedFile[]>([]);
+	let statementWallet = $state('');
+	let job = $state<ImportJob | null>(null);
+	let starting = $state(false);
+	let statementError = $state<string | null>(null);
+
+	const phase = $derived(job ? jobPhase(job) : null);
+
+	/**
+	 * The job being watched.
+	 *
+	 * A plain variable rather than `$state`: it is the loop's own guard,
+	 * and clearing it is how closing the modal stops the polling without
+	 * stopping the job, which carries on in the API.
+	 */
+	let watching = '';
+
+	$effect(() => {
+		// The wallet follows the load until the user picks one, the same
+		// way the CSV step's does.
+		if (statementWallet === '') statementWallet = walletId;
+	});
+
+	/**
+	 * Start a job over a file that is already in the vault.
+	 *
+	 * The job carries its own `vault_file_id`, which is what a retry uses:
+	 * a failed or stale job keeps its upload, so trying again should not
+	 * ask the user for the file a second time.
+	 */
+	async function startStatement(fileId?: string) {
+		const vaultFileId = fileId ?? statementFiles.at(-1)?.id ?? '';
+		if (vaultFileId === '' || statementWallet === '') return;
+
+		starting = true;
+		statementError = null;
+
+		try {
+			const response = await fetch('/transactions/import/statement', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ vault_file_id: vaultFileId, wallet_id: statementWallet })
+			});
+
+			if (!response.ok) {
+				statementError = await failureCode(response);
+				return;
+			}
+
+			const started = (await response.json()) as { job_id?: unknown };
+			const jobId = typeof started.job_id === 'string' ? started.job_id : '';
+			if (jobId === '') {
+				statementError = 'STREAM_FAILED';
+				return;
+			}
+
+			// Nothing is known about the job until the first poll, so the
+			// modal shows the pending state rather than an empty review.
+			job = {
+				id: jobId,
+				status: 'pending',
+				vault_file_id: vaultFileId,
+				imported: 0,
+				skipped: 0,
+				duplicates: 0,
+				review: null,
+				error: null,
+				stale: false,
+				created_at: '',
+				updated_at: ''
+			};
+			watch(jobId);
+		} catch {
+			statementError = 'STREAM_FAILED';
+		} finally {
+			starting = false;
+		}
+	}
+
+	/** Every two seconds until the job settles, then once more and stop. */
+	function watch(jobId: string) {
+		watching = jobId;
+
+		const tick = async () => {
+			if (watching !== jobId) return;
+
+			const fresh = await pollJob(jobId);
+			if (watching !== jobId) return;
+
+			if (fresh) job = fresh;
+
+			if (fresh && isSettled(fresh)) {
+				watching = '';
+				// Rows landed in the ledger, so whatever this page holds of
+				// it is stale.
+				if (fresh.status === 'succeeded') await invalidateAll();
+				return;
+			}
+
+			setTimeout(tick, IMPORT_POLL_INTERVAL);
+		};
+
+		setTimeout(tick, IMPORT_POLL_INTERVAL);
+	}
+
+	async function pollJob(jobId: string): Promise<ImportJob | null> {
+		try {
+			const response = await fetch(`/transactions/import/statement/${jobId}`);
+			if (!response.ok) return null;
+			return parseImportJob(await response.json());
+		} catch {
+			// A dropped poll is not a failed job. The next one asks again.
+			return null;
+		}
+	}
+
+	/**
+	 * Try the same file again.
+	 *
+	 * A failed or stale job keeps its upload, so this starts a new job over
+	 * the file that is already in the vault rather than asking for it twice.
+	 */
+	function retryStatement() {
+		const fileId = job?.vault_file_id ?? undefined;
+		watching = '';
+		job = null;
+		void startStatement(fileId);
+	}
+
+	function closeStatement() {
+		const finished = phase === 'succeeded';
+
+		watching = '';
+		statementOpen = false;
+		job = null;
+		statementFiles = [];
+		statementError = null;
+
+		if (finished) void goto('/transactions');
+	}
+
+	/** The code SvelteKit's `error()` carried, or a generic one. */
+	async function failureCode(response: Response): Promise<string> {
+		try {
+			const body = (await response.json()) as { message?: unknown };
+			return typeof body.message === 'string' ? body.message : 'STREAM_FAILED';
+		} catch {
+			return 'STREAM_FAILED';
+		}
+	}
 </script>
 
 <svelte:head><title>{t('import.title')} · {t('app.name')}</title></svelte:head>
@@ -207,6 +385,21 @@
 				<p class="text-subtle text-xs">{t('import.file_hint')}</p>
 			</div>
 		</section>
+
+		<!--
+			The other path, picked by what the file is. Deterministic beats
+			model-driven wherever structure exists, so this is the one the
+			page offers second: a photograph has no columns to map, and the
+			model reads its rows because nothing else can (AI-4, D28).
+		-->
+		<section class="space-y-3 border p-6">
+			<h2 class="text-small font-medium">{t('import.statement_title')}</h2>
+			<p class="text-subtle text-small">{t('import.statement_hint')}</p>
+			<Button variant="outline" onclick={() => (statementOpen = true)}>
+				<FileUp />
+				{t('import.statement_open')}
+			</Button>
+		</section>
 	{:else if step === 'columns'}
 		<section class="space-y-4 border p-6">
 			<div class="flex items-center gap-2">
@@ -224,19 +417,19 @@
 			{/if}
 
 			<div class="grid gap-4 sm:grid-cols-2">
-				{#each FIELDS as field (field.key)}
+				{#each MAPPING_FIELDS as field (field)}
 					<div class="grid gap-2">
-						<Label for="map-{field.key}" class="text-subtle text-xs font-normal">
-							{field.label}{field.required ? ' *' : ''}
+						<Label for="map-{field}" class="text-subtle text-xs font-normal">
+							{fieldLabel(field)}{REQUIRED.includes(field) ? ' *' : ''}
 						</Label>
 						<select
-							id="map-{field.key}"
+							id="map-{field}"
 							class={selectClass}
-							value={mapping[field.key] ?? ''}
+							value={mapping[field] ?? ''}
 							onchange={(event) =>
 								(mapping = {
 									...mapping,
-									[field.key]: (event.currentTarget as HTMLSelectElement).value || undefined
+									[field]: (event.currentTarget as HTMLSelectElement).value || undefined
 								})}
 						>
 							<option value="">{t('common.none')}</option>
@@ -392,3 +585,24 @@
 		</div>
 	{/if}
 </div>
+
+<!--
+	The statement path's whole UI. It holds no fetch: the page starts the
+	job, polls it and hands down what it says (AI-4).
+-->
+<ImportAiModal
+	bind:open={statementOpen}
+	onOpenChange={(open) => {
+		if (!open) closeStatement();
+	}}
+	wallets={data.wallets}
+	bind:walletId={statementWallet}
+	bind:files={statementFiles}
+	{job}
+	{phase}
+	{starting}
+	errorCode={statementError}
+	onStart={startStatement}
+	onRetry={retryStatement}
+	onClose={closeStatement}
+/>

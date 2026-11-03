@@ -10,6 +10,7 @@ This doc describes the shape of the system: the three apps, what each one owns, 
 - Changing a request lifecycle, in particular the chat stream path.
 - Changing what a process is allowed to talk to.
 - Making a decision worth keeping. Add it to the [decision log](#decision-log).
+- Changing how the apps are built or run in production. The detail lives in [deployment.md](deployment.md); the shape belongs here.
 
 ## System context
 
@@ -176,32 +177,42 @@ Buffering is disabled at every hop. The event protocol is specified in [AI servi
 ```
 Browser uploads an image
   -> SvelteKit
-  -> API POST /v1/vault/files           store the blob, insert a vault_files row
-  -> API POST (AI) /receipt/parse       image bytes to a structured draft
-  <- draft plus vault_file_id, nothing persisted as a transaction
+  -> API POST /v1/vault/files           chunked; store the bytes, insert a vault_files row
+  -> API POST /v1/ai/receipt/parse      body is { vault_file_id }, never the bytes (D69)
+       API reads the chunks back, base64s them
+       -> AI  POST /receipt/parse       the quality ladder, with no tools at all (D24)
+       <- draft plus a quality score
+       API checks the arithmetic in Rust: items sum, subtotal plus tax,
+       unit price times quantity, the date, the currency (D30, AI-7)
+  <- draft, quality, and what arithmetic replaced. Nothing persisted
   Browser shows the confirmation sheet, user edits
-  -> API POST /v1/transactions          with attachment_ids
+  -> API POST /v1/transactions          items, attachment_ids and source: "receipt" (D72, D74)
 ```
 
-The draft is never auto-committed (AI-2). This matches the old receipt confirmation flow.
+The draft is never auto-committed (AI-2). The bytes travel to the model from the vault rather than from the request, because a 1 MB body cannot carry a 10 MB receipt and the file has to be stored anyway: it stays attached to the transaction the user confirms.
 
 ### Async statement import
 
 ```
-Browser uploads a statement
-  -> API POST /v1/transactions/import
-     insert transaction_import_jobs row (status pending)
+Browser uploads a statement, then picks the wallet it belongs to
+  -> API POST /v1/transactions/import   { vault_file_id, wallet_id }
+     insert transaction_import_jobs row (status pending, carrying the file id)
      spawn a tokio task
      return 202 { job_id }
   tokio task:
-     POST (AI) /import/extract
-     create transactions row by row, each in its own database transaction
+     POST (AI) /import/extract          also with no tools at all
+     shape each row into the CSV wizard's own RawRow and hand the batch
+       to service::import_rows, so fingerprinting, duplicate counting,
+       per-row rate resolution, wallet locking and the audit rows are the
+       ones that path already proves (D70)
      a failed row is counted as skipped, never aborts the job
-     update the job row with imported and skipped counts
+     write back the three counts, plus a per-row review list
   Browser polls GET /v1/transactions/import/:job_id every 2 seconds
 ```
 
 The old app ran this in a Go worker (D10). A tokio task is enough at this size, and the job row keeps the same polling contract, so the UI is unchanged.
+
+One thing worth knowing before changing it: the rows of one import commit in **one** database transaction, not one each. That is inherited from the CSV path, which is the point of reusing it, and it is a real trade-off. A row that cannot be read is filtered out before the statement runs and a row that cannot be written is counted as skipped, so neither takes the batch down; but a database-level failure rolls the whole import back rather than leaving half a statement in the ledger. At 5,000 rows that is also a long hold on the wallet row's lock. If a file ever grows past what one transaction should carry, the answer is to chunk the batch, not to give each row its own transaction and lose the all-or-nothing property.
 
 ## Configuration
 
@@ -263,7 +274,9 @@ Three containers plus PostgreSQL on Coolify, on the existing Hostinger VPS, matc
 - `apps/app` and `apps/api` are public. `apps/ai` is reachable only from the internal network.
 - Internal API routes (`/v1/internal/*`) are additionally gated by the service API key (OPS-6). They are not routable from the internet.
 - Files live in Cloudflare R2 in production.
-- Deployment configuration is written at US-035, not before.
+- A production image per app: `apps/api/Dockerfile`, `apps/ai/Dockerfile`, `apps/app/Dockerfile`. Multi-stage, unprivileged, with no compiler or package manager in the image that runs.
+- **One instance of each service, one worker** (D75). Crypto sessions, per-turn tool budgets, rate limit windows and in-flight imports all live in process memory.
+- The whole of it is in [deployment.md](deployment.md), including what is still undecided.
 
 ## Decision log
 
@@ -339,6 +352,13 @@ Each decision is permanent unless superseded by a later numbered decision.
 | **D66** | 2026-11-02 | The design system is the old app's, copied: `packages/ui/src/globals.css` values verbatim (radius `0.5rem` scale, `--green: 142 71% 45%`, `--red: 358 75% 59%`, `--input: 240 5.9% 90%`, shadows where only `sm` paints, the `*:focus { outline: none !important }` rule), and each component's own radius, shadow and ring classes as its old source carries them: a pill badge, a round avatar, switch, radio, progress and kbd, a `rounded-md` toggle, a 10px dialog and sheet. | The owner reviewed the squared-and-flattened version and rejected it. The old scale being live while almost nothing applies it is the actual rule, and the same for shadows: a component keeps its `shadow-md` class and paints nothing because the token is `none`. This knowingly reinstates two audit findings, the contrast gap on amounts and the absent focus indicator, both recorded in UI-7. What the audit found that does **not** touch the look is kept: the table's roles, the keyboard path for column resizing, the reduced-motion rule, the `main` landmark, the type scale and the semantic tokens, which hold the same values the old literals did. |
 | **D67** | 2026-11-03 | The model is reached through `AI_BASE_URL`, a gateway speaking the Anthropic protocol, rather than Anthropic's endpoint directly. The SDK, the tool loop and the extraction ladder are unchanged; the model id is whatever the gateway calls it. | The owner runs 9Router, which fronts many providers behind one endpoint, so a model outside the Claude family becomes a configuration change rather than a second client. D11 stands for what the code is written against: the protocol, the tool-use shape and the vision calls are still Anthropic's, and a provider the gateway cannot express in that shape is not reachable from here. Empty `AI_BASE_URL` keeps the direct path, which is what production uses unless a gateway is deployed with it. |
 | **D68** | 2026-11-03 | Per-turn tool caps are counted against a `turn_id` the API mints in `begin_turn` and sends to the AI service with the turn. The service echoes it on every tool call and never mints one; the API refuses an id it did not mint. | A cap needs a unit to count against, and that unit cannot be something the counted party can manufacture. The alternative was to count against the chat session inside a rolling time window, and it was rejected because a window is not a bound anybody can reason about: set it short and a slow legitimate turn, one waiting on a vision pass or a chain of reads, is cut off part-way through work the user asked for; set it long and a fast second turn inherits whatever the first one left of the budget. An id minted where the turn begins has exactly the turn's lifetime, which is the thing the cap is actually about. Same reasoning as the `role` field being a claim the API re-checks rather than a fact ([blast radius](security/ai-safety.md#layer-2-blast-radius)). |
+| **D69** | 2026-11-03 | A document reaches an extraction route as a `vault_file_id`, never as bytes in the body. The browser uploads it through the chunked vault path first, and `POST /v1/ai/receipt/parse` and `POST /v1/transactions/import` each name the file. | The body limit is 1 MB and a receipt is up to 10 MB (SEC-18, VLT-1), so bytes in the body would mean a second upload path with its own limit, its own type sniffing and its own storage. The vault already does all three, and the file has to be stored anyway: the receipt stays attached to the transaction the user confirms. The cost is that the client makes two calls instead of one, which it was already making. |
+| **D70** | 2026-11-03 | The statement import path shapes the model's extracted rows into the same `RawRow` the CSV wizard produces and hands them to `service::import_rows`. It writes nothing of its own except the job row. | The two paths differ in exactly one way, that one is asynchronous, and everything else about them is the same problem: fingerprint each row, count a repeat as a duplicate rather than an error, resolve a rate for the row's own date, lock the wallet, write an audit row. A second implementation of that would be a second place for a duplicate to slip through. The extracted direction decides which of the two synthetic amount columns a figure lands in, so even the sign rule stays written once, in `csv_import::read_amount`. |
+| **D71** | 2026-11-03 | `transaction_import_jobs` carries the `vault_file_id` it was read from. | A failed job keeps its document, and a retry re-reads it rather than asking the user to upload a statement again (AI-6). It also closes a gap in the record: the transactions a job created carry `source = 'import'`, but nothing said which document they were imported from. |
+| **D72** | 2026-11-03 | A transaction and its line items are written in one database transaction, through `create_with_items`. The create body carries `items`; the item routes exist for editing one afterwards. | Confirming a receipt is a single act by the user. Expressed as a create plus six item calls it becomes six acts that can each half-fail, and a crash after the third leaves a transaction whose items do not add up and nothing recording why. Items move no money, so this changes no balance arithmetic (TXN-12). |
+| **D73** | 2026-11-03 | A correction carries the figure the model gave, not only the name of the field: `corrected_fields: [{field, model_value}]`. | AI-11 asks that the user see which numbers the model read and which the code computed. A field name alone says a figure changed without saying from what, which is half the promise. `model_value` is null when the model gave nothing and arithmetic supplied the field outright: that is a different event and the sheet reads it differently. Rejected: carrying both a name list and a detail list, which would be two spellings of one fact. |
+| **D74** | 2026-11-03 | The create body may claim a `source` of `web` or `receipt`, and nothing else. | The audit trail is worth only what its surface column is worth. `chat` and `import` are minted by the API's own paths, so a client naming one of them is either confused or lying; refusing both keeps the column a fact about the system rather than a value the client preferred. `web` and `receipt` are the two things a browser can truthfully be, and the difference between them is worth recording (OPS-8). |
+| **D75** | 2026-11-03 | `api` and `ai` each run as exactly one instance with one worker, and a production image per app is built from its own `Dockerfile` (multi-stage, unprivileged, no compiler in the image that runs). | Four pieces of state live in process memory and are correct only while one process holds them: OWE1 crypto sessions, the per-turn tool budgets a cap is counted against (D68), the rate limit windows, and in-flight statement imports as tokio tasks (D10). A second instance does not degrade any of these gracefully; it breaks them intermittently, which is the worst way for them to break. This is a constraint to design around rather than a deficiency to apologise for: a Rust process doing database round trips has a long way to go vertically, and the day it runs out, moving sessions and budgets to shared storage is its own decision record. Recorded here because "just add a replica" is the obvious wrong move and nothing in the code says so. |
 
 ## Related docs
 

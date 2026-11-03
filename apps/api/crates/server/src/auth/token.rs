@@ -128,9 +128,14 @@ mod tests {
 
     #[test]
     fn should_round_trip_claims() {
-        let issued =
-            issue_access_token(&secret(), "user_1", "wsp_1", Role::Admin, Duration::from_secs(900))
-                .unwrap();
+        let issued = issue_access_token(
+            &secret(),
+            "user_1",
+            "wsp_1",
+            Role::Admin,
+            Duration::from_secs(900),
+        )
+        .unwrap();
         let claims = verify_access_token(&secret(), &issued.token).unwrap();
 
         assert_eq!(claims.sub, "user_1");
@@ -141,9 +146,14 @@ mod tests {
 
     #[test]
     fn should_reject_a_token_signed_with_another_secret() {
-        let issued =
-            issue_access_token(&secret(), "user_1", "wsp_1", Role::Admin, Duration::from_secs(900))
-                .unwrap();
+        let issued = issue_access_token(
+            &secret(),
+            "user_1",
+            "wsp_1",
+            Role::Admin,
+            Duration::from_secs(900),
+        )
+        .unwrap();
         let other = Secret::new("a-different-secret-also-at-least-32-characters");
 
         let error = verify_access_token(&other, &issued.token).unwrap_err();
@@ -153,22 +163,34 @@ mod tests {
     #[test]
     fn should_reject_an_expired_token() {
         // Zero TTL expires at the moment of issue, with no leeway to save it.
-        let issued =
-            issue_access_token(&secret(), "user_1", "wsp_1", Role::Member, Duration::from_secs(0))
-                .unwrap();
+        let issued = issue_access_token(
+            &secret(),
+            "user_1",
+            "wsp_1",
+            Role::Member,
+            Duration::from_secs(0),
+        )
+        .unwrap();
         std::thread::sleep(Duration::from_millis(1100));
 
         assert_eq!(
-            verify_access_token(&secret(), &issued.token).unwrap_err().code(),
+            verify_access_token(&secret(), &issued.token)
+                .unwrap_err()
+                .code(),
             "UNAUTHENTICATED"
         );
     }
 
     #[test]
     fn should_reject_a_tampered_token() {
-        let issued =
-            issue_access_token(&secret(), "user_1", "wsp_1", Role::Member, Duration::from_secs(900))
-                .unwrap();
+        let issued = issue_access_token(
+            &secret(),
+            "user_1",
+            "wsp_1",
+            Role::Member,
+            Duration::from_secs(900),
+        )
+        .unwrap();
 
         // Flip a character in the payload segment.
         let mut parts: Vec<String> = issued.token.split('.').map(str::to_string).collect();
@@ -176,7 +198,17 @@ mod tests {
         parts[1] = payload
             .iter()
             .enumerate()
-            .map(|(i, c)| if i == 2 { if *c == 'A' { 'B' } else { 'A' } } else { *c })
+            .map(|(i, c)| {
+                if i == 2 {
+                    if *c == 'A' {
+                        'B'
+                    } else {
+                        'A'
+                    }
+                } else {
+                    *c
+                }
+            })
             .collect();
 
         assert!(verify_access_token(&secret(), &parts.join(".")).is_err());

@@ -81,10 +81,7 @@ mod tests {
             request("cs_a", "GET", "/p", "r", 1),
             query("cs_a", "GET", "/p", "r", 1)
         );
-        assert_ne!(
-            response("cs_a", "r", 200),
-            stream_event("cs_a", "r", 200)
-        );
+        assert_ne!(response("cs_a", "r", 200), stream_event("cs_a", "r", 200));
     }
 
     #[test]

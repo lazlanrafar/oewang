@@ -70,7 +70,8 @@ pub fn currency_symbol(code: &str) -> String {
 /// quoted in chat reads the same as the same total in a table.
 pub fn format_money(value: Decimal, code: &str, signed: bool) -> String {
     let digits = currency_digits(code);
-    let rounded = value.round_dp_with_strategy(digits as u32, RoundingStrategy::MidpointAwayFromZero);
+    let rounded =
+        value.round_dp_with_strategy(digits as u32, RoundingStrategy::MidpointAwayFromZero);
 
     let text = rounded.abs().to_string();
     let (whole, fraction) = match text.split_once('.') {
@@ -121,8 +122,14 @@ mod tests {
 
     #[test]
     fn should_normalize_a_valid_code() {
-        assert_eq!(validate_currency_code("currency_code", " idr ").unwrap(), "IDR");
-        assert_eq!(validate_currency_code("currency_code", "EUR").unwrap(), "EUR");
+        assert_eq!(
+            validate_currency_code("currency_code", " idr ").unwrap(),
+            "IDR"
+        );
+        assert_eq!(
+            validate_currency_code("currency_code", "EUR").unwrap(),
+            "EUR"
+        );
     }
 
     use std::str::FromStr;
@@ -135,8 +142,14 @@ mod tests {
     /// apps/app/src/lib/money.test.ts: one figure, one rendering.
     #[test]
     fn should_render_a_figure_the_way_the_web_app_does() {
-        assert_eq!(format_money(money("812500.0000"), "IDR", false), "Rp 812.500");
-        assert_eq!(format_money(money("-87500.0000"), "IDR", false), "-Rp 87.500");
+        assert_eq!(
+            format_money(money("812500.0000"), "IDR", false),
+            "Rp 812.500"
+        );
+        assert_eq!(
+            format_money(money("-87500.0000"), "IDR", false),
+            "-Rp 87.500"
+        );
         assert_eq!(format_money(money("49.9900"), "USD", false), "$ 49,99");
         assert_eq!(format_money(money("1234.5000"), "USD", false), "$ 1.234,50");
         assert_eq!(format_money(money("0"), "IDR", false), "Rp 0");

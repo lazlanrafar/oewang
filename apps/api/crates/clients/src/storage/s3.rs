@@ -155,14 +155,19 @@ const SIGNED_HEADERS: &str = "host;x-amz-content-sha256;x-amz-date";
 
 impl Storage for S3Storage {
     async fn put(&self, key: &str, bytes: &[u8]) -> StorageResult<()> {
-        let response = self.send(reqwest::Method::PUT, key, Some(bytes.to_vec())).await?;
+        let response = self
+            .send(reqwest::Method::PUT, key, Some(bytes.to_vec()))
+            .await?;
 
         if response.status().is_success() {
             Ok(())
         } else {
             // The body may carry the bucket name and the key; the status is
             // what a caller can act on.
-            Err(StorageError::Unavailable(format!("put: {}", response.status())))
+            Err(StorageError::Unavailable(format!(
+                "put: {}",
+                response.status()
+            )))
         }
     }
 
@@ -173,7 +178,10 @@ impl Storage for S3Storage {
             return Err(StorageError::NotFound);
         }
         if !response.status().is_success() {
-            return Err(StorageError::Unavailable(format!("get: {}", response.status())));
+            return Err(StorageError::Unavailable(format!(
+                "get: {}",
+                response.status()
+            )));
         }
 
         response
@@ -190,7 +198,10 @@ impl Storage for S3Storage {
         if response.status().is_success() || response.status() == reqwest::StatusCode::NOT_FOUND {
             Ok(())
         } else {
-            Err(StorageError::Unavailable(format!("delete: {}", response.status())))
+            Err(StorageError::Unavailable(format!(
+                "delete: {}",
+                response.status()
+            )))
         }
     }
 }
@@ -274,8 +285,14 @@ mod tests {
         // MinIO in development is reached by path; a virtual-host bucket
         // would need DNS for it.
         let storage = storage();
-        assert_eq!(storage.url("wsp/w1/f1/00000"), "http://minio:9000/oewang-vault/wsp/w1/f1/00000");
-        assert_eq!(storage.canonical_path("wsp/w1/f1/00000"), "/oewang-vault/wsp/w1/f1/00000");
+        assert_eq!(
+            storage.url("wsp/w1/f1/00000"),
+            "http://minio:9000/oewang-vault/wsp/w1/f1/00000"
+        );
+        assert_eq!(
+            storage.canonical_path("wsp/w1/f1/00000"),
+            "/oewang-vault/wsp/w1/f1/00000"
+        );
         assert_eq!(storage.host(), "minio:9000");
     }
 
@@ -302,7 +319,8 @@ mod tests {
         let storage = storage();
         let put = storage.authorization("PUT", "wsp/w1/f1/00000", EMPTY_SHA256, "20260102T030405Z");
         let get = storage.authorization("GET", "wsp/w1/f1/00000", EMPTY_SHA256, "20260102T030405Z");
-        let other = storage.authorization("PUT", "wsp/w1/f1/00001", EMPTY_SHA256, "20260102T030405Z");
+        let other =
+            storage.authorization("PUT", "wsp/w1/f1/00001", EMPTY_SHA256, "20260102T030405Z");
 
         assert_ne!(put, get);
         assert_ne!(put, other);
@@ -344,6 +362,9 @@ mod live {
         assert_eq!(storage.get(key).await.expect("get"), b"the bytes");
 
         storage.delete(key).await.expect("delete");
-        assert!(matches!(storage.get(key).await, Err(StorageError::NotFound)));
+        assert!(matches!(
+            storage.get(key).await,
+            Err(StorageError::NotFound)
+        ));
     }
 }

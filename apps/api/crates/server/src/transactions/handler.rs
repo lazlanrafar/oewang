@@ -15,7 +15,9 @@ use oewang_db::repositories::{
     audit::AuditRow,
     transactions::{SortField, SortOrder, TransactionFilters, TransactionListRow},
 };
-use oewang_domain::{ledger::TransactionType, AppError, Envelope, PageMeta, Result};
+use oewang_domain::{
+    csv_import::ColumnMapping, ledger::TransactionType, AppError, Envelope, PageMeta, Result,
+};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
@@ -24,7 +26,10 @@ use crate::{
     auth::extractor::{Auth, AuthWrite},
     response::{ApiError, RequestId},
     state::AppState,
-    transactions::service::{self, Page, TransactionInput},
+    transactions::{
+        service::{self, Page, TransactionInput},
+        statement,
+    },
 };
 
 // ------------------------------------------------------------------- views
@@ -181,7 +186,13 @@ pub struct AttachmentView {
 
 impl From<service::AttachmentRow> for AttachmentView {
     fn from(row: service::AttachmentRow) -> Self {
-        Self { id: row.id, file_id: row.file_id, name: row.name, r#type: row.r#type, size: row.size }
+        Self {
+            id: row.id,
+            file_id: row.file_id,
+            name: row.name,
+            r#type: row.r#type,
+            size: row.size,
+        }
     }
 }
 
@@ -264,6 +275,56 @@ pub struct SkippedView {
     pub reason: String,
 }
 
+/// A statement import, as the modal polls it (AI-6).
+///
+/// The three counts are separate because they are three different things
+/// that happened to a row, and a user reading "40 imported" wants to know
+/// what became of the other six (TXN-16).
+#[derive(Debug, Serialize)]
+pub struct ImportJobView {
+    pub id: String,
+    pub status: String,
+    pub vault_file_id: Option<String>,
+    pub imported: Option<i32>,
+    pub skipped: Option<i32>,
+    pub duplicates: Option<i32>,
+    pub error: Option<String>,
+    /// What became of each row: `{rows: [{date, name, amount, direction,
+    /// status}], truncated}`. Null while the job is pending. The counts
+    /// above are exact for the whole file; this list is capped, and says
+    /// so (AI-6).
+    pub review: Option<serde_json::Value>,
+    /// Computed, not stored: a job is stale because time passed, and
+    /// nothing writes that fact down.
+    pub stale: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+impl From<statement::ImportJobRow> for ImportJobView {
+    fn from(row: statement::ImportJobRow) -> Self {
+        let stale = statement::is_stale(&row);
+        Self {
+            id: row.id,
+            status: row.status,
+            vault_file_id: row.vault_file_id,
+            imported: row.imported,
+            skipped: row.skipped,
+            duplicates: row.duplicates,
+            error: row.error,
+            review: row.review,
+            stale,
+            created_at: row.created_at.to_rfc3339(),
+            updated_at: row.updated_at.to_rfc3339(),
+        }
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub struct StartedJobView {
+    pub job_id: String,
+}
+
 #[derive(Debug, Serialize)]
 pub struct AffectedView {
     pub affected: usize,
@@ -297,9 +358,9 @@ impl ListQuery {
         let kind = match self.r#type.as_deref() {
             None | Some("") => None,
             Some(value) => {
-                let parsed: TransactionType = value
-                    .parse()
-                    .map_err(|_| AppError::validation([("type", "Use income, expense or transfer.")]))?;
+                let parsed: TransactionType = value.parse().map_err(|_| {
+                    AppError::validation([("type", "Use income, expense or transfer.")])
+                })?;
                 Some(parsed.as_str())
             }
         };
@@ -362,6 +423,19 @@ pub struct TransactionBody {
     /// The whole set of files this transaction carries. Absent leaves the
     /// attachments alone; present replaces them (TXN-13, VLT-5).
     pub attachment_ids: Option<Vec<String>>,
+    /// Line items written with the transaction, in one database
+    /// transaction. Only `POST` reads this: a `PATCH` edits items through
+    /// their own routes, where each one can be addressed (TXN-12).
+    #[serde(default)]
+    pub items: Vec<ItemBody>,
+    /// Which surface this write came from, for the audit row (OPS-8).
+    ///
+    /// A claim, and a deliberately narrow one: `web` and `receipt` are the
+    /// two things a browser can truthfully be. `chat` and `import` are
+    /// minted by the API's own paths and are refused here, because a
+    /// surface the client can name freely would make the audit trail
+    /// describe whatever the client preferred.
+    pub source: Option<String>,
 }
 
 impl TransactionBody {
@@ -413,6 +487,26 @@ pub struct ImportBody {
     /// step three of the wizard.
     #[serde(default)]
     pub categories: std::collections::BTreeMap<String, String>,
+}
+
+/// Which document to read, and which wallet its rows belong to.
+///
+/// The bytes are not in the body: a statement does not fit in one
+/// (SEC-18), so it is uploaded as chunks first and named here (D23). The
+/// wallet is required because a statement is an account's statement, and
+/// every row it holds moves that account's balance.
+#[derive(Debug, Deserialize)]
+pub struct StatementImportBody {
+    pub vault_file_id: String,
+    pub wallet_id: String,
+}
+
+/// Column names and a sample or two, on their way to the model (AI-9).
+#[derive(Debug, Deserialize)]
+pub struct MapColumnsBody {
+    pub columns: Vec<String>,
+    #[serde(default)]
+    pub sample_rows: Vec<std::collections::BTreeMap<String, String>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -524,7 +618,10 @@ pub async fn add_item(
     .await;
 
     match result {
-        Ok(item) => Ok((StatusCode::CREATED, Json(Envelope::data(ItemView::from(item), id)))),
+        Ok(item) => Ok((
+            StatusCode::CREATED,
+            Json(Envelope::data(ItemView::from(item), id)),
+        )),
         Err(error) => Err(ApiError::new(error, id)),
     }
 }
@@ -605,13 +702,11 @@ pub async fn summary(
         let filters = query.filters()?;
         let (by_type, by_category) =
             service::summary(&state.db, &auth.workspace_id, &filters).await?;
-        let workspace = oewang_db::repositories::accounts::find_workspace(
-            &state.db,
-            &auth.workspace_id,
-        )
-        .await
-        .map_err(|e| AppError::Internal(anyhow::anyhow!(e)))?
-        .ok_or(AppError::NotFound)?;
+        let workspace =
+            oewang_db::repositories::accounts::find_workspace(&state.db, &auth.workspace_id)
+                .await
+                .map_err(|e| AppError::Internal(anyhow::anyhow!(e)))?
+                .ok_or(AppError::NotFound)?;
 
         Ok::<_, AppError>(SummaryView {
             // Every total is in the workspace currency, because every row
@@ -619,7 +714,11 @@ pub async fn summary(
             currency_code: workspace.currency_code,
             by_type: by_type
                 .into_iter()
-                .map(|row| TypeTotal { r#type: row.r#type, total: row.total, count: row.count })
+                .map(|row| TypeTotal {
+                    r#type: row.r#type,
+                    total: row.total,
+                    count: row.count,
+                })
                 .collect(),
             by_category: by_category
                 .into_iter()
@@ -692,11 +791,19 @@ pub async fn create(
 
     let result = async {
         let input = body.input()?;
-        let row = service::create(
+        let items = body
+            .items
+            .iter()
+            .map(ItemBody::input)
+            .collect::<Result<Vec<_>>>()?;
+
+        let row = service::create_with_items(
             &state.db,
             &state.rates,
-            Actor::web(&auth.workspace_id, &auth.user_id),
+            Actor::web(&auth.workspace_id, &auth.user_id)
+                .with_source(client_source(body.source.as_deref())?),
             input,
+            &items,
         )
         .await?;
         service::find(&state.db, &auth.workspace_id, &row.id).await
@@ -780,6 +887,7 @@ pub async fn bulk_create(
             // says so (D14).
             Actor::web(&auth.workspace_id, &auth.user_id).with_source(crate::audit::SOURCE_IMPORT),
             inputs,
+            state.config.import_row_limit,
         )
         .await
     }
@@ -822,6 +930,7 @@ pub async fn import_csv(
         &body.mapping,
         &body.rows,
         &body.categories,
+        state.config.import_row_limit,
     )
     .await;
 
@@ -888,6 +997,22 @@ fn non_empty(value: Option<&str>) -> Option<&str> {
 ///
 /// The error names the field, so the form highlights the input the user is
 /// looking at rather than the whole sheet.
+/// The surfaces a browser may claim (OPS-8).
+///
+/// `chat` and `import` are written by the API's own paths, so a client
+/// naming either of them is either confused or lying, and both answers are
+/// a rejection.
+fn client_source(claimed: Option<&str>) -> Result<&'static str> {
+    match claimed {
+        None | Some("web") => Ok(crate::audit::SOURCE_WEB),
+        Some("receipt") => Ok(crate::audit::SOURCE_RECEIPT),
+        Some(_) => Err(AppError::validation([(
+            "source",
+            "A write from the browser is either web or receipt.",
+        )])),
+    }
+}
+
 fn money(field: &'static str, raw: &str) -> Result<Decimal> {
     raw.trim()
         .parse::<Decimal>()
@@ -909,7 +1034,9 @@ enum DayEdge {
 /// A day to an instant. The end of a range is inclusive, so it becomes the
 /// last moment of that day rather than its midnight.
 fn parse_day(raw: Option<&str>, edge: DayEdge) -> Result<Option<DateTime<Utc>>> {
-    let Some(value) = non_empty(raw) else { return Ok(None) };
+    let Some(value) = non_empty(raw) else {
+        return Ok(None);
+    };
 
     // The picker sends a plain day; a link pasted from elsewhere may carry a
     // full timestamp, and both should filter the same way.
@@ -930,14 +1057,138 @@ fn parse_day(raw: Option<&str>, edge: DayEdge) -> Result<Option<DateTime<Utc>>> 
     Ok(time.map(|naive| Utc.from_utc_datetime(&naive)))
 }
 
+/// Start a statement import (AI-4).
+///
+/// Answers `202` and a job id. The work runs in a task, because the ladder
+/// may spend forty-five seconds on the document before the first row
+/// exists and a request held open that long is a request that times out
+/// (SEC-19).
+pub async fn import_statement(
+    State(state): State<AppState>,
+    auth: AuthWrite,
+    request_id: RequestId,
+    Json(body): Json<StatementImportBody>,
+) -> std::result::Result<(StatusCode, Json<Envelope<StartedJobView>>), ApiError> {
+    let id = request_id.0;
+
+    match statement::start(
+        &state.db,
+        &state.files,
+        &state.ai,
+        statement::StatementImport {
+            actor: Actor::web(&auth.workspace_id, &auth.user_id)
+                .with_source(crate::audit::SOURCE_IMPORT),
+            request_id: &id,
+            wallet_id: &body.wallet_id,
+            vault_file_id: &body.vault_file_id,
+            row_limit: state.config.import_row_limit,
+        },
+    )
+    .await
+    {
+        Ok(job) => Ok((
+            StatusCode::ACCEPTED,
+            Json(Envelope::data(StartedJobView { job_id: job.id }, id)),
+        )),
+        Err(error) => Err(ApiError::new(error, id)),
+    }
+}
+
+/// Poll one. Any member: watching an import finish is not a privileged
+/// question, and the row holds counts, not contents.
+pub async fn import_job(
+    State(state): State<AppState>,
+    auth: Auth,
+    Path(job_id): Path<String>,
+    request_id: RequestId,
+) -> std::result::Result<Json<Envelope<ImportJobView>>, ApiError> {
+    let id = request_id.0;
+
+    match statement::find(&state.db, &auth.workspace_id, &job_id).await {
+        Ok(job) => Ok(Json(Envelope::data(job.into(), id))),
+        Err(error) => Err(ApiError::new(error, id)),
+    }
+}
+
+/// Propose which column holds what (AI-9, D28).
+///
+/// A proxy, because the browser never calls the AI service (D5, PLT-4).
+/// The model sees column names and two sample rows and returns a mapping;
+/// every figure in the file is then read by `csv_import::transform`, so a
+/// wrong mapping costs a correction in the wizard and never a wrong amount.
+///
+/// A failure is relayed as it comes. The wizard's step two works by hand,
+/// and an empty step is a better answer than a guess.
+pub async fn map_columns(
+    State(state): State<AppState>,
+    auth: AuthWrite,
+    request_id: RequestId,
+    Json(body): Json<MapColumnsBody>,
+) -> std::result::Result<Json<Envelope<ColumnMapping>>, ApiError> {
+    let id = request_id.0;
+
+    if body.columns.is_empty() {
+        return Err(ApiError::new(
+            AppError::validation([("columns", "Name at least one column.")]),
+            id,
+        ));
+    }
+
+    // Two rows is what the prompt is written for, and every cell is clamped
+    // before it leaves this process: a sample row is file content, and file
+    // content is the input this product treats as hostile (SEC-21).
+    let samples: Vec<_> = body
+        .sample_rows
+        .iter()
+        .take(SAMPLE_ROWS)
+        .map(clamp_row)
+        .collect();
+
+    match crate::ai::extraction::map_columns(
+        &state.ai,
+        &id,
+        &auth.workspace_id,
+        &body.columns,
+        &samples,
+    )
+    .await
+    {
+        Ok(mapping) => Ok(Json(Envelope::data(mapping, id))),
+        Err(error) => Err(ApiError::new(error, id)),
+    }
+}
+
+/// How many sample rows the model is shown, and how much of each cell.
+/// Both are from the prompt's own contract
+/// (docs/ai/service.md#csv-column-mapping).
+const SAMPLE_ROWS: usize = 2;
+const SAMPLE_CELL_CHARS: usize = 80;
+
+fn clamp_row(
+    row: &std::collections::BTreeMap<String, String>,
+) -> std::collections::BTreeMap<String, String> {
+    row.iter()
+        .map(|(column, value)| {
+            (
+                column.clone(),
+                value.chars().take(SAMPLE_CELL_CHARS).collect::<String>(),
+            )
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn should_make_the_end_of_a_range_inclusive() {
-        let start = parse_day(Some("2026-11-02"), DayEdge::Start).unwrap().unwrap();
-        let end = parse_day(Some("2026-11-02"), DayEdge::End).unwrap().unwrap();
+        let start = parse_day(Some("2026-11-02"), DayEdge::Start)
+            .unwrap()
+            .unwrap();
+        let end = parse_day(Some("2026-11-02"), DayEdge::End)
+            .unwrap()
+            .unwrap();
 
         assert_eq!(start.to_rfc3339(), "2026-11-02T00:00:00+00:00");
         assert!(end > start);
@@ -958,20 +1209,32 @@ mod tests {
 
     #[test]
     fn should_map_an_unknown_sort_to_the_default_rather_than_an_error() {
-        let query = ListQuery { sort: Some("; DROP TABLE".into()), ..Default::default() };
+        let query = ListQuery {
+            sort: Some("; DROP TABLE".into()),
+            ..Default::default()
+        };
         assert_eq!(query.sort(), (SortField::Date, SortOrder::Descending));
     }
 
     #[test]
     fn should_refuse_an_unknown_type_filter() {
-        let query = ListQuery { r#type: Some("refund".into()), ..Default::default() };
+        let query = ListQuery {
+            r#type: Some("refund".into()),
+            ..Default::default()
+        };
         assert!(query.filters().is_err());
     }
 
     #[test]
     fn should_parse_money_as_a_decimal_never_a_float() {
-        assert_eq!(money("amount", "812500.0000").unwrap(), Decimal::new(8125000000, 4));
-        assert!(money("amount", "50,000").is_err(), "a separator is not a number");
+        assert_eq!(
+            money("amount", "812500.0000").unwrap(),
+            Decimal::new(8125000000, 4)
+        );
+        assert!(
+            money("amount", "50,000").is_err(),
+            "a separator is not a number"
+        );
     }
 
     #[test]

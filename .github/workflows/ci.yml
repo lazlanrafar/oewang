@@ -1,0 +1,369 @@
+# CI for oewang (OPS-7, SEC-20, story US-038).
+#
+# One job per app, plus a secret scan and the Rust advisory audit, all in
+# parallel. The whole run has to finish under five minutes, which is an
+# acceptance criterion rather than a target, so the shape of this file is
+# driven by two rules:
+#
+#   1. Never split a Rust check into its own job. Each job pays the full
+#      dependency compile, so three Rust jobs cost three compiles. `api`
+#      runs fmt, the sqlx cache check, clippy and the tests against one
+#      cached target directory.
+#   2. Cache everything that is expensive to rebuild: the Cargo registry
+#      and target directory, the uv cache, the bun install cache.
+#
+# Local development runs every check inside a container (see CLAUDE.md).
+# CI does not: building the dev images on a runner costs more than it
+# saves, and the runner image is already fixed. The toolchains here track
+# the three Dockerfile.dev files instead. `rust:1-bookworm` is the latest
+# stable 1.x, which is what `dtolnay/rust-toolchain@stable` installs;
+# Python and bun are pinned to an exact version because their images are
+# not. When a Dockerfile.dev moves, move the matching line here.
+#
+# A check that cannot run in CI fails loudly or is absent. Nothing here is
+# allowed to pass by being skipped.
+
+name: CI
+
+on:
+  # Pushes to the two long-lived branches, plus every pull request. An
+  # unfiltered `push:` would run the whole suite twice for a branch that
+  # also has a pull request open, once for each event, which is the same
+  # answer at double the cost.
+  push:
+    branches: [main, development]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # ------------------------------------------------------------------
+  # Secrets. Runs over the diff, not the working tree: a key that was
+  # committed and then deleted is still a leaked key (hardening, Secrets).
+  # ------------------------------------------------------------------
+  secrets:
+    name: secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # gitleaks walks git history for the pushed range, so a shallow
+          # clone would scan nothing on a pull request.
+          fetch-depth: 0
+
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITLEAKS_CONFIG: .github/gitleaks.toml
+          # Commenting on a pull request needs write permission on this
+          # token. The failed step is the signal; a comment is not worth
+          # widening the permission.
+          GITLEAKS_ENABLE_COMMENTS: false
+          GITLEAKS_ENABLE_SUMMARY: true
+
+  # ------------------------------------------------------------------
+  # Docs. One generated file, one check. A configuration reference
+  # written by hand is wrong within a month, so this one is generated
+  # from the three configuration modules and CI fails when it drifts.
+  # ------------------------------------------------------------------
+  docs:
+    name: docs
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: ENV_VARS.md is current
+        run: python3 scripts/env-vars.py --check
+
+      - name: every requirement is named by a story
+        run: python3 scripts/coverage.py
+
+  # ------------------------------------------------------------------
+  # Rust API. Needs PostgreSQL: the suite is `#[sqlx::test]`, which
+  # creates and drops a database per test, so the role must be able to
+  # create databases. The service image matches infra/docker-compose.yml.
+  # ------------------------------------------------------------------
+  api:
+    name: api (rust)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/api
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: oewang
+          POSTGRES_PASSWORD: oewang
+          POSTGRES_DB: oewang
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U oewang -d oewang"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+
+    env:
+      DATABASE_URL: postgres://oewang:oewang@localhost:5432/oewang
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Cache cargo registry and target
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/api
+
+      - name: Install sqlx-cli
+        uses: taiki-e/install-action@v2
+        with:
+          tool: sqlx-cli
+
+      - name: Format
+        run: cargo fmt --all --check
+
+      - name: Migrate
+        run: sqlx migrate run --source migrations
+
+      # The committed .sqlx cache is what every other compile here uses.
+      # A stale one does not break this build, it breaks the next person's,
+      # so it is checked explicitly rather than discovered later.
+      - name: Check the sqlx offline cache is current
+        env:
+          SQLX_OFFLINE: "false"
+        run: cargo sqlx prepare --workspace --check -- --all-targets
+
+      - name: Clippy
+        env:
+          SQLX_OFFLINE: "true"
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Test
+        env:
+          SQLX_OFFLINE: "true"
+        run: cargo test
+
+  # ------------------------------------------------------------------
+  # Rust advisories. Separate from `api` on purpose: cargo-audit reads
+  # Cargo.lock and needs no build, so running it here means a vulnerable
+  # dependency is reported in under a minute instead of after the compile.
+  # ------------------------------------------------------------------
+  audit-rust:
+    name: api audit (cargo-audit)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-audit
+
+      # RUSTSEC-2023-0071 (Marvin attack, `rsa` 0.9.10, medium) has no
+      # fixed upgrade. The crate reaches Cargo.lock through `sqlx-mysql`,
+      # which `sqlx-macros-core` lists unconditionally; `cargo tree -i rsa`
+      # prints nothing, so it is never compiled and no MySQL driver runs
+      # here. The ignore is written out with its reason rather than hidden
+      # in an audit.toml, and it comes off the day sqlx ships a fix.
+      # See docs/deployment.md, Open questions.
+      - name: cargo audit
+        working-directory: apps/api
+        run: cargo audit --ignore RUSTSEC-2023-0071
+
+  # ------------------------------------------------------------------
+  # Python AI service. Lint, tests, and the Python half of SEC-20.
+  # ------------------------------------------------------------------
+  ai:
+    name: ai (python)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: apps/ai
+
+    env:
+      # The OWE1 wire vectors are generated by the Rust test and committed.
+      # The test finds them by walking up from the checkout, but pointing
+      # at them removes the guesswork.
+      OWE1_VECTORS_PATH: ${{ github.workspace }}/apps/api/crates/domain/testdata/owe1-vectors.json
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: apps/ai/uv.lock
+          # Matches apps/ai/Dockerfile.dev.
+          python-version: "3.13"
+
+      - name: Install dependencies
+        # From the lockfile, never a fresh resolution (hardening,
+        # Dependencies).
+        run: uv sync --frozen
+
+      - name: Lint
+        run: uv run ruff check .
+
+      - name: Test
+        # The live-model tests opt in through RUN_LIVE_MODEL_TESTS and are
+        # deliberately not set here: they cost money and need the gateway
+        # up. Everything else runs against a mocked model.
+        run: uv run pytest -q
+
+      - name: pip-audit
+        run: |
+          uv export --frozen --no-emit-project --no-hashes \
+            --format requirements-txt -o "${RUNNER_TEMP}/requirements.txt"
+          uvx pip-audit --no-deps --requirement "${RUNNER_TEMP}/requirements.txt"
+
+  # ------------------------------------------------------------------
+  # SvelteKit web app. `bun run check` is the typecheck; there is no
+  # separate linter in this project, so there is no lint step to add.
+  # ------------------------------------------------------------------
+  app:
+    name: app (svelte)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: apps/app
+
+    env:
+      OWE1_VECTORS_PATH: ${{ github.workspace }}/apps/api/crates/domain/testdata/owe1-vectors.json
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          # Matches apps/app/Dockerfile.dev, which tracks oven/bun:1.
+          bun-version: "1.4.4"
+
+      - name: Cache bun install cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('apps/app/bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+
+      - name: Install dependencies
+        # --ignore-scripts: no post-install script in the web app's
+        # dependency tree runs here (hardening, Dependencies). `prepare`
+        # is skipped with them, which costs nothing: `bun run check` runs
+        # `svelte-kit sync` itself.
+        run: bun install --frozen-lockfile --ignore-scripts
+
+      - name: Typecheck
+        run: bun run check
+
+      - name: Test
+        run: bun run test
+
+      - name: bun audit
+        # Gated at high. A low-severity advisory in a build-time
+        # dependency should not stop a release, and a job that is red for
+        # a reason nobody can fix is a job people learn to ignore. See
+        # docs/deployment.md, Open questions.
+        run: bun audit --audit-level=high
+
+  # ------------------------------------------------------------------
+  # The browser half of US-038: the three journeys and the axe pass.
+  #
+  # One job, not two. Both need the whole stack up, and standing that up
+  # twice would cost more than the tests do. It runs the real compose
+  # stack rather than mocks, because a journey against a mock is not a
+  # journey.
+  #
+  # Off the critical path of the five-minute budget: it runs in parallel
+  # with the three app jobs above and nothing waits on it.
+  # ------------------------------------------------------------------
+  e2e:
+    name: journeys and accessibility
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: apps/app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+
+      - name: Write the stack's .env
+        working-directory: .
+        # The compose stack reads ../.env. CI has no secrets to put in it
+        # and needs none: every value here is local to this runner and
+        # dies with it. JWT_SECRET must still be 32 characters, which the
+        # API checks at startup.
+        run: |
+          cp .env.example .env
+          {
+            echo "APP_ENV=development"
+            echo "JWT_SECRET=ci-only-not-a-secret-0123456789abcdef"
+            echo "AI_SERVICE_API_KEY=ci-only-not-a-secret-0123456789ab"
+            echo "AI_API_KEY="
+            echo "AI_BASE_URL="
+          } >> .env
+
+      - name: Start the stack
+        working-directory: .
+        run: docker compose -f infra/docker-compose.yml up -d --wait --wait-timeout 600
+
+      - name: Migrate and seed
+        working-directory: .
+        run: |
+          docker compose -f infra/docker-compose.yml run --rm api \
+            sqlx migrate run --source migrations
+          docker compose -f infra/docker-compose.yml exec -T postgres \
+            psql -U oewang -d oewang -q < apps/api/seeds/dev.sql
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile --ignore-scripts
+
+      - name: Install the browser
+        run: bunx playwright install --with-deps chromium
+
+      - name: Journeys and axe
+        # E2E_CHAT=0 because no model is reachable from a runner: the chat
+        # journey needs AI_BASE_URL to point at something that answers,
+        # and pointing CI at the owner's gateway would make every push
+        # spend money and every outage a red build. The other two
+        # journeys and all six axe checks run.
+        env:
+          E2E_BASE_URL: http://localhost:3000
+          E2E_CHAT: "0"
+        run: bun run test:e2e
+
+      - name: What the stack said, if it failed
+        if: failure()
+        working-directory: .
+        run: docker compose -f infra/docker-compose.yml logs --tail 200
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: apps/app/playwright-report/
+          retention-days: 7

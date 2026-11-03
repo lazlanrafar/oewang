@@ -1,0 +1,27 @@
+# gitleaks configuration for the CI secret scan (hardening, Secrets).
+#
+# The default ruleset does the work. This file exists only to stop two
+# classes of false positive from training people to ignore the job:
+#
+#   - .env.example, which lists every variable with an empty value and
+#     the command that generates a real one.
+#   - the OWE1 test vectors and the fixtures around them, which hold
+#     fixed key material generated for the test and published in the
+#     repository on purpose.
+#
+# Nothing here allowlists a path that could hold a live credential. The
+# real .env is gitignored and is not a scanned path.
+
+title = "oewang"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Documented placeholders and published test vectors"
+paths = [
+  '''^\.env\.example$''',
+  '''^apps/api/crates/domain/testdata/.*''',
+  '''^apps/api/seeds/.*\.sql$''',
+  '''^apps/ai/tests/golden/.*''',
+]

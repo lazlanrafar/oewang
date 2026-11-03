@@ -25,7 +25,9 @@ const ENTITY_CATEGORY: &str = "category";
 // ----------------------------------------------------------- wallet groups
 
 pub async fn list_groups(pool: &PgPool, workspace_id: &str) -> Result<Vec<WalletGroupRow>> {
-    wallets::list_groups(pool, workspace_id).await.map_err(internal)
+    wallets::list_groups(pool, workspace_id)
+        .await
+        .map_err(internal)
 }
 
 pub async fn create_group(
@@ -79,10 +81,16 @@ pub async fn update_group(
         .map_err(internal)?
         .ok_or(AppError::NotFound)?;
 
-    let after = wallets::update_group(&mut *tx, actor.workspace_id, id, name.as_deref(), sort_order)
-        .await
-        .map_err(internal)?
-        .ok_or(AppError::NotFound)?;
+    let after = wallets::update_group(
+        &mut *tx,
+        actor.workspace_id,
+        id,
+        name.as_deref(),
+        sort_order,
+    )
+    .await
+    .map_err(internal)?
+    .ok_or(AppError::NotFound)?;
 
     log(
         &mut tx,
@@ -133,7 +141,9 @@ pub async fn delete_group(pool: &PgPool, actor: Actor<'_>, id: &str) -> Result<(
 // ----------------------------------------------------------------- wallets
 
 pub async fn list_wallets(pool: &PgPool, workspace_id: &str) -> Result<Vec<WalletListRow>> {
-    wallets::list_wallets(pool, workspace_id).await.map_err(internal)
+    wallets::list_wallets(pool, workspace_id)
+        .await
+        .map_err(internal)
 }
 
 pub async fn find_wallet(pool: &PgPool, workspace_id: &str, id: &str) -> Result<WalletRow> {
@@ -229,7 +239,10 @@ pub async fn update_wallet(
     id: &str,
     input: WalletPatchInput<'_>,
 ) -> Result<WalletRow> {
-    let name = input.name.map(|value| clean_name("name", value)).transpose()?;
+    let name = input
+        .name
+        .map(|value| clean_name("name", value))
+        .transpose()?;
     let currency = input
         .currency_code
         .map(|code| validate_currency_code("currency_code", code))
@@ -614,7 +627,10 @@ fn clean_name(field: &'static str, value: &str) -> Result<String> {
         return Err(AppError::validation([(field, "Enter a name.")]));
     }
     if trimmed.chars().count() > 80 {
-        return Err(AppError::validation([(field, "Use 80 characters or fewer.")]));
+        return Err(AppError::validation([(
+            field,
+            "Use 80 characters or fewer.",
+        )]));
     }
 
     Ok(trimmed.to_string())

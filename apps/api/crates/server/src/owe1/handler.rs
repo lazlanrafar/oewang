@@ -57,15 +57,12 @@ pub async fn handshake_handler(
     Json(body): Json<HandshakeRequest>,
 ) -> Result<Json<HandshakeResponse>, ApiError> {
     let result = run_handshake(&state, body);
-    result.map(Json).map_err(|error| {
-        ApiError::new(AppError::from(error), request_id.0.clone())
-    })
+    result
+        .map(Json)
+        .map_err(|error| ApiError::new(AppError::from(error), request_id.0.clone()))
 }
 
-fn run_handshake(
-    state: &AppState,
-    body: HandshakeRequest,
-) -> Result<HandshakeResponse, Owe1Error> {
+fn run_handshake(state: &AppState, body: HandshakeRequest) -> Result<HandshakeResponse, Owe1Error> {
     check_version(body.v)?;
 
     let client_public_bytes =
@@ -149,10 +146,11 @@ pub async fn session_status(
         .to_string();
 
     let now = session::now_secs();
-    let expires_at = state
-        .owe1_sessions
-        .expires_at(&session_id)
-        .unwrap_or(now);
+    let expires_at = state.owe1_sessions.expires_at(&session_id).unwrap_or(now);
 
-    Ok(Json(SessionStatus { session_id, expires_at, server_time: now }))
+    Ok(Json(SessionStatus {
+        session_id,
+        expires_at,
+        server_time: now,
+    }))
 }

@@ -1,0 +1,13 @@
+{
+  "merchant": "Pepito Market Sanur",
+  "date": "2026-10-28",
+  "total": "152300.00",
+  "subtotal": "138455.00",
+  "tax": "13845.00",
+  "currency": "IDR",
+  "line_items": [
+    {"name": "Kopi Bali 200g", "amount": "68900.00", "quantity": "1", "unit_price": "68900.00"},
+    {"name": "Telur ayam 10 butir", "amount": "32500.00", "quantity": "1", "unit_price": "32500.00"},
+    {"name": "Roti gandum", "amount": "37055.00", "quantity": "1", "unit_price": "37055.00"}
+  ]
+}

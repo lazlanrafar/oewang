@@ -46,6 +46,17 @@ STATUS_BY_CODE = {
     # Spelled out: Starlette renamed its constant and both spellings warn
     # on one version or the other.
     "VALIDATION_FAILED": 422,
+    # A document this service cannot show a model. A refusal on the way
+    # in, with a reason, rather than a provider error three layers down.
+    "UNSUPPORTED_MEDIA_TYPE": status.HTTP_400_BAD_REQUEST,
+    # Extraction produced nothing to confirm (AI-3). Unprocessable rather
+    # than a bad request: the request was fine, the document was not.
+    "RECEIPT_UNREADABLE": 422,
+    "STATEMENT_UNREADABLE": 422,
+    "COLUMN_MAPPING_FAILED": 422,
+    # A misconfiguration, not a bad request. Answered as such so it is not
+    # mistaken for an unreadable document and retried with another photo.
+    "MODEL_UNAVAILABLE": status.HTTP_503_SERVICE_UNAVAILABLE,
 }
 
 

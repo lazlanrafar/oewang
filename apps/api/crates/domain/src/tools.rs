@@ -428,14 +428,21 @@ impl<'a> Reader<'a> {
             Value::Null => None,
             _ => {
                 return Err(AppError::ToolArgsInvalid(
-                    [("args".to_string(), "Arguments must be an object.".to_string())]
-                        .into_iter()
-                        .collect(),
+                    [(
+                        "args".to_string(),
+                        "Arguments must be an object.".to_string(),
+                    )]
+                    .into_iter()
+                    .collect(),
                 ))
             }
         };
 
-        Ok(Self { fields, seen: Vec::new(), errors: FieldErrors::new() })
+        Ok(Self {
+            fields,
+            seen: Vec::new(),
+            errors: FieldErrors::new(),
+        })
     }
 
     /// The raw value, or `None` when the key is absent or explicitly null.
@@ -451,7 +458,9 @@ impl<'a> Reader<'a> {
     }
 
     fn reject(&mut self, name: &'static str, message: &str) {
-        self.errors.entry(name.to_string()).or_insert_with(|| message.to_string());
+        self.errors
+            .entry(name.to_string())
+            .or_insert_with(|| message.to_string());
     }
 
     fn require(&mut self, name: &'static str, present: bool) {
@@ -463,8 +472,11 @@ impl<'a> Reader<'a> {
     fn text(&mut self, name: &'static str) -> Option<String> {
         match self.get(name)? {
             Value::String(raw) => {
-                let cleaned: String =
-                    raw.chars().filter(|c| !c.is_control()).take(MAX_TEXT).collect();
+                let cleaned: String = raw
+                    .chars()
+                    .filter(|c| !c.is_control())
+                    .take(MAX_TEXT)
+                    .collect();
                 let cleaned = cleaned.trim().to_string();
                 if cleaned.is_empty() {
                     self.reject(name, "This argument cannot be empty.");
@@ -589,7 +601,9 @@ impl<'a> Reader<'a> {
     }
 
     fn strings(&mut self, name: &'static str, max: usize) -> Vec<String> {
-        let Some(value) = self.get(name) else { return Vec::new() };
+        let Some(value) = self.get(name) else {
+            return Vec::new();
+        };
 
         let Value::Array(raw) = value else {
             self.reject(name, "Expected a list.");
@@ -606,8 +620,11 @@ impl<'a> Reader<'a> {
         for entry in raw {
             match entry {
                 Value::String(text) => {
-                    let cleaned: String =
-                        text.chars().filter(|c| !c.is_control()).take(MAX_TEXT).collect();
+                    let cleaned: String = text
+                        .chars()
+                        .filter(|c| !c.is_control())
+                        .take(MAX_TEXT)
+                        .collect();
                     let cleaned = cleaned.trim().to_string();
                     if cleaned.is_empty() {
                         self.reject(name, "An entry cannot be empty.");
@@ -623,7 +640,9 @@ impl<'a> Reader<'a> {
     }
 
     fn items(&mut self, name: &'static str) -> Vec<ItemArg> {
-        let Some(value) = self.get(name) else { return Vec::new() };
+        let Some(value) = self.get(name) else {
+            return Vec::new();
+        };
 
         let Value::Array(raw) = value else {
             self.reject(name, "Expected a list of items.");
@@ -646,7 +665,10 @@ impl<'a> Reader<'a> {
 
             // An item's keys are checked like the call's own: a stray key
             // means the model meant something this tool cannot do.
-            if fields.keys().any(|key| !matches!(key.as_str(), "name" | "amount" | "quantity")) {
+            if fields
+                .keys()
+                .any(|key| !matches!(key.as_str(), "name" | "amount" | "quantity"))
+            {
                 self.reject(name, "An item takes only name, amount and quantity.");
                 continue;
             }
@@ -656,14 +678,11 @@ impl<'a> Reader<'a> {
 
             // An unparseable quantity is an error, not something to drop:
             // a line item that silently lost its count is a wrong receipt.
-            let quantity: std::result::Result<Option<Decimal>, ()> =
-                match fields.get("quantity") {
-                    None | Some(Value::Null) => Ok(None),
-                    Some(Value::String(raw)) => {
-                        Decimal::from_str(raw.trim()).map(Some).map_err(|_| ())
-                    }
-                    Some(_) => Err(()),
-                };
+            let quantity: std::result::Result<Option<Decimal>, ()> = match fields.get("quantity") {
+                None | Some(Value::Null) => Ok(None),
+                Some(Value::String(raw)) => Decimal::from_str(raw.trim()).map(Some).map_err(|_| ()),
+                Some(_) => Err(()),
+            };
 
             match (item_name, amount.map(|raw| Decimal::from_str(raw.trim())), quantity) {
                 (Some(item_name), Some(Ok(amount)), Ok(quantity)) if !item_name.is_empty() => {
@@ -750,8 +769,14 @@ mod tests {
             assert_eq!(Tool::parse(tool.name()).unwrap(), tool);
         }
         assert_eq!(Tool::ALL.len(), 11, "the catalog is eleven tools (D17)");
-        assert!(matches!(Tool::parse("delete_wallet"), Err(AppError::ToolNotFound)));
-        assert!(matches!(Tool::parse("bulk_delete_transactions"), Err(AppError::ToolNotFound)));
+        assert!(matches!(
+            Tool::parse("delete_wallet"),
+            Err(AppError::ToolNotFound)
+        ));
+        assert!(matches!(
+            Tool::parse("bulk_delete_transactions"),
+            Err(AppError::ToolNotFound)
+        ));
     }
 
     #[test]
@@ -763,8 +788,16 @@ mod tests {
                 "{} for a member",
                 tool.name()
             );
-            assert!(tool.allowed_for(Role::Admin), "{} for an admin", tool.name());
-            assert!(tool.allowed_for(Role::Owner), "{} for an owner", tool.name());
+            assert!(
+                tool.allowed_for(Role::Admin),
+                "{} for an admin",
+                tool.name()
+            );
+            assert!(
+                tool.allowed_for(Role::Owner),
+                "{} for an owner",
+                tool.name()
+            );
         }
     }
 
@@ -783,7 +816,10 @@ mod tests {
         )
         .unwrap_err();
 
-        assert_eq!(fields(error)["amount"], "An amount is a string, never a number.");
+        assert_eq!(
+            fields(error)["amount"],
+            "An amount is a string, never a number."
+        );
     }
 
     #[test]
@@ -801,7 +837,9 @@ mod tests {
         )
         .unwrap();
 
-        let ToolCall::CreateTransaction(args) = call else { panic!("wrong variant") };
+        let ToolCall::CreateTransaction(args) = call else {
+            panic!("wrong variant")
+        };
         assert_eq!(args.amount, Some(Decimal::from_str("50000.00").unwrap()));
         assert_eq!(args.name.as_deref(), Some("Lunch"));
         assert_eq!(args.date.unwrap().to_rfc3339(), "2026-11-03T00:00:00+00:00");
@@ -832,23 +870,31 @@ mod tests {
 
     #[test]
     fn should_refuse_a_type_outside_the_enum() {
-        let error = parse(Tool::CreateCategory, json!({ "name": "Food", "type": "savings" }))
-            .unwrap_err();
+        let error = parse(
+            Tool::CreateCategory,
+            json!({ "name": "Food", "type": "savings" }),
+        )
+        .unwrap_err();
         assert!(fields(error)["type"].starts_with("Expected one of"));
     }
 
     #[test]
     fn should_refuse_a_date_in_the_workspace_display_format() {
-        let error = parse(Tool::GetRecentTransactions, json!({ "from": "03/11/2026" }))
-            .unwrap_err();
+        let error =
+            parse(Tool::GetRecentTransactions, json!({ "from": "03/11/2026" })).unwrap_err();
         assert!(fields(error)["from"].contains("ISO 8601"));
     }
 
     #[test]
     fn should_accept_a_full_timestamp_as_well_as_a_date() {
-        let call = parse(Tool::GetRecentTransactions, json!({ "from": "2026-11-03T09:30:00Z" }))
-            .unwrap();
-        let ToolCall::GetRecentTransactions(args) = call else { panic!("wrong variant") };
+        let call = parse(
+            Tool::GetRecentTransactions,
+            json!({ "from": "2026-11-03T09:30:00Z" }),
+        )
+        .unwrap();
+        let ToolCall::GetRecentTransactions(args) = call else {
+            panic!("wrong variant")
+        };
         assert_eq!(args.from.unwrap().to_rfc3339(), "2026-11-03T09:30:00+00:00");
     }
 
@@ -889,8 +935,7 @@ mod tests {
 
     #[test]
     fn should_require_a_range_for_a_summary_and_keep_it_in_order() {
-        let error = parse(Tool::GetSpendingSummary, json!({ "group_by": "category" }))
-            .unwrap_err();
+        let error = parse(Tool::GetSpendingSummary, json!({ "group_by": "category" })).unwrap_err();
         let missing = fields(error);
         assert!(missing.contains_key("from") && missing.contains_key("to"));
 
@@ -910,7 +955,9 @@ mod tests {
                 json!({ "from": "2026-11-01", "to": "2026-11-30", "group_by": grouping }),
             )
             .unwrap();
-            let ToolCall::GetSpendingSummary(args) = call else { panic!("wrong variant") };
+            let ToolCall::GetSpendingSummary(args) = call else {
+                panic!("wrong variant")
+            };
             assert_eq!(args.group_by.as_str(), grouping);
         }
     }
@@ -944,10 +991,15 @@ mod tests {
         )
         .unwrap();
 
-        let ToolCall::AddTransactionItems(args) = call else { panic!("wrong variant") };
+        let ToolCall::AddTransactionItems(args) = call else {
+            panic!("wrong variant")
+        };
         assert_eq!(args.items.len(), 1);
         assert_eq!(args.items[0].amount, Decimal::from_str("25000").unwrap());
-        assert_eq!(args.items[0].quantity, Some(Decimal::from_str("2").unwrap()));
+        assert_eq!(
+            args.items[0].quantity,
+            Some(Decimal::from_str("2").unwrap())
+        );
     }
 
     #[test]
@@ -1023,7 +1075,9 @@ mod tests {
             json!({ "name": "  Fo\u{0000}od\n", "type": "expense" }),
         )
         .unwrap();
-        let ToolCall::CreateCategory(args) = call else { panic!("wrong variant") };
+        let ToolCall::CreateCategory(args) = call else {
+            panic!("wrong variant")
+        };
         assert_eq!(args.name, "Food");
     }
 }

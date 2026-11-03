@@ -656,15 +656,25 @@
 
 			<div role="rowgroup">
 			{#if sorted.length === 0}
-				<div class="border-border border-b">
+				<!--
+					A row, because a rowgroup may only hold rows: an empty
+					state parked loose inside one leaves the table's ARIA
+					contract broken, which axe fails on and a screen reader
+					reads as a table with nothing in it at all (UI-6). Same
+					shape a native table uses for this, a single cell
+					spanning the width.
+				-->
+				<div role="row" class="border-border border-b">
 					<!-- Two empty states, not one: "none yet" and "none matching"
 					     need different words and different next steps (UI-2). -->
+					<div role="cell">
 					<DataTableEmptyState
 						title={emptyTitle}
 						description={emptyDescription}
 						actionLabel={canEdit ? emptyActionLabel : undefined}
 						onAction={onAdd}
 					/>
+					</div>
 				</div>
 			{/if}
 

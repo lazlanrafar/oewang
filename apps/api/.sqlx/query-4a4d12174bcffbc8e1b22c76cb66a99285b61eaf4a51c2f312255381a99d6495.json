@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT count(*) as \"count!\"\n           FROM vault_files\n           WHERE workspace_id = $1 AND created_at >= date_trunc('day', now())",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count!",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "4a4d12174bcffbc8e1b22c76cb66a99285b61eaf4a51c2f312255381a99d6495"
+}

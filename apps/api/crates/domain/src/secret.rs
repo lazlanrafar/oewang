@@ -65,7 +65,9 @@ mod tests {
         struct Config {
             jwt_secret: Secret,
         }
-        let config = Config { jwt_secret: Secret::new("leak-me") };
+        let config = Config {
+            jwt_secret: Secret::new("leak-me"),
+        };
         assert!(!format!("{config:?}").contains("leak-me"));
     }
 

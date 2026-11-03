@@ -19,6 +19,10 @@ use sqlx::PgPool;
 
 use crate::{audit::Actor, vault::service};
 
+/// The configured ceiling, out of the way of these tests: what they
+/// are about is the bytes and the rows, not the daily allowance (SEC-18).
+const UPLOADS_PER_DAY: i64 = 200;
+
 const WORKSPACE: &str = "ws_test";
 const USER: &str = "usr_test";
 
@@ -44,7 +48,10 @@ impl MemoryStore {
 
 impl Storage for MemoryStore {
     async fn put(&self, key: &str, bytes: &[u8]) -> StorageResult<()> {
-        self.objects.lock().unwrap().insert(key.to_string(), bytes.to_vec());
+        self.objects
+            .lock()
+            .unwrap()
+            .insert(key.to_string(), bytes.to_vec());
         Ok(())
     }
 
@@ -64,11 +71,13 @@ impl Storage for MemoryStore {
 }
 
 async fn fixture(pool: &PgPool) {
-    sqlx::query("INSERT INTO users (id, email, password_hash) VALUES ($1, 'test@example.com', 'x')")
-        .bind(USER)
-        .execute(pool)
-        .await
-        .unwrap();
+    sqlx::query(
+        "INSERT INTO users (id, email, password_hash) VALUES ($1, 'test@example.com', 'x')",
+    )
+    .bind(USER)
+    .execute(pool)
+    .await
+    .unwrap();
     sqlx::query(
         "INSERT INTO workspaces (id, name, slug, currency_code) VALUES ($1, 'Test', 'test', 'IDR')",
     )
@@ -100,7 +109,16 @@ async fn upload(
     declared: &str,
     bytes: &[u8],
 ) -> Result<service::VaultFileRow, AppError> {
-    let begun = service::begin(pool, actor(), "receipt.jpg", declared, bytes.len() as i64).await?;
+    let begun = service::begin(
+        pool,
+        actor(),
+        "receipt.jpg",
+        declared,
+        bytes.len() as i64,
+        UPLOADS_PER_DAY,
+        MAX_FILE_BYTES,
+    )
+    .await?;
 
     for (index, chunk) in bytes.chunks(CHUNK_BYTES as usize).enumerate() {
         service::put_chunk(pool, store, WORKSPACE, &begun.file.id, index as u32, chunk).await?;
@@ -141,12 +159,23 @@ async fn should_build_the_key_from_ids_and_never_from_the_filename(pool: PgPool)
     fixture(&pool).await;
 
     // A filename that would be a path traversal if it ever became one.
-    let begun = service::begin(&pool, actor(), "../../etc/passwd", "image/jpeg", 10)
-        .await
-        .unwrap();
+    let begun = service::begin(
+        &pool,
+        actor(),
+        "../../etc/passwd",
+        "image/jpeg",
+        10,
+        UPLOADS_PER_DAY,
+        MAX_FILE_BYTES,
+    )
+    .await
+    .unwrap();
 
     assert_eq!(begun.file.key, format!("wsp/{WORKSPACE}/{}", begun.file.id));
-    assert_eq!(begun.file.name, ".._.._etc_passwd", "kept as a label, not a path");
+    assert_eq!(
+        begun.file.name, ".._.._etc_passwd",
+        "kept as a label, not a path"
+    );
 }
 
 // -------------------------------------------------------------- the refusals
@@ -157,19 +186,25 @@ async fn should_refuse_a_renamed_executable_and_keep_nothing(pool: PgPool) {
     fixture(&pool).await;
     let store = MemoryStore::default();
 
-    let error = upload(&pool, &store, "image/jpeg", b"\x7fELF\x02\x01\x01\x00 pretending")
-        .await
-        .unwrap_err();
+    let error = upload(
+        &pool,
+        &store,
+        "image/jpeg",
+        b"\x7fELF\x02\x01\x01\x00 pretending",
+    )
+    .await
+    .unwrap_err();
 
     assert!(matches!(error, AppError::UnsupportedFileType), "{error:?}");
-    assert!(store.keys().is_empty(), "a rejected upload leaves no bytes behind");
+    assert!(
+        store.keys().is_empty(),
+        "a rejected upload leaves no bytes behind"
+    );
 
-    let live: i64 = sqlx::query_scalar(
-        "SELECT count(*) FROM vault_files WHERE deleted_at IS NULL",
-    )
-    .fetch_one(&pool)
-    .await
-    .unwrap();
+    let live: i64 = sqlx::query_scalar("SELECT count(*) FROM vault_files WHERE deleted_at IS NULL")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
     assert_eq!(live, 0, "and no row either");
 }
 
@@ -185,17 +220,37 @@ async fn should_refuse_svg_however_it_is_declared(pool: PgPool) {
     assert!(matches!(error, AppError::UnsupportedFileType));
 
     // Declared honestly, and refused at the door.
-    let declared = service::begin(&pool, actor(), "x.svg", "image/svg+xml", 10).await;
-    assert!(matches!(declared.unwrap_err(), AppError::UnsupportedFileType));
+    let declared = service::begin(
+        &pool,
+        actor(),
+        "x.svg",
+        "image/svg+xml",
+        10,
+        UPLOADS_PER_DAY,
+        MAX_FILE_BYTES,
+    )
+    .await;
+    assert!(matches!(
+        declared.unwrap_err(),
+        AppError::UnsupportedFileType
+    ));
 }
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_refuse_a_file_over_the_ceiling_before_a_byte_arrives(pool: PgPool) {
     fixture(&pool).await;
 
-    let error = service::begin(&pool, actor(), "big.jpg", "image/jpeg", MAX_FILE_BYTES + 1)
-        .await
-        .unwrap_err();
+    let error = service::begin(
+        &pool,
+        actor(),
+        "big.jpg",
+        "image/jpeg",
+        MAX_FILE_BYTES + 1,
+        UPLOADS_PER_DAY,
+        MAX_FILE_BYTES,
+    )
+    .await
+    .unwrap_err();
 
     assert!(matches!(error, AppError::FileTooLarge), "{error:?}");
 }
@@ -205,7 +260,17 @@ async fn should_refuse_an_oversized_chunk(pool: PgPool) {
     fixture(&pool).await;
     let store = MemoryStore::default();
 
-    let begun = service::begin(&pool, actor(), "r.jpg", "image/jpeg", 1024).await.unwrap();
+    let begun = service::begin(
+        &pool,
+        actor(),
+        "r.jpg",
+        "image/jpeg",
+        1024,
+        UPLOADS_PER_DAY,
+        MAX_FILE_BYTES,
+    )
+    .await
+    .unwrap();
     let too_big = vec![0u8; CHUNK_BYTES as usize + 1];
 
     let error = service::put_chunk(&pool, &store, WORKSPACE, &begun.file.id, 0, &too_big)
@@ -219,7 +284,17 @@ async fn should_refuse_a_chunk_past_the_end_of_the_file(pool: PgPool) {
     fixture(&pool).await;
     let store = MemoryStore::default();
 
-    let begun = service::begin(&pool, actor(), "r.jpg", "image/jpeg", 1024).await.unwrap();
+    let begun = service::begin(
+        &pool,
+        actor(),
+        "r.jpg",
+        "image/jpeg",
+        1024,
+        UPLOADS_PER_DAY,
+        MAX_FILE_BYTES,
+    )
+    .await
+    .unwrap();
 
     let error = service::put_chunk(&pool, &store, WORKSPACE, &begun.file.id, 7, b"x")
         .await
@@ -232,7 +307,17 @@ async fn should_refuse_to_complete_an_upload_that_is_short(pool: PgPool) {
     fixture(&pool).await;
     let store = MemoryStore::default();
 
-    let begun = service::begin(&pool, actor(), "r.jpg", "image/jpeg", 2048).await.unwrap();
+    let begun = service::begin(
+        &pool,
+        actor(),
+        "r.jpg",
+        "image/jpeg",
+        2048,
+        UPLOADS_PER_DAY,
+        MAX_FILE_BYTES,
+    )
+    .await
+    .unwrap();
     service::put_chunk(&pool, &store, WORKSPACE, &begun.file.id, 0, &jpeg(1000))
         .await
         .unwrap();
@@ -248,7 +333,9 @@ async fn should_not_reopen_a_finished_upload(pool: PgPool) {
     fixture(&pool).await;
     let store = MemoryStore::default();
 
-    let file = upload(&pool, &store, "image/jpeg", &jpeg(100)).await.unwrap();
+    let file = upload(&pool, &store, "image/jpeg", &jpeg(100))
+        .await
+        .unwrap();
 
     // The hash is recorded; letting a chunk through now would change the
     // bytes under anything already attached to it.
@@ -263,7 +350,17 @@ async fn should_not_serve_a_file_that_is_still_uploading(pool: PgPool) {
     fixture(&pool).await;
     let store = MemoryStore::default();
 
-    let begun = service::begin(&pool, actor(), "r.jpg", "image/jpeg", 100).await.unwrap();
+    let begun = service::begin(
+        &pool,
+        actor(),
+        "r.jpg",
+        "image/jpeg",
+        100,
+        UPLOADS_PER_DAY,
+        MAX_FILE_BYTES,
+    )
+    .await
+    .unwrap();
     service::put_chunk(&pool, &store, WORKSPACE, &begun.file.id, 0, &jpeg(100))
         .await
         .unwrap();
@@ -288,21 +385,29 @@ async fn should_answer_not_found_across_a_workspace_boundary(pool: PgPool) {
     .await
     .unwrap();
 
-    let file = upload(&pool, &store, "image/jpeg", &jpeg(100)).await.unwrap();
+    let file = upload(&pool, &store, "image/jpeg", &jpeg(100))
+        .await
+        .unwrap();
     let intruder = Actor::web("ws_other", USER);
 
     // Not "forbidden": a file in another workspace is a file that does not
     // exist (VLT-4).
     assert!(matches!(
-        service::find(&pool, "ws_other", &file.id).await.unwrap_err(),
+        service::find(&pool, "ws_other", &file.id)
+            .await
+            .unwrap_err(),
         AppError::FileNotFound
     ));
     assert!(matches!(
-        service::read_chunk(&pool, &store, "ws_other", &file.id, 0).await.unwrap_err(),
+        service::read_chunk(&pool, &store, "ws_other", &file.id, 0)
+            .await
+            .unwrap_err(),
         AppError::FileNotFound
     ));
     assert!(matches!(
-        service::delete(&pool, &store, intruder, &file.id).await.unwrap_err(),
+        service::delete(&pool, &store, intruder, &file.id)
+            .await
+            .unwrap_err(),
         AppError::FileNotFound
     ));
 
@@ -316,14 +421,24 @@ async fn should_drop_the_bytes_when_a_file_is_deleted(pool: PgPool) {
     fixture(&pool).await;
     let store = MemoryStore::default();
 
-    let file = upload(&pool, &store, "image/jpeg", &jpeg(CHUNK_BYTES as usize + 10))
-        .await
-        .unwrap();
+    let file = upload(
+        &pool,
+        &store,
+        "image/jpeg",
+        &jpeg(CHUNK_BYTES as usize + 10),
+    )
+    .await
+    .unwrap();
     assert_eq!(store.keys().len(), 2);
 
-    service::delete(&pool, &store, actor(), &file.id).await.unwrap();
+    service::delete(&pool, &store, actor(), &file.id)
+        .await
+        .unwrap();
 
-    assert!(store.keys().is_empty(), "a deleted receipt is not left readable");
+    assert!(
+        store.keys().is_empty(),
+        "a deleted receipt is not left readable"
+    );
     assert!(matches!(
         service::find(&pool, WORKSPACE, &file.id).await.unwrap_err(),
         AppError::FileNotFound
@@ -337,5 +452,8 @@ async fn should_drop_the_bytes_when_a_file_is_deleted(pool: PgPool) {
     .fetch_all(&pool)
     .await
     .unwrap();
-    assert_eq!(actions, vec!["file.created", "file.uploaded", "file.deleted"]);
+    assert_eq!(
+        actions,
+        vec!["file.created", "file.uploaded", "file.deleted"]
+    );
 }

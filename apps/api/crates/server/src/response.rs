@@ -55,8 +55,8 @@ pub struct ApiError {
 
 impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
-        let status = StatusCode::from_u16(self.error.status())
-            .unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
+        let status =
+            StatusCode::from_u16(self.error.status()).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
         let is_transport = self.error.is_transport();
 
         if let AppError::Internal(source) = &self.error {
@@ -73,7 +73,10 @@ impl IntoResponse for ApiError {
         let body = Envelope::<()> {
             data: None,
             error: Some(self.error.to_body(self.request_id.clone())),
-            meta: oewang_domain::Meta { request_id: self.request_id, page: None },
+            meta: oewang_domain::Meta {
+                request_id: self.request_id,
+                page: None,
+            },
         };
 
         let mut response = (status, Json(body)).into_response();
@@ -96,6 +99,9 @@ impl IntoResponse for ApiError {
 
 impl ApiError {
     pub fn new(error: AppError, request_id: impl Into<String>) -> Self {
-        Self { error, request_id: request_id.into() }
+        Self {
+            error,
+            request_id: request_id.into(),
+        }
     }
 }

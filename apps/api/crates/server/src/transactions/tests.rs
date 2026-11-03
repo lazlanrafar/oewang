@@ -17,6 +17,12 @@ use crate::{
     transactions::service::{self, Page, TransactionInput},
 };
 
+/// The configured ceiling, out of the way of these tests: what they
+/// are about is the bytes and the rows, not the daily allowance (SEC-18).
+const UPLOADS_PER_DAY: i64 = 200;
+use crate::transactions::service::IMPORT_LIMIT;
+use oewang_domain::files::MAX_FILE_BYTES;
+
 const WORKSPACE: &str = "ws_test";
 const USER: &str = "usr_test";
 
@@ -40,11 +46,13 @@ fn day(day: u32) -> DateTime<Utc> {
 }
 
 async fn fixture(pool: &PgPool, currency: &str) {
-    sqlx::query("INSERT INTO users (id, email, password_hash) VALUES ($1, 'test@example.com', 'x')")
-        .bind(USER)
-        .execute(pool)
-        .await
-        .unwrap();
+    sqlx::query(
+        "INSERT INTO users (id, email, password_hash) VALUES ($1, 'test@example.com', 'x')",
+    )
+    .bind(USER)
+    .execute(pool)
+    .await
+    .unwrap();
     sqlx::query(
         "INSERT INTO workspaces (id, name, slug, currency_code) VALUES ($1, 'Test', 'test', $2)",
     )
@@ -152,14 +160,20 @@ async fn should_move_the_balance_for_each_type(pool: PgPool) {
     let bank = wallet(&pool, "w_bank", "IDR").await;
     let rates = offline_rates();
 
-    service::create(&pool, &rates, actor(), expense(&cash, "50000")).await.unwrap();
+    service::create(&pool, &rates, actor(), expense(&cash, "50000"))
+        .await
+        .unwrap();
     assert_eq!(balance(&pool, &cash).await, decimal("-50000"));
 
     service::create(
         &pool,
         &rates,
         actor(),
-        TransactionInput { kind: TransactionType::Income, amount: decimal("9500000"), ..expense(&bank, "0") },
+        TransactionInput {
+            kind: TransactionType::Income,
+            amount: decimal("9500000"),
+            ..expense(&bank, "0")
+        },
     )
     .await
     .unwrap();
@@ -193,7 +207,10 @@ async fn should_write_the_audit_row_in_the_same_transaction(pool: PgPool) {
         .await
         .unwrap();
 
-    assert_eq!(audit_actions(&pool, &row.id).await, vec!["transaction.created"]);
+    assert_eq!(
+        audit_actions(&pool, &row.id).await,
+        vec!["transaction.created"]
+    );
     assert_eq!(row.source, "web", "the surface is recorded, not assumed");
 }
 
@@ -203,9 +220,14 @@ async fn should_leave_no_trace_when_a_create_is_refused(pool: PgPool) {
     let cash = wallet(&pool, "w_cash", "IDR").await;
 
     // A wallet from nowhere: the row is refused before anything is written.
-    let error = service::create(&pool, &offline_rates(), actor(), expense("w_ghost", "50000"))
-        .await
-        .unwrap_err();
+    let error = service::create(
+        &pool,
+        &offline_rates(),
+        actor(),
+        expense("w_ghost", "50000"),
+    )
+    .await
+    .unwrap_err();
     assert!(matches!(error, AppError::WalletNotFound), "{error:?}");
 
     assert_eq!(balance(&pool, &cash).await, Decimal::ZERO);
@@ -239,7 +261,10 @@ async fn should_refuse_a_category_from_another_workspace(pool: PgPool) {
         &pool,
         &offline_rates(),
         actor(),
-        TransactionInput { category_id: Some("c_theirs"), ..expense(&cash, "1000") },
+        TransactionInput {
+            category_id: Some("c_theirs"),
+            ..expense(&cash, "1000")
+        },
     )
     .await
     .unwrap_err();
@@ -265,7 +290,11 @@ async fn should_store_the_base_amount_in_the_workspace_currency(pool: PgPool) {
     assert_eq!(row.base_amount, decimal("812500.0000"), "for reporting");
     assert_eq!(row.base_rate, decimal("16250.00000000"));
     assert_eq!(row.base_rate_source, "live");
-    assert_eq!(balance(&pool, &wise).await, decimal("-50"), "the balance moves in USD");
+    assert_eq!(
+        balance(&pool, &wise).await,
+        decimal("-50"),
+        "the balance moves in USD"
+    );
 }
 
 /// The other worked example: USD 50 paid from the IDR wallet. The entry
@@ -293,7 +322,10 @@ async fn should_keep_what_the_user_typed_when_the_entry_currency_differed(pool: 
     assert_eq!(row.amount, decimal("812500.0000"));
     assert_eq!(row.original_amount, Some(decimal("50.0000")));
     assert_eq!(row.original_currency_code.as_deref(), Some("USD"));
-    assert_eq!(row.base_rate_source, "same", "the wallet is already the workspace currency");
+    assert_eq!(
+        row.base_rate_source, "same",
+        "the wallet is already the workspace currency"
+    );
     assert_eq!(row.base_amount, decimal("812500.0000"));
 }
 
@@ -329,7 +361,9 @@ async fn should_walk_every_step_of_the_rate_ladder(pool: PgPool) {
     let rates = offline_rates();
 
     // 1. Same currency: rate one, nothing looked up.
-    let same = service::create(&pool, &rates, actor(), expense(&idr, "1000")).await.unwrap();
+    let same = service::create(&pool, &rates, actor(), expense(&idr, "1000"))
+        .await
+        .unwrap();
     assert_eq!(same.base_rate_source, "same");
     assert_eq!(same.base_rate, decimal("1.00000000"));
 
@@ -337,14 +371,20 @@ async fn should_walk_every_step_of_the_rate_ladder(pool: PgPool) {
     let nothing = service::create(&pool, &rates, actor(), expense(&usd, "50"))
         .await
         .unwrap_err();
-    assert!(matches!(nothing, AppError::FxRateUnavailable), "{nothing:?}");
+    assert!(
+        matches!(nothing, AppError::FxRateUnavailable),
+        "{nothing:?}"
+    );
 
     // 2. The request: the rate the user confirmed wins over any lookup.
     let requested = service::create(
         &pool,
         &rates,
         actor(),
-        TransactionInput { requested_base_rate: Some(decimal("16000")), ..expense(&usd, "50") },
+        TransactionInput {
+            requested_base_rate: Some(decimal("16000")),
+            ..expense(&usd, "50")
+        },
     )
     .await
     .unwrap();
@@ -353,7 +393,9 @@ async fn should_walk_every_step_of_the_rate_ladder(pool: PgPool) {
 
     // 3. The source's rate for the day, read from where it was cached.
     cache_rate(&pool, "USD", "IDR", "2026-11-02", "16250").await;
-    let live = service::create(&pool, &rates, actor(), expense(&usd, "50")).await.unwrap();
+    let live = service::create(&pool, &rates, actor(), expense(&usd, "50"))
+        .await
+        .unwrap();
     assert_eq!(live.base_rate_source, "live");
     assert_eq!(live.base_amount, decimal("812500.0000"));
 
@@ -362,7 +404,10 @@ async fn should_walk_every_step_of_the_rate_ladder(pool: PgPool) {
         &pool,
         &rates,
         actor(),
-        TransactionInput { date: day(5), ..expense(&usd, "50") },
+        TransactionInput {
+            date: day(5),
+            ..expense(&usd, "50")
+        },
     )
     .await
     .unwrap();
@@ -382,7 +427,9 @@ async fn should_not_move_a_historical_total_when_todays_rate_changes(pool: PgPoo
     let usd = wallet(&pool, "w_usd", "USD").await;
     cache_rate(&pool, "USD", "IDR", "2026-11-02", "16250").await;
 
-    service::create(&pool, &offline_rates(), actor(), expense(&usd, "50")).await.unwrap();
+    service::create(&pool, &offline_rates(), actor(), expense(&usd, "50"))
+        .await
+        .unwrap();
 
     let before = total_expense(&pool).await;
 
@@ -392,11 +439,17 @@ async fn should_not_move_a_historical_total_when_todays_rate_changes(pool: PgPoo
         .await
         .unwrap();
 
-    assert_eq!(total_expense(&pool).await, before, "a report is a plain sum of base_amount");
+    assert_eq!(
+        total_expense(&pool).await,
+        before,
+        "a report is a plain sum of base_amount"
+    );
 }
 
 async fn total_expense(pool: &PgPool) -> Decimal {
-    let (by_type, _) = service::summary(pool, WORKSPACE, &Default::default()).await.unwrap();
+    let (by_type, _) = service::summary(pool, WORKSPACE, &Default::default())
+        .await
+        .unwrap();
     by_type
         .into_iter()
         .find(|row| row.r#type == "expense")
@@ -412,7 +465,9 @@ async fn should_reverse_the_old_effect_and_apply_the_new_one(pool: PgPool) {
     let cash = wallet(&pool, "w_cash", "IDR").await;
     let rates = offline_rates();
 
-    let row = service::create(&pool, &rates, actor(), expense(&cash, "50000")).await.unwrap();
+    let row = service::create(&pool, &rates, actor(), expense(&cash, "50000"))
+        .await
+        .unwrap();
     assert_eq!(balance(&pool, &cash).await, decimal("-50000"));
 
     service::update(&pool, &rates, actor(), &row.id, expense(&cash, "87500"))
@@ -434,18 +489,24 @@ async fn should_recompute_every_type_transition(pool: PgPool) {
     let b = wallet(&pool, "w_b", "IDR").await;
     let rates = offline_rates();
 
-    let types = [TransactionType::Expense, TransactionType::Income, TransactionType::Transfer];
+    let types = [
+        TransactionType::Expense,
+        TransactionType::Income,
+        TransactionType::Transfer,
+    ];
 
     for from in types {
         for to in types {
             // A fresh pair of balances per case, so each one is read alone.
-            sqlx::query("UPDATE wallets SET balance = 0").execute(&pool).await.unwrap();
+            sqlx::query("UPDATE wallets SET balance = 0")
+                .execute(&pool)
+                .await
+                .unwrap();
 
             let make = |kind: TransactionType, amount: &str| TransactionInput {
                 kind,
                 to_wallet_id: matches!(kind, TransactionType::Transfer).then_some(b.as_str()),
-                to_amount: matches!(kind, TransactionType::Transfer)
-                    .then(|| decimal(amount)),
+                to_amount: matches!(kind, TransactionType::Transfer).then(|| decimal(amount)),
                 amount: decimal(amount),
                 ..expense(&a, "0")
             };
@@ -463,8 +524,16 @@ async fn should_recompute_every_type_transition(pool: PgPool) {
                 TransactionType::Transfer => (decimal("-87500"), decimal("87500")),
             };
 
-            assert_eq!(balance(&pool, &a).await, expected_a, "{from:?} -> {to:?} on the source");
-            assert_eq!(balance(&pool, &b).await, expected_b, "{from:?} -> {to:?} on the target");
+            assert_eq!(
+                balance(&pool, &a).await,
+                expected_a,
+                "{from:?} -> {to:?} on the source"
+            );
+            assert_eq!(
+                balance(&pool, &b).await,
+                expected_b,
+                "{from:?} -> {to:?} on the target"
+            );
 
             service::delete(&pool, actor(), &row.id).await.unwrap();
         }
@@ -478,10 +547,18 @@ async fn should_follow_a_transaction_that_moves_to_another_wallet(pool: PgPool) 
     let b = wallet(&pool, "w_b", "IDR").await;
     let rates = offline_rates();
 
-    let row = service::create(&pool, &rates, actor(), expense(&a, "50000")).await.unwrap();
-    service::update(&pool, &rates, actor(), &row.id, expense(&b, "50000")).await.unwrap();
+    let row = service::create(&pool, &rates, actor(), expense(&a, "50000"))
+        .await
+        .unwrap();
+    service::update(&pool, &rates, actor(), &row.id, expense(&b, "50000"))
+        .await
+        .unwrap();
 
-    assert_eq!(balance(&pool, &a).await, Decimal::ZERO, "the first wallet is made whole");
+    assert_eq!(
+        balance(&pool, &a).await,
+        Decimal::ZERO,
+        "the first wallet is made whole"
+    );
     assert_eq!(balance(&pool, &b).await, decimal("-50000"));
 }
 
@@ -491,8 +568,12 @@ async fn should_record_before_and_after_on_an_update(pool: PgPool) {
     let cash = wallet(&pool, "w_cash", "IDR").await;
     let rates = offline_rates();
 
-    let row = service::create(&pool, &rates, actor(), expense(&cash, "50000")).await.unwrap();
-    service::update(&pool, &rates, actor(), &row.id, expense(&cash, "87500")).await.unwrap();
+    let row = service::create(&pool, &rates, actor(), expense(&cash, "50000"))
+        .await
+        .unwrap();
+    service::update(&pool, &rates, actor(), &row.id, expense(&cash, "87500"))
+        .await
+        .unwrap();
 
     let entry: (Option<serde_json::Value>, Option<serde_json::Value>) = sqlx::query_as(
         "SELECT before, after FROM audit_logs WHERE entity_id = $1 AND action = 'transaction.updated'",
@@ -535,7 +616,9 @@ async fn should_reverse_the_balance_when_a_transaction_is_deleted(pool: PgPool) 
     assert_eq!(balance(&pool, &a).await, Decimal::ZERO);
     assert_eq!(balance(&pool, &b).await, Decimal::ZERO);
     assert!(matches!(
-        service::find(&pool, WORKSPACE, &transfer.id).await.unwrap_err(),
+        service::find(&pool, WORKSPACE, &transfer.id)
+            .await
+            .unwrap_err(),
         AppError::TransactionNotFound
     ));
     assert_eq!(
@@ -609,7 +692,11 @@ async fn should_not_deadlock_on_opposite_transfers(pool: PgPool) {
     one.await.unwrap();
     other.await.unwrap();
 
-    assert_eq!(balance(&pool, &a).await, Decimal::ZERO, "ten each way nets to nothing");
+    assert_eq!(
+        balance(&pool, &a).await,
+        Decimal::ZERO,
+        "ten each way nets to nothing"
+    );
     assert_eq!(balance(&pool, &b).await, Decimal::ZERO);
 }
 
@@ -628,7 +715,9 @@ async fn should_skip_a_duplicate_rather_than_fail_the_import(pool: PgPool) {
         expense(&cash, "87500"),
     ];
 
-    let outcome = service::bulk_create(&pool, actor(), rows).await.unwrap();
+    let outcome = service::bulk_create(&pool, actor(), rows, IMPORT_LIMIT)
+        .await
+        .unwrap();
 
     assert_eq!(outcome.created, 2);
     assert_eq!(outcome.duplicates, 1);
@@ -646,9 +735,13 @@ async fn should_report_a_bad_row_and_commit_the_rest(pool: PgPool) {
         actor(),
         vec![
             expense(&cash, "50000"),
-            TransactionInput { amount: Decimal::ZERO, ..expense(&cash, "0") },
+            TransactionInput {
+                amount: Decimal::ZERO,
+                ..expense(&cash, "0")
+            },
             expense(&cash, "87500"),
         ],
+        IMPORT_LIMIT,
     )
     .await
     .unwrap();
@@ -673,11 +766,21 @@ async fn should_convert_each_imported_row_at_its_own_dates_rate(pool: PgPool) {
         &pool,
         actor(),
         vec![
-            TransactionInput { date: day(2), ..expense(&usd, "10") },
-            TransactionInput { date: day(3), ..expense(&usd, "10") },
+            TransactionInput {
+                date: day(2),
+                ..expense(&usd, "10")
+            },
+            TransactionInput {
+                date: day(3),
+                ..expense(&usd, "10")
+            },
             // No rate was ever cached for this day.
-            TransactionInput { date: day(4), ..expense(&usd, "10") },
+            TransactionInput {
+                date: day(4),
+                ..expense(&usd, "10")
+            },
         ],
+        IMPORT_LIMIT,
     )
     .await
     .unwrap();
@@ -689,12 +792,11 @@ async fn should_convert_each_imported_row_at_its_own_dates_rate(pool: PgPool) {
         "reported apart from an invalid row, because the fix is a rate backfill"
     );
 
-    let totals: Vec<Decimal> = sqlx::query_scalar(
-        "SELECT base_amount FROM transactions ORDER BY date",
-    )
-    .fetch_all(&pool)
-    .await
-    .unwrap();
+    let totals: Vec<Decimal> =
+        sqlx::query_scalar("SELECT base_amount FROM transactions ORDER BY date")
+            .fetch_all(&pool)
+            .await
+            .unwrap();
     assert_eq!(totals, vec![decimal("162500.0000"), decimal("165000.0000")]);
 }
 
@@ -707,7 +809,12 @@ async fn should_apply_a_bulk_category_change_in_one_transaction(pool: PgPool) {
 
     let mut ids = Vec::new();
     for amount in ["1000", "2000", "3000"] {
-        ids.push(service::create(&pool, &rates, actor(), expense(&cash, amount)).await.unwrap().id);
+        ids.push(
+            service::create(&pool, &rates, actor(), expense(&cash, amount))
+                .await
+                .unwrap()
+                .id,
+        );
     }
 
     let affected = service::bulk_update(&pool, actor(), &ids, Some(Some(&food)), Some(true))
@@ -726,9 +833,15 @@ async fn should_apply_a_bulk_category_change_in_one_transaction(pool: PgPool) {
     .await
     .unwrap();
 
-    assert!(rows.iter().all(|row| row.category_id.as_deref() == Some(food.as_str())));
+    assert!(rows
+        .iter()
+        .all(|row| row.category_id.as_deref() == Some(food.as_str())));
     assert!(rows.iter().all(|row| row.is_ready));
-    assert_eq!(balance(&pool, &cash).await, decimal("-6000"), "a label change moves no money");
+    assert_eq!(
+        balance(&pool, &cash).await,
+        decimal("-6000"),
+        "a label change moves no money"
+    );
 }
 
 #[sqlx::test(migrations = "../../migrations")]
@@ -739,7 +852,12 @@ async fn should_reverse_every_balance_on_a_bulk_delete(pool: PgPool) {
 
     let mut ids = Vec::new();
     for amount in ["1000", "2000", "3000"] {
-        ids.push(service::create(&pool, &rates, actor(), expense(&cash, amount)).await.unwrap().id);
+        ids.push(
+            service::create(&pool, &rates, actor(), expense(&cash, amount))
+                .await
+                .unwrap()
+                .id,
+        );
     }
     assert_eq!(balance(&pool, &cash).await, decimal("-6000"));
 
@@ -747,7 +865,10 @@ async fn should_reverse_every_balance_on_a_bulk_delete(pool: PgPool) {
     assert_eq!(balance(&pool, &cash).await, Decimal::ZERO);
 
     for id in &ids {
-        assert_eq!(audit_actions(&pool, id).await.last().unwrap(), "transaction.deleted");
+        assert_eq!(
+            audit_actions(&pool, id).await.last().unwrap(),
+            "transaction.deleted"
+        );
     }
 }
 
@@ -774,7 +895,11 @@ async fn should_filter_search_and_page_the_list(pool: PgPool) {
         &pool,
         &rates,
         actor(),
-        TransactionInput { name: Some("Warung Tekko"), category_id: Some(&food), ..expense(&cash, "50000") },
+        TransactionInput {
+            name: Some("Warung Tekko"),
+            category_id: Some(&food),
+            ..expense(&cash, "50000")
+        },
     )
     .await
     .unwrap();
@@ -782,7 +907,11 @@ async fn should_filter_search_and_page_the_list(pool: PgPool) {
         &pool,
         &rates,
         actor(),
-        TransactionInput { name: Some("Gojek"), date: day(3), ..expense(&cash, "24000") },
+        TransactionInput {
+            name: Some("Gojek"),
+            date: day(3),
+            ..expense(&cash, "24000")
+        },
     )
     .await
     .unwrap();
@@ -790,7 +919,11 @@ async fn should_filter_search_and_page_the_list(pool: PgPool) {
         &pool,
         &rates,
         actor(),
-        TransactionInput { name: Some("Electricity"), date: day(4), ..expense(&bank, "412000") },
+        TransactionInput {
+            name: Some("Electricity"),
+            date: day(4),
+            ..expense(&bank, "412000")
+        },
     )
     .await
     .unwrap();
@@ -811,21 +944,52 @@ async fn should_filter_search_and_page_the_list(pool: PgPool) {
     }
 
     assert_eq!(
-        matching(&pool, service::TransactionFilters { wallet_id: Some(&cash), ..Default::default() }).await,
+        matching(
+            &pool,
+            service::TransactionFilters {
+                wallet_id: Some(&cash),
+                ..Default::default()
+            }
+        )
+        .await,
         (2, 2)
     );
     assert_eq!(
-        matching(&pool, service::TransactionFilters { category_id: Some(&food), ..Default::default() }).await.0,
+        matching(
+            &pool,
+            service::TransactionFilters {
+                category_id: Some(&food),
+                ..Default::default()
+            }
+        )
+        .await
+        .0,
         1
     );
 
     // Case-insensitive, and the pattern is bound, never formatted in.
     assert_eq!(
-        matching(&pool, service::TransactionFilters { search: Some("tekko"), ..Default::default() }).await.0,
+        matching(
+            &pool,
+            service::TransactionFilters {
+                search: Some("tekko"),
+                ..Default::default()
+            }
+        )
+        .await
+        .0,
         1
     );
     assert_eq!(
-        matching(&pool, service::TransactionFilters { search: Some("%"), ..Default::default() }).await.0,
+        matching(
+            &pool,
+            service::TransactionFilters {
+                search: Some("%"),
+                ..Default::default()
+            }
+        )
+        .await
+        .0,
         0,
         "a wildcard typed by a user is a literal percent sign"
     );
@@ -918,8 +1082,12 @@ async fn should_return_the_history_of_one_transaction(pool: PgPool) {
     let cash = wallet(&pool, "w_cash", "IDR").await;
     let rates = offline_rates();
 
-    let row = service::create(&pool, &rates, actor(), expense(&cash, "50000")).await.unwrap();
-    service::update(&pool, &rates, actor(), &row.id, expense(&cash, "87500")).await.unwrap();
+    let row = service::create(&pool, &rates, actor(), expense(&cash, "50000"))
+        .await
+        .unwrap();
+    service::update(&pool, &rates, actor(), &row.id, expense(&cash, "87500"))
+        .await
+        .unwrap();
 
     let history = service::history(&pool, WORKSPACE, &row.id).await.unwrap();
 
@@ -1053,14 +1221,21 @@ async fn should_import_a_statement_and_report_what_it_could_not_read(pool: PgPoo
         &mapping,
         &rows,
         &categories,
+        IMPORT_LIMIT,
     )
     .await
     .unwrap();
 
     assert_eq!(outcome.created, 2);
-    assert_eq!(outcome.duplicates, 1, "the same row twice is counted, not failed");
+    assert_eq!(
+        outcome.duplicates, 1,
+        "the same row twice is counted, not failed"
+    );
     assert_eq!(outcome.skipped.len(), 1);
-    assert_eq!(outcome.skipped[0].index, 2, "the index is the file's line, not the batch's");
+    assert_eq!(
+        outcome.skipped[0].index, 2,
+        "the index is the file's line, not the batch's"
+    );
 
     // The debit became an expense and the credit an income, and the sign
     // rule is in code rather than in the model (D28).
@@ -1122,6 +1297,8 @@ async fn uploaded_file(pool: &PgPool, store: &crate::vault::tests::MemoryStore) 
         "receipt.jpg",
         "image/jpeg",
         bytes.len() as i64,
+        UPLOADS_PER_DAY,
+        MAX_FILE_BYTES,
     )
     .await
     .unwrap();
@@ -1150,12 +1327,17 @@ async fn should_sync_attachments_without_deleting_the_file(pool: PgPool) {
         &pool,
         &rates,
         actor(),
-        TransactionInput { attachment_ids: Some(&attached), ..expense(&cash, "50000") },
+        TransactionInput {
+            attachment_ids: Some(&attached),
+            ..expense(&cash, "50000")
+        },
     )
     .await
     .unwrap();
 
-    let files = service::list_attachments(&pool, WORKSPACE, &row.id).await.unwrap();
+    let files = service::list_attachments(&pool, WORKSPACE, &row.id)
+        .await
+        .unwrap();
     assert_eq!(files.len(), 2);
 
     // Drop one. The join row goes; the file stays (VLT-5).
@@ -1165,17 +1347,24 @@ async fn should_sync_attachments_without_deleting_the_file(pool: PgPool) {
         &rates,
         actor(),
         &row.id,
-        TransactionInput { attachment_ids: Some(&kept), ..expense(&cash, "50000") },
+        TransactionInput {
+            attachment_ids: Some(&kept),
+            ..expense(&cash, "50000")
+        },
     )
     .await
     .unwrap();
 
-    let files = service::list_attachments(&pool, WORKSPACE, &row.id).await.unwrap();
+    let files = service::list_attachments(&pool, WORKSPACE, &row.id)
+        .await
+        .unwrap();
     assert_eq!(files.len(), 1);
     assert_eq!(files[0].file_id, first);
 
     assert!(
-        crate::vault::service::find(&pool, WORKSPACE, &second).await.is_ok(),
+        crate::vault::service::find(&pool, WORKSPACE, &second)
+            .await
+            .is_ok(),
         "the detached file is still a file"
     );
 
@@ -1186,12 +1375,18 @@ async fn should_sync_attachments_without_deleting_the_file(pool: PgPool) {
         &rates,
         actor(),
         &row.id,
-        TransactionInput { attachment_ids: None, ..expense(&cash, "87500") },
+        TransactionInput {
+            attachment_ids: None,
+            ..expense(&cash, "87500")
+        },
     )
     .await
     .unwrap();
     assert_eq!(
-        service::list_attachments(&pool, WORKSPACE, &row.id).await.unwrap().len(),
+        service::list_attachments(&pool, WORKSPACE, &row.id)
+            .await
+            .unwrap()
+            .len(),
         1
     );
 }
@@ -1221,13 +1416,20 @@ async fn should_refuse_a_file_from_another_workspace(pool: PgPool) {
         &pool,
         &offline_rates(),
         actor(),
-        TransactionInput { attachment_ids: Some(&ids), ..expense(&cash, "50000") },
+        TransactionInput {
+            attachment_ids: Some(&ids),
+            ..expense(&cash, "50000")
+        },
     )
     .await
     .unwrap_err();
 
     assert!(matches!(error, AppError::FileNotFound), "{error:?}");
-    assert_eq!(balance(&pool, &cash).await, Decimal::ZERO, "and nothing was written");
+    assert_eq!(
+        balance(&pool, &cash).await,
+        Decimal::ZERO,
+        "and nothing was written"
+    );
 }
 
 #[sqlx::test(migrations = "../../migrations")]
@@ -1266,7 +1468,9 @@ async fn should_keep_line_items_off_the_balance(pool: PgPool) {
     );
 
     // The item total is deliberately not forced to match the transaction.
-    let items = service::list_items(&pool, WORKSPACE, &row.id).await.unwrap();
+    let items = service::list_items(&pool, WORKSPACE, &row.id)
+        .await
+        .unwrap();
     assert_eq!(items.len(), 1);
 
     service::replace_item(
@@ -1288,12 +1492,19 @@ async fn should_keep_line_items_off_the_balance(pool: PgPool) {
     .await
     .unwrap();
 
-    let items = service::list_items(&pool, WORKSPACE, &row.id).await.unwrap();
+    let items = service::list_items(&pool, WORKSPACE, &row.id)
+        .await
+        .unwrap();
     assert_eq!(items[0].name, "Nasi goreng spesial");
     assert_eq!(items[0].amount, decimal("40000.0000"));
 
-    service::delete_item(&pool, actor(), &row.id, &item.id).await.unwrap();
-    assert!(service::list_items(&pool, WORKSPACE, &row.id).await.unwrap().is_empty());
+    service::delete_item(&pool, actor(), &row.id, &item.id)
+        .await
+        .unwrap();
+    assert!(service::list_items(&pool, WORKSPACE, &row.id)
+        .await
+        .unwrap()
+        .is_empty());
 
     assert_eq!(
         audit_actions(&pool, &item.id).await,
@@ -1340,4 +1551,160 @@ async fn should_refuse_an_item_on_another_workspaces_transaction(pool: PgPool) {
     .unwrap_err();
 
     assert!(matches!(error, AppError::TransactionNotFound), "{error:?}");
+}
+
+// ------------------------------------------------------- statement imports
+
+/// The job row is the only thing the asynchronous import path writes on its
+/// own, and the modal reads nothing else, so what is tested here is that it
+/// is scoped, that it finishes, and that a job nobody finished reports as
+/// stale rather than as running (AI-4, AI-6).
+mod statement_jobs {
+    use super::*;
+    use oewang_db::repositories::transactions as repo;
+
+    use crate::transactions::statement;
+
+    async fn vault_file(pool: &PgPool) -> String {
+        let id = "file_statement";
+        sqlx::query(
+            "INSERT INTO vault_files (id, workspace_id, name, key, size, type, status)
+             VALUES ($1, $2, 'statement.pdf', 'k', 10, 'application/pdf', 'ready')",
+        )
+        .bind(id)
+        .bind(WORKSPACE)
+        .execute(pool)
+        .await
+        .unwrap();
+        id.to_string()
+    }
+
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn should_record_the_document_a_job_read(pool: PgPool) {
+        fixture(&pool, "IDR").await;
+        let file = vault_file(&pool).await;
+
+        let job = repo::insert_import_job(&pool, "job_1", WORKSPACE, USER, &file)
+            .await
+            .unwrap();
+
+        assert_eq!(job.status, "pending");
+        // Without this a retry after a failure would have to upload the
+        // statement again (AI-6).
+        assert_eq!(job.vault_file_id.as_deref(), Some(file.as_str()));
+        assert_eq!(job.imported, None, "a pending job counts nothing yet");
+    }
+
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn should_not_find_a_job_from_another_workspace(pool: PgPool) {
+        fixture(&pool, "IDR").await;
+        let file = vault_file(&pool).await;
+        repo::insert_import_job(&pool, "job_1", WORKSPACE, USER, &file)
+            .await
+            .unwrap();
+
+        let error = statement::find(&pool, "ws_other", "job_1")
+            .await
+            .unwrap_err();
+
+        assert!(matches!(error, AppError::ImportJobNotFound), "{error:?}");
+    }
+
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn should_keep_the_three_counts_apart(pool: PgPool) {
+        fixture(&pool, "IDR").await;
+        let file = vault_file(&pool).await;
+        repo::insert_import_job(&pool, "job_1", WORKSPACE, USER, &file)
+            .await
+            .unwrap();
+
+        repo::finish_import_job(
+            &pool,
+            "job_1",
+            repo::JobOutcome {
+                status: "succeeded",
+                imported: 40,
+                skipped: 2,
+                duplicates: 4,
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+
+        let job = statement::find(&pool, WORKSPACE, "job_1").await.unwrap();
+        assert_eq!(job.status, "succeeded");
+        assert_eq!(
+            (job.imported, job.skipped, job.duplicates),
+            (Some(40), Some(2), Some(4))
+        );
+        assert!(!statement::is_stale(&job), "a finished job is not stale");
+    }
+
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn should_keep_the_review_list_beside_the_counts(pool: PgPool) {
+        fixture(&pool, "IDR").await;
+        let file = vault_file(&pool).await;
+        repo::insert_import_job(&pool, "job_1", WORKSPACE, USER, &file)
+            .await
+            .unwrap();
+
+        let review = serde_json::json!({
+            "rows": [
+                { "date": "2026-11-02", "name": "WARUNG TEKKO", "amount": "87500",
+                  "direction": "expense", "status": "imported" },
+                { "date": "2026-11-02", "name": "WARUNG TEKKO", "amount": "87500",
+                  "direction": "expense", "status": "duplicate" },
+            ],
+            "truncated": false,
+        });
+
+        repo::finish_import_job(
+            &pool,
+            "job_1",
+            repo::JobOutcome {
+                status: "succeeded",
+                imported: 1,
+                duplicates: 1,
+                review: Some(&review),
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+
+        let job = statement::find(&pool, WORKSPACE, "job_1").await.unwrap();
+        let stored = job.review.expect("the review list was written");
+
+        // A count cannot answer "which of my rows was the duplicate", and
+        // that is the question the review screen exists for (TXN-16).
+        assert_eq!(stored["rows"][1]["status"], "duplicate");
+        assert_eq!(stored["truncated"], false);
+    }
+
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn should_record_a_failure_as_a_code_and_nothing_else(pool: PgPool) {
+        fixture(&pool, "IDR").await;
+        let file = vault_file(&pool).await;
+        repo::insert_import_job(&pool, "job_1", WORKSPACE, USER, &file)
+            .await
+            .unwrap();
+
+        repo::finish_import_job(
+            &pool,
+            "job_1",
+            repo::JobOutcome {
+                status: "failed",
+                error: Some("STATEMENT_UNREADABLE"),
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+
+        let job = statement::find(&pool, WORKSPACE, "job_1").await.unwrap();
+        assert_eq!(job.error.as_deref(), Some("STATEMENT_UNREADABLE"));
+        // A message could quote the statement back (OPS-3).
+        assert!(!job.error.unwrap().contains(' '));
+    }
 }

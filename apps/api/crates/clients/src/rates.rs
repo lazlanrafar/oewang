@@ -142,7 +142,10 @@ mod tests {
     fn should_read_the_keyless_dialect() {
         let body: RateResponse =
             serde_json::from_str(r#"{"success":true,"rates":{"IDR":16250.5}}"#).unwrap();
-        assert_eq!(body.find("USD", "IDR"), Some(Decimal::try_from(16250.5).unwrap()));
+        assert_eq!(
+            body.find("USD", "IDR"),
+            Some(Decimal::try_from(16250.5).unwrap())
+        );
     }
 
     #[test]
@@ -174,10 +177,15 @@ mod tests {
     #[test]
     fn should_switch_dialect_on_whether_a_key_is_configured() {
         let keyless = RatesClient::new("https://rates.test/".into(), None);
-        assert_eq!(keyless.url("USD", "IDR", date()), "https://rates.test/2026-11-02?base=USD&symbols=IDR");
+        assert_eq!(
+            keyless.url("USD", "IDR", date()),
+            "https://rates.test/2026-11-02?base=USD&symbols=IDR"
+        );
 
         let keyed = RatesClient::new("https://rates.test".into(), Some("k".into()));
-        assert!(keyed.url("USD", "IDR", date()).contains("/historical?date=2026-11-02"));
+        assert!(keyed
+            .url("USD", "IDR", date())
+            .contains("/historical?date=2026-11-02"));
     }
 
     #[test]

@@ -94,10 +94,13 @@ pub async fn mark_refresh_token_used(
     executor: impl PgExecutor<'_>,
     id: &str,
 ) -> Result<(), sqlx::Error> {
-    sqlx::query!(r#"UPDATE refresh_tokens SET used_at = now() WHERE id = $1"#, id)
-        .execute(executor)
-        .await
-        .map(|_| ())
+    sqlx::query!(
+        r#"UPDATE refresh_tokens SET used_at = now() WHERE id = $1"#,
+        id
+    )
+    .execute(executor)
+    .await
+    .map(|_| ())
 }
 
 /// Revoke every token descended from one login.

@@ -122,10 +122,10 @@ The response is a suggestion. The rate the user confirms is sent back on the tra
 | POST | `/v1/transactions/bulk` | admin+ | Create many. Used by the CSV wizard commit (TXN-11) |
 | POST | `/v1/transactions/bulk-update` | admin+ | Update many: category, ready flag (TXN-14) |
 | POST | `/v1/transactions/bulk-delete` | admin+ | Soft-delete many, reversing each balance (TXN-14) |
-| POST | `/v1/transactions/import` | admin+ | Upload a statement image or PDF. Returns `202 {job_id}` (AI-4) |
+| POST | `/v1/transactions/import` | admin+ | Read an already-uploaded statement image or PDF. Returns `202 {job_id}` (AI-4) |
 | POST | `/v1/transactions/import/csv` | admin+ | A file's rows as they came out of it, plus a column mapping. Every figure and date is parsed in Rust (TXN-11, D28). Returns created, duplicate and skipped counts |
 | POST | `/v1/transactions/import/map-columns` | admin+ | Column names plus two sample rows in, a proposed mapping out (AI-9). Proxies the AI service, because the browser never calls it directly (PLT-4) |
-| GET | `/v1/transactions/import/{job_id}` | any | Poll an import job: status plus imported, skipped and duplicate counts (AI-6) |
+| GET | `/v1/transactions/import/{job_id}` | any | Poll an import job: status plus imported, skipped and duplicate counts, and whether it has gone stale (AI-6) |
 | GET | `/v1/transactions/{id}` | any | One transaction with items and attachments |
 | GET | `/v1/transactions/{id}/history` | any | Audit history for this transaction: actor, surface, before and after, newest first (OPS-8) |
 | PATCH | `/v1/transactions/{id}` | admin+ | Update. Re-applies the balance delta (TXN-4) |
@@ -166,7 +166,50 @@ The response is a suggestion. The rate the user confirms is sent back on the tra
 }
 ```
 
-`items` and `attachment_ids` are optional. Both are synced inside the same database transaction as the transaction insert.
+`items` and `attachment_ids` are optional. Both are written inside the same database transaction as the transaction insert, so confirming a receipt is one act that either happens or does not: a create followed by six item calls is six acts that can each half-fail, and a crash after the third leaves a transaction whose items do not add up with nothing saying why. Items move no money; only the transaction's own `amount` does (TXN-12). `PATCH` ignores `items`, because editing one needs to address it, which the item routes do.
+
+`source` is optional and is `web` or `receipt`. It names the surface for the audit row (OPS-8) and it is a claim, deliberately a narrow one: `chat` and `import` are written by the API's own paths, so a client naming either is refused. Without it a write is `web`.
+
+### `POST /v1/transactions/import` body
+
+```json
+{ "vault_file_id": "clx…", "wallet_id": "clx…" }
+```
+
+The bytes are not here. A statement is up to 10 MB and a body is capped at 1 MB (SEC-18, VLT-1), so the document is uploaded through the chunked vault path first and named by id (D69, D23). The wallet is required because a statement is an account's statement and every row it holds moves that account's balance.
+
+Answers `202 {"data": {"job_id": "clx…"}}` and the work continues in a task: the extraction ladder may spend 45 seconds on the document before the first row exists, which is longer than the request timeout (SEC-19, AI-10).
+
+`GET /v1/transactions/import/{job_id}` then answers:
+
+```json
+{ "data": {
+    "id": "clx…", "status": "succeeded", "vault_file_id": "clx…",
+    "imported": 40, "skipped": 2, "duplicates": 4,
+    "error": null, "stale": false,
+    "review": {
+      "rows": [
+        { "date": "2026-11-02", "name": "WARUNG TEKKO", "amount": "87500",
+          "direction": "expense", "status": "imported" }
+      ],
+      "truncated": false
+    },
+    "created_at": "2026-11-03T09:00:00Z", "updated_at": "2026-11-03T09:02:11Z"
+} }
+```
+
+`status` is `pending`, `succeeded` or `failed`. The three counts are null until it finishes and are separate because they are three different things that happened to a row (TXN-16).
+
+`review` is null until it finishes. Its `rows` pair each extracted row with what became of it, `imported`, `duplicate` or `skipped`, because a count cannot answer "which of my rows was the duplicate". The figures are exactly the strings the model read, not a second parse of them. The list is capped at 200 rows and says so in `truncated`; the counts beside it stay exact for the whole file, which may be up to 5,000 rows. `error` is a code, never a message: a message could quote the statement back (OPS-3). `stale` is computed, not stored: a `pending` job older than 10 minutes is one whose task died with its process, and the modal offers a retry rather than polling forever. The retry re-reads `vault_file_id`, so a failure never costs a second upload (D71).
+
+### `POST /v1/transactions/import/map-columns` body
+
+```json
+{ "columns": ["Tanggal", "Keterangan", "Debet", "Kredit"],
+  "sample_rows": [ { "Tanggal": "02/11/2026", "Keterangan": "WARUNG TEKKO", "Debet": "50.000" } ] }
+```
+
+At most two sample rows travel, and every cell is clamped to 80 characters before the API forwards them (D28, [column mapping](../ai/service.md#csv-column-mapping)). A failure is relayed as it comes: step two of the wizard works by hand, and an empty step is a better answer than a guessed mapping.
 
 ## Transaction line items
 
@@ -215,6 +258,35 @@ The declared `content_type` is checked against the bytes sniffed from chunk 0 at
 ```
 
 Answers `text/event-stream`. Protocol in [AI service](../ai/service.md#streaming-protocol).
+
+### `POST /v1/ai/receipt/parse` body
+
+```json
+{ "vault_file_id": "clx…" }
+```
+
+The same reasoning as the statement route: the image is uploaded through the vault first and named here (D69). Answers the draft, what the ladder scored it, and what arithmetic replaced:
+
+```json
+{ "data": {
+    "vault_file_id": "clx…",
+    "draft": { "merchant": "Warung Tekko", "date": "2026-11-02", "currency": "IDR",
+               "subtotal": "80000.0000", "tax": "7500.0000", "total": "87500.0000",
+               "line_items": [ { "name": "Iga bakar", "amount": "45000.0000",
+                                 "quantity": "1", "unit_price": "45000.0000" } ] },
+    "quality": {
+      "score": 62,
+      "low_confidence_fields": ["date"],
+      "corrected_fields": [ { "field": "total", "model_value": "8750" } ]
+    }
+} }
+```
+
+Nothing is persisted (AI-2). `low_confidence_fields` is the ladder's own report of what it was unsure of; `corrected_fields` names what [cross-field consistency](../ai/service.md#cross-field-consistency) replaced by arithmetic in Rust. They are different claims and the confirmation sheet renders them differently (AI-11).
+
+Each correction carries `model_value`, the figure the model read, so the sheet can show it beside the computed one. AI-11 asks that the user see which numbers the model gave and which the code fixed, and a field name on its own says a figure changed without saying from what. `model_value` is `null` when the model gave nothing and the arithmetic supplied the field outright, which reads differently and is a different thing. An item-level fix marks `line_items` rather than an index, because the sheet shows every item at once.
+
+An image with neither a readable total nor a readable date answers `RECEIPT_UNREADABLE` (422), and the sheet offers manual entry with the file already attached (AI-3).
 
 ## Internal
 

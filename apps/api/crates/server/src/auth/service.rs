@@ -77,7 +77,10 @@ pub async fn register(
 
     let mut tx = pool.begin().await.map_err(internal)?;
 
-    if accounts::email_exists(&mut *tx, &email).await.map_err(internal)? {
+    if accounts::email_exists(&mut *tx, &email)
+        .await
+        .map_err(internal)?
+    {
         return Err(AppError::EmailTaken);
     }
 
@@ -150,7 +153,10 @@ pub async fn login(
         .await
         .map_err(internal)?;
     let first = workspaces.first().ok_or(AppError::NotAMember)?;
-    let role = first.role.parse::<Role>().map_err(|_| AppError::NotAMember)?;
+    let role = first
+        .role
+        .parse::<Role>()
+        .map_err(|_| AppError::NotAMember)?;
 
     let mut tx = pool.begin().await.map_err(internal)?;
     let issued = issue_session(
@@ -217,7 +223,10 @@ pub async fn refresh(
         .await
         .map_err(internal)?
         .ok_or(AppError::NotAMember)?;
-    let role = membership.role.parse::<Role>().map_err(|_| AppError::NotAMember)?;
+    let role = membership
+        .role
+        .parse::<Role>()
+        .map_err(|_| AppError::NotAMember)?;
 
     tokens::mark_refresh_token_used(&mut *tx, &row.id)
         .await
@@ -246,7 +255,9 @@ pub async fn logout(pool: &PgPool, raw_token: &str) -> Result<()> {
 }
 
 pub async fn logout_everywhere(pool: &PgPool, user_id: &str) -> Result<u64> {
-    tokens::revoke_all_for_user(pool, user_id).await.map_err(internal)
+    tokens::revoke_all_for_user(pool, user_id)
+        .await
+        .map_err(internal)
 }
 
 /// Re-scope a session to another workspace the user belongs to (WS-2).
@@ -260,7 +271,10 @@ pub async fn switch_workspace(
         .await
         .map_err(internal)?
         .ok_or(AppError::NotAMember)?;
-    let role = membership.role.parse::<Role>().map_err(|_| AppError::NotAMember)?;
+    let role = membership
+        .role
+        .parse::<Role>()
+        .map_err(|_| AppError::NotAMember)?;
 
     let mut tx = pool.begin().await.map_err(internal)?;
     let issued = issue_session(
@@ -347,10 +361,16 @@ async fn issue_session(
     family_id: String,
     session: &SessionContext<'_>,
 ) -> Result<IssuedSession> {
-    let access =
-        token::issue_access_token(session.jwt_secret, user_id, workspace_id, role, session.access_ttl)?;
+    let access = token::issue_access_token(
+        session.jwt_secret,
+        user_id,
+        workspace_id,
+        role,
+        session.access_ttl,
+    )?;
     let refresh = token::issue_refresh_token();
-    let refresh_expires_at = Utc::now() + ChronoDuration::seconds(session.refresh_ttl.as_secs() as i64);
+    let refresh_expires_at =
+        Utc::now() + ChronoDuration::seconds(session.refresh_ttl.as_secs() as i64);
 
     tokens::insert_refresh_token(
         &mut **tx,
@@ -383,13 +403,13 @@ fn truncate_agent(agent: &str) -> String {
     agent.chars().take(200).collect()
 }
 
-async fn unique_slug(
-    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
-    name: &str,
-) -> Result<String> {
+async fn unique_slug(tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, name: &str) -> Result<String> {
     let base = slugify(name);
 
-    if !accounts::slug_exists(&mut **tx, &base).await.map_err(internal)? {
+    if !accounts::slug_exists(&mut **tx, &base)
+        .await
+        .map_err(internal)?
+    {
         return Ok(base);
     }
 
@@ -397,7 +417,10 @@ async fn unique_slug(
     // Looping until free would be an unbounded wait on a contended name.
     for suffix in 2..=20 {
         let candidate = format!("{base}-{suffix}");
-        if !accounts::slug_exists(&mut **tx, &candidate).await.map_err(internal)? {
+        if !accounts::slug_exists(&mut **tx, &candidate)
+            .await
+            .map_err(internal)?
+        {
             return Ok(candidate);
         }
     }

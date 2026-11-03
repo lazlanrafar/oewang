@@ -200,16 +200,20 @@ export type RequestOptions = {
 	 * layer seals both the same way, so only the parse differs.
 	 */
 	expect?: 'json' | 'text';
-};
-
-export type StreamOptions = Omit<RequestOptions, 'expect'> & {
 	/**
-	 * Aborted when the browser disconnects, which is what the stop button
-	 * does. Closing this hop is what tells the API to stop generating and
-	 * persist the partial reply (CHAT-9).
+	 * Abandons the call.
+	 *
+	 * On a stream it is the browser disconnecting, which is what the stop
+	 * button does: closing this hop tells the API to stop generating and
+	 * persist the partial reply (CHAT-9). On an ordinary call it is a
+	 * deadline, for the one route where a slow answer is worse than no
+	 * answer: the import wizard's column mapping, which has a working path
+	 * without it (AI-9).
 	 */
 	signal?: AbortSignal;
 };
+
+export type StreamOptions = Omit<RequestOptions, 'expect'>;
 
 /**
  * Call the API and return the decrypted envelope.
@@ -315,7 +319,12 @@ async function send<T>(options: RequestOptions, active: Session): Promise<Envelo
 	const { method, requestId, headers, payload } = prepare(options, active);
 
 	// The path carries no query string: it travels in the header above.
-	const response = await fetch(`${API_URL}${options.path}`, { method, headers, body: payload });
+	const response = await fetch(`${API_URL}${options.path}`, {
+		method,
+		headers,
+		body: payload,
+		signal: options.signal
+	});
 
 	if (response.status === 204) {
 		return { data: null, error: null, meta: { request_id: requestId } };

@@ -37,8 +37,24 @@ pub async fn begin(
     name: &str,
     content_type: &str,
     size_bytes: i64,
+    uploads_per_day: i64,
+    max_file_bytes: i64,
 ) -> Result<BegunUpload> {
-    let declared = validate_declaration(content_type, size_bytes)?;
+    let declared = validate_declaration(content_type, size_bytes, max_file_bytes)?;
+
+    // A day's worth, counted from the rows (SEC-18). The ceiling exists
+    // because storage is the one thing a member can spend without a model
+    // call and without an admin noticing.
+    if uploads_per_day > 0
+        && vault::count_files_today(pool, actor.workspace_id)
+            .await
+            .map_err(internal)?
+            >= uploads_per_day
+    {
+        return Err(AppError::RateLimited {
+            retry_after_secs: 3600,
+        });
+    }
 
     let id = cuid2::create_id();
     // Generated from ids, never from the filename (SEC-13). The filename
@@ -59,11 +75,24 @@ pub async fn begin(
     .await
     .map_err(internal)?;
 
-    log(&mut tx, actor, "file.created", ENTITY, &file.id, None, snapshot(&file)?).await?;
+    log(
+        &mut tx,
+        actor,
+        "file.created",
+        ENTITY,
+        &file.id,
+        None,
+        snapshot(&file)?,
+    )
+    .await?;
 
     tx.commit().await.map_err(internal)?;
 
-    Ok(BegunUpload { chunk_size: CHUNK_BYTES, chunk_count: chunk_count(size_bytes), file })
+    Ok(BegunUpload {
+        chunk_size: CHUNK_BYTES,
+        chunk_count: chunk_count(size_bytes),
+        file,
+    })
 }
 
 /// Store one chunk.
@@ -82,7 +111,10 @@ pub async fn put_chunk(
     let file = require_pending(pool, workspace_id, file_id).await?;
 
     if index >= chunk_count(file.size) {
-        return Err(AppError::validation([("index", "That chunk is past the end of the file.")]));
+        return Err(AppError::validation([(
+            "index",
+            "That chunk is past the end of the file.",
+        )]));
     }
     if bytes.len() as i64 > CHUNK_BYTES {
         return Err(AppError::FileTooLarge);
@@ -118,10 +150,9 @@ pub async fn complete(
             .await
             .map_err(|error| match error {
                 // A missing chunk is an unfinished upload, not a fault.
-                StorageError::NotFound => AppError::validation([(
-                    "chunks",
-                    "Some chunks have not arrived yet.",
-                )]),
+                StorageError::NotFound => {
+                    AppError::validation([("chunks", "Some chunks have not arrived yet.")])
+                }
                 other => storage_failed(other),
             })?;
 
@@ -232,7 +263,16 @@ async fn discard(
     vault::soft_delete_file(&mut *tx, actor.workspace_id, &file.id)
         .await
         .map_err(internal)?;
-    log(&mut tx, actor, "file.deleted", ENTITY, &file.id, snapshot(file)?, None).await?;
+    log(
+        &mut tx,
+        actor,
+        "file.deleted",
+        ENTITY,
+        &file.id,
+        snapshot(file)?,
+        None,
+    )
+    .await?;
 
     tx.commit().await.map_err(internal)?;
 
@@ -247,17 +287,16 @@ async fn discard(
     Ok(())
 }
 
-async fn require_pending(
-    pool: &PgPool,
-    workspace_id: &str,
-    file_id: &str,
-) -> Result<VaultFileRow> {
+async fn require_pending(pool: &PgPool, workspace_id: &str, file_id: &str) -> Result<VaultFileRow> {
     let file = find(pool, workspace_id, file_id).await?;
 
     if file.status == "ready" {
         // A finished upload is not reopened: the hash has been recorded
         // and anything already attached to it would silently change.
-        return Err(AppError::validation([("status", "That upload is already complete.")]));
+        return Err(AppError::validation([(
+            "status",
+            "That upload is already complete.",
+        )]));
     }
 
     Ok(file)
@@ -268,7 +307,11 @@ fn clean_name(name: &str) -> String {
     let trimmed = name.trim().replace(['/', '\\', '\0'], "_");
     let bounded: String = trimmed.chars().take(200).collect();
 
-    if bounded.is_empty() { "file".to_string() } else { bounded }
+    if bounded.is_empty() {
+        "file".to_string()
+    } else {
+        bounded
+    }
 }
 
 fn hex(bytes: &[u8]) -> String {

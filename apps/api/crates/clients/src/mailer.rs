@@ -16,7 +16,9 @@ pub enum Mailer {
     /// Development: log that a message would have been sent, with the link,
     /// so a reset can be completed without a provider. Refused outside
     /// development by the configuration.
-    Console { app_url: String },
+    Console {
+        app_url: String,
+    },
 }
 
 #[derive(Clone)]

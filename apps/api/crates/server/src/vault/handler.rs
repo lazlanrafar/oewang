@@ -86,6 +86,8 @@ pub async fn begin(
         &body.filename,
         &body.content_type,
         body.size_bytes,
+        state.config.uploads_per_day,
+        state.config.max_file_bytes,
     )
     .await
     {
@@ -182,7 +184,10 @@ pub async fn get_chunk(
 
     match service::read_chunk(&state.db, &state.files, &auth.workspace_id, &file_id, index).await {
         Ok(bytes) => Ok(Json(Envelope::data(
-            ChunkView { index, data: STANDARD.encode(bytes) },
+            ChunkView {
+                index,
+                data: STANDARD.encode(bytes),
+            },
             id,
         ))),
         Err(error) => Err(ApiError::new(error, id)),

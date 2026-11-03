@@ -328,10 +328,12 @@ Removing an attachment soft-deletes this row, never the file (VLT-5).
 | `workspace_id` | text | FK workspaces, cascade |
 | `user_id` | text | FK users, cascade |
 | `status` | text | `pending`, `succeeded` or `failed` |
+| `vault_file_id` | text | FK vault_files. The document the rows were read from, so a retry does not re-upload it (D71). Nullable: the CSV path writes no job row at all |
 | `imported` | integer | Nullable until the job finishes |
 | `skipped` | integer | Rows that failed validation. Nullable until the job finishes |
 | `duplicates` | integer | Rows whose fingerprint already existed (TXN-16). Nullable until the job finishes |
-| `error` | text | Nullable |
+| `error` | text | An error code, never a message: a message could quote the statement back (OPS-3). Nullable |
+| `review` | jsonb | What became of each row: `{rows: [{date, name, amount, direction, status}], truncated}`, `status` one of `imported`, `duplicate`, `skipped`. Capped at 200 rows while the counts stay exact for the whole file. Nullable until the job finishes |
 | `created_at`, `updated_at` | timestamp | |
 
 ```sql
@@ -340,6 +342,10 @@ CREATE INDEX transaction_import_jobs_workspace_idx
 ```
 
 In the old app a Go worker owned the transition to a terminal status. Here a tokio task does (D10), but the polling contract is identical (AI-6).
+
+`review` is jsonb rather than a table because it is a report, not ledger data: nothing joins it, nothing updates it, and it is written once and read whole. A table would add a foreign key and an index to carry a list that is never read in parts.
+
+There is no `stale` column. A job that stopped reporting did so because its task died with the process, and nothing was left running to write that down; the API computes staleness from `created_at` when the modal polls.
 
 ### Files
 

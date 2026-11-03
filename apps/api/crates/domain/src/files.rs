@@ -31,7 +31,11 @@ pub fn chunk_count(size_bytes: i64) -> u32 {
 }
 
 /// Check the declared type and size before a single byte is accepted.
-pub fn validate_declaration(content_type: &str, size_bytes: i64) -> Result<String, AppError> {
+pub fn validate_declaration(
+    content_type: &str,
+    size_bytes: i64,
+    max_bytes: i64,
+) -> Result<String, AppError> {
     let declared = content_type.trim().to_lowercase();
 
     if !ACCEPTED_TYPES.contains(&declared.as_str()) {
@@ -40,7 +44,7 @@ pub fn validate_declaration(content_type: &str, size_bytes: i64) -> Result<Strin
     if size_bytes <= 0 {
         return Err(AppError::validation([("size_bytes", "The file is empty.")]));
     }
-    if size_bytes > MAX_FILE_BYTES {
+    if size_bytes > max_bytes {
         return Err(AppError::FileTooLarge);
     }
 
@@ -144,7 +148,12 @@ mod tests {
             b"<!DOCTYPE html><html><body>",
             b"<html>",
         ] {
-            assert_eq!(sniff(markup), None, "accepted {:?}", String::from_utf8_lossy(markup));
+            assert_eq!(
+                sniff(markup),
+                None,
+                "accepted {:?}",
+                String::from_utf8_lossy(markup)
+            );
         }
     }
 
@@ -171,23 +180,35 @@ mod tests {
 
     #[test]
     fn should_refuse_a_declaration_this_product_does_not_take() {
-        for kind in ["image/svg+xml", "text/html", "application/zip", "", "IMAGE/GIF"] {
+        for kind in [
+            "image/svg+xml",
+            "text/html",
+            "application/zip",
+            "",
+            "IMAGE/GIF",
+        ] {
             assert!(
-                matches!(validate_declaration(kind, 1024), Err(AppError::UnsupportedFileType)),
+                matches!(
+                    validate_declaration(kind, 1024, MAX_FILE_BYTES),
+                    Err(AppError::UnsupportedFileType)
+                ),
                 "accepted {kind:?}"
             );
         }
-        assert_eq!(validate_declaration("IMAGE/JPEG", 1024).unwrap(), "image/jpeg");
+        assert_eq!(
+            validate_declaration("IMAGE/JPEG", 1024, MAX_FILE_BYTES).unwrap(),
+            "image/jpeg"
+        );
     }
 
     #[test]
     fn should_refuse_a_file_that_is_empty_or_over_the_ceiling() {
         assert!(matches!(
-            validate_declaration("image/jpeg", MAX_FILE_BYTES + 1),
+            validate_declaration("image/jpeg", MAX_FILE_BYTES + 1, MAX_FILE_BYTES),
             Err(AppError::FileTooLarge)
         ));
-        assert!(validate_declaration("image/jpeg", 0).is_err());
-        assert!(validate_declaration("image/jpeg", MAX_FILE_BYTES).is_ok());
+        assert!(validate_declaration("image/jpeg", 0, MAX_FILE_BYTES).is_err());
+        assert!(validate_declaration("image/jpeg", MAX_FILE_BYTES, MAX_FILE_BYTES).is_ok());
     }
 
     #[test]

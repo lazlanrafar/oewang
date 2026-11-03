@@ -67,13 +67,16 @@ pub enum RowError {
 
 impl From<RowError> for AppError {
     fn from(error: RowError) -> Self {
-        AppError::validation([("row", match error {
-            RowError::NoDateColumn => "Map the date column.",
-            RowError::NoAmountColumn => "Map the amount column.",
-            RowError::BadDate(_) => "The date could not be read.",
-            RowError::BadAmount(_) => "The amount could not be read.",
-            RowError::EmptyAmount => "The row has no amount.",
-        })])
+        AppError::validation([(
+            "row",
+            match error {
+                RowError::NoDateColumn => "Map the date column.",
+                RowError::NoAmountColumn => "Map the amount column.",
+                RowError::BadDate(_) => "The date could not be read.",
+                RowError::BadAmount(_) => "The amount could not be read.",
+                RowError::EmptyAmount => "The row has no amount.",
+            },
+        )])
     }
 }
 
@@ -99,7 +102,11 @@ pub fn transform(mapping: &ColumnMapping, row: &RawRow) -> Result<ImportedRow, R
             let value = cell(row, column);
             // A mapping may name a column or carry a literal code, which is
             // what the model returns for a file with no currency column.
-            if value.is_empty() { column.to_uppercase() } else { value.to_uppercase() }
+            if value.is_empty() {
+                column.to_uppercase()
+            } else {
+                value.to_uppercase()
+            }
         }),
         name: non_empty(mapping.name.as_deref().map(|c| cell(row, c))),
         description: non_empty(mapping.description.as_deref().map(|c| cell(row, c))),
@@ -111,9 +118,18 @@ fn read_amount(
     mapping: &ColumnMapping,
     row: &RawRow,
 ) -> Result<(TransactionType, Decimal), RowError> {
-    if let (Some(out_column), in_column) = (mapping.amount_out.as_deref(), mapping.amount_in.as_deref())
-    {
-        let out = optional_amount(&cell(row, out_column))?;
+    // Either half is enough to mean the split shape. A statement that
+    // lists only credits is still a two-column statement with one column,
+    // and requiring both here made such a file fail on every row while the
+    // mapping looked correct.
+    let out_column = mapping.amount_out.as_deref();
+    let in_column = mapping.amount_in.as_deref();
+
+    if out_column.is_some() || in_column.is_some() {
+        let out = match out_column {
+            Some(column) => optional_amount(&cell(row, column))?,
+            None => None,
+        };
         let incoming = match in_column {
             Some(column) => optional_amount(&cell(row, column))?,
             None => None,
@@ -162,7 +178,11 @@ pub fn parse_amount(raw: &str) -> Option<Decimal> {
 
     // Accounting notation: a figure in brackets is negative.
     let bracketed = trimmed.starts_with('(') && trimmed.ends_with(')');
-    let body = if bracketed { &trimmed[1..trimmed.len() - 1] } else { trimmed };
+    let body = if bracketed {
+        &trimmed[1..trimmed.len() - 1]
+    } else {
+        trimmed
+    };
 
     // Strip everything that is not a digit, a separator or a sign: currency
     // codes and symbols travel in these columns more often than not.
@@ -222,7 +242,9 @@ pub fn parse_date(raw: &str) -> Option<NaiveDate> {
     // A timestamp, from an export that kept the time.
     let head = trimmed.split(['T', ' ']).next().unwrap_or(trimmed);
 
-    for format in ["%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%d.%m.%Y", "%Y/%m/%d", "%d/%m/%y"] {
+    for format in [
+        "%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%d.%m.%Y", "%Y/%m/%d", "%d/%m/%y",
+    ] {
         if let Ok(date) = NaiveDate::parse_from_str(head, format) {
             return Some(date);
         }
@@ -232,7 +254,9 @@ pub fn parse_date(raw: &str) -> Option<NaiveDate> {
 }
 
 fn cell(row: &RawRow, column: &str) -> String {
-    row.get(column).map(|value| value.trim().to_string()).unwrap_or_default()
+    row.get(column)
+        .map(|value| value.trim().to_string())
+        .unwrap_or_default()
 }
 
 fn non_empty(value: Option<String>) -> Option<String> {
@@ -244,7 +268,10 @@ mod tests {
     use super::*;
 
     fn row(pairs: &[(&str, &str)]) -> RawRow {
-        pairs.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect()
+        pairs
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect()
     }
 
     fn decimal(value: &str) -> Decimal {
@@ -256,8 +283,16 @@ mod tests {
         assert_eq!(parse_amount("1.234.567,89"), Some(decimal("1234567.89")));
         assert_eq!(parse_amount("1,234,567.89"), Some(decimal("1234567.89")));
         assert_eq!(parse_amount("1234567.89"), Some(decimal("1234567.89")));
-        assert_eq!(parse_amount("50.000"), Some(decimal("50000")), "three digits after a dot is thousands");
-        assert_eq!(parse_amount("50,5"), Some(decimal("50.5")), "two digits after a comma is a decimal");
+        assert_eq!(
+            parse_amount("50.000"),
+            Some(decimal("50000")),
+            "three digits after a dot is thousands"
+        );
+        assert_eq!(
+            parse_amount("50,5"),
+            Some(decimal("50.5")),
+            "two digits after a comma is a decimal"
+        );
         assert_eq!(parse_amount("0.75"), Some(decimal("0.75")));
     }
 
@@ -266,7 +301,11 @@ mod tests {
         assert_eq!(parse_amount("Rp 50.000"), Some(decimal("50000")));
         assert_eq!(parse_amount("IDR 50.000,00"), Some(decimal("50000")));
         assert_eq!(parse_amount("-50.000"), Some(decimal("-50000")));
-        assert_eq!(parse_amount("(50.000)"), Some(decimal("-50000")), "brackets mean negative");
+        assert_eq!(
+            parse_amount("(50.000)"),
+            Some(decimal("-50000")),
+            "brackets mean negative"
+        );
         assert_eq!(parse_amount("  "), None);
         assert_eq!(parse_amount("n/a"), None);
     }
@@ -329,11 +368,23 @@ mod tests {
             ..Default::default()
         };
 
-        let spent = transform(&mapping, &row(&[("Date", "2026-11-02"), ("Amount", "-50000")])).unwrap();
+        let spent = transform(
+            &mapping,
+            &row(&[("Date", "2026-11-02"), ("Amount", "-50000")]),
+        )
+        .unwrap();
         assert_eq!(spent.kind, TransactionType::Expense);
-        assert_eq!(spent.amount, decimal("50000"), "the stored amount is always positive");
+        assert_eq!(
+            spent.amount,
+            decimal("50000"),
+            "the stored amount is always positive"
+        );
 
-        let received = transform(&mapping, &row(&[("Date", "2026-11-02"), ("Amount", "50000")])).unwrap();
+        let received = transform(
+            &mapping,
+            &row(&[("Date", "2026-11-02"), ("Amount", "50000")]),
+        )
+        .unwrap();
         assert_eq!(received.kind, TransactionType::Income);
     }
 
@@ -360,6 +411,47 @@ mod tests {
     }
 
     #[test]
+    fn should_read_a_statement_that_lists_only_credits() {
+        // One half of the pair is still the split shape. The mapper drops
+        // the single-column `amount` field whenever either half survives,
+        // so requiring both here failed every row of a credits-only
+        // statement while the mapping itself looked right
+        // (docs/ai/service.md#csv-column-mapping).
+        let mapping = ColumnMapping {
+            date: Some("Date".into()),
+            amount_in: Some("Credit".into()),
+            ..Default::default()
+        };
+
+        let result = transform(
+            &mapping,
+            &row(&[("Date", "2026-11-02"), ("Credit", "12.000.000")]),
+        )
+        .unwrap();
+
+        assert_eq!(result.kind, TransactionType::Income);
+        assert_eq!(result.amount, "12000000".parse::<Decimal>().unwrap());
+    }
+
+    #[test]
+    fn should_read_a_statement_that_lists_only_debits() {
+        let mapping = ColumnMapping {
+            date: Some("Date".into()),
+            amount_out: Some("Debit".into()),
+            ..Default::default()
+        };
+
+        let result = transform(
+            &mapping,
+            &row(&[("Date", "2026-11-02"), ("Debit", "87.500")]),
+        )
+        .unwrap();
+
+        assert_eq!(result.kind, TransactionType::Expense);
+        assert_eq!(result.amount, "87500".parse::<Decimal>().unwrap());
+    }
+
+    #[test]
     fn should_take_the_larger_figure_when_a_row_fills_both_columns() {
         // A statement whose running balance landed in the credit column.
         let mapping = ColumnMapping {
@@ -371,7 +463,11 @@ mod tests {
 
         let result = transform(
             &mapping,
-            &row(&[("Date", "2026-11-02"), ("Debit", "50.000"), ("Credit", "1.000")]),
+            &row(&[
+                ("Date", "2026-11-02"),
+                ("Debit", "50.000"),
+                ("Credit", "1.000"),
+            ]),
         )
         .unwrap();
         assert_eq!(result.kind, TransactionType::Expense);

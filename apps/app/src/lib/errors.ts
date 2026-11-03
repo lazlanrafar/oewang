@@ -33,7 +33,9 @@ const CODE_TO_KEY: Record<string, TranslationKey> = {
 	TRANSFER_AMOUNT_REQUIRED: 'errors.transfer_amount_required',
 	AMOUNT_NOT_POSITIVE: 'errors.amount_not_positive',
 	FX_RATE_UNAVAILABLE: 'errors.fx_rate_unavailable',
-	STREAM_FAILED: 'errors.stream_failed'
+	STREAM_FAILED: 'errors.stream_failed',
+	AI_UNAVAILABLE: 'errors.ai_unavailable',
+	RECEIPT_UNREADABLE: 'errors.receipt_unreadable'
 };
 
 export function messageForCode(code: string): string {

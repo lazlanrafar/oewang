@@ -8,6 +8,7 @@ use oewang_db::PgPool;
 use crate::{
     ai::turns::TurnStore,
     config::Config,
+    limits::RateLimiter,
     owe1::{Owe1Signer, SessionStore},
 };
 
@@ -32,4 +33,6 @@ pub struct AppState {
     /// been challenged. The per-turn caps are only a bound because this
     /// remembers (D25).
     pub turns: TurnStore,
+    /// Every per-address and per-workspace budget (OPS-5, AUTH-6, SEC-17).
+    pub rate_limits: RateLimiter,
 }

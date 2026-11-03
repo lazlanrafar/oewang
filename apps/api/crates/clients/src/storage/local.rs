@@ -26,9 +26,9 @@ impl LocalStorage {
     fn path(&self, key: &str) -> StorageResult<PathBuf> {
         let candidate = Path::new(key);
 
-        let safe = candidate.components().all(|component| {
-            matches!(component, Component::Normal(_))
-        });
+        let safe = candidate
+            .components()
+            .all(|component| matches!(component, Component::Normal(_)));
         if !safe || key.is_empty() {
             return Err(StorageError::Unavailable("invalid key".into()));
         }
@@ -141,9 +141,11 @@ mod tests {
 
         fn cuid() -> String {
             use std::time::{SystemTime, UNIX_EPOCH};
-            let nanos = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
-            format!("{nanos}-{:?}", std::thread::current().id())
-                .replace(['(', ')', ' '], "")
+            let nanos = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos();
+            format!("{nanos}-{:?}", std::thread::current().id()).replace(['(', ')', ' '], "")
         }
     }
 }

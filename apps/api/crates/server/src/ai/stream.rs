@@ -16,7 +16,7 @@
 //!
 //! Nothing here logs an event, a token or a reply (OPS-3).
 
-use std::convert::Infallible;
+use std::{convert::Infallible, time::Duration};
 
 use axum::{
     http::{header, HeaderName, HeaderValue},
@@ -66,24 +66,40 @@ pub async fn start(
     // anywhere else. Enabled and no context would mean sealing nothing on a
     // protected hop, so it fails instead.
     if state.config.owe1_enabled && context.is_none() {
-        return Err(AppError::Internal(anyhow::anyhow!("no owe1 context for a sealed stream")));
+        return Err(AppError::Internal(anyhow::anyhow!(
+            "no owe1 context for a sealed stream"
+        )));
     }
 
     let workspace_id = turn.workspace_id.clone();
     let session_id = turn.session_id.clone();
 
-    let events = state.ai.post_stream(AI_STREAM_PATH, &turn).await.map_err(|error| {
-        // The code, never the message: an upstream message can quote the
-        // request back (OPS-3).
-        tracing::warn!(code = error.code(), "the chat stream could not be opened");
-        AppError::AiUnavailable
-    })?;
+    let events = state
+        .ai
+        .post_stream(AI_STREAM_PATH, &turn)
+        .await
+        .map_err(|error| {
+            // The code, never the message: an upstream message can quote the
+            // request back (OPS-3).
+            tracing::warn!(code = error.code(), "the chat stream could not be opened");
+            AppError::AiUnavailable
+        })?;
 
     let (sender, receiver) = mpsc::channel::<Frame>(CHANNEL_DEPTH);
     let pool = state.db.clone();
+    let deadline = state.config.chat_stream_timeout;
 
     tokio::spawn(async move {
-        pump(events, sender, pool, workspace_id, session_id, Sealer::new(context)).await;
+        pump(
+            events,
+            sender,
+            pool,
+            workspace_id,
+            session_id,
+            Sealer::new(context),
+            deadline,
+        )
+        .await;
     });
 
     let body = ReceiverStream::new(receiver)
@@ -124,31 +140,77 @@ pub async fn pump<S: EventSource>(
     workspace_id: String,
     session_id: String,
     mut sealer: Sealer,
+    deadline: Duration,
 ) {
     let mut reply = String::new();
     let mut usage: Option<Value> = None;
     let mut tools = ToolLog::default();
 
+    // The stream's own deadline. The router's request timeout cannot serve
+    // here: it bounds producing a response, and this response was produced
+    // the moment the headers went out (SEC-19). A turn that never ends
+    // would otherwise hold a task and a connection for as long as the
+    // other side felt like it.
+    let expires = tokio::time::Instant::now() + deadline;
+
     loop {
-        let event = match events.next().await {
-            Some(Ok(event)) => event,
-            Some(Err(error)) => {
+        let event = match tokio::time::timeout_at(expires, events.next()).await {
+            Err(_) => {
+                tracing::warn!(%workspace_id, "the chat stream ran past its deadline");
+                // What arrived before the deadline is still the reply
+                // (CHAT-9).
+                persist(
+                    &pool,
+                    &workspace_id,
+                    &session_id,
+                    &reply,
+                    usage.as_ref(),
+                    &tools,
+                )
+                .await;
+                send(&sender, &mut sealer, "error", &failure("AI_UNAVAILABLE"))
+                    .await
+                    .ok();
+                return;
+            }
+            Ok(Some(Ok(event))) => event,
+            Ok(Some(Err(error))) => {
                 // A failed seal is the control working: a dropped or
                 // reordered event must not reach the caller as if it were
                 // fine (docs/api/encryption.md#chat-stream-events).
                 let code = error.code().to_string();
                 tracing::warn!(code = %code, "the chat stream failed");
-                persist(&pool, &workspace_id, &session_id, &reply, usage.as_ref(), &tools).await;
-                send(&sender, &mut sealer, "error", &failure(&code)).await.ok();
+                persist(
+                    &pool,
+                    &workspace_id,
+                    &session_id,
+                    &reply,
+                    usage.as_ref(),
+                    &tools,
+                )
+                .await;
+                send(&sender, &mut sealer, "error", &failure(&code))
+                    .await
+                    .ok();
                 return;
             }
-            None => {
+            Ok(None) => {
                 // A stream never ends silently: `done` or `error` is always
                 // last (docs/ai/service.md#streaming-protocol). The other
                 // side stopping without one is a failure, and what arrived
                 // before it is still the reply.
-                persist(&pool, &workspace_id, &session_id, &reply, usage.as_ref(), &tools).await;
-                send(&sender, &mut sealer, "error", &failure("AI_UNAVAILABLE")).await.ok();
+                persist(
+                    &pool,
+                    &workspace_id,
+                    &session_id,
+                    &reply,
+                    usage.as_ref(),
+                    &tools,
+                )
+                .await;
+                send(&sender, &mut sealer, "error", &failure("AI_UNAVAILABLE"))
+                    .await
+                    .ok();
                 return;
             }
         };
@@ -162,9 +224,15 @@ pub async fn pump<S: EventSource>(
             "tool_result" => tools.answered(&payload(&event)),
             "done" => {
                 usage = payload(&event).get("usage").cloned();
-                let message_id =
-                    persist(&pool, &workspace_id, &session_id, &reply, usage.as_ref(), &tools)
-                        .await;
+                let message_id = persist(
+                    &pool,
+                    &workspace_id,
+                    &session_id,
+                    &reply,
+                    usage.as_ref(),
+                    &tools,
+                )
+                .await;
                 let mut done = payload(&event);
                 done["message_id"] = message_id.map(Value::String).unwrap_or(Value::Null);
                 send(&sender, &mut sealer, "done", &done).await.ok();
@@ -175,15 +243,34 @@ pub async fn pump<S: EventSource>(
 
         // Every other event travels on exactly as it arrived, re-sealed and
         // not reinterpreted: this hop pipes the protocol, it does not own it.
-        if send_bytes(&sender, &mut sealer, &event.name, &event.data).await.is_err() {
+        if send_bytes(&sender, &mut sealer, &event.name, &event.data)
+            .await
+            .is_err()
+        {
             // The caller hung up. What it was sent before that is still its
             // reply, and is stored (CHAT-9).
-            persist(&pool, &workspace_id, &session_id, &reply, usage.as_ref(), &tools).await;
+            persist(
+                &pool,
+                &workspace_id,
+                &session_id,
+                &reply,
+                usage.as_ref(),
+                &tools,
+            )
+            .await;
             return;
         }
 
         if event.name == "error" {
-            persist(&pool, &workspace_id, &session_id, &reply, usage.as_ref(), &tools).await;
+            persist(
+                &pool,
+                &workspace_id,
+                &session_id,
+                &reply,
+                usage.as_ref(),
+                &tools,
+            )
+            .await;
             return;
         }
     }
@@ -229,7 +316,10 @@ impl Sealer {
         };
 
         self.seq += 1;
-        Ok(Frame { name: name.to_string(), data })
+        Ok(Frame {
+            name: name.to_string(),
+            data,
+        })
     }
 }
 

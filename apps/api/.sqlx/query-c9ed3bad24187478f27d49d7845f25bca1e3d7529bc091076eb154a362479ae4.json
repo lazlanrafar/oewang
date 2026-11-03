@@ -1,0 +1,91 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO transaction_import_jobs\n               (id, workspace_id, user_id, vault_file_id)\n           VALUES ($1, $2, $3, $4)\n           RETURNING id, workspace_id, user_id, status, vault_file_id,\n                     imported, skipped, duplicates, error, review,\n                     created_at, updated_at",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "workspace_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "user_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "status",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "vault_file_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "imported",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 6,
+        "name": "skipped",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 7,
+        "name": "duplicates",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 8,
+        "name": "error",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 9,
+        "name": "review",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 10,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 11,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "c9ed3bad24187478f27d49d7845f25bca1e3d7529bc091076eb154a362479ae4"
+}

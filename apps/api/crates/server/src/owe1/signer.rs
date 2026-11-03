@@ -22,19 +22,29 @@ pub struct Owe1Signer {
 impl std::fmt::Debug for Owe1Signer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // The private half never prints (OPS-3).
-        f.debug_struct("Owe1Signer").field("key_id", &self.key_id).finish()
+        f.debug_struct("Owe1Signer")
+            .field("key_id", &self.key_id)
+            .finish()
     }
 }
 
 #[derive(Debug, thiserror::Error)]
 pub enum SignerError {
     #[error("reading {path}: {source}")]
-    Read { path: String, source: std::io::Error },
+    Read {
+        path: String,
+        source: std::io::Error,
+    },
     #[error("writing {path}: {source}")]
-    Write { path: String, source: std::io::Error },
+    Write {
+        path: String,
+        source: std::io::Error,
+    },
     #[error("{path} is not a valid PKCS#8 Ed25519 private key")]
     Malformed { path: String },
-    #[error("refusing to create a signing key outside development; mount {path} from the secret store")]
+    #[error(
+        "refusing to create a signing key outside development; mount {path} from the secret store"
+    )]
     RefusedToCreate { path: String },
 }
 
@@ -68,7 +78,9 @@ impl Owe1Signer {
         let key = SigningKey::from_bytes(&seed);
         let pem = key
             .to_pkcs8_pem(ed25519_dalek::pkcs8::spki::der::pem::LineEnding::LF)
-            .map_err(|_| SignerError::Malformed { path: display.clone() })?;
+            .map_err(|_| SignerError::Malformed {
+                path: display.clone(),
+            })?;
 
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent).map_err(|source| SignerError::Write {
@@ -87,7 +99,10 @@ impl Owe1Signer {
 
     fn from_key(key: SigningKey) -> Self {
         let public = key.verifying_key().to_bytes();
-        Self { key_id: handshake::key_id(&public), key }
+        Self {
+            key_id: handshake::key_id(&public),
+            key,
+        }
     }
 
     pub fn key_id(&self) -> &str {
@@ -188,12 +203,18 @@ mod tests {
 
         let verifying = VerifyingKey::from_bytes(&signer.public_key()).unwrap();
         assert!(verifying
-            .verify(transcript, &ed25519_dalek::Signature::from_bytes(&signature))
+            .verify(
+                transcript,
+                &ed25519_dalek::Signature::from_bytes(&signature)
+            )
             .is_ok());
 
         // A different transcript must not verify against the same signature.
         assert!(verifying
-            .verify(b"something else", &ed25519_dalek::Signature::from_bytes(&signature))
+            .verify(
+                b"something else",
+                &ed25519_dalek::Signature::from_bytes(&signature)
+            )
             .is_err());
 
         fs::remove_file(&path).ok();

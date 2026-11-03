@@ -1,0 +1,7 @@
+{
+  "rows": [
+    {"date": "2026-11-02", "description": "WARUNG TEKKO", "amount": "87500.00", "direction": "expense"},
+    {"date": "2026-11-01", "description": "TRANSFER MASUK GAJI", "amount": "12000000.00", "direction": "income"},
+    {"date": "2026-10-31", "description": "GRAB RIDE", "amount": "45000.00", "direction": "expense"}
+  ]
+}

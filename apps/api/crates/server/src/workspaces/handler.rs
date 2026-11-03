@@ -167,7 +167,11 @@ async fn apply_update(
         .await?;
     }
 
-    let name = body.name.as_deref().map(str::trim).filter(|n| !n.is_empty());
+    let name = body
+        .name
+        .as_deref()
+        .map(str::trim)
+        .filter(|n| !n.is_empty());
 
     // A slug is derived from the name, and two workspaces can legitimately
     // share a name. Deriving one without checking produced a 500 from the
@@ -283,7 +287,10 @@ async fn change_role(
         .await
         .map_err(internal)?
         .ok_or(AppError::NotFound)?;
-    let current_role = current.role.parse::<Role>().map_err(|_| AppError::NotFound)?;
+    let current_role = current
+        .role
+        .parse::<Role>()
+        .map_err(|_| AppError::NotFound)?;
 
     // Demoting an owner needs the same check as removing one.
     if current_role == Role::Owner && new_role != Role::Owner {
@@ -322,7 +329,10 @@ async fn remove(state: &AppState, auth: &AuthWrite, target_user: &str) -> Result
         .await
         .map_err(internal)?
         .ok_or(AppError::NotFound)?;
-    let current_role = current.role.parse::<Role>().map_err(|_| AppError::NotFound)?;
+    let current_role = current
+        .role
+        .parse::<Role>()
+        .map_err(|_| AppError::NotFound)?;
 
     if current_role == Role::Owner {
         // Locked, so two concurrent removals cannot each see two owners and
@@ -379,7 +389,12 @@ pub async fn create_invite(
 ) -> std::result::Result<(StatusCode, Json<Envelope<InviteCreated>>), ApiError> {
     let result = invite(&state, &auth, &body).await;
     result
-        .map(|created| (StatusCode::CREATED, Json(Envelope::data(created, request_id.0.clone()))))
+        .map(|created| {
+            (
+                StatusCode::CREATED,
+                Json(Envelope::data(created, request_id.0.clone())),
+            )
+        })
         .map_err(|error| ApiError::new(error, request_id.0))
 }
 

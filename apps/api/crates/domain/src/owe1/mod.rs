@@ -44,14 +44,8 @@ impl From<Owe1Error> for crate::AppError {
             // A malformed field and a low-order point are both "this request
             // is not a valid OWE1 message", which is what the catalog calls
             // CRYPTO_DECRYPT_FAILED.
-            MalformedField(_)
-            | LowOrderPoint
-            | KeyDerivation
-            | SealFailed
-            | DecryptFailed
-            | SignatureInvalid => {
-                crate::AppError::CryptoDecryptFailed
-            }
+            MalformedField(_) | LowOrderPoint | KeyDerivation | SealFailed | DecryptFailed
+            | SignatureInvalid => crate::AppError::CryptoDecryptFailed,
         }
     }
 }

@@ -220,7 +220,11 @@ async fn load_me(state: &AppState, auth: &Auth) -> Result<MeResponse> {
     let role = service::current_role(&state.db, &auth.workspace_id, &auth.user_id).await?;
 
     Ok(MeResponse {
-        user: UserView { id: user.id, email: user.email, name: user.name },
+        user: UserView {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+        },
         workspace: WorkspaceView {
             id: workspace.id,
             name: workspace.name,
@@ -254,9 +258,7 @@ pub async fn sessions(
 ) -> std::result::Result<Json<Envelope<Vec<SessionListItem>>>, ApiError> {
     let rows = oewang_db::repositories::tokens::list_sessions(&state.db, &auth.user_id)
         .await
-        .map_err(|e| {
-            ApiError::new(AppError::Internal(anyhow::anyhow!(e)), request_id.0.clone())
-        })?;
+        .map_err(|e| ApiError::new(AppError::Internal(anyhow::anyhow!(e)), request_id.0.clone()))?;
 
     let items = rows
         .into_iter()

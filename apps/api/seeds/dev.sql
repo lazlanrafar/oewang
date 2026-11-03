@@ -10,6 +10,9 @@
 --
 -- Password for demo@oewang.local is "oewang-dev-password".
 -- The hash below is Argon2id; it is a development credential, not a secret.
+-- `auth::password::seed_tests` verifies the password against it, because the
+-- first one here was a plausible-looking string that verified against nothing
+-- and every attempt to sign in as the demo user looked like a typo.
 
 BEGIN;
 
@@ -18,7 +21,7 @@ VALUES (
     'clxseeduser000000000001',
     'demo@oewang.local',
     'Demo User',
-    '$argon2id$v=19$m=19456,t=2,p=1$ZGV2c2VlZHNhbHQxMjM0NQ$Yx8kqFqHhVnqPQ7yJ0mWvLJ3tZB4pZ1nXK5sD9cR2fE'
+    '$argon2id$v=19$m=19456,t=2,p=1$JscTiaXHhHCBgFfIYG8iNA$2RA0Jb3uVWhiLVr3AKPK+OkVMLJUNEV1aQScfcSARCg'
 )
 ON CONFLICT (id) DO NOTHING;
 

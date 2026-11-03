@@ -45,7 +45,12 @@ pub enum SeenOutcome {
 
 impl Session {
     fn new(keys: SessionKeys, expires_at: i64) -> Self {
-        Self { keys, expires_at, messages: 0, seen: HashMap::new() }
+        Self {
+            keys,
+            expires_at,
+            messages: 0,
+            seen: HashMap::new(),
+        }
     }
 
     /// Record a request id, reporting whether it had already been used.
@@ -97,7 +102,9 @@ impl SessionStore {
 
     pub fn observe(&self, session_id: &str, request_id: &str, now: i64) -> Option<SeenOutcome> {
         let mut guard = self.inner.write().expect("session store poisoned");
-        guard.get_mut(session_id).map(|s| s.observe(request_id, now))
+        guard
+            .get_mut(session_id)
+            .map(|s| s.observe(request_id, now))
     }
 
     /// Drop expired sessions. Called periodically so memory tracks live
@@ -140,7 +147,10 @@ mod tests {
     use super::*;
 
     fn keys() -> SessionKeys {
-        SessionKeys { client_to_server: [1u8; 32], server_to_client: [2u8; 32] }
+        SessionKeys {
+            client_to_server: [1u8; 32],
+            server_to_client: [2u8; 32],
+        }
     }
 
     #[test]
@@ -155,7 +165,10 @@ mod tests {
         let store = SessionStore::new();
         store.insert("cs_a".into(), keys(), 1_000);
         assert!(store.keys("cs_a", 1_000).is_none(), "expiry is inclusive");
-        assert!(store.is_empty(), "an expired session is removed, not just hidden");
+        assert!(
+            store.is_empty(),
+            "an expired session is removed, not just hidden"
+        );
     }
 
     #[test]
@@ -168,9 +181,18 @@ mod tests {
         let store = SessionStore::new();
         store.insert("cs_a".into(), keys(), i64::MAX);
 
-        assert_eq!(store.observe("cs_a", "req_1", 100), Some(SeenOutcome::Fresh));
-        assert_eq!(store.observe("cs_a", "req_1", 101), Some(SeenOutcome::Replay));
-        assert_eq!(store.observe("cs_a", "req_2", 101), Some(SeenOutcome::Fresh));
+        assert_eq!(
+            store.observe("cs_a", "req_1", 100),
+            Some(SeenOutcome::Fresh)
+        );
+        assert_eq!(
+            store.observe("cs_a", "req_1", 101),
+            Some(SeenOutcome::Replay)
+        );
+        assert_eq!(
+            store.observe("cs_a", "req_2", 101),
+            Some(SeenOutcome::Fresh)
+        );
     }
 
     #[test]
@@ -182,7 +204,10 @@ mod tests {
         // Well past the five minute window: the id is no longer remembered.
         // Freshness is the timestamp's job, and that check happens before this.
         let later = 100 + REPLAY_WINDOW.as_secs() as i64 + 1;
-        assert_eq!(store.observe("cs_a", "req_1", later), Some(SeenOutcome::Fresh));
+        assert_eq!(
+            store.observe("cs_a", "req_1", later),
+            Some(SeenOutcome::Fresh)
+        );
     }
 
     #[test]

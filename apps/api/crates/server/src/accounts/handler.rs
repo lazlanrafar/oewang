@@ -251,7 +251,10 @@ pub async fn delete_group(
     Path(id): Path<String>,
     request_id: RequestId,
 ) -> std::result::Result<StatusCode, ApiError> {
-    no_content(service::delete_group(&state.db, actor(&auth), &id).await, request_id)
+    no_content(
+        service::delete_group(&state.db, actor(&auth), &id).await,
+        request_id,
+    )
 }
 
 // ---------------------------------------------------------------- wallets
@@ -320,10 +323,7 @@ pub async fn update_wallet(
             &id,
             WalletPatchInput {
                 name: body.name.as_deref(),
-                group_id: body
-                    .group_id
-                    .as_ref()
-                    .map(|inner| inner.as_deref()),
+                group_id: body.group_id.as_ref().map(|inner| inner.as_deref()),
                 currency_code: body.currency_code.as_deref(),
                 is_included_in_totals: body.is_included_in_totals,
                 sort_order: body.sort_order,
@@ -352,7 +352,10 @@ pub async fn delete_wallet(
     Path(id): Path<String>,
     request_id: RequestId,
 ) -> std::result::Result<StatusCode, ApiError> {
-    no_content(service::delete_wallet(&state.db, actor(&auth), &id).await, request_id)
+    no_content(
+        service::delete_wallet(&state.db, actor(&auth), &id).await,
+        request_id,
+    )
 }
 
 // ------------------------------------------------------------- categories

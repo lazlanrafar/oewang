@@ -34,7 +34,10 @@ impl<T> Envelope<T> {
         Self {
             data: Some(value),
             error: None,
-            meta: Meta { request_id: request_id.into(), page: None },
+            meta: Meta {
+                request_id: request_id.into(),
+                page: None,
+            },
         }
     }
 
@@ -42,7 +45,10 @@ impl<T> Envelope<T> {
         Self {
             data: Some(value),
             error: None,
-            meta: Meta { request_id: request_id.into(), page: Some(page) },
+            meta: Meta {
+                request_id: request_id.into(),
+                page: Some(page),
+            },
         }
     }
 }
@@ -62,7 +68,10 @@ impl Page {
     /// `limit` is capped at 100 by the conventions, and a page below 1 is a
     /// typo rather than a request for page zero.
     pub fn new(page: Option<u32>, limit: Option<u32>) -> Self {
-        Self { page: page.unwrap_or(1).max(1), limit: limit.unwrap_or(25).clamp(1, 100) }
+        Self {
+            page: page.unwrap_or(1).max(1),
+            limit: limit.unwrap_or(25).clamp(1, 100),
+        }
     }
 
     pub fn offset(self) -> i64 {
@@ -77,7 +86,12 @@ impl PageMeta {
     pub fn new(page: u32, limit: u32, total: u64) -> Self {
         let limit = limit.max(1);
         let total_pages = ((total as f64) / (limit as f64)).ceil().max(1.0) as u32;
-        Self { page, limit, total, total_pages }
+        Self {
+            page,
+            limit,
+            total,
+            total_pages,
+        }
     }
 }
 
@@ -90,7 +104,10 @@ mod tests {
         let envelope = Envelope::data(serde_json::json!({"id": "x"}), "req-1");
         let value = serde_json::to_value(&envelope).unwrap();
         assert!(value.get("data").is_some());
-        assert!(value.get("error").is_some(), "error must be present, as null");
+        assert!(
+            value.get("error").is_some(),
+            "error must be present, as null"
+        );
         assert!(value.get("meta").is_some());
     }
 

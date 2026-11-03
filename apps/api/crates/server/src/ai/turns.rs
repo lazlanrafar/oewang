@@ -59,7 +59,13 @@ impl TurnStore {
     /// which is the only way one comes into existence.
     pub fn open(&self, turn_id: &str, now: i64) {
         let mut guard = self.inner.write().expect("turn store poisoned");
-        guard.turns.insert(turn_id.to_string(), Counters { opened_at: now, ..Counters::default() });
+        guard.turns.insert(
+            turn_id.to_string(),
+            Counters {
+                opened_at: now,
+                ..Counters::default()
+            },
+        );
     }
 
     /// Count one tool call against the turn, refusing it if a cap is
@@ -107,7 +113,9 @@ impl TurnStore {
     /// Record that this exact row has been put to the user.
     pub fn challenge(&self, session_id: &str, transaction_id: &str, now: i64) {
         let mut guard = self.inner.write().expect("turn store poisoned");
-        guard.challenges.insert((session_id.to_string(), transaction_id.to_string()), now);
+        guard
+            .challenges
+            .insert((session_id.to_string(), transaction_id.to_string()), now);
     }
 
     /// Has this exact row been challenged recently enough to be confirmed?
@@ -124,7 +132,9 @@ impl TurnStore {
     /// delete of anything is challenged again.
     pub fn clear_challenge(&self, session_id: &str, transaction_id: &str) {
         let mut guard = self.inner.write().expect("turn store poisoned");
-        guard.challenges.remove(&(session_id.to_string(), transaction_id.to_string()));
+        guard
+            .challenges
+            .remove(&(session_id.to_string(), transaction_id.to_string()));
     }
 
     /// Drop what has aged out, so memory tracks live turns rather than
@@ -133,8 +143,12 @@ impl TurnStore {
         let mut guard = self.inner.write().expect("turn store poisoned");
         let before = guard.turns.len() + guard.challenges.len();
 
-        guard.turns.retain(|_, counters| now - counters.opened_at <= TURN_TTL_SECS);
-        guard.challenges.retain(|_, issued_at| now - *issued_at <= CONFIRMATION_TTL_SECS);
+        guard
+            .turns
+            .retain(|_, counters| now - counters.opened_at <= TURN_TTL_SECS);
+        guard
+            .challenges
+            .retain(|_, issued_at| now - *issued_at <= CONFIRMATION_TTL_SECS);
 
         before - (guard.turns.len() + guard.challenges.len())
     }
@@ -204,7 +218,9 @@ mod tests {
     #[test]
     fn should_refuse_a_turn_the_api_never_opened() {
         let store = TurnStore::new();
-        let error = store.reserve("turn_invented", Tool::CreateTransaction, 0).unwrap_err();
+        let error = store
+            .reserve("turn_invented", Tool::CreateTransaction, 0)
+            .unwrap_err();
         assert_eq!(error.code(), "TOOL_FORBIDDEN");
     }
 
@@ -234,8 +250,14 @@ mod tests {
         store.challenge(SESSION, "txn_a", 0);
 
         assert!(store.challenged(SESSION, "txn_a", 0));
-        assert!(!store.challenged(SESSION, "txn_b", 0), "a confirmation does not transfer");
-        assert!(!store.challenged("ses_other", "txn_a", 0), "nor does it cross sessions");
+        assert!(
+            !store.challenged(SESSION, "txn_b", 0),
+            "a confirmation does not transfer"
+        );
+        assert!(
+            !store.challenged("ses_other", "txn_a", 0),
+            "nor does it cross sessions"
+        );
     }
 
     #[test]

@@ -4,9 +4,45 @@
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="text-scale" content="scale" />
+		<!--
+			The theme, applied before paint, so a dark-mode user never sees a
+			white flash on load.
+
+			It lives here rather than in `<ModeWatcher />` because only this
+			file can carry `%sveltekit.nonce%`, which SvelteKit replaces per
+			response with the nonce it also puts in `script-src`. The
+			component injects its own copy through `{@html}` with no nonce
+			and an unquoted attribute, so under this app's policy that copy
+			is refused by the browser and the flash comes back. The layout
+			therefore renders it with `disableHeadScriptInjection`, which is
+			the option the library documents for exactly this.
+
+			The two keys and the class name are mode-watcher's defaults. If
+			either is ever overridden on the component, it has to change here
+			too (SEC-15, D64).
+		-->
+		<script nonce="%sveltekit.nonce%">
+			(function () {
+				try {
+					var mode = localStorage.getItem('mode-watcher-mode') || 'system';
+					var dark =
+						mode === 'dark' ||
+						(mode === 'system' &&
+							window.matchMedia('(prefers-color-scheme: dark)').matches);
+					document.documentElement.classList.toggle('dark', dark);
+					document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+				} catch (error) {
+					// Storage throws in a private window. The page then renders
+					// in the default mode, which is a worse first paint and not
+					// a broken one.
+				}
+			})();
+		</script>
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">
-		<div style="display: contents">%sveltekit.body%</div>
+		<!-- `contents` rather than an inline style, so the policy needs no
+		     exception for this file (SEC-15). -->
+		<div class="contents">%sveltekit.body%</div>
 	</body>
 </html>

@@ -69,15 +69,23 @@ fn build() -> serde_json::Value {
         TIMESTAMP,
     );
     let request_plaintext = br#"{"type":"expense","amount":"50000.0000"}"#;
-    let sealed_request =
-        seal::seal_with_nonce(&keys.client_to_server, &request_aad, request_plaintext, &SEAL_NONCE)
-            .unwrap();
+    let sealed_request = seal::seal_with_nonce(
+        &keys.client_to_server,
+        &request_aad,
+        request_plaintext,
+        &SEAL_NONCE,
+    )
+    .unwrap();
 
     let query_aad = aad::query(SESSION_ID, "GET", "/v1/transactions", REQUEST_ID, TIMESTAMP);
     let query_plaintext = b"type=expense&page=2";
-    let sealed_query =
-        seal::seal_with_nonce(&keys.client_to_server, &query_aad, query_plaintext, &SEAL_NONCE)
-            .unwrap();
+    let sealed_query = seal::seal_with_nonce(
+        &keys.client_to_server,
+        &query_aad,
+        query_plaintext,
+        &SEAL_NONCE,
+    )
+    .unwrap();
 
     let response_aad = aad::response(SESSION_ID, REQUEST_ID, 201);
     let response_plaintext =
@@ -92,9 +100,13 @@ fn build() -> serde_json::Value {
 
     let event_aad = aad::stream_event(SESSION_ID, REQUEST_ID, 0);
     let event_plaintext = br#"{"text":"You spent "}"#;
-    let sealed_event =
-        seal::seal_with_nonce(&keys.server_to_client, &event_aad, event_plaintext, &SEAL_NONCE)
-            .unwrap();
+    let sealed_event = seal::seal_with_nonce(
+        &keys.server_to_client,
+        &event_aad,
+        event_plaintext,
+        &SEAL_NONCE,
+    )
+    .unwrap();
 
     json!({
         "version": 1,
@@ -150,8 +162,11 @@ fn should_match_the_committed_vectors() {
 
     if std::env::var("REGENERATE_OWE1_VECTORS").is_ok() {
         fs::create_dir_all(path.parent().unwrap()).unwrap();
-        fs::write(&path, format!("{}\n", serde_json::to_string_pretty(&generated).unwrap()))
-            .unwrap();
+        fs::write(
+            &path,
+            format!("{}\n", serde_json::to_string_pretty(&generated).unwrap()),
+        )
+        .unwrap();
         eprintln!("regenerated {}", path.display());
         return;
     }
@@ -204,12 +219,11 @@ fn should_open_every_sealed_vector() {
         ("stream_event", &client_side.server_to_client),
     ] {
         let message = &messages[name];
-        let sealed: seal::SealedBody =
-            serde_json::from_value(message["sealed"].clone()).unwrap();
+        let sealed: seal::SealedBody = serde_json::from_value(message["sealed"].clone()).unwrap();
         let aad = message["aad"].as_str().unwrap().as_bytes();
 
-        let opened = seal::open(key, aad, &sealed)
-            .unwrap_or_else(|e| panic!("{name} failed to open: {e}"));
+        let opened =
+            seal::open(key, aad, &sealed).unwrap_or_else(|e| panic!("{name} failed to open: {e}"));
 
         assert_eq!(
             String::from_utf8(opened).unwrap(),

@@ -9,7 +9,10 @@
 import { redirect } from '@sveltejs/kit';
 import type { Handle } from '@sveltejs/kit/hooks';
 
+import { dev } from '$app/env';
+
 import { api, ApiError } from '$lib/server/api';
+import { securityHeaders } from '$lib/security-headers';
 import {
 	clearSession,
 	readAccessToken,
@@ -26,7 +29,10 @@ const PUBLIC_PREFIXES = [
 	'/reset-password',
 	// The design system renders primitives and reads no data. Its own load
 	// returns 404 outside development.
-	'/design-system'
+	'/design-system',
+	// Liveness, for the container health check. A health check that has to
+	// log in is not one, and this route reads nothing.
+	'/health'
 ];
 
 function isPublic(pathname: string): boolean {
@@ -84,11 +90,12 @@ export const handle: Handle = async ({ event, resolve }) => {
 	// script. Setting it here instead blocks that script and the app stops
 	// hydrating without any visible error (SEC-15).
 	//
-	// The rest are plain headers with nothing for SvelteKit to sign.
-	response.headers.set('X-Content-Type-Options', 'nosniff');
-	response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-	response.headers.set('Permissions-Policy', 'camera=(self), microphone=(), geolocation=()');
-	response.headers.set('Cross-Origin-Opener-Policy', 'same-origin');
+	// The rest are plain headers with nothing for SvelteKit to sign. Their
+	// values live in $lib/security-headers beside the CSP directives, so
+	// one file answers what this app sends and one test snapshots it.
+	for (const [name, value] of Object.entries(securityHeaders(!dev))) {
+		response.headers.set(name, value);
+	}
 
 	return response;
 };

@@ -1,0 +1,12 @@
+{
+  "merchant": "Warung Made",
+  "date": "2026-10-30",
+  "total": "62000.00",
+  "subtotal": "116000.00",
+  "tax": "11600.00",
+  "currency": "IDR",
+  "line_items": [
+    {"name": "Babi guling", "amount": "85000.00", "quantity": "1", "unit_price": "85000.00"},
+    {"name": "Es kelapa muda", "amount": "31000.00", "quantity": "1", "unit_price": "31000.00"}
+  ]
+}

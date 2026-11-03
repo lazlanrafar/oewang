@@ -67,7 +67,29 @@ pub struct Config {
     pub chat_max_tool_amount: Decimal,
 
     pub request_timeout: Duration,
+    /// The chat stream outlives the ordinary timeout by design: a turn with
+    /// a tool loop in it is slower than any deadline worth setting on a
+    /// read (SEC-19).
+    pub chat_stream_timeout: Duration,
     pub body_limit_bytes: usize,
+
+    /// Every rate limit from
+    /// [hardening](../../../../docs/security/hardening.md#limits), as
+    /// configuration with those defaults. Zero disables a bucket, which is
+    /// what a local run sets rather than removing the layer.
+    pub rate_limits: crate::limits::Limits,
+    /// How many files one workspace may upload in a day (SEC-18).
+    pub uploads_per_day: i64,
+    /// The largest single file (VLT-1), and the most rows one import
+    /// may carry (SEC-18). Both are deployment questions, about storage
+    /// and about how much one transaction should hold, so both are
+    /// configuration rather than constants.
+    pub max_file_bytes: i64,
+    pub import_row_limit: usize,
+    /// Whether `X-Forwarded-For` is believed. False unless the deployment
+    /// puts a proxy in front: anyone can send that header, and a limiter
+    /// that believes it is one anyone can step around.
+    pub trust_proxy_headers: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -85,6 +107,23 @@ pub enum ConfigError {
 }
 
 impl Config {
+    /// The documented defaults, in one place
+    /// (docs/security/hardening.md#limits). Every one is overridable by
+    /// environment variable; none of them is a literal in a handler.
+    pub fn default_rate_limits() -> crate::limits::Limits {
+        use crate::limits::Limit;
+        crate::limits::Limits {
+            // Per address. Guessing a password, a refresh token or a reset
+            // token (AUTH-6).
+            credential: Limit::new(10, 900),
+            handshake: Limit::new(30, 60),
+            authenticated: Limit::new(300, 60),
+            anonymous: Limit::new(30, 60),
+            // Per workspace, not per address (SEC-17).
+            chat_turn: Limit::new(20, 60),
+        }
+    }
+
     pub fn from_env() -> Result<Self, ConfigError> {
         let app_env = match optional("APP_ENV").as_deref() {
             Some("production") => AppEnv::Production,
@@ -114,7 +153,10 @@ impl Config {
         // turn (docs/api/encryption.md#server-signing-keys).
         let ai_signing_public_keys = match optional("AI_SIGNING_PUBLIC_KEYS") {
             Some(raw) => oewang_clients::owe1_client::parse_pinned_keys(&raw).map_err(|error| {
-                ConfigError::Invalid { name: "AI_SIGNING_PUBLIC_KEYS", reason: error.to_string() }
+                ConfigError::Invalid {
+                    name: "AI_SIGNING_PUBLIC_KEYS",
+                    reason: error.to_string(),
+                }
             })?,
             None if app_env == AppEnv::Production => {
                 return Err(ConfigError::Missing("AI_SIGNING_PUBLIC_KEYS"))
@@ -146,7 +188,12 @@ impl Config {
         // than a message at startup, so it fails here instead.
         let storage_backend = optional("STORAGE_BACKEND").unwrap_or_else(|| "local".into());
         if storage_backend == "s3" {
-            for name in ["S3_ENDPOINT", "S3_BUCKET", "S3_ACCESS_KEY_ID", "S3_SECRET_ACCESS_KEY"] {
+            for name in [
+                "S3_ENDPOINT",
+                "S3_BUCKET",
+                "S3_ACCESS_KEY_ID",
+                "S3_SECRET_ACCESS_KEY",
+            ] {
                 if optional(name).is_none() {
                     return Err(ConfigError::Missing(name));
                 }
@@ -198,12 +245,13 @@ impl Config {
 
             chat_max_tool_amount: match optional("CHAT_MAX_TOOL_AMOUNT") {
                 None => oewang_domain::tools::default_max_tool_amount(),
-                Some(raw) => raw.parse().map_err(|error: rust_decimal::Error| {
-                    ConfigError::Invalid {
-                        name: "CHAT_MAX_TOOL_AMOUNT",
-                        reason: error.to_string(),
-                    }
-                })?,
+                Some(raw) => {
+                    raw.parse()
+                        .map_err(|error: rust_decimal::Error| ConfigError::Invalid {
+                            name: "CHAT_MAX_TOOL_AMOUNT",
+                            reason: error.to_string(),
+                        })?
+                }
             },
 
             crypto_signing_key_file: optional("CRYPTO_SIGNING_KEY_FILE")
@@ -211,7 +259,46 @@ impl Config {
                 .into(),
 
             request_timeout: Duration::from_secs(parse_or("REQUEST_TIMEOUT_SECS", 30)?),
+            chat_stream_timeout: Duration::from_secs(parse_or("CHAT_STREAM_TIMEOUT_SECS", 120)?),
             body_limit_bytes: parse_or("BODY_LIMIT_BYTES", 1024 * 1024)?,
+
+            rate_limits: {
+                let defaults = Self::default_rate_limits();
+                crate::limits::Limits {
+                    credential: crate::limits::Limit::new(
+                        parse_or("RATE_LIMIT_CREDENTIAL", defaults.credential.max)?,
+                        parse_or(
+                            "RATE_LIMIT_CREDENTIAL_WINDOW_SECS",
+                            defaults.credential.window_secs,
+                        )?,
+                    ),
+                    handshake: crate::limits::Limit::new(
+                        parse_or("RATE_LIMIT_HANDSHAKE", defaults.handshake.max)?,
+                        defaults.handshake.window_secs,
+                    ),
+                    authenticated: crate::limits::Limit::new(
+                        parse_or("RATE_LIMIT_AUTHENTICATED", defaults.authenticated.max)?,
+                        defaults.authenticated.window_secs,
+                    ),
+                    anonymous: crate::limits::Limit::new(
+                        parse_or("RATE_LIMIT_ANONYMOUS", defaults.anonymous.max)?,
+                        defaults.anonymous.window_secs,
+                    ),
+                    chat_turn: crate::limits::Limit::new(
+                        parse_or("RATE_LIMIT_CHAT_TURNS", defaults.chat_turn.max)?,
+                        defaults.chat_turn.window_secs,
+                    ),
+                }
+            },
+            uploads_per_day: parse_or("UPLOADS_PER_WORKSPACE_PER_DAY", 200)?,
+            max_file_bytes: parse_or("MAX_FILE_BYTES", 10 * 1024 * 1024)?,
+            import_row_limit: parse_or(
+                "IMPORT_ROW_LIMIT",
+                crate::transactions::service::IMPORT_LIMIT,
+            )?,
+            trust_proxy_headers: optional("TRUST_PROXY_HEADERS")
+                .map(|value| value == "true")
+                .unwrap_or(false),
         })
     }
 }
@@ -269,11 +356,20 @@ mod tests {
     #[test]
     fn should_parse_duration_suffixes() {
         std::env::set_var("TEST_TTL", "15m");
-        assert_eq!(parse_duration("TEST_TTL", "1s").unwrap(), Duration::from_secs(900));
+        assert_eq!(
+            parse_duration("TEST_TTL", "1s").unwrap(),
+            Duration::from_secs(900)
+        );
         std::env::set_var("TEST_TTL", "30d");
-        assert_eq!(parse_duration("TEST_TTL", "1s").unwrap(), Duration::from_secs(2_592_000));
+        assert_eq!(
+            parse_duration("TEST_TTL", "1s").unwrap(),
+            Duration::from_secs(2_592_000)
+        );
         std::env::set_var("TEST_TTL", "90");
-        assert_eq!(parse_duration("TEST_TTL", "1s").unwrap(), Duration::from_secs(90));
+        assert_eq!(
+            parse_duration("TEST_TTL", "1s").unwrap(),
+            Duration::from_secs(90)
+        );
         std::env::remove_var("TEST_TTL");
     }
 
@@ -289,7 +385,10 @@ mod tests {
     fn should_treat_an_empty_variable_as_unset() {
         std::env::set_var("TEST_EMPTY", "   ");
         assert!(optional("TEST_EMPTY").is_none());
-        assert!(matches!(required("TEST_EMPTY"), Err(ConfigError::Missing(_))));
+        assert!(matches!(
+            required("TEST_EMPTY"),
+            Err(ConfigError::Missing(_))
+        ));
         std::env::remove_var("TEST_EMPTY");
     }
 

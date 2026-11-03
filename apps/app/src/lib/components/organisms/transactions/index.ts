@@ -1,3 +1,6 @@
+export { default as ImportAiModal } from './import-ai-modal.svelte';
+export { default as ReceiptCanvas } from './receipt-canvas.svelte';
+export { default as ReceiptConfirmationSheet } from './receipt-confirmation-sheet.svelte';
 export { default as TransactionBulkBar } from './transaction-bulk-bar.svelte';
 export { default as TransactionDetailSheet } from './transaction-detail-sheet.svelte';
 export type { TransactionDetail } from './transaction-detail-sheet.svelte';

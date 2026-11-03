@@ -59,11 +59,7 @@ const HEADER_QUERY: &str = "x-owe-query";
 /// request body into memory to decrypt it.
 const MAX_BODY: usize = 8 * 1024 * 1024;
 
-pub async fn owe1_layer(
-    State(state): State<AppState>,
-    request: Request,
-    next: Next,
-) -> Response {
+pub async fn owe1_layer(State(state): State<AppState>, request: Request, next: Next) -> Response {
     // Plaintext mode exists only for local development and the config refuses
     // to enable it anywhere else.
     if !state.config.owe1_enabled {
@@ -76,18 +72,14 @@ pub async fn owe1_layer(
     }
 }
 
-async fn handle(
-    state: &AppState,
-    request: Request,
-    next: Next,
-) -> Result<Response, ApiError> {
+async fn handle(state: &AppState, request: Request, next: Next) -> Result<Response, ApiError> {
     let headers = request.headers().clone();
     let request_id = header(&headers, HEADER_REQUEST_ID).unwrap_or_default();
 
     let fail = |error: AppError| ApiError::new(error, request_id.clone());
 
-    let session_id = header(&headers, HEADER_SESSION)
-        .ok_or_else(|| fail(AppError::CryptoSessionUnknown))?;
+    let session_id =
+        header(&headers, HEADER_SESSION).ok_or_else(|| fail(AppError::CryptoSessionUnknown))?;
     if request_id.is_empty() {
         return Err(fail(AppError::CryptoDecryptFailed));
     }
@@ -126,8 +118,8 @@ async fn handle(
         return Err(fail(AppError::CryptoQueryNotEncrypted));
     }
 
-    let encrypted_query = header(&headers, HEADER_QUERY)
-        .ok_or_else(|| fail(AppError::CryptoQueryNotEncrypted))?;
+    let encrypted_query =
+        header(&headers, HEADER_QUERY).ok_or_else(|| fail(AppError::CryptoQueryNotEncrypted))?;
     let query = open_field(
         &keys.client_to_server,
         &aad::query(&session_id, &method, &path, &request_id, timestamp),
@@ -198,9 +190,12 @@ async fn seal_response(
         return Ok(Response::from_parts(parts, body));
     }
 
-    let plaintext = to_bytes(body, MAX_BODY)
-        .await
-        .map_err(|_| ApiError::new(AppError::Internal(anyhow::anyhow!("response body")), request_id))?;
+    let plaintext = to_bytes(body, MAX_BODY).await.map_err(|_| {
+        ApiError::new(
+            AppError::Internal(anyhow::anyhow!("response body")),
+            request_id,
+        )
+    })?;
 
     let sealed = seal::seal(
         key,
@@ -208,11 +203,17 @@ async fn seal_response(
         &plaintext,
     )
     .map_err(|_| {
-        ApiError::new(AppError::Internal(anyhow::anyhow!("seal failed")), request_id)
+        ApiError::new(
+            AppError::Internal(anyhow::anyhow!("seal failed")),
+            request_id,
+        )
     })?;
 
     let encoded = serde_json::to_vec(&sealed).map_err(|_| {
-        ApiError::new(AppError::Internal(anyhow::anyhow!("encode failed")), request_id)
+        ApiError::new(
+            AppError::Internal(anyhow::anyhow!("encode failed")),
+            request_id,
+        )
     })?;
 
     let mut out = Response::from_parts(parts, Body::from(encoded));
@@ -254,20 +255,17 @@ fn header(headers: &HeaderMap, name: &str) -> Option<String> {
 
 /// Open a header-carried field such as the query string, encoded as
 /// `nonce.ciphertext`.
-fn open_field(
-    key: &[u8; 32],
-    aad: &[u8],
-    value: &str,
-) -> Result<String, AppError> {
+fn open_field(key: &[u8; 32], aad: &[u8], value: &str) -> Result<String, AppError> {
     if value.is_empty() {
         return Ok(String::new());
     }
 
-    let (nonce, ciphertext) = value
-        .split_once('.')
-        .ok_or(AppError::CryptoDecryptFailed)?;
+    let (nonce, ciphertext) = value.split_once('.').ok_or(AppError::CryptoDecryptFailed)?;
 
-    let body = SealedBody { n: nonce.to_string(), c: ciphertext.to_string() };
+    let body = SealedBody {
+        n: nonce.to_string(),
+        c: ciphertext.to_string(),
+    };
     let opened = seal::open(key, aad, &body).map_err(|_| AppError::CryptoDecryptFailed)?;
 
     String::from_utf8(opened).map_err(|_| AppError::CryptoDecryptFailed)
@@ -290,7 +288,10 @@ mod tests {
     fn should_open_an_encrypted_query_field() {
         let aad = aad::query("cs_a", "GET", "/v1/transactions", "req_1", 1);
         let field = sealed_field(&aad, b"type=expense&page=2");
-        assert_eq!(open_field(&KEY, &aad, &field).unwrap(), "type=expense&page=2");
+        assert_eq!(
+            open_field(&KEY, &aad, &field).unwrap(),
+            "type=expense&page=2"
+        );
     }
 
     #[test]
@@ -311,10 +312,7 @@ mod tests {
 
     #[test]
     fn should_reject_a_query_field_bound_to_another_request() {
-        let field = sealed_field(
-            &aad::query("cs_a", "GET", "/p", "req_1", 1),
-            b"page=2",
-        );
+        let field = sealed_field(&aad::query("cs_a", "GET", "/p", "req_1", 1), b"page=2");
         let other = aad::query("cs_a", "GET", "/p", "req_2", 1);
         assert_eq!(
             open_field(&KEY, &other, &field).unwrap_err().code(),

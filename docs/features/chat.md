@@ -133,16 +133,39 @@ Workspace-level `custom_instructions` and `response_language` from `ai_agent_set
 
 The capture path that makes the assistant worth using (AI-1 to AI-3).
 
-1. The user attaches a photo, from the chat input or from the transaction page.
+1. The user attaches a photo, from the chat input or from the transactions page's **Scan a receipt** button. Both open the same dropzone, so there is one upload path (D23).
 2. The file uploads to `POST /v1/vault/files` and gets a `vault_file_id`.
-3. The API calls the AI service's `POST /receipt/parse` with the image bytes.
-4. The model returns a structured draft: merchant, date, total, currency, line items.
-5. The API returns the draft plus the file ID. **Nothing is persisted as a transaction** (AI-2).
-6. The confirmation sheet opens with every field editable. The wallet defaults to the workspace default; the category is preselected when the parsed name matches an existing one.
-7. Confirming calls `POST /v1/transactions` with the items and `attachment_ids`.
+3. The web app posts that id to its own `/transactions/receipt`, which calls `POST /v1/ai/receipt/parse`. The browser never calls the API (D5), and the bytes are already in the vault, so only an id travels on this hop.
+4. The API calls the AI service, which returns a structured draft: merchant, date, total, subtotal, tax, currency, line items.
+5. The API returns the draft, the file id and a `quality` report. **Nothing is persisted as a transaction** (AI-2).
+6. The confirmation sheet opens in the [canvas](#canvas) with every field editable. The wallet defaults to the workspace default (WAL-3); the category is preselected when the parsed merchant or a line item matches an existing one, as a whole word and never from an income category.
+7. Confirming posts to `/transactions?/confirmReceipt`, which calls `POST /v1/transactions` with `attachment_ids` and then adds the line items one by one. The create route takes attachments but not items.
 8. Cancelling leaves the uploaded file and creates nothing.
 
-An unreadable image returns `RECEIPT_UNREADABLE` (422), and the sheet offers manual entry with the image already attached (AI-3).
+The response shape, which the web app checks field by field in `src/lib/receipt.ts` rather than casting:
+
+```json
+{ "data": {
+    "vault_file_id": "clx…",
+    "draft": { "merchant": "Warung Tekko", "date": "2026-11-02", "total": "87500.0000",
+               "subtotal": "80000.0000", "tax": "7500.0000", "currency": "IDR",
+               "line_items": [ { "name": "Iga bakar", "amount": "45000.0000",
+                                 "quantity": "1", "unit_price": "45000.0000" } ] },
+    "quality": { "score": 62, "low_confidence_fields": ["date"], "corrected_fields": ["total"] }
+} }
+```
+
+**The two field lists are what the panel marks** (AI-11), and the difference between them is the point: a `corrected` field is a figure the API's cross-field arithmetic replaced, and a `low_confidence` one is a figure nobody checked. `corrected` wins when a field is in both, because it is the stronger statement. Each renders as a badge beside the field's own label, so the user can see which numbers came from the model and which came from the code.
+
+What the panel cannot yet show is the model's original figure beside the corrected one. The response names the corrected fields but not what they were, so the badge says the figure was recomputed and the explainer says why. Carrying the replaced value, for example `quality.corrections: [{ field, model_value }]`, is the change that would close it.
+
+A date the model wrote in prose, a figure that is not a decimal string and a line with neither a name nor an amount are all dropped on the way in rather than guessed at. An empty date field asks the user; a wrong one does not.
+
+**Subtotal and tax are editable but not stored.** A transaction has no column for either ([data model](../data-model.md#ledger)); they are shown so the user can check the total against the paper before confirming it.
+
+An unreadable image returns `RECEIPT_UNREADABLE` (422), and the panel offers manual entry with the image already attached (AI-3). A 200 carrying nothing usable takes the same path: the image did not become a draft either way.
+
+One gap worth naming: `POST /v1/transactions` carries no source field, so the audit row for a confirmed receipt reads `web` rather than `receipt` ([transactions](transactions.md#audit)). The surface is recorded correctly for a chat write, which goes through the tool route, and not for this one.
 
 ## Entity deep links
 
@@ -178,18 +201,26 @@ The effect: "You spent 50,000 at Warung Tekko on 2 November" becomes clickable, 
 
 When the assistant produces something the user needs to see rather than read, the UI opens a side panel. The panel holds **the real application component**, not a model-authored artifact (D31, CHAT-13).
 
-| Trigger | Panel contents |
-|---|---|
-| A receipt draft | The receipt confirmation sheet, the same component the transaction page uses |
-| `create_transaction` or `update_transaction` | The transaction form sheet, prefilled, ready to adjust |
-| A transaction the user clicks in an answer | The transaction detail sheet |
+| `?canvas=` | Panel contents | Opened by |
+|---|---|---|
+| `receipt` | The receipt confirmation sheet, the same component the transactions page mounts | An upload finishing, in the composer or on the transactions page |
+| `transaction` | The transaction form sheet, with the uploaded file attached | The confirmation panel's "Enter it by hand", and an unreadable image (AI-3) |
+
+`id` is the vault file in both cases, which is what makes a reload reproduce the panel.
 
 Mechanics:
 
-- State lives in URL search parameters (`?canvas=transaction&id=clx…`), so the panel survives a reload and the URL is shareable.
-- The conversation column animates its own margin so it reflows beside the panel instead of being covered.
+- State lives in URL search parameters (`?canvas=receipt&id=clx…`), read through `src/lib/canvas.ts`, so the panel survives a reload and the URL is shareable. A kind this app does not have and a missing id both open nothing: a URL is user input, and an empty panel is a worse answer to a mistyped link than no panel.
+- The conversation column animates its own margin so it reflows beside the panel instead of being covered. The transactions page does the same.
 - The panel is 100 percent width below the medium breakpoint and a fixed 560 px above it.
-- The prompt tells the model the panel exists: after creating a draft it writes **one short sentence** and stops. No tables, no line items, no totals, no repetition of what the user can already see.
+- **It is a panel, not a dialog.** There is no overlay and no focus trap, because the column beside it stays usable, which is the whole point of a canvas. So it is a labelled region: focus moves to its heading when it opens and back to whatever had it when it closes, and Escape closes it. While closed it is `inert` and `aria-hidden`, so it slides rather than appears without leaving anything in the tab order.
+- **A reload re-reads the receipt.** The API persists no draft (AI-2), so reopening `?canvas=receipt&id=…` asks for the parse again. That is the price of nothing being written until the user agrees, and it is a model call per reload. Caching it would mean storing a draft, which is the thing AI-2 forbids.
+- The prompt tells the model the panel exists: after creating a draft it writes **one short sentence** and stops. No tables, no line items, no totals, no repetition of what the user can already see. Nothing in the conversation column renders a receipt draft either, so the two cannot disagree.
+
+Two things on the original list are not built this way, and both were decisions:
+
+- **A `create_transaction` or `update_transaction` tool call does not open the panel.** The `tool_result` event carries `ok` and a summary, not the id of the row it wrote ([streaming protocol](../ai/service.md#streaming-protocol)), and the panel is keyed by an id. Carrying the written id on the result is the change that would enable it.
+- **A transaction clicked in an answer opens on the transactions page**, not in the chat canvas, as [entity deep links](#entity-deep-links) already specifies. The detail sheet needs the row's history and its attachments, which that page's load fetches and this one does not.
 
 Why this shape: the canvas is the real editor, so it cannot drift from it, its edits go through the normal validation and mutation path, and the model renders nothing. The old oewang built the opposite, a bespoke artifact system under `components/organisms/chat/canvas/` and `charts/` fed by model-produced payloads, which is more code and more ways to be wrong ([research](../research/midday.md#2-the-canvas)).
 
@@ -210,9 +241,13 @@ The map is `src/lib/chat-invalidation.ts`. Each entry is a key a load declares w
 | Key | Declared by |
 |---|---|
 | `app:transactions`, `app:transaction-detail`, `app:transaction-filters` | The transactions page load |
-| `app:wallets`, `app:categories` | The settings page load |
-| `app:wallet-balances` | Both of those |
-| `app:summary`, `app:overview` | Nothing yet. The screens arrive in M6; the key is in the map so the write already names what it will make stale |
+| `app:wallets`, `app:categories` | The settings page load, and the conversation's own load, which needs both for the canvas |
+| `app:wallet-balances` | All of those |
+| `app:summary`, `app:overview` | Nothing. No load declares either |
+
+**The last row is stale and needs a decision, not an edit.** It says the summary and overview screens arrive in M6, and no M6 story builds them: [M6](../backlog.md) is hardening, the safety corpus and the deployment, and the [non-goals](../prd.md#non-goals-for-v1) do not rule the screens out either. So the two keys name data nothing produces. Either a story is added for the screens or the keys come out of the map; leaving the claim in the table is the one option that is wrong.
+
+A receipt confirmed from the canvas invalidates the same keys, through `invalidationsForTool('create_transaction')`. The write did not come from a tool, but it moved the same money, and reusing the map is what keeps the two from drifting.
 
 Two rules in the collector, both tested:
 
@@ -262,8 +297,9 @@ The rule is `visibleText` in `src/lib/chat-stream.ts`, next to the turn it reads
 | `chat/status-indicators.svelte` | `chat-status-indicators.tsx` | 143 lines |
 | `chat/chat-suggestions.svelte` | `chat-suggestion-button.tsx` | 46 lines |
 | `chat/tool-call-group.svelte` | new. Pattern from Midday's `tool-call-group.tsx` | |
-| `chat/receipt-draft-card.svelte` | derived from `transaction-receipt-confirmation-modal.tsx` | |
 | `chat/chat-canvas.svelte` | new. Pattern from Midday's `chat-invoice-canvas.tsx`, 90 lines | |
+
+`chat/receipt-draft-card.svelte` is not built and should not be. It was to be a card in the conversation derived from `transaction-receipt-confirmation-modal.tsx`; the canvas mounts that modal's real successor instead ([transactions](transactions.md#ui-port-map)), so a card would have been a second rendering of the same draft, which is exactly what D31 exists to prevent.
 
 Old files are at `references/oewang-old/apps/app/components/organisms/chat/`. The Midday references are at `references/midday/apps/dashboard/src/components/chat/`.
 

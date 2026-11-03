@@ -12,8 +12,12 @@
 	<link rel="icon" href={favicon} />
 </svelte:head>
 
-<!-- Applies the stored preference before paint, so a dark-mode user never
-     sees a white flash on load. -->
-<ModeWatcher />
+<!--
+	Tracks and writes the preference. The before-paint part is in
+	`app.html`, which is the only file that can carry `%sveltekit.nonce%`:
+	this component's own injected script has no nonce, so the policy refuses
+	it and the flash it exists to prevent comes back (SEC-15).
+-->
+<ModeWatcher disableHeadScriptInjection />
 
 {@render children()}

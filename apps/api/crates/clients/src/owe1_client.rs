@@ -123,7 +123,9 @@ pub struct Owe1Client {
 impl std::fmt::Debug for Owe1Client {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // Neither the key nor the session keys print (OPS-3).
-        f.debug_struct("Owe1Client").field("base_url", &self.base_url).finish()
+        f.debug_struct("Owe1Client")
+            .field("base_url", &self.base_url)
+            .finish()
     }
 }
 
@@ -174,8 +176,8 @@ impl Owe1Client {
         path: &str,
         body: &B,
     ) -> Result<T, Owe1ClientError> {
-        let payload = serde_json::to_vec(body)
-            .map_err(|e| Owe1ClientError::Malformed(e.to_string()))?;
+        let payload =
+            serde_json::to_vec(body).map_err(|e| Owe1ClientError::Malformed(e.to_string()))?;
         self.call("POST", path, "", Some(payload)).await
     }
 
@@ -191,7 +193,10 @@ impl Owe1Client {
 
         loop {
             let session = self.session().await?;
-            match self.send(&session, method, path, query, body.as_deref()).await {
+            match self
+                .send(&session, method, path, query, body.as_deref())
+                .await
+            {
                 Ok(value) => return Ok(value),
                 Err(error) if error.is_session_unknown() && !retried_session => {
                     // What a restart of the other side looks like from here.
@@ -220,8 +225,8 @@ impl Owe1Client {
         path: &str,
         body: &B,
     ) -> Result<EventStream, Owe1ClientError> {
-        let payload = serde_json::to_vec(body)
-            .map_err(|e| Owe1ClientError::Malformed(e.to_string()))?;
+        let payload =
+            serde_json::to_vec(body).map_err(|e| Owe1ClientError::Malformed(e.to_string()))?;
 
         let mut retried_session = false;
         let mut retried_transport = false;
@@ -318,7 +323,9 @@ impl Owe1Client {
             // answer this client asked for a stream and did not get.
             let _: serde_json::Value =
                 self.read_envelope(session, &request_id, status.as_u16(), &raw)?;
-            return Err(Owe1ClientError::Malformed("expected an event stream".into()));
+            return Err(Owe1ClientError::Malformed(
+                "expected an event stream".into(),
+            ));
         }
 
         Ok(EventStream {
@@ -367,7 +374,10 @@ impl Owe1Client {
             .header("x-owe-timestamp", timestamp.to_string())
             // Required even when empty, so a stripped filter cannot pass
             // unnoticed.
-            .header("x-owe-query", format!("{}.{}", sealed_query.n, sealed_query.c));
+            .header(
+                "x-owe-query",
+                format!("{}.{}", sealed_query.n, sealed_query.c),
+            );
 
         if let Some(plaintext) = body {
             let sealed = seal::seal(
@@ -412,7 +422,10 @@ impl Owe1Client {
             .map_err(|e| Owe1ClientError::Malformed(format!("{e} (status {status})")))?;
 
         if let Some(error) = envelope.error {
-            return Err(Owe1ClientError::Api { code: error.code, message: error.message });
+            return Err(Owe1ClientError::Api {
+                code: error.code,
+                message: error.message,
+            });
         }
 
         envelope
@@ -481,7 +494,8 @@ impl Owe1Client {
             .await
             .map_err(|e| Owe1ClientError::Malformed(e.to_string()))?;
 
-        let server_public = handshake::decode_fixed::<32>(&answer.server_public_key, "server_public_key")?;
+        let server_public =
+            handshake::decode_fixed::<32>(&answer.server_public_key, "server_public_key")?;
         let server_nonce = handshake::decode_fixed::<16>(&answer.server_nonce, "server_nonce")?;
         let signature = handshake::decode_fixed::<64>(&answer.signature, "signature")?;
 
@@ -508,7 +522,11 @@ impl Owe1Client {
             &answer.session_id,
         )?;
 
-        Ok(Session { id: answer.session_id, keys, expires_at: answer.expires_at })
+        Ok(Session {
+            id: answer.session_id,
+            keys,
+            expires_at: answer.expires_at,
+        })
     }
 
     async fn signing_key(&self, kid: &str) -> Result<[u8; 32], Owe1ClientError> {
@@ -517,7 +535,9 @@ impl Owe1Client {
         }
 
         if !self.discover_keys {
-            return Err(Owe1ClientError::UnknownSigningKey { kid: kid.to_string() });
+            return Err(Owe1ClientError::UnknownSigningKey {
+                kid: kid.to_string(),
+            });
         }
 
         // Development only, and cached, so the published set is read once.
@@ -541,7 +561,9 @@ impl Owe1Client {
         guard
             .get(kid)
             .copied()
-            .ok_or_else(|| Owe1ClientError::UnknownSigningKey { kid: kid.to_string() })
+            .ok_or_else(|| Owe1ClientError::UnknownSigningKey {
+                kid: kid.to_string(),
+            })
     }
 }
 
@@ -642,7 +664,10 @@ impl EventStream {
         ) {
             Ok(plaintext) => {
                 self.seq += 1;
-                Some(Ok(StreamEvent { name, data: plaintext }))
+                Some(Ok(StreamEvent {
+                    name,
+                    data: plaintext,
+                }))
             }
             Err(error) => {
                 self.finished = true;
@@ -710,7 +735,11 @@ fn parse_frame(frame: &[u8]) -> Option<(String, String)> {
         return None;
     }
 
-    let name = if name.is_empty() { "message".to_string() } else { name };
+    let name = if name.is_empty() {
+        "message".to_string()
+    } else {
+        name
+    };
     Some((name, data.join("\n")))
 }
 
@@ -832,7 +861,8 @@ mod tests {
         service.counts.lock().unwrap().handshakes += 1;
 
         let client_public =
-            handshake::decode_fixed::<32>(body["client_public_key"].as_str().unwrap(), "k").unwrap();
+            handshake::decode_fixed::<32>(body["client_public_key"].as_str().unwrap(), "k")
+                .unwrap();
         let client_nonce =
             handshake::decode_fixed::<16>(body["client_nonce"].as_str().unwrap(), "n").unwrap();
 
@@ -855,7 +885,11 @@ mod tests {
             server_time,
         ));
 
-        service.sessions.lock().unwrap().insert(session_id.clone(), keys);
+        service
+            .sessions
+            .lock()
+            .unwrap()
+            .insert(session_id.clone(), keys);
 
         Json(json!({
             "v": 1,
@@ -916,18 +950,29 @@ mod tests {
                 .into_response();
         }
 
-        let keys = service.sessions.lock().unwrap().get(&session_id).cloned().unwrap();
+        let keys = service
+            .sessions
+            .lock()
+            .unwrap()
+            .get(&session_id)
+            .cloned()
+            .unwrap();
 
         let sealed_query = header(&headers, "x-owe-query");
         let (nonce, ciphertext) = sealed_query.split_once('.').unwrap();
         let query = seal::open(
             &keys.client_to_server,
             &aad::query(&session_id, &method, &path, &request_id, timestamp),
-            &SealedBody { n: nonce.into(), c: ciphertext.into() },
+            &SealedBody {
+                n: nonce.into(),
+                c: ciphertext.into(),
+            },
         )
         .unwrap();
 
-        let body_bytes = axum::body::to_bytes(request.into_body(), 1 << 20).await.unwrap();
+        let body_bytes = axum::body::to_bytes(request.into_body(), 1 << 20)
+            .await
+            .unwrap();
         let sent = if body_bytes.is_empty() {
             serde_json::Value::Null
         } else {
@@ -954,7 +999,11 @@ mod tests {
         )
         .unwrap();
 
-        ([(axum::http::header::CONTENT_TYPE, CONTENT_TYPE)], Json(json!(sealed))).into_response()
+        (
+            [(axum::http::header::CONTENT_TYPE, CONTENT_TYPE)],
+            Json(json!(sealed)),
+        )
+            .into_response()
     }
 
     /// Three sealed events, exactly as the AI service writes them: the event
@@ -969,19 +1018,32 @@ mod tests {
         let headers = request.headers().clone();
         let session_id = header(&headers, "x-owe-session");
         let request_id = header(&headers, "x-owe-request-id");
-        let keys = service.sessions.lock().unwrap().get(&session_id).cloned().unwrap();
+        let keys = service
+            .sessions
+            .lock()
+            .unwrap()
+            .get(&session_id)
+            .cloned()
+            .unwrap();
         let skip = service.script.lock().unwrap().skip_a_sequence_number;
 
         let mut body = String::new();
         for (index, (name, payload)) in [
             ("token", json!({ "text": "You spent " })),
             ("token", json!({ "text": "50,000." })),
-            ("done", json!({ "message_id": null, "usage": { "input": 12, "output": 4 } })),
+            (
+                "done",
+                json!({ "message_id": null, "usage": { "input": 12, "output": 4 } }),
+            ),
         ]
         .into_iter()
         .enumerate()
         {
-            let seq = if skip && index >= 1 { index as u64 + 1 } else { index as u64 };
+            let seq = if skip && index >= 1 {
+                index as u64 + 1
+            } else {
+                index as u64
+            };
             let sealed = seal::seal(
                 &keys.server_to_client,
                 &aad::stream_event(&session_id, &request_id, seq),
@@ -999,7 +1061,11 @@ mod tests {
     }
 
     fn header(headers: &HeaderMap, name: &str) -> String {
-        headers.get(name).and_then(|v| v.to_str().ok()).unwrap_or_default().to_string()
+        headers
+            .get(name)
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or_default()
+            .to_string()
     }
 
     async fn serve(service: TestService) -> SocketAddr {
@@ -1035,8 +1101,10 @@ mod tests {
         let address = serve(service.clone()).await;
         let client = client(address, DEFAULT_TIMEOUT);
 
-        let answer: serde_json::Value =
-            client.post("/v1/echo", &json!({ "hello": "world" })).await.unwrap();
+        let answer: serde_json::Value = client
+            .post("/v1/echo", &json!({ "hello": "world" }))
+            .await
+            .unwrap();
 
         assert_eq!(answer["body"]["hello"], "world");
         assert_eq!(service.counts().handshakes, 1);
@@ -1066,7 +1134,11 @@ mod tests {
             let _: serde_json::Value = client.get("/v1/echo", "").await.unwrap();
         }
 
-        assert_eq!(service.counts().handshakes, 1, "one handshake per session, not per call");
+        assert_eq!(
+            service.counts().handshakes,
+            1,
+            "one handshake per session, not per call"
+        );
     }
 
     #[tokio::test]
@@ -1091,7 +1163,10 @@ mod tests {
         let address = serve(service.clone()).await;
         let client = client(address, DEFAULT_TIMEOUT);
 
-        let error = client.get::<serde_json::Value>("/v1/echo", "").await.unwrap_err();
+        let error = client
+            .get::<serde_json::Value>("/v1/echo", "")
+            .await
+            .unwrap_err();
 
         assert_eq!(error.code(), "CRYPTO_SESSION_UNKNOWN");
         assert_eq!(service.counts().handshakes, 2);
@@ -1107,7 +1182,11 @@ mod tests {
         let answer: serde_json::Value = client.get("/v1/echo", "").await.unwrap();
 
         assert_eq!(answer["path"], "/v1/echo");
-        assert_eq!(service.counts().calls, 2, "the first call timed out, the second answered");
+        assert_eq!(
+            service.counts().calls,
+            2,
+            "the first call timed out, the second answered"
+        );
     }
 
     #[tokio::test]
@@ -1117,7 +1196,10 @@ mod tests {
         let address = serve(service.clone()).await;
         let client = client(address, Duration::from_millis(200));
 
-        let error = client.get::<serde_json::Value>("/v1/echo", "").await.unwrap_err();
+        let error = client
+            .get::<serde_json::Value>("/v1/echo", "")
+            .await
+            .unwrap_err();
 
         assert!(error.is_transport(), "{error}");
         assert_eq!(service.counts().calls, 2);
@@ -1129,8 +1211,10 @@ mod tests {
         let address = serve(service.clone()).await;
         let client = client(address, DEFAULT_TIMEOUT);
 
-        let mut stream =
-            client.post_stream("/chat/stream", &json!({ "message": "hi" })).await.unwrap();
+        let mut stream = client
+            .post_stream("/chat/stream", &json!({ "message": "hi" }))
+            .await
+            .unwrap();
 
         let mut names = Vec::new();
         let mut text = String::new();
@@ -1156,12 +1240,24 @@ mod tests {
         let address = serve(service).await;
         let client = client(address, DEFAULT_TIMEOUT);
 
-        let mut stream = client.post_stream("/chat/stream", &json!({})).await.unwrap();
+        let mut stream = client
+            .post_stream("/chat/stream", &json!({}))
+            .await
+            .unwrap();
 
-        assert!(stream.next_event().await.unwrap().is_ok(), "the first event is in order");
+        assert!(
+            stream.next_event().await.unwrap().is_ok(),
+            "the first event is in order"
+        );
         let error = stream.next_event().await.unwrap().unwrap_err();
-        assert!(matches!(error, Owe1ClientError::Crypto(Owe1Error::DecryptFailed)), "{error}");
-        assert!(stream.next_event().await.is_none(), "the stream stops at the first bad event");
+        assert!(
+            matches!(error, Owe1ClientError::Crypto(Owe1Error::DecryptFailed)),
+            "{error}"
+        );
+        assert!(
+            stream.next_event().await.is_none(),
+            "the stream stops at the first bad event"
+        );
     }
 
     #[tokio::test]
@@ -1172,7 +1268,10 @@ mod tests {
         let address = serve(service).await;
         let client = client(address, DEFAULT_TIMEOUT);
 
-        let error = client.post_stream("/v1/echo", &json!({})).await.unwrap_err();
+        let error = client
+            .post_stream("/v1/echo", &json!({}))
+            .await
+            .unwrap_err();
 
         assert!(matches!(error, Owe1ClientError::Malformed(_)), "{error}");
     }
@@ -1184,7 +1283,10 @@ mod tests {
         let address = serve(service).await;
         let client = client(address, DEFAULT_TIMEOUT);
 
-        let error = client.get::<serde_json::Value>("/v1/echo", "").await.unwrap_err();
+        let error = client
+            .get::<serde_json::Value>("/v1/echo", "")
+            .await
+            .unwrap_err();
 
         assert!(
             matches!(error, Owe1ClientError::Crypto(Owe1Error::SignatureInvalid)),
@@ -1205,9 +1307,15 @@ mod tests {
         )
         .unwrap();
 
-        let error = client.get::<serde_json::Value>("/v1/echo", "").await.unwrap_err();
+        let error = client
+            .get::<serde_json::Value>("/v1/echo", "")
+            .await
+            .unwrap_err();
 
-        assert!(matches!(error, Owe1ClientError::UnknownSigningKey { .. }), "{error}");
+        assert!(
+            matches!(error, Owe1ClientError::UnknownSigningKey { .. }),
+            "{error}"
+        );
     }
 
     #[test]
@@ -1232,7 +1340,10 @@ mod tests {
         buffer.extend_from_slice(b"}\n\nevent: done\n");
         let frame = take_frame(&mut buffer).unwrap();
 
-        assert_eq!(parse_frame(&frame).unwrap(), ("token".into(), "{\"n\":\"a\"}".into()));
+        assert_eq!(
+            parse_frame(&frame).unwrap(),
+            ("token".into(), "{\"n\":\"a\"}".into())
+        );
         assert_eq!(buffer, b"event: done\n");
     }
 

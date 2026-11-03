@@ -243,7 +243,10 @@ pub fn net(effects: impl IntoIterator<Item = BalanceDelta>) -> Vec<BalanceDelta>
     let mut netted: Vec<BalanceDelta> = Vec::new();
 
     for effect in effects {
-        match netted.iter_mut().find(|held| held.wallet_id == effect.wallet_id) {
+        match netted
+            .iter_mut()
+            .find(|held| held.wallet_id == effect.wallet_id)
+        {
             Some(held) => held.delta += effect.delta,
             None => netted.push(effect),
         }
@@ -364,7 +367,12 @@ pub fn fingerprint(
 
 /// Lowercase, trimmed, runs of whitespace collapsed to one space.
 fn normalize(value: &str) -> String {
-    value.trim().to_lowercase().split_whitespace().collect::<Vec<_>>().join(" ")
+    value
+        .trim()
+        .to_lowercase()
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 fn hex(bytes: &[u8]) -> String {
@@ -379,7 +387,12 @@ mod tests {
         value.parse().unwrap()
     }
 
-    fn shape(kind: TransactionType, amount: &str, to: Option<&str>, to_amount: Option<&str>) -> TransactionShape {
+    fn shape(
+        kind: TransactionType,
+        amount: &str,
+        to: Option<&str>,
+        to_amount: Option<&str>,
+    ) -> TransactionShape {
         TransactionShape::validate(ProposedShape {
             kind,
             wallet_id: "w_a",
@@ -395,13 +408,25 @@ mod tests {
     #[test]
     fn should_decrease_the_wallet_on_an_expense() {
         let effects = shape(TransactionType::Expense, "50000", None, None).effect();
-        assert_eq!(effects, vec![BalanceDelta { wallet_id: "w_a".into(), delta: decimal("-50000") }]);
+        assert_eq!(
+            effects,
+            vec![BalanceDelta {
+                wallet_id: "w_a".into(),
+                delta: decimal("-50000")
+            }]
+        );
     }
 
     #[test]
     fn should_increase_the_wallet_on_an_income() {
         let effects = shape(TransactionType::Income, "9500000", None, None).effect();
-        assert_eq!(effects, vec![BalanceDelta { wallet_id: "w_a".into(), delta: decimal("9500000") }]);
+        assert_eq!(
+            effects,
+            vec![BalanceDelta {
+                wallet_id: "w_a".into(),
+                delta: decimal("9500000")
+            }]
+        );
     }
 
     /// The worked example from docs/data-model.md#worked-examples: USD 50 out
@@ -412,8 +437,14 @@ mod tests {
         assert_eq!(
             effects,
             vec![
-                BalanceDelta { wallet_id: "w_a".into(), delta: decimal("-50") },
-                BalanceDelta { wallet_id: "w_b".into(), delta: decimal("812500") },
+                BalanceDelta {
+                    wallet_id: "w_a".into(),
+                    delta: decimal("-50")
+                },
+                BalanceDelta {
+                    wallet_id: "w_b".into(),
+                    delta: decimal("812500")
+                },
             ]
         );
     }
@@ -445,14 +476,24 @@ mod tests {
 
         let moves = net(reverse(&old.effect()).into_iter().chain(new.effect()));
 
-        assert_eq!(moves, vec![BalanceDelta { wallet_id: "w_a".into(), delta: decimal("-37500") }]);
+        assert_eq!(
+            moves,
+            vec![BalanceDelta {
+                wallet_id: "w_a".into(),
+                delta: decimal("-37500")
+            }]
+        );
     }
 
     /// Every one of the nine type transitions has to leave the wallet where
     /// applying the new transaction alone would have left it.
     #[test]
     fn should_recompute_every_type_transition() {
-        let types = [TransactionType::Income, TransactionType::Expense, TransactionType::Transfer];
+        let types = [
+            TransactionType::Income,
+            TransactionType::Expense,
+            TransactionType::Transfer,
+        ];
 
         for from in types {
             for to in types {
@@ -480,8 +521,14 @@ mod tests {
     #[test]
     fn should_sort_moves_by_wallet_id_so_locks_cannot_deadlock() {
         let moves = net([
-            BalanceDelta { wallet_id: "w_z".into(), delta: decimal("1") },
-            BalanceDelta { wallet_id: "w_a".into(), delta: decimal("1") },
+            BalanceDelta {
+                wallet_id: "w_z".into(),
+                delta: decimal("1"),
+            },
+            BalanceDelta {
+                wallet_id: "w_a".into(),
+                delta: decimal("1"),
+            },
         ]);
         assert_eq!(moves[0].wallet_id, "w_a");
         assert_eq!(moves[1].wallet_id, "w_z");
@@ -611,8 +658,22 @@ mod tests {
 
     #[test]
     fn should_hash_the_same_row_to_the_same_fingerprint() {
-        let a = fingerprint("w_a", "2026-11-02", decimal("50000"), "IDR", "Warung  Tekko", "");
-        let b = fingerprint("w_a", "2026-11-02", decimal("50000.0000"), "idr", " warung tekko ", "");
+        let a = fingerprint(
+            "w_a",
+            "2026-11-02",
+            decimal("50000"),
+            "IDR",
+            "Warung  Tekko",
+            "",
+        );
+        let b = fingerprint(
+            "w_a",
+            "2026-11-02",
+            decimal("50000.0000"),
+            "idr",
+            " warung tekko ",
+            "",
+        );
         assert_eq!(a, b, "normalization and canonical decimals have to agree");
         assert_eq!(a.len(), 24);
     }
@@ -620,11 +681,26 @@ mod tests {
     #[test]
     fn should_hash_different_rows_differently() {
         let base = fingerprint("w_a", "2026-11-02", decimal("50000"), "IDR", "Lunch", "");
-        assert_ne!(base, fingerprint("w_b", "2026-11-02", decimal("50000"), "IDR", "Lunch", ""));
-        assert_ne!(base, fingerprint("w_a", "2026-11-03", decimal("50000"), "IDR", "Lunch", ""));
-        assert_ne!(base, fingerprint("w_a", "2026-11-02", decimal("50001"), "IDR", "Lunch", ""));
-        assert_ne!(base, fingerprint("w_a", "2026-11-02", decimal("50000"), "USD", "Lunch", ""));
-        assert_ne!(base, fingerprint("w_a", "2026-11-02", decimal("50000"), "IDR", "Dinner", ""));
+        assert_ne!(
+            base,
+            fingerprint("w_b", "2026-11-02", decimal("50000"), "IDR", "Lunch", "")
+        );
+        assert_ne!(
+            base,
+            fingerprint("w_a", "2026-11-03", decimal("50000"), "IDR", "Lunch", "")
+        );
+        assert_ne!(
+            base,
+            fingerprint("w_a", "2026-11-02", decimal("50001"), "IDR", "Lunch", "")
+        );
+        assert_ne!(
+            base,
+            fingerprint("w_a", "2026-11-02", decimal("50000"), "USD", "Lunch", "")
+        );
+        assert_ne!(
+            base,
+            fingerprint("w_a", "2026-11-02", decimal("50000"), "IDR", "Dinner", "")
+        );
     }
 
     // -------------------------------------------------------- rounding

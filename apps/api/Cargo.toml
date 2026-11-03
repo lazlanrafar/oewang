@@ -20,7 +20,7 @@ tokio = { version = "1", features = ["rt-multi-thread", "macros", "signal", "syn
 # A channel read as a response body: what an event stream is made of.
 tokio-stream = { version = "0.1", features = ["sync"] }
 tower = "0.5"
-tower-http = { version = "0.6", features = ["trace", "timeout", "limit", "catch-panic", "request-id", "compression-gzip", "cors"] }
+tower-http = { version = "0.6", features = ["trace", "timeout", "limit", "catch-panic", "request-id", "compression-gzip"] }
 
 # Data
 sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "tls-rustls", "postgres", "macros", "migrate", "chrono", "rust_decimal", "uuid", "json"] }

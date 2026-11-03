@@ -1,6 +1,6 @@
 # AI Service
 
-Status: draft v0.1, 2026-11-02. Part of the [oewang docs](../README.md). Implements [PRD](../prd.md) PLT-3, CHAT-3 to CHAT-7 and AI-1 to AI-6.
+Status: draft v0.2, 2026-11-03. Part of the [oewang docs](../README.md). Implements [PRD](../prd.md) PLT-3, CHAT-3 to CHAT-7 and AI-1 to AI-11.
 
 `apps/ai` is a Python 3.13 FastAPI service on port 3004. It owns every call to the model and nothing else.
 
@@ -11,6 +11,8 @@ Status: draft v0.1, 2026-11-02. Part of the [oewang docs](../README.md). Impleme
 - Changing the streaming event protocol.
 - Changing the model IDs or the loop limits.
 - Changing what a request must carry: the service key, the rate limits or the OWE1 contract.
+- Changing the quality score's weights, the ladder's passes, its caps or its merge rules.
+- Changing the shape of an extraction response, or the fields a column mapping may name.
 
 ## Responsibilities
 
@@ -19,8 +21,7 @@ Owns:
 - System prompt construction.
 - The Claude tool loop.
 - Server-sent event streaming.
-- Receipt OCR and bank statement extraction.
-- Session title generation.
+- Receipt OCR and bank statement extraction, including the quality ladder and the CSV column mapping.
 
 Owns nothing else. It has no database connection, no storage credentials and no user JWT (D3, D4). Every side effect goes through the API's internal endpoints.
 
@@ -36,6 +37,7 @@ The practical test: if `apps/ai` had `DATABASE_URL` set, it would be a bug. The 
 | Chat model | `AI_CHAT_MODEL`, default `claude-sonnet-5-5`. A gateway's own alias goes here unchanged |
 | Vision models | A three-step ladder, see [extraction quality ladder](#extraction-quality-ladder). `AI_VISION_PRIMARY` defaults to `claude-haiku-5-5`, `AI_VISION_SECONDARY` to `claude-sonnet-5-5`, `AI_VISION_TERTIARY` to `claude-opus-5` |
 | HTTP client | `httpx`, async, for calls back to the API |
+| PDF text | `pypdf`, for the deterministic first pass over a PDF that carries its own characters (D42) |
 | Validation | Pydantic models on every request and response |
 | Lint and format | `ruff` |
 | Tests | `pytest`, with the model always mocked, plus an opt-in live set |
@@ -60,11 +62,12 @@ Every route requires `x-api-key`, and every body is OWE1 (D22). There is no user
 | POST | `/v1/handshake` | Opens a crypto session. Plaintext, signed rather than encrypted |
 | GET | `/v1/session` | The caller's own crypto session. Reaching it proves the session is live |
 | POST | `/chat/stream` | Tool-loop chat, answers `text/event-stream` |
-| POST | `/chat/title` | Short session title from the first user message |
 | POST | `/receipt/parse` | Image bytes to a structured receipt draft |
 | POST | `/import/map-columns` | Column names plus two sample rows to a column mapping (D28) |
 | POST | `/import/extract` | Statement image or PDF to structured transaction rows |
 | GET | `/tools/definitions` | The tool schemas, so the API can validate against the same contract |
+
+There is no session-title endpoint. The API sets a session's title from the first user message, with no round trip to this service (CHAT-8): a chat title is not a place where a model's judgement earns a call on the first turn of every new conversation.
 
 ### Request handling
 
@@ -289,6 +292,8 @@ The cheapest and most reliable part of import (D28, AI-9). The model is shown th
 
 ```json
 {
+  "request_id": "01JC0…",
+  "workspace_id": "clx…",
   "columns": ["Tanggal", "Keterangan", "Debet", "Kredit", "Saldo"],
   "sample_rows": [
     {"Tanggal": "02/11/2026", "Keterangan": "WARUNG TEKKO", "Debet": "50.000", "Saldo": "1.200.000"}
@@ -299,8 +304,19 @@ The cheapest and most reliable part of import (D28, AI-9). The model is shown th
 Returns:
 
 ```json
-{ "date": "Tanggal", "name": "Keterangan", "amount_out": "Debet", "amount_in": "Kredit", "balance": "Saldo" }
+{
+  "mapping": { "date": "Tanggal", "name": "Keterangan", "amount_out": "Debet", "amount_in": "Kredit", "balance": "Saldo" },
+  "model": "claude-sonnet-5-5"
+}
 ```
+
+The mapping may name any of exactly eight fields, all optional: `date`, `name`, `counterparty`, `amount_out`, `amount_in`, `amount`, `balance`, `currency`. The list matches `ColumnMapping` on the Rust side; a key outside it is dropped rather than relayed.
+
+**The two amount shapes are alternatives, never both** (rule 7). A statement either prints separate debit and credit columns, which map to `amount_out` and `amount_in`, or one signed column where money out carries a minus sign, which maps to `amount`. `csv_import::read_amount` reads whichever shape it is handed: negative is an expense and positive is income for the single column, and the column itself carries the direction for the pair. A mapping carrying both describes two readings of one file, so the service drops `amount` when either half of the pair survives: the pair states the direction in the layout rather than in a sign the importer has to find.
+
+`balance` stays in the catalog even though Rust ignores it, and that is deliberate rather than an oversight. A running balance is the state of the account, not a transaction field, so there is nothing for the importer to do with it. Taking it out of the catalog would leave the model with nowhere to put the column, and what it does then is map it to an amount.
+
+The model is `AI_CHAT_MODEL`, not one of the vision ids: nothing here is an image, and it is a short reasoning task over a handful of strings that runs once per file. The answer is capped at 512 output tokens, because a mapping is one small JSON object and a ceiling on it is a ceiling on how long an import waits before it starts. The call passes `tools=[]` like every other call on the capture path: the column names and sample cells came out of a file somebody uploaded.
 
 Rules in the prompt, with few-shot examples for each:
 
@@ -310,6 +326,11 @@ Rules in the prompt, with few-shot examples for each:
 4. `counterparty` is the other party: merchant, vendor, payee, recipient. **Never** a column that names the account holder (`Nama Pemilik`, `Cardholder`, `Account Holder`). That is the user, not the counterparty.
 5. Never map two fields to the same column.
 6. For currency, return a column name if one exists, otherwise an inferred ISO 4217 code.
+7. Return one amount shape, never both: `amount_out` plus `amount_in`, or `amount` on its own. `balance` is not an amount.
+
+The answer is then cleaned before it is relayed, and four things are dropped: a field this importer does not have, a value that is not one of the columns the model was shown (rule 1), a column an earlier field already used (rule 5), and `amount` when the split pair is also present (rule 7). `currency` is the one exception to the second, because rule 6 lets it be an inferred ISO code. Dropping beats relaying: a mapping naming a column that does not exist fails in the Rust importer as a lookup against every row of the file. An answer that cleans down to nothing comes back as an empty mapping rather than an error, so the API can ask the user which column is which; an answer that is not JSON at all is `COLUMN_MAPPING_FAILED`, a 422.
+
+Cleaning cannot catch rule 4. `Nama Pemilik` is a real column with real values in it, and nothing downstream can tell that mapping it to `counterparty` is wrong. The prompt is the defence, which is why the test suite asserts the prompt still names those headers.
 
 **Every row is then transformed by deterministic Rust code.** The model never sees an amount, never produces an amount, and cannot move a decimal point. Cost is one small call per file whether the file has 10 rows or 10,000.
 
@@ -319,16 +340,69 @@ Indonesian bank statements split debit and credit into two columns, which the ol
 
 | Endpoint | Models | Tools | Output |
 |---|---|---|---|
-| `POST /receipt/parse` | [ladder](#extraction-quality-ladder) | none | merchant, date, total, currency, line items, quality score |
+| `POST /receipt/parse` | [ladder](#extraction-quality-ladder) | none | merchant, date, total, subtotal, tax, currency, line items, quality score |
 | `POST /import/extract` | [ladder](#extraction-quality-ladder) | none | rows of date, description, amount, direction, quality score |
 
-A PDF carrying a real text layer skips the model entirely on the first attempt: the text is extracted and parsed deterministically, and vision runs only when that yields nothing usable (D42). Reading a PDF's own text is cheaper and more accurate than looking at a picture of it, and it is the same principle as the ladder: escalate on evidence.
+Both take the same body, because both run the same ladder over the same kind of document:
 
-**Both calls pass no tools at all** (D24, SEC-21). The input is attacker-controlled text, so the component that reads it is given nothing to call. An instruction printed on a receipt reaches a model that has no `create_transaction` and no `delete_transaction` to reach for. This is the strongest control in the feature; see [AI safety](../security/ai-safety.md).
+```json
+{
+  "request_id": "01JC0…",
+  "workspace_id": "clx…",
+  "document": { "media_type": "image/jpeg", "data": "<base64>" },
+  "workspace_currency": "IDR",
+  "today": "2026-11-03"
+}
+```
 
-Both use a strict output schema and validate the result with Pydantic before returning it. A result that fails validation is retried once with a stricter instruction, then returns `RECEIPT_UNREADABLE` or `STATEMENT_UNREADABLE` (AI-3). Neither endpoint writes anything anywhere.
+`media_type` is one of `image/jpeg`, `image/png`, `image/webp`, `application/pdf`. Anything else answers `UNSUPPORTED_MEDIA_TYPE` with a 400, in the normal envelope. `today` and `workspace_currency` come from the API because this service reads no database (D3): `today` is what a date is judged believable against, and the currency is a hint for an ambiguous symbol, never a value to fill in.
+
+A PDF carrying a real text layer skips the model entirely on the first attempt: the text is extracted and parsed deterministically, and vision runs only when that yields nothing usable (D42). Reading a PDF's own text is cheaper and more accurate than looking at a picture of it, and it is the same principle as the ladder: escalate on evidence. The deterministic parser reads only what it can read without guessing, which in particular means it leaves an ambiguous numeric date (`03/04/2026`) absent rather than assuming a day-first convention.
+
+**Both calls pass no tools at all** (D24, SEC-21). The input is attacker-controlled text, so the component that reads it is given nothing to call. An instruction printed on a receipt reaches a model that has no `create_transaction` and no `delete_transaction` to reach for. This is the strongest control in the feature; see [AI safety](../security/ai-safety.md). In the implementation there is exactly one function that calls the model for extraction, so `tools=[]` is one line, and the tests assert it on every call of every ladder path rather than once.
+
+Both validate the result before returning it, and `RECEIPT_UNREADABLE` or `STATEMENT_UNREADABLE` (AI-3) is the answer only when nothing usable came out of any pass: a 422 in the service envelope. There is no separate "retry once with a stricter instruction" step. That is what the ladder's pass 2 and pass 3 are, and running a stricter retry as well would be a fourth model call with no exit condition of its own. Neither endpoint writes anything anywhere.
+
+**Every money figure is a string on the wire** (D12), and `Decimal` everywhere inside. The JSON parser is given `parse_float=Decimal`, so a model that writes `87500.00` without quotes still never produces a float. An amount this service cannot read unambiguously is reported as absent-and-flagged rather than guessed at: `87.500` is 87,500 in Jakarta and 87.5 in Chicago, and nothing in this process can tell which.
 
 `/import/extract` is used only for an image or a PDF. Anything with columns goes through [column mapping](#csv-column-mapping) instead, because deterministic beats model-driven whenever structure exists.
+
+### Responses
+
+```json
+{
+  "draft": {
+    "merchant": "Warung Tekko",
+    "date": "2026-11-02",
+    "total": "87500.0000",
+    "subtotal": "80000.0000",
+    "tax": "7500.0000",
+    "currency": "IDR",
+    "line_items": [ { "name": "Iga bakar", "amount": "45000.0000", "quantity": "1", "unit_price": "45000.0000" } ]
+  },
+  "quality": { "score": 62, "low_confidence_fields": ["date"], "corrected_fields": [] },
+  "passes": 1,
+  "models": ["claude-haiku-5-5"]
+}
+```
+
+```json
+{
+  "rows": [ { "date": "2026-11-02", "description": "WARUNG TEKKO", "amount": "87500.0000", "direction": "expense" } ],
+  "quality": { "score": 88, "low_confidence_fields": [] },
+  "passes": 1,
+  "models": ["claude-haiku-5-5"]
+}
+```
+
+Rules on these shapes:
+
+- A field the service is not sure of is **left out**, and named in `low_confidence_fields`. A date that did not validate is absent here, never emitted as something plausible: the confirmation sheet can ask about an absence and cannot flag a fabrication the user taps past.
+- `corrected_fields` is always present and always `[]` from this service. [Cross-field consistency](#cross-field-consistency) is the API's pure Rust pass (D30, AI-7) and it is the only thing that fills it. Two layers correcting the same number is how a user ends up unable to tell which figure came off the receipt.
+- `passes` counts the **model** passes reached: `0` when the PDF's text layer answered and no model was called at all, up to `3`. Pass 4 is Rust's, so it is never counted here.
+- `models` carries one entry per pass, in order, or the sentinel `pdf-text-layer` for a pass 0 answer. It is not a model id and is deliberately not shaped like one, so a cost report cannot count it as a model call.
+- A statement row missing a date or an amount is dropped from `rows`. The API would discard it anyway, and the score has already counted it against the page.
+- `low_confidence_fields` is always empty for a statement. There is no field to point at on a forty-row page, and naming every column says less than the score already does.
 
 ## Extraction quality ladder
 
@@ -340,12 +414,17 @@ So extraction starts cheap and escalates only on evidence (D36, AI-10). Adapted 
 
 | Pass | Model | What it does | Exit condition |
 |---|---|---|---|
+| 0 | none | A PDF's own text layer, parsed deterministically (D42) | Score at or above the threshold: return |
 | 1 | `AI_VISION_PRIMARY` | Extract with the standard prompt. Score the result | Score at or above the threshold: return |
 | 2 | `AI_VISION_SECONDARY` | Re-extract with a chain-of-thought prompt. Merge the two results field by field, weighted by confidence. Re-score | Score now at or above the threshold: return |
 | 3 | `AI_VISION_SECONDARY` | Re-extract **only** the fields still missing or invalid, one targeted prompt per field. Merge back | Always continues to pass 4 |
 | 4 | none | [Cross-field consistency](#cross-field-consistency) in Rust: arithmetic fixes, date and currency sanity (D30) | Final result |
 
-`AI_VISION_TERTIARY` is used in pass 2 instead of the secondary when pass 1 scored below half the threshold, meaning the primary model did not produce something worth merging with. There is no separate fourth model call.
+`AI_VISION_TERTIARY` is used in pass 2 instead of the secondary when pass 1 scored below half the threshold, meaning the primary model did not produce something worth merging with. A pass 1 that failed outright scores zero, so it escalates the same way. There is no separate fourth model call.
+
+Pass 0 runs only for `application/pdf`, and only its own exit matters: a text layer that scores **below** the threshold is discarded rather than merged into pass 1. It is a parser's guess at a layout, and merging a weak guess would let a misparsed label outvote a field the model read correctly.
+
+Pass 3 runs only for a receipt. A statement's quality is a share of valid rows rather than a set of named fields, and "re-read row 7" is not a prompt that can be written against a page the model numbers differently each time, so a statement's ladder stops after pass 2. A targeted answer is kept only when swapping it in actually raises the score; one that answered with something no better leaves the field alone.
 
 Most uploads stop at pass 1.
 
@@ -357,15 +436,31 @@ Receipts:
 
 | Field | Missing | Present but invalid |
 |---|---|---|
-| `total_amount` | -30 | -15 |
+| `total` | -30 | -15 |
 | `currency` | -25 | -10 |
 | `merchant` | -20 | n/a |
 | `date` | -15 | -5 (bad format or outside a reasonable range) |
 | `line_items` | -10 | -5 (items do not sum close to the total) |
 
-Statement rows score on the batch: a row missing a date or an amount is invalid, and the score is the share of valid rows.
+The field is `total` here and on the wire. An earlier draft of this table called it `total_amount`; there was never a second field, and the two names are the same thing.
 
-The weights are deliberate. A receipt with no merchant name is still useful, because the user can type it. A receipt with no total is not a receipt.
+Statement rows score on the batch: a row missing a date or an amount is invalid, and the score is the share of valid rows. A page with no rows at all scores zero.
+
+The weights are deliberate, and they add up to 100 exactly, so a receipt with every scored field missing scores zero. A receipt with no merchant name is still useful, because the user can type it. A receipt with no total is not a receipt.
+
+What counts as invalid, field by field:
+
+| Field | Invalid when |
+|---|---|
+| `total` | Present and not a positive decimal, or present as text this service will not read as a number |
+| `currency` | Present and not three letters |
+| `merchant` | Never. Any string the document carried is a usable name, which is why the table above has no invalid weight for it |
+| `date` | Not `YYYY-MM-DD`, or outside one day after `today` and ten years before it |
+| `line_items` | They do not sum close to the printed subtotal, or to the total when no subtotal was read. Tolerance is one percent, with a floor of one unit |
+
+`subtotal` and `tax` are merged and returned but not scored. They are useful when present and cost nothing when absent, and the API's consistency pass is what has an opinion about them.
+
+**Present but unreadable is not the same as missing**, which is why the internal result type can say both. A model answering `"total": "about 87 thousand"` saw a total; it is the reading that failed, and a reading is something the targeted pass can re-ask for. Collapsing the two at parse time would throw that away before anything could score it.
 
 ### Merging two results
 
@@ -373,10 +468,16 @@ Pass 2 produces a second result, not a replacement. Merge rules, in order:
 
 1. A field present in one result and absent in the other: take the present one.
 2. Both present and the confidences differ by more than 0.1: take the higher-confidence result's value.
-3. Both present and the confidences are close: field-specific rules decide. For `total_amount`, prefer the value that agrees with the sum of the line items. For `date`, prefer the one inside a reasonable range. For `merchant`, prefer the longer string, because truncation is the common failure.
-4. `line_items`: take the longer list, then apply consistency fixes to it.
+3. Both present and the confidences are close: field-specific rules decide. For `total`, prefer the value that agrees with the rest of its own reading. For `date`, prefer the one inside a reasonable range. For `merchant`, prefer the longer string, because truncation is the common failure. For `subtotal`, `tax` and `currency` there is nothing to appeal to, so the earlier pass wins and the ladder does not churn on equal evidence.
+4. `line_items`: take the longer list. Consistency fixes on that list are Rust's (D30), not the merge's.
 
-Confidence is derived from the result's own quality score and its missing critical fields, so it is computed, not asked for from the model.
+Rule 3's total deserves a sentence, because "agrees with the sum of the line items" taken literally never fires on a receipt with tax on it: the items sum to the subtotal and the total is the subtotal plus the tax. So the comparison is against the whole of the rest of that reading, which is the printed subtotal when there is one and the items when there is not, plus the tax when there is one.
+
+Confidence is derived from the result's own quality score and its missing critical fields, so it is computed, not asked for from the model. A model that misread a total states its confidence in the misread total just as firmly. A missing `total` or `date` costs 0.15 of confidence beyond what the score already took: a result with no total is not "70% as trustworthy", it is a different kind of answer.
+
+Nothing in the merge corrects a figure. Choosing the total that agrees with its own line items is choosing between two things the models said; replacing a total with the sum of the items is arithmetic, and arithmetic belongs to the API's consistency pass (D30, AI-7).
+
+Statement results do not merge field by field, because rows are not fields: two passes over a page produce two orderings of overlapping rows, and matching them up is guessing which `WARUNG TEKKO 87500` is which. The page with more valid rows wins whole, and the earlier pass wins a tie.
 
 ### Budget and caps
 
@@ -390,9 +491,13 @@ The ladder cannot run forever. A user is waiting on a confirmation sheet.
 
 When the budget runs out mid-ladder, the result is returned with its score, marked low confidence. It is not an error: a partially extracted receipt the user can correct beats a spinner that ends in a failure message.
 
-`RECEIPT_UNREADABLE` (AI-3) is returned only when the result after pass 4 still has no `total_amount` and no `date`. Below the threshold but with those two present, the draft is returned and marked (AI-11), and the confirmation sheet highlights the weak fields for the user to check.
+"Marked" is not a separate flag. A result that a cap stopped is below the threshold by construction, because the ladder only kept going while it was, so its own `quality.score` and `low_confidence_fields` already say so. A field the response does not carry is a field the sheet asks about.
 
-A failed pass never aborts the ladder. Pass 2 failing falls through to pass 3; pass 3 failing falls through to pass 4.
+A call is never given more time than the budget has left: the per-call timeout is the smaller of 20 seconds and the remaining wall clock. Otherwise a 20 second call starts with 3 seconds of budget left and spends 17 of them on an answer that will be thrown away.
+
+`RECEIPT_UNREADABLE` (AI-3) is returned only when the result after pass 4 still has no `total` and no usable `date`. Below the threshold but with those two present, the draft is returned and marked (AI-11), and the confirmation sheet highlights the weak fields for the user to check. The statement equivalent, `STATEMENT_UNREADABLE`, is returned when no row carries both a date and an amount. Both are 422.
+
+A failed pass never aborts the ladder. Pass 2 failing falls through to pass 3; pass 3 failing falls through to pass 4. A pass fails on a timeout, a transport error, a provider error, or an answer that is not JSON; all four are a pass that produced nothing, and none of them is a request that failed.
 
 ### What the user sees
 
@@ -406,6 +511,8 @@ The draft carries its score and a per-field flag:
 ```
 
 The confirmation sheet marks a `low_confidence_field` for attention and a `corrected_field` as replaced by arithmetic ([chat](../features/chat.md#canvas)). The user always sees which numbers the model gave and which the code fixed.
+
+That example is the draft **after the API's pass 4**. Out of the AI service `corrected_fields` is always `[]`, because the service does not correct anything.
 
 ### Cross-field consistency
 
@@ -425,8 +532,9 @@ A suggested fix is applied and the field is marked as corrected, so the confirma
 
 - Structured JSON logs with `request_id` propagated from the API.
 - Logged per turn: workspace ID, session ID, round count, tool names called, input and output tokens, total duration.
-- Logged per extraction: the pass reached, the model used at each pass, the quality score after each pass, the fields re-extracted, and total duration. This is the data that says whether the ladder's threshold is set correctly, and whether the primary model is good enough to stay primary.
-- Never logged: prompt text, message content, receipt images, extracted receipt text, the Anthropic key (OPS-3).
+- Logged per extraction, as one line: `request_id`, `workspace_id`, the pass reached, the model used at each pass, the quality score after each pass, the fields re-extracted, the number of model calls, and total duration. This is the data that says whether the ladder's threshold is set correctly, and whether the primary model is good enough to stay primary.
+- Never logged: prompt text, message content, receipt images, extracted receipt text, **any extracted field value**, the Anthropic key (OPS-3). The re-extracted fields are logged as names, never with what they turned out to be. A failed pass logs the exception type and not its message, because a provider's message can quote the request back.
+- The same rule reaches the refusal bodies. This service answers a refused request body with its own envelope rather than FastAPI's, because FastAPI's default echoes the offending `input`, and on `POST /receipt/parse` the offending input is a base64 receipt.
 
 Token usage is logged for cost visibility. There is no quota enforcement; billing is out of scope.
 
@@ -437,8 +545,12 @@ Token usage is logged for cost visibility. There is no quota enforcement; billin
 | Tool loop | A fake model client returns a scripted sequence: one call, a chain, a refusal, a cap breach |
 | Prompt | Golden-file test on the assembled prompt for a fixed context |
 | Schemas | `GET /tools/definitions` matches the schema module, so the API and the model cannot drift |
-| Parsing | Three receipt fixtures with known totals and dates, run against a recorded response |
+| Parsing | Three receipt fixtures with known totals and dates, run against a recorded response, plus one whose stated total is deliberately wrong and which the service must surface unchanged |
 | Quality score | Pure function, no model. A complete receipt scores 100, each missing field deducts its stated weight |
+| The empty tool list | Asserted on **every** call of **every** ladder path, not once. The control is that no branch passes a tool, and a single test of one branch does not say that |
+| The PDF text layer | A committed one-page PDF with a real text layer scores 100 and makes no model call at all; one without a text layer escalates |
+| The clock | Scripted, not slept through. The wall-clock budget is a rule about `time.monotonic`, so a scripted answer says "this call took 46 seconds" and the ladder behaves exactly as it would have |
+| Column mapping | The clamp (two rows, 80 characters a cell) asserted on what reached the model, and rule 4 asserted twice: once on the cleaner and once on the prompt still naming the account-holder headers |
 | The provider | `tests/test_model_live.py`, opt-in with `RUN_LIVE_MODEL_TESTS=1`. Proves the two things the rest of M4 stands on, a streamed answer and a tool call in the Anthropic shape, actually survive whatever `AI_BASE_URL` points at. Asserts shape, never wording |
 | Ladder | A scripted model client: a clean result stops at pass 1 and makes exactly one call; a poor result escalates; a pass 2 failure still reaches pass 4; the call cap and the time budget both stop the ladder and return a marked result |
 | Merging | Two results with known confidences merge per the stated rules, including the close-confidence field rules |

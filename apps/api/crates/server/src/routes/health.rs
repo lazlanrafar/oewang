@@ -19,7 +19,10 @@ pub async fn ready(State(state): State<AppState>) -> (StatusCode, Json<Value>) {
         .fetch_one(&state.db)
         .await
     {
-        Ok(_) => (StatusCode::OK, Json(json!({ "status": "ok", "database": "ok" }))),
+        Ok(_) => (
+            StatusCode::OK,
+            Json(json!({ "status": "ok", "database": "ok" })),
+        ),
         Err(error) => {
             tracing::warn!(%error, "readiness check failed");
             (

@@ -55,6 +55,9 @@ export const load: PageServerLoad = async ({ depends, locals, url, parent }) => 
 		transactions: transactions.data ?? [],
 		suggestedRate: suggestion,
 		detail,
+		// The receipt the canvas is open on, so the panel can name the file
+		// and the manual form can carry it as an attachment (AI-3).
+		canvasFile: await loadCanvasFile(url, token),
 		meta: transactions.meta,
 		wallets: wallets.data ?? [],
 		categories: categories.data ?? [],
@@ -81,6 +84,24 @@ async function suggestRate(
 		const today = new Date().toISOString().slice(0, 10);
 		const result = await ledger.fxRate(from, to, today, token);
 		return result.data?.rate ?? null;
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * The vault file `?canvas=…&id=…` points at, or null.
+ *
+ * Read here rather than in the browser, which has no way to ask (D5). A
+ * file that has gone leaves this null and the panel says so rather than
+ * failing the page.
+ */
+async function loadCanvasFile(url: URL, token?: string) {
+	const id = url.searchParams.get('canvas') ? (url.searchParams.get('id') ?? '') : '';
+	if (id === '') return null;
+
+	try {
+		return (await ledger.readFile(id, token)).data ?? null;
 	} catch {
 		return null;
 	}
@@ -147,6 +168,46 @@ export const actions: Actions = {
 	bulkDelete: async ({ request, locals }) =>
 		run(request, (form) => ledger.bulkDeleteTransactions(ids(form), locals.accessToken)),
 
+	/**
+	 * Confirm what the model read off a receipt (AI-2, CHAT-13).
+	 *
+	 * The draft was never persisted, so this is an ordinary create through
+	 * the same service every other write here uses: the receipt's file
+	 * travels as an attachment, and the line items follow it, because
+	 * `POST /v1/transactions` takes attachments but not items.
+	 *
+	 * It lives on this page rather than on the chat page because this is
+	 * where transactions are written. The chat canvas posts here, so both
+	 * surfaces confirm a receipt the same way rather than twice.
+	 *
+	 * **One call.** The row, its line items and its attachment are written
+	 * in the same database transaction, so a confirmed receipt either
+	 * happens whole or does not happen. `source: 'receipt'` is what makes
+	 * the audit row name the surface it came from (OPS-1, D14).
+	 */
+	confirmReceipt: async ({ request, locals }) =>
+		run(request, (form) =>
+			ledger.createTransaction(
+				{
+					type: 'expense',
+					source: 'receipt',
+					wallet_id: text(form, 'wallet_id'),
+					to_wallet_id: null,
+					category_id: optional(form, 'category_id'),
+					amount: text(form, 'amount'),
+					date: new Date(`${text(form, 'date')}T12:00:00`).toISOString(),
+					name: optional(form, 'name'),
+					is_ready: false,
+					items: receiptItems(form),
+					attachment_ids: form
+						.getAll('attachment_ids')
+						.map((value) => String(value))
+						.filter(Boolean)
+				},
+				locals.accessToken
+			)
+		),
+
 	// ------------------------------------------------------- line items
 
 	addItem: async ({ request, locals }) =>
@@ -173,6 +234,36 @@ export const actions: Actions = {
 			)
 		)
 };
+
+/**
+ * A receipt's line items, as the confirmation panel submitted them.
+ *
+ * One JSON field rather than one form field per line: the number of lines
+ * belongs to the receipt, not to the form. Every figure stays the string
+ * the panel held (D12); nothing here reads one.
+ */
+function receiptItems(form: FormData): ledger.TransactionItemPayload[] {
+	let parsed: unknown;
+	try {
+		parsed = JSON.parse(String(form.get('items') ?? '[]'));
+	} catch {
+		return [];
+	}
+
+	if (!Array.isArray(parsed)) return [];
+
+	return parsed
+		.filter(
+			(entry): entry is Record<string, unknown> => typeof entry === 'object' && entry !== null
+		)
+		.map((entry) => ({
+			name: typeof entry.name === 'string' ? entry.name : '',
+			quantity: typeof entry.quantity === 'string' ? entry.quantity : null,
+			unit_price: typeof entry.unit_price === 'string' ? entry.unit_price : null,
+			amount: typeof entry.amount === 'string' ? entry.amount : ''
+		}))
+		.filter((item) => item.amount !== '');
+}
 
 /** A line item, with every figure still a string (D12). */
 function itemBody(form: FormData): Record<string, unknown> {

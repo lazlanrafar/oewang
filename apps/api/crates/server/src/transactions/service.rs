@@ -40,6 +40,10 @@ const ENTITY: &str = "transaction";
 /// The most rows one bulk edit or bulk delete may touch (TXN-14).
 pub const BULK_LIMIT: usize = 500;
 /// The most rows one import may commit (TXN-11).
+/// The default, and the number the documentation states. The running
+/// value is `Config::import_row_limit`; this is what it falls back to
+/// and what the tests assert against
+/// (docs/security/hardening.md#limits).
 pub const IMPORT_LIMIT: usize = 5_000;
 
 /// What a create or an update is asked to write.
@@ -118,7 +122,9 @@ pub async fn list(
     .await
     .map_err(internal)?;
 
-    let total = repo::count(pool, workspace_id, filters).await.map_err(internal)?;
+    let total = repo::count(pool, workspace_id, filters)
+        .await
+        .map_err(internal)?;
 
     Ok((rows, total))
 }
@@ -135,7 +141,9 @@ pub async fn summary(
     workspace_id: &str,
     filters: &TransactionFilters<'_>,
 ) -> Result<(Vec<SummaryRow>, Vec<CategoryTotalRow>)> {
-    let by_type = repo::summary(pool, workspace_id, filters).await.map_err(internal)?;
+    let by_type = repo::summary(pool, workspace_id, filters)
+        .await
+        .map_err(internal)?;
     let by_category = repo::summary_by_category(pool, workspace_id, filters)
         .await
         .map_err(internal)?;
@@ -147,11 +155,7 @@ pub async fn summary(
 ///
 /// Readable by any member: knowing why a number is what it is is not a
 /// privileged question.
-pub async fn history(
-    pool: &PgPool,
-    workspace_id: &str,
-    id: &str,
-) -> Result<Vec<audit::AuditRow>> {
+pub async fn history(pool: &PgPool, workspace_id: &str, id: &str) -> Result<Vec<audit::AuditRow>> {
     // Scoped through the transaction itself, so a history request cannot be
     // used to probe for ids in another workspace.
     find(pool, workspace_id, id).await?;
@@ -169,6 +173,30 @@ pub async fn create(
     actor: Actor<'_>,
     input: TransactionInput<'_>,
 ) -> Result<TransactionRow> {
+    create_with_items(pool, rates, actor, input, &[]).await
+}
+
+/// Create a transaction and its line items in one database transaction.
+///
+/// A receipt is the reason this exists. Confirming one is a single act by
+/// the user, and creating the transaction and then adding six items in six
+/// more calls makes it six acts that can each half-fail: a crash after the
+/// third leaves a transaction whose items do not add up and nothing saying
+/// why. Either the whole receipt is written or none of it is.
+///
+/// Items move no money. Only the transaction's own `amount` does, which is
+/// why the balance arithmetic below does not look at them (TXN-12).
+pub async fn create_with_items(
+    pool: &PgPool,
+    rates: &RatesClient,
+    actor: Actor<'_>,
+    input: TransactionInput<'_>,
+    items: &[ItemInput<'_>],
+) -> Result<TransactionRow> {
+    for item in items {
+        validate_item(item)?;
+    }
+
     let prepared = prepare(pool, rates, actor.workspace_id, &input).await?;
 
     let mut tx = pool.begin().await.map_err(internal)?;
@@ -185,7 +213,40 @@ pub async fn create(
 
     sync_attachments(&mut tx, actor.workspace_id, &row.id, input.attachment_ids).await?;
 
-    log(&mut tx, actor, "transaction.created", ENTITY, &row.id, None, snapshot(&row)?).await?;
+    for item in items {
+        if let Some(category_id) = item.category_id {
+            require_category(&mut tx, actor.workspace_id, category_id).await?;
+        }
+
+        let stored = vault::insert_item(
+            &mut *tx,
+            new_item(&cuid2::create_id(), actor.workspace_id, &row.id, item),
+        )
+        .await
+        .map_err(internal)?;
+
+        log(
+            &mut tx,
+            actor,
+            "transaction_item.created",
+            ITEM_ENTITY,
+            &stored.id,
+            None,
+            snapshot(&stored)?,
+        )
+        .await?;
+    }
+
+    log(
+        &mut tx,
+        actor,
+        "transaction.created",
+        ENTITY,
+        &row.id,
+        None,
+        snapshot(&row)?,
+    )
+    .await?;
 
     tx.commit().await.map_err(internal)?;
     Ok(row)
@@ -215,7 +276,9 @@ pub async fn update(
         .ok_or(AppError::TransactionNotFound)?;
 
     let old_effect = effect_of(&before)?;
-    let moves = net(reverse(&old_effect).into_iter().chain(prepared.shape.effect()));
+    let moves = net(reverse(&old_effect)
+        .into_iter()
+        .chain(prepared.shape.effect()));
     apply_moves(&mut tx, actor.workspace_id, &moves).await?;
 
     let after = repo::update(
@@ -256,7 +319,9 @@ async fn sync_attachments(
     transaction_id: &str,
     attachment_ids: Option<&[String]>,
 ) -> Result<()> {
-    let Some(ids) = attachment_ids else { return Ok(()) };
+    let Some(ids) = attachment_ids else {
+        return Ok(());
+    };
 
     for file_id in ids {
         // A file from another workspace is a file that does not exist.
@@ -297,15 +362,46 @@ pub async fn delete(pool: &PgPool, actor: Actor<'_>, id: &str) -> Result<()> {
     let moves = net(reverse(&effect_of(&before)?));
     apply_moves(&mut tx, actor.workspace_id, &moves).await?;
 
-    repo::soft_delete(&mut *tx, actor.workspace_id, id).await.map_err(internal)?;
+    repo::soft_delete(&mut *tx, actor.workspace_id, id)
+        .await
+        .map_err(internal)?;
 
-    log(&mut tx, actor, "transaction.deleted", ENTITY, id, snapshot(&before)?, None).await?;
+    log(
+        &mut tx,
+        actor,
+        "transaction.deleted",
+        ENTITY,
+        id,
+        snapshot(&before)?,
+        None,
+    )
+    .await?;
 
     tx.commit().await.map_err(internal)?;
     Ok(())
 }
 
 // -------------------------------------------------------------------- bulk
+
+/// What became of one row. Three different things, counted and reported
+/// separately, because a user reading "40 imported" wants to know what
+/// happened to the other six (TXN-16).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RowOutcome {
+    Created,
+    Duplicate,
+    Skipped,
+}
+
+impl RowOutcome {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Created => "imported",
+            Self::Duplicate => "duplicate",
+            Self::Skipped => "skipped",
+        }
+    }
+}
 
 #[derive(Debug, Default)]
 pub struct BulkOutcome {
@@ -314,6 +410,11 @@ pub struct BulkOutcome {
     /// One entry per row that could not be written, with its index in the
     /// request and why. Row-level errors are reported, never fatal.
     pub skipped: Vec<SkippedRow>,
+    /// One entry per input row, in input order. The counts above are what
+    /// a caller usually wants; this is what a review screen needs, because
+    /// "which of my rows was the duplicate" is not answerable from a
+    /// number.
+    pub outcomes: Vec<RowOutcome>,
 }
 
 #[derive(Debug, Clone)]
@@ -334,8 +435,9 @@ pub async fn bulk_create(
     pool: &PgPool,
     actor: Actor<'_>,
     inputs: Vec<TransactionInput<'_>>,
+    row_limit: usize,
 ) -> Result<BulkOutcome> {
-    if inputs.len() > IMPORT_LIMIT {
+    if inputs.len() > row_limit {
         return Err(AppError::validation([(
             "transactions",
             "An import is capped at 5,000 rows. Split the file.",
@@ -351,8 +453,7 @@ pub async fn bulk_create(
     let mut tx = pool.begin().await.map_err(internal)?;
 
     for (index, input) in inputs.iter().enumerate() {
-        match prepare_import_row(&mut tx, actor.workspace_id, &workspace.currency_code, input)
-            .await
+        match prepare_import_row(&mut tx, actor.workspace_id, &workspace.currency_code, input).await
         {
             Ok(prepared) => {
                 let print = fingerprint_for(input, &prepared);
@@ -370,6 +471,7 @@ pub async fn bulk_create(
 
                 if !seen.is_empty() {
                     outcome.duplicates += 1;
+                    outcome.outcomes.push(RowOutcome::Duplicate);
                     continue;
                 }
 
@@ -395,12 +497,16 @@ pub async fn bulk_create(
                 .await?;
 
                 outcome.created += 1;
+                outcome.outcomes.push(RowOutcome::Created);
             }
-            Err(error) => outcome.skipped.push(SkippedRow {
-                index,
-                code: error.code(),
-                reason: error.to_string(),
-            }),
+            Err(error) => {
+                outcome.skipped.push(SkippedRow {
+                    index,
+                    code: error.code(),
+                    reason: error.to_string(),
+                });
+                outcome.outcomes.push(RowOutcome::Skipped);
+            }
         }
     }
 
@@ -424,8 +530,9 @@ pub async fn import_rows(
     mapping: &ColumnMapping,
     rows: &[RawRow],
     categories: &std::collections::BTreeMap<String, String>,
+    row_limit: usize,
 ) -> Result<BulkOutcome> {
-    if rows.len() > IMPORT_LIMIT {
+    if rows.len() > row_limit {
         return Err(AppError::validation([(
             "rows",
             "An import is capped at 5,000 rows. Split the file.",
@@ -488,7 +595,7 @@ pub async fn import_rows(
         })
         .collect();
 
-    let mut outcome = bulk_create(pool, actor, payload).await?;
+    let mut outcome = bulk_create(pool, actor, payload, row_limit).await?;
 
     // Report indexes from the original file, not from the filtered list, so
     // the review step can point at the line the user has to fix.
@@ -499,6 +606,18 @@ pub async fn import_rows(
     }
     outcome.skipped.extend(unreadable);
     outcome.skipped.sort_by_key(|row| row.index);
+
+    // `bulk_create` saw only the rows that could be read, so its outcomes
+    // are indexed against that shorter list. Expand them back to the file:
+    // a row that never reached it was skipped before it got there, and the
+    // review screen counts the lines of the file the user uploaded.
+    let mut full = vec![RowOutcome::Skipped; rows.len()];
+    for (position, (original, _, _)) in prepared.iter().enumerate() {
+        if let Some(result) = outcome.outcomes.get(position) {
+            full[*original] = *result;
+        }
+    }
+    outcome.outcomes = full;
 
     Ok(outcome)
 }
@@ -602,7 +721,10 @@ pub async fn bulk_delete(pool: &PgPool, actor: Actor<'_>, ids: &[String]) -> Res
 
 fn check_bulk_size(ids: &[String]) -> Result<()> {
     if ids.is_empty() {
-        return Err(AppError::validation([("ids", "Select at least one transaction.")]));
+        return Err(AppError::validation([(
+            "ids",
+            "Select at least one transaction.",
+        )]));
     }
     if ids.len() > BULK_LIMIT {
         return Err(AppError::validation([(
@@ -653,9 +775,16 @@ pub async fn export(
             quote(row.category_name.as_deref().unwrap_or("")),
             quote(&row.wallet_name),
             quote(row.to_wallet_name.as_deref().unwrap_or("")),
-            quote(row.description.as_deref().or(row.name.as_deref()).unwrap_or("")),
+            quote(
+                row.description
+                    .as_deref()
+                    .or(row.name.as_deref())
+                    .unwrap_or("")
+            ),
             row.wallet_currency_code,
-            row.original_amount.map(|a| a.to_string()).unwrap_or_default(),
+            row.original_amount
+                .map(|a| a.to_string())
+                .unwrap_or_default(),
             row.original_currency_code.clone().unwrap_or_default(),
             row.exchange_rate.map(|r| r.to_string()).unwrap_or_default(),
             row.base_amount,
@@ -820,7 +949,11 @@ async fn prepare_import_row(
 }
 
 fn foreign_entry(input: &TransactionInput<'_>) -> Result<Option<ForeignEntry>> {
-    match (input.original_amount, input.original_currency_code, input.exchange_rate) {
+    match (
+        input.original_amount,
+        input.original_currency_code,
+        input.exchange_rate,
+    ) {
         (None, None, None) => Ok(None),
         (Some(amount), Some(code), Some(rate)) => Ok(Some(ForeignEntry {
             original_amount: amount,
@@ -853,7 +986,10 @@ fn new_row<'a>(
         amount: prepared.shape.amount,
         to_amount: prepared.shape.to_amount,
         original_amount: prepared.foreign.as_ref().map(|f| f.original_amount),
-        original_currency_code: prepared.foreign.as_ref().map(|f| f.original_currency_code.as_str()),
+        original_currency_code: prepared
+            .foreign
+            .as_ref()
+            .map(|f| f.original_currency_code.as_str()),
         exchange_rate: prepared.foreign.as_ref().map(|f| f.exchange_rate),
         base_amount: prepared.base_amount,
         base_rate: prepared.base_rate,
@@ -871,10 +1007,9 @@ fn new_row<'a>(
 
 /// The balance effect of a row already in the database.
 fn effect_of(row: &TransactionRow) -> Result<Vec<BalanceDelta>> {
-    let kind: TransactionType = row
-        .r#type
-        .parse()
-        .map_err(|error| AppError::Internal(anyhow::anyhow!("unknown type in database: {error}")))?;
+    let kind: TransactionType = row.r#type.parse().map_err(|error| {
+        AppError::Internal(anyhow::anyhow!("unknown type in database: {error}"))
+    })?;
 
     Ok(TransactionShape {
         kind,
@@ -1020,13 +1155,26 @@ pub async fn add_item(
 
     let item = vault::insert_item(
         &mut *tx,
-        new_item(&cuid2::create_id(), actor.workspace_id, transaction_id, &input),
+        new_item(
+            &cuid2::create_id(),
+            actor.workspace_id,
+            transaction_id,
+            &input,
+        ),
     )
     .await
     .map_err(internal)?;
 
-    log(&mut tx, actor, "transaction_item.created", ITEM_ENTITY, &item.id, None, snapshot(&item)?)
-        .await?;
+    log(
+        &mut tx,
+        actor,
+        "transaction_item.created",
+        ITEM_ENTITY,
+        &item.id,
+        None,
+        snapshot(&item)?,
+    )
+    .await?;
 
     tx.commit().await.map_err(internal)?;
     Ok(item)
@@ -1125,8 +1273,14 @@ fn validate_item(input: &ItemInput<'_>) -> Result<()> {
     if input.amount == Decimal::ZERO {
         return Err(AppError::AmountNotPositive);
     }
-    if input.quantity.is_some_and(|quantity| quantity <= Decimal::ZERO) {
-        return Err(AppError::validation([("quantity", "Enter a quantity greater than zero.")]));
+    if input
+        .quantity
+        .is_some_and(|quantity| quantity <= Decimal::ZERO)
+    {
+        return Err(AppError::validation([(
+            "quantity",
+            "Enter a quantity greater than zero.",
+        )]));
     }
 
     Ok(())

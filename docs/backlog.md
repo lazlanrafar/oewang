@@ -211,7 +211,7 @@ Requirements: TXN-4, TXN-5
 - [x] Unit tests cover every transition and the delete
 
 ### US-017: Transaction table UI
-Requirements: TXN-8, TXN-9, UI-2, UI-6
+Requirements: TXN-8, TXN-9, UI-2, UI-6, UI-8
 
 - [x] The old column set, widths, sticky columns and resizing. TanStack Table is deliberately absent (see [transactions](features/transactions.md#data-table-what-is-built-and-what-is-not))
 - [x] Column visibility, sorting and row selection
@@ -287,8 +287,8 @@ Requirements: TXN-10
 Requirements: TXN-11, TXN-16, TXN-23, AI-9, SEC-18
 
 - [x] Four steps, ported from the old wizard
-- [ ] XLSX. CSV, semicolon and tab files are parsed in the browser; a spreadsheet needs a dependency whose only npm build carries a known advisory, which is a call for the team rather than a default
-- [ ] Prefilled step 2. The route exists and refuses with `AI_UNAVAILABLE`; the call needs the OWE1 client for the API-to-AI hop, which is US-026
+- [ ] XLSX. CSV, semicolon and tab files are parsed in the browser. Still not built, and still deliberately: the only npm build of SheetJS carries a known prototype-pollution advisory and it would run in the browser, in the same context as the session. Reconfirmed 2026-11-03. The owner takes this one or it stays out
+- [x] Prefilled step 2. `POST /v1/transactions/import/map-columns` now proxies the AI service (US-029 landed the hop). The step still works entirely by hand when the call fails, times out or maps nothing, which is the path that matters
 - [x] The mapping call failing or timing out leaves the step empty and the wizard still works by hand
 - [x] Rows are transformed in Rust. A test asserts no amount is ever sent to the model
 - [x] Split debit and credit columns map correctly, with the sign rule in code
@@ -368,7 +368,7 @@ Requirements: CHAT-2, CHAT-9, SEC-7
 - [x] SvelteKit pipes it to the browser with no buffering
 - [x] Tokens render incrementally; Markdown renders after the stream ends, sanitized
 - [x] Aborting stops generation and persists the partial reply
-- [ ] First token under 2 seconds with encryption on
+- [ ] First token under 2 seconds with encryption on. Measured at about 2.4 s. Encryption is not the cost: the gateway's `free-main` injects roughly 3.6k tokens of its own system prompt ahead of ours. A faster model behind `AI_BASE_URL` is a configuration change (D67), so this is the owner's call, not more code. See [Q12](prd.md#10-open-questions)
 - [x] Verify in browser
 
 First token measured at 2.35 seconds end to end through all three hops. The
@@ -440,60 +440,58 @@ Requirements: CHAT-10
 ### US-033: Receipt parsing and consistency fixes
 Requirements: AI-1, AI-3, AI-7, SEC-21
 
-- [ ] `POST /receipt/parse` returns merchant, date, total, currency and line items
-- [ ] **The call passes no tools at all**; a test asserts the tool list is empty
-- [ ] `POST /v1/ai/receipt/parse` uploads to the vault, calls the service and returns the draft plus the file ID
-- [ ] Cross-field consistency runs in Rust: items sum to subtotal, subtotal plus tax equals total, unit price times quantity equals item amount, date is real, currency is valid ISO 4217
-- [ ] A suggested fix is applied and the field is marked as corrected
-- [ ] Nothing is persisted as a transaction
-- [ ] An unreadable image returns `RECEIPT_UNREADABLE`, not a 500
-- [ ] Three receipt fixtures with known totals and dates, plus one fixture whose stated total is deliberately wrong and must be corrected by arithmetic
+- [x] `POST /receipt/parse` returns merchant, date, total, currency and line items
+- [x] **The call passes no tools at all**; a test asserts the tool list is empty
+- [x] `POST /v1/ai/receipt/parse` uploads to the vault, calls the service and returns the draft plus the file ID
+- [x] Cross-field consistency runs in Rust: items sum to subtotal, subtotal plus tax equals total, unit price times quantity equals item amount, date is real, currency is valid ISO 4217
+- [x] A suggested fix is applied and the field is marked as corrected
+- [x] Nothing is persisted as a transaction
+- [x] An unreadable image returns `RECEIPT_UNREADABLE`, not a 500
+- [x] Three receipt fixtures with known totals and dates, plus one fixture whose stated total is deliberately wrong and must be corrected by arithmetic
 
 This story runs the single primary model. The ladder is US-033b, so the flow is working before it is optimized.
-
 ### US-033b: Extraction quality ladder
 Requirements: AI-10, AI-11
 
-- [ ] `calculateQualityScore` as a pure function with the weights in [the ladder](ai/service.md#quality-score). Unit tested with no model
-- [ ] Pass 1 runs `AI_VISION_PRIMARY` and returns immediately when the score reaches `AI_QUALITY_THRESHOLD`
-- [ ] Pass 2 runs the secondary model with a chain-of-thought prompt, or the tertiary when pass 1 scored below half the threshold
-- [ ] Results merge per the stated rules, including the close-confidence field rules for total, date, merchant and line items
-- [ ] Pass 3 re-extracts only the invalid fields, one targeted prompt per field, capped at 4 calls
-- [ ] A failed pass never aborts the ladder; pass 2 failing falls through to pass 3
-- [ ] The call cap and the 45 second budget each stop the ladder and return a marked result, not an error
-- [ ] `RECEIPT_UNREADABLE` only when `total` and `date` are both absent after pass 4
-- [ ] The response carries `quality.score`, `low_confidence_fields` and `corrected_fields`
-- [ ] A clean fixture makes exactly one model call; a poor fixture escalates. Both asserted against a scripted client
-- [ ] Per-extraction logging: pass reached, model per pass, score per pass, fields re-extracted, duration
-- [ ] The same ladder serves `/import/extract`
-
+- [x] `calculateQualityScore` as a pure function with the weights in [the ladder](ai/service.md#quality-score). Unit tested with no model
+- [x] Pass 1 runs `AI_VISION_PRIMARY` and returns immediately when the score reaches `AI_QUALITY_THRESHOLD`
+- [x] Pass 2 runs the secondary model with a chain-of-thought prompt, or the tertiary when pass 1 scored below half the threshold
+- [x] Results merge per the stated rules, including the close-confidence field rules for total, date, merchant and line items
+- [x] Pass 3 re-extracts only the invalid fields, one targeted prompt per field, capped at 4 calls
+- [x] A failed pass never aborts the ladder; pass 2 failing falls through to pass 3
+- [x] The call cap and the 45 second budget each stop the ladder and return a marked result, not an error
+- [x] `RECEIPT_UNREADABLE` only when `total` and `date` are both absent after pass 4
+- [x] The response carries `quality.score`, `low_confidence_fields` and `corrected_fields`
+- [x] A clean fixture makes exactly one model call; a poor fixture escalates. Both asserted against a scripted client
+- [x] Per-extraction logging: pass reached, model per pass, score per pass, fields re-extracted, duration
+- [x] The same ladder serves `/import/extract`
 ### US-034: Receipt confirmation and the canvas
 Requirements: AI-2, UI-2, CHAT-13
 
-- [ ] A side panel component driven by URL parameters (`?canvas=…&id=…`), surviving reload
-- [ ] The panel mounts the real confirmation sheet and the real transaction form, not a separate rendering
-- [ ] The conversation column animates its margin so it reflows beside the panel; full width below the medium breakpoint
-- [ ] Uploading from chat or from the transaction page opens the panel
-- [ ] Every parsed field is editable; corrected fields are visibly marked, and low confidence fields are flagged for the user to check (AI-11)
-- [ ] The wallet defaults to the workspace default; a matching category is preselected
-- [ ] Confirming creates the transaction with its items and the receipt attached
-- [ ] Cancelling leaves the file and creates nothing
-- [ ] The assistant writes one sentence and does not repeat the draft contents in text
+- [x] A side panel component driven by URL parameters (`?canvas=…&id=…`), surviving reload
+- [x] The panel mounts the real confirmation sheet and the real transaction form, not a separate rendering
+- [x] The conversation column animates its margin so it reflows beside the panel; full width below the medium breakpoint
+- [x] Uploading from chat or from the transaction page opens the panel
+- [x] Every parsed field is editable; corrected fields are visibly marked, and low confidence fields are flagged for the user to check (AI-11)
+- [x] The wallet defaults to the workspace default; a matching category is preselected
+- [x] Confirming creates the transaction with its items and the receipt attached
+- [x] Cancelling leaves the file and creates nothing
+- [x] The assistant writes one sentence and does not repeat the draft contents in text
 - [ ] Verify in browser
 
 ### US-035: AI statement import
 Requirements: AI-4, AI-5, AI-6, TXN-16, TXN-17, SEC-18, SEC-21
 
-- [ ] `POST /v1/transactions/import` creates a job row and returns `202 {job_id}`
-- [ ] A PDF carrying a text layer is parsed deterministically first; vision is the fallback (D42)
-- [ ] A tokio task calls `/import/extract`, which also passes no tools, then creates rows one by one
-- [ ] Each row gets a fingerprint; an existing one counts as a duplicate
-- [ ] A failed row counts as skipped and does not abort the job
-- [ ] Imported, skipped and duplicate counts written back on completion; capped at 5,000 rows
-- [ ] A job `pending` past 10 minutes reports as stale and the modal offers a retry
-- [ ] A failed job keeps its uploaded file, so a retry does not re-upload
+- [x] `POST /v1/transactions/import` creates a job row and returns `202 {job_id}`
+- [x] A PDF carrying a text layer is parsed deterministically first; vision is the fallback (D42)
+- [x] A tokio task calls `/import/extract`, which also passes no tools, then creates rows one by one
+- [x] Each row gets a fingerprint; an existing one counts as a duplicate
+- [x] A failed row counts as skipped and does not abort the job
+- [x] Imported, skipped and duplicate counts written back on completion; capped at 5,000 rows
+- [x] A job `pending` past 10 minutes reports as stale and the modal offers a retry
+- [x] A failed job keeps its uploaded file, so a retry does not re-upload
 - [ ] Re-importing the same statement twice creates nothing the second time
-- [ ] The modal polls every 2 seconds and shows the review screen
+- [x] The modal polls every 2 seconds and shows the review screen
 - [ ] Verify in browser
 
 ---
@@ -503,52 +501,59 @@ Requirements: AI-4, AI-5, AI-6, TXN-16, TXN-17, SEC-18, SEC-21
 ### US-036: Limits, headers, secrets
 Requirements: PLT-4, AUTH-6, OPS-5, OPS-6, SEC-14 to SEC-19
 
-- [ ] Every rate limit and size limit from [hardening](security/hardening.md#limits), as configuration with those defaults
-- [ ] CSP, HSTS, `nosniff`, referrer policy, permissions policy and `frame-ancestors 'none'` on every HTML response
-- [ ] CORS allows nothing (SEC-16)
-- [ ] The chat turn limit holds: the 21st turn in a minute for one workspace is refused (SEC-17)
-- [ ] A test asserts no browser-reachable code path calls the API or the AI service directly (PLT-4)
-- [ ] Internal routes reject a request without a valid service key, compared in constant time
-- [ ] A header snapshot test, so a loosened CSP shows up in review (SEC-15)
-- [ ] A test asserts no secret value appears in captured logs
+- [x] Every rate limit and size limit from [hardening](security/hardening.md#limits), as configuration with those defaults
+- [x] CSP, HSTS, `nosniff`, referrer policy, permissions policy and `frame-ancestors 'none'` on every HTML response
+- [x] CORS allows nothing (SEC-16)
+- [x] The chat turn limit holds: the 21st turn in a minute for one workspace is refused (SEC-17)
+- [x] A test asserts no browser-reachable code path calls the API or the AI service directly (PLT-4)
+- [x] Internal routes reject a request without a valid service key, compared in constant time
+- [x] A header snapshot test, so a loosened CSP shows up in review (SEC-15)
+- [x] A test asserts no secret value appears in captured logs
 
 ### US-037: AI safety test corpus
 Requirements: SEC-21 to SEC-26
 
-- [ ] Every case in [AI safety testing](security/ai-safety.md#testing) implemented
-- [ ] A receipt carrying an injected instruction produces no tool call from the extraction path
-- [ ] Document text reaches the tool-capable loop only inside a labelled block, never as an unreviewed tool argument (SEC-22)
-- [ ] A `member` write attempt is refused and reported
-- [ ] An unchallenged `confirmed: true` is rejected, and a confirmation token cannot move between IDs
-- [ ] Each blast-radius cap has a test
-- [ ] Model output containing an HTML event handler is sanitized before rendering
+- [x] Every case in [AI safety testing](security/ai-safety.md#testing) implemented
+- [x] A receipt carrying an injected instruction produces no tool call from the extraction path
+- [x] Document text reaches the tool-capable loop only inside a labelled block, never as an unreviewed tool argument (SEC-22)
+- [x] A `member` write attempt is refused and reported
+- [x] An unchallenged `confirmed: true` is rejected, and a confirmation token cannot move between IDs
+- [x] Each blast-radius cap has a test
+- [x] Model output containing an HTML event handler is sanitized before rendering
 
 ### US-038: Test suite and CI
 Requirements: OPS-7, SEC-20
 
-- [ ] `cargo test` covers services and repositories against a test database
-- [ ] `pytest` covers the tool loop with a mocked model
-- [ ] Vitest covers the app's pure modules and the OWE1 client vectors
-- [ ] Playwright covers log in, create a transaction, and a chat message that creates a transaction
-- [ ] An axe pass on the three main screens
-- [ ] GitHub Actions runs lint, typecheck, tests and the three audit tools for all apps on every push
-- [ ] The whole run finishes under 5 minutes
-- [ ] Deployment targets Coolify on the existing VPS, with files in Cloudflare R2 (D41)
+- [x] `cargo test` covers services and repositories against a test database
+- [x] `pytest` covers the tool loop with a mocked model
+- [x] Vitest covers the app's pure modules and the OWE1 client vectors
+- [x] Playwright covers log in, create a transaction, and a chat message that creates a transaction
+- [x] An axe pass on the three main screens
+- [x] GitHub Actions runs lint, typecheck, tests and the three audit tools for all apps on every push
+- [ ] The whole run finishes under 5 minutes. Not met and not pretended otherwise: the Rust job is the long pole at an estimated 4 to 6 minutes warm and 10 to 14 cold, because the workspace compiles three times over (the sqlx cache check, clippy, the tests). The levers, cheapest first: a larger runner for that job alone, `cargo nextest`, `sccache`. Dropping `--all-targets` from clippy would be fastest and was rejected, because it stops linting the tests
+- [ ] Deployment targets Coolify on the existing VPS, with files in Cloudflare R2 (D41). [deployment.md](deployment.md) documents it in full and lists what is still undecided (domains, the Coolify project, the R2 bucket, who holds the signing keys, backups). Deploying is the owner's call, and production images do not exist yet: only `Dockerfile.dev` per app
 
 ### US-039: Documentation pass
 Requirements: all
 
-- [ ] Every doc in [the index](README.md#all-documents) reflects what was built
-- [ ] Each feature doc's "Update this doc when" list is accurate
-- [ ] `docs/ENV_VARS.md` generated from the running configuration
-- [ ] `CLAUDE.md` at the root points at the index and states the layer rules
-- [ ] Every requirement ID in the [PRD](prd.md#6-requirements) has a passing test or a browser-verified story, or is listed as not done with a reason
+- [x] Every doc in [the index](README.md#all-documents) reflects what was built
+- [x] Each feature doc's "Update this doc when" list is accurate
+- [x] `docs/ENV_VARS.md` generated from the running configuration
+- [x] `CLAUDE.md` at the root points at the index and states the layer rules
+- [ ] Every requirement ID in the [PRD](prd.md#6-requirements) has a passing test or a browser-verified story, or is listed as not done with a reason. `scripts/coverage.py` proves all 111 are named by a story and runs in CI; the stronger half, that each is actually exercised, waits on the browser pass below
 
 ---
 
 ## Coverage check
 
 Run this before declaring a milestone finished: every requirement ID in [PRD section 6](prd.md#6-requirements) should appear in at least one story above. A requirement with no story is either out of scope and belongs in the non-goals, or it is a gap.
+
+It is one command, `python3 scripts/coverage.py`, and CI runs it.
+
+As of 2026-11-03 it reports none missing. UI-8 was the last gap: every screen
+was built to it and `src/lib/url-state.ts` exists, but no story named it, which
+is how a requirement ends up satisfied by habit rather than on purpose. It is
+now listed under US-017.
 
 ## Related docs
 

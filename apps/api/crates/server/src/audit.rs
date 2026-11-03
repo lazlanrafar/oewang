@@ -14,7 +14,6 @@ pub const SOURCE_WEB: &str = "web";
 #[allow(dead_code)]
 pub const SOURCE_CHAT: &str = "chat";
 pub const SOURCE_IMPORT: &str = "import";
-#[allow(dead_code)]
 pub const SOURCE_RECEIPT: &str = "receipt";
 
 /// Who the write is for, and where it came from.
@@ -32,7 +31,11 @@ pub struct Actor<'a> {
 
 impl<'a> Actor<'a> {
     pub fn web(workspace_id: &'a str, user_id: &'a str) -> Self {
-        Self { workspace_id, user_id, source: SOURCE_WEB }
+        Self {
+            workspace_id,
+            user_id,
+            source: SOURCE_WEB,
+        }
     }
 
     pub fn with_source(self, source: &'a str) -> Self {

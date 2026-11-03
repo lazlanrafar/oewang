@@ -9,6 +9,7 @@ How the web app is structured and written. It is a BFF as much as a UI: it holds
 - Changing the route structure or the data-loading pattern.
 - Adopting or dropping a core dependency.
 - Changing the i18n mechanism or the money and date rendering rules.
+- Changing what the test suites cover or what they need to run.
 
 ## Stack
 
@@ -21,7 +22,7 @@ How the web app is structured and written. It is a BFF as much as a UI: it holds
 | Table | TanStack Table, Svelte adapter |
 | Forms | Superforms with a Zod adapter |
 | Icons | Lucide Svelte |
-| Theme | mode-watcher |
+| Theme | mode-watcher, with the before-paint bootstrap in `app.html` so it can carry the CSP nonce ([hardening](../security/hardening.md#browser-headers)) |
 | Type scale | Role tokens, not sizes: `text-h1` to `text-h4`, `text-body`, `text-small`, `text-caption`, each carrying line height, weight and letter spacing (D53). `h1`-`h4` take them in the base layer |
 | Shape | The old app's: a live radius scale (`--radius: .5rem`) that almost nothing applies, and a shadow scale where only `sm` paints (D66) |
 | Focus | None, as the old app has none: `*:focus, *:focus-visible { outline: none !important }` (D66). A known WCAG 2.4.7 failure, recorded in UI-7 |
@@ -30,7 +31,7 @@ How the web app is structured and written. It is a BFF as much as a UI: it holds
 | Motion | Opt-in: one base rule collapses durations under `prefers-reduced-motion: reduce` (D64) |
 | Fonts | Hedvig Letters Sans and Serif, Geist Mono, self-hosted through `@fontsource` so the CSP stays `font-src 'self'`. The serif ships one weight (400) and is never set bold: `.font-serif` disables weight synthesis, so a stray `font-semibold` renders unchanged rather than as a faked bold |
 | Crypto | `node:crypto` on the server only ([encryption](../api/encryption.md#primitives)) |
-| Tests | Vitest for units, Playwright for journeys |
+| Tests | Vitest for units, Playwright with an axe pass for journeys |
 | Lint | ESLint with the Svelte plugin, Prettier with the Svelte plugin |
 
 Exact versions are pinned at scaffold time. A dependency that runs in the browser is weighed harder than one that runs on the server, because it shares a context with the session ([hardening](../security/hardening.md#dependencies)).
@@ -274,12 +275,43 @@ Budget: the dashboard's time to first byte under 300 milliseconds, measured agai
 
 ## Testing
 
-| Kind | Scope |
-|---|---|
-| Vitest | Pure modules: money formatting, the dictionary helper, filter serialization, the OWE1 client against shared vectors |
-| Playwright | Three journeys: log in, create a transaction, send a chat message that creates a transaction |
-| Accessibility | An axe pass on the three main screens |
-| Visual | None for v1. The port is verified in a browser per story instead |
+| Kind | Scope | Command |
+|---|---|---|
+| Vitest | Pure modules: money formatting, the dictionary helper, filter serialization, the receipt draft, the import job, the OWE1 client against shared vectors | `bun run test` |
+| Playwright | Three journeys: log in, create a transaction, send a chat message that creates a transaction | `bun run test:e2e` |
+| Accessibility | An axe pass over the main screens, in the same suite | `bun run test:e2e` |
+| Boundary | A walk over the source asserting no browser-reachable file reads `process.env`, imports a Node builtin, fetches an absolute URL, touches `document.cookie` or value-imports `$lib/server` (PLT-4, D5) | `bun run test` |
+| Headers | A snapshot of every security header and CSP directive (SEC-15) | `bun run test` |
+| Visual | None for v1. The port is verified in a browser per story instead | |
+
+`bun run test` needs nothing running. `bun run test:e2e` needs the whole
+stack up and talks to it over HTTP; Playwright starts nothing, because
+starting half a stack is how a suite ends up testing a different system
+from the one that ships.
+
+Three things about the journey suite, each a decision rather than a detail:
+
+- **It registers its own account.** The seeded `demo@oewang.local` carries
+  a placeholder Argon2 hash that verifies against nothing, so its
+  documented password is refused. Registering is the better fixture
+  anyway: each run gets an empty workspace, so a test can assert "one
+  transaction" instead of "one more than before". `E2E_EMAIL` and
+  `E2E_PASSWORD` switch it to an existing account for a run against a
+  shared environment.
+- **An action is retried until it has an effect** (`actUntil`). Every page
+  is server rendered and then hydrated, so a control is clickable for a
+  moment before its handler exists, and a click in that window is
+  swallowed silently. Waiting on a hydration marker would mean depending
+  on a SvelteKit internal; retrying depends on nothing.
+- **The chat journey needs a model** and runs by default, because a
+  journey skipped by default is a journey nobody runs. `E2E_CHAT=0` skips
+  it where no model is reachable.
+
+The axe pass disables exactly one rule, `color-contrast`, because the port
+reproduces the live app's colours and those fail today (D66, UI-7). The
+missing focus ring is the other known failure and axe cannot see it, so it
+stays a hand check against UI-7. Everything else is a failure, and the
+allowlist is one named rule with one decision behind it, not a threshold.
 
 ## Related docs
 

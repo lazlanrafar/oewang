@@ -1,0 +1,13 @@
+{
+  "merchant": "Warung Tekko",
+  "date": "2026-11-02",
+  "total": "87500.00",
+  "subtotal": "80000.00",
+  "tax": "7500.00",
+  "currency": "IDR",
+  "line_items": [
+    {"name": "Iga bakar", "amount": "45000.00", "quantity": "1", "unit_price": "45000.00"},
+    {"name": "Nasi putih", "amount": "10000.00", "quantity": "2", "unit_price": "5000.00"},
+    {"name": "Es teh manis", "amount": "25000.00", "quantity": "5", "unit_price": "5000.00"}
+  ]
+}

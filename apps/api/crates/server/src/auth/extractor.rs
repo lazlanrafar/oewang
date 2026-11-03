@@ -174,8 +174,10 @@ impl FromRequestParts<AppState> for ServiceCaller {
             .and_then(|value| value.to_str().ok())
             .unwrap_or_default();
 
-        if constant_time_eq(presented.as_bytes(), state.config.ai_service_api_key.expose().as_bytes())
-        {
+        if constant_time_eq(
+            presented.as_bytes(),
+            state.config.ai_service_api_key.expose().as_bytes(),
+        ) {
             Ok(ServiceCaller)
         } else {
             Err(ApiError::new(AppError::Unauthenticated, request_id))
@@ -192,7 +194,10 @@ fn constant_time_eq(left: &[u8], right: &[u8]) -> bool {
         return false;
     }
 
-    left.iter().zip(right).fold(0u8, |acc, (a, b)| acc | (a ^ b)) == 0
+    left.iter()
+        .zip(right)
+        .fold(0u8, |acc, (a, b)| acc | (a ^ b))
+        == 0
 }
 
 #[cfg(test)]

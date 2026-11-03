@@ -304,3 +304,23 @@ pub async fn soft_delete_item(
     .await
     .map(|result| result.rows_affected())
 }
+
+/// How many files this workspace has started uploading today (SEC-18).
+///
+/// Counted from the rows rather than from a window in memory, because the
+/// limit is a day and a process restart must not hand anybody a fresh
+/// allowance. Pending rows count: reserving a thousand uploads and never
+/// finishing them is exactly the abuse the limit is for.
+pub async fn count_files_today(
+    executor: impl PgExecutor<'_>,
+    workspace_id: &str,
+) -> Result<i64, sqlx::Error> {
+    sqlx::query_scalar!(
+        r#"SELECT count(*) as "count!"
+           FROM vault_files
+           WHERE workspace_id = $1 AND created_at >= date_trunc('day', now())"#,
+        workspace_id
+    )
+    .fetch_one(executor)
+    .await
+}

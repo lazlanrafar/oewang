@@ -10,13 +10,16 @@ mod audit;
 mod auth;
 mod config;
 mod fx;
+#[cfg(test)]
+mod hardening_tests;
+mod limits;
 mod owe1;
-mod workspaces;
 mod response;
 mod routes;
 mod state;
 mod transactions;
 mod vault;
+mod workspaces;
 
 use std::{net::SocketAddr, sync::Arc, time::Duration};
 
@@ -74,20 +77,23 @@ async fn main() -> anyhow::Result<()> {
     })
     .await?;
 
-    tracing::info!(max_connections = config.db_max_connections, "database pool ready");
+    tracing::info!(
+        max_connections = config.db_max_connections,
+        "database pool ready"
+    );
 
     // Creating a key on first start is a development convenience. In
     // production it would silently invalidate every pinned client, so that
     // path refuses and the key must be mounted from the secret store.
     let allow_create = config.app_env == AppEnv::Development;
-    let owe1_signer = match Owe1Signer::load_or_create(&config.crypto_signing_key_file, allow_create)
-    {
-        Ok(signer) => Arc::new(signer),
-        Err(error) => {
-            tracing::error!(%error, "owe1 signing key unavailable");
-            std::process::exit(1);
-        }
-    };
+    let owe1_signer =
+        match Owe1Signer::load_or_create(&config.crypto_signing_key_file, allow_create) {
+            Ok(signer) => Arc::new(signer),
+            Err(error) => {
+                tracing::error!(%error, "owe1 signing key unavailable");
+                std::process::exit(1);
+            }
+        };
     tracing::info!(kid = owe1_signer.key_id(), "owe1 signing key ready");
 
     let owe1_sessions = SessionStore::new();
@@ -108,7 +114,10 @@ async fn main() -> anyhow::Result<()> {
 
     let rates = oewang_clients::RatesClient::new(
         config.fx_api_url.clone(),
-        config.fx_access_key.as_ref().map(|key| key.expose().to_string()),
+        config
+            .fx_access_key
+            .as_ref()
+            .map(|key| key.expose().to_string()),
     );
     tracing::info!(rates = ?rates, "rate source ready");
 
@@ -145,6 +154,9 @@ async fn main() -> anyhow::Result<()> {
     let body_limit = config.body_limit_bytes;
     let addr = SocketAddr::from(([0, 0, 0, 0], config.port));
 
+    let rate_limits = limits::RateLimiter::new(config.rate_limits);
+    limits::spawn_sweeper(rate_limits.clone());
+
     let state = AppState {
         db,
         config: Arc::new(config),
@@ -155,6 +167,7 @@ async fn main() -> anyhow::Result<()> {
         files,
         ai,
         turns,
+        rate_limits,
     };
 
     spawn_rate_refresher(state.clone(), fx_refresh_interval);
@@ -164,7 +177,10 @@ async fn main() -> anyhow::Result<()> {
         .route("/health/ready", get(routes::health::ready))
         // Plaintext by design: a client needs the keys before it can do
         // anything, and the handshake creates them (E2, E3).
-        .route("/.well-known/oewang-keys", get(owe1::handler::well_known_keys))
+        .route(
+            "/.well-known/oewang-keys",
+            get(owe1::handler::well_known_keys),
+        )
         .route("/v1/handshake", post(owe1::handler::handshake_handler))
         // Everything below this line is OWE1. The exception list is
         // structural: a route only skips encryption by being registered
@@ -183,12 +199,23 @@ async fn main() -> anyhow::Result<()> {
                 // Outermost: a panic becomes a 500 with a request id rather
                 // than a dropped connection.
                 .layer(CatchPanicLayer::new())
+                // The request id is set and propagated above the rate
+                // limiter, so a refusal names the request like every other
+                // answer does.
+                .layer(SetRequestIdLayer::x_request_id(MakeRequestUuid))
+                .layer(PropagateRequestIdLayer::x_request_id())
+                // Counted before anything expensive happens. A flood should
+                // cost a hash lookup, not a key agreement (OPS-5, AUTH-6).
+                // Above the body limit because that layer rewraps the body
+                // into a type a plain middleware cannot take.
+                .layer(axum::middleware::from_fn_with_state(
+                    state.clone(),
+                    limits::enforce,
+                ))
                 // Rejects an oversized body before a handler allocates for it.
                 .layer(RequestBodyLimitLayer::new(body_limit))
                 .layer(CompressionLayer::new())
-                .layer(SetRequestIdLayer::x_request_id(MakeRequestUuid))
                 .layer(TraceLayer::new_for_http().make_span_with(RequestSpan))
-                .layer(PropagateRequestIdLayer::x_request_id())
                 .layer(TimeoutLayer::with_status_code(
                     StatusCode::REQUEST_TIMEOUT,
                     request_timeout,
@@ -199,9 +226,14 @@ async fn main() -> anyhow::Result<()> {
     let listener = tokio::net::TcpListener::bind(addr).await?;
     tracing::info!(%addr, "listening");
 
-    axum::serve(listener, app)
-        .with_graceful_shutdown(shutdown_signal())
-        .await?;
+    // The connecting address is what the per-address budgets count
+    // against, and it only reaches a layer through this (OPS-5).
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .with_graceful_shutdown(shutdown_signal())
+    .await?;
 
     tracing::info!("shutdown complete");
     Ok(())
@@ -220,9 +252,18 @@ fn protected_routes(state: AppState) -> Router<AppState> {
         .route("/v1/auth/logout-all", post(auth::handler::logout_all))
         .route("/v1/auth/me", get(auth::handler::me))
         .route("/v1/auth/sessions", get(auth::handler::sessions))
-        .route("/v1/auth/switch-workspace", post(auth::handler::switch_workspace))
-        .route("/v1/auth/forgot-password", post(auth::handler::forgot_password))
-        .route("/v1/auth/reset-password", post(auth::handler::reset_password))
+        .route(
+            "/v1/auth/switch-workspace",
+            post(auth::handler::switch_workspace),
+        )
+        .route(
+            "/v1/auth/forgot-password",
+            post(auth::handler::forgot_password),
+        )
+        .route(
+            "/v1/auth/reset-password",
+            post(auth::handler::reset_password),
+        )
         // Workspaces and members.
         .route("/v1/workspaces", get(workspaces::handler::list_workspaces))
         .route(
@@ -248,7 +289,10 @@ fn protected_routes(state: AppState) -> Router<AppState> {
             "/v1/workspaces/current/invites/{id}",
             axum::routing::delete(workspaces::handler::revoke_invite),
         )
-        .route("/v1/workspaces/accept-invite", post(workspaces::handler::accept_invite))
+        .route(
+            "/v1/workspaces/accept-invite",
+            post(workspaces::handler::accept_invite),
+        )
         // Wallet groups, wallets and categories. Reads take any member;
         // writes take `AuthWrite`, which re-reads the membership row.
         .route(
@@ -292,12 +336,35 @@ fn protected_routes(state: AppState) -> Router<AppState> {
             "/v1/transactions",
             get(transactions::handler::list).post(transactions::handler::create),
         )
-        .route("/v1/transactions/summary", get(transactions::handler::summary))
-        .route("/v1/transactions/export", get(transactions::handler::export))
-        .route("/v1/transactions/bulk", post(transactions::handler::bulk_create))
+        .route(
+            "/v1/transactions/summary",
+            get(transactions::handler::summary),
+        )
+        .route(
+            "/v1/transactions/export",
+            get(transactions::handler::export),
+        )
+        .route(
+            "/v1/transactions/bulk",
+            post(transactions::handler::bulk_create),
+        )
         .route(
             "/v1/transactions/import/csv",
             post(transactions::handler::import_csv),
+        )
+        // A statement that is a picture rather than a table. Answers 202
+        // and a job id; the ladder runs in a task (AI-4, AI-6).
+        .route(
+            "/v1/transactions/import",
+            post(transactions::handler::import_statement),
+        )
+        .route(
+            "/v1/transactions/import/map-columns",
+            post(transactions::handler::map_columns),
+        )
+        .route(
+            "/v1/transactions/import/{job_id}",
+            get(transactions::handler::import_job),
         )
         .route(
             "/v1/transactions/bulk-update",
@@ -341,6 +408,10 @@ fn protected_routes(state: AppState) -> Router<AppState> {
         // One chat turn, answered as server-sent events. Any member: a
         // viewer who cannot write can still ask.
         .route("/v1/ai/chat/stream", post(ai::handler::chat_stream))
+        // A receipt the user uploaded, read and checked. Persists nothing
+        // (AI-1, AI-2). The bytes are already in the vault; the body names
+        // the file, because a receipt does not fit in one (D23, SEC-18).
+        .route("/v1/ai/receipt/parse", post(ai::handler::parse_receipt))
         // Agent settings. Read by any member, written by admin and above:
         // custom instructions reach every future turn's prompt (CHAT-10).
         .route(
@@ -351,7 +422,10 @@ fn protected_routes(state: AppState) -> Router<AppState> {
         // token, and never routable from the internet (OPS-6). The caller
         // is the AI service; who the call is for arrives in the body and is
         // re-checked against the membership row (D4, CHAT-4).
-        .route("/v1/internal/tools/execute", post(ai::handler::execute_tool))
+        .route(
+            "/v1/internal/tools/execute",
+            post(ai::handler::execute_tool),
+        )
         // Files. Bytes travel as base64 inside the envelope; no signed
         // object-storage URL exists anywhere (D23, VLT-3).
         .route("/v1/vault/files", post(vault::handler::begin))
@@ -363,7 +437,10 @@ fn protected_routes(state: AppState) -> Router<AppState> {
             "/v1/vault/files/{id}/chunks/{index}",
             get(vault::handler::get_chunk).put(vault::handler::put_chunk),
         )
-        .route("/v1/vault/files/{id}/complete", post(vault::handler::complete))
+        .route(
+            "/v1/vault/files/{id}/complete",
+            post(vault::handler::complete),
+        )
         .layer(axum::middleware::from_fn_with_state(
             state,
             owe1::middleware::owe1_layer,
@@ -470,7 +547,9 @@ fn init_tracing(env: AppEnv) {
 
     match env {
         // Structured JSON in production, so a log pipeline can index it.
-        AppEnv::Production => registry.with(tracing_subscriber::fmt::layer().json()).init(),
+        AppEnv::Production => registry
+            .with(tracing_subscriber::fmt::layer().json())
+            .init(),
         AppEnv::Development => registry
             .with(tracing_subscriber::fmt::layer().with_target(false))
             .init(),

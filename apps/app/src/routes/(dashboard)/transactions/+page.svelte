@@ -12,6 +12,7 @@
 	import FileDown from '@lucide/svelte/icons/file-down';
 	import FileUp from '@lucide/svelte/icons/file-up';
 	import Plus from '@lucide/svelte/icons/plus';
+	import ScanLine from '@lucide/svelte/icons/scan-line';
 
 	import { toast } from 'svelte-sonner';
 
@@ -30,9 +31,11 @@
 	import type { DataTableFilterState } from '$lib/components/organisms/data-table-filter';
 	import { TransactionsTable } from '$lib/components/organisms/data-table';
 	import type { NamedOption, TransactionRow } from '$lib/components/organisms/data-table';
-	import type { UploadedFile } from '$lib/components/molecules/file-dropzone';
+	import { FileDropzone, type UploadedFile } from '$lib/components/molecules/file-dropzone';
+	import { ChatCanvas } from '$lib/components/organisms/chat';
 	import {
 		emptyDraft,
+		ReceiptCanvas,
 		TransactionBulkBar,
 		TransactionDetailSheet,
 		TransactionExportModal,
@@ -41,6 +44,7 @@
 		type TransactionDraft
 	} from '$lib/components/organisms/transactions';
 	import FormError from '$lib/components/shell/form-error.svelte';
+	import { canvasParams, readCanvas } from '$lib/canvas';
 	import { messageForCode } from '$lib/errors';
 	import { t } from '$lib/i18n';
 	import { absDecimal } from '$lib/money';
@@ -330,6 +334,86 @@
 		};
 	};
 
+	// ----------------------------------------------------- the receipt canvas
+
+	/**
+	 * The receipt panel, driven by the URL like every other open thing on
+	 * this page (D31, UI-8).
+	 *
+	 * The same panel the chat page mounts, over the same confirmation
+	 * sheet: a receipt is confirmed the same way wherever it was dropped.
+	 * `?canvas=transaction` is the manual form with the image attached,
+	 * which is where an unreadable one lands (AI-3).
+	 */
+	const canvas = $derived(readCanvas(page.url));
+
+	let scanOpen = $state(false);
+	/** The dropzone's own list, cleared the moment the panel takes over. */
+	let scanned = $state<UploadedFile[]>([]);
+	let confirming = $state(false);
+	let canvasError = $state<string | null>(null);
+
+	const openCanvas = (kind: 'receipt' | 'transaction', id: string) =>
+		writeParams(canvasParams({ kind, id }), { push: true });
+
+	function closeCanvas() {
+		canvasError = null;
+		return writeParams(canvasParams(null), { push: true });
+	}
+
+	/* An upload finishing is what opens the panel (AI-1). */
+	$effect(() => {
+		const uploaded = scanned.at(-1);
+		if (!uploaded) return;
+
+		scanned = [];
+		scanOpen = false;
+		void openCanvas('receipt', uploaded.id);
+	});
+
+	/** The manual form behind `?canvas=transaction`, with the file on it. */
+	let manualDraft = $state<TransactionDraft>(emptyDraft());
+	let manualAttachments = $state<UploadedFile[]>([]);
+
+	$effect(() => {
+		if (canvas?.kind !== 'transaction') return;
+
+		manualDraft = emptyDraft(
+			defaultWallet?.id ?? '',
+			defaultWallet?.currency_code ?? baseCurrency,
+			''
+		);
+
+		const file = data.canvasFile;
+		manualAttachments = file
+			? [{ id: file.id, name: file.name, type: file.type, size: file.size }]
+			: [];
+	});
+
+	const manualWalletCurrency = $derived(walletCurrencies[manualDraft.accountId] ?? baseCurrency);
+
+	/** A confirmed receipt, or the manual form beside one. */
+	const afterReceipt: SubmitFunction = () => {
+		confirming = true;
+		canvasError = null;
+
+		return async ({ result, update }) => {
+			confirming = false;
+
+			if (result.type === 'failure') {
+				canvasError = String(result.data?.code ?? 'STREAM_FAILED');
+				return;
+			}
+
+			if (result.type === 'success') {
+				await closeCanvas();
+				toast.success(t('receipt.created'));
+			}
+
+			await update();
+		};
+	};
+
 	// ----------------------------------------------------------- export
 
 	let exportOpen = $state(false);
@@ -363,7 +447,11 @@
 
 <svelte:head><title>{t('nav.transactions')} · {t('app.name')}</title></svelte:head>
 
-<div class="flex flex-col gap-4">
+<!-- The page reflows beside the receipt panel rather than being covered by
+     it, the same way the conversation column does. -->
+<div
+	class="flex flex-col gap-4 transition-[margin] duration-200 {canvas ? 'md:me-[560px]' : ''}"
+>
 	<div class="flex shrink-0 flex-wrap items-center justify-between gap-4">
 		<h1 class="text-h2">{t('nav.transactions')}</h1>
 
@@ -373,7 +461,11 @@
 				value={grouping}
 				onValueChange={(value) => writeParams({ group: value === 'day' ? null : value })}
 			>
-				<Select.Trigger class="w-36">
+				<!-- A `role="combobox"` is not named by its contents the way a
+				     button is, so each of these three carries its own label
+				     (UI-6). Without one a screen reader announces three
+				     unnamed controls in a row. -->
+				<Select.Trigger class="w-36" aria-label={t('txn.grouping_label')}>
 					{grouping === 'day' ? t('txn.group_by_day') : t('txn.no_grouping')}
 				</Select.Trigger>
 				<Select.Content>
@@ -387,7 +479,7 @@
 				value={typeFilter}
 				onValueChange={(value) => writeParams({ type: value || null, page: null })}
 			>
-				<Select.Trigger class="w-32">
+				<Select.Trigger class="w-32" aria-label={t('txn.type_label')}>
 					{typeFilter === '' ? t('txn.all_types') : t(`txn.type_${typeFilter}` as 'txn.type_income')}
 				</Select.Trigger>
 				<Select.Content>
@@ -403,7 +495,7 @@
 				value={readyFilter}
 				onValueChange={(value) => writeParams({ is_ready: value || null, page: null })}
 			>
-				<Select.Trigger class="w-32">
+				<Select.Trigger class="w-32" aria-label={t('txn.ready_label')}>
 					{readyFilter === '' ? t('txn.any_ready') : readyFilter === 'true' ? t('txn.ready') : t('txn.not_ready')}
 				</Select.Trigger>
 				<Select.Content>
@@ -428,6 +520,10 @@
 			</Button>
 
 			{#if canEdit}
+				<Button variant="outline" onclick={() => (scanOpen = true)}>
+					<ScanLine />
+					{t('txn.receipt')}
+				</Button>
 				<Button href="/transactions/import" variant="outline">
 					<FileUp />
 					{t('txn.import')}
@@ -674,6 +770,75 @@
 	filtered={data.filtered}
 	href={exportHref}
 />
+
+<!--
+	Scanning a receipt (AI-1). The same dropzone the form sheet and the
+	composer use, so there is one upload path: split in the browser, chunk
+	by chunk through this app's own server, never a signed storage URL (D23).
+-->
+<Dialog.Root bind:open={scanOpen}>
+	<Dialog.Content class="sm:max-w-md">
+		<Dialog.Header>
+			<Dialog.Title>{t('txn.receipt')}</Dialog.Title>
+			<Dialog.Description>{t('txn.receipt_hint')}</Dialog.Description>
+		</Dialog.Header>
+
+		<div class="py-2">
+			<FileDropzone bind:files={scanned} />
+		</div>
+	</Dialog.Content>
+</Dialog.Root>
+
+<!--
+	The canvas (D31, CHAT-13). The same panel and the same confirmation
+	sheet the chat page mounts, because a receipt is confirmed the same way
+	wherever it was dropped.
+-->
+<ChatCanvas
+	open={canvas !== null}
+	title={canvas?.kind === 'transaction' ? t('canvas.transaction_title') : t('canvas.receipt_title')}
+	description={canvas?.kind === 'transaction'
+		? t('canvas.transaction_description')
+		: t('canvas.receipt_description')}
+	onClose={closeCanvas}
+>
+	{#if canvas?.kind === 'transaction'}
+		{#if canvasError}
+			<p class="text-destructive text-small px-6 pt-4" role="alert">
+				{messageForCode(canvasError)}
+			</p>
+		{/if}
+
+		<TransactionFormSheet
+			container="panel"
+			bind:draft={manualDraft}
+			bind:attachments={manualAttachments}
+			accounts={accountItems}
+			categories={categoryItems}
+			{baseCurrency}
+			walletCurrency={manualWalletCurrency}
+			saving={confirming}
+			fieldErrors={form?.fields}
+			action="?/create"
+			enhance={(node) => enhance(node, afterReceipt)}
+		/>
+	{:else}
+		<ReceiptCanvas
+			fileId={canvas?.kind === 'receipt' ? canvas.id : null}
+			fileName={data.canvasFile?.name ?? ''}
+			wallets={data.wallets}
+			categories={data.categories}
+			{baseCurrency}
+			saving={confirming}
+			errorCode={canvasError}
+			fieldErrors={form?.fields}
+			action="?/confirmReceipt"
+			enhance={(node) => enhance(node, afterReceipt)}
+			onCancel={closeCanvas}
+			onManualEntry={() => openCanvas('transaction', canvas?.id ?? '')}
+		/>
+	{/if}
+</ChatCanvas>
 
 {#if canEdit}
 	<TransactionBulkBar

@@ -50,7 +50,9 @@ pub async fn list(
     let rows = ai::list_sessions(pool, workspace_id, page.limit.into(), page.offset())
         .await
         .map_err(internal)?;
-    let total = ai::count_sessions(pool, workspace_id).await.map_err(internal)?;
+    let total = ai::count_sessions(pool, workspace_id)
+        .await
+        .map_err(internal)?;
 
     Ok((rows, total))
 }
@@ -63,7 +65,9 @@ pub struct Conversation {
 
 pub async fn get(pool: &PgPool, workspace_id: &str, id: &str) -> Result<Conversation> {
     let session = require(pool, workspace_id, id).await?;
-    let messages = ai::list_messages(pool, workspace_id, id).await.map_err(internal)?;
+    let messages = ai::list_messages(pool, workspace_id, id)
+        .await
+        .map_err(internal)?;
 
     Ok(Conversation { session, messages })
 }
@@ -77,20 +81,23 @@ pub async fn create(pool: &PgPool, actor: Actor<'_>, title: Option<&str>) -> Res
         .await
         .map_err(internal)?;
 
-    log(&mut tx, actor, "ai_session.created", ENTITY, &session.id, None, snapshot(&session)?)
-        .await?;
+    log(
+        &mut tx,
+        actor,
+        "ai_session.created",
+        ENTITY,
+        &session.id,
+        None,
+        snapshot(&session)?,
+    )
+    .await?;
 
     tx.commit().await.map_err(internal)?;
 
     Ok(session)
 }
 
-pub async fn rename(
-    pool: &PgPool,
-    actor: Actor<'_>,
-    id: &str,
-    title: &str,
-) -> Result<SessionRow> {
+pub async fn rename(pool: &PgPool, actor: Actor<'_>, id: &str, title: &str) -> Result<SessionRow> {
     let title = clean_title(title)?;
     let before = require(pool, actor.workspace_id, id).await?;
 
@@ -135,7 +142,16 @@ pub async fn delete(pool: &PgPool, actor: Actor<'_>, id: &str) -> Result<()> {
         .await
         .map_err(internal)?;
 
-    log(&mut tx, actor, "ai_session.deleted", ENTITY, id, snapshot(&before)?, None).await?;
+    log(
+        &mut tx,
+        actor,
+        "ai_session.deleted",
+        ENTITY,
+        id,
+        snapshot(&before)?,
+        None,
+    )
+    .await?;
 
     tx.commit().await.map_err(internal)?;
 
@@ -155,14 +171,21 @@ pub async fn append_message(
     attachments: Option<&serde_json::Value>,
 ) -> Result<MessageRow> {
     if !matches!(role, "user" | "assistant" | "system") {
-        return Err(AppError::validation([("role", "That is not a message role.")]));
+        return Err(AppError::validation([(
+            "role",
+            "That is not a message role.",
+        )]));
     }
 
     let mut tx = pool.begin().await.map_err(internal)?;
 
     // Scoped by workspace, so a session id from another workspace cannot be
     // written into (AUTH-4).
-    if ai::find_session(&mut *tx, workspace_id, session_id).await.map_err(internal)?.is_none() {
+    if ai::find_session(&mut *tx, workspace_id, session_id)
+        .await
+        .map_err(internal)?
+        .is_none()
+    {
         return Err(AppError::SessionNotFound);
     }
 
@@ -178,7 +201,9 @@ pub async fn append_message(
     .await
     .map_err(internal)?;
 
-    ai::touch_session(&mut *tx, workspace_id, session_id).await.map_err(internal)?;
+    ai::touch_session(&mut *tx, workspace_id, session_id)
+        .await
+        .map_err(internal)?;
 
     // No audit row: a message is the conversation itself, not a change to
     // workspace data, and OPS-3 keeps its content out of the trail anyway.
@@ -377,12 +402,15 @@ pub async fn begin_turn(
 ) -> Result<TurnRequest> {
     let message = message.trim();
     if message.is_empty() {
-        return Err(AppError::validation([("message", "A message is required.")]));
+        return Err(AppError::validation([(
+            "message",
+            "A message is required.",
+        )]));
     }
 
     // Workspace-scoped, so a session id from another workspace is not found
     // rather than answered (AUTH-4).
-    require(pool, workspace_id, session_id).await?;
+    let session = require(pool, workspace_id, session_id).await?;
 
     let mut attachments = Vec::with_capacity(attachment_ids.len());
     for id in attachment_ids {
@@ -397,13 +425,19 @@ pub async fn begin_turn(
         .await
         .map_err(internal)?
         .ok_or(AppError::NotAMember)?;
-    let wallets = wallets::list_wallets(pool, workspace_id).await.map_err(internal)?;
+    let wallets = wallets::list_wallets(pool, workspace_id)
+        .await
+        .map_err(internal)?;
     let categories = categories::list_categories(pool, workspace_id, None)
         .await
         .map_err(internal)?;
-    let settings = ai::find_settings(pool, workspace_id).await.map_err(internal)?;
+    let settings = ai::find_settings(pool, workspace_id)
+        .await
+        .map_err(internal)?;
 
-    let stored = ai::list_messages(pool, workspace_id, session_id).await.map_err(internal)?;
+    let stored = ai::list_messages(pool, workspace_id, session_id)
+        .await
+        .map_err(internal)?;
 
     let files: Vec<Value> = attachments
         .iter()
@@ -420,6 +454,21 @@ pub async fn begin_turn(
         stored_attachments.as_ref(),
     )
     .await?;
+
+    // The first message names the conversation (CHAT-8). Taken from the
+    // message rather than asked of the model: a label is not a place a
+    // model's judgement earns a call on the first turn of every new
+    // conversation, and this costs nothing and arrives instantly.
+    //
+    // Only while the session is still unnamed, so a title the user set is
+    // never overwritten.
+    if session.title == DEFAULT_TITLE {
+        if let Ok(title) = clean_title(&summarize(message)) {
+            ai::rename_session(pool, workspace_id, session_id, &title)
+                .await
+                .map_err(internal)?;
+        }
+    }
 
     Ok(TurnRequest {
         turn_id: cuid2::create_id(),
@@ -438,7 +487,10 @@ pub async fn begin_turn(
             .collect::<Vec<_>>()
             .into_iter()
             .rev()
-            .map(|row| TurnMessage { role: row.role, content: row.content })
+            .map(|row| TurnMessage {
+                role: row.role,
+                content: row.content,
+            })
             .collect(),
         context: TurnContext {
             currency_code: workspace.currency_code,
@@ -463,7 +515,9 @@ pub async fn begin_turn(
                 .collect(),
         },
         settings: TurnSettings {
-            custom_instructions: settings.as_ref().and_then(|row| row.custom_instructions.clone()),
+            custom_instructions: settings
+                .as_ref()
+                .and_then(|row| row.custom_instructions.clone()),
             response_language: settings
                 .map(|row| row.response_language)
                 .unwrap_or_else(|| "auto".to_string()),
@@ -505,7 +559,15 @@ pub async fn finish_turn(
 
     let attachments = Value::Object(attachments);
 
-    append_message(pool, workspace_id, session_id, "assistant", content, Some(&attachments)).await
+    append_message(
+        pool,
+        workspace_id,
+        session_id,
+        "assistant",
+        content,
+        Some(&attachments),
+    )
+    .await
 }
 
 async fn require(pool: &PgPool, workspace_id: &str, id: &str) -> Result<SessionRow> {
@@ -513,6 +575,32 @@ async fn require(pool: &PgPool, workspace_id: &str, id: &str) -> Result<SessionR
         .await
         .map_err(internal)?
         .ok_or(AppError::SessionNotFound)
+}
+
+/// How much of the first message becomes the session's name.
+///
+/// Short enough to read in a list at a glance, long enough that two
+/// questions about the same wallet do not look identical.
+const TITLE_FROM_MESSAGE: usize = 60;
+
+/// The first message, cut to a label.
+///
+/// Cut on a word boundary when there is one near the end, because a title
+/// ending mid-word reads as a bug rather than as a truncation.
+fn summarize(message: &str) -> String {
+    let line = message.lines().next().unwrap_or(message).trim();
+
+    if line.chars().count() <= TITLE_FROM_MESSAGE {
+        return line.to_string();
+    }
+
+    let cut: String = line.chars().take(TITLE_FROM_MESSAGE).collect();
+    let trimmed = match cut.rfind(char::is_whitespace) {
+        Some(space) if space > TITLE_FROM_MESSAGE / 2 => &cut[..space],
+        _ => cut.as_str(),
+    };
+
+    format!("{}…", trimmed.trim_end_matches([',', '.', ';', ':']))
 }
 
 /// A title is a label, not prose: one line, trimmed, bounded.
@@ -535,8 +623,37 @@ mod title_tests {
     use super::*;
 
     #[test]
+    fn should_name_a_session_after_a_short_first_message() {
+        assert_eq!(
+            summarize("How much did I spend on food?"),
+            "How much did I spend on food?"
+        );
+    }
+
+    #[test]
+    fn should_cut_a_long_message_on_a_word_boundary() {
+        let message = "How much did I spend on food last month across every \
+                       wallet including the one in dollars";
+        let title = summarize(message);
+
+        assert!(title.ends_with('…'), "{title}");
+        assert!(title.chars().count() <= TITLE_FROM_MESSAGE + 1, "{title}");
+        assert!(!title.contains("  "), "{title}");
+        // Cut between words, not inside one.
+        assert!(message.starts_with(title.trim_end_matches('…')), "{title}");
+    }
+
+    #[test]
+    fn should_take_only_the_first_line() {
+        assert_eq!(summarize("Lunch\nand dinner"), "Lunch");
+    }
+
+    #[test]
     fn should_trim_and_keep_one_line() {
-        assert_eq!(clean_title("  Lunch spending\n  ").unwrap(), "Lunch spending");
+        assert_eq!(
+            clean_title("  Lunch spending\n  ").unwrap(),
+            "Lunch spending"
+        );
     }
 
     #[test]
@@ -550,4 +667,73 @@ mod title_tests {
         let long = "a".repeat(400);
         assert_eq!(clean_title(&long).unwrap().chars().count(), MAX_TITLE);
     }
+}
+
+// -------------------------------------------------------------- receipts
+
+/// A receipt draft, checked, with the file it came from.
+///
+/// Nothing in it is persisted. The user confirms it on a sheet and the
+/// ordinary create path writes the transaction (AI-2).
+#[derive(Debug)]
+pub struct ReceiptOutcome {
+    pub vault_file_id: String,
+    pub draft: oewang_domain::receipt::ReceiptDraft,
+    pub quality: oewang_domain::receipt::Quality,
+}
+
+/// Read an uploaded receipt and answer with a draft (AI-1, AI-7).
+///
+/// Three steps, in this order for a reason: the bytes are fetched with a
+/// workspace filter, the model is asked and given no tools, and the numbers
+/// it produced are checked by arithmetic in Rust before anyone sees them.
+/// The model's total is a reading of a photograph; the sum of the items is
+/// evidence, and where they disagree the code decides and says so (D27,
+/// D30).
+pub async fn parse_receipt(
+    pool: &PgPool,
+    store: &impl oewang_clients::storage::Storage,
+    ai: &oewang_clients::Owe1Client,
+    request_id: &str,
+    workspace_id: &str,
+    file_id: &str,
+) -> Result<ReceiptOutcome> {
+    let workspace = accounts::find_workspace(pool, workspace_id)
+        .await
+        .map_err(internal)?
+        .ok_or(AppError::NotFound)?;
+
+    let document = crate::ai::extraction::document(pool, store, workspace_id, file_id).await?;
+    let answer = crate::ai::extraction::parse_receipt(
+        ai,
+        request_id,
+        workspace_id,
+        &workspace.currency_code,
+        document,
+    )
+    .await?;
+
+    let checked = oewang_domain::receipt::check(
+        answer.draft,
+        &workspace.currency_code,
+        Utc::now().date_naive(),
+    );
+
+    // A receipt with neither a total nor a date is not a receipt that was
+    // read, whatever the ladder scored it (AI-3).
+    if checked.draft.total.is_none() && checked.draft.date.is_none() {
+        return Err(AppError::ReceiptUnreadable);
+    }
+
+    let mut quality = answer.quality;
+    // The ladder reports what it was unsure of; the arithmetic reports what
+    // it replaced. Both reach the sheet, and they are different claims
+    // (AI-11).
+    quality.corrected_fields = checked.corrected;
+
+    Ok(ReceiptOutcome {
+        vault_file_id: file_id.to_string(),
+        draft: checked.draft,
+        quality,
+    })
 }

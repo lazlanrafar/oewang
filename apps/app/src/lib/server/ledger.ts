@@ -209,9 +209,35 @@ export function fxRate(
 
 // ----------------------------------------------------------------- writes
 
+/** A line item as `POST /v1/transactions` takes it. Every figure a string. */
+export type TransactionItemPayload = {
+	name: string;
+	brand?: string | null;
+	quantity?: string | null;
+	unit?: string | null;
+	unit_price?: string | null;
+	amount: string;
+	category_id?: string | null;
+	notes?: string | null;
+};
+
 export type TransactionPayload = {
 	/** The whole set of files, or absent to leave them alone (TXN-13). */
 	attachment_ids?: string[];
+	/**
+	 * Line items, written in the same database transaction as the row, so
+	 * a receipt is one call that either happens or does not. `PATCH`
+	 * ignores this: editing an item goes through the item routes.
+	 */
+	items?: TransactionItemPayload[];
+	/**
+	 * Where the write came from, for the audit row (OPS-1, D14).
+	 *
+	 * Only `web` and `receipt` may be claimed; absent means `web`. The API
+	 * mints `chat` and `import` on its own paths, so a client sending
+	 * either is refused.
+	 */
+	source?: 'web' | 'receipt';
 	type: 'income' | 'expense' | 'transfer';
 	wallet_id: string;
 	to_wallet_id?: string | null;
@@ -396,6 +422,70 @@ export function importRows(
 		body,
 		token
 	});
+}
+
+/**
+ * Ask the AI service which column holds what (AI-9, D28).
+ *
+ * Column names and two sample rows go out and a mapping comes back. No
+ * figure is sent and none comes back: every amount is parsed in Rust,
+ * which is the whole reason this step maps names rather than extracting
+ * rows.
+ *
+ * `signal` is what keeps the wizard moving. The call failing, timing out
+ * or 404ing leaves step two empty and the user maps by hand, which is the
+ * documented fallback rather than an error state.
+ */
+export function mapColumns(
+	body: { columns: string[]; sample_rows: Array<Record<string, string>> },
+	token?: string,
+	signal?: AbortSignal
+): Promise<Envelope<ColumnMapping>> {
+	return api<ColumnMapping>({
+		method: 'POST',
+		path: '/v1/transactions/import/map-columns',
+		body,
+		token,
+		signal
+	});
+}
+
+/**
+ * One asynchronous statement import (AI-4).
+ *
+ * The file is already in the vault, so this carries its id and the wallet
+ * every row lands in: a statement is one account's statement, and a row
+ * with no wallet moves no balance. The API answers `202` with a job id and
+ * does the work in the background.
+ */
+export function startStatementImport(
+	body: { vault_file_id: string; wallet_id: string },
+	token?: string
+) {
+	return api<{ job_id: string }>({
+		method: 'POST',
+		path: '/v1/transactions/import',
+		body,
+		token
+	});
+}
+
+export type ImportJobView = {
+	id: string;
+	status: 'pending' | 'succeeded' | 'failed';
+	imported: number;
+	skipped: number;
+	duplicates: number;
+	error: string | null;
+	/** True once a pending job has been pending too long (P12). */
+	stale: boolean;
+	created_at: string;
+	updated_at: string;
+};
+
+/** One poll. Readable by any role: watching an import is not a write. */
+export function readImportJob(jobId: string, token?: string): Promise<Envelope<ImportJobView>> {
+	return api<ImportJobView>({ path: `/v1/transactions/import/${jobId}`, token });
 }
 
 export function bulkUpdateTransactions(

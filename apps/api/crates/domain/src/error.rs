@@ -180,15 +180,30 @@ impl AppError {
         match self {
             Unauthenticated | InvalidCredentials | CryptoSessionUnknown => 401,
             InsufficientRole | NotAMember | ToolForbidden => 403,
-            EmailTaken | LastOwner | WalletHasTransactions | WalletCurrencyLocked
-            | WorkspaceCurrencyLocked | ConfirmationRequired(_) | ToolCapExceeded => 409,
+            EmailTaken
+            | LastOwner
+            | WalletHasTransactions
+            | WalletCurrencyLocked
+            | WorkspaceCurrencyLocked
+            | ConfirmationRequired(_)
+            | ToolCapExceeded => 409,
             InviteInvalid | ResetTokenInvalid | NotFound | WalletNotFound | CategoryNotFound
             | TransactionNotFound | ImportJobNotFound | FileNotFound | SessionNotFound => 404,
-            Validation(_) | TransferRequiresDestination | TransferSameWallet
-            | DestinationNotAllowed | TransferAmountRequired | AmountNotPositive
-            | ReceiptUnreadable | StatementUnreadable | ToolArgsInvalid(_) => 422,
-            MalformedRequest | CryptoDecryptFailed | CryptoReplayDetected
-            | CryptoClockSkew { .. } | CryptoQueryNotEncrypted | CryptoVersionUnsupported
+            Validation(_)
+            | TransferRequiresDestination
+            | TransferSameWallet
+            | DestinationNotAllowed
+            | TransferAmountRequired
+            | AmountNotPositive
+            | ReceiptUnreadable
+            | StatementUnreadable
+            | ToolArgsInvalid(_) => 422,
+            MalformedRequest
+            | CryptoDecryptFailed
+            | CryptoReplayDetected
+            | CryptoClockSkew { .. }
+            | CryptoQueryNotEncrypted
+            | CryptoVersionUnsupported
             | ToolNotFound => 400,
             RateLimited { .. } => 429,
             FileTooLarge => 413,
@@ -224,8 +239,12 @@ impl AppError {
             CryptoSessionUnknown => "Run the handshake again and retry once.",
             CryptoClockSkew { .. } => "Correct the clock offset and retry once.",
             ConfirmationRequired(_) => "Ask the user to confirm, then call again.",
-            ToolCapExceeded => "One turn may not do this much. Tell the user what was done and stop.",
-            ReceiptUnreadable | StatementUnreadable => "Try a sharper photograph, or enter it manually.",
+            ToolCapExceeded => {
+                "One turn may not do this much. Tell the user what was done and stop."
+            }
+            ReceiptUnreadable | StatementUnreadable => {
+                "Try a sharper photograph, or enter it manually."
+            }
             RateLimited { .. } => "Wait and try again.",
             _ => return None,
         })
@@ -314,7 +333,9 @@ mod tests {
             AppError::Validation(FieldErrors::new()),
             AppError::MalformedRequest,
             AppError::NotFound,
-            AppError::RateLimited { retry_after_secs: 1 },
+            AppError::RateLimited {
+                retry_after_secs: 1,
+            },
             AppError::WalletNotFound,
             AppError::WalletHasTransactions,
             AppError::CategoryNotFound,

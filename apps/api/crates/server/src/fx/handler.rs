@@ -51,7 +51,12 @@ pub async fn rate(
         let from = validate_currency_code("from", &query.from)?;
         let to = validate_currency_code("to", &query.to)?;
 
-        let date = match query.date.as_deref().map(str::trim).filter(|d| !d.is_empty()) {
+        let date = match query
+            .date
+            .as_deref()
+            .map(str::trim)
+            .filter(|d| !d.is_empty())
+        {
             Some(value) => value
                 .parse::<NaiveDate>()
                 .map_err(|_| AppError::validation([("date", "Use a date like 2026-11-02.")]))?,

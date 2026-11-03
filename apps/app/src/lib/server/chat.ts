@@ -1,9 +1,9 @@
 /**
- * Typed calls to the chat endpoints.
+ * Typed calls to the `/v1/ai` endpoints.
  *
  * Server only, like everything under `src/lib/server`: the browser never
  * talks to the API (D5). Sessions and their messages live here, and so does
- * the turn that fills them.
+ * the turn that fills them and the receipt parse the canvas opens on.
  */
 
 import { api, apiStream, type Envelope } from './api';
@@ -104,6 +104,30 @@ export function updateSettings(
 	token?: string
 ) {
 	return api<AgentSettings>({ method: 'PATCH', path: '/v1/ai/settings', body: patch, token });
+}
+
+/**
+ * Read a receipt that is already in the vault (AI-1, AI-2).
+ *
+ * The file uploads through the ordinary chunked path first, so this call
+ * carries an id rather than bytes. The API runs the extraction and answers
+ * with a draft and a quality report; **nothing is persisted as a
+ * transaction** (AI-2). Confirming is a separate write the user makes.
+ *
+ * The draft is typed loosely here on purpose. It crosses two service hops
+ * with a model at the far end, and `$lib/receipt` is where every field is
+ * checked rather than cast.
+ */
+export function parseReceipt(
+	vaultFileId: string,
+	token?: string
+): Promise<Envelope<Record<string, unknown>>> {
+	return api<Record<string, unknown>>({
+		method: 'POST',
+		path: '/v1/ai/receipt/parse',
+		body: { vault_file_id: vaultFileId },
+		token
+	});
 }
 
 export type TurnRequest = {

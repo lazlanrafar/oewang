@@ -46,7 +46,11 @@ use rust_decimal::Decimal;
 use serde_json::{json, Map, Value};
 
 use crate::{
-    accounts, ai::turns::TurnStore, audit::{Actor, SOURCE_CHAT}, auth, owe1::session::now_secs,
+    accounts,
+    ai::turns::TurnStore,
+    audit::{Actor, SOURCE_CHAT},
+    auth,
+    owe1::session::now_secs,
     transactions,
 };
 
@@ -118,7 +122,11 @@ pub async fn execute(
     // Layer 2.
     turns.reserve(request.turn_id, tool, now_secs())?;
 
-    let actor = Actor { workspace_id: request.workspace_id, user_id: request.user_id, source: SOURCE_CHAT };
+    let actor = Actor {
+        workspace_id: request.workspace_id,
+        user_id: request.user_id,
+        source: SOURCE_CHAT,
+    };
 
     match call {
         ToolCall::GetWorkspaceContext => workspace_context(pool, request.workspace_id).await,
@@ -151,7 +159,11 @@ fn check_amount_ceiling(call: &ToolCall, max_amount: Decimal) -> Result<()> {
         _ => return Ok(()),
     };
 
-    if amounts.into_iter().flatten().any(|amount| amount.abs() > max_amount) {
+    if amounts
+        .into_iter()
+        .flatten()
+        .any(|amount| amount.abs() > max_amount)
+    {
         let mut fields = FieldErrors::new();
         fields.insert(
             "amount".to_string(),
@@ -205,9 +217,12 @@ async fn workspace_context(pool: &PgPool, workspace_id: &str) -> Result<ToolOutc
         .await
         .map_err(internal)?
         .ok_or(AppError::NotAMember)?;
-    let wallet_rows = wallets::list_wallets(pool, workspace_id).await.map_err(internal)?;
-    let category_rows =
-        categories::list_categories(pool, workspace_id, None).await.map_err(internal)?;
+    let wallet_rows = wallets::list_wallets(pool, workspace_id)
+        .await
+        .map_err(internal)?;
+    let category_rows = categories::list_categories(pool, workspace_id, None)
+        .await
+        .map_err(internal)?;
 
     let wallets: Vec<Value> = wallet_rows
         .iter()
@@ -225,9 +240,9 @@ async fn workspace_context(pool: &PgPool, workspace_id: &str) -> Result<ToolOutc
 
     let categories: Vec<Value> = category_rows
         .iter()
-        .map(|category| {
-            json!({ "id": category.id, "name": category.name, "type": category.r#type })
-        })
+        .map(
+            |category| json!({ "id": category.id, "name": category.name, "type": category.r#type }),
+        )
         .collect();
 
     let summary = format!(
@@ -253,7 +268,13 @@ async fn recent(pool: &PgPool, workspace_id: &str, args: RecentArgs) -> Result<T
         ..Default::default()
     };
 
-    list_transactions(pool, workspace_id, filters, args.limit.unwrap_or(DEFAULT_LIMIT)).await
+    list_transactions(
+        pool,
+        workspace_id,
+        filters,
+        args.limit.unwrap_or(DEFAULT_LIMIT),
+    )
+    .await
 }
 
 async fn search(pool: &PgPool, workspace_id: &str, args: SearchArgs) -> Result<ToolOutcome> {
@@ -272,7 +293,13 @@ async fn search(pool: &PgPool, workspace_id: &str, args: SearchArgs) -> Result<T
         ..Default::default()
     };
 
-    list_transactions(pool, workspace_id, filters, args.limit.unwrap_or(DEFAULT_SEARCH_LIMIT)).await
+    list_transactions(
+        pool,
+        workspace_id,
+        filters,
+        args.limit.unwrap_or(DEFAULT_SEARCH_LIMIT),
+    )
+    .await
 }
 
 async fn list_transactions(
@@ -296,8 +323,11 @@ async fn list_transactions(
     .map_err(internal)?;
 
     let has_more = rows.len() > limit as usize;
-    let projected: Vec<Value> =
-        rows.iter().take(limit as usize).map(transaction_view).collect();
+    let projected: Vec<Value> = rows
+        .iter()
+        .take(limit as usize)
+        .map(transaction_view)
+        .collect();
 
     let (data, truncated) = bounded(projected);
     let returned = data.len();
@@ -383,8 +413,12 @@ async fn summary(pool: &PgPool, workspace_id: &str, args: SummaryArgs) -> Result
     let previous_from = previous_to - span;
     let previous = range_filters(previous_from, previous_to);
 
-    let current_totals = repo::summary(pool, workspace_id, &current).await.map_err(internal)?;
-    let previous_totals = repo::summary(pool, workspace_id, &previous).await.map_err(internal)?;
+    let current_totals = repo::summary(pool, workspace_id, &current)
+        .await
+        .map_err(internal)?;
+    let previous_totals = repo::summary(pool, workspace_id, &previous)
+        .await
+        .map_err(internal)?;
 
     let spent = total_of(&current_totals, "expense");
     let earned = total_of(&current_totals, "income");
@@ -411,7 +445,10 @@ async fn summary(pool: &PgPool, workspace_id: &str, args: SummaryArgs) -> Result
     .await
     .map_err(internal)?;
 
-    let groups: Vec<Value> = group_rows.iter().map(|row| group_view(row, spent, &currency)).collect();
+    let groups: Vec<Value> = group_rows
+        .iter()
+        .map(|row| group_view(row, spent, &currency))
+        .collect();
     let (groups, truncated) = bounded(groups);
 
     let change = spent - spent_before;
@@ -462,10 +499,7 @@ async fn summary(pool: &PgPool, workspace_id: &str, args: SummaryArgs) -> Result
     })
 }
 
-fn range_filters<'a>(
-    from: DateTime<Utc>,
-    to: DateTime<Utc>,
-) -> repo::TransactionFilters<'a> {
+fn range_filters<'a>(from: DateTime<Utc>, to: DateTime<Utc>) -> repo::TransactionFilters<'a> {
     repo::TransactionFilters {
         start_date: Some(from),
         end_date: Some(to),
@@ -573,7 +607,10 @@ async fn update_transaction(
     actor: Actor<'_>,
     args: WriteTransactionArgs,
 ) -> Result<ToolOutcome> {
-    let id = args.transaction_id.clone().ok_or_else(|| missing("transaction_id"))?;
+    let id = args
+        .transaction_id
+        .clone()
+        .ok_or_else(|| missing("transaction_id"))?;
     let current = transactions::service::find(pool, actor.workspace_id, &id).await?;
 
     let kind = match args.kind.as_deref() {
@@ -581,11 +618,23 @@ async fn update_transaction(
         None => parse_kind(Some(current.r#type.as_str()))?,
     };
 
-    let wallet_id = args.wallet_id.clone().unwrap_or_else(|| current.wallet_id.clone());
-    let to_wallet_id = args.to_wallet_id.clone().or_else(|| current.to_wallet_id.clone());
-    let category_id = args.category_id.clone().or_else(|| current.category_id.clone());
+    let wallet_id = args
+        .wallet_id
+        .clone()
+        .unwrap_or_else(|| current.wallet_id.clone());
+    let to_wallet_id = args
+        .to_wallet_id
+        .clone()
+        .or_else(|| current.to_wallet_id.clone());
+    let category_id = args
+        .category_id
+        .clone()
+        .or_else(|| current.category_id.clone());
     let name = args.name.clone().or_else(|| current.name.clone());
-    let description = args.description.clone().or_else(|| current.description.clone());
+    let description = args
+        .description
+        .clone()
+        .or_else(|| current.description.clone());
 
     let input = transactions::service::TransactionInput {
         kind,
@@ -629,7 +678,9 @@ async fn delete_transaction(
         result: json!({ "id": args.transaction_id, "deleted": true }),
         summary: format!(
             "Deleted {} of {}.",
-            row.name.clone().unwrap_or_else(|| "the transaction".to_string()),
+            row.name
+                .clone()
+                .unwrap_or_else(|| "the transaction".to_string()),
             format_money(row.amount, &row.wallet_currency_code, false)
         ),
     })
@@ -668,7 +719,10 @@ async fn add_items(pool: &PgPool, actor: Actor<'_>, args: ItemsArgs) -> Result<T
         result: json!({ "transaction_id": args.transaction_id, "added": added }),
         summary: format!(
             "Added {added} items to {}.",
-            transaction.name.clone().unwrap_or_else(|| "the transaction".to_string())
+            transaction
+                .name
+                .clone()
+                .unwrap_or_else(|| "the transaction".to_string())
         ),
     })
 }
@@ -708,8 +762,8 @@ async fn create_category(
     actor: Actor<'_>,
     args: NewCategoryArgs,
 ) -> Result<ToolOutcome> {
-    let category = accounts::service::create_category(pool, actor, &args.name, &args.kind, None)
-        .await?;
+    let category =
+        accounts::service::create_category(pool, actor, &args.name, &args.kind, None).await?;
 
     Ok(ToolOutcome {
         result: json!({
@@ -717,7 +771,10 @@ async fn create_category(
             "name": category.name,
             "type": category.r#type,
         }),
-        summary: format!("Created the {} category {}.", category.r#type, category.name),
+        summary: format!(
+            "Created the {} category {}.",
+            category.r#type, category.name
+        ),
     })
 }
 

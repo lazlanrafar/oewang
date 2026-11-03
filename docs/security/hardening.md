@@ -64,19 +64,28 @@ Set by the SvelteKit server on every HTML response.
 
 | Header | Value |
 |---|---|
-| `Content-Security-Policy` | `default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'` |
+| `Content-Security-Policy` | `default-src 'self'; script-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'` |
 | `Strict-Transport-Security` | `max-age=31536000; includeSubDomains` in production |
 | `X-Content-Type-Options` | `nosniff` |
 | `Referrer-Policy` | `strict-origin-when-cross-origin` |
 | `Permissions-Policy` | `camera=(self), microphone=(), geolocation=(), payment=()` |
 | `Cross-Origin-Opener-Policy` | `same-origin` |
 
+One implementation, in `apps/app/src/lib/security-headers.ts`: `vite.config.ts` hands the directives to SvelteKit, because only SvelteKit can nonce its own inlined bootstrap script and its own `<style>` element, and `hooks.server.ts` sets the rest. `security-headers.test.ts` snapshots every value, so widening a directive is a failing test and a line in a diff rather than something noticed in production (SEC-15).
+
 Notes:
 
 - No `'unsafe-inline'` in `script-src`. SvelteKit's inlined hydration data is covered by a per-response nonce, which it supports natively.
+- **The theme bootstrap lives in `app.html`, carrying `%sveltekit.nonce%`.** `mode-watcher` injects its own copy of that script through `{@html}` with no nonce and an unquoted attribute, so under this policy the browser refuses it and the white flash it exists to prevent comes back. The component is rendered with `disableHeadScriptInjection`, which is the option the library documents for this. Changing either storage key or the dark class name on the component means changing the copy in `app.html`.
+- `style-src-attr 'unsafe-inline'` is a deliberate divergence from "no inline anything". Without it, `style-src 'self'` covers attributes too, and the few `style` attributes that carry a per-element geometry value, the upload progress bar's transform and the transactions table's measured total width, stop applying: the table then renders at the wrong width until hydration. It is narrower than it looks, because an injected `<style>` block and a remote stylesheet are both still refused, and writing a style attribute takes HTML injection, which the assistant's renderer forecloses by escaping rather than parsing (SEC-11). Moving those values to CSSOM would close it and cost a first paint.
 - `img-src` allows `blob:` because file bytes arrive decrypted in memory and are shown through a Blob URL that is revoked after load ([encryption](../api/encryption.md#file-bytes)).
 - `camera=(self)` only because receipt capture on a phone uses it. If capture ships as a file picker instead, drop it to `()`.
 - `frame-ancestors 'none'` plus `X-Frame-Options` is redundant; the CSP directive is the one that counts.
+- In development SvelteKit adds `'unsafe-inline'` to `style-src` itself, because Vite injects stylesheets at runtime. That is a development-only branch in SvelteKit; a production build serves the table above exactly, which was verified against one rather than reasoned about.
+
+### Liveness
+
+`apps/app` answers `GET /health` with `{"status":"ok"}` and no session, for the container health check. Liveness only: the web app's one dependency is the API, which answers for itself, and a readiness check that reports somebody else's outage gets a working process restarted.
 
 ## CORS
 
@@ -118,6 +127,14 @@ Enforcement: request and response bodies are never passed to the logger, and sec
 | New dependency | Needs a reason in the pull request: what it does, what it would take to not have it |
 | Frontend | A dependency that runs in the browser is weighed harder than one that runs on the server. It executes in the same context as the session |
 | Supply chain | No post-install scripts in the web app's dependency tree. `bun install --ignore-scripts` in CI |
+| Threshold | The build fails on an advisory rated high or above. Anything lower is recorded below rather than ignored silently: a gate nobody can pass is a gate somebody removes |
+
+**Accepted advisories.** Each one is listed with why it does not reach this product. A new one goes here with the same reasoning or it is fixed.
+
+| Advisory | Where | Why it is accepted |
+|---|---|---|
+| RUSTSEC-2023-0071 | `rsa` 0.9.10, reached through `sqlx-mysql` | No fixed version exists. `sqlx-macros-core` lists `sqlx-mysql` unconditionally, but this build uses PostgreSQL only and `cargo tree -i rsa` finds no path that compiles it. Passed to `cargo audit --ignore` with this reasoning in the workflow, not hidden in a config file |
+| GHSA-gcqx-w48m-w2h4 | `deepmerge`, through `@sveltejs/vite-plugin-svelte` | Low. A build-time dependency: it never runs in the browser and never sees a request |
 
 ## Rate limits and resource limits
 
@@ -125,7 +142,7 @@ Enforcement: request and response bodies are never passed to the logger, and sec
 
 | Scope | Limit | Requirement |
 |---|---|---|
-| `/v1/auth/*` | 10 requests per 15 minutes per IP | AUTH-6 |
+| Credential routes | 10 requests per 15 minutes per IP | AUTH-6 |
 | Authenticated routes | 300 per minute per IP | OPS-5 |
 | Unauthenticated routes | 30 per minute per IP | OPS-5 |
 | `POST /v1/handshake` | 30 per minute per IP | [encryption](../api/encryption.md#handshake) |
@@ -144,7 +161,17 @@ Enforcement: request and response bodies are never passed to the logger, and sec
 | Database statement timeout | 10 seconds | SEC-19 |
 | Database pool | 20 connections, 5 second acquire timeout | SEC-19 |
 
-Every limit above is a configuration value with the listed default, not a literal buried in code.
+Every limit above is a configuration value with the listed default, not a literal buried in code, **except two**: the list `limit` parameter and the bulk-operation size. Those are part of the API contract rather than a deployment question. A client pages against them and a change to either is an API change with a client to update, not a knob an operator turns, so they are constants and a test fails if they move. `Config::default_rate_limits` is where the defaults live and a test asserts each one still equals the number in this table, so the two cannot drift apart quietly.
+
+**Credential routes** means the ones something can be guessed at: `register`, `login`, `refresh`, `forgot-password`, `reset-password` and `accept-invite`. An earlier draft of this table said `/v1/auth/*`, which was wrong: `/v1/auth/me` is read on every page load, and ten of those per fifteen minutes would lock a working session out of the product. The limit exists for guessing, so it covers what can be guessed.
+
+Two things are exempt from the per-address budgets. The health routes, which a container probes every few seconds. And `/v1/internal/*`, which one service calls from one address and which is gated by a key rather than by a budget (OPS-6); counting a long chat turn's tool calls against a per-address budget would make the product's own traffic look like an attack. The AI service runs its own limiter on what it will accept.
+
+The window slides rather than resetting on the minute. A fixed window lets a caller spend the whole budget at 11:59:59 and the whole budget again at 12:00:00, which is twice the limit at the one moment anybody would aim for.
+
+The counters live in process memory, so a restart forgives everyone and a second instance counts separately. Both are acceptable: this bounds abuse and spend, it is not accounting, and the alternative is a shared store on the request path of every call (D10). The daily upload ceiling is the exception and is counted from the rows, because a day is long enough that a restart must not hand anybody a fresh allowance.
+
+Behind a reverse proxy every request arrives from the proxy, so `X-Forwarded-For` is read only when `TRUST_PROXY_HEADERS` says there is one in front. Anyone can send that header, and a limiter that believes it is a limiter anyone can step around.
 
 ### Why each matters
 
@@ -176,6 +203,7 @@ A body limit layer stops a large body before a handler allocates for it. A state
 | Replay | A captured OWE1 request is replayed and returns `CRYPTO_REPLAY_DETECTED` |
 | Tamper | A flipped bit in a ciphertext returns `CRYPTO_DECRYPT_FAILED` |
 | CSP | A response header snapshot test, so a loosened policy shows up in review |
+| CORS | The `cors` feature of `tower-http` is not enabled, and a test fails if it is ever switched on. A layer whose code is not compiled cannot be added by accident (SEC-16) |
 | Prompt injection | The corpus in [AI safety](ai-safety.md#testing) runs against the tool loop |
 
 ## Related docs

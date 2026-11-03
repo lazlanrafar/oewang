@@ -183,6 +183,23 @@ pub struct ToolView {
     pub summary: String,
 }
 
+/// Which uploaded file to read. The bytes are not in the body: a receipt
+/// does not fit in one (SEC-18), so it is uploaded as chunks first and
+/// named here (D23).
+#[derive(Debug, Deserialize)]
+pub struct ReceiptBody {
+    pub vault_file_id: String,
+}
+
+/// The draft, what the ladder scored it, and what arithmetic replaced.
+/// Nothing in it has been written anywhere (AI-2).
+#[derive(Debug, Serialize)]
+pub struct ReceiptView {
+    pub vault_file_id: String,
+    pub draft: oewang_domain::receipt::ReceiptDraft,
+    pub quality: oewang_domain::receipt::Quality,
+}
+
 /// One user turn. `workspace_id` is not here and never will be: it comes
 /// from the token (AUTH-4).
 #[derive(Debug, Deserialize)]
@@ -226,7 +243,11 @@ pub async fn get_session(
         Ok(conversation) => Ok(Json(Envelope::data(
             ConversationView {
                 session: conversation.session.into(),
-                messages: conversation.messages.into_iter().map(MessageView::from).collect(),
+                messages: conversation
+                    .messages
+                    .into_iter()
+                    .map(MessageView::from)
+                    .collect(),
             },
             id,
         ))),
@@ -249,7 +270,10 @@ pub async fn create_session(
     )
     .await
     {
-        Ok(session) => Ok((StatusCode::CREATED, Json(Envelope::data(session.into(), id)))),
+        Ok(session) => Ok((
+            StatusCode::CREATED,
+            Json(Envelope::data(session.into(), id)),
+        )),
         Err(error) => Err(ApiError::new(error, id)),
     }
 }
@@ -310,6 +334,18 @@ pub async fn chat_stream(
     Json(body): Json<StreamBody>,
 ) -> Result<Response, ApiError> {
     let id = request_id.0;
+
+    // Per workspace, not per address: what this bounds is model spend, and
+    // spend belongs to a workspace (SEC-17). Counted before the user's
+    // message is written, so a refused turn leaves no half-turn behind.
+    state
+        .rate_limits
+        .check(
+            crate::limits::Bucket::ChatTurn,
+            &auth.workspace_id,
+            now_secs(),
+        )
+        .map_err(|error| ApiError::new(error, id.clone()))?;
 
     let turn = service::begin_turn(
         &state.db,
@@ -403,9 +439,48 @@ pub async fn execute_tool(
     .map_err(|error| ApiError::new(error, id.clone()))?;
 
     Ok(Json(Envelope::data(
-        ToolView { ok: true, result: outcome.result, summary: outcome.summary },
+        ToolView {
+            ok: true,
+            result: outcome.result,
+            summary: outcome.summary,
+        },
         id,
     )))
+}
+
+/// Read an uploaded receipt (AI-1).
+///
+/// `AuthWrite`, because the only thing a draft is for is creating a
+/// transaction, and a member who cannot create one has no use for the
+/// model spend. Nothing is persisted either way.
+pub async fn parse_receipt(
+    State(state): State<AppState>,
+    auth: AuthWrite,
+    request_id: RequestId,
+    Json(body): Json<ReceiptBody>,
+) -> Result<Json<Envelope<ReceiptView>>, ApiError> {
+    let id = request_id.0;
+
+    match service::parse_receipt(
+        &state.db,
+        &state.files,
+        &state.ai,
+        &id,
+        &auth.workspace_id,
+        &body.vault_file_id,
+    )
+    .await
+    {
+        Ok(outcome) => Ok(Json(Envelope::data(
+            ReceiptView {
+                vault_file_id: outcome.vault_file_id,
+                draft: outcome.draft,
+                quality: outcome.quality,
+            },
+            id,
+        ))),
+        Err(error) => Err(ApiError::new(error, id)),
+    }
 }
 
 #[cfg(test)]

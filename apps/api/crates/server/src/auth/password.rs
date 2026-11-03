@@ -93,3 +93,36 @@ mod tests {
         verify_dummy("anything".into()).await;
     }
 }
+
+#[cfg(test)]
+mod seed_tests {
+    use super::*;
+
+    /// The development seed's password must actually work.
+    ///
+    /// It did not. The hash in `seeds/dev.sql` was a plausible-looking
+    /// Argon2id string that verified against nothing, so every attempt to
+    /// sign in as the demo user answered `INVALID_CREDENTIALS` and looked
+    /// like a typo. Nothing noticed, because nothing checked: the seed is
+    /// data and data is not compiled. This test compiles it.
+    #[tokio::test]
+    async fn should_let_the_seeded_user_sign_in() {
+        let seed = include_str!("../../../../seeds/dev.sql");
+
+        let password = seed
+            .lines()
+            .find_map(|line| line.split("is \"").nth(1)?.split('"').next())
+            .expect("the seed states the demo password in a comment");
+
+        let stored = seed
+            .lines()
+            .find_map(|line| line.trim().strip_prefix("'$argon2id$"))
+            .map(|rest| format!("$argon2id${}", rest.trim_end_matches(['\'', ','])))
+            .expect("the seed carries an argon2id hash");
+
+        assert!(
+            verify(password.to_string(), stored).await,
+            "the seeded password does not verify against the seeded hash"
+        );
+    }
+}
