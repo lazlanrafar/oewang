@@ -34,6 +34,11 @@ pub struct Config {
     pub email_from: String,
     pub ai_service_url: String,
     pub ai_service_api_key: Secret,
+    /// Pinned Ed25519 keys for the AI service's handshake. A production
+    /// client with none refuses to start; in development the client
+    /// reads what the service publishes (D22).
+    pub ai_signing_public_keys: Vec<(String, [u8; 32])>,
+    pub ai_request_timeout: Duration,
 
     /// The daily rate source (D44). The key is optional: the keyless
     /// endpoint still answers, and a lookup that fails for any reason just
@@ -98,6 +103,19 @@ impl Config {
             });
         }
 
+        // A client that cannot verify a handshake stops, so production
+        // needs the keys before it starts rather than at the first chat
+        // turn (docs/api/encryption.md#server-signing-keys).
+        let ai_signing_public_keys = match optional("AI_SIGNING_PUBLIC_KEYS") {
+            Some(raw) => oewang_clients::owe1_client::parse_pinned_keys(&raw).map_err(|error| {
+                ConfigError::Invalid { name: "AI_SIGNING_PUBLIC_KEYS", reason: error.to_string() }
+            })?,
+            None if app_env == AppEnv::Production => {
+                return Err(ConfigError::Missing("AI_SIGNING_PUBLIC_KEYS"))
+            }
+            None => Vec::new(),
+        };
+
         // Plaintext mode exists only for local development. Anywhere else it
         // would quietly undo D22, so it is refused rather than warned about.
         let owe1_enabled = optional("OWE1_ENABLED")
@@ -153,6 +171,8 @@ impl Config {
                 .unwrap_or_else(|| "oewang <no-reply@localhost>".into()),
             ai_service_url: optional("AI_SERVICE_URL").unwrap_or_else(|| "http://ai:3004".into()),
             ai_service_api_key: Secret::new(ai_service_api_key),
+            ai_signing_public_keys,
+            ai_request_timeout: Duration::from_secs(parse_or("AI_REQUEST_TIMEOUT_SECS", 60)?),
 
             owe1_enabled,
 

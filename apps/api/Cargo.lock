@@ -1508,10 +1508,13 @@ dependencies = [
 name = "oewang-clients"
 version = "0.1.0"
 dependencies = [
+ "axum",
  "base64 0.22.1",
  "chrono",
+ "ed25519-dalek",
  "hmac",
  "oewang-domain",
+ "rand 0.8.8",
  "reqwest",
  "rust_decimal",
  "serde",

@@ -32,6 +32,8 @@ pub enum Owe1Error {
     SealFailed,
     #[error("decryption failed")]
     DecryptFailed,
+    #[error("handshake signature did not verify")]
+    SignatureInvalid,
 }
 
 impl From<Owe1Error> for crate::AppError {
@@ -42,7 +44,12 @@ impl From<Owe1Error> for crate::AppError {
             // A malformed field and a low-order point are both "this request
             // is not a valid OWE1 message", which is what the catalog calls
             // CRYPTO_DECRYPT_FAILED.
-            MalformedField(_) | LowOrderPoint | KeyDerivation | SealFailed | DecryptFailed => {
+            MalformedField(_)
+            | LowOrderPoint
+            | KeyDerivation
+            | SealFailed
+            | DecryptFailed
+            | SignatureInvalid => {
                 crate::AppError::CryptoDecryptFailed
             }
         }

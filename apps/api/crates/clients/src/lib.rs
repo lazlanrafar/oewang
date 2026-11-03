@@ -5,9 +5,11 @@
 #![forbid(unsafe_code)]
 
 pub mod mailer;
+pub mod owe1_client;
 pub mod rates;
 pub mod storage;
 
 pub use mailer::Mailer;
+pub use owe1_client::{Owe1Client, Owe1ClientError};
 pub use rates::RatesClient;
 pub use storage::{FileStore, Storage};

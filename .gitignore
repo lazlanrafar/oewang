@@ -27,5 +27,6 @@ apps/ai/.pytest_cache/
 # Docker named-volume stand-ins
 .docker-data/
 
-# OWE1 signing key, created on first start in development
-apps/api/.secrets/
+# OWE1 signing keys, created on first start in development. Each service
+# holds its own: the API signs its handshake, the AI service signs its own.
+.secrets/

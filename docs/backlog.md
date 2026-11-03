@@ -340,12 +340,12 @@ Requirements: TXN-12
 ### US-026: Python service skeleton
 Requirements: PLT-3, SEC-1
 
-- [ ] FastAPI with `/health`, the service-key middleware and per-caller rate limiting
-- [ ] Anthropic client configured from the environment
-- [ ] OWE1 middleware and client wired, passing the shared vectors
-- [ ] No `DATABASE_URL` is read anywhere; a test asserts the service starts without one
-- [ ] A Rust client in `crates/clients` with timeout and retry
-- [ ] pytest green with a mocked model
+- [x] FastAPI with `/health`, the service-key middleware and per-caller rate limiting
+- [x] Anthropic client configured from the environment
+- [x] OWE1 middleware and client wired, passing the shared vectors
+- [x] No `DATABASE_URL` is read anywhere; a test asserts the service starts without one
+- [x] A Rust client in `crates/clients` with timeout and retry
+- [x] pytest green with a mocked model
 
 ### US-027: Chat sessions API and history UI
 Requirements: CHAT-1, CHAT-8

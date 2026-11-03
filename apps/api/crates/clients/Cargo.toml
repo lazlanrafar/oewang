@@ -18,3 +18,13 @@ sha2 = { workspace = true }
 hmac = { workspace = true }
 base64 = { workspace = true }
 thiserror = { workspace = true }
+
+[dev-dependencies]
+# A real server for the OWE1 client's tests: the protocol is the thing under
+# test, so the other end has to be an actual HTTP server rather than a mock.
+axum = { workspace = true }
+oewang-domain = { workspace = true }
+tokio = { workspace = true }
+# The test service signs its handshake, exactly as the AI service does.
+ed25519-dalek = { workspace = true }
+rand = { workspace = true }

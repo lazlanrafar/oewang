@@ -228,8 +228,12 @@ All configuration comes from environment variables, validated at startup. A miss
 | `AI_QUALITY_THRESHOLD` | ai | Default 70. The score at which the ladder stops escalating. |
 | `AI_EXTRACTION_BUDGET_MS` | ai | Default 45000. Wall-clock budget per document. |
 | `AI_MAX_STEPS` | ai | Tool-loop cap, default 8 (CHAT-5). |
-| `CRYPTO_SIGNING_KEY_FILE` | api | Ed25519 private key, PKCS#8 PEM, mode `0600`. Created on first start in development (D22). |
-| `CRYPTO_SIGNING_PUBLIC_KEYS` | app, ai | Pinned public keys, `kid:base64url` pairs. A production client with none refuses to start. |
+| `AI_REQUEST_TIMEOUT_SECS` | api | How long one AI service call may take, default 60. |
+| `RATE_LIMIT_PER_MINUTE` | ai | Requests per caller per minute, default 600. |
+| `HANDSHAKE_RATE_LIMIT_PER_MINUTE` | ai | The lower ceiling on the handshake, default 30. |
+| `CRYPTO_SIGNING_KEY_FILE` | api, ai | Ed25519 private key, PKCS#8 PEM, mode `0600`. Each service signs its own handshake, so each holds its own key. Created on first start in development (D22). |
+| `CRYPTO_SIGNING_PUBLIC_KEYS` | app | The API's pinned public keys, `kid:base64url` pairs. A production client with none refuses to start. |
+| `AI_SIGNING_PUBLIC_KEYS` | api | The AI service's pinned public keys, same format. Required in production. |
 | `OWE1_ENABLED` | api, app, ai | Default true. Plaintext mode only when `APP_ENV=development` on localhost. |
 | `STORAGE_BACKEND` | api | `local` or `s3`. |
 | `STORAGE_LOCAL_PATH` | api | Used when the backend is `local`. |

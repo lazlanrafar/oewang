@@ -5,7 +5,9 @@
 //! Python implementations cannot drift from it.
 
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
+use ed25519_dalek::{Signature, Verifier, VerifyingKey};
 use hkdf::Hkdf;
+use rand::RngCore;
 use sha2::{Digest, Sha256};
 use x25519_dalek::{PublicKey, StaticSecret};
 
@@ -69,6 +71,78 @@ pub fn derive_keys(
     Ok(SessionKeys { client_to_server, server_to_client })
 }
 
+/// One side's ephemeral key pair, with the agreement that follows it.
+///
+/// The client half of the handshake lives here rather than in the HTTP
+/// client, so x25519 stays inside the one crate the encryption doc names
+/// (docs/api/encryption.md#primitives) and both sides derive their keys with
+/// the same code.
+pub struct Ephemeral {
+    secret: StaticSecret,
+    public: [u8; 32],
+}
+
+impl std::fmt::Debug for Ephemeral {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // The private half never prints (OPS-3).
+        f.write_str("Ephemeral([redacted])")
+    }
+}
+
+impl Ephemeral {
+    pub fn generate() -> Self {
+        let mut bytes = [0u8; 32];
+        rand::rngs::OsRng.fill_bytes(&mut bytes);
+        let secret = StaticSecret::from(bytes);
+        let public = PublicKey::from(&secret).to_bytes();
+        Self { secret, public }
+    }
+
+    pub fn public_key(&self) -> &[u8; 32] {
+        &self.public
+    }
+
+    /// Derive both session keys against the peer's public key. The private
+    /// half is dropped with `self` and never stored.
+    pub fn derive(
+        &self,
+        peer_public: &[u8; 32],
+        client_nonce: &[u8; 16],
+        server_nonce: &[u8; 16],
+        session_id: &str,
+    ) -> Result<SessionKeys, Owe1Error> {
+        derive_keys(
+            &self.secret,
+            &PublicKey::from(*peer_public),
+            client_nonce,
+            server_nonce,
+            session_id,
+        )
+    }
+}
+
+/// Sixteen random bytes, the nonce each side contributes to the salt.
+pub fn new_nonce() -> [u8; 16] {
+    let mut nonce = [0u8; 16];
+    rand::rngs::OsRng.fill_bytes(&mut nonce);
+    nonce
+}
+
+/// Verify a handshake signature against a pinned public key.
+///
+/// A client that cannot verify stops; it never falls back to plaintext
+/// (docs/api/encryption.md#handshake).
+pub fn verify(
+    pinned_public_key: &[u8; 32],
+    signature: &[u8; 64],
+    message: &[u8],
+) -> Result<(), Owe1Error> {
+    let key =
+        VerifyingKey::from_bytes(pinned_public_key).map_err(|_| Owe1Error::SignatureInvalid)?;
+    key.verify(message, &Signature::from_bytes(signature))
+        .map_err(|_| Owe1Error::SignatureInvalid)
+}
+
 /// The bytes the server signs.
 ///
 /// Every binary part has a fixed size and the session id a fixed shape, so
@@ -109,6 +183,15 @@ pub fn key_id(public_key: &[u8; 32]) -> String {
 
 pub fn new_session_id() -> String {
     format!("{SESSION_PREFIX}{}", cuid2::create_id())
+}
+
+/// A request id, fresh per call.
+///
+/// Freshness comes from the timestamp, not from the id, so this only has to
+/// be unique inside the replay window
+/// (docs/api/encryption.md#replay-protection).
+pub fn new_request_id() -> String {
+    format!("req_{}", cuid2::create_id())
 }
 
 /// Decode a base64url value that must be exactly `N` bytes.
@@ -272,5 +355,72 @@ mod tests {
         let id = new_session_id();
         assert!(id.starts_with(SESSION_PREFIX));
         assert_ne!(id, new_session_id());
+    }
+
+    #[test]
+    fn should_mint_a_fresh_request_id_every_time() {
+        assert_ne!(new_request_id(), new_request_id());
+    }
+
+    #[test]
+    fn should_agree_on_keys_from_both_sides_of_an_agreement() {
+        let client = Ephemeral::generate();
+        let server = Ephemeral::generate();
+        let client_nonce = new_nonce();
+        let server_nonce = new_nonce();
+
+        let from_client = client
+            .derive(server.public_key(), &client_nonce, &server_nonce, "cs_a")
+            .unwrap();
+        let from_server = server
+            .derive(client.public_key(), &client_nonce, &server_nonce, "cs_a")
+            .unwrap();
+
+        assert_eq!(from_client, from_server);
+    }
+
+    #[test]
+    fn should_derive_different_keys_for_a_different_session_id() {
+        let client = Ephemeral::generate();
+        let server = Ephemeral::generate();
+        let nonce = new_nonce();
+
+        let one = client.derive(server.public_key(), &nonce, &nonce, "cs_a").unwrap();
+        let other = client.derive(server.public_key(), &nonce, &nonce, "cs_b").unwrap();
+
+        assert_ne!(one, other);
+    }
+
+    #[test]
+    fn should_refuse_a_low_order_peer_key() {
+        let client = Ephemeral::generate();
+        let nonce = new_nonce();
+        let error = client.derive(&[0u8; 32], &nonce, &nonce, "cs_a").unwrap_err();
+        assert_eq!(error, Owe1Error::LowOrderPoint);
+    }
+
+    #[test]
+    fn should_not_print_an_ephemeral_secret() {
+        assert_eq!(format!("{:?}", Ephemeral::generate()), "Ephemeral([redacted])");
+    }
+
+    #[test]
+    fn should_verify_a_signature_and_refuse_a_changed_message() {
+        use ed25519_dalek::{Signer as _, SigningKey};
+
+        let signing = SigningKey::from_bytes(&[42u8; 32]);
+        let public = signing.verifying_key().to_bytes();
+        let message = b"oewang/owe1/handshake...";
+        let signature = signing.sign(message).to_bytes();
+
+        assert!(verify(&public, &signature, message).is_ok());
+        assert_eq!(
+            verify(&public, &signature, b"something else").unwrap_err(),
+            Owe1Error::SignatureInvalid
+        );
+        assert_eq!(
+            verify(&[1u8; 32], &signature, message).unwrap_err(),
+            Owe1Error::SignatureInvalid
+        );
     }
 }

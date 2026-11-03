@@ -10,6 +10,7 @@ Status: draft v0.1, 2026-11-02. Part of the [oewang docs](../README.md). Impleme
 - Changing the system prompt structure.
 - Changing the streaming event protocol.
 - Changing the model IDs or the loop limits.
+- Changing what a request must carry: the service key, the rate limits or the OWE1 contract.
 
 ## Responsibilities
 
@@ -23,7 +24,7 @@ Owns:
 
 Owns nothing else. It has no database connection, no storage credentials and no user JWT (D3, D4). Every side effect goes through the API's internal endpoints.
 
-The practical test: if `apps/ai` had `DATABASE_URL` set, it would be a bug. The deployment does not provide one.
+The practical test: if `apps/ai` had `DATABASE_URL` set, it would be a bug. The deployment does not provide one, and the service refuses to start if it finds one. The same applies to `JWT_SECRET`, `S3_SECRET_ACCESS_KEY` and `RESEND_API_KEY`: they live in the shared `.env` for the API's sake, the compose file drops them from this container, and the startup check is what makes that structural rather than a convention.
 
 ## Stack
 
@@ -41,17 +42,34 @@ The practical test: if `apps/ai` had `DATABASE_URL` set, it would be a bug. The 
 
 ## Endpoints
 
-Every route requires `x-api-key`. There is no user-facing authentication here (D4).
+Every route requires `x-api-key`, and every body is OWE1 (D22). There is no user-facing authentication here (D4).
 
 | Method | Path | Description |
 |---|---|---|
-| GET | `/health` | Liveness |
+| GET | `/health` | Liveness. No key, no session: the container healthcheck runs without credentials |
+| GET | `/.well-known/oewang-keys` | The service's Ed25519 public keys, pinned by the API. Plaintext by design |
+| POST | `/v1/handshake` | Opens a crypto session. Plaintext, signed rather than encrypted |
+| GET | `/v1/session` | The caller's own crypto session. Reaching it proves the session is live |
 | POST | `/chat/stream` | Tool-loop chat, answers `text/event-stream` |
 | POST | `/chat/title` | Short session title from the first user message |
 | POST | `/receipt/parse` | Image bytes to a structured receipt draft |
 | POST | `/import/map-columns` | Column names plus two sample rows to a column mapping (D28) |
 | POST | `/import/extract` | Statement image or PDF to structured transaction rows |
 | GET | `/tools/definitions` | The tool schemas, so the API can validate against the same contract |
+
+### Request handling
+
+Three layers, outermost first. A caller failing one never reaches the next.
+
+| Layer | What it does |
+|---|---|
+| Service key | `x-api-key` compared in constant time (SEC-1). `/health` and the published keys are the only routes without it |
+| Rate limit | A sliding window per caller, `RATE_LIMIT_PER_MINUTE`, with a lower ceiling on the handshake. A loop in the API cannot become an unbounded spend on the model |
+| OWE1 | Opens the request body and the sealed query string, seals the response, binding the HTTP status. The same contract as the Rust middleware, pinned by the shared vectors |
+
+A failure the caller may not be able to decrypt, which means a crypto failure, a missing key or a rate limit, answers in plaintext and is marked with `x-owe-transport-error`. Everything else is sealed.
+
+Sessions live in process memory for at most 24 hours or 2^24 messages, exactly as on the API. A restart drops them, and the API's client answers `CRYPTO_SESSION_UNKNOWN` by running one new handshake and retrying once.
 
 ### `POST /chat/stream` request
 

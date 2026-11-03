@@ -124,6 +124,18 @@ async fn main() -> anyhow::Result<()> {
     };
     tracing::info!(store = ?files, "file storage ready");
 
+    // In development the client reads the keys the AI service publishes;
+    // anywhere else they are pinned and the config already refused to start
+    // without them.
+    let ai = Arc::new(oewang_clients::Owe1Client::new(
+        config.ai_service_url.clone(),
+        config.ai_service_api_key.clone(),
+        config.ai_signing_public_keys.clone(),
+        config.app_env == config::AppEnv::Development,
+        config.ai_request_timeout,
+    )?);
+    tracing::info!(ai = ?ai, "ai service client ready");
+
     let request_timeout = config.request_timeout;
     let fx_refresh_interval = config.fx_refresh_interval;
     let body_limit = config.body_limit_bytes;
@@ -137,6 +149,7 @@ async fn main() -> anyhow::Result<()> {
         mailer,
         rates,
         files,
+        ai,
     };
 
     spawn_rate_refresher(state.clone(), fx_refresh_interval);

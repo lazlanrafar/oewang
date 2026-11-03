@@ -101,9 +101,9 @@ Encoding: every binary value is base64url without padding (RFC 4648 section 5).
 
 ## Server signing keys
 
-- The API holds one or more Ed25519 signing keys. The key ID is derived from the public key: `kid = "k-" || first 12 characters of base64url(SHA-256(public_key))`.
+- Each server on a protected hop holds one or more Ed25519 signing keys: the API signs hop 2's handshake, the AI service signs hop 3's. The key ID is derived from the public key: `kid = "k-" || first 12 characters of base64url(SHA-256(public_key))`.
 - The private key is a PKCS#8 PEM file at `CRYPTO_SIGNING_KEY_FILE`, mounted from the deployment secret store. In development the API creates it with mode `0600` on first start.
-- Public keys are published at `GET /.well-known/oewang-keys` (plaintext) and pinned by every client through `CRYPTO_SIGNING_PUBLIC_KEYS`.
+- Public keys are published at `GET /.well-known/oewang-keys` (plaintext) and pinned by every client: the web app pins the API's through `CRYPTO_SIGNING_PUBLIC_KEYS`, the API pins the AI service's through `AI_SIGNING_PUBLIC_KEYS`.
 - A production client with no pinned key refuses to start. A development client with none trusts what the local API publishes.
 - Rotation: publish the new key, deploy clients that pin both, switch signing, remove the old key after 90 days.
 
@@ -131,22 +131,18 @@ Server steps:
 10. `signature = Ed25519-Sign(signing_key, transcript)`.
 11. Store the session in memory: both keys, expiry, a message counter per direction, and a recent request-ID set. Discard the ephemeral private key.
 
-Response, in the standard plaintext envelope:
+Response, plaintext. The one route that answers outside the envelope: it exists before a session does, and its shape is fixed by the protocol rather than by the API's conventions.
 
 ```json
 {
-  "data": {
-    "v": 1,
-    "session_id": "cs_h6wqk2m0v9s1t4y7u3i8o5pa",
-    "server_public_key": "<base64url>",
-    "server_nonce": "<base64url>",
-    "server_time": 1762070400,
-    "expires_at": 1762156800,
-    "kid": "k-bI-GB9vocHem",
-    "signature": "<base64url>"
-  },
-  "error": null,
-  "meta": { "request_id": "01JC0…" }
+  "v": 1,
+  "session_id": "cs_h6wqk2m0v9s1t4y7u3i8o5pa",
+  "server_public_key": "<base64url>",
+  "server_nonce": "<base64url>",
+  "server_time": 1762070400,
+  "expires_at": 1762156800,
+  "kid": "k-bI-GB9vocHem",
+  "signature": "<base64url>"
 }
 ```
 
@@ -311,7 +307,8 @@ Guardrails: the first-token latency test in [chat testing](../features/chat.md#t
 | Rust middleware: decrypt query and body, encrypt response | `apps/api/crates/server/src/middleware/owe1.rs` |
 | Rust client transport, used to call the AI service | `apps/api/crates/clients/src/owe1_client.rs` |
 | Node protocol and client, used by the SvelteKit server | `apps/app/src/lib/server/owe1/` |
-| Python protocol and server middleware | `apps/ai/app/core/owe1.py` |
+| Python protocol | `apps/ai/app/core/owe1.py` |
+| Python handshake, sessions and middleware | `apps/ai/app/core/{signer,sessions,middleware}.py`, `apps/ai/app/api/routes/handshake.py` |
 | Shared test vectors | `apps/api/crates/domain/testdata/owe1-vectors.json` |
 
 Interop is tested three ways: every side runs the same vectors, and an integration test drives the Node client and the Python client against a live Rust API.

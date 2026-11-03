@@ -4,7 +4,15 @@ A missing required variable stops the process rather than failing at first
 use. See docs/architecture.md#configuration.
 """
 
+import os
+from pathlib import Path
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+#: Handed to the API, never to this process. The shared .env carries them
+#: for the API's sake, so the deployment drops them here and this check
+#: refuses to start if one arrives anyway.
+FORBIDDEN_VARIABLES = ("DATABASE_URL", "JWT_SECRET", "S3_SECRET_ACCESS_KEY", "RESEND_API_KEY")
 
 
 class Settings(BaseSettings):
@@ -23,8 +31,48 @@ class Settings(BaseSettings):
     ai_quality_threshold: int = 70
     ai_extraction_budget_ms: int = 45_000
     ai_max_steps: int = 8
+    # One model call's ceiling, in seconds, and how often the SDK retries a
+    # transport failure before the call counts as a failed pass.
+    model_timeout_secs: float = 20.0
+    model_max_retries: int = 2
+
+    # Payload encryption (D22). Plaintext mode is only honoured in
+    # development; `validate` below refuses it anywhere else.
+    owe1_enabled: bool = True
+    app_env: str = "development"
+    crypto_signing_key_file: Path = Path("./.secrets/ai-owe1-signing-key.pem")
+
+    # Requests per minute per caller. The handshake has its own, lower
+    # ceiling (docs/api/encryption.md#handshake).
+    rate_limit_per_minute: int = 600
+    handshake_rate_limit_per_minute: int = 30
 
     port: int = 3004
+
+    def validate_for_environment(self) -> None:
+        """Stop at startup rather than at first use.
+
+        Only the rules that cannot be expressed as a type live here; the
+        rest are enforced by the field declarations above.
+        """
+        # D3 and D4 are deployment facts, so they are checked against the
+        # environment rather than against this class: nothing here reads a
+        # database or a storage key, and a process handed one is
+        # misconfigured even if it never touches it.
+        for name in FORBIDDEN_VARIABLES:
+            if os.environ.get(name, "").strip():
+                raise ValueError(
+                    f"{name} must not be set on the AI service: it holds no database "
+                    "connection, no storage credentials and no user token (D3, D4)"
+                )
+
+        if self.app_env != "development":
+            if not self.owe1_enabled:
+                raise ValueError("payload encryption can only be disabled in development")
+            if len(self.ai_service_api_key) < 32:
+                raise ValueError("AI_SERVICE_API_KEY must be at least 32 characters")
+            if not self.anthropic_api_key:
+                raise ValueError("ANTHROPIC_API_KEY is required outside development")
 
 
 settings = Settings()
