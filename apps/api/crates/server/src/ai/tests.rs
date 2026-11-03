@@ -463,6 +463,86 @@ async fn should_store_the_assistant_message_when_the_stream_ends(pool: PgPool) {
 }
 
 #[sqlx::test(migrations = "../../migrations")]
+async fn should_store_the_tool_calls_beside_the_reply(pool: PgPool) {
+    fixture(&pool).await;
+    let session = service::create(&pool, actor(), None).await.unwrap();
+    let (sender, mut receiver) = mpsc::channel::<Frame>(16);
+
+    let events = Scripted::new(vec![
+        ("tool_call", json!({ "id": "t1", "name": "create_transaction", "args": { "amount": "50000" } })),
+        ("tool_result", json!({ "id": "t1", "ok": true, "summary": "Created expense of Rp 50.000 in Cash." })),
+        ("token", json!({ "text": "Added." })),
+        ("done", json!({ "message_id": null, "usage": { "input": 12, "output": 4 } })),
+    ]);
+
+    stream::pump(
+        events,
+        sender,
+        pool.clone(),
+        WORKSPACE.to_string(),
+        session.id.clone(),
+        Sealer::new(None),
+    )
+    .await;
+
+    // Both events still travel on untouched: recording them is not
+    // interpreting them.
+    let mut names = Vec::new();
+    while let Some(frame) = receiver.recv().await {
+        names.push(frame.name);
+    }
+    assert_eq!(names, ["tool_call", "tool_result", "token", "done"]);
+
+    let attachments: Value =
+        sqlx::query_scalar("SELECT attachments FROM ai_messages WHERE role = 'assistant'")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+
+    assert_eq!(attachments["tool_calls"][0]["name"], json!("create_transaction"));
+    assert_eq!(attachments["tool_calls"][0]["result"]["ok"], json!(true));
+    assert_eq!(
+        attachments["tool_calls"][0]["result"]["summary"],
+        json!("Created expense of Rp 50.000 in Cash.")
+    );
+    assert_eq!(attachments["usage"]["output"], json!(4));
+}
+
+/// A turn cut off between the call and its answer stores the call without a
+/// result, which is what the UI reads as "never answered" rather than as a
+/// finished one.
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_store_a_tool_call_that_never_answered(pool: PgPool) {
+    fixture(&pool).await;
+    let session = service::create(&pool, actor(), None).await.unwrap();
+    let (sender, receiver) = mpsc::channel::<Frame>(16);
+
+    let events = Scripted::new(vec![
+        ("tool_call", json!({ "id": "t1", "name": "get_spending_summary", "args": {} })),
+    ]);
+
+    stream::pump(
+        events,
+        sender,
+        pool.clone(),
+        WORKSPACE.to_string(),
+        session.id.clone(),
+        Sealer::new(None),
+    )
+    .await;
+    drop(receiver);
+
+    let attachments: Value =
+        sqlx::query_scalar("SELECT attachments FROM ai_messages WHERE role = 'assistant'")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+
+    assert_eq!(attachments["tool_calls"][0]["name"], json!("get_spending_summary"));
+    assert_eq!(attachments["tool_calls"][0]["result"], Value::Null);
+}
+
+#[sqlx::test(migrations = "../../migrations")]
 async fn should_store_the_partial_reply_when_the_caller_disconnects(pool: PgPool) {
     fixture(&pool).await;
     let session = service::create(&pool, actor(), None).await.unwrap();

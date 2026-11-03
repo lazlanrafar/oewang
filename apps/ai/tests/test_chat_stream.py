@@ -14,9 +14,11 @@ from typing import Any
 
 import pytest
 
-from app.api.routes import chat
 from app.core import model, owe1
 from app.core.sse import EventWriter
+from app.modules.chat import loop
+from app.modules.chat.schemas import ChatStreamRequest
+from app.modules.chat.tools import TOOL_NAMES
 from tests.support import Owe1TestClient
 
 CHUNKS = ("You spent ", "50,000", " on food.")
@@ -93,6 +95,7 @@ def payload(**overrides: Any) -> dict[str, Any]:
         "user_id": "clxuser1",
         "role": "admin",
         "session_id": "clxsession1",
+        "turn_id": "clxturn1",
         "message": "How much did I spend on food last month?",
         "history": [],
         "context": {
@@ -232,16 +235,17 @@ def test_a_missing_model_key_is_an_error_event_too(
     assert events[0][1]["code"] == "MODEL_UNAVAILABLE"
 
 
-def test_no_tools_are_ever_passed_to_the_model(owe1_client: Owe1TestClient) -> None:
-    """US-028 runs the turn without tools. Not an empty list: no key at all,
-    so nothing can be called (D24)."""
+def test_the_catalog_is_attached_and_no_tool_is_forced(owe1_client: Owe1TestClient) -> None:
+    """US-030 attaches the eleven (D17). Nothing forces one: a turn that is
+    only a question is answered as a question. The loop itself is covered in
+    tests/test_chat_loop.py."""
     client = ScriptedClient()
     model.set_model_client(client)
 
     stream(owe1_client)
 
     kwargs = client.messages.calls[0]
-    assert "tools" not in kwargs
+    assert [definition["name"] for definition in kwargs["tools"]] == list(TOOL_NAMES)
     assert "tool_choice" not in kwargs
 
 
@@ -287,9 +291,9 @@ def test_history_is_bounded_and_starts_on_a_user_message(owe1_client: Owe1TestCl
 
 
 def test_attachments_do_not_reach_the_model(owe1_client: Owe1TestClient) -> None:
-    """The component that reads attacker-controlled text has no tools, and
-    this one will have tools in US-030. Capture is POST /receipt/parse
-    (D24, SEC-21)."""
+    """This turn does have tools, which is exactly why an attachment never
+    reaches it. The component that reads attacker-controlled text is the one
+    with none, and capture is POST /receipt/parse (D24, SEC-21)."""
     client = ScriptedClient()
     model.set_model_client(client)
 
@@ -335,7 +339,21 @@ def test_a_malformed_body_is_refused_before_the_stream_opens(
     owe1_client.open_response(response, request_id)
 
 
-async def test_an_abort_stops_generating_and_emits_nothing_further() -> None:
+def test_a_turn_without_a_turn_id_is_refused(owe1_client: Owe1TestClient) -> None:
+    """The API mints the turn id and the caps are counted against it. A turn
+    that arrived without one cannot be given one here: this service inventing
+    an id per call would restart the count and walk through the caps."""
+    model.set_model_client(ScriptedClient())
+    body = payload()
+    del body["turn_id"]
+
+    response, request_id = owe1_client.request("POST", "/chat/stream", body=body)
+
+    assert response.status_code == 422
+    owe1_client.open_response(response, request_id)
+
+
+async def test_an_abort_stops_generating_and_emits_nothing_further(config) -> None:
     """The caller hanging up reaches the generator as a cancellation.
 
     Driven directly rather than over HTTP, because the test client reads a
@@ -347,7 +365,9 @@ async def test_an_abort_stops_generating_and_emits_nothing_further() -> None:
     model.set_model_client(client)
     writer = EventWriter(None)
 
-    events = chat._events(writer, {"model": "free-main", "messages": []}, "abort test")
+    events = loop.run_turn(
+        writer=writer, body=ChatStreamRequest(**payload()), config=config, api=None
+    )
     first = await anext(events)
     assert first.startswith(b"event: token")
 

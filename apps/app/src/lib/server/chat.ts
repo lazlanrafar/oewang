@@ -75,6 +75,37 @@ export function deleteSession(id: string, token?: string) {
 	return api<null>({ method: 'DELETE', path: `/v1/ai/sessions/${id}`, token });
 }
 
+/**
+ * The workspace's agent settings (CHAT-10).
+ *
+ * Both fields reach every future turn's system prompt, which is why the
+ * page says so and why the instructions are bounded
+ * (docs/features/chat.md#settings).
+ */
+export type AgentSettings = {
+	custom_instructions: string | null;
+	response_language: ResponseLanguage;
+};
+
+export type ResponseLanguage = 'auto' | 'english' | 'indonesian';
+
+export function readSettings(token?: string): Promise<Envelope<AgentSettings>> {
+	return api<AgentSettings>({ path: '/v1/ai/settings', token });
+}
+
+/**
+ * Change one or both fields. Admin and above.
+ *
+ * A patch: an absent key is left alone, and `custom_instructions` sent
+ * empty clears it. The page always sends both, because it renders both.
+ */
+export function updateSettings(
+	patch: Partial<Pick<AgentSettings, 'custom_instructions' | 'response_language'>>,
+	token?: string
+) {
+	return api<AgentSettings>({ method: 'PATCH', path: '/v1/ai/settings', body: patch, token });
+}
+
 export type TurnRequest = {
 	session_id: string;
 	message: string;

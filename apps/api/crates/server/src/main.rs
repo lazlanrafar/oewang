@@ -93,6 +93,9 @@ async fn main() -> anyhow::Result<()> {
     let owe1_sessions = SessionStore::new();
     spawn_session_sweeper(owe1_sessions.clone());
 
+    let turns = ai::turns::TurnStore::new();
+    spawn_turn_sweeper(turns.clone());
+
     let mailer = match &config.resend_api_key {
         Some(key) => oewang_clients::Mailer::resend(
             key.expose().to_string(),
@@ -151,6 +154,7 @@ async fn main() -> anyhow::Result<()> {
         rates,
         files,
         ai,
+        turns,
     };
 
     spawn_rate_refresher(state.clone(), fx_refresh_interval);
@@ -337,6 +341,17 @@ fn protected_routes(state: AppState) -> Router<AppState> {
         // One chat turn, answered as server-sent events. Any member: a
         // viewer who cannot write can still ask.
         .route("/v1/ai/chat/stream", post(ai::handler::chat_stream))
+        // Agent settings. Read by any member, written by admin and above:
+        // custom instructions reach every future turn's prompt (CHAT-10).
+        .route(
+            "/v1/ai/settings",
+            get(ai::handler::get_settings).patch(ai::handler::update_settings),
+        )
+        // Internal. Service to service, gated by the key rather than by a
+        // token, and never routable from the internet (OPS-6). The caller
+        // is the AI service; who the call is for arrives in the body and is
+        // re-checked against the membership row (D4, CHAT-4).
+        .route("/v1/internal/tools/execute", post(ai::handler::execute_tool))
         // Files. Bytes travel as base64 inside the envelope; no signed
         // object-storage URL exists anywhere (D23, VLT-3).
         .route("/v1/vault/files", post(vault::handler::begin))
@@ -379,6 +394,21 @@ fn spawn_rate_refresher(state: AppState, every: Duration) {
                 // A rate source that is down is not a reason to stop the
                 // loop: the resolution ladder has a step for exactly this.
                 Err(error) => tracing::warn!(%error, "rate cache refresh failed"),
+            }
+        }
+    });
+}
+
+/// Drop the budgets of turns that have ended and challenges nobody
+/// answered, for the same reason the sessions are swept.
+fn spawn_turn_sweeper(turns: ai::turns::TurnStore) {
+    tokio::spawn(async move {
+        let mut ticker = tokio::time::interval(Duration::from_secs(60));
+        loop {
+            ticker.tick().await;
+            let removed = turns.sweep(owe1::session::now_secs());
+            if removed > 0 {
+                tracing::debug!(removed, "swept chat turn budgets");
             }
         }
     });

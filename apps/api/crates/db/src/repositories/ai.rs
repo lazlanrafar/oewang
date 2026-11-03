@@ -247,9 +247,10 @@ pub struct AgentSettingsRow {
     pub response_language: String,
 }
 
-/// The row is created lazily, so absent means the defaults rather than a
-/// missing workspace. The table carries no `deleted_at`: there is one row per
-/// workspace and it is edited, never removed.
+/// Absent means the defaults, not a missing workspace: `seed.rs` writes the
+/// row with the workspace, but a workspace made before that did, or by a
+/// fixture, has none and still answers. The table carries no `deleted_at`:
+/// there is one row per workspace and it is edited, never removed.
 pub async fn find_settings(
     executor: impl PgExecutor<'_>,
     workspace_id: &str,
@@ -262,6 +263,37 @@ pub async fn find_settings(
         workspace_id
     )
     .fetch_optional(executor)
+    .await
+}
+
+/// Write the settings (CHAT-10).
+///
+/// An upsert rather than an update: the row usually exists, written with the
+/// workspace, but a workspace that predates that has none, and a settings
+/// page that failed for those would be a puzzling bug rather than a visible
+/// one.
+pub async fn upsert_settings(
+    executor: impl PgExecutor<'_>,
+    id: &str,
+    workspace_id: &str,
+    custom_instructions: Option<&str>,
+    response_language: &str,
+) -> Result<AgentSettingsRow, sqlx::Error> {
+    sqlx::query_as!(
+        AgentSettingsRow,
+        r#"INSERT INTO ai_agent_settings (id, workspace_id, custom_instructions, response_language)
+           VALUES ($1, $2, $3, $4)
+           ON CONFLICT (workspace_id) DO UPDATE
+               SET custom_instructions = excluded.custom_instructions,
+                   response_language = excluded.response_language,
+                   updated_at = now()
+           RETURNING custom_instructions, response_language"#,
+        id,
+        workspace_id,
+        custom_instructions,
+        response_language
+    )
+    .fetch_one(executor)
     .await
 }
 

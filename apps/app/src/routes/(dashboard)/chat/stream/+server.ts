@@ -20,10 +20,21 @@ import type { RequestHandler } from './$types';
  * body, and `EventSource` can only issue a GET.
  */
 export const POST: RequestHandler = async ({ locals, request }) => {
-	const body = (await request.json()) as { session_id?: unknown; message?: unknown };
+	const body = (await request.json()) as {
+		session_id?: unknown;
+		message?: unknown;
+		attachment_ids?: unknown;
+	};
 
 	const sessionId = typeof body.session_id === 'string' ? body.session_id : '';
 	const message = typeof body.message === 'string' ? body.message.trim() : '';
+	// Ids of files already in the vault, uploaded through this app's own
+	// upload routes. The API checks each one belongs to the workspace
+	// before the turn starts, which is the control; this only keeps a
+	// malformed body from travelling.
+	const attachmentIds = Array.isArray(body.attachment_ids)
+		? body.attachment_ids.filter((id): id is string => typeof id === 'string')
+		: [];
 
 	// The API validates again, and that is the control. This only keeps an
 	// empty turn from costing a round trip.
@@ -31,7 +42,7 @@ export const POST: RequestHandler = async ({ locals, request }) => {
 
 	try {
 		const events = await streamTurn(
-			{ session_id: sessionId, message, attachment_ids: [] },
+			{ session_id: sessionId, message, attachment_ids: attachmentIds },
 			locals.accessToken,
 			// Aborted by SvelteKit when the browser disconnects, which is what
 			// the stop button does. That tears down the hop to the API, which

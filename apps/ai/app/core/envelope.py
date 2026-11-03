@@ -30,10 +30,14 @@ TRANSPORT_ERROR_CODES = frozenset(
     }
 )
 
+# The statuses the API answers with, for the same codes
+# (docs/api/encryption.md#errors). Both halves of OWE1 answer one protocol,
+# so a client that branches on the status rather than the code must not get
+# a different answer depending on which service it reached.
 STATUS_BY_CODE = {
-    "CRYPTO_SESSION_UNKNOWN": status.HTTP_409_CONFLICT,
+    "CRYPTO_SESSION_UNKNOWN": status.HTTP_401_UNAUTHORIZED,
     "CRYPTO_DECRYPT_FAILED": status.HTTP_400_BAD_REQUEST,
-    "CRYPTO_REPLAY_DETECTED": status.HTTP_409_CONFLICT,
+    "CRYPTO_REPLAY_DETECTED": status.HTTP_400_BAD_REQUEST,
     "CRYPTO_CLOCK_SKEW": status.HTTP_400_BAD_REQUEST,
     "CRYPTO_QUERY_NOT_ENCRYPTED": status.HTTP_400_BAD_REQUEST,
     "CRYPTO_VERSION_UNSUPPORTED": status.HTTP_400_BAD_REQUEST,

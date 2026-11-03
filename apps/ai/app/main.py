@@ -4,10 +4,12 @@ Owns every call to the model and nothing else: no database connection, no
 storage credentials, no user JWT. Every side effect goes through the API's
 internal endpoints. See docs/ai/service.md.
 
-The tool loop and the extraction ladder arrive in US-030 and US-033. What is
-here is the shell they run inside, plus the chat stream: the shared-key
-check, the per-caller ceiling, and the OWE1 layer that opens every request
-and seals every response.
+The extraction ladder arrives in US-033. What is here is the shell it runs
+inside, plus the chat stream and its tool loop: the shared-key check, the
+per-caller ceiling, the OWE1 layer that opens every request and seals every
+response, and the OWE1 client that calls the API back. The tool catalog is
+served as well, because the API validates against the same definitions the
+model is shown.
 """
 
 from __future__ import annotations
@@ -20,9 +22,10 @@ from collections.abc import AsyncIterator
 from fastapi import FastAPI
 from starlette.middleware import Middleware
 
-from app.api.routes import chat, handshake
+from app.api.routes import chat, handshake, tools
 from app.config import Settings, settings
 from app.core.middleware import Owe1Middleware, RateLimitMiddleware, ServiceKeyMiddleware
+from app.core.owe1_client import build_api_client
 from app.core.ratelimit import RateLimiter
 from app.core.sessions import SessionStore, now_secs
 from app.core.signer import Signer
@@ -51,6 +54,7 @@ async def lifespan(instance: FastAPI) -> AsyncIterator[None]:
         task.cancel()
         with contextlib.suppress(asyncio.CancelledError):
             await task
+        await instance.state.api.aclose()
 
 
 def create_app(config: Settings | None = None) -> FastAPI:
@@ -87,9 +91,14 @@ def create_app(config: Settings | None = None) -> FastAPI:
     instance.state.owe1_sessions = sessions
     instance.state.signer = signer
     instance.state.config = config
+    # The other direction of the same protocol: this service calling the
+    # API, which is how it performs every side effect (D4, D22). One client
+    # for the process, holding one crypto session.
+    instance.state.api = build_api_client(config)
 
     instance.include_router(handshake.router)
     instance.include_router(chat.router)
+    instance.include_router(tools.router)
 
     @instance.get("/health")
     async def health() -> dict[str, str]:

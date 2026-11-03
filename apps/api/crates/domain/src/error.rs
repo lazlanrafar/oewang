@@ -108,8 +108,13 @@ pub enum AppError {
     ToolArgsInvalid(FieldErrors),
     #[error("tool forbidden for this role")]
     ToolForbidden,
+    /// Carries a description of the row the caller asked to destroy: date,
+    /// name, amount, wallet. The assistant quotes it back to the user and
+    /// asks, which is the whole point of the challenge (CHAT-6, D20).
     #[error("confirmation required")]
-    ConfirmationRequired,
+    ConfirmationRequired(FieldErrors),
+    #[error("tool cap exceeded for this turn")]
+    ToolCapExceeded,
 
     /// The only variant that carries a source. The source is logged; the
     /// client gets the code and the request id and nothing else.
@@ -163,7 +168,8 @@ impl AppError {
             ToolNotFound => "TOOL_NOT_FOUND",
             ToolArgsInvalid(_) => "TOOL_ARGS_INVALID",
             ToolForbidden => "TOOL_FORBIDDEN",
-            ConfirmationRequired => "CONFIRMATION_REQUIRED",
+            ConfirmationRequired(_) => "CONFIRMATION_REQUIRED",
+            ToolCapExceeded => "TOOL_CAP_EXCEEDED",
             Internal(_) => "INTERNAL_ERROR",
         }
     }
@@ -175,7 +181,7 @@ impl AppError {
             Unauthenticated | InvalidCredentials | CryptoSessionUnknown => 401,
             InsufficientRole | NotAMember | ToolForbidden => 403,
             EmailTaken | LastOwner | WalletHasTransactions | WalletCurrencyLocked
-            | WorkspaceCurrencyLocked | ConfirmationRequired => 409,
+            | WorkspaceCurrencyLocked | ConfirmationRequired(_) | ToolCapExceeded => 409,
             InviteInvalid | ResetTokenInvalid | NotFound | WalletNotFound | CategoryNotFound
             | TransactionNotFound | ImportJobNotFound | FileNotFound | SessionNotFound => 404,
             Validation(_) | TransferRequiresDestination | TransferSameWallet
@@ -217,7 +223,8 @@ impl AppError {
             UnsupportedFileType => "Accepted: JPEG, PNG, WebP and PDF.",
             CryptoSessionUnknown => "Run the handshake again and retry once.",
             CryptoClockSkew { .. } => "Correct the clock offset and retry once.",
-            ConfirmationRequired => "Ask the user to confirm, then call again.",
+            ConfirmationRequired(_) => "Ask the user to confirm, then call again.",
+            ToolCapExceeded => "One turn may not do this much. Tell the user what was done and stop.",
             ReceiptUnreadable | StatementUnreadable => "Try a sharper photograph, or enter it manually.",
             RateLimited { .. } => "Wait and try again.",
             _ => return None,
@@ -227,7 +234,9 @@ impl AppError {
     /// Per-field detail, when the variant carries any.
     pub fn fields(&self) -> Option<&FieldErrors> {
         match self {
-            AppError::Validation(f) | AppError::ToolArgsInvalid(f) => Some(f),
+            AppError::Validation(f)
+            | AppError::ToolArgsInvalid(f)
+            | AppError::ConfirmationRequired(f) => Some(f),
             _ => None,
         }
     }
@@ -335,13 +344,14 @@ mod tests {
             AppError::ToolNotFound,
             AppError::ToolArgsInvalid(FieldErrors::new()),
             AppError::ToolForbidden,
-            AppError::ConfirmationRequired,
+            AppError::ConfirmationRequired(FieldErrors::new()),
+            AppError::ToolCapExceeded,
             AppError::Internal(anyhow::anyhow!("boom")),
         ];
 
-        // 43 of the 44 catalog entries. TRANSPORT_UNEXPECTED_RESPONSE is a
+        // 44 of the 45 catalog entries. TRANSPORT_UNEXPECTED_RESPONSE is a
         // client-side condition and has no server variant by design.
-        assert_eq!(samples.len(), 43);
+        assert_eq!(samples.len(), 44);
 
         let mut seen = std::collections::HashSet::new();
         for error in &samples {

@@ -30,7 +30,9 @@ CREATE TABLE ai_messages (
 CREATE INDEX ai_messages_session_created_idx
     ON ai_messages (session_id, created_at) WHERE deleted_at IS NULL;
 
--- One row per workspace, created lazily. The old app also stored model,
+-- One row per workspace, written when the workspace is seeded. The read
+-- still tolerates its absence, because a row that only holds defaults is
+-- not worth a migration to backfill. The old app also stored model,
 -- temperature and max_steps; the loop read none of them, so they are gone.
 CREATE TABLE ai_agent_settings (
     id                  text PRIMARY KEY,

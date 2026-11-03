@@ -6,6 +6,7 @@ use oewang_clients::{FileStore, Mailer, Owe1Client, RatesClient};
 use oewang_db::PgPool;
 
 use crate::{
+    ai::turns::TurnStore,
     config::Config,
     owe1::{Owe1Signer, SessionStore},
 };
@@ -27,4 +28,8 @@ pub struct AppState {
     /// The AI service, over OWE1 (hop 3). Built at startup, so a missing
     /// pinned key fails there rather than on the first chat turn.
     pub ai: Arc<Owe1Client>,
+    /// What each live chat turn has already spent, and which deletes have
+    /// been challenged. The per-turn caps are only a bound because this
+    /// remembers (D25).
+    pub turns: TurnStore,
 }

@@ -7,7 +7,13 @@
 	 * it be shown on a page with no server behind it.
 	 */
 	import type { MessageItem, SessionItem } from '$lib/chat';
-	import { ChatHistory, ChatMessages } from '$lib/components/organisms/chat';
+	import type { ToolCall } from '$lib/chat-tools';
+	import {
+		ChatHistory,
+		ChatMessages,
+		ChatSuggestions,
+		ToolCallGroup
+	} from '$lib/components/organisms/chat';
 	import { TransactionsTable } from '$lib/components/organisms/data-table';
 	import type { NamedOption, TransactionRow } from '$lib/components/organisms/data-table';
 
@@ -28,8 +34,27 @@
 	];
 
 	const chatMessages: MessageItem[] = [
-		{ id: 'm1', role: 'user', content: 'How much did I spend on food last month?', at: '09:14', who: 'You' },
-		{ id: 'm2', role: 'assistant', content: 'You spent Rp 1.240.000 on Food in October, 12 percent less than September.', at: '09:14', who: 'Assistant' }
+		{ id: 'm1', role: 'user', content: 'How much did I spend on food last month?', at: '09:14', who: 'You', toolCalls: [], files: [] },
+		{
+			id: 'm2',
+			role: 'assistant',
+			content:
+				'You spent Rp 1.240.000 on [Food](#cat:food) in October, 12 percent less than September. The largest was [Warung Tekko](#txn:a).',
+			at: '09:14',
+			who: 'Assistant',
+			toolCalls: [
+				{ id: 't1', name: 'get_spending_summary', args: {}, status: 'ok', summary: '6 categories' }
+			],
+			files: []
+		}
+	];
+
+	/** Four finished calls, which is what collapses behind "Used 4 tools". */
+	const chatToolBatch: ToolCall[] = [
+		{ id: 't2', name: 'get_workspace_context', args: {}, status: 'ok', summary: '3 wallets' },
+		{ id: 't3', name: 'search_transactions', args: {}, status: 'ok', summary: '12 matches' },
+		{ id: 't4', name: 'create_transaction', args: {}, status: 'ok', summary: 'Created expense 50,000 in Cash.' },
+		{ id: 't5', name: 'delete_transaction', args: {}, status: 'failed', summary: 'Needs confirming.' }
 	];
 
 	const wallets: NamedOption[] = [
@@ -71,15 +96,28 @@
 </section>
 
 <section class="space-y-4">
-	{@render heading('Chat messages', 'A stored conversation. Markdown, tool cards and the message actions arrive with the stream; this is what a conversation reads like once it is saved.')}
+	{@render heading('Chat messages', 'A stored conversation: the tools the assistant used above what it said, Markdown below it, entity links as buttons that open a sheet or a filter, and copy and ask-again underneath.')}
 	<div class="border p-4">
-		<ChatMessages messages={chatMessages} />
+		<ChatMessages messages={chatMessages} onEntity={() => {}} onCopy={() => {}} />
 	</div>
 </section>
 
 <section class="space-y-4">
-	{@render heading('Chat messages, empty', 'A conversation with nothing in it yet.')}
+	{@render heading('Chat tool calls', 'Progress, never JSON. One finished call is a check and its label; several collapse to a count and expand; the call in flight shimmers.')}
+	<div class="flex flex-col gap-3 border p-4">
+		<ToolCallGroup calls={[{ id: 't1', name: 'create_transaction', args: {}, status: 'ok', summary: 'Created expense 50,000 in Cash.' }]} />
+		<ToolCallGroup calls={chatToolBatch} />
+		<ToolCallGroup calls={[{ id: 't9', name: 'get_spending_summary', args: {}, status: 'running', summary: null }]} />
+	</div>
+</section>
+
+<section class="space-y-4">
+	{@render heading('Chat messages, empty', 'A conversation with nothing in it yet, and the three suggestions that start one.')}
 	<div class="h-64 border p-4">
-		<ChatMessages messages={[]} />
+		<ChatMessages messages={[]} onEntity={() => {}} onCopy={() => {}}>
+			{#snippet emptyActions()}
+				<ChatSuggestions onSelect={() => {}} />
+			{/snippet}
+		</ChatMessages>
 	</div>
 </section>

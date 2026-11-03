@@ -82,6 +82,10 @@ pub struct TransactionFilters<'a> {
     pub search: Option<&'a str>,
     pub is_ready: Option<bool>,
     pub ids: Option<&'a [String]>,
+    /// Bounds on the row's own amount, in the wallet's currency. Added for
+    /// the chat search tool; the web list has no amount filter.
+    pub min_amount: Option<Decimal>,
+    pub max_amount: Option<Decimal>,
 }
 
 /// The allowed sort fields, as an enum so the SQL fragment is fixed.
@@ -159,6 +163,12 @@ fn push_filters<'a>(
             .push(" OR t.description ILIKE ")
             .push_bind(pattern)
             .push(")");
+    }
+    if let Some(min_amount) = filters.min_amount {
+        builder.push(" AND t.amount >= ").push_bind(min_amount);
+    }
+    if let Some(max_amount) = filters.max_amount {
+        builder.push(" AND t.amount <= ").push_bind(max_amount);
     }
     if let Some(is_ready) = filters.is_ready {
         builder.push(" AND t.is_ready = ").push_bind(is_ready);
@@ -279,6 +289,84 @@ pub async fn summary_by_category(
     builder.push(" GROUP BY t.category_id, c.name, t.type ORDER BY total DESC");
 
     builder.build_query_as::<CategoryTotalRow>().fetch_all(executor).await
+}
+
+/// The groupings a summary may be asked for.
+///
+/// An enum, so the `GROUP BY` fragment is a literal and a string from a
+/// model never reaches the statement (SEC-10).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SummaryGroup {
+    Category,
+    Wallet,
+    Type,
+    Month,
+}
+
+impl SummaryGroup {
+    /// The selected key and label, the joins they need, and the grouping.
+    /// Each arm is fixed text.
+    fn fragments(self) -> (&'static str, &'static str, &'static str) {
+        match self {
+            SummaryGroup::Category => (
+                "t.category_id AS key, c.name AS label",
+                " LEFT JOIN categories c ON c.id = t.category_id",
+                " GROUP BY t.category_id, c.name",
+            ),
+            SummaryGroup::Wallet => (
+                "t.wallet_id AS key, w.name AS label",
+                " JOIN wallets w ON w.id = t.wallet_id",
+                " GROUP BY t.wallet_id, w.name",
+            ),
+            SummaryGroup::Type => (
+                "t.type AS key, t.type AS label",
+                "",
+                " GROUP BY t.type",
+            ),
+            SummaryGroup::Month => (
+                "to_char(t.date, 'YYYY-MM') AS key, to_char(t.date, 'YYYY-MM') AS label",
+                "",
+                " GROUP BY to_char(t.date, 'YYYY-MM')",
+            ),
+        }
+    }
+}
+
+/// One group's total, in the workspace currency.
+///
+/// `key` is null for the one group that has no row behind it: transactions
+/// with no category. The caller labels it; the repository does not decide
+/// what to call it.
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct GroupTotalRow {
+    pub key: Option<String>,
+    pub label: Option<String>,
+    pub total: Decimal,
+    pub count: i64,
+}
+
+/// Totals per group, for the chat summary tool (CHAT-15, D27).
+///
+/// A plain sum of `base_amount`: the conversion happened once, at write
+/// time (TXN-19), so there is no rate lookup and nothing to get wrong here.
+pub async fn summary_grouped(
+    executor: impl PgExecutor<'_>,
+    workspace_id: &str,
+    filters: &TransactionFilters<'_>,
+    group: SummaryGroup,
+) -> Result<Vec<GroupTotalRow>, sqlx::Error> {
+    let (select, join, group_by) = group.fragments();
+
+    let mut builder = QueryBuilder::new("SELECT ");
+    builder.push(select);
+    builder.push(", COALESCE(sum(t.base_amount), 0) AS total, count(*) AS count");
+    builder.push(" FROM transactions t");
+    builder.push(join);
+    push_filters(&mut builder, workspace_id, filters);
+    builder.push(group_by);
+    builder.push(" ORDER BY total DESC");
+
+    builder.build_query_as::<GroupTotalRow>().fetch_all(executor).await
 }
 
 pub async fn find(

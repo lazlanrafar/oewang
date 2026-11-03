@@ -77,6 +77,12 @@ class ChatStreamRequest(BaseModel):
     user_id: str = Field(min_length=1)
     role: Role
     session_id: str = Field(min_length=1)
+    #: The API's id for this turn, minted by the API and echoed back on every
+    #: tool call (US-030). Required, and never generated here: the per-turn
+    #: blast-radius caps are counted against it (D25, SEC-23), so a service
+    #: that minted its own id per call would start a fresh count each time
+    #: and walk straight through the caps.
+    turn_id: str = Field(min_length=1)
     message: str = Field(min_length=1)
     history: list[Message] = Field(default_factory=list)
     context: WorkspaceContext

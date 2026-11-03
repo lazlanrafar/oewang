@@ -75,7 +75,29 @@ describe('toMessageItem', () => {
 	});
 
 	it('keeps the content untouched', () => {
-		// Markdown rendering and sanitising arrive with the stream (US-031).
+		// The rendering and the sanitising happen in $lib/markdown, at the
+		// point the text becomes HTML.
 		expect(toMessageItem(message).content).toBe('You spent Rp 1.240.000.');
+	});
+
+	it('carries the tools and files stored on the message', () => {
+		// A reloaded conversation shows the same strip the live turn did.
+		const item = toMessageItem({
+			...message,
+			attachments: {
+				tool_calls: [
+					{ id: 't1', name: 'create_transaction', result: { ok: true, summary: 'Created.' } }
+				],
+				files: [{ vault_file_id: 'f1', name: 'receipt.jpg', type: 'image/jpeg' }]
+			}
+		});
+
+		expect(item.toolCalls).toHaveLength(1);
+		expect(item.toolCalls[0]).toMatchObject({ name: 'create_transaction', status: 'ok' });
+		expect(item.files).toEqual([{ id: 'f1', name: 'receipt.jpg', type: 'image/jpeg' }]);
+	});
+
+	it('has no tools or files when the message carries none', () => {
+		expect(toMessageItem(message)).toMatchObject({ toolCalls: [], files: [] });
 	});
 });

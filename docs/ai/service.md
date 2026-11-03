@@ -88,6 +88,7 @@ Sessions live in process memory for at most 24 hours or 2^24 messages, exactly a
   "user_id": "clx…",
   "role": "admin",
   "session_id": "clx…",
+  "turn_id": "clx…",
   "message": "How much did I spend on food last month?",
   "history": [ { "role": "user", "content": "…" }, { "role": "assistant", "content": "…" } ],
   "context": {
@@ -103,13 +104,15 @@ Sessions live in process memory for at most 24 hours or 2^24 messages, exactly a
 
 The workspace context is supplied by the API (CHAT-7). The service does not fetch it unless a tool asks for a refresh mid-turn.
 
+`turn_id` is minted by the API, one per user turn, and the service echoes it unchanged on every tool call it makes in that turn ([tool execution](../api/endpoints.md#post-v1internaltoolsexecute-body)). The service never mints one and never reuses one from an earlier turn: the per-turn caps are counted against it, so an id the service produced itself would be a budget the service hands itself.
+
 `attachments[].url` is a path on the API, not a signed storage URL: there are none (D23, VLT-3). It is read back through the API like any other file.
 
 `context.timezone` is optional and currently absent: the data model carries no workspace timezone, so `today` is UTC and the prompt drops the timezone line rather than stating one it cannot know.
 
 ## Tool catalog
 
-Eleven tools (D17), cut down from thirty-four in the old app. Schemas live in one Python module and are exposed at `GET /tools/definitions`, so the API validates against the same definitions the model sees.
+Eleven tools (D17), cut down from thirty-four in the old app. The schemas the model sees live in one Python module and are exposed at `GET /tools/definitions`, so the API's own validator can be checked against them.
 
 ### Read tools
 
@@ -124,11 +127,11 @@ Eleven tools (D17), cut down from thirty-four in the old app. Schemas live in on
 
 | Tool | Arguments | Role |
 |---|---|---|
-| `create_transaction` | `type`, `amount`, `wallet_id`, `to_wallet_id`, `category_id`, `date`, `name`, `description` | admin+ |
-| `update_transaction` | `transaction_id` plus any creatable field | admin+ |
+| `create_transaction` | `type`, `amount`, `to_amount`, `wallet_id`, `to_wallet_id`, `category_id`, `date`, `name`, `description` | admin+ |
+| `update_transaction` | `transaction_id` plus any creatable field, `to_amount` included | admin+ |
 | `delete_transaction` | `transaction_id`, `confirmed` | admin+, plus confirmation (CHAT-6) |
 | `add_transaction_items` | `transaction_id`, `items[]` | admin+ |
-| `create_wallet` | `name`, `group_id`, `initial_balance` | admin+ |
+| `create_wallet` | `name`, `group_id`, `currency_code` | admin+ |
 | `create_category` | `name`, `type` | admin+ |
 
 ### Interaction tool
@@ -138,6 +141,14 @@ Eleven tools (D17), cut down from thirty-four in the old app. Schemas live in on
 | `present_choices` | `question`, `choices[]` | Ask the user to disambiguate a wallet, a category or a date instead of guessing |
 
 Required arguments, types and enums are in the schema module. Money arguments are strings, matching the wire format (D12).
+
+Three things the table cannot carry on its own:
+
+- `create_wallet` has no opening balance. `wallets.balance` defaults to 0 and the only thing that moves it is a transaction, so a tool that offered one would be offering something the ledger cannot do.
+- `create_wallet.currency_code` is optional. Absent means the workspace currency (WAL-5), which is what almost every wallet wants.
+- `to_amount` is on both write tools because a transfer is refused without it: `amount` leaves the source wallet in its currency and `to_amount` arrives in the destination's (TXN-18), and a transfer missing it answers `TRANSFER_AMOUNT_REQUIRED`. A tool that cannot supply `to_amount` cannot make a transfer at all.
+
+**The enforcing copy of these schemas is `apps/api/crates/domain/src/tools.rs`,** not this table and not the Python module. The model is shown the Python definitions; the Rust validator decides whether a call runs, and it rejects an argument key the tool does not declare rather than ignoring it. A model that invented a parameter misunderstood the call it was making, and dropping that parameter silently turns a misunderstanding into a write the user did not ask for. `GET /tools/definitions` exists so the two copies can be compared rather than assumed equal.
 
 ### What was dropped
 
@@ -250,7 +261,7 @@ Rules:
 ```
 build the system prompt
 messages = history + user message
-for round in 1..AI_MAX_STEPS:          # default 8 (CHAT-5)
+for round in 1..=AI_MAX_STEPS:         # default 8 (CHAT-5)
     response = claude(messages, tools=TOOLS)
     stream any text as token events
     if no tool calls:
@@ -266,9 +277,9 @@ emit done
 Safety rules:
 
 - **Round cap.** On hitting `AI_MAX_STEPS`, the loop stops and returns what it has rather than looping (CHAT-5).
-- **Blast-radius caps.** The API refuses more than 3 write calls, more than 1 delete, or more than 3 created transactions in one turn (D25, SEC-23). The service relays the refusal.
+- **Blast-radius caps.** The API refuses more than 3 write calls, more than 1 delete, or more than 3 created transactions in one turn (D25, D68, SEC-23), counted against the `turn_id` the service echoes on every call. The refusal is `TOOL_CAP_EXCEEDED` and the service relays it.
 - **Tool errors are data.** A refusal or a failure is appended as a tool result, so the model can explain it. It is never raised as an exception that kills the turn.
-- **No retry on refusal.** `TOOL_FORBIDDEN` and `CONFIRMATION_REQUIRED` are relayed to the user, not worked around.
+- **No retry on refusal.** `TOOL_FORBIDDEN`, `TOOL_CAP_EXCEEDED` and `CONFIRMATION_REQUIRED` are relayed to the user, not worked around.
 - **No client-side authorization.** The service never decides that a call is allowed. It asks the API and reports the answer.
 - **Bounded history.** A long conversation is truncated to a bounded window before it is sent, so cost per turn does not grow without limit.
 

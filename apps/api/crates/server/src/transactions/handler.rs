@@ -313,6 +313,9 @@ impl ListQuery {
             search: non_empty(self.search.as_deref()),
             is_ready: self.is_ready,
             ids: None,
+            // The web list has no amount filter; the chat search tool does.
+            min_amount: None,
+            max_amount: None,
         })
     }
 

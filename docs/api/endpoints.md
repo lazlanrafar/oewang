@@ -106,7 +106,7 @@ The response is a suggestion. The rate the user confirms is sent back on the tra
 
 | Method | Path | Role | Description |
 |---|---|---|---|
-| GET | `/v1/categories` | any | List. Query: `type=income|expense` |
+| GET | `/v1/categories` | any | List. Query: `type=income\|expense` |
 | POST | `/v1/categories` | admin+ | Create |
 | PATCH | `/v1/categories/{id}` | admin+ | Update name, type or sort order |
 | DELETE | `/v1/categories/{id}` | admin+ | Soft delete. Sets `category_id` to null on its transactions (CAT-2) |
@@ -222,9 +222,9 @@ Service-to-service only. Gated by `x-api-key`, bound to the internal network, ne
 
 | Method | Path | Role | Description |
 |---|---|---|---|
-| GET | `/v1/internal/context` | service | Workspace wallets and categories for the system prompt (CHAT-7) |
 | POST | `/v1/internal/tools/execute` | service | Execute one named tool. Enforces role, writes an audit row (CHAT-4) |
-| POST | `/v1/internal/messages` | service | Persist a chat message |
+
+One route, not three. An earlier draft also gave the AI service a context endpoint and a message endpoint; neither was built, because neither is needed. The workspace's wallets and categories travel in the turn body the API already sends (CHAT-7), and the API persists both halves of a turn itself, around the call. Every extra internal route is another door into the only process with a database connection, so the ones that buy nothing do not exist (D3).
 
 ### `POST /v1/internal/tools/execute` body
 
@@ -234,15 +234,19 @@ Service-to-service only. Gated by `x-api-key`, bound to the internal network, ne
   "user_id": "clx…",
   "role": "admin",
   "session_id": "clx…",
+  "turn_id": "clx…",
   "tool": "create_transaction",
-  "args": { "type": "expense", "amount": "50000.0000", "wallet_id": "clx…", "name": "Lunch" },
-  "confirmed": false
+  "args": { "type": "expense", "amount": "50000.0000", "wallet_id": "clx…", "name": "Lunch" }
 }
 ```
 
+Everything a tool takes is inside `args`, including `delete_transaction`'s `confirmed`. There is no top-level flag: a confirmation belongs to one call of one tool, and a field beside `tool` would read as something the request carries whatever it is asking for.
+
 The body carries the workspace context explicitly because the AI service holds no user JWT (D4). The API trusts the service key for the fact that the call comes from the AI service, and re-checks the `role` against the stored membership row before executing: the role in the body is a claim, not a fact (CHAT-4, [AI safety](../security/ai-safety.md#layer-1-authorization)).
 
-Per-turn blast-radius caps are enforced here, not in the prompt: at most 3 write calls, 1 delete and 3 transactions created per turn, plus a configurable amount ceiling (SEC-23, SEC-24, D25).
+`turn_id` is required. The API mints one id per user turn in `begin_turn` and sends it to the AI service with the turn; the AI service echoes it unchanged on every tool call belonging to that turn. The API refuses a `turn_id` it did not mint. This is the same reasoning as the `role` field above: a value the caller states about itself is a claim, and a service that minted its own id per call would start every call with an untouched budget and evade every cap (D68, [blast radius](../security/ai-safety.md#layer-2-blast-radius)).
+
+Per-turn blast-radius caps are enforced here, not in the prompt, and they are counted against the `turn_id`: at most 3 write calls, 1 delete and 3 transactions created per turn, plus an amount ceiling set by `CHAT_MAX_TOOL_AMOUNT` (SEC-23, SEC-24, D25).
 
 Response:
 
@@ -254,7 +258,28 @@ Response:
 }
 ```
 
-A refused call answers with `TOOL_FORBIDDEN`, `TOOL_ARGS_INVALID` or `CONFIRMATION_REQUIRED` in the standard error envelope. The AI service relays the refusal to the user as plain text; it does not retry.
+A refused call answers with `TOOL_FORBIDDEN`, `TOOL_ARGS_INVALID`, `TOOL_CAP_EXCEEDED` or `CONFIRMATION_REQUIRED` in the standard error envelope. The AI service relays the refusal to the user as plain text; it does not retry.
+
+`CONFIRMATION_REQUIRED` is the one refusal that carries data the assistant needs. Its `fields` map holds the target row's description, so the assistant can quote the row back and ask rather than describing a delete it cannot see:
+
+```json
+{
+  "data": null,
+  "error": {
+    "code": "CONFIRMATION_REQUIRED",
+    "message": "This delete needs confirmation.",
+    "hint": "Ask the user to confirm, then call again.",
+    "fields": {
+      "date": "2026-11-02",
+      "name": "Warung Tekko",
+      "amount": "50000.0000",
+      "wallet": "Cash"
+    },
+    "request_id": "01JC0…"
+  },
+  "meta": { "request_id": "01JC0…" }
+}
+```
 
 ## Related docs
 

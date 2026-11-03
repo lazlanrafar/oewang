@@ -10,6 +10,7 @@
 use std::time::Duration;
 
 use oewang_domain::Secret;
+use rust_decimal::Decimal;
 
 // Several fields are read only once their feature lands: the JWT settings in
 // US-008, the AI service client in US-026. They are parsed and validated now
@@ -59,6 +60,11 @@ pub struct Config {
 
     pub crypto_signing_key_file: std::path::PathBuf,
     pub owe1_enabled: bool,
+
+    /// The ceiling on an amount one chat tool call may write, in the
+    /// wallet's own currency (SEC-24). A parse error that shifts a decimal
+    /// point stops there rather than in the ledger.
+    pub chat_max_tool_amount: Decimal,
 
     pub request_timeout: Duration,
     pub body_limit_bytes: usize,
@@ -189,6 +195,16 @@ impl Config {
             s3_region: optional("S3_REGION").unwrap_or_else(|| "auto".into()),
             s3_access_key_id: optional("S3_ACCESS_KEY_ID").unwrap_or_default(),
             s3_secret_access_key: Secret::new(optional("S3_SECRET_ACCESS_KEY").unwrap_or_default()),
+
+            chat_max_tool_amount: match optional("CHAT_MAX_TOOL_AMOUNT") {
+                None => oewang_domain::tools::default_max_tool_amount(),
+                Some(raw) => raw.parse().map_err(|error: rust_decimal::Error| {
+                    ConfigError::Invalid {
+                        name: "CHAT_MAX_TOOL_AMOUNT",
+                        reason: error.to_string(),
+                    }
+                })?,
+            },
 
             crypto_signing_key_file: optional("CRYPTO_SIGNING_KEY_FILE")
                 .unwrap_or_else(|| "./.secrets/owe1-signing-key.pem".into())

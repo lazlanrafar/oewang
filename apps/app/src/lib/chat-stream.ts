@@ -14,6 +14,8 @@
  * The event protocol is specified in docs/ai/service.md#streaming-protocol.
  */
 
+import type { ToolCall } from '$lib/chat-tools';
+
 export type SseFrame = { event: string; data: string };
 
 /** Whole frames, and whatever is left of a frame still arriving. */
@@ -79,15 +81,36 @@ export function formatFrame(event: string, data: string): string {
 
 export type TurnStatus = 'idle' | 'sending' | 'streaming' | 'done' | 'stopped' | 'failed';
 
+export type TokenUsage = { input: number; output: number };
+
 export type Turn = {
 	status: TurnStatus;
 	/** The assistant's text so far. Kept on stop: a partial reply is a reply. */
 	text: string;
+	/**
+	 * The text since the most recent tool call, which is all the screen
+	 * shows while the turn is working. See `visibleText`.
+	 */
+	textSinceTool: string;
+	/** Every tool the model has asked for this turn, in order (CHAT-14). */
+	toolCalls: ToolCall[];
+	/** A parsed receipt, waiting for the panel US-034 mounts. */
+	receiptDraft: Record<string, unknown> | null;
+	usage: TokenUsage | null;
 	messageId: string | null;
 	errorCode: string | null;
 };
 
-export const IDLE_TURN: Turn = { status: 'idle', text: '', messageId: null, errorCode: null };
+export const IDLE_TURN: Turn = {
+	status: 'idle',
+	text: '',
+	textSinceTool: '',
+	toolCalls: [],
+	receiptDraft: null,
+	usage: null,
+	messageId: null,
+	errorCode: null
+};
 
 export type TurnInput =
 	| { kind: 'send' }
@@ -109,9 +132,7 @@ export function isActive(turn: Turn): boolean {
  * would make the stop button look ignored.
  */
 export function advance(turn: Turn, input: TurnInput): Turn {
-	if (input.kind === 'send') {
-		return { status: 'sending', text: '', messageId: null, errorCode: null };
-	}
+	if (input.kind === 'send') return { ...IDLE_TURN, status: 'sending' };
 
 	if (!isActive(turn)) return turn;
 
@@ -121,17 +142,127 @@ export function advance(turn: Turn, input: TurnInput): Turn {
 	const payload = readPayload(input.frame.data);
 
 	switch (input.frame.event) {
-		case 'token':
-			return { ...turn, status: 'streaming', text: turn.text + text(payload.text) };
+		case 'token': {
+			const chunk = text(payload.text);
+			return {
+				...turn,
+				status: 'streaming',
+				text: turn.text + chunk,
+				textSinceTool: turn.textSinceTool + chunk
+			};
+		}
+		case 'tool_call': {
+			const call = readToolCall(payload);
+			if (!call) return turn;
+
+			return {
+				...turn,
+				status: 'streaming',
+				toolCalls: [...turn.toolCalls, call],
+				// The narration that led up to this call stops being the
+				// latest thing said, which is what `visibleText` reads.
+				textSinceTool: ''
+			};
+		}
+		case 'tool_result': {
+			const id = text(payload.id);
+			// A result for a call that never arrived is a protocol error.
+			// Inventing the call it belongs to would put a tool nobody asked
+			// for on the screen, so it is dropped.
+			if (!turn.toolCalls.some((call) => call.id === id)) return turn;
+
+			return {
+				...turn,
+				toolCalls: turn.toolCalls.map((call) =>
+					call.id === id
+						? {
+								...call,
+								status: payload.ok === true ? 'ok' : 'failed',
+								summary: text(payload.summary) || null
+							}
+						: call
+				)
+			};
+		}
+		case 'receipt_draft': {
+			const draft = payload.draft;
+			return typeof draft === 'object' && draft !== null && !Array.isArray(draft)
+				? { ...turn, receiptDraft: draft as Record<string, unknown> }
+				: turn;
+		}
 		case 'done':
-			return { ...turn, status: 'done', messageId: text(payload.message_id) || null };
+			return {
+				...turn,
+				status: 'done',
+				messageId: text(payload.message_id) || null,
+				usage: readUsage(payload.usage)
+			};
 		case 'error':
 			return { ...turn, status: 'failed', errorCode: text(payload.code) || 'STREAM_FAILED' };
 		default:
-			// `tool_call`, `tool_result` and `receipt_draft` render with the
-			// tool loop in US-030. Ignored here rather than guessed at.
+			// An event this version does not know is ignored rather than
+			// guessed at. The protocol gains events; a turn should not break
+			// because the service is one deploy ahead.
 			return turn;
 	}
+}
+
+/** Whether a tool the model asked for has yet to answer. */
+export function toolsRunning(turn: Turn): boolean {
+	return turn.toolCalls.some((call) => call.status === 'running');
+}
+
+/**
+ * The assistant text the screen shows (CHAT-14).
+ *
+ * **Text that arrived before the last tool call is suppressed while the
+ * turn is still working.** The prompt tells the model not to narrate each
+ * call; the prompt alone does not hold, and a sentence like "Let me check
+ * your wallets" between two tool cards is noise the user never asked for
+ * ([research](../../../docs/research/midday.md#16-tool-call-presentation)).
+ *
+ * Two details are deliberate:
+ *
+ * - The suppression lasts for the whole working turn, not only while a
+ *   call is unanswered. Lifting it between rounds would flash the
+ *   narration back on screen each time a result arrived.
+ * - It ends when the turn does. The API persists everything the model
+ *   wrote, so the stored message that replaces this one a moment later
+ *   contains the narration anyway; hiding it to the end would make the two
+ *   disagree for no gain.
+ */
+export function visibleText(turn: Turn): string {
+	const working = isActive(turn) && turn.toolCalls.length > 0;
+	return working ? turn.textSinceTool : turn.text;
+}
+
+function readToolCall(payload: Record<string, unknown>): ToolCall | null {
+	const id = text(payload.id);
+	const name = text(payload.name);
+	if (id === '' || name === '') return null;
+
+	const args = payload.args;
+
+	return {
+		id,
+		name,
+		args:
+			typeof args === 'object' && args !== null && !Array.isArray(args)
+				? (args as Record<string, unknown>)
+				: {},
+		status: 'running',
+		summary: null
+	};
+}
+
+function readUsage(value: unknown): TokenUsage | null {
+	if (typeof value !== 'object' || value === null) return null;
+
+	const usage = value as Record<string, unknown>;
+	const input = usage.input;
+	const output = usage.output;
+
+	return typeof input === 'number' && typeof output === 'number' ? { input, output } : null;
 }
 
 /**

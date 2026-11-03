@@ -5,6 +5,12 @@
  * message column stay layouts. Same split as `transaction-detail.ts`.
  */
 
+import {
+	filesFromAttachments,
+	toolCallsFromAttachments,
+	type MessageFile,
+	type ToolCall
+} from '$lib/chat-tools';
 import { t, type TranslationKey } from '$lib/i18n';
 import type { ChatMessage, ChatSessionSummary } from '$lib/server/chat';
 
@@ -24,6 +30,10 @@ export type MessageItem = {
 	/** "14:32", enough beside a message in a conversation read top to bottom. */
 	at: string;
 	who: string;
+	/** The tools this message ran, as the strip above it shows them. */
+	toolCalls: ToolCall[];
+	/** The files sent with it, which `#file:` links also point at. */
+	files: MessageFile[];
 };
 
 /** One key per role, so the lookup is typed rather than built as a string. */
@@ -78,7 +88,9 @@ export function toMessageItem(message: ChatMessage, locale = 'en-GB'): MessageIt
 		at: new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' }).format(
 			new Date(message.created_at)
 		),
-		who: t(WHO[message.role])
+		who: t(WHO[message.role]),
+		toolCalls: toolCallsFromAttachments(message.attachments),
+		files: filesFromAttachments(message.attachments)
 	};
 }
 

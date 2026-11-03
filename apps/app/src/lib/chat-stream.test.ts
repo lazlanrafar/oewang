@@ -7,12 +7,22 @@ import {
 	IDLE_TURN,
 	isActive,
 	readFrames,
+	toolsRunning,
+	visibleText,
 	type SseFrame,
 	type Turn
 } from './chat-stream';
 
 function token(text: string): SseFrame {
 	return { event: 'token', data: JSON.stringify({ text }) };
+}
+
+function call(id: string, name: string): SseFrame {
+	return { event: 'tool_call', data: JSON.stringify({ id, name, args: { amount: '50000' } }) };
+}
+
+function result(id: string, ok: boolean, summary: string): SseFrame {
+	return { event: 'tool_result', data: JSON.stringify({ id, ok, summary }) };
 }
 
 /** A turn mid-answer, which is where every interesting transition starts. */
@@ -68,12 +78,7 @@ describe('advance', () => {
 	it('starts a turn clean, whatever the last one ended as', () => {
 		const failed = advance(streaming(), { kind: 'failed', code: 'TOOL_FAILED' });
 
-		expect(advance(failed, { kind: 'send' })).toEqual({
-			status: 'sending',
-			text: '',
-			messageId: null,
-			errorCode: null
-		});
+		expect(advance(failed, { kind: 'send' })).toEqual({ ...IDLE_TURN, status: 'sending' });
 	});
 
 	it('grows the answer token by token', () => {
@@ -135,10 +140,12 @@ describe('advance', () => {
 		expect(turn.text).toBe('You spent ');
 	});
 
-	it('passes over the events the tool loop brings in US-030', () => {
+	it('ignores an event it does not know, rather than breaking the turn', () => {
+		// The protocol gains events. A turn should not end because the
+		// service is one deploy ahead of the browser.
 		const turn = advance(streaming(), {
 			kind: 'frame',
-			frame: { event: 'tool_call', data: '{"id":"t1","name":"get_spending_summary"}' }
+			frame: { event: 'thinking', data: '{"text":"hmm"}' }
 		});
 
 		expect(turn).toMatchObject({ status: 'streaming', text: 'You spent ' });
@@ -148,6 +155,117 @@ describe('advance', () => {
 		const turn = advance(streaming(), { kind: 'frame', frame: { event: 'error', data: '{}' } });
 
 		expect(turn.errorCode).toBe('STREAM_FAILED');
+	});
+});
+
+describe('advance, the tool events', () => {
+	it('records a call as running and its result as the API answered it', () => {
+		const called = advance(streaming(), { kind: 'frame', frame: call('t1', 'create_transaction') });
+		expect(called.toolCalls).toEqual([
+			{
+				id: 't1',
+				name: 'create_transaction',
+				args: { amount: '50000' },
+				status: 'running',
+				summary: null
+			}
+		]);
+
+		const answered = advance(called, { kind: 'frame', frame: result('t1', true, 'Created.') });
+		expect(answered.toolCalls[0]).toMatchObject({ status: 'ok', summary: 'Created.' });
+	});
+
+	it('marks a refused call as failed', () => {
+		const called = advance(streaming(), { kind: 'frame', frame: call('t1', 'delete_transaction') });
+		const refused = advance(called, { kind: 'frame', frame: result('t1', false, 'Not allowed.') });
+
+		expect(refused.toolCalls[0].status).toBe('failed');
+	});
+
+	it('drops a result for a call that never arrived', () => {
+		// A tool nobody asked for would otherwise appear on screen.
+		const turn = advance(streaming(), { kind: 'frame', frame: result('ghost', true, 'x') });
+
+		expect(turn.toolCalls).toEqual([]);
+	});
+
+	it('drops a call with no id or no name', () => {
+		const turn = advance(streaming(), {
+			kind: 'frame',
+			frame: { event: 'tool_call', data: '{"name":"create_transaction"}' }
+		});
+
+		expect(turn.toolCalls).toEqual([]);
+	});
+
+	it('keeps the receipt draft for the panel that shows it', () => {
+		const turn = advance(streaming(), {
+			kind: 'frame',
+			frame: { event: 'receipt_draft', data: '{"draft":{"merchant":"Warung Tekko"}}' }
+		});
+
+		expect(turn.receiptDraft).toEqual({ merchant: 'Warung Tekko' });
+	});
+
+	it('reads the usage reported with done', () => {
+		const turn = advance(streaming(), {
+			kind: 'frame',
+			frame: { event: 'done', data: '{"message_id":"clx1","usage":{"input":1204,"output":311}}' }
+		});
+
+		expect(turn.usage).toEqual({ input: 1204, output: 311 });
+	});
+});
+
+describe('visibleText', () => {
+	it('shows everything when no tool was called', () => {
+		expect(visibleText(streaming('You spent Rp 50.000.'))).toBe('You spent Rp 50.000.');
+	});
+
+	it('suppresses the narration that came before the last tool call', () => {
+		// CHAT-14. The prompt tells the model not to narrate each call; the
+		// prompt alone does not hold, so the screen does not show it.
+		const narrated = streaming('Let me check your wallets. ');
+		const called = advance(narrated, { kind: 'frame', frame: call('t1', 'get_recent_transactions') });
+		const answering = advance(called, { kind: 'frame', frame: token('You spent Rp 50.000.') });
+
+		expect(answering.text).toBe('Let me check your wallets. You spent Rp 50.000.');
+		expect(visibleText(answering)).toBe('You spent Rp 50.000.');
+	});
+
+	it('stays suppressed between rounds, so the narration does not flash back', () => {
+		const called = advance(streaming('First I will look. '), {
+			kind: 'frame',
+			frame: call('t1', 'search_transactions')
+		});
+		const answered = advance(called, { kind: 'frame', frame: result('t1', true, '6 rows') });
+
+		expect(toolsRunning(answered)).toBe(false);
+		expect(visibleText(answered)).toBe('');
+	});
+
+	it('shows the whole answer once the turn ends', () => {
+		// The API persisted all of it, and the stored message replaces this
+		// one a moment later. Hiding it to the end would make the two
+		// disagree for nothing.
+		const called = advance(streaming('Let me check. '), {
+			kind: 'frame',
+			frame: call('t1', 'get_spending_summary')
+		});
+		const answered = advance(called, { kind: 'frame', frame: result('t1', true, '6 categories') });
+		const spoken = advance(answered, { kind: 'frame', frame: token('You spent Rp 50.000.') });
+		const done = advance(spoken, { kind: 'frame', frame: { event: 'done', data: '{}' } });
+
+		expect(visibleText(done)).toBe('Let me check. You spent Rp 50.000.');
+	});
+
+	it('shows what was said when a turn with tools is stopped', () => {
+		const called = advance(streaming('Let me check. '), {
+			kind: 'frame',
+			frame: call('t1', 'get_spending_summary')
+		});
+
+		expect(visibleText(advance(called, { kind: 'stop' }))).toBe('Let me check. ');
 	});
 });
 

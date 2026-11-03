@@ -2,16 +2,21 @@
 	/**
 	 * The composer (UI-2).
 	 *
-	 * Ported from the old app's `chat-input.tsx`, minus the parts that belong
-	 * to other stories or to features that are out of scope: the attachment
-	 * button arrives with the receipt flow, and the command menu, web search
-	 * and quota card are not being built at all
+	 * Ported from the old app's `chat-input.tsx`, minus the command menu, web
+	 * search and quota card, which are not being built at all
 	 * (docs/features/chat.md#ui-port-map).
 	 *
-	 * It holds the draft and nothing else. Sending and stopping are
-	 * callbacks, so the page owns the turn and this stays a control.
+	 * It holds the draft and the files chosen for the turn, and nothing
+	 * else. Sending and stopping are callbacks, so the page owns the turn
+	 * and this stays a control.
+	 *
+	 * The attachment button opens the same dropzone the transaction form
+	 * uses, so a receipt photographed into the chat takes the one upload
+	 * path there is: split in the browser, chunk by chunk through this
+	 * app's own server, never a signed storage URL (D23).
 	 */
 	import ArrowUp from '@lucide/svelte/icons/arrow-up';
+	import Paperclip from '@lucide/svelte/icons/paperclip';
 	import Square from '@lucide/svelte/icons/square';
 
 	import { composerHeight } from '$lib/chat-stream';
@@ -19,9 +24,11 @@
 
 	import { Button } from '../../atoms/button/index.js';
 	import { Textarea } from '../../atoms/textarea/index.js';
+	import { FileDropzone, type UploadedFile } from '../../molecules/file-dropzone/index.js';
 
 	let {
 		value = $bindable(''),
+		files = $bindable([]),
 		streaming = false,
 		disabled = false,
 		placeholder = t('chat.input_placeholder'),
@@ -29,6 +36,8 @@
 		onStop
 	}: {
 		value?: string;
+		/** The files this turn carries, uploaded and waiting for a message. */
+		files?: UploadedFile[];
 		/** A turn is running: the send button becomes the stop button. */
 		streaming?: boolean;
 		disabled?: boolean;
@@ -39,6 +48,13 @@
 
 	let field = $state<HTMLTextAreaElement | null>(null);
 	let overflowing = $state(false);
+	let attaching = $state(false);
+
+	/*
+	 * The panel stays open while anything is attached. Closing it over a
+	 * file that is about to be sent would hide what the turn carries.
+	 */
+	const showDropzone = $derived(attaching || files.length > 0);
 
 	/*
 	 * The field grows with its content, then scrolls.
@@ -69,6 +85,7 @@
 		const message = value.trim();
 		if (!message) return;
 
+		attaching = false;
 		onSend(message);
 	}
 
@@ -91,7 +108,24 @@
 		submit();
 	}}
 >
+	{#if showDropzone}
+		<FileDropzone bind:files disabled={disabled || streaming} />
+	{/if}
+
 	<div class="flex items-end gap-2">
+		<Button
+			type="button"
+			variant="ghost"
+			size="icon"
+			title={attaching ? t('chat.attach_close') : t('chat.attach')}
+			aria-expanded={showDropzone}
+			disabled={disabled || streaming}
+			onclick={() => (attaching = !attaching)}
+		>
+			<Paperclip />
+			<span class="sr-only">{attaching ? t('chat.attach_close') : t('chat.attach')}</span>
+		</Button>
+
 		<Textarea
 			bind:ref={field}
 			bind:value

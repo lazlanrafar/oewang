@@ -143,3 +143,72 @@ impl FromRequestParts<AppState> for AuthOwner {
         })
     }
 }
+
+/// A caller holding the service key.
+///
+/// The internal routes are service to service: the AI service calls them,
+/// and it carries no user token because it is never given one (D4). This
+/// extractor says only that the call came from a process that holds the
+/// key. Who the call is *for* arrives in the body and is re-checked against
+/// the membership row before anything happens (SEC-23, CHAT-4).
+#[derive(Debug, Clone, Copy)]
+pub struct ServiceCaller;
+
+impl FromRequestParts<AppState> for ServiceCaller {
+    type Rejection = ApiError;
+
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &AppState,
+    ) -> Result<Self, Self::Rejection> {
+        let request_id = parts
+            .headers
+            .get("x-request-id")
+            .and_then(|value| value.to_str().ok())
+            .unwrap_or("unknown")
+            .to_string();
+
+        let presented = parts
+            .headers
+            .get("x-api-key")
+            .and_then(|value| value.to_str().ok())
+            .unwrap_or_default();
+
+        if constant_time_eq(presented.as_bytes(), state.config.ai_service_api_key.expose().as_bytes())
+        {
+            Ok(ServiceCaller)
+        } else {
+            Err(ApiError::new(AppError::Unauthenticated, request_id))
+        }
+    }
+}
+
+/// Compare without leaking where two keys first differ.
+///
+/// The length is not secret and is compared first; the bytes are folded so
+/// the loop runs the same way whatever they hold.
+fn constant_time_eq(left: &[u8], right: &[u8]) -> bool {
+    if left.len() != right.len() || left.is_empty() {
+        return false;
+    }
+
+    left.iter().zip(right).fold(0u8, |acc, (a, b)| acc | (a ^ b)) == 0
+}
+
+#[cfg(test)]
+mod service_key_tests {
+    use super::constant_time_eq;
+
+    #[test]
+    fn should_match_only_an_identical_key() {
+        assert!(constant_time_eq(b"a-service-key", b"a-service-key"));
+        assert!(!constant_time_eq(b"a-service-key", b"a-service-kez"));
+        assert!(!constant_time_eq(b"a-service-key", b"a-service-ke"));
+    }
+
+    #[test]
+    fn should_never_match_an_absent_key() {
+        assert!(!constant_time_eq(b"", b""));
+        assert!(!constant_time_eq(b"", b"a-service-key"));
+    }
+}

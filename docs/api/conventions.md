@@ -201,7 +201,8 @@ Only these are returned in plaintext, because the caller may have no working key
 | `TOOL_NOT_FOUND` | 400 | The AI service called a tool that does not exist |
 | `TOOL_ARGS_INVALID` | 422 | Tool arguments failed schema validation |
 | `TOOL_FORBIDDEN` | 403 | The caller's role cannot run this tool (CHAT-4) |
-| `CONFIRMATION_REQUIRED` | 409 | A destructive tool was called without confirmation (CHAT-6) |
+| `CONFIRMATION_REQUIRED` | 409 | A destructive tool was called without confirmation (CHAT-6). `fields` carries the target row's description: `date`, `name`, `amount`, `wallet` |
+| `TOOL_CAP_EXCEEDED` | 409 | A per-turn blast-radius cap was reached (D25). The model reports it and stops; it does not retry |
 
 ## Encoding rules
 

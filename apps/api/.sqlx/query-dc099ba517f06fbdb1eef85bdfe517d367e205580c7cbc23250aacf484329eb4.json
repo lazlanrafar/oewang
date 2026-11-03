@@ -1,0 +1,31 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO ai_agent_settings (id, workspace_id, custom_instructions, response_language)\n           VALUES ($1, $2, $3, $4)\n           ON CONFLICT (workspace_id) DO UPDATE\n               SET custom_instructions = excluded.custom_instructions,\n                   response_language = excluded.response_language,\n                   updated_at = now()\n           RETURNING custom_instructions, response_language",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "custom_instructions",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "response_language",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      true,
+      false
+    ]
+  },
+  "hash": "dc099ba517f06fbdb1eef85bdfe517d367e205580c7cbc23250aacf484329eb4"
+}

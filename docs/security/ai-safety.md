@@ -56,10 +56,14 @@ Caps enforced in the API per turn, whatever the model asks for.
 | Write tool calls per turn | 3 | A turn that wants to create ten transactions is not a turn the user asked for |
 | `delete_transaction` calls per turn | 1 | Mass deletion through chat is not reachable, at any confirmation level |
 | Transactions created per turn | 3 | Same reason as above |
-| Single transaction amount from a tool | 100,000,000 minor units, configurable | A parse error that shifts a decimal point stops here |
+| Single transaction amount from a tool | 100,000,000 in the wallet's own currency, configurable | A parse error that shifts a decimal point stops here |
 | Chat turns per workspace per minute | 20 | Bounds model spend, the one unbounded cost |
 
-Exceeding a cap returns a tool error. The model reports it to the user; it does not retry ([AI service](../ai/service.md#the-tool-loop)).
+Exceeding a cap returns `TOOL_CAP_EXCEEDED`. The model reports it to the user; it does not retry ([AI service](../ai/service.md#the-tool-loop)).
+
+A cap needs something to count against, and that unit is a `turn_id`. The API mints one per user turn in `begin_turn` and hands it to the AI service with the turn. The AI service echoes it on every tool call it makes, and the API refuses a `turn_id` it did not mint (D68).
+
+The AI service does not mint it, for the same reason the `role` in the body is a claim rather than a fact. A service that produced a fresh id per call would hand itself an untouched budget on every call, and the three per-turn caps above would bound nothing. The party being counted cannot also be the party that decides what counts as one turn.
 
 Bulk paths deliberately do not exist as tools. There is no `bulk_delete_transactions`, no `delete_wallet`, no `delete_category`, no membership tool, no settings tool. Those operations exist only in the UI, where a human clicked them. The tool catalog is small on purpose (D17).
 
@@ -71,7 +75,14 @@ Bulk paths deliberately do not exist as tools. There is no `bulk_delete_transact
 2. The assistant shows that to the user and asks.
 3. Only after the user agrees, in a later turn, does the assistant call again with `confirmed: true`.
 
-The confirmation token is scoped to one transaction ID and expires after 5 minutes. A confirmation cannot be carried from one row to another, and a model cannot set `confirmed: true` on the first call and have it honoured: the API rejects a `confirmed` flag on a call it has not previously challenged for that exact ID.
+The challenge the API records is keyed by the chat session and the transaction ID together, lives 5 minutes, and is one-shot: a successful delete consumes it. Four consequences, each of them a thing a model cannot talk its way around:
+
+- A confirmation cannot be carried from one row to another. The key holds the ID.
+- A confirmation cannot be carried from one session to another. The key holds the session, so a challenge raised in one conversation does nothing in a second one opened alongside it.
+- A confirmation cannot be replayed. The delete that answers a challenge consumes it, so deleting the same row again starts at the first step again.
+- `confirmed: true` on a call the API has not previously challenged for that exact ID is not honoured. It is answered with `CONFIRMATION_REQUIRED`, which is the first step of the flow rather than a refusal of it: the model gets the row's description and has to ask the user.
+
+The flag is a claim, like the `role` and the `turn_id`. What makes the confirmation real is the record the API kept, not the boolean the model sent.
 
 ## Layer 4: prompt structure
 

@@ -127,6 +127,7 @@ pub async fn pump<S: EventSource>(
 ) {
     let mut reply = String::new();
     let mut usage: Option<Value> = None;
+    let mut tools = ToolLog::default();
 
     loop {
         let event = match events.next().await {
@@ -137,7 +138,7 @@ pub async fn pump<S: EventSource>(
                 // fine (docs/api/encryption.md#chat-stream-events).
                 let code = error.code().to_string();
                 tracing::warn!(code = %code, "the chat stream failed");
-                persist(&pool, &workspace_id, &session_id, &reply, usage.as_ref()).await;
+                persist(&pool, &workspace_id, &session_id, &reply, usage.as_ref(), &tools).await;
                 send(&sender, &mut sealer, "error", &failure(&code)).await.ok();
                 return;
             }
@@ -146,7 +147,7 @@ pub async fn pump<S: EventSource>(
                 // last (docs/ai/service.md#streaming-protocol). The other
                 // side stopping without one is a failure, and what arrived
                 // before it is still the reply.
-                persist(&pool, &workspace_id, &session_id, &reply, usage.as_ref()).await;
+                persist(&pool, &workspace_id, &session_id, &reply, usage.as_ref(), &tools).await;
                 send(&sender, &mut sealer, "error", &failure("AI_UNAVAILABLE")).await.ok();
                 return;
             }
@@ -154,10 +155,16 @@ pub async fn pump<S: EventSource>(
 
         match event.name.as_str() {
             "token" => reply.push_str(&token_text(&event)),
+            // Recorded as well as forwarded. The live turn renders these
+            // events; the stored message is what a reload renders, and
+            // without them the tool strip vanishes on refresh (CHAT-14).
+            "tool_call" => tools.called(&payload(&event)),
+            "tool_result" => tools.answered(&payload(&event)),
             "done" => {
                 usage = payload(&event).get("usage").cloned();
                 let message_id =
-                    persist(&pool, &workspace_id, &session_id, &reply, usage.as_ref()).await;
+                    persist(&pool, &workspace_id, &session_id, &reply, usage.as_ref(), &tools)
+                        .await;
                 let mut done = payload(&event);
                 done["message_id"] = message_id.map(Value::String).unwrap_or(Value::Null);
                 send(&sender, &mut sealer, "done", &done).await.ok();
@@ -171,12 +178,12 @@ pub async fn pump<S: EventSource>(
         if send_bytes(&sender, &mut sealer, &event.name, &event.data).await.is_err() {
             // The caller hung up. What it was sent before that is still its
             // reply, and is stored (CHAT-9).
-            persist(&pool, &workspace_id, &session_id, &reply, usage.as_ref()).await;
+            persist(&pool, &workspace_id, &session_id, &reply, usage.as_ref(), &tools).await;
             return;
         }
 
         if event.name == "error" {
-            persist(&pool, &workspace_id, &session_id, &reply, usage.as_ref()).await;
+            persist(&pool, &workspace_id, &session_id, &reply, usage.as_ref(), &tools).await;
             return;
         }
     }
@@ -263,18 +270,58 @@ async fn forward(
 }
 
 /// The id of the stored reply, when there was one to store.
+/// The turn's tool calls, in the order the model made them.
+///
+/// Kept beside the reply so the stored message carries what the live turn
+/// showed. A call with no result never answered: the turn ended first, and
+/// it is stored that way rather than reported as finished.
+#[derive(Debug, Default)]
+pub struct ToolLog(Vec<Value>);
+
+impl ToolLog {
+    fn called(&mut self, payload: &Value) {
+        let (Some(id), Some(name)) = (payload.get("id"), payload.get("name")) else {
+            return;
+        };
+
+        self.0.push(json!({
+            "id": id,
+            "name": name,
+            "args": payload.get("args").cloned().unwrap_or(Value::Null),
+        }));
+    }
+
+    fn answered(&mut self, payload: &Value) {
+        let Some(id) = payload.get("id") else { return };
+
+        if let Some(call) = self.0.iter_mut().find(|call| call.get("id") == Some(id)) {
+            call["result"] = json!({
+                "ok": payload.get("ok").and_then(Value::as_bool).unwrap_or(false),
+                "summary": payload.get("summary").cloned().unwrap_or(Value::Null),
+            });
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+}
+
 async fn persist(
     pool: &PgPool,
     workspace_id: &str,
     session_id: &str,
     reply: &str,
     usage: Option<&Value>,
+    tools: &ToolLog,
 ) -> Option<String> {
-    if reply.trim().is_empty() {
+    // A turn that said nothing and did nothing leaves no message. A turn
+    // that ran a tool did something, even if the words never arrived.
+    if reply.trim().is_empty() && tools.is_empty() {
         return None;
     }
 
-    match service::finish_turn(pool, workspace_id, session_id, reply, usage).await {
+    match service::finish_turn(pool, workspace_id, session_id, reply, usage, &tools.0).await {
         Ok(message) => Some(message.id),
         Err(error) => {
             // Logged as a failure, never with what it was carrying (OPS-3).

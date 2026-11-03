@@ -1,5 +1,6 @@
 import { fail, type Actions } from '@sveltejs/kit';
 
+import { INVALIDATION_KEYS } from '$lib/chat-invalidation';
 import { ApiError } from '$lib/server/api';
 import * as ledger from '$lib/server/ledger';
 
@@ -12,9 +13,20 @@ import type { PageServerLoad } from './$types';
  * refresh, the back button and a pasted link all reproduce the same view
  * (TXN-9, UI-8, D55). Nothing is filtered in the browser.
  */
-export const load: PageServerLoad = async ({ locals, url, parent }) => {
+export const load: PageServerLoad = async ({ depends, locals, url, parent }) => {
 	const token = locals.accessToken;
 	const query = ledger.filterParams(url);
+
+	// What a chat write makes stale here (D32, CHAT-12). The map lives in
+	// $lib/chat-invalidation; this is the end that declares the data. The
+	// wallets and categories loaded below are both the filter's options and
+	// the balances a transaction moved.
+	depends(
+		INVALIDATION_KEYS.transactions,
+		INVALIDATION_KEYS.transactionDetail,
+		INVALIDATION_KEYS.transactionFilters,
+		INVALIDATION_KEYS.walletBalances
+	);
 	const { me } = await parent();
 	const workspaceCurrency = me.workspace.currency_code;
 

@@ -187,12 +187,114 @@ pub async fn append_message(
     Ok(message)
 }
 
+// ------------------------------------------------------------- settings
+
+pub use oewang_db::repositories::ai::AgentSettingsRow;
+
+/// What the workspace wants the assistant to be like (CHAT-10).
+///
+/// A workspace with no row reads the defaults rather than failing. The row
+/// is normally written with the workspace itself.
+pub async fn settings(pool: &PgPool, workspace_id: &str) -> Result<AgentSettingsRow> {
+    Ok(ai::find_settings(pool, workspace_id)
+        .await
+        .map_err(internal)?
+        .unwrap_or(AgentSettingsRow {
+            custom_instructions: None,
+            response_language: "auto".to_string(),
+        }))
+}
+
+/// How long the workspace's own instructions may be.
+///
+/// They are prepended to every turn's prompt, so an unbounded field is an
+/// unbounded cost per turn, and a long enough one would crowd out the
+/// rules above it (docs/ai/service.md#system-prompt).
+const MAX_CUSTOM_INSTRUCTIONS: usize = 2_000;
+
+const LANGUAGES: [&str; 3] = ["auto", "english", "indonesian"];
+
+pub async fn update_settings(
+    pool: &PgPool,
+    actor: Actor<'_>,
+    custom_instructions: Option<&str>,
+    response_language: Option<&str>,
+) -> Result<AgentSettingsRow> {
+    let current = settings(pool, actor.workspace_id).await?;
+
+    let instructions = match custom_instructions {
+        None => current.custom_instructions.clone(),
+        Some(raw) => {
+            let cleaned = raw.trim();
+            if cleaned.chars().count() > MAX_CUSTOM_INSTRUCTIONS {
+                return Err(AppError::validation([(
+                    "custom_instructions",
+                    "That is longer than the assistant can carry on every turn.",
+                )]));
+            }
+            (!cleaned.is_empty()).then(|| cleaned.to_string())
+        }
+    };
+
+    let language = match response_language {
+        None => current.response_language.clone(),
+        Some(raw) if LANGUAGES.contains(&raw) => raw.to_string(),
+        Some(_) => {
+            return Err(AppError::validation([(
+                "response_language",
+                "Choose auto, english or indonesian.",
+            )]))
+        }
+    };
+
+    let mut tx = pool.begin().await.map_err(internal)?;
+
+    let row = ai::upsert_settings(
+        &mut *tx,
+        &cuid2::create_id(),
+        actor.workspace_id,
+        instructions.as_deref(),
+        &language,
+    )
+    .await
+    .map_err(internal)?;
+
+    // The instructions themselves stay out of the trail: they are the
+    // workspace's text, and the audit row records that they changed, not
+    // what they say (OPS-3).
+    log(
+        &mut tx,
+        actor,
+        "ai_settings.updated",
+        "ai_settings",
+        actor.workspace_id,
+        snapshot(&json!({
+            "has_custom_instructions": current.custom_instructions.is_some(),
+            "response_language": current.response_language,
+        }))?,
+        snapshot(&json!({
+            "has_custom_instructions": row.custom_instructions.is_some(),
+            "response_language": row.response_language,
+        }))?,
+    )
+    .await?;
+
+    tx.commit().await.map_err(internal)?;
+
+    Ok(row)
+}
+
 // -------------------------------------------------------------- one turn
 
 /// What `POST /chat/stream` sends to the AI service
 /// (docs/ai/service.md#post-chatstream-request).
 #[derive(Debug, Serialize)]
 pub struct TurnRequest {
+    /// Minted here, once per user turn, and echoed by the AI service on
+    /// every tool call it makes. The per-turn caps are counted against it,
+    /// which is why the API mints it and the AI service does not: a service
+    /// that minted its own id per call would have no cap at all (D25).
+    pub turn_id: String,
     pub workspace_id: String,
     pub user_id: String,
     /// A claim the prompt is shaped by, never a permission. Every write the
@@ -320,6 +422,7 @@ pub async fn begin_turn(
     .await?;
 
     Ok(TurnRequest {
+        turn_id: cuid2::create_id(),
         workspace_id: workspace_id.to_string(),
         user_id: user_id.to_string(),
         role: role.as_str().to_string(),
@@ -386,10 +489,23 @@ pub async fn finish_turn(
     session_id: &str,
     content: &str,
     usage: Option<&Value>,
+    tool_calls: &[Value],
 ) -> Result<MessageRow> {
-    let attachments = usage.map(|usage| json!({ "usage": usage }));
+    let mut attachments = serde_json::Map::new();
+    if let Some(usage) = usage {
+        attachments.insert("usage".to_string(), usage.clone());
+    }
+    if !tool_calls.is_empty() {
+        attachments.insert("tool_calls".to_string(), Value::Array(tool_calls.to_vec()));
+    }
 
-    append_message(pool, workspace_id, session_id, "assistant", content, attachments.as_ref()).await
+    if attachments.is_empty() {
+        return append_message(pool, workspace_id, session_id, "assistant", content, None).await;
+    }
+
+    let attachments = Value::Object(attachments);
+
+    append_message(pool, workspace_id, session_id, "assistant", content, Some(&attachments)).await
 }
 
 async fn require(pool: &PgPool, workspace_id: &str, id: &str) -> Result<SessionRow> {

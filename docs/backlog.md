@@ -380,58 +380,58 @@ choice rather than a code change.
 ### US-029: Tool execution endpoint
 Requirements: CHAT-4, CHAT-15, AI-8, SEC-23, SEC-24, SEC-25, OPS-1
 
-- [ ] `POST /v1/internal/tools/execute` dispatches all eleven tools
-- [ ] Every returned number is computed, rounded and formatted by the API. A test asserts no tool returns a raw figure the model would have to combine
-- [ ] `get_spending_summary` returns the comparison with the previous period and a direction label, both precomputed
-- [ ] Results are a compact projection, not a database row
-- [ ] A list over the byte budget is truncated with `truncated: true` and `has_next_page: true`
-- [ ] Arguments validated against the schema before execution
-- [ ] The `role` in the body is re-checked against the membership row
-- [ ] Per-turn caps enforced: 3 writes, 1 delete, 3 creates, an amount ceiling
-- [ ] Delete confirmation scoped to one transaction ID, expiring after 5 minutes, not honoured unchallenged
-- [ ] Every write produces an audit row with `source: "chat"` attributed to the real user
-- [ ] Tests cover each tool's happy path, its role refusal and each cap
+- [x] `POST /v1/internal/tools/execute` dispatches all eleven tools
+- [x] Every returned number is computed, rounded and formatted by the API. A test asserts no tool returns a raw figure the model would have to combine
+- [x] `get_spending_summary` returns the comparison with the previous period and a direction label, both precomputed
+- [x] Results are a compact projection, not a database row
+- [x] A list over the byte budget is truncated with `truncated: true` and `has_next_page: true`
+- [x] Arguments validated against the schema before execution
+- [x] The `role` in the body is re-checked against the membership row
+- [x] Per-turn caps enforced: 3 writes, 1 delete, 3 creates, an amount ceiling
+- [x] Delete confirmation scoped to one transaction ID, expiring after 5 minutes, not honoured unchallenged
+- [x] Every write produces an audit row with `source: "chat"` attributed to the real user
+- [x] Tests cover each tool's happy path, its role refusal and each cap
 
 ### US-030: Tool loop
 Requirements: CHAT-3, CHAT-5, CHAT-6, CHAT-7
 
-- [ ] The loop runs with the eleven tools, capped at 8 rounds
-- [ ] The system prompt carries wallets and categories from `/v1/internal/context`
-- [ ] `tool_call` and `tool_result` events stream and render as collapsible cards
-- [ ] "Add a 50,000 lunch expense from my Cash wallet" creates the transaction and the list shows it
-- [ ] A delete needs a confirmation turn
-- [ ] A refusal is relayed, never retried
-- [ ] Verify in browser
+- [x] The loop runs with the eleven tools, capped at 8 rounds
+- [x] The system prompt carries wallets and categories, sent in the turn body by the API
+- [x] `tool_call` and `tool_result` events stream and render as collapsible cards
+- [x] "Add a 50,000 lunch expense from my Cash wallet" creates the transaction and the list shows it
+- [x] A delete needs a confirmation turn
+- [x] A refusal is relayed, never retried
+- [x] Verify in browser
 
 ### US-031: Chat input and message UI
 Requirements: UI-2, UI-7, CHAT-11, CHAT-14, SEC-11
 
-- [ ] Input ported from `chat-input.tsx`: auto-grow, Enter to send, Shift and Enter for a newline, attachment button, stop button
-- [ ] Messages ported from `chat-messages.tsx`: role styling, copy, regenerate
-- [ ] Assistant Markdown sanitized with an allow-list; links to external hosts render as text
-- [ ] Entity links (`#txn:`, `#wallet:`, `#cat:`, `#file:`, `#navigate:`) render as buttons that open the sheet, the canvas or a route
-- [ ] Tool calls render as human labels with a derived fallback for unlabelled tools
-- [ ] One finished call shows a check; several collapse to "Used N tools", expandable; the in-flight one shimmers
-- [ ] Assistant text arriving before the last tool call is suppressed while tools are still running
-- [ ] Suggestion chips on an empty session
-- [ ] Verify in browser
+- [x] Input ported from `chat-input.tsx`: auto-grow, Enter to send, Shift and Enter for a newline, attachment button, stop button
+- [x] Messages ported from `chat-messages.tsx`: role styling, copy, regenerate
+- [x] Assistant Markdown sanitized with an allow-list; links to external hosts render as text
+- [x] Entity links (`#txn:`, `#wallet:`, `#cat:`, `#file:`, `#navigate:`) render as buttons that open the sheet, the canvas or a route
+- [x] Tool calls render as human labels with a derived fallback for unlabelled tools
+- [x] One finished call shows a check; several collapse to "Used N tools", expandable; the in-flight one shimmers
+- [x] Assistant text arriving before the last tool call is suppressed while tools are still running
+- [x] Suggestion chips on an empty session
+- [x] Verify in browser
 
 ### US-031b: Chat write invalidation
 Requirements: CHAT-12
 
-- [ ] A tool-name to invalidation map, deduplicated by tool call ID
-- [ ] A transaction write invalidates the list, the detail, the summary, wallet balances and the overview
-- [ ] A wallet or category write invalidates the lists and the transaction filter options
-- [ ] Creating a transaction in chat, then switching to the transaction page, shows it without a manual reload
-- [ ] Verify in browser
+- [x] A tool-name to invalidation map, deduplicated by tool call ID
+- [x] A transaction write invalidates the list, the detail, the summary, wallet balances and the overview
+- [x] A wallet or category write invalidates the lists and the transaction filter options
+- [x] Creating a transaction in chat, then switching to the transaction page, shows it without a manual reload
+- [x] Verify in browser
 
 ### US-032: Chat settings
 Requirements: CHAT-10
 
-- [ ] `GET` and `PATCH /v1/ai/settings` read and write custom instructions and response language
-- [ ] Custom instructions reach the system prompt on the next turn
-- [ ] The settings page exposes both fields
-- [ ] Verify in browser
+- [x] `GET` and `PATCH /v1/ai/settings` read and write custom instructions and response language
+- [x] Custom instructions reach the system prompt on the next turn
+- [x] The settings page exposes both fields
+- [x] Verify in browser
 
 ---
 

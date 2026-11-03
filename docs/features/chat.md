@@ -83,7 +83,7 @@ The old app also stored canvas artifacts, provider metadata and invoice drafts h
 Server-sent events, passed through two hops unchanged. The event protocol is specified in [AI service](../ai/service.md#streaming-protocol).
 
 - Tokens render as they arrive. Markdown is parsed after the stream ends, so a half-written table does not flicker.
-- Tool calls render as collapsible cards: the tool name and a one-line summary when collapsed, the arguments and the result when expanded.
+- Tool calls render above the answer as one line of plain English, never as JSON. The shape is in [tool call presentation](#tool-call-presentation).
 - Aborting the request stops generation and still persists the partial reply (CHAT-9).
 - Buffering is disabled at every hop. A proxy that buffers turns a streaming chat into a slow request.
 
@@ -156,7 +156,21 @@ Receipts:     [receipt.jpg](#file:clxb8c…)
 Navigation:   [Settings](#navigate:/settings)
 ```
 
-A regex (`/^#(txn|wallet|cat|file|navigate):/`) decides whether a link becomes an anchor or a button. A button opens the detail sheet, the canvas, or a route. Anything else renders as plain text, because an external link in assistant output is an injection surface ([AI safety](../security/ai-safety.md#output-handling)).
+A regex (`/^#(txn|wallet|cat|file|navigate):/`) decides whether a link becomes a button or stays text. Anything else renders as plain text, because an external link in assistant output is an injection surface ([AI safety](../security/ai-safety.md#output-handling)).
+
+The two halves live apart, so each is testable on its own. `src/lib/markdown.ts` renders a known scheme as a button carrying `data-entity-scheme` and `data-entity-value`, and nothing else as a link at all. `src/lib/chat-entities.ts` decides what that button opens:
+
+| Scheme | Opens |
+|---|---|
+| `#txn:` | `/transactions?detail={id}`, which is the transaction's detail sheet |
+| `#wallet:` | `/transactions?wallet_id={id}`: that wallet's money |
+| `#cat:` | `/transactions?category_id={id}`: that category's money |
+| `#file:` | The attachment, in a dialog on the conversation. No URL: the bytes come down as counted chunks (D23) |
+| `#navigate:` | The path, if it is one of ours |
+
+The conversation column binds one delegated click handler rather than one per link, because the buttons arrive inside `{@html}` and there is no component to bind to.
+
+**A `#navigate:` path is checked before it is followed.** It must start with a single `/`: `//evil.test` and `/\evil.test` are read by a browser as another origin, and this string is written by the model, which is reachable through a receipt (SEC-11). The value is decoded first, because markdown-it percent-encodes the href and `%2F%2Fevil.test` is the same attack spelled differently. A path that fails renders as a button that does nothing rather than as a navigation somewhere else.
 
 The effect: "You spent 50,000 at Warung Tekko on 2 November" becomes clickable, and the answer is an index instead of a dead end. Cost is one regex, one prompt block and one renderer override.
 
@@ -191,6 +205,22 @@ A chat write leaves every other view stale, because there is no realtime channel
 
 A write invalidates the whole derived surface, not only the table that changed. A new transaction moves a wallet balance and every total computed from it, and a user who switches tabs to a stale balance has lost trust in the number, which is the product.
 
+The map is `src/lib/chat-invalidation.ts`. Each entry is a key a load declares with SvelteKit's `depends()`, not a URL, because the same rows reach several screens through different requests:
+
+| Key | Declared by |
+|---|---|
+| `app:transactions`, `app:transaction-detail`, `app:transaction-filters` | The transactions page load |
+| `app:wallets`, `app:categories` | The settings page load |
+| `app:wallet-balances` | Both of those |
+| `app:summary`, `app:overview` | Nothing yet. The screens arrive in M6; the key is in the map so the write already names what it will make stale |
+
+Two rules in the collector, both tested:
+
+- **Deduplicated by tool call id.** The stream hands the same call back on every event that follows it, so the set of ids already acted on is what stops one write refetching the ledger once per token.
+- **Only a call that answered `ok` invalidates anything.** A `TOOL_FORBIDDEN`, a cap and a `CONFIRMATION_REQUIRED` all changed nothing, and refetching because the model was told no buys nothing.
+
+Invalidating reruns the loads that are mounted, which is how the shell refreshes while the user is still in the conversation. A page the user then navigates to runs its load anyway; the map is what keeps the screens that are already open honest.
+
 ## Screens
 
 | Area | Contents |
@@ -198,7 +228,7 @@ A write invalidates the whole derived surface, not only the table that changed. 
 | Session list | Sessions newest first, rename, delete, new chat |
 | Message area | User and assistant messages, tool cards, receipt draft cards, copy and regenerate actions |
 | Canvas | Side panel holding the real form or sheet, driven by URL parameters |
-| Input | Auto-growing textarea, Enter to send, Shift and Enter for a newline, attachment button, stop button while streaming |
+| Input | Auto-growing textarea, Enter to send, Shift and Enter for a newline, attachment button, stop button while streaming. The attachment button opens the same dropzone the transaction form uses, so a receipt photographed into the chat takes the one upload path there is (D23); the turn then carries the file ids |
 | Empty state | Suggestion chips: "How much did I spend on food last month?", "Add a 50,000 lunch expense", "What is my biggest expense this month?" |
 | Status | Thinking, calling a tool (with a human label), streaming |
 
@@ -206,10 +236,18 @@ A write invalidates the whole derived surface, not only the table that changed. 
 
 Tool calls are progress, not output. They never render as JSON.
 
-- Every tool name maps to a human label: `create_transaction` renders as "Creating transaction", `get_spending_summary` as "Calculating summary". A fallback derives a label from the name shape (`noun_verb` to gerund plus noun) so a new tool reads correctly before anyone writes a label.
+- Every tool name maps to a human label: `create_transaction` renders as "Creating transaction", `get_spending_summary` as "Calculating summary". The eleven labels live in the dictionary (UI-1). A fallback derives a label from the name shape (`verb_noun` to gerund plus noun) so a tool added on the service side reads as progress the moment it streams, rather than as an identifier.
 - One finished call renders as a check plus its label. Several collapse to "Used 4 tools", expandable.
-- The in-flight call shows a shimmer on the current label.
+- The in-flight call shows a shimmer on the current label and takes the line for itself: what is happening now is more informative than what has already finished.
+- The arguments are not shown. They are the model's own account of what it was doing; the summary beside each finished call is the API's, and the API's is what happened.
 - **Assistant text that arrives before the last tool call is suppressed while tools are still running.** This is what makes the prompt rule "do not narrate intermediate calls" actually hold; a prompt alone does not ([research](../research/midday.md#16-tool-call-presentation)).
+
+The suppression has two edges worth stating, because both were decisions rather than consequences:
+
+- It lasts for the whole working turn, not only while a call is unanswered. Lifting it between rounds would flash the narration back on screen each time a result arrived.
+- It ends when the turn does. The API persists everything the model wrote, so the stored message that replaces the live one a moment later carries the narration anyway. Hiding it to the end would make the two disagree and buy nothing.
+
+The rule is `visibleText` in `src/lib/chat-stream.ts`, next to the turn it reads, and it is unit tested. It is a control, not a nicety: it is implemented in the app, where it holds, rather than asked for in the prompt, where it does not.
 
 ## UI port map
 
@@ -222,7 +260,7 @@ Tool calls are progress, not output. They never render as JSON.
 | `chat/chat-history.svelte` | `chat-history.tsx` | 262 lines |
 | `chat/chat-header.svelte` | `chat-header.tsx` | 99 lines |
 | `chat/status-indicators.svelte` | `chat-status-indicators.tsx` | 143 lines |
-| `chat/suggestion-button.svelte` | `chat-suggestion-button.tsx` | 46 lines |
+| `chat/chat-suggestions.svelte` | `chat-suggestion-button.tsx` | 46 lines |
 | `chat/tool-call-group.svelte` | new. Pattern from Midday's `tool-call-group.tsx` | |
 | `chat/receipt-draft-card.svelte` | derived from `transaction-receipt-confirmation-modal.tsx` | |
 | `chat/chat-canvas.svelte` | new. Pattern from Midday's `chat-invoice-canvas.tsx`, 90 lines | |
@@ -233,10 +271,18 @@ Not ported from the old app: `canvas/`, `charts/`, `chat-artifact-toggle.tsx`, `
 
 ## Settings
 
-Two fields, on the settings page (CHAT-10):
+Two fields, on the settings page under `?tab=assistant` (CHAT-10), read with `GET /v1/ai/settings` and written with `PATCH /v1/ai/settings` through an ordinary form action.
 
-- **Custom instructions.** Free text, appended to the system prompt. Takes effect on the next turn.
+- **Custom instructions.** Free text, appended to the system prompt. Takes effect on the next turn. Capped at 2,000 characters.
 - **Response language.** `auto`, `english`, `indonesian`.
+
+Three things the page is responsible for, each because of what the fields are rather than how they look:
+
+- **It says that the instructions reach every message.** A user who thinks this is a note to the assistant writes a question in it. The field's own hint says it is for standing preferences, and that it costs a little on every message.
+- **It counts down to the bound.** The text is prepended to every turn, so an unbounded field is an unbounded cost per turn, charged forever rather than once. The counter is characters as the API counts them, which is code points rather than UTF-16 units: counting the JavaScript way would refuse text the API accepts, and only for the users whose text leaves the basic plane. Over the bound, the save button is disabled and the count says by how much. The API validating again is the control (`VALIDATION_FAILED`, with the field named).
+- **A member sees the values and the reason, not a disabled control.** Reading is open to any member, because what the assistant has been told explains the answers they get; writing is admin and above, and the API re-reads the membership row, so hiding the form is manners rather than the gate (AUTH-4). A disabled field with no explanation reads as a broken page.
+
+Saving these settings invalidates nothing in [the chat invalidation map](#keeping-the-rest-of-the-app-fresh). That map exists for writes the assistant makes to the ledger; no tool writes agent settings, and the form action reloads this page's own data the way every other action here does.
 
 The old app also exposed model, temperature and max steps. All three were stored and never read. They are gone ([data model](../data-model.md#ai_agent_settings)).
 

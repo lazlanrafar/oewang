@@ -21,6 +21,10 @@ class Settings(BaseSettings):
     # Service to service. This process never holds a user JWT (D4).
     ai_service_api_key: str = "dev-insecure-change-me"
     api_internal_url: str = "http://api:3002"
+    # One API call's ceiling, in seconds. A tool call is a database round
+    # trip rather than a model call, so it is short: a turn that waits here
+    # is a user watching a spinner between two model calls.
+    api_timeout_secs: float = 30.0
 
     # The model provider (D67). Empty `ai_base_url` talks to Anthropic
     # directly; set it to a gateway and the same SDK talks to that instead,
@@ -49,6 +53,12 @@ class Settings(BaseSettings):
     owe1_enabled: bool = True
     app_env: str = "development"
     crypto_signing_key_file: Path = Path("./.secrets/ai-owe1-signing-key.pem")
+    #: The API's Ed25519 signing keys, pinned by this service's client, as
+    #: `kid:base64url` pairs separated by commas. The same variable the web
+    #: app pins the API with: one signer, one published set, two clients.
+    #: Empty is a development-only path, where the client reads what the
+    #: local API publishes instead.
+    crypto_signing_public_keys: str = ""
 
     # Requests per minute per caller. The handshake has its own, lower
     # ceiling (docs/api/encryption.md#handshake).
@@ -81,6 +91,17 @@ class Settings(BaseSettings):
                 raise ValueError("AI_SERVICE_API_KEY must be at least 32 characters")
             if not self.ai_api_key:
                 raise ValueError("AI_API_KEY is required outside development")
+            if not self.crypto_signing_public_keys.strip():
+                # A client that cannot verify a handshake stops, and reading
+                # the key from the server it is meant to authenticate proves
+                # nothing. So the pin is required before the first tool call
+                # rather than discovered at it
+                # (docs/api/encryption.md#server-signing-keys).
+                raise ValueError(
+                    "CRYPTO_SIGNING_PUBLIC_KEYS is required outside development: the "
+                    "API's handshake signature is verified against a pinned key, never "
+                    "against one the API itself hands over"
+                )
 
 
 settings = Settings()
