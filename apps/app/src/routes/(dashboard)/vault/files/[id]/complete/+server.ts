@@ -1,7 +1,7 @@
 import { error, json } from '@sveltejs/kit';
 
 import { ApiError } from '$lib/server/api';
-import { completeUpload } from '$lib/server/ledger';
+import { completeUpload } from '$lib/server/vault';
 
 import type { RequestHandler } from './$types';
 

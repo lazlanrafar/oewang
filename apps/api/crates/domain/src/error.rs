@@ -78,6 +78,9 @@ pub enum AppError {
     UnsupportedFileType,
     #[error("file not found")]
     FileNotFound,
+    /// The file is there, but no preview can be made from it (D91).
+    #[error("thumbnail unavailable")]
+    ThumbnailUnavailable,
 
     // -- transport (OWE1). Answered in plaintext; the caller may hold no key.
     #[error("crypto session unknown")]
@@ -165,6 +168,7 @@ impl AppError {
             FileTooLarge => "FILE_TOO_LARGE",
             UnsupportedFileType => "UNSUPPORTED_FILE_TYPE",
             FileNotFound => "FILE_NOT_FOUND",
+            ThumbnailUnavailable => "THUMBNAIL_UNAVAILABLE",
             CryptoSessionUnknown => "CRYPTO_SESSION_UNKNOWN",
             CryptoDecryptFailed => "CRYPTO_DECRYPT_FAILED",
             CryptoReplayDetected => "CRYPTO_REPLAY_DETECTED",
@@ -200,7 +204,8 @@ impl AppError {
             | ConfirmationRequired(_)
             | ToolCapExceeded => 409,
             InviteInvalid | ResetTokenInvalid | NotFound | WalletNotFound | CategoryNotFound
-            | TransactionNotFound | ImportJobNotFound | FileNotFound | SessionNotFound => 404,
+            | TransactionNotFound | ImportJobNotFound | FileNotFound | ThumbnailUnavailable
+            | SessionNotFound => 404,
             Validation(_)
             | TransferRequiresDestination
             | TransferSameWallet
@@ -365,6 +370,7 @@ mod tests {
             AppError::FileTooLarge,
             AppError::UnsupportedFileType,
             AppError::FileNotFound,
+            AppError::ThumbnailUnavailable,
             AppError::CryptoSessionUnknown,
             AppError::CryptoDecryptFailed,
             AppError::CryptoReplayDetected,
@@ -385,9 +391,9 @@ mod tests {
             AppError::Internal(anyhow::anyhow!("boom")),
         ];
 
-        // 46 of the 47 catalog entries. TRANSPORT_UNEXPECTED_RESPONSE is a
+        // 47 of the 48 catalog entries. TRANSPORT_UNEXPECTED_RESPONSE is a
         // client-side condition and has no server variant by design.
-        assert_eq!(samples.len(), 46);
+        assert_eq!(samples.len(), 47);
 
         let mut seen = std::collections::HashSet::new();
         for error in &samples {

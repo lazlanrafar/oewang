@@ -49,6 +49,13 @@ export const CSP_DIRECTIVES: Record<string, string[]> = {
 	 * through a Blob URL that is revoked after load (D23).
 	 */
 	'img-src': ['self', 'data:', 'blob:'],
+	/**
+	 * `blob:` for the one frame the app draws: a PDF in the vault file sheet,
+	 * shown from the same revoked Blob URL as an image (D91). Nothing remote
+	 * can be framed, and a blob URL is only ever minted by this page from
+	 * bytes the API already sniffed as a PDF (SEC-12).
+	 */
+	'frame-src': ['blob:'],
 	'connect-src': ['self'],
 	'font-src': ['self'],
 	'object-src': ['none'],

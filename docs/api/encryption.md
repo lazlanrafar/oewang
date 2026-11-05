@@ -238,6 +238,7 @@ File bytes are receipt images and bank statements. They carry exactly the data t
 - Download: `GET /v1/vault/files/{id}/chunks/{index}` answers `{ "index", "data" }` inside OWE1. The client assembles the bytes.
 - The request AAD already covers the path, so a chunk index cannot be moved. The last chunk is known from `size_bytes`.
 - At 10 MB maximum ([data model](../data-model.md#vault_files)) a file is at most 20 chunks.
+- A thumbnail is the same: `GET /v1/vault/files/{id}/thumbnail` answers `{ "type": "image/jpeg", "data" }` inside OWE1, and the SvelteKit server hands the browser the bytes from its own origin (D91). A preview is small and derived, but it is still a picture of a receipt.
 - A 512 KiB chunk fits the 1 MiB body limit with room to spare, and the arithmetic is worth writing down because it is what sets the chunk size: base64 takes 512 KiB to about 683 KiB, the seal adds a 16-byte tag, and base64 over the ciphertext brings the body to about 911 KiB.
 
 **This replaces signed URLs.** The original VLT-3 ("a signed URL valid for 15 minutes") is incompatible with the scheme: a signed URL hands the browser a path to object storage, where the bytes travel outside the envelope and the URL itself leaks into history and logs. Serving chunks through the API costs API bandwidth and rules out a CDN for file delivery. That is the price of encrypting file bytes, and it is stated here rather than discovered later (D23).

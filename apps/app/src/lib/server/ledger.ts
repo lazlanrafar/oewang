@@ -285,65 +285,6 @@ export function createTransactions(transactions: TransactionPayload[], token?: s
 	});
 }
 
-export type VaultFile = {
-	id: string;
-	name: string;
-	size: number;
-	type: string;
-	sha256: string | null;
-	status: 'pending' | 'ready';
-};
-
-export type BegunUpload = {
-	id: string;
-	chunk_size: number;
-	chunk_count: number;
-	status: string;
-};
-
-/**
- * Start an upload (VLT-1).
- *
- * Nothing is stored yet: the row exists so a chunk can be addressed, and
- * stays pending until the bytes have been checked against what was
- * declared.
- */
-export function beginUpload(
-	body: { filename: string; content_type: string; size_bytes: number },
-	token?: string
-) {
-	return api<BegunUpload>({ method: 'POST', path: '/v1/vault/files', body, token });
-}
-
-/** One chunk, base64 inside the envelope. Never a signed URL (D23). */
-export function putChunk(fileId: string, index: number, data: string, token?: string) {
-	return api<null>({
-		method: 'PUT',
-		path: `/v1/vault/files/${fileId}/chunks/${index}`,
-		body: { data },
-		token
-	});
-}
-
-export function completeUpload(fileId: string, token?: string) {
-	return api<VaultFile>({
-		method: 'POST',
-		path: `/v1/vault/files/${fileId}/complete`,
-		token
-	});
-}
-
-export function readChunk(fileId: string, index: number, token?: string) {
-	return api<{ index: number; data: string }>({
-		path: `/v1/vault/files/${fileId}/chunks/${index}`,
-		token
-	});
-}
-
-export function readFile(fileId: string, token?: string) {
-	return api<VaultFile>({ path: `/v1/vault/files/${fileId}`, token });
-}
-
 export type TransactionItem = {
 	id: string;
 	name: string;

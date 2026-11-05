@@ -101,6 +101,8 @@ class Outcome:
     low_confidence_fields: list[str]
     passes: int
     models: list[str] = field(default_factory=list)
+    #: What the passes cost, in the shape `model.usage_report` gives.
+    usage: dict[str, object] = field(default_factory=dict)
     #: Field names the targeted pass re-asked for. Logged, not returned:
     #: the caller sees the flagged fields, which is the same information
     #: in the form the confirmation sheet needs.
@@ -143,6 +145,13 @@ class _Budget:
     deadline: float
     per_call_timeout: float
     calls: int = 0
+    #: Summed over every pass that came back, whether or not its answer
+    #: parsed (D92). A pass that timed out or failed in transport returns
+    #: no message, so whatever it spent is not counted.
+    input_tokens: int = 0
+    output_tokens: int = 0
+    #: The last model asked, which is the one the cost mostly belongs to.
+    model: str | None = None
 
     @property
     def remaining(self) -> float:
@@ -225,6 +234,11 @@ async def _call_model(
         # request, and the request is somebody's receipt (OPS-3).
         logger.info("extraction pass on %s failed with %s", model_id, type(error).__name__)
         return None
+
+    tokens_in, tokens_out = model.tokens_of(message)
+    budget.input_tokens += tokens_in
+    budget.output_tokens += tokens_out
+    budget.model = model_id
 
     try:
         return parsing.load_object(parsing.answer_text(message))
@@ -351,6 +365,7 @@ async def run_ladder(
             low_confidence_fields=low_confidence_fields(result, today=today),
             passes=passes,
             models=models,
+            usage=model.usage_report(budget.input_tokens, budget.output_tokens, budget.model),
             re_extracted=re_extracted,
         )
 

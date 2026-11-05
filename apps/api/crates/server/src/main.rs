@@ -20,6 +20,7 @@ mod routes;
 mod state;
 mod telegram;
 mod transactions;
+mod usage;
 mod vault;
 mod workspaces;
 
@@ -285,6 +286,8 @@ fn protected_routes(state: AppState) -> Router<AppState> {
         )
         // Workspaces and members.
         .route("/v1/workspaces", get(workspaces::handler::list_workspaces))
+        // What the workspace spends: tokens and stored bytes, no limit (D92).
+        .route("/v1/workspaces/current/usage", get(usage::handler::get))
         .route(
             "/v1/workspaces/current",
             get(workspaces::handler::current_workspace)
@@ -467,10 +470,19 @@ fn protected_routes(state: AppState) -> Router<AppState> {
         )
         // Files. Bytes travel as base64 inside the envelope; no signed
         // object-storage URL exists anywhere (D23, VLT-3).
-        .route("/v1/vault/files", post(vault::handler::begin))
+        .route(
+            "/v1/vault/files",
+            get(vault::handler::list).post(vault::handler::begin),
+        )
         .route(
             "/v1/vault/files/{id}",
-            get(vault::handler::get_file).delete(vault::handler::delete_file),
+            get(vault::handler::get_file)
+                .patch(vault::handler::update)
+                .delete(vault::handler::delete_file),
+        )
+        .route(
+            "/v1/vault/files/{id}/thumbnail",
+            get(vault::handler::thumbnail),
         )
         .route(
             "/v1/vault/files/{id}/chunks/{index}",

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, name, key, size, type AS \"type!\", sha256, status, created_at\n           FROM vault_files\n           WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL",
+  "query": "INSERT INTO vault_files (id, workspace_id, name, key, size, type)\n           VALUES ($1, $2, $3, $4, $5, $6)\n           RETURNING id, name, key, size, type AS \"type!\", sha256, status, tags, thumbnail, created_at",
   "describe": {
     "columns": [
       {
@@ -40,6 +40,16 @@
       },
       {
         "ordinal": 7,
+        "name": "tags",
+        "type_info": "TextArray"
+      },
+      {
+        "ordinal": 8,
+        "name": "thumbnail",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 9,
         "name": "created_at",
         "type_info": "Timestamptz"
       }
@@ -47,6 +57,10 @@
     "parameters": {
       "Left": [
         "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Int8",
         "Text"
       ]
     },
@@ -58,8 +72,10 @@
       false,
       true,
       false,
+      false,
+      true,
       false
     ]
   },
-  "hash": "edbae6c7340812a2b50d59c687d4fce0ff3cced7613d0476d8a14a6d24b41253"
+  "hash": "08d6366c405689c56c2494b2475eb2100a8d8d4101eb471ac8461edcd42d98d8"
 }

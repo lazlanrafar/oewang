@@ -175,6 +175,16 @@ async def test_a_poor_result_escalates_and_merges(ladder_config: Settings) -> No
     assert_no_tools(client)
 
 
+async def test_the_outcome_sums_the_cost_of_every_pass(ladder_config: Settings) -> None:
+    """Two passes, two calls' worth of tokens, credited to the model that
+    answered last (D92)."""
+    client = ScriptedClient(answer("receipt_poor.json"), answer("receipt_clean.json"))
+
+    outcome = await run(client, ladder_config)
+
+    assert outcome.usage == {"input": 200, "output": 40, "model": TERTIARY}
+
+
 async def test_a_middling_result_escalates_to_the_secondary(ladder_config: Settings) -> None:
     """Above half the threshold, so the step up is the next one along."""
     # 100 less the merchant, the date and the items: 55, which is above

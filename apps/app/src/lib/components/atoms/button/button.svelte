@@ -28,13 +28,18 @@
 				// A ghost that removes, as the old app's row trash: red at rest, a red
 				// tint on hover, never the filled destructive block in a table row.
 				'ghost-destructive': 'text-destructive hover:bg-destructive/10 hover:text-destructive',
+				// The old vault panel's Delete: an outline that turns red on hover.
+				'outline-destructive':
+					'border bg-transparent text-destructive hover:border-destructive/50 hover:bg-destructive/10 hover:text-destructive',
 				link: 'text-primary underline-offset-4 hover:underline'
 			},
 			size: {
 				default: 'h-9 px-4 py-2',
 				sm: 'h-8 px-3 text-xs',
 				lg: 'h-10 px-8',
-				icon: 'h-9 w-9'
+				icon: 'h-9 w-9',
+				// The old app's small-caps action, as under a sheet's attachments.
+				caps: 'h-9 gap-2 px-3 font-medium text-[10px] uppercase tracking-widest'
 			}
 		},
 		defaultVariants: {

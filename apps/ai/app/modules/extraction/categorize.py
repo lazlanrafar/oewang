@@ -85,13 +85,14 @@ async def categorize(
     items: list[str],
     categories: list[str],
     config: Settings,
-) -> tuple[str | None, str]:
-    """One call. Returns the category name, or `None`, and the model used.
+) -> tuple[str | None, str, dict[str, object]]:
+    """One call. Returns the category name, or `None`, the model used, and
+    what the call cost.
 
     No call at all when there is nothing to choose from.
     """
     if not categories:
-        return None, config.ai_chat_model
+        return None, config.ai_chat_model, model.usage_report(0, 0, None)
 
     message = await model.complete(
         model=config.ai_chat_model,
@@ -111,7 +112,10 @@ async def categorize(
     # Whether it chose, never what: a category name is the workspace's own
     # content (OPS-3).
     logger.info("categorize chose %s of %d", "one" if category else "none", len(categories))
-    return category, config.ai_chat_model
+    tokens_in, tokens_out = model.tokens_of(message)
+    return category, config.ai_chat_model, model.usage_report(
+        tokens_in, tokens_out, config.ai_chat_model
+    )
 
 
 __all__ = [

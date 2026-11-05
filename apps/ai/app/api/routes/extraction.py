@@ -127,6 +127,7 @@ async def _extract(kind: str, body: ExtractionRequest, request: Request) -> JSON
             passes=outcome.passes,
             models=outcome.models,
             today=body.today,
+            usage=outcome.usage,
         ),
         request_id,
     )
@@ -162,7 +163,7 @@ async def map_columns(body: ColumnMappingRequest, request: Request) -> JSONRespo
     request_id = request_id_of(request, body)
 
     try:
-        mapping, used = await columns.map_columns(
+        mapping, used, usage = await columns.map_columns(
             columns=body.columns,
             # Clamped on the model, not on the prompt builder: two rows,
             # each cell at 80 characters.
@@ -174,7 +175,7 @@ async def map_columns(body: ColumnMappingRequest, request: Request) -> JSONRespo
     except model.ModelUnavailable:
         return error_response("MODEL_UNAVAILABLE", MODEL_UNAVAILABLE_MESSAGE, request_id)
 
-    return envelope({"mapping": mapping, "model": used}, request_id)
+    return envelope({"mapping": mapping, "model": used, "usage": usage}, request_id)
 
 
 @router.post("/receipt/categorize", response_model=None)
@@ -189,7 +190,7 @@ async def receipt_categorize(body: CategorizeRequest, request: Request) -> JSONR
     request_id = request_id_of(request, body)
 
     try:
-        category, used = await categorize.categorize(
+        category, used, usage = await categorize.categorize(
             merchant=body.merchant,
             items=body.items,
             categories=body.categories,
@@ -200,4 +201,4 @@ async def receipt_categorize(body: CategorizeRequest, request: Request) -> JSONR
     except model.ModelUnavailable:
         return error_response("MODEL_UNAVAILABLE", MODEL_UNAVAILABLE_MESSAGE, request_id)
 
-    return envelope({"category": category, "model": used}, request_id)
+    return envelope({"category": category, "model": used, "usage": usage}, request_id)

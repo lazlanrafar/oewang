@@ -59,6 +59,23 @@ async def complete(**kwargs: Any) -> Any:
         return await stream.get_final_message()
 
 
+def tokens_of(message: Any) -> tuple[int, int]:
+    """Input and output tokens a finished message reports, zero when the
+    provider says nothing. A gateway may omit the field; a missing count is
+    not a reason to fail the call it describes."""
+    usage = getattr(message, "usage", None)
+    return (
+        int(getattr(usage, "input_tokens", 0) or 0),
+        int(getattr(usage, "output_tokens", 0) or 0),
+    )
+
+
+def usage_report(input_tokens: int, output_tokens: int, model_id: str | None) -> dict[str, Any]:
+    """The `usage` field every route answers with (D92). The API writes it
+    to the workspace's ledger; nothing here keeps it."""
+    return {"input": input_tokens, "output": output_tokens, "model": model_id}
+
+
 def set_model_client(client: Any | None) -> None:
     """Install a client, or reset to the configured one with `None`."""
     global _client

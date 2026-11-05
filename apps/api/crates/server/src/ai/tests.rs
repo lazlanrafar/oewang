@@ -504,6 +504,7 @@ async fn should_store_the_assistant_message_when_the_stream_ends(pool: PgPool) {
         Sealer::new(None),
         STREAM_DEADLINE,
         None,
+        crate::usage::TurnMeter::for_channel("user", "web"),
     )
     .await;
 
@@ -558,6 +559,7 @@ async fn should_store_the_words_either_side_of_a_tool_as_two_paragraphs(pool: Pg
         Sealer::new(None),
         STREAM_DEADLINE,
         None,
+        crate::usage::TurnMeter::for_channel("user", "web"),
     )
     .await;
     while receiver.recv().await.is_some() {}
@@ -618,6 +620,7 @@ async fn should_send_and_store_the_artifact_a_tool_left(pool: PgPool) {
             turns: turns.clone(),
             turn_id: "turn_a".to_string(),
         }),
+        crate::usage::TurnMeter::for_channel("user", "web"),
     )
     .await;
 
@@ -683,6 +686,7 @@ async fn should_store_the_tool_calls_beside_the_reply(pool: PgPool) {
         Sealer::new(None),
         STREAM_DEADLINE,
         None,
+        crate::usage::TurnMeter::for_channel("user", "web"),
     )
     .await;
 
@@ -735,6 +739,7 @@ async fn should_store_a_tool_call_that_never_answered(pool: PgPool) {
         Sealer::new(None),
         STREAM_DEADLINE,
         None,
+        crate::usage::TurnMeter::for_channel("user", "web"),
     )
     .await;
     drop(receiver);
@@ -776,6 +781,7 @@ async fn should_store_the_partial_reply_when_the_caller_disconnects(pool: PgPool
         Sealer::new(None),
         STREAM_DEADLINE,
         None,
+        crate::usage::TurnMeter::for_channel("user", "web"),
     )
     .await;
 
@@ -803,6 +809,7 @@ async fn should_end_on_an_error_when_the_other_side_stops_without_saying_done(po
         Sealer::new(None),
         STREAM_DEADLINE,
         None,
+        crate::usage::TurnMeter::for_channel("user", "web"),
     )
     .await;
 
@@ -838,6 +845,7 @@ async fn should_store_nothing_when_the_assistant_said_nothing(pool: PgPool) {
         Sealer::new(None),
         STREAM_DEADLINE,
         None,
+        crate::usage::TurnMeter::for_channel("user", "web"),
     )
     .await;
 

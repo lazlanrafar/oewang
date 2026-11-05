@@ -1,6 +1,6 @@
 # Data Model
 
-Status: draft v0.1, 2026-11-02. Part of the [oewang docs](README.md). Implements [PRD](prd.md) WAL, CAT, TXN, VLT, CHAT and OPS requirements.
+Status: draft v0.1, 2026-11-02. Part of the [oewang docs](README.md). Implements [PRD](prd.md) WAL, CAT, TXN, VLT, CHAT, USG and OPS requirements.
 
 PostgreSQL 16. This doc is the source of truth for every table and column. No other doc repeats a column list.
 
@@ -20,11 +20,11 @@ PostgreSQL 16. This doc is the source of truth for every table and column. No ot
 | Timestamps | `created_at` and `updated_at`, both `timestamptz` with `DEFAULT now()`. Every timestamp column is `timestamptz`: a naive timestamp means whatever the writer's clock meant, which is wrong for a product with a workspace timezone (changed at US-002, from the old app's `timestamp`). |
 | Money | `decimal(19,4)`. Read in Rust as `rust_decimal::Decimal`. Serialized as a string (D12). |
 | Naming | `snake_case` for tables and columns, plural table names. |
-| Migrations | sqlx SQL files under `apps/api/migrations/`, one per logical group: identity, accounts, vault, ledger, chat, audit. Vault precedes ledger because `transaction_attachments` references it. |
+| Migrations | sqlx SQL files under `apps/api/migrations/`, one per logical group: identity, accounts, vault, ledger, chat, audit. Vault precedes ledger because `transaction_attachments` references it. Later changes are numbered after them; the newest is `0010_vault_usage.sql` (D90 to D92). |
 
 ## Tables in scope
 
-Twenty-two tables. The sixteen carried from the old app's schema, plus `refresh_tokens` and `password_reset_tokens` (D38, AUTH-10), `exchange_rates` (D44), and the three Telegram tables (D83). Carried (see [legacy app](reference/legacy-app.md#schema-mapping)) with the billing, quota and integration columns stripped (D8).
+Twenty-three tables. The sixteen carried from the old app's schema, plus `refresh_tokens` and `password_reset_tokens` (D38, AUTH-10), `exchange_rates` (D44), the three Telegram tables (D83), and `ai_usage` (D92). Carried (see [legacy app](reference/legacy-app.md#schema-mapping)) with the billing, quota and integration columns stripped (D8).
 
 ```mermaid
 erDiagram
@@ -50,6 +50,9 @@ erDiagram
     users ||--o{ telegram_links : "links"
     ai_sessions ||--o| telegram_links : "converses in"
     workspaces ||--o{ telegram_link_tokens : "mints"
+    workspaces ||--o{ vault_files : "stores"
+    workspaces ||--o{ ai_usage : "spends"
+    users ||--o{ ai_usage : "made for"
 ```
 
 ### Identity and tenancy
@@ -365,6 +368,8 @@ There is no `stale` column. A job that stopped reporting did so because its task
 | `type` | text | MIME type, sniffed from the bytes and checked against the declared type (SEC-12). One of `image/jpeg`, `image/png`, `image/webp`, `application/pdf` |
 | `sha256` | text | Content hash, recorded at upload completion |
 | `status` | text | `pending` or `ready`. Chunked upload ([file bytes](api/encryption.md#file-bytes)) |
+| `tags` | text[] | Not null, default `'{}'`. Free labels a member puts on a file. At most 10 of at most 32 characters, deduplicated case-insensitively; the bound is enforced by the API, not here, so the rule lives in one place with its tests (VLT-9). Added in `0010` |
+| `thumbnail` | boolean | Nullable. Whether a preview exists at `{key}/thumb`: null means nobody has asked yet, false means it cannot be made (a PDF, or bytes that do not decode) and is never retried, true means it is stored (D91, VLT-12). Added in `0010` |
 | `created_at`, `updated_at`, `deleted_at` | timestamp | |
 
 ```sql
@@ -373,7 +378,11 @@ CREATE INDEX vault_files_workspace_idx ON vault_files (workspace_id) WHERE delet
 
 A file is stored as its chunks, one object per chunk, because that is how it is uploaded and how it is served back ([file bytes](api/encryption.md#file-bytes)). Nothing assembles the whole file except the SHA-256 at completion, which is also where the declared type is checked against the bytes: checking the first chunk alone would let a client send a valid header and anything it liked afterwards. A file that fails that check is soft-deleted and its chunks dropped, so a rejected upload leaves nothing behind.
 
-Dropped from the old table: `tags`, `metadata`, `inactive_at`. The vault is not a feature here, only the backing store for attachments and receipts.
+Dropped from the old table: `metadata`, `inactive_at`. `tags` was dropped too, while the vault was only the backing store for attachments and receipts, and came back when the vault became a browsable feature again (D90, migration `0010`).
+
+The stored preview is one more object at `{key}/thumb`, beside the chunks, and it goes with them when the file is deleted. Deleting a file also soft-deletes its live `transaction_attachments` rows in the same database transaction (VLT-11).
+
+A file's storage is not counted anywhere: storage used is `SUM(size)` over the workspace's `ready`, non-deleted rows ([usage](#usage)).
 
 ### Chat
 
@@ -449,6 +458,31 @@ CREATE INDEX audit_logs_workspace_entity_idx
 ```
 
 Append-only. The row is written inside the mutation's database transaction (D14, OPS-1). `source` is new: in the old app there was no way to tell a chat-driven write from a manual one.
+
+### Usage
+
+Added by D92 in `0010_vault_usage.sql`. The feature is in [Usage](features/usage.md).
+
+#### `ai_usage`
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | text | CUID2, primary key |
+| `workspace_id` | text | FK workspaces, cascade |
+| `user_id` | text | Nullable, FK users, set null. Who the call was made for; null for work no person started directly |
+| `feature` | text | `chat`, `telegram`, `receipt`, `categorize`, `import` or `columns`, by check constraint (USG-2) |
+| `model` | text | Nullable. The model the AI service reported, the last one asked when a ladder escalated |
+| `input_tokens` | integer | Not null, `>= 0`. Summed across every model request the call made |
+| `output_tokens` | integer | Not null, `>= 0` |
+| `created_at` | timestamptz | |
+
+```sql
+CREATE INDEX ai_usage_workspace_idx ON ai_usage (workspace_id, created_at);
+```
+
+Append-only, like `audit_logs`: nothing updates or deletes a row, so a sum over it is the whole history (USG-2). There is no `deleted_at`, because there is nothing to soft-delete; the soft-delete rule protects rows a user can remove, and nobody removes a record of a call that was made. "This month" is `created_at` since the first of the current calendar month in UTC, which is what the index serves.
+
+There is no storage table and no counter column. Storage used is `SUM(size)` and `COUNT(*)` over `vault_files` where `status = 'ready'` and `deleted_at IS NULL` (USG-1). A counter would be a second copy of a number the rows already hold, and it drifts the first time a delete path forgets it.
 
 ### Telegram
 

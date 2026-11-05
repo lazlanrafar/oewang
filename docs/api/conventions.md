@@ -175,6 +175,7 @@ Codes are stable, SCREAMING_SNAKE_CASE, and never reused for a different meaning
 | `FILE_TOO_LARGE` | 413 | Over 10 MB (VLT-1) |
 | `UNSUPPORTED_FILE_TYPE` | 415 | Not JPEG, PNG, WebP or PDF |
 | `FILE_NOT_FOUND` | 404 | Unknown file in this workspace |
+| `THUMBNAIL_UNAVAILABLE` | 404 | The file exists but no preview can be made from it (a PDF, or bytes that do not decode) (D91) |
 
 ### Transport
 

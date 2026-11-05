@@ -457,3 +457,264 @@ async fn should_drop_the_bytes_when_a_file_is_deleted(pool: PgPool) {
         vec!["file.created", "file.uploaded", "file.deleted"]
     );
 }
+
+// ------------------------------------------------------- the browsable vault
+
+use oewang_db::repositories::vault::{FileFilters, FileKind, FileSort};
+use oewang_domain::Page;
+
+const PDF_BYTES: &[u8] = b"%PDF-1.7\n%some pdf body";
+
+fn png() -> Vec<u8> {
+    let image = image::RgbImage::from_pixel(64, 48, image::Rgb([10, 120, 200]));
+    let mut out = std::io::Cursor::new(Vec::new());
+    image.write_to(&mut out, image::ImageFormat::Png).unwrap();
+    out.into_inner()
+}
+
+/// A transaction carrying `file_id`, written as rows: what is under test is
+/// the vault's view of the link, not the ledger's rules.
+async fn attach_to_new_transaction(pool: &PgPool, transaction_id: &str, file_id: &str) {
+    sqlx::query(
+        "INSERT INTO wallets (id, workspace_id, name, currency_code)
+         VALUES ('w_test', $1, 'Cash', 'IDR') ON CONFLICT (id) DO NOTHING",
+    )
+    .bind(WORKSPACE)
+    .execute(pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO transactions
+           (id, workspace_id, wallet_id, amount, base_amount, base_rate, base_rate_source,
+            base_rate_date, date, type, name)
+         VALUES ($1, $2, 'w_test', 1000, 1000, 1, 'same', current_date, now(), 'expense', 'Lunch')",
+    )
+    .bind(transaction_id)
+    .bind(WORKSPACE)
+    .execute(pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO transaction_attachments (id, workspace_id, transaction_id, vault_file_id)
+         VALUES ($1, $2, $3, $4)",
+    )
+    .bind(format!("a_{transaction_id}"))
+    .bind(WORKSPACE)
+    .bind(transaction_id)
+    .bind(file_id)
+    .execute(pool)
+    .await
+    .unwrap();
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_list_only_this_workspaces_ready_files_with_their_use(pool: PgPool) {
+    fixture(&pool).await;
+    let store = MemoryStore::default();
+
+    let photo = upload(&pool, &store, "image/png", &png()).await.unwrap();
+    let statement = upload(&pool, &store, "application/pdf", PDF_BYTES)
+        .await
+        .unwrap();
+    let gone = upload(&pool, &store, "image/jpeg", &jpeg(64))
+        .await
+        .unwrap();
+    service::delete(&pool, &store, actor(), &gone.id)
+        .await
+        .unwrap();
+    attach_to_new_transaction(&pool, "t_one", &photo.id).await;
+
+    let (rows, total) = service::list(
+        &pool,
+        WORKSPACE,
+        &FileFilters::default(),
+        FileSort::Newest,
+        Page::new(None, None),
+    )
+    .await
+    .unwrap();
+
+    assert_eq!(total, 2, "the deleted file is not listed");
+    let used: Vec<(String, i64)> = rows
+        .iter()
+        .map(|row| (row.id.clone(), row.used_by))
+        .collect();
+    assert!(used.contains(&(photo.id.clone(), 1)));
+    assert!(used.contains(&(statement.id.clone(), 0)));
+
+    let (pdfs, _) = service::list(
+        &pool,
+        WORKSPACE,
+        &FileFilters {
+            kind: Some(FileKind::Pdf),
+            ..FileFilters::default()
+        },
+        FileSort::Newest,
+        Page::new(None, None),
+    )
+    .await
+    .unwrap();
+    assert_eq!(pdfs.len(), 1);
+    assert_eq!(pdfs[0].id, statement.id);
+
+    let (elsewhere, total) = service::list(
+        &pool,
+        "ws_other",
+        &FileFilters::default(),
+        FileSort::Newest,
+        Page::new(None, None),
+    )
+    .await
+    .unwrap();
+    assert!(elsewhere.is_empty());
+    assert_eq!(total, 0);
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_treat_search_wildcards_as_plain_characters(pool: PgPool) {
+    fixture(&pool).await;
+    let store = MemoryStore::default();
+    upload(&pool, &store, "image/png", &png()).await.unwrap();
+
+    let (rows, _) = service::list(
+        &pool,
+        WORKSPACE,
+        &FileFilters {
+            search: Some("%"),
+            ..FileFilters::default()
+        },
+        FileSort::Newest,
+        Page::new(None, None),
+    )
+    .await
+    .unwrap();
+
+    assert!(rows.is_empty(), "a typed % matches only a literal %");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_rename_and_retag_a_file_and_audit_it(pool: PgPool) {
+    fixture(&pool).await;
+    let store = MemoryStore::default();
+    let file = upload(&pool, &store, "image/png", &png()).await.unwrap();
+
+    let tags = vec![
+        "Receipt".to_string(),
+        " receipt ".to_string(),
+        "Tax".to_string(),
+    ];
+    let updated = service::update(
+        &pool,
+        actor(),
+        &file.id,
+        Some("lunch/march.png"),
+        Some(&tags),
+    )
+    .await
+    .unwrap();
+
+    assert_eq!(
+        updated.name, "lunch_march.png",
+        "a rename is cleaned like an upload"
+    );
+    assert_eq!(updated.tags, vec!["Receipt", "Tax"]);
+
+    let audited: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM audit_logs WHERE entity_id = $1 AND action = 'file.updated'",
+    )
+    .bind(&file.id)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(audited, 1);
+
+    let too_many: Vec<String> = (0..11).map(|n| format!("t{n}")).collect();
+    let refused = service::update(&pool, actor(), &file.id, None, Some(&too_many)).await;
+    assert!(matches!(refused, Err(AppError::Validation(_))));
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_detach_a_deleted_file_from_every_transaction(pool: PgPool) {
+    fixture(&pool).await;
+    let store = MemoryStore::default();
+    let file = upload(&pool, &store, "image/png", &png()).await.unwrap();
+    attach_to_new_transaction(&pool, "t_one", &file.id).await;
+    attach_to_new_transaction(&pool, "t_two", &file.id).await;
+
+    let detail = service::detail(&pool, WORKSPACE, &file.id).await.unwrap();
+    assert_eq!(detail.used_by, 2);
+    assert_eq!(detail.transactions.len(), 2);
+
+    service::delete(&pool, &store, actor(), &file.id)
+        .await
+        .unwrap();
+
+    let live: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM transaction_attachments WHERE vault_file_id = $1 AND deleted_at IS NULL",
+    )
+    .bind(&file.id)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(live, 0);
+
+    let after: serde_json::Value = sqlx::query_scalar(
+        "SELECT after FROM audit_logs WHERE entity_id = $1 AND action = 'file.deleted'",
+    )
+    .bind(&file.id)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(after["detached"], 2);
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_make_a_preview_once_and_keep_it(pool: PgPool) {
+    fixture(&pool).await;
+    let store = MemoryStore::default();
+    let file = upload(&pool, &store, "image/png", &png()).await.unwrap();
+
+    let first = service::thumbnail(&pool, &store, WORKSPACE, &file.id)
+        .await
+        .unwrap();
+    assert!(first.starts_with(&[0xFF, 0xD8, 0xFF]));
+    assert!(store.keys().contains(&format!("{}/thumb", file.key)));
+
+    let row = service::find(&pool, WORKSPACE, &file.id).await.unwrap();
+    assert_eq!(row.thumbnail, Some(true));
+
+    let second = service::thumbnail(&pool, &store, WORKSPACE, &file.id)
+        .await
+        .unwrap();
+    assert_eq!(first, second, "served from storage, not made again");
+
+    service::delete(&pool, &store, actor(), &file.id)
+        .await
+        .unwrap();
+    assert!(store.keys().is_empty(), "the preview goes with the file");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_mark_a_pdf_as_having_no_preview(pool: PgPool) {
+    fixture(&pool).await;
+    let store = MemoryStore::default();
+    let file = upload(&pool, &store, "application/pdf", PDF_BYTES)
+        .await
+        .unwrap();
+
+    let answer = service::thumbnail(&pool, &store, WORKSPACE, &file.id).await;
+    assert!(matches!(answer, Err(AppError::ThumbnailUnavailable)));
+
+    let row = service::find(&pool, WORKSPACE, &file.id).await.unwrap();
+    assert_eq!(row.thumbnail, Some(false), "never decoded again");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_not_make_a_preview_for_another_workspace(pool: PgPool) {
+    fixture(&pool).await;
+    let store = MemoryStore::default();
+    let file = upload(&pool, &store, "image/png", &png()).await.unwrap();
+
+    let answer = service::thumbnail(&pool, &store, "ws_other", &file.id).await;
+    assert!(matches!(answer, Err(AppError::FileNotFound)));
+}

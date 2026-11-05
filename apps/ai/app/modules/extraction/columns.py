@@ -212,8 +212,9 @@ def clean_mapping(body: dict[str, Any], columns: list[str]) -> dict[str, str]:
 
 async def map_columns(
     *, columns: list[str], sample_rows: list[dict[str, str]], config: Settings
-) -> tuple[dict[str, str], str]:
-    """One call. Returns the cleaned mapping and the model that made it.
+) -> tuple[dict[str, str], str, dict[str, object]]:
+    """One call. Returns the cleaned mapping, the model that made it, and
+    what the call cost.
 
     `tools=[]`, like every other call in this package: the column names
     and sample cells came out of a file somebody uploaded, so the
@@ -240,7 +241,10 @@ async def map_columns(
     mapping = clean_mapping(body, columns)
     # Field names only. A column name is the user's own file's content.
     logger.info("column mapping produced %d of %d fields", len(mapping), len(MAPPING_FIELDS))
-    return mapping, config.ai_chat_model
+    tokens_in, tokens_out = model.tokens_of(message)
+    return mapping, config.ai_chat_model, model.usage_report(
+        tokens_in, tokens_out, config.ai_chat_model
+    )
 
 
 __all__ = [

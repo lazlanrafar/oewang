@@ -23,7 +23,8 @@
 		"switch_workspace": "Switch workspace",
 		"user_menu": "Account",
 		"accounts": "Accounts",
-		"apps": "Apps"
+		"apps": "Apps",
+		"vault": "Vault"
 	},
 	"common": {
 		"loading": "Loading",
@@ -351,7 +352,27 @@
 		"language_english": "English",
 		"language_indonesian": "Bahasa Indonesia",
 		"assistant_read_only": "Only an owner or an admin can change what the assistant is told. These are the settings in force for this workspace.",
-		"assistant_unavailable": "The assistant's settings could not be read just now, so they are not shown. Nothing has changed. Reload to try again."
+		"assistant_unavailable": "The assistant's settings could not be read just now, so they are not shown. Nothing has changed. Reload to try again.",
+		"nav_usage": "Usage",
+		"usage_title": "Usage",
+		"usage_description": "What this workspace stores and what the assistant has spent. Recorded and shown, with no limit for now.",
+		"usage_storage": "Storage",
+		"usage_storage_detail": "{count} files in the vault",
+		"usage_tokens_month": "AI tokens this month",
+		"usage_tokens_total": "AI tokens, all time",
+		"usage_tokens_detail": "{input} in · {output} out",
+		"usage_by_feature": "By feature",
+		"usage_feature": "Feature",
+		"usage_calls": "Calls",
+		"usage_month": "This month",
+		"usage_total": "All time",
+		"usage_empty": "No AI calls recorded yet.",
+		"usage_feature_chat": "Chat",
+		"usage_feature_telegram": "Telegram",
+		"usage_feature_receipt": "Receipt scan",
+		"usage_feature_categorize": "Receipt category",
+		"usage_feature_import": "Statement import",
+		"usage_feature_columns": "Column mapping"
 	},
 	"txn": {
 		"search_placeholder": "Search transactions",
@@ -530,7 +551,19 @@
 		"error_rejected_type": "Accepted: JPEG, PNG, WebP and PDF.",
 		"error_unsupported_type": "Those bytes are not the type claimed.",
 		"error_too_large": "The limit is 10 MB.",
-		"error_failed": "Upload failed."
+		"error_failed": "Upload failed.",
+		"attachments": "Attachments",
+		"add_or_upload": "Add or upload files",
+		"click_to_browse": "Click to browse",
+		"drag_drop": "or drag and drop files here",
+		"upload_hint": "Images and PDFs from your computer or Vault",
+		"saving": "Saving...",
+		"open": "Open {name}",
+		"preview_unavailable": "Preview not available for this file type",
+		"open_original_file": "Open Original File",
+		"open_new_tab": "Open in new tab",
+		"download_short": "Download",
+		"close": "Close"
 	},
 	"apps": {
 		"search_placeholder": "Search apps...",
@@ -614,5 +647,120 @@
 		"chart_empty": "Nothing recorded in this range.",
 		"starting": "Starting a conversation",
 		"start_failed": "The conversation could not be started. Try again."
+	},
+	"vault": {
+		"title": "Vault",
+		"description": "Manage your documents and receipts securely.",
+		"upload_button": "Upload",
+		"search_placeholder": "Search files...",
+		"view_list": "List view",
+		"view_grid": "Grid view",
+		"drop_zone": {
+			"title": "Drop to upload your documents",
+			"description": "Images or PDFs only"
+		},
+		"empty": {
+			"title": "No files found",
+			"no_results": "No results for \"{search}\". Try different keywords.",
+			"get_started": "Upload your first file to get started.",
+			"clear_search": "Clear search",
+			"action": "Upload File"
+		},
+		"storage": {
+			"usage": "{used} used",
+			"files": "{count} files",
+			"title": "Vault Storage"
+		},
+		"details": {
+			"title": "File Details",
+			"date_created": "Date Created",
+			"format": "Format",
+			"file_size": "File Size",
+			"used_by": "Used by",
+			"tags": "Tags",
+			"no_tags": "No tags added",
+			"suggested_tags": "Suggested Tags",
+			"add_custom_tag": "Add custom tag...",
+			"add_tag_button": "Add",
+			"remove_tag": "Remove tag {tag}",
+			"rename": "Rename",
+			"rename_label": "File name",
+			"view_full": "View full",
+			"more_actions": "More actions",
+			"open_original": "Open Original",
+			"download_local": "Download Local",
+			"delete": "Delete",
+			"transactions": "Linked transactions",
+			"no_transactions": "Not attached to any transaction.",
+			"untitled": "Untitled",
+			"loading": "Loading file...",
+			"missing": "This file is no longer in the vault."
+		},
+		"suggested": {
+			"invoice": "Invoice",
+			"transaction": "Transaction",
+			"receipt": "Receipt",
+			"report": "Report",
+			"contract": "Contract",
+			"document": "Document"
+		},
+		"columns": {
+			"filename": "Filename",
+			"format": "Format",
+			"size": "File Size",
+			"date": "Date Created"
+		},
+		"delete_confirm": {
+			"title": "Delete {name}?",
+			"description": "The file is removed from the vault.",
+			"used": "It is attached to {count} transactions and will be removed from them too.",
+			"confirm": "Delete"
+		},
+		"toasts": {
+			"uploading": "Uploading {count} files...",
+			"upload_success": "All files uploaded successfully",
+			"upload_failed_some": "Some files failed to upload",
+			"delete_success": "File deleted",
+			"delete_failed": "Failed to delete file",
+			"tags_update_success": "Tags updated",
+			"tags_update_failed": "Failed to update tags",
+			"rename_success": "File renamed",
+			"rename_failed": "Failed to rename file"
+		},
+		"loading_more": "Loading more...",
+		"picker": {
+			"title": "Select file",
+			"search": "Search files...",
+			"sort": "Sort",
+			"sort_newest": "Newest first",
+			"sort_name_asc": "Name (A-Z)",
+			"sort_name_desc": "Name (Z-A)",
+			"sort_size_desc": "Size (Largest)",
+			"sort_size_asc": "Size (Smallest)",
+			"file_type": "File type",
+			"type_all": "All types",
+			"type_image": "Images",
+			"type_pdf": "Documents",
+			"file_size": "File size",
+			"size_all": "Any size",
+			"size_lt1": "Under 1MB",
+			"size_1to5": "1MB - 5MB",
+			"size_gt5": "Over 5MB",
+			"size_lt1_short": "< 1MB",
+			"size_1to5_short": "1-5MB",
+			"size_gt5_short": "> 5MB",
+			"add_media": "Add media",
+			"drop": "Drag and drop images and PDFs",
+			"loading": "Loading vault…",
+			"empty": "No vault files found. Upload files in the Vault section first.",
+			"empty_filtered": "No files match these filters.",
+			"clear_selection": "Clear selection",
+			"page": "Page {page} of {total}",
+			"previous": "Previous page",
+			"next": "Next page",
+			"cancel": "Cancel",
+			"done": "Done",
+			"select": "Select {name}"
+		}
 	}
 }

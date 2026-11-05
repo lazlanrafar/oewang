@@ -20,6 +20,7 @@ describe('the content security policy', () => {
 				"style-src 'self'; " +
 				"style-src-attr 'unsafe-inline'; " +
 				"img-src 'self' data: blob:; " +
+				"frame-src blob:; " +
 				"connect-src 'self'; " +
 				"font-src 'self'; " +
 				"object-src 'none'; " +

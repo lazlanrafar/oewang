@@ -410,10 +410,7 @@
 			form that silently dropped the file would be worse than one that
 			does not offer it.
 		-->
-		<div class="grid gap-2">
-			<Label class={labelClass}>Attachments</Label>
-			<FileDropzone bind:files={attachments} {...attachmentDropzone()} />
-		</div>
+		<FileDropzone bind:files={attachments} class="mb-10" {...attachmentDropzone()} />
 	{/if}
 
 	<div class="flex items-center gap-2">

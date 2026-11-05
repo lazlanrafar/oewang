@@ -123,6 +123,11 @@ If the look is wrong, change the component and its specimen together. If one
 screen genuinely needs a different look, that is a variant on the component,
 named and specimened, not a class string at one call site.
 
+The vault port (D90) added three such variants rather than restyling at the
+call site: Button `variant="outline-destructive"` (the file sheet's Delete),
+Button `size="caps"` (the old app's small-caps action, as under a sheet's
+attachments), and Badge `variant="tag"` (a file's tag in the vault sheet).
+
 ## The design system page
 
 `/design-system` renders every component in `$lib/components` on a bare page,
@@ -221,10 +226,12 @@ src/lib/components/
 │               select and the pickers over it (select-account, select-category,
 │               select-group, select-currency, select-column), combobox,
 │               currency-input, date-range-picker, item, empty, stat-card,
-│               field-error, form-error, confirm-dialog, file-dropzone,
-│               attachment-view, the data table and its filter bar
+│               field-error, form-error, confirm-dialog, chart, the file
+│               pieces (file-icon, file-tile, file-card, file-picker,
+│               file-preview, file-dropzone), the data table and its filter bar
 └─ organisms/   a whole feature, and the app's own furniture: transactions/,
-                accounts/, chat/, apps/ (the card, the details sheet, the
+                accounts/, chat/, vault/ (the file sheet, the list view, the
+                skeleton, the storage figure), apps/ (the card, the details sheet, the
                 Telegram connect dialog), settings/ (the settings sidebar, section
                 header, sortable category list) and layouts/ (the sidebar, its nav
                 and the row both sidebars share, the workspace block, the
@@ -260,7 +267,8 @@ call sites.
 - A picker that has to post its value renders a hidden input beside it, or takes `name`. A picker that has to save on change submits its own form, as the account detail sheet does.
 - There is no `shell/`. The app's own furniture is `organisms/layouts/`, because a sidebar that knows the navigation and the workspace is a feature, not a primitive.
 - `atoms/` and `molecules/` are the design system. They are edited to change the design system, never for one feature's convenience.
-- A component that fetches is a mistake. Data comes in as a prop, and so does transport: the dropzone takes `upload`, the attachment view takes `load`, and the routes, the limits and the strings behind them live in `$lib/files.ts` (D78).
+- A component that fetches is a mistake. Data comes in as a prop, and so does transport: the dropzone takes `upload`, the preview takes `load`, a tile or card takes a `thumbnail` function that returns a URL, and the routes, the limits and the strings behind them live in `$lib/files.ts` (D78). The picker takes `list` and `upload` the same way; `$lib/files.ts` points `list` at this app's own `/vault/files` route. Its search, sort and filters are the dialog's own input, like a combobox's typed text, so they go to the server through `list` and are not written to the page's URL.
+- **The file pieces are feature-neutral** (D78, D90), each a port of one old component: `file-icon` (the old `FileIcon`, one copy where the old app kept three), `file-tile` (the old `AttachmentCard`: a square, the preview or the icon, name and size on hover, a remove button top-right when `onremove` is given), `file-card` (the old `VaultItemCard`), `file-picker` (the old `VaultPickerModal`), `file-preview` (the old `FilePreviewSheet` body; variants `full` and `box`; it owns its Blob URL and revokes it) and `file-dropzone` (the old form sheet's attachments block: label, three-column tile grid, a dashed box that opens the picker or takes a drop). `molecules/attachment-view` was deleted; `file-preview` replaced it.
 - A component over roughly 300 lines is a hint that a sheet is doing a page's job.
 - `components.json` points shadcn-svelte's `ui` alias at `atoms/`, so a generated component lands in the right layer. Generated code is then edited to match the old app (square, flat, no ring) before it is used.
 
@@ -360,7 +368,7 @@ The old app's, unchanged. `static/` holds `favicon.ico` (16 and 32 px), `icon.sv
 
 ## Money and dates
 
-- Money arrives and leaves as a string. It is never parsed into a `number`, not even to compare or sort (D12). The one exception is a chart's geometry: `chartValue` in `$lib/money` turns an amount into a height, and nothing else reads that number (D89). Charts are `molecules/chart` (area, bar, donut); a page never imports `layerchart` directly. A `<Money />` component formats with `Intl.NumberFormat` at render time.
+- Money arrives and leaves as a string. It is never parsed into a `number`, not even to compare or sort (D12). The one exception is a chart's geometry: `chartValue` in `$lib/money` turns an amount into a height, and nothing else reads that number (D89). Charts are `molecules/chart` (area, bar, donut, and `chart-panel` around them); a page never imports `layerchart` directly. Every fill is the diagonal hatch from `chart-hatch.svelte` with the `--chart-*` tokens in `app.css`, never a colour or an opacity picked at the call site (D93). A `<Money />` component formats with `Intl.NumberFormat` at render time.
 - `<Money />` takes an explicit currency. There is no implicit default, because a wallet balance, a transaction amount and a total can each be in a different currency (D37, UI-5). A missing currency is a typecheck error, not a silent fallback to the workspace's.
 - A sort over money happens server-side. A client-side sort over decimal strings would be wrong.
 - Dates arrive as ISO 8601 with an offset, render in the workspace timezone, and are never built from a local `Date` without an explicit zone.

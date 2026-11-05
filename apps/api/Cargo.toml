@@ -54,6 +54,10 @@ sha2 = "0.10"
 rand = "0.8"
 base64 = "0.22"
 
+# Vault previews (D91). Decoders for the accepted image types only, plus the
+# JPEG encoder the preview is written with; nothing that parses PDF or SVG.
+image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp"] }
+
 # Clients
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "stream", "multipart"] }
 

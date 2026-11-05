@@ -113,6 +113,57 @@ pub fn storage_key(workspace_id: &str, file_id: &str) -> String {
     format!("wsp/{workspace_id}/{file_id}")
 }
 
+/// At most this many tags on one file (VLT-9).
+pub const MAX_TAGS: usize = 10;
+
+/// At most this many characters in one tag.
+pub const MAX_TAG_CHARS: usize = 32;
+
+/// The square edge of a stored preview, in pixels (D91). Large enough for
+/// the biggest tile at 2x, small enough to stay a single response.
+pub const THUMBNAIL_PX: u32 = 320;
+
+/// Trim, drop blanks, and dedupe case-insensitively, keeping the first
+/// spelling. A list that is still too long, or a tag that is, is refused
+/// rather than cut, so nothing the user typed disappears silently.
+pub fn normalize_tags(tags: &[String]) -> Result<Vec<String>, AppError> {
+    let mut kept: Vec<String> = Vec::new();
+
+    for tag in tags {
+        let trimmed = tag.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        if trimmed.chars().count() > MAX_TAG_CHARS {
+            return Err(AppError::validation([(
+                "tags",
+                "A tag can be at most 32 characters.",
+            )]));
+        }
+        if !kept
+            .iter()
+            .any(|seen| seen.to_lowercase() == trimmed.to_lowercase())
+        {
+            kept.push(trimmed.to_string());
+        }
+    }
+
+    if kept.len() > MAX_TAGS {
+        return Err(AppError::validation([(
+            "tags",
+            "A file can carry at most 10 tags.",
+        )]));
+    }
+
+    Ok(kept)
+}
+
+/// Whether a preview can be made from this type at all. PDFs cannot: the
+/// sheet shows the document itself instead (D91).
+pub fn has_thumbnail_source(content_type: &str) -> bool {
+    matches!(content_type, "image/jpeg" | "image/png" | "image/webp")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -224,5 +275,30 @@ mod tests {
     #[test]
     fn should_build_a_key_from_ids_and_nothing_else() {
         assert_eq!(storage_key("w1", "f1"), "wsp/w1/f1");
+    }
+
+    #[test]
+    fn should_trim_and_dedupe_tags_keeping_the_first_spelling() {
+        let tags = vec![
+            " Receipt ".to_string(),
+            "receipt".to_string(),
+            "".to_string(),
+            "Invoice".to_string(),
+        ];
+        assert_eq!(normalize_tags(&tags).unwrap(), vec!["Receipt", "Invoice"]);
+    }
+
+    #[test]
+    fn should_refuse_too_many_or_too_long_tags() {
+        let many: Vec<String> = (0..11).map(|n| format!("t{n}")).collect();
+        assert!(normalize_tags(&many).is_err());
+        assert!(normalize_tags(&["x".repeat(33)]).is_err());
+        assert!(normalize_tags(&["x".repeat(32)]).is_ok());
+    }
+
+    #[test]
+    fn should_only_make_previews_from_images() {
+        assert!(has_thumbnail_source("image/png"));
+        assert!(!has_thumbnail_source("application/pdf"));
     }
 }

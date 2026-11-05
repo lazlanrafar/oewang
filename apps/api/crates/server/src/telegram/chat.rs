@@ -138,6 +138,7 @@ async fn session(state: &AppState, link: &TelegramLinkRow) -> Result<String> {
 async fn collect(state: &AppState, turn: ai::TurnRequest) -> Result<String> {
     let workspace_id = turn.workspace_id.clone();
     let session_id = turn.session_id.clone();
+    let meter = crate::usage::TurnMeter::for_channel(&turn.user_id, turn.channel);
 
     let events = state
         .ai
@@ -162,6 +163,7 @@ async fn collect(state: &AppState, turn: ai::TurnRequest) -> Result<String> {
         state.config.chat_stream_timeout,
         // Telegram draws no canvas; what the tools left is swept.
         None,
+        meter,
     ));
 
     let mut reply = String::new();

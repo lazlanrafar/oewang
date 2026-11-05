@@ -20,6 +20,15 @@ export const ACCEPTED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'ap
 
 const CHUNK_BYTES = 512 * 1024;
 
+/** This app's own file routes, which forward to the API (D5). */
+const FILES = '/vault/files';
+
+/** The vault grid loads this many at a time, as the old app did. */
+export const VAULT_PAGE_SIZE = 15;
+
+/** The picker pages this many, as the old app did. */
+export const PICKER_PAGE_SIZE = 12;
+
 /** The form field the API reads an attachment set from. */
 const ATTACHMENT_FIELD = 'attachment_ids';
 
@@ -43,7 +52,7 @@ async function post(url: string, body: unknown): Promise<any> {
  * from nothing to everything.
  */
 export async function uploadFile(file: File, onProgress: Progress): Promise<UploadedFile> {
-	const begun = await post('/transactions/files', {
+	const begun = await post(FILES, {
 		filename: file.name,
 		content_type: file.type,
 		size_bytes: file.size
@@ -55,7 +64,7 @@ export async function uploadFile(file: File, onProgress: Progress): Promise<Uplo
 		const start = index * begun.chunk_size;
 		const slice = file.slice(start, start + begun.chunk_size);
 
-		const response = await fetch(`/transactions/files/${begun.id}/chunks/${index}`, {
+		const response = await fetch(`${FILES}/${begun.id}/chunks/${index}`, {
 			method: 'PUT',
 			body: await slice.arrayBuffer()
 		});
@@ -64,12 +73,13 @@ export async function uploadFile(file: File, onProgress: Progress): Promise<Uplo
 		onProgress(index + 1, begun.chunk_count);
 	}
 
-	const completed = await post(`/transactions/files/${begun.id}/complete`, {});
+	const completed = await post(`${FILES}/${begun.id}/complete`, {});
 	return {
 		id: completed.id,
 		name: completed.name,
 		type: completed.type,
-		size: completed.size
+		size: completed.size,
+		thumbnail: completed.thumbnail ?? null
 	};
 }
 
@@ -84,7 +94,7 @@ export async function loadFile(
 	onProgress(0, chunkCount);
 
 	for (let index = 0; index < chunkCount; index += 1) {
-		const response = await fetch(`/transactions/files/${file.file_id}/chunks/${index}`);
+		const response = await fetch(`${FILES}/${file.file_id}/chunks/${index}`);
 		if (!response.ok) throw new Error(String(response.status));
 		parts.push(await response.arrayBuffer());
 		onProgress(index + 1, chunkCount);
@@ -114,23 +124,190 @@ export function attachmentDropzone() {
 		upload: uploadFile,
 		accept: ACCEPTED_FILE_TYPES,
 		name: ATTACHMENT_FIELD,
-		prompt: t('files.drop'),
-		chooseLabel: t('files.choose'),
-		hint: t('files.hint'),
-		busyLabel: t('files.uploading'),
-		rejectedMessage: t('files.error_rejected_type'),
-		removeLabel: (name: string) => t('files.remove', { name }),
-		errorMessage: uploadErrorMessage
+		label: t('files.attachments'),
+		browseLabel: t('files.click_to_browse'),
+		prompt: t('files.drag_drop'),
+		hint: t('files.upload_hint'),
+		busyLabel: t('files.saving'),
+		errorMessage: uploadErrorMessage,
+		tile: fileTile(),
+		picker: filePicker()
 	};
 }
 
-/** The same, for the view that shows an attached file back. */
-export function attachmentViewer() {
+/** The same, for the preview that shows a file back in its sheet. */
+export function filePreview() {
 	return {
 		load: loadFile,
-		downloadLabel: (name: string) => t('files.download', { name }),
 		loadingLabel: (done: number, total: number) =>
 			t('files.loading', { done: String(done), total: String(total) }),
-		failedLabel: t('files.unreadable')
+		failedLabel: t('files.unreadable'),
+		unavailableLabel: t('files.preview_unavailable'),
+		openOriginalLabel: t('files.open_original_file')
+	};
+}
+
+/**
+ * Where a tile's preview comes from: this app's own route, which asks the
+ * API for a small square JPEG (D91). `null` when there is none to ask for, so
+ * a tile shows its type icon without a request that would only fail.
+ */
+export function thumbnailSrc(file: { id: string; type: string; thumbnail?: boolean | null }) {
+	if (!file.type.startsWith('image/') || file.thumbnail === false) return null;
+	return `${FILES}/${file.id}/thumbnail`;
+}
+
+/** Bytes as the old app showed them: B, then KB and MB to one decimal. */
+export function formatBytes(bytes: number): string {
+	if (bytes < 1024) return `${bytes} B`;
+	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+	return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+/** The subtype, upper-cased by the caller's class, as the old app labelled a format. */
+export function formatOf(type: string): string {
+	return type.split('/')[1] || type;
+}
+
+export type VaultListFile = UploadedFile & {
+	tags: string[];
+	used_by: number;
+	created_at: string;
+};
+
+/** A transaction that carries a file (VLT-10). Money stays a string (D12). */
+export type LinkedTransaction = {
+	id: string;
+	name: string | null;
+	date: string;
+	type: 'income' | 'expense' | 'transfer';
+	amount: string;
+	currency_code: string;
+};
+
+/** A file as its sheet shows it. */
+export type VaultFileDetail = UploadedFile & {
+	tags: string[];
+	created_at: string;
+	used_by: number;
+	transactions: LinkedTransaction[];
+};
+
+export type VaultListQuery = {
+	search?: string;
+	type?: 'image' | 'pdf' | '';
+	size?: 'lt1' | '1to5' | 'gt5' | '';
+	sort?: 'newest' | 'name_asc' | 'name_desc' | 'size_desc' | 'size_asc';
+	page?: number;
+	limit?: number;
+};
+
+/** One page of the vault, every filter applied by the API (VLT-6). */
+export async function listVault(
+	query: VaultListQuery
+): Promise<{ files: VaultListFile[]; total_pages: number }> {
+	const params = new URLSearchParams();
+	for (const [key, value] of Object.entries(query)) {
+		if (value !== undefined && value !== '') params.set(key, String(value));
+	}
+	const response = await fetch(`${FILES}?${params}`);
+	if (!response.ok) throw new Error(await response.text());
+	return response.json();
+}
+
+/**
+ * Upload several files at once behind one toast, as the old app did:
+ * "Uploading 3 files...", then all done or some failed.
+ */
+export async function uploadMany(
+	files: File[],
+	notify: {
+		loading: (message: string) => string | number;
+		success: (message: string, id: string | number) => void;
+		error: (message: string, id: string | number) => void;
+	}
+): Promise<UploadedFile[]> {
+	const accepted = files.filter((file) => ACCEPTED_FILE_TYPES.includes(file.type));
+	if (files.length === 0) return [];
+
+	const id = notify.loading(t('vault.toasts.uploading', { count: files.length }));
+	const results = await Promise.allSettled(accepted.map((file) => uploadFile(file, () => {})));
+	const stored = results
+		.filter((result): result is PromiseFulfilledResult<UploadedFile> => result.status === 'fulfilled')
+		.map((result) => result.value);
+
+	if (stored.length === files.length) notify.success(t('vault.toasts.upload_success'), id);
+	else notify.error(t('vault.toasts.upload_failed_some'), id);
+
+	return stored;
+}
+
+/** The picker's strings and transport, spread into `<FilePicker>`. */
+export function filePicker() {
+	return {
+		list: listVault,
+		upload: uploadFile,
+		thumbnail: thumbnailSrc,
+		formatOf,
+		formatBytes,
+		accept: ACCEPTED_FILE_TYPES,
+		pageSize: PICKER_PAGE_SIZE,
+		labels: {
+			title: t('vault.picker.title'),
+			search: t('vault.picker.search'),
+			sort: t('vault.picker.sort'),
+			sorts: {
+				newest: t('vault.picker.sort_newest'),
+				name_asc: t('vault.picker.sort_name_asc'),
+				name_desc: t('vault.picker.sort_name_desc'),
+				size_desc: t('vault.picker.sort_size_desc'),
+				size_asc: t('vault.picker.sort_size_asc')
+			},
+			listView: t('vault.view_list'),
+			gridView: t('vault.view_grid'),
+			fileType: t('vault.picker.file_type'),
+			types: {
+				'': t('vault.picker.type_all'),
+				image: t('vault.picker.type_image'),
+				pdf: t('vault.picker.type_pdf')
+			},
+			fileSize: t('vault.picker.file_size'),
+			sizes: {
+				'': t('vault.picker.size_all'),
+				lt1: t('vault.picker.size_lt1'),
+				'1to5': t('vault.picker.size_1to5'),
+				gt5: t('vault.picker.size_gt5')
+			},
+			sizesShort: {
+				lt1: t('vault.picker.size_lt1_short'),
+				'1to5': t('vault.picker.size_1to5_short'),
+				gt5: t('vault.picker.size_gt5_short')
+			},
+			addMedia: t('vault.picker.add_media'),
+			drop: t('vault.picker.drop'),
+			loading: t('vault.picker.loading'),
+			empty: t('vault.picker.empty'),
+			emptyFiltered: t('vault.picker.empty_filtered'),
+			clearSelection: t('vault.picker.clear_selection'),
+			page: (page: number, total: number) => t('vault.picker.page', { page, total }),
+			previous: t('vault.picker.previous'),
+			next: t('vault.picker.next'),
+			cancel: t('vault.picker.cancel'),
+			done: t('vault.picker.done'),
+			select: (name: string) => t('vault.picker.select', { name }),
+			uploading: (count: number) => t('vault.toasts.uploading', { count }),
+			uploaded: t('vault.toasts.upload_success'),
+			uploadFailed: t('vault.toasts.upload_failed_some')
+		}
+	};
+}
+
+/** What a tile says about itself, spread into `<FileTile>`. */
+export function fileTile() {
+	return {
+		thumbnail: thumbnailSrc,
+		formatBytes,
+		openLabel: (name: string) => t('files.open', { name }),
+		removeLabel: (name: string) => t('files.remove', { name })
 	};
 }

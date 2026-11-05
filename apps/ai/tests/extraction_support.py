@@ -97,9 +97,18 @@ class Block:
         self.text = text
 
 
+class Usage:
+    """What a provider reports per call. A fixed figure, so a test can count
+    passes by their cost."""
+
+    input_tokens = 100
+    output_tokens = 20
+
+
 class Message:
     def __init__(self, text: str) -> None:
         self.content = [Block(text)]
+        self.usage = Usage()
 
 
 class ScriptedStream:

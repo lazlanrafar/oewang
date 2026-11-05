@@ -6,5 +6,6 @@ pub mod fx;
 pub mod telegram;
 pub mod tokens;
 pub mod transactions;
+pub mod usage;
 pub mod vault;
 pub mod wallets;

@@ -704,6 +704,7 @@ pub async fn parse_receipt(
     ai: &oewang_clients::Owe1Client,
     request_id: &str,
     workspace_id: &str,
+    user_id: Option<&str>,
     file_id: &str,
 ) -> Result<ReceiptOutcome> {
     let workspace = accounts::find_workspace(pool, workspace_id)
@@ -714,8 +715,8 @@ pub async fn parse_receipt(
     let document = crate::ai::extraction::document(pool, store, workspace_id, file_id).await?;
     let answer = crate::ai::extraction::parse_receipt(
         ai,
+        crate::usage::Meter::new(pool, workspace_id, user_id),
         request_id,
-        workspace_id,
         &workspace.currency_code,
         document,
     )

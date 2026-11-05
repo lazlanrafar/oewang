@@ -6,10 +6,16 @@
 //! URL to object storage.
 
 use oewang_clients::storage::{chunk_key, Storage, StorageError};
-use oewang_db::{repositories::vault, PgPool};
+use oewang_db::{
+    repositories::vault::{self, FileFilters, FileListRow, FileSort, LinkedTransactionRow},
+    PgPool,
+};
 use oewang_domain::{
-    files::{chunk_count, storage_key, validate_declaration, verify_type, CHUNK_BYTES},
-    AppError, Result,
+    files::{
+        chunk_count, has_thumbnail_source, normalize_tags, storage_key, validate_declaration,
+        verify_type, CHUNK_BYTES, THUMBNAIL_PX,
+    },
+    AppError, Page, Result,
 };
 use sha2::{Digest, Sha256};
 
@@ -263,6 +269,11 @@ async fn discard(
     vault::soft_delete_file(&mut *tx, actor.workspace_id, &file.id)
         .await
         .map_err(internal)?;
+    // A deleted file is gone from every transaction that carried it, in the
+    // same commit, so no attachment points at nothing (VLT-11).
+    let detached = vault::detach_everywhere(&mut *tx, actor.workspace_id, &file.id)
+        .await
+        .map_err(internal)?;
     log(
         &mut tx,
         actor,
@@ -270,7 +281,7 @@ async fn discard(
         ENTITY,
         &file.id,
         snapshot(file)?,
-        None,
+        Some(serde_json::json!({ "detached": detached })),
     )
     .await?;
 
@@ -283,8 +294,234 @@ async fn discard(
             tracing::warn!(file = %file.id, index, %error, "chunk left behind after delete");
         }
     }
+    if file.thumbnail == Some(true) {
+        if let Err(error) = store.delete(&thumbnail_key(&file.key)).await {
+            tracing::warn!(file = %file.id, %error, "preview left behind after delete");
+        }
+    }
 
     Ok(())
+}
+
+/// One page of the vault (VLT-6), and the total for the pager.
+pub async fn list(
+    pool: &PgPool,
+    workspace_id: &str,
+    filters: &FileFilters<'_>,
+    sort: FileSort,
+    page: Page,
+) -> Result<(Vec<FileListRow>, i64)> {
+    let rows = vault::list_files(
+        pool,
+        workspace_id,
+        filters,
+        sort,
+        i64::from(page.limit),
+        page.offset(),
+    )
+    .await
+    .map_err(internal)?;
+    let total = vault::count_list_files(pool, workspace_id, filters)
+        .await
+        .map_err(internal)?;
+
+    Ok((rows, total))
+}
+
+/// How many transactions a file sheet lists. The count beside it is exact.
+const LINKED_LIMIT: i64 = 20;
+
+#[derive(Debug)]
+pub struct FileDetail {
+    pub file: VaultFileRow,
+    pub used_by: i64,
+    pub transactions: Vec<LinkedTransactionRow>,
+}
+
+/// A file with the transactions that carry it (VLT-10).
+pub async fn detail(pool: &PgPool, workspace_id: &str, file_id: &str) -> Result<FileDetail> {
+    let file = find(pool, workspace_id, file_id).await?;
+    let used_by = vault::count_links(pool, workspace_id, file_id)
+        .await
+        .map_err(internal)?;
+    let transactions = vault::linked_transactions(pool, workspace_id, file_id, LINKED_LIMIT)
+        .await
+        .map_err(internal)?;
+
+    Ok(FileDetail {
+        file,
+        used_by,
+        transactions,
+    })
+}
+
+/// Rename a file, retag it, or both (VLT-8, VLT-9).
+pub async fn update(
+    pool: &PgPool,
+    actor: Actor<'_>,
+    file_id: &str,
+    name: Option<&str>,
+    tags: Option<&[String]>,
+) -> Result<VaultFileRow> {
+    let before = find(pool, actor.workspace_id, file_id).await?;
+    if before.status != "ready" {
+        return Err(AppError::FileNotFound);
+    }
+
+    let name = name.map(clean_name);
+    let tags = tags.map(normalize_tags).transpose()?;
+
+    let mut tx = pool.begin().await.map_err(internal)?;
+    let after = vault::update_file(
+        &mut *tx,
+        actor.workspace_id,
+        file_id,
+        name.as_deref(),
+        tags.as_deref(),
+    )
+    .await
+    .map_err(internal)?
+    .ok_or(AppError::FileNotFound)?;
+
+    log(
+        &mut tx,
+        actor,
+        "file.updated",
+        ENTITY,
+        file_id,
+        snapshot(&before)?,
+        snapshot(&after)?,
+    )
+    .await?;
+
+    tx.commit().await.map_err(internal)?;
+    Ok(after)
+}
+
+/// A small square JPEG of an image file, made the first time anybody asks
+/// and stored beside the chunks (D91).
+///
+/// The bytes still travel through the API, never as a URL (D23). A file
+/// that cannot have one is marked so, and is never decoded again.
+pub async fn thumbnail(
+    pool: &PgPool,
+    store: &impl Storage,
+    workspace_id: &str,
+    file_id: &str,
+) -> Result<Vec<u8>> {
+    let file = find(pool, workspace_id, file_id).await?;
+    if file.status != "ready" {
+        return Err(AppError::FileNotFound);
+    }
+    if file.thumbnail == Some(false) {
+        return Err(AppError::ThumbnailUnavailable);
+    }
+    if file.thumbnail == Some(true) {
+        match store.get(&thumbnail_key(&file.key)).await {
+            Ok(bytes) => return Ok(bytes),
+            // Lost from storage: make it again rather than show nothing.
+            Err(StorageError::NotFound) => {}
+            Err(other) => return Err(storage_failed(other)),
+        }
+    }
+    if !has_thumbnail_source(&file.r#type) {
+        mark_thumbnail(pool, workspace_id, file_id, false).await?;
+        return Err(AppError::ThumbnailUnavailable);
+    }
+
+    let mut original = Vec::with_capacity(file.size.max(0) as usize);
+    for index in 0..chunk_count(file.size) {
+        let bytes = store
+            .get(&chunk_key(&file.key, index))
+            .await
+            .map_err(|error| match error {
+                StorageError::NotFound => AppError::FileNotFound,
+                other => storage_failed(other),
+            })?;
+        original.extend_from_slice(&bytes);
+    }
+
+    // Decoding is CPU work; it stays off the async workers.
+    let made = tokio::task::spawn_blocking(move || make_thumbnail(&original))
+        .await
+        .map_err(|error| AppError::Internal(anyhow::anyhow!(error)))?;
+
+    let Some(preview) = made else {
+        mark_thumbnail(pool, workspace_id, file_id, false).await?;
+        return Err(AppError::ThumbnailUnavailable);
+    };
+
+    store
+        .put(&thumbnail_key(&file.key), &preview)
+        .await
+        .map_err(storage_failed)?;
+    mark_thumbnail(pool, workspace_id, file_id, true).await?;
+
+    Ok(preview)
+}
+
+async fn mark_thumbnail(
+    pool: &PgPool,
+    workspace_id: &str,
+    file_id: &str,
+    stored: bool,
+) -> Result<()> {
+    vault::set_thumbnail(pool, workspace_id, file_id, stored)
+        .await
+        .map_err(internal)
+}
+
+/// Where a file's preview lives. Beside its chunks, which are named by a
+/// zero-padded index, so the two cannot collide.
+fn thumbnail_key(file_key: &str) -> String {
+    format!("{file_key}/thumb")
+}
+
+/// Decode, turn upright, crop to a square, encode as JPEG.
+///
+/// The limits bound what a hostile file can make the decoder allocate: a
+/// 10 MB upload can still claim to be a gigapixel image.
+fn make_thumbnail(bytes: &[u8]) -> Option<Vec<u8>> {
+    use image::{DynamicImage, ImageDecoder, ImageReader, Limits};
+
+    let mut limits = Limits::default();
+    limits.max_image_width = Some(8000);
+    limits.max_image_height = Some(8000);
+    limits.max_alloc = Some(128 * 1024 * 1024);
+
+    let mut reader = ImageReader::new(std::io::Cursor::new(bytes))
+        .with_guessed_format()
+        .ok()?;
+    reader.limits(limits);
+
+    let mut decoder = reader.into_decoder().ok()?;
+    let orientation = decoder.orientation().ok();
+    let mut decoded = DynamicImage::from_decoder(decoder).ok()?;
+    if let Some(orientation) = orientation {
+        decoded.apply_orientation(orientation);
+    }
+
+    let square = decoded.resize_to_fill(
+        THUMBNAIL_PX,
+        THUMBNAIL_PX,
+        image::imageops::FilterType::Triangle,
+    );
+
+    // JPEG has no alpha. Dropping it would turn every transparent pixel
+    // black, so a logo on a clear background is laid on white first.
+    let rgba = square.to_rgba8();
+    let flat = image::RgbImage::from_fn(rgba.width(), rgba.height(), |x, y| {
+        let [r, g, b, a] = rgba.get_pixel(x, y).0;
+        let over = |channel: u8| {
+            ((u16::from(channel) * u16::from(a) + 255 * (255 - u16::from(a))) / 255) as u8
+        };
+        image::Rgb([over(r), over(g), over(b)])
+    });
+
+    let mut out = Vec::new();
+    let encoder = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut out, 80);
+    flat.write_with_encoder(encoder).ok()?;
+    Some(out)
 }
 
 async fn require_pending(pool: &PgPool, workspace_id: &str, file_id: &str) -> Result<VaultFileRow> {
@@ -337,5 +574,41 @@ mod tests {
         assert_eq!(clean_name(r"C:\Windows\system32"), "C:_Windows_system32");
         assert_eq!(clean_name("   "), "file");
         assert_eq!(clean_name(&"x".repeat(500)).len(), 200);
+    }
+
+    fn png(width: u32, height: u32) -> Vec<u8> {
+        let image = image::RgbImage::from_pixel(width, height, image::Rgb([200, 40, 40]));
+        let mut out = std::io::Cursor::new(Vec::new());
+        image.write_to(&mut out, image::ImageFormat::Png).unwrap();
+        out.into_inner()
+    }
+
+    #[test]
+    fn should_make_a_square_jpeg_preview_from_an_image() {
+        let preview = make_thumbnail(&png(640, 480)).expect("a preview");
+        assert!(preview.starts_with(&[0xFF, 0xD8, 0xFF]), "a JPEG");
+        let decoded = image::load_from_memory(&preview).unwrap();
+        assert_eq!(
+            (decoded.width(), decoded.height()),
+            (THUMBNAIL_PX, THUMBNAIL_PX)
+        );
+    }
+
+    #[test]
+    fn should_lay_a_transparent_image_on_white_rather_than_black() {
+        let clear = image::RgbaImage::from_pixel(40, 40, image::Rgba([0, 0, 0, 0]));
+        let mut bytes = std::io::Cursor::new(Vec::new());
+        clear.write_to(&mut bytes, image::ImageFormat::Png).unwrap();
+
+        let preview = make_thumbnail(&bytes.into_inner()).expect("a preview");
+        let decoded = image::load_from_memory(&preview).unwrap().to_rgb8();
+        let [r, g, b] = decoded.get_pixel(10, 10).0;
+        assert!(r > 240 && g > 240 && b > 240, "white, got {r},{g},{b}");
+    }
+
+    #[test]
+    fn should_make_no_preview_from_bytes_that_do_not_decode() {
+        assert!(make_thumbnail(b"%PDF-1.7\n").is_none());
+        assert!(make_thumbnail(&[0x89, b'P', b'N', b'G']).is_none());
     }
 }

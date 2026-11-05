@@ -62,6 +62,8 @@ def test_a_receipt_comes_back_as_a_draft(owe1_client: Owe1TestClient) -> None:
     assert draft["date"] == "2026-11-02"
     assert draft["currency"] == "IDR"
     assert body["data"]["passes"] == 1
+    assert body["data"]["usage"]["input"] == 100, "what the pass cost, for the ledger (D92)"
+    assert body["data"]["usage"]["output"] == 20
     assert_no_tools(scripted)
 
 

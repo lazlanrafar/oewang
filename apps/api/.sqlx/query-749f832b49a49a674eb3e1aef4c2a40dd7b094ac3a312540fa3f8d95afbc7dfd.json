@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT COALESCE(sum(size), 0)::bigint AS \"bytes!\", count(*) AS \"files!\"\n           FROM vault_files\n           WHERE workspace_id = $1 AND deleted_at IS NULL AND status = 'ready'",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "bytes!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "files!",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      null,
+      null
+    ]
+  },
+  "hash": "749f832b49a49a674eb3e1aef4c2a40dd7b094ac3a312540fa3f8d95afbc7dfd"
+}

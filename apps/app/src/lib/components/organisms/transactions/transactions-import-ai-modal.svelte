@@ -98,8 +98,12 @@
 				</div>
 
 				<div class="grid gap-2">
-					<Label class="text-subtle text-xs font-normal">{t('import.ai_file')}</Label>
-					<FileDropzone bind:files disabled={starting} {...attachmentDropzone()} />
+					<FileDropzone
+						bind:files
+						disabled={starting}
+						{...attachmentDropzone()}
+						label={t('import.ai_file')}
+					/>
 					<p class="text-subtle text-xs">{t('import.ai_file_hint')}</p>
 				</div>
 

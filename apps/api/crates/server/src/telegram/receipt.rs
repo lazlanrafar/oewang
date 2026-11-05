@@ -119,6 +119,7 @@ pub async fn handle(
         &state.ai,
         &request_id,
         &link.workspace_id,
+        Some(&link.user_id),
         &file_id,
     )
     .await
@@ -170,8 +171,8 @@ pub async fn handle(
             .collect();
         extraction::categorize(
             &state.ai,
+            crate::usage::Meter::new(&state.db, &link.workspace_id, Some(&link.user_id)),
             &request_id,
-            &link.workspace_id,
             draft.merchant.as_deref(),
             &items,
             &names,

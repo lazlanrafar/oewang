@@ -11,6 +11,7 @@ Transactions are the product. Every movement of money is one row: income, expens
 - Changing a transaction screen, a filter, or a column in the table.
 - Changing the CSV export columns, the import wizard steps, or the statement import job.
 - Changing the receipt confirmation sheet or what it writes.
+- Changing how attachments are shown, picked or saved. The file sheet itself is in [vault](vault.md).
 
 ## Data
 
@@ -111,7 +112,7 @@ A side sheet, used for both create and edit.
 - Amount input is decimal-safe: the value is held as a string, never parsed into a JavaScript number (D12).
 - Date defaults to today. Wallet defaults to the workspace default wallet (WAL-3).
 - Optional: name, category, description, ready flag, line items, attachments.
-- Attachments upload immediately on drop, so the sheet submits only IDs.
+- Attachments are the old form sheet's block (`molecules/file-dropzone`): a label, the attached files as a three-column grid of square tiles (`molecules/file-tile`), and a dashed box under them. A click on the box opens the vault picker (`molecules/file-picker`); a drop uploads straight to the vault, with a "Saving..." overlay while it runs. Either way the sheet submits only IDs (VLT-13).
 - The sheet submits the whole set of attachment IDs on every save, so an edit loads the row's current attachments for `?sheet=<id>` itself. It cannot rely on the detail sheet having loaded them: opening the editor from the detail clears `?detail=`.
 
 On success the sheet closes, the list invalidates, and a toast confirms.
@@ -120,7 +121,11 @@ On success the sheet closes, the list invalidates, and a toast confirms.
 
 Read-first view of one transaction: all fields, an editable line-item table, its attachments and its audit history.
 
-Attachment bytes arrive as chunks through the SvelteKit server, which reads them from the API inside the envelope, and are shown from an object URL that is revoked when the sheet closes. No signed object-storage URL exists anywhere in the codebase (VLT-3, D23).
+**Attachments** is an accordion section, open by default, holding the same square tiles as the form sheet. A tile shows the file's server-made preview, never the whole file ([thumbnails](vault.md#thumbnails)). A writer sees a remove button on each tile and an "Add or upload files" button that opens the vault picker. A change saves at once: the page action `?/setAttachments` re-reads the row and PATCHes it with the full attachment set, through the same `resave` helper `setWallet` uses, so the balances, the lock order and the audit row stay behind `PATCH /v1/transactions/{id}`. The set is always whole, so removing the last tile means none rather than leave them alone (TXN-13, VLT-13).
+
+Clicking a tile opens the vault's file sheet stacked over this one, through `?file=<id>` on `/transactions` (VLT-7). It is the sheet the vault page opens, so rename, tags, linked transactions and delete behave the same here.
+
+File bytes arrive as chunks through the SvelteKit server's `/vault/files` routes, which read them from the API inside the envelope, and are shown from an object URL that is revoked when the sheet closes. No signed object-storage URL exists anywhere in the codebase (VLT-3, D23). The proxy routes moved from `transactions/files/` to `vault/files/` with D90, because both pages use them.
 
 Line items move no money: only the transaction's own `amount` does. When the items do not add up to it the sheet raises a badge and nothing more, because a receipt with a service charge on it legitimately does not add up (TXN-12).
 
@@ -488,5 +493,6 @@ The covering index on `(workspace_id, date DESC, created_at DESC) WHERE deleted_
 - [Auth and access control](../security/auth.md#permission-matrix)
 - [Accounts](accounts.md) (a balance correction lands here as a transaction)
 - [Chat](chat.md) (the assistant writes through the same service)
+- [Vault](vault.md) (the file sheet, thumbnails and the picker)
 - [Svelte app best practices](../best-practices/svelte-app.md)
 - [Legacy app](../reference/legacy-app.md#where-to-look-when-porting)

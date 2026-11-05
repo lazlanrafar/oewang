@@ -80,6 +80,8 @@
 		<Button variant="ghost">Ghost</Button>
 		<Button variant="destructive">Destructive</Button>
 		<Button variant="ghost-destructive">Ghost destructive</Button>
+		<Button variant="outline-destructive">Outline destructive</Button>
+		<Button variant="outline" size="caps">Caps size</Button>
 		<Button variant="link">Link</Button>
 	</div>
 	<div class="flex flex-wrap items-center gap-2">
@@ -102,6 +104,7 @@
 		<Badge variant="success">Installed</Badge>
 		<Badge variant="muted">Not set up</Badge>
 		<Badge variant="ghost">Ghost</Badge>
+		<Badge variant="tag">Receipt</Badge>
 		<Badge variant="link" href="#top">Link</Badge>
 	</div>
 </Specimen>

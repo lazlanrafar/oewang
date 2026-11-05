@@ -4,7 +4,7 @@
 
 use chrono::{DateTime, Utc};
 use serde::Serialize;
-use sqlx::PgExecutor;
+use sqlx::{PgExecutor, QueryBuilder};
 
 /// `Serialize` is for the audit snapshot, as in the other repositories.
 #[derive(Debug, Clone, Serialize, sqlx::FromRow)]
@@ -18,6 +18,11 @@ pub struct VaultFileRow {
     pub sha256: Option<String>,
     /// `pending` until every chunk has arrived and been verified.
     pub status: String,
+    /// Free labels (VLT-9).
+    pub tags: Vec<String>,
+    /// Whether a preview is stored at `{key}/thumb`; `None` until first
+    /// asked for (D91).
+    pub thumbnail: Option<bool>,
     pub created_at: DateTime<Utc>,
 }
 
@@ -34,7 +39,7 @@ pub async fn insert_file(
         VaultFileRow,
         r#"INSERT INTO vault_files (id, workspace_id, name, key, size, type)
            VALUES ($1, $2, $3, $4, $5, $6)
-           RETURNING id, name, key, size, type AS "type!", sha256, status, created_at"#,
+           RETURNING id, name, key, size, type AS "type!", sha256, status, tags, thumbnail, created_at"#,
         id,
         workspace_id,
         name,
@@ -53,7 +58,7 @@ pub async fn find_file(
 ) -> Result<Option<VaultFileRow>, sqlx::Error> {
     sqlx::query_as!(
         VaultFileRow,
-        r#"SELECT id, name, key, size, type AS "type!", sha256, status, created_at
+        r#"SELECT id, name, key, size, type AS "type!", sha256, status, tags, thumbnail, created_at
            FROM vault_files
            WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL"#,
         workspace_id,
@@ -75,7 +80,7 @@ pub async fn mark_ready(
         r#"UPDATE vault_files
            SET status = 'ready', sha256 = $3, updated_at = now()
            WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL
-           RETURNING id, name, key, size, type AS "type!", sha256, status, created_at"#,
+           RETURNING id, name, key, size, type AS "type!", sha256, status, tags, thumbnail, created_at"#,
         workspace_id,
         id,
         sha256
@@ -98,6 +103,296 @@ pub async fn soft_delete_file(
     .execute(executor)
     .await
     .map(|result| result.rows_affected())
+}
+
+// ------------------------------------------------------------ browse
+
+/// One row of the vault list: the file plus how many live transactions
+/// carry it (VLT-6).
+#[derive(Debug, Clone, Serialize, sqlx::FromRow)]
+pub struct FileListRow {
+    pub id: String,
+    pub name: String,
+    pub size: i64,
+    pub r#type: String,
+    pub tags: Vec<String>,
+    pub thumbnail: Option<bool>,
+    pub used_by: i64,
+    pub created_at: DateTime<Utc>,
+}
+
+/// What the vault list may be narrowed by. Every field is optional; the
+/// workspace, `ready` and `deleted_at IS NULL` are not.
+#[derive(Debug, Default, Clone)]
+pub struct FileFilters<'a> {
+    pub search: Option<&'a str>,
+    /// `image` matches every `image/*` type; anything else is exact.
+    pub kind: Option<FileKind>,
+    /// Inclusive lower and exclusive upper bound, in bytes.
+    pub min_size: Option<i64>,
+    pub max_size: Option<i64>,
+    pub tag: Option<&'a str>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FileKind {
+    Image,
+    Pdf,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum FileSort {
+    #[default]
+    Newest,
+    NameAsc,
+    NameDesc,
+    SizeDesc,
+    SizeAsc,
+}
+
+impl FileSort {
+    fn order_by(self) -> &'static str {
+        // Fixed strings only: nothing from the request reaches ORDER BY.
+        match self {
+            Self::Newest => " ORDER BY f.created_at DESC, f.id DESC",
+            Self::NameAsc => " ORDER BY lower(f.name) ASC, f.id",
+            Self::NameDesc => " ORDER BY lower(f.name) DESC, f.id",
+            Self::SizeDesc => " ORDER BY f.size DESC, f.id",
+            Self::SizeAsc => " ORDER BY f.size ASC, f.id",
+        }
+    }
+}
+
+fn push_file_filters<'a>(
+    builder: &mut QueryBuilder<'a, sqlx::Postgres>,
+    workspace_id: &'a str,
+    filters: &FileFilters<'a>,
+) {
+    builder.push(" WHERE f.workspace_id = ");
+    builder.push_bind(workspace_id);
+    builder.push(" AND f.deleted_at IS NULL AND f.status = 'ready'");
+
+    if let Some(search) = filters.search {
+        builder.push(" AND f.name ILIKE ");
+        builder.push_bind(format!("%{}%", escape_like(search)));
+    }
+    match filters.kind {
+        Some(FileKind::Image) => {
+            builder.push(" AND f.type LIKE 'image/%'");
+        }
+        Some(FileKind::Pdf) => {
+            builder.push(" AND f.type = 'application/pdf'");
+        }
+        None => {}
+    }
+    if let Some(min) = filters.min_size {
+        builder.push(" AND f.size >= ");
+        builder.push_bind(min);
+    }
+    if let Some(max) = filters.max_size {
+        builder.push(" AND f.size < ");
+        builder.push_bind(max);
+    }
+    if let Some(tag) = filters.tag {
+        builder.push(" AND ");
+        builder.push_bind(tag);
+        builder.push(" = ANY(f.tags)");
+    }
+}
+
+/// `%` and `_` typed by a user are literal characters, not wildcards.
+fn escape_like(value: &str) -> String {
+    value
+        .replace('\\', "\\\\")
+        .replace('%', "\\%")
+        .replace('_', "\\_")
+}
+
+/// One page of the workspace's files (VLT-6).
+pub async fn list_files(
+    executor: impl PgExecutor<'_>,
+    workspace_id: &str,
+    filters: &FileFilters<'_>,
+    sort: FileSort,
+    limit: i64,
+    offset: i64,
+) -> Result<Vec<FileListRow>, sqlx::Error> {
+    let mut builder = QueryBuilder::new(
+        r#"SELECT f.id, f.name, f.size, f.type, f.tags, f.thumbnail, f.created_at,
+                  (SELECT count(*)
+                     FROM transaction_attachments a
+                     JOIN transactions t ON t.id = a.transaction_id
+                    WHERE a.vault_file_id = f.id
+                      AND a.workspace_id = f.workspace_id
+                      AND a.deleted_at IS NULL
+                      AND t.deleted_at IS NULL) AS used_by
+           FROM vault_files f"#,
+    );
+    push_file_filters(&mut builder, workspace_id, filters);
+    builder.push(sort.order_by());
+    builder.push(" LIMIT ");
+    builder.push_bind(limit);
+    builder.push(" OFFSET ");
+    builder.push_bind(offset);
+
+    builder.build_query_as().fetch_all(executor).await
+}
+
+pub async fn count_list_files(
+    executor: impl PgExecutor<'_>,
+    workspace_id: &str,
+    filters: &FileFilters<'_>,
+) -> Result<i64, sqlx::Error> {
+    let mut builder = QueryBuilder::new("SELECT count(*) FROM vault_files f");
+    push_file_filters(&mut builder, workspace_id, filters);
+
+    builder.build_query_scalar().fetch_one(executor).await
+}
+
+/// Rename and retag in one statement. `None` leaves that column alone.
+pub async fn update_file(
+    executor: impl PgExecutor<'_>,
+    workspace_id: &str,
+    id: &str,
+    name: Option<&str>,
+    tags: Option<&[String]>,
+) -> Result<Option<VaultFileRow>, sqlx::Error> {
+    sqlx::query_as!(
+        VaultFileRow,
+        r#"UPDATE vault_files
+           SET name = COALESCE($3, name), tags = COALESCE($4, tags), updated_at = now()
+           WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL AND status = 'ready'
+           RETURNING id, name, key, size, type AS "type!", sha256, status, tags, thumbnail, created_at"#,
+        workspace_id,
+        id,
+        name,
+        tags
+    )
+    .fetch_optional(executor)
+    .await
+}
+
+/// Record whether a preview exists, so the API asks storage at most once.
+pub async fn set_thumbnail(
+    executor: impl PgExecutor<'_>,
+    workspace_id: &str,
+    id: &str,
+    stored: bool,
+) -> Result<(), sqlx::Error> {
+    sqlx::query!(
+        r#"UPDATE vault_files SET thumbnail = $3
+           WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL"#,
+        workspace_id,
+        id,
+        stored
+    )
+    .execute(executor)
+    .await
+    .map(|_| ())
+}
+
+/// A transaction that carries a file, for the file sheet (VLT-10).
+#[derive(Debug, Clone, Serialize, sqlx::FromRow)]
+pub struct LinkedTransactionRow {
+    pub id: String,
+    pub name: Option<String>,
+    pub date: DateTime<Utc>,
+    pub r#type: String,
+    pub amount: rust_decimal::Decimal,
+    pub currency_code: String,
+}
+
+pub async fn linked_transactions(
+    executor: impl PgExecutor<'_>,
+    workspace_id: &str,
+    file_id: &str,
+    limit: i64,
+) -> Result<Vec<LinkedTransactionRow>, sqlx::Error> {
+    sqlx::query_as!(
+        LinkedTransactionRow,
+        r#"SELECT t.id, t.name, t.date, t.type AS "type!", t.amount, w.currency_code
+           FROM transaction_attachments a
+           JOIN transactions t ON t.id = a.transaction_id
+           JOIN wallets w ON w.id = t.wallet_id
+           WHERE a.workspace_id = $1
+             AND a.vault_file_id = $2
+             AND a.deleted_at IS NULL
+             AND t.workspace_id = $1
+             AND t.deleted_at IS NULL
+           ORDER BY t.date DESC, t.id DESC
+           LIMIT $3"#,
+        workspace_id,
+        file_id,
+        limit
+    )
+    .fetch_all(executor)
+    .await
+}
+
+/// How many live transactions carry a file.
+pub async fn count_links(
+    executor: impl PgExecutor<'_>,
+    workspace_id: &str,
+    file_id: &str,
+) -> Result<i64, sqlx::Error> {
+    sqlx::query_scalar!(
+        r#"SELECT count(*) AS "count!"
+           FROM transaction_attachments a
+           JOIN transactions t ON t.id = a.transaction_id
+           WHERE a.workspace_id = $1
+             AND a.vault_file_id = $2
+             AND a.deleted_at IS NULL
+             AND t.deleted_at IS NULL"#,
+        workspace_id,
+        file_id
+    )
+    .fetch_one(executor)
+    .await
+}
+
+/// Detach a file from every transaction, when the file itself is deleted
+/// (VLT-11). Soft, like every other detach.
+pub async fn detach_everywhere(
+    executor: impl PgExecutor<'_>,
+    workspace_id: &str,
+    file_id: &str,
+) -> Result<u64, sqlx::Error> {
+    sqlx::query!(
+        r#"UPDATE transaction_attachments SET deleted_at = now()
+           WHERE workspace_id = $1 AND vault_file_id = $2 AND deleted_at IS NULL"#,
+        workspace_id,
+        file_id
+    )
+    .execute(executor)
+    .await
+    .map(|result| result.rows_affected())
+}
+
+/// Bytes and files the workspace keeps (USG-1). Derived from the rows, so
+/// it cannot drift from what is actually stored.
+#[derive(Debug, Clone, Copy, Serialize)]
+pub struct StorageUsage {
+    pub bytes: i64,
+    pub files: i64,
+}
+
+pub async fn storage_usage(
+    executor: impl PgExecutor<'_>,
+    workspace_id: &str,
+) -> Result<StorageUsage, sqlx::Error> {
+    let row = sqlx::query!(
+        r#"SELECT COALESCE(sum(size), 0)::bigint AS "bytes!", count(*) AS "files!"
+           FROM vault_files
+           WHERE workspace_id = $1 AND deleted_at IS NULL AND status = 'ready'"#,
+        workspace_id
+    )
+    .fetch_one(executor)
+    .await?;
+
+    Ok(StorageUsage {
+        bytes: row.bytes,
+        files: row.files,
+    })
 }
 
 // ------------------------------------------------------- attachments

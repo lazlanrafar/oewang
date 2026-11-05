@@ -3,11 +3,12 @@
  *
  * Grouping mirrors the live app: an unlabelled first group, then Finance,
  * then Workspace, then System. The item set is ours, not the live app's:
- * Calendar, Budget, Debts, Contacts and Vault belong to features this
- * rewrite deliberately drops (docs/prd.md#non-goals-for-v1). Accounts is not
- * among them and never was: wallets are specified in their own right as
- * WAL-1 to WAL-6. Apps came back with Telegram (D83), in the live app's
- * Workspace group, with Telegram as its only app.
+ * Calendar, Budget, Debts and Contacts belong to features this rewrite
+ * deliberately drops (docs/prd.md#non-goals-for-v1). Accounts is not among
+ * them and never was: wallets are specified in their own right as WAL-1 to
+ * WAL-6. Apps came back with Telegram (D83), and Vault came back on request
+ * (D90), both in the live app's Workspace group, Vault first with its old
+ * box icon.
  *
  * Titles are dictionary keys, not strings (UI-1). A route that does not
  * exist yet is marked so the shell renders it disabled rather than linking
@@ -17,6 +18,8 @@
 import {
 	Banknote,
 	Bot,
+	Box,
+	ChartColumn,
 	DatabaseBackup,
 	FileText,
 	Landmark,
@@ -62,7 +65,10 @@ export const navGroups: NavGroup[] = [
 	},
 	{
 		labelKey: 'nav.workspace_group',
-		items: [{ titleKey: 'nav.apps', href: '/apps', icon: SquareDot }]
+		items: [
+			{ titleKey: 'nav.vault', href: '/vault', icon: Box },
+			{ titleKey: 'nav.apps', href: '/apps', icon: SquareDot }
+		]
 	},
 	{
 		labelKey: 'nav.system_group',
@@ -106,6 +112,7 @@ export const settingsNavGroups: NavGroup[] = [
 			{ titleKey: 'settings.nav_passcode', href: '/settings/passcode', icon: Lock, pending: true },
 			{ titleKey: 'settings.nav_currency', href: '/settings/currency', icon: Banknote, pending: true },
 			{ titleKey: 'settings.nav_assistant', href: '/settings/assistant', icon: Bot },
+			{ titleKey: 'settings.nav_usage', href: '/settings/usage', icon: ChartColumn },
 			{ titleKey: 'settings.nav_feedback', href: '/settings/feedback', icon: MessageSquareWarning, pending: true }
 		]
 	}

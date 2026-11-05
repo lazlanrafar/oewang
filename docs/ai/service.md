@@ -255,7 +255,7 @@ A model told its result was truncated asks for the next page. A model handed a q
 | `tool_result` | `{"id": "t1", "ok": true, "summary": "6 categories"}` | The API answered |
 | `artifact` | `{"id": "t1", "type": "spending", "payload": {…}}` | A canvas artifact for that call (D88). **Sent by the API's stream pump, never by this service**: the API built it during the tool call, holds it in the turn store under the call id this service sends as `call_id`, and injects it after the result. An `artifact` event from this service is dropped |
 | `receipt_draft` | `{"draft": {…}}` | A parsed receipt, pending confirmation |
-| `done` | `{"message_id": "clx…", "usage": {"input": 1204, "output": 311}}` | Turn complete |
+| `done` | `{"message_id": "clx…", "usage": {"input": 1204, "output": 311, "model": "claude-sonnet-5-5"}}` | Turn complete. `usage` is summed over every model round in the turn; `model` is `AI_CHAT_MODEL`. The API records it in `ai_usage` (D92) |
 | `error` | `{"code": "TOOL_FAILED", "message": "…"}` | Failure after the stream opened |
 
 Rules:
@@ -311,7 +311,8 @@ Returns:
 ```json
 {
   "mapping": { "date": "Tanggal", "name": "Keterangan", "amount_out": "Debet", "amount_in": "Kredit", "balance": "Saldo" },
-  "model": "claude-sonnet-5-5"
+  "model": "claude-sonnet-5-5",
+  "usage": { "input": 412, "output": 58, "model": "claude-sonnet-5-5" }
 }
 ```
 
@@ -347,7 +348,7 @@ Indonesian bank statements split debit and credit into two columns, which the ol
 |---|---|---|---|
 | `POST /receipt/parse` | [ladder](#extraction-quality-ladder) | none | merchant, date, total, subtotal, tax, currency, line items, quality score |
 | `POST /import/extract` | [ladder](#extraction-quality-ladder) | none | rows of date, description, amount, direction, quality score |
-| `POST /receipt/categorize` | `AI_CHAT_MODEL`, one call | none | `{ category, model }`: one of the given names exactly, or null |
+| `POST /receipt/categorize` | `AI_CHAT_MODEL`, one call | none | `{ category, model, usage }`: one of the given names exactly, or null |
 
 The first two take the same body, because both run the same ladder over the same kind of document (`/receipt/categorize` takes `{ request_id, workspace_id, merchant, items, categories }`, strings only):
 
@@ -388,7 +389,8 @@ Both validate the result before returning it, and `RECEIPT_UNREADABLE` or `STATE
   },
   "quality": { "score": 62, "low_confidence_fields": ["date"], "corrected_fields": [] },
   "passes": 1,
-  "models": ["claude-haiku-5-5"]
+  "models": ["claude-haiku-5-5"],
+  "usage": { "input": 1873, "output": 402, "model": "claude-haiku-5-5" }
 }
 ```
 
@@ -397,7 +399,8 @@ Both validate the result before returning it, and `RECEIPT_UNREADABLE` or `STATE
   "rows": [ { "date": "2026-11-02", "description": "WARUNG TEKKO", "amount": "87500.0000", "direction": "expense" } ],
   "quality": { "score": 88, "low_confidence_fields": [] },
   "passes": 1,
-  "models": ["claude-haiku-5-5"]
+  "models": ["claude-haiku-5-5"],
+  "usage": { "input": 2410, "output": 655, "model": "claude-haiku-5-5" }
 }
 ```
 
@@ -407,6 +410,7 @@ Rules on these shapes:
 - `corrected_fields` is always present and always `[]` from this service. [Cross-field consistency](#cross-field-consistency) is the API's pure Rust pass (D30, AI-7) and it is the only thing that fills it. Two layers correcting the same number is how a user ends up unable to tell which figure came off the receipt.
 - `passes` counts the **model** passes reached: `0` when the PDF's text layer answered and no model was called at all, up to `3`. Pass 4 is Rust's, so it is never counted here.
 - `models` carries one entry per pass, in order, or the sentinel `pdf-text-layer` for a pass 0 answer. It is not a model id and is deliberately not shaped like one, so a cost report cannot count it as a model call.
+- `usage` is on every extraction response: `/receipt/parse`, `/import/extract`, `/import/map-columns` and `/receipt/categorize` (D92). For a ladder it is the tokens of every model request summed across passes, with `model` the last model asked; the ladder's `_Budget` accumulates them. A document answered by a PDF's text layer alone reports zero tokens and a null `model`. `core/model.py` holds the two helpers: `tokens_of(message)` reads a finished message's counts, as zero when a gateway omits them, and `usage_report(input, output, model)` builds the field. This service keeps none of it; the API writes it to `ai_usage` ([usage](../features/usage.md)). An error response carries no `usage`, so the tokens a refused extraction spent are not recorded.
 - A statement row missing a date or an amount is dropped from `rows`. The API would discard it anyway, and the score has already counted it against the page.
 - `low_confidence_fields` is always empty for a statement. There is no field to point at on a forty-row page, and naming every column says less than the score already does.
 

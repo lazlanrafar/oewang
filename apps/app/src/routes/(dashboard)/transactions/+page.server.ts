@@ -4,6 +4,7 @@ import { INVALIDATION_KEYS } from '$lib/chat-invalidation';
 import { ApiError } from '$lib/server/api';
 import { currentMonth } from '$lib/month-range';
 import * as ledger from '$lib/server/ledger';
+import * as vault from '$lib/server/vault';
 
 import type { PageServerLoad } from './$types';
 
@@ -78,6 +79,8 @@ export const load: PageServerLoad = async ({ depends, locals, url, parent }) => 
 		// The receipt the canvas is open on, so the panel can name the file
 		// and the manual form can carry it as an attachment (AI-3).
 		canvasFile: await loadCanvasFile(url, token),
+		// The file sheet a tile opened, stacked over the detail sheet (VLT-10).
+		file: await loadVaultFile(url.searchParams.get('file'), token),
 		meta: transactions.meta,
 		wallets: wallets.data ?? [],
 		categories: categories.data ?? [],
@@ -137,7 +140,17 @@ async function loadCanvasFile(url: URL, token?: string) {
 	if (id === '') return null;
 
 	try {
-		return (await ledger.readFile(id, token)).data ?? null;
+		return (await vault.readFile(id, token)).data ?? null;
+	} catch {
+		return null;
+	}
+}
+
+/** The file `?file=` names, or null when it is gone (D90). */
+async function loadVaultFile(id: string | null, token?: string) {
+	if (!id) return null;
+	try {
+		return (await vault.readFile(id, token)).data ?? null;
 	} catch {
 		return null;
 	}
@@ -208,32 +221,29 @@ export const actions: Actions = {
 	 * written a second time against the bulk path.
 	 */
 	setWallet: async ({ request, locals }) =>
-		run(request, async (form) => {
-			const id = text(form, 'id');
-			const current = await ledger.readTransaction(id, locals.accessToken);
-			const row = current.data;
-			if (!row) throw new Error('NOT_FOUND');
+		run(request, (form) =>
+			resave(text(form, 'id'), { wallet_id: text(form, 'wallet_id') }, locals.accessToken)
+		),
 
-			return ledger.updateTransaction(
-				id,
+	/**
+	 * The detail sheet's attachments, saved as soon as they change.
+	 *
+	 * The whole set, as the form sheet sends it: one hidden input per file,
+	 * so an empty set means "none" rather than "leave them alone" (TXN-13).
+	 */
+	setAttachments: async ({ request, locals }) =>
+		run(request, (form) =>
+			resave(
+				text(form, 'id'),
 				{
-					type: row.type,
-					wallet_id: text(form, 'wallet_id'),
-					to_wallet_id: row.to_wallet_id,
-					category_id: row.category_id,
-					amount: row.amount,
-					to_amount: row.to_amount,
-					original_amount: row.original_amount,
-					original_currency_code: row.original_currency_code,
-					exchange_rate: row.exchange_rate,
-					date: row.date,
-					name: row.name,
-					description: row.description,
-					is_ready: row.is_ready
+					attachment_ids: form
+						.getAll('attachment_ids')
+						.map((value) => String(value))
+						.filter(Boolean)
 				},
 				locals.accessToken
-			);
-		}),
+			)
+		),
 
 	bulkUpdate: async ({ request, locals }) =>
 		run(request, (form) =>
@@ -316,6 +326,47 @@ export const actions: Actions = {
 			)
 		)
 };
+
+/**
+ * Save a row back with some fields changed.
+ *
+ * An account change moves the amount off one wallet and onto another, and
+ * the balances, the locking order and the audit row for that already live
+ * behind `PATCH /v1/transactions/:id`. So the row is read and sent back
+ * with the change applied, rather than that work being written a second
+ * time against the bulk path. Attachments go the same way, because the
+ * bulk path does not carry them.
+ */
+async function resave(
+	id: string,
+	change: Partial<ledger.TransactionPayload>,
+	token?: string
+) {
+	const current = await ledger.readTransaction(id, token);
+	const row = current.data;
+	if (!row) throw new Error('NOT_FOUND');
+
+	return ledger.updateTransaction(
+		id,
+		{
+			type: row.type,
+			wallet_id: row.wallet_id,
+			to_wallet_id: row.to_wallet_id,
+			category_id: row.category_id,
+			amount: row.amount,
+			to_amount: row.to_amount,
+			original_amount: row.original_amount,
+			original_currency_code: row.original_currency_code,
+			exchange_rate: row.exchange_rate,
+			date: row.date,
+			name: row.name,
+			description: row.description,
+			is_ready: row.is_ready,
+			...change
+		},
+		token
+	);
+}
 
 /**
  * A receipt's line items, as the confirmation panel submitted them.

@@ -161,6 +161,7 @@ def extraction_payload(
     passes: int,
     models: list[str],
     today: date,
+    usage: dict[str, object] | None = None,
 ) -> dict[str, object]:
     """The body of either route, assembled in one place.
 
@@ -172,6 +173,7 @@ def extraction_payload(
         "quality": quality.model_dump(),
         "passes": passes,
         "models": models,
+        "usage": usage or {"input": 0, "output": 0, "model": None},
     }
     if kind == "receipt":
         assert isinstance(result, ReceiptResult)

@@ -34,7 +34,9 @@ export const INVALIDATION_KEYS = {
 	categories: 'app:categories',
 	overview: 'app:overview',
 	/** The Apps page's link status, which the connect dialog polls (D85). */
-	integrations: 'app:integrations'
+	integrations: 'app:integrations',
+	/** The vault's files and the storage they take (D90). */
+	vault: 'app:vault'
 } as const;
 
 export type InvalidationKey = (typeof INVALIDATION_KEYS)[keyof typeof INVALIDATION_KEYS];

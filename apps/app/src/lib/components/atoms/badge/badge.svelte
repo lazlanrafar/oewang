@@ -13,6 +13,8 @@
 				success: "bg-green/10 text-green dark:bg-green/20 font-mono text-[10px]",
 				// The old app's "Coming soon" pill: grey, mono, small.
 				muted: "bg-secondary text-muted-foreground font-mono text-[10px] font-normal",
+				// A file's tag in the vault sheet, as the old panel drew it.
+				tag: "h-6 rounded-none border-primary/20 bg-primary/10 px-2 py-0 text-[11px] text-primary",
 				outline: "rounded-none border-border bg-transparent text-caption font-normal text-primary",
 				ghost: "hover:bg-muted hover:text-muted-foreground dark:hover:bg-muted/50",
 				link: "text-primary underline-offset-4 hover:underline",

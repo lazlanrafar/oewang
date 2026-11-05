@@ -1210,8 +1210,8 @@ pub async fn map_columns(
 
     match crate::ai::extraction::map_columns(
         &state.ai,
+        crate::usage::Meter::new(&state.db, &auth.workspace_id, Some(&auth.user_id)),
         &id,
-        &auth.workspace_id,
         &body.columns,
         &samples,
     )

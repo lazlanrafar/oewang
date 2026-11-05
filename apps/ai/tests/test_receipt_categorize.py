@@ -46,6 +46,7 @@ def test_a_category_it_was_shown_comes_back(owe1_client: Owe1TestClient) -> None
     body = call(owe1_client)
 
     assert body["data"]["category"] == "🍜 Food"
+    assert body["data"]["usage"]["input"] == 100, "what the call cost, for the ledger (D92)"
     assert_no_tools(scripted)
 
 

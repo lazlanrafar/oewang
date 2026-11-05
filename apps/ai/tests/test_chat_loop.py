@@ -298,7 +298,9 @@ def test_done_is_last_and_sums_the_usage_of_every_round(owe1_client: Owe1TestCli
 
     name, body = events[-1]
     assert name == "done"
-    assert body["usage"] == {"input": 20, "output": 10}
+    assert body["usage"]["input"] == 20
+    assert body["usage"]["output"] == 10
+    assert body["usage"]["model"], "the model the tokens were spent on"
     assert body["message_id"] is None
     assert "done" not in names(events)[:-1]
 

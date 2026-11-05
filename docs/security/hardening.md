@@ -35,7 +35,7 @@ Rules:
 
 ## File uploads
 
-Receipts and statements are the only uploads. They are also the most common way in for a malicious file.
+Receipts, statements and the files dropped on the vault page are the only uploads, and they share one path. They are also the most common way in for a malicious file.
 
 | Control | Rule |
 |---|---|
@@ -43,7 +43,7 @@ Receipts and statements are the only uploads. They are also the most common way 
 | Declared type | Must be `image/jpeg`, `image/png`, `image/webp` or `application/pdf` |
 | Actual type | Sniffed from the leading bytes at completion, not on the first chunk: a client could otherwise send a valid header and anything it liked after it. A mismatch is rejected with `UNSUPPORTED_FILE_TYPE`, and the file and its chunks go with it |
 | Filename | Stored as data, never used as a path. The storage key is `wsp/{workspace_id}/{file_id}` |
-| Image handling | The API never decodes, resizes or thumbnails an image. Decoding untrusted images in-process is a known class of memory bug, and nothing here needs it |
+| Image handling | The API decodes an image in exactly one place: the vault thumbnail (D91). Decoding untrusted images in-process is a known class of memory bug, so it is bounded: the `image` crate with only its JPEG, PNG and WebP decoders, at most 8000px a side and 128 MB of allocation, inside `spawn_blocking`, once per file. A file that fails is marked and never decoded again. The output is a 320x320 JPEG the API wrote itself. This row said "never" until the vault grid needed previews |
 | Serving | Bytes are served back through the API in encrypted chunks, with `Content-Type` fixed to the sniffed type and `Content-Disposition: attachment` ([encryption](../api/encryption.md#file-bytes)) |
 | SVG and HTML | Not accepted, at all. Both execute script when opened |
 | Scope | A file is workspace-scoped. A cross-workspace request returns 404 (VLT-4) |
@@ -67,7 +67,7 @@ Set by the SvelteKit server on every HTML response.
 
 | Header | Value |
 |---|---|
-| `Content-Security-Policy` | `default-src 'self'; script-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'` |
+| `Content-Security-Policy` | `default-src 'self'; script-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self' data: blob:; frame-src blob:; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'` |
 | `Strict-Transport-Security` | `max-age=31536000; includeSubDomains` in production |
 | `X-Content-Type-Options` | `nosniff` |
 | `Referrer-Policy` | `strict-origin-when-cross-origin` |
@@ -82,6 +82,7 @@ Notes:
 - **The theme bootstrap lives in `app.html`, carrying `%sveltekit.nonce%`.** `mode-watcher` injects its own copy of that script through `{@html}` with no nonce and an unquoted attribute, so under this policy the browser refuses it and the white flash it exists to prevent comes back. The component is rendered with `disableHeadScriptInjection`, which is the option the library documents for this. Changing either storage key or the dark class name on the component means changing the copy in `app.html`.
 - `style-src-attr 'unsafe-inline'` is a deliberate divergence from "no inline anything". Without it, `style-src 'self'` covers attributes too, and the few `style` attributes that carry a per-element geometry value, the upload progress bar's transform and the transactions table's measured total width, stop applying: the table then renders at the wrong width until hydration. It is narrower than it looks, because an injected `<style>` block and a remote stylesheet are both still refused, and writing a style attribute takes HTML injection, which the assistant's renderer forecloses by escaping rather than parsing (SEC-11). Moving those values to CSSOM would close it and cost a first paint.
 - `img-src` allows `blob:` because file bytes arrive decrypted in memory and are shown through a Blob URL that is revoked after load ([encryption](../api/encryption.md#file-bytes)).
+- `frame-src` allows `blob:` and nothing else, for the one frame the app draws: a PDF in the vault file sheet, shown from the same kind of revoked Blob URL (D91). No remote page can be framed, and the only blob URL is one the page minted from bytes the API sniffed as a PDF (SEC-12). Without the directive `default-src 'self'` refuses a blob frame and the PDF preview is blank.
 - `camera=(self)` only because receipt capture on a phone uses it. If capture ships as a file picker instead, drop it to `()`.
 - `frame-ancestors 'none'` plus `X-Frame-Options` is redundant; the CSP directive is the one that counts.
 - In development SvelteKit adds `'unsafe-inline'` to `style-src` itself, because Vite injects stylesheets at runtime. That is a development-only branch in SvelteKit; a production build serves the table above exactly, which was verified against one rather than reasoned about.

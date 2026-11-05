@@ -25,7 +25,10 @@ use oewang_domain::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::vault::service as vault;
+use crate::{
+    usage::{Feature, Meter, Usage},
+    vault::service as vault,
+};
 
 /// The AI service's own routes (docs/ai/service.md#endpoints).
 const RECEIPT_PATH: &str = "/receipt/parse";
@@ -55,6 +58,8 @@ pub struct ReceiptResponse {
     pub draft: RawDraft,
     #[serde(default)]
     pub quality: Quality,
+    #[serde(default)]
+    pub usage: Option<Usage>,
 }
 
 /// One row off a statement, as the model read it. Every figure is a string
@@ -80,6 +85,8 @@ pub struct StatementResponse {
     pub rows: Vec<StatementRow>,
     #[serde(default)]
     pub quality: Quality,
+    #[serde(default)]
+    pub usage: Option<Usage>,
 }
 
 /// Fetch a ready file's bytes and label them for the model.
@@ -116,39 +123,43 @@ pub async fn document(
 /// Ask for a receipt draft (AI-1).
 pub async fn parse_receipt(
     ai: &Owe1Client,
+    meter: Meter<'_>,
     request_id: &str,
-    workspace_id: &str,
     workspace_currency: &str,
     document: Document,
 ) -> Result<ReceiptResponse> {
-    call(
+    let answer: ReceiptResponse = call(
         ai,
         RECEIPT_PATH,
         request_id,
-        workspace_id,
+        meter.workspace_id,
         workspace_currency,
         document,
     )
-    .await
+    .await?;
+    meter.record(Feature::Receipt, answer.usage.as_ref()).await;
+    Ok(answer)
 }
 
 /// Ask for statement rows (AI-4).
 pub async fn extract_statement(
     ai: &Owe1Client,
+    meter: Meter<'_>,
     request_id: &str,
-    workspace_id: &str,
     workspace_currency: &str,
     document: Document,
 ) -> Result<StatementResponse> {
-    call(
+    let answer: StatementResponse = call(
         ai,
         EXTRACT_PATH,
         request_id,
-        workspace_id,
+        meter.workspace_id,
         workspace_currency,
         document,
     )
-    .await
+    .await?;
+    meter.record(Feature::Import, answer.usage.as_ref()).await;
+    Ok(answer)
 }
 
 #[derive(Debug, Serialize)]
@@ -167,22 +178,36 @@ struct MapColumnsRequest<'a> {
 /// afterwards by `csv_import::transform`.
 pub async fn map_columns(
     ai: &Owe1Client,
+    meter: Meter<'_>,
     request_id: &str,
-    workspace_id: &str,
     columns: &[String],
     sample_rows: &[std::collections::BTreeMap<String, String>],
 ) -> Result<oewang_domain::csv_import::ColumnMapping> {
-    ai.post(
-        MAP_COLUMNS_PATH,
-        &MapColumnsRequest {
-            request_id,
-            workspace_id,
-            columns,
-            sample_rows,
-        },
-    )
-    .await
-    .map_err(upstream)
+    let answer: MapColumnsResponse = ai
+        .post(
+            MAP_COLUMNS_PATH,
+            &MapColumnsRequest {
+                request_id,
+                workspace_id: meter.workspace_id,
+                columns,
+                sample_rows,
+            },
+        )
+        .await
+        .map_err(upstream)?;
+    meter.record(Feature::Columns, answer.usage.as_ref()).await;
+    Ok(answer.mapping)
+}
+
+/// The AI service answers `{mapping, model, usage}`. Read as that shape:
+/// reading it as a bare mapping, as this once did, finds no field it knows
+/// and returns an empty mapping without an error.
+#[derive(Debug, Deserialize)]
+struct MapColumnsResponse {
+    #[serde(default)]
+    mapping: oewang_domain::csv_import::ColumnMapping,
+    #[serde(default)]
+    usage: Option<Usage>,
 }
 
 #[derive(Debug, Serialize)]
@@ -198,6 +223,8 @@ struct CategorizeRequest<'a> {
 struct CategorizeResponse {
     #[serde(default)]
     category: Option<String>,
+    #[serde(default)]
+    usage: Option<Usage>,
 }
 
 /// Which of `categories` a saved receipt belongs to, by name (D86).
@@ -208,8 +235,8 @@ struct CategorizeResponse {
 /// because this call did. The caller maps the name to an id by exact match.
 pub async fn categorize(
     ai: &Owe1Client,
+    meter: Meter<'_>,
     request_id: &str,
-    workspace_id: &str,
     merchant: Option<&str>,
     items: &[&str],
     categories: &[&str],
@@ -220,7 +247,7 @@ pub async fn categorize(
 
     let body = CategorizeRequest {
         request_id,
-        workspace_id,
+        workspace_id: meter.workspace_id,
         merchant,
         items: items.to_vec(),
         categories: categories.to_vec(),
@@ -230,7 +257,12 @@ pub async fn categorize(
         .post::<_, CategorizeResponse>(CATEGORIZE_PATH, &body)
         .await
     {
-        Ok(answer) => answer.category,
+        Ok(answer) => {
+            meter
+                .record(Feature::Categorize, answer.usage.as_ref())
+                .await;
+            answer.category
+        }
         Err(error) => {
             tracing::warn!(code = error.code(), "the categorize call failed");
             None
@@ -281,6 +313,20 @@ fn upstream(error: Owe1ClientError) -> AppError {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn should_read_the_mapping_out_of_the_ai_services_answer() {
+        let answer: MapColumnsResponse = serde_json::from_value(serde_json::json!({
+            "mapping": { "date": "Tanggal", "amount": "Jumlah" },
+            "model": "claude-sonnet-5-5",
+            "usage": { "input": 120, "output": 30, "model": "claude-sonnet-5-5" },
+        }))
+        .unwrap();
+
+        assert_eq!(answer.mapping.date.as_deref(), Some("Tanggal"));
+        assert_eq!(answer.mapping.amount.as_deref(), Some("Jumlah"));
+        assert_eq!(answer.usage.map(|usage| usage.input), Some(120));
+    }
 
     #[test]
     fn should_map_an_unreadable_receipt_to_its_own_code() {

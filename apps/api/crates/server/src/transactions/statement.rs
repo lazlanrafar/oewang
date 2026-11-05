@@ -219,8 +219,8 @@ impl Run {
 
         let answer = crate::ai::extraction::extract_statement(
             &self.ai,
+            crate::usage::Meter::new(&self.pool, &self.workspace_id, Some(&self.user_id)),
             &self.request_id,
-            &self.workspace_id,
             &workspace.currency_code,
             document,
         )

@@ -79,8 +79,8 @@
 		type TransactionDraft
 	} from '$lib/components/organisms/transactions';
 	import * as Dialog from '$lib/components/atoms/dialog';
-	import { AttachmentView } from '$lib/components/molecules/attachment-view';
-	import { attachmentViewer } from '$lib/files';
+	import { FilePreview } from '$lib/components/molecules/file-preview';
+	import { filePreview } from '$lib/files';
 	import type { UploadedFile } from '$lib/components/molecules/file-dropzone';
 	import { messageForCode } from '$lib/errors';
 	import { t } from '$lib/i18n';
@@ -654,11 +654,11 @@
 		</Dialog.Header>
 
 		{#if openFile}
-			<AttachmentView
-				{...attachmentViewer()}
+			<FilePreview
+				{...filePreview()}
+				variant="box"
 				file={{
 					id: openFile.id,
-					file_id: openFile.id,
 					name: openFile.name,
 					type: openFile.type,
 					size: openFile.size

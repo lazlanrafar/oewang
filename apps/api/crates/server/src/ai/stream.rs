@@ -36,6 +36,7 @@ use crate::{
     ai::{service, turns::TurnStore},
     owe1::Owe1Context,
     state::AppState,
+    usage::TurnMeter,
 };
 
 /// The AI service's own route (docs/ai/service.md#endpoints).
@@ -77,6 +78,7 @@ pub async fn start(
 
     let workspace_id = turn.workspace_id.clone();
     let session_id = turn.session_id.clone();
+    let meter = TurnMeter::for_channel(&turn.user_id, turn.channel);
     let artifacts = TurnArtifacts {
         turns: state.turns.clone(),
         turn_id: turn.turn_id.clone(),
@@ -107,6 +109,7 @@ pub async fn start(
             Sealer::new(context),
             deadline,
             Some(artifacts),
+            meter,
         )
         .await;
     });
@@ -163,6 +166,7 @@ pub async fn pump<S: EventSource>(
     mut sealer: Sealer,
     deadline: Duration,
     artifacts: Option<TurnArtifacts>,
+    meter: TurnMeter,
 ) {
     let mut reply = String::new();
     let mut usage: Option<Value> = None;
@@ -182,6 +186,7 @@ pub async fn pump<S: EventSource>(
                 // What arrived before the deadline is still the reply
                 // (CHAT-9).
                 persist(
+                    &meter,
                     &pool,
                     &workspace_id,
                     &session_id,
@@ -203,6 +208,7 @@ pub async fn pump<S: EventSource>(
                 let code = error.code().to_string();
                 tracing::warn!(code = %code, "the chat stream failed");
                 persist(
+                    &meter,
                     &pool,
                     &workspace_id,
                     &session_id,
@@ -222,6 +228,7 @@ pub async fn pump<S: EventSource>(
                 // side stopping without one is a failure, and what arrived
                 // before it is still the reply.
                 persist(
+                    &meter,
                     &pool,
                     &workspace_id,
                     &session_id,
@@ -259,6 +266,7 @@ pub async fn pump<S: EventSource>(
             "done" => {
                 usage = payload(&event).get("usage").cloned();
                 let message_id = persist(
+                    &meter,
                     &pool,
                     &workspace_id,
                     &session_id,
@@ -284,6 +292,7 @@ pub async fn pump<S: EventSource>(
             // The caller hung up. What it was sent before that is still its
             // reply, and is stored (CHAT-9).
             persist(
+                &meter,
                 &pool,
                 &workspace_id,
                 &session_id,
@@ -304,6 +313,7 @@ pub async fn pump<S: EventSource>(
                     .is_err()
                 {
                     persist(
+                        &meter,
                         &pool,
                         &workspace_id,
                         &session_id,
@@ -319,6 +329,7 @@ pub async fn pump<S: EventSource>(
 
         if event.name == "error" {
             persist(
+                &meter,
                 &pool,
                 &workspace_id,
                 &session_id,
@@ -492,6 +503,7 @@ impl ToolLog {
 }
 
 async fn persist(
+    meter: &TurnMeter,
     pool: &PgPool,
     workspace_id: &str,
     session_id: &str,
@@ -499,6 +511,10 @@ async fn persist(
     usage: Option<&Value>,
     tools: &ToolLog,
 ) -> Option<String> {
+    // Tokens were spent whether or not anything is worth storing, so the
+    // ledger is written before the early return below (USG-2).
+    meter.record(pool, workspace_id, usage).await;
+
     // A turn that said nothing and did nothing leaves no message. A turn
     // that ran a tool did something, even if the words never arrived.
     if reply.trim().is_empty() && tools.is_empty() {

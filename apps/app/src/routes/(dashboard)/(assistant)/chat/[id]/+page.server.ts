@@ -6,7 +6,7 @@ import { filesFromAttachments } from '$lib/chat-tools';
 import { ApiError } from '$lib/server/api';
 import * as chat from '$lib/server/chat';
 import * as ledger from '$lib/server/ledger';
-import { readFile, type VaultFile } from '$lib/server/ledger';
+import { readFile, type VaultFile } from '$lib/server/vault';
 
 import type { PageServerLoad } from './$types';
 

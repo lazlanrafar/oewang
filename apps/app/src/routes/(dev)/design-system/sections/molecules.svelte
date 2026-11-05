@@ -8,11 +8,15 @@
 	import Wallet from '@lucide/svelte/icons/wallet';
 
 	import { Button } from '$lib/components/atoms/button';
-	import { ChartArea, ChartBar, ChartDonut } from '$lib/components/molecules/chart';
+	import { ChartArea, ChartBar, ChartDonut, ChartPanel } from '$lib/components/molecules/chart';
 	import { Checkbox } from '$lib/components/atoms/checkbox';
 	import { Input } from '$lib/components/atoms/input';
 	import { Switch } from '$lib/components/atoms/switch';
-	import { AttachmentView } from '$lib/components/molecules/attachment-view';
+	import { FileCard } from '$lib/components/molecules/file-card';
+	import { FileIcon } from '$lib/components/molecules/file-icon';
+	import { FilePicker, type PickerFile } from '$lib/components/molecules/file-picker';
+	import { FilePreview } from '$lib/components/molecules/file-preview';
+	import { FileTile } from '$lib/components/molecules/file-tile';
 	import * as ButtonGroup from '$lib/components/molecules/button-group';
 	import { Combobox } from '$lib/components/molecules/combobox';
 	import { ConfirmDialog } from '$lib/components/molecules/confirm-dialog';
@@ -117,6 +121,77 @@
 		}
 		return { id: crypto.randomUUID(), name: file.name, type: file.type, size: file.size };
 	}
+
+	const PIXEL =
+		'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+
+	/** Vault rows for the picker and the tiles, with a pixel for a preview. */
+	const sampleFiles: PickerFile[] = [
+		{ id: 'f1', name: 'warung-tekko.png', type: 'image/png', size: 184320 },
+		{ id: 'f2', name: 'statement-october.pdf', type: 'application/pdf', size: 2_411_724, thumbnail: false },
+		{ id: 'f3', name: 'parking.jpg', type: 'image/jpeg', size: 96_000 },
+		{ id: 'f4', name: 'invoice-0042.pdf', type: 'application/pdf', size: 640_000, thumbnail: false }
+	];
+	const fakeThumbnail = (file: { type: string; thumbnail?: boolean | null }) =>
+		file.type.startsWith('image/') && file.thumbnail !== false ? PIXEL : null;
+	const fakeBytes = (bytes: number) =>
+		bytes < 1024 * 1024 ? `${(bytes / 1024).toFixed(1)} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+	async function fakeList() {
+		await wait(200);
+		return { files: sampleFiles, total_pages: 1 };
+	}
+	const fakeTile = {
+		thumbnail: fakeThumbnail,
+		formatBytes: fakeBytes,
+		openLabel: (name: string) => `Open ${name}`,
+		removeLabel: (name: string) => `Remove ${name}`
+	};
+	const fakePicker = {
+		list: fakeList,
+		upload: fakeUpload,
+		thumbnail: fakeThumbnail,
+		formatOf: (type: string) => type.split('/')[1] ?? type,
+		formatBytes: fakeBytes,
+		accept: ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'],
+		pageSize: 12,
+		labels: {
+			title: 'Select file',
+			search: 'Search files...',
+			sort: 'Sort',
+			sorts: {
+				newest: 'Newest first',
+				name_asc: 'Name (A-Z)',
+				name_desc: 'Name (Z-A)',
+				size_desc: 'Size (Largest)',
+				size_asc: 'Size (Smallest)'
+			},
+			listView: 'List view',
+			gridView: 'Grid view',
+			fileType: 'File type',
+			types: { '': 'All types', image: 'Images', pdf: 'Documents' },
+			fileSize: 'File size',
+			sizes: { '': 'Any size', lt1: 'Under 1MB', '1to5': '1MB - 5MB', gt5: 'Over 5MB' },
+			sizesShort: { lt1: '< 1MB', '1to5': '1-5MB', gt5: '> 5MB' },
+			addMedia: 'Add media',
+			drop: 'Drag and drop images and PDFs',
+			loading: 'Loading vault…',
+			empty: 'No vault files found.',
+			emptyFiltered: 'No files match these filters.',
+			clearSelection: 'Clear selection',
+			page: (page: number, total: number) => `Page ${page} of ${total}`,
+			previous: 'Previous page',
+			next: 'Next page',
+			cancel: 'Cancel',
+			done: 'Done',
+			select: (name: string) => `Select ${name}`,
+			uploading: (count: number) => `Uploading ${count} files...`,
+			uploaded: 'All files uploaded successfully',
+			uploadFailed: 'Some files failed to upload'
+		}
+	};
+	let pickerOpen = $state(false);
+	let pickedFiles = $state<PickerFile[]>([]);
+	let cardSelected = $state('f1');
 
 	/** A 1x1 PNG, so the view has real bytes to show without a server. */
 	async function fakeLoad(_file: unknown, onProgress: (done: number, total: number) => void) {
@@ -351,7 +426,7 @@
 
 <Specimen
 	title="Charts"
-	note="Monochrome, layerchart underneath (D89). Heights come from chartValue, which is geometry only; every figure in a tooltip or legend is the API's formatted string. The area takes an optional comparison series and a dashed average; the bar is a breakdown read sideways; the donut carries its figures in the legend beside it."
+	note="The hatch is the chart style of this product (D93): a 2px solid line over a 45° hatch, dashed averages and grid, bare axes, monotone curves, upright hatched columns with an outline. layerchart underneath (D89); heights come from chartValue, which is geometry only, and every figure in a tooltip or legend is the API's formatted string. `outflow` is the burn-rate form, lighter and dotted. The panel is the old CanvasChart. The donut keeps the old grey ring."
 	source="molecules/chart"
 >
 	<div class="flex flex-col gap-8">
@@ -368,6 +443,29 @@
 				{ month: '2026-11', value: 3800000, formatted: 'Rp 3.800.000', compare: 4000000, compareFormatted: 'Rp 4.000.000' }
 			]}
 		/>
+		<ChartPanel
+			title="Burn rate"
+			legend={[
+				{ label: 'Current', type: 'solid' },
+				{ label: 'Average', type: 'pattern' }
+			]}
+		>
+			<ChartArea
+				label="Current"
+				legend={false}
+				outflow
+				average={{ value: 4200000, formatted: 'Rp 4.200.000', label: 'Average' }}
+				points={[
+					{ month: '2026-06', value: 3100000, formatted: 'Rp 3.100.000' },
+					{ month: '2026-07', value: 4800000, formatted: 'Rp 4.800.000' },
+					{ month: '2026-08', value: 3900000, formatted: 'Rp 3.900.000' },
+					{ month: '2026-09', value: 5200000, formatted: 'Rp 5.200.000' }
+				]}
+			/>
+		</ChartPanel>
+		<ChartPanel title="Nothing yet" empty="No expenses in this range." height={120}>
+			<span></span>
+		</ChartPanel>
 		<ChartBar
 			label="Expense"
 			items={[
@@ -540,31 +638,78 @@
 </Specimen>
 
 <Specimen title="File dropzone"
-	note="The drop target, the per-chunk progress and the attached list. It owns none of the transport: `upload` is handed in, which is what keeps the routes and the limits in `$lib/files.ts` and lets chat and transactions use the same component. Here the upload is faked, so the specimen talks to nothing.">
+	note="The old transaction sheet's attachments block: the attached files as square tiles, and a dashed box where a click opens the vault picker and a drop uploads straight to the vault. The transport, the picker's list and the previews are handed in from `$lib/files.ts`; here they are faked.">
 	<FileDropzone
 		bind:files={uploads}
-		class="max-w-lg"
+		class="max-w-sm"
 		upload={fakeUpload}
-		prompt="Drop a file, or"
-		chooseLabel="Choose a file"
-		hint="JPEG, PNG, WebP or PDF, up to 10 MB."
-		busyLabel="Uploading. The form will wait."
-		removeLabel={(name) => `Remove ${name}`}
+		label="Attachments"
+		browseLabel="Click to browse"
+		prompt="or drag and drop files here"
+		hint="Images and PDFs from your computer or Vault"
+		busyLabel="Saving..."
 		errorMessage={() => 'Upload failed.'}
+		tile={fakeTile}
+		picker={fakePicker}
 	/>
 </Specimen>
 
-<Specimen title="Attachment view"
-	note="An attached file shown from a Blob URL, revoked when the view goes away so the bytes do not outlive what shows them. `load` is handed in, as the dropzone's `upload` is; this one returns a 1x1 PNG."
+<Specimen title="File icon"
+	note="A file's type as an icon, one copy where the old app kept three: image, video, PDF, anything else.">
+	<div class="flex items-center gap-4 text-muted-foreground">
+		<FileIcon type="image/png" />
+		<FileIcon type="video/mp4" />
+		<FileIcon type="application/pdf" />
+		<FileIcon type="text/plain" />
+	</div>
+</Specimen>
+
+<Specimen title="File tile"
+	note="One attached file as a square, the old AttachmentCard. An image shows the API's small preview (D91), anything else its type icon; name and size on hover; remove top-right, only when the reader may detach. Clickable when the caller can open the file.">
+	<div class="grid max-w-sm grid-cols-3 gap-2">
+		{#each sampleFiles.slice(0, 3) as file (file.id)}
+			<FileTile {file} {...fakeTile} onopen={() => {}} onremove={() => {}} />
+		{/each}
+	</div>
+</Specimen>
+
+<Specimen title="File card"
+	note="A file in the vault grid, the old VaultItemCard: the preview filling a square, the name on a gradient. The selected one is ringed.">
+	<div class="grid max-w-xl grid-cols-2 gap-4 md:grid-cols-4">
+		{#each sampleFiles as file (file.id)}
+			<FileCard
+				{file}
+				thumbnail={fakeThumbnail}
+				label={file.name}
+				selected={cardSelected === file.id}
+				onselect={() => (cardSelected = file.id)}
+			/>
+		{/each}
+	</div>
+</Specimen>
+
+<Specimen title="File picker"
+	note="The old VaultPickerModal: search, sort, grid or list, type and size filters, a drop target, pages of 12. Unlike the old one, every filter goes to the server and covers every page, and a pick comes back whole.">
+	<div class="flex items-center gap-3">
+		<Button variant="outline" onclick={() => (pickerOpen = true)}>Open picker</Button>
+		<span class="text-subtle text-small">{pickedFiles.length} picked</span>
+	</div>
+	<FilePicker bind:open={pickerOpen} selected={pickedFiles} onconfirm={(files) => (pickedFiles = files)} {...fakePicker} />
+</Specimen>
+
+<Specimen title="File preview"
+	note="A file shown back from a Blob URL that is revoked when the view goes away (VLT-3, D23). `box` is the old vault panel's 16:9 box; `full` fills a sheet. `load` is handed in; this one returns a 1x1 PNG."
 	framed={false}
 >
-	<div class="max-w-sm border p-3">
-		<AttachmentView
-			file={{ id: 'f1', file_id: 'f1', name: 'warung-tekko.png', type: 'image/png', size: 184320 }}
+	<div class="max-w-sm">
+		<FilePreview
+			file={{ id: 'f1', name: 'warung-tekko.png', type: 'image/png', size: 184320 }}
+			variant="box"
 			load={fakeLoad}
-			downloadLabel={(name) => `Download ${name}`}
 			loadingLabel={(done, total) => `Fetching ${done} of ${total}.`}
 			failedLabel="Those bytes could not be read."
+			unavailableLabel="Preview not available for this file type"
+			openOriginalLabel="Open Original File"
 		/>
 	</div>
 </Specimen>

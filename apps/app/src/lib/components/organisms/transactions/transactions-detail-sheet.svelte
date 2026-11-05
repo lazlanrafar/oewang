@@ -67,8 +67,12 @@
 
 	import { Badge } from '../../atoms/badge/index.js';
 	import { Button } from '../../atoms/button/index.js';
-	import { AttachmentView } from '../../molecules/attachment-view/index.js';
-	import { attachmentViewer } from '$lib/files.js';
+	import * as Accordion from '../../atoms/accordion/index.js';
+	import { FilePicker } from '../../molecules/file-picker/index.js';
+	import { FileTile } from '../../molecules/file-tile/index.js';
+	import type { UploadedFile } from '../../molecules/file-dropzone/index.js';
+	import { filePicker, fileTile } from '$lib/files.js';
+	import { t } from '$lib/i18n';
 	import * as Sheet from '../../atoms/sheet/index.js';
 	import { cn } from '$lib/utils.js';
 
@@ -81,7 +85,9 @@
 		onDelete,
 		onAddItem,
 		onEditItem,
-		onDeleteItem
+		onDeleteItem,
+		onOpenFile,
+		onAttachmentsChange
 	}: {
 		open?: boolean;
 		onOpenChange?: (open: boolean) => void;
@@ -92,7 +98,26 @@
 		onAddItem?: () => void;
 		onEditItem?: (itemId: string) => void;
 		onDeleteItem?: (itemId: string) => void;
+		/** A tile was clicked: the page opens the file sheet over this one. */
+		onOpenFile?: (file: UploadedFile) => void;
+		/** The whole new set, saved as soon as it changes (TXN-13). */
+		onAttachmentsChange?: (files: UploadedFile[]) => void;
 	} = $props();
+
+	let pickerOpen = $state(false);
+	const tile = fileTile();
+	const picker = filePicker();
+
+	// The tiles show the file, so they carry the file's id rather than the
+	// link row's.
+	const attached = $derived(
+		(transaction?.attachments ?? []).map((file) => ({
+			id: file.file_id,
+			name: file.name,
+			type: file.type,
+			size: file.size
+		}))
+	);
 </script>
 
 <Sheet.Root bind:open {onOpenChange}>
@@ -295,24 +320,55 @@
 					{/if}
 				</div>
 
-				<div class="space-y-2">
-					<p class="text-subtle text-xs tracking-widest uppercase">Attachments</p>
-					{#if transaction.attachments?.length}
-						<!--
-							The bytes arrive as chunks through this app's own server
-							and are shown from an object URL that is revoked when the
-							sheet goes away. No signed object-storage URL exists
-							(VLT-3, D23).
-						-->
-						<ul class="space-y-2">
-							{#each transaction.attachments as file (file.id)}
-								<li><AttachmentView {file} {...attachmentViewer()} /></li>
-							{/each}
-						</ul>
-					{:else}
-						<p class="text-subtle text-sm">None yet.</p>
-					{/if}
-				</div>
+				<!--
+					The old app's attachments accordion, open by default. A tile
+					opens the file's own sheet; a change saves at once, sending
+					the whole set, as the form does (TXN-13).
+				-->
+				<Accordion.Root type="multiple" value={['attachments']}>
+					<Accordion.Item value="attachments" class="border-none">
+						<Accordion.Trigger>{t('files.attachments')}</Accordion.Trigger>
+						<Accordion.Content class="flex flex-col gap-4 pt-1">
+							{#if attached.length > 0}
+								<div class="mb-4 grid grid-cols-3 gap-2">
+									{#each attached as file (file.id)}
+										<FileTile
+											{file}
+											{...tile}
+											onopen={onOpenFile}
+											onremove={canEdit
+												? (removed) =>
+														onAttachmentsChange?.(
+															attached.filter((candidate) => candidate.id !== removed.id)
+														)
+												: undefined}
+										/>
+									{/each}
+								</div>
+							{/if}
+
+							{#if canEdit}
+								<div class="mb-4 flex items-center justify-between gap-4">
+									<Button
+										variant="outline"
+										size="caps"
+										class="flex-1"
+										onclick={() => (pickerOpen = true)}
+									>
+										<Plus class="h-3.5 w-3.5" />
+										{t('files.add_or_upload')}
+									</Button>
+								</div>
+								<FilePicker
+									bind:open={pickerOpen}
+									selected={attached}
+									onconfirm={(files) => onAttachmentsChange?.(files)}
+									{...picker}
+								/>
+							{/if}
+						</Accordion.Content>
+					</Accordion.Item>
+				</Accordion.Root>
 
 				<!--
 					Why this number is what it is, at the row the user is looking at

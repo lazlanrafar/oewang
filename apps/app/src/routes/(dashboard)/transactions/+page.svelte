@@ -20,6 +20,7 @@
 	import { toast } from 'svelte-sonner';
 
 	import { applyAction, deserialize, enhance, type SubmitFunction } from '$app/forms';
+	import { VaultFileSheet } from '$lib/components/organisms/vault';
 	import { goto, invalidateAll } from '$app/navigation';
 
 	import { untrack } from 'svelte';
@@ -397,7 +398,42 @@
 	);
 
 	const openDetail = (id: string) => writeParams({ detail: id }, { push: true });
-	const closeDetail = () => writeParams({ detail: null }, { push: true });
+	const closeDetail = () => writeParams({ detail: null, file: null }, { push: true });
+
+	/*
+	 * A vault file's own sheet, stacked over the detail sheet when one of its
+	 * tiles is clicked (D90). Also in the URL, so a reload keeps it.
+	 */
+	const fileParam = $derived(readText(page.url, 'file'));
+	let fileOpen = $state(false);
+
+	$effect(() => {
+		fileOpen = fileParam !== '';
+	});
+
+	const openFile = (file: UploadedFile) => writeParams({ file: file.id }, { push: true });
+	const closeFile = () => writeParams({ file: null }, { push: true });
+
+	/**
+	 * The detail sheet's attachments changed: save the whole set at once, as
+	 * the old sheet did, through the same update the form uses (TXN-13).
+	 */
+	async function setAttachments(files: UploadedFile[]) {
+		const body = new FormData();
+		body.set('id', detailParam);
+		for (const file of files) body.append('attachment_ids', file.id);
+
+		const response = await fetch('?/setAttachments', {
+			method: 'POST',
+			body,
+			headers: { accept: 'application/json', 'x-sveltekit-action': 'true' }
+		});
+		const result = deserialize(await response.text());
+
+		await invalidateAll();
+		if (result.type === 'success') toast.success(t('txn.updated'));
+		else await applyAction(result);
+	}
 
 	/**
 	 * Two sheets cannot change places in the same tick: the overlay the first
@@ -874,6 +910,24 @@
 	onDeleteItem={(itemId) => {
 		deletingItem = itemId;
 		deleteItemForm?.requestSubmit();
+	}}
+	onOpenFile={openFile}
+	onAttachmentsChange={setAttachments}
+/>
+
+<VaultFileSheet
+	bind:open={fileOpen}
+	onOpenChange={(open) => {
+		// Not while a link out of the sheet is navigating away: writing the
+		// URL then would pull the user back to this page.
+		if (!open && fileParam !== '' && !navigating.to) closeFile();
+	}}
+	file={data.file}
+	{canEdit}
+	onChanged={() => invalidateAll()}
+	onDeleted={async () => {
+		await closeFile();
+		await invalidateAll();
 	}}
 />
 

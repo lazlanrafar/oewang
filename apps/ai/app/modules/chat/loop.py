@@ -287,13 +287,6 @@ def _assistant_content(message: Any) -> tuple[list[dict[str, Any]], bool]:
     return blocks, screened
 
 
-def _usage(message: Any) -> tuple[int, int]:
-    usage = getattr(message, "usage", None)
-    return (
-        int(getattr(usage, "input_tokens", 0) or 0),
-        int(getattr(usage, "output_tokens", 0) or 0),
-    )
-
 
 async def run_turn(
     *, writer: EventWriter, body: ChatStreamRequest, config: Settings, api: Any
@@ -325,7 +318,7 @@ async def run_turn(
         # The capture path is POST /receipt/parse.
 
         client = model.model_client()
-        usage = {"input": 0, "output": 0}
+        usage = model.usage_report(0, 0, config.ai_chat_model)
         called: list[str] = []
         screened = False
         rounds = 0
@@ -353,7 +346,7 @@ async def run_turn(
                     yield writer.event("token", {"text": visible})
                 final = await stream.get_final_message()
 
-            tokens_in, tokens_out = _usage(final)
+            tokens_in, tokens_out = model.tokens_of(final)
             usage["input"] += tokens_in
             usage["output"] += tokens_out
 

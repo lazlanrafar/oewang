@@ -193,8 +193,9 @@ The old token stays valid until expiry. It is scoped to the previous workspace, 
 | Export transactions to CSV | yes | yes | yes |
 | Import transactions (CSV or AI) | yes | yes | no |
 | Manage wallets, wallet groups, categories | yes | yes | no |
-| Upload or delete a file | yes | yes | no |
-| View a file | yes | yes | yes |
+| Upload, rename, tag or delete a file | yes | yes | no |
+| View a file, list the vault, read a thumbnail | yes | yes | yes |
+| Read workspace usage (storage and tokens) | yes | yes | yes |
 | Invite or remove a member, change a role | yes | yes | no |
 | Update workspace settings | yes | yes | no |
 | Delete the workspace | yes | no | no |

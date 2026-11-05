@@ -71,6 +71,25 @@ Returns `NOT_A_MEMBER` if the user has no live membership row.
 | DELETE | `/v1/workspaces/current/invites/{id}` | admin+ | Revoke an invite |
 | POST | `/v1/workspaces/accept-invite` | any | Accept an invite by token |
 | DELETE | `/v1/workspaces/current` | owner | Soft-delete the workspace |
+| GET | `/v1/workspaces/current/usage` | any | Storage used and model tokens, by month and feature (USG-1, USG-3, D92) |
+
+### `GET /v1/workspaces/current/usage` response
+
+```json
+{ "data": {
+    "storage": { "bytes": 18432771, "files": 42 },
+    "ai": {
+      "month": { "input": 120433, "output": 9120 },
+      "total": { "input": 984210, "output": 77310 },
+      "by_feature": [
+        { "feature": "receipt", "month": { "input": 80211, "output": 4410 },
+          "total": { "input": 610002, "output": 40120 }, "calls": 57 }
+      ]
+    }
+} }
+```
+
+`storage` is `SUM(size)` and the count over ready, live files; nothing stores it. `month` is since the first of the current calendar month in UTC. The headline `month` and `total` are summed from the `by_feature` rows, so the cards and the table on the settings page cannot disagree. `calls` counts all time. Nothing here is a limit ([usage](../features/usage.md)).
 
 ## Wallet groups
 
@@ -234,14 +253,61 @@ Bytes travel through the API in encrypted chunks, not through a signed object-st
 
 | Method | Path | Role | Description |
 |---|---|---|---|
+| GET | `/v1/vault/files` | any | The workspace's ready, live files, paged. Query below (VLT-6) |
 | POST | `/v1/vault/files` | admin+ | Begin an upload: `{filename, content_type, size_bytes}`. Returns `{id, chunk_size, chunk_count, status:"pending"}` (VLT-1) |
 | PUT | `/v1/vault/files/{id}/chunks/{index}` | admin+ | Send one 512 KiB chunk as `{"data":"<base64>"}` |
 | POST | `/v1/vault/files/{id}/complete` | admin+ | Verify every chunk, record the SHA-256, set status `ready` |
-| GET | `/v1/vault/files/{id}` | any | Metadata |
+| GET | `/v1/vault/files/{id}` | any | Metadata, tags, `thumbnail`, `used_by`, and the newest 20 transactions carrying it (VLT-7, VLT-10) |
+| PATCH | `/v1/vault/files/{id}` | admin+ | Rename, retag, or both: `{name?, tags?}`. Audited as `file.updated` (VLT-8, VLT-9) |
+| GET | `/v1/vault/files/{id}/thumbnail` | any | A 320x320 JPEG preview, `{type:"image/jpeg", data:"<base64>"}`, made on first request. `THUMBNAIL_UNAVAILABLE` for a PDF or bytes that do not decode (VLT-12, D91) |
 | GET | `/v1/vault/files/{id}/chunks/{index}` | any | One chunk back, `{index, data}` (VLT-3, as revised by D23) |
-| DELETE | `/v1/vault/files/{id}` | admin+ | Soft delete |
+| DELETE | `/v1/vault/files/{id}` | admin+ | Soft delete, and detach it from every transaction in the same database transaction (VLT-11) |
 
 The declared `content_type` is checked against the bytes sniffed from chunk 0 at completion. A mismatch fails the upload with `UNSUPPORTED_FILE_TYPE` (SEC-12).
+
+### `GET /v1/vault/files` query parameters
+
+| Parameter | Values | Notes |
+|---|---|---|
+| `search` | text | Matches the name with `ILIKE`. `%` and `_` are escaped, so they match themselves |
+| `type` | `image`, `pdf` | Anything else is `VALIDATION_FAILED`, as is an unknown `size` or `sort` |
+| `size` | `lt1`, `1to5`, `gt5` | Megabytes, the picker's three bands |
+| `tag` | text | One tag, exact |
+| `sort` | `newest` (default), `name_asc`, `name_desc`, `size_desc`, `size_asc` | Mapped to fixed SQL, never interpolated |
+| `page`, `limit` | integers | As in [pagination](conventions.md#pagination) |
+
+Each row is `{id, name, size, type, tags, thumbnail, used_by, created_at}`. `used_by` counts live attachment rows on live transactions. `thumbnail` is `null` until a preview has been asked for, `false` when none can be made, `true` when one is stored.
+
+### `GET /v1/vault/files/{id}` response
+
+The list row plus `sha256`, `status` and `transactions`:
+
+```json
+{ "data": {
+    "id": "clx…", "name": "warung-tekko.jpg", "size": 482113, "type": "image/jpeg",
+    "sha256": "…", "status": "ready", "tags": ["Receipt"], "thumbnail": true,
+    "created_at": "2026-11-05T03:12:00+00:00",
+    "used_by": 1,
+    "transactions": [
+      { "id": "clx…", "name": "Warung Tekko", "date": "2026-11-02T00:00:00+00:00",
+        "type": "expense", "amount": "87500.0000", "currency_code": "IDR" }
+    ]
+} }
+```
+
+`transactions` holds the newest 20; `used_by` is the exact count, so the sheet can say how many it is not showing. `amount` is a decimal string in the wallet's currency (D12).
+
+### `PATCH /v1/vault/files/{id}` body
+
+```json
+{ "name": "Warung Tekko, 2 Nov", "tags": ["Receipt", "Food"] }
+```
+
+An absent field is left alone. The name is cleaned the way an upload filename is. Tags are trimmed and deduplicated case-insensitively, keeping the first spelling; more than 10, or one over 32 characters, is `VALIDATION_FAILED` rather than a silent cut, because a cut tag is a label the member did not write.
+
+### `DELETE /v1/vault/files/{id}`
+
+Soft-deletes the file and its live `transaction_attachments` rows in one database transaction. The audit row's `after` is `{"detached": n}`. The chunks and the stored preview are removed after commit.
 
 ## Chat
 

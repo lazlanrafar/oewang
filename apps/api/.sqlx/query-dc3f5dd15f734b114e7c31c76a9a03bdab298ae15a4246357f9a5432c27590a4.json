@@ -1,0 +1,52 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT feature,\n                  COALESCE(sum(input_tokens) FILTER (\n                      WHERE created_at >= date_trunc('month', now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'\n                  ), 0)::bigint AS \"month_input!\",\n                  COALESCE(sum(output_tokens) FILTER (\n                      WHERE created_at >= date_trunc('month', now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'\n                  ), 0)::bigint AS \"month_output!\",\n                  COALESCE(sum(input_tokens), 0)::bigint AS \"total_input!\",\n                  COALESCE(sum(output_tokens), 0)::bigint AS \"total_output!\",\n                  count(*) AS \"calls!\"\n           FROM ai_usage\n           WHERE workspace_id = $1\n           GROUP BY feature\n           ORDER BY feature",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "feature",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "month_input!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 2,
+        "name": "month_output!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 3,
+        "name": "total_input!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 4,
+        "name": "total_output!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 5,
+        "name": "calls!",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "dc3f5dd15f734b114e7c31c76a9a03bdab298ae15a4246357f9a5432c27590a4"
+}

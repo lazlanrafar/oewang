@@ -197,7 +197,9 @@ def test_done_is_last_and_carries_the_usage(owe1_client: Owe1TestClient) -> None
     events = read_events(owe1_client, response, request_id)
     name, body = events[-1]
     assert name == "done"
-    assert body["usage"] == {"input": 1204, "output": 311}
+    assert body["usage"]["input"] == 1204
+    assert body["usage"]["output"] == 311
+    assert body["usage"]["model"], "the model the tokens were spent on"
     # The persisted row's id belongs to the API, which fills it in when it
     # re-seals the event for the next hop.
     assert body["message_id"] is None

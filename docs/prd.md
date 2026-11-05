@@ -1,6 +1,6 @@
 # oewang: Product Requirements Document
 
-Status: draft v0.1, 2026-11-02; Telegram added 2026-11-05 (D83). Owner: Azlan. Part of the [oewang docs](README.md).
+Status: draft v0.1, 2026-11-02; Telegram added 2026-11-05 (D83); vault and usage added 2026-11-05 (D90, D92). Owner: Azlan. Part of the [oewang docs](README.md).
 
 oewang is a personal finance tracker: daily income and expenses, wallets, categories, receipts, and an AI assistant that can read and write the same data through chat. This document covers a ground-up rewrite of the existing implementation ([legacy app](reference/legacy-app.md)) onto a new stack, with the scope cut to two features.
 
@@ -20,7 +20,7 @@ The result: a small change touches several apps, and deleting a feature is harde
 
 ### Goals
 
-1. **G1. Two features, finished.** Transactions (full CRUD, line items, attachments, CSV and AI import) and AI chat (tool-calling assistant plus receipt OCR). Nothing else. Telegram (section 6.11) is those same two features reached from a chat, added by D83; it brings no feature of its own.
+1. **G1. Two features, finished.** Transactions (full CRUD, line items, attachments, CSV and AI import) and AI chat (tool-calling assistant plus receipt OCR). Nothing else. Telegram (section 6.11) is those same two features reached from a chat, added by D83; it brings no feature of its own. The vault page (section 6.5, D90) browses the files those two features already store, and the usage page (section 6.13, D92) reports what they cost.
 2. **G2. One writer.** Exactly one process holds a database connection. Every business rule is enforced in exactly one place.
 3. **G3. Same product, new stack.** Screens, layouts and interactions carry over from the old app. The code does not.
 4. **G4. Multi-workspace stays.** A user belongs to several workspaces with a role in each, as today.
@@ -35,8 +35,8 @@ Each of these exists in the old app and is deliberately left out. Adding any of 
 - Debts and receivables, including the related chat tools.
 - Budgets and budget-exceeded notifications.
 - Contacts and bill splitting.
-- Vault as a browsable feature: `vault_files` exists only to back attachments and receipts. No document manager, no document RAG, no `search_documents` tool.
-- Billing: plans, Mayar payments, AI token quotas, storage limits, the upgrade flow.
+- ~~Vault as a browsable feature: `vault_files` exists only to back attachments and receipts.~~ The vault page came back with D90 (VLT-6 to VLT-13). Still out: document RAG and a `search_documents` tool.
+- Billing: plans, Mayar payments, AI token quotas, storage limits, the upgrade flow. Usage is recorded and shown (section 6.13, D92), never limited.
 - Integrations: third-party connectors and webhooks. Telegram was on this list until D83 moved it into section 6.11; nothing else on the old Apps page came with it (Gmail, Outlook, the MCP clients).
 - The admin dashboard and the marketing website.
 - The Flutter mobile app and offline sync.
@@ -177,11 +177,19 @@ Requirement IDs are referenced by every other doc and by each backlog story. The
 
 | ID | Requirement |
 |---|---|
-| VLT-1 | The API accepts multipart upload of JPEG, PNG, WebP and PDF files up to 10 MB. |
+| VLT-1 | The API accepts upload of JPEG, PNG, WebP and PDF files up to 10 MB, in 512 KiB chunks sent as base64 JSON inside OWE1 ([file bytes](api/encryption.md#file-bytes)). Originally written as multipart; chunked since D23. |
 | VLT-2 | Files are stored behind a storage trait: local filesystem in development, S3-compatible storage in production. |
 | VLT-3 | Download happens through the API in encrypted chunks. No signed object-storage URL is ever issued (D23). |
 | VLT-4 | Files are workspace-scoped. A cross-workspace request returns 404, not 403. |
 | VLT-5 | Removing an attachment soft-deletes the join row, not the file. |
+| VLT-6 | `/vault` lists the workspace's ready files as a grid or a list, newest first, with search by name. The search, the view and the open file live in the URL (UI-8). The grid loads 15 at a time with infinite scroll. Dropping files anywhere on the page uploads them (D90). |
+| VLT-7 | A file opens in its own sheet: a preview (the image, or the PDF in a frame), its name, date created, format and size, its tags, the transactions that carry it, and open, download and delete. The same sheet opens from an attachment on a transaction. |
+| VLT-8 | A writer can rename a file. The name is cleaned the way an upload filename is. |
+| VLT-9 | A writer can tag a file: at most 10 tags of at most 32 characters, trimmed, duplicates dropped case-insensitively keeping the first spelling. A tag over the limit is refused, never cut. |
+| VLT-10 | The file sheet lists the newest 20 live transactions that carry the file, each linking to its detail sheet, with the exact count beside them. |
+| VLT-11 | Deleting a file asks first, says how many transactions it is attached to, and detaches it from all of them in the same database transaction as the soft delete. |
+| VLT-12 | An image file gets a small square preview, made by the API once on first request and stored beside the file. A PDF or an undecodable image gets an icon and is never retried (D91). |
+| VLT-13 | On a transaction, attachments are square tiles. The form sheet and the detail sheet each offer the vault picker, which searches, sorts and filters across every page on the server and can upload new files. A change in the detail sheet saves at once. |
 
 ### 6.6 Chat (CHAT)
 
@@ -323,6 +331,16 @@ Added by D87. See [Overview](features/overview.md).
 | OVR-4 | A floating composer, the prompt chips and a click on a card each start a conversation: the session is created, the conversation opens, and the question is sent there. Nothing is sent twice on reload. |
 | OVR-5 | The overview declares the summary, overview and wallet balance invalidation keys, so a chat write moves its figures without a reload (D32). |
 
+### 6.13 Usage (USG)
+
+Added by D92. See [Usage](features/usage.md).
+
+| ID | Requirement |
+|---|---|
+| USG-1 | A workspace's storage used is derived from its rows: the sum of `size` and the count over ready, non-deleted files. No counter is stored. |
+| USG-2 | Every model call's input and output tokens are recorded per workspace and per feature, with the model and the member it was made for, in an append-only table. A failed record never fails the call. |
+| USG-3 | A settings page, readable by any member, shows storage used and tokens for this calendar month and all time, in total and by feature. Nothing is limited. |
+
 ## 7. Success metrics
 
 | Metric | Target |
@@ -350,6 +368,8 @@ Detailed stories are in [backlog.md](backlog.md).
 | **M5. Capture** | US-033 to US-035, including US-033b | Receipt OCR and statement import. |
 | **M6. Hardening** | US-036 to US-039 | Limits, headers, the injection corpus, test suite, CI, docs. |
 | **M7. Telegram** | US-040 to US-042 | The Apps page, a linked Telegram chat, receipts saved from a photo, and the assistant in the chat. |
+| **M8. Overview and the analysis canvas** | US-043 to US-046 | The overview front page, the analysis canvases in chat, and the chat restyle. |
+| **M9. Vault and usage** | US-047 to US-050 | The vault page and its file sheet, thumbnails, tiles and the picker on transactions, and a usage page for tokens and storage. |
 
 M2 is the first milestone worth demoing, and it de-risks the stack choice before any LLM work starts.
 

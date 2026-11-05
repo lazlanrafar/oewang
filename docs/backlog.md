@@ -2,7 +2,7 @@
 
 Status: draft v0.1, 2026-11-02. Part of the [oewang docs](README.md). Every story maps to requirement IDs from the [PRD](prd.md#6-requirements).
 
-Forty-eight stories in seven milestones. Each is sized for one focused session. A story is done when every acceptance criterion is checked, not when the code compiles.
+Fifty-six stories in ten milestones. Each is sized for one focused session. A story is done when every acceptance criterion is checked, not when the code compiles.
 
 ## Update this doc when
 
@@ -567,7 +567,7 @@ Requirements: all
 - [x] Each feature doc's "Update this doc when" list is accurate
 - [x] `docs/ENV_VARS.md` generated from the running configuration
 - [x] `CLAUDE.md` at the root points at the index and states the layer rules
-- [ ] Every requirement ID in the [PRD](prd.md#6-requirements) has a passing test or a browser-verified story, or is listed as not done with a reason. `scripts/coverage.py` proves all 111 are named by a story and runs in CI; the stronger half, that each is actually exercised, waits on the browser pass below
+- [ ] Every requirement ID in the [PRD](prd.md#6-requirements) has a passing test or a browser-verified story, or is listed as not done with a reason. `scripts/coverage.py` proves all 141 are named by a story and runs in CI; the stronger half, that each is actually exercised, waits on the browser pass below
 
 
 ---
@@ -657,6 +657,60 @@ Requirements: CHAT-17, CHAT-19, CHAT-13, UI-8
 - [x] Verified in dark mode; donut slices take their colours from the theme
 - [ ] Verify at phone width
 
+## M9. Vault and usage
+
+Added by D90, D91 and D92. [Vault](features/vault.md) and [usage](features/usage.md) are the feature docs.
+
+### US-047: Vault API and thumbnails
+Requirements: VLT-6, VLT-8, VLT-9, VLT-10, VLT-11, VLT-12, VLT-4
+
+- [x] `0010_vault_usage.sql`: `vault_files.tags` and `vault_files.thumbnail`
+- [x] `GET /v1/vault/files`, any member: search (`%` and `_` escaped), type, size band, tag, five sorts, paged; only ready, live files of the token's workspace, each with `used_by`
+- [x] `GET /v1/vault/files/{id}` adds tags, thumbnail, `used_by` and the newest 20 linked transactions, amounts as decimal strings
+- [x] `PATCH /v1/vault/files/{id}`, write role: the name cleaned like an upload filename; tags trimmed, deduplicated case-insensitively, at most 10 of at most 32 characters, refused rather than cut; audited as `file.updated`
+- [x] `DELETE` soft-deletes the file's live attachment rows in the same database transaction, audited with `{"detached": n}`; the chunks and the preview go after commit
+- [x] `GET /v1/vault/files/{id}/thumbnail`: made on first request in `spawn_blocking`, 8000px and 128 MB limits, EXIF orientation, 320x320 JPEG at quality 80, stored at `{key}/thumb`; a PDF or undecodable bytes answer `THUMBNAIL_UNAVAILABLE` and are never retried
+- [x] Tests: tag normalisation (`domain/src/files.rs`); in `vault/tests.rs`, workspace scope and `used_by`, search wildcards, rename and retag with the audit row, detach on delete, one preview kept, a PDF marked, no preview across a workspace
+- [x] clippy, `cargo test` and `cargo sqlx prepare` pass in the containers
+
+### US-048: Vault page and file sheet
+Requirements: VLT-6, VLT-7, VLT-8, VLT-9, VLT-10, VLT-11, UI-8
+
+- [x] "Vault" in the sidebar's Workspace group, before Apps
+- [x] The old page copied: `h1` title and description, storage in the header, search, grid and list views; `?search`, `?view=grid|list` and `?file=<id>` in the URL
+- [x] The grid loads 15 at a time and scrolls for more; a scrolled page is not in the URL
+- [x] Dropping files anywhere on the page uploads them, with one toast for the batch
+- [x] `organisms/vault/vault-file-sheet`: preview box, rename, date created, format and size, tags with suggestions and a custom input, linked transactions, "View full" with its menu, delete behind a confirmation that counts the transactions
+- [x] File proxy routes under `/vault/files` (begin, chunks, complete, the JSON list, the thumbnail); writes post to `/vault?/update` and `/vault?/delete`
+- [x] CSP `frame-src blob:` for the PDF frame, with the header snapshot test updated (SEC-15)
+- [ ] Verify in browser: upload by drop, rename, tag, delete with a count, a PDF and an image preview, dark mode
+
+### US-049: Tiles and the picker on transactions
+Requirements: VLT-13, VLT-5, VLT-7, TXN-13
+
+- [x] Molecules `file-icon`, `file-tile`, `file-card`, `file-picker` and `file-preview`; `file-dropzone` restyled to the old form sheet's attachments block; `attachment-view` deleted
+- [x] Specimens on `/design-system` for the tile, card, picker, preview and dropzone
+- [x] Button gains variant `outline-destructive` and size `caps`; Badge gains variant `tag`
+- [x] Specimens for `file-icon` and for the three new atom variants (D81: a named variant has its own specimen)
+- [x] The picker filters, searches and sorts on the server across every page, 12 per page, with no "Videos" filter and no orientation column; a picked file comes back whole
+- [x] Form sheet: tiles plus the picker; a drop uploads straight to the vault
+- [x] Detail sheet: the Attachments section open by default; a writer removes a tile or adds through the picker, and the change saves at once through `?/setAttachments`
+- [x] An attachment tile opens the vault file sheet over the detail sheet (`?file=` on `/transactions`)
+- [ ] Verify in browser: attach from the picker, remove a tile in the detail sheet, open a file over a transaction
+
+### US-050: Usage tracking and the settings page
+Requirements: USG-1, USG-2, USG-3
+
+- [x] `ai_usage`, append-only, one row per model call
+- [x] The AI service answers `usage: {input, output, model}` on every extraction route, summed across ladder passes, and `model` in the chat `done` event's usage
+- [x] The API records through a `Meter` in `ai/extraction.rs` (receipt, import, columns, categorize) and a `TurnMeter` in the stream pump (chat or telegram); a failed record is logged and never fails the call
+- [x] The column mapping answer is read as `{mapping, usage}`; it was read as a bare mapping, so AI column mapping always came back empty (unit test)
+- [x] `GET /v1/workspaces/current/usage`, any member: storage from the rows, tokens this month (UTC) and all time, by feature, with the headline summed from the feature rows
+- [x] `/settings/usage`, after Assistant: three stat cards and the by-feature table
+- [x] Tests: the headline summed from the features, missing token fields read as zero, tokens clamped into the column (Rust); usage in each extraction response and the chat `done` event (pytest)
+- [x] clippy, `cargo test`, `bun run check`, `ruff check` and `pytest` pass in the containers
+- [ ] Verify in browser: a receipt parse and a chat turn each move the figures
+
 ---
 
 ## Coverage check
@@ -674,5 +728,5 @@ now listed under US-017.
 
 - [Docs index](README.md) and [PRD](prd.md)
 - [Architecture](architecture.md) and [data model](data-model.md)
-- [Transactions](features/transactions.md), [accounts](features/accounts.md) and [chat](features/chat.md)
+- [Transactions](features/transactions.md), [accounts](features/accounts.md), [chat](features/chat.md), [vault](features/vault.md) and [usage](features/usage.md)
 - [Hardening](security/hardening.md) and [AI safety](security/ai-safety.md)

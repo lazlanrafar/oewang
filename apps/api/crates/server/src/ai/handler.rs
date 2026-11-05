@@ -472,6 +472,7 @@ pub async fn parse_receipt(
         &state.ai,
         &id,
         &auth.workspace_id,
+        Some(&auth.user_id),
         &body.vault_file_id,
     )
     .await
