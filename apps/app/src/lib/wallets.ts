@@ -16,6 +16,8 @@ export type WalletLike = {
 	is_included_in_totals: boolean;
 	is_default: boolean;
 	sort_order: number;
+	created_at: string;
+	updated_at: string;
 };
 
 export type WalletGroupView<T extends WalletLike> = {
@@ -112,4 +114,44 @@ export function groupWallets<T extends WalletLike>(
 		if (b.id === null) return -1;
 		return 0;
 	});
+}
+
+/**
+ * The three figures the accounts page puts above its table.
+ *
+ * `groupWallets` answers per group; this answers for the workspace. Both
+ * count only wallets flagged "include in totals" (WAL-2), and both leave a
+ * wallet out of the total when no rate exists for its currency rather than
+ * adding it as if it were already in the workspace's.
+ */
+export type WalletTotals = {
+	/** In the workspace currency. */
+	total: string;
+	/** Every live wallet, counted or not. */
+	count: number;
+	/** How many carry the flag, which is what the total is a total of. */
+	counted: number;
+	/** How many were left out for want of a rate, so the page can say so. */
+	unconverted: number;
+};
+
+export function walletTotals(
+	wallets: WalletLike[],
+	base: string,
+	rates: Record<string, string>
+): WalletTotals {
+	const converted: string[] = [];
+	let counted = 0;
+	let unconverted = 0;
+
+	for (const wallet of wallets) {
+		if (!wallet.is_included_in_totals) continue;
+		counted += 1;
+
+		const value = inBaseCurrency(wallet.balance, wallet.currency_code, base, rates);
+		if (value === null) unconverted += 1;
+		else converted.push(value);
+	}
+
+	return { total: addDecimals(converted), count: wallets.length, counted, unconverted };
 }

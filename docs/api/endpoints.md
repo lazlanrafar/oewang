@@ -90,9 +90,12 @@ Returns `NOT_A_MEMBER` if the user has no live membership row.
 | POST | `/v1/wallets` | admin+ | Create. `currency_code` optional, defaults to the workspace currency (WAL-5) |
 | PATCH | `/v1/wallets/{id}` | admin+ | Update name, group, sort order, totals flag. Currency only while the wallet has no live transaction, otherwise `WALLET_CURRENCY_LOCKED` (WAL-6) |
 | POST | `/v1/wallets/{id}/set-default` | admin+ | Make default, clearing the previous default in the same transaction (WAL-3) |
+| POST | `/v1/wallets/{id}/adjust` | admin+ | Correct a balance to a stated figure. Body `{ "balance": "100000" }` as a decimal string. Answers with the updated wallet |
 | DELETE | `/v1/wallets/{id}` | admin+ | Soft delete. `WALLET_HAS_TRANSACTIONS` if any live transaction references it (WAL-4) |
 
 Balance is never writable through the API. It changes only as a consequence of a transaction (TXN-3). A manual correction is recorded as an income or expense transaction, like any other movement.
+
+`/adjust` is that rule, not an exception to it. It writes no column: it reads the wallet, works out `target - current`, and creates one transaction for the difference through the ordinary create path, so the balance arrives at the figure as a consequence. A positive difference becomes an `income`, a negative one an `expense` for its absolute value, and a difference of zero writes nothing and still succeeds. The transaction is named "Balance adjustment", dated today, carries no category, is denominated in the wallet's own currency, and records `web` as its source. It takes the wallet lock, moves the balance and writes its audit row inside one database transaction like every other write (D13, D14, OPS-1).
 
 ## Exchange rates
 

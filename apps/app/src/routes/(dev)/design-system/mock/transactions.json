@@ -1,0 +1,73 @@
+{
+	"categories": [
+		{ "id": "food", "name": "Food", "colorClass": "bg-red" },
+		{ "id": "transport", "name": "Transport", "colorClass": "bg-subtle" },
+		{ "id": "shopping", "name": "Shopping", "colorClass": "bg-primary" },
+		{ "id": "bills", "name": "Bills", "colorClass": "bg-destructive" },
+		{ "id": "salary", "name": "Salary", "colorClass": "bg-green" }
+	],
+	"wallets": [
+		{ "id": "wallet-1", "name": "Petty cash" },
+		{ "id": "wallet-2", "name": "Current account" },
+		{ "id": "wallet-3", "name": "Travel card" }
+	],
+	"rows": [
+		{
+			"id": "txn-1",
+			"day": "2026-11-02",
+			"date": "02/11/2026",
+			"name": "Lunch, Sample Warung",
+			"categoryId": "food",
+			"walletId": "wallet-1",
+			"amount": "-87500",
+			"currency": "IDR",
+			"note": "Team lunch. Receipt attached."
+		},
+		{
+			"id": "txn-2",
+			"day": "2026-11-02",
+			"date": "02/11/2026",
+			"name": "Ride to the office",
+			"categoryId": "transport",
+			"walletId": "wallet-1",
+			"amount": "-24000",
+			"currency": "IDR",
+			"note": "Two stops."
+		},
+		{
+			"id": "txn-3",
+			"day": "2026-11-01",
+			"date": "01/11/2026",
+			"name": "Monthly salary",
+			"categoryId": "salary",
+			"walletId": "wallet-2",
+			"amount": "9500000",
+			"currency": "IDR",
+			"note": "October."
+		},
+		{
+			"id": "txn-4",
+			"day": "2026-11-01",
+			"date": "01/11/2026",
+			"name": "Design tool subscription",
+			"categoryId": "shopping",
+			"walletId": "wallet-3",
+			"amount": "-49.99",
+			"currency": "USD",
+			"originalAmount": "-49.99",
+			"originalCurrency": "USD",
+			"note": "Entered in USD, converted at 16.250."
+		},
+		{
+			"id": "txn-5",
+			"day": "2026-10-28",
+			"date": "28/10/2026",
+			"name": "Electricity",
+			"categoryId": "bills",
+			"walletId": "wallet-2",
+			"amount": "-412000",
+			"currency": "IDR",
+			"note": "October bill."
+		}
+	]
+}

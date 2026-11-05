@@ -27,18 +27,20 @@
 
 	import { Button } from '../../atoms/button/index.js';
 	import * as DropdownMenu from '../../atoms/dropdown-menu/index.js';
-	import * as Select from '../../atoms/select/index.js';
 	import { DateRangePicker } from '../../molecules/date-range-picker/index.js';
 	import { DataTableFilter } from '../../molecules/data-table-filter/index.js';
+	import { Select } from '../../molecules/select/index.js';
 	import { emptyFilterState, type DataTableFilterState } from '../../molecules/data-table-filter/index.js';
-	import { TransactionsTable, TRANSACTION_COLUMNS } from '../../molecules/data-table/index.js';
-	import { GROUPINGS, type Grouping } from '../../molecules/data-table/grouping.js';
-	import type { ColumnKey, NamedOption, TransactionRow } from '../../molecules/data-table/index.js';
-	import TransactionBulkBar from './transaction-bulk-bar.svelte';
-	import TransactionDetailSheet from './transaction-detail-sheet.svelte';
-	import TransactionExportModal from './transaction-export-modal.svelte';
-	import TransactionFormSheet from './transaction-form-sheet.svelte';
-	import { emptyDraft, type TransactionDraft } from './transaction-form-fields.svelte';
+	import type { NamedOption } from '../../molecules/data-table/index.js';
+	import TransactionsDataTable from './transactions-data-table.svelte';
+	import { TRANSACTION_COLUMNS, type ColumnKey } from './transactions-data-table-column.js';
+	import { GROUPINGS, type Grouping } from './transactions-data-table-grouping.js';
+	import type { TransactionRow } from './transactions-data-table-types.js';
+	import TransactionBulkBar from './transactions-bulk-bar.svelte';
+	import TransactionDetailSheet from './transactions-detail-sheet.svelte';
+	import TransactionExportModal from './transactions-export-modal.svelte';
+	import TransactionFormSheet from './transactions-form-sheet.svelte';
+	import { emptyDraft, type TransactionDraft } from './transactions-form-fields.svelte';
 
 	let {
 		rows,
@@ -199,17 +201,13 @@
 		</div>
 
 		<div class="flex items-center gap-2">
-			<Select.Root type="single" bind:value={grouping}>
-				<Select.Trigger class="w-36">
-					<LayoutGrid class="text-subtle size-4 shrink-0" />
-					{GROUPING_LABEL[grouping]}
-				</Select.Trigger>
-				<Select.Content>
-					{#each GROUPINGS as option (option)}
-						<Select.Item value={option}>{GROUPING_LABEL[option]}</Select.Item>
-					{/each}
-				</Select.Content>
-			</Select.Root>
+			<Select
+				items={GROUPINGS.map((option) => ({ value: option, label: GROUPING_LABEL[option] }))}
+				bind:value={grouping}
+				searchable={false}
+				mark={{ icon: LayoutGrid }}
+				class="w-36"
+			/>
 
 			<DateRangePicker bind:value={filters.dateRange} />
 
@@ -280,7 +278,7 @@
 		</div>
 	</div>
 
-	<TransactionsTable
+	<TransactionsDataTable
 		{rows}
 		{categories}
 		{wallets}

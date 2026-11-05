@@ -224,7 +224,7 @@ Requirement IDs are referenced by every other doc and by each backlog story. The
 | ID | Requirement |
 |---|---|
 | UI-1 | Every user-facing string resolves through the `en.json` dictionary. No literals in markup. |
-| UI-2 | Transaction and chat screens reproduce the layout and interaction model of the old app, per the port maps in [transactions](features/transactions.md#ui-port-map) and [chat](features/chat.md#ui-port-map). |
+| UI-2 | Transaction, account and chat screens reproduce the layout and interaction model of the old app, per the port maps in [transactions](features/transactions.md#ui-port-map), [accounts](features/accounts.md#ui-port-map) and [chat](features/chat.md#ui-port-map). |
 | UI-3 | Light and dark mode are supported and the choice persists. |
 | UI-4 | Destructive actions require confirmation. |
 | UI-5 | Every monetary value renders with the currency it is denominated in and correct decimal precision. A wallet balance uses its wallet's currency; a total uses the workspace currency. |
@@ -311,7 +311,7 @@ Detailed stories are in [backlog.md](backlog.md).
 |---|---|---|
 | **M0. Foundation** | US-001 to US-006 | Three apps build, schema migrates, OWE1 works across all three languages, the app shell renders. |
 | **M1. Accounts** | US-007 to US-010, including US-008b and US-010b | Register, log in with rotating sessions, reset a forgotten password, manage a workspace and its members. |
-| **M2. Ledger** | US-011 to US-022, including US-018b | A usable multicurrency transaction tracker with no AI in it. First demo. |
+| **M2. Ledger** | US-011 to US-022, including US-013b and US-018b | A usable multicurrency transaction tracker with no AI in it. First demo. |
 | **M3. Files** | US-023 to US-025 | Chunked encrypted uploads, attachments, line items. |
 | **M4. Assistant** | US-026 to US-032, including US-031b | Streaming chat that reads and writes the ledger. Second demo. |
 | **M5. Capture** | US-033 to US-035, including US-033b | Receipt OCR and statement import. |

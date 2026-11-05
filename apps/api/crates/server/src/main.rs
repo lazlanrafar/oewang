@@ -318,6 +318,12 @@ fn protected_routes(state: AppState) -> Router<AppState> {
             "/v1/wallets/{id}/set-default",
             post(accounts::handler::set_default_wallet),
         )
+        // Not a balance write: the difference is recorded as a transaction,
+        // which is the only thing that moves a balance (TXN-3).
+        .route(
+            "/v1/wallets/{id}/adjust",
+            post(accounts::handler::adjust_wallet),
+        )
         .route(
             "/v1/categories",
             get(accounts::handler::list_categories).post(accounts::handler::create_category),

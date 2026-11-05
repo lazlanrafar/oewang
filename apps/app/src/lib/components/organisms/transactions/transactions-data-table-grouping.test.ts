@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { groupKey, groupLabel } from './grouping';
+import { groupKey, groupLabel } from './transactions-data-table-grouping';
 
 describe('which block a day belongs to', () => {
 	it('is the day itself when grouping daily', () => {

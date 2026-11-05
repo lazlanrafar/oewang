@@ -27,6 +27,8 @@
 	import { Label } from '../../atoms/label/index.js';
 	import { Spinner } from '../../atoms/spinner/index.js';
 	import { FileDropzone, type UploadedFile } from '../../molecules/file-dropzone/index.js';
+	import { attachmentDropzone } from '$lib/files.js';
+	import { SelectAccount } from '../../molecules/select-account/index.js';
 
 	let {
 		open = $bindable(false),
@@ -59,7 +61,12 @@
 		onClose: () => void;
 	} = $props();
 
-	const selectClass = 'border-input bg-background h-9 w-full border px-3 text-sm';
+
+	/* The picker takes `{ id, label }`; the currency rides along in the label,
+	   as the native list showed it. */
+	const walletItems = $derived(
+		wallets.map((wallet) => ({ id: wallet.id, label: `${wallet.name} · ${wallet.currency_code}` }))
+	);
 
 	/** Nothing to start without a wallet and a file. */
 	const startable = $derived(walletId !== '' && files.length > 0 && !starting);
@@ -79,17 +86,20 @@
 					<Label for="ai-import-wallet" class="text-subtle text-xs font-normal">
 						{t('import.wallet')}
 					</Label>
-					<select id="ai-import-wallet" class={selectClass} bind:value={walletId}>
-						{#each wallets as wallet (wallet.id)}
-							<option value={wallet.id}>{wallet.name} · {wallet.currency_code}</option>
-						{/each}
-					</select>
+					<!-- The wallets come from the workspace, so this is the app's
+					     picker rather than a native `<select>` (D79). -->
+					<SelectAccount
+						id="ai-import-wallet"
+						accounts={walletItems}
+						bind:value={walletId}
+						placeholder={t('import.wallet')}
+					/>
 					<p class="text-subtle text-xs">{t('import.wallet_hint')}</p>
 				</div>
 
 				<div class="grid gap-2">
 					<Label class="text-subtle text-xs font-normal">{t('import.ai_file')}</Label>
-					<FileDropzone bind:files disabled={starting} />
+					<FileDropzone bind:files disabled={starting} {...attachmentDropzone()} />
 					<p class="text-subtle text-xs">{t('import.ai_file_hint')}</p>
 				</div>
 

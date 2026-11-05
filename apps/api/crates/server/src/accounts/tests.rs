@@ -4,6 +4,7 @@
 //! database rather than a mock: `#[sqlx::test]` gives each test its own
 //! schema and drops it afterwards.
 
+use oewang_clients::RatesClient;
 use oewang_domain::AppError;
 use rust_decimal::Decimal;
 use sqlx::PgPool;
@@ -95,6 +96,37 @@ async fn audit_actions(pool: &PgPool, entity_id: &str) -> Vec<String> {
     .fetch_all(pool)
     .await
     .unwrap()
+}
+
+/// A rate client with nowhere to call, so no test reaches the network. Every
+/// lookup answers `None`, which is what the resolution ladder's cache steps
+/// are for.
+fn offline_rates() -> RatesClient {
+    RatesClient::new("http://rates.invalid".into(), None)
+}
+
+fn decimal(value: &str) -> Decimal {
+    value.parse().unwrap()
+}
+
+/// Every live transaction in the workspace, as type, amount and base amount.
+async fn transactions(pool: &PgPool) -> Vec<(String, Decimal, Decimal)> {
+    sqlx::query_as::<_, (String, Decimal, Decimal)>(
+        "SELECT type, amount, base_amount FROM transactions
+         WHERE workspace_id = $1 AND deleted_at IS NULL
+         ORDER BY created_at, id",
+    )
+    .bind(WORKSPACE)
+    .fetch_all(pool)
+    .await
+    .unwrap()
+}
+
+async fn balance(pool: &PgPool, wallet_id: &str) -> Decimal {
+    service::find_wallet(pool, WORKSPACE, wallet_id)
+        .await
+        .unwrap()
+        .balance
 }
 
 // ---------------------------------------------------------------- wallets
@@ -368,6 +400,165 @@ async fn should_roll_the_audit_row_back_with_a_refused_mutation(pool: PgPool) {
         audit_actions(&pool, &wallet).await,
         vec!["wallet.created"],
         "a refused delete leaves no log of something that never happened (D14)"
+    );
+}
+
+// ------------------------------------------------- balance adjustment
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_write_one_income_for_the_difference_when_a_balance_is_adjusted_up(pool: PgPool) {
+    fixture(&pool, "IDR").await;
+    let wallet = make_wallet(&pool, "Cash", None).await;
+
+    let after = service::adjust_wallet_balance(
+        &pool,
+        &offline_rates(),
+        actor(),
+        &wallet,
+        decimal("100000"),
+    )
+    .await
+    .unwrap();
+
+    assert_eq!(after.balance, decimal("100000.0000"));
+    assert_eq!(balance(&pool, &wallet).await, decimal("100000.0000"));
+
+    let written = transactions(&pool).await;
+    assert_eq!(written.len(), 1, "one transaction, not a balance write");
+    assert_eq!(written[0].0, "income");
+    assert_eq!(written[0].1, decimal("100000.0000"));
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_write_one_expense_for_the_difference_when_a_balance_is_adjusted_down(pool: PgPool) {
+    fixture(&pool, "IDR").await;
+    let wallet = make_wallet(&pool, "Cash", None).await;
+    sqlx::query("UPDATE wallets SET balance = 250000.0000 WHERE id = $1")
+        .bind(&wallet)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+    let after = service::adjust_wallet_balance(
+        &pool,
+        &offline_rates(),
+        actor(),
+        &wallet,
+        decimal("90000.50"),
+    )
+    .await
+    .unwrap();
+
+    assert_eq!(after.balance, decimal("90000.5000"));
+
+    let written = transactions(&pool).await;
+    assert_eq!(written.len(), 1);
+    assert_eq!(written[0].0, "expense");
+    assert_eq!(
+        written[0].1,
+        decimal("159999.5000"),
+        "the absolute difference, not the target"
+    );
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_write_nothing_when_the_balance_is_already_the_target(pool: PgPool) {
+    fixture(&pool, "IDR").await;
+    let wallet = make_wallet(&pool, "Cash", None).await;
+    service::adjust_wallet_balance(&pool, &offline_rates(), actor(), &wallet, decimal("100000"))
+        .await
+        .unwrap();
+
+    let before = transactions(&pool).await.len();
+
+    // Asking for the balance it already has is not an error, and a
+    // zero-amount transaction is never written.
+    let after = service::adjust_wallet_balance(
+        &pool,
+        &offline_rates(),
+        actor(),
+        &wallet,
+        decimal("100000.0000"),
+    )
+    .await
+    .unwrap();
+
+    assert_eq!(after.balance, decimal("100000.0000"));
+    assert_eq!(transactions(&pool).await.len(), before);
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_land_on_the_target_in_its_own_currency_when_the_wallet_is_foreign(pool: PgPool) {
+    fixture(&pool, "IDR").await;
+    let wallet = make_wallet(&pool, "Euro", Some("EUR")).await;
+
+    // The create path converts to the workspace currency itself and writes
+    // that as `base_amount`. Nothing about that moves the balance, which is
+    // denominated in the wallet's own currency (TXN-2).
+    sqlx::query(
+        "INSERT INTO exchange_rates (id, base_code, quote_code, date, rate)
+         VALUES ($1, 'EUR', 'IDR', current_date, 17000)",
+    )
+    .bind(cuid2::create_id())
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    let after =
+        service::adjust_wallet_balance(&pool, &offline_rates(), actor(), &wallet, decimal("250"))
+            .await
+            .unwrap();
+
+    assert_eq!(after.currency_code, "EUR");
+    assert_eq!(after.balance, decimal("250.0000"), "euros, not rupiah");
+
+    let written = transactions(&pool).await;
+    assert_eq!(written.len(), 1);
+    assert_eq!(written[0].1, decimal("250.0000"));
+    assert_eq!(
+        written[0].2,
+        decimal("4250000.0000"),
+        "the base figure is the converted one, and the balance is not it"
+    );
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_refuse_a_balance_adjustment_when_the_member_cannot_write(pool: PgPool) {
+    fixture(&pool, "IDR").await;
+
+    sqlx::query(
+        "INSERT INTO users (id, email, password_hash) VALUES ($1, 'reader@example.com', 'x')",
+    )
+    .bind("usr_reader")
+    .execute(&pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO user_workspaces (id, workspace_id, user_id, role)
+         VALUES ('m_reader', $1, $2, 'member')",
+    )
+    .bind(WORKSPACE)
+    .bind("usr_reader")
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    // The route is registered behind `AuthWrite`, which re-reads the
+    // membership row and refuses when it cannot write. That read is the
+    // gate, and this is it answering: there is no HTTP harness in this
+    // crate, and the service deliberately holds no second copy of the role
+    // rule.
+    let role = crate::auth::service::current_role(&pool, WORKSPACE, "usr_reader")
+        .await
+        .unwrap();
+
+    assert!(!role.can_write(), "a member may not adjust a balance");
+    assert!(
+        crate::auth::service::current_role(&pool, WORKSPACE, USER)
+            .await
+            .unwrap()
+            .can_write(),
+        "and the owner the other tests use may"
     );
 }
 

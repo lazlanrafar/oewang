@@ -65,30 +65,110 @@ Rules:
 - A page load fetches only what that page adds.
 - Independent fetches go in one `Promise.all`.
 
+## A list screen
+
+Transactions and accounts are the same screen with different rows, and the
+next list is meant to be the third. The shape, top to bottom:
+
+```
+header      one line: filter bar left, actions right. No page title: the
+            sidebar already said where the reader is.
+summary     optional, above the table: cards whose figures arrive formatted.
+table       molecules/data-table, filling the rest of the height, configured
+            by organisms/<module>/<module>-data-table-column.ts.
+off-page    the form sheet, the detail sheet, modals and the bulk bar. They
+            are the page's state, not the table's, so they live beside it.
+```
+
+Rules that make a second list screen cheap:
+
+- **Every view choice is in the URL** (UI-8, D55), through `src/lib/url-state.ts`:
+  search, facets, amount band, date range, sort, order, page, grouping, the
+  open sheet, the open tab. A filter kept in component state is lost on
+  refresh, cannot be shared, and cannot be read back by the load that is
+  supposed to apply it.
+- **Sorting and paging are the server's.** The load reads the query string and
+  asks the API; the table reports a header click and renders what comes back.
+  Sorting the page you happen to have loaded is not sorting.
+- **The table is configured, never rewritten** (D78). Columns in the module's
+  own column file; what a cell renders in the `cell` snippet; what a group's
+  heading shows in `groupRow`. A screen that re-implements the scrollport, the
+  sticky header or the geometry has forked the table.
+- **Two empty states** (UI-2). "Nothing yet" offers the action that makes the
+  first row; "nothing matching" offers a way back out of the filter. One
+  message for both tells half the readers the wrong thing.
+- **In-cell editing reports, it does not save.** The cell calls back, the page
+  posts, and `invalidateAll` is what makes the new value stick or puts the old
+  one back.
+
+## Changing how something looks
+
+The component owns its look; the call site owns where it sits. A caller may
+pass data, a documented variant (`inDataTable`, `variant="outline"`), and the
+classes that place it: a width, a grid or flex position, a height. It may not
+pass colour, radius, shadow, border, font or padding, and it may not reach
+past the component with `[&_div]:…`.
+
+This is not tidiness. The shape rules are measured against the live app
+(D52, D66), and the design system measures itself against them on every
+render. A call site that restyles is a value nothing measures, which is how
+two screens end up disagreeing about what a field looks like.
+
+If the look is wrong, change the component and its specimen together. If one
+screen genuinely needs a different look, that is a variant on the component,
+named and specimened, not a class string at one call site.
+
 ## The design system page
 
-`/design-system` renders every primitive in `$lib/components/ui` on a bare
-page, expanded and grouped into tabs: Foundations (type scale, colour,
-shape), Controls (button, badge, checkbox, separator, tabs), Forms (input,
-input group, label, textarea, select, combobox), Overlays (command, dropdown
-menu, popover, dialog, sheet, toast) and Data (the grouped table with in-cell
-editing and an expanded row, plus card).
+`/design-system` renders every component in `$lib/components` on a bare page,
+one tab per atomic layer, so the page is laid out the way the folders are:
+Foundations (type scale, colour, shape), Atoms, Molecules, Organisms, Pages
+(a whole screen assembled from the organisms) and Measured.
 
-Two rules make it worth keeping:
+```
+src/routes/(dev)/design-system/
+├─ +page.svelte        the shell: the tabs, and the contents list beside them
+├─ specimen.svelte     one specimen: title, note, framed preview
+├─ measured.svelte     the comparison against the live app
+├─ mock/               the fixtures, as JSON, behind one typed index.ts
+└─ sections/           one file per tab
+```
+
+Three rules make it worth keeping:
+
+- **One specimen, one frame.** A section never writes its own heading or
+  wrapper classes; it renders `<Specimen title note>`, which owns both. The
+  page makes the same argument to itself that the design system makes to the
+  rest of the app.
+- **The contents list is read, not registered.** The nav beside the tabs is
+  built from the rendered `[data-specimen]` elements, so a new specimen
+  appears in it without being listed anywhere. A registry would be a second
+  list to keep true, and the one that drifts is always the second.
+- **Nothing on the page is real.** Every specimen reads `design-system/mock/`,
+  a handful of JSON files behind one typed `index.ts`. A specimen that borrows
+  production data puts a real name and a real balance on a page whose purpose
+  is to be shared around, and it also hides the empty, long and awkward cases
+  a fixture can state outright.
+- **A shared component is shown once.** The data table is a molecule, so it
+  has one specimen there, not a transactions table and an accounts table on
+  the Organisms tab: two specimens of the same shell would be the duplication
+  the shell exists to remove. Organisms show what a feature adds on top, and
+  the Pages tab shows the whole screen.
 
 - **Development only.** `(dev)/+layout.server.ts` calls `error(404)` outside
   `dev`, so a production deployment does not admit the route exists. Verified
   against a production build, not only by reading the code.
-- **It measures itself.** The table at the foot reads the rendered page with
+- **It measures itself.** The Measured tab reads the rendered page with
   `getComputedStyle` and prints each value beside the one measured on
   `app.oewang.com` (D50), so a drift shows on the page. A row is read while its
   tab is on screen and keeps its value afterwards, so browsing the tabs fills
-  the table in; the two menu rows need the dropdown opened once, then
-  Re-measure. Two rows are not comparisons but rules, counted over every
-  element the page renders: no radius and no shadow (D52). Two traps are handled
-  in that code: `getPropertyValue` needs kebab-case, and Chrome reports a
-  hairline border already snapped to a device pixel, so a 1px rule reads
-  0.5556px at a device pixel ratio of 1.8. Compare in device pixels.
+  the table in; the two menu rows need the dropdown on the Atoms tab opened
+  once, then Re-measure. Two traps are handled in that code:
+  `getPropertyValue` needs kebab-case, and Chrome reports a hairline border
+  already snapped to a device pixel, so a 1px rule reads 0.5556px at a device
+  pixel ratio of 1.8. Compare in device pixels. The table rows are read through
+  the roles and `data-group-row` the shell renders, not through ids planted in
+  the product for this page's benefit.
 
 ## The BFF
 
@@ -126,32 +206,65 @@ Atomic design, the same three layers as the old app's `packages/ui/src/component
 ```
 src/lib/components/
 ├─ atoms/       one element, no product knowledge: button, badge, input, textarea,
-│               label, checkbox, radio-group, switch, select, separator, table,
-│               tabs, card, avatar, alert, alert-dialog, dialog, sheet, popover,
-│               dropdown-menu, command, tooltip, accordion, collapsible, toggle,
-│               toggle-group, slider, progress, skeleton, spinner, kbd, breadcrumb,
-│               pagination, scroll-area, aspect-ratio, sonner
+│               label, checkbox, radio-group, switch, select, native-select,
+│               separator, table, tabs, card, avatar, alert, alert-dialog, dialog,
+│               sheet, popover, dropdown-menu, command, tooltip, accordion,
+│               collapsible, toggle, toggle-group, slider, progress, skeleton,
+│               spinner, kbd, breadcrumb, pagination, scroll-area, aspect-ratio,
+│               calendar, range-calendar, sonner
 ├─ molecules/   atoms doing one job together: field, input-group, button-group,
-│               combobox, currency-input, item, empty, stat-card, field-error,
-│               form-error, the data table and its filter bar
-└─ organisms/   a whole feature, and the app's own furniture: the transactions
-                page, the chat panel, and layouts/ (the sidebar, its nav, the
+│               select and the pickers over it (select-account, select-category,
+│               select-group, select-currency, select-column), combobox,
+│               currency-input, date-range-picker, item, empty, stat-card,
+│               field-error, form-error, confirm-dialog, file-dropzone,
+│               attachment-view, the data table and its filter bar
+└─ organisms/   a whole feature, and the app's own furniture: transactions/,
+                accounts/, chat/ and layouts/ (the sidebar, its nav, the
                 workspace block, the theme toggle)
 ```
 
+Inside an organism folder, every file repeats the module's name, so a file
+says which feature it belongs to before it is opened and two modules can hold
+the same kind of part without either being `columns.ts`:
+
+```
+organisms/transactions/          organisms/accounts/
+├─ transactions-data-table.svelte        ├─ accounts-data-table.svelte
+├─ transactions-data-table-column.ts     ├─ accounts-data-table-column.ts
+├─ transactions-data-table-types.ts      ├─ accounts-form-sheet.svelte
+├─ transactions-data-table-grouping.ts   ├─ accounts-form-fields.svelte
+├─ transactions-form-sheet.svelte        ├─ accounts-detail-sheet.svelte
+├─ …                                     ├─ accounts-summary-cards.svelte
+└─ index.ts                              └─ index.ts
+```
+
+Every folder has an `index.ts`, and that barrel is the only way in: a deep
+path into another folder's file is what made the last rename touch twenty
+call sites.
+
 - An atom knows nothing about money, workspaces or transactions. The moment it would, it is a molecule.
-- The data table and its filter bar are molecules, not organisms: they take rows and columns as props and know nothing about transactions. `organisms/transactions` is what knows, and it is the thing that configures them.
+- The data table and its filter bar are molecules, not organisms: they take rows and columns as props and know nothing about transactions. `organisms/transactions` is what knows, and it is the thing that configures them. The word "transaction" does not appear under `molecules/`; if it does, something leaked (D78).
+- **There is one table.** `molecules/data-table` owns the scrollport, the sticky header, the per-column geometry, the table roles, the resize handles, the sideways arrows, group rows and the next-page trigger. A feature passes `ColumnSpec`s and the `head`, `cell` and `groupRow` snippets. A screen that re-implements any of that has forked the table, which is how the two tables drifted the first time.
+- The select is one component with its options as a prop, `<Select items={…} bind:value />`, with two engines behind one API: searchable (the combobox, with an optional create row) and plain (`atoms/select`, for a short fixed list). A call site that assembles a trigger, a panel and a row by hand is repeating class strings the molecule already owns.
+- **The workspace's lists are loaded once and read, not passed** (D80). `(dashboard)/+layout.server.ts` loads wallets, groups and categories with the session's token; `$lib/workspace-data.svelte.ts` publishes them through context; a picker with no list prop reads them. `<SelectCategory type="expense" creatable />` needs nothing else, and `creatable` creates the missing entry through `POST /workspace`. A caller that passes a list, such as a design-system specimen or a filtered subset, still wins. One workspace's rows cannot reach another: both the load and the create call the API with the cookie's token, and the workspace is a claim inside it (AUTH-4).
+- **Every dynamic list gets a picker of its own** (D79): `select-account`, `select-category`, `select-group`, `select-currency`, `select-column`. Each is a few lines over `molecules/select` and states that list's placeholder, search text, mark and empty-value convention once. Adding a list means adding `molecules/select-<thing>`, not mapping to `items` at a call site.
+- A native `<select>` is for a list fixed in the source, and for the `<noscript>` copy of a form, because the rich select is a button and a button submits nothing. It is always `atoms/native-select`; a hand-styled `<select>` element is the class string copied again.
+- A picker that has to post its value renders a hidden input beside it, or takes `name`. A picker that has to save on change submits its own form, as the account detail sheet does.
 - There is no `shell/`. The app's own furniture is `organisms/layouts/`, because a sidebar that knows the navigation and the workspace is a feature, not a primitive.
 - `atoms/` and `molecules/` are the design system. They are edited to change the design system, never for one feature's convenience.
-- A component that fetches is a mistake. Data comes in as a prop.
+- A component that fetches is a mistake. Data comes in as a prop, and so does transport: the dropzone takes `upload`, the attachment view takes `load`, and the routes, the limits and the strings behind them live in `$lib/files.ts` (D78).
 - A component over roughly 300 lines is a hint that a sheet is doing a page's job.
 - `components.json` points shadcn-svelte's `ui` alias at `atoms/`, so a generated component lands in the right layer. Generated code is then edited to match the old app (square, flat, no ring) before it is used.
 
 ### Ported, and not
 
-Ported from `packages/ui`: every atom above, and the molecules above.
+Ported from `packages/ui`: every atom above, and the molecules above. The
+calendar, range calendar and date range picker were on the "not ported" list
+until the transactions filter needed a date range; they are ported now, and a
+day is a `DateValue` rather than a `Date`, so the browser's time zone cannot
+move the boundary.
 
-Deliberately not ported, because the feature they serve is out of scope ([non-goals](../prd.md#non-goals-for-v1)) or because the platform differs: `chart`, `ai-chart`, `bar-metric-chart`, `donut-chart`, `line-metric-chart` (charts are out of scope), `canvas`, `carousel`, `context-menu`, `menubar`, `navigation-menu`, `resizable`, `drawer`, `hover-card`, `sidebar` (this app has its own shell), `form` (react-hook-form; SvelteKit form actions replace it), `icons` and `simple-icon` (a React icon registry; `@lucide/svelte` replaces it), `portal`, `animated-size-container`, `animated-status`, `text-shimmer`, `input-otp`, `calendar`, `date-range-picker`, `select-country`, `select-currency`, `scrollable-content`, `horizontal-pagination`, and the chat surface (`conversation`, `message`, `markdown`, `prompt-input`, `response`) which lands with M4.
+Deliberately not ported, because the feature they serve is out of scope ([non-goals](../prd.md#non-goals-for-v1)) or because the platform differs: `chart`, `ai-chart`, `bar-metric-chart`, `donut-chart`, `line-metric-chart` (charts are out of scope), `canvas`, `carousel`, `context-menu`, `menubar`, `navigation-menu`, `resizable`, `drawer`, `hover-card`, `sidebar` (this app has its own shell), `form` (react-hook-form; SvelteKit form actions replace it), `icons` and `simple-icon` (a React icon registry; `@lucide/svelte` replaces it), `portal`, `animated-size-container`, `animated-status`, `text-shimmer`, `input-otp`, `select-country`, `select-currency`, `scrollable-content`, `horizontal-pagination`, and the chat surface (`conversation`, `message`, `markdown`, `prompt-input`, `response`) which lands with M4.
 
 Two rules override fidelity where they conflict: nothing is rounded and nothing casts a shadow (D52). The old avatar, switch, radio, progress track, kbd and menu item are rounded, and its tooltip and alert dialog cast a shadow; the ports are square and flat.
 
@@ -163,14 +276,14 @@ Ported from the old app's `docs/SHEET_GUIDE.md`, which is the contract every she
 
 Pass `p-0` and manage the padding inside.
 
-**A form sheet** (`transaction-form-sheet`):
+**A form sheet** (`transactions-form-sheet`):
 
 - Content `flex h-full flex-col p-0`; header `shrink-0 px-6 pt-6` with no rule; title `text-lg`, no weight or serif override.
 - Body `flex-1 overflow-y-auto px-6 pt-6 pb-[100px]`, fields `space-y-6`, two-column rows as `grid grid-cols-2 gap-4`.
 - Footer `absolute inset-x-0 bottom-0 bg-background p-6`: one full-width submit, **no cancel**, no rule. The overlay and Escape already close the sheet, and `pb-[100px]` keeps the last field clear of it.
 - Labels `text-subtle text-xs font-normal`. Every control keeps its default `h-9`, which is what keeps two fields in a row on the same line.
 
-**A detail sheet** (`transaction-detail-sheet`): header `flex shrink-0 flex-row items-center justify-between border-b bg-muted/5 px-6 py-6`, title `text-xl font-medium`, subtitle `text-subtle text-xs uppercase tracking-widest`, actions in the header row, body `flex-1 space-y-6 overflow-y-auto px-6 py-6`, and no footer.
+**A detail sheet** (`transactions-detail-sheet`): header `flex shrink-0 flex-row items-center justify-between border-b bg-muted/5 px-6 py-6`, title `text-xl font-medium`, subtitle `text-subtle text-xs uppercase tracking-widest`, actions in the header row, body `flex-1 space-y-6 overflow-y-auto px-6 py-6`, and no footer.
 
 Two sheets cannot swap in one tick: close the first through its own `Sheet.Close` and open the second once the overlay is gone. When wrapping a control in `Sheet.Close`, call the handler the primitive puts in `props` as well as your own, or the sheet never closes.
 

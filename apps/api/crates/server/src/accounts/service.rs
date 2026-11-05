@@ -4,11 +4,17 @@
 //! audit row inside it (D14, OPS-1). Handlers parse and map to HTTP;
 //! repositories run SQL.
 
+use chrono::Utc;
+use oewang_clients::RatesClient;
 use oewang_db::{
     repositories::{accounts, categories, wallets},
     PgPool,
 };
-use oewang_domain::{validate_currency_code, AppError, Result};
+use oewang_domain::{
+    ledger::{round_money, TransactionType},
+    validate_currency_code, AppError, Result,
+};
+use rust_decimal::Decimal;
 
 use oewang_db::repositories::{
     categories::CategoryRow,
@@ -16,7 +22,10 @@ use oewang_db::repositories::{
 };
 
 pub use crate::audit::Actor;
-use crate::audit::{log, snapshot};
+use crate::{
+    audit::{log, snapshot},
+    transactions::service::{self as ledger, TransactionInput},
+};
 
 const ENTITY_WALLET: &str = "wallet";
 const ENTITY_WALLET_GROUP: &str = "wallet_group";
@@ -399,6 +408,84 @@ pub async fn delete_wallet(pool: &PgPool, actor: Actor<'_>, id: &str) -> Result<
 
     tx.commit().await.map_err(internal)?;
     Ok(())
+}
+
+/// What a balance adjustment is called in the ledger (TXN-3).
+const ADJUSTMENT_NAME: &str = "Balance adjustment";
+
+/// Bring a wallet to `target` by writing the one transaction that gets it
+/// there.
+///
+/// `wallets.balance` is not written, here or anywhere: the balance is the
+/// ledger's consequence, so a correction that wrote the column would make
+/// the two disagree and leave nothing saying why (TXN-3,
+/// docs/api/endpoints.md#wallets). The difference becomes an income or an
+/// expense in the wallet's own currency and goes through the ordinary
+/// create path, which is what locks the wallet, moves the balance and
+/// writes the audit row inside one database transaction (D13, D14, OPS-1).
+///
+/// Asking for the balance the wallet already has writes nothing and
+/// succeeds. It is not a mistake, and the ledger refuses a zero amount
+/// anyway.
+///
+/// The read and the write are not one atomic act. A transaction committed
+/// by someone else in between moves the balance after the difference was
+/// computed, and the wallet then lands beside the target rather than on
+/// it. Closing that would mean computing the difference under the wallet's
+/// own lock, which means reimplementing the create path; a manual
+/// correction racing another write is not worth a second copy of the
+/// ledger.
+pub async fn adjust_wallet_balance(
+    pool: &PgPool,
+    rates: &RatesClient,
+    actor: Actor<'_>,
+    id: &str,
+    target: Decimal,
+) -> Result<WalletRow> {
+    let wallet = find_wallet(pool, actor.workspace_id, id).await?;
+    let difference = round_money(target) - wallet.balance;
+
+    if difference.is_zero() {
+        return Ok(wallet);
+    }
+
+    let kind = if difference > Decimal::ZERO {
+        TransactionType::Income
+    } else {
+        TransactionType::Expense
+    };
+
+    ledger::create(
+        pool,
+        rates,
+        actor,
+        TransactionInput {
+            kind,
+            wallet_id: id,
+            to_wallet_id: None,
+            // A correction belongs to no category: inventing one would put
+            // it in a report the user never spent that money in.
+            category_id: None,
+            // The wallet's own currency. `create` converts it to the
+            // workspace currency itself and writes that as `base_amount`,
+            // which is why the balance lands on the target either way.
+            amount: difference.abs(),
+            to_amount: None,
+            original_amount: None,
+            original_currency_code: None,
+            exchange_rate: None,
+            requested_base_rate: None,
+            date: Utc::now(),
+            name: Some(ADJUSTMENT_NAME),
+            description: None,
+            // Nothing left to review: the user named the figure.
+            is_ready: true,
+            attachment_ids: None,
+        },
+    )
+    .await?;
+
+    find_wallet(pool, actor.workspace_id, id).await
 }
 
 // -------------------------------------------------------------- categories

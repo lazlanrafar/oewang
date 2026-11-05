@@ -425,8 +425,8 @@ Each new component has a reference file in the old app. "Port" means reproduce t
 | `transactions/transaction-table.svelte` | `transaction-client.tsx` | 865 lines |
 | `transactions/transaction-columns.ts` | `transaction-columns.tsx` | 567 lines |
 | `transactions/transaction-header.svelte` | `transaction-client-header.tsx` | 165 lines |
-| `transactions/transaction-form-sheet.svelte` | `transaction-form-sheet.tsx` | 907 lines |
-| `transactions/transaction-detail-sheet.svelte` | `transaction-detail-sheet.tsx` | 611 lines |
+| `transactions/transactions-form-sheet.svelte` | `transaction-form-sheet.tsx` | 907 lines |
+| `transactions/transactions-detail-sheet.svelte` | `transaction-detail-sheet.tsx` | 611 lines |
 | `transactions/bulk-edit-bar.svelte` | `transaction-bulk-edit-bar.tsx` | 124 lines |
 | `transactions/export-modal.svelte` | `transaction-export-modal.tsx` | 173 lines |
 | `transactions/import-wizard/*.svelte` | `transaction-import-modal.tsx` plus the four mapping components | 1,435 lines |
@@ -437,7 +437,7 @@ Each new component has a reference file in the old app. "Port" means reproduce t
 
 ### One component, two containers
 
-`receipt-confirmation-sheet` and `transaction-form-sheet` each take a
+`transactions-receipt-confirmation-sheet` and `transactions-form-sheet` each take a
 `container` prop. `sheet` brings a `Sheet.Root` with it, as the transactions
 page mounts them; `panel` renders the same form as the [canvas](chat.md#canvas)'s
 contents, because the canvas is already the container.
@@ -485,6 +485,7 @@ The covering index on `(workspace_id, date DESC, created_at DESC) WHERE deleted_
 - [Data model](../data-model.md#ledger) and [balance arithmetic](../data-model.md#balance-arithmetic)
 - [API endpoints](../api/endpoints.md#transactions) and [conventions](../api/conventions.md)
 - [Auth and access control](../security/auth.md#permission-matrix)
+- [Accounts](accounts.md) (a balance correction lands here as a transaction)
 - [Chat](chat.md) (the assistant writes through the same service)
 - [Svelte app best practices](../best-practices/svelte-app.md)
 - [Legacy app](../reference/legacy-app.md#where-to-look-when-porting)

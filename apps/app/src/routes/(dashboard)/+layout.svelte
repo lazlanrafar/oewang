@@ -26,8 +26,17 @@
 	import * as Sheet from '$lib/components/atoms/sheet';
 	import { Toaster } from '$lib/components/atoms/sonner';
 	import { t } from '$lib/i18n';
+	import { setWorkspaceLists } from '$lib/workspace-data.svelte';
 
 	let { children, data } = $props();
+
+	/*
+	 * The workspace's own lists, published for every picker under this
+	 * layout, so a call site writes `<SelectCategory type="expense" />` and
+	 * not three mapped arrays. A getter, so a navigation that reloads them
+	 * reaches the pickers already on screen.
+	 */
+	setWorkspaceLists(() => data.lists);
 
 	/**
 	 * Seeded from the cookie, so the first paint is already the right shape,

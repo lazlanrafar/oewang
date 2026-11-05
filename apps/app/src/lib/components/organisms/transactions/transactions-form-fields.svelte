@@ -58,15 +58,19 @@
 	import { formatMoney, multiplyDecimals } from '$lib/money.js';
 	import { Checkbox } from '../../atoms/checkbox/index.js';
 	import { FileDropzone, type UploadedFile } from '../../molecules/file-dropzone/index.js';
+	import { attachmentDropzone } from '$lib/files.js';
 	import { Input } from '../../atoms/input/index.js';
 	import { Label } from '../../atoms/label/index.js';
 	import * as Tabs from '../../atoms/tabs/index.js';
 	import { Textarea } from '../../atoms/textarea/index.js';
 	import { CurrencyInput } from '../../molecules/currency-input/index.js';
+	import { DatePicker } from '../../molecules/date-picker/index.js';
+	import { SelectCurrency } from '../../molecules/select-currency/index.js';
 	import { SelectAccount } from '../../molecules/select-account/index.js';
 	import { SelectCategory } from '../../molecules/select-category/index.js';
 	import type { CategoryItem } from '../../molecules/select-category/index.js';
 	import type { ComboboxItem } from '../../molecules/combobox/index.js';
+	import { NativeSelect } from '../../atoms/native-select/index.js';
 
 	let {
 		draft = $bindable(),
@@ -82,6 +86,7 @@
 		plain = false,
 		attachments = $bindable([]),
 		fieldErrors,
+		createLabel,
 		onCreateAccount,
 		onCreateCategory
 	}: {
@@ -97,6 +102,13 @@
 		/** The files this transaction carries (TXN-13). */
 		attachments?: UploadedFile[];
 		fieldErrors?: Record<string, string>;
+		/** The create row's text, resolved by the caller (UI-1). */
+		createLabel?: (typed: string) => string;
+		/**
+		 * Override what the create row does. Left out, the picker makes the
+		 * account or the category in this session's workspace itself (D80);
+		 * a specimen with no session behind it passes its own.
+		 */
 		onCreateAccount?: (name: string) => void;
 		onCreateCategory?: (name: string) => void;
 	} = $props();
@@ -127,7 +139,6 @@
 	});
 
 	const labelClass = 'text-subtle text-xs font-normal';
-	const selectClass = 'border-input bg-background h-9 w-full border px-3 text-sm';
 </script>
 
 <!--
@@ -169,11 +180,11 @@
 	{#if plain}
 		<div class="grid gap-2">
 			<Label for="form-type" class={labelClass}>Type</Label>
-			<select id="form-type" name="type" class={selectClass} bind:value={draft.type}>
+			<NativeSelect id="form-type" name="type" bind:value={draft.type}>
 				<option value="expense">Expense</option>
 				<option value="income">Income</option>
 				<option value="transfer">Transfer</option>
-			</select>
+			</NativeSelect>
 		</div>
 	{:else}
 		<Tabs.Root
@@ -220,16 +231,13 @@
 		<div class="grid gap-2">
 			<Label for="form-currency" class={labelClass}>Currency</Label>
 			{#if plain}
-				<select id="form-currency" class={selectClass} bind:value={draft.currency}>
+				<NativeSelect id="form-currency" bind:value={draft.currency}>
 					{#each currencies as code (code)}<option value={code}>{code}</option>{/each}
-				</select>
+				</NativeSelect>
 			{:else}
-				<SelectAccount
-					id="form-currency"
-					accounts={currencies.map((code) => ({ id: code, label: code }))}
-					bind:value={draft.currency}
-					placeholder="Currency"
-				/>
+				<!-- A currency is not an account: its own picker, so a code does
+				     not render behind a bank icon (D79). -->
+				<SelectCurrency id="form-currency" {currencies} bind:value={draft.currency} />
 			{/if}
 		</div>
 	</div>
@@ -281,17 +289,19 @@
 				{transfer ? 'From account' : 'Account'}
 			</Label>
 			{#if plain}
-				<select id="form-account" name="wallet_id" class={selectClass} bind:value={draft.accountId}>
+				<NativeSelect id="form-account" name="wallet_id" bind:value={draft.accountId}>
 					{#each accounts as account (account.id)}
 						<option value={account.id}>{account.label}</option>
 					{/each}
-				</select>
+				</NativeSelect>
 			{:else}
 				<SelectAccount
 					id="form-account"
 					{accounts}
 					bind:value={draft.accountId}
+					creatable
 					onCreate={onCreateAccount}
+					{createLabel}
 				/>
 			{/if}
 		</div>
@@ -300,23 +310,24 @@
 			<div class="grid gap-2">
 				<Label for="form-to-account" class={labelClass}>To account</Label>
 				{#if plain}
-					<select
+					<NativeSelect
 						id="form-to-account"
 						name="to_wallet_id"
-						class={selectClass}
 						bind:value={draft.toAccountId}
 					>
 						<option value="">Select</option>
 						{#each accounts as account (account.id)}
 							<option value={account.id}>{account.label}</option>
 						{/each}
-					</select>
+					</NativeSelect>
 				{:else}
 					<SelectAccount
 						id="form-to-account"
 						{accounts}
 						bind:value={draft.toAccountId}
+						creatable
 						onCreate={onCreateAccount}
+						{createLabel}
 					/>
 				{/if}
 			</div>
@@ -324,23 +335,25 @@
 			<div class="grid gap-2">
 				<Label for="form-category" class={labelClass}>Category</Label>
 				{#if plain}
-					<select
+					<NativeSelect
 						id="form-category"
 						name="category_id"
-						class={selectClass}
 						bind:value={draft.categoryId}
 					>
 						<option value="">None</option>
 						{#each categories as category (category.id)}
 							<option value={category.id}>{category.label}</option>
 						{/each}
-					</select>
+					</NativeSelect>
 				{:else}
 					<SelectCategory
 						id="form-category"
 						{categories}
+						creatable
+						type={draft.type === 'income' ? 'income' : 'expense'}
 						bind:value={draft.categoryId}
 						onCreate={onCreateCategory}
+						{createLabel}
 					/>
 				{/if}
 			</div>
@@ -372,7 +385,11 @@
 
 	<div class="grid gap-2">
 		<Label for="form-date" class={labelClass}>Date</Label>
-		<Input id="form-date" name="date" type="date" required bind:value={draft.date} />
+		{#if plain}
+			<Input id="form-date" name="date" type="date" required bind:value={draft.date} />
+		{:else}
+			<DatePicker id="form-date" name="date" bind:value={draft.date} />
+		{/if}
 	</div>
 
 	<div class="grid gap-2">
@@ -395,7 +412,7 @@
 		-->
 		<div class="grid gap-2">
 			<Label class={labelClass}>Attachments</Label>
-			<FileDropzone bind:files={attachments} />
+			<FileDropzone bind:files={attachments} {...attachmentDropzone()} />
 		</div>
 	{/if}
 

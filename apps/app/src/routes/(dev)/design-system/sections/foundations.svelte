@@ -1,6 +1,7 @@
 <script lang="ts">
 	/** Type, colour and shape: the tokens every component is built from. */
 	import * as Table from '$lib/components/atoms/table';
+	import Specimen from '../specimen.svelte';
 
 	const typeScale = [
 		{ token: 'text-h1', use: 'Page title, serif', size: '22.5px', weight: '400' },
@@ -29,11 +30,10 @@
 		['red', 'bg-red']
 	];
 
-	let { heading }: { heading: import('svelte').Snippet<[string, string?]> } = $props();
 </script>
 
-<section class="space-y-4">
-	{@render heading('Type scale', 'Named by role, not by size. Each token carries its own size, line height, weight and letter spacing, so one class sets all four.')}
+<Specimen title="Type scale"
+	note="Named by role, not by size. Each token carries its own size, line height, weight and letter spacing, so one class sets all four.">
 
 	<div class="space-y-3">
 		<p class="text-h1">Heading 1, serif, the page title</p>
@@ -79,10 +79,9 @@
 		and a utility still wins where a page needs something else. The serif ships one weight, 400,
 		and font-synthesis-weight is off, so a stray font-semibold cannot fake a bold.
 	</p>
-</section>
+</Specimen>
 
-<section class="space-y-4">
-	{@render heading('Colour')}
+<Specimen title="Colour">
 	<div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
 		{#each colours as [name, cls] (name)}
 			<div class="space-y-1">
@@ -91,10 +90,10 @@
 			</div>
 		{/each}
 	</div>
-</section>
+</Specimen>
 
-<section class="space-y-4">
-	{@render heading('Shape', 'Copied from the old app, not invented here, and the table at the foot of the page checks both.')}
+<Specimen title="Shape"
+	note="Copied from the old app, not invented here, and the table at the foot of the page checks both.">
 	<ul class="text-body list-disc space-y-1 pl-5">
 		<li>
 			The radius scale is live: --radius is 0.5rem, so rounded-sm is 3.5px, rounded-md 5.5px
@@ -107,4 +106,4 @@
 			shadow-md or shadow-lg class it was written with and paints nothing.
 		</li>
 	</ul>
-</section>
+</Specimen>

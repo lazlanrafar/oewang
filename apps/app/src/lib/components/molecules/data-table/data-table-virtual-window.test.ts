@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { GROUP_ROW_HEIGHT, ROW_HEIGHT } from './columns.js';
-import { blockHeights, windowOf } from './virtual-window.js';
+import { GROUP_ROW_HEIGHT, ROW_HEIGHT } from './data-table-column.js';
+import { blockHeights, windowOf } from './data-table-virtual-window.js';
 
 /** Five uneven day blocks, 800px in all, tops at 0, 100, 300, 350 and 650. */
 const BLOCKS = [100, 200, 50, 300, 150];

@@ -11,11 +11,13 @@
 
 	import * as Accordion from '$lib/components/atoms/accordion';
 	import * as Alert from '$lib/components/atoms/alert';
+	import { AspectRatio } from '$lib/components/atoms/aspect-ratio';
 	import * as AlertDialog from '$lib/components/atoms/alert-dialog';
 	import * as Avatar from '$lib/components/atoms/avatar';
 	import { Badge } from '$lib/components/atoms/badge';
 	import * as Breadcrumb from '$lib/components/atoms/breadcrumb';
 	import { Button } from '$lib/components/atoms/button';
+	import { Calendar } from '$lib/components/atoms/calendar';
 	import * as Card from '$lib/components/atoms/card';
 	import { Checkbox } from '$lib/components/atoms/checkbox';
 	import * as Collapsible from '$lib/components/atoms/collapsible';
@@ -25,10 +27,12 @@
 	import { Input } from '$lib/components/atoms/input';
 	import { Kbd, KbdGroup } from '$lib/components/atoms/kbd';
 	import { Label } from '$lib/components/atoms/label';
+	import { NativeSelect } from '$lib/components/atoms/native-select';
 	import { Pagination } from '$lib/components/atoms/pagination';
 	import * as Popover from '$lib/components/atoms/popover';
 	import { Progress } from '$lib/components/atoms/progress';
 	import * as RadioGroup from '$lib/components/atoms/radio-group';
+	import { RangeCalendar } from '$lib/components/atoms/range-calendar';
 	import { ScrollArea } from '$lib/components/atoms/scroll-area';
 	import * as Select from '$lib/components/atoms/select';
 	import { Separator } from '$lib/components/atoms/separator';
@@ -42,8 +46,8 @@
 	import { Toggle } from '$lib/components/atoms/toggle';
 	import * as ToggleGroup from '$lib/components/atoms/toggle-group';
 	import * as Tooltip from '$lib/components/atoms/tooltip';
+	import Specimen from '../specimen.svelte';
 
-	let { heading }: { heading: import('svelte').Snippet<[string, string?]> } = $props();
 
 	const categories = ['Food', 'Transport', 'Shopping', 'Bills', 'Salary'];
 	let category = $state('Food');
@@ -56,8 +60,7 @@
 	let showArchived = $state(true);
 </script>
 
-<section class="space-y-4">
-	{@render heading('Button')}
+<Specimen title="Button">
 	<div class="flex flex-wrap items-center gap-2">
 		<Button id="spec-button">Default</Button>
 		<Button variant="secondary">Secondary</Button>
@@ -75,10 +78,9 @@
 		<Button disabled>Disabled</Button>
 		<Button href="#top">As a link</Button>
 	</div>
-</section>
+</Specimen>
 
-<section class="space-y-4">
-	{@render heading('Badge')}
+<Specimen title="Badge">
 	<div class="flex flex-wrap items-center gap-2">
 		<Badge>Default</Badge>
 		<Badge variant="secondary">Secondary</Badge>
@@ -87,10 +89,10 @@
 		<Badge variant="ghost">Ghost</Badge>
 		<Badge variant="link" href="#top">Link</Badge>
 	</div>
-</section>
+</Specimen>
 
-<section class="space-y-4">
-	{@render heading('Input, label, textarea', 'Square, a plain border, and no focus treatment: the old app suppresses it globally.')}
+<Specimen title="Input, label, textarea"
+	note="Square, a plain border, and no focus treatment: the old app suppresses it globally.">
 	<div class="grid gap-4 sm:grid-cols-2">
 		<div class="space-y-2">
 			<Label id="spec-label" for="spec-input">Input</Label>
@@ -98,7 +100,7 @@
 		</div>
 		<div class="space-y-2">
 			<Label for="spec-input-value">With a value</Label>
-			<Input id="spec-input-value" value="Warung Tekko" />
+			<Input id="spec-input-value" value="A sample description" />
 		</div>
 		<div class="space-y-2">
 			<Label for="spec-input-disabled">Disabled</Label>
@@ -114,10 +116,9 @@
 			<Textarea id="spec-textarea" placeholder="A note on this transaction" rows={3} />
 		</div>
 	</div>
-</section>
+</Specimen>
 
-<section class="space-y-4">
-	{@render heading('Checkbox, radio, switch')}
+<Specimen title="Checkbox, radio, switch">
 	<div class="flex flex-wrap items-start gap-10">
 		<div class="space-y-2">
 			<div class="flex items-center gap-2">
@@ -158,10 +159,23 @@
 			</div>
 		</div>
 	</div>
-</section>
+</Specimen>
 
-<section class="space-y-4">
-	{@render heading('Select')}
+<Specimen
+	title="Native select"
+	note="The plain control a form keeps for the path where script has not run: the rich select is a button, and a button submits nothing. Same height and border as the input, and the class string lives here rather than in each form that needs one."
+>
+	<NativeSelect id="spec-native-select" class="max-w-xs">
+		<option value="expense">Expense</option>
+		<option value="income">Income</option>
+		<option value="transfer">Transfer</option>
+	</NativeSelect>
+</Specimen>
+
+<Specimen
+	title="Select primitive"
+	note="The bits-ui control the molecule wraps. A feature uses `molecules/select`; this is what it is made of."
+>
 	<div class="grid gap-4 sm:grid-cols-3">
 		<div class="space-y-2">
 			<Label for="spec-select">Select</Label>
@@ -182,10 +196,9 @@
 			</Select.Root>
 		</div>
 	</div>
-</section>
+</Specimen>
 
-<section class="space-y-4">
-	{@render heading('Avatar, skeleton, spinner, progress, slider')}
+<Specimen title="Avatar, skeleton, spinner, progress, slider">
 	<div class="flex flex-wrap items-center gap-8">
 		<div class="flex items-center gap-3">
 			<Avatar.Root size="sm"><Avatar.Fallback>AZ</Avatar.Fallback></Avatar.Root>
@@ -201,10 +214,9 @@
 			<Slider type="multiple" bind:value={slider} max={100} step={1} />
 		</div>
 	</div>
-</section>
+</Specimen>
 
-<section class="space-y-4">
-	{@render heading('Alert')}
+<Specimen title="Alert">
 	<div class="space-y-3">
 		<Alert.Root>
 			<Bell class="size-4" />
@@ -222,10 +234,9 @@
 			<Alert.Description>They import, but they will not appear in a breakdown.</Alert.Description>
 		</Alert.Root>
 	</div>
-</section>
+</Specimen>
 
-<section class="space-y-4">
-	{@render heading('Accordion and collapsible')}
+<Specimen title="Accordion and collapsible">
 	<div class="grid gap-6 sm:grid-cols-2">
 		<Accordion.Root type="single">
 			<Accordion.Item value="one">
@@ -251,10 +262,9 @@
 			</Collapsible.Content>
 		</Collapsible.Root>
 	</div>
-</section>
+</Specimen>
 
-<section class="space-y-4">
-	{@render heading('Toggle, tabs, breadcrumb, pagination, kbd')}
+<Specimen title="Toggle, tabs, breadcrumb, pagination, kbd">
 	<div class="flex flex-wrap items-center gap-6">
 		<Toggle bind:pressed={bold} aria-label="Bold"><Bold /></Toggle>
 		<ToggleGroup.Root type="multiple" bind:value={formatting} variant="outline">
@@ -298,15 +308,14 @@
 				<Breadcrumb.Link href="#top">Transactions</Breadcrumb.Link>
 			</Breadcrumb.Item>
 			<Breadcrumb.Separator />
-			<Breadcrumb.Item><Breadcrumb.Page>Warung Tekko</Breadcrumb.Page></Breadcrumb.Item>
+			<Breadcrumb.Item><Breadcrumb.Page>A sample row</Breadcrumb.Page></Breadcrumb.Item>
 		</Breadcrumb.List>
 	</Breadcrumb.Root>
 
 	<Pagination count={120} perPage={20} bind:page />
-</section>
+</Specimen>
 
-<section class="space-y-4">
-	{@render heading('Separator, scroll area, tooltip')}
+<Specimen title="Separator, scroll area, tooltip">
 	<Separator />
 	<div class="text-body flex h-8 items-center gap-3">
 		<span>Transactions</span>
@@ -337,10 +346,12 @@
 			</Tooltip.Root>
 		</Tooltip.Provider>
 	</div>
-</section>
+</Specimen>
 
-<section class="space-y-4">
-	{@render heading('Command', 'The list the combobox opens, inline so its own styling is visible.')}
+<Specimen title="Command"
+	note="The list the combobox opens, inline so its own styling is visible."
+	framed={false}
+>
 	<Command.Root class="max-w-sm border">
 		<Command.Input placeholder="Search categories..." />
 		<Command.List>
@@ -363,10 +374,10 @@
 			</Command.Group>
 		</Command.List>
 	</Command.Root>
-</section>
+</Specimen>
 
-<section class="space-y-4">
-	{@render heading('Menus and overlays', 'Square surfaces, a 1px rule, no shadow. The two menu rows in the table below measure once the dropdown has been opened.')}
+<Specimen title="Menus and overlays"
+	note="Square surfaces, a 1px rule, no shadow. The two menu rows in the table below measure once the dropdown has been opened.">
 	<div class="flex flex-wrap items-center gap-2">
 		<DropdownMenu.Root>
 			<DropdownMenu.Trigger>
@@ -471,7 +482,7 @@
 				<div class="space-y-4 px-4">
 					<div class="space-y-2">
 						<Label for="sheet-name">Description</Label>
-						<Input id="sheet-name" placeholder="Warung Tekko" />
+						<Input id="sheet-name" placeholder="What the money was for" />
 					</div>
 				</div>
 				<Sheet.Footer>
@@ -485,10 +496,10 @@
 			Toast, error
 		</Button>
 	</div>
-</section>
+</Specimen>
 
-<section class="space-y-4">
-	{@render heading('Card', 'Flat: a rule, no radius, no shadow, and the page background rather than a raised surface.')}
+<Specimen title="Card"
+	note="Flat: a rule, no radius, no shadow, and the page background rather than a raised surface.">
 	<div class="grid gap-4 sm:grid-cols-2">
 		<Card.Root id="spec-card">
 			<Card.Header>
@@ -510,9 +521,9 @@
 			</Card.Header>
 			<Card.Content class="text-body pt-6">
 				<ul class="space-y-2">
-					<li class="flex justify-between"><span>Cash</span><span class="font-mono">Rp 412.000</span></li>
-					<li class="flex justify-between"><span>BCA</span><span class="font-mono">Rp 8.976.500</span></li>
-					<li class="flex justify-between"><span>Wise</span><span class="font-mono">$120,10</span></li>
+					<li class="flex justify-between"><span>Petty cash</span><span class="font-mono">Rp 412.000</span></li>
+					<li class="flex justify-between"><span>Current account</span><span class="font-mono">Rp 8.976.500</span></li>
+					<li class="flex justify-between"><span>Travel card</span><span class="font-mono">$120,10</span></li>
 				</ul>
 			</Card.Content>
 			<Card.Footer class="gap-2">
@@ -520,4 +531,23 @@
 			</Card.Footer>
 		</Card.Root>
 	</div>
-</section>
+</Specimen>
+
+<Specimen title="Calendar and range calendar"
+	note="One month for a single day, two for a range. A day is 32px, the selected day inverts, and the days between the ends of a range are tinted rather than outlined (D52). The value is a `DateValue`, never a `Date`: a transaction happens on a calendar day in the workspace’s zone.">
+	<div class="flex flex-wrap items-start gap-6">
+		<div class="border p-3"><Calendar type="single" /></div>
+		<div class="border p-3"><RangeCalendar /></div>
+	</div>
+</Specimen>
+
+<Specimen title="Aspect ratio"
+	note="Holds a box at a ratio while whatever goes in it loads, so a receipt preview does not resize the page under the pointer when the bytes arrive."
+	framed={false}
+>
+	<div class="w-64 border">
+		<AspectRatio ratio={4 / 3}>
+			<div class="text-subtle text-small flex h-full w-full items-center justify-center">4 : 3</div>
+		</AspectRatio>
+	</div>
+</Specimen>

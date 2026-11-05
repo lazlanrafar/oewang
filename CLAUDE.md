@@ -15,6 +15,8 @@ Before writing code, read the doc that owns the area you are touching:
 | A route | [docs/api/endpoints.md](docs/api/endpoints.md) and [docs/api/conventions.md](docs/api/conventions.md) |
 | Rust | [docs/best-practices/rust-api.md](docs/best-practices/rust-api.md) |
 | Svelte | [docs/best-practices/svelte-app.md](docs/best-practices/svelte-app.md) |
+| A screen that lists rows | [A list screen](docs/best-practices/svelte-app.md#a-list-screen) |
+| How anything looks | [Changing how something looks](docs/best-practices/svelte-app.md#changing-how-something-looks), and the [design system page](docs/best-practices/svelte-app.md#the-design-system-page) at `/design-system` |
 | Auth, roles, tokens | [docs/security/auth.md](docs/security/auth.md) |
 | Anything the model reads or writes | [docs/security/ai-safety.md](docs/security/ai-safety.md) |
 | Request or response bodies | [docs/api/encryption.md](docs/api/encryption.md) |
@@ -65,6 +67,9 @@ These are not style preferences. Breaking one is a design error, not a nit.
 - **`workspace_id` comes from JWT claims, never from a body, a query or a path** (AUTH-4).
 - **Every mutation writes an audit row inside the same database transaction** (D14, OPS-1).
 - **Wallet rows are locked with `SELECT ... FOR UPDATE`, in ascending ID order,** before any balance is read (D13).
+- **A select whose options are data gets the app's own picker, never a native `<select>`** (D79). The workspace's own lists are already loaded by the dashboard layout and published through `$lib/workspace-data.svelte.ts`, so a picker needs no list prop: `<SelectCategory type="expense" creatable />` is the whole call, and `creatable` makes a missing entry from the name that was typed (D80). Dynamic means the options come from the workspace, the database or a file: accounts, categories, account groups, currencies, the columns of an uploaded CSV. Each such list has its own molecule, `molecules/select-<thing>`, built on `molecules/select`; the call site passes the domain data, not markup. A native `<select>` is only for a list fixed in the source (expense/income/transfer, a locale list) or for the `<noscript>` copy of a form, and then it is `atoms/native-select`, never a hand-styled `<select>` element.
+- **A list screen follows the standard shape** (D81). One header line: the filter bar on the left, the controls that act on the table on the right, no page title. The table fills what is left and is `molecules/data-table` configured by that module's own column file, never a table written again. Sheets, modals and the bulk bar hang off the page, because they are the page's state rather than the table's. Two empty states, "none yet" and "none matching", with different words.
+- **Nothing is restyled at the call site** (D81). A component owns how it looks. A caller passes data, a documented variant, and at most the classes that place it (width, grid position, flex behaviour) — never colour, radius, shadow, border, font or padding overrides. If the look is wrong, change the component and its specimen in the design system, so it is wrong or right in one place rather than per page.
 - **The component that reads attacker-controlled text has no tools** (D24). Receipt and statement extraction pass an empty tool list. This is the strongest control in the product; do not weaken it for convenience.
 - **Never log** a password, a token, a key, a decrypted body, or file contents (OPS-3).
 

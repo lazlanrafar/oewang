@@ -7,7 +7,7 @@
 	 * and no cancel, because the overlay and Escape already close the sheet.
 	 *
 	 * The sheet is a container and nothing more. The fields live in
-	 * `transaction-form-fields.svelte`, which the page also renders inside
+	 * `transactions-form-fields.svelte`, which the page also renders inside
 	 * `<noscript>` as a plain form, so there is one field set rather than two
 	 * that drift.
 	 *
@@ -27,7 +27,7 @@
 	import * as Sheet from '../../atoms/sheet/index.js';
 	import type { CategoryItem } from '../../molecules/select-category/index.js';
 	import type { ComboboxItem } from '../../molecules/combobox/index.js';
-	import TransactionFormFields, { type TransactionDraft } from './transaction-form-fields.svelte';
+	import TransactionFormFields, { type TransactionDraft } from './transactions-form-fields.svelte';
 
 	let {
 		open = $bindable(false),
@@ -46,6 +46,7 @@
 		/** The form action this sheet posts to, so the page owns the write. */
 		action = '?/create',
 		enhance,
+		createLabel,
 		onCreateAccount,
 		onCreateCategory
 	}: {
@@ -70,6 +71,9 @@
 		 * means. Without it the form posts natively, which is also correct.
 		 */
 		enhance?: (node: HTMLFormElement) => void;
+		/** The create row's text, resolved by the caller (UI-1). */
+		createLabel?: (typed: string) => string;
+		/** Override the picker's own create, as a specimen does. */
 		onCreateAccount?: (name: string) => void;
 		onCreateCategory?: (name: string) => void;
 	} = $props();
@@ -108,6 +112,7 @@
 				{walletCurrency}
 				{suggestedRate}
 				{fieldErrors}
+				{createLabel}
 				{onCreateAccount}
 				{onCreateCategory}
 			/>

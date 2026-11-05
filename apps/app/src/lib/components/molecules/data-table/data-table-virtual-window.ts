@@ -1,11 +1,10 @@
 /**
- * Which day blocks the transactions table has to render, and nothing else.
+ * Which blocks of a grouped table have to be rendered, and nothing else.
  *
- * The table groups rows by day, and a day is the unit that gets windowed: a
- * block is wholly rendered or wholly absent. Windowing per row instead would
- * mean a day header without its rows, or rows under a header that is off
- * screen, and the sticky day header is the thing that makes the list
- * readable.
+ * A grouped table windows a whole block at a time: a block is wholly
+ * rendered or wholly absent. Windowing per row instead would mean a group
+ * header without its rows, or rows under a header that is off screen, and
+ * the sticky group header is the thing that makes the list readable.
  *
  * Blocks are tall and uneven, so the offsets are summed once into a prefix
  * array and then binary-searched. Scrolling a long list calls this on every
@@ -16,7 +15,7 @@
  * tests below cover the cases a browser makes awkward to reach.
  */
 
-import { GROUP_ROW_HEIGHT, ROW_HEIGHT } from './columns.js';
+import { GROUP_ROW_HEIGHT, ROW_HEIGHT } from './data-table-column.js';
 
 export type VirtualWindow = {
 	/** Index of the first block to render. */
@@ -45,7 +44,7 @@ const ASSUMED_VIEWPORT = 900;
 const DEFAULT_OVERSCAN = 2;
 
 /**
- * The height each day block takes, collapsed or expanded.
+ * The height each block takes, collapsed or expanded.
  *
  * The arithmetic lives here rather than at the two call sites, because a
  * spacer computed from one formula and a block rendered from another is a

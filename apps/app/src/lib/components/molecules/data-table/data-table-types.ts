@@ -1,38 +1,27 @@
-/** One row of the transactions table. */
-export type TransactionRow = {
-	id: string;
-	/** ISO day, which is what rows are grouped by. */
-	day: string;
-	date: string;
-	name: string;
-	categoryId: string;
-	walletId: string;
-	/** A decimal string, signed. Never a number (D12). */
-	amount: string;
-	/**
-	 * The ISO 4217 code the amount is denominated in, which is the wallet's
-	 * own currency. A code rather than a symbol, because the code is what
-	 * decides the precision: rupiah shows no decimals, dollars two.
-	 */
-	currency: string;
-	/** What the user typed, when its currency differed from the wallet's (TXN-21). */
-	originalAmount?: string;
-	originalCurrency?: string;
-	/** Written on a cached rate from another day, so the row is marked (TXN-22). */
-	staleRate?: boolean;
-	staleRateDate?: string;
-	note?: string;
-};
+/**
+ * The types the table shell itself speaks.
+ *
+ * A row model belongs to the feature whose rows they are, not here: this
+ * module is the design system and knows nothing about what a row holds.
+ */
 
+/** An option a cell picks from: an id, a name, and optionally a colour. */
 export type NamedOption = { id: string; name: string; colorClass?: string };
 
 /**
- * The three columns the API can sort by.
+ * A sort, or the absence of one, which is the third click.
  *
- * `name` is here because the API gained it for this table; the other
- * columns have no server-side order, so their headers do not sort.
+ * The key is the caller's own union of sortable column keys, so a sort over
+ * a column the server cannot order by is a typecheck error rather than a
+ * request that comes back unsorted.
  */
-export type SortKey = 'date' | 'name' | 'amount';
+export type TableSort<K extends string = string> = { key: K | null; descending: boolean };
 
-/** A sort, or the absence of one, which is the third click. */
-export type TableSort = { key: SortKey | null; descending: boolean };
+/**
+ * One block of rows under a heading, such as a day.
+ *
+ * The key is whatever the caller groups by, and it is what the shell uses
+ * to remember which blocks are shut. An empty key means a block with no
+ * heading, which is what an ungrouped table is.
+ */
+export type RowGroup<Row> = { key: string; rows: Row[] };

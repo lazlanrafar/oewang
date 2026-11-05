@@ -6,18 +6,28 @@
 	/**
 	 * Ported from the old app's molecules/select-category.
 	 *
-	 * The category picker, with the category's colour square beside the name,
-	 * borderless and filling the cell when it sits in a data table.
+	 * The category picker: the app's `Select` with the category's colour
+	 * square beside the name. A category without a colour falls back to
+	 * `bg-subtle`, which is also the square the create row carries.
+	 *
+	 * With no `categories` prop it reads the workspace's own list, published
+	 * by the dashboard layout, and `type` narrows it to the income or the
+	 * expense half: `<SelectCategory type="expense" />` is the whole call.
+	 * That list is this session's workspace and no other (AUTH-4). A caller
+	 * with its own list passes `categories`, which wins.
 	 */
-	import { Combobox } from '../combobox/index.js';
-	import { Spinner } from '../../atoms/spinner/index.js';
-	import { cn } from '$lib/utils.js';
+	import { createInWorkspace, workspaceLists } from '$lib/workspace-data.svelte';
+
+	import { Select } from '../select/index.js';
 
 	let {
 		categories,
+		type,
+		creatable = false,
 		value = $bindable(),
 		onChange,
 		onCreate,
+		createLabel,
 		placeholder = 'Select category',
 		disabled = false,
 		updating = false,
@@ -25,10 +35,24 @@
 		id,
 		class: className
 	}: {
-		categories: CategoryItem[];
+		/** Omitted, the workspace's own categories. */
+		categories?: CategoryItem[];
+		/**
+		 * Which half of the list to offer. A category is income or expense,
+		 * and a form that is recording one should not be offering the other.
+		 * It is also the type a created category is filed under.
+		 */
+		type?: 'income' | 'expense';
+		/**
+		 * Offer a create row. The category is made in this session's
+		 * workspace, under `type`, and then selected.
+		 */
+		creatable?: boolean;
 		value?: string;
 		onChange?: (id: string) => void;
 		onCreate?: (name: string) => void;
+		/** The create row's text, resolved by the caller (UI-1). */
+		createLabel?: (typed: string) => string;
 		placeholder?: string;
 		disabled?: boolean;
 		updating?: boolean;
@@ -37,50 +61,55 @@
 		class?: string;
 	} = $props();
 
-	const colourOf = (id: string) =>
-		categories.find((category) => category.id === id)?.colorClass ?? 'bg-subtle';
+	const lists = workspaceLists();
+
+	const options = $derived<CategoryItem[]>(
+		categories ??
+			lists.categories
+				.filter((category) => !type || category.type === type)
+				.map((category) => ({ id: category.id, label: category.name }))
+	);
+
+	const items = $derived(
+		options.map((category) => ({
+			value: category.id,
+			label: category.label,
+			colorClass: category.colorClass
+		}))
+	);
+
+	/*
+	 * A created category needs a type, and only the caller knows which, so
+	 * the create row is offered only where one was stated. Guessing would
+	 * file half of them in the wrong half of the list, where the picker that
+	 * needed them cannot see them.
+	 */
+	const create = $derived(
+		onCreate ??
+			(creatable && type
+				? async (name: string) => {
+						const created = await createInWorkspace.category(name, type);
+						if (created) {
+							value = created.id;
+							onChange?.(created.id);
+						}
+					}
+				: undefined)
+	);
 </script>
 
-<div class={cn('relative', inDataTable && 'h-full w-full')}>
-	<Combobox
-		{id}
-		items={categories}
-		bind:value
-		onSelect={onChange}
-		{onCreate}
-		{placeholder}
-		disabled={disabled || updating}
-		searchPlaceholder="Search category"
-		variant={inDataTable ? 'ghost' : 'outline'}
-		triggerClass={cn(
-			inDataTable &&
-				'h-full w-full justify-start border-none px-3 hover:bg-transparent max-w-[280px]',
-			className
-		)}
-	>
-		{#snippet selected(item)}
-			<span class="flex items-center space-x-2">
-				<span class={cn('size-2 shrink-0', colourOf(item.id))} aria-hidden="true"></span>
-				<span class="text-body max-w-[90%] truncate text-left font-medium">{item.label}</span>
-			</span>
-		{/snippet}
-		{#snippet create(value)}
-			<span class="flex items-center space-x-2 py-1">
-				<span class="bg-subtle size-2 shrink-0" aria-hidden="true"></span>
-				<span class="text-body">Create "{value}"</span>
-			</span>
-		{/snippet}
-		{#snippet item(entry)}
-			<span class="flex items-center space-x-2 py-1">
-				<span class={cn('size-2 shrink-0', colourOf(entry.id))} aria-hidden="true"></span>
-				<span class="text-body line-clamp-1 font-medium">{entry.label}</span>
-			</span>
-		{/snippet}
-	</Combobox>
-
-	{#if updating}
-		<div class="bg-background/50 absolute inset-0 z-20 flex items-center justify-center">
-			<Spinner size={12} />
-		</div>
-	{/if}
-</div>
+<Select
+	{id}
+	{items}
+	bind:value
+	{onChange}
+	onCreate={create}
+	{createLabel}
+	{placeholder}
+	{disabled}
+	{updating}
+	searchPlaceholder="Search category"
+	mark={{ colorClass: 'bg-subtle' }}
+	variant={inDataTable ? 'in-cell' : 'outline'}
+	class={className}
+/>

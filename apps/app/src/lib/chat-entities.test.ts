@@ -28,9 +28,9 @@ describe('entityTarget', () => {
 	});
 
 	it('follows a route inside this app', () => {
-		expect(entityTarget('#navigate:/settings?tab=wallets')).toEqual({
+		expect(entityTarget('#navigate:/settings?tab=assistant')).toEqual({
 			kind: 'route',
-			href: '/settings?tab=wallets'
+			href: '/settings?tab=assistant'
 		});
 	});
 

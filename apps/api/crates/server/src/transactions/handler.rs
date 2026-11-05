@@ -1300,7 +1300,9 @@ mod tests {
             .unwrap();
         let (mut parts, _) = request.into_parts();
 
-        let query = ListQuery::from_request_parts(&mut parts, &()).await.unwrap();
+        let query = ListQuery::from_request_parts(&mut parts, &())
+            .await
+            .unwrap();
 
         assert_eq!(query.wallet_ids, vec!["w_cash", "w_bank"]);
         assert_eq!(query.category_ids, vec!["c_food"]);

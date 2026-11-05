@@ -1,0 +1,63 @@
+{
+	"groups": [
+		{ "id": "group-cash", "name": "Cash" },
+		{ "id": "group-bank", "name": "Bank" }
+	],
+	"baseCurrency": "IDR",
+	"rates": { "USD": "16250" },
+	"summary": { "total": "Rp 9.340.125", "count": 4, "counted": 3, "unconverted": 1 },
+	"accounts": [
+		{
+			"id": "wallet-1",
+			"group_id": "group-cash",
+			"group_name": "Cash",
+			"name": "Petty cash",
+			"currency_code": "IDR",
+			"balance": "412000",
+			"is_included_in_totals": true,
+			"is_default": true,
+			"sort_order": 0,
+			"created_at": "2026-10-01T00:00:00Z",
+			"updated_at": "2026-11-02T09:14:00Z"
+		},
+		{
+			"id": "wallet-2",
+			"group_id": "group-bank",
+			"group_name": "Bank",
+			"name": "Current account",
+			"currency_code": "IDR",
+			"balance": "8976500",
+			"is_included_in_totals": true,
+			"is_default": false,
+			"sort_order": 1,
+			"created_at": "2026-10-01T00:00:00Z",
+			"updated_at": "2026-11-02T09:14:00Z"
+		},
+		{
+			"id": "wallet-3",
+			"group_id": "group-bank",
+			"group_name": "Bank",
+			"name": "Travel card",
+			"currency_code": "USD",
+			"balance": "120.10",
+			"is_included_in_totals": true,
+			"is_default": false,
+			"sort_order": 2,
+			"created_at": "2026-10-01T00:00:00Z",
+			"updated_at": "2026-11-02T09:14:00Z"
+		},
+		{
+			"id": "wallet-4",
+			"group_id": null,
+			"group_name": null,
+			"name": "Savings",
+			"currency_code": "SGD",
+			"balance": "2400.00",
+			"is_included_in_totals": false,
+			"is_default": false,
+			"sort_order": 3,
+			"created_at": "2026-10-01T00:00:00Z",
+			"updated_at": "2026-11-02T09:14:00Z"
+		}
+	]
+}

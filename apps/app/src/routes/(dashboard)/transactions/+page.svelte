@@ -37,26 +37,31 @@
 	import { ConfirmDialog } from '$lib/components/molecules/confirm-dialog';
 	import { Label } from '$lib/components/atoms/label';
 	import * as DropdownMenu from '$lib/components/atoms/dropdown-menu';
-	import * as Select from '$lib/components/atoms/select';
+	import { Select } from '$lib/components/molecules/select';
 	import { DateRangePicker, type DateRange } from '$lib/components/molecules/date-range-picker';
 	import { DataTableFilter } from '$lib/components/molecules/data-table-filter';
 	import { SelectCategory } from '$lib/components/molecules/select-category';
 	import type { DataTableFilterState } from '$lib/components/molecules/data-table-filter';
-	import { TransactionsTable, TRANSACTION_COLUMNS } from '$lib/components/molecules/data-table';
-	import type { ColumnKey, TableSort } from '$lib/components/molecules/data-table';
-	import { GROUPINGS, type Grouping } from '$lib/components/molecules/data-table/grouping';
-	import type { NamedOption, TransactionRow } from '$lib/components/molecules/data-table';
+	import type { NamedOption } from '$lib/components/molecules/data-table';
 	import { FileDropzone, type UploadedFile } from '$lib/components/molecules/file-dropzone';
+	import { attachmentDropzone } from '$lib/files';
 	import { ChatCanvas } from '$lib/components/organisms/chat';
 	import {
 		emptyDraft,
+		GROUPINGS,
 		ReceiptCanvas,
+		TRANSACTION_COLUMNS,
 		TransactionBulkBar,
 		TransactionDetailSheet,
 		TransactionExportModal,
 		TransactionFormFields,
 		TransactionFormSheet,
-		type TransactionDraft
+		TransactionsDataTable,
+		type ColumnKey,
+		type Grouping,
+		type TransactionDraft,
+		type TransactionRow,
+		type TransactionSort
 	} from '$lib/components/organisms/transactions';
 	import { FormError } from '$lib/components/molecules/form-error';
 	import { canvasParams, readCanvas } from '$lib/canvas';
@@ -161,7 +166,7 @@
 	 */
 	const SORT_KEYS = ['date', 'name', 'amount'] as const;
 
-	const sort = $derived<TableSort>({
+	const sort = $derived<TransactionSort>({
 		key: readText(page.url, 'sort')
 			? readParam(page.url, 'sort', SORT_KEYS, 'date')
 			: null,
@@ -676,26 +681,19 @@
 		</div>
 
 		<div class="flex items-center gap-2">
-			<Select.Root
-				type="single"
+			<!-- The icon is the selector's own mark, as the live app draws it:
+			     the trigger names the interval and nothing else, so the
+			     accessible name is passed rather than read off the contents
+			     (UI-6). -->
+			<Select
+				items={GROUPINGS.map((option) => ({ value: option, label: GROUPING_LABEL[option] }))}
 				value={grouping}
-				onValueChange={(value) => writeParams({ group: value === 'daily' ? null : value })}
-			>
-				<!-- A `role="combobox"` is not named by its contents the way a
-				     button is, so it carries its own label (UI-6). -->
-				<!-- The icon is the selector's own mark, as the live app draws
-				     it: the trigger names the interval and nothing else, so
-				     the label carries the accessible name instead. -->
-				<Select.Trigger class="w-36" aria-label={t('txn.grouping_label')}>
-					<LayoutGrid class="text-subtle size-4 shrink-0" />
-					{GROUPING_LABEL[grouping]}
-				</Select.Trigger>
-				<Select.Content>
-					{#each GROUPINGS as option (option)}
-						<Select.Item value={option}>{GROUPING_LABEL[option]}</Select.Item>
-					{/each}
-				</Select.Content>
-			</Select.Root>
+				onChange={(value) => writeParams({ group: value === 'daily' ? null : value })}
+				searchable={false}
+				mark={{ icon: LayoutGrid }}
+				ariaLabel={t('txn.grouping_label')}
+				class="w-36"
+			/>
 
 			<!-- Reads the URL as well as writing it. Write-only, the picker
 			     showed "Pick a date range" on a link that carried one, and
@@ -779,7 +777,7 @@
 
 	<FormError message={form?.code ? messageForCode(form.code) : undefined} />
 
-	<TransactionsTable
+	<TransactionsDataTable
 		class="min-h-0 flex-1"
 		hasMore={currentPage < totalPages}
 		loadingMore={navigating.to !== null}
@@ -812,6 +810,7 @@
 		onCategoryChange={(row: TransactionRow, categoryId: string) =>
 			setCategory(row.id, categoryId)}
 		onWalletChange={(row: TransactionRow, walletId: string) => setWallet(row.id, walletId)}
+		createLabel={(typed) => t('common.create_named', { name: typed })}
 	/>
 
 </div>
@@ -828,6 +827,7 @@
 	suggestedRate={data.suggestedRate}
 	fieldErrors={form?.fields}
 	action={editing ? '?/update' : '?/create'}
+	createLabel={(typed) => t('common.create_named', { name: typed })}
 	enhance={(node) => enhance(node, saveAndClose)}
 />
 
@@ -997,7 +997,7 @@
 		</Dialog.Header>
 
 		<div class="py-2">
-			<FileDropzone bind:files={scanned} />
+			<FileDropzone bind:files={scanned} {...attachmentDropzone()} />
 		</div>
 	</Dialog.Content>
 </Dialog.Root>

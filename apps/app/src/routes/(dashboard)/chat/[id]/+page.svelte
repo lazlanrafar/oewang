@@ -57,6 +57,7 @@
 	import * as Dialog from '$lib/components/atoms/dialog';
 	import { ScrollArea } from '$lib/components/atoms/scroll-area';
 	import { AttachmentView } from '$lib/components/molecules/attachment-view';
+	import { attachmentViewer } from '$lib/files';
 	import type { UploadedFile } from '$lib/components/molecules/file-dropzone';
 	import { messageForCode } from '$lib/errors';
 	import { t } from '$lib/i18n';
@@ -520,6 +521,7 @@
 
 		{#if openFile}
 			<AttachmentView
+				{...attachmentViewer()}
 				file={{
 					id: openFile.id,
 					file_id: openFile.id,

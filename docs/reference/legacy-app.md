@@ -17,7 +17,7 @@ A Turborepo monorepo, Bun as package manager and runtime, version 2.2.0 at the t
 
 | App | Stack | Port | Rewrite |
 |---|---|---|---|
-| `apps/app` | Next.js 16, React 19, Turbopack | 3000 | Replaced by `apps/app` (SvelteKit). Two screens ported |
+| `apps/app` | Next.js 16, React 19, Turbopack | 3000 | Replaced by `apps/app` (SvelteKit). Three screens ported |
 | `apps/admin` | Next.js | 3001 | Dropped |
 | `apps/api` | ElysiaJS on Bun | 3002 | Replaced by `apps/api` (Rust Axum) |
 | `apps/website` | Next.js | 3003 | Dropped |
@@ -40,7 +40,7 @@ None survive. The rewrite has no shared package layer: the three apps speak HTTP
 | Balance arithmetic | `apps/api/modules/transactions/transactions.service.ts` | [balance arithmetic](../data-model.md#balance-arithmetic) |
 | The layer discipline (controller, service, repository) | `apps/api/modules/*` | [Rust best practices](../best-practices/rust-api.md#layer-flow) |
 | Soft delete and audit logging | the same | OPS-1, OPS-2 |
-| Screen layouts and interaction models | `apps/app/components/organisms/` | the port maps in [transactions](../features/transactions.md#ui-port-map) and [chat](../features/chat.md#ui-port-map) |
+| Screen layouts and interaction models | `apps/app/components/organisms/` | the port maps in [transactions](../features/transactions.md#ui-port-map), [accounts](../features/accounts.md#ui-port-map) and [chat](../features/chat.md#ui-port-map) |
 | Design tokens, colours, radii, dark mode | `packages/ui/globals.css` | US-006 |
 | The multi-workspace role model | `packages/database/schema/user-workspaces.ts` | [auth](../security/auth.md#roles) |
 | The idea of a tool-calling assistant | `apps/ai/app/modules/chatbot/` | [AI service](../ai/service.md), 11 tools instead of 34 |
@@ -103,6 +103,7 @@ Recorded so the rewrite does not reproduce them.
 | Need | Path under `references/oewang-old/` |
 |---|---|
 | Transaction screens | `apps/app/components/organisms/transactions/` |
+| Account screens | `apps/app/components/organisms/accounts/` |
 | Chat screens | `apps/app/components/organisms/chat/` |
 | Design tokens | `packages/ui/globals.css` |
 | Shared primitives | `packages/ui/components/` |

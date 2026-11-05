@@ -25,6 +25,8 @@ export type Wallet = {
 	is_included_in_totals: boolean;
 	is_default: boolean;
 	sort_order: number;
+	created_at: string;
+	updated_at: string;
 };
 
 export type WalletGroup = {
@@ -536,6 +538,36 @@ export function updateWallet(
 	token?: string
 ) {
 	return api<Wallet>({ method: 'PATCH', path: `/v1/wallets/${id}`, body, token });
+}
+
+/**
+ * One wallet, by id.
+ *
+ * The list carries `group_name`; this does not, because a single read does
+ * no join. A caller that needs the name has the group list already.
+ */
+export function readWallet(id: string, token?: string): Promise<Envelope<Wallet>> {
+	return api<Wallet>({ path: `/v1/wallets/${id}`, token });
+}
+
+/**
+ * Move a balance to a figure by writing the transaction that explains it.
+ *
+ * `balance` is the target, not the difference. The API works out which way
+ * it moved and records one adjustment; the column is never written
+ * directly, because a balance is a consequence of transactions (TXN-3).
+ */
+export function adjustWalletBalance(
+	id: string,
+	balance: string,
+	token?: string
+): Promise<Envelope<Wallet>> {
+	return api<Wallet>({
+		method: 'POST',
+		path: `/v1/wallets/${id}/adjust`,
+		body: { balance },
+		token
+	});
 }
 
 export function setDefaultWallet(id: string, token?: string) {

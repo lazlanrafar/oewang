@@ -30,7 +30,7 @@
 	import { Button } from '../../atoms/button/index.js';
 	import type { CategoryItem } from '../../molecules/select-category/index.js';
 	import type { ComboboxItem } from '../../molecules/combobox/index.js';
-	import ReceiptConfirmationSheet from './receipt-confirmation-sheet.svelte';
+	import ReceiptConfirmationSheet from './transactions-receipt-confirmation-sheet.svelte';
 
 	let {
 		fileId,

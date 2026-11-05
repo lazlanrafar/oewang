@@ -39,6 +39,8 @@
 	import { Label } from '../../atoms/label/index.js';
 	import * as Sheet from '../../atoms/sheet/index.js';
 	import { CurrencyInput } from '../../molecules/currency-input/index.js';
+	import { DatePicker } from '../../molecules/date-picker/index.js';
+	import { SelectCurrency } from '../../molecules/select-currency/index.js';
 	import { SelectAccount } from '../../molecules/select-account/index.js';
 	import { SelectCategory } from '../../molecules/select-category/index.js';
 	import type { CategoryItem } from '../../molecules/select-category/index.js';
@@ -224,11 +226,9 @@
 						<Label for="receipt-currency" class={labelClass}>{t('receipt.currency')}</Label>
 						{@render mark('currency')}
 					</div>
-					<SelectAccount
-						id="receipt-currency"
-						accounts={currencies.map((code) => ({ id: code, label: code }))}
-						bind:value={form.currency}
-					/>
+					<!-- A currency is not an account: its own picker, so a code
+					     does not render behind a bank icon (D79). -->
+					<SelectCurrency id="receipt-currency" {currencies} bind:value={form.currency} />
 				</div>
 			</div>
 
@@ -265,7 +265,7 @@
 					<Label for="receipt-date" class={labelClass}>{t('receipt.date')}</Label>
 					{@render mark('date')}
 				</div>
-				<Input id="receipt-date" type="date" bind:value={form.date} />
+				<DatePicker id="receipt-date" bind:value={form.date} />
 			</div>
 
 			<div class="grid grid-cols-2 gap-4">

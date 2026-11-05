@@ -12,7 +12,7 @@ use oewang_db::repositories::{
     categories::CategoryRow,
     wallets::{WalletGroupRow, WalletListRow, WalletRow},
 };
-use oewang_domain::{Envelope, Result};
+use oewang_domain::{AppError, Envelope, Result};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Deserializer, Serialize};
 
@@ -161,6 +161,17 @@ pub struct UpdateWalletBody {
     pub currency_code: Option<String>,
     pub is_included_in_totals: Option<bool>,
     pub sort_order: Option<i32>,
+}
+
+/// The balance the wallet should show afterwards.
+///
+/// A decimal string, never a JSON number: a client that sends one has
+/// already lost precision before this struct is built (D12). This does not
+/// reopen `UpdateWalletBody`'s missing `balance`; the column stays
+/// unwritable, and the route reaches the figure through a transaction.
+#[derive(Debug, Deserialize)]
+pub struct AdjustWalletBody {
+    pub balance: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -346,6 +357,33 @@ pub async fn set_default_wallet(
     )
 }
 
+/// Bring a wallet to a stated balance (TXN-3).
+///
+/// A write, so `AuthWrite`, like every other wallet mutation. The balance
+/// column is not touched: the service records the difference as a
+/// transaction and answers with the wallet the ledger produced, so the
+/// browser can render the new figure without a second request.
+pub async fn adjust_wallet(
+    State(state): State<AppState>,
+    auth: AuthWrite,
+    Path(id): Path<String>,
+    request_id: RequestId,
+    Json(body): Json<AdjustWalletBody>,
+) -> std::result::Result<Json<Envelope<WalletView>>, ApiError> {
+    let request = request_id.0;
+
+    let result = async {
+        let target = money("balance", &body.balance)?;
+        service::adjust_wallet_balance(&state.db, &state.rates, actor(&auth), &id, target).await
+    }
+    .await;
+
+    match result {
+        Ok(row) => Ok(Json(Envelope::data(WalletView::from(row), request))),
+        Err(error) => Err(ApiError::new(error, request)),
+    }
+}
+
 pub async fn delete_wallet(
     State(state): State<AppState>,
     auth: AuthWrite,
@@ -432,6 +470,14 @@ pub async fn delete_category(
 
 fn actor(auth: &AuthWrite) -> Actor<'_> {
     Actor::web(&auth.workspace_id, &auth.user_id)
+}
+
+/// A decimal string to a `Decimal`. Money is parsed, never deserialized
+/// through a float (D12).
+fn money(field: &'static str, raw: &str) -> Result<Decimal> {
+    raw.trim()
+        .parse::<Decimal>()
+        .map_err(|_| AppError::validation([(field, "Enter a number, for example 50000.00.")]))
 }
 
 fn ok<R, V: From<R>>(

@@ -8,8 +8,8 @@
 	 * on the panel inside it, so the panel's translucency does not wash it
 	 * out.
 	 */
-	import SidebarNav from './sidebar-nav.svelte';
-	import WorkspaceSwitcher from './workspace-switcher.svelte';
+	import SidebarNav from './layouts-sidebar-nav.svelte';
+	import WorkspaceSwitcher from './layouts-workspace-switcher.svelte';
 	import { cn } from '$lib/utils';
 
 	let {

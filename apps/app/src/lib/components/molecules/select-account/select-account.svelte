@@ -2,25 +2,36 @@
 	/**
 	 * Ported from the old app's molecules/select-account.
 	 *
-	 * The account picker, with the landmark mark beside the name. Inside a
-	 * data table it is borderless and fills the cell, which is the class
-	 * string the old transaction columns pass it verbatim.
+	 * The account picker: the app's `Select` with the landmark mark beside
+	 * the name. Everything that is not the mark — the trigger, the panel,
+	 * the in-cell variant, the spinner — belongs to `molecules/select`, so
+	 * this file holds the account's part and nothing else.
 	 *
-	 * Accounts come in as a prop. The old component fetched them itself; here
-	 * a component that fetches is a mistake, so the page loads them once and
-	 * every cell shares the list.
+	 * The list is the workspace's own, so it does not have to be passed:
+	 * with no `accounts` prop the picker reads the lists the dashboard
+	 * layout loaded and published, which is also the only workspace this
+	 * session can see (AUTH-4). A caller with a list of its own, such as a
+	 * design-system specimen or a filtered subset, passes `accounts` and
+	 * that wins.
+	 *
+	 * The component still fetches nothing itself. `creatable` wires the
+	 * create row to the workspace route, which is the one call it makes, and
+	 * only when the caller asks for it.
 	 */
 	import Landmark from '@lucide/svelte/icons/landmark';
 
-	import { Combobox, type ComboboxItem } from '../combobox/index.js';
-	import { Spinner } from '../../atoms/spinner/index.js';
-	import { cn } from '$lib/utils.js';
+	import { createInWorkspace, workspaceLists } from '$lib/workspace-data.svelte';
+
+	import type { ComboboxItem } from '../combobox/index.js';
+	import { Select } from '../select/index.js';
 
 	let {
 		accounts,
+		creatable = false,
 		value = $bindable(),
 		onChange,
 		onCreate,
+		createLabel,
 		placeholder = 'Select account',
 		disabled = false,
 		updating = false,
@@ -28,10 +39,18 @@
 		id,
 		class: className
 	}: {
-		accounts: ComboboxItem[];
+		/** Omitted, the workspace's own accounts. */
+		accounts?: ComboboxItem[];
+		/**
+		 * Offer a create row. The account is made in this session's
+		 * workspace and then selected; `onCreate` overrides what that does.
+		 */
+		creatable?: boolean;
 		value?: string;
 		onChange?: (id: string) => void;
 		onCreate?: (name: string) => void;
+		/** The create row's text, resolved by the caller (UI-1). */
+		createLabel?: (typed: string) => string;
 		placeholder?: string;
 		disabled?: boolean;
 		/** Shows the spinner the old cell shows while a change is in flight. */
@@ -40,48 +59,40 @@
 		id?: string;
 		class?: string;
 	} = $props();
+
+	const lists = workspaceLists();
+
+	const options = $derived(
+		accounts ?? lists.wallets.map((wallet) => ({ id: wallet.id, label: wallet.name }))
+	);
+	const items = $derived(options.map((account) => ({ value: account.id, label: account.label })));
+
+	const create = $derived(
+		onCreate ??
+			(creatable
+				? async (name: string) => {
+						const created = await createInWorkspace.wallet(name);
+						if (created) {
+							value = created.id;
+							onChange?.(created.id);
+						}
+					}
+				: undefined)
+	);
 </script>
 
-<div class={cn('relative', inDataTable && 'h-full w-full')}>
-	<Combobox
-		{id}
-		items={accounts}
-		bind:value
-		onSelect={onChange}
-		{onCreate}
-		{placeholder}
-		disabled={disabled || updating}
-		searchPlaceholder="Search account"
-		variant={inDataTable ? 'ghost' : 'outline'}
-		triggerClass={cn(
-			inDataTable &&
-				'h-full w-full justify-start border-none px-3 hover:bg-transparent max-w-[280px]',
-			className
-		)}
-	>
-		{#snippet selected(item)}
-			<span class="flex items-center space-x-2">
-				<Landmark class="text-subtle size-3 shrink-0" aria-hidden="true" />
-				<span class="text-body max-w-[90%] truncate text-left font-medium">{item.label}</span>
-			</span>
-		{/snippet}
-		{#snippet create(value)}
-			<span class="flex items-center space-x-2 py-1">
-				<Landmark class="text-subtle size-3 shrink-0" aria-hidden="true" />
-				<span class="text-body">Create "{value}"</span>
-			</span>
-		{/snippet}
-		{#snippet item(entry)}
-			<span class="flex items-center space-x-2 py-1">
-				<Landmark class="text-subtle size-3 shrink-0" aria-hidden="true" />
-				<span class="text-body line-clamp-1 font-medium">{entry.label}</span>
-			</span>
-		{/snippet}
-	</Combobox>
-
-	{#if updating}
-		<div class="bg-background/50 absolute inset-0 z-20 flex items-center justify-center">
-			<Spinner size={12} />
-		</div>
-	{/if}
-</div>
+<Select
+	{id}
+	{items}
+	bind:value
+	{onChange}
+	onCreate={create}
+	{createLabel}
+	{placeholder}
+	{disabled}
+	{updating}
+	searchPlaceholder="Search account"
+	mark={{ icon: Landmark }}
+	variant={inDataTable ? 'in-cell' : 'outline'}
+	class={className}
+/>

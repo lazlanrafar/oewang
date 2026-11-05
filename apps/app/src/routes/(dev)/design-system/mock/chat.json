@@ -1,0 +1,35 @@
+{
+	"sessions": [
+		{ "id": "session-1", "title": "Food spending last month", "when": "2 minutes ago", "preview": "You spent Rp 1.240.000 on Food." },
+		{ "id": "session-2", "title": "Travel card balance", "when": "yesterday", "preview": "4 messages" },
+		{ "id": "session-3", "title": "New chat", "when": "28 Oct", "preview": "No messages" }
+	],
+	"messages": [
+		{
+			"id": "message-1",
+			"role": "user",
+			"content": "How much did I spend on food last month?",
+			"at": "09:14",
+			"who": "You",
+			"toolCalls": [],
+			"files": []
+		},
+		{
+			"id": "message-2",
+			"role": "assistant",
+			"content": "You spent Rp 1.240.000 on [Food](#cat:food) in October, 12 percent less than September. The largest was [Lunch, Sample Warung](#txn:txn-1).",
+			"at": "09:14",
+			"who": "Assistant",
+			"toolCalls": [
+				{ "id": "call-1", "name": "get_spending_summary", "args": {}, "status": "ok", "summary": "6 categories" }
+			],
+			"files": []
+		}
+	],
+	"toolBatch": [
+		{ "id": "call-2", "name": "get_workspace_context", "args": {}, "status": "ok", "summary": "3 wallets" },
+		{ "id": "call-3", "name": "search_transactions", "args": {}, "status": "ok", "summary": "12 matches" },
+		{ "id": "call-4", "name": "create_transaction", "args": {}, "status": "ok", "summary": "Created expense 50,000 in Petty cash." },
+		{ "id": "call-5", "name": "delete_transaction", "args": {}, "status": "failed", "summary": "Needs confirming." }
+	]
+}

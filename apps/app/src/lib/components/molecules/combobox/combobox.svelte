@@ -63,6 +63,24 @@
 	let open = $state(false);
 	let search = $state('');
 
+	/**
+	 * Whether the highlighted row is worth drawing. The command primitive
+	 * highlights the first row the moment the list opens and keeps that
+	 * highlight on whatever the pointer or the arrow keys reach, so a panel
+	 * opened with the mouse arrives with a filled row nobody pointed at,
+	 * sitting beside the filled row that is the current value: two marks, and
+	 * the one that looks like a choice means nothing yet. The same highlight
+	 * is drawn once it does mean something, which is from the first pointer
+	 * move across the list, the first arrow key, or a search that narrowed
+	 * the list so Enter would take the top match.
+	 */
+	let interacted = $state(false);
+	const showHighlight = $derived(interacted || search.trim() !== '');
+
+	$effect(() => {
+		if (open) interacted = false;
+	});
+
 	const current = $derived(items.find((entry) => entry.id === value));
 
 	const canCreate = $derived(
@@ -90,6 +108,7 @@
 				{disabled}
 				aria-expanded={open}
 				{...props}
+				data-slot="combobox-trigger"
 				class={cn('relative w-full justify-between font-normal', triggerClass)}
 				{id}
 			>
@@ -109,9 +128,12 @@
 	<!-- The panel is the width of the field it belongs to, not a width of its
 	     own: a list narrower than its trigger reads as a different control. -->
 	<Popover.Content class="w-(--bits-popover-anchor-width) p-0" align="start">
-		<Command.Root class="p-0">
+		<Command.Root class="p-0" onkeydown={() => (interacted = true)}>
 			<Command.Input placeholder={searchPlaceholder} bind:value={search} />
-			<Command.List>
+			<!-- A pointer move anywhere over the rows counts as interaction; a
+			     key is caught on the root, because the search input has focus
+			     and its keys bubble there. -->
+			<Command.List onpointermove={() => (interacted = true)}>
 				{#if !canCreate}
 					<Command.Empty>{empty}</Command.Empty>
 				{/if}
@@ -121,14 +143,16 @@
 							Two marks, and they must not compete. The chosen row
 							carries `accent`, which is the stronger of the two,
 							because which value is set outlasts where the pointer
-							happens to be. The row under the cursor is dimmed to a
-							fraction of `muted`, so it reads as a hint rather than
-							as a second selection.
+							happens to be. The row under the pointer, or under the
+							keyboard highlight once that highlight means something,
+							is dimmed to a fraction of `muted`, so it reads as a
+							hint rather than as a second selection.
 						-->
 						<Command.Item
 							value={entry.label}
 							class={cn(
-								'px-3 py-2 data-selected:bg-muted/40',
+								'px-3 py-2',
+								showHighlight ? 'data-selected:bg-muted/40' : 'data-selected:bg-transparent',
 								entry.id === value && 'bg-accent data-selected:bg-accent font-medium'
 							)}
 							onSelect={() => choose(entry)}
@@ -139,7 +163,10 @@
 					{#if canCreate}
 						<Command.Item
 							value={`create-${search}`}
-							class="px-3 py-2 data-selected:bg-muted/40"
+							class={cn(
+								'px-3 py-2',
+								showHighlight ? 'data-selected:bg-muted/40' : 'data-selected:bg-transparent'
+							)}
 							onSelect={() => {
 								onCreate?.(search.trim());
 								open = false;

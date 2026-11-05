@@ -16,12 +16,13 @@ oewang is a personal finance tracker. This repository is a ground-up rewrite of 
 8. [Hardening](security/hardening.md): input validation, uploads, headers, secrets, limits, dependencies.
 9. [AI safety](security/ai-safety.md): prompt injection, tool abuse, blast-radius caps.
 10. [Transactions](features/transactions.md): the transaction feature end to end, API to UI.
-11. [Chat](features/chat.md): the chat feature end to end, including receipt OCR.
-12. [AI service](ai/service.md): the Python service, its tool catalog, prompt, and streaming protocol.
-13. Best practices: [Rust API](best-practices/rust-api.md) and [Svelte app](best-practices/svelte-app.md).
-14. [Backlog](backlog.md): the implementation stories, in order, each mapped to requirement IDs.
-15. [Legacy app](reference/legacy-app.md): what the old implementation contains, what the rewrite takes from it, what it drops.
-16. [Midday research](research/midday.md): reverse engineering of a second reference implementation, and the proposals taken from it.
+11. [Accounts](features/accounts.md): the wallets screen, its figures, its table and how a balance is corrected.
+12. [Chat](features/chat.md): the chat feature end to end, including receipt OCR.
+13. [AI service](ai/service.md): the Python service, its tool catalog, prompt, and streaming protocol.
+14. Best practices: [Rust API](best-practices/rust-api.md) and [Svelte app](best-practices/svelte-app.md).
+15. [Backlog](backlog.md): the implementation stories, in order, each mapped to requirement IDs.
+16. [Legacy app](reference/legacy-app.md): what the old implementation contains, what the rewrite takes from it, what it drops.
+17. [Midday research](research/midday.md): reverse engineering of a second reference implementation, and the proposals taken from it.
 
 ## Doc map
 
@@ -38,12 +39,17 @@ flowchart TD
     AUTH --> HARD["security/hardening.md"]
     ENC --> HARD
     PRD --> TXN["features/transactions.md"]
+    PRD --> ACC["features/accounts.md"]
     PRD --> CHAT["features/chat.md"]
     CHAT --> AI["ai/service.md"]
     CHAT --> SAFE["security/ai-safety.md"]
     AI --> SAFE
     HARD --> SAFE
     EP --> TXN
+    EP --> ACC
+    ACC --> TXN
+    DM --> ACC
+    ACC --> SVELTE
     EP --> CHAT
     AUTH --> TXN
     AUTH --> CHAT
@@ -99,6 +105,7 @@ flowchart TD
 | Doc | What it answers |
 |---|---|
 | [features/transactions.md](features/transactions.md) | The transaction feature: data, business rules, endpoints, screens, the UI port map from the old app, CSV export and import, attachments, line items. |
+| [features/accounts.md](features/accounts.md) | The accounts screen: why wallets left Settings, the three cards and where each figure comes from, the measured table, the two sheets, how a balance adjustment is recorded as a transaction, the UI port map. |
 | [features/chat.md](features/chat.md) | The chat feature: sessions, streaming, the tool loop, role gating of writes, receipt OCR, the UI port map, settings. |
 | [ai/service.md](ai/service.md) | The Python service: responsibilities, endpoints, the eleven-tool catalog, the system prompt, the SSE event protocol, safety rules, testing with a mocked model. |
 

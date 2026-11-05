@@ -68,6 +68,7 @@
 	import { Badge } from '../../atoms/badge/index.js';
 	import { Button } from '../../atoms/button/index.js';
 	import { AttachmentView } from '../../molecules/attachment-view/index.js';
+	import { attachmentViewer } from '$lib/files.js';
 	import * as Sheet from '../../atoms/sheet/index.js';
 	import { cn } from '$lib/utils.js';
 
@@ -305,7 +306,7 @@
 						-->
 						<ul class="space-y-2">
 							{#each transaction.attachments as file (file.id)}
-								<li><AttachmentView {file} /></li>
+								<li><AttachmentView {file} {...attachmentViewer()} /></li>
 							{/each}
 						</ul>
 					{:else}

@@ -27,6 +27,9 @@
 	import type { UploadedFile } from '$lib/components/molecules/file-dropzone';
 	import { ImportAiModal } from '$lib/components/organisms/transactions';
 	import { FormError } from '$lib/components/molecules/form-error';
+	import { SelectAccount } from '$lib/components/molecules/select-account';
+	import { SelectCategory } from '$lib/components/molecules/select-category';
+	import { NO_COLUMN, SelectColumn } from '$lib/components/molecules/select-column';
 	import {
 		cleanMapping,
 		isMappable,
@@ -73,12 +76,30 @@
 			data.wallets[0]?.id ||
 			''
 	);
+	/*
+	 * The pickers take `{ id, label }`. The wallet's currency rides along in
+	 * its label, as the list showed it; "leave uncategorised" is a value
+	 * rather than an absent one, so the row reads as a choice.
+	 */
+	const walletItems = $derived(
+		data.wallets.map((wallet) => ({
+			id: wallet.id,
+			label: `${wallet.name} · ${wallet.currency_code}`
+		}))
+	);
+
+	const UNCATEGORISED = '__uncategorised__';
+
+	const categoryItems = $derived([
+		{ id: UNCATEGORISED, label: t('import.leave_uncategorised') },
+		...data.categories.map((category) => ({ id: category.id, label: category.name }))
+	]);
+
 	/** The file's category names, matched to a category in this workspace. */
 	let categoryMatches = $state<Record<string, string>>({});
 	let mappingPending = $state(false);
 	let mappingFailed = $state(false);
 
-	const selectClass = 'border-input bg-background h-9 w-full border px-3 text-sm';
 
 	/*
 	 * A reload keeps the step but not the file: the rows live in this
@@ -369,11 +390,15 @@
 				<Label for="import-wallet" class="text-subtle text-xs font-normal">
 					{t('import.wallet')}
 				</Label>
-				<select id="import-wallet" class={selectClass} value={walletId} onchange={(event) => (chosenWallet = (event.currentTarget as HTMLSelectElement).value)}>
-					{#each data.wallets as wallet (wallet.id)}
-						<option value={wallet.id}>{wallet.name} · {wallet.currency_code}</option>
-					{/each}
-				</select>
+				<!-- Workspace data, so the app's picker, never a native
+				     `<select>` (D79). -->
+				<SelectAccount
+					id="import-wallet"
+					accounts={walletItems}
+					value={walletId}
+					placeholder={t('import.wallet')}
+					onChange={(value) => (chosenWallet = value)}
+				/>
 				<p class="text-subtle text-xs">{t('import.wallet_hint')}</p>
 			</div>
 
@@ -422,21 +447,19 @@
 						<Label for="map-{field}" class="text-subtle text-xs font-normal">
 							{fieldLabel(field)}{REQUIRED.includes(field) ? ' *' : ''}
 						</Label>
-						<select
+						<SelectColumn
 							id="map-{field}"
-							class={selectClass}
-							value={mapping[field] ?? ''}
-							onchange={(event) =>
+							columns={file.columns}
+							value={mapping[field] ?? NO_COLUMN}
+							noneLabel={t('common.none')}
+							placeholder={t('common.none')}
+							searchPlaceholder={t('import.search_columns')}
+							onChange={(value) =>
 								(mapping = {
 									...mapping,
-									[field]: (event.currentTarget as HTMLSelectElement).value || undefined
+									[field]: value === NO_COLUMN ? undefined : value
 								})}
-						>
-							<option value="">{t('common.none')}</option>
-							{#each file.columns as column (column)}
-								<option value={column}>{column}</option>
-							{/each}
-						</select>
+						/>
 					</div>
 				{/each}
 			</div>
@@ -453,20 +476,17 @@
 					{#each fileCategories as name (name)}
 						<div class="flex flex-wrap items-center gap-3">
 							<span class="text-body w-48 truncate font-mono text-xs">{name}</span>
-							<select
-								class={selectClass + ' max-w-xs'}
-								value={categoryMatches[name] ?? ''}
-								onchange={(event) =>
+							<SelectCategory
+								class="max-w-xs"
+								categories={categoryItems}
+								value={categoryMatches[name] ?? UNCATEGORISED}
+								placeholder={t('import.leave_uncategorised')}
+								onChange={(value) =>
 									(categoryMatches = {
 										...categoryMatches,
-										[name]: (event.currentTarget as HTMLSelectElement).value
+										[name]: value === UNCATEGORISED ? '' : value
 									})}
-							>
-								<option value="">{t('import.leave_uncategorised')}</option>
-								{#each data.categories as category (category.id)}
-									<option value={category.id}>{category.name}</option>
-								{/each}
-							</select>
+							/>
 						</div>
 					{/each}
 				</div>

@@ -387,8 +387,10 @@ async function run(request: Request, call: (form: FormData) => Promise<unknown>)
 	const form = await request.formData();
 
 	try {
-		await call(form);
-		return { ok: true };
+		// The created row travels back, so a picker that just made one can
+		// select it without a second round trip to look it up by name.
+		const data = await call(form);
+		return { ok: true, data };
 	} catch (error) {
 		if (error instanceof ApiError) {
 			return fail(error.status, { code: error.code, fields: error.fields });

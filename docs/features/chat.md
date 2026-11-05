@@ -241,8 +241,9 @@ The map is `src/lib/chat-invalidation.ts`. Each entry is a key a load declares w
 | Key | Declared by |
 |---|---|
 | `app:transactions`, `app:transaction-detail`, `app:transaction-filters` | The transactions page load |
-| `app:wallets`, `app:categories` | The settings page load, and the conversation's own load, which needs both for the canvas |
-| `app:wallet-balances` | All of those |
+| `app:wallets` | The [accounts](accounts.md) page load, plus the conversation's own load, which needs wallets for the canvas |
+| `app:categories` | The accounts page's sibling, the settings page load, plus the conversation's own load |
+| `app:wallet-balances` | The accounts page load and the conversation's own load |
 | `app:summary`, `app:overview` | Nothing. No load declares either |
 
 **The last row is stale and needs a decision, not an edit.** It says the summary and overview screens arrive in M6, and no M6 story builds them: [M6](../backlog.md) is hardening, the safety corpus and the deployment, and the [non-goals](../prd.md#non-goals-for-v1) do not rule the screens out either. So the two keys name data nothing produces. Either a story is added for the screens or the keys come out of the map; leaving the claim in the table is the one option that is wrong.

@@ -1,13 +1,12 @@
 <script lang="ts">
 	/**
-	 * An attached file, fetched as chunks and shown from a Blob URL
-	 * (VLT-3, D23).
+	 * An attached file, shown from a Blob URL (VLT-3, D23).
 	 *
-	 * The bytes come back chunk by chunk from this app's own server, which
-	 * reads them from the API inside the OWE1 envelope. No signed
-	 * object-storage URL is involved at any point, and the object URL is
-	 * revoked when the component goes away so the bytes do not sit in the
-	 * browser longer than the view that shows them.
+	 * The component does not know where the bytes come from: `load` is handed
+	 * to it, so this stays a design-system piece and the routes stay in
+	 * `$lib/files.ts`. What it does own is the object URL's life, which is
+	 * revoked when the view goes away so the bytes do not sit in the browser
+	 * longer than the thing that shows them.
 	 */
 	import Download from '@lucide/svelte/icons/download';
 	import FileText from '@lucide/svelte/icons/file-text';
@@ -16,17 +15,28 @@
 	import { Button } from '../../atoms/button/index.js';
 	import { Spinner } from '../../atoms/spinner/index.js';
 
+	type AttachedFile = { id: string; file_id: string; name: string; type: string; size: number };
+
 	let {
-		file
+		file,
+		load,
+		downloadLabel,
+		loadingLabel,
+		failedLabel
 	}: {
-		file: { id: string; file_id: string; name: string; type: string; size: number };
+		file: AttachedFile;
+		/** Fetch the bytes. Progress is reported as it goes. */
+		load: (file: AttachedFile, onProgress: (done: number, total: number) => void) => Promise<Blob>;
+		downloadLabel: (name: string) => string;
+		loadingLabel: (done: number, total: number) => string;
+		failedLabel: string;
 	} = $props();
 
 	let objectUrl = $state<string | null>(null);
 	let failed = $state(false);
+	let done = $state(0);
+	let total = $state(1);
 
-	const CHUNK_BYTES = 512 * 1024;
-	const chunkCount = $derived(Math.max(1, Math.ceil(file.size / CHUNK_BYTES)));
 	const isImage = $derived(file.type.startsWith('image/'));
 
 	$effect(() => {
@@ -35,17 +45,14 @@
 
 		(async () => {
 			try {
-				const parts: ArrayBuffer[] = [];
-				for (let index = 0; index < chunkCount; index += 1) {
-					const response = await fetch(`/transactions/files/${file.file_id}/chunks/${index}`);
-					if (!response.ok) throw new Error(String(response.status));
-					parts.push(await response.arrayBuffer());
-				}
+				const bytes = await load(file, (fetched, count) => {
+					if (cancelled) return;
+					done = fetched;
+					total = count;
+				});
 				if (cancelled) return;
 
-				// The type comes from the record, which the API sniffed from
-				// the bytes. It is never taken from the filename.
-				url = URL.createObjectURL(new Blob(parts, { type: file.type }));
+				url = URL.createObjectURL(bytes);
 				objectUrl = url;
 			} catch {
 				if (!cancelled) failed = true;
@@ -73,7 +80,7 @@
 				variant="ghost"
 				size="icon"
 				class="size-6"
-				aria-label="Download {file.name}"
+				aria-label={downloadLabel(file.name)}
 			>
 				<Download class="size-3.5" />
 			</Button>
@@ -81,11 +88,11 @@
 	</div>
 
 	{#if failed}
-		<p class="text-subtle text-xs">Those bytes could not be read.</p>
+		<p class="text-subtle text-xs">{failedLabel}</p>
 	{:else if !objectUrl}
 		<div class="flex items-center gap-2">
 			<Spinner size={12} />
-			<span class="text-subtle text-xs">Fetching {chunkCount} chunk(s).</span>
+			<span class="text-subtle text-xs">{loadingLabel(done, total)}</span>
 		</div>
 	{:else if isImage}
 		<img src={objectUrl} alt={file.name} class="max-h-64 w-full object-contain" />

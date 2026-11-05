@@ -2,7 +2,7 @@
 
 Status: draft v0.1, 2026-11-02. Part of the [oewang docs](README.md). Every story maps to requirement IDs from the [PRD](prd.md#6-requirements).
 
-Forty-four stories in six milestones. Each is sized for one focused session. A story is done when every acceptance criterion is checked, not when the code compiles.
+Forty-five stories in six milestones. Each is sized for one focused session. A story is done when every acceptance criterion is checked, not when the code compiles.
 
 ## Update this doc when
 
@@ -179,6 +179,31 @@ Requirements: WAL-1, CAT-1, UI-5
 - [x] Categories in a separate tab, split by type
 - [x] Each wallet balance renders in that wallet's own currency, with correct precision; a group total renders in the workspace currency
 - [x] Verify in browser
+
+The wallet half of this story moved out in US-013b, and the Settings wallets tab was removed with it. The criteria above stay ticked because they describe what was built and shipped; Settings keeps the categories tab and the assistant tab. Reordering and group CRUD had no UI left anywhere after the move, which US-013b records as open work.
+
+### US-013b: Accounts page
+Requirements: WAL-1, WAL-2, WAL-3, WAL-4, WAL-5, WAL-6, UI-1, UI-6, UI-8
+
+- [x] `/accounts` owns creating, renaming, grouping, setting the default and deleting a wallet. The Settings wallets tab is removed, so one screen owns each write (WAL-1, WAL-3, WAL-4)
+- [ ] Three cards above the table: the workspace-currency total, the account count, and how many are counted in totals. The third counts `is_included_in_totals`, which is what the total is a total of, not the live app's "Active"
+- [ ] A foreign wallet converts at today's rate; a wallet with no rate is left out and the card says how many were left out
+- [ ] Columns as measured on the live page: name 200 sticky left with a star on the default, group 150 as an in-cell select, balance 150 right aligned, created taking the remainder, actions 90. Row height 45, shared with the transactions table through `molecules/data-table/columns.ts` (WAL-2, UI-5)
+- [ ] Each balance renders in its own wallet's currency and precision; every total renders in the workspace currency
+- [ ] A form sheet creates and edits an account, with no balance field: an opening figure is a transaction, not a column write (TXN-3)
+- [ ] The currency field is locked once the account has a live transaction, and a locked save does not blank the column (WAL-6)
+- [ ] A detail sheet edits one account in place: name on submit, group and the totals flag on change, balance on blur
+- [ ] Typing a balance posts `POST /v1/wallets/{id}/adjust`, which records one "Balance adjustment" transaction for the difference. A target equal to the current balance writes nothing
+- [ ] Every mutation is a form action, so the page works with JavaScript off
+- [ ] A `member` sees the page with no add button, no group select and View alone in the row menu
+- [ ] Search and the group filter live in the URL and are applied on the server, so a filtered view can be shared and restored (UI-8)
+- [ ] Every string on the screen resolves through `en.json`; no literals in markup (UI-1)
+- [ ] The page is usable at 375 px, with the cards stacking and the table scrolling inside its own box (UI-6)
+- [ ] Unit tests cover `walletTotals`: only flagged wallets count, a foreign wallet converts, and the wallets left out for want of a rate are reported
+- [ ] Rust tests cover the adjustment: up writes one income, down writes one expense, an unchanged target writes nothing, a foreign wallet lands on its target in its own currency, and a `member` is refused
+- [ ] Verify in browser
+- [ ] Group create, rename and delete reach the screen. The actions are on the page and nothing calls them; the Settings tab that used to do it is gone
+- [ ] A wallet's `sort_order` can be set again. The settings reorder went with the tab, so the list orders by a column no screen writes
 
 ### US-014: Transaction list API
 Requirements: TXN-8, SEC-9, SEC-10, SEC-18
@@ -559,5 +584,5 @@ now listed under US-017.
 
 - [Docs index](README.md) and [PRD](prd.md)
 - [Architecture](architecture.md) and [data model](data-model.md)
-- [Transactions](features/transactions.md) and [chat](features/chat.md)
+- [Transactions](features/transactions.md), [accounts](features/accounts.md) and [chat](features/chat.md)
 - [Hardening](security/hardening.md) and [AI safety](security/ai-safety.md)

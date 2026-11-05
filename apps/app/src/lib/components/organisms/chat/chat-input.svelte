@@ -25,6 +25,7 @@
 	import { Button } from '../../atoms/button/index.js';
 	import { Textarea } from '../../atoms/textarea/index.js';
 	import { FileDropzone, type UploadedFile } from '../../molecules/file-dropzone/index.js';
+	import { attachmentDropzone } from '$lib/files.js';
 
 	let {
 		value = $bindable(''),
@@ -109,7 +110,7 @@
 	}}
 >
 	{#if showDropzone}
-		<FileDropzone bind:files disabled={disabled || streaming} />
+		<FileDropzone bind:files disabled={disabled || streaming} {...attachmentDropzone()} />
 	{/if}
 
 	<div class="flex items-end gap-2">

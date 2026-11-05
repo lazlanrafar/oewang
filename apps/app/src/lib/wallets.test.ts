@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { groupWallets, inBaseCurrency, type WalletLike } from './wallets';
+import { groupWallets, inBaseCurrency, walletTotals, type WalletLike } from './wallets';
 
 describe('groupWallets', () => {
 	const wallet = (over: Partial<WalletLike> = {}): WalletLike => ({
@@ -13,6 +13,8 @@ describe('groupWallets', () => {
 		is_included_in_totals: true,
 		is_default: false,
 		sort_order: 0,
+		created_at: '2026-11-01T00:00:00Z',
+		updated_at: '2026-11-01T00:00:00Z',
 		...over
 	});
 
@@ -83,5 +85,67 @@ describe('inBaseCurrency', () => {
 
 	it('should answer null when no rate exists for the pair', () => {
 		expect(inBaseCurrency('50.0000', 'USD', 'IDR', {})).toBeNull();
+	});
+});
+
+describe('the figures above the accounts table', () => {
+	const base = 'IDR';
+
+	const wallet = (over: Partial<WalletLike> = {}): WalletLike => ({
+		id: 'w',
+		group_id: null,
+		group_name: null,
+		name: 'Cash',
+		currency_code: 'IDR',
+		balance: '1000.0000',
+		is_included_in_totals: true,
+		is_default: false,
+		sort_order: 0,
+		created_at: '2026-11-01T00:00:00Z',
+		updated_at: '2026-11-01T00:00:00Z',
+		...over
+	});
+
+	it('totals only the wallets flagged to count', () => {
+		const totals = walletTotals(
+			[
+				wallet({ id: 'a', balance: '100000' }),
+				wallet({ id: 'b', balance: '50000', is_included_in_totals: false })
+			],
+			base,
+			{}
+		);
+
+		expect(totals.total).toBe('100000.0000');
+		expect(totals.count).toBe(2);
+		expect(totals.counted).toBe(1);
+	});
+
+	it('converts a foreign wallet rather than adding it as if it were not', () => {
+		const totals = walletTotals(
+			[
+				wallet({ id: 'a', balance: '100000' }),
+				wallet({ id: 'b', balance: '10', currency_code: 'USD' })
+			],
+			base,
+			{ USD: '16000' }
+		);
+
+		expect(totals.total).toBe('260000.0000');
+		expect(totals.unconverted).toBe(0);
+	});
+
+	it('leaves a wallet out when no rate exists, and says how many', () => {
+		const totals = walletTotals(
+			[
+				wallet({ id: 'a', balance: '100000' }),
+				wallet({ id: 'b', balance: '10', currency_code: 'USD' })
+			],
+			base,
+			{}
+		);
+
+		expect(totals.total).toBe('100000.0000');
+		expect(totals.unconverted).toBe(1);
 	});
 });

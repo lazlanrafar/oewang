@@ -1,21 +1,17 @@
 <script lang="ts" module>
 	export type UploadedFile = { id: string; name: string; type: string; size: number };
-
-	/** What this product accepts. Nothing that runs when it is opened. */
-	export const ACCEPTED = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
 </script>
 
 <script lang="ts">
 	/**
-	 * Drop a receipt here (VLT-1, TXN-13).
+	 * Drop a file here.
 	 *
-	 * The file is split in the browser and sent chunk by chunk to this
-	 * app's own server, which forwards each one into the OWE1 envelope. The
-	 * browser never talks to the API and is never handed an object-storage
-	 * URL (D5, D23).
-	 *
-	 * Progress is per chunk, which is real progress rather than a bar that
-	 * jumps from nothing to everything.
+	 * The component owns the drop target, the per-file progress and the list
+	 * of what is attached. It does not own the transport: `upload` is handed
+	 * to it, so the routes, the limits and the accepted types stay in
+	 * `$lib/files.ts` and this stays a design-system piece that any feature
+	 * can use. Progress is per chunk, which is real progress rather than a
+	 * bar that jumps from nothing to everything.
 	 */
 	import Paperclip from '@lucide/svelte/icons/paperclip';
 	import Upload from '@lucide/svelte/icons/upload';
@@ -27,10 +23,38 @@
 
 	let {
 		files = $bindable([]),
+		upload,
+		accept = [],
+		name,
+		prompt,
+		chooseLabel,
+		hint,
+		busyLabel,
+		rejectedMessage,
+		removeLabel,
+		errorMessage,
 		disabled = false,
 		class: className
 	}: {
 		files?: UploadedFile[];
+		/** Send one file, reporting progress, and return what was stored. */
+		upload: (
+			file: File,
+			onProgress: (sent: number, total: number) => void
+		) => Promise<UploadedFile>;
+		/** Accepted content types. Empty means anything. */
+		accept?: string[];
+		/** The form field each attached id posts under. Omitted, nothing posts. */
+		name?: string;
+		prompt: string;
+		chooseLabel: string;
+		hint?: string;
+		busyLabel?: string;
+		/** Shown when a chosen file is not one of `accept`. */
+		rejectedMessage?: string;
+		removeLabel: (name: string) => string;
+		/** What a failed upload says, which is the caller's to map (UI-1). */
+		errorMessage: (error: unknown) => string;
 		disabled?: boolean;
 		class?: string;
 	} = $props();
@@ -49,78 +73,35 @@
 	let dragging = $state(false);
 	let input = $state<HTMLInputElement | null>(null);
 
-	const busy = $derived(uploading.some((upload) => !upload.error));
+	const busy = $derived(uploading.some((entry) => !entry.error));
 
 	/** Replace one entry, by id, so the change reaches the array. */
 	function amend(id: string, change: Partial<InFlight>) {
 		uploading = uploading.map((entry) => (entry.id === id ? { ...entry, ...change } : entry));
 	}
 
-	async function accept(chosen: FileList | null | undefined) {
-		for (const file of Array.from(chosen ?? [])) await send(file);
+	async function chosen(list: FileList | null | undefined) {
+		for (const file of Array.from(list ?? [])) await send(file);
 	}
 
 	async function send(file: File) {
 		const id = `${file.name}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 		uploading = [...uploading, { id, name: file.name, sent: 0, total: 1 }];
 
+		if (accept.length > 0 && !accept.includes(file.type)) {
+			amend(id, { error: rejectedMessage ?? errorMessage(new Error('UNSUPPORTED_FILE_TYPE')) });
+			return;
+		}
+
 		try {
-			if (!ACCEPTED.includes(file.type)) {
-				amend(id, { error: 'Accepted: JPEG, PNG, WebP and PDF.' });
-				return;
-			}
-
-			const begun = await post('/transactions/files', {
-				filename: file.name,
-				content_type: file.type,
-				size_bytes: file.size
-			});
-
-			amend(id, { total: begun.chunk_count || 1 });
-
-			for (let index = 0; index < begun.chunk_count; index += 1) {
-				const start = index * begun.chunk_size;
-				const slice = file.slice(start, start + begun.chunk_size);
-
-				const response = await fetch(`/transactions/files/${begun.id}/chunks/${index}`, {
-					method: 'PUT',
-					body: await slice.arrayBuffer()
-				});
-				if (!response.ok) throw new Error(await response.text());
-
-				amend(id, { sent: index + 1 });
-			}
-
-			const completed = await post(`/transactions/files/${begun.id}/complete`, {});
-			files = [
-				...files,
-				{ id: completed.id, name: completed.name, type: completed.type, size: completed.size }
-			];
+			const stored = await upload(file, (sent, total) => amend(id, { sent, total }));
+			files = [...files, stored];
 			uploading = uploading.filter((entry) => entry.id !== id);
 		} catch (error) {
 			// The API refuses a file whose bytes are not what it said they
 			// were, and leaves nothing behind when it does.
-			amend(id, { error: message(error) });
+			amend(id, { error: errorMessage(error) });
 		}
-	}
-
-	/** The API's code, if the failure carried one. */
-	function message(error: unknown): string {
-		const raw = error instanceof Error ? error.message : '';
-		if (raw.includes('UNSUPPORTED_FILE_TYPE')) return 'Those bytes are not the type claimed.';
-		if (raw.includes('FILE_TOO_LARGE')) return 'The limit is 10 MB.';
-		return 'Upload failed.';
-	}
-
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	async function post(url: string, body: unknown): Promise<any> {
-		const response = await fetch(url, {
-			method: 'POST',
-			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify(body)
-		});
-		if (!response.ok) throw new Error(await response.text());
-		return response.json();
 	}
 </script>
 
@@ -140,49 +121,43 @@
 		ondrop={(event) => {
 			event.preventDefault();
 			dragging = false;
-			accept(event.dataTransfer?.files);
+			chosen(event.dataTransfer?.files);
 		}}
 	>
 		<Upload class="text-subtle size-4" aria-hidden="true" />
-		<p class="text-subtle text-xs">Drop a receipt, or</p>
-		<Button
-			type="button"
-			variant="outline"
-			size="sm"
-			{disabled}
-			onclick={() => input?.click()}
-		>
-			Choose a file
+		<p class="text-subtle text-xs">{prompt}</p>
+		<Button type="button" variant="outline" size="sm" {disabled} onclick={() => input?.click()}>
+			{chooseLabel}
 		</Button>
 		<input
 			bind:this={input}
 			type="file"
 			class="hidden"
-			accept={ACCEPTED.join(',')}
+			accept={accept.join(',') || undefined}
 			multiple
 			onchange={(event) => {
-				accept((event.currentTarget as HTMLInputElement).files);
+				chosen((event.currentTarget as HTMLInputElement).files);
 				// Clear it, so choosing the same file twice still fires.
 				(event.currentTarget as HTMLInputElement).value = '';
 			}}
 		/>
-		<p class="text-subtle text-xs">JPEG, PNG, WebP or PDF, up to 10 MB.</p>
+		{#if hint}<p class="text-subtle text-xs">{hint}</p>{/if}
 	</div>
 
-	{#each uploading as upload (upload.id)}
+	{#each uploading as entry (entry.id)}
 		<div class="space-y-1">
 			<div class="flex items-center justify-between gap-2 text-xs">
-				<span class="truncate">{upload.name}</span>
-				{#if upload.error}
-					<span class="text-destructive shrink-0">{upload.error}</span>
+				<span class="truncate">{entry.name}</span>
+				{#if entry.error}
+					<span class="text-destructive shrink-0">{entry.error}</span>
 				{:else}
 					<span class="text-subtle shrink-0 tabular-nums">
-						{Math.round((upload.sent / upload.total) * 100)}%
+						{Math.round((entry.sent / entry.total) * 100)}%
 					</span>
 				{/if}
 			</div>
-			{#if !upload.error}
-				<Progress value={(upload.sent / upload.total) * 100} class="h-1" />
+			{#if !entry.error}
+				<Progress value={(entry.sent / entry.total) * 100} class="h-1" />
 			{/if}
 		</div>
 	{/each}
@@ -192,13 +167,13 @@
 			<Paperclip class="text-subtle size-3.5 shrink-0" aria-hidden="true" />
 			<span class="min-w-0 flex-1 truncate">{file.name}</span>
 			<!-- Removing an attachment detaches it. The file itself stays,
-			     because the same receipt may be on another transaction (VLT-5). -->
+			     because the same one may be attached elsewhere (VLT-5). -->
 			<Button
 				type="button"
 				variant="ghost"
 				size="icon"
 				class="size-6"
-				aria-label="Remove {file.name}"
+				aria-label={removeLabel(file.name)}
 				{disabled}
 				onclick={() => (files = files.filter((candidate) => candidate.id !== file.id))}
 			>
@@ -207,12 +182,14 @@
 		</div>
 	{/each}
 
-	<!-- Every attached file's id, so the form submits the whole set. -->
-	{#each files as file (file.id)}
-		<input type="hidden" name="attachment_ids" value={file.id} />
-	{/each}
+	{#if name}
+		<!-- Every attached file's id, so the form submits the whole set. -->
+		{#each files as file (file.id)}
+			<input type="hidden" {name} value={file.id} />
+		{/each}
+	{/if}
 
-	{#if busy}
-		<p class="text-subtle text-xs">Uploading. The form will wait.</p>
+	{#if busy && busyLabel}
+		<p class="text-subtle text-xs">{busyLabel}</p>
 	{/if}
 </div>

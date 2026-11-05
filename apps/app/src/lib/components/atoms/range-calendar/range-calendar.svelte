@@ -11,6 +11,10 @@
 	 *
 	 * Days between the ends are tinted rather than outlined, and the two ends
 	 * invert, so a range reads at a glance without a radius to shape it (D52).
+	 *
+	 * While only one end is set, the days between it and the day under the
+	 * pointer carry the same tint (`data-highlighted`), so the range being
+	 * drawn is visible before the second click rather than after it.
 	 */
 	let {
 		ref = $bindable(null),
@@ -69,11 +73,12 @@
 									<RangeCalendarPrimitive.Cell
 										{date}
 										month={month.value}
-										class="data-selected:bg-accent p-0"
+										class="data-selected:bg-accent data-highlighted:bg-accent p-0"
 									>
 										<RangeCalendarPrimitive.Day
 											class={cn(
 												'text-body hover:bg-accent flex size-8 items-center justify-center font-normal',
+												'data-highlighted:bg-accent',
 												'data-selection-start:bg-primary data-selection-start:text-primary-foreground',
 												'data-selection-end:bg-primary data-selection-end:text-primary-foreground',
 												'data-today:font-medium data-outside-month:text-subtle data-disabled:opacity-40'

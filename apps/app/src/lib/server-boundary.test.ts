@@ -79,7 +79,7 @@ const RULES: Rule[] = [
 		// first paint, which is a cookie for exactly that reason and carries
 		// no identity. It is named here so adding a second one is a decision
 		// someone makes on purpose.
-		except: ['lib/components/organisms/layouts/sidebar.ts']
+		except: ['lib/components/organisms/layouts/layouts-sidebar-state.ts']
 	}
 ];
 
