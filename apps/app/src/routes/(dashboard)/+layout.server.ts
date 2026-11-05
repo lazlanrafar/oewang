@@ -2,6 +2,7 @@ import type { LayoutServerLoad } from './$types';
 
 import { listWorkspaces, readMe } from '$lib/server/account';
 import * as ledger from '$lib/server/ledger';
+import { receiptNotices } from '$lib/server/receipts';
 import { SIDEBAR_COOKIE } from '$lib/components/organisms/layouts';
 
 /**
@@ -21,12 +22,15 @@ export const load: LayoutServerLoad = async ({ locals, cookies }) => {
 	 * claim inside it (AUTH-4): nothing here names one, so no page can be
 	 * served another workspace's rows.
 	 */
-	const [result, workspaces, wallets, groups, categories] = await Promise.all([
+	const [result, workspaces, wallets, groups, categories, notices] = await Promise.all([
 		readMe(locals.accessToken),
 		listWorkspaces(locals.accessToken),
 		ledger.listWallets(locals.accessToken),
 		ledger.listWalletGroups(locals.accessToken),
-		ledger.listCategories(locals.accessToken)
+		ledger.listCategories(locals.accessToken),
+		// Queued receipts that ended since the last page (D95). A failure to
+		// read them never blocks the shell.
+		receiptNotices(locals.accessToken).catch(() => null)
 	]);
 
 	// The sidebar's own state, read here so the first paint is already the
@@ -54,6 +58,7 @@ export const load: LayoutServerLoad = async ({ locals, cookies }) => {
 				type: category.type
 			}))
 		},
+		receiptNotices: notices?.data ?? [],
 		sidebarOpen: cookies.get(SIDEBAR_COOKIE) !== 'false'
 	};
 };

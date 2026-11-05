@@ -6,6 +6,8 @@
 	 */
 	import FileText from '@lucide/svelte/icons/file-text';
 
+	import { Badge } from '../../atoms/badge/index.js';
+
 	import { formatBytes, thumbnailSrc, type VaultListFile } from '$lib/files.js';
 	import { t } from '$lib/i18n';
 	import { cn } from '$lib/utils.js';
@@ -62,6 +64,18 @@
 							>
 								{file.name}
 							</button>
+							{#if file.receipt_status}
+								<Badge
+									variant={file.receipt_status === 'failed' ? 'destructive' : 'muted'}
+									title={file.receipt_status === 'failed'
+										? t('vault.receipt_failed_hint')
+										: t('vault.receipt_pending_hint')}
+								>
+									{file.receipt_status === 'failed'
+										? t('vault.receipt_failed')
+										: t('vault.receipt_pending')}
+								</Badge>
+							{/if}
 						</div>
 					</td>
 					<td class="px-4 font-medium text-primary">{file.type}</td>

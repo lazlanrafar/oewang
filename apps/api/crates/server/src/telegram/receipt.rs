@@ -12,17 +12,15 @@
 //! A receipt with no readable total is never saved: there is no amount to
 //! save, and a guessed one is worse than asking for a better photo.
 
-use chrono::{TimeZone, Utc};
 use oewang_clients::telegram::{Message, TelegramError};
-use oewang_db::repositories::{categories, telegram::TelegramLinkRow, wallets};
-use oewang_domain::{ledger::TransactionType, AppError, Result};
+use oewang_db::repositories::telegram::TelegramLinkRow;
+use oewang_domain::{AppError, Result};
 
 use crate::{
-    ai::{extraction, service as ai},
     audit::{Actor, SOURCE_TELEGRAM},
+    receipts::{queue, service as receipts},
     state::AppState,
     telegram::{render, reply, Bot},
-    transactions::service::{self as transactions, ItemInput, TransactionInput},
     vault::service as vault,
 };
 
@@ -112,167 +110,49 @@ pub async fn handle(
 
     bot.client.send_typing(chat_id).await.ok();
 
-    let request_id = cuid2::create_id();
-    let outcome = match ai::parse_receipt(
-        &state.db,
-        &state.files,
-        &state.ai,
-        &request_id,
-        &link.workspace_id,
-        Some(&link.user_id),
-        &file_id,
-    )
-    .await
-    {
-        Ok(outcome) => outcome,
-        Err(AppError::ReceiptUnreadable) => {
-            return say(bot, chat_id, render::RECEIPT_UNREADABLE).await
+    // The shared read-and-save (D86, D95). What differs here is only how
+    // each ending is said.
+    let read = match receipts::read_and_save(state, actor, &file_id).await {
+        Ok(read) => read,
+        Err(AppError::AiUnavailable | AppError::ExtractionNoAnswer) => {
+            receipts::Read::Busy(AppError::AiUnavailable.code())
         }
-        Err(AppError::ExtractionNoAnswer) => {
-            return say(bot, chat_id, render::EXTRACTION_NO_ANSWER).await
-        }
-        Err(AppError::AiUnavailable) => return say(bot, chat_id, render::AI_UNAVAILABLE).await,
         Err(error) => return Err(error),
     };
 
-    let draft = outcome.draft;
-    let Some(total) = draft.total.filter(|total| !total.is_zero()) else {
-        return say(bot, chat_id, render::RECEIPT_UNREADABLE).await;
-    };
-
-    // The account: the default one when it holds this currency, otherwise
-    // the first one that does. A receipt is never converted silently.
-    let wallets = wallets::list_wallets(&state.db, &link.workspace_id)
-        .await
-        .map_err(internal)?;
-    if wallets.is_empty() {
-        return say(bot, chat_id, render::NO_ACCOUNT).await;
-    }
-    let Some(wallet) = wallets
-        .iter()
-        .filter(|wallet| wallet.currency_code == draft.currency)
-        .max_by_key(|wallet| wallet.is_default)
-    else {
-        return say(bot, chat_id, &render::currency_mismatch(&draft.currency)).await;
-    };
-
-    let expense = categories::list_categories(&state.db, &link.workspace_id, Some("expense"))
-        .await
-        .map_err(internal)?;
-    let category_id = {
-        let names: Vec<&str> = expense
-            .iter()
-            .map(|category| category.name.as_str())
-            .collect();
-        let items: Vec<&str> = draft
-            .line_items
-            .iter()
-            .map(|item| item.name.as_str())
-            .collect();
-        extraction::categorize(
-            &state.ai,
-            crate::usage::Meter::new(&state.db, &link.workspace_id, Some(&link.user_id)),
-            &request_id,
-            draft.merchant.as_deref(),
-            &items,
-            &names,
-        )
-        .await
-        .and_then(|chosen| expense.iter().find(|category| category.name == chosen))
-        .map(|category| category.id.clone())
-    };
-
-    let mut check: Vec<String> = outcome
-        .quality
-        .low_confidence_fields
-        .iter()
-        .cloned()
-        .chain(
-            outcome
-                .quality
-                .corrected_fields
-                .iter()
-                .map(|correction| correction.field.clone()),
-        )
-        .map(|field| {
-            if field == "line_items" {
-                "items".into()
-            } else {
-                field
-            }
-        })
-        .collect();
-
-    let date = match draft.date {
-        Some(date) => date,
-        None => {
-            // A receipt with a total and no readable date is saved as
-            // today's, and the reply says so.
-            check.push("date".into());
-            Utc::now().date_naive()
+    match read {
+        receipts::Read::Saved {
+            transaction_id,
+            check,
+        } => {
+            let message =
+                reply::saved(&state.db, &link.workspace_id, &transaction_id, &check).await?;
+            bot.client
+                .send_message(chat_id, &message.text, Some(&message.keyboard))
+                .await
+                .map_err(|error| AppError::Internal(anyhow::anyhow!(error)))?;
+            Ok(())
         }
-    };
-    check.sort();
-    check.dedup();
-
-    let attachment_ids = vec![file_id.clone()];
-    let items: Vec<ItemInput<'_>> = draft
-        .line_items
-        .iter()
-        .filter_map(|item| {
-            let amount = item.amount.filter(|amount| !amount.is_zero())?;
-            (!item.name.trim().is_empty()).then_some(ItemInput {
-                name: item.name.as_str(),
-                brand: None,
-                quantity: item
-                    .quantity
-                    .filter(|quantity| quantity.is_sign_positive() && !quantity.is_zero()),
-                unit: None,
-                unit_price: item.unit_price,
-                amount,
-                category_id: None,
-                notes: None,
-            })
-        })
-        .collect();
-
-    let name = draft
-        .merchant
-        .as_deref()
-        .map(str::trim)
-        .filter(|name| !name.is_empty());
-
-    let saved = transactions::create_with_items(
-        &state.db,
-        &state.rates,
-        actor,
-        TransactionInput {
-            kind: TransactionType::Expense,
-            wallet_id: &wallet.id,
-            to_wallet_id: None,
-            category_id: category_id.as_deref(),
-            amount: total,
-            to_amount: None,
-            original_amount: None,
-            original_currency_code: None,
-            exchange_rate: None,
-            requested_base_rate: None,
-            date: Utc.from_utc_datetime(&date.and_hms_opt(0, 0, 0).unwrap_or_default()),
-            name: Some(name.unwrap_or("Receipt")),
-            description: None,
-            is_ready: true,
-            attachment_ids: Some(&attachment_ids),
-        },
-        &items,
-    )
-    .await?;
-
-    let message = reply::saved(&state.db, &link.workspace_id, &saved.id, &check).await?;
-    bot.client
-        .send_message(chat_id, &message.text, Some(&message.keyboard))
-        .await
-        .map_err(|error| AppError::Internal(anyhow::anyhow!(error)))?;
-    Ok(())
+        receipts::Read::Unreadable => say(bot, chat_id, render::RECEIPT_UNREADABLE).await,
+        receipts::Read::NoAccount => say(bot, chat_id, render::NO_ACCOUNT).await,
+        receipts::Read::CurrencyMismatch(currency) => {
+            say(bot, chat_id, &render::currency_mismatch(&currency)).await
+        }
+        // The reader did not answer: the photo is already in the vault, so
+        // it waits there and is read when the reader is back (D95).
+        receipts::Read::Busy(_) => {
+            queue::enqueue(
+                state,
+                &link.workspace_id,
+                &link.user_id,
+                &file_id,
+                queue::CHANNEL_TELEGRAM,
+                Some(chat_id),
+            )
+            .await?;
+            say(bot, chat_id, render::QUEUED).await
+        }
+    }
 }
 
 /// Reserve, send in chunks, complete: the browser's three steps, in
@@ -319,8 +199,4 @@ async fn say(bot: &Bot, chat_id: i64, text: &str) -> Result<()> {
         .await
         .map(|_| ())
         .map_err(|error| AppError::Internal(anyhow::anyhow!(error)))
-}
-
-fn internal(error: impl Into<anyhow::Error>) -> AppError {
-    AppError::Internal(error.into())
 }

@@ -248,6 +248,8 @@ export function matchCategoryId(
 export type ReceiptRequest =
 	| { status: 'ready'; parsed: ParsedReceipt }
 	| { status: 'unreadable' }
+	/** The reader did not answer; the receipt waits in the vault and is saved when it does (D95). */
+	| { status: 'queued' }
 	| { status: 'failed'; code: string };
 
 /** The app's own route. The browser never calls the API (D5). */
@@ -276,6 +278,8 @@ export async function requestReceipt(
 	} catch {
 		return { status: 'failed', code: 'STREAM_FAILED' };
 	}
+
+	if (response.status === 202) return { status: 'queued' };
 
 	if (!response.ok) {
 		const code = await failureCode(response);

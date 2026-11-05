@@ -234,6 +234,7 @@ Requirement IDs are referenced by every other doc and by each backlog story. The
 | AI-9 | A file with columns is imported by mapping its **columns** with one model call. Rows are transformed by deterministic code. The model never sees an amount (D28). |
 | AI-10 | Extraction escalates on evidence: a cheap model first, a computed quality score, a stronger model only when the score is below the threshold, then targeted re-extraction of only the invalid fields. Bounded by a call cap and a wall-clock budget (D36). |
 | AI-11 | A draft carries its quality score, the fields the ladder is unsure about, and the fields arithmetic corrected. The confirmation sheet marks both. A Telegram reply names both as "Please check" (TG-6). |
+| AI-12 | A receipt the reader cannot answer for is kept in the vault as pending and retried for up to 24 hours. When it reads, the expense is saved as the bot saves one, on the web too, and the person is told where they sent it. Nothing has to be uploaded again (D95). |
 
 ### 6.8 User interface (UI)
 

@@ -220,7 +220,14 @@
 		"currency_mismatch": "This receipt is in {receipt} and the wallet holds {wallet}. Pick a wallet in {receipt}, or enter it by hand where a rate can be set.",
 		"confirm": "Create transaction",
 		"manual_entry": "Enter it by hand instead",
-		"created": "Transaction created from the receipt."
+		"created": "Transaction created from the receipt.",
+		"queued_title": "The reader is busy right now",
+		"queued_body": "Your receipt is kept in the Vault as pending. It will be read and saved automatically as soon as the reader is back, and you will see it here. No need to upload it again.",
+		"queued_close": "Close",
+		"notice_saved": "Receipt saved: {name} · {amount}",
+		"notice_saved_plain": "A pending receipt was saved: {name}",
+		"notice_failed": "A pending receipt could not be read: {name}. It is still in the Vault.",
+		"notice_view": "View"
 	},
 	"shell": {
 		"workspace": "Workspace"
@@ -761,7 +768,11 @@
 			"cancel": "Cancel",
 			"done": "Done",
 			"select": "Select {name}"
-		}
+		},
+		"receipt_pending": "Pending",
+		"receipt_failed": "Not read",
+		"receipt_pending_hint": "Waiting for the receipt reader. It is saved automatically when the reader is back.",
+		"receipt_failed_hint": "The reader could not read this receipt. Enter it by hand from Transactions."
 	},
 	"workspaces": {
 		"switcher": {

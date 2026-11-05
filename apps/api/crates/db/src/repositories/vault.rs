@@ -118,6 +118,9 @@ pub struct FileListRow {
     pub tags: Vec<String>,
     pub thumbnail: Option<bool>,
     pub used_by: i64,
+    /// `pending` or `failed` while the receipt reader has it queued (D95);
+    /// `None` otherwise, including once it was saved.
+    pub receipt_status: Option<String>,
     pub created_at: DateTime<Utc>,
 }
 
@@ -225,7 +228,10 @@ pub async fn list_files(
                     WHERE a.vault_file_id = f.id
                       AND a.workspace_id = f.workspace_id
                       AND a.deleted_at IS NULL
-                      AND t.deleted_at IS NULL) AS used_by
+                      AND t.deleted_at IS NULL) AS used_by,
+                  (SELECT CASE WHEN r.status = 'processing' THEN 'pending' ELSE r.status END
+                     FROM receipt_jobs r
+                    WHERE r.vault_file_id = f.id AND r.status <> 'done') AS receipt_status
            FROM vault_files f"#,
     );
     push_file_filters(&mut builder, workspace_id, filters);

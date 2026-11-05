@@ -1,0 +1,65 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT j.id, j.status, j.last_error, f.name AS file_name, j.transaction_id,\n                  t.name AS \"transaction_name?\", t.amount AS \"amount?\",\n                  w.currency_code AS \"currency_code?\"\n           FROM receipt_jobs j\n           JOIN vault_files f ON f.id = j.vault_file_id\n           LEFT JOIN transactions t ON t.id = j.transaction_id AND t.deleted_at IS NULL\n           LEFT JOIN wallets w ON w.id = t.wallet_id\n           WHERE j.workspace_id = $1 AND j.user_id = $2 AND j.channel = 'web'\n             AND j.status IN ('done', 'failed') AND j.seen_at IS NULL\n           ORDER BY j.updated_at",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "status",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "last_error",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "file_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "transaction_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "transaction_name?",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "amount?",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 7,
+        "name": "currency_code?",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      true,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "89dd65cb73494a878becdbdc7a17d8b96d9541a6a0ab086241e88e9b08b367ba"
+}

@@ -326,6 +326,9 @@ Soft-deletes the file and its live `transaction_attachments` rows in one databas
 | DELETE | `/v1/ai/sessions/{id}` | any | Soft delete |
 | POST | `/v1/ai/chat/stream` | any | Server-sent events. Persists both messages (CHAT-2) |
 | POST | `/v1/ai/receipt/parse` | admin+ | Image to receipt draft. Persists nothing (AI-1, AI-2) |
+| POST | `/v1/receipts/pending` | admin+ | `{vault_file_id}`. Queue a receipt the reader could not answer for; 202 with `{id, status, next_attempt_at}`. Queuing a file twice returns the same job (AI-12, D95) |
+| GET | `/v1/receipts/notices` | any | The caller's queued web receipts that ended and were not told yet: `{id, status, code, file_name, transaction_id, transaction_name, amount, currency_code}` |
+| POST | `/v1/receipts/notices/seen` | any | `{ids}`. Mark them told |
 | GET | `/v1/ai/settings` | any | Read agent settings |
 | PATCH | `/v1/ai/settings` | admin+ | Update custom instructions and response language (CHAT-10) |
 

@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE receipt_jobs SET seen_at = now()\n           WHERE workspace_id = $1 AND user_id = $2 AND id = ANY($3) AND seen_at IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "TextArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "7ff5fd2b7983932fd9ac6820fb4c2220ac50410b6c7c77908fe2c46a6b7d29ca"
+}

@@ -34,10 +34,12 @@ pub const FILE_TOO_LARGE: &str = "That file is too large. Receipts up to 10 MB w
 
 pub const RECEIPT_UNREADABLE: &str = "I couldn't read a total or a date on that receipt. Try a sharper photo with the whole receipt in frame.";
 
-/// Every reading attempt timed out or failed, so the photo was never read.
-/// It says so, and does not ask for a better photo of a receipt that may
-/// be perfectly clear.
-pub const EXTRACTION_NO_ANSWER: &str = "I couldn't read that receipt this time: the reader didn't answer in time. Your photo looks fine, nothing was saved. Send it again in a minute.";
+/// The reader did not answer, so the receipt waits in the vault and is read
+/// as soon as it can be (D95). Nothing to resend.
+pub const QUEUED: &str = "⏳ The reader is busy right now. I kept your receipt and will save it automatically as soon as the reader is back, then tell you here. No need to send it again.";
+
+/// A queued receipt that was never read within the day.
+pub const QUEUE_GAVE_UP: &str = "I still couldn't read a receipt you sent yesterday: the reader never came back in time. The photo is in your Oewang vault; enter it there when you can.";
 
 pub const NO_ACCOUNT: &str = "There's no account to save this to yet. Add one in Oewang under Accounts, then send the receipt again.";
 

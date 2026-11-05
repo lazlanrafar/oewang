@@ -172,6 +172,8 @@ export function formatOf(type: string): string {
 export type VaultListFile = UploadedFile & {
 	tags: string[];
 	used_by: number;
+	/** `pending` while the receipt reader has it queued, `failed` once it gave up (D95). */
+	receipt_status?: 'pending' | 'failed' | null;
 	created_at: string;
 };
 

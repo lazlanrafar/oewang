@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT t.id\n           FROM transaction_attachments a\n           JOIN transactions t ON t.id = a.transaction_id\n           WHERE a.workspace_id = $1 AND a.vault_file_id = $2\n             AND a.deleted_at IS NULL AND t.deleted_at IS NULL\n           ORDER BY t.created_at\n           LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "2686547c45757af4f2e2ce1b402fbd11de7ae981e7c001aad06eb29ec710c976"
+}

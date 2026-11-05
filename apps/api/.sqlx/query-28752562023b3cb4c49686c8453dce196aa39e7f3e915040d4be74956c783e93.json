@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE receipt_jobs SET status = 'failed', last_error = $2, updated_at = now()\n           WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "28752562023b3cb4c49686c8453dce196aa39e7f3e915040d4be74956c783e93"
+}

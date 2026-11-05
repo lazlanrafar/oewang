@@ -17,6 +17,9 @@
 	 * avatar menu, trimmed to what exists here (D94).
 	 */
 	import { untrack } from 'svelte';
+	import { toast } from 'svelte-sonner';
+
+	import { goto } from '$app/navigation';
 
 	import { PanelLeft } from '@lucide/svelte';
 
@@ -26,6 +29,7 @@
 	import { Toaster } from '$lib/components/atoms/sonner';
 	import { t } from '$lib/i18n';
 	import { setWorkspaceLists } from '$lib/workspace-data.svelte';
+	import { formatMoney } from '$lib/money';
 
 	let { children, data } = $props();
 
@@ -44,6 +48,47 @@
 	 * says that rather than leaving it as a warning someone later "fixes".
 	 */
 	let open = $state(untrack(() => data.sidebarOpen));
+
+	/*
+	 * Queued receipts that ended while the person was away (D95): each is
+	 * told once, as a toast, and then marked seen so the next page does not
+	 * tell it again.
+	 */
+	const told = new Set<string>();
+	$effect(() => {
+		const fresh = data.receiptNotices.filter((notice) => !told.has(notice.id));
+		if (fresh.length === 0) return;
+
+		for (const notice of fresh) {
+			told.add(notice.id);
+			if (notice.status === 'done' && notice.transaction_id) {
+				const name = notice.transaction_name ?? notice.file_name;
+				const id = notice.transaction_id;
+				toast.success(
+					notice.amount && notice.currency_code
+						? t('receipt.notice_saved', {
+								name,
+								amount: formatMoney(notice.amount, notice.currency_code)
+							})
+						: t('receipt.notice_saved_plain', { name }),
+					{
+						action: {
+							label: t('receipt.notice_view'),
+							onClick: () => goto(`/transactions?detail=${encodeURIComponent(id)}`)
+						}
+					}
+				);
+			} else {
+				toast.error(t('receipt.notice_failed', { name: notice.file_name }));
+			}
+		}
+
+		void fetch('/receipts/seen', {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ ids: fresh.map((notice) => notice.id) })
+		});
+	});
 	let drawerOpen = $state(false);
 
 	function toggle() {

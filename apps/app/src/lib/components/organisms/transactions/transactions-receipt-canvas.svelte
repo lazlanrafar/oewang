@@ -160,6 +160,14 @@
 			{t('receipt.manual_entry')}
 		</Button>
 	</div>
+{:else if request?.status === 'queued'}
+	<!-- The reader did not answer. The receipt is already in the vault and
+	     is saved by itself when the reader is back (D95). -->
+	<div class="space-y-4 px-6 py-6" role="status">
+		<p class="text-small font-medium">{t('receipt.queued_title')}</p>
+		<p class="text-subtle text-small">{t('receipt.queued_body')}</p>
+		<Button type="button" variant="outline" onclick={onCancel}>{t('receipt.queued_close')}</Button>
+	</div>
 {:else if request?.status === 'failed'}
 	<div class="space-y-4 px-6 py-6">
 		<p class="text-destructive text-small" role="alert">{messageForCode(request.code)}</p>

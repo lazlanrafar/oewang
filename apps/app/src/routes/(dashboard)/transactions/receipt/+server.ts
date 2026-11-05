@@ -2,6 +2,7 @@ import { error, json } from '@sveltejs/kit';
 
 import { ApiError } from '$lib/server/api';
 import { parseReceipt } from '$lib/server/chat';
+import { queueReceipt, READER_BUSY_CODES } from '$lib/server/receipts';
 
 import type { RequestHandler } from './$types';
 
@@ -19,6 +20,11 @@ import type { RequestHandler } from './$types';
  * `RECEIPT_UNREADABLE` travels on as itself, with its 422, because the
  * panel has something to offer for it: the manual form with the image
  * already attached (AI-3).
+ *
+ * When the reader does not answer at all, the receipt is queued instead of
+ * failed (D95): the file is already in the vault, the API retries it and
+ * saves the expense when the reader is back. The answer is a 202, so nobody
+ * has to upload the same photo again.
  */
 export const POST: RequestHandler = async ({ locals, request }) => {
 	const body = (await request.json().catch(() => null)) as { vault_file_id?: unknown } | null;
@@ -32,6 +38,10 @@ export const POST: RequestHandler = async ({ locals, request }) => {
 		const parsed = await parseReceipt(fileId, locals.accessToken);
 		return json(parsed.data);
 	} catch (failure) {
+		if (failure instanceof ApiError && READER_BUSY_CODES.includes(failure.code)) {
+			await queueReceipt(fileId, locals.accessToken);
+			return json({ queued: true }, { status: 202 });
+		}
 		if (failure instanceof ApiError) error(failure.status, failure.code);
 		throw failure;
 	}

@@ -484,6 +484,26 @@ Append-only, like `audit_logs`: nothing updates or deletes a row, so a sum over 
 
 There is no storage table and no counter column. Storage used is `SUM(size)` and `COUNT(*)` over `vault_files` where `status = 'ready'` and `deleted_at IS NULL` (USG-1). A counter would be a second copy of a number the rows already hold, and it drifts the first time a delete path forgets it.
 
+### Receipt jobs
+
+`receipt_jobs` (migration `0011`, D95): a receipt waiting for the reader.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | text | |
+| `workspace_id`, `user_id` | text | Who the expense is saved for |
+| `vault_file_id` | text | Unique: one job per file |
+| `channel` | text | `web` or `telegram`, where the outcome is told |
+| `chat_id` | bigint | The Telegram chat, or null |
+| `status` | text | `pending`, `processing`, `done`, `failed` |
+| `attempts` | integer | Reads tried |
+| `next_attempt_at` | timestamptz | When the loop may take it |
+| `last_error` | text | The last refusal's code, never a message (OPS-3) |
+| `transaction_id` | text | The saved expense, once `done` |
+| `seen_at` | timestamptz | When the web told the person |
+
+No `deleted_at`: a job is a record of an attempt, not workspace data a person deletes, and the file it points at is soft-deleted the usual way.
+
 ### Telegram
 
 Added by D83. The flows are in [Telegram](features/telegram.md).

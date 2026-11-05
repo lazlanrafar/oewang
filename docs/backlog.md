@@ -754,3 +754,15 @@ Requirements: AUTH-11, AUTH-12, AUTH-13
 - [x] Sessions listed; Sign out of all devices asks first
 - [x] clippy, `cargo test`, `bun run check` and `bun run test` pass in the containers
 - [ ] Verify in browser: change a password, sign out of all devices
+
+### US-053: Receipts wait for the reader
+Requirements: AI-12
+
+- [x] A reader failure on the bot or the web queues the receipt instead of failing it; the bot says it will save it by itself, the web panel says the same and closes
+- [x] `receipt_jobs` with one job per file; the loop claims due jobs with `SKIP LOCKED`, frees jobs a dead process held, backs off 1, 2, 5, 10, 30 minutes then hourly, gives up after 24 hours (Rust tests)
+- [x] Read and save shared by the bot and the queue; a file already attached to a live transaction counts as saved
+- [x] Telegram is answered in its chat when the job ends; the web shows a toast on the next page and marks it seen
+- [x] Vault tiles and rows show *Pending* (hatched) or *Not read*
+- [x] Verified locally: with the AI service stopped, a queued receipt stays pending and is rescheduled
+- [ ] Verify end to end: a queued receipt saved once the reader answers
+

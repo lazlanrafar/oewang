@@ -14,13 +14,16 @@
 		thumbnail,
 		selected = false,
 		onselect,
-		label
+		label,
+		badge
 	}: {
 		file: CardFile;
 		thumbnail: (file: CardFile) => string | null;
 		selected?: boolean;
 		onselect: (file: CardFile) => void;
 		label: string;
+		/** A state the file is in, such as a receipt waiting for the reader. */
+		badge?: { label: string; hint: string; tone: 'pending' | 'failed' };
 	} = $props();
 
 	const src = $derived(thumbnail(file));
@@ -54,6 +57,19 @@
 			<FileText class="h-12 w-12 text-muted-foreground" aria-hidden="true" />
 		{/if}
 	</div>
+	{#if badge}
+		<span
+			title={badge.hint}
+			class={cn(
+				'absolute top-2 left-2 px-1.5 py-0.5 font-medium text-[10px] uppercase tracking-wider',
+				badge.tone === 'pending'
+					? 'bg-background/90 text-foreground [background-image:repeating-linear-gradient(45deg,transparent_0_3px,color-mix(in_srgb,var(--chart-pattern-stroke)_25%,transparent)_3px_4px)]'
+					: 'bg-destructive text-destructive-foreground'
+			)}
+		>
+			{badge.label}
+		</span>
+	{/if}
 	<div class="absolute right-0 bottom-0 left-0 bg-linear-to-t from-black/60 to-transparent p-2">
 		<p class="truncate font-medium text-[10px] text-white">{file.name}</p>
 	</div>

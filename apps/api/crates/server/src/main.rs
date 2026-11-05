@@ -15,6 +15,7 @@ mod hardening_tests;
 mod images;
 mod limits;
 mod owe1;
+mod receipts;
 mod reports;
 mod response;
 mod routes;
@@ -192,6 +193,8 @@ async fn main() -> anyhow::Result<()> {
 
     spawn_rate_refresher(state.clone(), fx_refresh_interval);
     telegram::poller::spawn(state.clone());
+    // Receipts the reader could not answer for, retried until it can (D95).
+    receipts::queue::spawn(state.clone());
 
     let app = Router::new()
         .route("/health", get(routes::health::live))
@@ -459,6 +462,16 @@ fn protected_routes(state: AppState) -> Router<AppState> {
         // (AI-1, AI-2). The bytes are already in the vault; the body names
         // the file, because a receipt does not fit in one (D23, SEC-18).
         .route("/v1/ai/receipt/parse", post(ai::handler::parse_receipt))
+        // Receipts waiting for the reader (D95, AI-12).
+        .route(
+            "/v1/receipts/pending",
+            post(receipts::handler::queue_receipt),
+        )
+        .route("/v1/receipts/notices", get(receipts::handler::notices))
+        .route(
+            "/v1/receipts/notices/seen",
+            post(receipts::handler::mark_seen),
+        )
         // Agent settings. Read by any member, written by admin and above:
         // custom instructions reach every future turn's prompt (CHAT-10).
         .route(

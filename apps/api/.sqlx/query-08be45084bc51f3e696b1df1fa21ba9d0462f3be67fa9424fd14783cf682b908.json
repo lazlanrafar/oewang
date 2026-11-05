@@ -1,0 +1,94 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO receipt_jobs\n             (id, workspace_id, user_id, vault_file_id, channel, chat_id, next_attempt_at)\n           VALUES ($1, $2, $3, $4, $5, $6, $7)\n           ON CONFLICT (vault_file_id) DO UPDATE SET updated_at = receipt_jobs.updated_at\n           RETURNING id, workspace_id, user_id, vault_file_id, channel, chat_id, status,\n                     attempts, next_attempt_at, last_error, transaction_id, created_at",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "workspace_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "user_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "vault_file_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "channel",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "chat_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 6,
+        "name": "status",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "attempts",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 8,
+        "name": "next_attempt_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 9,
+        "name": "last_error",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 10,
+        "name": "transaction_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 11,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Int8",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "08be45084bc51f3e696b1df1fa21ba9d0462f3be67fa9424fd14783cf682b908"
+}

@@ -281,6 +281,12 @@ describe('requestReceipt', () => {
 		expect(result).toEqual({ status: 'unreadable' });
 	});
 
+	it('reads a 202 as queued: the reader was busy and the receipt waits (D95)', async () => {
+		const result = await requestReceipt('clxfile', answering({ queued: true }, { status: 202 }));
+
+		expect(result).toEqual({ status: 'queued' });
+	});
+
 	it('carries any other code through for the dictionary', async () => {
 		const result = await requestReceipt(
 			'clxfile',

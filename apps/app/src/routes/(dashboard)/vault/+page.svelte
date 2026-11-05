@@ -158,6 +158,25 @@
 		if (stored.length === 1) openFile(stored[0].id);
 	}
 
+	/** A receipt the reader has queued shows it on its tile (D95). */
+	function receiptBadge(file: VaultListFile) {
+		if (file.receipt_status === 'pending') {
+			return {
+				label: t('vault.receipt_pending'),
+				hint: t('vault.receipt_pending_hint'),
+				tone: 'pending' as const
+			};
+		}
+		if (file.receipt_status === 'failed') {
+			return {
+				label: t('vault.receipt_failed'),
+				hint: t('vault.receipt_failed_hint'),
+				tone: 'failed' as const
+			};
+		}
+		return undefined;
+	}
+
 	// --------------------------------------------------------- file sheet
 
 	const fileParam = $derived(readText(page.url, 'file'));
@@ -314,6 +333,7 @@
 							thumbnail={thumbnailSrc}
 							selected={fileParam === file.id}
 							label={file.name}
+							badge={receiptBadge(file)}
 							onselect={() => openFile(file.id)}
 						/>
 					{/each}

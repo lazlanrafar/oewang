@@ -64,6 +64,8 @@ pub struct FileListView {
     pub thumbnail: Option<bool>,
     /// Live transactions carrying this file.
     pub used_by: i64,
+    /// `pending` or `failed` while the receipt reader has it queued (D95).
+    pub receipt_status: Option<String>,
     pub created_at: String,
 }
 
@@ -77,6 +79,7 @@ impl From<FileListRow> for FileListView {
             tags: row.tags,
             thumbnail: row.thumbnail,
             used_by: row.used_by,
+            receipt_status: row.receipt_status,
             created_at: row.created_at.to_rfc3339(),
         }
     }

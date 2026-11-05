@@ -3,6 +3,7 @@ pub mod ai;
 pub mod audit;
 pub mod categories;
 pub mod fx;
+pub mod receipts;
 pub mod telegram;
 pub mod tokens;
 pub mod transactions;
