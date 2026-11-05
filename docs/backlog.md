@@ -764,5 +764,5 @@ Requirements: AI-12
 - [x] Telegram is answered in its chat when the job ends; the web shows a toast on the next page and marks it seen
 - [x] Vault tiles and rows show *Pending* (hatched) or *Not read*
 - [x] Verified locally: with the AI service stopped, a queued receipt stays pending and is rescheduled
-- [ ] Verify end to end: a queued receipt saved once the reader answers
+- [x] Verify end to end: a receipt saved once the reader answers (production, 2026-11-05, after the `oewang-model` combo in 9router was moved to `cx/gpt-5.6-luna` → `cx/gpt-5.6-terra`; the queue path itself was verified locally up to rescheduling, not yet through to a save)
 
