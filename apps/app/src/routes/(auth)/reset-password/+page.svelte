@@ -7,12 +7,13 @@
 	import { Input } from '$lib/components/atoms/input';
 	import { messageForCode } from '$lib/errors';
 	import { t } from '$lib/i18n';
+	import { pageTitle } from '$lib/page-title';
 
 	let { data, form } = $props();
 	let submitting = $state(false);
 </script>
 
-<svelte:head><title>{t('auth.reset_title')}</title></svelte:head>
+<svelte:head><title>{pageTitle(t('auth.reset_title'))}</title></svelte:head>
 
 <h1 class="text-xl font-semibold tracking-tight">{t('auth.reset_title')}</h1>
 <p class="text-muted-foreground mt-1 mb-6 text-sm">{t('auth.reset_subtitle')}</p>

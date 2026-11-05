@@ -84,6 +84,7 @@
 	import type { UploadedFile } from '$lib/components/molecules/file-dropzone';
 	import { messageForCode } from '$lib/errors';
 	import { t } from '$lib/i18n';
+	import { pageTitle } from '$lib/page-title';
 	import type { ReceiptForm } from '$lib/receipt';
 	import { rangeLabel } from '$lib/reports';
 	import type { ChatRole } from '$lib/server/chat';
@@ -485,7 +486,7 @@
 	};
 </script>
 
-<svelte:head><title>{data.conversation.title} · {t('app.name')}</title></svelte:head>
+<svelte:head><title>{pageTitle(data.conversation.title)}</title></svelte:head>
 
 <!--
 	The conversation column reflows beside the panel rather than being

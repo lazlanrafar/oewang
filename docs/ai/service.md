@@ -503,6 +503,10 @@ A call is never given more time than the budget has left: the per-call timeout i
 
 `RECEIPT_UNREADABLE` (AI-3) is returned only when the result after pass 4 still has no `total` and no usable `date`. Below the threshold but with those two present, the draft is returned and marked (AI-11), and the confirmation sheet highlights the weak fields for the user to check. The statement equivalent, `STATEMENT_UNREADABLE`, is returned when no row carries both a date and an amount. Both are 422.
 
+**Unreadable is not the same as unanswered.** If no full reading came back (pass 1 and pass 2 both timed out, failed, or answered outside the agreed shape, and no PDF text layer was read), nothing read the document, and the ladder raises `EXTRACTION_NO_ANSWER` (503) instead. Fields the targeted pass found on its own do not count: after two timed-out passes it can return a total alone, and the Telegram path would have saved that as a transaction dated today with no merchant and no items. The API passes it on as its own code, and the web app and the Telegram bot tell the user to try again rather than to take a sharper photo. Found with a clear receipt that came back "unreadable" because a slow model timed out on every pass; the same file read at score 100 on a retry.
+
+The service's own `oewang.*` loggers write at INFO to the container log, so a failed extraction shows which pass timed out, failed or answered out of shape. Those lines name models, codes and counts, never the document (OPS-3).
+
 A failed pass never aborts the ladder. Pass 2 failing falls through to pass 3; pass 3 failing falls through to pass 4. A pass fails on a timeout, a transport error, a provider error, or an answer that is not JSON; all four are a pass that produced nothing, and none of them is a request that failed.
 
 ### What the user sees

@@ -393,6 +393,51 @@ async def test_a_receipt_with_no_total_and_no_date_is_unreadable(
     assert_no_tools(client)
 
 
+async def test_no_answer_from_any_pass_is_not_an_unreadable_receipt(
+    ladder_config: Settings,
+) -> None:
+    """Every call timed out, so nothing looked at the photo. Saying it was
+    unreadable would send the user to retake a picture that was fine."""
+    client = ScriptedClient(failure(TimeoutError()))
+
+    with pytest.raises(ladder.NoAnswer):
+        await run(client, ladder_config)
+
+
+async def test_only_out_of_shape_answers_count_as_no_answer(ladder_config: Settings) -> None:
+    client = ScriptedClient(Answer(text="I am sorry, I cannot help with that."))
+
+    with pytest.raises(ladder.NoAnswer):
+        await run(client, ladder_config)
+
+
+async def test_fields_from_the_targeted_pass_alone_are_no_answer(
+    ladder_config: Settings,
+) -> None:
+    """Both full passes timed out and a targeted call found the total. A
+    total with no date, merchant or items is not a reading to save."""
+    client = ScriptedClient(
+        failure(TimeoutError()),
+        failure(TimeoutError()),
+        Answer(text='{"total": "61200"}'),
+    )
+
+    with pytest.raises(ladder.NoAnswer):
+        await run(client, ladder_config)
+
+
+async def test_one_answered_pass_makes_an_empty_reading_unreadable(
+    ladder_config: Settings,
+) -> None:
+    """A model did read it and found nothing: that is the photo's fault."""
+    client = ScriptedClient(failure(TimeoutError()), answer("receipt_empty.json"))
+
+    with pytest.raises(ladder.Unreadable) as raised:
+        await run(client, ladder_config)
+
+    assert raised.value.code == "RECEIPT_UNREADABLE"
+
+
 async def test_a_receipt_with_a_total_but_no_date_is_returned_marked(
     ladder_config: Settings,
 ) -> None:

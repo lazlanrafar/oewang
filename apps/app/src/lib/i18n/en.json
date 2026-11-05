@@ -1,7 +1,10 @@
 {
 	"app": {
-		"name": "oewang",
-		"tagline": "Track daily money without manual spreadsheets."
+		"name": "Oewang",
+		"tagline": "Track daily money without manual spreadsheets.",
+		"title_default": "Oewang - Financial OS",
+		"page_title": "{page} | Oewang",
+		"description": "Oewang is a modern financial OS. Manage spending, track transactions, read receipts, and gain real-time visibility into your finances."
 	},
 	"nav": {
 		"overview": "Overview",
@@ -277,6 +280,7 @@
 		"fx_rate_unavailable": "No exchange rate is available. Enter one by hand.",
 		"stream_failed": "The answer stopped part way. Ask again.",
 		"ai_unavailable": "The assistant could not be reached. Everything here still works by hand.",
+		"extraction_no_answer": "The receipt reader didn't answer in time, so this file wasn't read. It may be perfectly clear: try again in a moment, or enter it by hand.",
 		"receipt_unreadable": "That image could not be read as a receipt.",
 		"telegram_disabled": "Telegram is not set up on this server yet."
 	},
@@ -529,14 +533,14 @@
 		"error_failed": "Upload failed."
 	},
 	"apps": {
-		"search_placeholder": "Search apps",
+		"search_placeholder": "Search apps...",
 		"filter_all": "All apps",
 		"filter_connected": "Connected",
 		"installed": "Installed",
 		"unavailable": "Not set up",
 		"unavailable_hint": "This server has no Telegram bot configured. An administrator sets TELEGRAM_BOT_TOKEN and TELEGRAM_BOT_USERNAME.",
 		"details": "Details",
-		"connect": "Connect",
+		"connect": "Install",
 		"disconnect": "Disconnect",
 		"disconnect_title": "Disconnect {name}?",
 		"disconnect_description": "The bot stops acting for your account in this workspace. Transactions it saved stay.",

@@ -66,7 +66,7 @@
 	}
 </script>
 
-<svelte:head><title>Design system</title></svelte:head>
+<svelte:head><title>Design system | Oewang</title></svelte:head>
 
 <Toaster />
 

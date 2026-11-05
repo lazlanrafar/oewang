@@ -46,6 +46,9 @@ from app.modules.extraction.schemas import (
 
 router = APIRouter()
 
+#: No model call answered in time or in shape, so nothing read the document.
+NO_ANSWER_MESSAGE = "no extraction pass answered; try again"
+
 #: Fixed text. An exception's own message can quote the request, and the
 #: request is somebody's receipt (OPS-3).
 MODEL_UNAVAILABLE_MESSAGE = "no model is configured"
@@ -106,6 +109,8 @@ async def _extract(kind: str, body: ExtractionRequest, request: Request) -> JSON
             request_id=body.request_id,
             workspace_id=body.workspace_id,
         )
+    except ladder.NoAnswer:
+        return error_response("EXTRACTION_NO_ANSWER", NO_ANSWER_MESSAGE, request_id)
     except ladder.Unreadable as unreadable:
         return error_response(
             unreadable.code, UNREADABLE_MESSAGE[unreadable.code], request_id

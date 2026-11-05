@@ -270,6 +270,10 @@ fn upstream(error: Owe1ClientError) -> AppError {
     match code.as_str() {
         "RECEIPT_UNREADABLE" => AppError::ReceiptUnreadable,
         "STATEMENT_UNREADABLE" => AppError::StatementUnreadable,
+        // Nothing read the document: every pass timed out or answered out
+        // of shape. Kept apart from unreadable so nobody is told to retake
+        // a photo that was fine.
+        "EXTRACTION_NO_ANSWER" => AppError::ExtractionNoAnswer,
         _ => AppError::AiUnavailable,
     }
 }
@@ -286,6 +290,16 @@ mod tests {
         };
 
         assert_eq!(upstream(error).code(), "RECEIPT_UNREADABLE");
+    }
+
+    #[test]
+    fn should_keep_a_pass_with_no_answer_apart_from_an_unreadable_receipt() {
+        let error = Owe1ClientError::Api {
+            code: "EXTRACTION_NO_ANSWER".into(),
+            message: "no answer".into(),
+        };
+
+        assert_eq!(upstream(error).code(), "EXTRACTION_NO_ANSWER");
     }
 
     #[test]

@@ -352,6 +352,11 @@ src/lib/i18n/
 - A build script generates the key union from `en.json`, so an unknown key is a typecheck error.
 - No locale segment in the URL and no negotiation for now (D15). Adding `id.json` later means a file, a store and a switcher, with no change at call sites.
 - Error codes from the API map to dictionary keys through one table, so a new code without a string is caught at build time.
+- Every page sets its document title with `pageTitle(...)` from `$lib/page-title`, most specific part first: `pageTitle(t('settings.assistant_title'), t('settings.title'))` gives "Assistant | Settings | Oewang", the old app's `%s | Oewang` template. The root layout sets no title, because a second `<title>` in the head is the one a browser shows.
+
+## Brand and metadata
+
+The old app's, unchanged. `static/` holds `favicon.ico` (16 and 32 px), `icon.svg` (the mark on a white rounded square), `apple-touch-icon.png` and `og-image.png`; `app.html` links the icons and the theme colours, and the root layout writes the description and the OpenGraph and Twitter tags from `app.*` in the dictionary. The mark itself is `atoms/logo`, drawn in `currentColor`, shown above the name on the sign-in pages.
 
 ## Money and dates
 

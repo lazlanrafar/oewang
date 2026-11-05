@@ -9,6 +9,7 @@
 	import Plus from '@lucide/svelte/icons/plus';
 	import { toast } from 'svelte-sonner';
 
+	import { Logo } from '$lib/components/atoms/logo';
 	import * as Accordion from '$lib/components/atoms/accordion';
 	import * as Alert from '$lib/components/atoms/alert';
 	import { AspectRatio } from '$lib/components/atoms/aspect-ratio';
@@ -60,6 +61,17 @@
 	let showArchived = $state(true);
 </script>
 
+<Specimen
+	title="Logo"
+	note="The Oewang mark from the old app's Icons.Logo, path for path. It draws in currentColor, so it follows the text colour in light and dark; a caller only sizes it. Decorative unless given a label."
+>
+	<div class="flex items-end gap-6">
+		<Logo class="size-6" />
+		<Logo />
+		<Logo class="size-12" label="Oewang" />
+	</div>
+</Specimen>
+
 <Specimen title="Button">
 	<div class="flex flex-wrap items-center gap-2">
 		<Button id="spec-button">Default</Button>
@@ -88,6 +100,7 @@
 		<Badge variant="outline">Outline</Badge>
 		<Badge variant="destructive">Destructive</Badge>
 		<Badge variant="success">Installed</Badge>
+		<Badge variant="muted">Not set up</Badge>
 		<Badge variant="ghost">Ghost</Badge>
 		<Badge variant="link" href="#top">Link</Badge>
 	</div>
@@ -299,6 +312,15 @@
 			<Tabs.Content value="week" class="text-body">The segmented variant.</Tabs.Content>
 			<Tabs.Content value="month" class="text-body">November.</Tabs.Content>
 			<Tabs.Content value="year" class="text-body">2026.</Tabs.Content>
+		</Tabs.Root>
+
+		<Tabs.Root value="all">
+			<Tabs.List variant="segmented">
+				<Tabs.Trigger value="all" variant="segmented">All apps</Tabs.Trigger>
+				<Tabs.Trigger value="connected" variant="segmented">Connected</Tabs.Trigger>
+			</Tabs.List>
+			<Tabs.Content value="all" class="text-body">The same segmented variant, as the Apps page uses it.</Tabs.Content>
+			<Tabs.Content value="connected" class="text-body">Only connected apps.</Tabs.Content>
 		</Tabs.Root>
 	</div>
 

@@ -22,6 +22,7 @@
 	} from '$lib/ai-settings';
 	import { messageForCode } from '$lib/errors';
 	import { t } from '$lib/i18n';
+	import { pageTitle } from '$lib/page-title';
 
 	import type { ActionData, PageData } from './$types';
 
@@ -56,7 +57,7 @@
 </script>
 
 <svelte:head>
-	<title>{t('settings.assistant_title')} · {t('settings.title')} · {t('app.name')}</title>
+	<title>{pageTitle(t('settings.assistant_title'), t('settings.title'))}</title>
 </svelte:head>
 
 <div class="flex flex-col gap-6">

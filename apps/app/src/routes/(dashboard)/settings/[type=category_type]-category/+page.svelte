@@ -24,6 +24,7 @@
 	import { SettingsCategoryList, SettingsSectionHeader } from '$lib/components/organisms/settings';
 	import { messageForCode } from '$lib/errors';
 	import { t } from '$lib/i18n';
+	import { pageTitle } from '$lib/page-title';
 	import type { Category } from '$lib/server/ledger';
 
 	import type { ActionData, PageData } from './$types';
@@ -106,7 +107,7 @@
 	};
 </script>
 
-<svelte:head><title>{copy.title} · {t('settings.title')} · {t('app.name')}</title></svelte:head>
+<svelte:head><title>{pageTitle(copy.title, t('settings.title'))}</title></svelte:head>
 
 <div class="flex flex-col gap-6">
 	<SettingsSectionHeader title={copy.title} description={copy.description} />

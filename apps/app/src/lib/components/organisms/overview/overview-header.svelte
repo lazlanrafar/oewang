@@ -11,8 +11,6 @@
 	 * from the clock after mount: the server's hour is not the reader's, and
 	 * rendering it there would greet a Bali evening with "Good morning".
 	 */
-	import Grid2x2 from '@lucide/svelte/icons/grid-2x2';
-	import ChartLine from '@lucide/svelte/icons/chart-line';
 	import { onMount } from 'svelte';
 
 	import { t } from '$lib/i18n';
@@ -62,14 +60,8 @@
 
 		<Tabs.Root value={tab} onValueChange={(next) => onTab(next as OverviewTab)}>
 			<Tabs.List variant="segmented" aria-label={t('overview.tabs_label')}>
-				<Tabs.Trigger value="overview" variant="segmented">
-					<Grid2x2 class="size-4" aria-hidden="true" />
-					{t('overview.tab_overview')}
-				</Tabs.Trigger>
-				<Tabs.Trigger value="metrics" variant="segmented">
-					<ChartLine class="size-4" aria-hidden="true" />
-					{t('overview.tab_metrics')}
-				</Tabs.Trigger>
+				<Tabs.Trigger value="overview" variant="segmented">{t('overview.tab_overview')}</Tabs.Trigger>
+				<Tabs.Trigger value="metrics" variant="segmented">{t('overview.tab_metrics')}</Tabs.Trigger>
 			</Tabs.List>
 		</Tabs.Root>
 	</div>

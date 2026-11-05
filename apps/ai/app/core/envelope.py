@@ -58,6 +58,9 @@ STATUS_BY_CODE = {
     # A misconfiguration, not a bad request. Answered as such so it is not
     # mistaken for an unreadable document and retried with another photo.
     "MODEL_UNAVAILABLE": status.HTTP_503_SERVICE_UNAVAILABLE,
+    # Every model call timed out or failed, so nothing read the document.
+    # Unavailable rather than unreadable: the photo may be perfectly good.
+    "EXTRACTION_NO_ANSWER": status.HTTP_503_SERVICE_UNAVAILABLE,
 }
 
 

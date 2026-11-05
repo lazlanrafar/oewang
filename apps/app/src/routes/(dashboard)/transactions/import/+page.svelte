@@ -40,6 +40,7 @@
 	import { parseDelimited, type ParsedFile } from '$lib/csv';
 	import { messageForCode } from '$lib/errors';
 	import { t, type TranslationKey } from '$lib/i18n';
+	import { pageTitle } from '$lib/page-title';
 	import {
 		IMPORT_POLL_INTERVAL,
 		isSettled,
@@ -360,7 +361,7 @@
 	}
 </script>
 
-<svelte:head><title>{t('import.title')} · {t('app.name')}</title></svelte:head>
+<svelte:head><title>{pageTitle(t('import.title'), t('nav.transactions'))}</title></svelte:head>
 
 <div class="mx-auto flex max-w-3xl flex-col gap-6">
 	<div>

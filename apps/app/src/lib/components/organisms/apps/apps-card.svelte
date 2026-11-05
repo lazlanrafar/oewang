@@ -42,19 +42,23 @@
 		{/if}
 	</div>
 
-	<div class="flex items-center gap-2 px-6 pt-4 pb-3">
-		<h2 class="text-sm font-medium">{t(app.nameKey)}</h2>
+	<div class="flex items-center gap-2 px-6 pt-2 pb-4">
+		<h2 class="text-base leading-none font-medium">{t(app.nameKey)}</h2>
 		{#if !available}
-			<Badge variant="secondary">{t('apps.unavailable')}</Badge>
+			<Badge variant="muted">{t('apps.unavailable')}</Badge>
 		{/if}
 	</div>
 
-	<p class="text-subtle line-clamp-2 flex-1 px-6 pb-4 text-xs">{t(app.shortKey)}</p>
+	<!-- The clamp is on the paragraph and the growth on its box: a clamped
+	     element that is itself stretched shows the third line anyway. -->
+	<div class="flex-1 px-6 pb-4">
+		<p class="text-subtle line-clamp-2 text-xs">{t(app.shortKey)}</p>
+	</div>
 
 	<div class="mt-auto grid grid-cols-2 gap-2 px-6 pb-6">
 		<Button variant="outline" onclick={onDetails}>{t('apps.details')}</Button>
 		{#if installed}
-			<Button variant="outline" disabled={busy} onclick={onDisconnect}>{t('apps.disconnect')}</Button>
+			<Button variant="secondary" disabled={busy} onclick={onDisconnect}>{t('apps.disconnect')}</Button>
 		{:else}
 			<Button variant="outline" disabled={!available || busy} onclick={onConnect}>
 				{t('apps.connect')}

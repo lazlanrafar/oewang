@@ -127,6 +127,9 @@ pub async fn handle(
         Err(AppError::ReceiptUnreadable) => {
             return say(bot, chat_id, render::RECEIPT_UNREADABLE).await
         }
+        Err(AppError::ExtractionNoAnswer) => {
+            return say(bot, chat_id, render::EXTRACTION_NO_ANSWER).await
+        }
         Err(AppError::AiUnavailable) => return say(bot, chat_id, render::AI_UNAVAILABLE).await,
         Err(error) => return Err(error),
     };

@@ -198,6 +198,7 @@ Only these are returned in plaintext, because the caller may have no working key
 | `AI_UNAVAILABLE` | 503 | The AI service did not answer |
 | `RECEIPT_UNREADABLE` | 422 | The model could not extract a receipt from the image (AI-3) |
 | `STATEMENT_UNREADABLE` | 422 | The model could not extract rows from the statement |
+| `EXTRACTION_NO_ANSWER` | 503 | Every extraction pass timed out, failed or answered out of shape, so the document was never read. Retry; do not ask for a better photo |
 | `TOOL_NOT_FOUND` | 400 | The AI service called a tool that does not exist |
 | `TOOL_ARGS_INVALID` | 422 | Tool arguments failed schema validation |
 | `TOOL_FORBIDDEN` | 403 | The caller's role cannot run this tool (CHAT-4) |

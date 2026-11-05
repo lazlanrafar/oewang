@@ -8,10 +8,9 @@
 				default:
 					'text-body justify-center px-3 py-1.5 font-medium data-[state=active]:bg-background data-[state=active]:text-foreground',
 				line: 'text-body relative justify-center px-1 py-1.5 font-medium data-[state=active]:text-foreground',
+				// The old `FilterToggle` (packages/ui filter-toggle.tsx).
 				segmented:
-					// The old segment sizes itself to its label, so alignment never
-					// came up. These stretch to share the row, so they centre.
-					'group bg-segment text-segment-foreground text-body hover:text-foreground relative z-1 mb-0 h-9 min-h-9 justify-center gap-1.5 border border-transparent px-3 py-1.5 data-[state=active]:z-10 data-[state=active]:-mb-px data-[state=active]:bg-primary data-[state=active]:text-primary-foreground'
+					'group relative z-1 mb-0 h-9 min-h-9 justify-center gap-1.5 border border-transparent bg-[#f7f7f7] px-3 py-1.5 text-[14px] text-[#707070] hover:text-black data-[state=active]:z-10 data-[state=active]:-mb-px data-[state=active]:bg-[#e6e6e6] data-[state=active]:text-black dark:bg-[#131313] dark:text-[#666666] dark:hover:text-white dark:data-[state=active]:bg-[#1d1d1d] dark:data-[state=active]:text-white'
 			}
 		},
 		defaultVariants: { variant: 'default' }

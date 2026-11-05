@@ -32,6 +32,7 @@
 	} from '$lib/components/organisms/overview';
 	import type { UploadedFile } from '$lib/components/molecules/file-dropzone';
 	import { t } from '$lib/i18n';
+	import { pageTitle } from '$lib/page-title';
 	import { rangeLabel } from '$lib/reports';
 	import { readParam, writeParams } from '$lib/url-state';
 
@@ -109,7 +110,7 @@
 	}
 </script>
 
-<svelte:head><title>{t('nav.overview')} · {t('app.name')}</title></svelte:head>
+<svelte:head><title>{pageTitle(t('nav.overview'))}</title></svelte:head>
 
 <div class="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6">
 	<OverviewHeader

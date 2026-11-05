@@ -60,7 +60,7 @@ A photo (the largest size Telegram kept) or a document typed JPEG, PNG, WebP or 
 1. Downloaded from Telegram's file host, capped at `MAX_FILE_BYTES`. The path comes from Telegram's own `getFile` answer and is refused if it is not a plain relative path.
 2. Stored through `vault::service` (`begin`, `put_chunk`, `complete`): the type is sniffed, the daily upload ceiling applies, and the audit rows are the usual ones.
 3. Read by `ai::service::parse_receipt`, the same call the web makes: the ladder with no tools, then the arithmetic check in Rust.
-4. Refused, with nothing saved, when there is no readable total, when there is no account, or when no account holds the receipt's currency.
+4. Refused, with nothing saved, when there is no readable total, when there is no account, or when no account holds the receipt's currency. When the reader got no answer at all (every pass timed out or failed), the reply says the photo was not read and to send it again in a minute, not to take a sharper one (`EXTRACTION_NO_ANSWER`).
 5. The account is the default one if it holds the receipt's currency, otherwise the first that does. Nothing is converted.
 6. A category is suggested by `POST /receipt/categorize`: the merchant, the item names and the expense category names, one small call with `tools=[]`. The API keeps the answer only when it is exactly one of those names, emoji included.
 7. Saved by `create_with_items`: an expense, the receipt's date (today when none was read, and flagged), the merchant as the name, the line items, the file attached, `source = 'telegram'`.

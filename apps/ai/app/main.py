@@ -39,6 +39,28 @@ from app.core.signer import Signer
 
 logger = logging.getLogger("oewang.ai")
 
+
+def _configure_logging() -> None:
+    """Make this service's own INFO lines reach the container log.
+
+    uvicorn configures its loggers and leaves the root without a handler,
+    so `oewang.*` INFO lines (which extraction pass ran, timed out, or
+    answered out of shape) were dropped, and a failed receipt left no trace
+    of why. Every one of those lines is written to name a model, a code or
+    a count and never a document or a token (OPS-3).
+    """
+    service = logging.getLogger("oewang")
+    if service.handlers:
+        return
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter("%(levelname)s:     %(name)s %(message)s"))
+    service.addHandler(handler)
+    service.setLevel(logging.INFO)
+    service.propagate = False
+
+
+_configure_logging()
+
 SWEEP_INTERVAL_SECS = 10 * 60
 
 

@@ -102,6 +102,11 @@ pub enum AppError {
     ReceiptUnreadable,
     #[error("statement unreadable")]
     StatementUnreadable,
+    /// Every extraction pass timed out or failed, so nothing read the
+    /// document. Not unreadable: the photo may be fine, and the user is
+    /// told to try again rather than to take another one.
+    #[error("extraction got no answer")]
+    ExtractionNoAnswer,
     #[error("tool not found")]
     ToolNotFound,
     #[error("tool arguments invalid")]
@@ -171,6 +176,7 @@ impl AppError {
             ReceiptUnreadable => "RECEIPT_UNREADABLE",
             TelegramDisabled => "TELEGRAM_DISABLED",
             StatementUnreadable => "STATEMENT_UNREADABLE",
+            ExtractionNoAnswer => "EXTRACTION_NO_ANSWER",
             ToolNotFound => "TOOL_NOT_FOUND",
             ToolArgsInvalid(_) => "TOOL_ARGS_INVALID",
             ToolForbidden => "TOOL_FORBIDDEN",
@@ -214,7 +220,7 @@ impl AppError {
             RateLimited { .. } => 429,
             FileTooLarge => 413,
             UnsupportedFileType => 415,
-            FxRateUnavailable | AiUnavailable | TelegramDisabled => 503,
+            FxRateUnavailable | AiUnavailable | ExtractionNoAnswer | TelegramDisabled => 503,
             Internal(_) => 500,
         }
     }
@@ -251,6 +257,7 @@ impl AppError {
             ReceiptUnreadable | StatementUnreadable => {
                 "Try a sharper photograph, or enter it manually."
             }
+            ExtractionNoAnswer => "The document was not read. Try again in a moment.",
             RateLimited { .. } => "Wait and try again.",
             _ => return None,
         })
@@ -368,6 +375,7 @@ mod tests {
             AppError::AiUnavailable,
             AppError::ReceiptUnreadable,
             AppError::StatementUnreadable,
+            AppError::ExtractionNoAnswer,
             AppError::ToolNotFound,
             AppError::ToolArgsInvalid(FieldErrors::new()),
             AppError::ToolForbidden,
@@ -377,9 +385,9 @@ mod tests {
             AppError::Internal(anyhow::anyhow!("boom")),
         ];
 
-        // 45 of the 46 catalog entries. TRANSPORT_UNEXPECTED_RESPONSE is a
+        // 46 of the 47 catalog entries. TRANSPORT_UNEXPECTED_RESPONSE is a
         // client-side condition and has no server variant by design.
-        assert_eq!(samples.len(), 45);
+        assert_eq!(samples.len(), 46);
 
         let mut seen = std::collections::HashSet::new();
         for error in &samples {

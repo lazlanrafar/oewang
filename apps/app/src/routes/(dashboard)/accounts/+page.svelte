@@ -30,6 +30,7 @@
 		AccountsDataTable
 	} from '$lib/components/organisms/accounts';
 	import { t } from '$lib/i18n';
+	import { pageTitle } from '$lib/page-title';
 	import { messageForCode } from '$lib/errors';
 	import { formatMoney } from '$lib/money';
 	import type { Wallet } from '$lib/server/ledger';
@@ -135,7 +136,7 @@
 	const detailAction = (node: HTMLFormElement) => enhance(node, toastOnSuccess);
 </script>
 
-<svelte:head><title>{t('nav.accounts')} · {t('app.name')}</title></svelte:head>
+<svelte:head><title>{pageTitle(t('nav.accounts'))}</title></svelte:head>
 
 <!--
 	A bounded column, as the transactions page is: `<main>` already has a

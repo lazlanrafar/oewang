@@ -4,8 +4,10 @@
 	/*
 	 * Ported from the old app's atoms/tabs.tsx, variants and all.
 	 *
-	 * `default` is a filled bar, `line` a bare row, `segmented` the joined
-	 * pill row the old settings pages use. Square, like everything else (D52).
+	 * `default` is a filled bar, `line` a bare row, `segmented` the old
+	 * `FilterToggle`: a light grey row whose active option is a darker grey.
+	 * Every segmented control in the app uses it, so they all look alike.
+	 * Square, like everything else (D52).
 	 */
 	export const tabsListVariants = tv({
 		base: 'bg-accent text-subtle inline-flex h-10 items-center justify-center p-1 group-data-[orientation=vertical]/tabs:h-fit group-data-[orientation=vertical]/tabs:flex-col',
@@ -13,7 +15,7 @@
 			variant: {
 				default: '',
 				line: 'h-auto gap-1 bg-transparent p-0',
-				segmented: 'bg-segment h-auto w-fit items-stretch p-0'
+				segmented: 'h-auto w-fit items-stretch bg-[#f7f7f7] p-0 dark:bg-[#131313]'
 			}
 		},
 		defaultVariants: { variant: 'default' }

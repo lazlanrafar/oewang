@@ -67,6 +67,7 @@
 	import { canvasParams, readCanvas } from '$lib/canvas';
 	import { messageForCode } from '$lib/errors';
 	import { t } from '$lib/i18n';
+	import { pageTitle } from '$lib/page-title';
 	import { absDecimal } from '$lib/money';
 	import { toDetail } from '$lib/transaction-detail';
 	import { isoDay, toRow } from '$lib/transactions';
@@ -631,7 +632,7 @@
 	const total = $derived(meta.total ?? rows.length);
 </script>
 
-<svelte:head><title>{t('nav.transactions')} · {t('app.name')}</title></svelte:head>
+<svelte:head><title>{pageTitle(t('nav.transactions'))}</title></svelte:head>
 
 <!-- The page reflows beside the receipt panel rather than being covered by
      it, the same way the conversation column does. -->

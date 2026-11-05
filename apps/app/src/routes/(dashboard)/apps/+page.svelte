@@ -15,7 +15,9 @@
 	import { invalidate } from '$app/navigation';
 	import { page } from '$app/state';
 
-	import { Input } from '$lib/components/atoms/input';
+	import Search from '@lucide/svelte/icons/search';
+
+	import * as InputGroup from '$lib/components/molecules/input-group';
 	import * as Tabs from '$lib/components/atoms/tabs';
 	import { ConfirmDialog } from '$lib/components/molecules/confirm-dialog';
 	import { DataTableEmptyState } from '$lib/components/molecules/data-table';
@@ -29,6 +31,7 @@
 	import { INVALIDATION_KEYS } from '$lib/chat-invalidation';
 	import { messageForCode } from '$lib/errors';
 	import { t } from '$lib/i18n';
+	import { pageTitle } from '$lib/page-title';
 	import { readParam, readText, writeParams } from '$lib/url-state';
 
 	let { data, form } = $props();
@@ -89,19 +92,23 @@
 	});
 </script>
 
-<svelte:head><title>{t('nav.apps')} · {t('app.name')}</title></svelte:head>
+<svelte:head><title>{pageTitle(t('nav.apps'))}</title></svelte:head>
 
 <div class="flex flex-col gap-8">
 	<h1 class="sr-only">{t('nav.apps')}</h1>
 
 	<div class="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
-		<Input
-			class="w-full sm:max-w-[280px]"
-			placeholder={t('apps.search_placeholder')}
-			aria-label={t('apps.search_placeholder')}
-			bind:value={search}
-			oninput={(event) => applySearch(event.currentTarget.value)}
-		/>
+		<InputGroup.Root class="w-full sm:max-w-[280px]">
+			<InputGroup.Addon>
+				<Search class="text-muted-foreground size-4" aria-hidden="true" />
+			</InputGroup.Addon>
+			<InputGroup.Input
+				placeholder={t('apps.search_placeholder')}
+				aria-label={t('apps.search_placeholder')}
+				bind:value={search}
+				oninput={(event) => applySearch(event.currentTarget.value)}
+			/>
+		</InputGroup.Root>
 		<Tabs.Root value={filter} onValueChange={(next) => writeParams({ filter: next === 'all' ? null : next })}>
 			<Tabs.List variant="segmented">
 				<Tabs.Trigger value="all" variant="segmented">{t('apps.filter_all')}</Tabs.Trigger>

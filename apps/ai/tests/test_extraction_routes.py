@@ -24,6 +24,7 @@ from tests.extraction_support import (
     ScriptedClient,
     answer,
     assert_no_tools,
+    failure,
     fixture_base64,
 )
 from tests.support import Owe1TestClient
@@ -291,6 +292,20 @@ def test_a_currency_that_is_not_a_code_is_refused(owe1_client: Owe1TestClient) -
 
     assert response.status_code == 422
     owe1_client.open_response(response, request_id)
+
+
+def test_no_answer_from_the_model_is_a_503_not_an_unreadable_receipt(
+    owe1_client: Owe1TestClient,
+) -> None:
+    """Every pass timed out. The photo was never read, so the answer says
+    to try again rather than to take a sharper picture."""
+    model.set_model_client(ScriptedClient(failure(TimeoutError())))
+
+    response, request_id = owe1_client.request("POST", "/receipt/parse", body=payload())
+    body = owe1_client.open_response(response, request_id)
+
+    assert response.status_code == 503
+    assert body["error"]["code"] == "EXTRACTION_NO_ANSWER"
 
 
 def test_no_model_configured_is_a_503_not_an_unreadable_receipt(

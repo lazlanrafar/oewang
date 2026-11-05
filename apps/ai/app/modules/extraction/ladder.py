@@ -107,6 +107,17 @@ class Outcome:
     re_extracted: list[str] = field(default_factory=list)
 
 
+class NoAnswer(Exception):
+    """No full reading came back: pass 1 and pass 2 timed out, failed, or
+    answered outside the agreed shape, and no text layer was read. Whatever
+    the targeted pass found on its own does not change that.
+
+    Not `Unreadable`. Nothing looked at the document, so blaming the photo
+    would send the user to retake a picture that was fine. The caller says
+    the reader did not answer and to try again (`EXTRACTION_NO_ANSWER`).
+    """
+
+
 class Unreadable(Exception):
     """Nothing usable came out of any pass (AI-3).
 
@@ -305,6 +316,13 @@ async def run_ladder(
     models: list[str] = []
     scores: list[int] = []
     threshold = config.ai_quality_threshold
+    # Whether a full reading came back: pass 1 or pass 2 in shape, or a text
+    # layer that parsed. What separates "the document has nothing on it"
+    # from "nobody got to read it". The targeted pass does not count: it
+    # asks for one field at a time, so after two timed-out passes it can
+    # return a total alone, and a total alone saved as a transaction (no
+    # date, no merchant, no items) is worse than asking for the photo again.
+    answered = False
 
     def done(result: ExtractionResult, passes: int, re_extracted: list[str]) -> Outcome:
         score = calculate_quality_score(result, today=today)
@@ -321,6 +339,8 @@ async def run_ladder(
             budget.calls,
             int((time.monotonic() - started) * 1000),
         )
+        if not answered:
+            raise NoAnswer()
         if _is_unreadable(kind, result, today):
             raise Unreadable(
                 "RECEIPT_UNREADABLE" if kind == "receipt" else "STATEMENT_UNREADABLE"
@@ -338,6 +358,7 @@ async def run_ladder(
     if media_type == PDF_MEDIA_TYPE:
         from_text = _text_layer_pass(kind, raw)
         if from_text is not None:
+            answered = True
             score = calculate_quality_score(from_text, today=today)
             if score >= threshold:
                 models.append(TEXT_LAYER)
@@ -365,6 +386,7 @@ async def run_ladder(
             budget=budget,
         )
         if body is not None:
+            answered = True
             best = _parse(kind, body)
         first_score = calculate_quality_score(best, today=today)
         scores.append(first_score)
@@ -394,6 +416,7 @@ async def run_ladder(
             budget=budget,
         )
         if body is not None:
+            answered = True
             best = _merge(kind, best, _parse(kind, body), today)
         second_score = calculate_quality_score(best, today=today)
         scores.append(second_score)
@@ -449,4 +472,12 @@ async def run_ladder(
     return done(best, passes, re_extracted)
 
 
-__all__ = ["CALL_CAP", "MAX_TARGETED_CALLS", "Outcome", "TEXT_LAYER", "Unreadable", "run_ladder"]
+__all__ = [
+    "CALL_CAP",
+    "MAX_TARGETED_CALLS",
+    "NoAnswer",
+    "Outcome",
+    "TEXT_LAYER",
+    "Unreadable",
+    "run_ladder",
+]

@@ -10,7 +10,10 @@
 	import { Button } from '$lib/components/atoms/button';
 	import * as Empty from '$lib/components/molecules/empty';
 	import { t } from '$lib/i18n';
+	import { pageTitle } from '$lib/page-title';
 </script>
+
+<svelte:head><title>{pageTitle(t('nav.chat'))}</title></svelte:head>
 
 <Empty.Root class="h-full">
 	<Empty.Header>

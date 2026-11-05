@@ -34,6 +34,11 @@ pub const FILE_TOO_LARGE: &str = "That file is too large. Receipts up to 10 MB w
 
 pub const RECEIPT_UNREADABLE: &str = "I couldn't read a total or a date on that receipt. Try a sharper photo with the whole receipt in frame.";
 
+/// Every reading attempt timed out or failed, so the photo was never read.
+/// It says so, and does not ask for a better photo of a receipt that may
+/// be perfectly clear.
+pub const EXTRACTION_NO_ANSWER: &str = "I couldn't read that receipt this time: the reader didn't answer in time. Your photo looks fine, nothing was saved. Send it again in a minute.";
+
 pub const NO_ACCOUNT: &str = "There's no account to save this to yet. Add one in Oewang under Accounts, then send the receipt again.";
 
 pub const SOMETHING_WENT_WRONG: &str =
