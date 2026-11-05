@@ -171,6 +171,10 @@ pub struct ToolBody {
     /// refused, because a caller that minted its own per call would have no
     /// cap at all (D25).
     pub turn_id: String,
+    /// The model's id for the call. Keys the canvas artifact an analysis
+    /// tool leaves for the stream (D88).
+    #[serde(default)]
+    pub call_id: Option<String>,
     pub tool: String,
     #[serde(default)]
     pub args: serde_json::Value,
@@ -431,6 +435,7 @@ pub async fn execute_tool(
             claimed_role: &body.role,
             session_id: &body.session_id,
             turn_id: &body.turn_id,
+            call_id: body.call_id.as_deref(),
             tool: &body.tool,
             args: &body.args,
         },

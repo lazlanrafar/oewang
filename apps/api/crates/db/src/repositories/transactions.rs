@@ -420,6 +420,42 @@ pub async fn summary_grouped(
         .await
 }
 
+/// One month's total for one type, in the workspace currency.
+///
+/// `month` is `YYYY-MM`. Months with no rows are absent; the service fills
+/// the gaps, because a chart with a missing month draws a wrong line.
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct MonthTotalRow {
+    pub month: String,
+    pub r#type: String,
+    pub total: Decimal,
+    pub count: i64,
+}
+
+/// Totals per month and type, for the overview and the analysis canvases.
+///
+/// Grouped by type as well as month so income and expense come back in one
+/// pass. The month is read the same way `SummaryGroup::Month` reads it, so
+/// the chat summary and the charts put a row in the same month.
+pub async fn monthly_totals(
+    executor: impl PgExecutor<'_>,
+    workspace_id: &str,
+    filters: &TransactionFilters<'_>,
+) -> Result<Vec<MonthTotalRow>, sqlx::Error> {
+    let mut builder = QueryBuilder::new(
+        "SELECT to_char(t.date, 'YYYY-MM') AS month, t.type,
+                COALESCE(sum(t.base_amount), 0) AS total, count(*) AS count
+         FROM transactions t",
+    );
+    push_filters(&mut builder, workspace_id, filters);
+    builder.push(" GROUP BY to_char(t.date, 'YYYY-MM'), t.type ORDER BY month");
+
+    builder
+        .build_query_as::<MonthTotalRow>()
+        .fetch_all(executor)
+        .await
+}
+
 pub async fn find(
     executor: impl PgExecutor<'_>,
     workspace_id: &str,

@@ -1,0 +1,69 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO telegram_links\n               (id, workspace_id, user_id, chat_id, telegram_user_id, telegram_username)\n           VALUES ($1, $2, $3, $4, $5, $6)\n           RETURNING id, workspace_id, user_id, chat_id, telegram_user_id, telegram_username,\n                     ai_session_id, linked_at",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "workspace_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "user_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "chat_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 4,
+        "name": "telegram_user_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 5,
+        "name": "telegram_username",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "ai_session_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "linked_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Int8",
+        "Int8",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "2bcaacbc64eb06c3fc27a30fdc456f60b8a70143b6cc23f31e50ca56455c5bd4"
+}

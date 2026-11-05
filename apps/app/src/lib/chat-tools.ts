@@ -11,7 +11,9 @@
  * "Used 4 tools".
  */
 
+import { readArtifact, type Artifact } from '$lib/artifacts';
 import { t, type TranslationKey } from '$lib/i18n';
+import { rangeLabel } from '$lib/reports';
 
 export type ToolStatus = 'running' | 'ok' | 'failed';
 
@@ -22,10 +24,15 @@ export type ToolCall = {
 	status: ToolStatus;
 	/** The API's one line about what it did. Null until the call answers. */
 	summary: string | null;
+	/**
+	 * The canvas an analysis call left, if it had something to draw (D88).
+	 * Absent on every other tool.
+	 */
+	artifact?: Artifact | null;
 };
 
 /**
- * The eleven tools (D17), each with a written label.
+ * The fourteen tools (D17, D88), each with a written label.
  *
  * Written rather than derived, because "Calculating summary" is not what
  * the name shape would produce and a progress line is read at a glance.
@@ -35,6 +42,9 @@ const LABEL_KEYS: Record<string, TranslationKey> = {
 	get_recent_transactions: 'chat.tool_get_recent_transactions',
 	search_transactions: 'chat.tool_search_transactions',
 	get_spending_summary: 'chat.tool_get_spending_summary',
+	get_spending_analysis: 'chat.tool_get_spending_analysis',
+	get_income_summary: 'chat.tool_get_income_summary',
+	get_burn_rate: 'chat.tool_get_burn_rate',
 	create_transaction: 'chat.tool_create_transaction',
 	update_transaction: 'chat.tool_update_transaction',
 	delete_transaction: 'chat.tool_delete_transaction',
@@ -43,6 +53,28 @@ const LABEL_KEYS: Record<string, TranslationKey> = {
 	create_category: 'chat.tool_create_category',
 	present_choices: 'chat.tool_present_choices'
 };
+
+const DAY = /^\d{4}-\d{2}-\d{2}/;
+
+/**
+ * What a call is about, from its arguments, for the live activity line:
+ * the date range it covers, or the words it searched for.
+ *
+ * Only shapes this app can read are shown, and only as plain text. Anything
+ * else stays out, which is why the arguments are never printed whole.
+ */
+export function toolDetail(call: Pick<ToolCall, 'args'>): string | null {
+	const { from, to, query } = call.args;
+
+	if (typeof from === 'string' && typeof to === 'string' && DAY.test(from) && DAY.test(to)) {
+		return rangeLabel(from.slice(0, 10), to.slice(0, 10));
+	}
+	if (typeof query === 'string' && query.trim() !== '') {
+		const words = query.trim();
+		return `“${words.length > 40 ? `${words.slice(0, 39)}…` : words}”`;
+	}
+	return null;
+}
 
 /** The label for a tool, written or derived. */
 export function toolLabel(name: string): string {
@@ -147,6 +179,7 @@ export function toolCallsFromAttachments(attachments: unknown): ToolCall[] {
 		if (id === '' || name === '') continue;
 
 		const result = record(call?.result);
+		const artifact = record(call?.artifact);
 
 		calls.push({
 			id,
@@ -155,7 +188,8 @@ export function toolCallsFromAttachments(attachments: unknown): ToolCall[] {
 			// A stored call without a result never answered: the turn ended
 			// first. It stays as it was rather than being reported as done.
 			status: result === null ? 'running' : result.ok === true ? 'ok' : 'failed',
-			summary: result === null ? null : string(result.summary) || null
+			summary: result === null ? null : string(result.summary) || null,
+			artifact: artifact === null ? null : readArtifact(artifact.type, artifact.payload)
 		});
 	}
 

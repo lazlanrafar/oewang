@@ -1,4 +1,4 @@
-"""The eleven tool definitions the model sees (D17).
+"""The fourteen tool definitions the model sees (D17, D88).
 
 **The specification for this module is `apps/api/crates/domain/src/tools.rs`.**
 That file is the validator: it parses every tool call the model produces, and
@@ -340,12 +340,62 @@ PRESENT_CHOICES = {
     ),
 }
 
+def _range() -> dict[str, Any]:
+    return _schema(
+        {
+            "from": _date("The start of the range, inclusive."),
+            "to": _date("The end of the range, inclusive. Must not be before from."),
+        },
+        required=["from", "to"],
+    )
+
+
+#: The three analysis tools (D88). Each answers with figures already computed
+#: and formatted, and the web app opens a panel beside the reply that draws
+#: the same figures as charts and tables. The prompt tells the model to keep
+#: its own reply short when that happens.
+GET_SPENDING_ANALYSIS = {
+    "name": "get_spending_analysis",
+    "description": (
+        "Spending over a date range: the total with the comparison to the previous "
+        "period, the breakdown by category with each share, and the largest "
+        "expenses. Use it when the user asks where the money went or for a "
+        "spending analysis. Every figure is computed and formatted; quote them."
+    ),
+    "input_schema": _range(),
+}
+
+GET_INCOME_SUMMARY = {
+    "name": "get_income_summary",
+    "description": (
+        "Income over a date range: the total with the comparison to the previous "
+        "period, the monthly average, the monthly series, the breakdown by "
+        "category and the latest income. Every figure is computed and formatted; "
+        "quote them."
+    ),
+    "input_schema": _range(),
+}
+
+GET_BURN_RATE = {
+    "name": "get_burn_rate",
+    "description": (
+        "Monthly spending over a date range: the amount spent each month, the "
+        "average per month, and how many months ran above it. Use it for burn "
+        "rate or average monthly spending questions. Every figure is computed "
+        "and formatted; quote them."
+    ),
+    "input_schema": _range(),
+}
+
 #: The catalog, in the order `Tool::ALL` lists it in the Rust validator.
 TOOL_DEFINITIONS: list[dict[str, Any]] = [
     GET_WORKSPACE_CONTEXT,
     GET_RECENT_TRANSACTIONS,
     SEARCH_TRANSACTIONS,
     GET_SPENDING_SUMMARY,
+    GET_SPENDING_ANALYSIS,
+    GET_INCOME_SUMMARY,
+    GET_BURN_RATE,
     CREATE_TRANSACTION,
     UPDATE_TRANSACTION,
     DELETE_TRANSACTION,

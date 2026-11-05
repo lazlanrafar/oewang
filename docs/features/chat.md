@@ -1,6 +1,6 @@
 # Feature: Chat
 
-Status: draft v0.1, 2026-11-02. Part of the [oewang docs](../README.md). Implements [PRD](../prd.md) CHAT-1 to CHAT-10 and AI-1 to AI-6.
+Status: draft v0.1, 2026-11-02. Part of the [oewang docs](../README.md). Implements [PRD](../prd.md) CHAT-1 to CHAT-19 and AI-1 to AI-6.
 
 An in-app assistant that reads and writes the same ledger the UI writes. It answers questions about the workspace's money, records transactions on request, and turns a photographed receipt into a draft.
 
@@ -57,7 +57,8 @@ One conversation is one `ai_sessions` row with its `ai_messages` ([data model](.
 - A title is generated from the first user message (CHAT-8), by a separate short call, not by the main loop.
 - Rename and delete are available from the list. Delete is a soft delete and asks for confirmation (UI-4). The messages are marked deleted with their session rather than left behind a deleted parent.
 - Routes: `/chat` opens the newest session or an empty one; `/chat/{id}` opens a specific session.
-- The list lives in `/chat`'s layout, so it survives switching sessions. A layout cannot own form actions, so rename, delete and new all post to `/chat`'s actions and redirect from there.
+- The list is loaded by the `(assistant)` route group's layout, which holds the overview and every conversation (D87), and it opens from the composer's history button on both. A layout cannot own form actions, so rename and delete post to `/chat`'s actions with the page they came from as `back`, and return there; deleting the conversation that is open lands on `/chat`.
+- There is no Assistant entry in the sidebar. A conversation starts from the overview's composer, its chips or its cards, and the list behind the history button reaches every earlier one.
 
 ### Message attachments
 
@@ -199,14 +200,27 @@ The effect: "You spent 50,000 at Warung Tekko on 2 November" becomes clickable, 
 
 ## Canvas
 
-When the assistant produces something the user needs to see rather than read, the UI opens a side panel. The panel holds **the real application component**, not a model-authored artifact (D31, CHAT-13).
+When the assistant produces something the user needs to see rather than read, the UI opens a side panel. For a receipt or a form, the panel holds **the real application component** (D31, CHAT-13). For an analysis, it holds an artifact the API built (D88, CHAT-16 to CHAT-18). Nothing in it is written by the model.
 
 | `?canvas=` | Panel contents | Opened by |
 |---|---|---|
 | `receipt` | The receipt confirmation sheet, the same component the transactions page mounts | An upload finishing, in the composer or on the transactions page |
 | `transaction` | The transaction form sheet, with the uploaded file attached | The confirmation panel's "Enter it by hand", and an unreadable image (AI-3) |
+| `spending` | Expense in range with its comparison, the top category, a donut by category, the ten largest expenses | `get_spending_analysis` |
+| `income` | Income in range, the monthly average, monthly income against the year before, income by category, the latest income | `get_income_summary` |
+| `burn-rate` | Monthly spending with its average, the average burn, months above it | `get_burn_rate` |
 
-`id` is the vault file in both cases, which is what makes a reload reproduce the panel.
+`id` is the vault file for the first two and the tool call id for the analyses, which is what makes a reload reproduce the panel.
+
+### Analysis artifacts (D88)
+
+- **Built by the API.** The tool runs in `ai/tools.rs`, which calls the report module (`server/src/reports`) and answers the model with the report. The same report goes into the turn store under the model's call id, sent by the AI service as `call_id`.
+- **Sent by the API.** The stream pump forwards the tool's `tool_result`, then takes the artifact and sends an `artifact` event. The AI service never carries a payload; an `artifact` arriving from it is dropped.
+- **Stored on the tool call.** The pump records it as `tool_calls[i].artifact = {type, payload}` in `ai_messages.attachments`. `toolCallsFromAttachments` reads it back, so the tabs and a reload find every analysis in the conversation. It is the answer as it was given, not a live figure; the [overview](overview.md) is the live one.
+- **Opened once.** The live turn opens the canvas when an artifact arrives, once per call: closing it is the reader's decision. Tabs list every analysis in the conversation; each message that made one has a toggle for it.
+- **Empty means none.** A range with nothing in it leaves no artifact, and the model's result says `canvas: false`.
+- **The prompt is told.** After an analysis tool the model answers in one to three sentences and lists nothing the panel shows.
+- **Figures.** The app prints each figure from the raw decimal with `formatMoney`, ISO code in front, like every other screen; the `_formatted` twins carry the API's symbol and are the model's. Charts read `chartValue` for geometry only (D89).
 
 Mechanics:
 
@@ -244,9 +258,9 @@ The map is `src/lib/chat-invalidation.ts`. Each entry is a key a load declares w
 | `app:wallets` | The [accounts](accounts.md) page load, plus the conversation's own load, which needs wallets for the canvas |
 | `app:categories` | The accounts page's sibling, the settings page load, plus the conversation's own load |
 | `app:wallet-balances` | The accounts page load and the conversation's own load |
-| `app:summary`, `app:overview` | Nothing. No load declares either |
+| `app:summary`, `app:overview` | The [overview](overview.md) load (D87) |
 
-**The last row is stale and needs a decision, not an edit.** It says the summary and overview screens arrive in M6, and no M6 story builds them: [M6](../backlog.md) is hardening, the safety corpus and the deployment, and the [non-goals](../prd.md#non-goals-for-v1) do not rule the screens out either. So the two keys name data nothing produces. Either a story is added for the screens or the keys come out of the map; leaving the claim in the table is the one option that is wrong.
+The overview (D87) is the screen the last row was waiting for. It declares both keys, so a transaction the assistant writes moves the overview's figures without a reload.
 
 A receipt confirmed from the canvas invalidates the same keys, through `invalidationsForTool('create_transaction')`. The write did not come from a tool, but it moved the same money, and reusing the map is what keeps the two from drifting.
 
@@ -275,13 +289,16 @@ Tool calls are progress, not output. They never render as JSON.
 - Every tool name maps to a human label: `create_transaction` renders as "Creating transaction", `get_spending_summary` as "Calculating summary". The eleven labels live in the dictionary (UI-1). A fallback derives a label from the name shape (`verb_noun` to gerund plus noun) so a tool added on the service side reads as progress the moment it streams, rather than as an identifier.
 - One finished call renders as a check plus its label. Several collapse to "Used 4 tools", expandable.
 - The in-flight call shows a shimmer on the current label and takes the line for itself: what is happening now is more informative than what has already finished.
-- The arguments are not shown. They are the model's own account of what it was doing; the summary beside each finished call is the API's, and the API's is what happened.
+- **While the turn works, the steps stay visible** (`chat-activity.svelte`): "Thinking" before anything comes back, one line per call with what it covers (a date range or a search phrase, read by `toolDetail`) and then the API's summary under its check, and "Reading the results" between the last call and the first word (`turnPhase`). When the turn ends the message folds to the line above.
+- The arguments are not shown whole. They are the model's own account of what it was doing; only a date range or a search phrase is read from them, and the summary beside each finished call is the API's, which is what happened.
 - **Assistant text that arrives before the last tool call is suppressed while tools are still running.** This is what makes the prompt rule "do not narrate intermediate calls" actually hold; a prompt alone does not ([research](../research/midday.md#16-tool-call-presentation)).
 
 The suppression has two edges worth stating, because both were decisions rather than consequences:
 
 - It lasts for the whole working turn, not only while a call is unanswered. Lifting it between rounds would flash the narration back on screen each time a result arrived.
 - It ends when the turn does. The API persists everything the model wrote, so the stored message that replaces the live one a moment later carries the narration anyway. Hiding it to the end would make the two disagree and buy nothing.
+- Two rounds of the model are two paragraphs. Words before a tool call and words after it are joined with a blank line, in the live turn and in the API's stored reply alike; run together they read "for you!Your".
+- The local copies of the question and the answer give way to the stored ones as soon as the page's load brings them, which can happen mid-turn when an analysis opens the canvas. Both on screen at once would show the question twice and the analysis tab twice.
 
 The rule is `visibleText` in `src/lib/chat-stream.ts`, next to the turn it reads, and it is unit tested. It is a control, not a nicety: it is implemented in the app, where it holds, rather than asked for in the prompt, where it does not.
 
@@ -292,7 +309,7 @@ The rule is `visibleText` in `src/lib/chat-stream.ts`, next to the turn it reads
 | `chat/chat-interface.svelte` | `chat-interface.tsx`, `chat-provider-wrapper.tsx` | 694 lines |
 | `chat/chat-messages.svelte` | `chat-messages.tsx` | 288 lines |
 | `chat/message-actions.svelte` | `chat-message-actions.tsx` | 264 lines |
-| `chat/chat-input.svelte` | `chat-input.tsx` | 541 lines |
+| `chat/chat-input.svelte` | `chat-input.tsx`, `chat-command-menu.tsx`, `prompt-input.tsx` | 541 lines |
 | `chat/chat-history.svelte` | `chat-history.tsx` | 262 lines |
 | `chat/chat-header.svelte` | `chat-header.tsx` | 99 lines |
 | `chat/status-indicators.svelte` | `chat-status-indicators.tsx` | 143 lines |
@@ -304,7 +321,19 @@ The rule is `visibleText` in `src/lib/chat-stream.ts`, next to the turn it reads
 
 Old files are at `references/oewang-old/apps/app/components/organisms/chat/`. The Midday references are at `references/midday/apps/dashboard/src/components/chat/`.
 
-Not ported from the old app: `canvas/`, `charts/`, `chat-artifact-toggle.tsx`, `chat-favicon-stack.tsx`, `chat-insight-message.tsx`, `chat-web-search-button.tsx`, `chat-command-menu.tsx`, `quota-limit-card.tsx`. Those belong to model-authored canvas artifacts, web search, quotas and the command palette. The canvas is rebuilt on the different shape in [canvas](#canvas) (D31); the rest are out of scope.
+Not ported from the old app: `chat-favicon-stack.tsx`, `chat-insight-message.tsx`, `chat-web-search-button.tsx`, `quota-limit-card.tsx`. They belong to web search and quotas, which are out of scope. The canvas is rebuilt in [canvas](#canvas) (D88).
+
+### The composer
+
+The old `chat-input.tsx`, the same surface and behaviour (D87):
+
+- A square translucent box (the old class said `rounded-3xl`, but an inline `borderRadius: 0` overrode it), `max-w-[770px]`, the field one line tall (55px) over a toolbar: add files, shortcuts, history; send on the right, which becomes stop while a turn runs and shows a cross after a failed turn.
+- Files are picked with the add button or dropped anywhere on the page (the old `globalDrop`), PDF and images, several at once, shown as 56px thumbnails with a remove button. Unlike the old one, each is uploaded to the vault as soon as it is picked (D23), and a spinner sits on the thumbnail until it is in. A drop on a drop zone of its own, such as a form's, stays there.
+- Typing `/` opens the shortcuts, filtered by what follows the slash; arrows move, Enter or a click sends the shortcut's sentence, Escape closes. The bolt button opens the whole list. Fourteen of the old twenty-eight are kept, the ones the current tools can answer (`$lib/chat-commands.ts`).
+- The history button opens the conversation list above the composer. The shortcuts and the history close each other, and a press outside closes both.
+- On the overview it folds as the page scrolls: narrower, more transparent, the toolbar gone, the placeholder centred, the whole surface a button that focuses the field. It stays open while focused, typed in, or a menu is open.
+- Text set from outside, rather than typed, wipes in from the left.
+- Left out: the web search toggle and the quota card, which belong to features not in v1. The old history search box is not ported either: it never filtered anything.
 
 ## Settings
 

@@ -186,7 +186,11 @@ def _error_payload(error: owe1_client.ApiError) -> dict[str, Any]:
 
 
 async def execute_tool(
-    api: Any, body: ChatStreamRequest, name: str, args: dict[str, Any]
+    api: Any,
+    body: ChatStreamRequest,
+    name: str,
+    args: dict[str, Any],
+    call_id: str | None = None,
 ) -> tuple[bool, dict[str, Any], str]:
     """One tool call. Returns `(ok, what the model is told, one-line summary)`.
 
@@ -202,6 +206,10 @@ async def execute_tool(
         # The API minted this. It is echoed unchanged, because the per-turn
         # caps are counted against it (D68, SEC-23).
         "turn_id": body.turn_id,
+        # The model's id for the call. The API keys the canvas artifact an
+        # analysis tool builds by it and sends it on the stream itself; the
+        # artifact never comes back through here (D88).
+        "call_id": call_id,
         "tool": name,
         "args": args,
     }
@@ -305,7 +313,9 @@ async def run_turn(
     """
     try:
         started = time.perf_counter()
-        system = build_system_prompt(role=body.role, context=body.context, settings=body.settings)
+        system = build_system_prompt(
+            role=body.role, context=body.context, settings=body.settings, channel=body.channel
+        )
 
         messages: list[dict[str, Any]] = list(body.bounded_history())
         messages.append({"role": "user", "content": body.message})
@@ -367,7 +377,7 @@ async def run_turn(
 
                 yield writer.event("tool_call", {"id": call_id, "name": name, "args": args})
 
-                ok, payload, summary = await execute_tool(api, body, name, args)
+                ok, payload, summary = await execute_tool(api, body, name, args, call_id)
 
                 yield writer.event("tool_result", {"id": call_id, "ok": ok, "summary": summary})
 

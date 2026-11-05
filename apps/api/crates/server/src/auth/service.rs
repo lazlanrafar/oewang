@@ -254,10 +254,16 @@ pub async fn logout(pool: &PgPool, raw_token: &str) -> Result<()> {
     Ok(())
 }
 
+/// Sign out of every session, and unlink every Telegram chat: a chat is a
+/// session that never expires on its own, so "everywhere" includes it (D85).
 pub async fn logout_everywhere(pool: &PgPool, user_id: &str) -> Result<u64> {
-    tokens::revoke_all_for_user(pool, user_id)
+    let mut tx = pool.begin().await.map_err(internal)?;
+    let revoked = tokens::revoke_all_for_user(&mut *tx, user_id)
         .await
-        .map_err(internal)
+        .map_err(internal)?;
+    crate::telegram::link::revoke_all_for_user(&mut *tx, user_id).await?;
+    tx.commit().await.map_err(internal)?;
+    Ok(revoked)
 }
 
 /// Re-scope a session to another workspace the user belongs to (WS-2).
@@ -344,6 +350,7 @@ pub async fn complete_password_reset(
     let revoked = tokens::revoke_all_for_user(&mut *tx, &user_id)
         .await
         .map_err(internal)?;
+    crate::telegram::link::revoke_all_for_user(&mut *tx, &user_id).await?;
 
     tx.commit().await.map_err(internal)?;
 

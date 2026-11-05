@@ -32,10 +32,14 @@ use serde_json::{json, Value};
 use tokio::sync::mpsc;
 use tokio_stream::{wrappers::ReceiverStream, StreamExt};
 
-use crate::{ai::service, owe1::Owe1Context, state::AppState};
+use crate::{
+    ai::{service, turns::TurnStore},
+    owe1::Owe1Context,
+    state::AppState,
+};
 
 /// The AI service's own route (docs/ai/service.md#endpoints).
-const AI_STREAM_PATH: &str = "/chat/stream";
+pub const AI_STREAM_PATH: &str = "/chat/stream";
 
 /// Enough events in flight to absorb a burst of tokens, few enough that a
 /// caller that has stopped reading is noticed rather than buffered for.
@@ -73,6 +77,10 @@ pub async fn start(
 
     let workspace_id = turn.workspace_id.clone();
     let session_id = turn.session_id.clone();
+    let artifacts = TurnArtifacts {
+        turns: state.turns.clone(),
+        turn_id: turn.turn_id.clone(),
+    };
 
     let events = state
         .ai
@@ -98,6 +106,7 @@ pub async fn start(
             session_id,
             Sealer::new(context),
             deadline,
+            Some(artifacts),
         )
         .await;
     });
@@ -113,6 +122,15 @@ pub async fn start(
         Sse::new(body),
     )
         .into_response())
+}
+
+/// Where the pump finds the canvas artifacts this turn's tools left (D88).
+///
+/// A channel that cannot render a canvas passes none, and what the tools
+/// left is swept with the turn.
+pub struct TurnArtifacts {
+    pub turns: TurnStore,
+    pub turn_id: String,
 }
 
 /// One event, or the end of the stream.
@@ -133,6 +151,9 @@ impl EventSource for EventStream {
 }
 
 /// Read, re-seal, forward, and persist what was said.
+// Each argument is one independent piece of the turn; a struct bundling
+// them would exist only to satisfy the count.
+#[allow(clippy::too_many_arguments)]
 pub async fn pump<S: EventSource>(
     mut events: S,
     sender: mpsc::Sender<Frame>,
@@ -141,6 +162,7 @@ pub async fn pump<S: EventSource>(
     session_id: String,
     mut sealer: Sealer,
     deadline: Duration,
+    artifacts: Option<TurnArtifacts>,
 ) {
     let mut reply = String::new();
     let mut usage: Option<Value> = None;
@@ -220,8 +242,20 @@ pub async fn pump<S: EventSource>(
             // Recorded as well as forwarded. The live turn renders these
             // events; the stored message is what a reload renders, and
             // without them the tool strip vanishes on refresh (CHAT-14).
-            "tool_call" => tools.called(&payload(&event)),
+            "tool_call" => {
+                // Words before a tool call and words after it are two rounds
+                // of the model, and run together they read "for you!Your".
+                // A paragraph break between them is what the live turn shows.
+                if !reply.trim().is_empty() {
+                    reply.truncate(reply.trim_end().len());
+                    reply.push_str("\n\n");
+                }
+                tools.called(&payload(&event));
+            }
             "tool_result" => tools.answered(&payload(&event)),
+            // Only this process builds artifacts. One arriving from upstream
+            // is not forwarded, whatever it says (D88).
+            "artifact" => continue,
             "done" => {
                 usage = payload(&event).get("usage").cloned();
                 let message_id = persist(
@@ -259,6 +293,28 @@ pub async fn pump<S: EventSource>(
             )
             .await;
             return;
+        }
+
+        // The artifact follows its tool's result, so the caller already
+        // knows the call succeeded when the canvas opens.
+        if event.name == "tool_result" {
+            if let Some(frame) = artifact_for(&event, artifacts.as_ref(), &mut tools) {
+                if send(&sender, &mut sealer, "artifact", &frame)
+                    .await
+                    .is_err()
+                {
+                    persist(
+                        &pool,
+                        &workspace_id,
+                        &session_id,
+                        &reply,
+                        usage.as_ref(),
+                        &tools,
+                    )
+                    .await;
+                    return;
+                }
+            }
         }
 
         if event.name == "error" {
@@ -362,6 +418,34 @@ async fn forward(
 /// The id of the stored reply, when there was one to store.
 /// The turn's tool calls, in the order the model made them.
 ///
+/// The artifact a successful tool call left, as the event the caller gets.
+///
+/// Recorded on the call in the tool log as well, which is what persists it
+/// on the stored message: a reload reopens the same canvas (CHAT-18).
+fn artifact_for(
+    event: &StreamEvent,
+    artifacts: Option<&TurnArtifacts>,
+    tools: &mut ToolLog,
+) -> Option<Value> {
+    let artifacts = artifacts?;
+    let result = payload(event);
+
+    if !result.get("ok").and_then(Value::as_bool).unwrap_or(false) {
+        return None;
+    }
+
+    let call_id = result.get("id").and_then(Value::as_str)?;
+    let artifact = artifacts.turns.take_artifact(&artifacts.turn_id, call_id)?;
+
+    tools.artifact(call_id, artifact.kind, &artifact.payload);
+
+    Some(json!({
+        "id": call_id,
+        "type": artifact.kind,
+        "payload": artifact.payload,
+    }))
+}
+
 /// Kept beside the reply so the stored message carries what the live turn
 /// showed. A call with no result never answered: the turn ended first, and
 /// it is stored that way rather than reported as finished.
@@ -389,6 +473,16 @@ impl ToolLog {
                 "ok": payload.get("ok").and_then(Value::as_bool).unwrap_or(false),
                 "summary": payload.get("summary").cloned().unwrap_or(Value::Null),
             });
+        }
+    }
+
+    fn artifact(&mut self, call_id: &str, kind: &str, payload: &Value) {
+        if let Some(call) = self
+            .0
+            .iter_mut()
+            .find(|call| call.get("id").and_then(Value::as_str) == Some(call_id))
+        {
+            call["artifact"] = json!({ "type": kind, "payload": payload });
         }
     }
 

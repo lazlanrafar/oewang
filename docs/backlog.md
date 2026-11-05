@@ -2,7 +2,7 @@
 
 Status: draft v0.1, 2026-11-02. Part of the [oewang docs](README.md). Every story maps to requirement IDs from the [PRD](prd.md#6-requirements).
 
-Forty-five stories in six milestones. Each is sized for one focused session. A story is done when every acceptance criterion is checked, not when the code compiles.
+Forty-eight stories in seven milestones. Each is sized for one focused session. A story is done when every acceptance criterion is checked, not when the code compiles.
 
 ## Update this doc when
 
@@ -181,6 +181,8 @@ Requirements: WAL-1, CAT-1, UI-5
 - [x] Verify in browser
 
 The wallet half of this story moved out in US-013b, and the Settings wallets tab was removed with it. The criteria above stay ticked because they describe what was built and shipped; Settings keeps the categories tab and the assistant tab. Reordering and group CRUD had no UI left anywhere after the move, which US-013b records as open work.
+
+Since D82 the categories tab is two settings sections, `/settings/income-category` and `/settings/expense-category`, one type each, and the assistant tab is `/settings/assistant`. `/settings?tab=assistant` and `?tab=wallets` still land on the right page.
 
 ### US-013b: Accounts page
 Requirements: WAL-1, WAL-2, WAL-3, WAL-4, WAL-5, WAL-6, UI-1, UI-6, UI-8
@@ -566,6 +568,94 @@ Requirements: all
 - [x] `docs/ENV_VARS.md` generated from the running configuration
 - [x] `CLAUDE.md` at the root points at the index and states the layer rules
 - [ ] Every requirement ID in the [PRD](prd.md#6-requirements) has a passing test or a browser-verified story, or is listed as not done with a reason. `scripts/coverage.py` proves all 111 are named by a story and runs in CI; the stronger half, that each is actually exercised, waits on the browser pass below
+
+
+---
+
+## M7. Telegram
+
+Added by D83. [Telegram](features/telegram.md) is the feature doc.
+
+### US-040: Link a Telegram chat
+Requirements: TG-1, TG-2, TG-3, TG-4, TG-9, TG-10
+
+- [x] `0009_telegram.sql`: `telegram_links`, `telegram_link_tokens`, `telegram_updates`, and `telegram` added to both `source` checks
+- [x] The API polls `getUpdates` from one task when `TELEGRAM_BOT_TOKEN` and `TELEGRAM_BOT_USERNAME` are set, and starts without it when neither is; one without the other refuses to start
+- [x] Each update is claimed by id before it is handled; one chat's updates run in order
+- [x] `GET /v1/integrations/telegram`, `POST …/link-token` and `POST …/unlink`, any member, the caller's own link only
+- [x] `/start <token>` links a private chat to the token's member: once, within ten minutes, refused for a bot account, a group chat, a used or expired token, the old app's `slug___user` payload, or a member who has left
+- [x] One live link per member per workspace and per chat; signing out everywhere, resetting the password, removing the member and `/disconnect` end it. Linking, unlinking from the Apps page and `/disconnect` write a `telegram_link` audit row; the other three are recorded by the action that caused them
+- [x] The bot token never reaches a log line: the client's `Debug` omits it and every `reqwest` error is stripped of its URL
+- [x] Apps page: search and All/Connected in the URL, the Telegram card, the details sheet (`?app=telegram`), the connect dialog with a server-drawn QR code, and disconnect behind a confirmation
+- [x] clippy, `cargo test` (the link tests in `telegram/tests.rs`), `bun run check`
+- [ ] Verify in browser and in Telegram with a real bot
+
+### US-041: Receipts from Telegram
+Requirements: TG-5, TG-6, TG-7, AI-2, AI-11
+
+- [x] A photo, or a JPEG, PNG, WebP or PDF document, goes through the vault service, `parse_receipt` and `create_with_items` with `source = 'telegram'`
+- [x] No readable total: nothing is saved and the user is asked for a sharper photo. No date: saved as today and flagged
+- [x] The account is the default one holding the receipt's currency, else the first that does; none holds it: nothing is saved and the user is told why
+- [x] `POST /receipt/categorize` (AI service) picks one expense category by exact name with `tools=[]`; the API keeps it only on an exact match
+- [x] The reply matches the format in [Telegram](features/telegram.md#the-reply), with this month's totals from the summary query
+- [x] Category buttons recategorise and rewrite the message; Delete asks once more, then soft-deletes. Every tap re-reads the link, the sender and the role, and looks the ids up in the link's workspace
+- [x] A member sees a refusal and nothing is saved
+- [x] Unit tests for the reply format, the button data, and categorize (pytest)
+- [ ] Verify with a real receipt: the transaction, its items and its attachment in the web app, and the totals equal to the dashboard's
+
+### US-042: The assistant in Telegram
+Requirements: TG-8, TG-10, CHAT-4, CHAT-6, CHAT-9
+
+- [x] Text goes to the link's own conversation through `begin_turn`, the turn budget and the stream pump, and the reply is collected and sent as plain text, split under 4096 characters
+- [x] The turn carries `channel: "telegram"`; the AI service then asks for plain text with no tables and no entity links, and the web prompt is unchanged (golden test)
+- [x] The per-workspace chat limit applies
+- [ ] Verify in Telegram: a question answered from the workspace's data, and a delete that asks before it happens
+
+## M8. Overview and the analysis canvas
+
+Added by D87, D88 and D89. [Overview](features/overview.md) and [chat](features/chat.md#canvas) are the feature docs.
+
+### US-043: The overview API
+Requirements: OVR-2, OVR-3, CHAT-15
+
+- [x] `GET /v1/overview?from&to`, any member, workspace from the token: income, expense and net with the previous equal-length period, zero-filled months, monthly averages, top six categories per type plus "Other"
+- [x] One report module (`server/src/reports`) owns the arithmetic for the overview and the three canvases; every raw figure has a `_formatted` twin
+- [x] `monthly_totals` in the repository filters by `workspace_id` and `deleted_at IS NULL`; a range is at most 60 months
+- [x] Tests: range arithmetic, workspace scope, soft delete, zero-fill, shares (`reports/tests.rs`)
+
+### US-044: The overview page
+Requirements: OVR-1, OVR-2, OVR-3, OVR-4, OVR-5, UI-8
+
+- [x] `/` redirects to `/overview`; the sidebar entry is live
+- [x] Greeting, range picker and the two tabs, all in the URL
+- [x] Six cards on the overview tab, each a question for the assistant; seven prompt chips; five charts on the metrics tab
+- [x] The floating composer starts a session, opens it and the conversation sends the question once
+- [x] The load declares `app:overview`, `app:summary` and `app:wallet-balances`
+- [x] Chart molecules (`molecules/chart`) with specimens on `/design-system`
+- [x] Verified in the browser: cards, comparisons, metrics charts, a chip starting a conversation
+
+### US-045: Analysis artifacts
+Requirements: CHAT-3, CHAT-16, CHAT-18, CHAT-15
+
+- [x] `get_spending_analysis`, `get_income_summary`, `get_burn_rate` in the Rust validator and the Python catalog, read-only, `from` and `to` required
+- [x] The tool request carries `call_id`; the API keeps the artifact in the turn store under it, eight at most per turn
+- [x] The stream pump sends `artifact` after the tool's result, records it on the tool call, and drops any `artifact` from upstream
+- [x] An empty range leaves no artifact; the model's result says `canvas: false`
+- [x] The prompt tells the model to answer in one to three sentences after an analysis tool (golden file)
+- [x] Tests: turn store hand-over and bound, pump injection and persistence, artifacts per tool, the last day of a range counted
+
+### US-046: The chat restyle and canvas tabs
+Requirements: CHAT-17, CHAT-19, CHAT-13, UI-8
+
+- [x] Header with back, title and new chat; centred column; floating composer with the history list behind its button
+- [x] An `artifact` event opens the canvas once per call; tabs between a conversation's analyses; a toggle on each message that made one
+- [x] `?canvas=spending|income|burn-rate&id=<call id>` survives reload; an unknown id says so
+- [x] Vitest: artifact frames, stored artifacts, canvas kinds, handoff
+- [x] Verified in the browser: a chip from the overview opens the spending canvas while the answer streams, and a reload keeps it
+- [x] Composer and history as the old app's: one-line field, add / shortcuts / history toolbar, `/` menu with the fourteen answerable shortcuts, thumbnails, drop anywhere, fold on scroll; history on the overview too, through the `(assistant)` route group
+- [x] The Assistant sidebar entry is gone; conversations start from the overview
+- [x] Verified in dark mode; donut slices take their colours from the theme
+- [ ] Verify at phone width
 
 ---
 

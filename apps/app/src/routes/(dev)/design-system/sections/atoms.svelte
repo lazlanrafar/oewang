@@ -67,6 +67,7 @@
 		<Button variant="outline">Outline</Button>
 		<Button variant="ghost">Ghost</Button>
 		<Button variant="destructive">Destructive</Button>
+		<Button variant="ghost-destructive">Ghost destructive</Button>
 		<Button variant="link">Link</Button>
 	</div>
 	<div class="flex flex-wrap items-center gap-2">
@@ -86,6 +87,7 @@
 		<Badge variant="secondary">Secondary</Badge>
 		<Badge variant="outline">Outline</Badge>
 		<Badge variant="destructive">Destructive</Badge>
+		<Badge variant="success">Installed</Badge>
 		<Badge variant="ghost">Ghost</Badge>
 		<Badge variant="link" href="#top">Link</Badge>
 	</div>

@@ -49,7 +49,12 @@ src/routes/
 │  ├─ +layout.svelte            sidebar and topbar shell
 │  ├─ transactions/+page.svelte
 │  ├─ chat/[id]/+page.svelte
-│  └─ settings/+page.svelte
+│  ├─ apps/+page.svelte           the Apps page, Telegram only (D83)
+│  └─ settings/
+│     ├─ +layout.svelte          settings sidebar beside the section (D82)
+│     ├─ +page.server.ts         redirects to the first section
+│     ├─ [type=category_type]-category/   income-category, expense-category
+│     └─ assistant/
 ├─ (dev)/
 │  ├─ +layout.server.ts         404 outside `dev`
 │  ├─ +layout.svelte            no shell
@@ -219,8 +224,11 @@ src/lib/components/
 │               field-error, form-error, confirm-dialog, file-dropzone,
 │               attachment-view, the data table and its filter bar
 └─ organisms/   a whole feature, and the app's own furniture: transactions/,
-                accounts/, chat/ and layouts/ (the sidebar, its nav, the
-                workspace block, the theme toggle)
+                accounts/, chat/, apps/ (the card, the details sheet, the
+                Telegram connect dialog), settings/ (the settings sidebar, section
+                header, sortable category list) and layouts/ (the sidebar, its nav
+                and the row both sidebars share, the workspace block, the
+                theme toggle)
 ```
 
 Inside an organism folder, every file repeats the module's name, so a file
@@ -347,14 +355,14 @@ src/lib/i18n/
 
 ## Money and dates
 
-- Money arrives and leaves as a string. It is never parsed into a `number`, not even to compare or sort (D12). A `<Money />` component formats with `Intl.NumberFormat` at render time.
+- Money arrives and leaves as a string. It is never parsed into a `number`, not even to compare or sort (D12). The one exception is a chart's geometry: `chartValue` in `$lib/money` turns an amount into a height, and nothing else reads that number (D89). Charts are `molecules/chart` (area, bar, donut); a page never imports `layerchart` directly. A `<Money />` component formats with `Intl.NumberFormat` at render time.
 - `<Money />` takes an explicit currency. There is no implicit default, because a wallet balance, a transaction amount and a total can each be in a different currency (D37, UI-5). A missing currency is a typecheck error, not a silent fallback to the workspace's.
 - A sort over money happens server-side. A client-side sort over decimal strings would be wrong.
 - Dates arrive as ISO 8601 with an offset, render in the workspace timezone, and are never built from a local `Date` without an explicit zone.
 
 ## Streaming
 
-`src/routes/(dashboard)/chat/stream/+server.ts` carries the turn to the browser:
+`src/routes/(dashboard)/(assistant)/chat/stream/+server.ts` carries the turn to the browser:
 
 - Read the cookie, attach the JWT, call the API, write the events on as they arrive.
 - Do not buffer, and do not collect. A proxy that waits for the turn to end is a slow request wearing a stream's clothes.

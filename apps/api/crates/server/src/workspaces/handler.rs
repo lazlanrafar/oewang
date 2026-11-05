@@ -353,6 +353,8 @@ async fn remove(state: &AppState, auth: &AuthWrite, target_user: &str) -> Result
     tokens::revoke_all_for_user(&mut *tx, target_user)
         .await
         .map_err(internal)?;
+    // And so does any Telegram chat they linked to this workspace (D85).
+    crate::telegram::link::revoke_member(&mut *tx, &auth.workspace_id, target_user).await?;
 
     tx.commit().await.map_err(internal)?;
     Ok(())

@@ -107,3 +107,14 @@
 		</li>
 	</ul>
 </Specimen>
+
+<Specimen
+	title="Scrollbar"
+	note="The same 8px bar on macOS and Windows: no arrows, a square thumb in the rule colour, a clear track. Set once in app.css. A data table hides its own, as the old app did."
+>
+	<div class="h-32 w-64 overflow-auto border p-3">
+		{#each Array.from({ length: 12 }, (_, index) => index + 1) as line (line)}
+			<p class="text-small whitespace-nowrap">Line {line}: long enough to scroll sideways as well as down.</p>
+		{/each}
+	</div>
+</Specimen>

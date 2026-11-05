@@ -58,6 +58,9 @@ pub enum Tool {
     GetRecentTransactions,
     SearchTransactions,
     GetSpendingSummary,
+    GetSpendingAnalysis,
+    GetIncomeSummary,
+    GetBurnRate,
     CreateTransaction,
     UpdateTransaction,
     DeleteTransaction,
@@ -68,11 +71,14 @@ pub enum Tool {
 }
 
 impl Tool {
-    pub const ALL: [Tool; 11] = [
+    pub const ALL: [Tool; 14] = [
         Tool::GetWorkspaceContext,
         Tool::GetRecentTransactions,
         Tool::SearchTransactions,
         Tool::GetSpendingSummary,
+        Tool::GetSpendingAnalysis,
+        Tool::GetIncomeSummary,
+        Tool::GetBurnRate,
         Tool::CreateTransaction,
         Tool::UpdateTransaction,
         Tool::DeleteTransaction,
@@ -88,6 +94,9 @@ impl Tool {
             Tool::GetRecentTransactions => "get_recent_transactions",
             Tool::SearchTransactions => "search_transactions",
             Tool::GetSpendingSummary => "get_spending_summary",
+            Tool::GetSpendingAnalysis => "get_spending_analysis",
+            Tool::GetIncomeSummary => "get_income_summary",
+            Tool::GetBurnRate => "get_burn_rate",
             Tool::CreateTransaction => "create_transaction",
             Tool::UpdateTransaction => "update_transaction",
             Tool::DeleteTransaction => "delete_transaction",
@@ -144,6 +153,11 @@ pub enum ToolCall {
     GetRecentTransactions(RecentArgs),
     SearchTransactions(SearchArgs),
     GetSpendingSummary(SummaryArgs),
+    /// The three analysis tools. Each answers the model and also hands the
+    /// web app a canvas artifact the API built (D88).
+    GetSpendingAnalysis(RangeArgs),
+    GetIncomeSummary(RangeArgs),
+    GetBurnRate(RangeArgs),
     CreateTransaction(WriteTransactionArgs),
     UpdateTransaction(WriteTransactionArgs),
     DeleteTransaction(DeleteArgs),
@@ -207,6 +221,13 @@ pub struct SummaryArgs {
     pub from: DateTime<Utc>,
     pub to: DateTime<Utc>,
     pub group_by: SummaryGrouping,
+}
+
+/// A closed date range, both ends required.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RangeArgs {
+    pub from: DateTime<Utc>,
+    pub to: DateTime<Utc>,
 }
 
 /// What a create or an update asks for.
@@ -306,28 +327,22 @@ impl ToolCall {
             }),
 
             Tool::GetSpendingSummary => {
-                let from = reader.date("from");
-                let to = reader.date("to");
+                let range = reader.range();
                 let group_by = reader.one_of("group_by", &["category", "wallet", "type", "month"]);
 
-                reader.require("from", from.is_some());
-                reader.require("to", to.is_some());
-
-                if let (Some(from), Some(to)) = (from, to) {
-                    if from > to {
-                        reader.reject("from", "The start of the range is after its end.");
-                    }
-                }
-
                 ToolCall::GetSpendingSummary(SummaryArgs {
-                    from: from.unwrap_or_else(Utc::now),
-                    to: to.unwrap_or_else(Utc::now),
+                    from: range.from,
+                    to: range.to,
                     group_by: group_by
                         .as_deref()
                         .and_then(SummaryGrouping::parse)
                         .unwrap_or(SummaryGrouping::Category),
                 })
             }
+
+            Tool::GetSpendingAnalysis => ToolCall::GetSpendingAnalysis(reader.range()),
+            Tool::GetIncomeSummary => ToolCall::GetIncomeSummary(reader.range()),
+            Tool::GetBurnRate => ToolCall::GetBurnRate(reader.range()),
 
             Tool::CreateTransaction => {
                 let args = reader.transaction(false);
@@ -544,6 +559,30 @@ impl<'a> Reader<'a> {
     /// A plain date is read as midnight UTC, which is how the rest of the
     /// product reads one. The workspace's display format never reaches a
     /// tool argument (docs/ai/service.md#system-prompt).
+    /// `from` and `to`, both required and in order.
+    ///
+    /// A missing end is rejected rather than defaulted, so the caller's
+    /// errors carry it; the placeholder `now` below is never executed
+    /// against, because a reader with a rejection fails the whole parse.
+    fn range(&mut self) -> RangeArgs {
+        let from = self.date("from");
+        let to = self.date("to");
+
+        self.require("from", from.is_some());
+        self.require("to", to.is_some());
+
+        if let (Some(from), Some(to)) = (from, to) {
+            if from > to {
+                self.reject("from", "The start of the range is after its end.");
+            }
+        }
+
+        RangeArgs {
+            from: from.unwrap_or_else(Utc::now),
+            to: to.unwrap_or_else(Utc::now),
+        }
+    }
+
     fn date(&mut self, name: &'static str) -> Option<DateTime<Utc>> {
         let raw = match self.get(name)? {
             Value::String(raw) => raw.trim().to_string(),
@@ -768,7 +807,11 @@ mod tests {
         for tool in Tool::ALL {
             assert_eq!(Tool::parse(tool.name()).unwrap(), tool);
         }
-        assert_eq!(Tool::ALL.len(), 11, "the catalog is eleven tools (D17)");
+        assert_eq!(
+            Tool::ALL.len(),
+            14,
+            "the catalog is fourteen tools (D17, D88)"
+        );
         assert!(matches!(
             Tool::parse("delete_wallet"),
             Err(AppError::ToolNotFound)
@@ -945,6 +988,33 @@ mod tests {
         )
         .unwrap_err();
         assert!(fields(error)["from"].contains("after"));
+    }
+
+    #[test]
+    fn should_require_an_ordered_range_for_every_analysis_tool() {
+        for tool in [
+            Tool::GetSpendingAnalysis,
+            Tool::GetIncomeSummary,
+            Tool::GetBurnRate,
+        ] {
+            assert!(!tool.is_write(), "{} is a read", tool.name());
+
+            let missing = fields(parse(tool, json!({})).unwrap_err());
+            assert!(missing.contains_key("from") && missing.contains_key("to"));
+
+            let reversed = parse(tool, json!({ "from": "2026-11-30", "to": "2026-11-01" }));
+            assert!(fields(reversed.unwrap_err())["from"].contains("after"));
+
+            let call = parse(tool, json!({ "from": "2026-11-01", "to": "2026-11-30" })).unwrap();
+            let args = match call {
+                ToolCall::GetSpendingAnalysis(args)
+                | ToolCall::GetIncomeSummary(args)
+                | ToolCall::GetBurnRate(args) => args,
+                other => panic!("wrong variant {other:?}"),
+            };
+            assert_eq!(args.from.date_naive().to_string(), "2026-11-01");
+            assert_eq!(args.to.date_naive().to_string(), "2026-11-30");
+        }
     }
 
     #[test]

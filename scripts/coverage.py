@@ -17,7 +17,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-PREFIXES = "PLT|AUTH|TXN|VLT|CHAT|AI|UI|SEC|OPS"
+PREFIXES = "PLT|AUTH|TXN|VLT|CHAT|AI|UI|SEC|OPS|TG"
 
 #: A requirement is *defined* by a row in one of the PRD's tables, which is
 #: what distinguishes a definition from the hundreds of references.

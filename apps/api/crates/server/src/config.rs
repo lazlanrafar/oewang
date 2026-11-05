@@ -49,6 +49,10 @@ pub struct Config {
     /// How often the daily job refreshes the cache.
     pub fx_refresh_interval: Duration,
 
+    /// The Telegram bot (D84). Absent turns the whole feature off: no
+    /// poller starts and the Apps page says the bot is not configured.
+    pub telegram: Option<TelegramConfig>,
+
     /// `local` or `s3` (D19).
     pub storage_backend: String,
     pub storage_local_path: String,
@@ -96,6 +100,16 @@ pub struct Config {
 pub enum AppEnv {
     Development,
     Production,
+}
+
+/// The bot's credentials and where its API lives.
+#[derive(Debug, Clone)]
+pub struct TelegramConfig {
+    pub token: Secret,
+    /// Without the `@`. The deep link is `https://t.me/<username>?start=…`.
+    pub username: String,
+    /// `https://api.telegram.org` unless a test points it at a stub.
+    pub api_url: String,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -234,6 +248,8 @@ impl Config {
             fx_access_key: optional("FX_ACCESS_KEY").map(Secret::new),
             fx_refresh_interval: parse_duration("FX_REFRESH_INTERVAL", "24h")?,
 
+            telegram: telegram_config()?,
+
             storage_backend: storage_backend.clone(),
             storage_local_path: optional("STORAGE_LOCAL_PATH")
                 .unwrap_or_else(|| "./.storage".into()),
@@ -300,6 +316,50 @@ impl Config {
                 .map(|value| value == "true")
                 .unwrap_or(false),
         })
+    }
+}
+
+/// Both or neither: a token without a username could receive messages but
+/// never hand anyone a link to the bot, which is a half-configured feature
+/// failing quietly instead of at startup.
+fn telegram_config() -> Result<Option<TelegramConfig>, ConfigError> {
+    let token = optional("TELEGRAM_BOT_TOKEN");
+    let username = optional("TELEGRAM_BOT_USERNAME");
+
+    match (token, username) {
+        (None, None) => Ok(None),
+        (Some(_), None) => Err(ConfigError::Missing("TELEGRAM_BOT_USERNAME")),
+        (None, Some(_)) => Err(ConfigError::Missing("TELEGRAM_BOT_TOKEN")),
+        (Some(token), Some(username)) => {
+            let username = username.trim().trim_start_matches('@').to_string();
+            if username.is_empty()
+                || !username
+                    .chars()
+                    .all(|c| c.is_ascii_alphanumeric() || c == '_')
+            {
+                return Err(ConfigError::Invalid {
+                    name: "TELEGRAM_BOT_USERNAME",
+                    reason: "letters, digits and underscores only".into(),
+                });
+            }
+            // `<digits>:<secret>` is the shape BotFather hands out. Checked
+            // so a pasted username or a stray quote fails here rather than
+            // as a 401 from Telegram on every poll.
+            if !token.split_once(':').is_some_and(|(id, rest)| {
+                id.chars().all(|c| c.is_ascii_digit()) && !rest.is_empty()
+            }) {
+                return Err(ConfigError::Invalid {
+                    name: "TELEGRAM_BOT_TOKEN",
+                    reason: "expected the <digits>:<secret> token BotFather gives".into(),
+                });
+            }
+            Ok(Some(TelegramConfig {
+                token: Secret::new(token.trim()),
+                username,
+                api_url: optional("TELEGRAM_API_URL")
+                    .unwrap_or_else(|| "https://api.telegram.org".into()),
+            }))
+        }
     }
 }
 

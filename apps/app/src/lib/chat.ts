@@ -23,6 +23,19 @@ export type SessionItem = {
 	preview: string;
 };
 
+/**
+ * The conversation list and its actions, as the chat layout publishes them
+ * to the page whose composer opens the list (D87).
+ */
+export type ChatHistoryContext = {
+	readonly sessions: SessionItem[];
+	readonly activeId: string | null;
+	onRename: (id: string, title: string) => void;
+	onDelete: (id: string) => void;
+};
+
+export const CHAT_HISTORY = Symbol('chat-history');
+
 export type MessageItem = {
 	id: string;
 	role: ChatMessage['role'];

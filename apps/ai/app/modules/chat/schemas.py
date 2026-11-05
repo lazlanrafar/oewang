@@ -16,6 +16,9 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 Role = Literal["owner", "admin", "member"]
+#: Where a reply is read: the web app renders Markdown and entity links, a
+#: Telegram chat shows plain text (D86).
+Channel = Literal["web", "telegram"]
 ResponseLanguage = Literal["auto", "english", "indonesian"]
 
 #: How many earlier messages travel with a turn. A conversation grows without
@@ -88,6 +91,10 @@ class ChatStreamRequest(BaseModel):
     context: WorkspaceContext
     settings: AgentSettings = Field(default_factory=AgentSettings)
     attachments: list[Attachment] = Field(default_factory=list)
+    #: Where the reply is read (D86). It changes how the answer is written,
+    #: never what the model may do: the tools and every check behind them
+    #: are the same on both.
+    channel: Channel = "web"
 
     def bounded_history(self) -> list[dict[str, str]]:
         """The tail of the conversation, starting at a user message.

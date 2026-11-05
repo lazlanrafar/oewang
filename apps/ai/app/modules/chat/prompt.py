@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from datetime import date
 
-from app.modules.chat.schemas import AgentSettings, Role, WorkspaceContext
+from app.modules.chat.schemas import AgentSettings, Channel, Role, WorkspaceContext
 
 CAPABILITY_BY_ROLE = {
     "owner": (
@@ -51,16 +51,41 @@ RULES = """\
    is for display only, never for a tool argument.
 5. Amounts are strings, never numbers.
 6. Three or more items render as a Markdown table. One or two render as
-   bullets.
+   bullets. Right-align every column of figures (`---:`).
 7. Entity names are clickable links, in the scheme below.
 8. Never claim a write succeeded unless the tool result says so.
 9. Do not narrate intermediate tool calls. Present the result once the work is
-   done."""
+   done.
+10. Lead with the answer in one sentence. Write the rest in short paragraphs
+   of one to three sentences, with a blank line between paragraphs and
+   around every table or list. Never one long block."""
+
+#: Rules 6 and 7 as a Telegram chat needs them (D86). The API sends the
+#: reply without a parse mode, so Markdown arrives as literal asterisks and
+#: pipes, and an entity link is a route that exists only in the web app.
+TELEGRAM_RULES = RULES.replace(
+    """6. Three or more items render as a Markdown table. One or two render as
+   bullets. Right-align every column of figures (`---:`).""",
+    """6. Write plain text for a phone chat. No Markdown, no tables, no
+   headings, no bold. Put each item of a list on its own line starting with
+   "• ". Keep the reply short.""",
+).replace(
+    "7. Entity names are clickable links, in the scheme below.",
+    "7. Name transactions, wallets and categories in plain words. There are\n"
+    "   no links in this chat.",
+)
 
 CONFIRMATION_RULE = """\
 A destructive tool needs a separate confirming turn. Describe what would be
 deleted, wait for the user to agree, and only then call again with the
 confirmation."""
+
+ANALYSIS_PANEL = """\
+get_spending_analysis, get_income_summary and get_burn_rate open a panel
+beside your reply that shows their figures as charts and tables. After one of
+them, answer in one to three sentences: the headline figure, the comparison
+and the one thing worth noticing. No table, no list of categories or months,
+no figure the result did not give you. The user can already see the rest."""
 
 ENTITY_LINKS = """\
 Transactions: [Name](#txn:TRANSACTION_ID)
@@ -117,6 +142,7 @@ def build_system_prompt(
     role: Role,
     context: WorkspaceContext,
     settings: AgentSettings,
+    channel: Channel = "web",
 ) -> str:
     """The whole system prompt for one turn.
 
@@ -135,7 +161,7 @@ def build_system_prompt(
         ("Capability", CAPABILITY_BY_ROLE[role]),
         ("Accounts", _accounts_block(context)),
         ("Categories", _categories_block(context)),
-        ("Rules", RULES),
+        ("Rules", TELEGRAM_RULES if channel == "telegram" else RULES),
         ("Confirmation", CONFIRMATION_RULE),
         ("Language", LANGUAGE_RULE[settings.response_language]),
     ]
@@ -152,6 +178,8 @@ def build_system_prompt(
             )
         )
 
-    sections.append(("Entity links", ENTITY_LINKS))
+    if channel == "web":
+        sections.append(("Analysis panel", ANALYSIS_PANEL))
+        sections.append(("Entity links", ENTITY_LINKS))
 
     return "\n\n".join(f"## {title}\n\n{body}" for title, body in sections) + "\n"

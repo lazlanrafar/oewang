@@ -608,3 +608,37 @@ export function updateCategory(id: string, body: Record<string, unknown>, token?
 export function deleteCategory(id: string, token?: string) {
 	return api<null>({ method: 'DELETE', path: `/v1/categories/${id}`, token });
 }
+
+/**
+ * Today's rate for each foreign wallet currency against the workspace's.
+ *
+ * A missing rate leaves that wallet out of the total, and the page says how
+ * many were left out. Refusing to render the screen because one rate is
+ * unavailable would be worse than an honest partial figure.
+ */
+export async function walletRates(
+	wallets: Wallet[],
+	base: string,
+	token?: string
+): Promise<Record<string, string>> {
+	const foreign = [...new Set(wallets.map((wallet) => wallet.currency_code))].filter(
+		(code) => code !== base
+	);
+	if (foreign.length === 0) return {};
+
+	const today = new Date().toISOString().slice(0, 10);
+	const rates: Record<string, string> = {};
+
+	await Promise.all(
+		foreign.map(async (code) => {
+			try {
+				const result = await fxRate(code, base, today, token);
+				if (result.data) rates[code] = result.data.rate;
+			} catch {
+				// Deliberately swallowed: see the note above.
+			}
+		})
+	);
+
+	return rates;
+}

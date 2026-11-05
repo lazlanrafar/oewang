@@ -311,6 +311,9 @@ pub async fn update_settings(
 
 // -------------------------------------------------------------- one turn
 
+pub const CHANNEL_WEB: &str = "web";
+pub const CHANNEL_TELEGRAM: &str = "telegram";
+
 /// What `POST /chat/stream` sends to the AI service
 /// (docs/ai/service.md#post-chatstream-request).
 #[derive(Debug, Serialize)]
@@ -331,6 +334,10 @@ pub struct TurnRequest {
     pub context: TurnContext,
     pub settings: TurnSettings,
     pub attachments: Vec<TurnAttachment>,
+    /// Where the reply will be read: `web` renders Markdown, entity links
+    /// and the canvas; `telegram` shows plain text (D86). It shapes the
+    /// prompt only.
+    pub channel: &'static str,
 }
 
 #[derive(Debug, Serialize)]
@@ -530,6 +537,7 @@ pub async fn begin_turn(
                 r#type: file.r#type,
             })
             .collect(),
+        channel: CHANNEL_WEB,
     })
 }
 

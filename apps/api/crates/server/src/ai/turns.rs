@@ -4,6 +4,10 @@
 //! only bounds anything if something remembers what has happened so far
 //! (D25, docs/security/ai-safety.md#layer-2-blast-radius).
 //!
+//! A third rides along for the same lifetime: the canvas artifacts the
+//! analysis tools built, held between the tool call that made them and the
+//! stream event that carries them to the caller (D88).
+//!
 //! In process memory, like the crypto sessions. Both are measured in
 //! minutes, both are worthless after a restart in a way that fails closed
 //! (an unknown turn is refused, an unknown challenge is re-issued), and a
@@ -14,6 +18,8 @@ use std::{
     collections::HashMap,
     sync::{Arc, RwLock},
 };
+
+use serde_json::Value;
 
 use oewang_domain::{
     tools::{
@@ -35,7 +41,24 @@ struct Counters {
     writes: u32,
     deletes: u32,
     created: u32,
+    /// Keyed by the model's tool call id. Taken, not read, so one artifact
+    /// reaches the stream once.
+    artifacts: HashMap<String, Artifact>,
 }
+
+/// One canvas artifact, built by the API from the database (D88).
+///
+/// `kind` is one of a fixed set the web app renders. The payload never
+/// passed through the AI service and was never written by the model.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Artifact {
+    pub kind: &'static str,
+    pub payload: Value,
+}
+
+/// How many artifacts one turn may hold. A turn has a step cap already;
+/// this keeps a misbehaving loop from growing memory regardless.
+pub const MAX_ARTIFACTS_PER_TURN: usize = 8;
 
 #[derive(Default)]
 struct Inner {
@@ -110,6 +133,30 @@ impl TurnStore {
         Ok(())
     }
 
+    /// Hold an artifact until the stream picks it up.
+    ///
+    /// Dropped silently for a turn this process did not open or that has
+    /// expired, and past the per-turn bound: an artifact is a convenience
+    /// beside an answer the model already has, never a reason to fail it.
+    pub fn put_artifact(&self, turn_id: &str, call_id: &str, artifact: Artifact) {
+        let mut guard = self.inner.write().expect("turn store poisoned");
+
+        if let Some(counters) = guard.turns.get_mut(turn_id) {
+            if counters.artifacts.len() < MAX_ARTIFACTS_PER_TURN {
+                counters.artifacts.insert(call_id.to_string(), artifact);
+            }
+        }
+    }
+
+    /// Hand over the artifact a tool call left, once.
+    pub fn take_artifact(&self, turn_id: &str, call_id: &str) -> Option<Artifact> {
+        let mut guard = self.inner.write().expect("turn store poisoned");
+        guard
+            .turns
+            .get_mut(turn_id)
+            .and_then(|counters| counters.artifacts.remove(call_id))
+    }
+
     /// Record that this exact row has been put to the user.
     pub fn challenge(&self, session_id: &str, transaction_id: &str, now: i64) {
         let mut guard = self.inner.write().expect("turn store poisoned");
@@ -165,6 +212,46 @@ mod tests {
         let store = TurnStore::new();
         store.open(TURN, 0);
         store
+    }
+
+    fn artifact() -> Artifact {
+        Artifact {
+            kind: "spending",
+            payload: serde_json::json!({ "total": "1" }),
+        }
+    }
+
+    #[test]
+    fn should_hand_an_artifact_over_once() {
+        let store = store();
+        store.put_artifact(TURN, "call_1", artifact());
+
+        assert_eq!(store.take_artifact(TURN, "call_1"), Some(artifact()));
+        assert_eq!(store.take_artifact(TURN, "call_1"), None);
+        assert_eq!(store.take_artifact(TURN, "call_2"), None);
+    }
+
+    #[test]
+    fn should_drop_an_artifact_for_a_turn_it_never_opened() {
+        let store = store();
+        store.put_artifact("turn_unknown", "call_1", artifact());
+        assert_eq!(store.take_artifact("turn_unknown", "call_1"), None);
+    }
+
+    #[test]
+    fn should_bound_the_artifacts_one_turn_holds() {
+        let store = store();
+        for index in 0..MAX_ARTIFACTS_PER_TURN + 3 {
+            store.put_artifact(TURN, &format!("call_{index}"), artifact());
+        }
+        let held = (0..MAX_ARTIFACTS_PER_TURN + 3)
+            .filter(|index| {
+                store
+                    .take_artifact(TURN, &format!("call_{index}"))
+                    .is_some()
+            })
+            .count();
+        assert_eq!(held, MAX_ARTIFACTS_PER_TURN);
     }
 
     #[test]

@@ -31,6 +31,7 @@ use crate::vault::service as vault;
 const RECEIPT_PATH: &str = "/receipt/parse";
 const EXTRACT_PATH: &str = "/import/extract";
 const MAP_COLUMNS_PATH: &str = "/import/map-columns";
+const CATEGORIZE_PATH: &str = "/receipt/categorize";
 
 /// A document on its way to the model: the bytes, base64, and what they are.
 #[derive(Debug, Serialize)]
@@ -182,6 +183,59 @@ pub async fn map_columns(
     )
     .await
     .map_err(upstream)
+}
+
+#[derive(Debug, Serialize)]
+struct CategorizeRequest<'a> {
+    request_id: &'a str,
+    workspace_id: &'a str,
+    merchant: Option<&'a str>,
+    items: Vec<&'a str>,
+    categories: Vec<&'a str>,
+}
+
+#[derive(Debug, Deserialize)]
+struct CategorizeResponse {
+    #[serde(default)]
+    category: Option<String>,
+}
+
+/// Which of `categories` a saved receipt belongs to, by name (D86).
+///
+/// Strings only: what extraction already read, never the document. Any
+/// failure is `None`, because an uncategorised transaction is a correct
+/// outcome the user fixes with one tap, and a receipt must not fail to save
+/// because this call did. The caller maps the name to an id by exact match.
+pub async fn categorize(
+    ai: &Owe1Client,
+    request_id: &str,
+    workspace_id: &str,
+    merchant: Option<&str>,
+    items: &[&str],
+    categories: &[&str],
+) -> Option<String> {
+    if categories.is_empty() {
+        return None;
+    }
+
+    let body = CategorizeRequest {
+        request_id,
+        workspace_id,
+        merchant,
+        items: items.to_vec(),
+        categories: categories.to_vec(),
+    };
+
+    match ai
+        .post::<_, CategorizeResponse>(CATEGORIZE_PATH, &body)
+        .await
+    {
+        Ok(answer) => answer.category,
+        Err(error) => {
+            tracing::warn!(code = error.code(), "the categorize call failed");
+            None
+        }
+    }
 }
 
 async fn call<T: serde::de::DeserializeOwned>(

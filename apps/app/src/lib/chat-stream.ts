@@ -14,6 +14,7 @@
  * The event protocol is specified in docs/ai/service.md#streaming-protocol.
  */
 
+import { readArtifact } from '$lib/artifacts';
 import type { ToolCall } from '$lib/chat-tools';
 
 export type SseFrame = { event: string; data: string };
@@ -158,6 +159,9 @@ export function advance(turn: Turn, input: TurnInput): Turn {
 			return {
 				...turn,
 				status: 'streaming',
+				// Two rounds of the model, kept as two paragraphs. The API
+				// stores the reply the same way.
+				text: turn.text.trim() !== '' ? `${turn.text.trimEnd()}\n\n` : turn.text,
 				toolCalls: [...turn.toolCalls, call],
 				// The narration that led up to this call stops being the
 				// latest thing said, which is what `visibleText` reads.
@@ -182,6 +186,18 @@ export function advance(turn: Turn, input: TurnInput): Turn {
 							}
 						: call
 				)
+			};
+		}
+		case 'artifact': {
+			// Sent by the API right after its tool's result (D88). One for a
+			// call this turn never made is dropped, like a stray result.
+			const id = text(payload.id);
+			const artifact = readArtifact(payload.type, payload.payload);
+			if (!artifact || !turn.toolCalls.some((call) => call.id === id)) return turn;
+
+			return {
+				...turn,
+				toolCalls: turn.toolCalls.map((call) => (call.id === id ? { ...call, artifact } : call))
 			};
 		}
 		case 'receipt_draft': {
@@ -251,7 +267,8 @@ function readToolCall(payload: Record<string, unknown>): ToolCall | null {
 				? (args as Record<string, unknown>)
 				: {},
 		status: 'running',
-		summary: null
+		summary: null,
+		artifact: null
 	};
 }
 
@@ -286,33 +303,21 @@ function text(value: unknown): string {
 	return typeof value === 'string' ? value : '';
 }
 
-// --------------------------------------------------------------- the composer
-
-/** One comfortable line, plus the field's padding. */
-export const COMPOSER_MIN_HEIGHT = 56;
-
-/** Roughly eight lines. Past that the conversation matters more than the draft. */
-export const COMPOSER_MAX_HEIGHT = 200;
-
-export type ComposerSize = { height: number; scroll: boolean };
-
 /**
- * How tall the composer should be for the text it holds.
+ * What a working turn is doing when nothing new is on screen yet.
  *
- * Measured height in, applied height out. The caller reads `scrollHeight`
- * because wrapped text has no height until it is laid out; the rule itself
- * is here so it can be checked without a browser.
+ * - `thinking`: sent, and neither a tool nor a word has come back.
+ * - `working`: a tool is running; the tool's own line says which.
+ * - `reading`: every tool has answered and the model has not started writing.
+ *
+ * `null` once words are arriving, or once the turn is over: the text is then
+ * the progress, and a status beside it would only repeat it.
  */
-export function composerHeight(
-	scrollHeight: number,
-	min = COMPOSER_MIN_HEIGHT,
-	max = COMPOSER_MAX_HEIGHT
-): ComposerSize {
-	if (!Number.isFinite(scrollHeight) || scrollHeight < min) {
-		return { height: min, scroll: false };
-	}
+export type TurnPhase = 'thinking' | 'working' | 'reading';
 
-	if (scrollHeight > max) return { height: max, scroll: true };
-
-	return { height: Math.ceil(scrollHeight), scroll: false };
+export function turnPhase(turn: Turn): TurnPhase | null {
+	if (!isActive(turn)) return null;
+	if (toolsRunning(turn)) return 'working';
+	if (visibleText(turn) !== '') return null;
+	return turn.toolCalls.length > 0 ? 'reading' : 'thinking';
 }

@@ -35,4 +35,6 @@ pub struct AppState {
     pub turns: TurnStore,
     /// Every per-address and per-workspace budget (OPS-5, AUTH-6, SEC-17).
     pub rate_limits: RateLimiter,
+    /// The Telegram bot, when one is configured (D84).
+    pub telegram: Option<crate::telegram::Bot>,
 }

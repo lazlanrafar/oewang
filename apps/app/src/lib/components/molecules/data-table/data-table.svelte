@@ -297,14 +297,20 @@
 {/snippet}
 
 <div class={cn('flex h-full min-h-0 flex-col', className)}>
-	<!-- The outer rule on the left and right edges. The cells draw the grid
-	     between columns and the rows draw it between rows, but the table's
-	     own two sides are the scroller's, so they survive a column being
-	     hidden or the body being scrolled sideways. -->
+	<!-- The outer rule on the left, right and bottom edges, as the old app's
+	     scroller draws it (`border-l border-r border-b`). The cells draw the
+	     grid between columns and the rows draw it between rows, but the
+	     table's own sides are the scroller's, so they survive a column being
+	     hidden or the body being scrolled sideways. The table fills its box,
+	     so the bottom rule closes the box, below any space under the last
+	     row.
+
+	     The scrollbar is hidden, as the old app hid it: the header arrows
+	     move it sideways, and a bar along a ruled box reads as a column. -->
 	<div
 		bind:this={scroller}
 		onscroll={readScroll}
-		class="border-border min-h-0 w-full flex-1 overflow-auto border-x"
+		class="border-border scrollbar-hide min-h-0 w-full flex-1 overflow-auto border-x border-b"
 	>
 		<div
 			role="table"

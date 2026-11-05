@@ -32,7 +32,7 @@ export const load: PageServerLoad = async ({ depends, locals, url, parent }) => 
 	]);
 
 	const all = wallets.data ?? [];
-	const rates = await walletRates(all, base, token);
+	const rates = await ledger.walletRates(all, base, token);
 
 	const search = (url.searchParams.get('search') ?? '').trim().toLowerCase();
 	const groupIds = url.searchParams.getAll('group_id').filter(Boolean);
@@ -60,40 +60,6 @@ export const load: PageServerLoad = async ({ depends, locals, url, parent }) => 
 		filtered: search !== '' || groupIds.length > 0
 	};
 };
-
-/**
- * Today's rate for each foreign wallet currency against the workspace's.
- *
- * A missing rate leaves that wallet out of the total, and the page says how
- * many were left out. Refusing to render the screen because one rate is
- * unavailable would be worse than an honest partial figure.
- */
-async function walletRates(
-	wallets: ledger.Wallet[],
-	base: string,
-	token?: string
-): Promise<Record<string, string>> {
-	const foreign = [...new Set(wallets.map((wallet) => wallet.currency_code))].filter(
-		(code) => code !== base
-	);
-	if (foreign.length === 0) return {};
-
-	const today = new Date().toISOString().slice(0, 10);
-	const rates: Record<string, string> = {};
-
-	await Promise.all(
-		foreign.map(async (code) => {
-			try {
-				const result = await ledger.fxRate(code, base, today, token);
-				if (result.data) rates[code] = result.data.rate;
-			} catch {
-				// Deliberately swallowed: see the note above.
-			}
-		})
-	);
-
-	return rates;
-}
 
 /**
  * Everything the screen can do, as form actions.

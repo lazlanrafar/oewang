@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE telegram_links SET ai_session_id = $2, updated_at = now()\n           WHERE id = $1 AND deleted_at IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "ee50395660e652a5d2da425e99ef67ccab26be2d5b1094fe8ba134cff5cd2d0d"
+}

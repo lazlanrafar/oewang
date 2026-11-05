@@ -2,12 +2,12 @@ import { describe, expect, it } from 'vitest';
 
 import {
 	advance,
-	composerHeight,
 	formatFrame,
 	IDLE_TURN,
 	isActive,
 	readFrames,
 	toolsRunning,
+	turnPhase,
 	visibleText,
 	type SseFrame,
 	type Turn
@@ -167,12 +167,32 @@ describe('advance, the tool events', () => {
 				name: 'create_transaction',
 				args: { amount: '50000' },
 				status: 'running',
-				summary: null
+				summary: null,
+				artifact: null
 			}
 		]);
 
 		const answered = advance(called, { kind: 'frame', frame: result('t1', true, 'Created.') });
 		expect(answered.toolCalls[0]).toMatchObject({ status: 'ok', summary: 'Created.' });
+	});
+
+	it('attaches the artifact the API sent to the call that made it (D88)', () => {
+		const called = advance(streaming(), {
+			kind: 'frame',
+			frame: call('t1', 'get_spending_analysis')
+		});
+		const payload = { from: '2026-11-01', to: '2026-11-30', total: { value: '1' } };
+		const frame = (id: string, type: string) => ({
+			event: 'artifact',
+			data: JSON.stringify({ id, type, payload })
+		});
+
+		const shown = advance(called, { kind: 'frame', frame: frame('t1', 'spending') });
+		expect(shown.toolCalls[0].artifact).toEqual({ kind: 'spending', payload });
+
+		// A kind this app does not draw, and a call this turn never made.
+		expect(advance(called, { kind: 'frame', frame: frame('t1', 'budget') })).toBe(called);
+		expect(advance(called, { kind: 'frame', frame: frame('t9', 'spending') })).toBe(called);
 	});
 
 	it('marks a refused call as failed', () => {
@@ -229,7 +249,7 @@ describe('visibleText', () => {
 		const called = advance(narrated, { kind: 'frame', frame: call('t1', 'get_recent_transactions') });
 		const answering = advance(called, { kind: 'frame', frame: token('You spent Rp 50.000.') });
 
-		expect(answering.text).toBe('Let me check your wallets. You spent Rp 50.000.');
+		expect(answering.text).toBe('Let me check your wallets.\n\nYou spent Rp 50.000.');
 		expect(visibleText(answering)).toBe('You spent Rp 50.000.');
 	});
 
@@ -256,7 +276,7 @@ describe('visibleText', () => {
 		const spoken = advance(answered, { kind: 'frame', frame: token('You spent Rp 50.000.') });
 		const done = advance(spoken, { kind: 'frame', frame: { event: 'done', data: '{}' } });
 
-		expect(visibleText(done)).toBe('Let me check. You spent Rp 50.000.');
+		expect(visibleText(done)).toBe('Let me check.\n\nYou spent Rp 50.000.');
 	});
 
 	it('shows what was said when a turn with tools is stopped', () => {
@@ -265,28 +285,54 @@ describe('visibleText', () => {
 			frame: call('t1', 'get_spending_summary')
 		});
 
-		expect(visibleText(advance(called, { kind: 'stop' }))).toBe('Let me check. ');
+		expect(visibleText(advance(called, { kind: 'stop' }))).toBe('Let me check.\n\n');
 	});
 });
 
-describe('composerHeight', () => {
-	it('holds one line open at the minimum', () => {
-		expect(composerHeight(20)).toEqual({ height: 56, scroll: false });
+describe('turnPhase', () => {
+	it('is thinking before anything comes back, then working, then reading', () => {
+		const sent = advance(IDLE_TURN, { kind: 'send' });
+		expect(turnPhase(sent)).toBe('thinking');
+
+		const working = advance(sent, { kind: 'frame', frame: call('t1', 'get_burn_rate') });
+		expect(turnPhase(working)).toBe('working');
+
+		const answered = advance(working, { kind: 'frame', frame: result('t1', true, 'Done.') });
+		expect(turnPhase(answered)).toBe('reading');
+
+		const writing = advance(answered, {
+			kind: 'frame',
+			frame: { event: 'token', data: JSON.stringify({ text: 'You spent' }) }
+		});
+		expect(turnPhase(writing)).toBeNull();
 	});
 
-	it('grows with the text', () => {
-		expect(composerHeight(96)).toEqual({ height: 96, scroll: false });
+	it('is nothing once the turn is over', () => {
+		const sent = advance(IDLE_TURN, { kind: 'send' });
+		expect(turnPhase(advance(sent, { kind: 'stop' }))).toBeNull();
+	});
+});
+
+describe('text across tool rounds', () => {
+	it('keeps the words before and after a tool call as two paragraphs', () => {
+		const before = advance(advance(IDLE_TURN, { kind: 'send' }), {
+			kind: 'frame',
+			frame: { event: 'token', data: JSON.stringify({ text: 'Let me check.' }) }
+		});
+		const called = advance(before, { kind: 'frame', frame: call('t1', 'get_burn_rate') });
+		const after = advance(called, {
+			kind: 'frame',
+			frame: { event: 'token', data: JSON.stringify({ text: 'Your burn rate' }) }
+		});
+
+		expect(after.text).toBe('Let me check.\n\nYour burn rate');
 	});
 
-	it('stops growing and scrolls at the maximum', () => {
-		expect(composerHeight(640)).toEqual({ height: 200, scroll: true });
-	});
-
-	it('rounds up, because a fractional height crops the last line', () => {
-		expect(composerHeight(96.4).height).toBe(97);
-	});
-
-	it('takes a measurement that is not a number as empty', () => {
-		expect(composerHeight(Number.NaN)).toEqual({ height: 56, scroll: false });
+	it('adds nothing when no words came before the call', () => {
+		const called = advance(advance(IDLE_TURN, { kind: 'send' }), {
+			kind: 'frame',
+			frame: call('t1', 'get_burn_rate')
+		});
+		expect(called.text).toBe('');
 	});
 });

@@ -63,6 +63,7 @@ Every route requires `x-api-key`, and every body is OWE1 (D22). There is no user
 | GET | `/v1/session` | The caller's own crypto session. Reaching it proves the session is live |
 | POST | `/chat/stream` | Tool-loop chat, answers `text/event-stream` |
 | POST | `/receipt/parse` | Image bytes to a structured receipt draft |
+| POST | `/receipt/categorize` | A saved receipt's merchant and item names to one of the given expense category names, or null (D86) |
 | POST | `/import/map-columns` | Column names plus two sample rows to a column mapping (D28) |
 | POST | `/import/extract` | Statement image or PDF to structured transaction rows |
 | GET | `/tools/definitions` | The tool schemas, so the API can validate against the same contract |
@@ -115,7 +116,7 @@ The workspace context is supplied by the API (CHAT-7). The service does not fetc
 
 ## Tool catalog
 
-Eleven tools (D17), cut down from thirty-four in the old app. The schemas the model sees live in one Python module and are exposed at `GET /tools/definitions`, so the API's own validator can be checked against them.
+Fourteen tools (D17, D88): eleven cut down from thirty-four in the old app, and three analysis tools brought back for the canvas. The schemas the model sees live in one Python module and are exposed at `GET /tools/definitions`, so the API's own validator can be checked against them.
 
 ### Read tools
 
@@ -125,6 +126,9 @@ Eleven tools (D17), cut down from thirty-four in the old app. The schemas the mo
 | `get_recent_transactions` | `limit` (1 to 50), `from`, `to` | Recent transactions, newest first |
 | `search_transactions` | `query`, `type`, `category_id`, `wallet_id`, `min_amount`, `max_amount`, `from`, `to`, `limit` | Matching transactions. It shares the list route's filter, so the two amount bounds compare on the base amount, the workspace's own currency (D77), which is the currency the assistant speaks in anyway |
 | `get_spending_summary` | `from`, `to`, `group_by` (`category`, `wallet`, `type`, `month`) | Totals per group, with a grand total |
+| `get_spending_analysis` | `from`, `to` | Spending total with the previous-period comparison, the category breakdown and the ten largest expenses. Leaves a `spending` canvas artifact (D88) |
+| `get_income_summary` | `from`, `to` | Income total with the comparison, monthly series and average, the category breakdown and the latest ten rows. Leaves an `income` artifact; the year-before series goes to the artifact only |
+| `get_burn_rate` | `from`, `to` | Monthly spending, the average per month, and how many months ran above it. Leaves a `burn-rate` artifact |
 
 ### Write tools
 
@@ -249,6 +253,7 @@ A model told its result was truncated asks for the next page. A model handed a q
 | `token` | `{"text": "You spent "}` | A chunk of assistant text |
 | `tool_call` | `{"id": "t1", "name": "get_spending_summary", "args": {…}}` | The model asked for a tool |
 | `tool_result` | `{"id": "t1", "ok": true, "summary": "6 categories"}` | The API answered |
+| `artifact` | `{"id": "t1", "type": "spending", "payload": {…}}` | A canvas artifact for that call (D88). **Sent by the API's stream pump, never by this service**: the API built it during the tool call, holds it in the turn store under the call id this service sends as `call_id`, and injects it after the result. An `artifact` event from this service is dropped |
 | `receipt_draft` | `{"draft": {…}}` | A parsed receipt, pending confirmation |
 | `done` | `{"message_id": "clx…", "usage": {"input": 1204, "output": 311}}` | Turn complete |
 | `error` | `{"code": "TOOL_FAILED", "message": "…"}` | Failure after the stream opened |
@@ -342,8 +347,9 @@ Indonesian bank statements split debit and credit into two columns, which the ol
 |---|---|---|---|
 | `POST /receipt/parse` | [ladder](#extraction-quality-ladder) | none | merchant, date, total, subtotal, tax, currency, line items, quality score |
 | `POST /import/extract` | [ladder](#extraction-quality-ladder) | none | rows of date, description, amount, direction, quality score |
+| `POST /receipt/categorize` | `AI_CHAT_MODEL`, one call | none | `{ category, model }`: one of the given names exactly, or null |
 
-Both take the same body, because both run the same ladder over the same kind of document:
+The first two take the same body, because both run the same ladder over the same kind of document (`/receipt/categorize` takes `{ request_id, workspace_id, merchant, items, categories }`, strings only):
 
 ```json
 {

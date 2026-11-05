@@ -96,7 +96,7 @@ export async function loadFile(
 }
 
 /** The API's code, if the failure carried one, as something a person reads. */
-function uploadErrorMessage(error: unknown): string {
+export function uploadErrorMessage(error: unknown): string {
 	const raw = error instanceof Error ? error.message : '';
 	if (raw.includes('UNSUPPORTED_FILE_TYPE')) return t('files.error_unsupported_type');
 	if (raw.includes('FILE_TOO_LARGE')) return t('files.error_too_large');

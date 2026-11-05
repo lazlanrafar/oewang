@@ -1,6 +1,6 @@
 # oewang: Product Requirements Document
 
-Status: draft v0.1, 2026-11-02. Owner: Azlan. Part of the [oewang docs](README.md).
+Status: draft v0.1, 2026-11-02; Telegram added 2026-11-05 (D83). Owner: Azlan. Part of the [oewang docs](README.md).
 
 oewang is a personal finance tracker: daily income and expenses, wallets, categories, receipts, and an AI assistant that can read and write the same data through chat. This document covers a ground-up rewrite of the existing implementation ([legacy app](reference/legacy-app.md)) onto a new stack, with the scope cut to two features.
 
@@ -20,7 +20,7 @@ The result: a small change touches several apps, and deleting a feature is harde
 
 ### Goals
 
-1. **G1. Two features, finished.** Transactions (full CRUD, line items, attachments, CSV and AI import) and AI chat (tool-calling assistant plus receipt OCR). Nothing else.
+1. **G1. Two features, finished.** Transactions (full CRUD, line items, attachments, CSV and AI import) and AI chat (tool-calling assistant plus receipt OCR). Nothing else. Telegram (section 6.11) is those same two features reached from a chat, added by D83; it brings no feature of its own.
 2. **G2. One writer.** Exactly one process holds a database connection. Every business rule is enforced in exactly one place.
 3. **G3. Same product, new stack.** Screens, layouts and interactions carry over from the old app. The code does not.
 4. **G4. Multi-workspace stays.** A user belongs to several workspaces with a role in each, as today.
@@ -37,14 +37,14 @@ Each of these exists in the old app and is deliberately left out. Adding any of 
 - Contacts and bill splitting.
 - Vault as a browsable feature: `vault_files` exists only to back attachments and receipts. No document manager, no document RAG, no `search_documents` tool.
 - Billing: plans, Mayar payments, AI token quotas, storage limits, the upgrade flow.
-- Integrations: Telegram, third-party connectors, webhooks.
+- Integrations: third-party connectors and webhooks. Telegram was on this list until D83 moved it into section 6.11; nothing else on the old Apps page came with it (Gmail, Outlook, the MCP clients).
 - The admin dashboard and the marketing website.
 - The Flutter mobile app and offline sync.
 - The Go background worker (D10).
 - The MCP server and its OAuth client registration.
 - OAuth login. Email and password only (D21).
 - Application-layer payload encryption (D9).
-- Canvas artifacts, chat charts, web search in chat.
+- Web search in chat. Canvas artifacts and chat charts were on this list until D88 brought the analysis canvas back for spending, income and burn rate; debt and budget canvases stay out with their features.
 - Anomaly detection and transaction classification.
 - Notifications: in-app centre, push, email alerts.
 - A second UI locale. The i18n layer ships, `en.json` is the only dictionary (D15).
@@ -189,7 +189,7 @@ Requirement IDs are referenced by every other doc and by each backlog story. The
 |---|---|
 | CHAT-1 | Each conversation persists as a session row with its messages. |
 | CHAT-2 | Responses stream to the browser over server-sent events. |
-| CHAT-3 | The assistant has access to the eleven tools listed in [AI service](ai/service.md#tool-catalog) and no others. |
+| CHAT-3 | The assistant has access to the fourteen tools listed in [AI service](ai/service.md#tool-catalog) and no others (D17, D88). |
 | CHAT-4 | Tool calls are executed by the API, which enforces the caller's role and writes an audit log row. |
 | CHAT-5 | The tool loop stops after at most 8 rounds per user turn. |
 | CHAT-6 | `delete_transaction` requires explicit user confirmation in a separate turn. |
@@ -199,16 +199,20 @@ Requirement IDs are referenced by every other doc and by each backlog story. The
 | CHAT-10 | Workspace-level custom instructions and a response language setting are appended to the system prompt. |
 | CHAT-11 | Entity names in assistant output are clickable links in a fixed scheme, intercepted by the renderer. External links render as plain text (D33). |
 | CHAT-12 | A tool write invalidates the affected view and every view derived from it (D32). |
-| CHAT-13 | The chat canvas mounts the real application component in a side panel, driven by URL parameters. No model-authored UI (D31). |
+| CHAT-13 | The chat canvas mounts the real application component in a side panel, driven by URL parameters. No model-authored UI (D31). The analysis canvases of CHAT-16 are built by the API, not the model, and keep the same URL rules. |
 | CHAT-14 | Tool calls render as human labels with collapsed grouping. Assistant text arriving before the last tool call is suppressed while tools are still running. |
 | CHAT-15 | The model performs no arithmetic. Every number it states is computed, rounded and formatted by the API (D27). |
+| CHAT-16 | Three analysis tools, `get_spending_analysis`, `get_income_summary` and `get_burn_rate`, each leave a canvas artifact of the same report the model read. The API builds the payload from the database and injects it into the stream after the tool's result; the AI service never carries one, and one arriving from upstream is dropped (D88). |
+| CHAT-17 | An artifact opens the canvas as it arrives. A conversation's artifacts are listed as tabs, each message that made one carries a toggle for it, and the open one lives in `?canvas=<kind>&id=<tool call id>` (UI-8). An empty range leaves no artifact. |
+| CHAT-18 | Artifacts are stored on the assistant message with the tool call that made them, so a reload reopens the same canvas with the figures as they were when it was answered. |
+| CHAT-19 | The chat screen is the old app's layout: a header with the way back to the overview, the title and a new-chat button; the conversation in one centred column; a floating composer at the bottom with the conversation list behind its history button (D87). |
 
 ### 6.7 AI parsing (AI)
 
 | ID | Requirement |
 |---|---|
 | AI-1 | Uploading a receipt image produces an editable draft: merchant, date, total, currency, line items. |
-| AI-2 | A receipt draft is never committed as a transaction without user confirmation. |
+| AI-2 | A receipt draft is never committed as a transaction without user confirmation. Exception: a receipt sent to the Telegram bot is saved on arrival, because sending it is the request and the reply carries the undo (TG-5, D86). |
 | AI-3 | An unreadable receipt returns a 422 with a specific error code, not a 500. |
 | AI-4 | A bank statement image or PDF can be imported asynchronously, returning a job ID immediately. |
 | AI-5 | A failed import row counts as skipped and does not abort the job. |
@@ -217,7 +221,7 @@ Requirement IDs are referenced by every other doc and by each backlog story. The
 | AI-8 | Tool results are a compact projection of the row, truncated to a byte budget that sets an explicit `truncated` flag (D34). |
 | AI-9 | A file with columns is imported by mapping its **columns** with one model call. Rows are transformed by deterministic code. The model never sees an amount (D28). |
 | AI-10 | Extraction escalates on evidence: a cheap model first, a computed quality score, a stronger model only when the score is below the threshold, then targeted re-extraction of only the invalid fields. Bounded by a call cap and a wall-clock budget (D36). |
-| AI-11 | A draft carries its quality score, the fields the ladder is unsure about, and the fields arithmetic corrected. The confirmation sheet marks both. |
+| AI-11 | A draft carries its quality score, the fields the ladder is unsure about, and the fields arithmetic corrected. The confirmation sheet marks both. A Telegram reply names both as "Please check" (TG-6). |
 
 ### 6.8 User interface (UI)
 
@@ -290,6 +294,35 @@ Specified in [payload encryption](api/encryption.md), [hardening](security/harde
 | OPS-7 | CI runs lint, typecheck and tests for all three apps on every push. |
 | OPS-8 | A transaction's detail sheet shows its audit history: who changed what, when, and from which surface (D46). |
 
+### 6.11 Telegram (TG)
+
+Added by D83. See [Telegram](features/telegram.md).
+
+| ID | Requirement |
+|---|---|
+| TG-1 | A member connects a private Telegram chat from the Apps page with a one-time link: random, stored hashed, valid for ten minutes, usable once, and bound to the member and workspace that minted it. Nothing a Telegram message carries names a workspace or a user. |
+| TG-2 | Only private chats, and only the Telegram account that opened the link, can act through a connection. Group chats are refused. |
+| TG-3 | A member holds one connection per workspace and a chat one connection at a time. Disconnecting from the Apps page, `/disconnect` in the chat, signing out everywhere, resetting the password and leaving the workspace each end it. |
+| TG-4 | Every update re-reads the membership row. A member who can no longer write cannot write from Telegram; one who left the workspace is disconnected. |
+| TG-5 | A receipt photo or PDF sent to the bot is saved as an expense with its items and the file attached, in the default account holding the receipt's currency, through the same vault, extraction and transaction services as the web flow. A receipt without a readable total is not saved. |
+| TG-6 | The reply states what was saved, every figure formatted by the API: name, amount, category, date, items, this month's expense total and the category's total, and any field to check. Its buttons recategorise the transaction or delete it after a second tap. |
+| TG-7 | A category is suggested by a tool-less model call over the merchant, the item names and the workspace's expense category names, and kept only when it names one of them exactly. Otherwise the transaction is uncategorised. |
+| TG-8 | A text message is a turn of the assistant in the chat's own conversation, under every control a web turn has: the turn budget, the role gate, the delete confirmation and the per-workspace rate limit. The reply is plain text. |
+| TG-9 | The API receives updates by long polling from its single instance. Each update is handled at most once. No route is exposed to Telegram. |
+| TG-10 | Nothing Telegram sends is logged: no message text, caption, file or reply. The bot token is never logged. |
+
+### 6.12 Overview (OVR)
+
+Added by D87. See [Overview](features/overview.md).
+
+| ID | Requirement |
+|---|---|
+| OVR-1 | `/overview` is the workspace's front page; `/` redirects to it. It greets the reader by first name and shows one date range, a year of whole months by default, held in `?from&to` (UI-8). |
+| OVR-2 | The overview tab shows income, expenses and net for the range with the change against the period of equal length before it, the top expense category, the average monthly burn, and the tracked balance of the wallets included in totals, marked partial when a rate is missing. Every figure is computed by the API (D27). |
+| OVR-3 | The metrics tab charts income and expenses per month with their averages, the income and expense breakdowns by category, and the monthly burn rate. The tab lives in `?tab=`. |
+| OVR-4 | A floating composer, the prompt chips and a click on a card each start a conversation: the session is created, the conversation opens, and the question is sent there. Nothing is sent twice on reload. |
+| OVR-5 | The overview declares the summary, overview and wallet balance invalidation keys, so a chat write moves its figures without a reload (D32). |
+
 ## 7. Success metrics
 
 | Metric | Target |
@@ -316,6 +349,7 @@ Detailed stories are in [backlog.md](backlog.md).
 | **M4. Assistant** | US-026 to US-032, including US-031b | Streaming chat that reads and writes the ledger. Second demo. |
 | **M5. Capture** | US-033 to US-035, including US-033b | Receipt OCR and statement import. |
 | **M6. Hardening** | US-036 to US-039 | Limits, headers, the injection corpus, test suite, CI, docs. |
+| **M7. Telegram** | US-040 to US-042 | The Apps page, a linked Telegram chat, receipts saved from a photo, and the assistant in the chat. |
 
 M2 is the first milestone worth demoing, and it de-risks the stack choice before any LLM work starts.
 

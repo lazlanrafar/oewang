@@ -37,8 +37,9 @@ use oewang_domain::{
     format_money,
     ledger::TransactionType,
     tools::{
-        ChoicesArgs, DeleteArgs, ItemsArgs, NewCategoryArgs, NewWalletArgs, RecentArgs, SearchArgs,
-        SummaryArgs, SummaryGrouping, Tool, ToolCall, WriteTransactionArgs, RESULT_BYTE_BUDGET,
+        ChoicesArgs, DeleteArgs, ItemsArgs, NewCategoryArgs, NewWalletArgs, RangeArgs, RecentArgs,
+        SearchArgs, SummaryArgs, SummaryGrouping, Tool, ToolCall, WriteTransactionArgs,
+        RESULT_BYTE_BUDGET,
     },
     AppError, FieldErrors, Result,
 };
@@ -47,10 +48,11 @@ use serde_json::{json, Map, Value};
 
 use crate::{
     accounts,
-    ai::turns::TurnStore,
+    ai::turns::{Artifact, TurnStore},
     audit::{Actor, SOURCE_CHAT},
     auth,
     owe1::session::now_secs,
+    reports::service::{self as reports, percent_change, DayRange},
     transactions,
 };
 
@@ -70,6 +72,10 @@ pub struct ToolRequest<'a> {
     pub claimed_role: &'a str,
     pub session_id: &'a str,
     pub turn_id: &'a str,
+    /// The model's id for this call, which keys the artifact an analysis
+    /// tool leaves for the stream (D88). Absent from an older caller, and
+    /// then no artifact is kept.
+    pub call_id: Option<&'a str>,
     pub tool: &'a str,
     pub args: &'a Value,
 }
@@ -133,6 +139,15 @@ pub async fn execute(
         ToolCall::GetRecentTransactions(args) => recent(pool, request.workspace_id, args).await,
         ToolCall::SearchTransactions(args) => search(pool, request.workspace_id, args).await,
         ToolCall::GetSpendingSummary(args) => summary(pool, request.workspace_id, args).await,
+        ToolCall::GetSpendingAnalysis(args) => {
+            analysis(pool, turns, &request, Analysis::Spending, args).await
+        }
+        ToolCall::GetIncomeSummary(args) => {
+            analysis(pool, turns, &request, Analysis::Income, args).await
+        }
+        ToolCall::GetBurnRate(args) => {
+            analysis(pool, turns, &request, Analysis::BurnRate, args).await
+        }
         ToolCall::CreateTransaction(args) => create_transaction(pool, rates, actor, args).await,
         ToolCall::UpdateTransaction(args) => update_transaction(pool, rates, actor, args).await,
         ToolCall::DeleteTransaction(args) => {
@@ -506,6 +521,99 @@ async fn summary(pool: &PgPool, workspace_id: &str, args: SummaryArgs) -> Result
     })
 }
 
+/// The three analysis tools (D88).
+#[derive(Debug, Clone, Copy)]
+enum Analysis {
+    Spending,
+    Income,
+    BurnRate,
+}
+
+/// Build the report, answer the model with it, and leave the same report
+/// for the stream as a canvas artifact.
+///
+/// The model and the canvas read one value, so the sentence and the chart
+/// cannot disagree. The artifact is kept only when there is something to
+/// draw, the old app's rule: an empty chart is a worse answer than none.
+async fn analysis(
+    pool: &PgPool,
+    turns: &TurnStore,
+    request: &ToolRequest<'_>,
+    kind: Analysis,
+    args: RangeArgs,
+) -> Result<ToolOutcome> {
+    let range = DayRange::from_instants(args.from, args.to)?;
+    let span = describe_span(range.start(), range.end());
+    let workspace_id = request.workspace_id;
+
+    let (name, payload, has_data, summary) = match kind {
+        Analysis::Spending => {
+            let report = reports::spending(pool, workspace_id, range).await?;
+            let summary = format!(
+                "{} spent across {} transactions, {} on the {} before.",
+                report.total.value_formatted, report.count, report.total.comparison.direction, span,
+            );
+            (
+                "spending",
+                serde_json::to_value(&report).map_err(internal)?,
+                report.count > 0,
+                summary,
+            )
+        }
+        Analysis::Income => {
+            let report = reports::income(pool, workspace_id, range).await?;
+            let summary = format!(
+                "{} earned across {} transactions, {} on the {} before.",
+                report.total.value_formatted, report.count, report.total.comparison.direction, span,
+            );
+            (
+                "income",
+                serde_json::to_value(&report).map_err(internal)?,
+                report.count > 0,
+                summary,
+            )
+        }
+        Analysis::BurnRate => {
+            let report = reports::burn_rate(pool, workspace_id, range).await?;
+            let summary = format!(
+                "{} spent per month on average over {} months.",
+                report.average_monthly_formatted,
+                report.months.len(),
+            );
+            (
+                "burn-rate",
+                serde_json::to_value(&report).map_err(internal)?,
+                !report.total.value.is_zero(),
+                summary,
+            )
+        }
+    };
+
+    if has_data {
+        if let Some(call_id) = request.call_id {
+            turns.put_artifact(
+                request.turn_id,
+                call_id,
+                Artifact {
+                    kind: name,
+                    payload: payload.clone(),
+                },
+            );
+        }
+    }
+
+    // The year-before series is for the chart. The model is not asked about
+    // it, and leaving it out keeps a long range inside the result budget
+    // (D34).
+    let mut result = payload;
+    if let Some(object) = result.as_object_mut() {
+        object.remove("previous_year");
+        object.insert("canvas".into(), json!(has_data));
+    }
+
+    Ok(ToolOutcome { result, summary })
+}
+
 fn range_filters<'a>(from: DateTime<Utc>, to: DateTime<Utc>) -> repo::TransactionFilters<'a> {
     repo::TransactionFilters {
         start_date: Some(from),
@@ -537,19 +645,6 @@ fn group_view(row: &GroupTotalRow, of_total: Decimal, currency: &str) -> Value {
         "share_percent": share.map(|value| value.to_string()),
         "share_formatted": share.map(|value| format!("{value}%")),
     })
-}
-
-/// The change as a percentage of what came before, to one decimal place.
-///
-/// `None` when there is nothing to compare against: a percentage of zero is
-/// not a large number, it is not a number, and a model handed `Infinity`
-/// writes a sentence about it.
-fn percent_change(before: Decimal, change: Decimal) -> Option<Decimal> {
-    if before.is_zero() {
-        None
-    } else {
-        Some((change / before.abs() * Decimal::ONE_HUNDRED).round_dp(1))
-    }
 }
 
 /// What to call the preceding period, so the summary line reads as English

@@ -59,6 +59,14 @@ const renderer = new MarkdownIt({
 
 renderer.disable('image');
 
+/*
+ * A table is wrapped so it scrolls sideways inside the message column
+ * rather than pushing the page wider than the phone (UI-6). Fixed markup, so
+ * it is set once rather than per call.
+ */
+renderer.renderer.rules.table_open = () => '<div class="markdown-table"><table>\n';
+renderer.renderer.rules.table_close = () => '</table></div>\n';
+
 /** An attribute value is typed loosely by the parser; a link href is text. */
 function href(token: Token): string {
 	return String(token.attrGet('href') ?? '');

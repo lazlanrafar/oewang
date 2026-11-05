@@ -210,6 +210,17 @@
 	   charts will hatch with when they land. A hex rather than an HSL
 	   triple, because it is fed to `color-mix` rather than to `hsl()`. */
 	--chart-pattern-stroke: #707070;
+	/* Donut slices, darkest first. Every one clears 3:1 against the
+	   background (WCAG 1.4.11), and neighbours differ in lightness so a
+	   slice edge reads without hue. The legend carries every figure as
+	   text, so colour is never the only way to tell two slices apart. */
+	--chart-slice-1: #0a0a0a;
+	--chart-slice-2: #6b6b6b;
+	--chart-slice-3: #2e2e2e;
+	--chart-slice-4: #8f8f8f;
+	--chart-slice-5: #4a4a4a;
+	--chart-slice-6: #7d7d7d;
+	--chart-slice-7: #1f1f1f;
 	--sidebar-accent: 40 10% 94%;
 	--sidebar-accent-foreground: 240 5.9% 10%;
 	--sidebar-border: 45 5% 85%;
@@ -252,6 +263,13 @@
 	--sidebar: 0 0% 5%;
 	--sidebar-foreground: 0 0% 98%;
 	--chart-pattern-stroke: #666666;
+	--chart-slice-1: #fafafa;
+	--chart-slice-2: #8f8f8f;
+	--chart-slice-3: #d4d4d4;
+	--chart-slice-4: #6b6b6b;
+	--chart-slice-5: #b3b3b3;
+	--chart-slice-6: #7d7d7d;
+	--chart-slice-7: #e6e6e6;
 	--sidebar-accent: 0 0% 11%;
 	--sidebar-accent-foreground: 0 0% 98%;
 	--sidebar-border: 0 0% 20%;
@@ -381,6 +399,51 @@
 			transition-duration: 0.01ms !important;
 			scroll-behavior: auto !important;
 		}
+	}
+}
+
+/*
+ * One scrollbar on every platform.
+ *
+ * Left alone, Windows draws its thick classic bar with arrow buttons and
+ * macOS an overlay that fades, so the same screen looks like two products.
+ * The `::-webkit-scrollbar` pseudos are drawn identically by Chromium and
+ * Safari on both systems: 8px, no arrows, a square thumb (D52) in the rule
+ * colour on a clear track.
+ *
+ * The standard `scrollbar-width` and `scrollbar-color` are set for Firefox
+ * only. Chromium 121 and later ignore the pseudos on any element that sets
+ * either of them, which would hand Windows back its native bar.
+ */
+::-webkit-scrollbar {
+	width: 8px;
+	height: 8px;
+}
+
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+	background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+	background-color: hsl(var(--border));
+	/* A 2px clear inset, so the thumb sits off the edge it scrolls along. */
+	border: 2px solid transparent;
+	background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+	background-color: hsl(var(--muted-foreground) / 0.5);
+}
+
+::-webkit-scrollbar-button {
+	display: none;
+}
+
+@supports (-moz-appearance: none) {
+	* {
+		scrollbar-width: thin;
+		scrollbar-color: hsl(var(--border)) transparent;
 	}
 }
 

@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE telegram_links SET deleted_at = now(), updated_at = now()\n           WHERE user_id = $1 AND deleted_at IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "a768a29f9b220cf4a7812f47e4ccff8f760dfe82fd3daf96523d43838151b931"
+}

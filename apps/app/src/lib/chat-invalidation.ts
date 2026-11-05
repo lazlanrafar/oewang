@@ -32,7 +32,9 @@ export const INVALIDATION_KEYS = {
 	wallets: 'app:wallets',
 	walletBalances: 'app:wallet-balances',
 	categories: 'app:categories',
-	overview: 'app:overview'
+	overview: 'app:overview',
+	/** The Apps page's link status, which the connect dialog polls (D85). */
+	integrations: 'app:integrations'
 } as const;
 
 export type InvalidationKey = (typeof INVALIDATION_KEYS)[keyof typeof INVALIDATION_KEYS];

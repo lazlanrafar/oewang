@@ -21,29 +21,53 @@
 	 * confirmation sheet, and this column animates its own margin so it
 	 * reflows beside it instead of being covered. What is open lives in
 	 * `?canvas=` and `?id=`, so a reload reopens it (UI-8).
+	 *
+	 * The canvas also holds the analyses (D88): the API sends each one on the
+	 * stream right after its tool's result, and the panel opens on it while
+	 * the answer is still arriving. They are stored on the message, so the
+	 * tabs and a reload find them again.
+	 *
+	 * The layout is the old app's (D87): a header with the way back, the
+	 * column in the middle, and the composer floating at the bottom with the
+	 * conversation list behind its history button.
 	 */
 	import { enhance, type SubmitFunction } from '$app/forms';
 	import { goto, invalidate, invalidateAll } from '$app/navigation';
 	import { page } from '$app/state';
+	import { getContext, onMount, tick } from 'svelte';
 
 	import { toast } from 'svelte-sonner';
 
-	import { canvasParams, readCanvas } from '$lib/canvas';
+	import { artifactsOf } from '$lib/artifacts';
+	import { canvasParams, isArtifactCanvas, readCanvas, type CanvasKind } from '$lib/canvas';
+	import { takeHandoff } from '$lib/chat-handoff';
 	import {
 		advance,
 		IDLE_TURN,
 		isActive,
 		readFrames,
 		toolsRunning,
+		turnPhase,
 		visibleText,
 		type Turn
 	} from '$lib/chat-stream';
-	import { toMessageItem, type MessageItem } from '$lib/chat';
+	import {
+		CHAT_HISTORY,
+		toMessageItem,
+		type ChatHistoryContext,
+		type MessageItem
+	} from '$lib/chat';
 	import type { EntityTarget } from '$lib/chat-entities';
 	import { invalidateForToolCalls, invalidationsForTool } from '$lib/chat-invalidation';
 	import { toolLabel } from '$lib/chat-tools';
 	import {
+		ArtifactCanvas,
+		ArtifactTabs,
+		artifactKindTitle,
 		ChatCanvas,
+		ChatDock,
+		ChatHeader,
+		ChatHistory,
 		ChatInput,
 		ChatMessages,
 		ChatSuggestions
@@ -55,17 +79,19 @@
 		type TransactionDraft
 	} from '$lib/components/organisms/transactions';
 	import * as Dialog from '$lib/components/atoms/dialog';
-	import { ScrollArea } from '$lib/components/atoms/scroll-area';
 	import { AttachmentView } from '$lib/components/molecules/attachment-view';
 	import { attachmentViewer } from '$lib/files';
 	import type { UploadedFile } from '$lib/components/molecules/file-dropzone';
 	import { messageForCode } from '$lib/errors';
 	import { t } from '$lib/i18n';
 	import type { ReceiptForm } from '$lib/receipt';
+	import { rangeLabel } from '$lib/reports';
 	import type { ChatRole } from '$lib/server/chat';
 	import { writeParams } from '$lib/url-state';
 
 	let { data } = $props();
+
+	const chatHistory = getContext<ChatHistoryContext>(CHAT_HISTORY);
 
 	let draft = $state('');
 	/** The files the next turn carries, already in the vault (VLT-1). */
@@ -80,7 +106,7 @@
 	let openFileId = $state<string | null>(null);
 
 	let abort: AbortController | null = null;
-	let storedBefore = 0;
+	let storedBefore = $state(0);
 
 	/**
 	 * The tool calls already acted on, by id (D32, CHAT-12).
@@ -101,15 +127,35 @@
 	 */
 	const answering = $derived.by(() => {
 		const text = visibleText(turn);
-		if (text === '' && turn.toolCalls.length === 0) return null;
+		// While the turn works the answer exists even when empty, so its
+		// activity lines ("Thinking", each tool) have somewhere to live.
+		if (text === '' && turn.toolCalls.length === 0 && !isActive(turn)) return null;
 
 		return { ...local('assistant', text, 'turn-assistant'), toolCalls: turn.toolCalls };
 	});
 
+	/*
+	 * The question shows from the local copy only until the server has it.
+	 * The page's load can run mid-turn, when an analysis opens the canvas and
+	 * the URL changes, and the API stored the question when the turn began;
+	 * showing both would put the question on screen twice.
+	 */
+	const askedPending = $derived(
+		asked !== null && data.conversation.messages.length <= storedBefore
+	);
+
+	/*
+	 * The same for the answer: the API stores it when the turn ends, and the
+	 * refresh that brings it lands a moment before `settle` drops the local
+	 * copy. Two copies of one answer would also mean two copies of each
+	 * analysis it made.
+	 */
+	const answeringPending = $derived(data.conversation.messages.length < storedBefore + 2);
+
 	const messages = $derived([
 		...stored,
-		...(asked ? [asked] : []),
-		...(answering ? [answering] : [])
+		...(askedPending && asked ? [asked] : []),
+		...(answering && answeringPending ? [answering] : [])
 	]);
 
 	const status = $derived(statusLabel(turn));
@@ -310,8 +356,49 @@
 		Object.fromEntries(data.wallets.map((wallet) => [wallet.id, wallet.currency_code]))
 	);
 
-	const openCanvas = (kind: 'receipt' | 'transaction', id: string) =>
+	const openCanvas = (kind: CanvasKind, id: string) =>
 		writeParams(canvasParams({ kind, id }), { push: true });
+
+	/** Every analysis in the conversation, for the tabs and the toggles. */
+	const artifacts = $derived(artifactsOf(messages));
+	const activeArtifact = $derived(
+		isArtifactCanvas(canvas) ? (artifacts.find((entry) => entry.id === canvas.id) ?? null) : null
+	);
+
+	/*
+	 * A new analysis opens the panel as it arrives, as the old canvas did.
+	 * Once per call: closing it is the reader's decision, and the stream
+	 * handing the same call back on every later event must not undo it.
+	 */
+	const opened = new Set<string>();
+
+	$effect(() => {
+		for (const call of turn.toolCalls) {
+			if (!call.artifact || opened.has(call.id)) continue;
+			opened.add(call.id);
+			void openCanvas(call.artifact.kind, call.id);
+		}
+	});
+
+	function openArtifact(id: string) {
+		const entry = artifacts.find((candidate) => candidate.id === id);
+		if (!entry) return;
+		if (canvas?.id === id) void closeCanvas();
+		else void openCanvas(entry.kind, id);
+	}
+
+	/*
+	 * A question asked on the overview, sent as this page mounts (D87).
+	 * Files first, so the receipt panel opens for them as it would have here.
+	 */
+	onMount(async () => {
+		const handoff = takeHandoff(data.conversation.id);
+		if (!handoff) return;
+
+		if (handoff.files.length > 0) attached = handoff.files;
+		await tick();
+		if (handoff.message) void send(handoff.message);
+	});
 
 	function closeCanvas() {
 		receiptForm = null;
@@ -403,38 +490,36 @@
 <!--
 	The conversation column reflows beside the panel rather than being
 	covered by it: its own margin animates to the panel's width above the
-	medium breakpoint, and below it the panel takes the screen.
+	medium breakpoint, and below it the panel takes the screen. The page
+	scrolls in the shell's one scroll box, and the header and the composer
+	stick to its edges.
 -->
 <div
-	class="flex h-full min-h-0 flex-col gap-4 transition-[margin] duration-200 {canvas
-		? 'md:me-[560px]'
-		: ''}"
+	class="flex flex-1 flex-col transition-[margin] duration-200 {canvas ? 'md:me-[560px]' : ''}"
 >
-	<header class="flex shrink-0 items-baseline justify-between gap-4">
-		<h1 class="text-h2 truncate">{data.conversation.title}</h1>
-	</header>
+	<ChatHeader title={data.conversation.title} />
 
-	<ScrollArea class="min-h-0 flex-1">
-		<div class="pr-4 pb-4">
-			<ChatMessages
-				{messages}
-				emptyBody={t('chat.empty_conversation')}
-				streamingId={answering?.id ?? null}
-				busy={isActive(turn)}
-				onEntity={openEntity}
-				onCopy={copy}
-				onRegenerate={regenerate}
-			>
-				{#snippet emptyActions()}
-					<ChatSuggestions disabled={isActive(turn)} onSelect={send} />
-				{/snippet}
-			</ChatMessages>
-			<div bind:this={foot}></div>
-		</div>
-	</ScrollArea>
+	<div class="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-4 pt-6">
+		<ChatMessages
+			{messages}
+			emptyBody={t('chat.empty_conversation')}
+			streamingId={answering?.id ?? null}
+			busy={isActive(turn)}
+			activeArtifactId={activeArtifact?.id ?? null}
+			activity={turnPhase(turn)}
+			onEntity={openEntity}
+			onCopy={copy}
+			onRegenerate={regenerate}
+			onArtifact={openArtifact}
+		>
+			{#snippet emptyActions()}
+				<ChatSuggestions disabled={isActive(turn)} onSelect={send} />
+			{/snippet}
+		</ChatMessages>
 
-	<div class="flex shrink-0 flex-col gap-2 border-t pt-4">
-		<p class="text-subtle text-caption" aria-live="polite">{status}</p>
+		<!-- Announced, not shown: the activity lines in the answer are the
+		     visible version of the same thing. -->
+		<p class="sr-only" aria-live="polite">{status}</p>
 
 		{#if turn.status === 'failed'}
 			<p class="text-destructive text-caption" role="alert">
@@ -442,14 +527,34 @@
 			</p>
 		{/if}
 
-		<ChatInput
-			bind:value={draft}
-			bind:files={attached}
-			streaming={isActive(turn)}
-			onSend={send}
-			onStop={stop}
-		/>
+		<!-- The scroll anchor. Its bottom margin is the floating composer's
+		     height, so following the answer down stops above the composer
+		     rather than behind it. -->
+		<div bind:this={foot} class="scroll-mb-44"></div>
 	</div>
+
+	<ChatDock>
+		{#snippet children()}
+			<ChatInput
+				bind:value={draft}
+				bind:files={attached}
+				streaming={isActive(turn)}
+				failed={turn.status === 'failed'}
+				onSend={send}
+				onStop={stop}
+			>
+				{#snippet history({ close })}
+					<ChatHistory
+						sessions={chatHistory.sessions}
+						activeId={chatHistory.activeId}
+						onOpen={close}
+						onRename={chatHistory.onRename}
+						onDelete={chatHistory.onDelete}
+					/>
+				{/snippet}
+			</ChatInput>
+		{/snippet}
+	</ChatDock>
 </div>
 
 <!--
@@ -463,13 +568,33 @@
 -->
 <ChatCanvas
 	open={canvas !== null}
-	title={canvas?.kind === 'transaction' ? t('canvas.transaction_title') : t('canvas.receipt_title')}
-	description={canvas?.kind === 'transaction'
-		? t('canvas.transaction_description')
-		: t('canvas.receipt_description')}
+	title={isArtifactCanvas(canvas)
+		? artifactKindTitle(canvas)
+		: canvas?.kind === 'transaction'
+			? t('canvas.transaction_title')
+			: t('canvas.receipt_title')}
+	description={activeArtifact
+		? rangeLabel(activeArtifact.payload.from, activeArtifact.payload.to)
+		: isArtifactCanvas(canvas)
+			? undefined
+			: canvas?.kind === 'transaction'
+				? t('canvas.transaction_description')
+				: t('canvas.receipt_description')}
 	onClose={closeCanvas}
+	toolbar={isArtifactCanvas(canvas) && artifacts.length > 1 ? tabs : undefined}
 >
-	{#if canvas?.kind === 'transaction'}
+	{#if isArtifactCanvas(canvas)}
+		<!-- An analysis the API built and stored on its message (D88). An id
+		     this conversation does not hold says so rather than drawing an
+		     empty panel. -->
+		{#if activeArtifact}
+			{#key activeArtifact.id}
+				<ArtifactCanvas entry={activeArtifact} />
+			{/key}
+		{:else}
+			<p class="text-subtle text-body px-6 py-6">{t('canvas.missing')}</p>
+		{/if}
+	{:else if canvas?.kind === 'transaction'}
 		{#if canvasError}
 			<p class="text-destructive text-small px-6 pt-4" role="alert">
 				{messageForCode(canvasError)}
@@ -507,6 +632,14 @@
 		/>
 	{/if}
 </ChatCanvas>
+
+{#snippet tabs()}
+	<ArtifactTabs
+		entries={artifacts}
+		activeId={activeArtifact?.id ?? null}
+		onSelect={(entry) => openCanvas(entry.kind, entry.id)}
+	/>
+{/snippet}
 
 <Dialog.Root
 	open={openFileId !== null}

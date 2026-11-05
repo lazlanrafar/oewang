@@ -149,7 +149,7 @@ def names(events: list[tuple[str, dict[str, Any]]]) -> list[str]:
 # --------------------------------------------------------------- the loop
 
 
-def test_the_eleven_tools_reach_the_model_on_every_round(owe1_client: Owe1TestClient) -> None:
+def test_the_fourteen_tools_reach_the_model_on_every_round(owe1_client: Owe1TestClient) -> None:
     client = ScriptedClient(
         Turn(tool_block("t1", "get_spending_summary", **LAST_MONTH)),
         Turn(text_block("You spent 1,200,000.")),
@@ -160,7 +160,7 @@ def test_the_eleven_tools_reach_the_model_on_every_round(owe1_client: Owe1TestCl
     assert len(client.messages.calls) == 2
     for call in client.messages.calls:
         assert call["tools"] == TOOL_DEFINITIONS
-        assert len(call["tools"]) == 11
+        assert len(call["tools"]) == 14
 
 
 def test_one_tool_call_runs_and_its_result_goes_back_to_the_model(
@@ -212,6 +212,8 @@ def test_a_tool_call_names_the_turn_the_api_minted(owe1_client: Owe1TestClient) 
     assert body["session_id"] == "clxsession1"
     assert body["tool"] == "get_recent_transactions"
     assert body["args"] == {"limit": 5}
+    # The model's own id for the call, which keys a canvas artifact (D88).
+    assert body["call_id"] == "t1"
 
 
 def test_a_chain_of_calls_runs_one_round_after_another(owe1_client: Owe1TestClient) -> None:

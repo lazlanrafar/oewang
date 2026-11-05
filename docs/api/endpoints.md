@@ -120,6 +120,7 @@ The response is a suggestion. The rate the user confirms is sent back on the tra
 |---|---|---|---|
 | GET | `/v1/transactions` | any | Paginated list (TXN-8) |
 | GET | `/v1/transactions/summary` | any | Totals by category, wallet and type for a date range |
+| GET | `/v1/overview` | any | The overview's figures for `?from&to` (both required, days, at most 60 months): income, expense and net with the previous equal-length period, zero-filled months, monthly averages, top categories per type. Built by the same report module as the analysis canvases (D87, D88) |
 | GET | `/v1/transactions/export` | any | CSV download honouring the active filters (TXN-10) |
 | POST | `/v1/transactions` | admin+ | Create. Adjusts wallet balances (TXN-3) |
 | POST | `/v1/transactions/bulk` | admin+ | Create many. Used by the CSV wizard commit (TXN-11) |
@@ -292,6 +293,16 @@ Nothing is persisted (AI-2). `low_confidence_fields` is the ladder's own report 
 Each correction carries `model_value`, the figure the model read, so the sheet can show it beside the computed one. AI-11 asks that the user see which numbers the model gave and which the code fixed, and a field name on its own says a figure changed without saying from what. `model_value` is `null` when the model gave nothing and the arithmetic supplied the field outright, which reads differently and is a different thing. An item-level fix marks `line_items` rather than an index, because the sheet shows every item at once.
 
 An image with neither a readable total nor a readable date answers `RECEIPT_UNREADABLE` (422), and the sheet offers manual entry with the file already attached (AI-3).
+
+## Integrations
+
+The Apps page's routes (D83). Each acts on the caller's own Telegram link in the token's workspace; none names another member. The bot itself needs no route: the API long-polls Telegram (D84).
+
+| Method | Path | Role | Description |
+|---|---|---|---|
+| GET | `/v1/integrations/telegram` | any | `{ enabled, bot_username, linked, telegram_username, linked_at }` |
+| POST | `/v1/integrations/telegram/link-token` | any | `{ deep_link, expires_at }`: a one-time `t.me` link, ten minutes (D85). `TELEGRAM_DISABLED` when no bot is configured |
+| POST | `/v1/integrations/telegram/unlink` | any | 204. Ends the caller's link and tells the chat; ending none is not an error |
 
 ## Internal
 

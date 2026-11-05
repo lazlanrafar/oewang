@@ -8,6 +8,7 @@
 	import Wallet from '@lucide/svelte/icons/wallet';
 
 	import { Button } from '$lib/components/atoms/button';
+	import { ChartArea, ChartBar, ChartDonut } from '$lib/components/molecules/chart';
 	import { Checkbox } from '$lib/components/atoms/checkbox';
 	import { Input } from '$lib/components/atoms/input';
 	import { Switch } from '$lib/components/atoms/switch';
@@ -332,6 +333,59 @@
 		<StatCard label="Income" value="Rp 9.500.000" change={12} changeLabel="vs last month" />
 		<StatCard label="Expenses" value="Rp 111.500" change={-4} changeLabel="vs last month" />
 		<StatCard label="Net" value="Rp 9.388.500" loading />
+	</div>
+	<div class="mt-4 grid gap-4 sm:grid-cols-2">
+		<StatCard
+			label="Total expenses"
+			icon={Wallet}
+			value="Rp 4.250.000"
+			change={8.5}
+			changeLabel="vs previous period"
+			invert
+			hint="1 Dec 2025 to 30 Nov 2026"
+			onclick={() => {}}
+		/>
+		<StatCard label="Tracked balance" value="Rp 12.400.000" hint="3 included accounts" />
+	</div>
+</Specimen>
+
+<Specimen
+	title="Charts"
+	note="Monochrome, layerchart underneath (D89). Heights come from chartValue, which is geometry only; every figure in a tooltip or legend is the API's formatted string. The area takes an optional comparison series and a dashed average; the bar is a breakdown read sideways; the donut carries its figures in the legend beside it."
+	source="molecules/chart"
+>
+	<div class="flex flex-col gap-8">
+		<ChartArea
+			label="This period"
+			compareLabel="Year before"
+			average={{ value: 4200000, formatted: 'Rp 4.200.000', label: 'Average' }}
+			points={[
+				{ month: '2026-06', value: 3100000, formatted: 'Rp 3.100.000', compare: 2800000, compareFormatted: 'Rp 2.800.000' },
+				{ month: '2026-07', value: 4800000, formatted: 'Rp 4.800.000', compare: 3900000, compareFormatted: 'Rp 3.900.000' },
+				{ month: '2026-08', value: 3900000, formatted: 'Rp 3.900.000', compare: 4100000, compareFormatted: 'Rp 4.100.000' },
+				{ month: '2026-09', value: 5200000, formatted: 'Rp 5.200.000', compare: 3600000, compareFormatted: 'Rp 3.600.000' },
+				{ month: '2026-10', value: 4400000, formatted: 'Rp 4.400.000', compare: 4300000, compareFormatted: 'Rp 4.300.000' },
+				{ month: '2026-11', value: 3800000, formatted: 'Rp 3.800.000', compare: 4000000, compareFormatted: 'Rp 4.000.000' }
+			]}
+		/>
+		<ChartBar
+			label="Expense"
+			items={[
+				{ label: 'Food', value: 1850000, formatted: 'Rp 1.850.000', share: '43.5%' },
+				{ label: 'Transport', value: 920000, formatted: 'Rp 920.000', share: '21.6%' },
+				{ label: 'Rent', value: 750000, formatted: 'Rp 750.000', share: '17.6%' },
+				{ label: 'Other', value: 730000, formatted: 'Rp 730.000', share: '17.2%' }
+			]}
+		/>
+		<ChartDonut
+			label="Expense by category"
+			slices={[
+				{ label: 'Food', value: 1850000, formatted: 'Rp 1.850.000', share: '43.5%' },
+				{ label: 'Transport', value: 920000, formatted: 'Rp 920.000', share: '21.6%' },
+				{ label: 'Rent', value: 750000, formatted: 'Rp 750.000', share: '17.6%' },
+				{ label: 'Other', value: 730000, formatted: 'Rp 730.000', share: '17.2%' }
+			]}
+		/>
 	</div>
 </Specimen>
 

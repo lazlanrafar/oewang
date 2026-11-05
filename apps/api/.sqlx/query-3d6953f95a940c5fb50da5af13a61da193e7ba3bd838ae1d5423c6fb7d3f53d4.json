@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM telegram_updates WHERE received_at < $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "3d6953f95a940c5fb50da5af13a61da193e7ba3bd838ae1d5423c6fb7d3f53d4"
+}

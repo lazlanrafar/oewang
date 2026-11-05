@@ -54,6 +54,7 @@ STATUS_BY_CODE = {
     "RECEIPT_UNREADABLE": 422,
     "STATEMENT_UNREADABLE": 422,
     "COLUMN_MAPPING_FAILED": 422,
+    "CATEGORIZE_FAILED": 422,
     # A misconfiguration, not a bad request. Answered as such so it is not
     # mistaken for an unreadable document and retried with another photo.
     "MODEL_UNAVAILABLE": status.HTTP_503_SERVICE_UNAVAILABLE,

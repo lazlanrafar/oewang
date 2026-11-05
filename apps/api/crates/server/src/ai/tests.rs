@@ -17,7 +17,8 @@ use tokio::sync::mpsc;
 use crate::{
     ai::{
         service,
-        stream::{self, EventSource, Frame, NextEvent, Sealer},
+        stream::{self, EventSource, Frame, NextEvent, Sealer, TurnArtifacts},
+        turns::{Artifact, TurnStore},
     },
     audit::Actor,
 };
@@ -502,6 +503,7 @@ async fn should_store_the_assistant_message_when_the_stream_ends(pool: PgPool) {
         // No context: encryption off, so the frames are the plain payloads.
         Sealer::new(None),
         STREAM_DEADLINE,
+        None,
     )
     .await;
 
@@ -525,6 +527,129 @@ async fn should_store_the_assistant_message_when_the_stream_ends(pool: PgPool) {
         .unwrap();
     assert_eq!(done["message_id"], json!(stored));
     assert_eq!(done["usage"]["output"], json!(4));
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_store_the_words_either_side_of_a_tool_as_two_paragraphs(pool: PgPool) {
+    fixture(&pool).await;
+    let session = service::create(&pool, actor(), None).await.unwrap();
+    let (sender, mut receiver) = mpsc::channel::<Frame>(16);
+
+    let events = Scripted::new(vec![
+        ("token", json!({ "text": "Let me check." })),
+        (
+            "tool_call",
+            json!({ "id": "t1", "name": "get_burn_rate", "args": {} }),
+        ),
+        (
+            "tool_result",
+            json!({ "id": "t1", "ok": true, "summary": "x" }),
+        ),
+        ("token", json!({ "text": "Your burn rate" })),
+        ("done", json!({ "message_id": null, "usage": null })),
+    ]);
+
+    stream::pump(
+        events,
+        sender,
+        pool.clone(),
+        WORKSPACE.to_string(),
+        session.id.clone(),
+        Sealer::new(None),
+        STREAM_DEADLINE,
+        None,
+    )
+    .await;
+    while receiver.recv().await.is_some() {}
+
+    assert_eq!(
+        messages(&pool, &session.id).await,
+        [(
+            "assistant".to_string(),
+            "Let me check.\n\nYour burn rate".to_string()
+        )]
+    );
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_send_and_store_the_artifact_a_tool_left(pool: PgPool) {
+    fixture(&pool).await;
+    let session = service::create(&pool, actor(), None).await.unwrap();
+    let (sender, mut receiver) = mpsc::channel::<Frame>(16);
+
+    let turns = TurnStore::new();
+    turns.open("turn_a", crate::owe1::session::now_secs());
+    turns.put_artifact(
+        "turn_a",
+        "t1",
+        Artifact {
+            kind: "spending",
+            payload: json!({ "total": { "value": "50000" } }),
+        },
+    );
+
+    let events = Scripted::new(vec![
+        (
+            "tool_call",
+            json!({ "id": "t1", "name": "get_spending_analysis", "args": {} }),
+        ),
+        (
+            "tool_result",
+            json!({ "id": "t1", "ok": true, "summary": "Rp 50.000 spent." }),
+        ),
+        // Upstream cannot add an artifact of its own (D88).
+        (
+            "artifact",
+            json!({ "id": "t1", "type": "spending", "payload": { "forged": true } }),
+        ),
+        ("token", json!({ "text": "Food led." })),
+        ("done", json!({ "message_id": null, "usage": null })),
+    ]);
+
+    stream::pump(
+        events,
+        sender,
+        pool.clone(),
+        WORKSPACE.to_string(),
+        session.id.clone(),
+        Sealer::new(None),
+        STREAM_DEADLINE,
+        Some(TurnArtifacts {
+            turns: turns.clone(),
+            turn_id: "turn_a".to_string(),
+        }),
+    )
+    .await;
+
+    let mut frames = Vec::new();
+    while let Some(frame) = receiver.recv().await {
+        frames.push(frame);
+    }
+    let names: Vec<&str> = frames.iter().map(|f| f.name.as_str()).collect();
+    assert_eq!(
+        names,
+        ["tool_call", "tool_result", "artifact", "token", "done"]
+    );
+
+    let artifact: Value = serde_json::from_str(&frames[2].data).unwrap();
+    assert_eq!(artifact["id"], "t1");
+    assert_eq!(artifact["type"], "spending");
+    assert_eq!(artifact["payload"]["total"]["value"], "50000");
+    assert!(artifact["payload"].get("forged").is_none());
+
+    // Handed over once.
+    assert!(turns.take_artifact("turn_a", "t1").is_none());
+
+    let attachments: Value =
+        sqlx::query_scalar("SELECT attachments FROM ai_messages WHERE role = 'assistant'")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert_eq!(attachments["tool_calls"][0]["artifact"]["type"], "spending");
+    assert_eq!(
+        attachments["tool_calls"][0]["artifact"]["payload"]["total"]["value"],
+        "50000"
+    );
 }
 
 #[sqlx::test(migrations = "../../migrations")]
@@ -557,6 +682,7 @@ async fn should_store_the_tool_calls_beside_the_reply(pool: PgPool) {
         session.id.clone(),
         Sealer::new(None),
         STREAM_DEADLINE,
+        None,
     )
     .await;
 
@@ -608,6 +734,7 @@ async fn should_store_a_tool_call_that_never_answered(pool: PgPool) {
         session.id.clone(),
         Sealer::new(None),
         STREAM_DEADLINE,
+        None,
     )
     .await;
     drop(receiver);
@@ -648,6 +775,7 @@ async fn should_store_the_partial_reply_when_the_caller_disconnects(pool: PgPool
         session.id.clone(),
         Sealer::new(None),
         STREAM_DEADLINE,
+        None,
     )
     .await;
 
@@ -674,6 +802,7 @@ async fn should_end_on_an_error_when_the_other_side_stops_without_saying_done(po
         session.id.clone(),
         Sealer::new(None),
         STREAM_DEADLINE,
+        None,
     )
     .await;
 
@@ -708,6 +837,7 @@ async fn should_store_nothing_when_the_assistant_said_nothing(pool: PgPool) {
         session.id.clone(),
         Sealer::new(None),
         STREAM_DEADLINE,
+        None,
     )
     .await;
 

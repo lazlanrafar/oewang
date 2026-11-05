@@ -18,11 +18,13 @@ oewang is a personal finance tracker. This repository is a ground-up rewrite of 
 10. [Transactions](features/transactions.md): the transaction feature end to end, API to UI.
 11. [Accounts](features/accounts.md): the wallets screen, its figures, its table and how a balance is corrected.
 12. [Chat](features/chat.md): the chat feature end to end, including receipt OCR.
-13. [AI service](ai/service.md): the Python service, its tool catalog, prompt, and streaming protocol.
-14. Best practices: [Rust API](best-practices/rust-api.md) and [Svelte app](best-practices/svelte-app.md).
-15. [Backlog](backlog.md): the implementation stories, in order, each mapped to requirement IDs.
-16. [Legacy app](reference/legacy-app.md): what the old implementation contains, what the rewrite takes from it, what it drops.
-17. [Midday research](research/midday.md): reverse engineering of a second reference implementation, and the proposals taken from it.
+13. [Telegram](features/telegram.md): the Apps page, linking a chat, receipts saved from a photo, and the assistant in Telegram.
+14. [Overview](features/overview.md): the front page, its two tabs, the floating composer, and where each figure comes from.
+14. [AI service](ai/service.md): the Python service, its tool catalog, prompt, and streaming protocol.
+15. Best practices: [Rust API](best-practices/rust-api.md) and [Svelte app](best-practices/svelte-app.md).
+16. [Backlog](backlog.md): the implementation stories, in order, each mapped to requirement IDs.
+17. [Legacy app](reference/legacy-app.md): what the old implementation contains, what the rewrite takes from it, what it drops.
+18. [Midday research](research/midday.md): reverse engineering of a second reference implementation, and the proposals taken from it.
 
 ## Doc map
 
@@ -106,7 +108,9 @@ flowchart TD
 |---|---|
 | [features/transactions.md](features/transactions.md) | The transaction feature: data, business rules, endpoints, screens, the UI port map from the old app, CSV export and import, attachments, line items. |
 | [features/accounts.md](features/accounts.md) | The accounts screen: why wallets left Settings, the three cards and where each figure comes from, the measured table, the two sheets, how a balance adjustment is recorded as a transaction, the UI port map. |
-| [features/chat.md](features/chat.md) | The chat feature: sessions, streaming, the tool loop, role gating of writes, receipt OCR, the UI port map, settings. |
+| [features/chat.md](features/chat.md) | The chat feature: sessions, streaming, the tool loop, role gating of writes, receipt OCR, the analysis canvas, the UI port map, settings. |
+| [features/overview.md](features/overview.md) | The overview: the greeting, range and tabs, the cards and charts and their sources, starting a conversation from the composer. |
+| [features/telegram.md](features/telegram.md) | Telegram: the Apps page, the one-time link, who a message is from, receipts saved on arrival and their reply, the buttons, the assistant in a chat. |
 | [ai/service.md](ai/service.md) | The Python service: responsibilities, endpoints, the eleven-tool catalog, the system prompt, the SSE event protocol, safety rules, testing with a mocked model. |
 
 ### Best practices

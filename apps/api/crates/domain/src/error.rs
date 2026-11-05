@@ -116,6 +116,11 @@ pub enum AppError {
     #[error("tool cap exceeded for this turn")]
     ToolCapExceeded,
 
+    // -- integrations
+    /// The server runs without a Telegram bot configured (D84).
+    #[error("telegram is not configured")]
+    TelegramDisabled,
+
     /// The only variant that carries a source. The source is logged; the
     /// client gets the code and the request id and nothing else.
     #[error("internal error")]
@@ -164,6 +169,7 @@ impl AppError {
             SessionNotFound => "SESSION_NOT_FOUND",
             AiUnavailable => "AI_UNAVAILABLE",
             ReceiptUnreadable => "RECEIPT_UNREADABLE",
+            TelegramDisabled => "TELEGRAM_DISABLED",
             StatementUnreadable => "STATEMENT_UNREADABLE",
             ToolNotFound => "TOOL_NOT_FOUND",
             ToolArgsInvalid(_) => "TOOL_ARGS_INVALID",
@@ -208,7 +214,7 @@ impl AppError {
             RateLimited { .. } => 429,
             FileTooLarge => 413,
             UnsupportedFileType => 415,
-            FxRateUnavailable | AiUnavailable => 503,
+            FxRateUnavailable | AiUnavailable | TelegramDisabled => 503,
             Internal(_) => 500,
         }
     }
@@ -367,12 +373,13 @@ mod tests {
             AppError::ToolForbidden,
             AppError::ConfirmationRequired(FieldErrors::new()),
             AppError::ToolCapExceeded,
+            AppError::TelegramDisabled,
             AppError::Internal(anyhow::anyhow!("boom")),
         ];
 
-        // 44 of the 45 catalog entries. TRANSPORT_UNEXPECTED_RESPONSE is a
+        // 45 of the 46 catalog entries. TRANSPORT_UNEXPECTED_RESPONSE is a
         // client-side condition and has no server variant by design.
-        assert_eq!(samples.len(), 44);
+        assert_eq!(samples.len(), 45);
 
         let mut seen = std::collections::HashSet::new();
         for error in &samples {

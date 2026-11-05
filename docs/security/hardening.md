@@ -52,7 +52,10 @@ The AI service receives image bytes to parse. It never writes them anywhere, nev
 
 ## Outbound calls
 
-The API makes exactly two kinds of outbound call: to the AI service, and to object storage. Both targets come from configuration, never from user input.
+The API calls five hosts, each from configuration and never from user input: the AI service, object storage, the email provider (`RESEND_API_KEY`, D40), the exchange-rate source (`FX_API_URL`, D44), and the Telegram Bot API (`TELEGRAM_API_URL`, D84). This line said two until Telegram arrived; email and rates had been added without it.
+
+- Telegram is called for `getUpdates`, `sendMessage`, `editMessageText`, `answerCallbackQuery`, `sendChatAction` and `getFile`, and files are downloaded from the same host. The download path comes from Telegram's `getFile` answer and is fetched only when it is a plain relative path; it is never followed as a URL. The download is capped at `MAX_FILE_BYTES` as it streams, whatever size Telegram claimed.
+- The bot token is part of every Telegram URL path, so the URL is a secret: the client's `Debug` omits it and every `reqwest` error is stripped of its URL before it is logged.
 
 - There is no endpoint that fetches a user-supplied URL. That removes server-side request forgery as a class, and it stays removed: adding one needs a decision record and an allow-list.
 - The AI service calls exactly one host, the API, from `API_INTERNAL_URL`.
@@ -112,6 +115,7 @@ Never logged, in any process (OPS-3):
 - `JWT_SECRET`, `AI_SERVICE_API_KEY`, the Ed25519 private key, storage credentials, the Anthropic key.
 - Decrypted request or response bodies.
 - File bytes, receipt images, extracted receipt text, chat message content.
+- Anything Telegram sends: message text, captions, files, and the bot's replies. `TELEGRAM_BOT_TOKEN`, and any URL that contains it.
 
 Logged on every request: `request_id`, method, path, status, duration, `user_id`, `workspace_id`. On every chat turn: workspace, session, round count, tool names, token counts, duration.
 

@@ -221,3 +221,18 @@ export function signedAmount(
 ): string {
 	return type === 'income' ? amount : negate(amount);
 }
+
+/**
+ * A decimal string as a height on a chart. Geometry only.
+ *
+ * The one place an amount becomes a JavaScript number, and the reason it is
+ * allowed (D89): a pixel position is a float whatever the input, and a bar
+ * a fraction of a pixel off is invisible. The number is never shown, summed
+ * or compared; every label beside the bar is the API's formatted string.
+ * An amount that does not parse draws as zero rather than as `NaN`, which
+ * would remove the whole series.
+ */
+export function chartValue(value: string): number {
+	const parsed = Number.parseFloat(value);
+	return Number.isFinite(parsed) ? parsed : 0;
+}

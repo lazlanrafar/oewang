@@ -20,12 +20,15 @@
 		AccountSummaryCards
 	} from '$lib/components/organisms/accounts';
 	import {
+		ChatActivity,
 		ChatHistory,
+		ChatInput,
 		ChatMessages,
 		ChatSuggestions,
 		ToolCallGroup
 	} from '$lib/components/organisms/chat';
 	import { AppSidebar, ThemeToggle, WorkspaceSwitcher } from '$lib/components/organisms/layouts';
+	import { SettingsSidebar } from '$lib/components/organisms/settings';
 
 	import {
 		accountGroups,
@@ -85,14 +88,54 @@
 </Specimen>
 
 <Specimen
+	title="Chat composer"
+	note="The old app's composer (D87), shared by the overview and every conversation: a one-line field over add, shortcuts and history, and send, which becomes stop and shows a cross after a failure. Typing / opens the shortcuts. Files are picked or dropped anywhere and shown as thumbnails. Past a short scroll it folds to the field alone. The second copy is folded."
+>
+	<div class="bg-muted flex flex-col gap-6 p-6">
+		<ChatInput onSend={() => {}} onStop={() => {}}>
+			{#snippet history()}
+				<ChatHistory
+					sessions={chatSessions}
+					activeId="s1"
+					onRename={() => {}}
+					onDelete={() => {}}
+				/>
+			{/snippet}
+		</ChatInput>
+		<ChatInput compact={1} onSend={() => {}} onStop={() => {}} />
+	</div>
+</Specimen>
+
+<Specimen
+	title="Chat activity"
+	note="What a working turn is doing, live (CHAT-14): one line per tool, shimmering with what it covers while it runs, then checked with the API's summary. The last line says Thinking before anything comes back and Reading the results between the last tool and the first word. When the turn ends the message folds to the tool group instead."
+>
+	<div class="flex max-w-xl flex-col gap-6">
+		<ChatActivity calls={[]} phase="thinking" />
+		<ChatActivity
+			calls={[
+				{ id: 'a1', name: 'get_workspace_context', args: {}, status: 'ok', summary: '3 wallets, 12 categories.' },
+				{ id: 'a2', name: 'get_spending_analysis', args: { from: '2026-09-01', to: '2026-11-30' }, status: 'running', summary: null }
+			]}
+			phase="working"
+		/>
+		<ChatActivity
+			calls={[
+				{ id: 'b1', name: 'get_spending_analysis', args: { from: '2026-09-01', to: '2026-11-30' }, status: 'ok', summary: 'Rp 50.394.000 spent across 183 transactions, up on the quarter before.' }
+			]}
+			phase="reading"
+		/>
+	</div>
+</Specimen>
+
+<Specimen
 	title="Chat history"
-	note="The conversation list: newest activity first, the open one marked, and a menu per row for renaming and deleting. Rename opens a dialog, delete asks first (UI-4)."
+	note="The conversation list as the old history dropdown: 32px rows, newest first, the open one marked, rename and delete on hover. In a conversation it opens from the composer's history button. Delete asks first (UI-4)."
 >
 	<div class="max-w-sm">
 		<ChatHistory
 			sessions={chatSessions}
 			activeId="s1"
-			onNew={() => {}}
 			onRename={() => {}}
 			onDelete={() => {}}
 		/>
@@ -144,6 +187,14 @@
 		<AppSidebar name={workspace.name} secondary={workspace.secondary} class="border" />
 		<AppSidebar name={workspace.name} secondary={workspace.secondary} collapsed class="border" />
 	</div>
+</Specimen>
+
+<Specimen
+	title="Settings sidebar"
+	note="One level below the app sidebar, with the same row. A section not built yet is tagged Soon and not linked (D82)."
+	source="organisms/settings/settings-sidebar.svelte"
+>
+	<SettingsSidebar class="w-56" />
 </Specimen>
 
 <Specimen

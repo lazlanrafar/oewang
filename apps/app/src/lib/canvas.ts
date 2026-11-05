@@ -11,6 +11,8 @@
  * `?canvas=nonsense` must open nothing rather than an empty panel.
  */
 
+import { ARTIFACT_KINDS, isArtifactKind, type ArtifactKind } from '$lib/artifacts';
+
 /**
  * What the panel can hold.
  *
@@ -18,8 +20,11 @@
  * vault file the user uploaded. `transaction` is the real transaction form,
  * keyed by the same vault file, which is the manual-entry fallback an
  * unreadable image falls back to with the image already attached (AI-3).
+ *
+ * The rest are the analysis artifacts (D88), keyed by the tool call that
+ * built them.
  */
-export const CANVAS_KINDS = ['receipt', 'transaction'] as const;
+export const CANVAS_KINDS = ['receipt', 'transaction', ...ARTIFACT_KINDS] as const;
 
 export type CanvasKind = (typeof CANVAS_KINDS)[number];
 
@@ -58,4 +63,11 @@ export function canvasParams(state: CanvasState | null): {
 	id: string | null;
 } {
 	return state === null ? { canvas: null, id: null } : { canvas: state.kind, id: state.id };
+}
+
+/** Whether the open panel is an analysis artifact rather than an app form. */
+export function isArtifactCanvas(
+	state: CanvasState | null
+): state is { kind: ArtifactKind; id: string } {
+	return state !== null && isArtifactKind(state.kind);
 }

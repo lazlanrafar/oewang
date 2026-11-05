@@ -14,7 +14,7 @@
 <th
 	bind:this={ref}
 	data-slot="table-head"
-	class={cn('h-12 px-4 text-left align-middle text-subtle font-medium [&:has([role=checkbox])]:pr-0 border-r last:border-r-0 nth-last-2:border-r-0 w-auto', className)}
+	class={cn('h-12 px-4 text-left align-middle text-subtle font-medium [&:has([role=checkbox])]:pr-0 border-r last:border-r-0 nth-last-2:border-r-0 w-auto group-data-[density=compact]/table:h-9 group-data-[density=compact]/table:px-3 group-data-[density=compact]/table:py-1.5', className)}
 	{...restProps}
 >
 	{@render children?.()}

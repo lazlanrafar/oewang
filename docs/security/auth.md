@@ -93,8 +93,9 @@ Unlike the old app, logout really ends the session (D38).
 | Event | Effect |
 |---|---|
 | Logout | Revoke the refresh row, clear both cookies |
-| Logout everywhere | Revoke every live row for the user |
-| Password change or reset | Revoke every live row for the user |
+| Logout everywhere | Revoke every live row for the user, and end every Telegram link they hold (D85) |
+| Password change or reset | Revoke every live row for the user, and end every Telegram link they hold (D85) |
+| Removed from a workspace | Revoke every live row for the user, and end their Telegram link in that workspace |
 | Reuse detected | Revoke the family |
 
 The access token still lives up to 15 minutes after revocation, because nothing is checked on a read. That window is the deliberate trade for not hitting the database on every request; writes re-read the membership row, so an access token that outlives a removal cannot write.
@@ -110,6 +111,16 @@ Email and password are the only way in (D21), so a forgotten password with no re
 5. Rate limited with the rest of `/v1/auth/*`: 10 requests per 15 minutes per IP (AUTH-6).
 
 A reset link is a bearer credential in an email. It is single use, short lived, and never logged.
+
+## Telegram links
+
+A Telegram chat that acts for a member (D85, [Telegram](../features/telegram.md)) is authenticated by a link row, not by a token on each message, because a Telegram message carries none.
+
+- The link is made with a one-time token minted for the signed-in member in the session's workspace: 32 random bytes, URL-safe base64, stored as SHA-256, ten minutes, claimed and marked used in one statement. The same rules as a reset token, for the same reason: it is a bearer credential shown to one person.
+- The token travels in a `t.me` deep link the member opens. It is shown in the connect dialog and nowhere else; it is never put in an app URL.
+- Only a private chat can be linked, and every later update must come from the Telegram account that opened the link (`telegram_user_id`), not merely from the chat.
+- Every update re-reads the membership row, so the role that applies is the current one, and a member who left is disconnected on their next message.
+- The link ends with the session events in [Revocation](#revocation), from the Apps page, and with `/disconnect`.
 
 ## Request flow
 
@@ -186,6 +197,9 @@ The old token stays valid until expiry. It is scoped to the previous workspace, 
 | Open chat, read sessions, use read-only tools | yes | yes | yes |
 | Use write tools in chat | yes | yes | no |
 | Update agent settings | yes | yes | no |
+| Connect or disconnect their own Telegram chat | yes | yes | yes |
+| Save a receipt or change a transaction from Telegram | yes | yes | no |
+| Ask the assistant from Telegram | yes | yes | yes |
 
 A `member` who asks the assistant to record an expense gets a refusal from the tool layer, server-side, not from the prompt (CHAT-4). A prompt instruction is guidance; the role gate is the control.
 
@@ -196,6 +210,7 @@ A `member` who asks the assistant to record an expense gets a refusal from the t
 | SvelteKit to API | The user's JWT as a bearer token |
 | API to AI service | `x-api-key: $AI_SERVICE_API_KEY` |
 | AI service to API (`/v1/internal/*`) | `x-api-key: $AI_SERVICE_API_KEY`, plus an explicit workspace context in the body |
+| API to Telegram | The bot token in the URL path, over TLS to the configured host. Inbound is the API polling, so Telegram never calls in (D84) |
 
 The AI service never holds a user JWT and never verifies one (D4). It states who it is acting for; the API decides whether that is allowed, by re-reading the membership row.
 
@@ -239,6 +254,10 @@ Logged on every request: `request_id`, method, path, status, duration, `user_id`
 | The AI service acting beyond the user | Tool role gate server-side; destructive tools need confirmation (D20) |
 | Secrets in logs | Explicit deny list and a test over captured output |
 | An exposed internal route | Internal network binding plus a constant-time service key check |
+| Linking someone else's workspace to a Telegram chat | One-time token minted for the signed-in member; nothing in a message names a workspace (the old app's `/start <slug>` did) |
+| A group member acting through a linked chat | Private chats only, and every update must come from the linking account |
+| A forged button (`callback_data`) | The ids are looked up in the link's workspace; anything else is not found |
+| The bot token in a log | Kept out of `Debug`, and every HTTP error is stripped of its URL before it is logged |
 
 Known gaps, accepted for now: an access token stays valid up to 15 minutes after revocation, there is no step-up verification for sensitive reads, and there is no audit UI (see [Q4](../prd.md#10-open-questions)).
 

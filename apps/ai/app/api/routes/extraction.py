@@ -35,9 +35,10 @@ from fastapi.responses import JSONResponse
 from app.config import Settings
 from app.core import model
 from app.core.envelope import envelope, error_response
-from app.modules.extraction import columns, ladder
+from app.modules.extraction import categorize, columns, ladder
 from app.modules.extraction.ladder import PDF_MEDIA_TYPE
 from app.modules.extraction.schemas import (
+    CategorizeRequest,
     ColumnMappingRequest,
     ExtractionRequest,
     extraction_payload,
@@ -49,6 +50,7 @@ router = APIRouter()
 #: request is somebody's receipt (OPS-3).
 MODEL_UNAVAILABLE_MESSAGE = "no model is configured"
 MAPPING_FAILED_MESSAGE = "the model did not return a usable column mapping"
+CATEGORIZE_FAILED_MESSAGE = "the model did not return a usable category"
 UNREADABLE_MESSAGE = {
     "RECEIPT_UNREADABLE": "no total and no usable date could be read from this receipt",
     "STATEMENT_UNREADABLE": "no usable transaction rows could be read from this statement",
@@ -168,3 +170,29 @@ async def map_columns(body: ColumnMappingRequest, request: Request) -> JSONRespo
         return error_response("MODEL_UNAVAILABLE", MODEL_UNAVAILABLE_MESSAGE, request_id)
 
     return envelope({"mapping": mapping, "model": used}, request_id)
+
+
+@router.post("/receipt/categorize", response_model=None)
+async def receipt_categorize(body: CategorizeRequest, request: Request) -> JSONResponse | dict:
+    """A saved receipt's merchant and items to one of the workspace's
+    expense category names, or null (D86).
+
+    Strings in, one name out. The API keeps the answer only when it is
+    exactly one of the workspace's categories.
+    """
+    config: Settings = request.app.state.config
+    request_id = request_id_of(request, body)
+
+    try:
+        category, used = await categorize.categorize(
+            merchant=body.merchant,
+            items=body.items,
+            categories=body.categories,
+            config=config,
+        )
+    except categorize.CategorizeFailed:
+        return error_response("CATEGORIZE_FAILED", CATEGORIZE_FAILED_MESSAGE, request_id)
+    except model.ModelUnavailable:
+        return error_response("MODEL_UNAVAILABLE", MODEL_UNAVAILABLE_MESSAGE, request_id)
+
+    return envelope({"category": category, "model": used}, request_id)

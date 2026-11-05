@@ -32,3 +32,18 @@ export function currentMonth(today = new Date()): DayRange {
 	const last = new Date(year, month, 0).getDate();
 	return { start: day(year, month, 1), end: day(year, month, last) };
 }
+
+/**
+ * The last `count` months up to and including the one `today` falls in,
+ * whole months at both ends.
+ *
+ * The overview's default (D87): a year of bars reads as a trend, and a range
+ * that starts mid-month draws its first bar short for no reason anyone can
+ * see. Here for the same reason `currentMonth` is: the load asks the API for
+ * it and the picker shows it, and the two must not drift.
+ */
+export function lastMonths(count: number, today = new Date()): DayRange {
+	const end = currentMonth(today).end;
+	const first = new Date(today.getFullYear(), today.getMonth() - (count - 1), 1);
+	return { start: day(first.getFullYear(), first.getMonth() + 1, 1), end };
+}

@@ -1,0 +1,64 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, workspace_id, user_id, chat_id, telegram_user_id, telegram_username,\n                  ai_session_id, linked_at\n           FROM telegram_links\n           WHERE chat_id = $1 AND deleted_at IS NULL",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "workspace_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "user_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "chat_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 4,
+        "name": "telegram_user_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 5,
+        "name": "telegram_username",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "ai_session_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "linked_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "22bf0b07ab6454a12343a2cd791fe7a1eea051cb066e683b4c1659a1a003d0f9"
+}

@@ -236,7 +236,7 @@ def test_a_missing_model_key_is_an_error_event_too(
 
 
 def test_the_catalog_is_attached_and_no_tool_is_forced(owe1_client: Owe1TestClient) -> None:
-    """US-030 attaches the eleven (D17). Nothing forces one: a turn that is
+    """US-030 attaches the fourteen (D17, D88). Nothing forces one: a turn that is
     only a question is answered as a question. The loop itself is covered in
     tests/test_chat_loop.py."""
     client = ScriptedClient()

@@ -1,5 +1,6 @@
 import { error } from '@sveltejs/kit';
 
+import { isArtifactCanvas, readCanvas } from '$lib/canvas';
 import { INVALIDATION_KEYS } from '$lib/chat-invalidation';
 import { filesFromAttachments } from '$lib/chat-tools';
 import { ApiError } from '$lib/server/api';
@@ -90,10 +91,17 @@ async function describeFiles(
 	return Object.fromEntries(found.filter((file) => file !== null).map((file) => [file.id, file]));
 }
 
-/** The vault file `?canvas=…&id=…` points at, or null. */
+/**
+ * The vault file `?canvas=…&id=…` points at, or null.
+ *
+ * Only the receipt and the manual form are keyed by a file. An analysis is
+ * keyed by its tool call and carries its own data (D88), so it asks the
+ * vault nothing.
+ */
 async function describeCanvasFile(url: URL, token?: string): Promise<VaultFile | null> {
-	const id = url.searchParams.get('canvas') ? (url.searchParams.get('id') ?? '') : '';
-	if (id === '') return null;
+	const canvas = readCanvas(url);
+	if (canvas === null || isArtifactCanvas(canvas)) return null;
+	const id = canvas.id;
 
 	try {
 		return (await readFile(id, token)).data ?? null;

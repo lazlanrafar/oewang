@@ -234,7 +234,40 @@ class ColumnMappingRequest(BaseModel):
         return rows
 
 
+#: Bounds on a categorize request. A receipt with more than this many
+#: lines is categorised by its first ones; a workspace with more than this
+#: many expense categories is not a list a model picks from well anyway.
+MAX_CATEGORIZE_ITEMS = 40
+MAX_CATEGORIES = 60
+MAX_LABEL_CHARS = 120
+
+
+class CategorizeRequest(BaseModel):
+    """What a saved receipt was, and what it could be filed under (D86).
+
+    Strings only: the API sends what extraction already read, never the
+    document, so this route cannot be used to read an image again.
+    """
+
+    request_id: str = Field(min_length=1, max_length=64)
+    workspace_id: str = Field(min_length=1, max_length=64)
+    merchant: str | None = Field(default=None, max_length=MAX_LABEL_CHARS)
+    items: list[str] = Field(default_factory=list)
+    categories: list[str] = Field(default_factory=list, max_length=MAX_CATEGORIES)
+
+    @field_validator("items")
+    @classmethod
+    def _clamp_items(cls, value: list[str]) -> list[str]:
+        return [item.strip()[:MAX_LABEL_CHARS] for item in value[:MAX_CATEGORIZE_ITEMS]]
+
+    @field_validator("categories")
+    @classmethod
+    def _clamp_categories(cls, value: list[str]) -> list[str]:
+        return [name.strip()[:MAX_LABEL_CHARS] for name in value if name.strip()]
+
+
 __all__ = [
+    "CategorizeRequest",
     "ColumnMappingRequest",
     "Document",
     "ExtractionRequest",

@@ -1,53 +1,49 @@
 <script lang="ts">
 	/**
-	 * The conversation list (CHAT-1).
+	 * The conversation list (CHAT-1), as the old app's history dropdown.
 	 *
-	 * Ported from the old app's `chat-history.tsx`, which was a dropdown
-	 * with its own search, debounce and keyboard handling. Here it is a
-	 * column beside the conversation, because the session list is where a
-	 * chat is navigated from, not a menu hidden behind an icon.
+	 * Rows of 32px: the title, how long ago, and on hover the actions. The
+	 * composer owns the panel around it and opens it from its history button.
+	 * Two differences from the old list: delete works and asks first (UI-4),
+	 * and rename is kept, because it shipped with the session list. The old
+	 * search box is gone: it never filtered anything.
 	 *
 	 * It holds no data and fetches nothing: rows come in as props and every
-	 * action is a callback, so the page that mounts it decides what rename
-	 * and delete mean.
+	 * action is a callback, so the page decides what rename and delete mean.
 	 */
-	import MessageSquarePlus from '@lucide/svelte/icons/message-square-plus';
-	import MoreHorizontal from '@lucide/svelte/icons/more-horizontal';
 	import PencilLine from '@lucide/svelte/icons/pencil-line';
 	import Trash2 from '@lucide/svelte/icons/trash-2';
 
 	import { t } from '$lib/i18n';
 	import type { SessionItem } from '$lib/chat';
+	import { cn } from '$lib/utils.js';
 
 	import { Button } from '../../atoms/button/index.js';
 	import * as Dialog from '../../atoms/dialog/index.js';
-	import * as DropdownMenu from '../../atoms/dropdown-menu/index.js';
 	import { Input } from '../../atoms/input/index.js';
-	import { ScrollArea } from '../../atoms/scroll-area/index.js';
 	import { ConfirmDialog } from '../../molecules/confirm-dialog/index.js';
 
 	let {
 		sessions,
 		activeId = null,
 		basePath = '/chat',
-		onNew,
+		onOpen,
 		onRename,
 		onDelete
 	}: {
 		sessions: SessionItem[];
 		activeId?: string | null;
 		basePath?: string;
-		onNew: () => void;
+		/** A row was followed, so the panel around it can close. */
+		onOpen?: () => void;
 		onRename: (id: string, title: string) => void;
 		onDelete: (id: string) => void;
 	} = $props();
 
 	/*
-	 * The session a menu action is aimed at, and what it is being called.
-	 *
-	 * Each dialog's open flag is its own state and is bound, not derived
-	 * from the target: a dialog closes itself, and a one-way `open` would
-	 * leave this side believing it is still open, so it never reopens.
+	 * The session an action is aimed at. Each dialog's open flag is its own
+	 * state and is bound: a dialog closes itself, and a one-way flag would
+	 * leave this side believing it is still open.
 	 */
 	let target = $state<SessionItem | null>(null);
 	let renameOpen = $state(false);
@@ -73,77 +69,56 @@
 	}
 </script>
 
-<div class="flex h-full w-full flex-col gap-3">
-	<div class="flex items-center justify-between gap-2 px-1">
-		<h2 class="text-subtle text-caption uppercase">{t('chat.conversations')}</h2>
-		<Button variant="ghost" size="icon" title={t('chat.new_chat_hint')} onclick={onNew}>
-			<MessageSquarePlus />
-			<span class="sr-only">{t('chat.new_chat')}</span>
-		</Button>
-	</div>
-
-	{#if sessions.length === 0}
-		<p class="text-subtle text-body px-1">{t('chat.no_conversations_body')}</p>
-	{:else}
-		<ScrollArea class="min-h-0 flex-1">
-			<ul class="flex flex-col gap-1 pr-2">
-				{#each sessions as session (session.id)}
-					<li
-						class="group flex items-center gap-1 border border-transparent px-2 py-2 transition-colors
-							{session.id === activeId ? 'bg-muted border-border' : 'hover:bg-muted/60'}"
+{#if sessions.length === 0}
+	<p class="text-muted-foreground flex items-center justify-center py-8 text-sm">
+		{t('chat.history_empty')}
+	</p>
+{:else}
+	<ul class="flex flex-col gap-1">
+		{#each sessions as session (session.id)}
+			<li
+				class={cn(
+					'group relative flex h-8 items-center justify-between px-2 text-sm transition-colors',
+					session.id === activeId ? 'bg-black/5 dark:bg-white/5' : 'hover:bg-black/5 dark:hover:bg-white/5'
+				)}
+			>
+				<a
+					href="{basePath}/{session.id}"
+					class="min-w-0 flex-1"
+					aria-current={session.id === activeId ? 'page' : undefined}
+					onclick={() => onOpen?.()}
+				>
+					<span class="ml-2 line-clamp-1 text-[#666] dark:text-[#999]">{session.title}</span>
+				</a>
+				<span class="ml-2 flex shrink-0 items-center gap-1">
+					<span class="text-xs whitespace-nowrap text-[#666] dark:text-[#999]">{session.when}</span>
+					<button
+						type="button"
+						class="hover:bg-black/5 dark:hover:bg-white/5 pointer-events-none w-0 overflow-hidden p-1 opacity-0 transition-all duration-200 group-focus-within:pointer-events-auto group-focus-within:w-6 group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:w-6 group-hover:opacity-100"
+						aria-label={`${t('chat.rename')}: ${session.title}`}
+						onclick={() => startRename(session)}
 					>
-						<a
-							href="{basePath}/{session.id}"
-							class="min-w-0 flex-1"
-							aria-current={session.id === activeId ? 'page' : undefined}
-						>
-							<span class="text-body block truncate">{session.title}</span>
-							<span class="text-subtle text-caption block truncate">
-								{session.preview}
-							</span>
-						</a>
-
-						<span class="text-subtle text-caption shrink-0">{session.when}</span>
-
-						<DropdownMenu.Root>
-							<DropdownMenu.Trigger>
-								{#snippet child({ props })}
-									<Button
-										{...props}
-										variant="ghost"
-										size="icon"
-										class="size-7 shrink-0"
-										title={t('common.actions')}
-									>
-										<MoreHorizontal />
-										<span class="sr-only">{t('common.actions')}</span>
-									</Button>
-								{/snippet}
-							</DropdownMenu.Trigger>
-							<DropdownMenu.Content align="end" class="w-40">
-								<DropdownMenu.Item onclick={() => startRename(session)}>
-									<PencilLine />
-									{t('chat.rename')}
-								</DropdownMenu.Item>
-								<DropdownMenu.Item variant="destructive" onclick={() => startDelete(session)}>
-									<Trash2 />
-									{t('common.delete')}
-								</DropdownMenu.Item>
-							</DropdownMenu.Content>
-						</DropdownMenu.Root>
-					</li>
-				{/each}
-			</ul>
-		</ScrollArea>
-	{/if}
-</div>
+						<PencilLine class="text-muted-foreground size-3.5" />
+					</button>
+					<button
+						type="button"
+						class="hover:bg-destructive/10 pointer-events-none w-0 overflow-hidden p-1 opacity-0 transition-all duration-200 group-focus-within:pointer-events-auto group-focus-within:w-6 group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:w-6 group-hover:opacity-100"
+						aria-label={`${t('common.delete')}: ${session.title}`}
+						onclick={() => startDelete(session)}
+					>
+						<Trash2 class="text-muted-foreground hover:text-destructive size-3.5" />
+					</button>
+				</span>
+			</li>
+		{/each}
+	</ul>
+{/if}
 
 <Dialog.Root bind:open={renameOpen}>
 	<Dialog.Content class="sm:max-w-sm">
 		<Dialog.Header>
 			<Dialog.Title>{t('chat.rename_title')}</Dialog.Title>
 		</Dialog.Header>
-
 		<form
 			class="flex flex-col gap-4"
 			onsubmit={(event) => {
@@ -156,7 +131,6 @@
 				<!-- svelte-ignore a11y_autofocus -- the dialog exists to type in -->
 				<Input bind:value={draftTitle} autofocus maxlength={120} />
 			</label>
-
 			<Dialog.Footer>
 				<Button type="button" variant="outline" onclick={() => (renameOpen = false)}>
 					{t('common.cancel')}

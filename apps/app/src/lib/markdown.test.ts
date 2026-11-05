@@ -9,6 +9,13 @@ describe('renderAssistantMarkdown', () => {
 		expect(html).toContain('<td>1</td>');
 	});
 
+	it('wraps a table so it scrolls inside the column, and keeps a right-aligned column', () => {
+		const html = renderAssistantMarkdown('| A | B |\n| --- | ---: |\n| 1 | 2 |');
+		expect(html.startsWith('<div class="markdown-table"><table>')).toBe(true);
+		expect(html).toContain('</table></div>');
+		expect(html).toContain('<td style="text-align:right">2</td>');
+	});
+
 	it('escapes raw HTML instead of parsing it', () => {
 		// The whole safety argument rests on this: with html off there is
 		// no HTML to sanitize, so there is no second sanitizer.

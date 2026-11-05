@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
+import { artifactsOf } from './artifacts';
+
 import {
 	deriveToolLabel,
 	filesFromAttachments,
 	presentToolCalls,
 	toolCallsFromAttachments,
+	toolDetail,
 	toolLabel,
 	type ToolCall
 } from './chat-tools';
@@ -119,9 +122,38 @@ describe('toolCallsFromAttachments', () => {
 				name: 'create_transaction',
 				args: { amount: '50000' },
 				status: 'ok',
-				summary: 'Created expense 50,000 in Cash.'
+				summary: 'Created expense 50,000 in Cash.',
+				artifact: null
 			}
 		]);
+	});
+
+	it('reads back the artifact an analysis call stored (D88)', () => {
+		const payload = { from: '2026-11-01', to: '2026-11-30' };
+		const calls = toolCallsFromAttachments({
+			tool_calls: [
+				{
+					id: 't1',
+					name: 'get_burn_rate',
+					result: { ok: true, summary: 'x' },
+					artifact: { type: 'burn-rate', payload }
+				},
+				{
+					id: 't2',
+					name: 'get_burn_rate',
+					result: { ok: true, summary: 'x' },
+					artifact: { type: 'nonsense', payload }
+				}
+			]
+		});
+
+		expect(calls[0].artifact).toEqual({ kind: 'burn-rate', payload });
+		expect(calls[1].artifact).toBeNull();
+		expect(artifactsOf([{ toolCalls: calls }]).map((entry) => entry.id)).toEqual(['t1']);
+		// The live and the stored copy of one answer give one tab.
+		expect(
+			artifactsOf([{ toolCalls: calls }, { toolCalls: calls }]).map((entry) => entry.id)
+		).toEqual(['t1']);
 	});
 
 	it('reports a refused call as failed', () => {
@@ -165,5 +197,23 @@ describe('filesFromAttachments', () => {
 
 	it('skips a record with no file id', () => {
 		expect(filesFromAttachments({ files: [{ name: 'receipt.jpg' }] })).toEqual([]);
+	});
+});
+
+describe('toolDetail', () => {
+	it('names the range a call covers', () => {
+		expect(toolDetail({ args: { from: '2026-09-01', to: '2026-11-30' } })).toBe(
+			'1 Sept to 30 Nov 2026'
+		);
+	});
+
+	it('quotes a search phrase, shortened', () => {
+		expect(toolDetail({ args: { query: 'warung' } })).toBe('“warung”');
+		expect(toolDetail({ args: { query: 'x'.repeat(60) } })?.length).toBe(42);
+	});
+
+	it('shows nothing it cannot read', () => {
+		expect(toolDetail({ args: { amount: '50000' } })).toBeNull();
+		expect(toolDetail({ args: { from: 'yesterday', to: 'today' } })).toBeNull();
 	});
 });

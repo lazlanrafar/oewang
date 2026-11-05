@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE telegram_link_tokens\n           SET used_at = now()\n           WHERE token_hash = $1 AND used_at IS NULL AND expires_at > now()\n           RETURNING workspace_id, user_id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "workspace_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "user_id",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "9080649cda63448e41d84d7c8d16fbc53bc3004a17c7c1440f7ed6f298ea498c"
+}

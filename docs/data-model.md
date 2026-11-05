@@ -24,7 +24,7 @@ PostgreSQL 16. This doc is the source of truth for every table and column. No ot
 
 ## Tables in scope
 
-Nineteen tables. The sixteen carried from the old app's schema, plus `refresh_tokens` and `password_reset_tokens` (D38, AUTH-10) and `exchange_rates` (D44). Carried (see [legacy app](reference/legacy-app.md#schema-mapping)) with the billing, quota and integration columns stripped (D8).
+Twenty-two tables. The sixteen carried from the old app's schema, plus `refresh_tokens` and `password_reset_tokens` (D38, AUTH-10), `exchange_rates` (D44), and the three Telegram tables (D83). Carried (see [legacy app](reference/legacy-app.md#schema-mapping)) with the billing, quota and integration columns stripped (D8).
 
 ```mermaid
 erDiagram
@@ -46,6 +46,10 @@ erDiagram
     workspaces ||--|| ai_agent_settings : "configures"
     workspaces ||--o{ audit_logs : "records"
     workspaces ||--o{ transaction_import_jobs : "runs"
+    workspaces ||--o{ telegram_links : "has"
+    users ||--o{ telegram_links : "links"
+    ai_sessions ||--o| telegram_links : "converses in"
+    workspaces ||--o{ telegram_link_tokens : "mints"
 ```
 
 ### Identity and tenancy
@@ -219,7 +223,7 @@ Deleting the default wallet hands the flag to the next wallet in display order, 
 | `description` | text | Free text note |
 | `is_ready` | boolean | Reviewed flag, default false |
 | `is_exported` | boolean | Included in a CSV export, default false (TXN-10) |
-| `source` | text | `web`, `chat`, `import` or `receipt`. How the row was created |
+| `source` | text | `web`, `chat`, `import`, `receipt` or `telegram`. How the row was created (D74, D86) |
 | `fingerprint` | text | Deterministic content hash, set on imported rows only. Null for manual entry (TXN-16, D29) |
 | `created_at`, `updated_at`, `deleted_at` | timestamp | |
 
@@ -436,7 +440,7 @@ Dropped: `model`, `temperature`, `max_steps`. The old app stored and exposed all
 | `entity_id` | text | Affected row ID |
 | `before` | jsonb | Nullable |
 | `after` | jsonb | Nullable |
-| `source` | text | `web`, `chat`, `import` or `receipt`. Matches `transactions.source`. New in this rewrite |
+| `source` | text | `web`, `chat`, `import`, `receipt` or `telegram`. Matches `transactions.source`. New in this rewrite |
 | `created_at` | timestamp | |
 
 ```sql
@@ -445,6 +449,56 @@ CREATE INDEX audit_logs_workspace_entity_idx
 ```
 
 Append-only. The row is written inside the mutation's database transaction (D14, OPS-1). `source` is new: in the old app there was no way to tell a chat-driven write from a manual one.
+
+### Telegram
+
+Added by D83. The flows are in [Telegram](features/telegram.md).
+
+#### `telegram_links`
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | text | CUID2, primary key |
+| `workspace_id` | text | FK workspaces, cascade |
+| `user_id` | text | FK users, cascade. The member the chat acts for |
+| `chat_id` | bigint | Telegram's chat id. Every update is looked up by it |
+| `telegram_user_id` | bigint | The Telegram account that opened the link. Every update must come from it (TG-2) |
+| `telegram_username` | text | Nullable. Shown on the Apps page, never used to decide anything |
+| `ai_session_id` | text | Nullable, FK ai_sessions, set null. The conversation text goes to, made on the first message |
+| `linked_at` | timestamptz | |
+| `created_at`, `updated_at`, `deleted_at` | timestamptz | Soft delete ends a link (OPS-2) |
+
+```sql
+CREATE UNIQUE INDEX telegram_links_member_idx
+  ON telegram_links (workspace_id, user_id) WHERE deleted_at IS NULL;
+CREATE UNIQUE INDEX telegram_links_chat_idx
+  ON telegram_links (chat_id) WHERE deleted_at IS NULL;
+```
+
+One live link per member per workspace, and one per chat: a chat acting for two workspaces would have to guess which one a receipt belongs to (D85).
+
+#### `telegram_link_tokens`
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | text | CUID2, primary key |
+| `workspace_id` | text | FK workspaces, cascade |
+| `user_id` | text | FK users, cascade |
+| `token_hash` | text | SHA-256 of the `start` value, unique. The value itself is never stored (AUTH-8) |
+| `expires_at` | timestamptz | Ten minutes after minting |
+| `used_at` | timestamptz | Set by the claim, in the same statement that checks it |
+| `created_at` | timestamptz | |
+
+The same shape and rules as `password_reset_tokens`.
+
+#### `telegram_updates`
+
+| Column | Type | Notes |
+|---|---|---|
+| `update_id` | bigint | Primary key. Telegram's own id |
+| `received_at` | timestamptz | |
+
+Not workspace-scoped: an update is claimed before anyone knows which workspace it is for. A row means the update was handled, so one delivered again after a restart is skipped (D84). Rows older than 48 hours are deleted, which is the one hard delete in the schema and is on a table with no workspace data: Telegram never redelivers an update older than a day.
 
 ## Balance arithmetic
 

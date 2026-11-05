@@ -20,16 +20,19 @@
 	 */
 	import type { Snippet } from 'svelte';
 
-	import Bot from '@lucide/svelte/icons/bot';
+	import PanelRight from '@lucide/svelte/icons/panel-right';
 	import Paperclip from '@lucide/svelte/icons/paperclip';
 	import Sparkles from '@lucide/svelte/icons/sparkles';
 
 	import type { MessageItem } from '$lib/chat';
+	import type { TurnPhase } from '$lib/chat-stream';
 	import { entityTargetFromDataset, type EntityTarget } from '$lib/chat-entities';
 	import { t } from '$lib/i18n';
 	import { renderAssistantMarkdown } from '$lib/markdown';
 
 	import * as Empty from '../../molecules/empty/index.js';
+	import { artifactTitle } from './canvas/artifact-title.js';
+	import ChatActivity from './chat-activity.svelte';
 	import MessageActions from './message-actions.svelte';
 	import ToolCallGroup from './tool-call-group.svelte';
 
@@ -42,6 +45,9 @@
 		onEntity,
 		onCopy,
 		onRegenerate,
+		onArtifact,
+		activeArtifactId = null,
+		activity = null,
 		emptyActions
 	}: {
 		messages: MessageItem[];
@@ -54,6 +60,12 @@
 		onEntity: (target: EntityTarget) => void;
 		onCopy: (message: MessageItem) => void;
 		onRegenerate?: () => void;
+		/** Open the analysis a tool call left in the canvas (D88). */
+		onArtifact?: (id: string) => void;
+		/** The analysis the canvas is showing, so its toggle reads as pressed. */
+		activeArtifactId?: string | null;
+		/** What the answer still arriving is doing, for its live activity lines. */
+		activity?: TurnPhase | null;
 		/** Suggestion chips, mounted by the page on an empty conversation. */
 		emptyActions?: Snippet;
 	} = $props();
@@ -103,22 +115,20 @@
 {:else}
 	<ol class="flex flex-col gap-6">
 		{#each messages as message (message.id)}
-			<li class="flex gap-3 {message.role === 'user' ? 'flex-row-reverse' : ''}">
-				{#if message.role !== 'user'}
-					<span
-						class="bg-muted text-subtle flex size-8 shrink-0 items-center justify-center"
-						aria-hidden="true"
-					>
-						<Bot class="size-4" />
-					</span>
-				{/if}
+			<!-- The old app's shape: the user's words in a bubble on the right,
+			     the answer as plain text on the left. Who and when stay for a
+			     screen reader, which has no alignment to go by. -->
+			<li class="flex {message.role === 'user' ? 'justify-end' : ''}">
+				<div
+					class="flex min-w-0 flex-col gap-1 {message.role === 'user'
+						? 'max-w-[85%] items-end'
+						: 'w-full'}"
+				>
+					<span class="sr-only">{message.who} · {message.at}</span>
 
-				<div class="flex max-w-[42rem] min-w-0 flex-col gap-1">
-					<span class="text-subtle text-caption {message.role === 'user' ? 'text-right' : ''}">
-						{message.who} · {message.at}
-					</span>
-
-					{#if message.toolCalls.length > 0}
+					{#if message.id === streamingId}
+						<ChatActivity calls={message.toolCalls} phase={activity} />
+					{:else if message.toolCalls.length > 0}
 						<ToolCallGroup calls={message.toolCalls} />
 					{/if}
 
@@ -138,7 +148,7 @@
 						{:else}
 							<p
 								class="text-body whitespace-pre-wrap {message.role === 'user'
-									? 'bg-muted px-3 py-2'
+									? 'bg-muted rounded-2xl rounded-br-none px-4 py-2'
 									: ''}"
 							>
 								{message.content}
@@ -167,6 +177,29 @@
 						</ul>
 					{/if}
 
+					{#if onArtifact && message.toolCalls.some((call) => call.artifact)}
+						<ul class="flex flex-wrap gap-2">
+							{#each message.toolCalls as call (call.id)}
+								{#if call.artifact}
+									<li>
+										<button
+											type="button"
+											class="border-border text-caption hover:border-foreground/40 flex items-center gap-1.5 border px-2 py-1 transition-colors {call.id ===
+											activeArtifactId
+												? 'bg-muted'
+												: ''}"
+											aria-pressed={call.id === activeArtifactId}
+											onclick={() => onArtifact(call.id)}
+										>
+											<PanelRight class="size-3.5" aria-hidden="true" />
+											{artifactTitle(call.artifact)}
+										</button>
+									</li>
+								{/if}
+							{/each}
+						</ul>
+					{/if}
+
 					{#if message.role === 'assistant' && message.id !== streamingId && message.content !== ''}
 						<MessageActions
 							{busy}
@@ -183,45 +216,104 @@
 <style>
 	/*
 	 * Scoped styles do not reach `{@html}` content, so these are global
-	 * inside the `.markdown` wrapper. The values are the design system's
-	 * own: no rounding, no typography plugin.
+	 * inside the `.markdown` wrapper. Colour tokens are HSL triples in
+	 * app.css, so each goes through `hsl()`; a bare `var(--border)` is not a
+	 * colour and draws nothing.
+	 *
+	 * Reading comes first: a line height with room, and a full blank line
+	 * between paragraphs, so an answer reads as paragraphs rather than as
+	 * one block.
 	 */
-	.markdown :global(p) {
-		margin-bottom: 0.75rem;
+	.markdown {
+		line-height: 1.7;
 	}
 
-	.markdown :global(p:last-child) {
+	.markdown :global(p),
+	.markdown :global(ul),
+	.markdown :global(ol),
+	.markdown :global(pre),
+	.markdown :global(blockquote),
+	.markdown :global(.markdown-table) {
+		margin-bottom: 1rem;
+	}
+
+	.markdown :global(:is(p, ul, ol, pre, blockquote, .markdown-table):last-child) {
 		margin-bottom: 0;
+	}
+
+	.markdown :global(h1),
+	.markdown :global(h2),
+	.markdown :global(h3),
+	.markdown :global(h4) {
+		font-family: var(--font-serif);
+		font-size: 1.125rem;
+		line-height: 1.4;
+		margin: 1.5rem 0 0.5rem;
+	}
+
+	.markdown :global(:is(h1, h2, h3, h4):first-child) {
+		margin-top: 0;
 	}
 
 	.markdown :global(ul),
 	.markdown :global(ol) {
-		margin: 0 0 0.75rem 1.25rem;
+		padding-left: 1.25rem;
 		list-style: revert;
+	}
+
+	.markdown :global(li + li) {
+		margin-top: 0.375rem;
+	}
+
+	.markdown :global(strong) {
+		font-weight: 600;
+	}
+
+	/*
+	 * Tables as the canvas draws them: a border on every cell, room inside
+	 * each, the header in the subtle colour. Figures line up on their
+	 * digits. A column the model marked right-aligned (`---:`) keeps it.
+	 */
+	.markdown :global(.markdown-table) {
+		max-width: 100%;
+		overflow-x: auto;
 	}
 
 	.markdown :global(table) {
 		width: 100%;
-		margin-bottom: 0.75rem;
 		border-collapse: collapse;
+		font-size: 0.875rem;
+		line-height: 1.4;
+		font-variant-numeric: tabular-nums;
 	}
 
 	.markdown :global(th),
 	.markdown :global(td) {
-		border: 1px solid var(--border);
-		padding: 0.25rem 0.5rem;
+		border: 1px solid hsl(var(--border));
+		padding: 0.4375rem 0.75rem;
 		text-align: left;
+		vertical-align: middle;
+		white-space: nowrap;
+	}
+
+	.markdown :global(th) {
+		color: hsl(var(--subtle));
+		font-weight: 500;
+	}
+
+	.markdown :global(th[style*='right']),
+	.markdown :global(td[style*='right']) {
+		text-align: right;
 	}
 
 	.markdown :global(code) {
-		background: var(--muted);
+		background: hsl(var(--muted));
 		padding: 0.1rem 0.3rem;
 		font-family: var(--font-mono);
 	}
 
 	.markdown :global(pre) {
-		background: var(--muted);
-		margin-bottom: 0.75rem;
+		background: hsl(var(--muted));
 		overflow-x: auto;
 		padding: 0.75rem;
 	}
@@ -232,7 +324,7 @@
 	}
 
 	.markdown :global(blockquote) {
-		border-left: 2px solid var(--border);
+		border-left: 2px solid hsl(var(--border));
 		padding-left: 0.75rem;
 	}
 

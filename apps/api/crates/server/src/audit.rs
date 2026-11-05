@@ -15,6 +15,8 @@ pub const SOURCE_WEB: &str = "web";
 pub const SOURCE_CHAT: &str = "chat";
 pub const SOURCE_IMPORT: &str = "import";
 pub const SOURCE_RECEIPT: &str = "receipt";
+/// A write that arrived as a Telegram message or a tapped button (D86).
+pub const SOURCE_TELEGRAM: &str = "telegram";
 
 /// Who the write is for, and where it came from.
 ///

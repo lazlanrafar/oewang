@@ -119,3 +119,27 @@ def test_an_empty_workspace_says_so() -> None:
     assert "This workspace has no categories yet." in prompt
     # No timezone was given, so the line is dropped rather than guessed.
     assert "- Timezone:" not in prompt
+
+
+def test_the_web_prompt_is_unchanged_by_the_channel_default() -> None:
+    """The golden file is the web prompt; naming the channel changes nothing."""
+    assert build_system_prompt(
+        role="owner", context=CONTEXT, settings=AgentSettings()
+    ) == build_system_prompt(role="owner", context=CONTEXT, settings=AgentSettings(), channel="web")
+
+
+def test_a_telegram_turn_is_asked_for_plain_text_without_links() -> None:
+    """A Telegram reply is sent with no parse mode, so Markdown would arrive
+    as literal asterisks and an entity link is a route that only exists in
+    the web app (D86)."""
+    prompt = build_system_prompt(
+        role="owner", context=CONTEXT, settings=AgentSettings(), channel="telegram"
+    )
+
+    assert "Write plain text for a phone chat" in prompt
+    assert "Markdown table" not in prompt
+    assert "## Entity links" not in prompt
+    assert "#txn:" not in prompt
+    # Everything that is a control stays.
+    assert "You do no arithmetic" in prompt
+    assert "A destructive tool needs a separate confirming turn" in prompt

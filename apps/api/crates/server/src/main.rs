@@ -14,9 +14,11 @@ mod fx;
 mod hardening_tests;
 mod limits;
 mod owe1;
+mod reports;
 mod response;
 mod routes;
 mod state;
+mod telegram;
 mod transactions;
 mod vault;
 mod workspaces;
@@ -157,6 +159,14 @@ async fn main() -> anyhow::Result<()> {
     let rate_limits = limits::RateLimiter::new(config.rate_limits);
     limits::spawn_sweeper(rate_limits.clone());
 
+    let telegram = config.telegram.as_ref().map(|bot| telegram::Bot {
+        client: oewang_clients::TelegramClient::new(
+            bot.api_url.clone(),
+            bot.token.expose().to_string(),
+        ),
+        username: bot.username.clone(),
+    });
+
     let state = AppState {
         db,
         config: Arc::new(config),
@@ -168,9 +178,11 @@ async fn main() -> anyhow::Result<()> {
         ai,
         turns,
         rate_limits,
+        telegram,
     };
 
     spawn_rate_refresher(state.clone(), fx_refresh_interval);
+    telegram::poller::spawn(state.clone());
 
     let app = Router::new()
         .route("/health", get(routes::health::live))
@@ -336,6 +348,8 @@ fn protected_routes(state: AppState) -> Router<AppState> {
         // Exchange rates. A suggestion for the form; nothing reads it on
         // the way out (D39).
         .route("/v1/fx/rate", get(fx::handler::rate))
+        // Reports. The overview page's figures (D87).
+        .route("/v1/overview", get(reports::handler::overview))
         // Transactions. The fixed sub-paths are registered before `{id}`,
         // so `/summary` is never read as a transaction id.
         .route(
@@ -431,6 +445,18 @@ fn protected_routes(state: AppState) -> Router<AppState> {
         .route(
             "/v1/internal/tools/execute",
             post(ai::handler::execute_tool),
+        )
+        // Telegram (D83 to D86). The member's own link in the token's
+        // workspace; the bot itself is reached by long polling, not by a
+        // route (D84).
+        .route("/v1/integrations/telegram", get(telegram::handler::status))
+        .route(
+            "/v1/integrations/telegram/link-token",
+            post(telegram::handler::link_token),
+        )
+        .route(
+            "/v1/integrations/telegram/unlink",
+            post(telegram::handler::unlink),
         )
         // Files. Bytes travel as base64 inside the envelope; no signed
         // object-storage URL exists anywhere (D23, VLT-3).

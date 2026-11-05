@@ -5,3 +5,7 @@ export { default as ChatMessages } from './chat-messages.svelte';
 export { default as ChatSuggestions } from './chat-suggestions.svelte';
 export { default as MessageActions } from './message-actions.svelte';
 export { default as ToolCallGroup } from './tool-call-group.svelte';
+export { default as ChatDock } from './chat-dock.svelte';
+export { default as ChatHeader } from './chat-header.svelte';
+export * from './canvas/index.js';
+export { default as ChatActivity } from './chat-activity.svelte';

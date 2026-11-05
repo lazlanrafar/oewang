@@ -33,6 +33,7 @@
 		title,
 		description,
 		onClose,
+		toolbar,
 		children
 	}: {
 		open?: boolean;
@@ -40,6 +41,8 @@
 		/** One line under the title, for what the panel is asking of the user. */
 		description?: string;
 		onClose: () => void;
+		/** A strip under the header, such as the tabs between analyses. */
+		toolbar?: Snippet;
 		children: Snippet;
 	} = $props();
 
@@ -131,6 +134,10 @@
 			<X class="size-4" />
 		</Button>
 	</header>
+
+	{#if toolbar}
+		<div class="shrink-0 border-b">{@render toolbar()}</div>
+	{/if}
 
 	<div class="min-h-0 flex-1 overflow-y-auto">
 		{@render children()}

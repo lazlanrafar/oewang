@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { canvasParams, readCanvas, type CanvasState } from './canvas';
+import { canvasParams, isArtifactCanvas, readCanvas, type CanvasState } from './canvas';
 
 const at = (query: string) => new URL(`https://oewang.test/chat/clx1${query}`);
 
@@ -51,5 +51,20 @@ describe('canvasParams', () => {
 		const url = at(`?canvas=${params.canvas}&id=${params.id}`);
 
 		expect(readCanvas(url)).toEqual(state);
+	});
+});
+
+describe('analysis canvases (D88)', () => {
+	it('reads each analysis kind, keyed by its tool call', () => {
+		for (const kind of ['spending', 'income', 'burn-rate']) {
+			const state = readCanvas(at(`?canvas=${kind}&id=toolu_1`));
+			expect(state).toEqual({ kind, id: 'toolu_1' });
+			expect(isArtifactCanvas(state)).toBe(true);
+		}
+	});
+
+	it('does not treat the receipt or the form as an analysis', () => {
+		expect(isArtifactCanvas(readCanvas(at('?canvas=receipt&id=clxfile')))).toBe(false);
+		expect(isArtifactCanvas(null)).toBe(false);
 	});
 });

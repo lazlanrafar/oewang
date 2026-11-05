@@ -4,7 +4,7 @@
 modules. Do not edit by hand: change the configuration and run it
 again.** CI runs `--check` and fails when this file is stale.
 
-Last generated 2026-11-03.
+Last generated 2026-11-05.
 
 A value shown as `secret` is never printed, logged or committed
 (OPS-3). `required` means the process refuses to start without it.
@@ -57,6 +57,9 @@ Read by `apps/api/crates/server/src/config.rs` at startup.
 | `S3_SECRET_ACCESS_KEY` | secret |
 | `STORAGE_BACKEND` | unset |
 | `STORAGE_LOCAL_PATH` | unset |
+| `TELEGRAM_API_URL` | unset |
+| `TELEGRAM_BOT_TOKEN` | unset |
+| `TELEGRAM_BOT_USERNAME` | unset |
 | `TEST_EMPTY` | required |
 | `TRUST_PROXY_HEADERS` | unset |
 | `UPLOADS_PER_WORKSPACE_PER_DAY` | `200` |

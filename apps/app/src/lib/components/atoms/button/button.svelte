@@ -25,6 +25,9 @@
 				outline: 'border bg-transparent hover:bg-accent hover:text-accent-foreground',
 				secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
 				ghost: 'hover:bg-accent hover:text-accent-foreground',
+				// A ghost that removes, as the old app's row trash: red at rest, a red
+				// tint on hover, never the filled destructive block in a table row.
+				'ghost-destructive': 'text-destructive hover:bg-destructive/10 hover:text-destructive',
 				link: 'text-primary underline-offset-4 hover:underline'
 			},
 			size: {

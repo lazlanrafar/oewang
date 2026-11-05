@@ -8,6 +8,9 @@
 				default: "bg-primary text-primary-foreground [a]:hover:bg-primary/80",
 				secondary: "bg-secondary text-secondary-foreground [a]:hover:bg-secondary/80",
 				destructive: "bg-destructive/10 [a]:hover:bg-destructive/20 text-destructive dark:bg-destructive/20",
+				// A state that is on: an app that is connected. Green on a
+				// green tint, as the old app's "Installed" pill.
+				success: "bg-green/10 text-green dark:bg-green/20 font-mono text-[10px]",
 				outline: "rounded-none border-border bg-transparent text-caption font-normal text-primary",
 				ghost: "hover:bg-muted hover:text-muted-foreground dark:hover:bg-muted/50",
 				link: "text-primary underline-offset-4 hover:underline",

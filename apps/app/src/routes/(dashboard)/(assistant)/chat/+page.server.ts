@@ -52,22 +52,38 @@ export const actions: Actions = {
 			return failure(error);
 		}
 
-		redirect(303, `/chat/${id}`);
+		redirect(303, backTo(form, `/chat/${id}`));
 	},
 
 	delete: async ({ request, locals }) => {
 		const form = await request.formData();
+		const id = text(form, 'id');
 
 		try {
-			await chat.deleteSession(text(form, 'id'), locals.accessToken);
+			await chat.deleteSession(id, locals.accessToken);
 		} catch (error) {
 			return failure(error);
 		}
 
-		// Back to `/chat`, which opens whatever is newest now.
-		redirect(303, '/chat');
+		// Back where the list was opened, unless that was the conversation
+		// just deleted: then `/chat`, which opens whatever is newest now.
+		const back = backTo(form, '/chat');
+		redirect(303, back.startsWith(`/chat/${id}`) ? '/chat' : back);
 	}
 };
+
+/**
+ * Where to land after an action, from the form's `back` field (D87).
+ *
+ * The list opens from the overview as well as from a conversation, and
+ * renaming from the overview should leave the reader there. Only a path on
+ * this site is followed: `//evil.test` and `/\evil.test` read as another
+ * origin to a browser, so anything but a single leading slash falls back.
+ */
+function backTo(form: FormData, fallback: string): string {
+	const back = text(form, 'back');
+	return /^\/(?![/\\])/.test(back) ? back : fallback;
+}
 
 function text(form: FormData, key: string): string {
 	return String(form.get(key) ?? '').trim();
