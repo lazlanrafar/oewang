@@ -1,8 +1,8 @@
 # Deployment
 
-Status: draft v0.1, 2026-11-03. Part of the [oewang docs](README.md). Implements [PRD](prd.md) OPS-6, OPS-7, SEC-8, SEC-20 and the deployment half of [D41](architecture.md#decision-log).
+Status: v0.2, 2026-11-05. Part of the [oewang docs](README.md). Implements [PRD](prd.md) OPS-6, OPS-7, SEC-8, SEC-20 and the deployment half of [D41](architecture.md#decision-log).
 
-Three containers plus PostgreSQL on Coolify, on the existing Hostinger VPS, with files in Cloudflare R2 (D41). This document describes the target. Nothing here has been provisioned: every value that needs a decision is listed under [Open questions](#open-questions) rather than filled in with a plausible guess.
+Three containers plus PostgreSQL on Coolify, on the existing Hostinger VPS, with files in Cloudflare R2 (D41). Provisioned on 2026-11-05; what exists is under [Production on Coolify](#production-on-coolify). What is still undecided is listed under [Open questions](#open-questions) rather than filled in with a plausible guess.
 
 ## Update this doc when
 
@@ -48,7 +48,22 @@ well as something the separate migration step runs.
 
 Image sizes as built on 2026-11-03: `api` 168 MB, `ai` 343 MB.
 
-`apps/app` has no production image yet; see [Open questions](#open-questions).
+`apps/app/Dockerfile` is the web app's: `adapter-node`'s server under bun, with a `HEALTHCHECK` against the app's own `/health`.
+
+## Production on Coolify
+
+Coolify project `oewang`, environment `production`. It replaced oewang old on 2026-11-05: the old `app`, `admin`, `api`, `artificial-intelligence` and `worker` applications were deleted, and the old marketing `website` (oewang.com) was kept as it was. A snapshot of the old environment is on the owner's machine, not in the repository.
+
+| Unit | Image | Domain |
+|---|---|---|
+| `app` | `ghcr.io/lazlanrafar/oewang/app` | app.oewang.com |
+| `api` | `ghcr.io/lazlanrafar/oewang/api` | api.oewang.com |
+| `ai` | `ghcr.io/lazlanrafar/oewang/ai` | none (OPS-6) |
+
+- **Images.** `.github/workflows/build-and-push.yml` builds each app's production Dockerfile on a push to `main` that touches it, pushes `:<sha>` and `:latest`, then pins the Coolify application to `:<sha>` and deploys. The repository secrets `COOLIFY_BASE_URL`, `COOLIFY_API_TOKEN` and `COOLIFY_{APP,API,AI}_UUID` drive that step. The packages are public, like the repository.
+- **Database.** Logical database `oewang_v2` on the shared PostgreSQL 18 instance in the Coolify project `infrastructure`, with the two roles described under [Migrations](#migrations). The old app's `oewang` database is on the same instance and untouched.
+- **Signing keys.** Generated on 2026-11-05 on the owner's machine (`~/.config/oewang/prod/`) and mounted into `api` and `ai` as Coolify file storage. That directory is the only copy outside Coolify.
+- **Model gateway.** `AI_BASE_URL` points at the self-hosted 9router on the same Docker network.
 
 ## Exactly one instance of each service
 
@@ -177,26 +192,43 @@ Nothing writes a key to disk at runtime, and nothing logs one ([hardening](secur
 
 ## Migrations
 
-The application role owns no DDL rights in production ([hardening](security/hardening.md#database)). Migrations therefore run as a separate role, in a separate step, before the new `api` container is promoted.
+The application role owns no DDL rights in production ([hardening](security/hardening.md#database)). Migrations therefore run as a separate role, before the application pool opens.
 
 Two roles on the same database:
 
 | Role | Rights | Used by |
 |---|---|---|
-| Migration role | Owns the schema, full DDL | The migration step only |
-| Application role | `SELECT`, `INSERT`, `UPDATE` on the existing tables, `USAGE` on sequences. No `CREATE`, no `DROP`, no `ALTER` | `api` at runtime |
+| Migration role (`oewang_migrator`) | Owns the schema, full DDL | `MIGRATION_DATABASE_URL` |
+| Application role (`oewang_app`) | `SELECT`, `INSERT`, `UPDATE` on every table, `DELETE` on `telegram_updates` only, `USAGE` on sequences. No `CREATE`, no `DROP`, no `ALTER` | `DATABASE_URL` |
 
-The step itself, run from the `apps/api` build context with the migration role's URL:
+The step: when `MIGRATION_DATABASE_URL` is set, `api` applies its embedded migrations over one connection as that role, closes it, and only then opens the application pool. A migration that fails stops the process, so the old container keeps serving.
 
-```bash
-sqlx migrate run --source migrations
+Both URLs sit in the `api` container's environment. The split therefore does not protect against someone who controls that container, who holds the data either way. It protects against SQL that reaches the application pool: an injected statement runs as a role that cannot drop or alter anything.
+
+`telegram_updates` is the one table the application deletes from: it is a de-duplication log of Telegram update ids, not workspace data, and its old rows are pruned.
+
+The roles were created once, as `postgres`:
+
+```sql
+CREATE ROLE oewang_migrator LOGIN PASSWORD '...';
+CREATE ROLE oewang_app LOGIN PASSWORD '...';
+CREATE DATABASE oewang_v2 OWNER oewang_migrator;
+\c oewang_v2
+REVOKE CREATE ON SCHEMA public FROM PUBLIC;
+GRANT USAGE ON SCHEMA public TO oewang_app;
+ALTER DEFAULT PRIVILEGES FOR ROLE oewang_migrator IN SCHEMA public
+  GRANT SELECT, INSERT, UPDATE ON TABLES TO oewang_app;
+ALTER DEFAULT PRIVILEGES FOR ROLE oewang_migrator IN SCHEMA public
+  GRANT USAGE, SELECT ON SEQUENCES TO oewang_app;
 ```
+
+`DELETE` on `telegram_updates` is granted after the first migration has created the table.
 
 Notes that matter in practice:
 
 - The migrations are in `apps/api/migrations` and are tracked in `_sqlx_migrations`. The runner is idempotent, so a repeated step is a no-op.
 - The application role has no `DELETE` grant to lose: nothing in the application issues one against a workspace-scoped table (OPS-2, soft delete only).
-- A new table created by a migration is owned by the migration role, so the grants have to be reissued, or granted by default with `ALTER DEFAULT PRIVILEGES`. Decide this once when the roles are created; a missing grant on a new table is a runtime permission error on an otherwise green deploy.
+- A new table created by a migration is owned by the migration role. The default privileges above grant it to the application role automatically; a table that needs `DELETE` needs its own grant.
 - `cargo sqlx prepare --check` in CI guarantees the committed `.sqlx` cache matches the schema the migrations produce, so the binary that ships was compiled against the schema it will run against.
 
 ## Object storage: Cloudflare R2
@@ -225,7 +257,7 @@ The bucket needs no CORS configuration, because no browser request ever reaches 
 | `api` | `GET /health` | Liveness. Static `{"status":"ok"}`, no dependencies touched |
 | `api` | `GET /health/ready` | Readiness. Runs `SELECT 1` against the pool. 200 with `{"status":"ok","database":"ok"}`, or 503 with `{"status":"degraded","database":"unavailable"}` |
 | `ai` | `GET /health` | Liveness |
-| `app` | none yet | See [Open questions](#open-questions) |
+| `app` | `GET /health` | Liveness |
 
 Both API health routes answer in plaintext, outside OWE1 (E1): they carry no data and a load balancer holds no crypto session. That is what makes them usable as a container health check.
 
@@ -268,13 +300,9 @@ Three further proxy requirements:
 
 Each of these needs the repository owner's decision. None of them is a value this document should guess.
 
-- **Domain names.** No domain is chosen for `app` or for `api`, so `APP_URL`, `ORIGIN` and the proxy host rules cannot be written yet. One domain with a path split, or two subdomains, is also undecided.
-- **The Coolify project and server.** Which Coolify project holds these resources, and whether they share the existing PostgreSQL instance on the VPS or get their own.
-- **A production image for `apps/app`.** `api` and `ai` have one; the web app does not. It needs a decision first: the SvelteKit adapter. The repo uses the default adapter today, and a container wants `adapter-node`.
-- **The R2 account, bucket name and jurisdiction.** No bucket exists. R2's location hint matters for latency from the VPS and for data residency, and nobody has chosen one.
+- **A private R2 bucket.** Production uses the old app's bucket `oewang` and its access key, because no other key exists yet. That bucket has a public custom domain (`cdn.oewang.com`), which breaks [the rule above](#object-storage-cloudflare-r2): an object's bytes are reachable by anyone who learns its key. The fix is a new bucket with no custom domain and a token scoped to it, created in the Cloudflare dashboard.
+- **A second copy of the signing keys.** The only copy outside Coolify is on the owner's laptop. A password manager entry would survive losing it.
 - **Database backup and restore.** Nothing in the repository covers backup schedule, retention or a tested restore. A finance app without a tested restore is an open risk, not a detail.
-- **Who generates and holds the two signing keys**, and where the PEM lives outside the secret store, if anywhere. Losing both with no copy means every pinned client needs a redeploy.
-- **The app has no health endpoint.** `api` and `ai` both answer `/health`; the SvelteKit app has no route for it, so a container health check on `app` has nothing to call. Adding one is a small change in `apps/app`, owned by whoever owns that tree.
 - **`bun audit` is gated at `--audit-level=high` in CI**, not at any advisory. [Hardening](security/hardening.md#dependencies) says a known vulnerability fails the build. Today the tree carries one low-severity advisory, `GHSA-gcqx-w48m-w2h4` in `deepmerge`, reached through `@sveltejs/vite-plugin-svelte`, a build-time dependency. Either the threshold stays and hardening is amended to say so, or the threshold comes off and that advisory gets resolved first.
 - **`cargo audit` ignores RUSTSEC-2023-0071** (Marvin attack, `rsa` 0.9.10, medium, no fixed upgrade available). The crate reaches `Cargo.lock` only through `sqlx-mysql`, which `sqlx-macros-core` lists unconditionally; `cargo tree -i rsa` finds nothing, so it is never compiled and no MySQL driver runs. The ignore is written into `.github/workflows/ci.yml` with its reason. It should come off when sqlx drops the dependency or upstream ships a fix.
 - **Log destination and retention.** The API emits structured JSON in production. Nothing says where it goes or how long it is kept, and [hardening](security/hardening.md#logging) sets rules about what must never appear in it.

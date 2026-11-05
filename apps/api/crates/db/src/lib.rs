@@ -9,7 +9,7 @@ pub mod pool;
 pub mod repositories;
 pub mod seed;
 
-pub use pool::{connect, PoolConfig};
+pub use pool::{connect, migrate, PoolConfig};
 pub use sqlx::PgPool;
 
 /// The migrations, embedded so the binary can apply them without sqlx-cli.

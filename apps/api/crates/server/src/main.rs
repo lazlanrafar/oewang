@@ -71,6 +71,13 @@ async fn main() -> anyhow::Result<()> {
         "starting oewang api"
     );
 
+    // Before the application pool, so the binary never serves a schema
+    // older than the one it was compiled against.
+    if let Some(url) = &config.migration_database_url {
+        oewang_db::migrate(url.expose()).await?;
+        tracing::info!("migrations applied");
+    }
+
     let db = oewang_db::connect(&oewang_db::PoolConfig {
         url: config.database_url.expose().to_string(),
         max_connections: config.db_max_connections,

@@ -1,0 +1,110 @@
+# Production images (docs/deployment.md).
+#
+# GitHub Actions builds each app's own production Dockerfile and pushes it
+# to GHCR; Coolify only pulls and runs it. Building on the VPS would share
+# its CPU with every other project hosted there.
+#
+# Each job pins its Coolify application to the commit's tag before it
+# deploys. Pulling `:latest` with force alone can leave Coolify restarting
+# the image it already has cached.
+#
+# The three jobs are independent. The pinned signing keys are configuration,
+# not build inputs, so no image has to wait for another one.
+
+name: Build and push
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      apps:
+        description: "Comma-separated apps to build (app,api,ai) or 'all'"
+        default: "all"
+
+concurrency:
+  group: build-push-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      app: ${{ steps.filter.outputs.app }}
+      api: ${{ steps.filter.outputs.api }}
+      ai: ${{ steps.filter.outputs.ai }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            app:
+              - 'apps/app/**'
+              - '.github/workflows/build-and-push.yml'
+            api:
+              - 'apps/api/**'
+              - '.github/workflows/build-and-push.yml'
+            ai:
+              - 'apps/ai/**'
+              - '.github/workflows/build-and-push.yml'
+
+  build:
+    needs: changes
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: api
+            uuid_secret: COOLIFY_API_UUID
+          - name: ai
+            uuid_secret: COOLIFY_AI_UUID
+          - name: app
+            uuid_secret: COOLIFY_APP_UUID
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      SELECTED: >-
+        ${{ (github.event_name == 'workflow_dispatch' &&
+             (github.event.inputs.apps == 'all' || contains(github.event.inputs.apps, matrix.name))) ||
+            needs.changes.outputs[matrix.name] == 'true' }}
+      COOLIFY_BASE_URL: ${{ secrets.COOLIFY_BASE_URL }}
+      COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
+      COOLIFY_UUID: ${{ secrets[matrix.uuid_secret] }}
+    steps:
+      - if: env.SELECTED == 'true'
+        uses: actions/checkout@v4
+      - if: env.SELECTED == 'true'
+        uses: docker/setup-buildx-action@v3
+      - if: env.SELECTED == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - if: env.SELECTED == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: apps/${{ matrix.name }}
+          file: apps/${{ matrix.name }}/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}/${{ matrix.name }}:${{ github.sha }}
+            ghcr.io/${{ github.repository }}/${{ matrix.name }}:latest
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+      - name: Pin the Coolify image tag and deploy
+        if: env.SELECTED == 'true' && env.COOLIFY_API_TOKEN != '' && env.COOLIFY_UUID != ''
+        run: |
+          curl -fsS -X PATCH "$COOLIFY_BASE_URL/api/v1/applications/$COOLIFY_UUID" \
+            -H "Authorization: Bearer $COOLIFY_API_TOKEN" -H "Content-Type: application/json" \
+            -d "{\"docker_registry_image_tag\": \"${{ github.sha }}\"}"
+          curl -fsS -X POST "$COOLIFY_BASE_URL/api/v1/deploy?uuid=$COOLIFY_UUID&force=true" \
+            -H "Authorization: Bearer $COOLIFY_API_TOKEN"

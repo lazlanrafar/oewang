@@ -46,3 +46,15 @@ pub async fn connect(config: &PoolConfig) -> Result<PgPool, sqlx::Error> {
         .connect(&config.url)
         .await
 }
+
+/// Applies the embedded migrations over a connection of their own.
+///
+/// `url` is the migration role's, which owns the schema. The pool the
+/// application serves from connects as a role without DDL rights, so it
+/// could not run them (docs/deployment.md#migrations).
+pub async fn migrate(url: &str) -> Result<(), sqlx::migrate::MigrateError> {
+    let pool = PgPoolOptions::new().max_connections(1).connect(url).await?;
+    let applied = crate::MIGRATIONS.run(&pool).await;
+    pool.close().await;
+    applied
+}

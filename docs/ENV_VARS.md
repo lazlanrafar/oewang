@@ -41,6 +41,7 @@ Read by `apps/api/crates/server/src/config.rs` at startup.
 | `IMPORT_ROW_LIMIT` | `crate::transactions::service::IMPORT_LIMIT` |
 | `JWT_SECRET` | secret |
 | `MAX_FILE_BYTES` | `10 * 1024 * 1024` |
+| `MIGRATION_DATABASE_URL` | unset |
 | `OWE1_ENABLED` | unset |
 | `RATE_LIMIT_ANONYMOUS` | `defaults.anonymous.max` |
 | `RATE_LIMIT_AUTHENTICATED` | `defaults.authenticated.max` |

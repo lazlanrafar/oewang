@@ -22,6 +22,9 @@ pub struct Config {
     pub port: u16,
 
     pub database_url: Secret,
+    /// The migration role's URL. When set, the embedded migrations run with
+    /// it before the application pool opens (docs/deployment.md#migrations).
+    pub migration_database_url: Option<Secret>,
     pub db_max_connections: u32,
     pub db_acquire_timeout: Duration,
     pub db_statement_timeout: Duration,
@@ -224,6 +227,7 @@ impl Config {
             port: parse_or("API_PORT", 3002)?,
 
             database_url: Secret::new(required("DATABASE_URL")?),
+            migration_database_url: optional("MIGRATION_DATABASE_URL").map(Secret::new),
             db_max_connections: parse_or("DB_MAX_CONNECTIONS", 20)?,
             db_acquire_timeout: Duration::from_secs(parse_or("DB_ACQUIRE_TIMEOUT_SECS", 5)?),
             db_statement_timeout: Duration::from_secs(parse_or("DB_STATEMENT_TIMEOUT_SECS", 10)?),
