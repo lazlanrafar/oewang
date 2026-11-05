@@ -60,12 +60,21 @@ export const load: PageServerLoad = async ({ depends, locals, url, parent }) => 
 	// here rather than fetched from the browser, because the browser never
 	// calls the API (D5), and because `?detail=` is a URL the user can share.
 	const detailId = url.searchParams.get('detail');
-	const detail = detailId ? await loadDetail(detailId, token) : null;
+	// The row the form sheet is editing, for its attachments. The list rows
+	// do not carry them, and the form saves the whole set every time, so a
+	// sheet that opened without them would detach every file (TXN-13).
+	const sheetId = url.searchParams.get('sheet');
+	const editId = sheetId && sheetId !== 'new' ? sheetId : null;
+	const [detail, editing] = await Promise.all([
+		detailId ? loadDetail(detailId, token) : null,
+		editId && editId !== detailId ? loadEditing(editId, token) : null
+	]);
 
 	return {
 		transactions: transactions.data ?? [],
 		suggestedRate: suggestion,
 		detail,
+		editing: editing ?? (detail && detail.transaction.id === editId ? detail.transaction : null),
 		// The receipt the canvas is open on, so the panel can name the file
 		// and the manual form can carry it as an attachment (AI-3).
 		canvasFile: await loadCanvasFile(url, token),
@@ -140,6 +149,14 @@ async function loadCanvasFile(url: URL, token?: string) {
  * A link to a row that has since been deleted opens the page rather than
  * an error: the row is gone, which is the answer.
  */
+async function loadEditing(id: string, token?: string) {
+	try {
+		return (await ledger.readTransaction(id, token)).data ?? null;
+	} catch {
+		return null;
+	}
+}
+
 async function loadDetail(id: string, token?: string) {
 	try {
 		const [transaction, history] = await Promise.all([

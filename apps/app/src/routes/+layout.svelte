@@ -44,6 +44,6 @@
 	this component's own injected script has no nonce, so the policy refuses
 	it and the flash it exists to prevent comes back (SEC-15).
 -->
-<ModeWatcher disableHeadScriptInjection />
+<ModeWatcher defaultMode="light" disableHeadScriptInjection />
 
 {@render children()}

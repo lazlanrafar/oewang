@@ -22,7 +22,7 @@ How the web app is structured and written. It is a BFF as much as a UI: it holds
 | Table | No table library. `molecules/data-table` is written here: a flex row of fixed-width cells per record, with sorting, column visibility, resizing, selection, sticky columns, sticky day groups, row virtualisation and column reordering all written against its own row model (D57, D76) |
 | Forms | Superforms with a Zod adapter |
 | Icons | Lucide Svelte |
-| Theme | mode-watcher, with the before-paint bootstrap in `app.html` so it can carry the CSP nonce ([hardening](../security/hardening.md#browser-headers)) |
+| Theme | mode-watcher, light by default (`defaultMode="light"` on the component and the same fallback in the bootstrap); the toggle still offers dark and system. The before-paint bootstrap is in `app.html` so it can carry the CSP nonce ([hardening](../security/hardening.md#browser-headers)) |
 | Type scale | Role tokens, not sizes: `text-h1` to `text-h4`, `text-body`, `text-small`, `text-caption`, each carrying line height, weight and letter spacing (D53). `h1`-`h4` take them in the base layer |
 | Shape | The old app's: a live radius scale (`--radius: .5rem`) that almost nothing applies, and a shadow scale where only `sm` paints (D66) |
 | Focus | None, as the old app has none: `*:focus, *:focus-visible { outline: none !important }` (D66). A known WCAG 2.4.7 failure, recorded in UI-7 |

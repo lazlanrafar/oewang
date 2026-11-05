@@ -317,8 +317,8 @@
 		);
 
 		attachments = editing
-			? (data.detail?.transaction.id === editing.id
-					? data.detail.transaction.attachments.map((file) => ({
+			? (data.editing?.id === editing.id
+					? data.editing.attachments.map((file) => ({
 							id: file.file_id,
 							name: file.name,
 							type: file.type,

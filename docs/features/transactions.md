@@ -112,6 +112,7 @@ A side sheet, used for both create and edit.
 - Date defaults to today. Wallet defaults to the workspace default wallet (WAL-3).
 - Optional: name, category, description, ready flag, line items, attachments.
 - Attachments upload immediately on drop, so the sheet submits only IDs.
+- The sheet submits the whole set of attachment IDs on every save, so an edit loads the row's current attachments for `?sheet=<id>` itself. It cannot rely on the detail sheet having loaded them: opening the editor from the detail clears `?detail=`.
 
 On success the sheet closes, the list invalidates, and a toast confirms.
 
