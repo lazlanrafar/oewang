@@ -7,6 +7,10 @@
 	 * beside the sidebar, and beside the canvas when the column narrows for
 	 * it, with no offsets to keep in step with either.
 	 *
+	 * No backdrop of its own: the old composer floated over the page with
+	 * only its own translucent, blurred box, so content shows around it
+	 * rather than fading into a band of background.
+	 *
 	 * With `minimize`, it reads how far that box has scrolled and hands the
 	 * composer a factor to fold by, as the old overview did. Reading the
 	 * scroll is a genuine side effect; the folding rule is the composer's.
@@ -47,7 +51,7 @@
 
 <div
 	bind:this={dock}
-	class="from-background pointer-events-none sticky bottom-0 z-10 -mx-4 mt-auto bg-gradient-to-t from-40% to-transparent px-4 pt-6 pb-4 md:-mx-6 md:px-6 md:pb-6"
+	class="pointer-events-none sticky bottom-0 z-10 mt-auto pt-6 pb-4 md:pb-6"
 	data-slot="chat-dock"
 >
 	<div class="pointer-events-auto">

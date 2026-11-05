@@ -34,6 +34,7 @@
 		<ChartArea
 			{points}
 			label={t('canvas.series_current')}
+			outflow
 			average={{
 				value: chartValue(report.average_monthly),
 				formatted: money(report.average_monthly),

@@ -206,6 +206,15 @@
 	   charts will hatch with when they land. A hex rather than an HSL
 	   triple, because it is fed to `color-mix` rather than to `hsl()`. */
 	--chart-pattern-stroke: #707070;
+	/* The rest of the old app's chart tokens (packages/ui globals.css), so
+	   every chart is drawn the one way: a hatched fill on the pattern
+	   background, the measured series as a solid line, a comparison as a
+	   dashed one, a dashed grid, small grey axis text (D93). */
+	--chart-pattern-bg: #ffffff;
+	--chart-actual-line: #000000;
+	--chart-line-secondary: #666666;
+	--chart-grid-stroke: #e6e6e6;
+	--chart-axis-text: #707070;
 	/* Donut slices, darkest first. Every one clears 3:1 against the
 	   background (WCAG 1.4.11), and neighbours differ in lightness so a
 	   slice edge reads without hue. The legend carries every figure as
@@ -257,6 +266,11 @@
 	--sidebar: 0 0% 5%;
 	--sidebar-foreground: 0 0% 98%;
 	--chart-pattern-stroke: #666666;
+	--chart-pattern-bg: #0c0c0c;
+	--chart-actual-line: #ffffff;
+	--chart-line-secondary: #999999;
+	--chart-grid-stroke: #1d1d1d;
+	--chart-axis-text: #666666;
 	--chart-slice-1: #fafafa;
 	--chart-slice-2: #8f8f8f;
 	--chart-slice-3: #d4d4d4;

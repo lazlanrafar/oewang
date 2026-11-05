@@ -9,8 +9,7 @@
 	import { chartValue, formatMoney } from '$lib/money';
 	import { shareLabel, type CategoryShare, type Overview } from '$lib/reports';
 
-	import * as Empty from '../../molecules/empty/index.js';
-	import { ChartArea, ChartBar } from '../../molecules/chart/index.js';
+	import { ChartArea, ChartBar, ChartPanel } from '../../molecules/chart/index.js';
 
 	let { overview }: { overview: Overview } = $props();
 
@@ -44,79 +43,91 @@
 	const hasExpense = $derived(overview.months.some((month) => chartValue(month.expense) > 0));
 </script>
 
-{#snippet panel(title: string, filled: boolean, body: import('svelte').Snippet)}
-	<section class="border-border flex min-w-0 flex-col gap-4 border p-4">
-		<h2 class="font-serif text-lg">{title}</h2>
-		{#if filled}
-			{@render body()}
-		{:else}
-			<Empty.Root>
-				<Empty.Header>
-					<Empty.Description>{t('overview.chart_empty')}</Empty.Description>
-				</Empty.Header>
-			</Empty.Root>
-		{/if}
-	</section>
-{/snippet}
+<!--
+	The old app's layout: two charts a row from xl, eight apart, each a
+	titled panel with its legend in the header; burn rate across the full
+	width below them.
+-->
+<div class="space-y-8">
+	<div class="grid gap-8 xl:grid-cols-2">
+		<ChartPanel
+			title={t('overview.chart_income')}
+			legend={[
+				{ label: t('overview.chart_income'), type: 'solid' },
+				{ label: t('canvas.series_average'), type: 'pattern' }
+			]}
+			empty={hasIncome ? null : t('overview.chart_empty')}
+		>
+			<ChartArea
+				points={income}
+				label={t('overview.chart_income')}
+				legend={false}
+				average={{
+					value: chartValue(overview.average_income),
+					formatted: money(overview.average_income),
+					label: t('canvas.series_average')
+				}}
+			/>
+		</ChartPanel>
 
-<div class="grid grid-cols-1 gap-3 xl:grid-cols-2">
-	{#snippet incomeChart()}
-		<ChartArea
-			points={income}
-			label={t('overview.chart_income')}
-			average={{
-				value: chartValue(overview.average_income),
-				formatted: money(overview.average_income),
-				label: t('canvas.series_average')
-			}}
-		/>
-	{/snippet}
-	{@render panel(t('overview.chart_income'), hasIncome, incomeChart)}
+		<ChartPanel
+			title={t('overview.chart_expense')}
+			legend={[
+				{ label: t('overview.chart_expense'), type: 'solid' },
+				{ label: t('canvas.series_average'), type: 'pattern' }
+			]}
+			empty={hasExpense ? null : t('overview.chart_empty')}
+		>
+			<ChartArea
+				points={expense}
+				label={t('overview.chart_expense')}
+				legend={false}
+				average={{
+					value: chartValue(overview.average_expense),
+					formatted: money(overview.average_expense),
+					label: t('canvas.series_average')
+				}}
+			/>
+		</ChartPanel>
+	</div>
 
-	{#snippet expenseChart()}
+	<div class="grid gap-8 xl:grid-cols-2">
+		<ChartPanel
+			title={t('overview.chart_income_breakdown')}
+			empty={overview.income_categories.length > 0 ? null : t('overview.chart_empty')}
+		>
+			<ChartBar items={bars(overview.income_categories)} label={t('overview.chart_income_breakdown')} />
+		</ChartPanel>
+
+		<ChartPanel
+			title={t('overview.chart_expense_breakdown')}
+			empty={overview.expense_categories.length > 0 ? null : t('overview.chart_empty')}
+		>
+			<ChartBar
+				items={bars(overview.expense_categories)}
+				label={t('overview.chart_expense_breakdown')}
+			/>
+		</ChartPanel>
+	</div>
+
+	<ChartPanel
+		title={t('overview.chart_burn')}
+		legend={[
+			{ label: t('canvas.series_current'), type: 'solid' },
+			{ label: t('canvas.series_average'), type: 'pattern' }
+		]}
+		empty={hasExpense ? null : t('overview.chart_empty')}
+	>
 		<ChartArea
 			points={expense}
-			label={t('overview.chart_expense')}
+			label={t('canvas.series_current')}
+			legend={false}
+			outflow
 			average={{
 				value: chartValue(overview.average_expense),
 				formatted: money(overview.average_expense),
 				label: t('canvas.series_average')
 			}}
 		/>
-	{/snippet}
-	{@render panel(t('overview.chart_expense'), hasExpense, expenseChart)}
-
-	{#snippet incomeBreakdown()}
-		<ChartBar items={bars(overview.income_categories)} label={t('overview.chart_income_breakdown')} />
-	{/snippet}
-	{@render panel(
-		t('overview.chart_income_breakdown'),
-		overview.income_categories.length > 0,
-		incomeBreakdown
-	)}
-
-	{#snippet expenseBreakdown()}
-		<ChartBar items={bars(overview.expense_categories)} label={t('overview.chart_expense_breakdown')} />
-	{/snippet}
-	{@render panel(
-		t('overview.chart_expense_breakdown'),
-		overview.expense_categories.length > 0,
-		expenseBreakdown
-	)}
-
-	<div class="xl:col-span-2">
-		{#snippet burnChart()}
-			<ChartArea
-				points={expense}
-				label={t('canvas.series_current')}
-				average={{
-					value: chartValue(overview.average_expense),
-					formatted: money(overview.average_expense),
-					label: t('canvas.series_average')
-				}}
-				height={280}
-			/>
-		{/snippet}
-		{@render panel(t('overview.chart_burn'), hasExpense, burnChart)}
-	</div>
+	</ChartPanel>
 </div>

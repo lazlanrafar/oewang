@@ -4,31 +4,31 @@
 
 <script lang="ts">
 	/**
-	 * A breakdown as horizontal bars, largest first (D89).
-	 *
-	 * Ported from the old app's `expenses-chart.tsx`. Horizontal rather than
-	 * upright, so a category name is read rather than truncated to sixteen
-	 * characters under a column.
+	 * A breakdown as hatched columns, the old app's `ExpensesChart` (D89, D93):
+	 * each column a diagonal hatch with a one-pixel outline and a slightly
+	 * rounded top, the category under it cut to sixteen characters, the full
+	 * name and figure in the tooltip.
 	 */
-	import { BarChart } from 'layerchart';
+	import { Bars, BarChart } from 'layerchart';
 
 	import { cn } from '$lib/utils.js';
 
-	import { CHART_COLORS, compactTick } from './chart-shared.js';
+	import { AXIS, GRID, HATCH, compactTick } from './chart-shared.js';
+	import ChartHatch from './chart-hatch.svelte';
 	import ChartTooltip from './chart-tooltip.svelte';
 
 	let {
 		items,
 		label,
+		height = 320,
 		class: className
 	}: {
 		items: BarItem[];
 		/** What is measured, for the tooltip and the accessible name. */
 		label: string;
+		height?: number;
 		class?: string;
 	} = $props();
-
-	const height = $derived(Math.max(120, items.length * 36 + 32));
 
 	/*
 	 * The band is the position, not the label: two bars with one name, such
@@ -36,8 +36,8 @@
 	 */
 	const data = $derived(items.map((item, index) => ({ ...item, key: String(index) })));
 	const labelOf = (key: string) => {
-		const label = data[Number(key)]?.label ?? '';
-		return label.length > 14 ? `${label.slice(0, 13)}…` : label;
+		const name = data[Number(key)]?.label ?? '';
+		return name.length > 16 ? `${name.slice(0, 15)}…` : name;
 	};
 </script>
 
@@ -50,18 +50,33 @@
 >
 	<BarChart
 		{data}
-		x="value"
-		y="key"
-		orientation="horizontal"
-		series={[{ key: 'value', label, value: 'value', color: CHART_COLORS[0] }]}
+		x="key"
+		y="value"
+		series={[{ key: 'value', label, value: 'value', color: 'var(--chart-actual-line)' }]}
 		legend={false}
-		bandPadding={0.35}
-		padding={{ left: 104, bottom: 24, right: 8 }}
+		grid={GRID}
+		bandPadding={0.3}
+		padding={{ left: 40, bottom: 20, top: 6, right: 6 }}
 		props={{
-			xAxis: { format: (value: number) => compactTick(value) },
-			yAxis: { format: (value: string) => labelOf(value) }
+			xAxis: { ...AXIS, format: (value: string) => labelOf(value) },
+			yAxis: { ...AXIS, format: (value: number) => compactTick(value) }
 		}}
 	>
+		{#snippet marks()}
+			<ChartHatch opacity={HATCH.outflow}>
+				{#snippet content(pattern)}
+					<Bars
+						seriesKey="value"
+						fill={pattern}
+						stroke="var(--chart-actual-line)"
+						strokeWidth={1}
+						radius={2}
+						rounded="top"
+					/>
+				{/snippet}
+			</ChartHatch>
+		{/snippet}
+
 		{#snippet tooltip({ context })}
 			<ChartTooltip
 				{context}
@@ -69,8 +84,7 @@
 				rows={(datum) => [
 					{
 						label: datum.share ? `${label} · ${datum.share}` : label,
-						value: String(datum.formatted),
-						color: CHART_COLORS[0]
+						value: String(datum.formatted)
 					}
 				]}
 			/>
