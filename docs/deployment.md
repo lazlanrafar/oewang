@@ -130,7 +130,7 @@ Values marked **secret** go in Coolify's secret store, not in a plain environmen
 | `FX_REFRESH_INTERVAL` | no | Default 24h |
 | `TRUST_PROXY_HEADERS` | yes | **Set this to `true`.** Behind a proxy every request arrives from the proxy, so with it off the rate limiter buckets the whole internet together. With it on, `x-forwarded-for` is read, which is only safe because the proxy is the only thing that can reach the port. Both halves of that sentence have to be true at once |
 | `RATE_LIMIT_*`, `UPLOADS_PER_WORKSPACE_PER_DAY`, `REQUEST_TIMEOUT_SECS`, `BODY_LIMIT_BYTES` | no | Limits, documented in [hardening](security/hardening.md#rate-limits-and-resource-limits) |
-| `RUST_LOG` | no | Production wants something quieter than the development default, for example `oewang_server=info,warn` |
+| `RUST_LOG` | no | Production wants something quieter than the development default, for example `oewang_api=info,warn`. The binary is `oewang-api`, so its log target is `oewang_api`; a filter naming `oewang_server` silences every line |
 
 `STORAGE_LOCAL_PATH` is read but unused when the backend is `s3`.
 
