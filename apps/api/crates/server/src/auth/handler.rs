@@ -12,8 +12,12 @@ use oewang_db::repositories::accounts;
 use oewang_domain::{AppError, Envelope, Result, Role};
 use serde::{Deserialize, Serialize};
 
+use base64::{engine::general_purpose::STANDARD, Engine};
+
 use crate::{
+    audit::Actor,
     auth::{
+        account,
         extractor::Auth,
         service::{self, SessionContext},
     },
@@ -95,6 +99,37 @@ pub struct UserView {
     pub id: String,
     pub email: String,
     pub name: Option<String>,
+    /// The current photo's version, or `null` when there is none (D94).
+    /// Never a path: the photo is fetched from `/v1/auth/me/avatar`.
+    pub profile_picture: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateProfileRequest {
+    pub name: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ChangePasswordRequest {
+    pub current_password: String,
+    pub new_password: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct AvatarRequest {
+    /// Standard base64 of a JPEG, PNG or WebP. The envelope keeps it private.
+    pub data: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct AvatarView {
+    pub r#type: &'static str,
+    pub data: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct AvatarVersion {
+    pub profile_picture: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -224,6 +259,7 @@ async fn load_me(state: &AppState, auth: &Auth) -> Result<MeResponse> {
             id: user.id,
             email: user.email,
             name: user.name,
+            profile_picture: user.profile_picture,
         },
         workspace: WorkspaceView {
             id: workspace.id,
@@ -233,6 +269,103 @@ async fn load_me(state: &AppState, auth: &Auth) -> Result<MeResponse> {
         },
         role,
     })
+}
+
+/// Rename yourself (AUTH-11).
+pub async fn update_profile(
+    State(state): State<AppState>,
+    auth: Auth,
+    request_id: RequestId,
+    Json(body): Json<UpdateProfileRequest>,
+) -> std::result::Result<StatusCode, ApiError> {
+    account::update_profile(
+        &state.db,
+        Actor::web(&auth.workspace_id, &auth.user_id),
+        body.name.as_deref(),
+    )
+    .await
+    .map(|_| StatusCode::NO_CONTENT)
+    .map_err(|error| ApiError::new(error, request_id.0))
+}
+
+/// Change your password knowing the current one (AUTH-12). Answers with a
+/// fresh session, because every other one has just ended.
+pub async fn change_password(
+    State(state): State<AppState>,
+    auth: Auth,
+    request_id: RequestId,
+    headers: HeaderMap,
+    Json(body): Json<ChangePasswordRequest>,
+) -> std::result::Result<Json<Envelope<SessionResponse>>, ApiError> {
+    let context = session_context(&state, &headers);
+
+    let issued = account::change_password(
+        &state.db,
+        Actor::web(&auth.workspace_id, &auth.user_id),
+        &body.current_password,
+        &body.new_password,
+        context,
+    )
+    .await
+    .map_err(|error| ApiError::new(error, request_id.0.clone()))?;
+
+    Ok(Json(Envelope::data(issued.into(), request_id.0)))
+}
+
+pub async fn get_avatar(
+    State(state): State<AppState>,
+    auth: Auth,
+    request_id: RequestId,
+) -> std::result::Result<Json<Envelope<AvatarView>>, ApiError> {
+    match account::read_avatar(&state.db, &state.files, &auth.user_id).await {
+        Ok(bytes) => Ok(Json(Envelope::data(
+            AvatarView {
+                r#type: "image/jpeg",
+                data: STANDARD.encode(bytes),
+            },
+            request_id.0,
+        ))),
+        Err(error) => Err(ApiError::new(error, request_id.0)),
+    }
+}
+
+pub async fn put_avatar(
+    State(state): State<AppState>,
+    auth: Auth,
+    request_id: RequestId,
+    Json(body): Json<AvatarRequest>,
+) -> std::result::Result<Json<Envelope<AvatarVersion>>, ApiError> {
+    match account::set_avatar(
+        &state.db,
+        &state.files,
+        Actor::web(&auth.workspace_id, &auth.user_id),
+        &body.data,
+    )
+    .await
+    {
+        Ok(version) => Ok(Json(Envelope::data(
+            AvatarVersion {
+                profile_picture: version,
+            },
+            request_id.0,
+        ))),
+        Err(error) => Err(ApiError::new(error, request_id.0)),
+    }
+}
+
+pub async fn delete_avatar(
+    State(state): State<AppState>,
+    auth: Auth,
+    request_id: RequestId,
+) -> std::result::Result<StatusCode, ApiError> {
+    account::remove_avatar(
+        &state.db,
+        &state.files,
+        Actor::web(&auth.workspace_id, &auth.user_id),
+    )
+    .await
+    .map(|_| StatusCode::NO_CONTENT)
+    .map_err(|error| ApiError::new(error, request_id.0))
 }
 
 pub async fn switch_workspace(

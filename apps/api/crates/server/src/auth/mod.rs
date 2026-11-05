@@ -1,3 +1,4 @@
+pub mod account;
 pub mod extractor;
 pub mod handler;
 pub mod password;

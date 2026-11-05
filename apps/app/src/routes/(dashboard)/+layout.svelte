@@ -13,15 +13,14 @@
 	 * Two of the live header's controls are deliberately not here, because
 	 * copying them would mean shipping a control that does nothing: the global
 	 * search, which has no endpoint in this rewrite, and the notification
-	 * bell, which belongs to a feature it drops. The account switcher is a
-	 * theme toggle and a sign-out form instead, since switching workspace
-	 * lands with the workspace picker.
+	 * bell, which belongs to a feature it drops. The account menu is the old
+	 * avatar menu, trimmed to what exists here (D94).
 	 */
 	import { untrack } from 'svelte';
 
-	import { LogOut, PanelLeft } from '@lucide/svelte';
+	import { PanelLeft } from '@lucide/svelte';
 
-	import { AppSidebar, rememberSidebar, SIDEBAR_SHORTCUT, ThemeToggle } from '$lib/components/organisms/layouts';
+	import { AccountMenu, AppSidebar, rememberSidebar, SIDEBAR_SHORTCUT } from '$lib/components/organisms/layouts';
 	import { Button } from '$lib/components/atoms/button';
 	import * as Sheet from '$lib/components/atoms/sheet';
 	import { Toaster } from '$lib/components/atoms/sonner';
@@ -72,8 +71,8 @@
 
 <div class="flex h-svh w-full overflow-hidden">
 	<AppSidebar
-		name={data.me.workspace.name}
-		secondary={data.me.role}
+		workspaces={data.workspaces}
+		activeId={data.me.workspace.id}
 		collapsed={!open}
 		class="hidden md:block"
 	/>
@@ -116,8 +115,8 @@
 								<Sheet.Title class="sr-only">{t('nav.toggle_sidebar')}</Sheet.Title>
 							</Sheet.Header>
 							<AppSidebar
-								name={data.me.workspace.name}
-								secondary={data.me.role}
+								workspaces={data.workspaces}
+								activeId={data.me.workspace.id}
 								class="w-full border-r-0"
 								onNavigate={() => (drawerOpen = false)}
 							/>
@@ -128,21 +127,13 @@
 				</div>
 
 				<div class="flex items-center gap-1">
-					<ThemeToggle />
-
-					<!-- A form, not a link: signing out is a state change, and a GET
-					     that mutates is a GET a prefetcher can fire. -->
-					<form method="POST" action="/logout">
-						<Button
-							type="submit"
-							variant="ghost"
-							size="icon"
-							class="size-8"
-							aria-label={t('nav.sign_out')}
-						>
-							<LogOut class="size-4" />
-						</Button>
-					</form>
+					<AccountMenu
+						name={data.me.user.name}
+						email={data.me.user.email}
+						photo={data.me.user.profile_picture
+							? `/account/photo?v=${encodeURIComponent(data.me.user.profile_picture)}`
+							: null}
+					/>
 				</div>
 			</div>
 		</header>

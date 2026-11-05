@@ -64,7 +64,7 @@ erDiagram
 | `id` | text | CUID2, primary key |
 | `email` | text | Unique, not null |
 | `name` | text | Nullable |
-| `profile_picture` | text | Nullable, a vault file key or an external URL |
+| `profile_picture` | text | Nullable. The current photo's version id; the photo itself is a 256px JPEG at `usr/{user_id}/avatar` in object storage, served through the API (D94) |
 | `password_hash` | text | Argon2id. Never returned by any endpoint (AUTH-1) |
 | `created_at`, `updated_at` | timestamp | |
 

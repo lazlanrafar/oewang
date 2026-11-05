@@ -1,14 +1,8 @@
 import type { LayoutServerLoad } from './$types';
 
-import { api } from '$lib/server/api';
+import { listWorkspaces, readMe } from '$lib/server/account';
 import * as ledger from '$lib/server/ledger';
 import { SIDEBAR_COOKIE } from '$lib/components/organisms/layouts';
-
-type Me = {
-	user: { id: string; email: string; name: string | null };
-	workspace: { id: string; name: string; slug: string; currency_code: string };
-	role: 'owner' | 'admin' | 'member';
-};
 
 /**
  * Loaded once per navigation for the whole shell, rather than per page
@@ -27,8 +21,9 @@ export const load: LayoutServerLoad = async ({ locals, cookies }) => {
 	 * claim inside it (AUTH-4): nothing here names one, so no page can be
 	 * served another workspace's rows.
 	 */
-	const [result, wallets, groups, categories] = await Promise.all([
-		api<Me>({ path: '/v1/auth/me', token: locals.accessToken }),
+	const [result, workspaces, wallets, groups, categories] = await Promise.all([
+		readMe(locals.accessToken),
+		listWorkspaces(locals.accessToken),
 		ledger.listWallets(locals.accessToken),
 		ledger.listWalletGroups(locals.accessToken),
 		ledger.listCategories(locals.accessToken)
@@ -40,6 +35,12 @@ export const load: LayoutServerLoad = async ({ locals, cookies }) => {
 	// same cookie under the same name.
 	return {
 		me: result.data!,
+		// The switcher's list (WS-1, D94).
+		workspaces: (workspaces.data ?? []).map((workspace) => ({
+			id: workspace.id,
+			name: workspace.name,
+			role: workspace.role
+		})),
 		lists: {
 			wallets: (wallets.data ?? []).map((wallet) => ({
 				id: wallet.id,

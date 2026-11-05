@@ -44,6 +44,7 @@ src/routes/
 │  ├─ login/+page.svelte
 │  ├─ register/+page.svelte
 │  └─ create-workspace/+page.svelte
+├─ (standalone)/      # a person's own pages, no app shell (D94): workspaces, account
 ├─ (dashboard)/
 │  ├─ +layout.server.ts         auth guard, loads user, workspace, wallets, categories
 │  ├─ +layout.svelte            sidebar and topbar shell

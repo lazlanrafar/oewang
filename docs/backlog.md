@@ -730,3 +730,27 @@ now listed under US-017.
 - [Architecture](architecture.md) and [data model](data-model.md)
 - [Transactions](features/transactions.md), [accounts](features/accounts.md), [chat](features/chat.md), [vault](features/vault.md) and [usage](features/usage.md)
 - [Hardening](security/hardening.md) and [AI safety](security/ai-safety.md)
+
+## M10. Workspaces and account
+
+### US-051: Workspace switcher and the workspaces page
+Requirements: WS-1, WS-2, WS-6
+
+- [x] The sidebar switcher is the old app's: cat tile, workspace over its role, a menu of workspaces with the current one ticked, Add workspace, Manage workspaces
+- [x] Switching posts `/workspaces?/switch`, writes the new session into the cookies and reloads the page it came from
+- [x] `POST /v1/workspaces`: owner membership, seeded categories, audit `workspace.created`, at most 10 owned (Rust tests)
+- [x] `/workspaces` outside the shell: the list with the current one marked, a click switches, and the business-details form creates and switches
+- [x] The switcher's "Add workspace" dialog posts the same action
+- [x] Verify in browser: create a workspace, land in it, switch back
+
+### US-052: The account area
+Requirements: AUTH-11, AUTH-12, AUTH-13
+
+- [x] `/account` outside the shell with its own sidebar (Profile, Password & sessions); Profile removed from the settings sidebar
+- [x] The top bar's avatar menu: Account, Theme, Log out
+- [x] `PATCH /v1/auth/me` renames and audits (Rust test)
+- [x] `POST /v1/auth/change-password`: a wrong current password is a field error, never a 401; every other session ends and a fresh one is issued (Rust test)
+- [x] `GET/PUT/DELETE /v1/auth/me/avatar`: sniffed, decoded under limits, stored as a 256px JPEG, removed after commit (Rust test); the browser shrinks a photo to 512px before sending it
+- [x] Sessions listed; Sign out of all devices asks first
+- [x] clippy, `cargo test`, `bun run check` and `bun run test` pass in the containers
+- [ ] Verify in browser: change a password, sign out of all devices

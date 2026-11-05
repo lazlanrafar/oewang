@@ -39,7 +39,12 @@ These four are the only plaintext routes ([exceptions](encryption.md#plaintext-e
 | GET | `/v1/auth/sessions` | any | The user's live sessions, with user agent and last use |
 | POST | `/v1/auth/forgot-password` | public | Always answers 204, whether or not the address exists (AUTH-10) |
 | POST | `/v1/auth/reset-password` | public | Token plus a new password. Revokes every session on success |
-| GET | `/v1/auth/me` | any | Current user, workspace and role |
+| GET | `/v1/auth/me` | any | Current user (with `profile_picture`, a photo version id or null), workspace and role |
+| PATCH | `/v1/auth/me` | any | `{name}`; a blank name clears it (AUTH-11) |
+| GET | `/v1/auth/me/avatar` | any | `{type: "image/jpeg", data}` base64, or 404 when there is no photo (AUTH-13) |
+| PUT | `/v1/auth/me/avatar` | any | `{data}` base64 JPEG, PNG or WebP up to 700 KB; stored as a 256px square JPEG. Answers `{profile_picture}` |
+| DELETE | `/v1/auth/me/avatar` | any | Remove the photo |
+| POST | `/v1/auth/change-password` | any | `{current_password, new_password}`. A wrong current password is a 422 field error. Ends every other session; answers a fresh session (AUTH-12) |
 | POST | `/v1/auth/switch-workspace` | any | Re-scope the JWT to another workspace the user belongs to (WS-2) |
 
 `POST /v1/auth/register`
@@ -61,6 +66,7 @@ Returns `NOT_A_MEMBER` if the user has no live membership row.
 | Method | Path | Role | Description |
 |---|---|---|---|
 | GET | `/v1/workspaces` | any | Workspaces the user belongs to, with their role in each |
+| POST | `/v1/workspaces` | any | `{name, currency_code}`. A new workspace the caller owns, seeded; at most 10 owned. The client then switches into it (WS-6) |
 | GET | `/v1/workspaces/current` | any | The current workspace |
 | PATCH | `/v1/workspaces/current` | admin+ | Update name, slug, country. Currency code only while no transaction exists, otherwise `WORKSPACE_CURRENCY_LOCKED` (WAL-6) |
 | GET | `/v1/workspaces/current/members` | any | Members with role and join date |

@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT count(*) AS \"count!\"\n           FROM user_workspaces m\n           JOIN workspaces w ON w.id = m.workspace_id\n           WHERE m.user_id = $1 AND m.role = 'owner'\n             AND m.deleted_at IS NULL AND w.deleted_at IS NULL",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count!",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "ae2ad69b4a756e27401ccc6d146c7267063b5f57f3b33816b93d8b39822c4d9b"
+}

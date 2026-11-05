@@ -27,7 +27,7 @@
 		ChatSuggestions,
 		ToolCallGroup
 	} from '$lib/components/organisms/chat';
-	import { AppSidebar, ThemeToggle, WorkspaceSwitcher } from '$lib/components/organisms/layouts';
+	import { AccountMenu, AppSidebar, ThemeToggle, WorkspaceSwitcher } from '$lib/components/organisms/layouts';
 	import { SettingsSidebar } from '$lib/components/organisms/settings';
 
 	import {
@@ -42,6 +42,12 @@
 		workspace
 	} from '../mock';
 	import Specimen from '../specimen.svelte';
+
+	/* Two workspaces, so the switcher's menu has something to switch to. */
+	const workspaces = [
+		{ id: 'w1', name: workspace.name, role: 'owner' },
+		{ id: 'w2', name: 'Side project', role: 'member' }
+	];
 
 	let formOpen = $state(false);
 	let detailOpen = $state(false);
@@ -184,8 +190,8 @@
 	     whatever follows it. `overflow-hidden` makes this box the scroll
 	     container it sticks inside. -->
 	<div class="flex h-96 gap-4 overflow-hidden">
-		<AppSidebar name={workspace.name} secondary={workspace.secondary} class="border" />
-		<AppSidebar name={workspace.name} secondary={workspace.secondary} collapsed class="border" />
+		<AppSidebar {workspaces} activeId="w1" class="border" />
+		<AppSidebar {workspaces} activeId="w1" collapsed class="border" />
 	</div>
 </Specimen>
 
@@ -198,13 +204,14 @@
 </Specimen>
 
 <Specimen
-	title="Workspace switcher and theme toggle"
-	note="The two controls at the ends of the sidebar."
+	title="Workspace switcher, account menu and theme toggle"
+	note="The old app's switcher (D94): the cat tile, the workspace over its role, a menu of workspaces with the current one ticked, Add workspace and Manage workspaces. Switching posts a plain form, so it does nothing useful here. The account menu is the old avatar menu: Account, Theme, Log out."
 >
 	<div class="flex items-center gap-6">
-		<div class="w-56 border p-2">
-			<WorkspaceSwitcher name={workspace.name} secondary={workspace.secondary} />
+		<div class="w-56 border">
+			<WorkspaceSwitcher {workspaces} activeId="w1" />
 		</div>
+		<AccountMenu name="Sample person" email={workspace.secondary} photo={null} />
 		<ThemeToggle />
 	</div>
 </Specimen>

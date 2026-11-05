@@ -111,6 +111,45 @@ pub async fn list_workspaces(
     Ok(Json(Envelope::data(items, request_id.0)))
 }
 
+#[derive(Debug, Deserialize)]
+pub struct CreateWorkspaceRequest {
+    pub name: String,
+    pub currency_code: String,
+}
+
+/// Open a new workspace you own (WS-6). The client switches into it with
+/// `POST /v1/auth/switch-workspace`, the same as into any other.
+pub async fn create_workspace(
+    State(state): State<AppState>,
+    auth: Auth,
+    request_id: RequestId,
+    Json(body): Json<CreateWorkspaceRequest>,
+) -> std::result::Result<(StatusCode, Json<Envelope<WorkspaceListItem>>), ApiError> {
+    match crate::auth::account::create_workspace(
+        &state.db,
+        &auth.user_id,
+        &body.name,
+        &body.currency_code,
+    )
+    .await
+    {
+        Ok(row) => Ok((
+            StatusCode::CREATED,
+            Json(Envelope::data(
+                WorkspaceListItem {
+                    id: row.id,
+                    name: row.name,
+                    slug: row.slug,
+                    currency_code: row.currency_code,
+                    role: Role::Owner.as_str().to_string(),
+                },
+                request_id.0,
+            )),
+        )),
+        Err(error) => Err(ApiError::new(error, request_id.0)),
+    }
+}
+
 pub async fn current_workspace(
     State(state): State<AppState>,
     auth: Auth,

@@ -12,6 +12,7 @@ mod config;
 mod fx;
 #[cfg(test)]
 mod hardening_tests;
+mod images;
 mod limits;
 mod owe1;
 mod reports;
@@ -270,7 +271,20 @@ fn protected_routes(state: AppState) -> Router<AppState> {
         .route("/v1/auth/refresh", post(auth::handler::refresh))
         .route("/v1/auth/logout", post(auth::handler::logout))
         .route("/v1/auth/logout-all", post(auth::handler::logout_all))
-        .route("/v1/auth/me", get(auth::handler::me))
+        .route(
+            "/v1/auth/me",
+            get(auth::handler::me).patch(auth::handler::update_profile),
+        )
+        .route(
+            "/v1/auth/me/avatar",
+            get(auth::handler::get_avatar)
+                .put(auth::handler::put_avatar)
+                .delete(auth::handler::delete_avatar),
+        )
+        .route(
+            "/v1/auth/change-password",
+            post(auth::handler::change_password),
+        )
         .route("/v1/auth/sessions", get(auth::handler::sessions))
         .route(
             "/v1/auth/switch-workspace",
@@ -285,7 +299,10 @@ fn protected_routes(state: AppState) -> Router<AppState> {
             post(auth::handler::reset_password),
         )
         // Workspaces and members.
-        .route("/v1/workspaces", get(workspaces::handler::list_workspaces))
+        .route(
+            "/v1/workspaces",
+            get(workspaces::handler::list_workspaces).post(workspaces::handler::create_workspace),
+        )
         // What the workspace spends: tokens and stored bytes, no limit (D92).
         .route("/v1/workspaces/current/usage", get(usage::handler::get))
         .route(

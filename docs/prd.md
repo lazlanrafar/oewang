@@ -125,11 +125,15 @@ Requirement IDs are referenced by every other doc and by each backlog story. The
 | AUTH-8 | Refresh and password reset tokens are stored as SHA-256 hashes. The raw token is never persisted. |
 | AUTH-9 | A refresh rotates the token. Reusing a rotated token revokes every token descended from that login. |
 | AUTH-10 | A user can reset a forgotten password through a single-use emailed token that expires in 1 hour. The request endpoint always answers 204, so it cannot enumerate users. A successful reset revokes every session. |
+| AUTH-11 | A user may change their display name. The email is shown and cannot be changed (D94). |
+| AUTH-12 | A user may change their password by giving the current one. Every other session and Telegram link ends; the browser that changed it stays signed in (D94). |
+| AUTH-13 | A user may set and remove a profile photo. It is kept as a 256px square JPEG under the user, not a workspace, and served through the app (D94). |
 | WS-1 | A user may belong to several workspaces, with one role per workspace. |
 | WS-2 | A user may switch workspace and receives a re-scoped JWT. |
 | WS-3 | A workspace owner or admin may invite a user by email and remove a member. |
 | WS-4 | The last remaining owner cannot be removed or demoted. |
 | WS-5 | Registration creates a user, a workspace and an `owner` membership in one database transaction. |
+| WS-6 | A signed-in user may create another workspace, which they own, seeded as registration seeds one, and is switched into it. One person owns at most 10 (D94). |
 
 ### 6.3 Wallets and categories (WAL, CAT)
 
@@ -370,6 +374,7 @@ Detailed stories are in [backlog.md](backlog.md).
 | **M7. Telegram** | US-040 to US-042 | The Apps page, a linked Telegram chat, receipts saved from a photo, and the assistant in the chat. |
 | **M8. Overview and the analysis canvas** | US-043 to US-046 | The overview front page, the analysis canvases in chat, and the chat restyle. |
 | **M9. Vault and usage** | US-047 to US-050 | The vault page and its file sheet, thumbnails, tiles and the picker on transactions, and a usage page for tokens and storage. |
+| **M10. Workspaces and account** | US-051 to US-052 | The workspace switcher, a workspaces page and an account area outside the app shell: profile and photo, password and sessions. |
 
 M2 is the first milestone worth demoing, and it de-risks the stack choice before any LLM work starts.
 

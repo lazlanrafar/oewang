@@ -13,14 +13,14 @@
 	import { cn } from '$lib/utils';
 
 	let {
-		name,
-		secondary,
+		workspaces,
+		activeId,
 		collapsed = false,
 		onNavigate,
 		class: className
 	}: {
-		name: string;
-		secondary: string;
+		workspaces: { id: string; name: string; role: string }[];
+		activeId: string;
 		/** Icon rail instead of the full panel. Ignored in the mobile sheet. */
 		collapsed?: boolean;
 		onNavigate?: () => void;
@@ -39,7 +39,7 @@
 	<div
 		class="bg-sidebar/70 text-sidebar-foreground sticky top-0 flex h-svh flex-col overflow-hidden backdrop-blur-md"
 	>
-		<WorkspaceSwitcher {name} {secondary} {collapsed} />
+		<WorkspaceSwitcher {workspaces} {activeId} {collapsed} />
 		<div class="flex-1 overflow-x-hidden overflow-y-auto">
 			<SidebarNav {collapsed} {onNavigate} />
 		</div>

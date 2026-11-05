@@ -77,6 +77,20 @@ export const navGroups: NavGroup[] = [
 ];
 
 /**
+ * The account area's sidebar (D94): what a person changes about
+ * themselves, outside any workspace, so outside the app shell. Profile moved
+ * here from the settings sidebar, where it sat as a "Soon" row.
+ */
+export const accountNavGroups: NavGroup[] = [
+	{
+		items: [
+			{ titleKey: 'account.nav_profile', href: '/account/profile', icon: User },
+			{ titleKey: 'account.nav_security', href: '/account/security', icon: Lock }
+		]
+	}
+];
+
+/**
  * The settings sidebar (D82).
  *
  * The old app's list, in its order, so the page reads as the one users
@@ -91,7 +105,6 @@ export const navGroups: NavGroup[] = [
 export const settingsNavGroups: NavGroup[] = [
 	{
 		items: [
-			{ titleKey: 'settings.nav_profile', href: '/settings/profile', icon: User, pending: true },
 			{ titleKey: 'settings.nav_members', href: '/settings/members', icon: Users, pending: true },
 			{ titleKey: 'settings.nav_appearance', href: '/settings/appearance', icon: Palette, pending: true },
 			{ titleKey: 'settings.nav_display', href: '/settings/display', icon: Monitor, pending: true },

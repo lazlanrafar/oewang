@@ -160,6 +160,57 @@ pub async fn update_password(
     .map(|_| ())
 }
 
+/// Rename a user. The name is a label; `None` clears it.
+pub async fn update_user_name(
+    executor: impl PgExecutor<'_>,
+    user_id: &str,
+    name: Option<&str>,
+) -> Result<Option<UserRow>, sqlx::Error> {
+    sqlx::query_as!(
+        UserRow,
+        r#"UPDATE users SET name = $2, updated_at = now() WHERE id = $1
+           RETURNING id, email, name, profile_picture, created_at"#,
+        user_id,
+        name
+    )
+    .fetch_optional(executor)
+    .await
+}
+
+/// Record which stored photo is current, or that there is none (D94). The
+/// value is a version id, never a path or a URL.
+pub async fn set_profile_picture(
+    executor: impl PgExecutor<'_>,
+    user_id: &str,
+    version: Option<&str>,
+) -> Result<(), sqlx::Error> {
+    sqlx::query!(
+        r#"UPDATE users SET profile_picture = $2, updated_at = now() WHERE id = $1"#,
+        user_id,
+        version
+    )
+    .execute(executor)
+    .await
+    .map(|_| ())
+}
+
+/// How many live workspaces this user owns (WS-6).
+pub async fn count_owned_workspaces(
+    executor: impl PgExecutor<'_>,
+    user_id: &str,
+) -> Result<i64, sqlx::Error> {
+    sqlx::query_scalar!(
+        r#"SELECT count(*) AS "count!"
+           FROM user_workspaces m
+           JOIN workspaces w ON w.id = m.workspace_id
+           WHERE m.user_id = $1 AND m.role = 'owner'
+             AND m.deleted_at IS NULL AND w.deleted_at IS NULL"#,
+        user_id
+    )
+    .fetch_one(executor)
+    .await
+}
+
 // -------------------------------------------------------------- workspaces
 
 pub async fn insert_workspace(

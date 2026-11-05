@@ -11,17 +11,25 @@
 
 	import { SidebarItem } from '$lib/components/organisms/layouts';
 	import { t } from '$lib/i18n';
-	import { settingsNavGroups } from '$lib/nav';
+	import { settingsNavGroups, type NavGroup } from '$lib/nav';
 	import { cn } from '$lib/utils';
 
-	let { class: className }: { class?: string } = $props();
+	/*
+	 * The account area draws the same sidebar with its own groups (D94), so
+	 * the two read as one family rather than as two hand-built lists.
+	 */
+	let {
+		groups = settingsNavGroups,
+		label = t('settings.title'),
+		class: className
+	}: { groups?: NavGroup[]; label?: string; class?: string } = $props();
 </script>
 
 <nav
 	class={cn('flex flex-col gap-4 lg:gap-2', className)}
-	aria-label={t('settings.title')}
+	aria-label={label}
 >
-	{#each settingsNavGroups as group, index (index)}
+	{#each groups as group, index (index)}
 		<div class="flex flex-col gap-1">
 			{#if group.labelKey}
 				<p class="text-subtle flex h-8 shrink-0 items-center px-2 text-xs font-medium">

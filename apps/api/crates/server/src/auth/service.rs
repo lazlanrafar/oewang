@@ -358,6 +358,26 @@ pub async fn complete_password_reset(
     Ok(())
 }
 
+/// A new session inside a transaction the caller already holds, for a write
+/// that must hand back fresh tokens in the same commit (D94).
+pub(crate) async fn issue_in(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    user_id: &str,
+    workspace_id: &str,
+    role: Role,
+    session: &SessionContext<'_>,
+) -> Result<IssuedSession> {
+    issue_session(
+        tx,
+        user_id,
+        workspace_id,
+        role,
+        token::new_family_id(),
+        session,
+    )
+    .await
+}
+
 // ------------------------------------------------------------- internals
 
 async fn issue_session(
@@ -410,7 +430,10 @@ fn truncate_agent(agent: &str) -> String {
     agent.chars().take(200).collect()
 }
 
-async fn unique_slug(tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, name: &str) -> Result<String> {
+pub(crate) async fn unique_slug(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    name: &str,
+) -> Result<String> {
     let base = slugify(name);
 
     if !accounts::slug_exists(&mut **tx, &base)
