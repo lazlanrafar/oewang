@@ -8,8 +8,6 @@
 
 import type { Cookies } from '@sveltejs/kit';
 
-export const ACCESS_COOKIE = 'oewang-session';
-export const REFRESH_COOKIE = 'oewang-refresh';
 
 export type IssuedSession = {
 	access_token: string;
@@ -22,6 +20,18 @@ export type IssuedSession = {
 };
 
 const secure = process.env.APP_ENV === 'production';
+
+/*
+ * `__Host-` in production: the browser then refuses the cookie unless it is
+ * Secure, on path `/` and without a Domain, so no other subdomain can set
+ * or shadow it. It also keeps these names apart from oewang old's
+ * `oewang-session`, which browsers that used the old app still send and
+ * whose token this API cannot verify. Development runs over plain http,
+ * where a `__Host-` cookie would be refused.
+ */
+const prefix = secure ? '__Host-' : '';
+export const ACCESS_COOKIE = `${prefix}oewang-session`;
+export const REFRESH_COOKIE = `${prefix}oewang-refresh`;
 
 function base(maxAge: number) {
 	return {

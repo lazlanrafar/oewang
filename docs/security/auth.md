@@ -56,7 +56,7 @@ HS256, signed with `JWT_SECRET` (at least 32 characters, validated at startup).
 
 Two cookies, set by the SvelteKit server, never by client JavaScript (D5, AUTH-3).
 
-| | `oewang-session` | `oewang-refresh` |
+| | `__Host-oewang-session` | `__Host-oewang-refresh` |
 |---|---|---|
 | Holds | The access JWT | An opaque 32-byte random token |
 | Lifetime | 15 minutes | 30 days |
@@ -64,6 +64,10 @@ Two cookies, set by the SvelteKit server, never by client JavaScript (D5, AUTH-3
 | `HttpOnly` | yes | yes |
 | `Secure` | yes in production | yes in production |
 | `SameSite` | `Lax` | `Lax` |
+
+In production both names carry the `__Host-` prefix, so the browser refuses them unless they are `Secure`, on `/` and without a `Domain`. That also keeps them apart from oewang old's `oewang-session`, which browsers that used the old app still send and whose token this API cannot verify. Development runs over plain http and drops the prefix.
+
+When the API answers 401 to a call that carried the access token, the SvelteKit server clears both cookies and redirects to `/login?next=`, rather than failing the page. A rotated `JWT_SECRET` or a removed user then costs a sign-in, not an error page.
 
 The refresh token is opaque, not a JWT. It carries no claims, so it proves nothing on its own: the server looks it up. Only its SHA-256 is stored (AUTH-8), so a database leak does not yield usable tokens.
 
@@ -137,7 +141,7 @@ sequenceDiagram
     R->>R: Argon2id verify
     R->>D: SELECT membership, pick workspace
     R-->>A: 200 { token, user, workspace }
-    A-->>B: Set-Cookie oewang-session; redirect /transactions
+    A-->>B: Set-Cookie __Host-oewang-session; redirect /transactions
 
     B->>A: GET /transactions
     A->>A: hooks.server.ts verifies the JWT, fills event.locals.user

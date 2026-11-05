@@ -11,9 +11,14 @@
 
 import { randomUUID } from 'node:crypto';
 
+import { redirect } from '@sveltejs/kit';
+
+import { getRequestEvent } from '$app/server';
+
 import { formatFrame, readFrames } from '$lib/chat-stream';
 
 import * as owe1 from './owe1/protocol';
+import { clearSession } from './session';
 
 // SvelteKit 3 removed $env/*. This module is server-only, so reading
 // process.env directly is both safe and the documented replacement.
@@ -229,8 +234,32 @@ export async function api<T>(options: RequestOptions): Promise<Envelope<T>> {
 			session = null;
 			return send<T>(options, await currentSession());
 		}
+		if (error instanceof ApiError && error.status === 401 && options.token) {
+			signOut();
+		}
 		throw error;
 	}
+}
+
+/**
+ * The API refused a token this server sent, so the session is over: the
+ * secret was rotated, the user was removed, or the cookie came from
+ * somewhere else. Clear it and send the reader to sign in, rather than
+ * failing whatever page or action asked (a 500 that a reload repeats).
+ *
+ * Outside a request, in a test, there is nothing to clear and the error
+ * is thrown as it was.
+ */
+function signOut(): void {
+	let event;
+	try {
+		event = getRequestEvent();
+	} catch {
+		return;
+	}
+	clearSession(event.cookies);
+	const target = event.url.pathname + event.url.search;
+	redirect(303, `/login?next=${encodeURIComponent(target)}`);
 }
 
 /**

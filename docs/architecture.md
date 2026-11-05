@@ -124,7 +124,7 @@ The detailed rules are in [Rust API best practices](best-practices/rust-api.md).
 ```
 Browser
   -> SvelteKit +page.server.ts load
-     reads the oewang-session cookie
+     reads the session cookie
      fetch(API, Authorization: Bearer <jwt>)
   -> API: auth extractor -> handler -> service -> repository -> PostgreSQL
   <- JSON envelope
