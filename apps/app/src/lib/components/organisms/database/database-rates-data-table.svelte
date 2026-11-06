@@ -30,6 +30,7 @@
 		onLoadMore,
 		filtered = false,
 		onClear,
+		loading = false,
 		class: className
 	}: {
 		rates: SnapshotRate[];
@@ -43,6 +44,8 @@
 		/** Decides which of the two empty states shows (UI-2). */
 		filtered?: boolean;
 		onClear?: () => void;
+		/** Rows are on their way: the table draws its skeleton (D108). */
+		loading?: boolean;
 		class?: string;
 	} = $props();
 
@@ -62,6 +65,7 @@
 </script>
 
 <DataTable
+	{loading}
 	class={className}
 	columns={RATE_COLUMNS}
 	rows={rates}

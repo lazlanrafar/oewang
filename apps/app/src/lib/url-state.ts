@@ -1,5 +1,5 @@
 import { goto } from '$app/navigation';
-import { page } from '$app/state';
+import { navigating, page } from '$app/state';
 
 /**
  * View state lives in the URL (UI-8).
@@ -98,4 +98,28 @@ export async function writeParams(
 		// applied, not a new page being opened.
 		reset: false
 	});
+}
+
+/**
+ * Is a navigation under way that will change what this page's load returns?
+ *
+ * True when the page is navigating to itself and one of `keys`, the query
+ * parameters its load reads, is about to change: a filter, a search, a
+ * sort, a month. The table then draws its skeleton rather than leaving the
+ * old rows up as if they answered the new question (D108).
+ *
+ * The keys are the page's to name because only the page knows which
+ * parameters are data. A page number appends a page under a spinner, and a
+ * parameter that opens a sheet changes nothing in the table; neither should
+ * blank it. Reactive: read it in markup or a `$derived`.
+ */
+export function reloading(keys: readonly string[]): boolean {
+	const to = navigating.to?.url;
+	if (!to || to.pathname !== page.url.pathname) return false;
+
+	return keys.some(
+		(key) =>
+			to.searchParams.getAll(key).join('\u0000') !==
+			page.url.searchParams.getAll(key).join('\u0000')
+	);
 }

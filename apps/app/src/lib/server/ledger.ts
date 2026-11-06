@@ -66,7 +66,6 @@ export type Transaction = {
 	type: 'income' | 'expense' | 'transfer';
 	name: string | null;
 	description: string | null;
-	is_ready: boolean;
 	is_exported: boolean;
 	source: 'web' | 'chat' | 'import' | 'receipt';
 	created_at: string;
@@ -115,7 +114,6 @@ export type TransactionQuery = {
 	start_date?: string;
 	end_date?: string;
 	search?: string;
-	is_ready?: string;
 	min_amount?: string;
 	max_amount?: string;
 	sort?: string;
@@ -137,7 +135,6 @@ export const TRANSACTION_FILTER_KEYS = [
 	'start_date',
 	'end_date',
 	'search',
-	'is_ready',
 	'min_amount',
 	'max_amount',
 	'sort',
@@ -340,7 +337,6 @@ export type TransactionPayload = {
 	date: string;
 	name?: string | null;
 	description?: string | null;
-	is_ready?: boolean;
 };
 
 export function createTransaction(body: TransactionPayload, token?: string) {
@@ -519,7 +515,7 @@ export function readImportJob(jobId: string, token?: string): Promise<Envelope<I
 }
 
 export function bulkUpdateTransactions(
-	body: { ids: string[]; category_id?: string | null; is_ready?: boolean },
+	body: { ids: string[]; category_id: string | null },
 	token?: string
 ) {
 	return api<{ affected: number }>({

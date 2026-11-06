@@ -52,24 +52,31 @@ export async function signInWith(page: Page, account: Account): Promise<void> {
 	await page.goto('/login');
 
 	await page.getByLabel(/email/i).fill(account.email);
-	await page.getByLabel(/password/i).fill(account.password);
-	await page.getByRole('button', { name: /sign in/i }).click();
+	await page.getByLabel('Password', { exact: true }).fill(account.password);
+	await page.getByRole('button', { name: 'Sign in', exact: true }).click();
 
 	// The guard redirects a signed-in visitor away from /login, so landing
 	// anywhere else is the signal, rather than a fixed destination.
 	await expect(page).not.toHaveURL(/\/login/);
 }
 
-/** One account and its workspace, through the real form. Leaves it signed in. */
+/**
+ * One account and its workspace, through the real forms. Leaves it signed
+ * in. Signing up makes no workspace (D109): the check page sends a new
+ * account to create one.
+ */
 export async function register(page: Page, account: Account): Promise<void> {
 	await page.goto('/register');
 
 	await page.getByLabel(/email/i).fill(account.email);
-	await page.getByLabel(/password/i).fill(account.password);
-	await page.locator('#workspace_name').fill('E2E Workspace');
+	await page.getByLabel('Password', { exact: true }).fill(account.password);
 	await page.getByRole('button', { name: /create account/i }).click();
 
-	await expect(page).not.toHaveURL(/\/register/);
+	await expect(page).toHaveURL(/\/workspace-create/);
+	await page.locator('#workspace-name').fill('E2E Workspace');
+	await page.getByRole('button', { name: /create workspace/i }).click();
+
+	await expect(page).toHaveURL(/\/overview/);
 }
 
 /**

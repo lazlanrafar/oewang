@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT t.id, t.wallet_id, w.name AS wallet_name,\n                  w.currency_code AS wallet_currency_code,\n                  t.to_wallet_id, tw.name AS \"to_wallet_name?\",\n                  t.category_id, c.name AS \"category_name?\",\n                  t.amount, t.to_amount, t.original_amount, t.original_currency_code,\n                  t.exchange_rate, t.base_amount, t.base_rate, t.base_rate_source,\n                  t.base_rate_date, t.date, t.type AS \"type!\", t.name, t.description,\n                  t.is_ready, t.is_exported, t.source, t.created_at\n           FROM transactions t\n           JOIN wallets w ON w.id = t.wallet_id\n           LEFT JOIN wallets tw ON tw.id = t.to_wallet_id\n           LEFT JOIN categories c ON c.id = t.category_id\n           WHERE t.workspace_id = $1 AND t.id = $2 AND t.deleted_at IS NULL",
+  "query": "SELECT id, wallet_id, to_wallet_id, category_id, amount, to_amount,\n                  original_amount, original_currency_code, exchange_rate,\n                  base_amount, base_rate, base_rate_source, base_rate_date,\n                  date, type AS \"type!\", name, description, is_exported,\n                  source, fingerprint, created_at, updated_at\n           FROM transactions\n           WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL",
   "describe": {
     "columns": [
       {
@@ -15,117 +15,102 @@
       },
       {
         "ordinal": 2,
-        "name": "wallet_name",
-        "type_info": "Text"
-      },
-      {
-        "ordinal": 3,
-        "name": "wallet_currency_code",
-        "type_info": "Text"
-      },
-      {
-        "ordinal": 4,
         "name": "to_wallet_id",
         "type_info": "Text"
       },
       {
-        "ordinal": 5,
-        "name": "to_wallet_name?",
-        "type_info": "Text"
-      },
-      {
-        "ordinal": 6,
+        "ordinal": 3,
         "name": "category_id",
         "type_info": "Text"
       },
       {
-        "ordinal": 7,
-        "name": "category_name?",
-        "type_info": "Text"
-      },
-      {
-        "ordinal": 8,
+        "ordinal": 4,
         "name": "amount",
         "type_info": "Numeric"
       },
       {
-        "ordinal": 9,
+        "ordinal": 5,
         "name": "to_amount",
         "type_info": "Numeric"
       },
       {
-        "ordinal": 10,
+        "ordinal": 6,
         "name": "original_amount",
         "type_info": "Numeric"
       },
       {
-        "ordinal": 11,
+        "ordinal": 7,
         "name": "original_currency_code",
         "type_info": "Text"
       },
       {
-        "ordinal": 12,
+        "ordinal": 8,
         "name": "exchange_rate",
         "type_info": "Numeric"
       },
       {
-        "ordinal": 13,
+        "ordinal": 9,
         "name": "base_amount",
         "type_info": "Numeric"
       },
       {
-        "ordinal": 14,
+        "ordinal": 10,
         "name": "base_rate",
         "type_info": "Numeric"
       },
       {
-        "ordinal": 15,
+        "ordinal": 11,
         "name": "base_rate_source",
         "type_info": "Text"
       },
       {
-        "ordinal": 16,
+        "ordinal": 12,
         "name": "base_rate_date",
         "type_info": "Date"
       },
       {
-        "ordinal": 17,
+        "ordinal": 13,
         "name": "date",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 18,
+        "ordinal": 14,
         "name": "type!",
         "type_info": "Text"
       },
       {
-        "ordinal": 19,
+        "ordinal": 15,
         "name": "name",
         "type_info": "Text"
       },
       {
-        "ordinal": 20,
+        "ordinal": 16,
         "name": "description",
         "type_info": "Text"
       },
       {
-        "ordinal": 21,
-        "name": "is_ready",
-        "type_info": "Bool"
-      },
-      {
-        "ordinal": 22,
+        "ordinal": 17,
         "name": "is_exported",
         "type_info": "Bool"
       },
       {
-        "ordinal": 23,
+        "ordinal": 18,
         "name": "source",
         "type_info": "Text"
       },
       {
-        "ordinal": 24,
+        "ordinal": 19,
+        "name": "fingerprint",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 20,
         "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 21,
+        "name": "updated_at",
         "type_info": "Timestamptz"
       }
     ],
@@ -138,12 +123,8 @@
     "nullable": [
       false,
       false,
-      false,
-      false,
       true,
-      false,
       true,
-      false,
       false,
       true,
       true,
@@ -159,9 +140,10 @@
       true,
       false,
       false,
+      true,
       false,
       false
     ]
   },
-  "hash": "64426af5a71e855106f04698061388d0948bd13465829388cb7bfe028412ea9d"
+  "hash": "41475df552f0a40872a7863a492b6716acc14ad08785cc8cc4af7c830fcc16be"
 }

@@ -7,6 +7,7 @@ pub mod feedback;
 pub mod fx;
 pub mod items;
 pub mod mcp;
+pub mod passkeys;
 pub mod receipts;
 pub mod telegram;
 pub mod tokens;

@@ -4,7 +4,7 @@
 	import { FieldError } from '$lib/components/molecules/field-error';
 	import { FormError } from '$lib/components/molecules/form-error';
 	import { Button } from '$lib/components/atoms/button';
-	import { Input } from '$lib/components/atoms/input';
+	import { PasswordInput } from '$lib/components/molecules/password-input';
 	import { messageForCode } from '$lib/errors';
 	import { t } from '$lib/i18n';
 	import { pageTitle } from '$lib/page-title';
@@ -43,10 +43,9 @@
 			<label for="password" class="mb-1.5 block text-sm font-medium">
 				{t('auth.new_password')}
 			</label>
-			<Input
+			<PasswordInput
 				id="password"
 				name="password"
-				type="password"
 				autocomplete="new-password"
 				required
 				minlength={10}

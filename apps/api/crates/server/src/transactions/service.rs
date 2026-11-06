@@ -70,7 +70,6 @@ pub struct TransactionInput<'a> {
     pub date: DateTime<Utc>,
     pub name: Option<&'a str>,
     pub description: Option<&'a str>,
-    pub is_ready: bool,
     /// The files this transaction carries (TXN-13, VLT-5).
     ///
     /// `None` leaves the attachments alone, which is what an import and a
@@ -591,7 +590,6 @@ pub async fn import_rows(
                 .unwrap_or_else(Utc::now),
             name: row.name.as_deref(),
             description: row.description.as_deref(),
-            is_ready: false,
             // An imported row carries no files.
             attachment_ids: None,
         })
@@ -624,29 +622,21 @@ pub async fn import_rows(
     Ok(outcome)
 }
 
-/// Change the category, the ready flag, or both, across a selection.
+/// Change the category across a selection; `None` clears it.
 ///
-/// Neither column touches a balance, which is why this is one statement and
-/// a bulk delete is not.
+/// It touches no balance, which is why this is one statement and a bulk
+/// delete is not.
 pub async fn bulk_update(
     pool: &PgPool,
     actor: Actor<'_>,
     ids: &[String],
-    category_id: Option<Option<&str>>,
-    is_ready: Option<bool>,
+    category_id: Option<&str>,
 ) -> Result<usize> {
     check_bulk_size(ids)?;
 
-    if category_id.is_none() && is_ready.is_none() {
-        return Err(AppError::validation([(
-            "changes",
-            "Choose a category or a ready state to apply.",
-        )]));
-    }
-
     let mut tx = pool.begin().await.map_err(internal)?;
 
-    if let Some(Some(category_id)) = category_id {
+    if let Some(category_id) = category_id {
         require_category(&mut tx, actor.workspace_id, category_id).await?;
     }
 
@@ -654,7 +644,7 @@ pub async fn bulk_update(
         .await
         .map_err(internal)?;
 
-    repo::bulk_update(&mut *tx, actor.workspace_id, ids, category_id, is_ready)
+    repo::bulk_update(&mut *tx, actor.workspace_id, ids, category_id)
         .await
         .map_err(internal)?;
 
@@ -999,7 +989,6 @@ fn new_row<'a>(
         kind: prepared.shape.kind.as_str(),
         name: input.name,
         description: input.description,
-        is_ready: input.is_ready,
         source: actor.source,
         fingerprint,
     }

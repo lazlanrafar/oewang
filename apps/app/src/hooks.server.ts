@@ -19,6 +19,7 @@ import {
 	readAccessToken,
 	readRefreshToken,
 	setSession,
+	tokenHasWorkspace,
 	type IssuedSession
 } from '$lib/server/session';
 
@@ -46,6 +47,16 @@ const PUBLIC_PREFIXES = [
 
 function isPublic(pathname: string): boolean {
 	return PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+}
+
+/**
+ * Routes a signed-in person may see before they have a workspace (D109):
+ * the check page, creating one, joining one by invitation, signing out.
+ */
+const ONBOARDING_PREFIXES = ['/sync', '/workspace-create', '/accept-invite', '/logout'];
+
+function isOnboarding(pathname: string): boolean {
+	return ONBOARDING_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
 
 export const handle: Handle = async ({ event, resolve }) => {
@@ -97,7 +108,19 @@ export const handle: Handle = async ({ event, resolve }) => {
 	}
 
 	if (accessToken && (url.pathname === '/login' || url.pathname === '/register')) {
-		redirect(303, '/');
+		redirect(303, '/sync');
+	}
+
+	// Everything else in the app reads a workspace. A session without one
+	// goes to the check page, which sends it on to create one, and back here
+	// afterwards (D109).
+	if (
+		accessToken &&
+		!isPublic(url.pathname) &&
+		!isOnboarding(url.pathname) &&
+		!tokenHasWorkspace(accessToken)
+	) {
+		redirect(303, `/sync?next=${encodeURIComponent(url.pathname + url.search)}`);
 	}
 
 	const response = await resolve(event);

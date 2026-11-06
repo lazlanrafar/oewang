@@ -1,6 +1,6 @@
 import type { LayoutServerLoad } from './$types';
 
-import { listWorkspaces, readMe } from '$lib/server/account';
+import { listWorkspaces, readWorkspaceMe } from '$lib/server/account';
 import * as ledger from '$lib/server/ledger';
 import { receiptNotices } from '$lib/server/receipts';
 import { SIDEBAR_COOKIE } from '$lib/components/organisms/layouts';
@@ -11,7 +11,7 @@ import { SIDEBAR_COOKIE } from '$lib/components/organisms/layouts';
  *
  * The guard in hooks.server.ts has already ensured a token exists.
  */
-export const load: LayoutServerLoad = async ({ locals, cookies }) => {
+export const load: LayoutServerLoad = async ({ locals, cookies, url }) => {
 	/*
 	 * The three lists every picker in the shell reads, loaded here rather
 	 * than by each page: they are the same lists whatever the page, and a
@@ -22,8 +22,9 @@ export const load: LayoutServerLoad = async ({ locals, cookies }) => {
 	 * claim inside it (AUTH-4): nothing here names one, so no page can be
 	 * served another workspace's rows.
 	 */
-	const [result, workspaces, wallets, groups, categories, currencies, notices] = await Promise.all([
-		readMe(locals.accessToken),
+	const [me, workspaces, wallets, groups, categories, currencies, notices] = await Promise.all([
+		// A session with no workspace yet is sent to the check page (D109).
+		readWorkspaceMe(locals.accessToken, url),
 		listWorkspaces(locals.accessToken),
 		ledger.listWallets(locals.accessToken),
 		ledger.listWalletGroups(locals.accessToken),
@@ -42,7 +43,7 @@ export const load: LayoutServerLoad = async ({ locals, cookies }) => {
 	// browser is a visible jump on every navigation. The live app keeps the
 	// same cookie under the same name.
 	return {
-		me: result.data!,
+		me,
 		// The switcher's list (WS-1, D94).
 		workspaces: (workspaces.data ?? []).map((workspace) => ({
 			id: workspace.id,

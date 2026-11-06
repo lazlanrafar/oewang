@@ -30,6 +30,16 @@
 	const featureLabel = (feature: string) =>
 		FEATURE_LABELS[feature] ? t(FEATURE_LABELS[feature]) : feature;
 
+	/*
+	 * The figures count up as they arrive (D108). These are whole counts of
+	 * tokens and bytes, not money, so the formatter may read them as numbers.
+	 */
+	const counted = (value: number) => ({ value: String(value), format: (v: string) => count(Number(v)) });
+	const bytes = (value: number) => ({
+		value: String(value),
+		format: (v: string) => formatBytes(Number(v))
+	});
+
 	const tokens = (pair: { input: number; output: number }) =>
 		t('settings.usage_tokens_detail', { input: count(pair.input), output: count(pair.output) });
 </script>
@@ -49,17 +59,17 @@
 		<div class="grid gap-4 sm:grid-cols-3">
 			<StatCard
 				label={t('settings.usage_storage')}
-				value={formatBytes(usage.storage.bytes)}
+				value={bytes(usage.storage.bytes)}
 				hint={t('settings.usage_storage_detail', { count: count(usage.storage.files) })}
 			/>
 			<StatCard
 				label={t('settings.usage_tokens_month')}
-				value={count(usage.ai.month.input + usage.ai.month.output)}
+				value={counted(usage.ai.month.input + usage.ai.month.output)}
 				hint={tokens(usage.ai.month)}
 			/>
 			<StatCard
 				label={t('settings.usage_tokens_total')}
-				value={count(usage.ai.total.input + usage.ai.total.output)}
+				value={counted(usage.ai.total.input + usage.ai.total.output)}
 				hint={tokens(usage.ai.total)}
 			/>
 		</div>

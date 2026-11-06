@@ -1,6 +1,6 @@
 import { redirect } from '@sveltejs/kit';
 
-import { switchWorkspace } from '$lib/server/account';
+import { readMe, switchWorkspace } from '$lib/server/account';
 import { ApiError } from '$lib/server/api';
 import { setSession } from '$lib/server/session';
 import { acceptInvite } from '$lib/server/workspaces';
@@ -19,8 +19,11 @@ import type { PageServerLoad } from './$types';
  * Accepting in a load rather than an action: the link in the email is a
  * GET, and asking the reader to press a second button to do what the link
  * says adds a step without adding a decision.
+ *
+ * Reachable without a workspace (D109): accepting is how someone who has
+ * just signed up joins the workspace they were invited to.
  */
-export const load: PageServerLoad = async ({ url, locals, cookies, parent }) => {
+export const load: PageServerLoad = async ({ url, locals, cookies }) => {
 	const token = url.searchParams.get('token') ?? '';
 	if (!token) return { error: 'missing' as const };
 
@@ -30,8 +33,8 @@ export const load: PageServerLoad = async ({ url, locals, cookies, parent }) => 
 		if (session.data) setSession(cookies, session.data);
 	} catch (error) {
 		if (error instanceof ApiError) {
-			const { me } = await parent();
-			return { error: 'invalid' as const, email: me.user.email };
+			const me = await readMe(locals.accessToken);
+			return { error: 'invalid' as const, email: me.data?.user.email ?? '' };
 		}
 		throw error;
 	}

@@ -40,4 +40,6 @@ pub struct AppState {
     pub rate_limits: RateLimiter,
     /// The Telegram bot, when one is configured (D84).
     pub telegram: Option<crate::telegram::Bot>,
+    /// The passkey relying party, the app's origin (D110).
+    pub webauthn: Arc<webauthn_rs::Webauthn>,
 }

@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     audit::Actor,
     auth::{
-        extractor::{Auth, AuthOwner, AuthWrite},
+        extractor::{Auth, AuthOwner, AuthUser, AuthWrite},
         service::slugify,
     },
     response::{ApiError, RequestId},
@@ -85,7 +85,7 @@ pub struct UpdateMemberRequest {
 
 pub async fn list_workspaces(
     State(state): State<AppState>,
-    auth: Auth,
+    auth: AuthUser,
     request_id: RequestId,
 ) -> std::result::Result<Json<Envelope<Vec<WorkspaceListItem>>>, ApiError> {
     let rows = accounts::list_workspaces_for_user(&state.db, &auth.user_id)
@@ -116,7 +116,7 @@ pub struct CreateWorkspaceRequest {
 /// `POST /v1/auth/switch-workspace`, the same as into any other.
 pub async fn create_workspace(
     State(state): State<AppState>,
-    auth: Auth,
+    auth: AuthUser,
     request_id: RequestId,
     Json(body): Json<CreateWorkspaceRequest>,
 ) -> std::result::Result<(StatusCode, Json<Envelope<WorkspaceListItem>>), ApiError> {
@@ -450,7 +450,7 @@ pub struct InviteAccepted {
 /// Accept an invitation addressed to the signed-in user.
 pub async fn accept_invite(
     State(state): State<AppState>,
-    auth: Auth,
+    auth: AuthUser,
     request_id: RequestId,
     Json(body): Json<AcceptInviteRequest>,
 ) -> std::result::Result<Json<Envelope<InviteAccepted>>, ApiError> {

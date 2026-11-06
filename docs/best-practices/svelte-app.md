@@ -79,7 +79,8 @@ next list is meant to be the third. The shape, top to bottom:
 ```
 header      one line: filter bar left, actions right. No page title: the
             sidebar already said where the reader is.
-summary     optional, above the table: cards whose figures arrive formatted.
+summary     optional, above the table: molecules/page-card, figures counting
+            up from a decimal string and its formatter.
 table       molecules/data-table, filling the rest of the height, configured
             by organisms/<module>/<module>-data-table-column.ts.
 off-page    the form sheet, the detail sheet, modals and the bulk bar. They
@@ -112,6 +113,20 @@ Rules that make a second list screen cheap:
 - **In-cell editing reports, it does not save.** The cell calls back, the page
   posts, and `invalidateAll` is what makes the new value stick or puts the old
   one back.
+- **Loading is the old app's skeleton** (D108). Pass the table
+  `loading={reloading([...])}`, naming the query parameters the load reads:
+  a filter, search, sort or month change then shows shimmering rows under the
+  real header until the rows arrive. Leave out `page` (the next page appends
+  under its own spinner) and sheet parameters (they change nothing in the
+  table); a mutation's `invalidateAll` is not a navigation and never blanks
+  it. Each column says what its cells look like while loading in its
+  `skeleton` spec, copied from the old column's `meta.skeleton`. Opening the
+  page from elsewhere is the shell's job: add the route to
+  `organisms/layouts/layouts-page-skeleton.svelte`, with its cards' labels,
+  its controls' widths and its table rendered with no rows and `loading`.
+- **Figures count up** (D108). Hand a card a `Count`, `{ value, format }`
+  with the API's decimal string, never a formatted string or a number; the
+  card animates through `lerpDecimal` and prints the exact value last.
 
 
 ## A settings section
@@ -242,12 +257,12 @@ src/lib/components/
 │               separator, table, tabs, card, avatar, alert, alert-dialog, dialog,
 │               sheet, popover, dropdown-menu, command, tooltip, accordion,
 │               collapsible, toggle, toggle-group, slider, progress, skeleton,
-│               spinner, kbd, breadcrumb, pagination, scroll-area, aspect-ratio,
+│               count-up, spinner, kbd, breadcrumb, pagination, scroll-area, aspect-ratio,
 │               calendar, range-calendar, sonner
 ├─ molecules/   atoms doing one job together: field, input-group, button-group,
 │               select and the pickers over it (select-account, select-category,
 │               select-group, select-currency, select-column), combobox,
-│               currency-input, date-range-picker, item, empty, stat-card,
+│               currency-input, date-range-picker, item, empty, stat-card, page-card,
 │               field-error, form-error, confirm-dialog, chart, the file
 │               pieces (file-icon, file-tile, file-card, file-picker,
 │               file-preview, file-dropzone), the data table and its filter bar
@@ -341,7 +356,7 @@ export const transactionSchema = z.object({
 
 - Progressive enhancement: every form works without JavaScript. The action is the real path; the client enhancement is the fast path.
 - Client validation is usability. The API validates again, and that is the control ([hardening](../security/hardening.md#input-validation)).
-- An optimistic update is allowed only where reversal is cheap: the ready flag, a bulk category change. Create and delete wait for the server, because they move wallet balances.
+- An optimistic update is allowed only where reversal is cheap: a bulk category change. Create and delete wait for the server, because they move wallet balances.
 
 ## URL state
 

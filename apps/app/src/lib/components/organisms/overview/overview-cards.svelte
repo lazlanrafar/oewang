@@ -33,12 +33,15 @@
 	}: {
 		overview: Overview;
 		/** Streamed: it waits on today's rates, the rest of the page does not. */
-		balance: Promise<{ totals: WalletTotals; formatted: string }>;
+		balance: Promise<{ totals: WalletTotals; currency: string }>;
 		onAsk: (message: string) => void;
 	} = $props();
 
 	/** Figures print in the app's own format, the currency code in front (D12). */
 	const money = (value: string) => formatMoney(value, overview.currency_code);
+	/** A figure that counts up when it arrives (D108), printed as `money` prints it. */
+	const count = (value: string) => ({ value, format: money });
+	const signed = (value: string) => formatMoney(value, overview.currency_code, { signed: true });
 
 	const range = $derived(rangeLabel(overview.from, overview.to));
 	const top = $derived(overview.expense_categories.find((share) => !share.other) ?? null);
@@ -49,7 +52,7 @@
 	<StatCard
 		label={t('overview.card_income')}
 		icon={TrendingUp}
-		value={money(overview.income.value)}
+		value={count(overview.income.value)}
 		change={changeOf(overview.income)}
 		changeLabel={comparedWith(overview.income)}
 		hint={range}
@@ -59,7 +62,7 @@
 	<StatCard
 		label={t('overview.card_expense')}
 		icon={Receipt}
-		value={money(overview.expense.value)}
+		value={count(overview.expense.value)}
 		change={changeOf(overview.expense)}
 		changeLabel={comparedWith(overview.expense)}
 		invert
@@ -70,7 +73,7 @@
 	<StatCard
 		label={t('overview.card_net')}
 		icon={Scale}
-		value={formatMoney(overview.net.value, overview.currency_code, { signed: true })}
+		value={{ value: overview.net.value, format: signed }}
 		change={changeOf(overview.net)}
 		changeLabel={comparedWith(overview.net)}
 		hint={range}
@@ -88,7 +91,7 @@
 	<StatCard
 		label={t('overview.card_burn')}
 		icon={Flame}
-		value={money(overview.average_expense)}
+		value={count(overview.average_expense)}
 		hint={range}
 		ariaLabel={t('overview.card_ask', { label: t('overview.card_burn') })}
 		onclick={() => ask('overview.ask_burn')}
@@ -99,7 +102,10 @@
 		<StatCard
 			label={t('overview.card_balance')}
 			icon={Wallet}
-			value={resolved.formatted}
+			value={{
+				value: resolved.totals.total,
+				format: (value) => formatMoney(value, resolved.currency)
+			}}
 			hint={resolved.totals.unconverted > 0
 				? t('overview.card_balance_partial', { count: resolved.totals.unconverted })
 				: t('overview.card_balance_hint', { count: resolved.totals.counted })}

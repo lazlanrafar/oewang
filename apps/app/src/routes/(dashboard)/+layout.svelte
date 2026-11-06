@@ -20,10 +20,18 @@
 	import { toast } from 'svelte-sonner';
 
 	import { goto } from '$app/navigation';
+	import { navigating, page } from '$app/state';
 
 	import { PanelLeft } from '@lucide/svelte';
 
-	import { AccountMenu, AppSidebar, rememberSidebar, SIDEBAR_SHORTCUT } from '$lib/components/organisms/layouts';
+	import {
+		AccountMenu,
+		AppSidebar,
+		hasPageSkeleton,
+		PageSkeleton,
+		rememberSidebar,
+		SIDEBAR_SHORTCUT
+	} from '$lib/components/organisms/layouts';
 	import { Button } from '$lib/components/atoms/button';
 	import * as Sheet from '$lib/components/atoms/sheet';
 	import { Toaster } from '$lib/components/atoms/sonner';
@@ -91,6 +99,18 @@
 		});
 	});
 	let drawerOpen = $state(false);
+
+	/*
+	 * A list page on its way (D108). Its load blocks, so nothing of it can
+	 * draw yet; the shell draws its frame and table skeleton instead of
+	 * leaving the previous page up as if it were current. Only for a move
+	 * between pages: a filter on the same page is the table's own skeleton,
+	 * and a page without an entry here keeps the old behaviour.
+	 */
+	const arriving = $derived.by(() => {
+		const id = navigating.to?.route.id;
+		return id !== page.route.id && hasPageSkeleton(id) ? id : null;
+	});
 
 	/*
 	 * The reader's income and expense colours (UI-12, D100). On the shell's
@@ -199,7 +219,11 @@
 		<!-- The one scrolling box. `min-w-0` on every flex ancestor is what
 		     keeps a wide table from making the page scroll sideways (UI-6). -->
 		<main class="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto p-4 md:p-6">
-			{@render children()}
+			{#if arriving}
+				<PageSkeleton route={arriving} />
+			{:else}
+				{@render children()}
+			{/if}
 		</main>
 	</div>
 </div>

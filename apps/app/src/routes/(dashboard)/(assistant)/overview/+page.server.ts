@@ -1,5 +1,4 @@
 import { INVALIDATION_KEYS } from '$lib/chat-invalidation';
-import { formatMoney } from '$lib/money';
 import { currentMonth } from '$lib/month-range';
 import * as ledger from '$lib/server/ledger';
 import * as reports from '$lib/server/reports';
@@ -43,7 +42,7 @@ export const load: PageServerLoad = async ({ depends, locals, url, parent }) => 
 	const balance = ledger.listWallets(token).then(async (wallets) => {
 		const all = wallets.data ?? [];
 		const totals = walletTotals(all, base, await ledger.walletRates(all, base, token));
-		return { totals, formatted: formatMoney(totals.total, base) };
+		return { totals, currency: base };
 	});
 
 	const overview = await reports.overview(range.start, range.end, token);

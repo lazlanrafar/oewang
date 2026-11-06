@@ -138,7 +138,6 @@ fn expense<'a>(wallet_id: &'a str, amount: &str) -> TransactionInput<'a> {
         date: day(2),
         name: Some("Lunch"),
         description: None,
-        is_ready: false,
         attachment_ids: None,
     }
 }
@@ -910,7 +909,7 @@ async fn should_apply_a_bulk_category_change_in_one_transaction(pool: PgPool) {
         );
     }
 
-    let affected = service::bulk_update(&pool, actor(), &ids, Some(Some(&food)), Some(true))
+    let affected = service::bulk_update(&pool, actor(), &ids, Some(&food))
         .await
         .unwrap();
     assert_eq!(affected, 3);
@@ -929,7 +928,6 @@ async fn should_apply_a_bulk_category_change_in_one_transaction(pool: PgPool) {
     assert!(rows
         .iter()
         .all(|row| row.category_id.as_deref() == Some(food.as_str())));
-    assert!(rows.iter().all(|row| row.is_ready));
     assert_eq!(
         balance(&pool, &cash).await,
         decimal("-6000"),

@@ -138,7 +138,12 @@ class Client:
         except Exception:  # a transport error answers in plaintext
             return status, json.loads(raw)
 
-    def register(self, suffix: str) -> dict:
+    def register(self, suffix: str, *, workspace: bool = True) -> dict:
+        """Sign up, then by default open a workspace and switch into it.
+
+        Signing up opens a session with no workspace (D109); the app's
+        create-workspace page is what makes the first one.
+        """
         status, body = self.call(
             "POST",
             "/v1/auth/register",
@@ -146,12 +151,23 @@ class Client:
                 "email": f"{suffix}@oewang.test",
                 "password": "a-long-enough-password",
                 "name": suffix,
-                "workspace_name": f"Workspace {suffix}",
             },
         )
         assert status == 201, body
         self.access_token = body["data"]["access_token"]
-        return body["data"]
+        if not workspace:
+            return body["data"]
+
+        status, created = self.call(
+            "POST", "/v1/workspaces", {"name": f"Workspace {suffix}", "currency_code": "IDR"}
+        )
+        assert status == 201, created
+        status, switched = self.call(
+            "POST", "/v1/auth/switch-workspace", {"workspace_id": created["data"]["id"]}
+        )
+        assert status == 200, switched
+        self.access_token = switched["data"]["access_token"]
+        return switched["data"]
 
 
 def unique(prefix: str) -> str:
@@ -161,17 +177,53 @@ def unique(prefix: str) -> str:
 # ------------------------------------------------------------- registration
 
 
-def test_register_creates_user_workspace_and_owner_membership():
+def test_register_opens_a_session_with_no_workspace():
+    client = Client()
+    session = client.register(unique("fresh"), workspace=False)
+
+    assert session["access_token"] and session["refresh_token"]
+    assert session["workspace_id"] is None
+    assert session["role"] is None
+
+    status, body = client.call("GET", "/v1/auth/me")
+    assert status == 200
+    assert body["data"]["workspace"] is None
+    assert body["data"]["role"] is None
+
+    status, body = client.call("GET", "/v1/workspaces")
+    assert status == 200
+    assert body["data"] == []
+
+    # Workspace data stays out of reach until there is a workspace (D109).
+    status, body = client.call("GET", "/v1/workspaces/current")
+    assert status == 403
+    assert body["error"]["code"] == "NO_WORKSPACE"
+
+
+def test_the_first_workspace_makes_the_user_its_owner():
     client = Client()
     session = client.register(unique("owner"))
 
     assert session["role"] == "owner"
-    assert session["access_token"] and session["refresh_token"]
 
     status, body = client.call("GET", "/v1/auth/me")
     assert status == 200
     assert body["data"]["role"] == "owner"
     assert body["data"]["workspace"]["currency_code"] == "IDR"
+
+
+def test_login_without_a_workspace_opens_a_session_without_one():
+    client = Client()
+    suffix = unique("noworkspace")
+    client.register(suffix, workspace=False)
+
+    status, body = client.call(
+        "POST",
+        "/v1/auth/login",
+        {"email": f"{suffix}@oewang.test", "password": "a-long-enough-password"},
+    )
+    assert status == 200
+    assert body["data"]["workspace_id"] is None
 
 
 def test_register_seeds_the_workspace_defaults():
@@ -197,7 +249,6 @@ def test_register_rejects_a_duplicate_email():
         {
             "email": f"{suffix}@oewang.test",
             "password": "a-long-enough-password",
-            "workspace_name": "Second",
         },
     )
     assert status == 409
@@ -209,7 +260,7 @@ def test_register_rejects_a_short_password():
     status, body = client.call(
         "POST",
         "/v1/auth/register",
-        {"email": f"{unique('short')}@oewang.test", "password": "short", "workspace_name": "W"},
+        {"email": f"{unique('short')}@oewang.test", "password": "short"},
     )
     assert status == 422
     assert body["error"]["code"] == "VALIDATION_FAILED"
@@ -358,8 +409,10 @@ def test_invite_and_accept_grants_membership():
     assert status == 201, created
     token = created["data"]["token"]
 
-    status, _ = invitee.call("POST", "/v1/workspaces/accept-invite", {"token": token})
-    assert status == 204
+    status, accepted = invitee.call("POST", "/v1/workspaces/accept-invite", {"token": token})
+    # The workspace joined comes back, so the app can switch into it (D104).
+    assert status == 200, accepted
+    assert accepted["data"]["workspace_id"]
 
     status, body = invitee.call("GET", "/v1/workspaces")
     assert status == 200

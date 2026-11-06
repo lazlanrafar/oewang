@@ -29,7 +29,6 @@ pub struct TransactionRow {
     pub r#type: String,
     pub name: Option<String>,
     pub description: Option<String>,
-    pub is_ready: bool,
     pub is_exported: bool,
     pub source: String,
     pub fingerprint: Option<String>,
@@ -64,7 +63,6 @@ pub struct TransactionListRow {
     pub r#type: String,
     pub name: Option<String>,
     pub description: Option<String>,
-    pub is_ready: bool,
     pub is_exported: bool,
     pub source: String,
     pub created_at: DateTime<Utc>,
@@ -84,7 +82,6 @@ pub struct TransactionFilters<'a> {
     pub start_date: Option<DateTime<Utc>>,
     pub end_date: Option<DateTime<Utc>>,
     pub search: Option<&'a str>,
-    pub is_ready: Option<bool>,
     pub ids: Option<&'a [String]>,
     /// Bounds on the amount, compared on `base_amount` so one bound means
     /// the same thing across wallets. A list holding a USD wallet beside an
@@ -201,9 +198,6 @@ fn push_filters<'a>(
     if let Some(max_amount) = filters.max_amount {
         builder.push(" AND t.base_amount <= ").push_bind(max_amount);
     }
-    if let Some(is_ready) = filters.is_ready {
-        builder.push(" AND t.is_ready = ").push_bind(is_ready);
-    }
     if let Some(ids) = filters.ids {
         builder.push(" AND t.id = ANY(").push_bind(ids).push(")");
     }
@@ -215,7 +209,7 @@ const LIST_SELECT: &str = r#"
            t.category_id, c.name AS category_name,
            t.amount, t.to_amount, t.original_amount, t.original_currency_code, t.exchange_rate,
            t.base_amount, t.base_rate, t.base_rate_source, t.base_rate_date,
-           t.date, t.type, t.name, t.description, t.is_ready, t.is_exported, t.source,
+           t.date, t.type, t.name, t.description, t.is_exported, t.source,
            t.created_at
     FROM transactions t
     JOIN wallets w ON w.id = t.wallet_id
@@ -460,7 +454,7 @@ pub async fn find(
         r#"SELECT id, wallet_id, to_wallet_id, category_id, amount, to_amount,
                   original_amount, original_currency_code, exchange_rate,
                   base_amount, base_rate, base_rate_source, base_rate_date,
-                  date, type AS "type!", name, description, is_ready, is_exported,
+                  date, type AS "type!", name, description, is_exported,
                   source, fingerprint, created_at, updated_at
            FROM transactions
            WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL"#,
@@ -489,7 +483,7 @@ pub async fn find_detail(
                   t.amount, t.to_amount, t.original_amount, t.original_currency_code,
                   t.exchange_rate, t.base_amount, t.base_rate, t.base_rate_source,
                   t.base_rate_date, t.date, t.type AS "type!", t.name, t.description,
-                  t.is_ready, t.is_exported, t.source, t.created_at
+                  t.is_exported, t.source, t.created_at
            FROM transactions t
            JOIN wallets w ON w.id = t.wallet_id
            LEFT JOIN wallets tw ON tw.id = t.to_wallet_id
@@ -523,7 +517,6 @@ pub struct NewTransaction<'a> {
     pub kind: &'a str,
     pub name: Option<&'a str>,
     pub description: Option<&'a str>,
-    pub is_ready: bool,
     pub source: &'a str,
     pub fingerprint: Option<&'a str>,
 }
@@ -538,13 +531,13 @@ pub async fn insert(
              (id, workspace_id, wallet_id, to_wallet_id, category_id, amount, to_amount,
               original_amount, original_currency_code, exchange_rate,
               base_amount, base_rate, base_rate_source, base_rate_date,
-              date, type, name, description, is_ready, source, fingerprint)
+              date, type, name, description, source, fingerprint)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
-                   $15, $16, $17, $18, $19, $20, $21)
+                   $15, $16, $17, $18, $19, $20)
            RETURNING id, wallet_id, to_wallet_id, category_id, amount, to_amount,
                      original_amount, original_currency_code, exchange_rate,
                      base_amount, base_rate, base_rate_source, base_rate_date,
-                     date, type AS "type!", name, description, is_ready, is_exported,
+                     date, type AS "type!", name, description, is_exported,
                      source, fingerprint, created_at, updated_at"#,
         new.id,
         new.workspace_id,
@@ -564,7 +557,6 @@ pub async fn insert(
         new.kind,
         new.name,
         new.description,
-        new.is_ready,
         new.source,
         new.fingerprint
     )
@@ -590,13 +582,13 @@ pub async fn update(
            SET wallet_id = $3, to_wallet_id = $4, category_id = $5, amount = $6, to_amount = $7,
                original_amount = $8, original_currency_code = $9, exchange_rate = $10,
                base_amount = $11, base_rate = $12, base_rate_source = $13, base_rate_date = $14,
-               date = $15, type = $16, name = $17, description = $18, is_ready = $19,
+               date = $15, type = $16, name = $17, description = $18,
                updated_at = now()
            WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL
            RETURNING id, wallet_id, to_wallet_id, category_id, amount, to_amount,
                      original_amount, original_currency_code, exchange_rate,
                      base_amount, base_rate, base_rate_source, base_rate_date,
-                     date, type AS "type!", name, description, is_ready, is_exported,
+                     date, type AS "type!", name, description, is_exported,
                      source, fingerprint, created_at, updated_at"#,
         workspace_id,
         id,
@@ -615,8 +607,7 @@ pub async fn update(
         new.date,
         new.kind,
         new.name,
-        new.description,
-        new.is_ready
+        new.description
     )
     .fetch_optional(executor)
     .await
@@ -638,33 +629,23 @@ pub async fn soft_delete(
     .map(|result| result.rows_affected())
 }
 
-/// Set the category, the ready flag, or both, across a selection (TXN-14).
+/// Set the category across a selection (TXN-14).
 ///
-/// Neither column touches a balance, which is why a bulk edit is one
+/// It touches no balance, which is why a bulk edit is one
 /// statement while a bulk delete has to walk its rows.
 pub async fn bulk_update(
     executor: impl PgExecutor<'_>,
     workspace_id: &str,
     ids: &[String],
-    category_id: Option<Option<&str>>,
-    is_ready: Option<bool>,
+    category_id: Option<&str>,
 ) -> Result<u64, sqlx::Error> {
-    let (set_category, category_id) = match category_id {
-        Some(value) => (true, value),
-        None => (false, None),
-    };
-
     sqlx::query!(
         r#"UPDATE transactions
-           SET category_id = CASE WHEN $3 THEN $4 ELSE category_id END,
-               is_ready = COALESCE($5, is_ready),
-               updated_at = now()
+           SET category_id = $3, updated_at = now()
            WHERE workspace_id = $1 AND id = ANY($2) AND deleted_at IS NULL"#,
         workspace_id,
         ids,
-        set_category,
-        category_id,
-        is_ready
+        category_id
     )
     .execute(executor)
     .await
@@ -682,7 +663,7 @@ pub async fn find_many(
         r#"SELECT id, wallet_id, to_wallet_id, category_id, amount, to_amount,
                   original_amount, original_currency_code, exchange_rate,
                   base_amount, base_rate, base_rate_source, base_rate_date,
-                  date, type AS "type!", name, description, is_ready, is_exported,
+                  date, type AS "type!", name, description, is_exported,
                   source, fingerprint, created_at, updated_at
            FROM transactions
            WHERE workspace_id = $1 AND id = ANY($2) AND deleted_at IS NULL

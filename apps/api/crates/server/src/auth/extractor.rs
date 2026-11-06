@@ -54,30 +54,71 @@ impl FromRequestParts<AppState> for Auth {
         parts: &mut Parts,
         state: &AppState,
     ) -> Result<Self, Self::Rejection> {
-        let request_id = parts
-            .headers
-            .get("x-request-id")
-            .and_then(|value| value.to_str().ok())
-            .unwrap_or("unknown")
-            .to_string();
+        let (claims, request_id) = verified_claims(parts, state)?;
 
-        let token = parts
-            .headers
-            .get(header::AUTHORIZATION)
-            .and_then(|value| value.to_str().ok())
-            .and_then(|value| value.strip_prefix("Bearer "))
-            .ok_or_else(|| ApiError::new(AppError::Unauthenticated, request_id.clone()))?;
-
-        let claims = token::verify_access_token(&state.config.jwt_secret, token)
-            .map_err(|error| ApiError::new(error, request_id))?;
+        // A session opened before the user had a workspace reaches only the
+        // routes that take `AuthUser` (D109).
+        let (Some(workspace_id), Some(role)) = (claims.wid, claims.role) else {
+            return Err(ApiError::new(AppError::NoWorkspace, request_id));
+        };
 
         Ok(Auth {
             user_id: claims.sub,
-            workspace_id: claims.wid,
-            role: claims.role,
+            workspace_id,
+            role,
             source: SOURCE_WEB,
         })
     }
+}
+
+/// A verified person, whether or not their session has a workspace yet.
+///
+/// For the routes that belong to a person rather than to a workspace:
+/// listing, creating and joining workspaces, switching into one, and the
+/// session list (D109). Everything that reads or writes workspace data
+/// takes [`Auth`], which refuses a session without one.
+#[derive(Debug, Clone)]
+pub struct AuthUser {
+    pub user_id: String,
+    /// The session's workspace, when it has one.
+    pub workspace_id: Option<String>,
+}
+
+impl FromRequestParts<AppState> for AuthUser {
+    type Rejection = ApiError;
+
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &AppState,
+    ) -> Result<Self, Self::Rejection> {
+        let (claims, _) = verified_claims(parts, state)?;
+        Ok(AuthUser {
+            user_id: claims.sub,
+            workspace_id: claims.wid,
+        })
+    }
+}
+
+/// The bearer token's claims, verified, with the request id for errors.
+fn verified_claims(parts: &Parts, state: &AppState) -> Result<(token::Claims, String), ApiError> {
+    let request_id = parts
+        .headers
+        .get("x-request-id")
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or("unknown")
+        .to_string();
+
+    let token = parts
+        .headers
+        .get(header::AUTHORIZATION)
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.strip_prefix("Bearer "))
+        .ok_or_else(|| ApiError::new(AppError::Unauthenticated, request_id.clone()))?;
+
+    let claims = token::verify_access_token(&state.config.jwt_secret, token)
+        .map_err(|error| ApiError::new(error, request_id.clone()))?;
+
+    Ok((claims, request_id))
 }
 
 /// A caller whose live membership says they may write.

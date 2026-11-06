@@ -392,7 +392,6 @@ fn transaction_view(row: &repo::TransactionListRow) -> Value {
     if let (Some(id), Some(name)) = (&row.to_wallet_id, &row.to_wallet_name) {
         view.insert("to_wallet".into(), json!({ "id": id, "name": name }));
     }
-    view.insert("is_ready".into(), json!(row.is_ready));
 
     Value::Object(view)
 }
@@ -722,7 +721,6 @@ async fn create_transaction(
         description: args.description.as_deref(),
         // A transaction the user asked for in words is a real one, not a
         // draft: the draft path is the receipt, and it is reviewed first.
-        is_ready: true,
         attachment_ids: None,
     };
 
@@ -785,7 +783,6 @@ async fn update_transaction(
         date: args.date.unwrap_or(current.date),
         name: name.as_deref(),
         description: description.as_deref(),
-        is_ready: current.is_ready,
         attachment_ids: None,
     };
 

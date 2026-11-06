@@ -6,11 +6,14 @@
  * `setSession`; nothing here touches a cookie.
  */
 
+import { redirect } from '@sveltejs/kit';
+
 import { api } from './api';
 import type { IssuedSession } from './session';
 
 export type Role = 'owner' | 'admin' | 'member';
 
+/** The signed-in person inside a workspace: what every app page reads. */
 export type Me = {
 	user: {
 		id: string;
@@ -23,6 +26,29 @@ export type Me = {
 	};
 	workspace: { id: string; name: string; slug: string; currency_code: string };
 	role: Role;
+};
+
+/**
+ * `/v1/auth/me` as the API answers it: a session opened before the user
+ * has a workspace carries none (D109).
+ */
+export type AccountMe = Omit<Me, 'workspace' | 'role'> & {
+	workspace: Me['workspace'] | null;
+	role: Role | null;
+};
+
+export type PasskeyItem = {
+	id: string;
+	name: string;
+	created_at: string;
+	last_used_at: string | null;
+};
+
+/** The first half of a passkey ceremony: what the browser is to run. */
+export type PasskeyCeremony = {
+	ceremony_id: string;
+	/** WebAuthn options in their JSON form, for `@simplewebauthn/browser`. */
+	options: Record<string, unknown>;
 };
 
 export type WorkspaceItem = {
@@ -42,7 +68,21 @@ export type SessionItem = {
 };
 
 export function readMe(token?: string) {
-	return api<Me>({ path: '/v1/auth/me', token });
+	return api<AccountMe>({ path: '/v1/auth/me', token });
+}
+
+/**
+ * The signed-in person and their workspace, for a page that needs one.
+ * A session without a workspace goes to the check page instead, which
+ * sends it on to create one or into one it already has (D109); `from` is
+ * where to come back to afterwards.
+ */
+export async function readWorkspaceMe(token: string | undefined, from: URL): Promise<Me> {
+	const me = (await readMe(token)).data!;
+	if (!me.workspace || !me.role) {
+		redirect(303, `/sync?next=${encodeURIComponent(from.pathname + from.search)}`);
+	}
+	return { ...me, workspace: me.workspace, role: me.role };
 }
 
 export function listWorkspaces(token?: string) {
@@ -52,6 +92,18 @@ export function listWorkspaces(token?: string) {
 /** A new workspace the caller owns (WS-6). Switch into it separately. */
 export function createWorkspace(body: { name: string; currency_code: string }, token?: string) {
 	return api<WorkspaceItem>({ method: 'POST', path: '/v1/workspaces', body, token });
+}
+
+/**
+ * Open a workspace and move the session into it, in one step (WS-6). The
+ * answer is the new session, for the caller to write into the cookies.
+ */
+export async function createAndEnterWorkspace(
+	body: { name: string; currency_code: string },
+	token?: string
+) {
+	const created = await createWorkspace(body, token);
+	return switchWorkspace(created.data!.id, token);
 }
 
 /** A session re-scoped to another workspace (WS-2). */
@@ -110,4 +162,43 @@ export function listSessions(token?: string) {
 /** Sign out of every device, this one included. */
 export function logoutEverywhere(token?: string) {
 	return api<null>({ method: 'POST', path: '/v1/auth/logout-all', token });
+}
+
+// ------------------------------------------------------------- passkeys
+
+export function listPasskeys(token?: string) {
+	return api<PasskeyItem[]>({ path: '/v1/auth/passkeys', token });
+}
+
+export function startPasskeyRegistration(token?: string) {
+	return api<PasskeyCeremony>({ method: 'POST', path: '/v1/auth/passkeys/register/start', token });
+}
+
+export function finishPasskeyRegistration(
+	body: { ceremony_id: string; name: string | null; credential: unknown },
+	token?: string
+) {
+	return api<PasskeyItem>({
+		method: 'POST',
+		path: '/v1/auth/passkeys/register/finish',
+		body,
+		token
+	});
+}
+
+export function removePasskey(id: string, token?: string) {
+	return api<null>({
+		method: 'DELETE',
+		path: `/v1/auth/passkeys/${encodeURIComponent(id)}`,
+		token
+	});
+}
+
+/** Sign-in needs no token: the passkey says who it belongs to (D110). */
+export function startPasskeySignIn() {
+	return api<PasskeyCeremony>({ method: 'POST', path: '/v1/auth/passkey/sign-in/start' });
+}
+
+export function finishPasskeySignIn(body: { ceremony_id: string; credential: unknown }) {
+	return api<IssuedSession>({ method: 'POST', path: '/v1/auth/passkey/sign-in/finish', body });
 }

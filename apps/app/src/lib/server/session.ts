@@ -15,8 +15,9 @@ export type IssuedSession = {
 	refresh_token: string;
 	refresh_expires_at: number;
 	user_id: string;
-	workspace_id: string;
-	role: 'owner' | 'admin' | 'member';
+	/** Null while the user has no workspace (D109). */
+	workspace_id: string | null;
+	role: 'owner' | 'admin' | 'member' | null;
 };
 
 const secure = process.env.APP_ENV === 'production';
@@ -63,4 +64,22 @@ export function readAccessToken(cookies: Cookies): string | undefined {
 
 export function readRefreshToken(cookies: Cookies): string | undefined {
 	return cookies.get(REFRESH_COOKIE);
+}
+
+/**
+ * Whether an access token names a workspace (D109).
+ *
+ * Read, not verified: it only decides which page to show. The API checks
+ * the signature on every call and refuses workspace data to a session
+ * without one, whatever this answers. A token that cannot be read counts
+ * as having one, so the API is the one to refuse it.
+ */
+export function tokenHasWorkspace(token: string): boolean {
+	try {
+		const payload = token.split('.')[1] ?? '';
+		const claims = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+		return typeof claims?.wid === 'string' && claims.wid !== '';
+	} catch {
+		return true;
+	}
 }

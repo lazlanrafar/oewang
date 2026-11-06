@@ -30,9 +30,9 @@
 	} from '$lib/components/organisms/accounts';
 	import { t } from '$lib/i18n';
 	import { pageTitle } from '$lib/page-title';
+	import { reloading } from '$lib/url-state';
 	import { messageForCode } from '$lib/errors';
 	import { filterBar } from '$lib/filter-bar.svelte';
-	import { formatMoney } from '$lib/money';
 	import type { Wallet } from '$lib/server/ledger';
 
 	let { data, form } = $props();
@@ -148,7 +148,8 @@
 
 	<AccountSummaryCards
 		class="shrink-0"
-		total={formatMoney(data.totals.total, data.baseCurrency)}
+		total={data.totals.total}
+		currency={data.baseCurrency}
 		count={data.totals.count}
 		counted={data.totals.counted}
 		unconverted={data.totals.unconverted}
@@ -180,6 +181,7 @@
 	</div>
 
 	<AccountsDataTable
+		loading={reloading(['search', 'group_id', 'currency'])}
 		class="min-h-0 flex-1"
 		accounts={data.wallets}
 		groups={data.groups}

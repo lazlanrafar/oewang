@@ -1,16 +1,21 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { page } from '$app/state';
 
 	import { FieldError } from '$lib/components/molecules/field-error';
 	import { FormError } from '$lib/components/molecules/form-error';
 	import { Button } from '$lib/components/atoms/button';
 	import { Input } from '$lib/components/atoms/input';
+	import { PasswordInput } from '$lib/components/molecules/password-input';
 	import { messageForCode } from '$lib/errors';
 	import { t } from '$lib/i18n';
 	import { pageTitle } from '$lib/page-title';
 
 	let { form } = $props();
 	let submitting = $state(false);
+	// Where the visitor was headed, usually an invitation, carried through
+	// signing up so the check page can take them there (D109).
+	const next = $derived(page.url.searchParams.get('next') ?? '');
 </script>
 
 <svelte:head><title>{pageTitle(t('auth.register_title'))}</title></svelte:head>
@@ -31,6 +36,8 @@
 	}}
 	class="space-y-4"
 >
+	<input type="hidden" name="next" value={next} />
+
 	<div>
 		<label for="email" class="mb-1.5 block text-sm font-medium">{t('auth.email')}</label>
 		<Input
@@ -47,10 +54,9 @@
 
 	<div>
 		<label for="password" class="mb-1.5 block text-sm font-medium">{t('auth.password')}</label>
-		<Input
+		<PasswordInput
 			id="password"
 			name="password"
-			type="password"
 			autocomplete="new-password"
 			required
 			minlength={10}
@@ -68,20 +74,6 @@
 		<Input id="name" name="name" autocomplete="name" value={form?.name ?? ''} />
 	</div>
 
-	<div>
-		<label for="workspace_name" class="mb-1.5 block text-sm font-medium">
-			{t('auth.workspace_name')}
-		</label>
-		<Input
-			id="workspace_name"
-			name="workspace_name"
-			required
-			value={form?.workspaceName ?? ''}
-			aria-invalid={form?.fields?.workspace_name ? 'true' : undefined}
-		/>
-		<FieldError message={form?.fields?.workspace_name} />
-	</div>
-
 	<Button type="submit" class="w-full" disabled={submitting}>
 		{submitting ? t('auth.creating') : t('auth.sign_up')}
 	</Button>
@@ -89,5 +81,8 @@
 
 <p class="text-muted-foreground mt-6 text-center text-sm">
 	{t('auth.have_account')}
-	<a href="/login" class="text-foreground underline">{t('auth.sign_in')}</a>
+	<a
+		href={next ? `/login?next=${encodeURIComponent(next)}` : '/login'}
+		class="text-foreground underline">{t('auth.sign_in')}</a
+	>
 </p>

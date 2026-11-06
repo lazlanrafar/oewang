@@ -5,7 +5,7 @@
 	],
 	"baseCurrency": "IDR",
 	"rates": { "USD": "16250" },
-	"summary": { "total": "Rp 9.340.125", "count": 4, "counted": 3, "unconverted": 1 },
+	"summary": { "total": "9340125.0000", "count": 4, "counted": 3, "unconverted": 1 },
 	"accounts": [
 		{
 			"id": "wallet-1",

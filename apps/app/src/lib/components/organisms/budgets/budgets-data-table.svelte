@@ -38,6 +38,7 @@
 		onClear,
 		onEditRow,
 		onDeleteRow,
+		loading = false,
 		class: className
 	}: {
 		budgets: BudgetLine[];
@@ -52,6 +53,8 @@
 		onClear?: () => void;
 		onEditRow?: (budget: BudgetLine) => void;
 		onDeleteRow?: (budget: BudgetLine) => void;
+		/** Rows are on their way: the table draws its skeleton (D108). */
+		loading?: boolean;
 		class?: string;
 	} = $props();
 
@@ -67,6 +70,7 @@
 </script>
 
 <DataTable
+	{loading}
 	class={className}
 	columns={BUDGET_COLUMNS}
 	rows={budgets}

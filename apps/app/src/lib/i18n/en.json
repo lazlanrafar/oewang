@@ -32,6 +32,8 @@
 	},
 	"common": {
 		"loading": "Loading",
+		"show_password": "Show password",
+		"hide_password": "Hide password",
 		"save": "Save",
 		"cancel": "Cancel",
 		"delete": "Delete",
@@ -252,11 +254,10 @@
 		"password": "Password",
 		"name": "Name",
 		"name_optional": "Name (optional)",
-		"workspace_name": "Workspace name",
 		"login_title": "Sign in to oewang",
 		"login_subtitle": "Track daily money without manual spreadsheets.",
-		"register_title": "Create your workspace",
-		"register_subtitle": "One account, one workspace to start. Invite others later.",
+		"register_title": "Create your account",
+		"register_subtitle": "Next, open a workspace or join the one you were invited to.",
 		"no_account": "No account yet?",
 		"have_account": "Already have an account?",
 		"forgot_password": "Forgot your password?",
@@ -272,7 +273,12 @@
 		"password_hint": "At least 10 characters.",
 		"back_to_login": "Back to sign in",
 		"signing_in": "Signing in",
-		"creating": "Creating"
+		"creating": "Creating",
+		"or": "or",
+		"passkey_sign_in": "Sign in with a passkey",
+		"passkey_waiting": "Waiting for your passkey\u2026",
+		"passkey_failed": "That passkey did not sign you in. Try again, or use your password.",
+		"passkey_unsupported": "This browser cannot use passkeys. Sign in with your password."
 	},
 	"error_page": {
 		"eyebrow": "Error {status}",
@@ -305,6 +311,7 @@
 		"unauthenticated": "Your session has ended. Sign in again.",
 		"insufficient_role": "You do not have permission to do that.",
 		"not_a_member": "You are not a member of that workspace.",
+		"no_workspace": "Create a workspace or accept an invitation first.",
 		"last_owner": "A workspace must keep at least one owner.",
 		"invite_invalid": "That invitation is no longer valid.",
 		"reset_token_invalid": "That reset link is no longer valid. Request a new one.",
@@ -511,7 +518,6 @@
 		"backup_export": "Export data to a spreadsheet",
 		"grouping_label": "Grouping",
 		"type_label": "Transaction type",
-		"ready_label": "Ready state",
 		"group_by_day": "Daily",
 		"group_by_week": "Weekly",
 		"group_by_month": "Monthly",
@@ -520,9 +526,6 @@
 		"type_income": "Income",
 		"type_expense": "Expense",
 		"type_transfer": "Transfer",
-		"any_ready": "Any state",
-		"ready": "Ready",
-		"not_ready": "Not ready",
 		"add_transaction": "Add transaction",
 		"empty_title": "No transactions yet",
 		"empty_description": "Add one by hand, or import a statement.",
@@ -543,7 +546,6 @@
 		"bulk_category": "Change category",
 		"bulk_category_hint": "Applies to {count} selected transaction(s).",
 		"bulk_delete_confirm": "Delete {count} transaction(s)? Every balance they moved is put back.",
-		"mark_ready": "Mark ready",
 		"add_item": "Add line item",
 		"edit_item": "Edit line item",
 		"item_saved": "Line item saved.",
@@ -1035,7 +1037,7 @@
 		},
 		"security": {
 			"title": "Password & sessions",
-			"description": "Change your password and see where you are signed in.",
+			"description": "Change your password, manage passkeys and see where you are signed in.",
 			"password_title": "Change password",
 			"current_label": "Current password",
 			"new_label": "New password",
@@ -1050,7 +1052,22 @@
 			"no_sessions": "No active sessions.",
 			"logout_all": "Sign out of all devices",
 			"logout_all_confirm": "Sign out everywhere, this browser included?",
-			"logout_all_description": "You will need to sign in again on every device."
+			"logout_all_description": "You will need to sign in again on every device.",
+			"passkeys_title": "Passkeys",
+			"passkeys_description": "Sign in with your fingerprint, face or device PIN instead of your password.",
+			"no_passkeys": "No passkeys yet.",
+			"add_passkey": "Add a passkey",
+			"passkey_added": "Passkey added. Use it next time you sign in.",
+			"passkey_failed": "The passkey was not added. Try again.",
+			"passkey_unsupported": "This browser cannot make passkeys.",
+			"passkey_added_on": "Added {date}",
+			"passkey_last_used": "Last used {date}",
+			"passkey_never_used": "Not used yet",
+			"remove_passkey": "Remove {name}",
+			"remove_passkey_confirm": "Remove this passkey?",
+			"remove_passkey_description": "{name} will no longer sign you in. The copy on your device stays until you delete it there.",
+			"remove": "Remove",
+			"passkey_removed": "Passkey removed."
 		},
 		"nav_mcp": "MCP",
 		"mcp": {
@@ -1109,6 +1126,12 @@
 			"disconnect_description": "{name} loses access at once. It can ask again.",
 			"disconnected": "App disconnected."
 		}
+	},
+	"onboarding": {
+		"sync_title": "Opening your workspace",
+		"redirecting": "Redirecting\u2026",
+		"create_page_title": "Create workspace",
+		"signed_in_as": "Signed in as {email}"
 	},
 	"invite": {
 		"title": "Join workspace",

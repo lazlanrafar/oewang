@@ -5,3 +5,4 @@ export { default as SidebarNav } from './layouts-sidebar-nav.svelte';
 export { default as ThemeToggle } from './layouts-theme-toggle.svelte';
 export { default as WorkspaceSwitcher } from './layouts-workspace-switcher.svelte';
 export { SIDEBAR_COOKIE, SIDEBAR_SHORTCUT, rememberSidebar } from './layouts-sidebar-state.js';
+export { default as PageSkeleton, hasPageSkeleton } from './layouts-page-skeleton.svelte';

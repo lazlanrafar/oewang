@@ -1,0 +1,56 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO passkeys (id, user_id, credential_id, credential, name)\n           VALUES ($1, $2, $3, $4, $5)\n           RETURNING id, user_id, credential, name, created_at, last_used_at",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "user_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "credential",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 3,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 5,
+        "name": "last_used_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Jsonb",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "de4aab8137f2ce173d1edd4fc95e0744db6a247001c9230e3d3b6fa5b46521a0"
+}

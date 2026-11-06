@@ -17,7 +17,7 @@ use base64::{engine::general_purpose::STANDARD, Engine};
 use crate::{
     auth::{
         account,
-        extractor::Auth,
+        extractor::{Auth, AuthUser},
         service::{self, SessionContext},
     },
     response::{ApiError, RequestId},
@@ -31,7 +31,6 @@ pub struct RegisterRequest {
     pub email: String,
     pub password: String,
     pub name: Option<String>,
-    pub workspace_name: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -68,8 +67,9 @@ pub struct SessionResponse {
     pub refresh_token: String,
     pub refresh_expires_at: i64,
     pub user_id: String,
-    pub workspace_id: String,
-    pub role: Role,
+    /// `null` while the user has no workspace (D109).
+    pub workspace_id: Option<String>,
+    pub role: Option<Role>,
 }
 
 impl From<service::IssuedSession> for SessionResponse {
@@ -89,8 +89,9 @@ impl From<service::IssuedSession> for SessionResponse {
 #[derive(Debug, Serialize)]
 pub struct MeResponse {
     pub user: UserView,
-    pub workspace: WorkspaceView,
-    pub role: Role,
+    /// The session's workspace, or `null` while the user has none (D109).
+    pub workspace: Option<WorkspaceView>,
+    pub role: Option<Role>,
 }
 
 #[derive(Debug, Serialize)]
@@ -174,7 +175,6 @@ pub async fn register(
         &body.email,
         &body.password,
         body.name.as_deref(),
-        &body.workspace_name,
         context,
     )
     .await
@@ -229,7 +229,7 @@ pub async fn logout(
 
 pub async fn logout_all(
     State(state): State<AppState>,
-    auth: Auth,
+    auth: AuthUser,
     request_id: RequestId,
 ) -> std::result::Result<StatusCode, ApiError> {
     service::logout_everywhere(&state.db, &auth.user_id)
@@ -240,7 +240,7 @@ pub async fn logout_all(
 
 pub async fn me(
     State(state): State<AppState>,
-    auth: Auth,
+    auth: AuthUser,
     request_id: RequestId,
 ) -> std::result::Result<Json<Envelope<MeResponse>>, ApiError> {
     let result = load_me(&state, &auth).await;
@@ -249,20 +249,33 @@ pub async fn me(
         .map_err(|error| ApiError::new(error, request_id.0))
 }
 
-async fn load_me(state: &AppState, auth: &Auth) -> Result<MeResponse> {
+async fn load_me(state: &AppState, auth: &AuthUser) -> Result<MeResponse> {
     let user = accounts::find_user_by_id(&state.db, &auth.user_id)
         .await
         .map_err(|e| AppError::Internal(anyhow::anyhow!(e)))?
         .ok_or(AppError::Unauthenticated)?;
 
-    let workspace = accounts::find_workspace(&state.db, &auth.workspace_id)
-        .await
-        .map_err(|e| AppError::Internal(anyhow::anyhow!(e)))?
-        .ok_or(AppError::NotFound)?;
-
-    // Read live rather than echoing the token's snapshot, so the UI shows
-    // the role the user actually has.
-    let role = service::current_role(&state.db, &auth.workspace_id, &auth.user_id).await?;
+    let (workspace, role) = match &auth.workspace_id {
+        Some(workspace_id) => {
+            let workspace = accounts::find_workspace(&state.db, workspace_id)
+                .await
+                .map_err(|e| AppError::Internal(anyhow::anyhow!(e)))?
+                .ok_or(AppError::NotFound)?;
+            // Read live rather than echoing the token's snapshot, so the UI
+            // shows the role the user actually has.
+            let role = service::current_role(&state.db, workspace_id, &auth.user_id).await?;
+            (
+                Some(WorkspaceView {
+                    id: workspace.id,
+                    name: workspace.name,
+                    slug: workspace.slug,
+                    currency_code: workspace.currency_code,
+                }),
+                Some(role),
+            )
+        }
+        None => (None, None),
+    };
 
     Ok(MeResponse {
         user: UserView {
@@ -273,12 +286,7 @@ async fn load_me(state: &AppState, auth: &Auth) -> Result<MeResponse> {
             income_color: user.income_color,
             expense_color: user.expense_color,
         },
-        workspace: WorkspaceView {
-            id: workspace.id,
-            name: workspace.name,
-            slug: workspace.slug,
-            currency_code: workspace.currency_code,
-        },
+        workspace,
         role,
     })
 }
@@ -385,7 +393,7 @@ pub async fn delete_avatar(
 
 pub async fn switch_workspace(
     State(state): State<AppState>,
-    auth: Auth,
+    auth: AuthUser,
     request_id: RequestId,
     headers: HeaderMap,
     Json(body): Json<SwitchWorkspaceRequest>,
@@ -401,7 +409,7 @@ pub async fn switch_workspace(
 
 pub async fn sessions(
     State(state): State<AppState>,
-    auth: Auth,
+    auth: AuthUser,
     request_id: RequestId,
 ) -> std::result::Result<Json<Envelope<Vec<SessionListItem>>>, ApiError> {
     let rows = oewang_db::repositories::tokens::list_sessions(&state.db, &auth.user_id)
@@ -454,7 +462,10 @@ pub async fn reset_password(
 
 // ------------------------------------------------------------- internals
 
-fn session_context<'a>(state: &'a AppState, headers: &'a HeaderMap) -> SessionContext<'a> {
+pub(crate) fn session_context<'a>(
+    state: &'a AppState,
+    headers: &'a HeaderMap,
+) -> SessionContext<'a> {
     SessionContext {
         jwt_secret: &state.config.jwt_secret,
         access_ttl: state.config.access_token_ttl,

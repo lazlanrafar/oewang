@@ -73,7 +73,7 @@
 	import { absDecimal } from '$lib/money';
 	import { toDetail } from '$lib/transaction-detail';
 	import { isoDay, toRow } from '$lib/transactions';
-	import { readParam, readText, readValues, writeParams } from '$lib/url-state';
+	import { readParam, readText, readValues, reloading, writeParams } from '$lib/url-state';
 
 	import type { ActionData, PageData } from './$types';
 
@@ -124,6 +124,25 @@
 	 * the `day` an older link may carry, falls back to it rather than to an
 	 * error.
 	 */
+	/**
+	 * The parameters the load sends to the API: a change to one of them
+	 * blanks the table into its skeleton until the rows arrive (D108).
+	 * `page` is not here, because the next page appends under a spinner, and
+	 * neither are the sheet parameters, which change nothing in the table.
+	 */
+	const RELOAD_KEYS = [
+		'wallet_id',
+		'category_id',
+		'type',
+		'start_date',
+		'end_date',
+		'search',
+		'min_amount',
+		'max_amount',
+		'sort',
+		'order'
+	] as const;
+
 	const grouping = $derived(readParam(page.url, 'group', GROUPINGS, 'daily'));
 
 	const GROUPING_LABEL: Record<Grouping, string> = $derived({
@@ -181,9 +200,9 @@
 	});
 
 	/*
-	 * `?type=` and `?is_ready=` are still read by the load function and still
-	 * narrow the list; the old header has no control for either, so neither
-	 * has one here. A link or a saved view can still carry them.
+	 * `?type=` is still read by the load function and still narrows the
+	 * list; the old header has no control for it, so there is none here. A
+	 * link or a saved view can still carry it.
 	 */
 
 	/*
@@ -353,7 +372,6 @@
 					categoryId: editing.category_id ?? '',
 					date: isoDay(editing.date),
 					notes: editing.description ?? '',
-					isReady: editing.is_ready
 				}
 			: fresh;
 	});
@@ -662,7 +680,6 @@
 	let confirmBulkDelete = $state(false);
 	let confirmItemDelete = $state(false);
 	let bulkDeleteForm = $state<HTMLFormElement | null>(null);
-	let readyForm = $state<HTMLFormElement | null>(null);
 
 	/**
 	 * The export is a download, so it is a link to a server route rather than
@@ -824,6 +841,7 @@
 	<FormError message={form?.code ? messageForCode(form.code) : undefined} />
 
 	<TransactionsDataTable
+		loading={reloading(RELOAD_KEYS)}
 		class="min-h-0 flex-1"
 		hasMore={currentPage < totalPages}
 		loadingMore={navigating.to !== null}
@@ -1122,7 +1140,6 @@
 		onClear={() => (selection = [])}
 		onEditCategory={() => (bulkCategoryOpen = true)}
 		onDelete={() => (confirmBulkDelete = true)}
-		onReady={() => readyForm?.requestSubmit()}
 	/>
 
 	<form
@@ -1133,17 +1150,6 @@
 		use:enhance={afterBulk}
 	>
 		<input type="hidden" name="ids" value={selectedIds} />
-	</form>
-
-	<form
-		bind:this={readyForm}
-		method="POST"
-		action="?/bulkUpdate"
-		class="hidden"
-		use:enhance={afterBulk}
-	>
-		<input type="hidden" name="ids" value={selectedIds} />
-		<input type="hidden" name="is_ready" value="true" />
 	</form>
 
 	<Dialog.Root bind:open={bulkCategoryOpen}>

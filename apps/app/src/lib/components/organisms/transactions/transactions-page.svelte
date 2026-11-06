@@ -118,7 +118,6 @@
 					account: nameOf(wallets, detailRow.walletId),
 					category: nameOf(categories, detailRow.categoryId),
 					type: isNegative(detailRow.amount) ? 'expense' : 'income',
-					ready: false,
 					notes: detailRow.note,
 					baseAmount: formatMoney(detailRow.amount, detailRow.currency),
 					items: [

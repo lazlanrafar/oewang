@@ -476,7 +476,6 @@ pub async fn adjust_wallet_balance(
             name: Some(ADJUSTMENT_NAME),
             description: None,
             // Nothing left to review: the user named the figure.
-            is_ready: true,
             attachment_ids: None,
         },
     )

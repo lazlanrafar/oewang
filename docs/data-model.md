@@ -24,7 +24,7 @@ PostgreSQL 16. This doc is the source of truth for every table and column. No ot
 
 ## Tables in scope
 
-Twenty-eight tables. The sixteen carried from the old app's schema, plus `refresh_tokens` and `password_reset_tokens` (D38, AUTH-10), `exchange_rates` (D44), the three Telegram tables (D83), `ai_usage` (D92), `budgets` (D103), `feedback` (D104), and `mcp_tokens`, `oauth_clients` and `oauth_codes` (D106). Carried (see [legacy app](reference/legacy-app.md#schema-mapping)) with the billing, quota and integration columns stripped (D8).
+Thirty tables. The sixteen carried from the old app's schema, plus `refresh_tokens` and `password_reset_tokens` (D38, AUTH-10), `passkeys` and `passkey_ceremonies` (D110), `exchange_rates` (D44), the three Telegram tables (D83), `ai_usage` (D92), `budgets` (D103), `feedback` (D104), and `mcp_tokens`, `oauth_clients` and `oauth_codes` (D106). Carried (see [legacy app](reference/legacy-app.md#schema-mapping)) with the billing, quota and integration columns stripped (D8).
 
 ```mermaid
 erDiagram
@@ -116,7 +116,7 @@ The second index matters: authentication resolves membership by `user_id` alone 
 |---|---|---|
 | `id` | text | CUID2, primary key |
 | `user_id` | text | FK users, cascade |
-| `workspace_id` | text | FK workspaces. The workspace the issued access token is scoped to |
+| `workspace_id` | text, nullable | FK workspaces. The workspace the issued access token is scoped to; null for a session opened before the user had one (D109) |
 | `token_hash` | text | SHA-256 of the token. The token itself is never stored (AUTH-8) |
 | `family_id` | text | Shared by every token descended from one login. Reuse detection works on the family |
 | `expires_at` | timestamp | 30 days from issue |
@@ -130,6 +130,24 @@ CREATE UNIQUE INDEX refresh_tokens_hash_idx ON refresh_tokens (token_hash);
 CREATE INDEX refresh_tokens_family_idx ON refresh_tokens (family_id);
 CREATE INDEX refresh_tokens_user_idx ON refresh_tokens (user_id, revoked_at);
 ```
+
+#### `passkeys`
+
+A WebAuthn credential a user signs in with (AUTH-14, D110). Belongs to a person, not a workspace, so it is filtered by `user_id` and `deleted_at IS NULL`.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | text | CUID2, primary key |
+| `user_id` | text | FK users, cascade |
+| `credential_id` | text | Base64url credential ID. Unique across all rows, removed ones included: a credential belongs to one account for good |
+| `credential` | jsonb | webauthn-rs `Passkey`: public key, signature counter, backup flags. Public material only |
+| `name` | text | Shown in the list; defaults to the device it was made on |
+| `created_at`, `last_used_at` | timestamptz | |
+| `deleted_at` | timestamptz | Soft delete |
+
+#### `passkey_ceremonies`
+
+The server half of a passkey registration or sign-in in progress (D110). `user_id` is set for a registration, null for a sign-in; `kind` is `register` or `authenticate`; `state` is the webauthn-rs state as JSON. Claimed once by setting `used_at`, within five minutes of `created_at` (`expires_at`).
 
 #### `password_reset_tokens`
 
@@ -284,7 +302,6 @@ The same migration adds `mcp` to the `transactions.source` and `audit_logs.sourc
 | `type` | text | `income`, `expense` or `transfer` (TXN-1) |
 | `name` | text | Label or payee |
 | `description` | text | Free text note |
-| `is_ready` | boolean | Reviewed flag, default false |
 | `is_exported` | boolean | Included in a CSV export, default false (TXN-10) |
 | `source` | text | `web`, `chat`, `import`, `receipt` or `telegram`. How the row was created (D74, D86) |
 | `fingerprint` | text | Deterministic content hash, set on imported rows only. Null for manual entry (TXN-16, D29) |

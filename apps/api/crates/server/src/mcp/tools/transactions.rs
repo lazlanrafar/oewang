@@ -9,8 +9,8 @@ use crate::{
     mcp::{
         budget::Spend,
         registry::{
-            args, boolean, day, id, integer, list_of, money, object, one_of, out, out_created,
-            out_done, out_page, string, take_str, Ctx, ToolDef,
+            args, day, id, integer, list_of, money, object, one_of, out, out_created, out_done,
+            out_page, string, take_str, Ctx, ToolDef,
         },
     },
     mcp_handler,
@@ -169,7 +169,6 @@ fn list_properties(paged: bool) -> Value {
         "wallet_ids": list_of(id("wallet"), "Only transactions in any of these wallets."),
         "category_ids": list_of(id("category"), "Only transactions in any of these categories."),
         "search": string("Text to find in the name or description."),
-        "is_ready": boolean("Only transactions marked ready (true) or not ready (false)."),
         "min_amount": money("Smallest amount, inclusive."),
         "max_amount": money("Largest amount, inclusive.")
     });
@@ -219,7 +218,6 @@ fn transaction_properties() -> Value {
         "date": { "type": "string", "format": "date-time", "description": "When it happened, as an RFC 3339 timestamp such as \"2026-11-06T09:30:00Z\"." },
         "name": string("A short name, such as the merchant."),
         "description": string("A longer note."),
-        "is_ready": boolean("Whether the transaction is reviewed and ready. false when left out."),
         "attachment_ids": list_of(id("vault file"), "The whole set of vault files attached. Left out leaves the attachments alone; sent, it replaces them.")
     })
 }

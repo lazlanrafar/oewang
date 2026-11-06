@@ -23,8 +23,9 @@ pub struct IssuedSession {
     pub refresh_token: String,
     pub refresh_expires_at: i64,
     pub user_id: String,
-    pub workspace_id: String,
-    pub role: Role,
+    /// `None` while the user has no workspace (D109).
+    pub workspace_id: Option<String>,
+    pub role: Option<Role>,
 }
 
 pub struct SessionContext<'a> {
@@ -52,24 +53,23 @@ pub async fn current_role(pool: &PgPool, workspace_id: &str, user_id: &str) -> R
         .map_err(|error| AppError::Internal(anyhow::anyhow!("unknown role in database: {error}")))
 }
 
-/// Create a user, a workspace and an owner membership in one transaction
-/// (WS-5), then seed the workspace defaults (CAT-3).
+/// Create a user and open a session with no workspace (WS-5, D109).
+///
+/// The workspace comes after, on its own page: the user creates one, or
+/// accepts the invitation that brought them here. Asking for a workspace
+/// name on the sign-up form made an invited person create a workspace they
+/// never wanted before they could join the one they were invited to.
 pub async fn register(
     pool: &PgPool,
     email: &str,
     password_plain: &str,
     name: Option<&str>,
-    workspace_name: &str,
     session: SessionContext<'_>,
 ) -> Result<IssuedSession> {
     validate_email(email)?;
     validate_password(password_plain)?;
 
     let email = normalize_email(email);
-    let workspace_name = workspace_name.trim();
-    if workspace_name.is_empty() {
-        return Err(AppError::validation([("workspace_name", "Required.")]));
-    }
 
     // Hash before opening the transaction: Argon2id is deliberately slow, and
     // holding a pool connection for the duration would be wasteful.
@@ -85,38 +85,12 @@ pub async fn register(
     }
 
     let user_id = cuid2::create_id();
-    let workspace_id = cuid2::create_id();
-    let slug = unique_slug(&mut tx, workspace_name).await?;
 
     accounts::insert_user(&mut *tx, &user_id, &email, name, &password_hash)
         .await
         .map_err(internal)?;
-    accounts::insert_workspace(&mut *tx, &workspace_id, workspace_name, &slug, "IDR")
-        .await
-        .map_err(internal)?;
-    accounts::insert_membership(
-        &mut *tx,
-        &cuid2::create_id(),
-        &workspace_id,
-        &user_id,
-        Role::Owner.as_str(),
-    )
-    .await
-    .map_err(internal)?;
 
-    oewang_db::seed::seed_workspace(&mut tx, &workspace_id, "IDR")
-        .await
-        .map_err(internal)?;
-
-    let issued = issue_session(
-        &mut tx,
-        &user_id,
-        &workspace_id,
-        Role::Owner,
-        token::new_family_id(),
-        &session,
-    )
-    .await?;
+    let issued = issue_session(&mut tx, &user_id, None, token::new_family_id(), &session).await?;
 
     tx.commit().await.map_err(internal)?;
     Ok(issued)
@@ -148,26 +122,37 @@ pub async fn login(
         return Err(AppError::InvalidCredentials);
     }
 
-    // The first workspace they joined. Switching is a separate call.
-    let workspaces = accounts::list_workspaces_for_user(pool, &credentials.id)
+    sign_in(pool, &credentials.id, session).await
+}
+
+/// Open a session for someone who has just proved who they are, by
+/// password or by passkey.
+///
+/// Scoped to the first workspace they joined; switching is a separate
+/// call. With no workspace at all, as after signing up or after leaving
+/// the last one, the session has none either, and the app takes them to
+/// create one (D109).
+pub(crate) async fn sign_in(
+    pool: &PgPool,
+    user_id: &str,
+    session: SessionContext<'_>,
+) -> Result<IssuedSession> {
+    let workspaces = accounts::list_workspaces_for_user(pool, user_id)
         .await
         .map_err(internal)?;
-    let first = workspaces.first().ok_or(AppError::NotAMember)?;
-    let role = first
-        .role
-        .parse::<Role>()
-        .map_err(|_| AppError::NotAMember)?;
+    let scope = match workspaces.first() {
+        Some(first) => Some((
+            first.id.as_str(),
+            first
+                .role
+                .parse::<Role>()
+                .map_err(|_| AppError::NotAMember)?,
+        )),
+        None => None,
+    };
 
     let mut tx = pool.begin().await.map_err(internal)?;
-    let issued = issue_session(
-        &mut tx,
-        &credentials.id,
-        &first.id,
-        role,
-        token::new_family_id(),
-        &session,
-    )
-    .await?;
+    let issued = issue_session(&mut tx, user_id, scope, token::new_family_id(), &session).await?;
     tx.commit().await.map_err(internal)?;
 
     Ok(issued)
@@ -218,15 +203,20 @@ pub async fn refresh(
     }
 
     // The role may have changed since the token was issued, so read it now
-    // rather than carrying the old one forward.
-    let membership = accounts::find_membership(&mut *tx, &row.workspace_id, &row.user_id)
-        .await
-        .map_err(internal)?
-        .ok_or(AppError::NotAMember)?;
-    let role = membership
-        .role
-        .parse::<Role>()
-        .map_err(|_| AppError::NotAMember)?;
+    // rather than carrying the old one forward. A session with no workspace
+    // stays without one: joining one is a switch, not a refresh (D109).
+    let role = match &row.workspace_id {
+        Some(workspace_id) => Some(
+            accounts::find_membership(&mut *tx, workspace_id, &row.user_id)
+                .await
+                .map_err(internal)?
+                .ok_or(AppError::NotAMember)?
+                .role
+                .parse::<Role>()
+                .map_err(|_| AppError::NotAMember)?,
+        ),
+        None => None,
+    };
 
     tokens::mark_refresh_token_used(&mut *tx, &row.id)
         .await
@@ -235,8 +225,7 @@ pub async fn refresh(
     let issued = issue_session(
         &mut tx,
         &row.user_id,
-        &row.workspace_id,
-        role,
+        row.workspace_id.as_deref().zip(role),
         // Same family: this token descends from the same login.
         row.family_id.clone(),
         &session,
@@ -290,8 +279,7 @@ pub async fn switch_workspace(
     let issued = issue_session(
         &mut tx,
         user_id,
-        workspace_id,
-        role,
+        Some((workspace_id, role)),
         token::new_family_id(),
         &session,
     )
@@ -378,8 +366,7 @@ pub(crate) async fn issue_in(
     issue_session(
         tx,
         user_id,
-        workspace_id,
-        role,
+        Some((workspace_id, role)),
         token::new_family_id(),
         session,
     )
@@ -391,18 +378,11 @@ pub(crate) async fn issue_in(
 async fn issue_session(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     user_id: &str,
-    workspace_id: &str,
-    role: Role,
+    scope: Option<(&str, Role)>,
     family_id: String,
     session: &SessionContext<'_>,
 ) -> Result<IssuedSession> {
-    let access = token::issue_access_token(
-        session.jwt_secret,
-        user_id,
-        workspace_id,
-        role,
-        session.access_ttl,
-    )?;
+    let access = token::issue_access_token(session.jwt_secret, user_id, scope, session.access_ttl)?;
     let refresh = token::issue_refresh_token();
     let refresh_expires_at =
         Utc::now() + ChronoDuration::seconds(session.refresh_ttl.as_secs() as i64);
@@ -411,7 +391,7 @@ async fn issue_session(
         &mut **tx,
         &cuid2::create_id(),
         user_id,
-        workspace_id,
+        scope.map(|(workspace_id, _)| workspace_id),
         &refresh.hash,
         &family_id,
         refresh_expires_at,
@@ -427,8 +407,8 @@ async fn issue_session(
         refresh_token: refresh.raw,
         refresh_expires_at: refresh_expires_at.timestamp(),
         user_id: user_id.to_string(),
-        workspace_id: workspace_id.to_string(),
-        role,
+        workspace_id: scope.map(|(workspace_id, _)| workspace_id.to_string()),
+        role: scope.map(|(_, role)| role),
     })
 }
 

@@ -22,7 +22,7 @@
 	import { pageTitle } from '$lib/page-title';
 	import { pagedRows } from '$lib/paged-rows.svelte';
 	import type { ItemSummary } from '$lib/server/ledger';
-	import { readText, writeParams } from '$lib/url-state';
+	import { readText, reloading, writeParams } from '$lib/url-state';
 	import { workspaceLists } from '$lib/workspace-data.svelte';
 
 	let { data } = $props();
@@ -97,6 +97,7 @@
 	</div>
 
 	<DatabaseItemsDataTable
+		loading={reloading(['search', 'currency', 'sort', 'order'])}
 		class="min-h-0 flex-1"
 		items={held.rows}
 		{sort}

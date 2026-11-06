@@ -10,6 +10,7 @@ import {
 	formatRate,
 	isNegative,
 	isZero,
+	lerpDecimal,
 	multiplyDecimals,
 	negate,
 	roundDecimal,
@@ -166,5 +167,29 @@ describe('compareDecimals', () => {
 	it('should take the size of a figure without its sign', () => {
 		expect(absDecimal('-87500.0000')).toBe('87500.0000');
 		expect(absDecimal('87500.0000')).toBe('87500.0000');
+	});
+});
+
+describe('lerpDecimal', () => {
+	it('should return the ends exactly as given', () => {
+		expect(lerpDecimal('0', '812500.0000', 0)).toBe('0');
+		expect(lerpDecimal('0', '812500.0000', 1)).toBe('812500.0000');
+		expect(lerpDecimal('5', '10', -0.5)).toBe('5');
+		expect(lerpDecimal('5', '10', 1.5)).toBe('10');
+	});
+
+	it('should move part of the way on the scaled digits', () => {
+		expect(lerpDecimal('0', '100', 0.5)).toBe('50');
+		expect(lerpDecimal('0', '0.10', 0.5)).toBe('0.05');
+		expect(lerpDecimal('1.5', '2.25', 0.5)).toBe('1.87');
+	});
+
+	it('should cross zero and keep the sign', () => {
+		expect(lerpDecimal('0', '-200.00', 0.25)).toBe('-50.00');
+		expect(lerpDecimal('-100', '100', 0.5)).toBe('0');
+	});
+
+	it('should stay exact for a figure no double holds', () => {
+		expect(lerpDecimal('0', '123456789012345678.9999', 0.5)).toBe('61728394506172839.4999');
 	});
 });

@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE passkeys SET credential = $2, last_used_at = now()\n           WHERE id = $1 AND deleted_at IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "db30effac88c9450d45632cd8a71cabcf4a439faf31a9f8b83e9879ad4b11898"
+}

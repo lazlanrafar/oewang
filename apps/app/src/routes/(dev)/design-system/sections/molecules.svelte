@@ -41,8 +41,12 @@
 	import { FormError } from '$lib/components/molecules/form-error';
 	import { Select } from '$lib/components/molecules/select';
 	import * as InputGroup from '$lib/components/molecules/input-group';
+	import { PasswordInput } from '$lib/components/molecules/password-input';
 	import * as Item from '$lib/components/molecules/item';
+	import { CountUp } from '$lib/components/atoms/count-up';
+	import { PageCard } from '$lib/components/molecules/page-card';
 	import { StatCard } from '$lib/components/molecules/stat-card';
+	import { formatMoney } from '$lib/money';
 	import {
 		categories as mockCategories,
 		wallets as mockWallets,
@@ -192,6 +196,8 @@
 	let pickerOpen = $state(false);
 	let pickedFiles = $state<PickerFile[]>([]);
 	let cardSelected = $state('f1');
+	/** Bumped to remount the page cards, so the count-up can be watched again. */
+	let countRun = $state(0);
 
 	/** A 1x1 PNG, so the view has real bytes to show without a server. */
 	async function fakeLoad(_file: unknown, onProgress: (done: number, total: number) => void) {
@@ -232,6 +238,18 @@
 			<Field.Label for="field-recurring">Repeat every month</Field.Label>
 		</Field.Root>
 	</Field.Group>
+</Specimen>
+
+<Specimen title="Password input">
+	<div class="grid gap-4 sm:grid-cols-2">
+		<PasswordInput placeholder="Password" autocomplete="off" value="correct horse battery" />
+		<PasswordInput placeholder="Invalid" autocomplete="off" aria-invalid="true" />
+		<PasswordInput placeholder="Disabled" autocomplete="off" disabled />
+	</div>
+	<p class="text-subtle text-small">
+		The eye at the end shows and hides what was typed. Every attribute goes to the input, so a
+		label and a password manager find it as before.
+	</p>
 </Specimen>
 
 <Specimen title="Input group and currency input">
@@ -403,9 +421,14 @@
 </Specimen>
 
 <Specimen title="Stat card"
-	note="The value is formatted by the caller; this component never does arithmetic on money.">
+	note="The value is formatted by the caller; this component never does arithmetic on money. A Count (a decimal string and its formatter) counts up from zero when it arrives (D108); a plain string shows as given.">
 	<div class="grid gap-4 sm:grid-cols-3">
-		<StatCard label="Income" value="Rp 9.500.000" change={12} changeLabel="vs last month" />
+		<StatCard
+			label="Income"
+			value={{ value: '9500000', format: (v) => formatMoney(v, 'IDR') }}
+			change={12}
+			changeLabel="vs last month"
+		/>
 		<StatCard label="Expenses" value="Rp 111.500" change={-4} changeLabel="vs last month" />
 		<StatCard label="Net" value="Rp 9.388.500" loading />
 	</div>
@@ -421,6 +444,31 @@
 			onclick={() => {}}
 		/>
 		<StatCard label="Tracked balance" value="Rp 12.400.000" hint="3 included accounts" />
+	</div>
+</Specimen>
+
+<Specimen
+	title="Page card and count-up"
+	note="The summary card above a list table, the old DataTablePageCard: a 10px tracked label over a serif figure. A Count animates over 0.8s with an ease-out; the decimal string moves through lerpDecimal, never a float (D12), and nothing counts on hydration or under reduced motion. While loading, the label stays and the figure is a skeleton. The tone is a variant, never a call-site class."
+	source="molecules/page-card, atoms/count-up"
+	framed={false}
+>
+	{#key countRun}
+		<div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+			<PageCard
+				label="Total balance"
+				value={{ value: '9340125.0000', format: (v) => formatMoney(v, 'IDR') }}
+				hint="1 account left out: no rate today"
+			/>
+			<PageCard label="Accounts" value={{ value: '4', format: (v) => v }} tone="positive" />
+			<PageCard label="Overall usage" value="" loading />
+		</div>
+	{/key}
+	<div class="mt-4 flex items-center gap-4">
+		<Button variant="outline" size="sm" onclick={() => (countRun += 1)}>Count again</Button>
+		<span class="font-mono text-xl">
+			<CountUp value="1234.56" format={(v) => formatMoney(v, 'USD')} />
+		</span>
 	</div>
 </Specimen>
 
@@ -587,6 +635,19 @@
 					{labelOfGroup(key)}
 				</button>
 			{/snippet}
+		</DataTable>
+	</div>
+</Specimen>
+
+<Specimen
+	title="Data table, loading"
+	note="The old app's table skeleton: the header stays and the body is shimmering rows in the columns' real widths, each cell shaped by the column's `skeleton` spec (text, checkbox, icon-text, avatar-text, badge, tags, icon). The table is aria-busy and the rows are hidden from assistive technology. A page shows it while a navigation that changes its load's parameters is under way (`reloading` in url-state), and the dashboard shell shows the page's frame with it while a list page is being opened (D108)."
+	framed={false}
+>
+	<div class="h-64">
+		<DataTable columns={sampleColumns} rows={[]} label={sampleLabel} loading skeletonRows={8}>
+			{#snippet head(column)}<span class="truncate">{column.label}</span>{/snippet}
+			{#snippet cell()}{/snippet}
 		</DataTable>
 	</div>
 </Specimen>

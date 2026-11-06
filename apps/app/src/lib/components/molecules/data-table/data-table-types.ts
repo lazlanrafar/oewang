@@ -25,3 +25,20 @@ export type TableSort<K extends string = string> = { key: K | null; descending: 
  * heading, which is what an ungrouped table is.
  */
 export type RowGroup<Row> = { key: string; rows: Row[] };
+
+/**
+ * What a column's cells look like while the rows are loading, as the old
+ * app's `meta.skeleton` types them: a bar of text, a checkbox, a dot or an
+ * avatar before text, a badge, a pair of tags, or an icon.
+ */
+export type SkeletonType =
+	| 'checkbox'
+	| 'text'
+	| 'avatar-text'
+	| 'icon-text'
+	| 'badge'
+	| 'tags'
+	| 'icon';
+
+/** A column's loading cell: its shape, and the Tailwind width of its bar. */
+export type SkeletonSpec = { type: SkeletonType; width?: string };

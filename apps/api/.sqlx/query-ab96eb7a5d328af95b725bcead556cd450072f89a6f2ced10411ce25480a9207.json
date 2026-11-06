@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, wallet_id, to_wallet_id, category_id, amount, to_amount,\n                  original_amount, original_currency_code, exchange_rate,\n                  base_amount, base_rate, base_rate_source, base_rate_date,\n                  date, type AS \"type!\", name, description, is_ready, is_exported,\n                  source, fingerprint, created_at, updated_at\n           FROM transactions\n           WHERE workspace_id = $1 AND id = ANY($2) AND deleted_at IS NULL\n           ORDER BY id",
+  "query": "INSERT INTO transactions\n             (id, workspace_id, wallet_id, to_wallet_id, category_id, amount, to_amount,\n              original_amount, original_currency_code, exchange_rate,\n              base_amount, base_rate, base_rate_source, base_rate_date,\n              date, type, name, description, source, fingerprint)\n           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,\n                   $15, $16, $17, $18, $19, $20)\n           RETURNING id, wallet_id, to_wallet_id, category_id, amount, to_amount,\n                     original_amount, original_currency_code, exchange_rate,\n                     base_amount, base_rate, base_rate_source, base_rate_date,\n                     date, type AS \"type!\", name, description, is_exported,\n                     source, fingerprint, created_at, updated_at",
   "describe": {
     "columns": [
       {
@@ -90,31 +90,26 @@
       },
       {
         "ordinal": 17,
-        "name": "is_ready",
-        "type_info": "Bool"
-      },
-      {
-        "ordinal": 18,
         "name": "is_exported",
         "type_info": "Bool"
       },
       {
-        "ordinal": 19,
+        "ordinal": 18,
         "name": "source",
         "type_info": "Text"
       },
       {
-        "ordinal": 20,
+        "ordinal": 19,
         "name": "fingerprint",
         "type_info": "Text"
       },
       {
-        "ordinal": 21,
+        "ordinal": 20,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 22,
+        "ordinal": 21,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
@@ -122,7 +117,25 @@
     "parameters": {
       "Left": [
         "Text",
-        "TextArray"
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Numeric",
+        "Numeric",
+        "Numeric",
+        "Text",
+        "Numeric",
+        "Numeric",
+        "Numeric",
+        "Text",
+        "Date",
+        "Timestamptz",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text"
       ]
     },
     "nullable": [
@@ -145,11 +158,10 @@
       true,
       false,
       false,
-      false,
       true,
       false,
       false
     ]
   },
-  "hash": "4c4424cd19fd747d8dd8a6bbd1727efd19108e612c6d3b8d85b702688f76e083"
+  "hash": "ab96eb7a5d328af95b725bcead556cd450072f89a6f2ced10411ce25480a9207"
 }

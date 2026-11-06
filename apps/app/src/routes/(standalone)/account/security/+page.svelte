@@ -1,10 +1,14 @@
 <script lang="ts">
 	/**
-	 * Password and sessions (AUTH-12, D94). New here: the old app had no way
-	 * to change a password or see where it was signed in, so this follows the
-	 * settings sections' own shape rather than a page to copy.
+	 * Password, passkeys and sessions (AUTH-12, D94, D110). New here: the old
+	 * app had no way to change a password, add a passkey or see where it was
+	 * signed in, so this follows the settings sections' own shape rather than
+	 * a page to copy. Passkeys list as the sessions do.
 	 */
+	import KeyRound from '@lucide/svelte/icons/key-round';
 	import Loader2 from '@lucide/svelte/icons/loader-circle';
+	import Plus from '@lucide/svelte/icons/plus';
+	import Trash2 from '@lucide/svelte/icons/trash-2';
 	import LogOut from '@lucide/svelte/icons/log-out';
 	import MonitorSmartphone from '@lucide/svelte/icons/monitor-smartphone';
 	import { toast } from 'svelte-sonner';
@@ -12,7 +16,7 @@
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import { Button } from '$lib/components/atoms/button';
-	import { Input } from '$lib/components/atoms/input';
+	import { PasswordInput } from '$lib/components/molecules/password-input';
 	import { Label } from '$lib/components/atoms/label';
 	import { Separator } from '$lib/components/atoms/separator';
 	import { ConfirmDialog } from '$lib/components/molecules/confirm-dialog';
@@ -22,8 +26,36 @@
 	import { messageForCode } from '$lib/errors';
 	import { t } from '$lib/i18n';
 	import { pageTitle } from '$lib/page-title';
+	import { addPasskey, passkeysSupported } from '$lib/passkeys';
 
 	let { data, form } = $props();
+
+	let adding = $state(false);
+	let removing = $state<{ id: string; name: string } | null>(null);
+	let confirmRemove = $state(false);
+	let removeForm = $state<HTMLFormElement | null>(null);
+
+	/** Make a passkey on this device, named after it (D110). */
+	async function add() {
+		if (!passkeysSupported()) {
+			toast.error(t('account.security.passkey_unsupported'));
+			return;
+		}
+		adding = true;
+		const outcome = await addPasskey(device(navigator.userAgent));
+		adding = false;
+
+		if (outcome.status === 'ok') {
+			toast.success(t('account.security.passkey_added'));
+			await invalidateAll();
+		} else if (outcome.status === 'failed') {
+			toast.error(
+				outcome.code && outcome.code !== 'VALIDATION_FAILED'
+					? messageForCode(outcome.code)
+					: t('account.security.passkey_failed')
+			);
+		}
+	}
 
 	let saving = $state(false);
 	let confirmLogout = $state(false);
@@ -98,10 +130,9 @@
 		>
 			<div class="space-y-2">
 				<Label for="current-password">{t('account.security.current_label')}</Label>
-				<Input
+				<PasswordInput
 					id="current-password"
 					name="current_password"
-					type="password"
 					autocomplete="current-password"
 					class="max-w-md"
 					required
@@ -110,10 +141,9 @@
 			</div>
 			<div class="space-y-2">
 				<Label for="new-password">{t('account.security.new_label')}</Label>
-				<Input
+				<PasswordInput
 					id="new-password"
 					name="new_password"
-					type="password"
 					autocomplete="new-password"
 					minlength={8}
 					class="max-w-md"
@@ -127,6 +157,76 @@
 				{t('account.security.change')}
 			</Button>
 		</form>
+	</section>
+
+	<Separator />
+
+	<section class="space-y-4">
+		<div class="space-y-1">
+			<h2 class="text-sm font-medium">{t('account.security.passkeys_title')}</h2>
+			<p class="text-muted-foreground text-xs">{t('account.security.passkeys_description')}</p>
+		</div>
+
+		{#if data.passkeys.length === 0}
+			<p class="text-muted-foreground text-xs">{t('account.security.no_passkeys')}</p>
+		{:else}
+			<ul class="divide-y border">
+				{#each data.passkeys as passkey (passkey.id)}
+					<li class="flex items-center gap-4 px-4 py-3">
+						<div class="flex size-10 shrink-0 items-center justify-center bg-muted">
+							<KeyRound class="size-4 text-muted-foreground" />
+						</div>
+						<div class="min-w-0 flex-1">
+							<p class="truncate font-medium text-sm">{passkey.name}</p>
+							<p class="text-[11px] text-muted-foreground">
+								{t('account.security.passkey_added_on', { date: date(passkey.created_at) })}
+								·
+								{passkey.last_used_at
+									? t('account.security.passkey_last_used', { date: date(passkey.last_used_at) })
+									: t('account.security.passkey_never_used')}
+							</p>
+						</div>
+						<Button
+							variant="ghost-destructive"
+							size="icon"
+							aria-label={t('account.security.remove_passkey', { name: passkey.name })}
+							onclick={() => {
+								removing = { id: passkey.id, name: passkey.name };
+								confirmRemove = true;
+							}}
+						>
+							<Trash2 />
+						</Button>
+					</li>
+				{/each}
+			</ul>
+		{/if}
+
+		<form
+			bind:this={removeForm}
+			method="POST"
+			action="?/removePasskey"
+			class="hidden"
+			use:enhance={() =>
+				async ({ result, update }) => {
+					if (result.type === 'success') toast.success(t('account.security.passkey_removed'));
+					else if (result.type === 'failure') {
+						toast.error(messageForCode(String(result.data?.code ?? '')));
+					}
+					await update();
+				}}
+		>
+			<input type="hidden" name="id" value={removing?.id ?? ''} />
+		</form>
+
+		<Button variant="outline" class="h-8 text-xs" disabled={adding} onclick={add}>
+			{#if adding}
+				<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+			{:else}
+				<Plus class="mr-2 h-4 w-4" />
+			{/if}
+			{t('account.security.add_passkey')}
+		</Button>
 	</section>
 
 	<Separator />
@@ -168,6 +268,14 @@
 		</Button>
 	</section>
 </div>
+
+<ConfirmDialog
+	bind:open={confirmRemove}
+	title={t('account.security.remove_passkey_confirm')}
+	description={t('account.security.remove_passkey_description', { name: removing?.name ?? '' })}
+	confirmLabel={t('account.security.remove')}
+	onConfirm={() => removeForm?.requestSubmit()}
+/>
 
 <ConfirmDialog
 	bind:open={confirmLogout}

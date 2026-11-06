@@ -26,12 +26,12 @@
 	<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
 		<StatCard
 			label={t('canvas.budget_spent')}
-			value={money(report.spent)}
+			value={{ value: report.spent, format: money }}
 			hint={t('canvas.budget_spent_hint', { total: money(report.budgeted) })}
 		/>
 		<StatCard
 			label={t('canvas.budget_remaining')}
-			value={money(report.remaining)}
+			value={{ value: report.remaining, format: money }}
 			hint={t('canvas.budget_remaining_hint', { percent: report.percent })}
 		/>
 	</div>

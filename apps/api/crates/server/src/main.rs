@@ -19,6 +19,7 @@ mod items;
 mod limits;
 mod mcp;
 mod owe1;
+mod passkeys;
 mod receipts;
 mod reports;
 mod response;
@@ -182,6 +183,10 @@ async fn main() -> anyhow::Result<()> {
         username: bot.username.clone(),
     });
 
+    // Built from APP_URL, so a deployment whose address cannot be a relying
+    // party refuses to start rather than failing at the first passkey.
+    let webauthn = Arc::new(passkeys::service::relying_party(&config.app_url)?);
+
     let state = AppState {
         db,
         config: Arc::new(config),
@@ -195,6 +200,7 @@ async fn main() -> anyhow::Result<()> {
         mcp: mcp_budget,
         rate_limits,
         telegram,
+        webauthn,
     };
 
     spawn_rate_refresher(state.clone());
@@ -299,6 +305,29 @@ fn protected_routes(state: AppState) -> Router<AppState> {
         .route(
             "/v1/auth/switch-workspace",
             post(auth::handler::switch_workspace),
+        )
+        // Passkeys (D110). Signing in with one is public; the rest take the
+        // token.
+        .route("/v1/auth/passkeys", get(passkeys::handler::list))
+        .route(
+            "/v1/auth/passkeys/register/start",
+            post(passkeys::handler::start_registration),
+        )
+        .route(
+            "/v1/auth/passkeys/register/finish",
+            post(passkeys::handler::finish_registration),
+        )
+        .route(
+            "/v1/auth/passkeys/{id}",
+            axum::routing::delete(passkeys::handler::remove),
+        )
+        .route(
+            "/v1/auth/passkey/sign-in/start",
+            post(passkeys::handler::start_sign_in),
+        )
+        .route(
+            "/v1/auth/passkey/sign-in/finish",
+            post(passkeys::handler::finish_sign_in),
         )
         .route(
             "/v1/auth/forgot-password",

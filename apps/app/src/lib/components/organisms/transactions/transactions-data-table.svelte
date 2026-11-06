@@ -91,6 +91,7 @@
 		onCategoryChange,
 		onWalletChange,
 		createLabel,
+		loading = false,
 		class: className
 	}: {
 		rows: TransactionRow[];
@@ -125,6 +126,8 @@
 		onWalletChange?: (row: TransactionRow, walletId: string) => void;
 		/** The create row's text, resolved by the caller (UI-1). */
 		createLabel?: (typed: string) => string;
+		/** Rows are on their way: the table draws its skeleton (D108). */
+		loading?: boolean;
 		class?: string;
 	} = $props();
 
@@ -404,6 +407,7 @@
 
 	<!-- --------------------------------------------------------- table -->
 	<DataTable
+		{loading}
 		columns={visibleColumns}
 		rows={sorted}
 		groups={blocks}

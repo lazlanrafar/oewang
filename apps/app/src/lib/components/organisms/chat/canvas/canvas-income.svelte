@@ -50,14 +50,14 @@
 	<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
 		<StatCard
 			label={t('canvas.total_earned')}
-			value={money(report.total.value)}
+			value={{ value: report.total.value, format: money }}
 			change={changeOf(report.total)}
 			changeLabel={comparedWith(report.total)}
 			hint={t('canvas.total_earned_hint', { count: report.count })}
 		/>
 		<StatCard
 			label={t('canvas.average_monthly')}
-			value={money(report.average_monthly)}
+			value={{ value: report.average_monthly, format: money }}
 			hint={t('canvas.average_monthly_hint', { count: report.months.length })}
 		/>
 	</div>

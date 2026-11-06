@@ -3,6 +3,7 @@
 	import ArrowUpRight from '@lucide/svelte/icons/arrow-up-right';
 	import type { Component } from 'svelte';
 
+	import { CountUp, type Count } from '../../atoms/count-up/index.js';
 	import { Skeleton } from '../../atoms/skeleton/index.js';
 	import { cn } from '$lib/utils.js';
 
@@ -13,6 +14,10 @@
 	 * The change carries an arrow as well as a colour, so the direction reads
 	 * without hue (UI-7), and the value is pre-formatted by the caller: this
 	 * component never does arithmetic on money (D12, D27).
+	 */
+	/*
+	 * A figure handed over as a `Count` counts up, as the old overview cards
+	 * did (D108); a plain string, such as a category name, shows as given.
 	 */
 	/*
 	 * Two additions for the overview's cards (D87): a footer line under the
@@ -34,7 +39,8 @@
 		class: className
 	}: {
 		label: string;
-		value: string;
+		/** A `Count` animates; a string is shown as given. */
+		value: string | Count;
 		/** Signed percentage, already computed. */
 		change?: number;
 		changeLabel?: string;
@@ -87,7 +93,13 @@
 		{#if loading}
 			<Skeleton class="mt-2 h-6 w-32" />
 		{:else}
-			<span class="mt-1 truncate font-mono text-xl">{value}</span>
+			<span class="mt-1 truncate font-mono text-xl">
+				{#if typeof value === 'string'}
+					{value}
+				{:else}
+					<CountUp value={value.value} format={value.format} />
+				{/if}
+			</span>
 		{/if}
 		{#if change !== undefined && !loading}
 			<span
