@@ -111,7 +111,14 @@ The body should say **why**, not restate the diff. If a commit works around some
 Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
 ```
 
-Work happens on `development`. Do not commit to `main` directly, and do not push unless asked. `main` moves only through a pull request from `development`: that is when CI runs (OPS-7), and merging it deploys.
+Work happens on `development`. Do not commit to `main` directly, and do not push unless asked. `main` moves only through a pull request from `development`, and merging it deploys.
+
+GitHub CI is switched off for now to save Actions minutes (`ci.yml` runs only by hand). Before a big feature is merged into `main`, run the whole suite locally and say what it reported:
+
+```bash
+scripts/ci-local.sh          # secret scan, docs, api, ai, app
+scripts/ci-local.sh --e2e    # plus the browser journeys, against the running stack
+```
 
 ## Keeping docs true
 

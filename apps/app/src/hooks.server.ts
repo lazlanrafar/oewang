@@ -12,6 +12,7 @@ import type { Handle } from '@sveltejs/kit/hooks';
 import { dev } from '$app/env';
 
 import { api, ApiError } from '$lib/server/api';
+import { isCrossSiteForm } from '$lib/server/csrf';
 import { securityHeaders } from '$lib/security-headers';
 import {
 	clearSession,
@@ -49,6 +50,14 @@ function isPublic(pathname: string): boolean {
 
 export const handle: Handle = async ({ event, resolve }) => {
 	const { cookies, url } = event;
+
+	// First, before any cookie is read: SvelteKit's own check is off so the
+	// OAuth token endpoint can be exempt (src/lib/server/csrf.ts).
+	if (isCrossSiteForm(event.request, url)) {
+		return new Response(`Cross-site ${event.request.method} form submissions are forbidden`, {
+			status: 403
+		});
+	}
 	let accessToken = readAccessToken(cookies);
 
 	// The access token lasts fifteen minutes, so an ordinary session spends

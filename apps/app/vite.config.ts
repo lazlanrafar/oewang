@@ -33,7 +33,12 @@ export default defineConfig({
 			//
 			// The directives live in `src/lib/security-headers.ts` with the
 			// rest of the table, so one file answers "what do we send".
-			csp: { mode: 'nonce', directives: CSP_DIRECTIVES }
+			csp: { mode: 'nonce', directives: CSP_DIRECTIVES },
+			// The cross-site form check runs in hooks.server.ts instead
+			// (src/lib/server/csrf.ts): the same rule, with the OAuth token
+			// endpoint exempt, which SvelteKit's own check cannot do. `'*'`
+			// is SvelteKit 3's switch for turning its check off.
+			csrf: { trustedOrigins: ['*'] }
 		})
 	],
 	/*

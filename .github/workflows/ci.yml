@@ -26,14 +26,12 @@
 name: CI
 
 on:
-  # Only when something is about to reach `main`: a pull request into it.
-  # `main` deploys to production (build-and-push.yml), and that is the one
-  # moment a red check has to stop something. Pushes to `development` run
-  # nothing, so a working branch does not spend Actions minutes per push;
-  # the same commit used to run here twice, once per branch.
-  pull_request:
-    branches: [main]
-  # By hand, for a branch you want checked before opening the pull request.
+  # Switched off for now to save Actions minutes (owner's decision,
+  # 2026-11-06). Run `scripts/ci-local.sh` before a big feature goes to
+  # main; it mirrors these jobs in the dev containers. This workflow stays
+  # runnable by hand from the Actions tab. To turn it back on, restore:
+  #   pull_request:
+  #     branches: [main]
   workflow_dispatch:
 
 permissions:
