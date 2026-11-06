@@ -450,7 +450,7 @@ Dropped: `model`, `temperature`, `max_steps`. The old app stored and exposed all
 | `entity_id` | text | Affected row ID |
 | `before` | jsonb | Nullable |
 | `after` | jsonb | Nullable |
-| `source` | text | `web`, `chat`, `import`, `receipt` or `telegram`. Matches `transactions.source`. New in this rewrite |
+| `source` | text | `web`, `chat`, `import`, `receipt` or `telegram`, matching `transactions.source`; or `migration` for a change a data migration made, attributed to the workspace's owner (0013, D102). New in this rewrite |
 | `created_at` | timestamp | |
 
 ```sql

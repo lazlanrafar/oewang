@@ -8,7 +8,7 @@ use serde_json::Value;
 use sqlx::PgExecutor;
 
 /// One entry. `source` names the surface the write came from and matches the
-/// `transactions.source` vocabulary: `web`, `chat`, `import` or `receipt`.
+/// `transactions.source` vocabulary: `web`, `chat`, `import`, `receipt`, `telegram`, or `migration` for a data migration's own changes.
 #[derive(Debug)]
 pub struct AuditEntry<'a> {
     pub workspace_id: &'a str,
