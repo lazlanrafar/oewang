@@ -80,8 +80,8 @@
 		{ id: 'w2', name: 'Studio' }
 	];
 	const MCP_TOKENS = [
-		{ id: 't1', kind: 'pat' as const, name: 'Claude Code on my laptop', client_id: null, token_prefix: 'owm_Q2xhdWRl', workspace_ids: null, expires_at: '2027-02-04T00:00:00Z', last_used_at: '2026-11-06T08:00:00Z', created_at: '2026-11-06T07:00:00Z' },
-		{ id: 't2', kind: 'pat' as const, name: 'Cursor', client_id: null, token_prefix: 'owm_Q3Vyc29y', workspace_ids: ['w2'], expires_at: null, last_used_at: null, created_at: '2026-11-01T07:00:00Z' }
+		{ id: 't1', kind: 'pat' as const, name: 'Claude Code on my laptop', client_id: null, token_prefix: 'owm_example1', workspace_ids: null, expires_at: '2027-02-04T00:00:00Z', last_used_at: '2026-11-06T08:00:00Z', created_at: '2026-11-06T07:00:00Z' },
+		{ id: 't2', kind: 'pat' as const, name: 'Cursor', client_id: null, token_prefix: 'owm_example2', workspace_ids: ['w2'], expires_at: null, last_used_at: null, created_at: '2026-11-01T07:00:00Z' }
 	];
 	let mcpClient = $state<McpClient>('claude-code');
 </script>
