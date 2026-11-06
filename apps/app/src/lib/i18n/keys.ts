@@ -51,6 +51,7 @@ export type TranslationKey =
 	| 'account.menu_account'
 	| 'account.menu_label'
 	| 'account.menu_log_out'
+	| 'account.menu_mcp'
 	| 'account.menu_theme'
 	| 'account.nav_mcp'
 	| 'account.nav_profile'

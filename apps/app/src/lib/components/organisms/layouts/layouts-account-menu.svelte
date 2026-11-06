@@ -10,6 +10,7 @@
 	import LogOut from '@lucide/svelte/icons/log-out';
 	import Monitor from '@lucide/svelte/icons/monitor';
 	import Moon from '@lucide/svelte/icons/moon';
+	import Plug from '@lucide/svelte/icons/plug';
 	import Sun from '@lucide/svelte/icons/sun';
 	import { setMode, userPrefersMode } from 'mode-watcher';
 
@@ -66,6 +67,15 @@
 				<a {...props} href="/account/profile">
 					<CircleUser />
 					{t('account.menu_account')}
+				</a>
+			{/snippet}
+		</DropdownMenu.Item>
+		<!-- MCP is the person's, like the account, so it sits beside it (D106). -->
+		<DropdownMenu.Item>
+			{#snippet child({ props })}
+				<a {...props} href="/account/mcp">
+					<Plug />
+					{t('account.menu_mcp')}
 				</a>
 			{/snippet}
 		</DropdownMenu.Item>

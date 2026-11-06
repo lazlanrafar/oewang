@@ -1,6 +1,6 @@
 import { INVALIDATION_KEYS } from '$lib/chat-invalidation';
 import { formatMoney } from '$lib/money';
-import { lastMonths } from '$lib/month-range';
+import { currentMonth } from '$lib/month-range';
 import * as ledger from '$lib/server/ledger';
 import * as reports from '$lib/server/reports';
 import { readText } from '$lib/url-state';
@@ -13,8 +13,8 @@ const DAY = /^\d{4}-\d{2}-\d{2}$/;
 /**
  * The overview (D87, OVR-1 to OVR-4).
  *
- * The figures for the range in `?from&to`, a year of whole months when the
- * URL names none, and the wallets for the tracked balance. Read together:
+ * The figures for the range in `?from&to`, the current month when the URL
+ * names none (the owner's choice, replacing D87's year), and the wallets for the tracked balance. Read together:
  * neither depends on the other.
  *
  * It declares the keys a chat write drops (D32), so a transaction created
@@ -27,7 +27,7 @@ export const load: PageServerLoad = async ({ depends, locals, url, parent }) => 
 
 	depends(INVALIDATION_KEYS.overview, INVALIDATION_KEYS.summary, INVALIDATION_KEYS.walletBalances);
 
-	const fallback = lastMonths(12);
+	const fallback = currentMonth();
 	const from = readText(url, 'from');
 	const to = readText(url, 'to');
 	// A half-written or malformed range falls back to the default as a

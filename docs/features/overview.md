@@ -16,7 +16,7 @@ The workspace's front page, ported from the old app's `overview`: a greeting, on
 |---|---|
 | Route | `/overview`. `/` redirects here, keeping the query string |
 | Header | "Good afternoon, {first name}", read from the clock after mount; the range picker; the two tabs |
-| URL | `?tab=overview\|metrics` (default `overview`), `?from&to` (days, default the last twelve whole months). A malformed or half range falls back to the default as a whole. The tab is written with shallow routing (`replaceState`): both tabs read the same report, so switching runs no load, and the URL still restores it |
+| URL | `?tab=overview\|metrics` (default `overview`), `?from&to` (days, default the current month). A malformed or half range falls back to the default as a whole. The tab is written with shallow routing (`replaceState`): both tabs read the same report, so switching runs no load, and the URL still restores it |
 | Overview tab | Six cards, then seven prompt chips |
 | Metrics tab | Income over time, expenses over time, income breakdown, expense breakdown, burn rate |
 | Composer | `ChatInput` in a `ChatDock`, sticky to the bottom of the shell's scroll box: the old composer, with the history list and the `/` shortcuts ([chat](chat.md#the-composer)). It folds as the page scrolls, unless it is in use |

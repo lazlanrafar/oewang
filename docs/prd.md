@@ -333,7 +333,7 @@ Added by D87. See [Overview](features/overview.md).
 
 | ID | Requirement |
 |---|---|
-| OVR-1 | `/overview` is the workspace's front page; `/` redirects to it. It greets the reader by first name and shows one date range, a year of whole months by default, held in `?from&to` (UI-8). |
+| OVR-1 | `/overview` is the workspace's front page; `/` redirects to it. It greets the reader by first name and shows one date range, the current month by default, held in `?from&to` (UI-8). |
 | OVR-2 | The overview tab shows income, expenses and net for the range with the change against the period of equal length before it, the top expense category, the average monthly burn, and the tracked balance of the wallets included in totals, marked partial when a rate is missing. Every figure is computed by the API (D27). |
 | OVR-3 | The metrics tab charts income and expenses per month with their averages, the income and expense breakdowns by category, and the monthly burn rate. The tab lives in `?tab=`. |
 | OVR-4 | A floating composer, the prompt chips and a click on a card each start a conversation: the session is created, the conversation opens, and the question is sent there. Nothing is sent twice on reload. |

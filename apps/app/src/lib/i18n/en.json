@@ -1009,6 +1009,7 @@
 		"title": "Account",
 		"back": "Back to app",
 		"menu_account": "Account",
+		"menu_mcp": "MCP",
 		"menu_theme": "Theme",
 		"menu_log_out": "Log out",
 		"menu_label": "Account menu",
