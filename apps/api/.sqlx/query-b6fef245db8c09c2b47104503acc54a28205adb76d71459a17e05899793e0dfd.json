@@ -1,0 +1,59 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE users SET name = $2, updated_at = now() WHERE id = $1\n           RETURNING id, email, name, profile_picture, income_color, expense_color, created_at",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "email",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "profile_picture",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "income_color",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "expense_color",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "b6fef245db8c09c2b47104503acc54a28205adb76d71459a17e05899793e0dfd"
+}

@@ -28,6 +28,7 @@
 	import { parseDate } from '@internationalized/date';
 
 	import { currentMonth } from '$lib/month-range';
+	import { categoryColorClass } from '$lib/colors';
 	import { pagedRows } from '$lib/paged-rows.svelte';
 
 	import { navigating, page } from '$app/state';
@@ -108,7 +109,11 @@
 		data.wallets.map((wallet) => ({ id: wallet.id, name: wallet.name }))
 	);
 	const categories = $derived<NamedOption[]>(
-		data.categories.map((category) => ({ id: category.id, name: category.name }))
+		data.categories.map((category) => ({
+			id: category.id,
+			name: category.name,
+			colorClass: categoryColorClass(category.type)
+		}))
 	);
 
 	/**
@@ -359,7 +364,11 @@
 		data.wallets.map((wallet) => ({ id: wallet.id, label: wallet.name }))
 	);
 	const categoryItems = $derived(
-		data.categories.map((category) => ({ id: category.id, label: category.name }))
+		data.categories.map((category) => ({
+			id: category.id,
+			label: category.name,
+			colorClass: categoryColorClass(category.type)
+		}))
 	);
 
 	const openSheet = (id: string) => writeParams({ sheet: id }, { push: true });

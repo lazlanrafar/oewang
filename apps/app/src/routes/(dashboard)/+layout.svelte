@@ -29,6 +29,7 @@
 	import { Toaster } from '$lib/components/atoms/sonner';
 	import { t } from '$lib/i18n';
 	import { setWorkspaceLists } from '$lib/workspace-data.svelte';
+	import { applyColors, colorStyle } from '$lib/colors';
 	import { formatMoney } from '$lib/money';
 
 	let { children, data } = $props();
@@ -91,6 +92,18 @@
 	});
 	let drawerOpen = $state(false);
 
+	/*
+	 * The reader's income and expense colours (UI-12, D100). On the shell's
+	 * own element for the first paint, which is server-rendered, and on the
+	 * document root once running, because sheets and menus are portals
+	 * outside the shell. Taken off again when the shell goes.
+	 */
+	const userColors = $derived({
+		income_color: data.me.user.income_color,
+		expense_color: data.me.user.expense_color
+	});
+	$effect(() => applyColors(userColors));
+
 	function toggle() {
 		open = !open;
 		rememberSidebar(open);
@@ -114,7 +127,7 @@
      to the screen that happened to trigger it. -->
 <Toaster />
 
-<div class="flex h-svh w-full overflow-hidden">
+<div class="flex h-svh w-full overflow-hidden" style={colorStyle(userColors) || undefined}>
 	<AppSidebar
 		workspaces={data.workspaces}
 		activeId={data.me.workspace.id}

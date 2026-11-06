@@ -65,6 +65,7 @@ erDiagram
 | `email` | text | Unique, not null |
 | `name` | text | Nullable |
 | `profile_picture` | text | Nullable. The current photo's version id; the photo itself is a 256px JPEG at `usr/{user_id}/avatar` in object storage, served through the API (D94) |
+| `income_color`, `expense_color` | text | Nullable, `#rrggbb` lowercase (checked). The colours this user sees income and expense in; null is the default (D100) |
 | `password_hash` | text | Argon2id. Never returned by any endpoint (AUTH-1) |
 | `created_at`, `updated_at` | timestamp | |
 

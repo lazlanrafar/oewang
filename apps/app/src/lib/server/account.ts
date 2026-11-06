@@ -12,7 +12,15 @@ import type { IssuedSession } from './session';
 export type Role = 'owner' | 'admin' | 'member';
 
 export type Me = {
-	user: { id: string; email: string; name: string | null; profile_picture: string | null };
+	user: {
+		id: string;
+		email: string;
+		name: string | null;
+		profile_picture: string | null;
+		/** `#rrggbb` income is drawn in, or null for the default (D100). */
+		income_color: string | null;
+		expense_color: string | null;
+	};
 	workspace: { id: string; name: string; slug: string; currency_code: string };
 	role: Role;
 };
@@ -59,6 +67,14 @@ export function switchWorkspace(workspaceId: string, token?: string) {
 /** Rename yourself (AUTH-11). A blank name clears it. */
 export function updateProfile(body: { name: string | null }, token?: string) {
 	return api<null>({ method: 'PATCH', path: '/v1/auth/me', body, token });
+}
+
+/** Both colours together; null restores the default (UI-12, D100). */
+export function updateColors(
+	body: { income_color: string | null; expense_color: string | null },
+	token?: string
+) {
+	return api<null>({ method: 'PUT', path: '/v1/auth/me/colors', body, token });
 }
 
 /** Every other session ends; the answer is this browser's new one (AUTH-12). */

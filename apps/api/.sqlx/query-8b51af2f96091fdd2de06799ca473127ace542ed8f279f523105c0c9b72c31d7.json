@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, email, name, profile_picture, created_at FROM users WHERE id = $1",
+  "query": "SELECT id, email, name, profile_picture, income_color, expense_color, created_at\n           FROM users WHERE id = $1",
   "describe": {
     "columns": [
       {
@@ -25,6 +25,16 @@
       },
       {
         "ordinal": 4,
+        "name": "income_color",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "expense_color",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
         "name": "created_at",
         "type_info": "Timestamptz"
       }
@@ -39,8 +49,10 @@
       false,
       true,
       true,
+      true,
+      true,
       false
     ]
   },
-  "hash": "e6dba2a2ae69611842c1ce8c6e09ddafee68140031abe190b9700f555b8855a6"
+  "hash": "8b51af2f96091fdd2de06799ca473127ace542ed8f279f523105c0c9b72c31d7"
 }

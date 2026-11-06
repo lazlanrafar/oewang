@@ -102,6 +102,17 @@ pub struct UserView {
     /// The current photo's version, or `null` when there is none (D94).
     /// Never a path: the photo is fetched from `/v1/auth/me/avatar`.
     pub profile_picture: Option<String>,
+    /// `#rrggbb` income and expense are drawn in, or `null` for the
+    /// default (UI-12, D100).
+    pub income_color: Option<String>,
+    pub expense_color: Option<String>,
+}
+
+/// Both colours, always together; `null` or blank restores the default.
+#[derive(Debug, Deserialize)]
+pub struct ColorsRequest {
+    pub income_color: Option<String>,
+    pub expense_color: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -260,6 +271,8 @@ async fn load_me(state: &AppState, auth: &Auth) -> Result<MeResponse> {
             email: user.email,
             name: user.name,
             profile_picture: user.profile_picture,
+            income_color: user.income_color,
+            expense_color: user.expense_color,
         },
         workspace: WorkspaceView {
             id: workspace.id,
@@ -282,6 +295,24 @@ pub async fn update_profile(
         &state.db,
         Actor::web(&auth.workspace_id, &auth.user_id),
         body.name.as_deref(),
+    )
+    .await
+    .map(|_| StatusCode::NO_CONTENT)
+    .map_err(|error| ApiError::new(error, request_id.0))
+}
+
+/// The colours income and expense are drawn in, for you only (UI-12).
+pub async fn update_colors(
+    State(state): State<AppState>,
+    auth: Auth,
+    request_id: RequestId,
+    Json(body): Json<ColorsRequest>,
+) -> std::result::Result<StatusCode, ApiError> {
+    account::update_colors(
+        &state.db,
+        Actor::web(&auth.workspace_id, &auth.user_id),
+        body.income_color.as_deref(),
+        body.expense_color.as_deref(),
     )
     .await
     .map(|_| StatusCode::NO_CONTENT)

@@ -733,6 +733,15 @@ Requirements: FX-2
 - [x] Wallet totals on the accounts page read the same snapshot in one call instead of one lookup per currency
 - [x] Verified locally in the browser: USD picked, rate prefilled
 
+### US-056: Brand green, user colours and error pages
+Requirements: UI-9, UI-10
+
+- [x] Primary is oewang.com's brand green, light and dark (D99)
+- [x] `users.income_color` and `users.expense_color`, `PUT /v1/auth/me/colors`, audited, `#rrggbb` only (Rust tests)
+- [x] Settings, Appearance: swatches, a free colour, default, live preview; applied to the shell on the server render and to the document root for portals (vitest)
+- [x] `routes/+error.svelte` per status and `src/error.html` as the last resort (D101)
+- [x] Verified locally in the browser: a colour saved and applied, then reset; the 404 page
+
 ## Coverage check
 
 Run this before declaring a milestone finished: every requirement ID in [PRD section 6](prd.md#6-requirements) should appear in at least one story above. A requirement with no story is either out of scope and belongs in the non-goals, or it is a gap.

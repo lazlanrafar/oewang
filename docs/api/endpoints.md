@@ -41,6 +41,7 @@ These four are the only plaintext routes ([exceptions](encryption.md#plaintext-e
 | POST | `/v1/auth/reset-password` | public | Token plus a new password. Revokes every session on success |
 | GET | `/v1/auth/me` | any | Current user (with `profile_picture`, a photo version id or null), workspace and role |
 | PATCH | `/v1/auth/me` | any | `{name}`; a blank name clears it (AUTH-11) |
+| PUT | `/v1/auth/me/colors` | any | `{income_color, expense_color}`, each `#rrggbb` or null for the default; both every time. Audited as `user.colors_updated`. `GET /v1/auth/me` returns them on `user` (UI-9, D100) |
 | GET | `/v1/auth/me/avatar` | any | `{type: "image/jpeg", data}` base64, or 404 when there is no photo (AUTH-13) |
 | PUT | `/v1/auth/me/avatar` | any | `{data}` base64 JPEG, PNG or WebP up to 700 KB; stored as a 256px square JPEG. Answers `{profile_picture}` |
 | DELETE | `/v1/auth/me/avatar` | any | Remove the photo |

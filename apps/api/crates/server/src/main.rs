@@ -31,7 +31,7 @@ use std::{net::SocketAddr, sync::Arc, time::Duration};
 
 use axum::{
     http::{Request, StatusCode},
-    routing::{get, post},
+    routing::{get, post, put},
     Router,
 };
 use tower::ServiceBuilder;
@@ -278,6 +278,7 @@ fn protected_routes(state: AppState) -> Router<AppState> {
             "/v1/auth/me",
             get(auth::handler::me).patch(auth::handler::update_profile),
         )
+        .route("/v1/auth/me/colors", put(auth::handler::update_colors))
         .route(
             "/v1/auth/me/avatar",
             get(auth::handler::get_avatar)

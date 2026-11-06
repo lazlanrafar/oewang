@@ -1,0 +1,49 @@
+<!doctype html>
+<!--
+	The last-resort page, served when the error page itself cannot render
+	(SvelteKit's `src/error.html`). No app code and no stylesheet reach it,
+	so it stands alone: the same layout as `routes/+error.svelte` (D101),
+	with inline style attributes only, because the content security policy
+	allows those and refuses an un-nonced `<style>` element. `light-dark()`
+	keeps it right in either theme without one.
+-->
+<html lang="en" style="color-scheme: light dark">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>%sveltekit.status% | Oewang</title>
+		<link rel="icon" href="/favicon.ico" sizes="32x32" />
+	</head>
+	<body
+		style="margin: 0; min-height: 100svh; display: flex; align-items: center; justify-content: center; padding: 64px 24px; box-sizing: border-box; background: light-dark(#ffffff, #0d0d0d); color: light-dark(#171717, #fafafa); font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif; text-align: center"
+	>
+		<main style="max-width: 28rem; display: flex; flex-direction: column; align-items: center">
+			<p
+				aria-hidden="true"
+				style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 9rem; line-height: 1; letter-spacing: -0.02em; color: light-dark(rgba(23, 23, 23, 0.06), rgba(250, 250, 250, 0.06)); user-select: none"
+			>
+				%sveltekit.status%
+			</p>
+			<p
+				style="margin: -24px 0 0; color: light-dark(#10bc99, #14d1ab); font-size: 11px; font-weight: 500; letter-spacing: 0.3em; text-transform: uppercase"
+			>
+				&bull; Error %sveltekit.status%
+			</p>
+			<h1
+				style="margin: 16px 0 0; font-family: Georgia, 'Times New Roman', serif; font-weight: 400; font-size: 2.5rem; line-height: 1.05; letter-spacing: -0.02em"
+			>
+				Something went <em style="color: light-dark(#10bc99, #14d1ab)">wrong.</em>
+			</h1>
+			<p style="margin: 16px 0 0; font-size: 14px; line-height: 1.6; color: light-dark(#616161, #8a8a8a)">
+				Oewang could not show this page. Try again in a moment.
+			</p>
+			<p style="margin: 32px 0 0">
+				<a
+					href="/overview"
+					style="display: inline-block; padding: 8px 16px; background: light-dark(#10bc99, #14d1ab); color: light-dark(#ffffff, #0a0a0a); font-size: 14px; font-weight: 500; text-decoration: none"
+					>Go to overview</a
+				>
+			</p>
+		</main>
+	</body>
+</html>

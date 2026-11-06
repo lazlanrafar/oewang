@@ -248,6 +248,8 @@ Requirement IDs are referenced by every other doc and by each backlog story. The
 | UI-6 | Every screen is usable at 375 px width. |
 | UI-7 | Interactive elements are reachable by keyboard, and every path a pointer can take a keyboard can take too. **Two known failures, accepted so the interface matches the old app exactly (D66):** there is no visible focus indicator anywhere, which fails WCAG 2.4.7, and the income and expense colours render at 2.30:1 and 3.91:1 where body text needs 4.5:1, which fails 1.4.3. Colour is never the only carrier of meaning: an amount shows a sign, a category shows its name. Motion is opt-in under `prefers-reduced-motion` (D64). Both failures are the first thing to revisit if accessibility becomes a requirement. |
 | UI-8 | View state lives in the URL. Every filter, search term, sort, page number, date range, grouping and open tab is a query parameter, so a refresh restores the view, the back button undoes a change, and a pasted link reproduces what the sender saw. Nothing that changes what is on screen is held only in a component. Per-browser conveniences (column visibility, density, sidebar collapsed) stay in `localStorage`; secrets never go in a URL. |
+| UI-9 | Each user may choose the colours income and expense are drawn in, from swatches or any colour, or keep the default. The choice is theirs only and applies across the app, sheets and menus included. |
+| UI-10 | Every error status gets a page in the brand's voice with a way out: 404, 401 (sign in), 403, 500 and 503 (try again) each with their own words, and a static last-resort page when the error page itself cannot render. |
 
 ### 6.9 Security (SEC)
 

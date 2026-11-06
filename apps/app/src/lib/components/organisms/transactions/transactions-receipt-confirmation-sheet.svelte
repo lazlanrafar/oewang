@@ -274,7 +274,7 @@
 
 				<div class="grid gap-2">
 					<Label for="receipt-category" class={labelClass}>{t('receipt.category')}</Label>
-					<SelectCategory id="receipt-category" {categories} bind:value={form.categoryId} />
+					<SelectCategory id="receipt-category" type="expense" {categories} bind:value={form.categoryId} />
 				</div>
 			</div>
 

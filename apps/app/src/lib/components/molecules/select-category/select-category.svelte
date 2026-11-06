@@ -6,9 +6,11 @@
 	/**
 	 * Ported from the old app's molecules/select-category.
 	 *
-	 * The category picker: the app's `Select` with the category's colour
-	 * square beside the name. A category without a colour falls back to
-	 * `bg-subtle`, which is also the square the create row carries.
+	 * The category picker: the app's `Select` with a square beside the name
+	 * in the category's type colour, income or expense, which is the user's
+	 * own choice of the two (D100). A category whose type is not known
+	 * falls back to the colour the caller gave, then to grey. The create row
+	 * carries the colour of the type it files under.
 	 *
 	 * With no `categories` prop it reads the workspace's own list, published
 	 * by the dashboard layout, and `type` narrows it to the income or the
@@ -16,6 +18,7 @@
 	 * That list is this session's workspace and no other (AUTH-4). A caller
 	 * with its own list passes `categories`, which wins.
 	 */
+	import { categoryColorClass } from '$lib/colors';
 	import { createInWorkspace, workspaceLists } from '$lib/workspace-data.svelte';
 
 	import { Select } from '../select/index.js';
@@ -63,19 +66,35 @@
 
 	const lists = workspaceLists();
 
+	/** Each category's type, so a caller's own list is filtered and coloured too. */
+	const typeOf = $derived(new Map(lists.categories.map((category) => [category.id, category.type])));
+
+	/*
+	 * `type` narrows a caller's own list as well as the workspace's: a row
+	 * recording an expense must not be offered an income category because
+	 * its page happened to pass the whole list. An entry whose type is not
+	 * known, such as a "none" row, stays, and so does the current value, so
+	 * an older row filed under the other type still shows what it holds.
+	 */
 	const options = $derived<CategoryItem[]>(
-		categories ??
-			lists.categories
-				.filter((category) => !type || category.type === type)
-				.map((category) => ({ id: category.id, label: category.name }))
+		(
+			categories ??
+			lists.categories.map((category) => ({ id: category.id, label: category.name }))
+		).filter((category) => {
+			const known = typeOf.get(category.id);
+			return !type || !known || known === type || category.id === value;
+		})
 	);
 
 	const items = $derived(
-		options.map((category) => ({
-			value: category.id,
-			label: category.label,
-			colorClass: category.colorClass
-		}))
+		options.map((category) => {
+			const known = typeOf.get(category.id);
+			return {
+				value: category.id,
+				label: category.label,
+				colorClass: known ? categoryColorClass(known) : category.colorClass
+			};
+		})
 	);
 
 	/*
@@ -109,7 +128,7 @@
 	{disabled}
 	{updating}
 	searchPlaceholder="Search category"
-	mark={{ colorClass: 'bg-subtle' }}
+	mark={{ colorClass: categoryColorClass(type) }}
 	variant={inDataTable ? 'in-cell' : 'outline'}
 	class={className}
 />

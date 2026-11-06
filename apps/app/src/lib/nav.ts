@@ -119,7 +119,7 @@ export const settingsNavGroups: NavGroup[] = [
 	{
 		items: [
 			{ titleKey: 'settings.nav_members', href: '/settings/members', icon: Users, pending: true },
-			{ titleKey: 'settings.nav_appearance', href: '/settings/appearance', icon: Palette, pending: true },
+			{ titleKey: 'settings.nav_appearance', href: '/settings/appearance', icon: Palette },
 			{ titleKey: 'settings.nav_display', href: '/settings/display', icon: Monitor, pending: true },
 			{ titleKey: 'settings.nav_transaction', href: '/settings/transaction', icon: FileText, pending: true }
 		]

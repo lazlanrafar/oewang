@@ -16,6 +16,9 @@ pub struct UserRow {
     pub email: String,
     pub name: Option<String>,
     pub profile_picture: Option<String>,
+    /// `#rrggbb`, or `None` for the product's default (D100).
+    pub income_color: Option<String>,
+    pub expense_color: Option<String>,
     pub created_at: DateTime<Utc>,
 }
 
@@ -126,7 +129,8 @@ pub async fn find_user_by_id(
 ) -> Result<Option<UserRow>, sqlx::Error> {
     sqlx::query_as!(
         UserRow,
-        r#"SELECT id, email, name, profile_picture, created_at FROM users WHERE id = $1"#,
+        r#"SELECT id, email, name, profile_picture, income_color, expense_color, created_at
+           FROM users WHERE id = $1"#,
         user_id
     )
     .fetch_optional(executor)
@@ -169,9 +173,29 @@ pub async fn update_user_name(
     sqlx::query_as!(
         UserRow,
         r#"UPDATE users SET name = $2, updated_at = now() WHERE id = $1
-           RETURNING id, email, name, profile_picture, created_at"#,
+           RETURNING id, email, name, profile_picture, income_color, expense_color, created_at"#,
         user_id,
         name
+    )
+    .fetch_optional(executor)
+    .await
+}
+
+/// Set both colours at once; `None` puts one back to the default (D100).
+pub async fn update_user_colors(
+    executor: impl PgExecutor<'_>,
+    user_id: &str,
+    income_color: Option<&str>,
+    expense_color: Option<&str>,
+) -> Result<Option<UserRow>, sqlx::Error> {
+    sqlx::query_as!(
+        UserRow,
+        r#"UPDATE users SET income_color = $2, expense_color = $3, updated_at = now()
+           WHERE id = $1
+           RETURNING id, email, name, profile_picture, income_color, expense_color, created_at"#,
+        user_id,
+        income_color,
+        expense_color
     )
     .fetch_optional(executor)
     .await

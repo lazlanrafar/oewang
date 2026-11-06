@@ -186,8 +186,10 @@
 	   the grouped table rows and the tooltip use. */
 	--popover: 0 0% 100%;
 	--popover-foreground: 240 10% 3.9%;
-	--primary: 240 5.9% 10%;
-	--primary-foreground: 0 0% 98%;
+	/* The brand green of oewang.com (`--brand-accent` there), as primary
+	   (D99). White on it, as the site sets it. */
+	--primary: 168 84% 40%;
+	--primary-foreground: 0 0% 100%;
 	--secondary: 40 11% 89%;
 	--secondary-foreground: 240 5.9% 10%;
 	--muted: 40 11% 89%;
@@ -198,7 +200,7 @@
 	--destructive-foreground: 0 0% 98%;
 	--border: 45 5% 85%;
 	--input: 240 5.9% 90%;
-	--ring: 240 5.9% 10%;
+	--ring: 168 84% 40%;
 
 	--sidebar: 0 0% 100%;
 	--sidebar-foreground: 240 10% 3.9%;
@@ -249,8 +251,9 @@
 	--card-foreground: 0 0% 98%;
 	--popover: 0 0% 5%;
 	--popover-foreground: 0 0% 98%;
-	--primary: 0 0% 98%;
-	--primary-foreground: 240 5.9% 10%;
+	/* oewang.com's dark-mode brand green, with near-black on it (D99). */
+	--primary: 168 84% 45%;
+	--primary-foreground: 0 0% 4%;
 	--secondary: 0 0% 7%;
 	--secondary-foreground: 0 0% 98%;
 	--muted: 0 0% 11%;
@@ -261,7 +264,7 @@
 	--destructive-foreground: 0 0% 100%;
 	--border: 0 0% 20%;
 	--input: 0 0% 11%;
-	--ring: 240 4.9% 83.9%;
+	--ring: 168 84% 45%;
 
 	--sidebar: 0 0% 5%;
 	--sidebar-foreground: 0 0% 98%;

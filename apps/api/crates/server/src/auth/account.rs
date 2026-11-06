@@ -74,6 +74,64 @@ pub async fn update_profile(
     Ok(user)
 }
 
+/// Set the colours income and expense are drawn in, for this user only
+/// (UI-12, D100). The whole pair every time; `None` restores the default.
+pub async fn update_colors(
+    pool: &PgPool,
+    actor: Actor<'_>,
+    income_color: Option<&str>,
+    expense_color: Option<&str>,
+) -> Result<accounts::UserRow> {
+    let income = normalize_color("income_color", income_color)?;
+    let expense = normalize_color("expense_color", expense_color)?;
+
+    let mut tx = pool.begin().await.map_err(internal)?;
+    let user = accounts::update_user_colors(
+        &mut *tx,
+        actor.user_id,
+        income.as_deref(),
+        expense.as_deref(),
+    )
+    .await
+    .map_err(internal)?
+    .ok_or(AppError::Unauthenticated)?;
+
+    log(
+        &mut tx,
+        actor,
+        "user.colors_updated",
+        "user",
+        actor.user_id,
+        None,
+        Some(serde_json::json!({
+            "income_color": user.income_color,
+            "expense_color": user.expense_color
+        })),
+    )
+    .await?;
+
+    tx.commit().await.map_err(internal)?;
+    Ok(user)
+}
+
+/// `#RRGGBB` in any case, lowercased; blank means the default. Anything
+/// else is refused: the value ends up in a style attribute (D100).
+fn normalize_color(field: &'static str, value: Option<&str>) -> Result<Option<String>> {
+    let Some(value) = value.map(str::trim).filter(|value| !value.is_empty()) else {
+        return Ok(None);
+    };
+    let valid = value.len() == 7
+        && value.starts_with('#')
+        && value[1..].chars().all(|c| c.is_ascii_hexdigit());
+    if !valid {
+        return Err(AppError::validation([(
+            field,
+            "Use a colour like #10bc99.",
+        )]));
+    }
+    Ok(Some(value.to_ascii_lowercase()))
+}
+
 /// Change the password, knowing the current one (AUTH-12).
 ///
 /// Every other session ends, as a reset ends them: a password worth changing
@@ -518,5 +576,38 @@ mod tests {
             read_avatar(&pool, &store, USER).await,
             Err(AppError::NotFound)
         ));
+    }
+}
+
+#[cfg(test)]
+mod color_tests {
+    use super::normalize_color;
+
+    #[test]
+    fn should_accept_a_hex_colour_and_lowercase_it() {
+        assert_eq!(
+            normalize_color("income_color", Some(" #10BC99 ")).unwrap(),
+            Some("#10bc99".to_string())
+        );
+    }
+
+    #[test]
+    fn should_treat_blank_as_the_default() {
+        assert_eq!(normalize_color("income_color", Some("  ")).unwrap(), None);
+        assert_eq!(normalize_color("income_color", None).unwrap(), None);
+    }
+
+    #[test]
+    fn should_refuse_anything_that_is_not_six_hex_digits() {
+        for bad in [
+            "10bc99",
+            "#10bc9",
+            "#10bc99;",
+            "red",
+            "#gggggg",
+            "#10bc99\"};color:red",
+        ] {
+            assert!(normalize_color("income_color", Some(bad)).is_err(), "{bad}");
+        }
     }
 }
