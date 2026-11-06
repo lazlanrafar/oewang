@@ -168,7 +168,7 @@ D103, BUD-1 to BUD-3. Every figure is computed by the API, with a `_formatted` t
 | GET | `/v1/transactions/export` | any | CSV download honouring the active filters (TXN-10) |
 | POST | `/v1/transactions` | admin+ | Create. Adjusts wallet balances (TXN-3) |
 | POST | `/v1/transactions/bulk` | admin+ | Create many. Used by the CSV wizard commit (TXN-11) |
-| POST | `/v1/transactions/bulk-update` | admin+ | Update many: category, ready flag (TXN-14) |
+| POST | `/v1/transactions/bulk-update` | admin+ | Set the category of many; `category_id: null` clears it (TXN-14) |
 | POST | `/v1/transactions/bulk-delete` | admin+ | Soft-delete many, reversing each balance (TXN-14) |
 | POST | `/v1/transactions/import` | admin+ | Read an already-uploaded statement image or PDF. Returns `202 {job_id}` (AI-4) |
 | POST | `/v1/transactions/import/csv` | admin+ | A file's rows as they came out of it, plus a column mapping. Every figure and date is parsed in Rust (TXN-11, D28). Returns created, duplicate and skipped counts |
@@ -189,7 +189,6 @@ D103, BUD-1 to BUD-3. Every figure is computed by the API, with a `_formatted` t
 | `start_date` | date | Inclusive |
 | `end_date` | date | Inclusive |
 | `search` | string | Matches `name` or `description`, case insensitive |
-| `is_ready` | boolean | |
 | `min_amount` | string | Inclusive lower bound, compared on the **base amount**, the workspace's own currency, not on the figure the row was entered in (D77). A decimal string, never a number (D12). Omitted and empty both mean no bound: a cleared filter sends `?min_amount=` |
 | `max_amount` | string | Inclusive upper bound, same rules |
 | `sort` | enum | `date` (default), `amount`, `name`, `created_at`. `amount` sorts on the base amount. `name` puts a row with no name last in both directions, so blanks do not jump to the top when the order flips |
@@ -208,7 +207,6 @@ D103, BUD-1 to BUD-3. Every figure is computed by the API, with a `_formatted` t
   "date": "2026-11-02T12:30:00+08:00",
   "name": "Lunch",
   "description": null,
-  "is_ready": true,
   "attachment_ids": ["clx…"],
   "items": [
     { "name": "Nasi goreng", "quantity": "1", "unit_price": "35000.0000", "amount": "35000.0000" }

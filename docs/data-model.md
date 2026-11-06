@@ -284,7 +284,6 @@ The same migration adds `mcp` to the `transactions.source` and `audit_logs.sourc
 | `type` | text | `income`, `expense` or `transfer` (TXN-1) |
 | `name` | text | Label or payee |
 | `description` | text | Free text note |
-| `is_ready` | boolean | Reviewed flag, default false |
 | `is_exported` | boolean | Included in a CSV export, default false (TXN-10) |
 | `source` | text | `web`, `chat`, `import`, `receipt` or `telegram`. How the row was created (D74, D86) |
 | `fingerprint` | text | Deterministic content hash, set on imported rows only. Null for manual entry (TXN-16, D29) |

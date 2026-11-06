@@ -70,7 +70,6 @@ pub struct TransactionView {
     pub r#type: String,
     pub name: Option<String>,
     pub description: Option<String>,
-    pub is_ready: bool,
     pub is_exported: bool,
     pub source: String,
     pub created_at: String,
@@ -107,7 +106,6 @@ impl From<TransactionListRow> for TransactionView {
             r#type: row.r#type,
             name: row.name,
             description: row.description,
-            is_ready: row.is_ready,
             is_exported: row.is_exported,
             source: row.source,
             created_at: row.created_at.to_rfc3339(),
@@ -348,7 +346,6 @@ pub struct ListQuery {
     pub start_date: Option<String>,
     pub end_date: Option<String>,
     pub search: Option<String>,
-    pub is_ready: Option<bool>,
     /// Amount bounds, as strings. Money is parsed, never deserialized into
     /// a float (D12).
     pub min_amount: Option<String>,
@@ -424,7 +421,6 @@ impl ListQuery {
             start_date: parse_day(self.start_date.as_deref(), DayEdge::Start)?,
             end_date: parse_day(self.end_date.as_deref(), DayEdge::End)?,
             search: non_empty(self.search.as_deref()),
-            is_ready: self.is_ready,
             ids: None,
             min_amount: bound("min_amount", self.min_amount.as_deref())?,
             max_amount: bound("max_amount", self.max_amount.as_deref())?,
@@ -471,7 +467,6 @@ pub struct TransactionBody {
     pub name: Option<String>,
     pub description: Option<String>,
     #[serde(default)]
-    pub is_ready: bool,
     /// The whole set of files this transaction carries. Absent leaves the
     /// attachments alone; present replaces them (TXN-13, VLT-5).
     pub attachment_ids: Option<Vec<String>>,
@@ -506,7 +501,6 @@ impl TransactionBody {
             date: self.date,
             name: non_empty(self.name.as_deref()),
             description: non_empty(self.description.as_deref()),
-            is_ready: self.is_ready,
             attachment_ids: self.attachment_ids.as_deref(),
         })
     }
@@ -520,10 +514,9 @@ pub struct BulkCreateBody {
 #[derive(Debug, Deserialize)]
 pub struct BulkUpdateBody {
     pub ids: Vec<String>,
-    /// Absent leaves the category alone; `null` clears it.
-    #[serde(default, deserialize_with = "explicit_null")]
-    pub category_id: Option<Option<String>>,
-    pub is_ready: Option<bool>,
+    /// The category to set; `null` or absent clears it. The only field a
+    /// bulk edit changes since the ready flag went (D107).
+    pub category_id: Option<String>,
 }
 
 /// A file's rows, as they came out of it, plus what each column holds.
@@ -565,15 +558,6 @@ pub struct MapColumnsBody {
 pub struct BulkDeleteBody {
     pub ids: Vec<String>,
 }
-
-fn explicit_null<'de, T, D>(deserializer: D) -> std::result::Result<Option<Option<T>>, D::Error>
-where
-    T: Deserialize<'de>,
-    D: serde::Deserializer<'de>,
-{
-    Deserialize::deserialize(deserializer).map(Some)
-}
-
 // ---------------------------------------------------------------- handlers
 
 pub async fn list(
@@ -967,10 +951,10 @@ pub async fn bulk_update(
 
     let category = body
         .category_id
-        .as_ref()
-        .map(|inner| inner.as_deref().filter(|value| !value.is_empty()));
+        .as_deref()
+        .filter(|value| !value.is_empty());
 
-    match service::bulk_update(&state.db, auth.actor(), &body.ids, category, body.is_ready).await {
+    match service::bulk_update(&state.db, auth.actor(), &body.ids, category).await {
         Ok(affected) => Ok(Json(Envelope::data(AffectedView { affected }, id))),
         Err(error) => Err(ApiError::new(error, id)),
     }

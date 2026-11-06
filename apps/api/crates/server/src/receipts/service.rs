@@ -199,7 +199,6 @@ pub async fn read_and_save(state: &AppState, actor: Actor<'_>, file_id: &str) ->
             date: Utc.from_utc_datetime(&date.and_hms_opt(0, 0, 0).unwrap_or_default()),
             name: Some(name.unwrap_or("Receipt")),
             description: None,
-            is_ready: true,
             attachment_ids: Some(&attachment_ids),
         },
         &items,

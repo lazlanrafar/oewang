@@ -161,7 +161,7 @@ Requirement IDs are referenced by every other doc and by each backlog story. The
 | TXN-5 | Deleting a transaction soft-deletes it and reverses its balance effect. |
 | TXN-6 | Wallet rows affected by a balance change are row-locked for the duration of the database transaction. |
 | TXN-7 | A `transfer` carries a `to_wallet_id` that differs from `wallet_id`. Other types leave it null. |
-| TXN-8 | The transaction list supports filtering by wallet, category, type, date range, free-text search and ready flag. |
+| TXN-8 | The transaction list supports filtering by wallet, category, type, date range and free-text search. The ready flag was removed by D107. |
 | TXN-9 | Filter state lives in URL search parameters and survives a reload. |
 | TXN-10 | Transactions can be exported as CSV, honouring the active filters. Exported rows are marked. |
 | TXN-11 | Transactions can be imported from CSV or XLSX through a field-mapping wizard, committed through a bulk endpoint. |

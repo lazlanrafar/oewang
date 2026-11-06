@@ -90,8 +90,7 @@ pub async fn handle(state: &AppState, bot: &Bot, query: CallbackQuery) -> Result
                     &state.db,
                     actor,
                     std::slice::from_ref(transaction_id),
-                    Some(Some(category.id.as_str())),
-                    None,
+                    Some(category.id.as_str()),
                 )
                 .await
                 .map(|_| ()),

@@ -232,8 +232,7 @@ A database row is the wrong shape and the wrong size for a model (D34). Before a
   "currency": "IDR",
   "type": "expense",
   "wallet": { "id": "clx…", "name": "Cash" },
-  "category": { "id": "clx…", "name": "Food" },
-  "is_ready": true
+  "category": { "id": "clx…", "name": "Food" }
 }
 ```
 

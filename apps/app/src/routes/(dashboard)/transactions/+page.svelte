@@ -181,9 +181,9 @@
 	});
 
 	/*
-	 * `?type=` and `?is_ready=` are still read by the load function and still
-	 * narrow the list; the old header has no control for either, so neither
-	 * has one here. A link or a saved view can still carry them.
+	 * `?type=` is still read by the load function and still narrows the
+	 * list; the old header has no control for it, so there is none here. A
+	 * link or a saved view can still carry it.
 	 */
 
 	/*
@@ -353,7 +353,6 @@
 					categoryId: editing.category_id ?? '',
 					date: isoDay(editing.date),
 					notes: editing.description ?? '',
-					isReady: editing.is_ready
 				}
 			: fresh;
 	});
@@ -662,7 +661,6 @@
 	let confirmBulkDelete = $state(false);
 	let confirmItemDelete = $state(false);
 	let bulkDeleteForm = $state<HTMLFormElement | null>(null);
-	let readyForm = $state<HTMLFormElement | null>(null);
 
 	/**
 	 * The export is a download, so it is a link to a server route rather than
@@ -1122,7 +1120,6 @@
 		onClear={() => (selection = [])}
 		onEditCategory={() => (bulkCategoryOpen = true)}
 		onDelete={() => (confirmBulkDelete = true)}
-		onReady={() => readyForm?.requestSubmit()}
 	/>
 
 	<form
@@ -1133,17 +1130,6 @@
 		use:enhance={afterBulk}
 	>
 		<input type="hidden" name="ids" value={selectedIds} />
-	</form>
-
-	<form
-		bind:this={readyForm}
-		method="POST"
-		action="?/bulkUpdate"
-		class="hidden"
-		use:enhance={afterBulk}
-	>
-		<input type="hidden" name="ids" value={selectedIds} />
-		<input type="hidden" name="is_ready" value="true" />
 	</form>
 
 	<Dialog.Root bind:open={bulkCategoryOpen}>

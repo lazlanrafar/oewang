@@ -10,7 +10,6 @@
 		toAccount?: string | null;
 		category?: string | null;
 		type: string;
-		ready: boolean;
 		notes?: string | null;
 		/** All three figures, when the entry currency differed (TXN-21). */
 		originalAmount?: string | null;
@@ -238,14 +237,6 @@
 					<div class="space-y-1">
 						<dt class="text-subtle text-xs tracking-widest uppercase">Type</dt>
 						<dd class="text-sm font-medium">{transaction.type}</dd>
-					</div>
-					<div class="space-y-1">
-						<dt class="text-subtle text-xs tracking-widest uppercase">State</dt>
-						<dd class="text-sm font-medium">
-							<Badge variant={transaction.ready ? 'secondary' : 'outline'}>
-								{transaction.ready ? 'Ready' : 'Not ready'}
-							</Badge>
-						</dd>
 					</div>
 				</dl>
 

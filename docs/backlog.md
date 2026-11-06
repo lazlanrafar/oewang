@@ -242,7 +242,7 @@ Requirements: TXN-8, TXN-9, UI-2, UI-6, UI-8
 
 - [x] The old column set, widths, sticky columns and resizing. TanStack Table is deliberately absent (see [transactions](features/transactions.md#data-table-what-is-built-and-what-is-not))
 - [x] Column visibility, sorting and row selection
-- [x] Filter bar: search, date range, wallet, category, type, ready flag
+- [x] Filter bar: search, date range, wallet, category, type, ready flag (the ready flag was removed later, D107)
 - [x] Filter state in URL search parameters, surviving reload
 - [x] Separate empty states for "none yet" and "none matching"
 - [x] Usable at 375 px

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "UPDATE transactions\n           SET wallet_id = $3, to_wallet_id = $4, category_id = $5, amount = $6, to_amount = $7,\n               original_amount = $8, original_currency_code = $9, exchange_rate = $10,\n               base_amount = $11, base_rate = $12, base_rate_source = $13, base_rate_date = $14,\n               date = $15, type = $16, name = $17, description = $18, is_ready = $19,\n               updated_at = now()\n           WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL\n           RETURNING id, wallet_id, to_wallet_id, category_id, amount, to_amount,\n                     original_amount, original_currency_code, exchange_rate,\n                     base_amount, base_rate, base_rate_source, base_rate_date,\n                     date, type AS \"type!\", name, description, is_ready, is_exported,\n                     source, fingerprint, created_at, updated_at",
+  "query": "UPDATE transactions\n           SET wallet_id = $3, to_wallet_id = $4, category_id = $5, amount = $6, to_amount = $7,\n               original_amount = $8, original_currency_code = $9, exchange_rate = $10,\n               base_amount = $11, base_rate = $12, base_rate_source = $13, base_rate_date = $14,\n               date = $15, type = $16, name = $17, description = $18,\n               updated_at = now()\n           WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL\n           RETURNING id, wallet_id, to_wallet_id, category_id, amount, to_amount,\n                     original_amount, original_currency_code, exchange_rate,\n                     base_amount, base_rate, base_rate_source, base_rate_date,\n                     date, type AS \"type!\", name, description, is_exported,\n                     source, fingerprint, created_at, updated_at",
   "describe": {
     "columns": [
       {
@@ -90,31 +90,26 @@
       },
       {
         "ordinal": 17,
-        "name": "is_ready",
-        "type_info": "Bool"
-      },
-      {
-        "ordinal": 18,
         "name": "is_exported",
         "type_info": "Bool"
       },
       {
-        "ordinal": 19,
+        "ordinal": 18,
         "name": "source",
         "type_info": "Text"
       },
       {
-        "ordinal": 20,
+        "ordinal": 19,
         "name": "fingerprint",
         "type_info": "Text"
       },
       {
-        "ordinal": 21,
+        "ordinal": 20,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 22,
+        "ordinal": 21,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
@@ -138,8 +133,7 @@
         "Timestamptz",
         "Text",
         "Text",
-        "Text",
-        "Bool"
+        "Text"
       ]
     },
     "nullable": [
@@ -162,11 +156,10 @@
       true,
       false,
       false,
-      false,
       true,
       false,
       false
     ]
   },
-  "hash": "0d4d168ed05cdffce561fa62d97588d5ea313b498a2afbccc6acd490e974de5b"
+  "hash": "e748ffadda170e16a8e1c2bb8123440fb0ccdf0500af0cbe6a6712361f0a73ed"
 }

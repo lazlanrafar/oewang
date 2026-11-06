@@ -89,7 +89,6 @@ async fn buy(pool: &PgPool, workspace_id: &str, wallet: &str, day: u32, items: &
             date: Utc.with_ymd_and_hms(2026, 11, day, 9, 0, 0).unwrap(),
             name: Some("Market"),
             description: None,
-            is_ready: true,
             attachment_ids: None,
         },
         items,

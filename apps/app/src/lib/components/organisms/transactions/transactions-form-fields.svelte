@@ -17,7 +17,6 @@
 		categoryId: string;
 		date: string;
 		notes: string;
-		isReady: boolean;
 	};
 
 	export const emptyDraft = (
@@ -37,7 +36,6 @@
 		categoryId,
 		date: new Date().toISOString().slice(0, 10),
 		notes: '',
-		isReady: false
 	});
 </script>
 
@@ -59,7 +57,6 @@
 
 	import { divideDecimals, formatMoney, multiplyDecimals } from '$lib/money.js';
 	import { workspaceLists } from '$lib/workspace-data.svelte.js';
-	import { Checkbox } from '../../atoms/checkbox/index.js';
 	import { FileDropzone, type UploadedFile } from '../../molecules/file-dropzone/index.js';
 	import { attachmentDropzone } from '$lib/files.js';
 	import { Input } from '../../atoms/input/index.js';
@@ -205,7 +202,6 @@
 	<input type="hidden" name="wallet_id" value={draft.accountId} />
 	<input type="hidden" name="to_wallet_id" value={transfer ? draft.toAccountId : ''} />
 	<input type="hidden" name="category_id" value={transfer ? '' : draft.categoryId} />
-	<input type="hidden" name="is_ready" value={draft.isReady ? 'true' : 'false'} />
 {/if}
 
 <!--
@@ -467,18 +463,4 @@
 		<FileDropzone bind:files={attachments} class="mb-10" {...attachmentDropzone()} />
 	{/if}
 
-	<div class="flex items-center gap-2">
-		{#if plain}
-			<input
-				id="form-ready"
-				type="checkbox"
-				name="is_ready"
-				value="true"
-				checked={draft.isReady}
-			/>
-		{:else}
-			<Checkbox id="form-ready" bind:checked={draft.isReady} />
-		{/if}
-		<Label for="form-ready">Mark as ready</Label>
-	</div>
 </div>

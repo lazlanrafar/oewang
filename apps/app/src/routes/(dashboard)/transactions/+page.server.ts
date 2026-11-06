@@ -217,8 +217,7 @@ export const actions: Actions = {
 			ledger.bulkUpdateTransactions(
 				{
 					ids: ids(form),
-					...(form.has('category_id') ? { category_id: optional(form, 'category_id') } : {}),
-					...(form.has('is_ready') ? { is_ready: form.get('is_ready') === 'true' } : {})
+					category_id: optional(form, 'category_id')
 				},
 				locals.accessToken
 			)
@@ -256,7 +255,6 @@ export const actions: Actions = {
 					amount: text(form, 'amount'),
 					date: new Date(`${text(form, 'date')}T12:00:00`).toISOString(),
 					name: optional(form, 'name'),
-					is_ready: false,
 					items: receiptItems(form),
 					attachment_ids: form
 						.getAll('attachment_ids')
@@ -328,7 +326,6 @@ async function resave(
 			date: row.date,
 			name: row.name,
 			description: row.description,
-			is_ready: row.is_ready,
 			...change
 		},
 		token
@@ -407,7 +404,6 @@ function payload(form: FormData): ledger.TransactionPayload {
 		date: new Date(`${text(form, 'date')}T12:00:00`).toISOString(),
 		name: optional(form, 'name'),
 		description: optional(form, 'description'),
-		is_ready: form.get('is_ready') === 'true',
 		// The whole set, every time the sheet saves. The dropzone renders
 		// one hidden input per file, so an empty form means no attachments
 		// rather than "leave them alone" (TXN-13).

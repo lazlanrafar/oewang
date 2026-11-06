@@ -11,7 +11,7 @@ import { addDecimals, compareDecimals, formatMoney, signedAmount } from '$lib/mo
 import type { HistoryEntry, TransactionDetail as ApiDetail } from '$lib/server/ledger';
 
 /** `wallet.balance` before and after, and the fields a reader cares about. */
-const WATCHED = ['amount', 'date', 'category_id', 'wallet_id', 'is_ready', 'name', 'description'];
+const WATCHED = ['amount', 'date', 'category_id', 'wallet_id', 'name', 'description'];
 
 export function toDetail(
 	transaction: ApiDetail,
@@ -49,7 +49,6 @@ export function toDetail(
 		toAccount: transaction.to_wallet_name,
 		category: transaction.category_name,
 		type: transaction.type,
-		ready: transaction.is_ready,
 		notes: transaction.description,
 		originalAmount:
 			transaction.original_amount && transaction.original_currency_code

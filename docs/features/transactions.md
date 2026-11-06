@@ -93,8 +93,8 @@ The main screen. One page, `/transactions`.
 | Area | Contents |
 |---|---|
 | Header | Title, date range picker, grouping selector, export button, scan-a-receipt button, import button, add button |
-| Filter bar | Search, wallet, category, type, ready flag, clear-all |
-| Table | Date, name, category, wallet, amount, ready flag, row actions |
+| Filter bar | Search, wallet, category, type, clear-all |
+| Table | Date, name, category, wallet, amount, row actions |
 | Bulk bar | Appears on selection: change category, toggle ready, delete, clear selection |
 | Empty state | Different copy for "no transactions yet" and "no results for these filters" |
 
@@ -111,7 +111,7 @@ A side sheet, used for both create and edit.
 - Type toggle first: income, expense, transfer. Switching it changes which fields are visible. Transfer reveals the destination wallet and hides the category.
 - Amount input is decimal-safe: the value is held as a string, never parsed into a JavaScript number (D12).
 - Date defaults to today. Wallet defaults to the workspace default wallet (WAL-3).
-- Optional: name, category, description, ready flag, line items, attachments.
+- Optional: name, category, description, line items, attachments.
 - Attachments are the old form sheet's block (`molecules/file-dropzone`): a label, the attached files as a three-column grid of square tiles (`molecules/file-tile`), and a dashed box under them. A click on the box opens the vault picker (`molecules/file-picker`); a drop uploads straight to the vault, with a "Saving..." overlay while it runs. Either way the sheet submits only IDs (VLT-13).
 - The sheet submits the whole set of attachment IDs on every save, so an edit loads the row's current attachments for `?sheet=<id>` itself. It cannot rely on the detail sheet having loaded them: opening the editor from the detail clears `?detail=`.
 
@@ -322,9 +322,9 @@ should match it:
 - Above the table, one row and nothing else, as `transaction-client-header`
   has it: the search on the left, then grouping, the date range, the
   column-visibility control, the backup menu and the add button. There is no
-  type filter and no state filter, because the live header has neither;
-  `?type=` and `?is_ready=` are still read by the load function, so a link can
-  still carry them.
+  type filter, because the live header has none; `?type=` is still read by
+  the load function, so a link can still carry it. There is no ready state
+  at all since D107.
 
 ## The page, built as a specimen first
 

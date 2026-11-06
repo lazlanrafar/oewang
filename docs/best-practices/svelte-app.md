@@ -341,7 +341,7 @@ export const transactionSchema = z.object({
 
 - Progressive enhancement: every form works without JavaScript. The action is the real path; the client enhancement is the fast path.
 - Client validation is usability. The API validates again, and that is the control ([hardening](../security/hardening.md#input-validation)).
-- An optimistic update is allowed only where reversal is cheap: the ready flag, a bulk category change. Create and delete wait for the server, because they move wallet balances.
+- An optimistic update is allowed only where reversal is cheap: a bulk category change. Create and delete wait for the server, because they move wallet balances.
 
 ## URL state
 
