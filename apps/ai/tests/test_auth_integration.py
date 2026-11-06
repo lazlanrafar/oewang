@@ -358,8 +358,10 @@ def test_invite_and_accept_grants_membership():
     assert status == 201, created
     token = created["data"]["token"]
 
-    status, _ = invitee.call("POST", "/v1/workspaces/accept-invite", {"token": token})
-    assert status == 204
+    status, accepted = invitee.call("POST", "/v1/workspaces/accept-invite", {"token": token})
+    # The workspace joined comes back, so the app can switch into it (D104).
+    assert status == 200, accepted
+    assert accepted["data"]["workspace_id"]
 
     status, body = invitee.call("GET", "/v1/workspaces")
     assert status == 200
