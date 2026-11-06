@@ -423,6 +423,12 @@ The Apps page's routes (D83). Each acts on the caller's own Telegram link in the
 | DELETE | `/v1/mcp/tokens/{id}` | any | Revoke one of the person's tokens |
 | GET | `/v1/mcp/connections` | any | The person's OAuth grants, one row per grant |
 | DELETE | `/v1/mcp/connections/{id}` | any | Disconnect an app: revokes every rotation of the grant |
+| POST | `/v1/oauth/register` | none | RFC 7591 registration: `{ client_name, redirect_uris }`. `data` is the client, or `{ error, error_description }` that the app's `/oauth/register` sends with a 400 |
+| GET | `/v1/oauth/clients/{id}` | any | Name and registered redirect URIs, for the consent page |
+| POST | `/v1/oauth/authorize` | any | After consent: `{ client_id, redirect_uri, code_challenge, code_challenge_method: "S256", workspace_ids }` returns `{ code }` |
+| POST | `/v1/oauth/token` | none | `grant_type` `authorization_code` (`code`, `redirect_uri`, `code_verifier`, `client_id`) or `refresh_token` (`refresh_token`, `client_id`). `data` is `{ access_token, token_type, expires_in, refresh_token, scope }` or an RFC 6749 error |
+
+The public OAuth URLs are the app's (`/.well-known/oauth-*`, `/oauth/register`, `/oauth/token`, `/oauth/authorize`); these routes are what they relay to, over OWE1.
 
 ## Internal
 

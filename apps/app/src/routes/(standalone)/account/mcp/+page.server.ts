@@ -12,9 +12,13 @@ import type { PageServerLoad } from './$types';
  * workspace, which is why this is here and not in a workspace's settings.
  */
 export const load: PageServerLoad = async ({ locals, url }) => {
-	const tokens = await mcp.listTokens(locals.accessToken).catch(() => null);
+	const [tokens, connections] = await Promise.all([
+		mcp.listTokens(locals.accessToken).catch(() => null),
+		mcp.listConnections(locals.accessToken).catch(() => null)
+	]);
 	return {
 		tokens: tokens?.data ?? [],
+		connections: connections?.data ?? [],
 		mcpUrl: `${url.origin}/mcp`
 	};
 };
@@ -48,5 +52,8 @@ export const actions: Actions = {
 	},
 
 	revoke: async ({ request, locals }) =>
-		run(request, (form) => mcp.revokeToken(text(form, 'id'), locals.accessToken))
+		run(request, (form) => mcp.revokeToken(text(form, 'id'), locals.accessToken)),
+
+	disconnect: async ({ request, locals }) =>
+		run(request, (form) => mcp.revokeConnection(text(form, 'id'), locals.accessToken))
 };

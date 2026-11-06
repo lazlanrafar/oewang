@@ -14,12 +14,15 @@
 		tokens,
 		workspaces,
 		empty,
+		actionLabel,
 		onRevoke
 	}: {
 		tokens: McpToken[];
 		/** To show a token's reach by name. */
 		workspaces: { id: string; name: string }[];
 		empty: string;
+		/** The row's button; revoking by default. */
+		actionLabel?: string;
 		onRevoke: (token: McpToken) => void;
 	} = $props();
 
@@ -46,21 +49,28 @@
 				<div class="min-w-0 flex-1">
 					<p class="truncate text-sm font-medium">
 						{token.name}
-						<span class="text-muted-foreground font-mono text-[11px] font-normal">{token.token_prefix}…</span>
+						{#if token.kind === 'pat'}
+							<span class="text-muted-foreground font-mono text-[11px] font-normal">{token.token_prefix}…</span>
+						{/if}
 					</p>
 					<p class="text-muted-foreground truncate text-[11px]">{scope(token)}</p>
 					<p class="text-muted-foreground text-[11px]">
 						{t('account.mcp.token_created', { date: date(token.created_at) })} ·
 						{token.last_used_at
 							? t('account.mcp.token_last_used', { date: date(token.last_used_at) })
-							: t('account.mcp.token_never_used')} ·
-						{token.expires_at
-							? t('account.mcp.token_expires', { date: date(token.expires_at) })
-							: t('account.mcp.token_never_expires')}
+							: t('account.mcp.token_never_used')}
+						<!-- A connection's access token lives an hour and renews
+						     itself, so its expiry says nothing about the connection. -->
+						{#if token.kind === 'pat'}
+							·
+							{token.expires_at
+								? t('account.mcp.token_expires', { date: date(token.expires_at) })
+								: t('account.mcp.token_never_expires')}
+						{/if}
 					</p>
 				</div>
 				<Button variant="ghost-destructive" size="sm" onclick={() => onRevoke(token)}>
-					{t('account.mcp.revoke')}
+					{actionLabel ?? t('account.mcp.revoke')}
 				</Button>
 			</li>
 		{/each}

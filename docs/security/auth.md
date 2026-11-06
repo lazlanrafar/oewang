@@ -128,7 +128,7 @@ A Telegram chat that acts for a member (D85, [Telegram](../features/telegram.md)
 
 ## MCP tokens
 
-An opaque bearer (`owm_…`), not a JWT, looked up by SHA-256 (D106). It names a person and a set of workspaces, never a role: every call reads the membership row of the workspace it acts in, so a token can do exactly what the person's role allows there, and nothing after they leave. It is revoked by the person, by a password change or reset, and by signing out everywhere. A refused token is `MCP_TOKEN_INVALID`; the app's relay answers it with its own 401 and never treats it as the browser session ending.
+An opaque bearer (`owm_…`), not a JWT, looked up by SHA-256 (D106). It names a person and a set of workspaces, never a role: every call reads the membership row of the workspace it acts in, so a token can do exactly what the person's role allows there, and nothing after they leave. It is revoked by the person, by a password change or reset, and by signing out everywhere. A refused token is `MCP_TOKEN_INVALID`; the app's relay answers it with its own 401 and never treats it as the browser session ending. An OAuth connection (MCP-9) yields the same kind of token, living an hour, with a refresh token that rotates on each use; a replayed refresh token revokes the grant, as a replayed session refresh token revokes its family (D38). The consent page is the only place a grant is made, and only for a redirect URI the app registered.
 
 ## Request flow
 

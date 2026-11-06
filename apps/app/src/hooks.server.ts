@@ -34,7 +34,13 @@ const PUBLIC_PREFIXES = [
 	// log in is not one, and this route reads nothing.
 	'/health',
 	// MCP clients bring their own bearer token, checked by the API (D106).
-	'/mcp'
+	'/mcp',
+	// OAuth for MCP connector apps: discovery, registration and the token
+	// endpoint are called by apps, not people. The consent page,
+	// `/oauth/authorize`, is not listed: it needs the person signed in.
+	'/.well-known/oauth-',
+	'/oauth/register',
+	'/oauth/token'
 ];
 
 function isPublic(pathname: string): boolean {

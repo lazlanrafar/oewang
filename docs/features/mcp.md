@@ -1,12 +1,12 @@
 # MCP
 
-External AI apps (Claude Code, Claude Desktop, Cursor, and later claude.ai and ChatGPT) read and change a person's oewang data over the Model Context Protocol. Decision: [D106](../architecture.md#decision-log). Requirements: MCP-1 to MCP-9 in the [PRD](../prd.md).
+External AI apps (Claude Code, Claude Desktop, Cursor, claude.ai and ChatGPT) read and change a person's oewang data over the Model Context Protocol. Decision: [D106](../architecture.md#decision-log). Requirements: MCP-1 to MCP-9 in the [PRD](../prd.md).
 
 ## Update this doc when
 
 - A tool is added, removed or renamed (`apps/api/crates/server/src/mcp/tools/`).
 - The caps, the confirmation rule or the token rules change.
-- OAuth ships (US-061): add the connector flow and the consent page.
+- The OAuth flow, its lifetimes or the consent page change.
 
 ## How a call travels
 
@@ -27,6 +27,20 @@ Stateless Streamable HTTP: one JSON-RPC message per POST, one JSON answer. No se
 - **Reach:** every workspace the person belongs to (including ones joined later), or a picked set. Either way the membership row is read on every call, so leaving a workspace or being removed ends access to it at once.
 - **Expiry:** 30, 90 or 365 days, or none. Revoking ends it immediately. A password change, a password reset and "sign out everywhere" revoke every MCP token too.
 - A token is the person's, not a workspace's: any role may make one. What it can do in a workspace is what that person's role allows there.
+
+## OAuth for connector apps (MCP-9)
+
+For apps that sign in instead of taking a pasted token (claude.ai and ChatGPT connectors, Claude Code without `--header`).
+
+| Step | Where | What holds |
+|---|---|---|
+| Discovery | `/.well-known/oauth-protected-resource[/mcp]`, `/.well-known/oauth-authorization-server` (app) | Built from the request's origin; `/mcp`'s 401 points at the first |
+| Registration | `POST /oauth/register` (app) → `/v1/oauth/register` | Public clients only (`none` auth). Redirect URIs: https, http to localhost/127.0.0.1/[::1], or an app's own scheme; never `javascript:`, `data:`, `file:` and the like. The name is the app's claim and the consent page says so |
+| Consent | `/oauth/authorize` (app page, session required) | Never redirects until the client exists and the redirect URI is one it registered, exactly. `response_type=code` and PKCE S256 are required. The person picks every workspace or some. Not frameable |
+| Code | `/v1/oauth/authorize` | Single use, ten minutes, bound to client, redirect URI and challenge; stored as SHA-256 |
+| Token | `POST /oauth/token` (app, form or JSON) → `/v1/oauth/token` | The code is claimed in one statement before anything is compared, so a failed check spends it. Access token one hour, refresh token thirty days, rotated on every use; presenting a spent refresh token revokes the whole grant |
+
+The tokens are rows of `mcp_tokens` with `kind = 'oauth'`, so every call re-reads the membership exactly as for a personal token. Connected apps are listed in Account → MCP, one row per grant, and Disconnect ends every rotation of it. Registration and the token endpoint are answered with `Access-Control-Allow-Origin: *` because they carry no cookie. Known gap: the API's rate limiter sees the app server's address for these, as it does for login, so they share one anonymous bucket; unused registrations are not yet pruned.
 
 ## Tools
 
@@ -60,4 +74,6 @@ Every delete is two calls. The first deletes nothing and answers `CONFIRMATION_R
 
 ## Screens
 
-**Account → MCP** (`/account/mcp`): the server URL, a setup snippet per client (tab in `?client=`), and the token list with a New token sheet (name, all or picked workspaces, expiry) that shows the token once.
+**Account → MCP** (`/account/mcp`, also in the avatar menu): the server URL, setup per client (tab in `?client=`: Claude Code, claude.ai and ChatGPT, Cursor, Claude Desktop, other), the token list with a New token sheet (name, all or picked workspaces, expiry) that shows the token once, and Connected apps with Disconnect.
+
+**Consent** (`/oauth/authorize`): the app's name marked unverified, where the answer goes, what it may do, the workspace choice, Allow and Deny.

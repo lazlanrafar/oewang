@@ -859,7 +859,8 @@ Requirements: MCP-1 to MCP-8
 ### US-061: OAuth for MCP connector apps
 Requirements: MCP-9
 
-- [ ] Discovery metadata, dynamic client registration, consent page with the workspace choice, PKCE S256, single-use codes, rotating refresh tokens
-- [ ] Connected apps listed and disconnectable in Account → MCP
-- [ ] Verify with claude.ai and ChatGPT connectors
+- [x] Discovery metadata, dynamic client registration, consent page with the workspace choice, PKCE S256, single-use codes, rotating refresh tokens with replay revoking the grant (Rust tests)
+- [x] Connected apps listed and disconnectable in Account → MCP; MCP in the avatar menu
+- [x] Verified locally end to end: discovery, registration (a foreign http redirect refused), consent limited to one workspace, a wrong verifier spends the code, the right one yields tokens that see only that workspace, refresh rotation, replay revoking, Disconnect
+- [ ] Verify with claude.ai and ChatGPT connectors against production
 

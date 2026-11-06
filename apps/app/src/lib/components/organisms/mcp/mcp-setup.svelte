@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	export type McpClient = 'claude-code' | 'cursor' | 'claude-desktop' | 'other';
+	export type McpClient = 'claude-code' | 'connector' | 'cursor' | 'claude-desktop' | 'other';
 </script>
 
 <script lang="ts">
@@ -34,6 +34,7 @@
 
 	const CLIENTS: { id: McpClient; label: TranslationKey; help: TranslationKey }[] = [
 		{ id: 'claude-code', label: 'account.mcp.client_claude_code', help: 'account.mcp.setup_claude_code' },
+		{ id: 'connector', label: 'account.mcp.client_connector', help: 'account.mcp.setup_connector' },
 		{ id: 'cursor', label: 'account.mcp.client_cursor', help: 'account.mcp.setup_cursor' },
 		{ id: 'claude-desktop', label: 'account.mcp.client_claude_desktop', help: 'account.mcp.setup_claude_desktop' },
 		{ id: 'other', label: 'account.mcp.client_other', help: 'account.mcp.setup_other' }
@@ -43,7 +44,7 @@
 	const snippet = $derived.by(() => {
 		switch (client) {
 			case 'claude-code':
-				return `claude mcp add --transport http oewang ${url} \\\n  --header "Authorization: Bearer YOUR_TOKEN"`;
+				return `claude mcp add --transport http oewang ${url}`;
 			case 'cursor':
 				return JSON.stringify(
 					{ mcpServers: { oewang: { url, headers: { Authorization: 'Bearer YOUR_TOKEN' } } } },

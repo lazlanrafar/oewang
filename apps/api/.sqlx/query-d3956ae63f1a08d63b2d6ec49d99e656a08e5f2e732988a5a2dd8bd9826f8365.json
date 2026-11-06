@@ -1,0 +1,64 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, user_id, name, client_id, family_id, workspace_ids, refresh_expires_at,\n                  revoked_at\n           FROM mcp_tokens WHERE refresh_hash = $1 AND kind = 'oauth'\n           FOR UPDATE",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "user_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "client_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "family_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "workspace_ids",
+        "type_info": "TextArray"
+      },
+      {
+        "ordinal": 6,
+        "name": "refresh_expires_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 7,
+        "name": "revoked_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "d3956ae63f1a08d63b2d6ec49d99e656a08e5f2e732988a5a2dd8bd9826f8365"
+}

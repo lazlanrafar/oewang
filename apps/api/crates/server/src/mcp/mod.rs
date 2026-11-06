@@ -4,6 +4,7 @@
 pub mod budget;
 pub mod caller;
 pub mod handler;
+pub mod oauth;
 pub mod protocol;
 pub mod registry;
 pub mod service;

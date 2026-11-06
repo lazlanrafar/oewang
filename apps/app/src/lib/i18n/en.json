@@ -1065,10 +1065,12 @@
 			"client_cursor": "Cursor",
 			"client_claude_desktop": "Claude Desktop",
 			"client_other": "Other apps",
-			"setup_claude_code": "Run this in a terminal, with a token from below in place of YOUR_TOKEN.",
+			"client_connector": "claude.ai and ChatGPT",
+			"setup_claude_code": "Run this in a terminal, then /mcp inside Claude Code to sign in with your browser. To use a token instead, add --header \"Authorization: Bearer YOUR_TOKEN\".",
 			"setup_cursor": "Add this to ~/.cursor/mcp.json, with a token from below in place of YOUR_TOKEN.",
 			"setup_claude_desktop": "Add this to claude_desktop_config.json, with a token from below in place of YOUR_TOKEN, then restart Claude Desktop.",
 			"setup_other": "Any app that supports remote MCP servers over HTTP: use the server URL and send the token as the header Authorization: Bearer YOUR_TOKEN.",
+			"setup_connector": "Add a custom connector with the server URL. The app sends you here to sign in and choose the workspaces it may use. In ChatGPT, turn on developer mode first under Settings, Apps and Connectors, Advanced.",
 			"tokens_title": "Personal access tokens",
 			"tokens_description": "Each token works until it expires or you revoke it. Changing your password or signing out everywhere revokes them all.",
 			"tokens_empty": "No tokens yet.",
@@ -1098,7 +1100,14 @@
 			"create": "Create token",
 			"secret_title": "Copy your token now",
 			"secret_warning": "This is the only time it is shown. Anyone with it can act as you in the workspaces it allows. If you lose it, revoke it and make a new one.",
-			"done": "Done"
+			"done": "Done",
+			"connections_title": "Connected apps",
+			"connections_description": "Apps you approved when they asked to connect. Each keeps the access you gave it until you disconnect it.",
+			"connections_empty": "No apps connected.",
+			"disconnect": "Disconnect",
+			"disconnect_title": "Disconnect this app?",
+			"disconnect_description": "{name} loses access at once. It can ask again.",
+			"disconnected": "App disconnected."
 		}
 	},
 	"invite": {
@@ -1107,5 +1116,18 @@
 		"invalid_body": "It may have expired, been revoked or used already, or it was sent to a different email address than {email}. Ask whoever invited you for a new one.",
 		"missing_body": "The link is incomplete. Open it again from the email.",
 		"home": "Go to the app"
+	},
+	"oauth": {
+		"title": "Connect an app",
+		"heading": "{name} wants to use your oewang",
+		"unverified": "This name is what the app says about itself. oewang has not verified it.",
+		"redirect": "After you answer, you go back to {host}.",
+		"can": "It will act as you: read and change data in the workspaces you choose, with what your role allows in each. You can disconnect it any time in Account, MCP.",
+		"signed_in_as": "Signed in as {email}",
+		"workspaces_label": "Workspaces it may use",
+		"allow": "Allow",
+		"deny": "Deny",
+		"invalid_title": "This connection request cannot be used",
+		"invalid_body": "The app sent an incomplete or unknown request. Start connecting again from the app."
 	}
 }

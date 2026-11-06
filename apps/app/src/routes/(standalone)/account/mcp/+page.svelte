@@ -31,7 +31,7 @@
 
 	let { data, form } = $props();
 
-	const CLIENTS = ['claude-code', 'cursor', 'claude-desktop', 'other'] as const;
+	const CLIENTS = ['claude-code', 'connector', 'cursor', 'claude-desktop', 'other'] as const;
 	const client = $derived(readParam(page.url, 'client', CLIENTS, 'claude-code') as McpClient);
 
 	// ------------------------------------------------------------ create
@@ -58,6 +58,10 @@
 	const createAction = (node: HTMLFormElement) => enhance(node, createSubmit);
 
 	// ------------------------------------------------------------ revoke
+
+	let disconnecting = $state<McpToken | null>(null);
+	let confirmDisconnect = $state(false);
+	let disconnectForm = $state<HTMLFormElement | null>(null);
 
 	let revoking = $state<McpToken | null>(null);
 	let confirmRevoke = $state(false);
@@ -105,7 +109,47 @@
 			onRevoke={askRevoke}
 		/>
 	</SettingsSectionGroup>
+
+	<Separator />
+
+	<SettingsSectionGroup
+		title={t('account.mcp.connections_title')}
+		description={t('account.mcp.connections_description')}
+	>
+		<McpTokensList
+			tokens={data.connections}
+			workspaces={data.workspaces}
+			empty={t('account.mcp.connections_empty')}
+			actionLabel={t('account.mcp.disconnect')}
+			onRevoke={(connection) => {
+				disconnecting = connection;
+				confirmDisconnect = true;
+			}}
+		/>
+	</SettingsSectionGroup>
 </div>
+
+<form
+	bind:this={disconnectForm}
+	method="POST"
+	action="?/disconnect"
+	class="hidden"
+	use:enhance={() => async ({ result, update }) => {
+		if (result.type === 'success') toast.success(t('account.mcp.disconnected'));
+		await update({ navigate: false });
+	}}
+>
+	<input type="hidden" name="id" value={disconnecting?.id ?? ''} />
+</form>
+
+<ConfirmDialog
+	bind:open={confirmDisconnect}
+	title={t('account.mcp.disconnect_title')}
+	description={t('account.mcp.disconnect_description', { name: disconnecting?.name ?? '' })}
+	confirmLabel={t('account.mcp.disconnect')}
+	cancelLabel={t('common.cancel')}
+	onConfirm={() => disconnectForm?.requestSubmit()}
+/>
 
 <form
 	bind:this={revokeForm}

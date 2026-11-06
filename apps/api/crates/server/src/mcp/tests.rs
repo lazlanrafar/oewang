@@ -214,3 +214,177 @@ async fn should_end_every_token_when_signing_out_everywhere(pool: PgPool) {
         .unwrap()
         .is_none());
 }
+
+// -------------------------------------------------------------------- OAuth
+
+mod oauth_flow {
+    use super::*;
+    use crate::mcp::oauth::{self, CodeExchange, Consent, Failure};
+
+    const VERIFIER: &str = "verifier-verifier-verifier-verifier-verifier-0123";
+    const REDIRECT: &str = "http://127.0.0.1:33418/callback";
+
+    fn error_of<T>(result: Result<T, Failure>) -> &'static str {
+        match result {
+            Err(Failure::OAuth(error)) => error.error,
+            Err(Failure::App(error)) => panic!("app error {error}"),
+            Ok(_) => panic!("expected an OAuth error"),
+        }
+    }
+
+    async fn code(pool: &PgPool, client_id: &str) -> String {
+        oauth::authorize(
+            pool,
+            actor(),
+            Consent {
+                client_id,
+                redirect_uri: REDIRECT,
+                code_challenge: &hash_token(VERIFIER),
+                code_challenge_method: "S256",
+                workspace_ids: Some(vec!["ws_a".into()]),
+            },
+        )
+        .await
+        .unwrap()
+    }
+
+    #[test]
+    fn should_accept_only_safe_redirects() {
+        for good in [
+            "https://claude.ai/api/mcp/auth_callback",
+            "http://127.0.0.1:5000/cb",
+            "http://localhost/cb",
+            "http://[::1]:8080/cb",
+            "cursor://anysphere.cursor-retrieval/oauth/callback",
+        ] {
+            assert!(oauth::valid_redirect(good), "{good}");
+        }
+        for bad in [
+            "http://evil.example/cb",
+            "javascript://alert(1)",
+            "data://x",
+            "https://a.example/cb#frag",
+            "not a url",
+            "http://localhost.evil.example/cb",
+        ] {
+            assert!(!oauth::valid_redirect(bad), "{bad}");
+        }
+    }
+
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn should_trade_a_code_once_with_pkce_and_rotate_refresh_tokens(pool: PgPool) {
+        fixture(&pool).await;
+        let client = oauth::register(&pool, Some("Claude"), &[REDIRECT.into()])
+            .await
+            .ok()
+            .unwrap();
+
+        // Wrong verifier: refused, and the code is spent anyway.
+        let first = code(&pool, &client.client_id).await;
+        let wrong = oauth::exchange_code(
+            &pool,
+            CodeExchange {
+                code: &first,
+                client_id: &client.client_id,
+                redirect_uri: REDIRECT,
+                code_verifier: "nope",
+            },
+        )
+        .await;
+        assert_eq!(error_of(wrong), "invalid_grant");
+        let again = oauth::exchange_code(
+            &pool,
+            CodeExchange {
+                code: &first,
+                client_id: &client.client_id,
+                redirect_uri: REDIRECT,
+                code_verifier: VERIFIER,
+            },
+        )
+        .await;
+        assert_eq!(error_of(again), "invalid_grant");
+
+        // The right one works once.
+        let second = code(&pool, &client.client_id).await;
+        let tokens = oauth::exchange_code(
+            &pool,
+            CodeExchange {
+                code: &second,
+                client_id: &client.client_id,
+                redirect_uri: REDIRECT,
+                code_verifier: VERIFIER,
+            },
+        )
+        .await
+        .ok()
+        .unwrap();
+        let live = mcp::find_live(&pool, &hash_token(&tokens.access_token))
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(live.workspace_ids, Some(vec!["ws_a".to_string()]));
+
+        // Refresh rotates: the old access token ends, the new one works.
+        let rotated = oauth::refresh(&pool, &tokens.refresh_token, &client.client_id)
+            .await
+            .ok()
+            .unwrap();
+        assert!(mcp::find_live(&pool, &hash_token(&tokens.access_token))
+            .await
+            .unwrap()
+            .is_none());
+        assert!(mcp::find_live(&pool, &hash_token(&rotated.access_token))
+            .await
+            .unwrap()
+            .is_some());
+
+        // Replaying the spent refresh token revokes the whole grant.
+        let replay = oauth::refresh(&pool, &tokens.refresh_token, &client.client_id).await;
+        assert_eq!(error_of(replay), "invalid_grant");
+        assert!(mcp::find_live(&pool, &hash_token(&rotated.access_token))
+            .await
+            .unwrap()
+            .is_none());
+        assert_eq!(
+            error_of(oauth::refresh(&pool, &rotated.refresh_token, &client.client_id).await),
+            "invalid_grant"
+        );
+    }
+
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn should_refuse_a_redirect_or_challenge_the_client_did_not_register(pool: PgPool) {
+        fixture(&pool).await;
+        let client = oauth::register(&pool, Some("Claude"), &[REDIRECT.into()])
+            .await
+            .ok()
+            .unwrap();
+        assert!(
+            oauth::register(&pool, Some("x"), &["http://evil.example/cb".into()])
+                .await
+                .is_err()
+        );
+
+        for (redirect, method, field) in [
+            ("http://127.0.0.1:1/other", "S256", "redirect_uri"),
+            (REDIRECT, "plain", "code_challenge"),
+        ] {
+            let error = oauth::authorize(
+                &pool,
+                actor(),
+                Consent {
+                    client_id: &client.client_id,
+                    redirect_uri: redirect,
+                    code_challenge: &hash_token(VERIFIER),
+                    code_challenge_method: method,
+                    workspace_ids: None,
+                },
+            )
+            .await
+            .unwrap_err();
+            assert!(
+                matches!(error, AppError::Validation(ref f) if f.contains_key(field)),
+                "{field}"
+            );
+        }
+    }
+}

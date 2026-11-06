@@ -412,6 +412,12 @@ fn protected_routes(state: AppState) -> Router<AppState> {
             "/v1/mcp/tokens/{id}",
             axum::routing::delete(mcp::handler::revoke),
         )
+        // OAuth for MCP connector apps (MCP-9). Register and token take no
+        // caller identity; authorize and the client lookup take the session.
+        .route("/v1/oauth/register", post(mcp::handler::register_client))
+        .route("/v1/oauth/clients/{id}", get(mcp::handler::get_client))
+        .route("/v1/oauth/authorize", post(mcp::handler::authorize))
+        .route("/v1/oauth/token", post(mcp::handler::token))
         .route("/v1/mcp/connections", get(mcp::handler::list_connections))
         .route(
             "/v1/mcp/connections/{id}",

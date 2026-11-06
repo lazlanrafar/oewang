@@ -16,14 +16,14 @@
 
 	import { Alert, AlertDescription, AlertTitle } from '$lib/components/atoms/alert';
 	import { Button } from '$lib/components/atoms/button';
-	import { Checkbox } from '$lib/components/atoms/checkbox';
 	import { Input } from '$lib/components/atoms/input';
 	import { Label } from '$lib/components/atoms/label';
 	import { NativeSelect } from '$lib/components/atoms/native-select';
-	import * as RadioGroup from '$lib/components/atoms/radio-group';
 	import * as Sheet from '$lib/components/atoms/sheet';
 	import { FieldError } from '$lib/components/molecules/field-error';
 	import { t } from '$lib/i18n';
+
+	import McpWorkspacePicker from './mcp-workspace-picker.svelte';
 
 	let {
 		open = $bindable(false),
@@ -53,10 +53,6 @@
 		picked = [];
 		copied = false;
 	});
-
-	function toggle(id: string, on: boolean) {
-		picked = on ? [...picked, id] : picked.filter((value) => value !== id);
-	}
 
 	async function copy() {
 		if (!secret) return;
@@ -114,40 +110,12 @@
 
 						<div class="grid gap-3">
 							<Label class={labelClass}>{t('account.mcp.workspaces_label')}</Label>
-							<RadioGroup.Root bind:value={scope} name="scope" class="grid gap-2">
-								<div class="flex items-center gap-2">
-									<RadioGroup.Item value="all" id="mcp-scope-all" />
-									<Label for="mcp-scope-all" class="text-sm font-normal">
-										{t('account.mcp.workspaces_all')}
-									</Label>
-								</div>
-								<div class="flex items-center gap-2">
-									<RadioGroup.Item value="some" id="mcp-scope-some" />
-									<Label for="mcp-scope-some" class="text-sm font-normal">
-										{t('account.mcp.workspaces_some')}
-									</Label>
-								</div>
-							</RadioGroup.Root>
-							{#if scope === 'some'}
-								<div class="grid gap-2 pl-6">
-									{#each workspaces as workspace (workspace.id)}
-										<div class="flex items-center gap-2">
-											<Checkbox
-												id="mcp-ws-{workspace.id}"
-												checked={picked.includes(workspace.id)}
-												onCheckedChange={(on) => toggle(workspace.id, on === true)}
-											/>
-											<Label for="mcp-ws-{workspace.id}" class="text-sm font-normal">
-												{workspace.name}
-											</Label>
-										</div>
-									{/each}
-									{#each picked as id (id)}
-										<input type="hidden" name="workspace_ids" value={id} />
-									{/each}
-								</div>
-							{/if}
-							<FieldError message={fieldErrors?.workspace_ids} />
+							<McpWorkspacePicker
+								{workspaces}
+								bind:scope
+								bind:picked
+								error={fieldErrors?.workspace_ids}
+							/>
 						</div>
 
 						<div class="grid gap-2">
