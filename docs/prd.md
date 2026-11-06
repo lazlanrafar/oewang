@@ -307,7 +307,7 @@ Specified in [payload encryption](api/encryption.md), [hardening](security/harde
 | OPS-4 | Errors use the envelope in [API conventions](api/conventions.md#the-envelope) with a stable code. |
 | OPS-5 | Rate limits: 300 requests per minute authenticated, 30 per minute unauthenticated, 10 per 15 minutes on auth endpoints. |
 | OPS-6 | Internal endpoints reject any request without a valid service API key. |
-| OPS-7 | CI runs lint, typecheck and tests for all three apps on every push. |
+| OPS-7 | CI runs lint, typecheck and tests for all three apps on every pull request into `main`, before anything reaches production. |
 | OPS-8 | A transaction's detail sheet shows its audit history: who changed what, when, and from which surface (D46). |
 
 ### 6.11 Telegram (TG)

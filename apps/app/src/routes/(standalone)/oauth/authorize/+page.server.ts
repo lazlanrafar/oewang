@@ -54,7 +54,10 @@ function back(request: Params, values: Record<string, string>): never {
 	const target = new URL(request.redirect_uri);
 	for (const [key, value] of Object.entries(values)) target.searchParams.set(key, value);
 	if (request.state) target.searchParams.set('state', request.state);
-	redirect(303, target.toString());
+	// External by design: the app's own redirect URI, which `trusted` has
+	// already matched exactly against the ones it registered. SvelteKit
+	// refuses another origin unless told, and still refuses `javascript:`.
+	redirect(303, target.toString(), { external: true });
 }
 
 export const load: PageServerLoad = async ({ url, locals, setHeaders }) => {

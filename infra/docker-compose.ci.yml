@@ -1,0 +1,13 @@
+# The CI journeys' overrides on top of docker-compose.yml.
+#
+# Production stores files in Cloudflare R2. Local development keeps MinIO
+# for an S3 code path to talk to, but CI does not need one: the journeys
+# test the app, not a storage vendor, and MinIO's images are no longer
+# published on Docker Hub, so pulling them failed every run. The API's
+# filesystem backend stands in, and CI starts only the services the
+# journeys use (postgres, api, ai, app), so MinIO is never pulled.
+services:
+  api:
+    environment:
+      STORAGE_BACKEND: local
+      STORAGE_LOCAL_PATH: /tmp/oewang-storage
