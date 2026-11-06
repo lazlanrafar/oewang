@@ -176,7 +176,7 @@ pub async fn delete(
 }
 
 fn actor(auth: &AuthWrite) -> Actor<'_> {
-    Actor::web(&auth.workspace_id, &auth.user_id)
+    auth.actor()
 }
 
 /// Parsed, never deserialized through a float (D12).

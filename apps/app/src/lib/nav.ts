@@ -28,6 +28,7 @@ import {
 	ChartColumn,
 	Landmark,
 	PiggyBank,
+	Plug,
 	LayoutDashboard,
 	Lock,
 	MessageSquareWarning,
@@ -98,7 +99,10 @@ export const accountNavGroups: NavGroup[] = [
 	{
 		items: [
 			{ titleKey: 'account.nav_profile', href: '/account/profile', icon: User },
-			{ titleKey: 'account.nav_security', href: '/account/security', icon: Lock }
+			{ titleKey: 'account.nav_security', href: '/account/security', icon: Lock },
+			// AI apps acting as this person over MCP (D106): personal, so here
+			// rather than in a workspace's settings.
+			{ titleKey: 'account.nav_mcp', href: '/account/mcp', icon: Plug }
 		]
 	}
 ];

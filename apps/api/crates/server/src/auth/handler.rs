@@ -15,7 +15,6 @@ use serde::{Deserialize, Serialize};
 use base64::{engine::general_purpose::STANDARD, Engine};
 
 use crate::{
-    audit::Actor,
     auth::{
         account,
         extractor::Auth,
@@ -291,14 +290,10 @@ pub async fn update_profile(
     request_id: RequestId,
     Json(body): Json<UpdateProfileRequest>,
 ) -> std::result::Result<StatusCode, ApiError> {
-    account::update_profile(
-        &state.db,
-        Actor::web(&auth.workspace_id, &auth.user_id),
-        body.name.as_deref(),
-    )
-    .await
-    .map(|_| StatusCode::NO_CONTENT)
-    .map_err(|error| ApiError::new(error, request_id.0))
+    account::update_profile(&state.db, auth.actor(), body.name.as_deref())
+        .await
+        .map(|_| StatusCode::NO_CONTENT)
+        .map_err(|error| ApiError::new(error, request_id.0))
 }
 
 /// The colours income and expense are drawn in, for you only (UI-12).
@@ -310,7 +305,7 @@ pub async fn update_colors(
 ) -> std::result::Result<StatusCode, ApiError> {
     account::update_colors(
         &state.db,
-        Actor::web(&auth.workspace_id, &auth.user_id),
+        auth.actor(),
         body.income_color.as_deref(),
         body.expense_color.as_deref(),
     )
@@ -332,7 +327,7 @@ pub async fn change_password(
 
     let issued = account::change_password(
         &state.db,
-        Actor::web(&auth.workspace_id, &auth.user_id),
+        auth.actor(),
         &body.current_password,
         &body.new_password,
         context,
@@ -366,14 +361,7 @@ pub async fn put_avatar(
     request_id: RequestId,
     Json(body): Json<AvatarRequest>,
 ) -> std::result::Result<Json<Envelope<AvatarVersion>>, ApiError> {
-    match account::set_avatar(
-        &state.db,
-        &state.files,
-        Actor::web(&auth.workspace_id, &auth.user_id),
-        &body.data,
-    )
-    .await
-    {
+    match account::set_avatar(&state.db, &state.files, auth.actor(), &body.data).await {
         Ok(version) => Ok(Json(Envelope::data(
             AvatarVersion {
                 profile_picture: version,
@@ -389,14 +377,10 @@ pub async fn delete_avatar(
     auth: Auth,
     request_id: RequestId,
 ) -> std::result::Result<StatusCode, ApiError> {
-    account::remove_avatar(
-        &state.db,
-        &state.files,
-        Actor::web(&auth.workspace_id, &auth.user_id),
-    )
-    .await
-    .map(|_| StatusCode::NO_CONTENT)
-    .map_err(|error| ApiError::new(error, request_id.0))
+    account::remove_avatar(&state.db, &state.files, auth.actor())
+        .await
+        .map(|_| StatusCode::NO_CONTENT)
+        .map_err(|error| ApiError::new(error, request_id.0))
 }
 
 pub async fn switch_workspace(

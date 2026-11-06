@@ -37,11 +37,11 @@ Each of these exists in the old app and is deliberately left out. Adding any of 
 - Contacts and bill splitting.
 - ~~Vault as a browsable feature: `vault_files` exists only to back attachments and receipts.~~ The vault page came back with D90 (VLT-6 to VLT-13). Still out: document RAG and a `search_documents` tool.
 - Billing: plans, Mayar payments, AI token quotas, storage limits, the upgrade flow. Usage is recorded and shown (section 6.13, D92), never limited.
-- Integrations: third-party connectors and webhooks. Telegram was on this list until D83 moved it into section 6.11; nothing else on the old Apps page came with it (Gmail, Outlook, the MCP clients).
+- Integrations: third-party connectors and webhooks. Telegram was on this list until D83 moved it into section 6.11, and MCP until D106 (section 6.17); nothing else on the old Apps page came with them (Gmail, Outlook).
 - The admin dashboard and the marketing website.
 - The Flutter mobile app and offline sync.
 - The Go background worker (D10).
-- The MCP server and its OAuth client registration.
+- ~~The MCP server and its OAuth client registration.~~ The MCP server came back with D106 (MCP-1 to MCP-9, section 6.17).
 - OAuth login. Email and password only (D21).
 - Application-layer payload encryption (D9).
 - Web search in chat. Canvas artifacts and chat charts were on this list until D88 brought the analysis canvas back for spending, income and burn rate, and D103 added the budget canvas; the debt canvas stays out with its feature.
@@ -379,6 +379,22 @@ Added by D104, from the old app's feedback section.
 | ID | Requirement |
 |---|---|
 | FB-1 | Any member may send feedback from Settings → Feedback: a type (bug, feature, other) and a message of at most 5000 characters. It is stored with the sender and the workspace, and audited. There is no screenshot and no inbox in the product; rows are read in the database. |
+
+### 6.17 MCP (MCP)
+
+Added by D106. Specified in [features/mcp.md](features/mcp.md).
+
+| ID | Requirement |
+|---|---|
+| MCP-1 | An MCP server at `{APP_URL}/mcp`: stateless Streamable HTTP, JSON-RPC 2.0, `initialize`, `ping`, `tools/list`, `tools/call`. The app relays to the API over OWE1; the API holds every rule. |
+| MCP-2 | A person makes personal access tokens in Account → MCP: a name, every workspace or a picked set, and an expiry of 30, 90 or 365 days or none. The token is shown once and stored as SHA-256. Revoking, a password change or reset, and signing out everywhere end it. |
+| MCP-3 | Every call resolves its workspace inside the token's grant and a live membership, and reads the role from the membership row. A token reaching more than one workspace takes `workspace_id` on every tool. |
+| MCP-4 | Tools cover the workspace's data: transactions and items, wallets and groups, categories, budgets, reports, items and rates, vault metadata, members and invites, assistant settings, feedback, and an import of rows through the CSV import. Each runs the web's own handler, so its rules apply unchanged. |
+| MCP-5 | Not exposed: deleting a workspace, converting its currency, account settings and MCP tokens, file bytes, bulk update and delete. |
+| MCP-6 | Per token per minute: 120 calls, 30 writes, 5 deletes. Every delete needs a second call with `confirmed: true` within five minutes. |
+| MCP-7 | Every write made through MCP is audited with source `mcp` (imports keep `import`). |
+| MCP-8 | A refused token gets 401 with `WWW-Authenticate` pointing at the protected-resource metadata. It never affects the browser session of whoever relays it. |
+| MCP-9 | OAuth 2.1 for connector apps (claude.ai, ChatGPT): discovery metadata, dynamic client registration, PKCE S256 only, exact redirect URIs, a consent page with the workspace choice, single-use codes, rotating refresh tokens. Connected apps are listed and disconnectable in Account → MCP. |
 
 ## 7. Success metrics
 

@@ -22,7 +22,6 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    audit::Actor,
     auth::extractor::{Auth, AuthWrite},
     response::{ApiError, RequestId},
     state::AppState,
@@ -659,16 +658,9 @@ pub async fn add_item(
 ) -> std::result::Result<(StatusCode, Json<Envelope<ItemView>>), ApiError> {
     let id = request_id.0;
 
-    let result = async {
-        service::add_item(
-            &state.db,
-            Actor::web(&auth.workspace_id, &auth.user_id),
-            &transaction_id,
-            body.input()?,
-        )
-        .await
-    }
-    .await;
+    let result =
+        async { service::add_item(&state.db, auth.actor(), &transaction_id, body.input()?).await }
+            .await;
 
     match result {
         Ok(item) => Ok((
@@ -691,7 +683,7 @@ pub async fn replace_item(
     let result = async {
         service::replace_item(
             &state.db,
-            Actor::web(&auth.workspace_id, &auth.user_id),
+            auth.actor(),
             &transaction_id,
             &item_id,
             body.input()?,
@@ -714,14 +706,7 @@ pub async fn delete_item(
 ) -> std::result::Result<StatusCode, ApiError> {
     let id = request_id.0;
 
-    match service::delete_item(
-        &state.db,
-        Actor::web(&auth.workspace_id, &auth.user_id),
-        &transaction_id,
-        &item_id,
-    )
-    .await
-    {
+    match service::delete_item(&state.db, auth.actor(), &transaction_id, &item_id).await {
         Ok(()) => Ok(StatusCode::NO_CONTENT),
         Err(error) => Err(ApiError::new(error, id)),
     }
@@ -808,14 +793,7 @@ pub async fn export(
     let result = async {
         let filters = query.filters()?;
         let (sort, order) = query.sort();
-        service::export(
-            &state.db,
-            Actor::web(&auth.workspace_id, &auth.user_id),
-            &filters,
-            sort,
-            order,
-        )
-        .await
+        service::export(&state.db, auth.actor(), &filters, sort, order).await
     }
     .await;
 
@@ -852,8 +830,8 @@ pub async fn create(
 
         let row = service::create_with_items(
             &state.db,
-            Actor::web(&auth.workspace_id, &auth.user_id)
-                .with_source(client_source(body.source.as_deref())?),
+            auth.actor()
+                .with_source(client_source(auth.source, body.source.as_deref())?),
             input,
             &items,
         )
@@ -882,13 +860,7 @@ pub async fn update(
 
     let result = async {
         let input = body.input()?;
-        service::update(
-            &state.db,
-            Actor::web(&auth.workspace_id, &auth.user_id),
-            &transaction_id,
-            input,
-        )
-        .await?;
+        service::update(&state.db, auth.actor(), &transaction_id, input).await?;
         service::find(&state.db, &auth.workspace_id, &transaction_id).await
     }
     .await;
@@ -906,13 +878,7 @@ pub async fn delete(
     request_id: RequestId,
 ) -> std::result::Result<StatusCode, ApiError> {
     let id = request_id.0;
-    match service::delete(
-        &state.db,
-        Actor::web(&auth.workspace_id, &auth.user_id),
-        &transaction_id,
-    )
-    .await
-    {
+    match service::delete(&state.db, auth.actor(), &transaction_id).await {
         Ok(()) => Ok(StatusCode::NO_CONTENT),
         Err(error) => Err(ApiError::new(error, id)),
     }
@@ -936,7 +902,7 @@ pub async fn bulk_create(
             &state.db,
             // Every row written this way is an import, and the audit trail
             // says so (D14).
-            Actor::web(&auth.workspace_id, &auth.user_id).with_source(crate::audit::SOURCE_IMPORT),
+            auth.actor().with_source(crate::audit::SOURCE_IMPORT),
             inputs,
             state.config.import_row_limit,
         )
@@ -976,7 +942,7 @@ pub async fn import_csv(
 
     let result = service::import_rows(
         &state.db,
-        Actor::web(&auth.workspace_id, &auth.user_id).with_source(crate::audit::SOURCE_IMPORT),
+        auth.actor().with_source(crate::audit::SOURCE_IMPORT),
         &body.wallet_id,
         &body.mapping,
         &body.rows,
@@ -1004,15 +970,7 @@ pub async fn bulk_update(
         .as_ref()
         .map(|inner| inner.as_deref().filter(|value| !value.is_empty()));
 
-    match service::bulk_update(
-        &state.db,
-        Actor::web(&auth.workspace_id, &auth.user_id),
-        &body.ids,
-        category,
-        body.is_ready,
-    )
-    .await
-    {
+    match service::bulk_update(&state.db, auth.actor(), &body.ids, category, body.is_ready).await {
         Ok(affected) => Ok(Json(Envelope::data(AffectedView { affected }, id))),
         Err(error) => Err(ApiError::new(error, id)),
     }
@@ -1026,13 +984,7 @@ pub async fn bulk_delete(
 ) -> std::result::Result<Json<Envelope<AffectedView>>, ApiError> {
     let id = request_id.0;
 
-    match service::bulk_delete(
-        &state.db,
-        Actor::web(&auth.workspace_id, &auth.user_id),
-        &body.ids,
-    )
-    .await
-    {
+    match service::bulk_delete(&state.db, auth.actor(), &body.ids).await {
         Ok(affected) => Ok(Json(Envelope::data(AffectedView { affected }, id))),
         Err(error) => Err(ApiError::new(error, id)),
     }
@@ -1052,8 +1004,12 @@ fn non_empty(value: Option<&str>) -> Option<&str> {
 ///
 /// `chat` and `import` are written by the API's own paths, so a client
 /// naming either of them is either confused or lying, and both answers are
-/// a rejection.
-fn client_source(claimed: Option<&str>) -> Result<&'static str> {
+/// a rejection. Only a session may claim anything: a write that arrived
+/// some other way (an MCP tool, D106) keeps the surface it came through.
+fn client_source(surface: &'static str, claimed: Option<&str>) -> Result<&'static str> {
+    if surface != crate::audit::SOURCE_WEB {
+        return Ok(surface);
+    }
     match claimed {
         None | Some("web") => Ok(crate::audit::SOURCE_WEB),
         Some("receipt") => Ok(crate::audit::SOURCE_RECEIPT),
@@ -1138,8 +1094,7 @@ pub async fn import_statement(
         &state.files,
         &state.ai,
         statement::StatementImport {
-            actor: Actor::web(&auth.workspace_id, &auth.user_id)
-                .with_source(crate::audit::SOURCE_IMPORT),
+            actor: auth.actor().with_source(crate::audit::SOURCE_IMPORT),
             request_id: &id,
             wallet_id: &body.wallet_id,
             vault_file_id: &body.vault_file_id,

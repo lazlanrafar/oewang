@@ -24,7 +24,7 @@ PostgreSQL 16. This doc is the source of truth for every table and column. No ot
 
 ## Tables in scope
 
-Twenty-five tables. The sixteen carried from the old app's schema, plus `refresh_tokens` and `password_reset_tokens` (D38, AUTH-10), `exchange_rates` (D44), the three Telegram tables (D83), `ai_usage` (D92), `budgets` (D103) and `feedback` (D104). Carried (see [legacy app](reference/legacy-app.md#schema-mapping)) with the billing, quota and integration columns stripped (D8).
+Twenty-eight tables. The sixteen carried from the old app's schema, plus `refresh_tokens` and `password_reset_tokens` (D38, AUTH-10), `exchange_rates` (D44), the three Telegram tables (D83), `ai_usage` (D92), `budgets` (D103), `feedback` (D104), and `mcp_tokens`, `oauth_clients` and `oauth_codes` (D106). Carried (see [legacy app](reference/legacy-app.md#schema-mapping)) with the billing, quota and integration columns stripped (D8).
 
 ```mermaid
 erDiagram
@@ -56,6 +56,9 @@ erDiagram
     users ||--o{ ai_usage : "made for"
     workspaces ||--o{ feedback : "receives"
     users ||--o{ feedback : "sends"
+    users ||--o{ mcp_tokens : "holds"
+    oauth_clients ||--o{ mcp_tokens : "granted"
+    oauth_clients ||--o{ oauth_codes : "redeems"
 ```
 
 ### Identity and tenancy
@@ -233,6 +236,28 @@ Migration `0015`, D104, FB-1. What a member sent from Settings → Feedback. Wri
 | `created_at`, `deleted_at` | timestamptz | |
 
 Index: `feedback_workspace_idx (workspace_id, created_at DESC) WHERE deleted_at IS NULL`. The old app's screenshot, review status and admin note are not carried: nothing here would show or change them.
+
+
+#### `mcp_tokens`, `oauth_clients`, `oauth_codes`
+
+Migration `0016`, D106. Scoped by person, not by workspace: a token's reach is `workspace_ids` (NULL is every workspace the person belongs to), checked against live memberships on every call.
+
+| Column (`mcp_tokens`) | Type | Notes |
+|---|---|---|
+| `id` | text | CUID2 |
+| `user_id` | text | FK users, cascade |
+| `kind` | text | `pat` or `oauth` |
+| `name` | text | The person's label, or the client's name |
+| `client_id` | text | FK `oauth_clients`; OAuth only |
+| `token_hash` | text | SHA-256, unique. The token is shown once |
+| `token_prefix` | text | First twelve characters, for the list |
+| `refresh_hash`, `family_id`, `refresh_expires_at` | text, text, timestamptz | OAuth only: rotation, and revoking a replayed family |
+| `workspace_ids` | text[] | NULL is every workspace |
+| `expires_at`, `last_used_at`, `revoked_at`, `created_at` | timestamptz | `last_used_at` written at most once a minute |
+
+`oauth_clients(id, name, redirect_uris text[], created_at, last_used_at)` are dynamically registered public clients. `oauth_codes(code_hash, client_id, user_id, workspace_ids, redirect_uri, code_challenge, expires_at, used_at)` are single-use, ten-minute codes with a required S256 challenge.
+
+The same migration adds `mcp` to the `transactions.source` and `audit_logs.source` checks.
 
 ### Ledger
 

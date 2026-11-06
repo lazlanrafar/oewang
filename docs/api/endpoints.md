@@ -124,7 +124,7 @@ Returns `NOT_A_MEMBER` if the user has no live membership row.
 
 Balance is never writable through the API. It changes only as a consequence of a transaction (TXN-3). A manual correction is recorded as an income or expense transaction, like any other movement.
 
-`/adjust` is that rule, not an exception to it. It writes no column: it reads the wallet, works out `target - current`, and creates one transaction for the difference through the ordinary create path, so the balance arrives at the figure as a consequence. A positive difference becomes an `income`, a negative one an `expense` for its absolute value, and a difference of zero writes nothing and still succeeds. The transaction is named "Balance adjustment", dated today, carries no category, is denominated in the wallet's own currency, and records `web` as its source. It takes the wallet lock, moves the balance and writes its audit row inside one database transaction like every other write (D13, D14, OPS-1).
+`/adjust` is that rule, not an exception to it. It writes no column: it reads the wallet, works out `target - current`, and creates one transaction for the difference through the ordinary create path, so the balance arrives at the figure as a consequence. A positive difference becomes an `income`, a negative one an `expense` for its absolute value, and a difference of zero writes nothing and still succeeds. The transaction is named "Balance adjustment", dated today, carries no category, is denominated in the wallet's own currency, and records the caller's surface as its source (`web`, or `mcp` from an MCP tool). It takes the wallet lock, moves the balance and writes its audit row inside one database transaction like every other write (D13, D14, OPS-1).
 
 ## Exchange rates
 
@@ -410,6 +410,19 @@ The Apps page's routes (D83). Each acts on the caller's own Telegram link in the
 | GET | `/v1/integrations/telegram` | any | `{ enabled, bot_username, linked, telegram_username, linked_at }` |
 | POST | `/v1/integrations/telegram/link-token` | any | `{ deep_link, expires_at }`: a one-time `t.me` link, ten minutes (D85). `TELEGRAM_DISABLED` when no bot is configured |
 | POST | `/v1/integrations/telegram/unlink` | any | 204. Ends the caller's link and tells the chat; ending none is not an error |
+
+## MCP
+
+[features/mcp.md](../features/mcp.md), D106. Tokens belong to the person, so these take the session and any role.
+
+| Method | Path | Role | Purpose |
+|---|---|---|---|
+| POST | `/v1/mcp` | MCP token | One JSON-RPC message, relayed by the app's `/mcp`. `data` is the JSON-RPC response, or null for a notification. A refused token is `MCP_TOKEN_INVALID` (401) |
+| GET | `/v1/mcp/tokens` | any | The person's live personal access tokens |
+| POST | `/v1/mcp/tokens` | any | `{ name, workspace_ids: string[] \| null, expires_in_days: 30 \| 90 \| 365 \| null }`. 201 with the token's view and `secret`, shown once |
+| DELETE | `/v1/mcp/tokens/{id}` | any | Revoke one of the person's tokens |
+| GET | `/v1/mcp/connections` | any | The person's OAuth grants, one row per grant |
+| DELETE | `/v1/mcp/connections/{id}` | any | Disconnect an app: revokes every rotation of the grant |
 
 ## Internal
 

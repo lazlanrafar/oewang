@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE mcp_tokens SET revoked_at = now()\n           WHERE user_id = $1 AND revoked_at IS NULL\n             AND (id = $2 OR family_id = (SELECT family_id FROM mcp_tokens\n                                          WHERE id = $2 AND user_id = $1))",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "97674722f487cd26e3a26213c78b68231568d80b3899e6f6c3921e55f93ef57a"
+}

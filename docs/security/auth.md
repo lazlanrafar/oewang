@@ -126,6 +126,10 @@ A Telegram chat that acts for a member (D85, [Telegram](../features/telegram.md)
 - Every update re-reads the membership row, so the role that applies is the current one, and a member who left is disconnected on their next message.
 - The link ends with the session events in [Revocation](#revocation), from the Apps page, and with `/disconnect`.
 
+## MCP tokens
+
+An opaque bearer (`owm_…`), not a JWT, looked up by SHA-256 (D106). It names a person and a set of workspaces, never a role: every call reads the membership row of the workspace it acts in, so a token can do exactly what the person's role allows there, and nothing after they leave. It is revoked by the person, by a password change or reset, and by signing out everywhere. A refused token is `MCP_TOKEN_INVALID`; the app's relay answers it with its own 401 and never treats it as the browser session ending.
+
 ## Request flow
 
 ```mermaid
@@ -206,6 +210,7 @@ The old token stays valid until expiry. It is scoped to the previous workspace, 
 | Connect or disconnect their own Telegram chat | yes | yes | yes |
 | Save a receipt or change a transaction from Telegram | yes | yes | no |
 | Ask the assistant from Telegram | yes | yes | yes |
+| Make, list and revoke their own MCP tokens (MCP-2) | yes | yes | yes |
 | Send feedback (FB-1) | yes | yes | yes |
 
 An admin cannot grant owner, nor change or remove an owner: only an owner acts on an owner. An invitation is a bearer token bound to an address: the API accepts it only from the account with that email, so a forwarded or leaked link admits nobody else, and a refused attempt leaves it usable for the right person. Accepting never changes the role of someone already in the workspace (D104).

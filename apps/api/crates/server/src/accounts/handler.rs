@@ -469,7 +469,7 @@ pub async fn delete_category(
 // ------------------------------------------------------------------ shared
 
 fn actor(auth: &AuthWrite) -> Actor<'_> {
-    Actor::web(&auth.workspace_id, &auth.user_id)
+    auth.actor()
 }
 
 /// A decimal string to a `Decimal`. Money is parsed, never deserialized

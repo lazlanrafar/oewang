@@ -140,9 +140,19 @@ Model output is untrusted too, in a different way.
 | A tool that fetches a URL | Removes server-side request forgery as a class ([hardening](hardening.md#outbound-calls)) |
 | Autonomous or scheduled agent runs | Every turn is initiated by a user who sees the result |
 | Bulk write tools | See [blast radius](#layer-2-blast-radius) |
-| Membership, settings or workspace tools | Privilege-adjacent operations stay in the UI |
+| Membership, settings or workspace tools | Privilege-adjacent operations stay in the UI. This row is about the assistant: the MCP server (D106) exposes members and settings to an external app acting as the person, with the web's own role rules, and never to the in-app model |
 
 Each row is a control. Adding any of them needs a decision record and a review of this document.
+
+## External apps over MCP (D106)
+
+An MCP client is someone else's model acting as the person, so none of oewang's model runs on its input and D24 is not engaged: no untrusted text reaches a tool-capable loop of ours. What still has to hold is the blast radius:
+
+- Every tool runs the web's own handler with the person's live role in the chosen workspace. Nothing a session cannot do, a token can.
+- Caps per token per rolling minute, minted by the API: 120 calls, 30 writes, 5 deletes. The client cannot reset them, because they are keyed by the token the API looked up.
+- Every delete is two calls, the second with `confirmed: true` for the exact same call within five minutes. Unlike the chat, the API cannot prove a human answered in between: the client is trusted to ask, and `destructiveHint` tells it to. Soft delete keeps the cost of a wrong delete recoverable.
+- Not exposed: workspace deletion, currency conversion, account and token management, bulk update and delete. A token can never mint or widen another token.
+- Every write is audited with source `mcp`.
 
 ## Cost and abuse
 

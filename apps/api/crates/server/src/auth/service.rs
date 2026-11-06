@@ -262,6 +262,10 @@ pub async fn logout_everywhere(pool: &PgPool, user_id: &str) -> Result<u64> {
         .await
         .map_err(internal)?;
     crate::telegram::link::revoke_all_for_user(&mut *tx, user_id).await?;
+    // MCP clients too: the same "every device" (D106).
+    oewang_db::repositories::mcp::revoke_all_for_user(&mut *tx, user_id)
+        .await
+        .map_err(|error| oewang_domain::AppError::Internal(anyhow::anyhow!(error)))?;
     tx.commit().await.map_err(internal)?;
     Ok(revoked)
 }
@@ -351,6 +355,10 @@ pub async fn complete_password_reset(
         .await
         .map_err(internal)?;
     crate::telegram::link::revoke_all_for_user(&mut *tx, &user_id).await?;
+    // MCP clients too: the same "every device" (D106).
+    oewang_db::repositories::mcp::revoke_all_for_user(&mut *tx, &user_id)
+        .await
+        .map_err(|error| oewang_domain::AppError::Internal(anyhow::anyhow!(error)))?;
 
     tx.commit().await.map_err(internal)?;
 

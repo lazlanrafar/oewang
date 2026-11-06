@@ -8,7 +8,6 @@ use axum::{extract::State, http::StatusCode, Json};
 use oewang_domain::{AppError, Envelope};
 
 use crate::{
-    audit::Actor,
     auth::extractor::Auth,
     response::{ApiError, RequestId},
     state::AppState,
@@ -61,7 +60,7 @@ pub async fn unlink(
 ) -> Result<StatusCode, ApiError> {
     let id = request_id.0;
 
-    let ended = link::unlink(&state.db, Actor::web(&auth.workspace_id, &auth.user_id))
+    let ended = link::unlink(&state.db, auth.actor())
         .await
         .map_err(|error| ApiError::new(error, id))?;
 

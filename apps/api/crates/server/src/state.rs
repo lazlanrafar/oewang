@@ -33,6 +33,9 @@ pub struct AppState {
     /// been challenged. The per-turn caps are only a bound because this
     /// remembers (D25).
     pub turns: TurnStore,
+    /// What each MCP token has spent this minute, and its open delete
+    /// challenges (D106).
+    pub mcp: crate::mcp::budget::McpBudget,
     /// Every per-address and per-workspace budget (OPS-5, AUTH-6, SEC-17).
     pub rate_limits: RateLimiter,
     /// The Telegram bot, when one is configured (D84).

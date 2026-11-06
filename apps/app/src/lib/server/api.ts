@@ -234,7 +234,14 @@ export async function api<T>(options: RequestOptions): Promise<Envelope<T>> {
 			session = null;
 			return send<T>(options, await currentSession());
 		}
-		if (error instanceof ApiError && error.status === 401 && options.token) {
+		// A refused MCP token is the MCP client's problem, not this browser's
+		// session: the `/mcp` relay answers it with its own 401 (D106).
+		if (
+			error instanceof ApiError &&
+			error.status === 401 &&
+			options.token &&
+			error.code !== 'MCP_TOKEN_INVALID'
+		) {
 			signOut();
 		}
 		throw error;

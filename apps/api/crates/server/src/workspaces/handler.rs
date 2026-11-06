@@ -208,12 +208,8 @@ async fn apply_update(
     // it, and running it last would leave a rename committed behind a
     // rejected currency change.
     if let Some(currency) = body.currency_code.as_deref() {
-        crate::accounts::service::update_workspace_currency(
-            &state.db,
-            crate::audit::Actor::web(&auth.workspace_id, &auth.user_id),
-            currency,
-        )
-        .await?;
+        crate::accounts::service::update_workspace_currency(&state.db, auth.actor(), currency)
+            .await?;
     }
 
     let name = body
@@ -468,7 +464,7 @@ pub async fn accept_invite(
 }
 
 fn actor(auth: &AuthWrite) -> Actor<'_> {
-    Actor::web(&auth.workspace_id, &auth.user_id)
+    auth.actor()
 }
 
 fn internal(error: sqlx::Error) -> AppError {

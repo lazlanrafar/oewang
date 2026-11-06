@@ -13,7 +13,12 @@ use axum::{
 };
 use oewang_domain::{AppError, Role};
 
-use crate::{auth::token, response::ApiError, state::AppState};
+use crate::{
+    audit::{Actor, SOURCE_WEB},
+    auth::token,
+    response::ApiError,
+    state::AppState,
+};
 
 /// A verified caller.
 ///
@@ -30,6 +35,16 @@ pub struct Auth {
     /// demotion takes effect on writes immediately rather than waiting out
     /// the token's 15 minutes.
     pub role: Role,
+    /// The surface the request came through: `web` from a session, `mcp`
+    /// when an MCP tool runs the same handler (D106). Audit rows carry it.
+    pub source: &'static str,
+}
+
+impl Auth {
+    /// Who a write is for, from where.
+    pub fn actor(&self) -> Actor<'_> {
+        Actor::web(&self.workspace_id, &self.user_id).with_source(self.source)
+    }
 }
 
 impl FromRequestParts<AppState> for Auth {
@@ -60,6 +75,7 @@ impl FromRequestParts<AppState> for Auth {
             user_id: claims.sub,
             workspace_id: claims.wid,
             role: claims.role,
+            source: SOURCE_WEB,
         })
     }
 }
@@ -76,6 +92,15 @@ pub struct AuthWrite {
     pub workspace_id: String,
     /// The role as the database has it right now.
     pub role: Role,
+    /// See [`Auth::source`].
+    pub source: &'static str,
+}
+
+impl AuthWrite {
+    /// Who a write is for, from where.
+    pub fn actor(&self) -> Actor<'_> {
+        Actor::web(&self.workspace_id, &self.user_id).with_source(self.source)
+    }
 }
 
 impl FromRequestParts<AppState> for AuthWrite {
@@ -105,6 +130,7 @@ impl FromRequestParts<AppState> for AuthWrite {
             user_id: auth.user_id,
             workspace_id: auth.workspace_id,
             role,
+            source: auth.source,
         })
     }
 }

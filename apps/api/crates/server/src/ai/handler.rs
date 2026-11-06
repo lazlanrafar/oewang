@@ -16,7 +16,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     ai::{service, stream, tools},
-    audit::Actor,
     auth::extractor::{Auth, AuthWrite, ServiceCaller},
     owe1::{session::now_secs, Owe1Context},
     response::{ApiError, RequestId},
@@ -267,13 +266,7 @@ pub async fn create_session(
 ) -> Result<(StatusCode, Json<Envelope<SessionView>>), ApiError> {
     let id = request_id.0;
 
-    match service::create(
-        &state.db,
-        Actor::web(&auth.workspace_id, &auth.user_id),
-        body.title.as_deref(),
-    )
-    .await
-    {
+    match service::create(&state.db, auth.actor(), body.title.as_deref()).await {
         Ok(session) => Ok((
             StatusCode::CREATED,
             Json(Envelope::data(session.into(), id)),
@@ -291,14 +284,7 @@ pub async fn rename_session(
 ) -> Result<Json<Envelope<SessionView>>, ApiError> {
     let id = request_id.0;
 
-    match service::rename(
-        &state.db,
-        Actor::web(&auth.workspace_id, &auth.user_id),
-        &session_id,
-        &body.title,
-    )
-    .await
-    {
+    match service::rename(&state.db, auth.actor(), &session_id, &body.title).await {
         Ok(session) => Ok(Json(Envelope::data(session.into(), id))),
         Err(error) => Err(ApiError::new(error, id)),
     }
@@ -312,13 +298,7 @@ pub async fn delete_session(
 ) -> Result<StatusCode, ApiError> {
     let id = request_id.0;
 
-    match service::delete(
-        &state.db,
-        Actor::web(&auth.workspace_id, &auth.user_id),
-        &session_id,
-    )
-    .await
-    {
+    match service::delete(&state.db, auth.actor(), &session_id).await {
         Ok(()) => Ok(StatusCode::NO_CONTENT),
         Err(error) => Err(ApiError::new(error, id)),
     }
@@ -399,7 +379,7 @@ pub async fn update_settings(
 
     match service::update_settings(
         &state.db,
-        Actor::web(&auth.workspace_id, &auth.user_id),
+        auth.actor(),
         body.custom_instructions.as_deref(),
         body.response_language.as_deref(),
     )

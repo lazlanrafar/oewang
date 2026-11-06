@@ -54,7 +54,7 @@ None survive. The rewrite has no shared package layer: the three apps speak HTTP
 | Document RAG, `ai_knowledge_chunks` | Out of scope. The vault page itself was on this line until D90 ported it: the old page copied, with a file opening in its own sheet instead of the inline panel, rename and delete fixed, the picker's filters run on the server across every page, the dead "Dimensions" row and the "Videos" filter removed, and server-made thumbnails ([vault](../features/vault.md)) |
 | Billing: Mayar, plans, addons, AI token quota, storage limits | Out of scope. Token and storage usage are recorded and shown, never limited (D92, [usage](../features/usage.md)) |
 | Integrations, Telegram webhook handling | Telegram rebuilt, not ported (D83 to D86): linking by one-time token instead of `/start <slug>___<user>`, long polling from the API instead of a webhook into the Go worker, receipts saved on arrival. Every other integration is out of scope |
-| The MCP server and its OAuth 2.1 client registration | Out of scope |
+| The MCP server and its OAuth 2.1 client registration | Rebuilt by D106, from the flows only: the old one stored tokens in plaintext and skipped redirect, membership and scope checks |
 | OAuth login providers | D21 |
 | Notifications, push, device tokens, realtime invalidation | Out of scope |
 | Anomaly detection, transaction classification, the advisor endpoint | Out of scope. The advisor had no caller even in the old app |

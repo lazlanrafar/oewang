@@ -270,6 +270,8 @@ A response that is neither OWE1 nor a plaintext `CRYPTO_*` error, for example an
 
 Any new exception needs a row here and a decision in the [decision log](../architecture.md#decision-log).
 
+The MCP endpoint is not one (D106). The public URL is the app's `/mcp`, which relays each message to `/v1/mcp` over OWE1 like any other route, so the API gains no plaintext route; the hop from an MCP client to the app is TLS, as the browser's is (D26).
+
 ## Rules for URLs
 
 Intermediaries see paths even with OWE1.

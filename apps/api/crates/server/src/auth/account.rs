@@ -177,6 +177,10 @@ pub async fn change_password(
         .await
         .map_err(internal)?;
     crate::telegram::link::revoke_all_for_user(&mut *tx, actor.user_id).await?;
+    // MCP clients too: the same "every device" (D106).
+    oewang_db::repositories::mcp::revoke_all_for_user(&mut *tx, actor.user_id)
+        .await
+        .map_err(|error| oewang_domain::AppError::Internal(anyhow::anyhow!(error)))?;
 
     log(
         &mut tx,

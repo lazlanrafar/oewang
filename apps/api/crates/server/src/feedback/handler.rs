@@ -5,7 +5,6 @@ use oewang_domain::Envelope;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    audit::Actor,
     auth::extractor::Auth,
     feedback::service,
     response::{ApiError, RequestId},
@@ -31,7 +30,7 @@ pub async fn send(
     request_id: RequestId,
     Json(body): Json<SendBody>,
 ) -> std::result::Result<(StatusCode, Json<Envelope<Sent>>), ApiError> {
-    let actor = Actor::web(&auth.workspace_id, &auth.user_id);
+    let actor = auth.actor();
     match service::send(&state.db, actor, body.kind.trim(), &body.message).await {
         Ok(row) => Ok((
             StatusCode::CREATED,

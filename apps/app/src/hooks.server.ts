@@ -32,7 +32,9 @@ const PUBLIC_PREFIXES = [
 	'/design-system',
 	// Liveness, for the container health check. A health check that has to
 	// log in is not one, and this route reads nothing.
-	'/health'
+	'/health',
+	// MCP clients bring their own bearer token, checked by the API (D106).
+	'/mcp'
 ];
 
 function isPublic(pathname: string): boolean {

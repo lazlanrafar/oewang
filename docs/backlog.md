@@ -839,3 +839,27 @@ Requirements: WAL-6, WAL-7
 - [ ] Verify end to end on a throwaway workspace: convert, then check transactions, overview and budgets read in the new currency
 - [ ] Verify in production after deploy
 
+## M13. MCP
+
+### US-060: MCP server with personal access tokens
+Requirements: MCP-1 to MCP-8
+
+- [x] `mcp_tokens` (migration 0016), personal tokens shown once and stored as SHA-256, reach of every workspace or a picked set, expiry choices, revoked by password change, reset and sign-out-everywhere (Rust tests)
+- [x] `/v1/mcp` JSON-RPC in Rust; the app's `/mcp` relays over OWE1, answers 401 with `WWW-Authenticate`, 202 for notifications, 405 for GET
+- [x] Workspace resolved inside the grant and live memberships on every call; `workspace_id` offered only when more than one is in reach (Rust test)
+- [x] Tool registry over the web's own handlers for every area, audit source `mcp`, imports through the CSV import
+- [x] Per-minute caps and two-step deletes (Rust unit tests)
+- [x] Account → MCP: setup per client, token list, New token sheet that shows the token once
+- [x] A refused MCP token no longer signs the relaying browser out (bug found while testing)
+- [x] clippy, `cargo test`, `bun run check`, `bun run test` pass in the containers
+- [x] Verified locally: initialize, tools/list, list_workspaces, a 401 for a bad token; imported a 431-row Money Manager export into Latoe through MCP (409 rows via `import_transactions`, 11 transfers via `create_transaction`, 3 wallets created), totals matching the file
+- [ ] Verify with Claude Code itself (`claude mcp add --transport http … --header`)
+- [ ] Verify in production after deploy
+
+### US-061: OAuth for MCP connector apps
+Requirements: MCP-9
+
+- [ ] Discovery metadata, dynamic client registration, consent page with the workspace choice, PKCE S256, single-use codes, rotating refresh tokens
+- [ ] Connected apps listed and disconnectable in Account → MCP
+- [ ] Verify with claude.ai and ChatGPT connectors
+

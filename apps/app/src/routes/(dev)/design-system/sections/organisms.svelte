@@ -34,6 +34,7 @@
 		ToolCallGroup
 	} from '$lib/components/organisms/chat';
 	import { AccountMenu, AppSidebar, ThemeToggle, WorkspaceSwitcher } from '$lib/components/organisms/layouts';
+	import { McpSetup, McpTokensList, type McpClient } from '$lib/components/organisms/mcp';
 	import { MembersInviteSheet, MembersInvitesTable, MembersTable } from '$lib/components/organisms/members';
 	import { SettingsSidebar } from '$lib/components/organisms/settings';
 
@@ -72,6 +73,17 @@
 		{ id: 'i1', email: 'colleague@example.com', role: 'member' as const, expires_at: '2026-11-13T00:00:00Z', created_at: '2026-11-06T00:00:00Z' }
 	];
 	let inviteOpen = $state(false);
+
+	/* MCP specimen data: one token for every workspace, one for a pick. */
+	const MCP_WORKSPACES = [
+		{ id: 'w1', name: 'Personal' },
+		{ id: 'w2', name: 'Studio' }
+	];
+	const MCP_TOKENS = [
+		{ id: 't1', kind: 'pat' as const, name: 'Claude Code on my laptop', client_id: null, token_prefix: 'owm_Q2xhdWRl', workspace_ids: null, expires_at: '2027-02-04T00:00:00Z', last_used_at: '2026-11-06T08:00:00Z', created_at: '2026-11-06T07:00:00Z' },
+		{ id: 't2', kind: 'pat' as const, name: 'Cursor', client_id: null, token_prefix: 'owm_Q3Vyc29y', workspace_ids: ['w2'], expires_at: null, last_used_at: null, created_at: '2026-11-01T07:00:00Z' }
+	];
+	let mcpClient = $state<McpClient>('claude-code');
 </script>
 
 <Specimen
@@ -257,6 +269,17 @@
 	source="organisms/settings/settings-sidebar.svelte"
 >
 	<SettingsSidebar class="w-56" />
+</Specimen>
+
+<Specimen
+	title="MCP setup and tokens"
+	note="The account area's MCP section (D106): the server URL and each client's config with a placeholder for the token, then the person's tokens with their reach, last use and expiry. A token itself is shown once, in the sheet that makes it."
+	source="organisms/mcp/"
+>
+	<div class="grid max-w-2xl gap-6">
+		<McpSetup url="https://app.oewang.com/mcp" client={mcpClient} onClientChange={(next) => (mcpClient = next)} />
+		<McpTokensList tokens={MCP_TOKENS} workspaces={MCP_WORKSPACES} empty="No tokens yet." onRevoke={() => {}} />
+	</div>
 </Specimen>
 
 <Specimen

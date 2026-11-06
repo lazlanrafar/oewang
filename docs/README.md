@@ -23,11 +23,12 @@ oewang is a personal finance tracker. This repository is a ground-up rewrite of 
 15. [Vault](features/vault.md): the vault page, the file sheet, thumbnails, and deleting a file that transactions carry.
 16. [Usage](features/usage.md): where model tokens are recorded, how storage is derived, and the settings page that shows both.
 17. [Budgets](features/budgets.md): monthly limits per expense category, what counts as spent, the page and the chat canvas.
-18. [AI service](ai/service.md): the Python service, its tool catalog, prompt, and streaming protocol.
-19. Best practices: [Rust API](best-practices/rust-api.md) and [Svelte app](best-practices/svelte-app.md).
-20. [Backlog](backlog.md): the implementation stories, in order, each mapped to requirement IDs.
-21. [Legacy app](reference/legacy-app.md): what the old implementation contains, what the rewrite takes from it, what it drops.
-22. [Midday research](research/midday.md): reverse engineering of a second reference implementation, and the proposals taken from it.
+18. [MCP](features/mcp.md): external AI apps over the Model Context Protocol, tokens, tools, caps and confirmation.
+19. [AI service](ai/service.md): the Python service, its tool catalog, prompt, and streaming protocol.
+20. Best practices: [Rust API](best-practices/rust-api.md) and [Svelte app](best-practices/svelte-app.md).
+21. [Backlog](backlog.md): the implementation stories, in order, each mapped to requirement IDs.
+22. [Legacy app](reference/legacy-app.md): what the old implementation contains, what the rewrite takes from it, what it drops.
+23. [Midday research](research/midday.md): reverse engineering of a second reference implementation, and the proposals taken from it.
 
 ## Doc map
 
@@ -49,6 +50,8 @@ flowchart TD
     PRD --> VAULT["features/vault.md"]
     PRD --> USAGE["features/usage.md"]
     PRD --> BUDGETS["features/budgets.md"]
+    PRD --> MCP["features/mcp.md"]
+    MCP --> SAFE
     VAULT --> TXN
     CHAT --> AI["ai/service.md"]
     CHAT --> SAFE["security/ai-safety.md"]
@@ -119,6 +122,7 @@ flowchart TD
 | [features/overview.md](features/overview.md) | The overview: the greeting, range and tabs, the cards and charts and their sources, starting a conversation from the composer. |
 | [features/vault.md](features/vault.md) | The vault: what was copied from the old page and what was fixed, the file sheet, thumbnails, the file proxy routes, what deleting a file does to transactions. |
 | [features/usage.md](features/usage.md) | Usage: where each model call's tokens are recorded, how storage is derived, the known gap, the settings page. |
+| [features/mcp.md](features/mcp.md) | MCP: how a call travels, personal tokens, the tool registry over the web's handlers, caps and two-step deletes, the account page. |
 | [features/telegram.md](features/telegram.md) | Telegram: the Apps page, the one-time link, who a message is from, receipts saved on arrival and their reply, the buttons, the assistant in a chat. |
 | [ai/service.md](ai/service.md) | The Python service: responsibilities, endpoints, the eleven-tool catalog, the system prompt, the SSE event protocol, safety rules, testing with a mocked model. |
 

@@ -16,7 +16,6 @@ use oewang_domain::{AppError, Envelope, Page, PageMeta};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    audit::Actor,
     auth::extractor::{Auth, AuthWrite},
     response::{ApiError, RequestId},
     state::AppState,
@@ -234,7 +233,7 @@ pub async fn begin(
 
     match service::begin(
         &state.db,
-        Actor::web(&auth.workspace_id, &auth.user_id),
+        auth.actor(),
         &body.filename,
         &body.content_type,
         body.size_bytes,
@@ -299,14 +298,7 @@ pub async fn complete(
 ) -> std::result::Result<Json<Envelope<FileView>>, ApiError> {
     let id = request_id.0;
 
-    match service::complete(
-        &state.db,
-        &state.files,
-        Actor::web(&auth.workspace_id, &auth.user_id),
-        &file_id,
-    )
-    .await
-    {
+    match service::complete(&state.db, &state.files, auth.actor(), &file_id).await {
         Ok(file) => Ok(Json(Envelope::data(FileView::from(file), id))),
         Err(error) => Err(ApiError::new(error, id)),
     }
@@ -372,7 +364,7 @@ pub async fn update(
 
     match service::update(
         &state.db,
-        Actor::web(&auth.workspace_id, &auth.user_id),
+        auth.actor(),
         &file_id,
         body.name.as_deref(),
         body.tags.as_deref(),
@@ -432,14 +424,7 @@ pub async fn delete_file(
 ) -> std::result::Result<StatusCode, ApiError> {
     let id = request_id.0;
 
-    match service::delete(
-        &state.db,
-        &state.files,
-        Actor::web(&auth.workspace_id, &auth.user_id),
-        &file_id,
-    )
-    .await
-    {
+    match service::delete(&state.db, &state.files, auth.actor(), &file_id).await {
         Ok(()) => Ok(StatusCode::NO_CONTENT),
         Err(error) => Err(ApiError::new(error, id)),
     }

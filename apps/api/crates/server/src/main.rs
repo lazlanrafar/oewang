@@ -17,6 +17,7 @@ mod hardening_tests;
 mod images;
 mod items;
 mod limits;
+mod mcp;
 mod owe1;
 mod receipts;
 mod reports;
@@ -116,6 +117,8 @@ async fn main() -> anyhow::Result<()> {
 
     let turns = ai::turns::TurnStore::new();
     spawn_turn_sweeper(turns.clone());
+    let mcp_budget = mcp::budget::McpBudget::new();
+    spawn_mcp_sweeper(mcp_budget.clone());
 
     let mailer = match &config.resend_api_key {
         Some(key) => oewang_clients::Mailer::resend(
@@ -189,6 +192,7 @@ async fn main() -> anyhow::Result<()> {
         files,
         ai,
         turns,
+        mcp: mcp_budget,
         rate_limits,
         telegram,
     };
@@ -396,6 +400,22 @@ fn protected_routes(state: AppState) -> Router<AppState> {
         .route(
             "/v1/budgets/{id}",
             axum::routing::patch(budgets::handler::update).delete(budgets::handler::delete),
+        )
+        // MCP (D106): the JSON-RPC endpoint the app's `/mcp` relays, and
+        // the account area's tokens and connected apps.
+        .route("/v1/mcp", post(mcp::handler::rpc))
+        .route(
+            "/v1/mcp/tokens",
+            get(mcp::handler::list_tokens).post(mcp::handler::create_token),
+        )
+        .route(
+            "/v1/mcp/tokens/{id}",
+            axum::routing::delete(mcp::handler::revoke),
+        )
+        .route("/v1/mcp/connections", get(mcp::handler::list_connections))
+        .route(
+            "/v1/mcp/connections/{id}",
+            axum::routing::delete(mcp::handler::revoke),
         )
         // Feedback from settings, any role (FB-1).
         .route("/v1/feedback", post(feedback::handler::send))
@@ -612,6 +632,17 @@ fn spawn_rate_refresher(state: AppState) {
 
 /// Drop the budgets of turns that have ended and challenges nobody
 /// answered, for the same reason the sessions are swept.
+/// Drop MCP minute windows and challenges that have aged out.
+fn spawn_mcp_sweeper(budget: mcp::budget::McpBudget) {
+    tokio::spawn(async move {
+        let mut ticker = tokio::time::interval(Duration::from_secs(60));
+        loop {
+            ticker.tick().await;
+            budget.sweep(owe1::session::now_secs());
+        }
+    });
+}
+
 fn spawn_turn_sweeper(turns: ai::turns::TurnStore) {
     tokio::spawn(async move {
         let mut ticker = tokio::time::interval(Duration::from_secs(60));
