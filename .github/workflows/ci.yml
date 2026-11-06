@@ -55,6 +55,10 @@ jobs:
     name: secret scan
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
+      # Listing a pull request's commits, which the action does to scan them.
+      pull-requests: read
     steps:
       - uses: actions/checkout@v4
         with:
@@ -64,6 +68,9 @@ jobs:
 
       - uses: gitleaks/gitleaks-action@v2
         env:
+          # Required on pull_request events: the action reads the pull
+          # request's commits through the API to know what to scan.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_CONFIG: .github/gitleaks.toml
           # Commenting on a pull request needs write permission on this
           # token. The failed step is the signal; a comment is not worth
@@ -313,6 +320,16 @@ jobs:
         with:
           bun-version: 1.4.4
 
+      # Before the stack starts: the app container mounts apps/app and an
+      # anonymous volume over node_modules, and Docker creates that mount
+      # point on the host as root, after which bun on the runner cannot
+      # write into it (EACCES).
+      - name: Install dependencies
+        run: bun install --frozen-lockfile --ignore-scripts
+
+      - name: Install the browser
+        run: bunx playwright install --with-deps chromium
+
       - name: Write the stack's .env
         working-directory: .
         # The compose stack reads ../.env. CI has no secrets to put in it
@@ -344,12 +361,6 @@ jobs:
             run --rm --no-deps api sqlx migrate run --source migrations
           docker compose -f infra/docker-compose.yml exec -T postgres \
             psql -U oewang -d oewang -q < apps/api/seeds/dev.sql
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile --ignore-scripts
-
-      - name: Install the browser
-        run: bunx playwright install --with-deps chromium
 
       - name: Journeys and axe
         # E2E_CHAT=0 because no model is reachable from a runner: the chat
