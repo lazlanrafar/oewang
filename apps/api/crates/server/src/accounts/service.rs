@@ -5,7 +5,6 @@
 //! repositories run SQL.
 
 use chrono::Utc;
-use oewang_clients::RatesClient;
 use oewang_db::{
     repositories::{accounts, categories, wallets},
     PgPool,
@@ -437,7 +436,6 @@ const ADJUSTMENT_NAME: &str = "Balance adjustment";
 /// ledger.
 pub async fn adjust_wallet_balance(
     pool: &PgPool,
-    rates: &RatesClient,
     actor: Actor<'_>,
     id: &str,
     target: Decimal,
@@ -457,7 +455,6 @@ pub async fn adjust_wallet_balance(
 
     ledger::create(
         pool,
-        rates,
         actor,
         TransactionInput {
             kind,

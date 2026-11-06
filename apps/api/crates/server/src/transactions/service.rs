@@ -9,7 +9,6 @@
 //! transaction.
 
 use chrono::{DateTime, NaiveDate, Utc};
-use oewang_clients::RatesClient;
 use oewang_db::{
     repositories::{accounts, audit, categories, transactions as repo, vault, wallets},
     PgPool,
@@ -169,11 +168,10 @@ pub async fn history(pool: &PgPool, workspace_id: &str, id: &str) -> Result<Vec<
 
 pub async fn create(
     pool: &PgPool,
-    rates: &RatesClient,
     actor: Actor<'_>,
     input: TransactionInput<'_>,
 ) -> Result<TransactionRow> {
-    create_with_items(pool, rates, actor, input, &[]).await
+    create_with_items(pool, actor, input, &[]).await
 }
 
 /// Create a transaction and its line items in one database transaction.
@@ -188,7 +186,6 @@ pub async fn create(
 /// why the balance arithmetic below does not look at them (TXN-12).
 pub async fn create_with_items(
     pool: &PgPool,
-    rates: &RatesClient,
     actor: Actor<'_>,
     input: TransactionInput<'_>,
     items: &[ItemInput<'_>],
@@ -197,7 +194,7 @@ pub async fn create_with_items(
         validate_item(item)?;
     }
 
-    let prepared = prepare(pool, rates, actor.workspace_id, &input).await?;
+    let prepared = prepare(pool, actor.workspace_id, &input).await?;
 
     let mut tx = pool.begin().await.map_err(internal)?;
 
@@ -261,12 +258,11 @@ pub async fn create_with_items(
 /// reversal is the negation of an effect and nothing else.
 pub async fn update(
     pool: &PgPool,
-    rates: &RatesClient,
     actor: Actor<'_>,
     id: &str,
     input: TransactionInput<'_>,
 ) -> Result<TransactionRow> {
-    let prepared = prepare(pool, rates, actor.workspace_id, &input).await?;
+    let prepared = prepare(pool, actor.workspace_id, &input).await?;
 
     let mut tx = pool.begin().await.map_err(internal)?;
 
@@ -812,14 +808,11 @@ fn quote(value: &str) -> String {
 
 // ----------------------------------------------------------------- shared
 
-/// Everything that can be worked out before the transaction opens.
-///
-/// Including the rate lookup, which may call a third party: a network call
-/// inside an open transaction holds locks for as long as the other end
-/// takes to answer.
+/// Everything that can be worked out before the transaction opens,
+/// including the rate lookup, so the transaction holds its locks only for
+/// the writes.
 async fn prepare(
     pool: &PgPool,
-    rates: &RatesClient,
     workspace_id: &str,
     input: &TransactionInput<'_>,
 ) -> Result<Prepared> {
@@ -865,7 +858,6 @@ async fn prepare(
     let date = input.date.date_naive();
     let resolved = fx::service::resolve(
         pool,
-        rates,
         &source.currency_code,
         &workspace.currency_code,
         date,

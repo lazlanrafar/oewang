@@ -207,14 +207,93 @@ export function transactionHistory(
 	return api<HistoryEntry[]>({ path: `/v1/transactions/${id}/history`, token });
 }
 
-export function fxRate(
-	from: string,
-	to: string,
-	date: string,
+
+/**
+ * One currency in the stored daily snapshot, against the workspace's own
+ * (FX-1, D96). The code is the row id: one row per currency.
+ */
+export type SnapshotRate = {
+	id: string;
+	currency_code: string;
+	home_code: string;
+	/** One `currency_code` in `home_code`, as a decimal string. */
+	rate: string;
+	/** One `home_code` in `currency_code`. */
+	inverse: string;
+	/** The snapshot's day, which may be older than the one asked for. */
+	date: string;
+};
+
+/**
+ * Every currency in the newest snapshot, the workspace's own first at rate
+ * one (FX-2). What the currency pickers offer.
+ */
+export function listCurrencies(token?: string): Promise<Envelope<SnapshotRate[]>> {
+	return api<SnapshotRate[]>({ path: '/v1/fx/currencies', token });
+}
+
+/** `search`, `date`, `sort`, `order` and `page`, passed straight through. */
+export function listRates(query: URLSearchParams, token?: string): Promise<Envelope<SnapshotRate[]>> {
+	return api<SnapshotRate[]>({ path: '/v1/fx/rates', query, token });
+}
+
+/**
+ * One thing bought, summed over every purchase of it (ITM-1). An item is
+ * its trimmed, lowercased name together with the paying wallet's currency.
+ */
+export type ItemSummary = {
+	/** `{currency_code}:{key}`. */
+	id: string;
+	key: string;
+	name: string;
+	currency_code: string;
+	purchases: number;
+	last_bought_at: string;
+	last_price: string;
+	last_quantity: string | null;
+	last_unit: string | null;
+	last_transaction_id: string;
+	/**
+	 * The discount lines on the latest purchase's receipt, summed and
+	 * negative, or null. The receipt's, not this item's (D97).
+	 */
+	last_discount: string | null;
+	min_price: string;
+	max_price: string;
+};
+
+/** One time an item was bought (ITM-2). */
+export type ItemPurchase = {
+	id: string;
+	transaction_id: string;
+	transaction_name: string | null;
+	wallet_name: string;
+	date: string;
+	name: string;
+	brand: string | null;
+	quantity: string | null;
+	unit: string | null;
+	/** One unit's price: the unit price, else amount over quantity, else the amount. */
+	price: string;
+	amount: string;
+	currency_code: string;
+	/** The discount lines on this purchase's receipt, summed and negative, or null. */
+	transaction_discount: string | null;
+};
+
+/** `search`, `key`+`currency`, `sort`, `order` and `page`, passed straight through. */
+export function listItems(query: URLSearchParams, token?: string): Promise<Envelope<ItemSummary[]>> {
+	return api<ItemSummary[]>({ path: '/v1/items', query, token });
+}
+
+export function itemHistory(
+	key: string,
+	currency: string,
+	page: number,
 	token?: string
-): Promise<Envelope<{ from: string; to: string; rate: string; source: string; date: string }>> {
-	const query = new URLSearchParams({ from, to, date });
-	return api({ path: '/v1/fx/rate', query, token });
+): Promise<Envelope<ItemPurchase[]>> {
+	const query = new URLSearchParams({ key, currency, page: String(page), limit: '100' });
+	return api<ItemPurchase[]>({ path: '/v1/items/history', query, token });
 }
 
 // ----------------------------------------------------------------- writes
@@ -567,19 +646,21 @@ export async function walletRates(
 	);
 	if (foreign.length === 0) return {};
 
-	const today = new Date().toISOString().slice(0, 10);
+	// One read of the newest snapshot, every rate already against the
+	// workspace currency (FX-2, D96), rather than one lookup per currency.
+	let snapshot: SnapshotRate[] = [];
+	try {
+		const result = await listCurrencies(token);
+		snapshot = result.data ?? [];
+	} catch {
+		// Deliberately swallowed: see the note above.
+	}
+
 	const rates: Record<string, string> = {};
-
-	await Promise.all(
-		foreign.map(async (code) => {
-			try {
-				const result = await fxRate(code, base, today, token);
-				if (result.data) rates[code] = result.data.rate;
-			} catch {
-				// Deliberately swallowed: see the note above.
-			}
-		})
-	);
-
+	for (const row of snapshot) {
+		if (row.home_code === base && foreign.includes(row.currency_code)) {
+			rates[row.currency_code] = row.rate;
+		}
+	}
 	return rates;
 }

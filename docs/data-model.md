@@ -266,7 +266,7 @@ CREATE UNIQUE INDEX exchange_rates_pair_date_idx
   ON exchange_rates (base_code, quote_code, date);
 ```
 
-Filled by a daily job from exchangerate.host (D44) for every pair the workspace actually uses: each distinct wallet currency against the workspace currency. A rate the user typed by hand is stored on the transaction row, never written back here.
+Filled by a daily job with one call to APILayer's Exchange Rate API (D44, D96): the whole snapshot for the day, every currency against the source's base (EUR), including the base itself at 1. A pair is read as a cross rate through that base, `rate(base→quote) / rate(base→from)`, computed in the query and rounded to 8 places; a direct row for the pair wins if one exists. The base's own row is also how the job knows the day is already stored. A rate the user typed by hand is stored on the transaction row, never written back here.
 
 The table is read when prefilling a form and when resolving a rate at write time ([rate resolution](#rate-resolution-at-write-time)). No report path consults it, because `base_amount` was already computed.
 
@@ -670,13 +670,13 @@ That is why the 100 ms list target in [success metrics](prd.md#7-success-metrics
 |---|---|---|---|
 | 1 | No conversion | `same` | Wallet currency equals the workspace currency. Rate is 1 and nothing is looked up. This is the ordinary case |
 | 2 | The request | `user` | The client sent a rate the user saw and confirmed in the form |
-| 3 | Live source | `live` | The rate for the transaction's date: the cached row for that day if there is one, otherwise fetched from exchangerate.host and cached |
-| 4 | Cache | `cache` | The live source did not answer. The newest cached rate for the pair is used, and `base_rate_date` records how old it is |
+| 3 | Live source | `live` | The source's rate for the transaction's date, read from that day's snapshot (direct or through the base) |
+| 4 | Cache | `cache` | The day has no snapshot. The newest snapshot for the pair is used, and `base_rate_date` records how old it is |
 | 5 | Nothing | n/a | No cached rate has ever existed for this pair. `FX_RATE_UNAVAILABLE`, and the form asks the user to type one |
 
-Step 3 reaches for the cache for that exact day before calling out. It is the same number the live source would return, written by the daily job or by an earlier transaction, so going to a third party for it would put a network call in front of a user waiting for a save and change nothing. Both report `live`, because the value came from the live source either way; `cache` means the fallback in step 4, where the day asked for has no rate at all.
+No step calls the source (D96). The free plan allows 100 calls a month, so the daily job is its only caller and every step here is a local read. Step 3 reports `live` because the value is the source's rate for that day; `cache` means the fallback in step 4, where the day asked for has no snapshot at all.
 
-Resolution happens before the write transaction opens. A network call inside an open transaction holds wallet locks for as long as the other end takes to answer.
+Resolution happens before the write transaction opens, so the transaction holds wallet locks only for the writes.
 
 Step 5 is the honest end of the ladder. A rate cannot be invented from nothing, and a brand-new foreign wallet on a day the source is down has no history to fall back on. The form already accepts a typed rate, so the user is never stuck, only asked.
 

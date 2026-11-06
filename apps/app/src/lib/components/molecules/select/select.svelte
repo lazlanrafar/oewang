@@ -18,6 +18,12 @@
 		colorClass?: string;
 		/** An icon before the label. Wins over `colorClass`. */
 		icon?: Component;
+		/**
+		 * A quiet figure at the row's right edge, such as a currency's rate.
+		 * In the list only: the trigger shows the label alone, and search
+		 * matches the label, never this.
+		 */
+		detail?: string;
 	};
 
 	/** The fallback mark, used by a row without one and by the create row. */
@@ -166,7 +172,12 @@
 			</SelectPrimitive.Trigger>
 			<SelectPrimitive.Content>
 				{#each items as item (item.value)}
-					<SelectPrimitive.Item value={item.value}>{item.label}</SelectPrimitive.Item>
+					<SelectPrimitive.Item value={item.value}>
+						{item.label}
+						{#if item.detail}
+							<span class="text-subtle ml-auto pl-3 text-xs tabular-nums">{item.detail}</span>
+						{/if}
+					</SelectPrimitive.Item>
 				{/each}
 			</SelectPrimitive.Content>
 		</SelectPrimitive.Root>
@@ -203,9 +214,15 @@
 			</span>
 		{/snippet}
 		{#snippet item(entry)}
-			<span class="flex items-center space-x-2 py-1">
+			{@const detail = byValue.get(entry.id)?.detail}
+			<span class="flex w-full min-w-0 items-center space-x-2 py-1">
 				{@render markOf(byValue.get(entry.id))}
 				<span class="text-body line-clamp-1 font-medium">{entry.label}</span>
+				{#if detail}
+					<span class="text-subtle ml-auto shrink-0 pl-3 text-xs font-normal tabular-nums">
+						{detail}
+					</span>
+				{/if}
 			</span>
 		{/snippet}
 	</Combobox>

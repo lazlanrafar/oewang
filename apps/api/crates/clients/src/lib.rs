@@ -13,6 +13,6 @@ pub mod telegram;
 
 pub use mailer::Mailer;
 pub use owe1_client::{EventStream, Owe1Client, Owe1ClientError, StreamEvent};
-pub use rates::RatesClient;
+pub use rates::{RatesClient, Snapshot};
 pub use storage::{FileStore, Storage};
 pub use telegram::TelegramClient;

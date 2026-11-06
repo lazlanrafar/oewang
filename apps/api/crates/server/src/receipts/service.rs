@@ -184,7 +184,6 @@ pub async fn read_and_save(state: &AppState, actor: Actor<'_>, file_id: &str) ->
 
     let saved = transactions::create_with_items(
         &state.db,
-        &state.rates,
         actor,
         TransactionInput {
             kind: TransactionType::Expense,

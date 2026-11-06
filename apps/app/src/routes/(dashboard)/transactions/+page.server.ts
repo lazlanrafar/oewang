@@ -15,7 +15,7 @@ import type { PageServerLoad } from './$types';
  * refresh, the back button and a pasted link all reproduce the same view
  * (TXN-9, UI-8, D55). Nothing is filtered in the browser.
  */
-export const load: PageServerLoad = async ({ depends, locals, url, parent }) => {
+export const load: PageServerLoad = async ({ depends, locals, url }) => {
 	const token = locals.accessToken;
 	const query = ledger.filterParams(url);
 
@@ -39,23 +39,11 @@ export const load: PageServerLoad = async ({ depends, locals, url, parent }) => 
 		INVALIDATION_KEYS.transactionFilters,
 		INVALIDATION_KEYS.walletBalances
 	);
-	const { me } = await parent();
-	const workspaceCurrency = me.workspace.currency_code;
-
 	const [transactions, wallets, categories] = await Promise.all([
 		ledger.listTransactions(query, token),
 		ledger.listWallets(token),
 		ledger.listCategories(token)
 	]);
-
-	// A rate suggestion for the form, only when the default wallet is held in
-	// a currency other than the workspace's (TXN-20).
-	const walletRows = wallets.data ?? [];
-	const defaultWallet = walletRows.find((wallet) => wallet.is_default) ?? walletRows[0];
-	const suggestion =
-		defaultWallet && defaultWallet.currency_code !== workspaceCurrency
-			? await suggestRate(defaultWallet.currency_code, workspaceCurrency, token)
-			: null;
 
 	// The row the detail sheet is showing, with its audit history. Loaded
 	// here rather than fetched from the browser, because the browser never
@@ -73,7 +61,6 @@ export const load: PageServerLoad = async ({ depends, locals, url, parent }) => 
 
 	return {
 		transactions: transactions.data ?? [],
-		suggestedRate: suggestion,
 		detail,
 		editing: editing ?? (detail && detail.transaction.id === editId ? detail.transaction : null),
 		// The receipt the canvas is open on, so the panel can name the file
@@ -107,26 +94,6 @@ export const load: PageServerLoad = async ({ depends, locals, url, parent }) => 
 	};
 };
 
-/**
- * Today's rate for a pair, or null.
- *
- * A suggestion for the form and nothing else: the rate the user confirms is
- * what gets stored (D39). A missing rate is not an error here, because the
- * form accepts a typed one.
- */
-async function suggestRate(
-	from: string,
-	to: string,
-	token?: string
-): Promise<string | null> {
-	try {
-		const today = new Date().toISOString().slice(0, 10);
-		const result = await ledger.fxRate(from, to, today, token);
-		return result.data?.rate ?? null;
-	} catch {
-		return null;
-	}
-}
 
 /**
  * The vault file `?canvas=…&id=…` points at, or null.

@@ -374,7 +374,7 @@ pub async fn adjust_wallet(
 
     let result = async {
         let target = money("balance", &body.balance)?;
-        service::adjust_wallet_balance(&state.db, &state.rates, actor(&auth), &id, target).await
+        service::adjust_wallet_balance(&state.db, actor(&auth), &id, target).await
     }
     .await;
 

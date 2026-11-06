@@ -264,7 +264,7 @@ Requirements: WAL-5, WAL-6, TXN-18, TXN-19, TXN-20, TXN-21, TXN-22
 - [x] `wallets.currency_code`, not null, defaulting to the workspace currency. A workspace that never touches it behaves exactly as before
 - [x] Both currency locks enforced, each with its own error code
 - [x] `exchange_rates` cache table with a unique index on pair and date
-- [x] A daily job pulls rates from exchangerate.host into `exchange_rates`, for every wallet-currency to workspace-currency pair in use (D44)
+- [x] A daily job pulls rates from exchangerate.host into `exchange_rates`, for every wallet-currency to workspace-currency pair in use (D44; now one APILayer snapshot a day, every pair read through it, D96)
 - [x] `GET /v1/fx/rate` returns a suggestion for the form
 - [x] Write-time resolution in order: same, request, live, newest cache, then `FX_RATE_UNAVAILABLE` only when no cached rate has ever existed (TXN-22)
 - [x] `base_rate_source` and `base_rate_date` are stored on every row
@@ -712,6 +712,26 @@ Requirements: USG-1, USG-2, USG-3
 - [ ] Verify in browser: a receipt parse and a chat turn each move the figures
 
 ---
+
+### US-054: Database pages: currency rates and items
+Requirements: FX-1, ITM-1, ITM-2
+
+- [x] Sidebar group Database, below Settings: Currency rates and Items
+- [x] `GET /v1/fx/rates`: the newest snapshot on or before `date`, every currency in the workspace currency and inverse, cross rates computed in `numeric` (Rust test)
+- [x] `GET /v1/items` and `GET /v1/items/history`: items grouped by trimmed lowercased name and currency, price per purchase worked out in SQL, other workspaces and deleted transactions left out, `%` and `_` literal in search (Rust tests)
+- [x] Both pages are standard list screens (D81): search, sort and page in the URL, two empty states, the shared table; the item sheet opens from `?item=`
+- [x] Verified locally in the browser against real receipts and today's snapshot
+- [x] Discount lines (negative amount) are not items; each purchase reports its receipt's discount sum, and the list marks an item whose latest receipt had one (Rust test)
+
+### US-055: Currency picker on the rate snapshot
+Requirements: FX-2
+
+- [x] `GET /v1/fx/currencies`: every currency in the newest snapshot, the workspace's first at one (Rust test)
+- [x] Loaded once by the dashboard layout into the workspace lists; `SelectCurrency` needs no list and shows each rate
+- [x] Used by the transaction form, the receipt confirmation sheet, the account form and, inside the shell, the workspace form (the standalone page keeps its fixed list)
+- [x] The transaction form prefills the entry rate (cross rates exact, `divideDecimals`) without overwriting a typed one, and suggests the base rate for the chosen wallet rather than only the default one
+- [x] Wallet totals on the accounts page read the same snapshot in one call instead of one lookup per currency
+- [x] Verified locally in the browser: USD picked, rate prefilled
 
 ## Coverage check
 

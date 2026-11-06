@@ -4,7 +4,6 @@
 //! database rather than a mock: `#[sqlx::test]` gives each test its own
 //! schema and drops it afterwards.
 
-use oewang_clients::RatesClient;
 use oewang_domain::AppError;
 use rust_decimal::Decimal;
 use sqlx::PgPool;
@@ -96,13 +95,6 @@ async fn audit_actions(pool: &PgPool, entity_id: &str) -> Vec<String> {
     .fetch_all(pool)
     .await
     .unwrap()
-}
-
-/// A rate client with nowhere to call, so no test reaches the network. Every
-/// lookup answers `None`, which is what the resolution ladder's cache steps
-/// are for.
-fn offline_rates() -> RatesClient {
-    RatesClient::new("http://rates.invalid".into(), None)
 }
 
 fn decimal(value: &str) -> Decimal {
@@ -410,15 +402,9 @@ async fn should_write_one_income_for_the_difference_when_a_balance_is_adjusted_u
     fixture(&pool, "IDR").await;
     let wallet = make_wallet(&pool, "Cash", None).await;
 
-    let after = service::adjust_wallet_balance(
-        &pool,
-        &offline_rates(),
-        actor(),
-        &wallet,
-        decimal("100000"),
-    )
-    .await
-    .unwrap();
+    let after = service::adjust_wallet_balance(&pool, actor(), &wallet, decimal("100000"))
+        .await
+        .unwrap();
 
     assert_eq!(after.balance, decimal("100000.0000"));
     assert_eq!(balance(&pool, &wallet).await, decimal("100000.0000"));
@@ -439,15 +425,9 @@ async fn should_write_one_expense_for_the_difference_when_a_balance_is_adjusted_
         .await
         .unwrap();
 
-    let after = service::adjust_wallet_balance(
-        &pool,
-        &offline_rates(),
-        actor(),
-        &wallet,
-        decimal("90000.50"),
-    )
-    .await
-    .unwrap();
+    let after = service::adjust_wallet_balance(&pool, actor(), &wallet, decimal("90000.50"))
+        .await
+        .unwrap();
 
     assert_eq!(after.balance, decimal("90000.5000"));
 
@@ -465,7 +445,7 @@ async fn should_write_one_expense_for_the_difference_when_a_balance_is_adjusted_
 async fn should_write_nothing_when_the_balance_is_already_the_target(pool: PgPool) {
     fixture(&pool, "IDR").await;
     let wallet = make_wallet(&pool, "Cash", None).await;
-    service::adjust_wallet_balance(&pool, &offline_rates(), actor(), &wallet, decimal("100000"))
+    service::adjust_wallet_balance(&pool, actor(), &wallet, decimal("100000"))
         .await
         .unwrap();
 
@@ -473,15 +453,9 @@ async fn should_write_nothing_when_the_balance_is_already_the_target(pool: PgPoo
 
     // Asking for the balance it already has is not an error, and a
     // zero-amount transaction is never written.
-    let after = service::adjust_wallet_balance(
-        &pool,
-        &offline_rates(),
-        actor(),
-        &wallet,
-        decimal("100000.0000"),
-    )
-    .await
-    .unwrap();
+    let after = service::adjust_wallet_balance(&pool, actor(), &wallet, decimal("100000.0000"))
+        .await
+        .unwrap();
 
     assert_eq!(after.balance, decimal("100000.0000"));
     assert_eq!(transactions(&pool).await.len(), before);
@@ -504,10 +478,9 @@ async fn should_land_on_the_target_in_its_own_currency_when_the_wallet_is_foreig
     .await
     .unwrap();
 
-    let after =
-        service::adjust_wallet_balance(&pool, &offline_rates(), actor(), &wallet, decimal("250"))
-            .await
-            .unwrap();
+    let after = service::adjust_wallet_balance(&pool, actor(), &wallet, decimal("250"))
+        .await
+        .unwrap();
 
     assert_eq!(after.currency_code, "EUR");
     assert_eq!(after.balance, decimal("250.0000"), "euros, not rupiah");

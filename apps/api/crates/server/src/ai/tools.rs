@@ -24,7 +24,6 @@
 //! because a model's arithmetic error looks exactly like a correct answer.
 
 use chrono::{DateTime, Utc};
-use oewang_clients::RatesClient;
 use oewang_db::{
     repositories::{
         categories, transactions as repo,
@@ -91,7 +90,6 @@ pub struct ToolOutcome {
 
 pub async fn execute(
     pool: &PgPool,
-    rates: &RatesClient,
     turns: &TurnStore,
     max_amount: Decimal,
     request: ToolRequest<'_>,
@@ -148,8 +146,8 @@ pub async fn execute(
         ToolCall::GetBurnRate(args) => {
             analysis(pool, turns, &request, Analysis::BurnRate, args).await
         }
-        ToolCall::CreateTransaction(args) => create_transaction(pool, rates, actor, args).await,
-        ToolCall::UpdateTransaction(args) => update_transaction(pool, rates, actor, args).await,
+        ToolCall::CreateTransaction(args) => create_transaction(pool, actor, args).await,
+        ToolCall::UpdateTransaction(args) => update_transaction(pool, actor, args).await,
         ToolCall::DeleteTransaction(args) => {
             delete_transaction(pool, turns, actor, request.session_id, args).await
         }
@@ -664,7 +662,6 @@ fn describe_span(from: DateTime<Utc>, to: DateTime<Utc>) -> &'static str {
 
 async fn create_transaction(
     pool: &PgPool,
-    rates: &RatesClient,
     actor: Actor<'_>,
     args: WriteTransactionArgs,
 ) -> Result<ToolOutcome> {
@@ -692,7 +689,7 @@ async fn create_transaction(
         attachment_ids: None,
     };
 
-    let row = transactions::service::create(pool, rates, actor, input).await?;
+    let row = transactions::service::create(pool, actor, input).await?;
     let detail = transactions::service::find(pool, actor.workspace_id, &row.id).await?;
 
     Ok(written(&detail, "Created"))
@@ -705,7 +702,6 @@ async fn create_transaction(
 /// uses (TXN-4), and a field the model did not name keeps its value.
 async fn update_transaction(
     pool: &PgPool,
-    rates: &RatesClient,
     actor: Actor<'_>,
     args: WriteTransactionArgs,
 ) -> Result<ToolOutcome> {
@@ -756,7 +752,7 @@ async fn update_transaction(
         attachment_ids: None,
     };
 
-    transactions::service::update(pool, rates, actor, &id, input).await?;
+    transactions::service::update(pool, actor, &id, input).await?;
     let detail = transactions::service::find(pool, actor.workspace_id, &id).await?;
 
     Ok(written(&detail, "Updated"))

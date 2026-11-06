@@ -5,7 +5,9 @@ import {
 	addDecimals,
 	compareDecimals,
 	currencyDigits,
+	divideDecimals,
 	formatMoney,
+	formatRate,
 	isNegative,
 	isZero,
 	multiplyDecimals,
@@ -50,6 +52,30 @@ describe('roundDecimal', () => {
 		// 2^53 is where a JavaScript number starts losing integers. The whole
 		// point of keeping money as a string is that this still works.
 		expect(roundDecimal('9007199254740993.0000', 0)).toBe('9007199254740993');
+	});
+});
+
+describe('divideDecimals', () => {
+	it('should divide exactly and round half away from zero', () => {
+		// IDR per SGD over IDR per USD: USD per SGD.
+		expect(divideDecimals('13106.0', '16795.0')).toBe('0.78035130');
+		expect(divideDecimals('1', '3', 4)).toBe('0.3333');
+		expect(divideDecimals('2', '3', 4)).toBe('0.6667');
+		expect(divideDecimals('-1', '8', 2)).toBe('-0.13');
+		expect(divideDecimals('18181.81818182', '1')).toBe('18181.81818182');
+	});
+
+	it('should refuse a zero denominator', () => {
+		expect(() => divideDecimals('1', '0.000')).toThrow(RangeError);
+	});
+});
+
+describe('formatRate', () => {
+	it('should keep four places at or above one and eight below it', () => {
+		expect(formatRate('18181.81818182')).toBe('18.181,8182');
+		expect(formatRate('0.00005518')).toBe('0,00005518');
+		expect(formatRate('1.10000000')).toBe('1,1');
+		expect(formatRate('20000.00000000')).toBe('20.000');
 	});
 });
 

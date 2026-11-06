@@ -1,9 +1,13 @@
 //! Rate resolution at write time, and the job that fills the cache.
 //!
-//! The ladder is docs/data-model.md#rate-resolution-at-write-time. It has
-//! five steps and stops at the first that works. Step 5 is the honest end:
-//! a rate cannot be invented from nothing, so the write is refused and the
-//! form asks the user to type one (TXN-22, D43).
+//! The ladder is docs/data-model.md#rate-resolution-at-write-time. It stops
+//! at the first step that works. The last is the honest end: a rate cannot
+//! be invented from nothing, so the write is refused and the form asks the
+//! user to type one (TXN-22, D43).
+//!
+//! Nothing on the write path calls the rate source. The free plan allows
+//! 100 calls a month, so the daily job is its only caller and every lookup
+//! here is a local read (D96).
 
 use chrono::NaiveDate;
 use oewang_db::{repositories::fx, PgPool};
@@ -42,7 +46,6 @@ impl ResolvedRate {
 /// over any lookup, because a bank's rate is not the market rate (D39).
 pub async fn resolve(
     pool: &PgPool,
-    rates: &oewang_clients::RatesClient,
     base_code: &str,
     quote_code: &str,
     date: NaiveDate,
@@ -64,12 +67,8 @@ pub async fn resolve(
         }
     }
 
-    // 3. The cache for this exact day, then the live source.
-    //
-    // The documented order puts the live call first, but a cached row for
-    // the day it is for is the same number the live call would return, and
-    // reaching for it first keeps a third party out of the hot path. Both
-    // report `live`, because the value came from the live source either way.
+    // 3. The day's snapshot, filled by the daily job. Reported as `live`,
+    //    because the value is the source's rate for that day.
     if let Some(cached) = fx::find_rate(pool, base_code, quote_code, date)
         .await
         .map_err(internal)?
@@ -81,19 +80,6 @@ pub async fn resolve(
         });
     }
 
-    if let Some(rate) = rates.rate(base_code, quote_code, date).await {
-        // Written back so the next transaction on this day is a local read.
-        fx::upsert_rate(pool, base_code, quote_code, date, round_rate(rate), "api")
-            .await
-            .map_err(internal)?;
-
-        return Ok(ResolvedRate {
-            rate: round_rate(rate),
-            source: RateSource::Live,
-            date,
-        });
-    }
-
     // 4. The newest cached rate for the pair, however old.
     if let Some(cached) = fx::newest_rate(pool, base_code, quote_code)
         .await
@@ -101,7 +87,7 @@ pub async fn resolve(
     {
         tracing::warn!(
             %base_code, %quote_code, wanted = %date, using = %cached.date,
-            "rate source unavailable, falling back to the cache"
+            "no snapshot for the day, falling back to the newest cached rate"
         );
         return Ok(ResolvedRate {
             rate: round_rate(cached.rate),
@@ -118,9 +104,8 @@ pub async fn resolve(
 /// The ladder without a live call, for an imported row (TXN-23, D45).
 ///
 /// A statement can cover months, so each row converts at the rate for its
-/// own date. Reaching for the live source once per row would be thousands
-/// of calls for one file, so this stops at the cache: a row with no rate
-/// for its date is skipped and reported, and the file still imports.
+/// own date, and only that date's rate: a row with no rate for its date is
+/// skipped and reported, and the file still imports.
 pub async fn resolve_cached(
     executor: impl sqlx::PgExecutor<'_>,
     base_code: &str,
@@ -160,47 +145,149 @@ pub async fn resolve_cached(
 /// user has not given yet.
 pub async fn suggest(
     pool: &PgPool,
-    rates: &oewang_clients::RatesClient,
     base_code: &str,
     quote_code: &str,
     date: NaiveDate,
 ) -> Result<ResolvedRate> {
-    resolve(pool, rates, base_code, quote_code, date, None).await
+    resolve(pool, base_code, quote_code, date, None).await
 }
 
-/// Fill the cache for every pair in use (D44).
+/// What one run of the daily job did.
+#[derive(Debug, PartialEq, Eq)]
+pub enum Refresh {
+    /// No key is configured, so no call was made.
+    Disabled,
+    /// The day's snapshot is already stored; no call was made.
+    AlreadyFresh,
+    /// The source did not answer. The ladder falls back to older rates.
+    Unavailable,
+    /// The snapshot for `date` was stored, `written` currencies in it.
+    Stored { date: NaiveDate, written: u64 },
+}
+
+/// Store today's snapshot of every currency, in one call to the source
+/// (D44, D96).
 ///
-/// Returns how many pairs were written, which is what the log line carries.
-/// A pair the source cannot answer is skipped: the job filling nothing is
-/// not a reason to fail, because the ladder has a step for exactly that.
+/// Asks the cache first, so a process that restarts many times a day still
+/// spends one call. Every pair is read through this snapshot afterwards.
 pub async fn refresh_cache(
     pool: &PgPool,
     rates: &oewang_clients::RatesClient,
-    date: NaiveDate,
-) -> Result<usize> {
-    let pairs = fx::pairs_in_use(pool).await.map_err(internal)?;
-    let mut written = 0;
+    today: NaiveDate,
+) -> Result<Refresh> {
+    if !rates.is_configured() {
+        return Ok(Refresh::Disabled);
+    }
 
-    for pair in pairs {
-        let Some(rate) = rates.rate(&pair.base_code, &pair.quote_code, date).await else {
-            continue;
-        };
+    if fx::has_snapshot(pool, today).await.map_err(internal)? {
+        return Ok(Refresh::AlreadyFresh);
+    }
 
-        fx::upsert_rate(
-            pool,
-            &pair.base_code,
-            &pair.quote_code,
-            date,
-            round_rate(rate),
-            "api",
-        )
+    let Some(snapshot) = rates.latest().await else {
+        return Ok(Refresh::Unavailable);
+    };
+
+    // `numeric(19, 8)` holds less than 10^11. Nothing real comes near it; a
+    // value that does is dropped rather than failing the whole snapshot.
+    let ceiling = Decimal::from(100_000_000_000_u64);
+    let quotes: Vec<(String, Decimal)> = snapshot
+        .rates
+        .into_iter()
+        .map(|(code, rate)| (code, round_rate(rate)))
+        .filter(|(_, rate)| *rate > Decimal::ZERO && *rate < ceiling)
+        .collect();
+
+    let written = fx::upsert_snapshot(pool, &snapshot.base, snapshot.date, &quotes)
         .await
         .map_err(internal)?;
 
-        written += 1;
-    }
+    Ok(Refresh::Stored {
+        date: snapshot.date,
+        written,
+    })
+}
 
-    Ok(written)
+/// One page of the newest stored snapshot on or before a day, every
+/// currency against the workspace's own (D96, FX-1).
+///
+/// Also returns the workspace currency, which is what every rate on the
+/// page is expressed in.
+pub async fn list_rates(
+    pool: &PgPool,
+    workspace_id: &str,
+    filters: &fx::SnapshotFilters<'_>,
+    sort: fx::SnapshotSort,
+    page: oewang_domain::Page,
+) -> Result<(String, Vec<fx::SnapshotRateRow>, i64)> {
+    let workspace = oewang_db::repositories::accounts::find_workspace(pool, workspace_id)
+        .await
+        .map_err(internal)?
+        .ok_or(AppError::NotFound)?;
+    let home = workspace.currency_code;
+
+    let rows = fx::list_snapshot_rates(
+        pool,
+        &home,
+        filters,
+        sort,
+        i64::from(page.limit),
+        page.offset(),
+    )
+    .await
+    .map_err(internal)?;
+    let total = fx::count_snapshot_rates(pool, &home, filters)
+        .await
+        .map_err(internal)?;
+
+    Ok((home, rows, total))
+}
+
+/// Every currency the newest snapshot carries, the workspace's own first at
+/// rate one, each with its rate against the workspace currency (FX-2).
+///
+/// The pickers' list. Unpaged, because the set is bounded by the source
+/// (about 170) and a picker needs all of it; the ceiling below only guards
+/// against a source that one day sends far more.
+pub async fn list_currencies(
+    pool: &PgPool,
+    workspace_id: &str,
+) -> Result<(String, Vec<fx::SnapshotRateRow>)> {
+    const CEILING: i64 = 1_000;
+
+    let workspace = oewang_db::repositories::accounts::find_workspace(pool, workspace_id)
+        .await
+        .map_err(internal)?
+        .ok_or(AppError::NotFound)?;
+    let home = workspace.currency_code;
+
+    let mut rows = fx::list_snapshot_rates(
+        pool,
+        &home,
+        &fx::SnapshotFilters::default(),
+        fx::SnapshotSort::CodeAsc,
+        CEILING,
+        0,
+    )
+    .await
+    .map_err(internal)?;
+
+    // The home currency is not listed against itself by the query, but a
+    // picker must offer it, and it is always worth exactly one of itself.
+    let date = rows
+        .first()
+        .map(|row| row.date)
+        .unwrap_or_else(|| chrono::Utc::now().date_naive());
+    rows.insert(
+        0,
+        fx::SnapshotRateRow {
+            currency_code: home.clone(),
+            rate: Decimal::ONE,
+            inverse: Decimal::ONE,
+            date,
+        },
+    );
+
+    Ok((home, rows))
 }
 
 fn internal(error: sqlx::Error) -> AppError {

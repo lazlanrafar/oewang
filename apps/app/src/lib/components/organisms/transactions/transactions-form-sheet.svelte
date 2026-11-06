@@ -37,10 +37,8 @@
 		attachments = $bindable([]),
 		accounts,
 		categories,
-		currencies = ['IDR', 'USD', 'EUR', 'SGD'],
 		baseCurrency = 'IDR',
 		walletCurrency = baseCurrency,
-		suggestedRate = null,
 		saving = false,
 		fieldErrors,
 		/** The form action this sheet posts to, so the page owns the write. */
@@ -59,10 +57,8 @@
 		attachments?: import('../../molecules/file-dropzone/index.js').UploadedFile[];
 		accounts: ComboboxItem[];
 		categories: CategoryItem[];
-		currencies?: string[];
 		baseCurrency?: string;
 		walletCurrency?: string;
-		suggestedRate?: string | null;
 		saving?: boolean;
 		fieldErrors?: Record<string, string>;
 		action?: string;
@@ -107,10 +103,8 @@
 				bind:attachments
 				{accounts}
 				{categories}
-				{currencies}
 				{baseCurrency}
 				{walletCurrency}
-				{suggestedRate}
 				{fieldErrors}
 				{createLabel}
 				{onCreateAccount}

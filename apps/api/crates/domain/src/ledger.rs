@@ -69,9 +69,10 @@ pub enum RateSource {
     Same,
     /// The rate the user saw and confirmed in the form.
     User,
-    /// Fetched from the rate source for the transaction's date.
+    /// The source's rate for the transaction's date, from that day's
+    /// snapshot (D96).
     Live,
-    /// The live source did not answer; the newest cached rate was used, and
+    /// The day has no snapshot; the newest one was used, and
     /// `base_rate_date` records how old it is.
     Cache,
 }

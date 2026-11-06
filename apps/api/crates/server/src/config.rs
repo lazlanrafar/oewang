@@ -44,13 +44,11 @@ pub struct Config {
     pub ai_signing_public_keys: Vec<(String, [u8; 32])>,
     pub ai_request_timeout: Duration,
 
-    /// The daily rate source (D44). The key is optional: the keyless
-    /// endpoint still answers, and a lookup that fails for any reason just
-    /// moves the resolution ladder down a step (TXN-22).
+    /// The daily rate source (D44, D96). Without a key no call is made and
+    /// the ladder works from whatever is cached, down to asking the user
+    /// for a rate (TXN-22).
     pub fx_api_url: String,
     pub fx_access_key: Option<Secret>,
-    /// How often the daily job refreshes the cache.
-    pub fx_refresh_interval: Duration,
 
     /// The Telegram bot (D84). Absent turns the whole feature off: no
     /// poller starts and the Apps page says the bot is not configured.
@@ -248,9 +246,8 @@ impl Config {
             owe1_enabled,
 
             fx_api_url: optional("FX_API_URL")
-                .unwrap_or_else(|| "https://api.exchangerate.host".into()),
+                .unwrap_or_else(|| "https://api.apilayer.net/exchangerate".into()),
             fx_access_key: optional("FX_ACCESS_KEY").map(Secret::new),
-            fx_refresh_interval: parse_duration("FX_REFRESH_INTERVAL", "24h")?,
 
             telegram: telegram_config()?,
 

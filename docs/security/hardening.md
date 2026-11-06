@@ -52,7 +52,7 @@ The AI service receives image bytes to parse. It never writes them anywhere, nev
 
 ## Outbound calls
 
-The API calls five hosts, each from configuration and never from user input: the AI service, object storage, the email provider (`RESEND_API_KEY`, D40), the exchange-rate source (`FX_API_URL`, D44), and the Telegram Bot API (`TELEGRAM_API_URL`, D84). This line said two until Telegram arrived; email and rates had been added without it.
+The API calls five hosts, each from configuration and never from user input: the AI service, object storage, the email provider (`RESEND_API_KEY`, D40), the exchange-rate source (`FX_API_URL`, D44, D96; once a day, from the refresh job only), and the Telegram Bot API (`TELEGRAM_API_URL`, D84). This line said two until Telegram arrived; email and rates had been added without it.
 
 - Telegram is called for `getUpdates`, `sendMessage`, `editMessageText`, `answerCallbackQuery`, `sendChatAction` and `getFile`, and files are downloaded from the same host. The download path comes from Telegram's `getFile` answer and is fetched only when it is a plain relative path; it is never followed as a URL. The download is capped at `MAX_FILE_BYTES` as it streams, whatever size Telegram claimed.
 - The bot token is part of every Telegram URL path, so the URL is a secret: the client's `Debug` omits it and every `reqwest` error is stripped of its URL before it is logged.

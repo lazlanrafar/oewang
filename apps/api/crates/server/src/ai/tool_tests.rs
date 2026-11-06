@@ -7,7 +7,6 @@
 //! challenge, and the audit row attributed to the real user with
 //! `source: "chat"`.
 
-use oewang_clients::RatesClient;
 use oewang_domain::tools::{
     MAX_CREATED_TRANSACTIONS_PER_TURN, MAX_DELETES_PER_TURN, MAX_WRITES_PER_TURN,
 };
@@ -26,10 +25,6 @@ const OWNER: &str = "usr_owner";
 const MEMBER: &str = "usr_member";
 const SESSION: &str = "ses_1";
 const TURN: &str = "turn_1";
-
-fn offline_rates() -> RatesClient {
-    RatesClient::new("http://rates.invalid".into(), None)
-}
 
 fn ceiling() -> Decimal {
     oewang_domain::tools::default_max_tool_amount()
@@ -61,7 +56,6 @@ async fn call_as(
 ) -> oewang_domain::Result<ToolOutcome> {
     tools::execute(
         pool,
-        &offline_rates(),
         turns,
         ceiling(),
         ToolRequest {
@@ -260,7 +254,6 @@ async fn should_refuse_a_turn_the_api_never_opened(pool: PgPool) {
     // An empty store: no turn was ever opened.
     let error = tools::execute(
         &pool,
-        &offline_rates(),
         &TurnStore::new(),
         ceiling(),
         ToolRequest {
@@ -756,7 +749,6 @@ async fn should_precompute_every_figure_in_a_summary(pool: PgPool) {
     ] {
         tools::execute(
             &pool,
-            &offline_rates(),
             // A fresh turn each time: three creates is the cap, and the
             // fixture needs more than the cap allows one turn to make.
             &store(),
@@ -897,7 +889,6 @@ async fn should_not_reach_another_workspace(pool: PgPool) {
 
     let error = tools::execute(
         &pool,
-        &offline_rates(),
         &turns,
         ceiling(),
         ToolRequest {

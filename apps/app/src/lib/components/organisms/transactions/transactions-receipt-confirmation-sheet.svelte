@@ -56,7 +56,6 @@
 		fileName = '',
 		accounts,
 		categories,
-		currencies = ['IDR', 'USD', 'EUR', 'SGD'],
 		walletCurrency,
 		saving = false,
 		fieldErrors,
@@ -76,7 +75,6 @@
 		fileName?: string;
 		accounts: ComboboxItem[];
 		categories: CategoryItem[];
-		currencies?: string[];
 		/** The currency the chosen wallet holds, which `total` has to be in. */
 		walletCurrency: string;
 		saving?: boolean;
@@ -228,7 +226,7 @@
 					</div>
 					<!-- A currency is not an account: its own picker, so a code
 					     does not render behind a bank icon (D79). -->
-					<SelectCurrency id="receipt-currency" {currencies} bind:value={form.currency} />
+					<SelectCurrency id="receipt-currency" bind:value={form.currency} />
 				</div>
 			</div>
 

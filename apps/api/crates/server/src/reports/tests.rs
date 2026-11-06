@@ -307,7 +307,6 @@ async fn should_list_the_largest_expenses_with_their_share(pool: PgPool) {
 async fn analyse(pool: &PgPool, turns: &TurnStore, tool: &str, args: Value) -> Value {
     tools::execute(
         pool,
-        &oewang_clients::RatesClient::new("http://rates.invalid".into(), None),
         turns,
         oewang_domain::tools::default_max_tool_amount(),
         ToolRequest {

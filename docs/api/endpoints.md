@@ -127,6 +127,8 @@ Balance is never writable through the API. It changes only as a consequence of a
 | Method | Path | Role | Description |
 |---|---|---|---|
 | GET | `/v1/fx/rate` | any | Rate for a currency pair on a date, for prefilling the form. Query: `from`, `to`, `date` (TXN-20) |
+| GET | `/v1/fx/currencies` | any | Every currency in the newest snapshot, unpaged (about 170), the workspace currency first at rate one, each row as in `/v1/fx/rates`. What the currency pickers offer (FX-2) |
+| GET | `/v1/fx/rates` | any | The stored snapshot, paged, every currency against the workspace currency (FX-1). Query: `search` (part of a code), `date` (newest snapshot on or before it, default the newest), `sort` `code` (default) or `rate`, `order`, `page`, `limit`. Row: `{id, currency_code, home_code, rate, inverse, date}`, `rate` being one `currency_code` in `home_code` |
 
 The response is a suggestion. The rate the user confirms is sent back on the transaction and stored there (D39). No read path consults this endpoint, because `base_amount` was computed at write time, so a report is a plain sum.
 
@@ -252,6 +254,19 @@ At most two sample rows travel, and every cell is clamped to 80 characters befor
 | DELETE | `/v1/transactions/{id}/items/{item_id}` | admin+ | Soft delete one |
 
 Line items do not affect wallet balances. Only the parent transaction's `amount` does (TXN-12).
+
+## Items
+
+Every line item across the workspace's live transactions, read only (D97).
+
+| Method | Path | Role | Description |
+|---|---|---|---|
+| GET | `/v1/items` | any | One row per item, paged (ITM-1). Query: `search`, `key` with `currency` (one exact item, both or neither), `sort` `last_bought_at` (default, newest first), `name`, `purchases` or `last_price`, `order`, `page`, `limit` |
+| GET | `/v1/items/history` | any | One item's purchases, newest first, paged (ITM-2). Query: `key`, `currency` (both required), `page`, `limit` |
+
+An item row is `{id, key, name, currency_code, purchases, last_bought_at, last_price, last_quantity, last_unit, last_transaction_id, last_discount, min_price, max_price}`; `id` is `{currency_code}:{key}`. A purchase row is `{id, transaction_id, transaction_name, wallet_name, date, name, brand, quantity, unit, price, amount, currency_code, transaction_discount}`. `price` is one unit's price: `unit_price`, else `amount / quantity`, else `amount`.
+
+A line with a negative amount is a discount and is never an item. `transaction_discount` is the sum of the discount lines on that purchase's transaction (negative, or null), and `last_discount` the same for the latest purchase. It belongs to the receipt, not to the item: items keep no position, so which item a discount followed is not known (D97).
 
 ## Files
 

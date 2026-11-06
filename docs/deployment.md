@@ -125,9 +125,8 @@ Values marked **secret** go in Coolify's secret store, not in a plain environmen
 | `S3_SECRET_ACCESS_KEY` | yes, **secret** | R2 secret access key |
 | `RESEND_API_KEY` | yes, **secret** | Required when `APP_ENV=production`; without it the mailer falls back to the console, which in production means password reset silently does nothing |
 | `EMAIL_FROM` | yes | Sender identity on reset and invite mail |
-| `FX_API_URL` | no | Defaults to the keyless exchangerate.host endpoint |
-| `FX_ACCESS_KEY` | no, **secret** | Only needed on a paid plan. A failed lookup moves the resolution ladder down a step, so this is never load bearing (TXN-22) |
-| `FX_REFRESH_INTERVAL` | no | Default 24h |
+| `FX_API_URL` | no | Defaults to `https://api.apilayer.net/exchangerate` (D96) |
+| `FX_ACCESS_KEY` | yes, **secret** | APILayer Exchange Rate key. Without it no rates are fetched; writes still work from the cache or a typed rate (TXN-22). The free plan is 100 calls a month and the job spends about 30, so one key covers production and one local machine, not more |
 | `TRUST_PROXY_HEADERS` | yes | **Set this to `true`.** Behind a proxy every request arrives from the proxy, so with it off the rate limiter buckets the whole internet together. With it on, `x-forwarded-for` is read, which is only safe because the proxy is the only thing that can reach the port. Both halves of that sentence have to be true at once |
 | `RATE_LIMIT_*`, `UPLOADS_PER_WORKSPACE_PER_DAY`, `REQUEST_TIMEOUT_SECS`, `BODY_LIMIT_BYTES` | no | Limits, documented in [hardening](security/hardening.md#rate-limits-and-resource-limits) |
 | `RUST_LOG` | no | Production wants something quieter than the development default, for example `oewang_api=info,warn`. The binary is `oewang-api`, so its log target is `oewang_api`; a filter naming `oewang_server` silences every line |

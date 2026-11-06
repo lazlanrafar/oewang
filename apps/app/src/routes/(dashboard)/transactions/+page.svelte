@@ -861,7 +861,6 @@
 	categories={categoryItems}
 	{baseCurrency}
 	walletCurrency={draftWalletCurrency}
-	suggestedRate={data.suggestedRate}
 	fieldErrors={form?.fields}
 	action={editing ? '?/update' : '?/create'}
 	createLabel={(typed) => t('common.create_named', { name: typed })}
@@ -883,7 +882,6 @@
 				categories={categoryItems}
 				{baseCurrency}
 				walletCurrency={draftWalletCurrency}
-				suggestedRate={data.suggestedRate}
 				fieldErrors={form?.fields}
 				plain
 			/>

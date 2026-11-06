@@ -346,6 +346,17 @@ Added by D92. See [Usage](features/usage.md).
 | USG-2 | Every model call's input and output tokens are recorded per workspace and per feature, with the model and the member it was made for, in an append-only table. A failed record never fails the call. |
 | USG-3 | A settings page, readable by any member, shows storage used and tokens for this calendar month and all time, in total and by feature. Nothing is limited. |
 
+### 6.14 Database (FX, ITM)
+
+Added by D97. Reference tables under a Database group in the sidebar, below Settings. Read only.
+
+| ID | Requirement |
+|---|---|
+| FX-1 | A page lists the stored daily rate snapshot, every currency against the workspace currency and the inverse, searchable by code, with a date that picks the newest snapshot on or before it. |
+| ITM-1 | A page lists every line item ever bought, one row per item (trimmed, case-insensitive name, per paying currency), with its last price, when it was last bought, how many times, and its lowest and highest price. Searchable and sortable on the server. A line with a negative amount is a discount and is never listed as an item. |
+| ITM-2 | Opening an item shows its price history: every purchase, newest first, with date, price per unit, quantity, total and the transaction, which links to its detail sheet. A purchase whose receipt carried discount lines says so, with their sum; the list marks an item whose latest receipt did. |
+| FX-2 | Every currency picker offers the currencies of the newest stored snapshot, each with its rate against the workspace currency. The transaction form prefills the entry rate and suggests the wallet's base rate from that snapshot; the user's figure always wins (D39). |
+
 ## 7. Success metrics
 
 | Metric | Target |
@@ -419,7 +430,7 @@ Resolved, all on 2026-11-02:
 | Q7 | Is there real data in the old app to migrate? | No. The database starts empty, D16 stands. No migration story. |
 | Q4 | Audit rows are written but nothing reads them. Ship a UI? | Yes, as a per-transaction history in the detail sheet, not a workspace-wide activity page (D46, OPS-8). |
 | Q9 | Can a write fail because the exchange rate source is down? | No. The rate resolves same, then request, then live, then cache, then `FX_RATE_UNAVAILABLE` only when no cached rate has ever existed. A stale rate is stored with its provenance and marked in the UI (D43, TXN-22). |
-| Q10 | Which exchange rate source? | exchangerate.host, free and keyless, pulled daily into the cache (D44). |
+| Q10 | Which exchange rate source? | exchangerate.host, free and keyless, pulled daily into the cache (D44). Since replaced by APILayer's Exchange Rate API, one keyed call a day (D96). |
 | Q11 | What happens when an imported row's currency differs from the wallet's? | Each row converts with the rate for its own date. A row with no rate is skipped and reported (D45, TXN-23). |
 | Q8 | Should the browser-to-web-app hop also be encrypted, accepting that data fetching must move out of SSR loads into client-side calls? | No. TLS alone on that hop, SSR stays (D26, answered 2026-11-02). The two service hops are encrypted. The accepted gap is stated in [which hops are protected](api/encryption.md#which-hops-are-protected). |
 

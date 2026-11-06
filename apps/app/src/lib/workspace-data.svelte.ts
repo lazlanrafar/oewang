@@ -26,11 +26,18 @@ import { invalidateAll } from '$app/navigation';
 export type WorkspaceWallet = { id: string; name: string; currency_code: string };
 export type WorkspaceGroup = { id: string; name: string };
 export type WorkspaceCategory = { id: string; name: string; type: 'income' | 'expense' };
+/**
+ * A currency the pickers offer, from the newest daily snapshot (FX-2,
+ * D96). `rate` is one unit of it in the workspace currency, a decimal
+ * string; the workspace's own is first, at one.
+ */
+export type WorkspaceCurrency = { code: string; rate: string; date: string };
 
 export type WorkspaceLists = {
 	wallets: WorkspaceWallet[];
 	groups: WorkspaceGroup[];
 	categories: WorkspaceCategory[];
+	currencies: WorkspaceCurrency[];
 };
 
 const KEY = Symbol('workspace-lists');
@@ -52,7 +59,7 @@ export function setWorkspaceLists(lists: () => WorkspaceLists) {
  */
 export function workspaceLists(): WorkspaceLists {
 	const read = getContext<(() => WorkspaceLists) | undefined>(KEY);
-	return read?.() ?? { wallets: [], groups: [], categories: [] };
+	return read?.() ?? { wallets: [], groups: [], categories: [], currencies: [] };
 }
 
 type Created = { id: string; name: string };

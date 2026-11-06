@@ -22,6 +22,7 @@
 	import { Input } from '$lib/components/atoms/input';
 	import { Label } from '$lib/components/atoms/label';
 	import { FieldError } from '$lib/components/molecules/field-error';
+	import { SelectCurrency } from '$lib/components/molecules/select-currency';
 	import { SelectGroup, UNGROUPED } from '$lib/components/molecules/select-group';
 	import { t } from '$lib/i18n';
 	import type { Wallet } from '$lib/server/ledger';
@@ -60,9 +61,12 @@
 	// after the sheet was reused for another account.
 	let groupValue = $state(UNGROUPED);
 
-	/* The sheet is reused for the next account, so the field follows it. */
+	let currencyValue = $state('');
+
+	/* The sheet is reused for the next account, so the fields follow it. */
 	$effect(() => {
 		groupValue = account?.group_id ?? UNGROUPED;
+		currencyValue = account?.currency_code ?? baseCurrency;
 	});
 
 	const labelClass = 'text-subtle text-xs font-normal';
@@ -118,14 +122,13 @@
 
 	<div class="grid gap-2">
 		<Label for="account-currency" class={labelClass}>{t('accounts.currency')}</Label>
-		<Input
+		<!-- The snapshot's currencies, each with today's rate (FX-2). -->
+		<SelectCurrency
 			id="account-currency"
 			name={currencyLocked ? undefined : 'currency_code'}
-			maxlength={3}
-			class="uppercase"
 			disabled={currencyLocked}
-			value={account?.currency_code ?? ''}
-			placeholder={baseCurrency}
+			bind:value={currencyValue}
+			ariaLabel={t('accounts.currency')}
 		/>
 		{#if currencyLocked}
 			<!--

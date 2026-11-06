@@ -1,0 +1,35 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT rate AS \"rate!\", date AS \"date!\", source AS \"source!\"\n           FROM (\n               SELECT rate, date, source, 0 AS via\n               FROM exchange_rates\n               WHERE base_code = $1 AND quote_code = $2\n               UNION ALL\n               SELECT round(q.rate / b.rate, 8), q.date, q.source, 1\n               FROM exchange_rates b\n               JOIN exchange_rates q\n                 ON q.base_code = b.base_code AND q.date = b.date\n               WHERE b.quote_code = $1 AND q.quote_code = $2\n           ) found\n           ORDER BY date DESC, via\n           LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "rate!",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 1,
+        "name": "date!",
+        "type_info": "Date"
+      },
+      {
+        "ordinal": 2,
+        "name": "source!",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "b01cafbb24f1eacf5ce5f7773977d3129ca2f12c5017df7f5fd677bac38dc425"
+}

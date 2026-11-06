@@ -22,12 +22,16 @@ export const load: LayoutServerLoad = async ({ locals, cookies }) => {
 	 * claim inside it (AUTH-4): nothing here names one, so no page can be
 	 * served another workspace's rows.
 	 */
-	const [result, workspaces, wallets, groups, categories, notices] = await Promise.all([
+	const [result, workspaces, wallets, groups, categories, currencies, notices] = await Promise.all([
 		readMe(locals.accessToken),
 		listWorkspaces(locals.accessToken),
 		ledger.listWallets(locals.accessToken),
 		ledger.listWalletGroups(locals.accessToken),
 		ledger.listCategories(locals.accessToken),
+		// The currency pickers' list, with today's rates (FX-2). A rate
+		// source that has never answered leaves it empty, and a picker then
+		// offers the workspace's own currencies, so it never blocks the shell.
+		ledger.listCurrencies(locals.accessToken).catch(() => null),
 		// Queued receipts that ended since the last page (D95). A failure to
 		// read them never blocks the shell.
 		receiptNotices(locals.accessToken).catch(() => null)
@@ -56,6 +60,11 @@ export const load: LayoutServerLoad = async ({ locals, cookies }) => {
 				id: category.id,
 				name: category.name,
 				type: category.type
+			})),
+			currencies: (currencies?.data ?? []).map((currency) => ({
+				code: currency.currency_code,
+				rate: currency.rate,
+				date: currency.date
 			}))
 		},
 		receiptNotices: notices?.data ?? [],

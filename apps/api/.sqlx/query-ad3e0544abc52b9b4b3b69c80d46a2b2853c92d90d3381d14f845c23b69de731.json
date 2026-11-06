@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO exchange_rates (id, base_code, quote_code, date, rate, source)\n           SELECT id, $1, code, $2, rate, 'api'\n           FROM UNNEST($3::text[], $4::text[], $5::numeric[]) AS t(id, code, rate)\n           ON CONFLICT (base_code, quote_code, date)\n           DO UPDATE SET rate = EXCLUDED.rate, source = EXCLUDED.source, fetched_at = now()",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Date",
+        "TextArray",
+        "TextArray",
+        "NumericArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "ad3e0544abc52b9b4b3b69c80d46a2b2853c92d90d3381d14f845c23b69de731"
+}

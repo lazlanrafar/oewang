@@ -7,7 +7,6 @@
 //! against one wallet produce the exact final balance.
 
 use chrono::{DateTime, TimeZone, Utc};
-use oewang_clients::RatesClient;
 use oewang_domain::{ledger::TransactionType, AppError};
 use rust_decimal::Decimal;
 use sqlx::PgPool;
@@ -28,13 +27,6 @@ const USER: &str = "usr_test";
 
 fn actor() -> Actor<'static> {
     Actor::web(WORKSPACE, USER)
-}
-
-/// A client with nowhere to call. Every lookup is a `None`, which is what
-/// the ladder's cache steps exist for, and what keeps these tests off the
-/// network.
-fn offline_rates() -> RatesClient {
-    RatesClient::new("http://rates.invalid".into(), None)
 }
 
 fn decimal(value: &str) -> Decimal {
@@ -158,16 +150,14 @@ async fn should_move_the_balance_for_each_type(pool: PgPool) {
     fixture(&pool, "IDR").await;
     let cash = wallet(&pool, "w_cash", "IDR").await;
     let bank = wallet(&pool, "w_bank", "IDR").await;
-    let rates = offline_rates();
 
-    service::create(&pool, &rates, actor(), expense(&cash, "50000"))
+    service::create(&pool, actor(), expense(&cash, "50000"))
         .await
         .unwrap();
     assert_eq!(balance(&pool, &cash).await, decimal("-50000"));
 
     service::create(
         &pool,
-        &rates,
         actor(),
         TransactionInput {
             kind: TransactionType::Income,
@@ -181,7 +171,6 @@ async fn should_move_the_balance_for_each_type(pool: PgPool) {
 
     service::create(
         &pool,
-        &rates,
         actor(),
         TransactionInput {
             kind: TransactionType::Transfer,
@@ -203,7 +192,7 @@ async fn should_write_the_audit_row_in_the_same_transaction(pool: PgPool) {
     fixture(&pool, "IDR").await;
     let cash = wallet(&pool, "w_cash", "IDR").await;
 
-    let row = service::create(&pool, &offline_rates(), actor(), expense(&cash, "50000"))
+    let row = service::create(&pool, actor(), expense(&cash, "50000"))
         .await
         .unwrap();
 
@@ -220,14 +209,9 @@ async fn should_leave_no_trace_when_a_create_is_refused(pool: PgPool) {
     let cash = wallet(&pool, "w_cash", "IDR").await;
 
     // A wallet from nowhere: the row is refused before anything is written.
-    let error = service::create(
-        &pool,
-        &offline_rates(),
-        actor(),
-        expense("w_ghost", "50000"),
-    )
-    .await
-    .unwrap_err();
+    let error = service::create(&pool, actor(), expense("w_ghost", "50000"))
+        .await
+        .unwrap_err();
     assert!(matches!(error, AppError::WalletNotFound), "{error:?}");
 
     assert_eq!(balance(&pool, &cash).await, Decimal::ZERO);
@@ -259,7 +243,6 @@ async fn should_refuse_a_category_from_another_workspace(pool: PgPool) {
 
     let error = service::create(
         &pool,
-        &offline_rates(),
         actor(),
         TransactionInput {
             category_id: Some("c_theirs"),
@@ -282,7 +265,7 @@ async fn should_store_the_base_amount_in_the_workspace_currency(pool: PgPool) {
     let wise = wallet(&pool, "w_wise", "USD").await;
     cache_rate(&pool, "USD", "IDR", "2026-11-02", "16250").await;
 
-    let row = service::create(&pool, &offline_rates(), actor(), expense(&wise, "50"))
+    let row = service::create(&pool, actor(), expense(&wise, "50"))
         .await
         .unwrap();
 
@@ -306,7 +289,6 @@ async fn should_keep_what_the_user_typed_when_the_entry_currency_differed(pool: 
 
     let row = service::create(
         &pool,
-        &offline_rates(),
         actor(),
         TransactionInput {
             amount: decimal("812500"),
@@ -336,7 +318,6 @@ async fn should_refuse_a_foreign_entry_whose_arithmetic_does_not_hold(pool: PgPo
 
     let error = service::create(
         &pool,
-        &offline_rates(),
         actor(),
         TransactionInput {
             amount: decimal("800000"),
@@ -358,17 +339,16 @@ async fn should_walk_every_step_of_the_rate_ladder(pool: PgPool) {
     fixture(&pool, "IDR").await;
     let idr = wallet(&pool, "w_idr", "IDR").await;
     let usd = wallet(&pool, "w_usd", "USD").await;
-    let rates = offline_rates();
 
     // 1. Same currency: rate one, nothing looked up.
-    let same = service::create(&pool, &rates, actor(), expense(&idr, "1000"))
+    let same = service::create(&pool, actor(), expense(&idr, "1000"))
         .await
         .unwrap();
     assert_eq!(same.base_rate_source, "same");
     assert_eq!(same.base_rate, decimal("1.00000000"));
 
     // 5. Nothing at all: refused, and the form asks for a rate.
-    let nothing = service::create(&pool, &rates, actor(), expense(&usd, "50"))
+    let nothing = service::create(&pool, actor(), expense(&usd, "50"))
         .await
         .unwrap_err();
     assert!(
@@ -379,7 +359,6 @@ async fn should_walk_every_step_of_the_rate_ladder(pool: PgPool) {
     // 2. The request: the rate the user confirmed wins over any lookup.
     let requested = service::create(
         &pool,
-        &rates,
         actor(),
         TransactionInput {
             requested_base_rate: Some(decimal("16000")),
@@ -393,7 +372,7 @@ async fn should_walk_every_step_of_the_rate_ladder(pool: PgPool) {
 
     // 3. The source's rate for the day, read from where it was cached.
     cache_rate(&pool, "USD", "IDR", "2026-11-02", "16250").await;
-    let live = service::create(&pool, &rates, actor(), expense(&usd, "50"))
+    let live = service::create(&pool, actor(), expense(&usd, "50"))
         .await
         .unwrap();
     assert_eq!(live.base_rate_source, "live");
@@ -402,7 +381,6 @@ async fn should_walk_every_step_of_the_rate_ladder(pool: PgPool) {
     // 4. The source is down and the day has no rate: the newest one, marked.
     let stale = service::create(
         &pool,
-        &rates,
         actor(),
         TransactionInput {
             date: day(5),
@@ -419,6 +397,129 @@ async fn should_walk_every_step_of_the_rate_ladder(pool: PgPool) {
     );
 }
 
+/// The daily snapshot stores every currency against the source's base
+/// (EUR on the free plan), so a pair the cache never held directly is read
+/// through it: IDR per USD is (IDR per EUR) / (USD per EUR) (D96).
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_read_a_pair_through_the_snapshot_base(pool: PgPool) {
+    fixture(&pool, "IDR").await;
+    let usd = wallet(&pool, "w_usd", "USD").await;
+    cache_rate(&pool, "EUR", "EUR", "2026-11-02", "1").await;
+    cache_rate(&pool, "EUR", "USD", "2026-11-02", "1.12").await;
+    cache_rate(&pool, "EUR", "IDR", "2026-11-02", "20000").await;
+
+    let row = service::create(&pool, actor(), expense(&usd, "50"))
+        .await
+        .unwrap();
+    assert_eq!(row.base_rate_source, "live");
+    assert_eq!(row.base_rate, decimal("17857.14285714"));
+    assert_eq!(row.base_amount, decimal("892857.1429"));
+
+    // A later day with no snapshot falls back to the newest one, marked.
+    let stale = service::create(
+        &pool,
+        actor(),
+        TransactionInput {
+            date: day(5),
+            ..expense(&usd, "50")
+        },
+    )
+    .await
+    .unwrap();
+    assert_eq!(stale.base_rate_source, "cache");
+    assert_eq!(stale.base_rate, decimal("17857.14285714"));
+    assert_eq!(stale.base_rate_date.to_string(), "2026-11-02");
+}
+
+/// The free plan allows 100 calls a month, so the daily job must not call
+/// the source for a day it already has, however often the process restarts.
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_not_call_the_rate_source_for_a_day_already_stored(pool: PgPool) {
+    use crate::fx::service::{refresh_cache, Refresh};
+    use oewang_clients::RatesClient;
+
+    let today = day(2).date_naive();
+    // An unreachable host: if the job called it, the answer would be
+    // `Unavailable`, not `AlreadyFresh`.
+    let keyed = RatesClient::new("http://rates.invalid".into(), Some("k".into()));
+    let keyless = RatesClient::new("http://rates.invalid".into(), None);
+
+    assert_eq!(
+        refresh_cache(&pool, &keyless, today).await.unwrap(),
+        Refresh::Disabled
+    );
+    assert_eq!(
+        refresh_cache(&pool, &keyed, today).await.unwrap(),
+        Refresh::Unavailable
+    );
+
+    cache_rate(&pool, "EUR", "EUR", "2026-11-02", "1").await;
+    assert_eq!(
+        refresh_cache(&pool, &keyed, today).await.unwrap(),
+        Refresh::AlreadyFresh
+    );
+}
+
+/// The rates list reads the newest snapshot on or before a day and states
+/// every currency in the workspace's own (FX-1, D96).
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_list_a_snapshot_against_the_workspace_currency(pool: PgPool) {
+    use crate::fx::service::list_rates;
+    use oewang_db::repositories::fx::{SnapshotFilters, SnapshotSort};
+    use oewang_domain::Page;
+
+    fixture(&pool, "IDR").await;
+    for (date, usd) in [("2026-11-02", "1.12"), ("2026-11-05", "1.10")] {
+        cache_rate(&pool, "EUR", "EUR", date, "1").await;
+        cache_rate(&pool, "EUR", "USD", date, usd).await;
+        cache_rate(&pool, "EUR", "IDR", date, "20000").await;
+    }
+
+    let newest = SnapshotFilters::default();
+    let (home, rows, total) = list_rates(
+        &pool,
+        WORKSPACE,
+        &newest,
+        SnapshotSort::CodeAsc,
+        Page::new(None, None),
+    )
+    .await
+    .unwrap();
+    assert_eq!(home, "IDR");
+    assert_eq!(total, 2, "the home currency is not listed against itself");
+    assert_eq!(rows[0].currency_code, "EUR");
+    assert_eq!(rows[1].currency_code, "USD");
+    assert_eq!(rows[1].rate, decimal("18181.81818182"));
+    assert_eq!(rows[1].inverse, decimal("0.00005500"));
+    assert_eq!(rows[1].date.to_string(), "2026-11-05");
+
+    let earlier = SnapshotFilters {
+        search: Some("us"),
+        on_or_before: Some(day(3).date_naive()),
+    };
+    let (_, rows, total) = list_rates(
+        &pool,
+        WORKSPACE,
+        &earlier,
+        SnapshotSort::CodeAsc,
+        Page::new(None, None),
+    )
+    .await
+    .unwrap();
+    assert_eq!(total, 1);
+    assert_eq!(rows[0].rate, decimal("17857.14285714"));
+    assert_eq!(rows[0].date.to_string(), "2026-11-02");
+
+    // The pickers' list: the newest snapshot, the home currency first at one.
+    let (_, all) = crate::fx::service::list_currencies(&pool, WORKSPACE)
+        .await
+        .unwrap();
+    let codes: Vec<_> = all.iter().map(|row| row.currency_code.as_str()).collect();
+    assert_eq!(codes, ["IDR", "EUR", "USD"]);
+    assert_eq!(all[0].rate, Decimal::ONE);
+    assert_eq!(all[2].rate, decimal("18181.81818182"));
+}
+
 /// What the PRD promises about history: today's rate moving does not move
 /// yesterday's total, because the conversion already happened (TXN-19).
 #[sqlx::test(migrations = "../../migrations")]
@@ -427,7 +528,7 @@ async fn should_not_move_a_historical_total_when_todays_rate_changes(pool: PgPoo
     let usd = wallet(&pool, "w_usd", "USD").await;
     cache_rate(&pool, "USD", "IDR", "2026-11-02", "16250").await;
 
-    service::create(&pool, &offline_rates(), actor(), expense(&usd, "50"))
+    service::create(&pool, actor(), expense(&usd, "50"))
         .await
         .unwrap();
 
@@ -463,14 +564,13 @@ async fn total_expense(pool: &PgPool) -> Decimal {
 async fn should_reverse_the_old_effect_and_apply_the_new_one(pool: PgPool) {
     fixture(&pool, "IDR").await;
     let cash = wallet(&pool, "w_cash", "IDR").await;
-    let rates = offline_rates();
 
-    let row = service::create(&pool, &rates, actor(), expense(&cash, "50000"))
+    let row = service::create(&pool, actor(), expense(&cash, "50000"))
         .await
         .unwrap();
     assert_eq!(balance(&pool, &cash).await, decimal("-50000"));
 
-    service::update(&pool, &rates, actor(), &row.id, expense(&cash, "87500"))
+    service::update(&pool, actor(), &row.id, expense(&cash, "87500"))
         .await
         .unwrap();
 
@@ -487,7 +587,6 @@ async fn should_recompute_every_type_transition(pool: PgPool) {
     fixture(&pool, "IDR").await;
     let a = wallet(&pool, "w_a", "IDR").await;
     let b = wallet(&pool, "w_b", "IDR").await;
-    let rates = offline_rates();
 
     let types = [
         TransactionType::Expense,
@@ -511,10 +610,10 @@ async fn should_recompute_every_type_transition(pool: PgPool) {
                 ..expense(&a, "0")
             };
 
-            let row = service::create(&pool, &rates, actor(), make(from, "50000"))
+            let row = service::create(&pool, actor(), make(from, "50000"))
                 .await
                 .unwrap();
-            service::update(&pool, &rates, actor(), &row.id, make(to, "87500"))
+            service::update(&pool, actor(), &row.id, make(to, "87500"))
                 .await
                 .unwrap();
 
@@ -545,12 +644,11 @@ async fn should_follow_a_transaction_that_moves_to_another_wallet(pool: PgPool) 
     fixture(&pool, "IDR").await;
     let a = wallet(&pool, "w_a", "IDR").await;
     let b = wallet(&pool, "w_b", "IDR").await;
-    let rates = offline_rates();
 
-    let row = service::create(&pool, &rates, actor(), expense(&a, "50000"))
+    let row = service::create(&pool, actor(), expense(&a, "50000"))
         .await
         .unwrap();
-    service::update(&pool, &rates, actor(), &row.id, expense(&b, "50000"))
+    service::update(&pool, actor(), &row.id, expense(&b, "50000"))
         .await
         .unwrap();
 
@@ -566,12 +664,11 @@ async fn should_follow_a_transaction_that_moves_to_another_wallet(pool: PgPool) 
 async fn should_record_before_and_after_on_an_update(pool: PgPool) {
     fixture(&pool, "IDR").await;
     let cash = wallet(&pool, "w_cash", "IDR").await;
-    let rates = offline_rates();
 
-    let row = service::create(&pool, &rates, actor(), expense(&cash, "50000"))
+    let row = service::create(&pool, actor(), expense(&cash, "50000"))
         .await
         .unwrap();
-    service::update(&pool, &rates, actor(), &row.id, expense(&cash, "87500"))
+    service::update(&pool, actor(), &row.id, expense(&cash, "87500"))
         .await
         .unwrap();
 
@@ -594,11 +691,9 @@ async fn should_reverse_the_balance_when_a_transaction_is_deleted(pool: PgPool) 
     fixture(&pool, "IDR").await;
     let a = wallet(&pool, "w_a", "IDR").await;
     let b = wallet(&pool, "w_b", "IDR").await;
-    let rates = offline_rates();
 
     let transfer = service::create(
         &pool,
-        &rates,
         actor(),
         TransactionInput {
             kind: TransactionType::Transfer,
@@ -644,7 +739,7 @@ async fn should_give_the_exact_balance_when_two_writes_race(pool: PgPool) {
         let pool = pool.clone();
         let cash = cash.clone();
         handles.push(tokio::spawn(async move {
-            service::create(&pool, &offline_rates(), actor(), expense(&cash, "1000"))
+            service::create(&pool, actor(), expense(&cash, "1000"))
                 .await
                 .unwrap();
         }));
@@ -670,7 +765,6 @@ async fn should_not_deadlock_on_opposite_transfers(pool: PgPool) {
             for _ in 0..10 {
                 service::create(
                     &pool,
-                    &offline_rates(),
                     actor(),
                     TransactionInput {
                         kind: TransactionType::Transfer,
@@ -805,12 +899,11 @@ async fn should_apply_a_bulk_category_change_in_one_transaction(pool: PgPool) {
     fixture(&pool, "IDR").await;
     let cash = wallet(&pool, "w_cash", "IDR").await;
     let food = category(&pool, "c_food", "expense").await;
-    let rates = offline_rates();
 
     let mut ids = Vec::new();
     for amount in ["1000", "2000", "3000"] {
         ids.push(
-            service::create(&pool, &rates, actor(), expense(&cash, amount))
+            service::create(&pool, actor(), expense(&cash, amount))
                 .await
                 .unwrap()
                 .id,
@@ -848,12 +941,11 @@ async fn should_apply_a_bulk_category_change_in_one_transaction(pool: PgPool) {
 async fn should_reverse_every_balance_on_a_bulk_delete(pool: PgPool) {
     fixture(&pool, "IDR").await;
     let cash = wallet(&pool, "w_cash", "IDR").await;
-    let rates = offline_rates();
 
     let mut ids = Vec::new();
     for amount in ["1000", "2000", "3000"] {
         ids.push(
-            service::create(&pool, &rates, actor(), expense(&cash, amount))
+            service::create(&pool, actor(), expense(&cash, amount))
                 .await
                 .unwrap()
                 .id,
@@ -889,11 +981,9 @@ async fn should_filter_search_and_page_the_list(pool: PgPool) {
     let cash = wallet(&pool, "w_cash", "IDR").await;
     let bank = wallet(&pool, "w_bank", "IDR").await;
     let food = category(&pool, "c_food", "expense").await;
-    let rates = offline_rates();
 
     service::create(
         &pool,
-        &rates,
         actor(),
         TransactionInput {
             name: Some("Warung Tekko"),
@@ -905,7 +995,6 @@ async fn should_filter_search_and_page_the_list(pool: PgPool) {
     .unwrap();
     service::create(
         &pool,
-        &rates,
         actor(),
         TransactionInput {
             name: Some("Gojek"),
@@ -917,7 +1006,6 @@ async fn should_filter_search_and_page_the_list(pool: PgPool) {
     .unwrap();
     service::create(
         &pool,
-        &rates,
         actor(),
         TransactionInput {
             name: Some("Electricity"),
@@ -1032,7 +1120,6 @@ async fn should_match_any_of_several_categories(pool: PgPool) {
     let food = category(&pool, "c_food", "expense").await;
     let transport = category(&pool, "c_transport", "expense").await;
     let rent = category(&pool, "c_rent", "expense").await;
-    let rates = offline_rates();
 
     for (name, category_id) in [
         ("Warung Tekko", &food),
@@ -1041,7 +1128,6 @@ async fn should_match_any_of_several_categories(pool: PgPool) {
     ] {
         service::create(
             &pool,
-            &rates,
             actor(),
             TransactionInput {
                 name: Some(name),
@@ -1053,7 +1139,7 @@ async fn should_match_any_of_several_categories(pool: PgPool) {
         .unwrap();
     }
     // An uncategorized row, which no id can match.
-    service::create(&pool, &rates, actor(), expense(&cash, "1000"))
+    service::create(&pool, actor(), expense(&cash, "1000"))
         .await
         .unwrap();
 
@@ -1105,16 +1191,14 @@ async fn should_match_any_of_several_wallets(pool: PgPool) {
     let cash = wallet(&pool, "w_cash", "IDR").await;
     let bank = wallet(&pool, "w_bank", "IDR").await;
     let savings = wallet(&pool, "w_savings", "IDR").await;
-    let rates = offline_rates();
 
     for wallet_id in [&cash, &bank, &savings] {
-        service::create(&pool, &rates, actor(), expense(wallet_id, "50000"))
+        service::create(&pool, actor(), expense(wallet_id, "50000"))
             .await
             .unwrap();
     }
     service::create(
         &pool,
-        &rates,
         actor(),
         TransactionInput {
             kind: TransactionType::Transfer,
@@ -1174,10 +1258,9 @@ async fn should_bound_the_list_by_amount(pool: PgPool) {
     // number means the same thing whichever wallet a row sits in.
     fixture(&pool, "IDR").await;
     let cash = wallet(&pool, "w_cash", "IDR").await;
-    let rates = offline_rates();
 
     for amount in ["12000", "50000", "412000"] {
-        service::create(&pool, &rates, actor(), expense(&cash, amount))
+        service::create(&pool, actor(), expense(&cash, amount))
             .await
             .unwrap();
     }
@@ -1239,12 +1322,10 @@ async fn should_bound_the_list_by_amount(pool: PgPool) {
 async fn should_sort_the_list_by_name(pool: PgPool) {
     fixture(&pool, "IDR").await;
     let cash = wallet(&pool, "w_cash", "IDR").await;
-    let rates = offline_rates();
 
     for name in ["Warung Tekko", "Gojek", "Electricity"] {
         service::create(
             &pool,
-            &rates,
             actor(),
             TransactionInput {
                 name: Some(name),
@@ -1288,7 +1369,6 @@ async fn should_join_the_names_the_table_renders(pool: PgPool) {
 
     let row = service::create(
         &pool,
-        &offline_rates(),
         actor(),
         TransactionInput {
             kind: TransactionType::Transfer,
@@ -1314,7 +1394,7 @@ async fn should_not_list_a_soft_deleted_row(pool: PgPool) {
     fixture(&pool, "IDR").await;
     let cash = wallet(&pool, "w_cash", "IDR").await;
 
-    let row = service::create(&pool, &offline_rates(), actor(), expense(&cash, "1000"))
+    let row = service::create(&pool, actor(), expense(&cash, "1000"))
         .await
         .unwrap();
     service::delete(&pool, actor(), &row.id).await.unwrap();
@@ -1337,12 +1417,11 @@ async fn should_not_list_a_soft_deleted_row(pool: PgPool) {
 async fn should_return_the_history_of_one_transaction(pool: PgPool) {
     fixture(&pool, "IDR").await;
     let cash = wallet(&pool, "w_cash", "IDR").await;
-    let rates = offline_rates();
 
-    let row = service::create(&pool, &rates, actor(), expense(&cash, "50000"))
+    let row = service::create(&pool, actor(), expense(&cash, "50000"))
         .await
         .unwrap();
-    service::update(&pool, &rates, actor(), &row.id, expense(&cash, "87500"))
+    service::update(&pool, actor(), &row.id, expense(&cash, "87500"))
         .await
         .unwrap();
 
@@ -1363,7 +1442,6 @@ async fn should_export_unformatted_decimals_and_mark_the_rows(pool: PgPool) {
 
     service::create(
         &pool,
-        &offline_rates(),
         actor(),
         TransactionInput {
             name: Some("Lunch"),
@@ -1411,7 +1489,7 @@ async fn should_not_reach_another_workspaces_transaction(pool: PgPool) {
     .await
     .unwrap();
 
-    let row = service::create(&pool, &offline_rates(), actor(), expense(&cash, "1000"))
+    let row = service::create(&pool, actor(), expense(&cash, "1000"))
         .await
         .unwrap();
 
@@ -1574,7 +1652,6 @@ async fn should_sync_attachments_without_deleting_the_file(pool: PgPool) {
     fixture(&pool, "IDR").await;
     let cash = wallet(&pool, "w_cash", "IDR").await;
     let store = crate::vault::tests::MemoryStore::default();
-    let rates = offline_rates();
 
     let first = uploaded_file(&pool, &store).await;
     let second = uploaded_file(&pool, &store).await;
@@ -1582,7 +1659,6 @@ async fn should_sync_attachments_without_deleting_the_file(pool: PgPool) {
     let attached = vec![first.clone(), second.clone()];
     let row = service::create(
         &pool,
-        &rates,
         actor(),
         TransactionInput {
             attachment_ids: Some(&attached),
@@ -1601,7 +1677,6 @@ async fn should_sync_attachments_without_deleting_the_file(pool: PgPool) {
     let kept = vec![first.clone()];
     service::update(
         &pool,
-        &rates,
         actor(),
         &row.id,
         TransactionInput {
@@ -1629,7 +1704,6 @@ async fn should_sync_attachments_without_deleting_the_file(pool: PgPool) {
     // edit and an import want.
     service::update(
         &pool,
-        &rates,
         actor(),
         &row.id,
         TransactionInput {
@@ -1671,7 +1745,6 @@ async fn should_refuse_a_file_from_another_workspace(pool: PgPool) {
     let ids = vec![file];
     let error = service::create(
         &pool,
-        &offline_rates(),
         actor(),
         TransactionInput {
             attachment_ids: Some(&ids),
@@ -1695,7 +1768,7 @@ async fn should_keep_line_items_off_the_balance(pool: PgPool) {
     let cash = wallet(&pool, "w_cash", "IDR").await;
     let food = category(&pool, "c_food", "expense").await;
 
-    let row = service::create(&pool, &offline_rates(), actor(), expense(&cash, "87500"))
+    let row = service::create(&pool, actor(), expense(&cash, "87500"))
         .await
         .unwrap();
 
@@ -1785,7 +1858,7 @@ async fn should_refuse_an_item_on_another_workspaces_transaction(pool: PgPool) {
     .await
     .unwrap();
 
-    let row = service::create(&pool, &offline_rates(), actor(), expense(&cash, "1000"))
+    let row = service::create(&pool, actor(), expense(&cash, "1000"))
         .await
         .unwrap();
 

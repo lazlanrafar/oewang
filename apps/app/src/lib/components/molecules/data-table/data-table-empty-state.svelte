@@ -1,6 +1,7 @@
 <script lang="ts">
 	// Ported from the old app's organisms/data-table/data-table-empty-state.
 	import Plus from '@lucide/svelte/icons/plus';
+	import type { Component } from 'svelte';
 
 	import { Button } from '../../atoms/button/index.js';
 	import { cn } from '$lib/utils.js';
@@ -10,12 +11,19 @@
 		description,
 		actionLabel,
 		onAction,
+		icon: Icon = Plus,
 		class: className
 	}: {
 		title: string;
 		description: string;
 		actionLabel?: string;
 		onAction?: () => void;
+		/**
+		 * The action's mark. A plus by default, for "add the first one"; the
+		 * "nothing matching" state passes its own, because clearing a
+		 * filter adds nothing.
+		 */
+		icon?: Component;
 		class?: string;
 	} = $props();
 </script>
@@ -25,7 +33,7 @@
 	<p class="text-subtle mb-8 max-w-[280px] text-sm">{description}</p>
 	{#if actionLabel}
 		<Button variant="outline" size="sm" onclick={onAction}>
-			<Plus class="mr-2 h-4 w-4" />
+			<Icon class="mr-2 h-4 w-4" />
 			{actionLabel}
 		</Button>
 	{/if}

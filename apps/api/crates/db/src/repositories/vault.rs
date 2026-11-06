@@ -177,7 +177,7 @@ fn push_file_filters<'a>(
 
     if let Some(search) = filters.search {
         builder.push(" AND f.name ILIKE ");
-        builder.push_bind(format!("%{}%", escape_like(search)));
+        builder.push_bind(super::contains_pattern(search));
     }
     match filters.kind {
         Some(FileKind::Image) => {
@@ -201,14 +201,6 @@ fn push_file_filters<'a>(
         builder.push_bind(tag);
         builder.push(" = ANY(f.tags)");
     }
-}
-
-/// `%` and `_` typed by a user are literal characters, not wildcards.
-fn escape_like(value: &str) -> String {
-    value
-        .replace('\\', "\\\\")
-        .replace('%', "\\%")
-        .replace('_', "\\_")
 }
 
 /// One page of the workspace's files (VLT-6).

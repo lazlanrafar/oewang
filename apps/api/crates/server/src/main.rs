@@ -13,6 +13,7 @@ mod fx;
 #[cfg(test)]
 mod hardening_tests;
 mod images;
+mod items;
 mod limits;
 mod owe1;
 mod receipts;
@@ -162,7 +163,6 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!(ai = ?ai, "ai service client ready");
 
     let request_timeout = config.request_timeout;
-    let fx_refresh_interval = config.fx_refresh_interval;
     let body_limit = config.body_limit_bytes;
     let addr = SocketAddr::from(([0, 0, 0, 0], config.port));
 
@@ -191,7 +191,7 @@ async fn main() -> anyhow::Result<()> {
         telegram,
     };
 
-    spawn_rate_refresher(state.clone(), fx_refresh_interval);
+    spawn_rate_refresher(state.clone());
     telegram::poller::spawn(state.clone());
     // Receipts the reader could not answer for, retried until it can (D95).
     receipts::queue::spawn(state.clone());
@@ -378,6 +378,10 @@ fn protected_routes(state: AppState) -> Router<AppState> {
         // Exchange rates. A suggestion for the form; nothing reads it on
         // the way out (D39).
         .route("/v1/fx/rate", get(fx::handler::rate))
+        .route("/v1/fx/rates", get(fx::handler::rates))
+        .route("/v1/fx/currencies", get(fx::handler::currencies))
+        .route("/v1/items", get(items::handler::list))
+        .route("/v1/items/history", get(items::handler::history))
         // Reports. The overview page's figures (D87).
         .route("/v1/overview", get(reports::handler::overview))
         // Transactions. The fixed sub-paths are registered before `{id}`,
@@ -528,30 +532,55 @@ fn protected_routes(state: AppState) -> Router<AppState> {
         ))
 }
 
-/// Fill the rate cache for every pair in use (D44).
+/// Store one snapshot of every exchange rate per UTC day (D44, D96).
 ///
-/// In-process rather than a worker service: it is one idempotent statement
-/// loop on a fixed schedule, and a separate process to run it would be more
-/// moving parts than the job is worth. The first run is immediate, so a
-/// fresh deployment has rates without waiting a day.
-fn spawn_rate_refresher(state: AppState, every: Duration) {
+/// In-process rather than a worker service: one loop on a fixed tick, its
+/// state in rows, so a restart loses nothing (D10). It looks every hour but
+/// calls the source only when today's snapshot is missing, and at most
+/// three times a day, because the free plan allows 100 calls a month and a
+/// source that keeps failing must not spend them. The first look is
+/// immediate, so a fresh deployment has rates without waiting a day.
+fn spawn_rate_refresher(state: AppState) {
+    const ATTEMPTS_PER_DAY: u32 = 3;
+
     tokio::spawn(async move {
-        let mut ticker = tokio::time::interval(every);
+        let mut ticker = tokio::time::interval(Duration::from_secs(60 * 60));
+        let mut attempts: (chrono::NaiveDate, u32) = (chrono::NaiveDate::MIN, 0);
+
         loop {
             ticker.tick().await;
 
-            match fx::service::refresh_cache(
-                &state.db,
-                &state.rates,
-                chrono::Utc::now().date_naive(),
-            )
-            .await
-            {
-                Ok(0) => tracing::debug!("rate cache: nothing to refresh"),
-                Ok(written) => tracing::info!(written, "rate cache refreshed"),
+            let today = chrono::Utc::now().date_naive();
+            if attempts.0 != today {
+                attempts = (today, 0);
+            }
+            if attempts.1 >= ATTEMPTS_PER_DAY {
+                continue;
+            }
+
+            match fx::service::refresh_cache(&state.db, &state.rates, today).await {
+                Ok(fx::service::Refresh::Disabled) => {
+                    tracing::warn!("rate cache: FX_ACCESS_KEY is not set, no rates fetched");
+                    // Said once a day, not once an hour.
+                    attempts.1 = ATTEMPTS_PER_DAY;
+                }
+                Ok(fx::service::Refresh::AlreadyFresh) => {
+                    tracing::debug!(%today, "rate cache: today's snapshot already stored");
+                }
+                Ok(fx::service::Refresh::Stored { date, written }) => {
+                    attempts.1 += 1;
+                    tracing::info!(%date, written, "rate cache refreshed");
+                }
                 // A rate source that is down is not a reason to stop the
                 // loop: the resolution ladder has a step for exactly this.
-                Err(error) => tracing::warn!(%error, "rate cache refresh failed"),
+                Ok(fx::service::Refresh::Unavailable) => {
+                    attempts.1 += 1;
+                    tracing::warn!(attempt = attempts.1, "rate cache: source did not answer");
+                }
+                Err(error) => {
+                    attempts.1 += 1;
+                    tracing::warn!(%error, "rate cache refresh failed");
+                }
             }
         }
     });

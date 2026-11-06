@@ -187,13 +187,7 @@ fn push_filters<'a>(
         builder.push(" AND t.date <= ").push_bind(end);
     }
     if let Some(search) = filters.search {
-        let pattern = format!(
-            "%{}%",
-            search
-                .replace('\\', "\\\\")
-                .replace('%', "\\%")
-                .replace('_', "\\_")
-        );
+        let pattern = super::contains_pattern(search);
         builder
             .push(" AND (t.name ILIKE ")
             .push_bind(pattern.clone())

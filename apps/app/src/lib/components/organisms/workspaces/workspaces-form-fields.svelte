@@ -15,6 +15,7 @@
 	import { SelectCurrency } from '../../molecules/select-currency/index.js';
 	import { t } from '$lib/i18n';
 	import { WORKSPACE_CURRENCIES } from '$lib/workspaces';
+	import { workspaceLists } from '$lib/workspace-data.svelte';
 
 	let {
 		pending = false,
@@ -33,6 +34,13 @@
 		const value = errors?.[field];
 		return Array.isArray(value) ? value[0] : value;
 	};
+
+	/*
+	 * Inside the shell the picker offers every currency in the rate snapshot
+	 * (FX-2); the workspaces page sits outside it, with no snapshot loaded,
+	 * and offers the fixed list instead.
+	 */
+	const snapshotLoaded = workspaceLists().currencies.length > 0;
 </script>
 
 <div class="space-y-5">
@@ -56,7 +64,7 @@
 		<SelectCurrency
 			id="workspace-currency"
 			name="currency_code"
-			currencies={WORKSPACE_CURRENCIES}
+			currencies={snapshotLoaded ? undefined : WORKSPACE_CURRENCIES}
 			bind:value={currency}
 		/>
 		<p class="text-muted-foreground text-xs leading-relaxed">{t('workspaces.currency_hint')}</p>

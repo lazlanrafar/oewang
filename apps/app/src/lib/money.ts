@@ -121,6 +121,24 @@ export function formatMoney(
 	return marker + symbol + body;
 }
 
+/**
+ * An exchange rate, as a figure with no currency of its own.
+ *
+ * A rate is not money: `18181.81818182` IDR per USD wants four places at
+ * most, while `0.00005518` USD per IDR is all fraction and loses its
+ * meaning at four. So a rate of one or more keeps four places and a rate
+ * below one keeps the eight the API stores, and trailing zeroes go either
+ * way. Decimal strings throughout (D12).
+ */
+export function formatRate(value: string): string {
+	const { whole } = split(value);
+	const rounded = roundDecimal(value, whole === '0' ? 8 : 4);
+	const { negative, whole: digits, fraction } = split(rounded);
+	const trimmed = fraction.replace(/0+$/, '');
+
+	return sign(negative) + group(digits) + (trimmed ? ',' + trimmed : '');
+}
+
 /** Is this decimal string zero, without parsing it? */
 export function isZero(value: string): boolean {
 	return /^-?0*(\.0*)?$/.test(value.trim());
@@ -175,6 +193,38 @@ export function multiplyDecimals(value: string, factor: string, digits = 4): str
 	const fraction = scale > 0 ? text.slice(text.length - scale) : '';
 
 	return roundDecimal(sign(negative) + (whole || '0') + (fraction ? '.' + fraction : ''), digits);
+}
+
+/**
+ * Divide two decimal strings, rounded half away from zero to `digits`
+ * places.
+ *
+ * Needed for one thing: a cross rate in the transaction form, when neither
+ * the entry currency nor the wallet's is the workspace's and both are known
+ * only against it (FX-2). The figure is a prefill the user may change; the
+ * API stores what is sent (D39).
+ */
+export function divideDecimals(numerator: string, denominator: string, digits = 8): string {
+	const top = scaled(numerator);
+	const bottom = scaled(denominator);
+	if (bottom.units === 0n) throw new RangeError('division by zero');
+
+	// Bring both to one scale, then shift the numerator by `digits` more so
+	// the integer quotient carries that many places.
+	const shift = 10n ** BigInt(bottom.scale);
+	const a = top.units * shift * 10n ** BigInt(digits);
+	const b = bottom.units * 10n ** BigInt(top.scale);
+
+	const negative = a < 0n !== b < 0n;
+	const absA = a < 0n ? -a : a;
+	const absB = b < 0n ? -b : b;
+	const quotient = (2n * absA + absB) / (2n * absB);
+
+	const text = quotient.toString().padStart(digits + 1, '0');
+	const whole = digits > 0 ? text.slice(0, text.length - digits) : text;
+	const fraction = digits > 0 ? text.slice(text.length - digits) : '';
+
+	return sign(negative && quotient !== 0n) + whole + (digits > 0 ? '.' + fraction : '');
 }
 
 /** A decimal string as an integer and the power of ten it was scaled by. */

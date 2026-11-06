@@ -426,7 +426,6 @@ pub async fn execute_tool(
 
     let outcome = tools::execute(
         &state.db,
-        &state.rates,
         &state.turns,
         state.config.chat_max_tool_amount,
         tools::ToolRequest {

@@ -852,7 +852,6 @@ pub async fn create(
 
         let row = service::create_with_items(
             &state.db,
-            &state.rates,
             Actor::web(&auth.workspace_id, &auth.user_id)
                 .with_source(client_source(body.source.as_deref())?),
             input,
@@ -885,7 +884,6 @@ pub async fn update(
         let input = body.input()?;
         service::update(
             &state.db,
-            &state.rates,
             Actor::web(&auth.workspace_id, &auth.user_id),
             &transaction_id,
             input,

@@ -55,7 +55,10 @@
 	 * `parseFloat`, and nothing here converts: the API computes
 	 * `base_amount` and refuses to take one (D12, D27).
 	 */
-	import { formatMoney, multiplyDecimals } from '$lib/money.js';
+	import { untrack } from 'svelte';
+
+	import { divideDecimals, formatMoney, multiplyDecimals } from '$lib/money.js';
+	import { workspaceLists } from '$lib/workspace-data.svelte.js';
 	import { Checkbox } from '../../atoms/checkbox/index.js';
 	import { FileDropzone, type UploadedFile } from '../../molecules/file-dropzone/index.js';
 	import { attachmentDropzone } from '$lib/files.js';
@@ -76,13 +79,10 @@
 		draft = $bindable(),
 		accounts,
 		categories,
-		currencies = ['IDR', 'USD', 'EUR', 'SGD'],
 		/** The workspace currency. Every total is expressed in it. */
 		baseCurrency = 'IDR',
 		/** The currency the chosen wallet holds, which `amount` moves. */
 		walletCurrency = baseCurrency,
-		/** A rate suggestion for the form, or null while none is known. */
-		suggestedRate = null,
 		plain = false,
 		attachments = $bindable([]),
 		fieldErrors,
@@ -93,10 +93,8 @@
 		draft: TransactionDraft;
 		accounts: ComboboxItem[];
 		categories: CategoryItem[];
-		currencies?: string[];
 		baseCurrency?: string;
 		walletCurrency?: string;
-		suggestedRate?: string | null;
 		/** Native controls only, for the no-JavaScript form. */
 		plain?: boolean;
 		/** The files this transaction carries (TXN-13). */
@@ -136,6 +134,62 @@
 			// Half-typed input is not an error worth showing.
 			return null;
 		}
+	});
+
+	/*
+	 * Rates from the newest daily snapshot, each one unit in the workspace
+	 * currency (FX-2, D96). They prefill; the user's figure always wins and
+	 * is what gets stored (D39).
+	 */
+	const lists = workspaceLists();
+	const rateTo = $derived(new Map(lists.currencies.map((entry) => [entry.code, entry.rate])));
+
+	/** The codes the plain form's native select offers. */
+	const currencyCodes = $derived(
+		lists.currencies.length > 0
+			? lists.currencies.map((entry) => entry.code)
+			: [...new Set([baseCurrency, ...lists.wallets.map((wallet) => wallet.currency_code)])]
+	);
+
+	/** `16795.12000000` as `16795.12`: a rate the reader can read in the field. */
+	const plainRate = (value: string) =>
+		value.includes('.') ? value.replace(/0+$/, '').replace(/\.$/, '') : value;
+
+	/** One `from` in `to`, worked out through the workspace currency, or null. */
+	function crossRate(from: string, to: string): string | null {
+		const fromRate = from === baseCurrency ? '1' : rateTo.get(from);
+		const toRate = to === baseCurrency ? '1' : rateTo.get(to);
+		if (!fromRate || !toRate) return null;
+		try {
+			return plainRate(to === baseCurrency ? fromRate : divideDecimals(fromRate, toRate));
+		} catch {
+			return null;
+		}
+	}
+
+	/** One unit of the wallet's currency in the workspace's, for the base rate. */
+	const suggestedRate = $derived(foreignWallet ? crossRate(walletCurrency, baseCurrency) : null);
+	/** One unit of the entry currency in the wallet's. */
+	const suggestedExchange = $derived(
+		foreignEntry ? crossRate(draft.currency, walletCurrency) : null
+	);
+
+	/*
+	 * Prefill the entry rate when the currency or the wallet changes, unless
+	 * the user has typed their own: a figure that is not the last one this
+	 * effect wrote is theirs, and an edited transaction's stored rate is
+	 * theirs too.
+	 */
+	let prefilled = '';
+	$effect(() => {
+		const next = suggestedExchange;
+		untrack(() => {
+			if (!next) return;
+			if (draft.exchangeRate === '' || draft.exchangeRate === prefilled) {
+				prefilled = next;
+				draft.exchangeRate = next;
+			}
+		});
 	});
 
 	const labelClass = 'text-subtle text-xs font-normal';
@@ -232,12 +286,12 @@
 			<Label for="form-currency" class={labelClass}>Currency</Label>
 			{#if plain}
 				<NativeSelect id="form-currency" bind:value={draft.currency}>
-					{#each currencies as code (code)}<option value={code}>{code}</option>{/each}
+					{#each currencyCodes as code (code)}<option value={code}>{code}</option>{/each}
 				</NativeSelect>
 			{:else}
 				<!-- A currency is not an account: its own picker, so a code does
 				     not render behind a bank icon (D79). -->
-				<SelectCurrency id="form-currency" {currencies} bind:value={draft.currency} />
+				<SelectCurrency id="form-currency" bind:value={draft.currency} />
 			{/if}
 		</div>
 	</div>

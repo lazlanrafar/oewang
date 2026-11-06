@@ -10,6 +10,10 @@
  * (D90), both in the live app's Workspace group, Vault first with its old
  * box icon.
  *
+ * Database sits last, below Settings: the daily rate snapshot (D96) and
+ * every line item ever bought (ITM-1), tables that are looked things up
+ * in rather than worked in.
+ *
  * Titles are dictionary keys, not strings (UI-1). A route that does not
  * exist yet is marked so the shell renders it disabled rather than linking
  * into a 404.
@@ -18,6 +22,7 @@
 import {
 	Banknote,
 	Bot,
+	ArrowLeftRight,
 	Box,
 	ChartColumn,
 	DatabaseBackup,
@@ -29,6 +34,7 @@ import {
 	Monitor,
 	Palette,
 	Settings,
+	ShoppingBasket,
 	SquareDot,
 	TrendingDown,
 	User,
@@ -73,6 +79,13 @@ export const navGroups: NavGroup[] = [
 	{
 		labelKey: 'nav.system_group',
 		items: [{ titleKey: 'nav.settings', href: '/settings', icon: Settings }]
+	},
+	{
+		labelKey: 'nav.database_group',
+		items: [
+			{ titleKey: 'nav.rates', href: '/database/rates', icon: ArrowLeftRight },
+			{ titleKey: 'nav.items', href: '/database/items', icon: ShoppingBasket }
+		]
 	}
 ];
 
