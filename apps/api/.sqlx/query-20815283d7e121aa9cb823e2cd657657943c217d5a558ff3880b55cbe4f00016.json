@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE transactions t\n           SET base_rate = CASE WHEN w.currency_code = $2 THEN 1\n                                ELSE round(t.base_rate * $3, 8) END,\n               base_amount = CASE WHEN w.currency_code = $2 THEN t.amount\n                                  ELSE round(t.amount * round(t.base_rate * $3, 8), 4) END,\n               base_rate_source = CASE WHEN w.currency_code = $2 THEN 'same' ELSE 'user' END,\n               updated_at = now()\n           FROM wallets w\n           WHERE w.id = t.wallet_id AND t.workspace_id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Numeric"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "20815283d7e121aa9cb823e2cd657657943c217d5a558ff3880b55cbe4f00016"
+}

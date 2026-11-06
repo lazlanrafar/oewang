@@ -199,6 +199,7 @@ The old token stays valid until expiry. It is scoped to the previous workspace, 
 | Invite or remove a member, change a role | yes | yes (not an owner) | no |
 | Update workspace settings | yes | yes | no |
 | Delete the workspace | yes | no | no |
+| Convert the workspace currency (WAL-7) | yes | no | no |
 | Open chat, read sessions, use read-only tools | yes | yes | yes |
 | Use write tools in chat | yes | yes | no |
 | Update agent settings | yes | yes | no |

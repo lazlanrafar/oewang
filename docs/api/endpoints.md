@@ -70,6 +70,8 @@ Returns `NOT_A_MEMBER` if the user has no live membership row.
 | POST | `/v1/workspaces` | any | `{name, currency_code}`. A new workspace the caller owns, seeded; at most 10 owned. The client then switches into it (WS-6) |
 | GET | `/v1/workspaces/current` | any | The current workspace, with `currency_locked`: true once any transaction exists (WAL-6) |
 | PATCH | `/v1/workspaces/current` | admin+ | Update name, slug, country. Currency code only while no transaction exists, otherwise `WORKSPACE_CURRENCY_LOCKED` (WAL-6) |
+| GET | `/v1/workspaces/current/currency/preview?to=USD` | owner | What a conversion would touch: `{ from, to, suggested_rate, rate_date, transactions, budgets }`, the rate from the newest stored snapshot or null (WAL-7) |
+| POST | `/v1/workspaces/current/currency/convert` | owner | `{ currency_code, rate }`, rate a decimal string of new units per old unit. Reprices every transaction and budget at that rate in one transaction; returns the counts. Audited `workspace.currency_converted` (WAL-7, D105) |
 | GET | `/v1/workspaces/current/members` | any | Members with role and join date |
 | DELETE | `/v1/workspaces/current/members/{user_id}` | admin+ | Remove a member. `LAST_OWNER` if it is the only owner (WS-4); `INSUFFICIENT_ROLE` if an admin targets an owner. Audited `member.removed` |
 | PATCH | `/v1/workspaces/current/members/{user_id}` | admin+ | Change a member's role. Same `LAST_OWNER` and owner rules; nobody grants above their own role. Audited `member.role_changed` |

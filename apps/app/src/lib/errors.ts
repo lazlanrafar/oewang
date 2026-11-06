@@ -24,6 +24,7 @@ const CODE_TO_KEY: Record<string, TranslationKey> = {
 	WALLET_HAS_TRANSACTIONS: 'errors.wallet_has_transactions',
 	WALLET_CURRENCY_LOCKED: 'errors.wallet_currency_locked',
 	WORKSPACE_CURRENCY_LOCKED: 'errors.workspace_currency_locked',
+	WORKSPACE_CURRENCY_CHANGED: 'errors.workspace_currency_changed',
 	WALLET_NOT_FOUND: 'errors.wallet_not_found',
 	CATEGORY_NOT_FOUND: 'errors.category_not_found',
 	TRANSACTION_NOT_FOUND: 'errors.transaction_not_found',

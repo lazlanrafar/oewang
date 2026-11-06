@@ -52,6 +52,8 @@ pub enum AppError {
     WalletCurrencyLocked,
     #[error("workspace currency is locked")]
     WorkspaceCurrencyLocked,
+    #[error("workspace currency changed during the write")]
+    WorkspaceCurrencyChanged,
 
     // -- transactions
     #[error("transaction not found")]
@@ -157,6 +159,7 @@ impl AppError {
             CategoryNotFound => "CATEGORY_NOT_FOUND",
             WalletCurrencyLocked => "WALLET_CURRENCY_LOCKED",
             WorkspaceCurrencyLocked => "WORKSPACE_CURRENCY_LOCKED",
+            WorkspaceCurrencyChanged => "WORKSPACE_CURRENCY_CHANGED",
             TransactionNotFound => "TRANSACTION_NOT_FOUND",
             TransferRequiresDestination => "TRANSFER_REQUIRES_DESTINATION",
             TransferSameWallet => "TRANSFER_SAME_WALLET",
@@ -201,6 +204,7 @@ impl AppError {
             | WalletHasTransactions
             | WalletCurrencyLocked
             | WorkspaceCurrencyLocked
+            | WorkspaceCurrencyChanged
             | ConfirmationRequired(_)
             | ToolCapExceeded => 409,
             InviteInvalid | ResetTokenInvalid | NotFound | WalletNotFound | CategoryNotFound
@@ -245,6 +249,9 @@ impl AppError {
             WalletHasTransactions => "Move or delete its transactions first.",
             WalletCurrencyLocked | WorkspaceCurrencyLocked => {
                 "The currency is fixed once transactions exist."
+            }
+            WorkspaceCurrencyChanged => {
+                "The workspace currency was converted while this was saved. Try again."
             }
             TransferRequiresDestination | TransferAmountRequired => {
                 "A transfer needs a destination wallet and a destination amount."
@@ -359,6 +366,7 @@ mod tests {
             AppError::CategoryNotFound,
             AppError::WalletCurrencyLocked,
             AppError::WorkspaceCurrencyLocked,
+            AppError::WorkspaceCurrencyChanged,
             AppError::TransactionNotFound,
             AppError::TransferRequiresDestination,
             AppError::TransferSameWallet,
@@ -393,7 +401,7 @@ mod tests {
 
         // 47 of the 48 catalog entries. TRANSPORT_UNEXPECTED_RESPONSE is a
         // client-side condition and has no server variant by design.
-        assert_eq!(samples.len(), 47);
+        assert_eq!(samples.len(), 48);
 
         let mut seen = std::collections::HashSet::new();
         for error in &samples {

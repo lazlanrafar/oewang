@@ -156,3 +156,36 @@ pub async fn usage(
     .fetch_all(executor)
     .await
 }
+
+/// Reprice every budget at one rate when the workspace currency is
+/// converted. Never below the smallest amount the column holds, because
+/// the limit must stay positive.
+pub async fn convert(
+    executor: impl PgExecutor<'_>,
+    workspace_id: &str,
+    rate: Decimal,
+) -> Result<u64, sqlx::Error> {
+    sqlx::query!(
+        r#"UPDATE budgets
+           SET amount = GREATEST(round(amount * $2, 4), 0.0001), updated_at = now()
+           WHERE workspace_id = $1"#,
+        workspace_id,
+        rate
+    )
+    .execute(executor)
+    .await
+    .map(|result| result.rows_affected())
+}
+
+pub async fn count_live(
+    executor: impl PgExecutor<'_>,
+    workspace_id: &str,
+) -> Result<i64, sqlx::Error> {
+    sqlx::query_scalar!(
+        r#"SELECT count(*) AS "count!" FROM budgets
+           WHERE workspace_id = $1 AND deleted_at IS NULL"#,
+        workspace_id
+    )
+    .fetch_one(executor)
+    .await
+}

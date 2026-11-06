@@ -348,6 +348,90 @@ pub async fn update_workspace_currency(
     .map(|_| ())
 }
 
+/// The workspace currency, read under a share lock by every write that
+/// computes a `base_amount`.
+///
+/// A conversion takes the row `FOR UPDATE`, so the two serialize: a write
+/// that read the old currency either commits before the conversion starts
+/// (and is converted with the rest) or waits and then sees the new one.
+pub async fn workspace_currency_for_write(
+    executor: impl PgExecutor<'_>,
+    workspace_id: &str,
+) -> Result<Option<String>, sqlx::Error> {
+    sqlx::query_scalar!(
+        r#"SELECT currency_code FROM workspaces
+           WHERE id = $1 AND deleted_at IS NULL
+           FOR SHARE"#,
+        workspace_id
+    )
+    .fetch_optional(executor)
+    .await
+}
+
+/// The workspace currency, locked for a conversion. See
+/// [`workspace_currency_for_write`].
+pub async fn lock_workspace_currency(
+    executor: impl PgExecutor<'_>,
+    workspace_id: &str,
+) -> Result<Option<String>, sqlx::Error> {
+    sqlx::query_scalar!(
+        r#"SELECT currency_code FROM workspaces
+           WHERE id = $1 AND deleted_at IS NULL
+           FOR UPDATE"#,
+        workspace_id
+    )
+    .fetch_optional(executor)
+    .await
+}
+
+/// Reprice every transaction of the workspace into a new workspace currency
+/// at one rate: `rate` units of the new currency per unit of the old.
+///
+/// Deleted rows too, so a restored row is in the same currency as the rest.
+/// A row whose wallet is already in the new currency needs no rate at all.
+/// Every other row keeps `base_amount = round(amount * base_rate)`, the
+/// invariant the write path holds, with the old rate chained through the
+/// new one. Postgres reads every right-hand side from the old row, so
+/// `base_amount` sees the old `base_rate`.
+pub async fn convert_transactions(
+    executor: impl PgExecutor<'_>,
+    workspace_id: &str,
+    currency_code: &str,
+    rate: rust_decimal::Decimal,
+) -> Result<u64, sqlx::Error> {
+    sqlx::query!(
+        r#"UPDATE transactions t
+           SET base_rate = CASE WHEN w.currency_code = $2 THEN 1
+                                ELSE round(t.base_rate * $3, 8) END,
+               base_amount = CASE WHEN w.currency_code = $2 THEN t.amount
+                                  ELSE round(t.amount * round(t.base_rate * $3, 8), 4) END,
+               base_rate_source = CASE WHEN w.currency_code = $2 THEN 'same' ELSE 'user' END,
+               updated_at = now()
+           FROM wallets w
+           WHERE w.id = t.wallet_id AND t.workspace_id = $1"#,
+        workspace_id,
+        currency_code,
+        rate
+    )
+    .execute(executor)
+    .await
+    .map(|result| result.rows_affected())
+}
+
+/// Live transactions in the workspace, for the conversion preview.
+pub async fn count_live_transactions(
+    executor: impl PgExecutor<'_>,
+    workspace_id: &str,
+) -> Result<i64, sqlx::Error> {
+    sqlx::query_scalar!(
+        r#"SELECT count(*) AS "count!" FROM transactions
+           WHERE workspace_id = $1 AND deleted_at IS NULL"#,
+        workspace_id
+    )
+    .fetch_one(executor)
+    .await
+}
+
 pub async fn soft_delete_workspace(
     executor: impl PgExecutor<'_>,
     workspace_id: &str,

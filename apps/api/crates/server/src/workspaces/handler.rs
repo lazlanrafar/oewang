@@ -1,12 +1,13 @@
 //! Workspace, member and invitation routes.
 
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     Json,
 };
 use oewang_db::repositories::{accounts, tokens, wallets};
 use oewang_domain::{AppError, Envelope, Result, Role};
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -17,7 +18,7 @@ use crate::{
     },
     response::{ApiError, RequestId},
     state::AppState,
-    workspaces::service,
+    workspaces::{currency, service},
 };
 
 #[derive(Debug, Serialize)]
@@ -266,6 +267,55 @@ async fn free_slug(state: &AppState, workspace_id: &str, name: &str) -> Result<S
     // Giving up on a readable slug beats an unbounded wait on a contended
     // name, the same fallback registration uses.
     Ok(format!("{base}-{}", cuid2::create_id()))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct PreviewQuery {
+    pub to: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ConvertRequest {
+    pub currency_code: String,
+    /// Units of the new currency per unit of the old, as a decimal string
+    /// (D12).
+    pub rate: String,
+}
+
+/// What converting to `to` would touch, and a rate to start from (WAL-7).
+pub async fn currency_preview(
+    State(state): State<AppState>,
+    auth: AuthOwner,
+    Query(query): Query<PreviewQuery>,
+    request_id: RequestId,
+) -> std::result::Result<Json<Envelope<currency::Preview>>, ApiError> {
+    match currency::preview(&state.db, &auth.workspace_id, &query.to).await {
+        Ok(preview) => Ok(Json(Envelope::data(preview, request_id.0))),
+        Err(error) => Err(ApiError::new(error, request_id.0)),
+    }
+}
+
+/// Reprice the whole ledger into a new workspace currency at one rate
+/// (WAL-7, D105). Owner only.
+pub async fn convert_currency(
+    State(state): State<AppState>,
+    auth: AuthOwner,
+    request_id: RequestId,
+    Json(body): Json<ConvertRequest>,
+) -> std::result::Result<Json<Envelope<currency::Converted>>, ApiError> {
+    let result = async {
+        let rate = body.rate.trim().parse::<Decimal>().map_err(|_| {
+            AppError::validation([("rate", "Enter a number, for example 0.00006.")])
+        })?;
+        let actor = Actor::web(&auth.workspace_id, &auth.user_id);
+        currency::convert(&state.db, actor, &body.currency_code, rate).await
+    }
+    .await;
+
+    match result {
+        Ok(converted) => Ok(Json(Envelope::data(converted, request_id.0))),
+        Err(error) => Err(ApiError::new(error, request_id.0)),
+    }
 }
 
 pub async fn delete_workspace(

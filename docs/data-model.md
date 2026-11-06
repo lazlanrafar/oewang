@@ -728,7 +728,7 @@ Two locks, for the same reason: a currency change would silently reinterpret num
 | Wallet currency | Once the wallet has a live transaction (WAL-6) | `WALLET_CURRENCY_LOCKED` |
 | Workspace currency | Once any transaction exists in the workspace | `WORKSPACE_CURRENCY_LOCKED` |
 
-Changing either after that point is a data migration, not a setting. `base_amount` is denominated in the workspace currency, so moving the workspace currency would require recomputing every row at its own historical rate.
+Changing either after that point is a data migration, not a setting. `base_amount` is denominated in the workspace currency, so the workspace currency moves only through a conversion (WAL-7, D105): an owner picks one rate, and every transaction, deleted ones included, gets `base_rate = 1` if its wallet is already in the new currency, else `round8(base_rate × rate)`, with `base_amount = round4(amount × base_rate)` and source `user`. Budgets are repriced at the same rate. Old figures then read at that rate, not at the rate of their own day. Writes re-read the currency under `FOR SHARE` and fail with `WORKSPACE_CURRENCY_CHANGED` if a conversion committed in between.
 
 ## Seed data
 

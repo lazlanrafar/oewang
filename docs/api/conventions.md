@@ -163,6 +163,7 @@ Codes are stable, SCREAMING_SNAKE_CASE, and never reused for a different meaning
 | `TRANSFER_AMOUNT_REQUIRED` | 422 | `to_amount` missing on a transfer, or set on a non-transfer (TXN-18) |
 | `WALLET_CURRENCY_LOCKED` | 409 | Changing a wallet's currency once it has a live transaction (WAL-6) |
 | `WORKSPACE_CURRENCY_LOCKED` | 409 | Changing the workspace currency once any transaction exists (WAL-6) |
+| `WORKSPACE_CURRENCY_CHANGED` | 409 | A transaction write whose rate was resolved before a currency conversion committed. Retry (D105) |
 | `FX_RATE_UNAVAILABLE` | 503 | No rate could be resolved: the source did not answer and no cached rate has ever existed for this pair. The user may still enter one by hand (TXN-22) |
 | `RESET_TOKEN_INVALID` | 404 | Unknown, expired or already used password reset token |
 | `AMOUNT_NOT_POSITIVE` | 422 | `amount` is zero or negative (TXN-2) |

@@ -317,6 +317,16 @@ fn protected_routes(state: AppState) -> Router<AppState> {
                 .patch(workspaces::handler::update_workspace)
                 .delete(workspaces::handler::delete_workspace),
         )
+        // Converting the workspace currency once transactions exist,
+        // owner only (WAL-7, D105).
+        .route(
+            "/v1/workspaces/current/currency/preview",
+            get(workspaces::handler::currency_preview),
+        )
+        .route(
+            "/v1/workspaces/current/currency/convert",
+            post(workspaces::handler::convert_currency),
+        )
         .route(
             "/v1/workspaces/current/members",
             get(workspaces::handler::list_members),

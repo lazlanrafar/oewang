@@ -328,7 +328,8 @@
 		"ai_unavailable": "The assistant could not be reached. Everything here still works by hand.",
 		"extraction_no_answer": "The receipt reader didn't answer in time, so this file wasn't read. It may be perfectly clear: try again in a moment, or enter it by hand.",
 		"receipt_unreadable": "That image could not be read as a receipt.",
-		"telegram_disabled": "Telegram is not set up on this server yet."
+		"telegram_disabled": "Telegram is not set up on this server yet.",
+		"workspace_currency_changed": "The workspace currency was just converted. Try again."
 	},
 	"style": {
 		"title": "Design system",
@@ -485,7 +486,22 @@
 		"feedback_message_placeholder": "What happened, or what would you like to see?",
 		"feedback_remaining": "{count} characters left",
 		"feedback_send": "Send feedback",
-		"feedback_sent": "Thanks, we got it."
+		"feedback_sent": "Thanks, we got it.",
+		"currency_convert_title": "Convert currency",
+		"currency_convert_description": "Move this workspace to another currency. Every amount already recorded is recalculated, so only an owner can.",
+		"currency_convert_owner_only": "Only an owner can convert the workspace currency.",
+		"currency_convert_to": "New currency",
+		"currency_convert_to_placeholder": "Choose a currency",
+		"currency_convert_rate": "Rate: 1 {from} in {to}",
+		"currency_convert_rate_hint": "From the stored rate of {date}. Change it if you want to use your own.",
+		"currency_convert_rate_none": "No stored rate for {from} to {to}. Enter one yourself.",
+		"currency_convert_warning_title": "All your data will use this one rate",
+		"currency_convert_warning": "Every transaction ({count}) and every budget ({budgets}) is recalculated at the rate above, today's rate, not the rate on the day each transaction happened. Totals, reports and budgets from before will show their value at this rate. Converting back later will not give exactly the same numbers, because each amount is rounded.",
+		"currency_convert_button": "Convert to {to}",
+		"currency_convert_confirm_title": "Convert the workspace to {to}?",
+		"currency_convert_confirm_body": "Every transaction and budget is recalculated at 1 {from} = {rate} {to}, including those from before today. This cannot be undone exactly. Type {to} to confirm.",
+		"currency_convert_confirm_label": "Type {to} to confirm",
+		"currency_convert_done": "Converted to {to}. {count} transactions and {budgets} budgets recalculated."
 	},
 	"txn": {
 		"search_placeholder": "Search transactions",

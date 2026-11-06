@@ -144,7 +144,8 @@ Requirement IDs are referenced by every other doc and by each backlog story. The
 | WAL-3 | Exactly one wallet per workspace is the default. Setting a new default clears the previous one in the same transaction. |
 | WAL-4 | A wallet with live transactions cannot be deleted. |
 | WAL-5 | A wallet has its own ISO 4217 currency, defaulting to the workspace currency. Its balance is denominated in it (D37). |
-| WAL-6 | A wallet's currency is locked once it has a live transaction. The workspace currency is locked once any transaction exists. |
+| WAL-6 | A wallet's currency is locked once it has a live transaction. The workspace currency is locked once any transaction exists, except through a conversion (WAL-7). |
+| WAL-7 | An owner may convert the workspace currency once transactions exist (D105). One rate, prefilled from the newest stored snapshot and editable, reprices every transaction (deleted ones included) and every budget in one database transaction: a row whose wallet is already in the new currency takes rate 1, every other row chains its old base rate through the new one. Before anything changes, the page warns that every figure from before will read at that one rate, not at the rate of its own day, and that converting back is not exact; the owner types the new code to confirm. Audited as `workspace.currency_converted`. |
 | CAT-1 | A category has a type, `income` or `expense`, and a sort order. |
 | CAT-2 | Deleting a category sets `category_id` to null on its transactions instead of blocking. |
 | CAT-3 | A new workspace is seeded with a default set of categories and one default wallet. |

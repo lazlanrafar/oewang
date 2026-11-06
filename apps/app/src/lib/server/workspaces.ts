@@ -52,6 +52,44 @@ export function updateCurrency(currencyCode: string, token?: string) {
 	});
 }
 
+/** What converting to `to` would touch, and a rate to start from (WAL-7). Owner only. */
+export type ConversionPreview = {
+	from: string;
+	to: string;
+	/** Units of `to` per unit of `from`, a decimal string; null when no snapshot holds the pair. */
+	suggested_rate: string | null;
+	rate_date: string | null;
+	transactions: number;
+	budgets: number;
+};
+
+export type Conversion = {
+	from: string;
+	to: string;
+	rate: string;
+	transactions: number;
+	budgets: number;
+};
+
+export function previewConversion(to: string, token?: string) {
+	return api<ConversionPreview>({
+		path: '/v1/workspaces/current/currency/preview',
+		// Sealed with the body rules, never left in the path (D22).
+		query: new URLSearchParams({ to }),
+		token
+	});
+}
+
+/** Reprice the whole ledger at one rate. The rate is a decimal string (D12). */
+export function convertCurrency(body: { currency_code: string; rate: string }, token?: string) {
+	return api<Conversion>({
+		method: 'POST',
+		path: '/v1/workspaces/current/currency/convert',
+		body,
+		token
+	});
+}
+
 export function listMembers(token?: string) {
 	return api<Member[]>({ path: '/v1/workspaces/current/members', token });
 }

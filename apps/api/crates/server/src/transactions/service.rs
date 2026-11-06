@@ -87,6 +87,9 @@ struct Prepared {
     /// because the import fingerprint needs the row's currency and the
     /// wallet is not read again after this point.
     wallet_currency: String,
+    /// The workspace currency `base_amount` is in. Checked again inside the
+    /// write's transaction, in case a conversion committed in between.
+    workspace_currency: String,
     base_rate: Decimal,
     base_amount: Decimal,
     base_rate_source: &'static str,
@@ -197,6 +200,7 @@ pub async fn create_with_items(
     let prepared = prepare(pool, actor.workspace_id, &input).await?;
 
     let mut tx = pool.begin().await.map_err(internal)?;
+    ensure_currency(&mut tx, actor.workspace_id, &prepared.workspace_currency).await?;
 
     let moves = net(prepared.shape.effect());
     apply_moves(&mut tx, actor.workspace_id, &moves).await?;
@@ -265,6 +269,7 @@ pub async fn update(
     let prepared = prepare(pool, actor.workspace_id, &input).await?;
 
     let mut tx = pool.begin().await.map_err(internal)?;
+    ensure_currency(&mut tx, actor.workspace_id, &prepared.workspace_currency).await?;
 
     let before = repo::find(&mut *tx, actor.workspace_id, id)
         .await
@@ -447,6 +452,7 @@ pub async fn bulk_create(
 
     let mut outcome = BulkOutcome::default();
     let mut tx = pool.begin().await.map_err(internal)?;
+    ensure_currency(&mut tx, actor.workspace_id, &workspace.currency_code).await?;
 
     for (index, input) in inputs.iter().enumerate() {
         match prepare_import_row(&mut tx, actor.workspace_id, &workspace.currency_code, input).await
@@ -871,6 +877,7 @@ async fn prepare(
         base_rate_source: resolved.source.as_str(),
         base_rate_date: resolved.date,
         wallet_currency: source.currency_code,
+        workspace_currency: workspace.currency_code,
         shape,
         foreign,
     })
@@ -935,6 +942,7 @@ async fn prepare_import_row(
         base_rate_source: resolved.source.as_str(),
         base_rate_date: resolved.date,
         wallet_currency: source.currency_code,
+        workspace_currency: workspace_currency.to_string(),
         shape,
         foreign,
     })
@@ -1011,6 +1019,27 @@ fn effect_of(row: &TransactionRow) -> Result<Vec<BalanceDelta>> {
         to_amount: row.to_amount,
     }
     .effect())
+}
+
+/// Hold the workspace currency for the rest of this write (D105).
+///
+/// The rate was resolved before the transaction opened. A conversion that
+/// committed since would leave this row's `base_amount` in the old
+/// currency, so the write is refused and the client tries again. The share
+/// lock then keeps a conversion from starting until this write commits.
+async fn ensure_currency(
+    tx: &mut Transaction<'_, Postgres>,
+    workspace_id: &str,
+    expected: &str,
+) -> Result<()> {
+    let current = accounts::workspace_currency_for_write(&mut **tx, workspace_id)
+        .await
+        .map_err(internal)?
+        .ok_or(AppError::NotFound)?;
+    if current != expected {
+        return Err(AppError::WorkspaceCurrencyChanged);
+    }
+    Ok(())
 }
 
 /// Lock every affected wallet, then move each balance (TXN-6, D13).

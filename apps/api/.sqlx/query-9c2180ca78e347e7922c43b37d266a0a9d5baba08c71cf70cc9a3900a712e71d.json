@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE budgets\n           SET amount = GREATEST(round(amount * $2, 4), 0.0001), updated_at = now()\n           WHERE workspace_id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Numeric"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "9c2180ca78e347e7922c43b37d266a0a9d5baba08c71cf70cc9a3900a712e71d"
+}

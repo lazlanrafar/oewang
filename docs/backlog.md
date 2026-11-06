@@ -828,3 +828,14 @@ Requirements: WS-3, WS-4, WAL-6, FB-1
 - [ ] Verify locally: accept as the invited account, change a role, remove a member, change the currency of a workspace with no transactions
 - [ ] Verify in production after deploy
 
+### US-059: Convert the workspace currency
+Requirements: WAL-6, WAL-7
+
+- [x] Owner-only preview and convert endpoints; one rate reprices every transaction (deleted included) and every budget; a wallet already in the new currency takes rate 1; audited (Rust tests)
+- [x] Transaction writes re-read the currency under a share lock and fail with `WORKSPACE_CURRENCY_CHANGED` after a conversion
+- [x] `/settings/currency`: when locked, an owner picks the new currency (`?to=`), gets the newest stored rate to edit, a warning that all data will use this one rate, and a confirm that needs the new code typed
+- [x] clippy, `cargo test`, `bun run check` and `bun run test` pass in the containers
+- [x] Verified locally: the warning, the prefilled rate and counts, the confirm dialog (no conversion run on the real local workspace)
+- [ ] Verify end to end on a throwaway workspace: convert, then check transactions, overview and budgets read in the new currency
+- [ ] Verify in production after deploy
+
