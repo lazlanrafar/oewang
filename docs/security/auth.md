@@ -9,13 +9,14 @@ How a user proves who they are, how the system decides what they may do, and how
 - Changing JWT claims, token lifetime or cookie attributes.
 - Adding a role, or changing what a role may do. Update the [permission matrix](#permission-matrix).
 - Changing service-to-service authentication.
+- Changing how a passkey is added, checked or removed.
 
 ## Summary
 
-- Email and password only. No OAuth providers (D21).
+- Email and password, and passkeys added once signed in (D21, D110). No OAuth providers.
 - Passwords hashed with Argon2id.
 - The session is a short-lived access JWT plus a rotating refresh token, both in `httpOnly` cookies set by the SvelteKit server (D6, D38).
-- The API derives the workspace and the role from JWT claims and from nothing else (AUTH-4).
+- The API derives the workspace and the role from JWT claims and from nothing else (AUTH-4). A session opened at sign-up has neither until the user creates or joins a workspace (D109).
 - Three roles per workspace: `owner`, `admin`, `member`.
 - The AI service authenticates with a shared service key, never with a user token (D4).
 
@@ -45,8 +46,8 @@ HS256, signed with `JWT_SECRET` (at least 32 characters, validated at startup).
 | Claim | Meaning |
 |---|---|
 | `sub` | User ID |
-| `wid` | The workspace this token is scoped to |
-| `role` | The user's role in that workspace, copied at issue time |
+| `wid` | The workspace this token is scoped to. Absent while the user has none (D109) |
+| `role` | The user's role in that workspace, copied at issue time. Absent with `wid` |
 | `exp` | Expiry. 15 minutes (D38) |
 | `jti` | Token ID, logged on issue so a session can be traced |
 
@@ -103,6 +104,23 @@ Unlike the old app, logout really ends the session (D38).
 | Reuse detected | Revoke the family |
 
 The access token still lives up to 15 minutes after revocation, because nothing is checked on a read. That window is the deliberate trade for not hitting the database on every request; writes re-read the membership row, so an access token that outlives a removal cannot write.
+
+## Sessions without a workspace
+
+Signing up opens a session with no workspace (D109): no `wid`, no `role`, and a null `refresh_tokens.workspace_id`. Logging in does the same for someone who belongs to no workspace. Such a session passes the `AuthUser` extractor, which serves the routes that belong to a person: `me`, the workspace list, creating a workspace, accepting an invitation, switching, the session list and signing out. The `Auth` extractor, which every workspace route takes, refuses it with `NO_WORKSPACE`. A refresh keeps it without a workspace; joining one is a switch.
+
+The app sends every sign-in through `/sync`, which moves a session without a workspace into the first one the user belongs to, or to `/workspace-create`. `hooks.server.ts` reads `wid` from the access token to send a workspace-less session there from any other page. It reads, it does not verify: the API checks the signature on every call and refuses workspace data whatever the app decided.
+
+## Passkeys
+
+A second way in, beside the password (AUTH-14, D110). WebAuthn through `webauthn-rs`, with the app's origin from `APP_URL` as the relying party: the browser only ever talks to the app (D5), so the API's own address plays no part.
+
+- **Adding.** From Account, Security. The API starts a registration that requires a resident (discoverable) key and user verification, and excludes the user's existing credentials, so a device that already holds one refuses to make a second. The answer is checked, the credential ID is refused if it was ever registered to any account, and the passkey is stored with an audit row `passkey.added`.
+- **Signing in.** A button on the login page. The API starts a discoverable authentication, so no email is asked for. The answer names its credential and user handle; the passkey row is found by credential ID, the handle must be the one derived for that row's owner, and the signature, user verification and counter are checked. Then a session opens exactly as a password login's does. Every failure answers `INVALID_CREDENTIALS`, and the two routes share the credential rate limit (AUTH-6).
+- **Ceremony state.** The server half of each ceremony is a `passkey_ceremonies` row, claimed once (`used_at`) within five minutes, and claimed before the answer is checked, so a failed answer spends it too. A registration can be claimed only by the user who started it.
+- **User handle.** The first 16 bytes of SHA-256 of the user ID. Nothing on the authenticator names the account, and the same handle for every registration means a second passkey on the same device replaces the first.
+- **Removing.** Soft delete, audited `passkey.removed`. The copy on the device stays until the person deletes it there; the server no longer accepts it.
+- Passkeys do not end with a password change: they are separate credentials, each removable on its own.
 
 ## Password reset
 

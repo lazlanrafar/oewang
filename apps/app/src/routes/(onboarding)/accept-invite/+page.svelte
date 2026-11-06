@@ -14,7 +14,7 @@
 
 <svelte:head><title>{pageTitle(t('invite.title'))}</title></svelte:head>
 
-<main class="mx-auto flex min-h-svh max-w-md flex-col justify-center gap-4 px-4">
+<div class="mx-auto flex w-full max-w-md flex-col justify-center gap-4 px-2">
 	<h1 class="text-lg font-medium">{t('invite.invalid_title')}</h1>
 	<p class="text-subtle text-sm">
 		{data.error === 'missing'
@@ -24,4 +24,4 @@
 	<div>
 		<Button href="/">{t('invite.home')}</Button>
 	</div>
-</main>
+</div>

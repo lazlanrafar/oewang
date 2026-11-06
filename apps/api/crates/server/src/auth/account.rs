@@ -586,7 +586,7 @@ mod tests {
         )
         .await
         .unwrap();
-        assert_eq!(issued.workspace_id, WORKSPACE);
+        assert_eq!(issued.workspace_id.as_deref(), Some(WORKSPACE));
 
         let hash: String = sqlx::query_scalar("SELECT password_hash FROM users WHERE id = $1")
             .bind(USER)

@@ -131,6 +131,7 @@ Codes are stable, SCREAMING_SNAKE_CASE, and never reused for a different meaning
 | `INSUFFICIENT_ROLE` | 403 | The role in the token cannot perform this action |
 | `EMAIL_TAKEN` | 409 | Registration with an existing address |
 | `NOT_A_MEMBER` | 403 | Workspace switch to a workspace the user does not belong to |
+| `NO_WORKSPACE` | 403 | A session with no workspace yet, on a route that reads or writes one (D109) |
 | `LAST_OWNER` | 409 | Removing or demoting the only owner (WS-4) |
 | `INVITE_INVALID` | 404 | Unknown, already accepted, or expired invite token |
 

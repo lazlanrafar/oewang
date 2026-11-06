@@ -864,3 +864,13 @@ Requirements: MCP-9
 - [x] Verified locally end to end: discovery, registration (a foreign http redirect refused), consent limited to one workspace, a wrong verifier spends the code, the right one yields tokens that see only that workspace, refresh rotation, replay revoking, Disconnect
 - [ ] Verify with claude.ai and ChatGPT connectors against production
 
+### US-062: Sign up without a workspace, and passkeys
+Requirements: WS-5, WS-7, AUTH-14
+
+- [x] Signing up asks for no workspace name and opens a session with no workspace; `NO_WORKSPACE` guards every workspace route (Rust and integration tests)
+- [x] `/sync` sends a session on, into the first workspace, or to `/workspace-create`; an invitation link survives signing up
+- [x] `/workspace-create` in the old onboarding look: name and base currency, sign out above
+- [x] Passkeys added and removed in Account, Security; "Sign in with a passkey" on the login page (Rust tests cover ceremonies, ownership and removal)
+- [x] Verified locally through the app's routes: sign up, check page, create workspace, overview, sign in again
+- [ ] Verify a real passkey registration and sign-in in a browser
+- [ ] Verify in production after deploy (`APP_URL` is the relying party)

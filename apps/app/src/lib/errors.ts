@@ -15,6 +15,7 @@ const CODE_TO_KEY: Record<string, TranslationKey> = {
 	UNAUTHENTICATED: 'errors.unauthenticated',
 	INSUFFICIENT_ROLE: 'errors.insufficient_role',
 	NOT_A_MEMBER: 'errors.not_a_member',
+	NO_WORKSPACE: 'errors.no_workspace',
 	LAST_OWNER: 'errors.last_owner',
 	INVITE_INVALID: 'errors.invite_invalid',
 	RESET_TOKEN_INVALID: 'errors.reset_token_invalid',

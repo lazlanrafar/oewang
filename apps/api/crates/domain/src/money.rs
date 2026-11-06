@@ -107,7 +107,7 @@ fn group(digits: &str) -> String {
     let count = digits.len();
 
     for (index, digit) in digits.chars().enumerate() {
-        if index > 0 && (count - index) % 3 == 0 {
+        if index > 0 && (count - index).is_multiple_of(3) {
             out.push('.');
         }
         out.push(digit);

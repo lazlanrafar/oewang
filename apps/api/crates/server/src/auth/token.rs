@@ -21,10 +21,13 @@ const REFRESH_TOKEN_BYTES: usize = 32;
 pub struct Claims {
     /// User id.
     pub sub: String,
-    /// The workspace this token is scoped to.
-    pub wid: String,
+    /// The workspace this token is scoped to, absent while the user has
+    /// none (D109). Absent and `role` absent always go together.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub wid: Option<String>,
     /// The user's role in that workspace, copied at issue time.
-    pub role: Role,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub role: Option<Role>,
     pub iat: i64,
     pub exp: i64,
     /// Token id, logged on issue so a session can be traced.
@@ -36,11 +39,12 @@ pub struct AccessToken {
     pub expires_at: i64,
 }
 
+/// Issue an access token, scoped to a workspace and the role held there,
+/// or to none while the user has no workspace (D109).
 pub fn issue_access_token(
     secret: &Secret,
     user_id: &str,
-    workspace_id: &str,
-    role: Role,
+    scope: Option<(&str, Role)>,
     ttl: std::time::Duration,
 ) -> Result<AccessToken> {
     let now = Utc::now().timestamp();
@@ -48,8 +52,8 @@ pub fn issue_access_token(
 
     let claims = Claims {
         sub: user_id.to_string(),
-        wid: workspace_id.to_string(),
-        role,
+        wid: scope.map(|(workspace_id, _)| workspace_id.to_string()),
+        role: scope.map(|(_, role)| role),
         iat: now,
         exp: expires_at,
         jti: cuid2::create_id(),
@@ -131,17 +135,27 @@ mod tests {
         let issued = issue_access_token(
             &secret(),
             "user_1",
-            "wsp_1",
-            Role::Admin,
+            Some(("wsp_1", Role::Admin)),
             Duration::from_secs(900),
         )
         .unwrap();
         let claims = verify_access_token(&secret(), &issued.token).unwrap();
 
         assert_eq!(claims.sub, "user_1");
-        assert_eq!(claims.wid, "wsp_1");
-        assert_eq!(claims.role, Role::Admin);
+        assert_eq!(claims.wid.as_deref(), Some("wsp_1"));
+        assert_eq!(claims.role, Some(Role::Admin));
         assert_eq!(claims.exp, issued.expires_at);
+    }
+
+    #[test]
+    fn should_round_trip_a_token_with_no_workspace() {
+        let issued =
+            issue_access_token(&secret(), "user_1", None, Duration::from_secs(900)).unwrap();
+        let claims = verify_access_token(&secret(), &issued.token).unwrap();
+
+        assert_eq!(claims.sub, "user_1");
+        assert_eq!(claims.wid, None);
+        assert_eq!(claims.role, None);
     }
 
     #[test]
@@ -149,8 +163,7 @@ mod tests {
         let issued = issue_access_token(
             &secret(),
             "user_1",
-            "wsp_1",
-            Role::Admin,
+            Some(("wsp_1", Role::Admin)),
             Duration::from_secs(900),
         )
         .unwrap();
@@ -166,8 +179,7 @@ mod tests {
         let issued = issue_access_token(
             &secret(),
             "user_1",
-            "wsp_1",
-            Role::Member,
+            Some(("wsp_1", Role::Member)),
             Duration::from_secs(0),
         )
         .unwrap();
@@ -186,8 +198,7 @@ mod tests {
         let issued = issue_access_token(
             &secret(),
             "user_1",
-            "wsp_1",
-            Role::Member,
+            Some(("wsp_1", Role::Member)),
             Duration::from_secs(900),
         )
         .unwrap();
@@ -223,10 +234,20 @@ mod tests {
 
     #[test]
     fn should_give_each_token_its_own_id() {
-        let a =
-            issue_access_token(&secret(), "u", "w", Role::Owner, Duration::from_secs(900)).unwrap();
-        let b =
-            issue_access_token(&secret(), "u", "w", Role::Owner, Duration::from_secs(900)).unwrap();
+        let a = issue_access_token(
+            &secret(),
+            "u",
+            Some(("w", Role::Owner)),
+            Duration::from_secs(900),
+        )
+        .unwrap();
+        let b = issue_access_token(
+            &secret(),
+            "u",
+            Some(("w", Role::Owner)),
+            Duration::from_secs(900),
+        )
+        .unwrap();
 
         let a_jti = verify_access_token(&secret(), &a.token).unwrap().jti;
         let b_jti = verify_access_token(&secret(), &b.token).unwrap().jti;

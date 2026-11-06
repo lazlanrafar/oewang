@@ -10,7 +10,8 @@ use sqlx::PgExecutor;
 pub struct RefreshTokenRow {
     pub id: String,
     pub user_id: String,
-    pub workspace_id: String,
+    /// `None` for a session opened before the user had a workspace (D109).
+    pub workspace_id: Option<String>,
     pub family_id: String,
     pub expires_at: DateTime<Utc>,
     pub used_at: Option<DateTime<Utc>>,
@@ -44,7 +45,7 @@ pub async fn insert_refresh_token(
     executor: impl PgExecutor<'_>,
     id: &str,
     user_id: &str,
-    workspace_id: &str,
+    workspace_id: Option<&str>,
     token_hash: &str,
     family_id: &str,
     expires_at: DateTime<Utc>,

@@ -42,7 +42,7 @@ Each of these exists in the old app and is deliberately left out. Adding any of 
 - The Flutter mobile app and offline sync.
 - The Go background worker (D10).
 - ~~The MCP server and its OAuth client registration.~~ The MCP server came back with D106 (MCP-1 to MCP-9, section 6.17).
-- OAuth login. Email and password only (D21).
+- OAuth login. Email and password, and passkeys (D21, D110).
 - Application-layer payload encryption (D9).
 - Web search in chat. Canvas artifacts and chat charts were on this list until D88 brought the analysis canvas back for spending, income and burn rate, and D103 added the budget canvas; the debt canvas stays out with its feature.
 - Anomaly detection and transaction classification.
@@ -128,12 +128,14 @@ Requirement IDs are referenced by every other doc and by each backlog story. The
 | AUTH-11 | A user may change their display name. The email is shown and cannot be changed (D94). |
 | AUTH-12 | A user may change their password by giving the current one. Every other session and Telegram link ends; the browser that changed it stays signed in (D94). |
 | AUTH-13 | A user may set and remove a profile photo. It is kept as a 256px square JPEG under the user, not a workspace, and served through the app (D94). |
+| AUTH-14 | A signed-in user may add passkeys and remove them, and sign in with one instead of a password, without typing an email first. A failed passkey sign-in answers as a wrong password does (D110). |
 | WS-1 | A user may belong to several workspaces, with one role per workspace. |
 | WS-2 | A user may switch workspace and receives a re-scoped JWT. |
 | WS-3 | A workspace owner or admin may invite a user by email and remove a member. An invitation is accepted only by the account with the address it was sent to, and accepting never changes the role of someone already in the workspace. Only an owner may change or remove an owner. Every invite, revoke, join, role change and removal is audited. Settings → Members lists both (D104). |
 | WS-4 | The last remaining owner cannot be removed or demoted. |
-| WS-5 | Registration creates a user, a workspace and an `owner` membership in one database transaction. |
+| WS-5 | Registration creates a user and opens a session with no workspace. The first workspace is created on its own page, which makes the user its `owner` and seeds it, or joined by accepting an invitation (amended by D109). |
 | WS-6 | A signed-in user may create another workspace, which they own, seeded as registration seeds one, and is switched into it. One person owns at most 10 (D94). |
+| WS-7 | Every sign-in passes a check page. A session with a workspace goes on; one without goes into the first workspace the user belongs to, or to the create-workspace page if there is none, unless it is accepting an invitation. A session without a workspace reaches no workspace data (D109). |
 
 ### 6.3 Wallets and categories (WAL, CAT)
 

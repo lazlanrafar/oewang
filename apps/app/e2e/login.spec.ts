@@ -29,8 +29,8 @@ test.describe('signing in', () => {
 		// helper navigates to a bare /login and the `next` this test is
 		// about would be lost on the way.
 		await page.getByLabel(/email/i).fill(account.email);
-		await page.getByLabel(/password/i).fill(account.password);
-		await page.getByRole('button', { name: /sign in/i }).click();
+		await page.getByLabel('Password', { exact: true }).fill(account.password);
+		await page.getByRole('button', { name: 'Sign in', exact: true }).click();
 
 		await expect(page).toHaveURL(/\/transactions/);
 		await expect(page.getByRole('heading', { name: 'Transactions', level: 1 })).toBeVisible();
@@ -40,8 +40,8 @@ test.describe('signing in', () => {
 		await page.goto('/login');
 
 		await page.getByLabel(/email/i).fill('nobody@oewang.test');
-		await page.getByLabel(/password/i).fill('not-the-password');
-		await page.getByRole('button', { name: /sign in/i }).click();
+		await page.getByLabel('Password', { exact: true }).fill('not-the-password');
+		await page.getByRole('button', { name: 'Sign in', exact: true }).click();
 
 		await expect(page).toHaveURL(/\/login/);
 		// One message for both halves: naming the wrong one tells an

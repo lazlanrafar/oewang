@@ -41,6 +41,7 @@
 	import { FormError } from '$lib/components/molecules/form-error';
 	import { Select } from '$lib/components/molecules/select';
 	import * as InputGroup from '$lib/components/molecules/input-group';
+	import { PasswordInput } from '$lib/components/molecules/password-input';
 	import * as Item from '$lib/components/molecules/item';
 	import { StatCard } from '$lib/components/molecules/stat-card';
 	import {
@@ -232,6 +233,18 @@
 			<Field.Label for="field-recurring">Repeat every month</Field.Label>
 		</Field.Root>
 	</Field.Group>
+</Specimen>
+
+<Specimen title="Password input">
+	<div class="grid gap-4 sm:grid-cols-2">
+		<PasswordInput placeholder="Password" autocomplete="off" value="correct horse battery" />
+		<PasswordInput placeholder="Invalid" autocomplete="off" aria-invalid="true" />
+		<PasswordInput placeholder="Disabled" autocomplete="off" disabled />
+	</div>
+	<p class="text-subtle text-small">
+		The eye at the end shows and hides what was typed. Every attribute goes to the input, so a
+		label and a password manager find it as before.
+	</p>
 </Specimen>
 
 <Specimen title="Input group and currency input">

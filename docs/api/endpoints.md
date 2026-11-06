@@ -31,28 +31,36 @@ These four are the only plaintext routes ([exceptions](encryption.md#plaintext-e
 
 | Method | Path | Role | Description |
 |---|---|---|---|
-| POST | `/v1/auth/register` | public | Create user, workspace and `owner` membership in one transaction. Returns a JWT (WS-5) |
-| POST | `/v1/auth/login` | public | Verify credentials, return a JWT (AUTH-2) |
+| POST | `/v1/auth/register` | public | Create the user and open a session with no workspace: `workspace_id` and `role` are null (WS-5, D109) |
+| POST | `/v1/auth/login` | public | Verify credentials, return a JWT scoped to the first workspace the user joined, or to none (AUTH-2, D109) |
 | POST | `/v1/auth/refresh` | public | Rotate the refresh cookie and issue a new access token. Reuse revokes the family (AUTH-9) |
 | POST | `/v1/auth/logout` | any | Revoke the refresh row and clear both cookies |
-| POST | `/v1/auth/logout-all` | any | Revoke every live refresh row for the user |
-| GET | `/v1/auth/sessions` | any | The user's live sessions, with user agent and last use |
+| POST | `/v1/auth/logout-all` | any session | Revoke every live refresh row for the user |
+| GET | `/v1/auth/sessions` | any session | The user's live sessions, with user agent and last use |
 | POST | `/v1/auth/forgot-password` | public | Always answers 204, whether or not the address exists (AUTH-10) |
 | POST | `/v1/auth/reset-password` | public | Token plus a new password. Revokes every session on success |
-| GET | `/v1/auth/me` | any | Current user (with `profile_picture`, a photo version id or null), workspace and role |
+| GET | `/v1/auth/me` | any session | Current user (with `profile_picture`, a photo version id or null), workspace and role; `workspace` and `role` are null for a session with no workspace (D109) |
 | PATCH | `/v1/auth/me` | any | `{name}`; a blank name clears it (AUTH-11) |
 | PUT | `/v1/auth/me/colors` | any | `{income_color, expense_color}`, each `#rrggbb` or null for the default; both every time. Audited as `user.colors_updated`. `GET /v1/auth/me` returns them on `user` (UI-9, D100) |
 | GET | `/v1/auth/me/avatar` | any | `{type: "image/jpeg", data}` base64, or 404 when there is no photo (AUTH-13) |
 | PUT | `/v1/auth/me/avatar` | any | `{data}` base64 JPEG, PNG or WebP up to 700 KB; stored as a 256px square JPEG. Answers `{profile_picture}` |
 | DELETE | `/v1/auth/me/avatar` | any | Remove the photo |
 | POST | `/v1/auth/change-password` | any | `{current_password, new_password}`. A wrong current password is a 422 field error. Ends every other session; answers a fresh session (AUTH-12) |
-| POST | `/v1/auth/switch-workspace` | any | Re-scope the JWT to another workspace the user belongs to (WS-2) |
+| POST | `/v1/auth/switch-workspace` | any session | Re-scope the JWT to another workspace the user belongs to, from a session with or without one (WS-2) |
+| GET | `/v1/auth/passkeys` | any | The user's passkeys: `{id, name, created_at, last_used_at}` (AUTH-14, D110) |
+| POST | `/v1/auth/passkeys/register/start` | any | `{ceremony_id, options}`: WebAuthn creation options for the browser. At most 20 passkeys |
+| POST | `/v1/auth/passkeys/register/finish` | any | `{ceremony_id, name, credential}`. 201 with the passkey. A failed check is a 422 on `passkey`. Audited `passkey.added` |
+| DELETE | `/v1/auth/passkeys/{id}` | any | Soft-delete one of your own passkeys. Audited `passkey.removed` |
+| POST | `/v1/auth/passkey/sign-in/start` | public | `{ceremony_id, options}`: request options for any passkey the browser holds for the site |
+| POST | `/v1/auth/passkey/sign-in/finish` | public | `{ceremony_id, credential}`. A session, as login answers. Any failure is `INVALID_CREDENTIALS` |
 
 `POST /v1/auth/register`
 
 ```json
-{ "email": "a@b.com", "password": "…", "name": "Azlan", "workspace_name": "Personal" }
+{ "email": "a@b.com", "password": "…", "name": "Azlan" }
 ```
+
+Role "any session" accepts a session with no workspace (D109). Every other authenticated route needs one and answers `NO_WORKSPACE` without it.
 
 `POST /v1/auth/switch-workspace`
 
@@ -66,8 +74,8 @@ Returns `NOT_A_MEMBER` if the user has no live membership row.
 
 | Method | Path | Role | Description |
 |---|---|---|---|
-| GET | `/v1/workspaces` | any | Workspaces the user belongs to, with their role in each |
-| POST | `/v1/workspaces` | any | `{name, currency_code}`. A new workspace the caller owns, seeded; at most 10 owned. The client then switches into it (WS-6) |
+| GET | `/v1/workspaces` | any session | Workspaces the user belongs to, with their role in each |
+| POST | `/v1/workspaces` | any session | `{name, currency_code}`. A new workspace the caller owns, seeded; at most 10 owned. The client then switches into it (WS-6) |
 | GET | `/v1/workspaces/current` | any | The current workspace, with `currency_locked`: true once any transaction exists (WAL-6) |
 | PATCH | `/v1/workspaces/current` | admin+ | Update name, slug, country. Currency code only while no transaction exists, otherwise `WORKSPACE_CURRENCY_LOCKED` (WAL-6) |
 | GET | `/v1/workspaces/current/currency/preview?to=USD` | owner | What a conversion would touch: `{ from, to, suggested_rate, rate_date, transactions, budgets }`, the rate from the newest stored snapshot or null (WAL-7) |
@@ -78,7 +86,7 @@ Returns `NOT_A_MEMBER` if the user has no live membership row.
 | GET | `/v1/workspaces/current/invites` | admin+ | Pending invites |
 | POST | `/v1/workspaces/current/invites` | admin+ | Invite by email with a role (WS-3). Refuses a current member (422 on `email`) and replaces a pending invite to the same address. Returns the raw `token` once. Audited `member.invited` |
 | DELETE | `/v1/workspaces/current/invites/{id}` | admin+ | Revoke an invite. Audited `member.invite_revoked` |
-| POST | `/v1/workspaces/accept-invite` | any signed-in user | Accept an invite by token. Returns `{ workspace_id }`. `INVITE_INVALID` unless the caller's email is the invited one; a live membership keeps its role. Audited `member.joined` |
+| POST | `/v1/workspaces/accept-invite` | any session | Accept an invite by token. Returns `{ workspace_id }`. `INVITE_INVALID` unless the caller's email is the invited one; a live membership keeps its role. Audited `member.joined` |
 | DELETE | `/v1/workspaces/current` | owner | Soft-delete the workspace |
 | GET | `/v1/workspaces/current/usage` | any | Storage used and model tokens, by month and feature (USG-1, USG-3, D92) |
 | POST | `/v1/feedback` | any | Send feedback: `{ type: bug\|feature\|other, message }`, 5000 characters at most. 201 `{ id }`. Audited `feedback.sent` (FB-1) |

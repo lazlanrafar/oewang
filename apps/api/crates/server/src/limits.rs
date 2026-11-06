@@ -197,6 +197,8 @@ fn is_credential_route(path: &str) -> bool {
             | "/v1/auth/refresh"
             | "/v1/auth/forgot-password"
             | "/v1/auth/reset-password"
+            | "/v1/auth/passkey/sign-in/start"
+            | "/v1/auth/passkey/sign-in/finish"
             | "/v1/workspaces/accept-invite"
     )
 }

@@ -24,6 +24,10 @@ pub enum AppError {
     EmailTaken,
     #[error("not a member of that workspace")]
     NotAMember,
+    /// A session that belongs to no workspace yet, used on a route that
+    /// reads or writes one (D109).
+    #[error("no workspace selected")]
+    NoWorkspace,
     #[error("cannot remove the last owner")]
     LastOwner,
     #[error("invite is invalid")]
@@ -149,6 +153,7 @@ impl AppError {
             InsufficientRole => "INSUFFICIENT_ROLE",
             EmailTaken => "EMAIL_TAKEN",
             NotAMember => "NOT_A_MEMBER",
+            NoWorkspace => "NO_WORKSPACE",
             LastOwner => "LAST_OWNER",
             InviteInvalid => "INVITE_INVALID",
             McpTokenInvalid => "MCP_TOKEN_INVALID",
@@ -201,7 +206,7 @@ impl AppError {
         use AppError::*;
         match self {
             Unauthenticated | InvalidCredentials | CryptoSessionUnknown | McpTokenInvalid => 401,
-            InsufficientRole | NotAMember | ToolForbidden => 403,
+            InsufficientRole | NotAMember | NoWorkspace | ToolForbidden => 403,
             EmailTaken
             | LastOwner
             | WalletHasTransactions
@@ -247,6 +252,7 @@ impl AppError {
             InsufficientRole => "This action needs the owner or admin role.",
             EmailTaken => "Sign in instead, or use another address.",
             LastOwner => "Promote another member to owner first.",
+            NoWorkspace => "Create a workspace or accept an invitation, then switch into it.",
             McpTokenInvalid => "Create a new token in Account, MCP, or connect again.",
             Validation(_) | ToolArgsInvalid(_) => "Fix the listed fields and try again.",
             WalletNotFound => "Reload your wallets and pick one that still exists.",
@@ -356,6 +362,7 @@ mod tests {
             AppError::InsufficientRole,
             AppError::EmailTaken,
             AppError::NotAMember,
+            AppError::NoWorkspace,
             AppError::LastOwner,
             AppError::InviteInvalid,
             AppError::ResetTokenInvalid,
@@ -404,9 +411,9 @@ mod tests {
             AppError::Internal(anyhow::anyhow!("boom")),
         ];
 
-        // 47 of the 48 catalog entries. TRANSPORT_UNEXPECTED_RESPONSE is a
-        // client-side condition and has no server variant by design.
-        assert_eq!(samples.len(), 49);
+        // Every catalog entry but TRANSPORT_UNEXPECTED_RESPONSE, a
+        // client-side condition with no server variant by design.
+        assert_eq!(samples.len(), 50);
 
         let mut seen = std::collections::HashSet::new();
         for error in &samples {

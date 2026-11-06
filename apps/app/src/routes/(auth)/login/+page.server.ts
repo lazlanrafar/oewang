@@ -2,19 +2,15 @@ import { fail, redirect, type Actions } from '@sveltejs/kit';
 
 import { api, ApiError } from '$lib/server/api';
 import { setSession, type IssuedSession } from '$lib/server/session';
+import { safeNext } from '$lib/workspaces';
 
-/** Only same-origin paths, so `?next=` cannot become an open redirect. */
-function safeNext(value: FormDataEntryValue | null): string {
-	const next = typeof value === 'string' ? value : '';
-	return next.startsWith('/') && !next.startsWith('//') ? next : '/';
-}
 
 export const actions: Actions = {
 	default: async ({ request, cookies }) => {
 		const form = await request.formData();
 		const email = String(form.get('email') ?? '').trim();
 		const password = String(form.get('password') ?? '');
-		const next = safeNext(form.get('next'));
+		const next = safeNext(String(form.get('next') ?? ''), '');
 
 		if (!email || !password) {
 			return fail(400, {
@@ -42,6 +38,8 @@ export const actions: Actions = {
 			throw error;
 		}
 
-		redirect(303, next);
+		// Through the check page, which also handles a session that has no
+		// workspace yet (D109).
+		redirect(303, next ? `/sync?next=${encodeURIComponent(next)}` : '/sync');
 	}
 };

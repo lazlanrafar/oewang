@@ -5,7 +5,7 @@ resolver = "2"
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
-rust-version = "1.84"
+rust-version = "1.89"
 license = "UNLICENSED"
 
 [workspace.dependencies]
@@ -53,6 +53,10 @@ hmac = "0.12"
 sha2 = "0.10"
 rand = "0.8"
 base64 = "0.22"
+# Passkeys (D110). Pure Rust since 0.6, so no OpenSSL joins the image.
+# State serialisation keeps a ceremony in the database between its two
+# requests; conditional-ui is what offers discoverable sign-in.
+webauthn-rs = { version = "0.6", features = ["danger-allow-state-serialisation", "conditional-ui"] }
 
 # Vault previews (D91). Decoders for the accepted image types only, plus the
 # JPEG encoder the preview is written with; nothing that parses PDF or SVG.
