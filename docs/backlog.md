@@ -795,3 +795,18 @@ Requirements: AI-12
 - [x] Verified locally: with the AI service stopped, a queued receipt stays pending and is rescheduled
 - [x] Verify end to end: a receipt saved once the reader answers (production, 2026-11-05, after the `oewang-model` combo in 9router was moved to `cx/gpt-5.6-luna` → `cx/gpt-5.6-terra`; the queue path itself was verified locally up to rescheduling, not yet through to a save)
 
+## M11. Budgets
+
+### US-057: Budgets and the budget canvas
+Requirements: BUD-1, BUD-2, BUD-3, BUD-4, BUD-5
+
+- [x] `budgets` table with one live budget per category (migration 0014); create, edit limit, delete, each audited (Rust tests)
+- [x] Spent sums live expenses in the month in `base_amount`; next month, last month, income, other categories, other workspaces and deleted rows are left out (Rust test)
+- [x] Percent and state thresholds (79 safe, 80 and 100 warning, 101 over) and the summary sentence (Rust unit tests)
+- [x] Deleting a category deletes its budget (Rust test)
+- [x] `/budget` as the old page: cards, filter bar with a status facet, month stepper, sortable table, form sheet, delete confirm; Budget in the sidebar after Accounts
+- [x] `get_budget_status` tool (Rust and Python catalogs, fifteen tools) and the `budget` canvas
+- [x] Every list screen's search is the transactions filter bar, with facets: budgets (status), accounts (group, currency), items (currency), rates (search only)
+- [x] clippy, `cargo test`, ruff, pytest, `bun run check` and `bun run test` pass in the containers
+- [x] Verified locally: create a budget, figures match the database, October shows over budget in red, the month and filters survive a reload, the chat answers with the canvas and it survives a reload
+- [ ] Verify in production after deploy

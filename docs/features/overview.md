@@ -35,7 +35,7 @@ Every money figure is computed by the API's report module (`server/src/reports`)
 
 The old cards showed the last month of the range under a label for the whole range. These cover the whole range, which is what the label says.
 
-Budget usage and debt balance are not here: both features are PRD non-goals.
+Debt balance is not here: debts are a PRD non-goal. Budget usage is not here either: budgets came back with D103 on their own page, and a card for them here was not asked for.
 
 ## Charts
 

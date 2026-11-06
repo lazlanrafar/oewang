@@ -29,8 +29,12 @@ describe('filterCommands', () => {
 		expect(filterCommands('insights')).toHaveLength(1);
 	});
 
+	it('offers the budget shortcut now that a tool answers it (D103)', () => {
+		expect(filterCommands('budget').map((entry) => entry.title)).toEqual(['chat.command_budget']);
+	});
+
 	it('offers nothing the tools cannot answer', () => {
-		for (const out of ['invoice', 'debt', 'budget', 'contact', 'runway']) {
+		for (const out of ['invoice', 'debt', 'contact', 'runway']) {
 			expect(filterCommands(out)).toEqual([]);
 		}
 	});

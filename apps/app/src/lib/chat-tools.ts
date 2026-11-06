@@ -32,7 +32,7 @@ export type ToolCall = {
 };
 
 /**
- * The fourteen tools (D17, D88), each with a written label.
+ * The fifteen tools (D17, D88, D103), each with a written label.
  *
  * Written rather than derived, because "Calculating summary" is not what
  * the name shape would produce and a progress line is read at a glance.
@@ -45,6 +45,7 @@ const LABEL_KEYS: Record<string, TranslationKey> = {
 	get_spending_analysis: 'chat.tool_get_spending_analysis',
 	get_income_summary: 'chat.tool_get_income_summary',
 	get_burn_rate: 'chat.tool_get_burn_rate',
+	get_budget_status: 'chat.tool_get_budget_status',
 	create_transaction: 'chat.tool_create_transaction',
 	update_transaction: 'chat.tool_update_transaction',
 	delete_transaction: 'chat.tool_delete_transaction',

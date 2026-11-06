@@ -7,9 +7,9 @@
  * has to decide what an artifact is and find the ones a conversation holds.
  */
 
-import type { BurnRate, IncomeSummary, SpendingAnalysis } from '$lib/reports';
+import type { BudgetStatus, BurnRate, IncomeSummary, SpendingAnalysis } from '$lib/reports';
 
-export const ARTIFACT_KINDS = ['spending', 'income', 'burn-rate'] as const;
+export const ARTIFACT_KINDS = ['spending', 'income', 'burn-rate', 'budget'] as const;
 
 export type ArtifactKind = (typeof ARTIFACT_KINDS)[number];
 
@@ -17,6 +17,7 @@ export type ArtifactPayloads = {
 	spending: SpendingAnalysis;
 	income: IncomeSummary;
 	'burn-rate': BurnRate;
+	budget: BudgetStatus;
 };
 
 export type Artifact = {

@@ -1,4 +1,4 @@
-"""The fourteen tool definitions the model sees (D17, D88).
+"""The fifteen tool definitions the model sees (D17, D88, D103).
 
 **The specification for this module is `apps/api/crates/domain/src/tools.rs`.**
 That file is the validator: it parses every tool call the model produces, and
@@ -387,6 +387,28 @@ GET_BURN_RATE = {
     "input_schema": _range(),
 }
 
+#: Budget against spending for one month (D103). Opens the same panel as the
+#: three analysis tools, drawing each budget's bar.
+GET_BUDGET_STATUS = {
+    "name": "get_budget_status",
+    "description": (
+        "Monthly budgets against what was spent: each budgeted expense category "
+        "with its limit, the amount spent, what remains and the percentage used, "
+        "plus the totals and which categories are over. Use it when the user asks "
+        "about their budget. Omit month for the current month. Every figure is "
+        "computed and formatted; quote them."
+    ),
+    "input_schema": _schema(
+        {
+            "month": {
+                "type": "string",
+                "pattern": "^[0-9]{4}-[0-9]{2}$",
+                "description": "The calendar month as YYYY-MM. Omit for the current month.",
+            },
+        }
+    ),
+}
+
 #: The catalog, in the order `Tool::ALL` lists it in the Rust validator.
 TOOL_DEFINITIONS: list[dict[str, Any]] = [
     GET_WORKSPACE_CONTEXT,
@@ -396,6 +418,7 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
     GET_SPENDING_ANALYSIS,
     GET_INCOME_SUMMARY,
     GET_BURN_RATE,
+    GET_BUDGET_STATUS,
     CREATE_TRANSACTION,
     UPDATE_TRANSACTION,
     DELETE_TRANSACTION,

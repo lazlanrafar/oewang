@@ -118,6 +118,50 @@ export type BurnRate = {
 	months_above_average: number;
 };
 
+export type BudgetState = 'safe' | 'warning' | 'over';
+
+/** One budget in one month (BUD-2). */
+export type BudgetLine = {
+	id: string;
+	category_id: string;
+	category_name: string;
+	amount: string;
+	amount_formatted: string;
+	spent: string;
+	spent_formatted: string;
+	/** Negative once the budget is over. */
+	remaining: string;
+	remaining_formatted: string;
+	/** Whole percent of the limit, past 100 when over. */
+	percent: number;
+	state: BudgetState;
+};
+
+/**
+ * Every budget in one month: the budget page's load and the `budget` canvas
+ * (D103). Totals cover every budget whatever the search; `budgets` is the
+ * searched and sorted list.
+ */
+export type BudgetStatus = {
+	/** `YYYY-MM`. */
+	month: string;
+	from: string;
+	to: string;
+	currency_code: string;
+	budgeted: string;
+	budgeted_formatted: string;
+	spent: string;
+	spent_formatted: string;
+	remaining: string;
+	remaining_formatted: string;
+	percent: number;
+	state: BudgetState;
+	count: number;
+	over_count: number;
+	summary: string;
+	budgets: BudgetLine[];
+};
+
 /**
  * `2026-03` as "Mar 2026", or "Mar" when every month is in one year.
  *

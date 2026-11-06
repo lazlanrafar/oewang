@@ -209,16 +209,17 @@ When the assistant produces something the user needs to see rather than read, th
 | `spending` | Expense in range with its comparison, the top category, a donut by category, the ten largest expenses | `get_spending_analysis` |
 | `income` | Income in range, the monthly average, monthly income against the year before, income by category, the latest income | `get_income_summary` |
 | `burn-rate` | Monthly spending with its average, the average burn, months above it | `get_burn_rate` |
+| `budget` | Spent and remaining against the month's total budget, a bar per budget (fullest first, amber from 80%, red past 100%), the summary sentence. `from` and `to` are the month's first and last day | `get_budget_status` (D103) |
 
 `id` is the vault file for the first two and the tool call id for the analyses, which is what makes a reload reproduce the panel.
 
 ### Analysis artifacts (D88)
 
-- **Built by the API.** The tool runs in `ai/tools.rs`, which calls the report module (`server/src/reports`) and answers the model with the report. The same report goes into the turn store under the model's call id, sent by the AI service as `call_id`.
+- **Built by the API.** The tool runs in `ai/tools.rs`, which calls the report module (`server/src/reports`, or `server/src/budgets` for the budget status) and answers the model with the report. The same report goes into the turn store under the model's call id, sent by the AI service as `call_id`.
 - **Sent by the API.** The stream pump forwards the tool's `tool_result`, then takes the artifact and sends an `artifact` event. The AI service never carries a payload; an `artifact` arriving from it is dropped.
 - **Stored on the tool call.** The pump records it as `tool_calls[i].artifact = {type, payload}` in `ai_messages.attachments`. `toolCallsFromAttachments` reads it back, so the tabs and a reload find every analysis in the conversation. It is the answer as it was given, not a live figure; the [overview](overview.md) is the live one.
 - **Opened once.** The live turn opens the canvas when an artifact arrives, once per call: closing it is the reader's decision. Tabs list every analysis in the conversation; each message that made one has a toggle for it.
-- **Empty means none.** A range with nothing in it leaves no artifact, and the model's result says `canvas: false`.
+- **Empty means none.** A range with nothing in it, or a workspace with no budgets, leaves no artifact, and the model's result says `canvas: false`.
 - **The prompt is told.** After an analysis tool the model answers in one to three sentences and lists nothing the panel shows.
 - **Figures.** The app prints each figure from the raw decimal with `formatMoney`, ISO code in front, like every other screen; the `_formatted` twins carry the API's symbol and are the model's. Charts read `chartValue` for geometry only (D89).
 

@@ -595,7 +595,8 @@ pub async fn update_category(
     Ok(after)
 }
 
-/// Soft delete. Transactions keep their money and lose their label (CAT-2).
+/// Soft delete. Transactions keep their money and lose their label (CAT-2),
+/// and the category's budget goes with it (BUD-4).
 pub async fn delete_category(pool: &PgPool, actor: Actor<'_>, id: &str) -> Result<()> {
     let mut tx = pool.begin().await.map_err(internal)?;
 
@@ -613,6 +614,7 @@ pub async fn delete_category(pool: &PgPool, actor: Actor<'_>, id: &str) -> Resul
     categories::soft_delete_category(&mut *tx, actor.workspace_id, id)
         .await
         .map_err(internal)?;
+    crate::budgets::service::delete_for_category(&mut tx, actor, id).await?;
 
     log(
         &mut tx,

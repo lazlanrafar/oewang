@@ -1,0 +1,48 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT b.id, b.category_id, c.name AS category_name, b.amount,\n                  COALESCE((\n                      SELECT sum(t.base_amount)\n                      FROM transactions t\n                      WHERE t.workspace_id = b.workspace_id\n                        AND t.category_id = b.category_id\n                        AND t.type = 'expense'\n                        AND t.deleted_at IS NULL\n                        AND t.date >= $2 AND t.date < $3\n                  ), 0) AS \"spent!\"\n           FROM budgets b\n           JOIN categories c\n             ON c.id = b.category_id AND c.workspace_id = b.workspace_id\n            AND c.deleted_at IS NULL\n           WHERE b.workspace_id = $1 AND b.deleted_at IS NULL\n           ORDER BY c.sort_order, c.name",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "category_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "category_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "amount",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 4,
+        "name": "spent!",
+        "type_info": "Numeric"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Timestamptz",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      null
+    ]
+  },
+  "hash": "f0e8222211ddabf616e16d9a08fd4bcd79caeabef5249c82c39bc9f5064ababf"
+}

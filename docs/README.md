@@ -22,11 +22,12 @@ oewang is a personal finance tracker. This repository is a ground-up rewrite of 
 14. [Overview](features/overview.md): the front page, its two tabs, the floating composer, and where each figure comes from.
 15. [Vault](features/vault.md): the vault page, the file sheet, thumbnails, and deleting a file that transactions carry.
 16. [Usage](features/usage.md): where model tokens are recorded, how storage is derived, and the settings page that shows both.
-17. [AI service](ai/service.md): the Python service, its tool catalog, prompt, and streaming protocol.
-18. Best practices: [Rust API](best-practices/rust-api.md) and [Svelte app](best-practices/svelte-app.md).
-19. [Backlog](backlog.md): the implementation stories, in order, each mapped to requirement IDs.
-20. [Legacy app](reference/legacy-app.md): what the old implementation contains, what the rewrite takes from it, what it drops.
-21. [Midday research](research/midday.md): reverse engineering of a second reference implementation, and the proposals taken from it.
+17. [Budgets](features/budgets.md): monthly limits per expense category, what counts as spent, the page and the chat canvas.
+18. [AI service](ai/service.md): the Python service, its tool catalog, prompt, and streaming protocol.
+19. Best practices: [Rust API](best-practices/rust-api.md) and [Svelte app](best-practices/svelte-app.md).
+20. [Backlog](backlog.md): the implementation stories, in order, each mapped to requirement IDs.
+21. [Legacy app](reference/legacy-app.md): what the old implementation contains, what the rewrite takes from it, what it drops.
+22. [Midday research](research/midday.md): reverse engineering of a second reference implementation, and the proposals taken from it.
 
 ## Doc map
 
@@ -47,6 +48,7 @@ flowchart TD
     PRD --> CHAT["features/chat.md"]
     PRD --> VAULT["features/vault.md"]
     PRD --> USAGE["features/usage.md"]
+    PRD --> BUDGETS["features/budgets.md"]
     VAULT --> TXN
     CHAT --> AI["ai/service.md"]
     CHAT --> SAFE["security/ai-safety.md"]

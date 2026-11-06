@@ -140,7 +140,20 @@ The response is a suggestion. The rate the user confirms is sent back on the tra
 | GET | `/v1/categories` | any | List. Query: `type=income\|expense` |
 | POST | `/v1/categories` | admin+ | Create |
 | PATCH | `/v1/categories/{id}` | admin+ | Update name, type or sort order |
-| DELETE | `/v1/categories/{id}` | admin+ | Soft delete. Sets `category_id` to null on its transactions (CAT-2) |
+| DELETE | `/v1/categories/{id}` | admin+ | Soft delete. Sets `category_id` to null on its transactions (CAT-2) and deletes its budget (BUD-4) |
+
+## Budgets
+
+D103, BUD-1 to BUD-3. Every figure is computed by the API, with a `_formatted` twin (D27).
+
+| Method | Path | Role | Description |
+|---|---|---|---|
+| GET | `/v1/budgets` | any | Status for one month. Query: `month=YYYY-MM` (default: the current month, UTC), `search` (category name, contains), `sort=category\|amount\|spent\|remaining\|percent` (default `category`, the category order), `order=asc\|desc` (default `asc`). Unpaged: one row per expense category at most |
+| POST | `/v1/budgets` | admin+ | Create. Body: `{ "category_id", "amount": "1500000" }`. A category that is not an expense category of this workspace, or one that already has a budget, is `VALIDATION_FAILED` on `category_id` |
+| PATCH | `/v1/budgets/{id}` | admin+ | Change the limit. Body: `{ "amount": "2000000" }`. The category never changes |
+| DELETE | `/v1/budgets/{id}` | admin+ | Soft delete |
+
+`GET /v1/budgets` answers `{ month, from, to, currency_code, budgeted, spent, remaining, percent, state, count, over_count, summary, budgets: [{ id, category_id, category_name, amount, spent, remaining, percent, state }] }`, each money field with its `_formatted` twin. The totals cover every budget whatever the search. `state` is `safe`, `warning` (80% or more) or `over` (past 100%). The same object is the `budget` canvas payload.
 
 ## Transactions
 
@@ -262,7 +275,7 @@ Every line item across the workspace's live transactions, read only (D97).
 
 | Method | Path | Role | Description |
 |---|---|---|---|
-| GET | `/v1/items` | any | One row per item, paged (ITM-1). Query: `search`, `key` with `currency` (one exact item, both or neither), `sort` `last_bought_at` (default, newest first), `name`, `purchases` or `last_price`, `order`, `page`, `limit` |
+| GET | `/v1/items` | any | One row per item, paged (ITM-1). Query: `search`, `currency` (items paid for in it), `key` (one exact item, needs `currency`), `sort` `last_bought_at` (default, newest first), `name`, `purchases` or `last_price`, `order`, `page`, `limit` |
 | GET | `/v1/items/history` | any | One item's purchases, newest first, paged (ITM-2). Query: `key`, `currency` (both required), `page`, `limit` |
 
 An item row is `{id, key, name, currency_code, purchases, last_bought_at, last_price, last_quantity, last_unit, last_transaction_id, last_discount, min_price, max_price}`; `id` is `{currency_code}:{key}`. A purchase row is `{id, transaction_id, transaction_name, wallet_name, date, name, brand, quantity, unit, price, amount, currency_code, transaction_discount}`. `price` is one unit's price: `unit_price`, else `amount / quantity`, else `amount`.

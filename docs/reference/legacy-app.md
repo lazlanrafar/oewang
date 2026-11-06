@@ -49,7 +49,8 @@ None survive. The rewrite has no shared package layer: the three apps speak HTTP
 
 | Dropped | Why |
 |---|---|
-| Invoices, debts, budgets, contacts | Out of scope ([PRD non-goals](../prd.md#non-goals-for-v1)) |
+| Invoices, debts, contacts | Out of scope ([PRD non-goals](../prd.md#non-goals-for-v1)) |
+| Budgets | Back with D103: the old page and its canvas, monthly per expense category; no budget notifications ([budgets](../features/budgets.md)) |
 | Document RAG, `ai_knowledge_chunks` | Out of scope. The vault page itself was on this line until D90 ported it: the old page copied, with a file opening in its own sheet instead of the inline panel, rename and delete fixed, the picker's filters run on the server across every page, the dead "Dimensions" row and the "Videos" filter removed, and server-made thumbnails ([vault](../features/vault.md)) |
 | Billing: Mayar, plans, addons, AI token quota, storage limits | Out of scope. Token and storage usage are recorded and shown, never limited (D92, [usage](../features/usage.md)) |
 | Integrations, Telegram webhook handling | Telegram rebuilt, not ported (D83 to D86): linking by one-time token instead of `/start <slug>___<user>`, long polling from the API instead of a webhook into the Go worker, receipts saved on arrival. Every other integration is out of scope |
@@ -57,7 +58,7 @@ None survive. The rewrite has no shared package layer: the three apps speak HTTP
 | OAuth login providers | D21 |
 | Notifications, push, device tokens, realtime invalidation | Out of scope |
 | Anomaly detection, transaction classification, the advisor endpoint | Out of scope. The advisor had no caller even in the old app |
-| Canvas artifacts and chat charts | Spending, income and burn rate came back with D88, built by the API rather than by the AI service, and stored on the tool call. Debt and budget canvases stay out with their features |
+| Canvas artifacts and chat charts | Spending, income and burn rate came back with D88, built by the API rather than by the AI service, and stored on the tool call. Budget followed with D103. The debt canvas stays out with its feature |
 | Three locales (`en`, `id`, `ja`) | English only, through a dictionary (D15) |
 | The Go worker | D10 |
 | Direct Postgres writes from Python and Go | D3, D4. The single most important structural change |

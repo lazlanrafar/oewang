@@ -3,8 +3,9 @@
  *
  * Grouping mirrors the live app: an unlabelled first group, then Finance,
  * then Workspace, then System. The item set is ours, not the live app's:
- * Calendar, Budget, Debts and Contacts belong to features this rewrite
- * deliberately drops (docs/prd.md#non-goals-for-v1). Accounts is not among
+ * Calendar, Debts and Contacts belong to features this rewrite deliberately
+ * drops (docs/prd.md#non-goals-for-v1). Budget came back on request (D103),
+ * in its old place under Finance, after Accounts, with its piggy bank. Accounts is not among
  * them and never was: wallets are specified in their own right as WAL-1 to
  * WAL-6. Apps came back with Telegram (D83), and Vault came back on request
  * (D90), both in the live app's Workspace group, Vault first with its old
@@ -28,6 +29,7 @@ import {
 	DatabaseBackup,
 	FileText,
 	Landmark,
+	PiggyBank,
 	LayoutDashboard,
 	Lock,
 	MessageSquareWarning,
@@ -66,7 +68,8 @@ export const navGroups: NavGroup[] = [
 		labelKey: 'nav.finance_group',
 		items: [
 			{ titleKey: 'nav.transactions', href: '/transactions', icon: Banknote },
-			{ titleKey: 'nav.accounts', href: '/accounts', icon: Landmark }
+			{ titleKey: 'nav.accounts', href: '/accounts', icon: Landmark },
+			{ titleKey: 'nav.budget', href: '/budget', icon: PiggyBank }
 		]
 	},
 	{
@@ -109,8 +112,10 @@ export const accountNavGroups: NavGroup[] = [
  * The old app's list, in its order, so the page reads as the one users
  * know. A section not built yet is `pending`: shown with a "Soon" tag, never
  * linked. Sections that belong to a non-goal are not listed at all, because
- * "Soon" would promise them: notifications and alarm, budget, billing, and
- * language (a second UI locale) (docs/prd.md#non-goals-for-v1).
+ * "Soon" would promise them: notifications and alarm, billing, and language
+ * (a second UI locale) (docs/prd.md#non-goals-for-v1). The old budget
+ * section is not listed either: budgets are managed on their own page
+ * (D103), and one thing managed from two screens is two rules to keep.
  *
  * Assistant is ours, not the old app's: it was a tab on the settings page
  * (US-032) and is a section now.

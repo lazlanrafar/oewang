@@ -56,7 +56,7 @@ describe('canvasParams', () => {
 
 describe('analysis canvases (D88)', () => {
 	it('reads each analysis kind, keyed by its tool call', () => {
-		for (const kind of ['spending', 'income', 'burn-rate']) {
+		for (const kind of ['spending', 'income', 'burn-rate', 'budget']) {
 			const state = readCanvas(at(`?canvas=${kind}&id=toolu_1`));
 			expect(state).toEqual({ kind, id: 'toolu_1' });
 			expect(isArtifactCanvas(state)).toBe(true);

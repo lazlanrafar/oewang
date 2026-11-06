@@ -16,10 +16,12 @@
 import type { ColumnSpec, NamedOption, RowGroup } from '$lib/components/molecules/data-table';
 import type { MessageItem, SessionItem } from '$lib/chat';
 import type { ToolCall } from '$lib/chat-tools';
+import type { BudgetStatus } from '$lib/reports';
 import type { TransactionRow } from '$lib/components/organisms/transactions';
 import type { Wallet } from '$lib/server/ledger';
 
 import accountsJson from './accounts.json';
+import budgetsJson from './budgets.json';
 import chatJson from './chat.json';
 import dataTableJson from './data-table.json';
 import transactionsJson from './transactions.json';
@@ -56,3 +58,5 @@ export const baseCurrency = accountsJson.baseCurrency;
 export const chatSessions = chatJson.sessions as SessionItem[];
 export const chatMessages = chatJson.messages as MessageItem[];
 export const chatToolBatch = chatJson.toolBatch as ToolCall[];
+
+export const budgetStatus = budgetsJson.status as BudgetStatus;

@@ -6,6 +6,7 @@
 #![forbid(unsafe_code)]
 
 pub mod auth;
+pub mod budget;
 pub mod csv_import;
 pub mod envelope;
 pub mod error;

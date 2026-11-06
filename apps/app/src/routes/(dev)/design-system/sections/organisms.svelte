@@ -20,6 +20,12 @@
 		AccountSummaryCards
 	} from '$lib/components/organisms/accounts';
 	import {
+		BudgetFormSheet,
+		BudgetMonthStepper,
+		BudgetSummaryCards
+	} from '$lib/components/organisms/budgets';
+	import { ArtifactCanvas } from '$lib/components/organisms/chat/canvas';
+	import {
 		ChatActivity,
 		ChatHistory,
 		ChatInput,
@@ -36,6 +42,7 @@
 		accountSummary,
 		accounts,
 		baseCurrency,
+		budgetStatus,
 		chatMessages,
 		chatSessions,
 		chatToolBatch,
@@ -51,6 +58,8 @@
 
 	let formOpen = $state(false);
 	let detailOpen = $state(false);
+	let budgetFormOpen = $state(false);
+	let budgetMonth = $state(budgetStatus.month);
 </script>
 
 <Specimen
@@ -91,6 +100,41 @@
 		{baseCurrency}
 		rates={accountRates}
 	/>
+</Specimen>
+
+<Specimen
+	title="Budget summary cards"
+	note="The three figures above the budget table (D103): the month's total limit, what was spent, and the share used, amber from 80% and red past 100%. The accounts cards' look; every figure and the state are the API's."
+	source="organisms/budgets/budgets-summary-cards.svelte"
+	framed={false}
+>
+	<BudgetSummaryCards status={budgetStatus} />
+</Specimen>
+
+<Specimen
+	title="Budget month and form"
+	note="The month stepper sits beside New budget and writes ?month= (UI-8); it steps from the YYYY-MM parts, never through Date. The form sheet takes an expense category, fixed once the budget exists, and a monthly limit in the workspace currency."
+	source="organisms/budgets/budgets-month-stepper.svelte, budgets-form-sheet.svelte"
+>
+	<div class="flex items-center gap-3">
+		<BudgetMonthStepper month={budgetMonth} onChange={(month) => (budgetMonth = month)} />
+		<Button variant="outline" onclick={() => (budgetFormOpen = true)}>Open form sheet</Button>
+	</div>
+	<BudgetFormSheet
+		bind:open={budgetFormOpen}
+		budget={budgetStatus.budgets[1]}
+		currency={budgetStatus.currency_code}
+	/>
+</Specimen>
+
+<Specimen
+	title="Budget canvas"
+	note="The chat's budget panel (D103), the old canvas: spent and remaining, a bar per budget with the fullest first in the page's colours, and the API's summary. Built from the same report as the budget page, so the two cannot disagree."
+	source="organisms/chat/canvas/canvas-budget.svelte"
+>
+	<div class="max-w-xl border">
+		<ArtifactCanvas entry={{ id: 'toolu_budget', kind: 'budget', payload: budgetStatus }} />
+	</div>
 </Specimen>
 
 <Specimen

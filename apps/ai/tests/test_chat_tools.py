@@ -14,9 +14,9 @@ from typing import Any
 from app.modules.chat import tools
 from tests.support import Owe1TestClient
 
-#: `Tool::ALL` in apps/api/crates/domain/src/tools.rs, in its order. Fourteen:
-#: the catalog is small on purpose (D17), and the three analysis tools are
-#: the only additions since (D88).
+#: `Tool::ALL` in apps/api/crates/domain/src/tools.rs, in its order. Fifteen:
+#: the catalog is small on purpose (D17); the three analysis tools (D88) and
+#: the budget status (D103) are the only additions since.
 RUST_TOOL_NAMES = [
     "get_workspace_context",
     "get_recent_transactions",
@@ -25,6 +25,7 @@ RUST_TOOL_NAMES = [
     "get_spending_analysis",
     "get_income_summary",
     "get_burn_rate",
+    "get_budget_status",
     "create_transaction",
     "update_transaction",
     "delete_transaction",
@@ -69,9 +70,9 @@ def test_every_tool_has_a_name_a_description_and_an_object_schema() -> None:
         assert isinstance(definition["input_schema"]["properties"], dict)
 
 
-def test_the_catalog_is_exactly_the_fourteen_tools_the_api_knows() -> None:
+def test_the_catalog_is_exactly_the_fifteen_tools_the_api_knows() -> None:
     assert [definition["name"] for definition in tools.TOOL_DEFINITIONS] == RUST_TOOL_NAMES
-    assert len(tools.TOOL_DEFINITIONS) == 14
+    assert len(tools.TOOL_DEFINITIONS) == 15
     assert tools.tool_definition("bulk_delete_transactions") is None
     assert tools.tool_definition("delete_wallet") is None
 

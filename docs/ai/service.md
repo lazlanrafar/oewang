@@ -116,7 +116,7 @@ The workspace context is supplied by the API (CHAT-7). The service does not fetc
 
 ## Tool catalog
 
-Fourteen tools (D17, D88): eleven cut down from thirty-four in the old app, and three analysis tools brought back for the canvas. The schemas the model sees live in one Python module and are exposed at `GET /tools/definitions`, so the API's own validator can be checked against them.
+Fifteen tools (D17, D88, D103): eleven cut down from thirty-four in the old app, three analysis tools brought back for the canvas, and the budget status that came back with budgets. The schemas the model sees live in one Python module and are exposed at `GET /tools/definitions`, so the API's own validator can be checked against them.
 
 ### Read tools
 
@@ -129,6 +129,7 @@ Fourteen tools (D17, D88): eleven cut down from thirty-four in the old app, and 
 | `get_spending_analysis` | `from`, `to` | Spending total with the previous-period comparison, the category breakdown and the ten largest expenses. Leaves a `spending` canvas artifact (D88) |
 | `get_income_summary` | `from`, `to` | Income total with the comparison, monthly series and average, the category breakdown and the latest ten rows. Leaves an `income` artifact; the year-before series goes to the artifact only |
 | `get_burn_rate` | `from`, `to` | Monthly spending, the average per month, and how many months ran above it. Leaves a `burn-rate` artifact |
+| `get_budget_status` | `month` (`YYYY-MM`, optional, defaults to the current month) | Every budget for that month with its limit, spent, remaining, percentage and state, the totals, and a summary sentence; fullest first. Leaves a `budget` artifact when any budget exists (D103) |
 
 ### Write tools
 
@@ -159,7 +160,7 @@ Three things the table cannot carry on its own:
 
 ### What was dropped
 
-From the old app's thirty-four tools: everything for debts (4), contacts (4), budgets (3), wallet groups (3), documents (4), bill splitting (1), export (1), recall (1), receipt re-send (1), plus eleven analysis tools that produced canvas artifacts. All belong to features out of scope ([PRD non-goals](../prd.md#non-goals-for-v1)).
+From the old app's thirty-four tools: everything for debts (4), contacts (4), budget writes (3; the read came back with D103), wallet groups (3), documents (4), bill splitting (1), export (1), recall (1), receipt re-send (1), plus eleven analysis tools that produced canvas artifacts. All belong to features out of scope ([PRD non-goals](../prd.md#non-goals-for-v1)).
 
 ## The arithmetic rule
 

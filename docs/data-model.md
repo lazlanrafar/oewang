@@ -24,7 +24,7 @@ PostgreSQL 16. This doc is the source of truth for every table and column. No ot
 
 ## Tables in scope
 
-Twenty-three tables. The sixteen carried from the old app's schema, plus `refresh_tokens` and `password_reset_tokens` (D38, AUTH-10), `exchange_rates` (D44), the three Telegram tables (D83), and `ai_usage` (D92). Carried (see [legacy app](reference/legacy-app.md#schema-mapping)) with the billing, quota and integration columns stripped (D8).
+Twenty-four tables. The sixteen carried from the old app's schema, plus `refresh_tokens` and `password_reset_tokens` (D38, AUTH-10), `exchange_rates` (D44), the three Telegram tables (D83), `ai_usage` (D92), and `budgets` (D103). Carried (see [legacy app](reference/legacy-app.md#schema-mapping)) with the billing, quota and integration columns stripped (D8).
 
 ```mermaid
 erDiagram
@@ -38,6 +38,7 @@ erDiagram
     wallet_groups ||--o{ wallets : "groups"
     wallets ||--o{ transactions : "source of"
     categories ||--o{ transactions : "classifies"
+    categories ||--o| budgets : "limited by"
     transactions ||--o{ transaction_items : "has"
     transactions ||--o{ transaction_attachments : "has"
     vault_files ||--o{ transaction_attachments : "referenced by"
@@ -199,6 +200,22 @@ Deleting the default wallet hands the flag to the next wallet in display order, 
 | `type` | text | `income` or `expense` (CAT-1) |
 | `sort_order` | integer | Default 0 |
 | `created_at`, `updated_at`, `deleted_at` | timestamp | |
+
+Deleting a category also deletes its budget (BUD-4).
+
+#### `budgets`
+
+Migration `0014`, D103. A monthly limit on one expense category, in the workspace currency. What a budget used is never stored: it is `sum(base_amount)` of the category's live expenses in the month, read when the budget is (BUD-2).
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | text | CUID2, primary key |
+| `workspace_id` | text | FK workspaces, cascade |
+| `category_id` | text | FK categories. An expense category, checked by the service |
+| `amount` | decimal(19,4) | `CHECK (amount > 0)`. The monthly limit; the only column an edit changes |
+| `created_at`, `updated_at`, `deleted_at` | timestamptz | |
+
+Indexes: `budgets_workspace_idx (workspace_id) WHERE deleted_at IS NULL`, and `budgets_one_per_category_idx` unique on `(workspace_id, category_id) WHERE deleted_at IS NULL`, so a category has one live budget whatever two saves race. The old app's `period` column is not carried: it was never read.
 
 ### Ledger
 

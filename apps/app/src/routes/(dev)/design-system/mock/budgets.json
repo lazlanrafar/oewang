@@ -1,0 +1,73 @@
+{
+	"status": {
+		"month": "2026-11",
+		"from": "2026-11-01",
+		"to": "2026-11-30",
+		"currency_code": "IDR",
+		"budgeted": "5600000",
+		"budgeted_formatted": "Rp 5.600.000",
+		"spent": "4385000",
+		"spent_formatted": "Rp 4.385.000",
+		"remaining": "1215000",
+		"remaining_formatted": "Rp 1.215.000",
+		"percent": 78,
+		"state": "safe",
+		"count": 4,
+		"over_count": 1,
+		"summary": "Rp 4.385.000 spent of a Rp 5.600.000 budget in November 2026 (78%). 1 category is over budget: Coffee.",
+		"budgets": [
+			{
+				"id": "b1",
+				"category_id": "c1",
+				"category_name": "☕ Coffee",
+				"amount": "500000",
+				"amount_formatted": "Rp 500.000",
+				"spent": "640000",
+				"spent_formatted": "Rp 640.000",
+				"remaining": "-140000",
+				"remaining_formatted": "-Rp 140.000",
+				"percent": 128,
+				"state": "over"
+			},
+			{
+				"id": "b2",
+				"category_id": "c2",
+				"category_name": "🍜 Food",
+				"amount": "2000000",
+				"amount_formatted": "Rp 2.000.000",
+				"spent": "1720000",
+				"spent_formatted": "Rp 1.720.000",
+				"remaining": "280000",
+				"remaining_formatted": "Rp 280.000",
+				"percent": 86,
+				"state": "warning"
+			},
+			{
+				"id": "b3",
+				"category_id": "c3",
+				"category_name": "🏠 Rent",
+				"amount": "2000000",
+				"amount_formatted": "Rp 2.000.000",
+				"spent": "2000000",
+				"spent_formatted": "Rp 2.000.000",
+				"remaining": "0",
+				"remaining_formatted": "Rp 0",
+				"percent": 100,
+				"state": "warning"
+			},
+			{
+				"id": "b4",
+				"category_id": "c4",
+				"category_name": "🚌 Transportation",
+				"amount": "1100000",
+				"amount_formatted": "Rp 1.100.000",
+				"spent": "25000",
+				"spent_formatted": "Rp 25.000",
+				"remaining": "1075000",
+				"remaining_formatted": "Rp 1.075.000",
+				"percent": 2,
+				"state": "safe"
+			}
+		]
+	}
+}

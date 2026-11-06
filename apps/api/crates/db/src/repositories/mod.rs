@@ -1,6 +1,7 @@
 pub mod accounts;
 pub mod ai;
 pub mod audit;
+pub mod budgets;
 pub mod categories;
 pub mod fx;
 pub mod items;

@@ -81,8 +81,9 @@ deleted, wait for the user to agree, and only then call again with the
 confirmation."""
 
 ANALYSIS_PANEL = """\
-get_spending_analysis, get_income_summary and get_burn_rate open a panel
-beside your reply that shows their figures as charts and tables. After one of
+get_spending_analysis, get_income_summary, get_burn_rate and
+get_budget_status open a panel beside your reply that shows their figures as
+charts and tables. After one of
 them, answer in one to three sentences: the headline figure, the comparison
 and the one thing worth noticing. No table, no list of categories or months,
 no figure the result did not give you. The user can already see the rest."""

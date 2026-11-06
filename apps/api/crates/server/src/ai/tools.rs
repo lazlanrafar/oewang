@@ -33,6 +33,7 @@ use oewang_db::{
     PgPool,
 };
 use oewang_domain::{
+    budget::Month,
     format_money,
     ledger::TransactionType,
     tools::{
@@ -49,7 +50,7 @@ use crate::{
     accounts,
     ai::turns::{Artifact, TurnStore},
     audit::{Actor, SOURCE_CHAT},
-    auth,
+    auth, budgets,
     owe1::session::now_secs,
     reports::service::{self as reports, percent_change, DayRange},
     transactions,
@@ -146,6 +147,7 @@ pub async fn execute(
         ToolCall::GetBurnRate(args) => {
             analysis(pool, turns, &request, Analysis::BurnRate, args).await
         }
+        ToolCall::GetBudgetStatus(month) => budget_status(pool, turns, &request, month).await,
         ToolCall::CreateTransaction(args) => create_transaction(pool, actor, args).await,
         ToolCall::UpdateTransaction(args) => update_transaction(pool, actor, args).await,
         ToolCall::DeleteTransaction(args) => {
@@ -528,11 +530,7 @@ enum Analysis {
 }
 
 /// Build the report, answer the model with it, and leave the same report
-/// for the stream as a canvas artifact.
-///
-/// The model and the canvas read one value, so the sentence and the chart
-/// cannot disagree. The artifact is kept only when there is something to
-/// draw, the old app's rule: an empty chart is a worse answer than none.
+/// for the stream as a canvas artifact (see `canvas`).
 async fn analysis(
     pool: &PgPool,
     turns: &TurnStore,
@@ -587,13 +585,52 @@ async fn analysis(
         }
     };
 
+    Ok(canvas(turns, request, name, payload, has_data, summary))
+}
+
+/// Budget against spending for one month (D103). Same shape as the three
+/// analysis tools: one report, read by the model and drawn by the canvas.
+async fn budget_status(
+    pool: &PgPool,
+    turns: &TurnStore,
+    request: &ToolRequest<'_>,
+    month: Option<Month>,
+) -> Result<ToolOutcome> {
+    let month = month.unwrap_or_else(|| Month::containing(Utc::now()));
+    // Fullest first, the order a "how is my budget" answer is read in.
+    let sort = budgets::service::Sort {
+        field: budgets::service::SortField::Percent,
+        descending: true,
+    };
+    let report = budgets::service::status(pool, request.workspace_id, month, None, sort).await?;
+    let summary = report.summary.clone();
+    let has_data = report.count > 0;
+    let payload = serde_json::to_value(&report).map_err(internal)?;
+
+    Ok(canvas(turns, request, "budget", payload, has_data, summary))
+}
+
+/// Leave the report for the stream as a canvas artifact, and answer the
+/// model with the same report.
+///
+/// The model and the canvas read one value, so the sentence and the chart
+/// cannot disagree. The artifact is kept only when there is something to
+/// draw, the old app's rule: an empty chart is a worse answer than none.
+fn canvas(
+    turns: &TurnStore,
+    request: &ToolRequest<'_>,
+    kind: &'static str,
+    payload: Value,
+    has_data: bool,
+    summary: String,
+) -> ToolOutcome {
     if has_data {
         if let Some(call_id) = request.call_id {
             turns.put_artifact(
                 request.turn_id,
                 call_id,
                 Artifact {
-                    kind: name,
+                    kind,
                     payload: payload.clone(),
                 },
             );
@@ -609,7 +646,7 @@ async fn analysis(
         object.insert("canvas".into(), json!(has_data));
     }
 
-    Ok(ToolOutcome { result, summary })
+    ToolOutcome { result, summary }
 }
 
 fn range_filters<'a>(from: DateTime<Utc>, to: DateTime<Utc>) -> repo::TransactionFilters<'a> {

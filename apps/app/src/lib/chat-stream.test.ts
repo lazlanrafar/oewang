@@ -191,7 +191,7 @@ describe('advance, the tool events', () => {
 		expect(shown.toolCalls[0].artifact).toEqual({ kind: 'spending', payload });
 
 		// A kind this app does not draw, and a call this turn never made.
-		expect(advance(called, { kind: 'frame', frame: frame('t1', 'budget') })).toBe(called);
+		expect(advance(called, { kind: 'frame', frame: frame('t1', 'debt') })).toBe(called);
 		expect(advance(called, { kind: 'frame', frame: frame('t9', 'spending') })).toBe(called);
 	});
 

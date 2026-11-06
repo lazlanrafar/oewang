@@ -8,6 +8,7 @@ mod accounts;
 mod ai;
 mod audit;
 mod auth;
+mod budgets;
 mod config;
 mod fx;
 #[cfg(test)]
@@ -375,6 +376,15 @@ fn protected_routes(state: AppState) -> Router<AppState> {
             "/v1/categories/{id}",
             axum::routing::patch(accounts::handler::update_category)
                 .delete(accounts::handler::delete_category),
+        )
+        // Budgets: a monthly limit per expense category (D103).
+        .route(
+            "/v1/budgets",
+            get(budgets::handler::status).post(budgets::handler::create),
+        )
+        .route(
+            "/v1/budgets/{id}",
+            axum::routing::patch(budgets::handler::update).delete(budgets::handler::delete),
         )
         // Exchange rates. A suggestion for the form; nothing reads it on
         // the way out (D39).

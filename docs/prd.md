@@ -33,7 +33,7 @@ Each of these exists in the old app and is deliberately left out. Adding any of 
 
 - Invoices: creation, sending, the public invoice page, payment tracking.
 - Debts and receivables, including the related chat tools.
-- Budgets and budget-exceeded notifications.
+- ~~Budgets.~~ Budgets came back with D103 (BUD-1 to BUD-4, section 6.15), with their chat canvas. Still out: budget-exceeded notifications, with every other notification.
 - Contacts and bill splitting.
 - ~~Vault as a browsable feature: `vault_files` exists only to back attachments and receipts.~~ The vault page came back with D90 (VLT-6 to VLT-13). Still out: document RAG and a `search_documents` tool.
 - Billing: plans, Mayar payments, AI token quotas, storage limits, the upgrade flow. Usage is recorded and shown (section 6.13, D92), never limited.
@@ -44,7 +44,7 @@ Each of these exists in the old app and is deliberately left out. Adding any of 
 - The MCP server and its OAuth client registration.
 - OAuth login. Email and password only (D21).
 - Application-layer payload encryption (D9).
-- Web search in chat. Canvas artifacts and chat charts were on this list until D88 brought the analysis canvas back for spending, income and burn rate; debt and budget canvases stay out with their features.
+- Web search in chat. Canvas artifacts and chat charts were on this list until D88 brought the analysis canvas back for spending, income and burn rate, and D103 added the budget canvas; the debt canvas stays out with its feature.
 - Anomaly detection and transaction classification.
 - Notifications: in-app centre, push, email alerts.
 - A second UI locale. The i18n layer ships, `en.json` is the only dictionary (D15).
@@ -83,7 +83,7 @@ Confirmed by the owner on 2026-11-02, and recorded in the [decision log](archite
 
 ### 5.1 Interpretation of the data model decision
 
-"Full data model" means full for the transaction and chat domain, not the old 42 tables. The sixteen tables in scope are listed in [data model](data-model.md#tables-in-scope). Out of scope: invoices, debts, budgets, contacts, notifications, billing, orders, pricing, plan features, workspace addons, integrations, MCP tables, articles, FAQs, feedback, device tokens, push subscriptions, privacy requests, webhook events, system settings, knowledge chunks.
+"Full data model" means full for the transaction and chat domain, not the old 42 tables. The sixteen tables in scope are listed in [data model](data-model.md#tables-in-scope). Out of scope: invoices, debts, contacts, notifications, billing, orders, pricing, plan features, workspace addons, integrations, MCP tables, articles, FAQs, feedback, device tokens, push subscriptions, privacy requests, webhook events, system settings, knowledge chunks.
 
 ### 5.2 Assumptions
 
@@ -201,7 +201,7 @@ Requirement IDs are referenced by every other doc and by each backlog story. The
 |---|---|
 | CHAT-1 | Each conversation persists as a session row with its messages. |
 | CHAT-2 | Responses stream to the browser over server-sent events. |
-| CHAT-3 | The assistant has access to the fourteen tools listed in [AI service](ai/service.md#tool-catalog) and no others (D17, D88). |
+| CHAT-3 | The assistant has access to the fifteen tools listed in [AI service](ai/service.md#tool-catalog) and no others (D17, D88, D103). |
 | CHAT-4 | Tool calls are executed by the API, which enforces the caller's role and writes an audit log row. |
 | CHAT-5 | The tool loop stops after at most 8 rounds per user turn. |
 | CHAT-6 | `delete_transaction` requires explicit user confirmation in a separate turn. |
@@ -214,7 +214,7 @@ Requirement IDs are referenced by every other doc and by each backlog story. The
 | CHAT-13 | The chat canvas mounts the real application component in a side panel, driven by URL parameters. No model-authored UI (D31). The analysis canvases of CHAT-16 are built by the API, not the model, and keep the same URL rules. |
 | CHAT-14 | Tool calls render as human labels with collapsed grouping. Assistant text arriving before the last tool call is suppressed while tools are still running. |
 | CHAT-15 | The model performs no arithmetic. Every number it states is computed, rounded and formatted by the API (D27). |
-| CHAT-16 | Three analysis tools, `get_spending_analysis`, `get_income_summary` and `get_burn_rate`, each leave a canvas artifact of the same report the model read. The API builds the payload from the database and injects it into the stream after the tool's result; the AI service never carries one, and one arriving from upstream is dropped (D88). |
+| CHAT-16 | Four analysis tools, `get_spending_analysis`, `get_income_summary`, `get_burn_rate` and `get_budget_status` (D103), each leave a canvas artifact of the same report the model read. The API builds the payload from the database and injects it into the stream after the tool's result; the AI service never carries one, and one arriving from upstream is dropped (D88). |
 | CHAT-17 | An artifact opens the canvas as it arrives. A conversation's artifacts are listed as tabs, each message that made one carries a toggle for it, and the open one lives in `?canvas=<kind>&id=<tool call id>` (UI-8). An empty range leaves no artifact. |
 | CHAT-18 | Artifacts are stored on the assistant message with the tool call that made them, so a reload reopens the same canvas with the figures as they were when it was answered. |
 | CHAT-19 | The chat screen is the old app's layout: a header with the way back to the overview, the title and a new-chat button; the conversation in one centred column; a floating composer at the bottom with the conversation list behind its history button (D87). |
@@ -358,6 +358,18 @@ Added by D97. Reference tables under a Database group in the sidebar, below Sett
 | ITM-1 | A page lists every line item ever bought, one row per item (trimmed, case-insensitive name, per paying currency), with its last price, when it was last bought, how many times, and its lowest and highest price. Searchable and sortable on the server. A line with a negative amount is a discount and is never listed as an item. |
 | ITM-2 | Opening an item shows its price history: every purchase, newest first, with date, price per unit, quantity, total and the transaction, which links to its detail sheet. A purchase whose receipt carried discount lines says so, with their sum; the list marks an item whose latest receipt did. |
 | FX-2 | Every currency picker offers the currencies of the newest stored snapshot, each with its rate against the workspace currency. The transaction form prefills the entry rate and suggests the wallet's base rate from that snapshot; the user's figure always wins (D39). |
+
+### 6.15 Budgets (BUD)
+
+Added by D103, from the old app's budget page. Specified in [features/budgets.md](features/budgets.md).
+
+| ID | Requirement |
+|---|---|
+| BUD-1 | A budget is a monthly limit in the workspace currency on one expense category. A category has at most one live budget, held by a unique index. Its category is fixed once created; only the limit changes. Admins and owners write; every member reads. |
+| BUD-2 | For a calendar month (UTC), each budget shows its limit, what its category spent (live expenses, summed in `base_amount`), what remains, the whole percentage used, and a state: `warning` from 80%, `over` past 100%. The page shows the totals over every budget whatever the search: budgeted, spent and the share used. Every figure is computed in the API (D27). |
+| BUD-3 | The page is the old one: three figures, a search, New budget, and a table sortable on the server by category, budget, spent, remaining and percentage. The month, the search and the sort live in the URL; a month stepper moves between months. |
+| BUD-4 | Deleting a category deletes its budget in the same transaction, with its own audit row. |
+| BUD-5 | `get_budget_status` answers for one month (the current one by default) and leaves a `budget` canvas: spent and remaining against the total, a bar per budget with the fullest first, and the API's summary sentence. |
 
 ## 7. Success metrics
 

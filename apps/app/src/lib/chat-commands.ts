@@ -2,9 +2,10 @@
  * The composer's "/" shortcuts, ported from the old app's
  * `packages/constants/src/chat-shortcuts.ts`.
  *
- * Fourteen of the old twenty-eight: the ones the current tools can answer.
- * The rest asked about invoices, debts, budgets, contacts, a P&L or a
- * runway, which are not in v1 (PRD non-goals), or about uncategorized and
+ * Fifteen of the old twenty-eight: the ones the current tools can answer.
+ * The budget one came back with budgets (D103). The rest asked about
+ * invoices, debts, contacts, a P&L or a runway, which are not in v1 (PRD
+ * non-goals), or about uncategorized and
  * recurring rows, which no tool can filter for. A shortcut the assistant
  * cannot answer is a worse menu entry than no entry.
  *
@@ -35,7 +36,8 @@ export const CHAT_COMMANDS: ChatCommand[] = [
 	{ command: '/analyze', title: 'chat.command_cash_flow_trends', keywords: ['analyze', 'cash', 'flow', 'trends', 'patterns'] },
 	{ command: '/show', title: 'chat.command_expenses', keywords: ['show', 'expenses', 'costs', 'spending'] },
 	{ command: '/show', title: 'chat.command_expenses_month', keywords: ['show', 'expenses', 'month', 'this month'] },
-	{ command: '/analyze', title: 'chat.command_expense_trends', keywords: ['analyze', 'expense', 'trends', 'patterns'] }
+	{ command: '/analyze', title: 'chat.command_expense_trends', keywords: ['analyze', 'expense', 'trends', 'patterns'] },
+	{ command: '/show', title: 'chat.command_budget', keywords: ['show', 'budget', 'actual', 'spending', 'limit'] }
 ];
 
 /**

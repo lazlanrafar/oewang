@@ -1,6 +1,6 @@
 //! The tool catalog, as rules rather than as a dispatch table.
 //!
-//! Eleven tools (D17). What lives here is everything about them that needs
+//! Fifteen tools (D17, D88, D103). What lives here is everything about them that needs
 //! no database: which exist, which write, what each one accepts, and the
 //! per-turn caps. Execution lives in the server crate, because that is where
 //! the services are.
@@ -23,7 +23,7 @@ use chrono::{DateTime, NaiveDate, NaiveTime, TimeZone, Utc};
 use rust_decimal::Decimal;
 use serde_json::{Map, Value};
 
-use crate::{AppError, FieldErrors, Role};
+use crate::{budget::Month, AppError, FieldErrors, Role};
 
 // ------------------------------------------------------------------- caps
 
@@ -61,6 +61,7 @@ pub enum Tool {
     GetSpendingAnalysis,
     GetIncomeSummary,
     GetBurnRate,
+    GetBudgetStatus,
     CreateTransaction,
     UpdateTransaction,
     DeleteTransaction,
@@ -71,7 +72,7 @@ pub enum Tool {
 }
 
 impl Tool {
-    pub const ALL: [Tool; 14] = [
+    pub const ALL: [Tool; 15] = [
         Tool::GetWorkspaceContext,
         Tool::GetRecentTransactions,
         Tool::SearchTransactions,
@@ -79,6 +80,7 @@ impl Tool {
         Tool::GetSpendingAnalysis,
         Tool::GetIncomeSummary,
         Tool::GetBurnRate,
+        Tool::GetBudgetStatus,
         Tool::CreateTransaction,
         Tool::UpdateTransaction,
         Tool::DeleteTransaction,
@@ -97,6 +99,7 @@ impl Tool {
             Tool::GetSpendingAnalysis => "get_spending_analysis",
             Tool::GetIncomeSummary => "get_income_summary",
             Tool::GetBurnRate => "get_burn_rate",
+            Tool::GetBudgetStatus => "get_budget_status",
             Tool::CreateTransaction => "create_transaction",
             Tool::UpdateTransaction => "update_transaction",
             Tool::DeleteTransaction => "delete_transaction",
@@ -158,6 +161,9 @@ pub enum ToolCall {
     GetSpendingAnalysis(RangeArgs),
     GetIncomeSummary(RangeArgs),
     GetBurnRate(RangeArgs),
+    /// Budget against spending for one month, with a `budget` canvas
+    /// (D103). `None` is the current month.
+    GetBudgetStatus(Option<Month>),
     CreateTransaction(WriteTransactionArgs),
     UpdateTransaction(WriteTransactionArgs),
     DeleteTransaction(DeleteArgs),
@@ -343,6 +349,7 @@ impl ToolCall {
             Tool::GetSpendingAnalysis => ToolCall::GetSpendingAnalysis(reader.range()),
             Tool::GetIncomeSummary => ToolCall::GetIncomeSummary(reader.range()),
             Tool::GetBurnRate => ToolCall::GetBurnRate(reader.range()),
+            Tool::GetBudgetStatus => ToolCall::GetBudgetStatus(reader.month("month")),
 
             Tool::CreateTransaction => {
                 let args = reader.transaction(false);
@@ -583,6 +590,22 @@ impl<'a> Reader<'a> {
         }
     }
 
+    /// A calendar month as `YYYY-MM`.
+    fn month(&mut self, name: &'static str) -> Option<Month> {
+        let raw = match self.get(name)? {
+            Value::String(raw) => raw,
+            _ => {
+                self.reject(name, "Expected a month as YYYY-MM.");
+                return None;
+            }
+        };
+        let month = Month::parse(raw);
+        if month.is_none() {
+            self.reject(name, "Expected a month as YYYY-MM, for example 2026-11.");
+        }
+        month
+    }
+
     fn date(&mut self, name: &'static str) -> Option<DateTime<Utc>> {
         let raw = match self.get(name)? {
             Value::String(raw) => raw.trim().to_string(),
@@ -809,8 +832,8 @@ mod tests {
         }
         assert_eq!(
             Tool::ALL.len(),
-            14,
-            "the catalog is fourteen tools (D17, D88)"
+            15,
+            "the catalog is fifteen tools (D17, D88, D103)"
         );
         assert!(matches!(
             Tool::parse("delete_wallet"),
@@ -1014,6 +1037,23 @@ mod tests {
             };
             assert_eq!(args.from.date_naive().to_string(), "2026-11-01");
             assert_eq!(args.to.date_naive().to_string(), "2026-11-30");
+        }
+    }
+
+    #[test]
+    fn should_read_an_optional_month_for_the_budget_tool() {
+        assert!(!Tool::GetBudgetStatus.is_write());
+        assert_eq!(
+            parse(Tool::GetBudgetStatus, json!({})).unwrap(),
+            ToolCall::GetBudgetStatus(None)
+        );
+        assert_eq!(
+            parse(Tool::GetBudgetStatus, json!({ "month": "2026-10" })).unwrap(),
+            ToolCall::GetBudgetStatus(Month::parse("2026-10"))
+        );
+        for bad in [json!({ "month": "2026-13" }), json!({ "month": 202610 })] {
+            let error = parse(Tool::GetBudgetStatus, bad).unwrap_err();
+            assert!(fields(error)["month"].contains("YYYY-MM"));
         }
     }
 
