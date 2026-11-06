@@ -84,8 +84,10 @@ test.describe('accessibility', () => {
 
 	test('the settings page', async ({ page }) => {
 		await signIn(page);
+		// `/settings` opens its first section, as the old app's did (D82).
 		await page.goto('/settings');
-		await expect(page.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible();
+		await expect(page).toHaveURL(/\/settings\/income-category/);
+		await expect(page.getByRole('heading', { name: 'Income categories', level: 1 })).toBeVisible();
 
 		const { violations } = await scan(page);
 		expect(summarize(violations)).toBe('');

@@ -80,14 +80,22 @@ export async function register(page: Page, account: Account): Promise<void> {
 }
 
 /**
- * Sign out through the shell's own button.
+ * Sign out through the shell's own account menu (D94).
  *
  * A form POST, not a link: signing out is a state change, and a GET that
  * mutates is a GET a prefetcher can fire. `page.goto('/logout')` is
  * therefore not a way to sign out, which is the point.
+ *
+ * The menu opens only once the shell has hydrated, so opening it is
+ * retried until its item shows.
  */
 export async function signOut(page: Page): Promise<void> {
-	await page.getByRole('button', { name: /sign out/i }).click();
+	const logOut = page.getByRole('menuitem', { name: 'Log out' });
+	await actUntil(
+		() => page.getByRole('button', { name: 'Account menu' }).click(),
+		() => expect(logOut).toBeVisible({ timeout: 1000 })
+	);
+	await logOut.click();
 	await expect(page).toHaveURL(/\/login/);
 }
 

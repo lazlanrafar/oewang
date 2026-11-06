@@ -67,6 +67,12 @@
 	<input type="hidden" name="next" value={next} />
 </form>
 
+<!--
+	Named by what it shows, the workspace and the role, while the sidebar is
+	open: a label in place of visible text fails WCAG 2.5.3, since a voice
+	user says what they see. Collapsed, only the icon shows, so the label
+	names it instead. The menu it opens is announced by `aria-haspopup`.
+-->
 <div class={cn('flex flex-col gap-2 p-2', collapsed && 'items-center px-0')}>
 	<DropdownMenu.Root>
 		<DropdownMenu.Trigger>
@@ -78,7 +84,7 @@
 						'flex w-full items-center gap-2 overflow-hidden text-left text-sm outline-hidden transition-[width,height,padding] hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground',
 						collapsed ? 'size-8 justify-center p-0' : 'h-12 p-2'
 					)}
-					aria-label={t('nav.switch_workspace')}
+					aria-label={collapsed ? t('nav.switch_workspace') : undefined}
 				>
 					<span
 						class="flex aspect-square size-8 shrink-0 items-center justify-center rounded bg-foreground font-semibold text-background text-sm"

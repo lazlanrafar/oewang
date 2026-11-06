@@ -26,7 +26,7 @@ test.describe('the assistant', () => {
 		await openConversation(page);
 
 		await expect(page).toHaveURL(/\/chat\/.+/);
-		await expect(page.getByRole('button', { name: 'Attach a file' })).toBeVisible();
+		await expect(page.getByRole('button', { name: 'Add attachments' })).toBeVisible();
 		await expect(page.getByRole('button', { name: 'Send' })).toBeDisabled();
 	});
 
