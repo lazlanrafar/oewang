@@ -214,7 +214,7 @@ cargo test
 cargo audit
 ```
 
-All five run in CI on every pull request into `main` (OPS-7, SEC-20). `-D warnings` is not negotiable; a warning that is worth keeping gets an explicit `allow` with a comment.
+All five run in CI before a change reaches `main`; for now that is `scripts/ci-local.sh` (OPS-7, SEC-20). `-D warnings` is not negotiable; a warning that is worth keeping gets an explicit `allow` with a comment.
 
 Release profile: `lto = "thin"`, `codegen-units = 1`, `panic = "abort"`, debug symbols stripped.
 
