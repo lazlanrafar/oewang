@@ -15,13 +15,12 @@
 
 	import { applyAction, deserialize, enhance, type SubmitFunction } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
-	import { page } from '$app/state';
 
 	import { toast } from 'svelte-sonner';
 
 	import { Button } from '$lib/components/atoms/button';
-	import { Input } from '$lib/components/atoms/input';
 	import { ConfirmDialog } from '$lib/components/molecules/confirm-dialog';
+	import { DataTableFilter } from '$lib/components/molecules/data-table-filter';
 	import { FormError } from '$lib/components/molecules/form-error';
 	import {
 		AccountDetailSheet,
@@ -32,27 +31,26 @@
 	import { t } from '$lib/i18n';
 	import { pageTitle } from '$lib/page-title';
 	import { messageForCode } from '$lib/errors';
+	import { filterBar } from '$lib/filter-bar.svelte';
 	import { formatMoney } from '$lib/money';
 	import type { Wallet } from '$lib/server/ledger';
-	import { readText, writeParams } from '$lib/url-state';
 
 	let { data, form } = $props();
 
 	const canEdit = $derived(data.me.role !== 'member');
 
-	/** The search, in the URL so a filtered view can be shared (UI-8, D55). */
-	let search = $state('');
-	let searchTimer: ReturnType<typeof setTimeout> | undefined;
+	/**
+	 * The search and the facets, in the URL so a filtered view can be shared
+	 * (UI-8, D55). "Ungrouped" is the `none` group, which the load reads as
+	 * the wallets in no group at all.
+	 */
+	const bar = filterBar({ group: 'group_id', currency: 'currency' });
 
-	$effect(() => {
-		search = readText(page.url, 'search');
-	});
-
-	function applySearch(next: string) {
-		if (next === readText(page.url, 'search')) return;
-		clearTimeout(searchTimer);
-		searchTimer = setTimeout(() => writeParams({ search: next }), 300);
-	}
+	const groupOptions = $derived([
+		...data.groups.map((group) => ({ id: group.id, name: group.name })),
+		{ id: 'none', name: t('accounts.ungrouped') }
+	]);
+	const currencyOptions = $derived(data.currencies.map((code) => ({ id: code, name: code })));
 
 	// ------------------------------------------------------------- sheets
 
@@ -160,12 +158,16 @@
 
 	<div class="flex shrink-0 items-center justify-between gap-4">
 		<div class="flex flex-1 items-center">
-			<Input
-				class="w-full max-w-sm"
+			<DataTableFilter
+				bind:filters={bar.filters}
+				facets={[
+					{ id: 'group', label: t('accounts.col_group'), options: groupOptions },
+					{ id: 'currency', label: t('accounts.currency'), options: currencyOptions }
+				]}
 				placeholder={t('accounts.search_placeholder')}
-				aria-label={t('accounts.search_placeholder')}
-				bind:value={search}
-				oninput={(event) => applySearch(event.currentTarget.value)}
+				showAmount={false}
+				showDate={false}
+				class="w-full"
 			/>
 		</div>
 

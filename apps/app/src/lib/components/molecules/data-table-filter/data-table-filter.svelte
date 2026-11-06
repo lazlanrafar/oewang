@@ -59,6 +59,9 @@
 
 	const active = $derived(hasActiveFilters(filters));
 
+	/** A table with only a search has no menu: an empty one is a dead button. */
+	const hasMenu = $derived(facets.length > 0 || showAmount || showDate);
+
 	const nameOf = (facet: Facet, id: string) =>
 		facet.options.find((option) => option.id === id)?.name ?? id;
 
@@ -145,6 +148,7 @@
 			/>
 			<Input
 				{placeholder}
+				aria-label={placeholder}
 				bind:value={filters.search}
 				class="bg-secondary/10 placeholder:text-subtle text-small h-9 pr-16 pl-9"
 			/>
@@ -161,6 +165,7 @@
 					</Button>
 				{/if}
 
+				{#if hasMenu}
 				<DropdownMenu.Root>
 					<DropdownMenu.Trigger>
 						{#snippet child({ props })}
@@ -267,6 +272,7 @@
 						</div>
 					</DropdownMenu.Content>
 				</DropdownMenu.Root>
+				{/if}
 			</div>
 		</div>
 	</div>

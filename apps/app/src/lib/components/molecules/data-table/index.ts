@@ -8,6 +8,7 @@
  */
 export { default as DataTable } from './data-table.svelte';
 export { default as DataTableEmptyState } from './data-table-empty-state.svelte';
+export { default as DataTableSortHead } from './data-table-sort-head.svelte';
 export {
 	GROUP_ROW_HEIGHT,
 	GROUP_STICK_TOP,

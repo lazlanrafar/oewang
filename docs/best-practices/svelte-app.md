@@ -93,6 +93,12 @@ Rules that make a second list screen cheap:
   open sheet, the open tab. A filter kept in component state is lost on
   refresh, cannot be shared, and cannot be read back by the load that is
   supposed to apply it.
+- **Every search is the filter bar** (`molecules/data-table-filter`), the
+  transactions page's, never a plain input: magnifier inside, the filter menu
+  on its right, a chip per applied facet. Give it every facet the table can
+  honestly be narrowed by (group, currency, status...). `filterBar()` in
+  `src/lib/filter-bar.svelte.ts` keeps it in the URL; the menu hides itself
+  when a table has nothing but a search.
 - **Sorting and paging are the server's.** The load reads the query string and
   asks the API; the table reports a header click and renders what comes back.
   Sorting the page you happen to have loaded is not sorting.

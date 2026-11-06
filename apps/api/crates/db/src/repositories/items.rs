@@ -45,8 +45,11 @@ const DISCOUNT: &str = "(SELECT sum(d.amount) FROM transaction_items d \
 pub struct ItemFilters<'a> {
     /// Matches anywhere in the name, case-insensitively.
     pub search: Option<&'a str>,
-    /// One exact item: its key and its currency, both required together.
-    pub exact: Option<(&'a str, &'a str)>,
+    /// One exact item, by its key. The handler requires `currency` with it,
+    /// because an item is a key in one currency.
+    pub key: Option<&'a str>,
+    /// Items paid for in this currency.
+    pub currency: Option<&'a str>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -141,9 +144,11 @@ fn push_purchases<'a>(
         builder.push(format_args!(" AND {KEY} ILIKE "));
         builder.push_bind(super::contains_pattern(search));
     }
-    if let Some((key, currency)) = filters.exact {
+    if let Some(key) = filters.key {
         builder.push(format_args!(" AND {KEY} = "));
         builder.push_bind(key);
+    }
+    if let Some(currency) = filters.currency {
         builder.push(" AND w.currency_code = ");
         builder.push_bind(currency);
     }
@@ -219,7 +224,8 @@ pub async fn list_purchases(
 ) -> Result<Vec<ItemPurchaseRow>, sqlx::Error> {
     let filters = ItemFilters {
         search: None,
-        exact: Some((key, currency_code)),
+        key: Some(key),
+        currency: Some(currency_code),
     };
     let mut builder = QueryBuilder::new(format!(
         "SELECT i.id, t.id AS transaction_id, t.name AS transaction_name,
@@ -244,7 +250,8 @@ pub async fn count_purchases(
 ) -> Result<i64, sqlx::Error> {
     let filters = ItemFilters {
         search: None,
-        exact: Some((key, currency_code)),
+        key: Some(key),
+        currency: Some(currency_code),
     };
     let mut builder = QueryBuilder::new("SELECT count(*)");
     push_purchases(&mut builder, workspace_id, &filters);

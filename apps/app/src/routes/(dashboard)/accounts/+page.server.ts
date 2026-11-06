@@ -36,6 +36,7 @@ export const load: PageServerLoad = async ({ depends, locals, url, parent }) => 
 
 	const search = (url.searchParams.get('search') ?? '').trim().toLowerCase();
 	const groupIds = url.searchParams.getAll('group_id').filter(Boolean);
+	const currencies = url.searchParams.getAll('currency').filter(Boolean);
 
 	const rows = all.filter((wallet) => {
 		if (search && !wallet.name.toLowerCase().includes(search)) return false;
@@ -45,6 +46,7 @@ export const load: PageServerLoad = async ({ depends, locals, url, parent }) => 
 			const key = wallet.group_id ?? 'none';
 			if (!groupIds.includes(key)) return false;
 		}
+		if (currencies.length > 0 && !currencies.includes(wallet.currency_code)) return false;
 		return true;
 	});
 
@@ -57,7 +59,9 @@ export const load: PageServerLoad = async ({ depends, locals, url, parent }) => 
 		// narrows the table, and a total that moved with it would read as
 		// money having disappeared.
 		totals: walletTotals(all, base, rates),
-		filtered: search !== '' || groupIds.length > 0
+		/** The currencies any wallet is in, for the filter bar's facet. */
+		currencies: [...new Set(all.map((wallet) => wallet.currency_code))].sort(),
+		filtered: search !== '' || groupIds.length > 0 || currencies.length > 0
 	};
 };
 

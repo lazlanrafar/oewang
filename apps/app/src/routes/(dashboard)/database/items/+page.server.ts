@@ -26,8 +26,12 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	);
 	const page = Math.max(1, Number.parseInt(url.searchParams.get('page') ?? '1', 10) || 1);
 
+	// One currency at a time: an item is a name in one currency.
+	const currency = (url.searchParams.get('currency') ?? '').trim().toUpperCase();
+
 	const query = new URLSearchParams({ sort, order, limit: String(ITEMS_PAGE_SIZE) });
 	if (search) query.set('search', search);
+	if (/^[A-Z]{3}$/.test(currency)) query.set('currency', currency);
 
 	const [items, open] = await Promise.all([
 		ledger.listItems(new URLSearchParams([...query, ['page', String(page)]]), token),
@@ -40,7 +44,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		open,
 		/** What makes this a different list rather than more of the same one. */
 		filterKey: query.toString(),
-		filtered: search !== ''
+		filtered: search !== '' || query.has('currency')
 	};
 };
 

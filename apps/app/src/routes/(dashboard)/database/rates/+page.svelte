@@ -14,10 +14,11 @@
 	import X from '@lucide/svelte/icons/x';
 
 	import { Button } from '$lib/components/atoms/button';
-	import { Input } from '$lib/components/atoms/input';
 	import type { TableSort } from '$lib/components/molecules/data-table';
+	import { DataTableFilter } from '$lib/components/molecules/data-table-filter';
 	import { DatePicker } from '$lib/components/molecules/date-picker';
 	import { DatabaseRatesDataTable } from '$lib/components/organisms/database';
+	import { filterBar } from '$lib/filter-bar.svelte';
 	import { t } from '$lib/i18n';
 	import { pageTitle } from '$lib/page-title';
 	import { pagedRows } from '$lib/paged-rows.svelte';
@@ -51,17 +52,8 @@
 		descending: readText(page.url, 'order') === 'desc'
 	});
 
-	let search = $state('');
-	let searchTimer: ReturnType<typeof setTimeout> | undefined;
-	$effect(() => {
-		search = readText(page.url, 'search');
-	});
-
-	function applySearch(next: string) {
-		if (next === readText(page.url, 'search')) return;
-		clearTimeout(searchTimer);
-		searchTimer = setTimeout(() => writeParams({ search: next, page: null }), 300);
-	}
+	/** The search, in the URL; a new one starts at page one. */
+	const bar = filterBar({}, { resetPage: true });
 </script>
 
 <svelte:head><title>{pageTitle(t('nav.rates'))}</title></svelte:head>
@@ -73,12 +65,12 @@
 
 	<div class="flex shrink-0 items-center justify-between gap-4">
 		<div class="flex flex-1 items-center gap-2">
-			<Input
-				class="w-full max-w-xs"
+			<DataTableFilter
+				bind:filters={bar.filters}
 				placeholder={t('rates.search_placeholder')}
-				aria-label={t('rates.search_placeholder')}
-				bind:value={search}
-				oninput={(event) => applySearch(event.currentTarget.value)}
+				showAmount={false}
+				showDate={false}
+				class="max-w-xs"
 			/>
 			<DatePicker
 				value={readText(page.url, 'date')}

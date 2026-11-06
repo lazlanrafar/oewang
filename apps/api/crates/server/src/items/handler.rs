@@ -21,9 +21,9 @@ use crate::{
 #[derive(Debug, Deserialize)]
 pub struct ItemListQuery {
     pub search: Option<String>,
-    /// One exact item, by the `key` and `currency_code` a row carries. Both
-    /// or neither.
+    /// One exact item, by the `key` a row carries. Needs `currency` too.
     pub key: Option<String>,
+    /// Items paid for in this currency; with `key`, that one item.
     pub currency: Option<String>,
     /// `last_bought_at` (default), `name`, `purchases` or `last_price`.
     pub sort: Option<String>,
@@ -34,12 +34,13 @@ pub struct ItemListQuery {
 }
 
 impl ItemListQuery {
-    /// The exact item's currency, validated, when one is asked for.
-    fn exact_currency(&self) -> oewang_domain::Result<Option<String>> {
+    /// The currency, validated, when one is asked for. A key alone is
+    /// refused: the same name in two currencies is two items.
+    fn currency(&self) -> oewang_domain::Result<Option<String>> {
         match (non_empty(&self.key), non_empty(&self.currency)) {
+            (_, Some(code)) => Ok(Some(validate_currency_code("currency", code)?)),
             (None, None) => Ok(None),
-            (Some(_), Some(code)) => Ok(Some(validate_currency_code("currency", code)?)),
-            _ => Err(AppError::validation([(
+            (Some(_), None) => Err(AppError::validation([(
                 "key",
                 "Send key and currency together.",
             )])),
@@ -184,10 +185,11 @@ pub async fn list(
     let id = request_id.0;
 
     let result = async {
-        let currency = query.exact_currency()?;
+        let currency = query.currency()?;
         let filters = ItemFilters {
             search: non_empty(&query.search),
-            exact: non_empty(&query.key).zip(currency.as_deref()),
+            key: non_empty(&query.key),
+            currency: currency.as_deref(),
         };
         let sort = query.sort()?;
         let page = Page::new(query.page, query.limit);

@@ -245,7 +245,7 @@ async fn should_search_and_leave_out_deleted_purchases(pool: PgPool) {
     // `_` is a literal underscore, not a single-character wildcard.
     let underscore = ItemFilters {
         search: Some("minyak_"),
-        exact: None,
+        ..Default::default()
     };
     let (rows, _) = service::list(
         &pool,
@@ -258,9 +258,19 @@ async fn should_search_and_leave_out_deleted_purchases(pool: PgPool) {
     .unwrap();
     assert_eq!(rows.len(), 1);
 
+    // A currency alone narrows to the items paid for in it.
+    let sgd_only = ItemFilters {
+        currency: Some("SGD"),
+        ..Default::default()
+    };
+    let (rows, _) = service::list(&pool, WORKSPACE, &sgd_only, recent(), Page::new(None, None))
+        .await
+        .unwrap();
+    assert!(rows.is_empty(), "nothing here was bought in SGD");
+
     let wildcard = ItemFilters {
         search: Some("minyak%goreng"),
-        exact: None,
+        ..Default::default()
     };
     let (rows, _) = service::list(&pool, WORKSPACE, &wildcard, recent(), Page::new(None, None))
         .await

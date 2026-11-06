@@ -9,22 +9,21 @@
 	 */
 	import { untrack } from 'svelte';
 
-	import X from '@lucide/svelte/icons/x';
-
 	import { navigating, page } from '$app/state';
 
-	import { Button } from '$lib/components/atoms/button';
-	import { Input } from '$lib/components/atoms/input';
 	import type { TableSort } from '$lib/components/molecules/data-table';
+	import { DataTableFilter } from '$lib/components/molecules/data-table-filter';
 	import {
 		DatabaseItemHistorySheet,
 		DatabaseItemsDataTable
 	} from '$lib/components/organisms/database';
+	import { filterBar } from '$lib/filter-bar.svelte';
 	import { t } from '$lib/i18n';
 	import { pageTitle } from '$lib/page-title';
 	import { pagedRows } from '$lib/paged-rows.svelte';
 	import type { ItemSummary } from '$lib/server/ledger';
 	import { readText, writeParams } from '$lib/url-state';
+	import { workspaceLists } from '$lib/workspace-data.svelte';
 
 	let { data } = $props();
 
@@ -57,19 +56,17 @@
 		});
 	}
 
-	let search = $state('');
-	let searchTimer: ReturnType<typeof setTimeout> | undefined;
-	$effect(() => {
-		search = readText(page.url, 'search');
-	});
+	/** The search and the currency facet, in the URL; a change starts at page one. */
+	const bar = filterBar({ currency: 'currency' }, { resetPage: true });
 
-	function applySearch(next: string) {
-		if (next === readText(page.url, 'search')) return;
-		clearTimeout(searchTimer);
-		searchTimer = setTimeout(() => writeParams({ search: next, page: null }), 300);
-	}
+	const lists = workspaceLists();
+	const currencyOptions = $derived(
+		[...new Set(lists.wallets.map((wallet) => wallet.currency_code))]
+			.sort()
+			.map((code) => ({ id: code, name: code }))
+	);
 
-	const clear = () => writeParams({ search: null, page: null });
+	const clear = () => writeParams({ search: null, currency: null, page: null });
 
 	const sheetOpen = $derived(data.open !== null);
 </script>
@@ -80,20 +77,22 @@
 	<h1 class="sr-only">{t('nav.items')}</h1>
 
 	<div class="flex shrink-0 items-center justify-between gap-4">
-		<div class="flex flex-1 items-center gap-2">
-			<Input
-				class="w-full max-w-sm"
+		<div class="flex flex-1 items-center">
+			<DataTableFilter
+				bind:filters={bar.filters}
+				facets={[
+					{
+						id: 'currency',
+						label: t('accounts.currency'),
+						options: currencyOptions,
+						multiple: false
+					}
+				]}
 				placeholder={t('items.search_placeholder')}
-				aria-label={t('items.search_placeholder')}
-				bind:value={search}
-				oninput={(event) => applySearch(event.currentTarget.value)}
+				showAmount={false}
+				showDate={false}
+				class="w-full"
 			/>
-			{#if data.filtered}
-				<Button variant="ghost" size="sm" onclick={clear}>
-					<X />
-					{t('items.clear')}
-				</Button>
-			{/if}
 		</div>
 	</div>
 

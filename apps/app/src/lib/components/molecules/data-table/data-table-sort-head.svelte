@@ -2,13 +2,14 @@
 	/**
 	 * One sortable header, drawn as the transactions table draws its own:
 	 * a ghost button with the label and an arrow on the sorted column. Shared
-	 * by the two Database tables, so a third table does not copy it again.
+	 * by every server-sorted table (the Database tables, budgets), so a new
+	 * one does not copy it again.
 	 */
 	import ArrowDown from '@lucide/svelte/icons/arrow-down';
 	import ArrowUp from '@lucide/svelte/icons/arrow-up';
 
-	import { Button } from '$lib/components/atoms/button';
-	import type { TableSort } from '$lib/components/molecules/data-table';
+	import { Button } from '../../atoms/button/index.js';
+	import type { TableSort } from './data-table-types.js';
 
 	let {
 		key,

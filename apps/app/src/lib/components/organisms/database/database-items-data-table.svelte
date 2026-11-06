@@ -11,6 +11,7 @@
 	import {
 		DataTable,
 		DataTableEmptyState,
+		DataTableSortHead,
 		type TableSort
 	} from '$lib/components/molecules/data-table';
 	import { t } from '$lib/i18n';
@@ -18,7 +19,6 @@
 	import type { ItemSummary } from '$lib/server/ledger';
 
 	import { ITEM_COLUMNS } from './database-items-data-table-column';
-	import SortHead from './database-sort-head.svelte';
 
 	let {
 		items,
@@ -72,7 +72,7 @@
 	{onLoadMore}
 >
 	{#snippet head(column)}
-		<SortHead
+		<DataTableSortHead
 			key={column.key}
 			label={LABEL[column.key] ?? column.label}
 			sortable={column.sortable}
