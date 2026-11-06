@@ -3,6 +3,7 @@ pub mod ai;
 pub mod audit;
 pub mod budgets;
 pub mod categories;
+pub mod feedback;
 pub mod fx;
 pub mod items;
 pub mod receipts;

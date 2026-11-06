@@ -68,17 +68,18 @@ Returns `NOT_A_MEMBER` if the user has no live membership row.
 |---|---|---|---|
 | GET | `/v1/workspaces` | any | Workspaces the user belongs to, with their role in each |
 | POST | `/v1/workspaces` | any | `{name, currency_code}`. A new workspace the caller owns, seeded; at most 10 owned. The client then switches into it (WS-6) |
-| GET | `/v1/workspaces/current` | any | The current workspace |
+| GET | `/v1/workspaces/current` | any | The current workspace, with `currency_locked`: true once any transaction exists (WAL-6) |
 | PATCH | `/v1/workspaces/current` | admin+ | Update name, slug, country. Currency code only while no transaction exists, otherwise `WORKSPACE_CURRENCY_LOCKED` (WAL-6) |
 | GET | `/v1/workspaces/current/members` | any | Members with role and join date |
-| DELETE | `/v1/workspaces/current/members/{user_id}` | admin+ | Remove a member. `LAST_OWNER` if it is the only owner (WS-4) |
-| PATCH | `/v1/workspaces/current/members/{user_id}` | admin+ | Change a member's role. Same `LAST_OWNER` rule |
+| DELETE | `/v1/workspaces/current/members/{user_id}` | admin+ | Remove a member. `LAST_OWNER` if it is the only owner (WS-4); `INSUFFICIENT_ROLE` if an admin targets an owner. Audited `member.removed` |
+| PATCH | `/v1/workspaces/current/members/{user_id}` | admin+ | Change a member's role. Same `LAST_OWNER` and owner rules; nobody grants above their own role. Audited `member.role_changed` |
 | GET | `/v1/workspaces/current/invites` | admin+ | Pending invites |
-| POST | `/v1/workspaces/current/invites` | admin+ | Invite by email with a role (WS-3) |
-| DELETE | `/v1/workspaces/current/invites/{id}` | admin+ | Revoke an invite |
-| POST | `/v1/workspaces/accept-invite` | any | Accept an invite by token |
+| POST | `/v1/workspaces/current/invites` | admin+ | Invite by email with a role (WS-3). Refuses a current member (422 on `email`) and replaces a pending invite to the same address. Returns the raw `token` once. Audited `member.invited` |
+| DELETE | `/v1/workspaces/current/invites/{id}` | admin+ | Revoke an invite. Audited `member.invite_revoked` |
+| POST | `/v1/workspaces/accept-invite` | any signed-in user | Accept an invite by token. Returns `{ workspace_id }`. `INVITE_INVALID` unless the caller's email is the invited one; a live membership keeps its role. Audited `member.joined` |
 | DELETE | `/v1/workspaces/current` | owner | Soft-delete the workspace |
 | GET | `/v1/workspaces/current/usage` | any | Storage used and model tokens, by month and feature (USG-1, USG-3, D92) |
+| POST | `/v1/feedback` | any | Send feedback: `{ type: bug\|feature\|other, message }`, 5000 characters at most. 201 `{ id }`. Audited `feedback.sent` (FB-1) |
 
 ### `GET /v1/workspaces/current/usage` response
 

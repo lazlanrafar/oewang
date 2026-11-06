@@ -288,3 +288,22 @@ pub async fn soft_delete_invitation(
     .await
     .map(|result| result.rows_affected())
 }
+
+/// Retire any pending invitation for this email, so inviting again replaces
+/// the old link rather than leaving two live ones.
+pub async fn soft_delete_pending_for_email(
+    executor: impl PgExecutor<'_>,
+    workspace_id: &str,
+    email: &str,
+) -> Result<u64, sqlx::Error> {
+    sqlx::query!(
+        r#"UPDATE workspace_invitations SET deleted_at = now()
+           WHERE workspace_id = $1 AND lower(email) = lower($2)
+             AND accepted_at IS NULL AND deleted_at IS NULL"#,
+        workspace_id,
+        email
+    )
+    .execute(executor)
+    .await
+    .map(|result| result.rows_affected())
+}

@@ -71,7 +71,7 @@
 	{#if !data.assistant}
 		<!-- The read failed. Showing an empty form would invite an admin to
 		     save "nothing set" over instructions that are in force. -->
-		<p class="text-destructive text-small max-w-xl" role="alert">
+		<p class="text-destructive text-small" role="alert">
 			{t('settings.assistant_unavailable')}
 		</p>
 	{:else if canEdit}
@@ -79,7 +79,7 @@
 			method="POST"
 			action="?/updateAssistant"
 			use:enhance={markSaved}
-			class="max-w-xl space-y-6 border p-4"
+			class="space-y-6"
 		>
 			<div class="grid gap-2">
 				<Label for="assistant-instructions" class="text-subtle text-xs font-normal">
@@ -140,7 +140,7 @@
 		<!-- A member sees what the assistant has been told, and why they
 		     cannot change it. A disabled field with no explanation reads as
 		     a broken page (UI-7). -->
-		<div class="max-w-xl space-y-4 border p-4">
+		<div class="space-y-4">
 			<p class="text-subtle text-small">{t('settings.assistant_read_only')}</p>
 
 			<div class="grid gap-1">

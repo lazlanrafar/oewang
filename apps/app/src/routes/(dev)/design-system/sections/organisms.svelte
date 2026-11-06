@@ -34,6 +34,7 @@
 		ToolCallGroup
 	} from '$lib/components/organisms/chat';
 	import { AccountMenu, AppSidebar, ThemeToggle, WorkspaceSwitcher } from '$lib/components/organisms/layouts';
+	import { MembersInviteSheet, MembersInvitesTable, MembersTable } from '$lib/components/organisms/members';
 	import { SettingsSidebar } from '$lib/components/organisms/settings';
 
 	import {
@@ -60,6 +61,17 @@
 	let detailOpen = $state(false);
 	let budgetFormOpen = $state(false);
 	let budgetMonth = $state(budgetStatus.month);
+
+	/* Members specimen data: an admin looking, so the owner row has no menu. */
+	const MEMBERS = [
+		{ user_id: 'u0', email: 'owner@example.com', name: 'Sample owner', role: 'owner' as const, joined_at: '2026-01-04T00:00:00Z' },
+		{ user_id: 'u1', email: 'admin@example.com', name: 'Sample admin', role: 'admin' as const, joined_at: '2026-03-12T00:00:00Z' },
+		{ user_id: 'u2', email: 'reader@example.com', name: null, role: 'member' as const, joined_at: '2026-10-30T00:00:00Z' }
+	];
+	const INVITES = [
+		{ id: 'i1', email: 'colleague@example.com', role: 'member' as const, expires_at: '2026-11-13T00:00:00Z', created_at: '2026-11-06T00:00:00Z' }
+	];
+	let inviteOpen = $state(false);
 </script>
 
 <Specimen
@@ -241,10 +253,30 @@
 
 <Specimen
 	title="Settings sidebar"
-	note="One level below the app sidebar, with the same row. A section not built yet is tagged Soon and not linked (D82)."
+	note="One level below the app sidebar, with the same row. A section not built yet is tagged Soon and not linked (D82); sections nobody plans to build are not listed (D104)."
 	source="organisms/settings/settings-sidebar.svelte"
 >
 	<SettingsSidebar class="w-56" />
+</Specimen>
+
+<Specimen
+	title="Members and invitations"
+	note="The old members page in a settings section (WS-3, D104). The row menu changes a role or removes; it is absent on your own row and, for an admin, on an owner's. The sheet shows the link once an invitation is sent, the only time the token can be read."
+	source="organisms/members/"
+>
+	<div class="grid max-w-2xl gap-6">
+		<MembersTable
+			members={MEMBERS}
+			viewerId="u1"
+			viewerRole="admin"
+			empty="No members match."
+		/>
+		<MembersInvitesTable invites={INVITES} empty="No pending invitations." />
+		<div>
+			<Button variant="outline" onclick={() => (inviteOpen = true)}>Open the invite sheet</Button>
+		</div>
+	</div>
+	<MembersInviteSheet bind:open={inviteOpen} viewerRole="owner" />
 </Specimen>
 
 <Specimen

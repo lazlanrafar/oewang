@@ -113,6 +113,21 @@ Rules that make a second list screen cheap:
   posts, and `invalidateAll` is what makes the new value stick or puts the old
   one back.
 
+
+## A settings section
+
+A section opens with `SettingsSectionHeader` (title, one line, a rule) and
+fills the settings column, which is the same width for every section
+(`settings/+layout.svelte`, `lg:max-w-3xl`). Inside it:
+
+- **No boxed forms.** No card, no border around a form. Fields sit on the
+  page; related fields are a `SettingsSectionGroup` (small heading, one line,
+  the fields), and two groups are separated by a `Separator`.
+- **No narrower inner widths.** A form does not set its own `max-w-*`; every
+  section's content ends where the column ends.
+- Appearance holds the theme (this browser, applied at once) and the income
+  and expense colours (this user, saved).
+
 ## Changing how something looks
 
 The component owns its look; the call site owns where it sits. A caller may
@@ -349,6 +364,8 @@ Use `src/lib/url-state.ts` rather than hand-rolling it:
 ```
 
 `readParam` constrains the value to what the page accepts, because a URL is user input and `?tab=nonsense` must not render a tab that does not exist. `writeParams` deletes a parameter given `null` or an empty string, so a cleared filter leaves no `?q=` behind, and replaces the history entry unless `push: true` is passed: a search box should not leave one back-button step per keystroke, while paging should.
+
+**A form action must not drop the view.** SvelteKit 3's `enhance` emulates a native submission: on success it navigates to where the form posted, which for `action="?/delete"` is the path with the query string stripped, so the open tab, the month and every filter are lost. A page whose view is in the URL passes `update({ navigate: false })` in its enhance callback, which refreshes the data in place. Every list page does. A form that means to land elsewhere (the import's `?/commit&step=review`) keeps the default.
 
 Per-browser conveniences (column visibility, density, sidebar collapsed) live in `localStorage`, wrapped in try and catch because it throws in a private window. Nothing that must persist reliably goes there.
 

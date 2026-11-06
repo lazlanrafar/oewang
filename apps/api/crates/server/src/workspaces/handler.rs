@@ -5,26 +5,20 @@ use axum::{
     http::StatusCode,
     Json,
 };
-use chrono::{Duration, Utc};
-use oewang_db::repositories::{accounts, tokens};
-use oewang_domain::{
-    auth::{normalize_email, validate_email},
-    AppError, Envelope, Result, Role,
-};
+use oewang_db::repositories::{accounts, tokens, wallets};
+use oewang_domain::{AppError, Envelope, Result, Role};
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    audit::Actor,
     auth::{
         extractor::{Auth, AuthOwner, AuthWrite},
         service::slugify,
-        token,
     },
     response::{ApiError, RequestId},
     state::AppState,
+    workspaces::service,
 };
-
-/// How long an invitation stays usable.
-const INVITE_TTL_DAYS: i64 = 7;
 
 #[derive(Debug, Serialize)]
 pub struct WorkspaceListItem {
@@ -150,23 +144,38 @@ pub async fn create_workspace(
     }
 }
 
+#[derive(Debug, Serialize)]
+pub struct CurrentWorkspace {
+    #[serde(flatten)]
+    pub workspace: WorkspaceListItem,
+    /// True once any transaction exists, deleted ones included (WAL-6), so
+    /// a settings page can say so before a change is refused.
+    pub currency_locked: bool,
+}
+
 pub async fn current_workspace(
     State(state): State<AppState>,
     auth: Auth,
     request_id: RequestId,
-) -> std::result::Result<Json<Envelope<WorkspaceListItem>>, ApiError> {
+) -> std::result::Result<Json<Envelope<CurrentWorkspace>>, ApiError> {
     let workspace = accounts::find_workspace(&state.db, &auth.workspace_id)
         .await
         .map_err(|e| ApiError::new(internal(e), request_id.0.clone()))?
         .ok_or_else(|| ApiError::new(AppError::NotFound, request_id.0.clone()))?;
+    let currency_locked = wallets::workspace_has_transactions(&state.db, &auth.workspace_id)
+        .await
+        .map_err(|e| ApiError::new(internal(e), request_id.0.clone()))?;
 
     Ok(Json(Envelope::data(
-        WorkspaceListItem {
-            id: workspace.id,
-            name: workspace.name,
-            slug: workspace.slug,
-            currency_code: workspace.currency_code,
-            role: auth.role.as_str().to_string(),
+        CurrentWorkspace {
+            workspace: WorkspaceListItem {
+                id: workspace.id,
+                name: workspace.name,
+                slug: workspace.slug,
+                currency_code: workspace.currency_code,
+                role: auth.role.as_str().to_string(),
+            },
+            currency_locked,
         },
         request_id.0,
     )))
@@ -293,10 +302,7 @@ pub async fn list_members(
     Ok(Json(Envelope::data(members, request_id.0)))
 }
 
-/// Change a member's role.
-///
-/// Two rules, both enforced inside one transaction: nobody may grant a role
-/// above their own, and the last owner cannot be demoted (WS-4).
+/// Change a member's role. The rules are in the service (WS-3, WS-4).
 pub async fn update_member(
     State(state): State<AppState>,
     auth: AuthWrite,
@@ -304,49 +310,10 @@ pub async fn update_member(
     request_id: RequestId,
     Json(body): Json<UpdateMemberRequest>,
 ) -> std::result::Result<StatusCode, ApiError> {
-    let result = change_role(&state, &auth, &user_id, body.role).await;
-    result
+    service::change_role(&state.db, actor(&auth), auth.role, &user_id, body.role)
+        .await
         .map(|_| StatusCode::NO_CONTENT)
         .map_err(|error| ApiError::new(error, request_id.0))
-}
-
-async fn change_role(
-    state: &AppState,
-    auth: &AuthWrite,
-    target_user: &str,
-    new_role: Role,
-) -> Result<()> {
-    if !auth.role.can_grant(new_role) {
-        return Err(AppError::InsufficientRole);
-    }
-
-    let mut tx = state.db.begin().await.map_err(internal)?;
-
-    let current = accounts::find_membership(&mut *tx, &auth.workspace_id, target_user)
-        .await
-        .map_err(internal)?
-        .ok_or(AppError::NotFound)?;
-    let current_role = current
-        .role
-        .parse::<Role>()
-        .map_err(|_| AppError::NotFound)?;
-
-    // Demoting an owner needs the same check as removing one.
-    if current_role == Role::Owner && new_role != Role::Owner {
-        let owners = accounts::lock_owners(&mut *tx, &auth.workspace_id)
-            .await
-            .map_err(internal)?;
-        if owners.len() <= 1 {
-            return Err(AppError::LastOwner);
-        }
-    }
-
-    accounts::update_membership_role(&mut *tx, &auth.workspace_id, target_user, new_role.as_str())
-        .await
-        .map_err(internal)?;
-
-    tx.commit().await.map_err(internal)?;
-    Ok(())
 }
 
 pub async fn remove_member(
@@ -355,48 +322,10 @@ pub async fn remove_member(
     Path(user_id): Path<String>,
     request_id: RequestId,
 ) -> std::result::Result<StatusCode, ApiError> {
-    let result = remove(&state, &auth, &user_id).await;
-    result
+    service::remove(&state.db, actor(&auth), auth.role, &user_id)
+        .await
         .map(|_| StatusCode::NO_CONTENT)
         .map_err(|error| ApiError::new(error, request_id.0))
-}
-
-async fn remove(state: &AppState, auth: &AuthWrite, target_user: &str) -> Result<()> {
-    let mut tx = state.db.begin().await.map_err(internal)?;
-
-    let current = accounts::find_membership(&mut *tx, &auth.workspace_id, target_user)
-        .await
-        .map_err(internal)?
-        .ok_or(AppError::NotFound)?;
-    let current_role = current
-        .role
-        .parse::<Role>()
-        .map_err(|_| AppError::NotFound)?;
-
-    if current_role == Role::Owner {
-        // Locked, so two concurrent removals cannot each see two owners and
-        // both proceed to leave none.
-        let owners = accounts::lock_owners(&mut *tx, &auth.workspace_id)
-            .await
-            .map_err(internal)?;
-        if owners.len() <= 1 {
-            return Err(AppError::LastOwner);
-        }
-    }
-
-    accounts::soft_delete_membership(&mut *tx, &auth.workspace_id, target_user)
-        .await
-        .map_err(internal)?;
-
-    // A removed member's sessions end now, not in fifteen minutes.
-    tokens::revoke_all_for_user(&mut *tx, target_user)
-        .await
-        .map_err(internal)?;
-    // And so does any Telegram chat they linked to this workspace (D85).
-    crate::telegram::link::revoke_member(&mut *tx, &auth.workspace_id, target_user).await?;
-
-    tx.commit().await.map_err(internal)?;
-    Ok(())
 }
 
 pub async fn list_invites(
@@ -428,54 +357,30 @@ pub async fn create_invite(
     request_id: RequestId,
     Json(body): Json<InviteRequest>,
 ) -> std::result::Result<(StatusCode, Json<Envelope<InviteCreated>>), ApiError> {
-    let result = invite(&state, &auth, &body).await;
-    result
-        .map(|created| {
-            (
-                StatusCode::CREATED,
-                Json(Envelope::data(created, request_id.0.clone())),
-            )
-        })
-        .map_err(|error| ApiError::new(error, request_id.0))
-}
+    let invitation =
+        match service::invite(&state.db, actor(&auth), auth.role, &body.email, body.role).await {
+            Ok(invitation) => invitation,
+            Err(error) => return Err(ApiError::new(error, request_id.0)),
+        };
 
-async fn invite(state: &AppState, auth: &AuthWrite, body: &InviteRequest) -> Result<InviteCreated> {
-    validate_email(&body.email)?;
-    if !auth.role.can_grant(body.role) {
-        return Err(AppError::InsufficientRole);
-    }
-
-    let email = normalize_email(&body.email);
-    let invite_token = token::issue_refresh_token();
-    let expires_at = Utc::now() + Duration::days(INVITE_TTL_DAYS);
-    let id = cuid2::create_id();
-
-    tokens::insert_invitation(
-        &state.db,
-        &id,
-        &auth.workspace_id,
-        &email,
-        body.role.as_str(),
-        // Only the hash is stored, like every other token (AUTH-8).
-        &invite_token.hash,
-        &auth.user_id,
-        expires_at,
-    )
-    .await
-    .map_err(internal)?;
-
+    // After the commit: a failed send must not undo the invitation, and the
+    // link is in the response for the inviter to pass on by hand.
     state
         .mailer
-        .send_workspace_invite(&email, &invite_token.raw)
+        .send_workspace_invite(&invitation.email, &invitation.raw_token)
         .await;
 
-    Ok(InviteCreated {
-        id,
-        email,
-        role: body.role.as_str().to_string(),
-        expires_at: expires_at.to_rfc3339(),
-        token: invite_token.raw,
-    })
+    let created = InviteCreated {
+        id: invitation.id,
+        email: invitation.email,
+        role: invitation.role.as_str().to_string(),
+        expires_at: invitation.expires_at.to_rfc3339(),
+        token: invitation.raw_token,
+    };
+    Ok((
+        StatusCode::CREATED,
+        Json(Envelope::data(created, request_id.0)),
+    ))
 }
 
 pub async fn revoke_invite(
@@ -484,53 +389,36 @@ pub async fn revoke_invite(
     Path(id): Path<String>,
     request_id: RequestId,
 ) -> std::result::Result<StatusCode, ApiError> {
-    let affected = tokens::soft_delete_invitation(&state.db, &auth.workspace_id, &id)
+    service::revoke_invite(&state.db, actor(&auth), &id)
         .await
-        .map_err(|e| ApiError::new(internal(e), request_id.0.clone()))?;
-
-    if affected == 0 {
-        return Err(ApiError::new(AppError::NotFound, request_id.0));
-    }
-    Ok(StatusCode::NO_CONTENT)
+        .map(|_| StatusCode::NO_CONTENT)
+        .map_err(|error| ApiError::new(error, request_id.0))
 }
 
-/// Accept an invitation.
-///
-/// The caller must already be signed in: an invite grants membership, not an
-/// account. Claiming is a single statement that also marks the invite used,
-/// so a token cannot be redeemed twice even concurrently.
+#[derive(Debug, Serialize)]
+pub struct InviteAccepted {
+    /// The workspace joined, so the client can switch into it.
+    pub workspace_id: String,
+}
+
+/// Accept an invitation addressed to the signed-in user.
 pub async fn accept_invite(
     State(state): State<AppState>,
     auth: Auth,
     request_id: RequestId,
     Json(body): Json<AcceptInviteRequest>,
-) -> std::result::Result<StatusCode, ApiError> {
-    let result = accept(&state, &auth, &body.token).await;
-    result
-        .map(|_| StatusCode::NO_CONTENT)
-        .map_err(|error| ApiError::new(error, request_id.0))
+) -> std::result::Result<Json<Envelope<InviteAccepted>>, ApiError> {
+    match service::accept(&state.db, &auth.user_id, &body.token).await {
+        Ok(workspace_id) => Ok(Json(Envelope::data(
+            InviteAccepted { workspace_id },
+            request_id.0,
+        ))),
+        Err(error) => Err(ApiError::new(error, request_id.0)),
+    }
 }
 
-async fn accept(state: &AppState, auth: &Auth, raw_token: &str) -> Result<()> {
-    let mut tx = state.db.begin().await.map_err(internal)?;
-
-    let invitation = tokens::claim_invitation(&mut *tx, &token::hash_token(raw_token))
-        .await
-        .map_err(internal)?
-        .ok_or(AppError::InviteInvalid)?;
-
-    accounts::insert_membership(
-        &mut *tx,
-        &cuid2::create_id(),
-        &invitation.workspace_id,
-        &auth.user_id,
-        &invitation.role,
-    )
-    .await
-    .map_err(internal)?;
-
-    tx.commit().await.map_err(internal)?;
-    Ok(())
+fn actor(auth: &AuthWrite) -> Actor<'_> {
+    Actor::web(&auth.workspace_id, &auth.user_id)
 }
 
 fn internal(error: sqlx::Error) -> AppError {

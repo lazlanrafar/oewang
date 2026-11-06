@@ -125,4 +125,4 @@ New requirement IDs are appended, never renumbered.
 
 Do not add these back without a new PRD. Each was considered and rejected, and the reasoning is in [docs/prd.md](docs/prd.md#non-goals-for-v1) and [docs/security/ai-safety.md](docs/security/ai-safety.md#what-is-deliberately-not-built):
 
-Invoices, debts, budgets, contacts, document RAG over the vault (the vault itself came back in D90), billing and quotas (usage is recorded but never limited, D92), integrations, an MCP server, OAuth login, notifications, a background worker, web search in chat, external app tools, bulk write tools, embedding-based tool selection, and a second UI locale.
+Invoices, debts, contacts, document RAG over the vault (the vault itself came back in D90), billing and quotas (usage is recorded but never limited, D92), integrations, an MCP server, OAuth login, notifications, a background worker, web search in chat, external app tools, bulk write tools, embedding-based tool selection, and a second UI locale.

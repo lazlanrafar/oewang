@@ -196,7 +196,7 @@ The old token stays valid until expiry. It is scoped to the previous workspace, 
 | Upload, rename, tag or delete a file | yes | yes | no |
 | View a file, list the vault, read a thumbnail | yes | yes | yes |
 | Read workspace usage (storage and tokens) | yes | yes | yes |
-| Invite or remove a member, change a role | yes | yes | no |
+| Invite or remove a member, change a role | yes | yes (not an owner) | no |
 | Update workspace settings | yes | yes | no |
 | Delete the workspace | yes | no | no |
 | Open chat, read sessions, use read-only tools | yes | yes | yes |
@@ -205,6 +205,9 @@ The old token stays valid until expiry. It is scoped to the previous workspace, 
 | Connect or disconnect their own Telegram chat | yes | yes | yes |
 | Save a receipt or change a transaction from Telegram | yes | yes | no |
 | Ask the assistant from Telegram | yes | yes | yes |
+| Send feedback (FB-1) | yes | yes | yes |
+
+An admin cannot grant owner, nor change or remove an owner: only an owner acts on an owner. An invitation is a bearer token bound to an address: the API accepts it only from the account with that email, so a forwarded or leaked link admits nobody else, and a refused attempt leaves it usable for the right person. Accepting never changes the role of someone already in the workspace (D104).
 
 A `member` who asks the assistant to record an expense gets a refusal from the tool layer, server-side, not from the prompt (CHAT-4). A prompt instruction is guidance; the role gate is the control.
 

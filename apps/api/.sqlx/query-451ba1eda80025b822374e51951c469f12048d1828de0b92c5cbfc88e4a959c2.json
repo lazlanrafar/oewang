@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE workspace_invitations SET deleted_at = now()\n           WHERE workspace_id = $1 AND lower(email) = lower($2)\n             AND accepted_at IS NULL AND deleted_at IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "451ba1eda80025b822374e51951c469f12048d1828de0b92c5cbfc88e4a959c2"
+}

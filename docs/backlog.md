@@ -134,7 +134,7 @@ Requirements: WS-3, WS-4
 - [x] Every route in [endpoints](api/endpoints.md#workspaces-and-members), with role gates
 - [x] An invite creates a token row; accepting adds a membership row
 - [x] The last owner cannot be removed or demoted: `LAST_OWNER`
-- [x] Settings page lists members with role, an invite form and a remove action
+- [x] Settings page lists members with role, an invite form and a remove action (ticked before the page existed; built in US-058)
 - [x] Verify in browser
 
 ### US-010b: Password reset
@@ -810,3 +810,21 @@ Requirements: BUD-1, BUD-2, BUD-3, BUD-4, BUD-5
 - [x] clippy, `cargo test`, ruff, pytest, `bun run check` and `bun run test` pass in the containers
 - [x] Verified locally: create a budget, figures match the database, October shows over budget in red, the month and filters survive a reload, the chat answers with the canvas and it survives a reload
 - [ ] Verify in production after deploy
+
+## M12. Workspace settings
+
+### US-058: Members, Currency and Feedback in settings
+Requirements: WS-3, WS-4, WAL-6, FB-1
+
+- [x] Sidebar: Members, Currency and Feedback built; Display, Transaction, Backup and Passcode removed rather than left "Soon" (D104)
+- [x] Accepting an invitation requires the invited address and never changes a live member's role; an admin cannot change or remove an owner; invite, revoke, join, role change and removal are audited (Rust tests)
+- [x] Inviting a current member is refused; inviting again replaces the pending link (Rust test)
+- [x] `/settings/members`: members and invitations tabs in the URL, filter bar with a role facet, invite sheet that shows the link once, role menu, remove and revoke confirms; read-only for members
+- [x] `/accept-invite` accepts, switches into the workspace and opens the overview; anything else says why
+- [x] `GET /v1/workspaces/current` returns `currency_locked`; `/settings/currency` changes the currency until the first transaction, then explains the lock
+- [x] `feedback` table (migration 0015) and `POST /v1/feedback`, any role, audited (Rust tests); `/settings/feedback` form
+- [x] clippy, `cargo test`, `bun run check` and `bun run test` pass in the containers
+- [x] Verified locally: invite and copy the link, a wrong-address accept is refused and leaves the link usable, revoke keeps the Invitations tab, the locked currency explains itself, feedback lands in the table
+- [ ] Verify locally: accept as the invited account, change a role, remove a member, change the currency of a workspace with no transactions
+- [ ] Verify in production after deploy
+

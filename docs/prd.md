@@ -83,7 +83,7 @@ Confirmed by the owner on 2026-11-02, and recorded in the [decision log](archite
 
 ### 5.1 Interpretation of the data model decision
 
-"Full data model" means full for the transaction and chat domain, not the old 42 tables. The sixteen tables in scope are listed in [data model](data-model.md#tables-in-scope). Out of scope: invoices, debts, contacts, notifications, billing, orders, pricing, plan features, workspace addons, integrations, MCP tables, articles, FAQs, feedback, device tokens, push subscriptions, privacy requests, webhook events, system settings, knowledge chunks.
+"Full data model" means full for the transaction and chat domain, not the old 42 tables. The sixteen tables in scope are listed in [data model](data-model.md#tables-in-scope). Out of scope: invoices, debts, contacts, notifications, billing, orders, pricing, plan features, workspace addons, integrations, MCP tables, articles, FAQs, device tokens, push subscriptions, privacy requests, webhook events, system settings, knowledge chunks.
 
 ### 5.2 Assumptions
 
@@ -130,7 +130,7 @@ Requirement IDs are referenced by every other doc and by each backlog story. The
 | AUTH-13 | A user may set and remove a profile photo. It is kept as a 256px square JPEG under the user, not a workspace, and served through the app (D94). |
 | WS-1 | A user may belong to several workspaces, with one role per workspace. |
 | WS-2 | A user may switch workspace and receives a re-scoped JWT. |
-| WS-3 | A workspace owner or admin may invite a user by email and remove a member. |
+| WS-3 | A workspace owner or admin may invite a user by email and remove a member. An invitation is accepted only by the account with the address it was sent to, and accepting never changes the role of someone already in the workspace. Only an owner may change or remove an owner. Every invite, revoke, join, role change and removal is audited. Settings → Members lists both (D104). |
 | WS-4 | The last remaining owner cannot be removed or demoted. |
 | WS-5 | Registration creates a user, a workspace and an `owner` membership in one database transaction. |
 | WS-6 | A signed-in user may create another workspace, which they own, seeded as registration seeds one, and is switched into it. One person owns at most 10 (D94). |
@@ -370,6 +370,14 @@ Added by D103, from the old app's budget page. Specified in [features/budgets.md
 | BUD-3 | The page is the old one: three figures, a search, New budget, and a table sortable on the server by category, budget, spent, remaining and percentage. The month, the search and the sort live in the URL; a month stepper moves between months. |
 | BUD-4 | Deleting a category deletes its budget in the same transaction, with its own audit row. |
 | BUD-5 | `get_budget_status` answers for one month (the current one by default) and leaves a `budget` canvas: spent and remaining against the total, a bar per budget with the fullest first, and the API's summary sentence. |
+
+### 6.16 Feedback (FB)
+
+Added by D104, from the old app's feedback section.
+
+| ID | Requirement |
+|---|---|
+| FB-1 | Any member may send feedback from Settings → Feedback: a type (bug, feature, other) and a message of at most 5000 characters. It is stored with the sender and the workspace, and audited. There is no screenshot and no inbox in the product; rows are read in the database. |
 
 ## 7. Success metrics
 

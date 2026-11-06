@@ -10,6 +10,7 @@ mod audit;
 mod auth;
 mod budgets;
 mod config;
+mod feedback;
 mod fx;
 #[cfg(test)]
 mod hardening_tests;
@@ -386,6 +387,8 @@ fn protected_routes(state: AppState) -> Router<AppState> {
             "/v1/budgets/{id}",
             axum::routing::patch(budgets::handler::update).delete(budgets::handler::delete),
         )
+        // Feedback from settings, any role (FB-1).
+        .route("/v1/feedback", post(feedback::handler::send))
         // Exchange rates. A suggestion for the form; nothing reads it on
         // the way out (D39).
         .route("/v1/fx/rate", get(fx::handler::rate))

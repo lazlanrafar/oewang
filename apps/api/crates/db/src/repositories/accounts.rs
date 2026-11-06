@@ -387,6 +387,54 @@ pub async fn insert_membership(
     .map(|_| ())
 }
 
+/// Join a workspace through an invitation.
+///
+/// Unlike `insert_membership`, a live membership is left exactly as it is:
+/// accepting a member invite must never demote an owner. Only a row the user
+/// left (soft-deleted) is revived, with the invitation's role.
+pub async fn join_membership(
+    executor: impl PgExecutor<'_>,
+    id: &str,
+    workspace_id: &str,
+    user_id: &str,
+    role: &str,
+) -> Result<(), sqlx::Error> {
+    sqlx::query!(
+        r#"INSERT INTO user_workspaces (id, workspace_id, user_id, role)
+           VALUES ($1, $2, $3, $4)
+           ON CONFLICT (workspace_id, user_id)
+           DO UPDATE SET role = EXCLUDED.role, deleted_at = NULL, joined_at = now()
+           WHERE user_workspaces.deleted_at IS NOT NULL"#,
+        id,
+        workspace_id,
+        user_id,
+        role
+    )
+    .execute(executor)
+    .await
+    .map(|_| ())
+}
+
+/// Whether this email already belongs to a live member.
+pub async fn email_is_member(
+    executor: impl PgExecutor<'_>,
+    workspace_id: &str,
+    email: &str,
+) -> Result<bool, sqlx::Error> {
+    sqlx::query_scalar!(
+        r#"SELECT EXISTS (
+             SELECT 1 FROM user_workspaces m
+             JOIN users u ON u.id = m.user_id
+             WHERE m.workspace_id = $1 AND m.deleted_at IS NULL
+               AND lower(u.email) = lower($2)
+           ) AS "exists!""#,
+        workspace_id,
+        email
+    )
+    .fetch_one(executor)
+    .await
+}
+
 /// The lookup every authenticated write performs, which is why the index is
 /// led by `user_id` rather than `workspace_id`.
 pub async fn find_membership(

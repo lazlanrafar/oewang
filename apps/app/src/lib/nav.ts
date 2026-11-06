@@ -26,14 +26,11 @@ import {
 	ArrowLeftRight,
 	Box,
 	ChartColumn,
-	DatabaseBackup,
-	FileText,
 	Landmark,
 	PiggyBank,
 	LayoutDashboard,
 	Lock,
 	MessageSquareWarning,
-	Monitor,
 	Palette,
 	Settings,
 	ShoppingBasket,
@@ -107,26 +104,27 @@ export const accountNavGroups: NavGroup[] = [
 ];
 
 /**
- * The settings sidebar (D82).
+ * The settings sidebar (D82, D104).
  *
  * The old app's list, in its order, so the page reads as the one users
- * know. A section not built yet is `pending`: shown with a "Soon" tag, never
- * linked. Sections that belong to a non-goal are not listed at all, because
- * "Soon" would promise them: notifications and alarm, billing, and language
- * (a second UI locale) (docs/prd.md#non-goals-for-v1). The old budget
- * section is not listed either: budgets are managed on their own page
- * (D103), and one thing managed from two screens is two rules to keep.
+ * know, less what was never real. Display, Transaction, Backup and Passcode
+ * are not listed: the old app had them as placeholders, or stored settings
+ * nothing read, and a row that promises "Soon" for something nobody plans
+ * to build is a broken promise (D104). Sections that belong to a non-goal
+ * are not listed either: notifications and alarm, billing, and language (a
+ * second UI locale) (docs/prd.md#non-goals-for-v1). The old budget section
+ * is not listed: budgets are managed on their own page (D103), and one
+ * thing managed from two screens is two rules to keep.
  *
  * Assistant is ours, not the old app's: it was a tab on the settings page
- * (US-032) and is a section now.
+ * (US-032) and is a section now. `pending` stays on the type for the next
+ * section that is planned but not built.
  */
 export const settingsNavGroups: NavGroup[] = [
 	{
 		items: [
-			{ titleKey: 'settings.nav_members', href: '/settings/members', icon: Users, pending: true },
-			{ titleKey: 'settings.nav_appearance', href: '/settings/appearance', icon: Palette },
-			{ titleKey: 'settings.nav_display', href: '/settings/display', icon: Monitor, pending: true },
-			{ titleKey: 'settings.nav_transaction', href: '/settings/transaction', icon: FileText, pending: true }
+			{ titleKey: 'settings.nav_members', href: '/settings/members', icon: Users },
+			{ titleKey: 'settings.nav_appearance', href: '/settings/appearance', icon: Palette }
 		]
 	},
 	{
@@ -139,12 +137,10 @@ export const settingsNavGroups: NavGroup[] = [
 	{
 		labelKey: 'settings.group_general',
 		items: [
-			{ titleKey: 'settings.nav_backup', href: '/settings/backup', icon: DatabaseBackup, pending: true },
-			{ titleKey: 'settings.nav_passcode', href: '/settings/passcode', icon: Lock, pending: true },
-			{ titleKey: 'settings.nav_currency', href: '/settings/currency', icon: Banknote, pending: true },
+			{ titleKey: 'settings.nav_currency', href: '/settings/currency', icon: Banknote },
 			{ titleKey: 'settings.nav_assistant', href: '/settings/assistant', icon: Bot },
 			{ titleKey: 'settings.nav_usage', href: '/settings/usage', icon: ChartColumn },
-			{ titleKey: 'settings.nav_feedback', href: '/settings/feedback', icon: MessageSquareWarning, pending: true }
+			{ titleKey: 'settings.nav_feedback', href: '/settings/feedback', icon: MessageSquareWarning }
 		]
 	}
 ];

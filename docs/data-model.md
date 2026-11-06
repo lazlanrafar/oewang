@@ -24,7 +24,7 @@ PostgreSQL 16. This doc is the source of truth for every table and column. No ot
 
 ## Tables in scope
 
-Twenty-four tables. The sixteen carried from the old app's schema, plus `refresh_tokens` and `password_reset_tokens` (D38, AUTH-10), `exchange_rates` (D44), the three Telegram tables (D83), `ai_usage` (D92), and `budgets` (D103). Carried (see [legacy app](reference/legacy-app.md#schema-mapping)) with the billing, quota and integration columns stripped (D8).
+Twenty-five tables. The sixteen carried from the old app's schema, plus `refresh_tokens` and `password_reset_tokens` (D38, AUTH-10), `exchange_rates` (D44), the three Telegram tables (D83), `ai_usage` (D92), `budgets` (D103) and `feedback` (D104). Carried (see [legacy app](reference/legacy-app.md#schema-mapping)) with the billing, quota and integration columns stripped (D8).
 
 ```mermaid
 erDiagram
@@ -54,6 +54,8 @@ erDiagram
     workspaces ||--o{ vault_files : "stores"
     workspaces ||--o{ ai_usage : "spends"
     users ||--o{ ai_usage : "made for"
+    workspaces ||--o{ feedback : "receives"
+    users ||--o{ feedback : "sends"
 ```
 
 ### Identity and tenancy
@@ -216,6 +218,21 @@ Migration `0014`, D103. A monthly limit on one expense category, in the workspac
 | `created_at`, `updated_at`, `deleted_at` | timestamptz | |
 
 Indexes: `budgets_workspace_idx (workspace_id) WHERE deleted_at IS NULL`, and `budgets_one_per_category_idx` unique on `(workspace_id, category_id) WHERE deleted_at IS NULL`, so a category has one live budget whatever two saves race. The old app's `period` column is not carried: it was never read.
+
+#### `feedback`
+
+Migration `0015`, D104, FB-1. What a member sent from Settings → Feedback. Written once, read in the database; nothing in the product lists it.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | text | CUID2, primary key |
+| `workspace_id` | text | FK workspaces, cascade |
+| `user_id` | text | FK users, cascade. Who sent it |
+| `type` | text | `bug`, `feature` or `other` |
+| `message` | text | `CHECK` 1 to 5000 characters, trimmed by the service |
+| `created_at`, `deleted_at` | timestamptz | |
+
+Index: `feedback_workspace_idx (workspace_id, created_at DESC) WHERE deleted_at IS NULL`. The old app's screenshot, review status and admin note are not carried: nothing here would show or change them.
 
 ### Ledger
 
