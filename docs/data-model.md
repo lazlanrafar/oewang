@@ -702,9 +702,12 @@ Run with `sqlx migrate run` and then the seed file; both commands are in the [RE
 
 A new workspace gets (CAT-3):
 
-- One wallet, named `Cash`, balance `0`, `is_default = true`.
-- Expense categories: Food, Transport, Shopping, Bills, Health, Entertainment, Other.
-- Income categories: Salary, Business, Gift, Other.
+- Eleven wallet groups: Cash, Accounts, Card, Debit Card, Savings, Top-Up / Prepaid, Investments, Overdrafts, Loan, Insurance, Others.
+- Three wallets, each at balance `0`, counted in totals, in the workspace currency: `Cash` in the Cash group (`is_default = true`), `Accounts` in Accounts, `Card` in Card.
+- Income categories (7): 💵 Salary, 💰 Allowance, 💵 Petty cash, 🏅 Bonus, 🐒 Chip in, 💰 Freelance, Other.
+- Expense categories (24): 🍜 Food, 🧑‍🤝‍🧑 Social Life, 🐶 Pets, 🚕 Transport, 🪑 Household, 🧥 Apparel, 💄 Beauty, 🧘 Health, 📙 Education, 🎁 Gift, ⚽ Sport, 🧣 Laundry, ☕ Coffee, 💹 Investment, 🏡 Rent, 💸 Subscription, 🛵 Motorbikes, 🤖 Hobby, 💳 Credit, 📶 Internet, 🏡 Parents, 📚 Hobby, 💵 Salary, Other.
+
+The list is the old app's (`packages/constants/src/default/category.ts`), verbatim (D102). It lives once, in `crates/db/src/seed.rs`, which registration and workspace creation both call.
 - One `ai_agent_settings` row with defaults.
 
 The development seed command additionally creates a demo user and roughly 200 sample transactions spread over three months, so list performance and grouping can be judged honestly.

@@ -455,7 +455,60 @@ mod tests {
                 .fetch_one(&pool)
                 .await
                 .unwrap();
-        assert!(categories > 0, "seeded as registration seeds one");
+        assert_eq!(categories, 31, "the old app's seven income and 24 expense");
+
+        let groups: i64 =
+            sqlx::query_scalar("SELECT count(*) FROM wallet_groups WHERE workspace_id = $1")
+                .bind(&created.id)
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(groups, 11);
+
+        let wallets: Vec<(String, String, bool)> = sqlx::query_as(
+            "SELECT w.name, g.name, w.is_default
+             FROM wallets w JOIN wallet_groups g ON g.id = w.group_id
+             WHERE w.workspace_id = $1 ORDER BY w.sort_order",
+        )
+        .bind(&created.id)
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+        assert_eq!(
+            wallets,
+            [
+                ("Cash".to_string(), "Cash".to_string(), true),
+                ("Accounts".to_string(), "Accounts".to_string(), false),
+                ("Card".to_string(), "Card".to_string(), false),
+            ]
+        );
+
+        // A user's own category needs no emoji: the emoji shape is the
+        // default list's, not a rule on input. It lands before "Other",
+        // which stays last in each type.
+        let actor = Actor::web(&created.id, USER);
+        for (name, kind) in [("Zakat", "income"), ("kopi susu", "expense")] {
+            crate::accounts::service::create_category(&pool, actor, name, kind, None)
+                .await
+                .unwrap();
+        }
+        for kind in ["income", "expense"] {
+            let listed = oewang_db::repositories::categories::list_categories(
+                &pool,
+                &created.id,
+                Some(kind),
+            )
+            .await
+            .unwrap();
+            assert_eq!(
+                listed.last().map(|row| row.name.as_str()),
+                Some("Other"),
+                "{kind}"
+            );
+            assert!(listed
+                .iter()
+                .any(|row| row.name == "Zakat" || row.name == "kopi susu"));
+        }
 
         assert!(matches!(
             create_workspace(&pool, USER, "   ", "IDR").await,
