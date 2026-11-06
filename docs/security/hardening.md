@@ -126,7 +126,7 @@ Enforcement: request and response bodies are never passed to the logger, and sec
 
 | Rule | Detail |
 |---|---|
-| Audit | `cargo audit` (Rust), `bun audit` (Node), `pip-audit` (Python), in CI on every push |
+| Audit | `cargo audit` (Rust), `bun audit` (Node), `pip-audit` (Python), in CI on every pull request into `main` |
 | Lockfiles | Committed for all three apps. CI installs from the lockfile, never resolves fresh |
 | Crypto | Only the primitives in [encryption](../api/encryption.md#primitives). No hand-rolled crypto, and no crypto dependency outside that list |
 | New dependency | Needs a reason in the pull request: what it does, what it would take to not have it |

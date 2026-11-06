@@ -111,7 +111,7 @@ The body should say **why**, not restate the diff. If a commit works around some
 Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
 ```
 
-Work happens on `development`. Do not commit to `main` directly, and do not push unless asked.
+Work happens on `development`. Do not commit to `main` directly, and do not push unless asked. `main` moves only through a pull request from `development`: that is when CI runs (OPS-7), and merging it deploys.
 
 ## Keeping docs true
 

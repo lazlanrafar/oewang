@@ -26,13 +26,15 @@
 name: CI
 
 on:
-  # Pushes to the two long-lived branches, plus every pull request. An
-  # unfiltered `push:` would run the whole suite twice for a branch that
-  # also has a pull request open, once for each event, which is the same
-  # answer at double the cost.
-  push:
-    branches: [main, development]
+  # Only when something is about to reach `main`: a pull request into it.
+  # `main` deploys to production (build-and-push.yml), and that is the one
+  # moment a red check has to stop something. Pushes to `development` run
+  # nothing, so a working branch does not spend Actions minutes per push;
+  # the same commit used to run here twice, once per branch.
   pull_request:
+    branches: [main]
+  # By hand, for a branch you want checked before opening the pull request.
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -329,13 +331,17 @@ jobs:
 
       - name: Start the stack
         working-directory: .
-        run: docker compose -f infra/docker-compose.yml up -d --wait --wait-timeout 600
+        # Only what the journeys use, with files on disk instead of S3
+        # (infra/docker-compose.ci.yml): MinIO is never pulled.
+        run: >
+          docker compose -f infra/docker-compose.yml -f infra/docker-compose.ci.yml
+          up -d --wait --wait-timeout 600 postgres api ai app
 
       - name: Migrate and seed
         working-directory: .
         run: |
-          docker compose -f infra/docker-compose.yml run --rm api \
-            sqlx migrate run --source migrations
+          docker compose -f infra/docker-compose.yml -f infra/docker-compose.ci.yml \
+            run --rm --no-deps api sqlx migrate run --source migrations
           docker compose -f infra/docker-compose.yml exec -T postgres \
             psql -U oewang -d oewang -q < apps/api/seeds/dev.sql
 
