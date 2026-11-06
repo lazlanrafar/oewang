@@ -46,7 +46,7 @@
 	} from '$lib/files';
 	import { t } from '$lib/i18n';
 	import { pageTitle } from '$lib/page-title';
-	import { readParam, readText, writeParams } from '$lib/url-state';
+	import { readParam, readText, reloading, writeParams } from '$lib/url-state';
 
 	let { data } = $props();
 
@@ -99,10 +99,7 @@
 	const totalPages = $derived(morePages ?? data.totalPages);
 
 	/** A search is on its way: show the old skeleton rather than stale rows. */
-	const searching = $derived(
-		navigating.to?.url.pathname === '/vault' &&
-			(navigating.to.url.searchParams.get('search') ?? '') !== data.search
-	);
+	const searching = $derived(reloading(['search']));
 
 	async function loadMore() {
 		if (loadingMore || loadedPages >= totalPages) return;

@@ -38,7 +38,7 @@
 	<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
 		<StatCard
 			label={t('canvas.total_spent')}
-			value={money(report.total.value)}
+			value={{ value: report.total.value, format: money }}
 			change={changeOf(report.total)}
 			changeLabel={comparedWith(report.total)}
 			invert

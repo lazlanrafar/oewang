@@ -31,7 +31,7 @@
 	import { t } from '$lib/i18n';
 	import { pageTitle } from '$lib/page-title';
 	import type { BudgetLine } from '$lib/reports';
-	import { readText, writeParams } from '$lib/url-state';
+	import { readText, reloading, writeParams } from '$lib/url-state';
 
 	let { data, form } = $props();
 
@@ -110,7 +110,8 @@
 <div class="flex min-h-0 flex-1 flex-col gap-4">
 	<h1 class="sr-only">{t('nav.budget')}</h1>
 
-	<BudgetSummaryCards class="shrink-0" {status} />
+	<!-- The cards are the month's, so only a new month reloads them. -->
+	<BudgetSummaryCards class="shrink-0" {status} loading={reloading(['month'])} />
 
 	<FormError message={form?.code ? messageForCode(form.code) : undefined} />
 
@@ -138,6 +139,7 @@
 	</div>
 
 	<BudgetsDataTable
+		loading={reloading(['month', 'search', 'state', 'sort', 'order'])}
 		class="min-h-0 flex-1"
 		budgets={status.budgets}
 		currency={status.currency_code}

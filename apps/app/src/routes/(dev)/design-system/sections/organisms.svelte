@@ -88,12 +88,13 @@
 
 <Specimen
 	title="Accounts summary cards"
-	note="The three figures above the accounts table. Local rather than built on the stat card molecule: this one is a tracked 10px label over a serif figure and carries no change indicator. Every figure arrives formatted."
+	note="The three figures above the accounts table, on the page card molecule. Each counts up when it arrives; the total is a decimal string formatted by the card (D12)."
 	source="organisms/accounts/accounts-summary-cards.svelte"
 	framed={false}
 >
 	<AccountSummaryCards
 		total={accountSummary.total}
+		currency={baseCurrency}
 		count={accountSummary.count}
 		counted={accountSummary.counted}
 		unconverted={accountSummary.unconverted}

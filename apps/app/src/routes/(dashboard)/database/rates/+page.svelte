@@ -23,7 +23,7 @@
 	import { pageTitle } from '$lib/page-title';
 	import { pagedRows } from '$lib/paged-rows.svelte';
 	import type { SnapshotRate } from '$lib/server/ledger';
-	import { readText, writeParams } from '$lib/url-state';
+	import { readText, reloading, writeParams } from '$lib/url-state';
 
 	let { data } = $props();
 
@@ -94,6 +94,7 @@
 	</div>
 
 	<DatabaseRatesDataTable
+		loading={reloading(['search', 'date', 'sort', 'order'])}
 		class="min-h-0 flex-1"
 		rates={held.rows}
 		home={data.home}

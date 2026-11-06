@@ -20,6 +20,8 @@
  * A feature's own column list lives with that feature, not here: this
  * module is the design system and knows nothing about what is in a row.
  */
+import type { SkeletonSpec } from './data-table-types.js';
+
 export type ColumnSpec = {
 	/**
 	 * A plain string, because the shell this feeds is shared and no two
@@ -51,6 +53,8 @@ export type ColumnSpec = {
 	 */
 	cellClass?: string;
 	headClass?: string;
+	/** What this column's cells show while the rows load. A text bar if omitted. */
+	skeleton?: SkeletonSpec;
 };
 
 /** The row height every table in the old app uses. */

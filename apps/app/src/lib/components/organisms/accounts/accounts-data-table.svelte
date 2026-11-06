@@ -41,6 +41,7 @@
 		onSetDefault,
 		onGroupChange,
 		createLabel,
+		loading = false,
 		class: className
 	}: {
 		accounts: Wallet[];
@@ -59,6 +60,8 @@
 		onGroupChange?: (account: Wallet, groupId: string) => void;
 		/** The create row's text, resolved by the caller (UI-1). */
 		createLabel?: (typed: string) => string;
+		/** Rows are on their way: the table draws its skeleton (D108). */
+		loading?: boolean;
 		class?: string;
 	} = $props();
 
@@ -79,6 +82,7 @@
 </script>
 
 <DataTable
+	{loading}
 	class={className}
 	columns={ACCOUNT_COLUMNS}
 	rows={accounts}

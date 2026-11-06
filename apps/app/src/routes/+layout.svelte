@@ -1,13 +1,19 @@
 <script lang="ts">
 	import { ModeWatcher } from 'mode-watcher';
+	import { onMount } from 'svelte';
 
 	import { page } from '$app/state';
 
 	import '../app.css';
+	import { markHydrated } from '$lib/hydration';
 	import { t } from '$lib/i18n';
 	import type { LayoutProps } from './$types';
 
 	let { children }: LayoutProps = $props();
+
+	// What the server rendered is on screen from here on: a figure mounted
+	// after this counts up, one hydrated before it does not (D108).
+	onMount(markHydrated);
 
 	/* A link preview needs an absolute image URL; the origin is the request's. */
 	const ogImage = $derived(`${page.url.origin}/og-image.png`);

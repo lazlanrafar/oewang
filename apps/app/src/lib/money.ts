@@ -286,3 +286,35 @@ export function chartValue(value: string): number {
 	const parsed = Number.parseFloat(value);
 	return Number.isFinite(parsed) ? parsed : 0;
 }
+
+/**
+ * A decimal string part of the way from one figure to another, for a figure
+ * counting up on screen.
+ *
+ * `progress` is a share of the way, from 0 to 1, and is the only float here:
+ * it is a position in time, not an amount. It becomes a whole number of
+ * millionths before it touches the figure, and the figure itself moves as
+ * `BigInt` on its scaled digits, so no amount is ever a JavaScript number
+ * (D12). The ends are returned as given, so the last frame is the exact
+ * figure rather than one rebuilt from arithmetic.
+ */
+export function lerpDecimal(from: string, to: string, progress: number): string {
+	if (!(progress > 0)) return from;
+	if (progress >= 1) return to;
+
+	const start = scaled(from);
+	const end = scaled(to);
+	const scale = Math.max(start.scale, end.scale);
+	const a = start.units * 10n ** BigInt(scale - start.scale);
+	const b = end.units * 10n ** BigInt(scale - end.scale);
+
+	const steps = 1_000_000n;
+	const units = a + ((b - a) * BigInt(Math.round(progress * 1_000_000))) / steps;
+
+	const negative = units < 0n;
+	const text = (negative ? -units : units).toString().padStart(scale + 1, '0');
+	const whole = scale > 0 ? text.slice(0, text.length - scale) : text;
+	const fraction = scale > 0 ? text.slice(text.length - scale) : '';
+
+	return sign(negative) + whole + (scale > 0 ? '.' + fraction : '');
+}

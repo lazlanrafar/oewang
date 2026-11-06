@@ -12,6 +12,11 @@
 	 *
 	 * It holds no data and fetches nothing. Rows arrive as a prop.
 	 *
+	 * While `loading`, the body is the old app's skeleton: shimmering rows in
+	 * the real columns' widths, each cell the shape its column's content
+	 * will take (`ColumnSpec.skeleton`). The header stays, so the reader
+	 * sees which table is coming (D108).
+	 *
 	 * The roles have to sit inside a table to mean anything: a `row` with no
 	 * `table` ancestor is dropped, and a screen reader is handed a pile of
 	 * divs with no column names and no counts (UI-6).
@@ -26,6 +31,7 @@
 
 	import type { ColumnSpec } from './data-table-column.js';
 	import type { RowGroup } from './data-table-types.js';
+	import SkeletonCell from './data-table-skeleton-cell.svelte';
 	import { GROUP_ROW_HEIGHT, GROUP_STICK_TOP, ROW_HEIGHT } from './data-table-column.js';
 	import { CELL, HEAD, tableLayout } from './data-table-layout.svelte.js';
 
@@ -46,6 +52,8 @@
 		loadingMore = false,
 		loadingMoreLabel,
 		onLoadMore,
+		loading = false,
+		skeletonRows = 40,
 		resizeLabel = (column) => `Resize ${column.label}`,
 		scrollLeftLabel = 'Scroll columns left',
 		scrollRightLabel = 'Scroll columns right',
@@ -86,6 +94,10 @@
 		loadingMoreLabel?: string;
 		/** Called when the foot of the list comes into view. */
 		onLoadMore?: () => void;
+		/** Rows are on their way: draw the skeleton instead of what is here. */
+		loading?: boolean;
+		/** How many skeleton rows, the old app's 40 by default. */
+		skeletonRows?: number;
 		resizeLabel?: (column: ColumnSpec) => string;
 		scrollLeftLabel?: string;
 		scrollRightLabel?: string;
@@ -315,6 +327,7 @@
 		<div
 			role="table"
 			aria-label={label}
+			aria-busy={loading || undefined}
 			aria-rowcount={total ?? rowCount}
 			aria-colcount={columns.length}
 			class="w-full"
@@ -368,7 +381,31 @@
 				</div>
 			</div>
 
-			{#if rowCount === 0 && empty}
+			{#if loading}
+				<!-- Decorative: `aria-busy` on the table already says rows are
+				     coming, and forty rows of nothing would be read out. -->
+				<div role="presentation" aria-hidden="true" class="block w-full">
+					{#each { length: skeletonRows } as _, index (index)}
+						<div class="flex w-full min-w-full items-center" style="height: {rowHeight}px">
+							{#each columns as column (column.key)}
+								<div
+									class={cn(
+										CELL,
+										'px-4',
+										layout.stickyClass(column),
+										layout.edgeClass(column.key),
+										column.alignRight && 'justify-end',
+										column.stickyRight && 'justify-center'
+									)}
+									style={layout.cellStyle(column.key)}
+								>
+									<SkeletonCell type={column.skeleton?.type} width={column.skeleton?.width} />
+								</div>
+							{/each}
+						</div>
+					{/each}
+				</div>
+			{:else if rowCount === 0 && empty}
 				<div role="rowgroup" class="block w-full">
 					<!-- A row, because a rowgroup may hold nothing else: an empty
 					     state parked loose inside one breaks the table's ARIA
@@ -390,7 +427,7 @@
 				block` is explicit because `display: contents` would generate
 				no box, and there would be nothing to be held inside.
 			-->
-			{#each blocks as block (block.key)}
+			{#each loading ? [] : blocks as block (block.key)}
 				<div role="rowgroup" class="block w-full">
 					{#if block.key && groupRow}
 						<!--
@@ -452,7 +489,7 @@
 				</div>
 			{/each}
 
-			{#if hasMore || loadingMore}
+			{#if !loading && (hasMore || loadingMore)}
 				<!--
 					The foot of the list, as a row: a rowgroup may hold nothing
 					else, and a loose div here is the same ARIA break the empty
@@ -484,7 +521,7 @@
 
 			{#if footer}{@render footer()}{/if}
 
-			{#if onLoadMore}
+			{#if onLoadMore && !loading}
 				<!--
 					The trigger. A pixel tall and after everything, so it is only
 					reached at the end of what is loaded, and watched rather than

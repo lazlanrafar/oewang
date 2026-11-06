@@ -17,5 +17,11 @@ export {
 	type ColumnSpec
 } from './data-table-column.js';
 export { CELL, HEAD, tableLayout, type TableLayout } from './data-table-layout.svelte.js';
-export type { NamedOption, RowGroup, TableSort } from './data-table-types.js';
+export type {
+	NamedOption,
+	RowGroup,
+	SkeletonSpec,
+	SkeletonType,
+	TableSort
+} from './data-table-types.js';
 export { blockHeights, windowOf, type VirtualWindow } from './data-table-virtual-window.js';
