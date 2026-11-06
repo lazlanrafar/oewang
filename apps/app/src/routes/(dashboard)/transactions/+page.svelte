@@ -386,7 +386,7 @@
 				await closeSheet();
 				toast.success(wasEditing ? t('txn.updated') : t('txn.created'));
 			}
-			await update();
+			await update({ navigate: false });
 		};
 	};
 
@@ -524,7 +524,7 @@
 				selection = [];
 				toast.success(t('txn.bulk_applied'));
 			}
-			await update();
+			await update({ navigate: false });
 		};
 	};
 
@@ -534,7 +534,7 @@
 				await closeDetail();
 				toast.success(t('txn.deleted'));
 			}
-			await update();
+			await update({ navigate: false });
 		};
 	};
 
@@ -562,7 +562,7 @@
 				itemDialog = { open: false, item: null };
 				toast.success(t('txn.item_saved'));
 			}
-			await update();
+			await update({ navigate: false });
 		};
 	};
 
@@ -642,7 +642,7 @@
 				toast.success(t('receipt.created'));
 			}
 
-			await update();
+			await update({ navigate: false });
 		};
 	};
 

@@ -87,7 +87,7 @@
 				formOpen = false;
 				toast.success(editing ? t('budget.updated') : t('budget.created'));
 			}
-			await update();
+			await update({ navigate: false });
 		};
 	};
 
@@ -161,7 +161,7 @@
 	class="hidden"
 	use:enhance={() => async ({ result, update }) => {
 		if (result.type === 'success') toast.success(t('budget.deleted'));
-		await update();
+		await update({ navigate: false });
 	}}
 >
 	<input type="hidden" name="id" value={deleting?.id ?? ''} />

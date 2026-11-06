@@ -192,7 +192,7 @@
 				dialogOpen = true;
 				return;
 			}
-			await update();
+			await update({ navigate: false });
 		};
 	}}
 ></form>
@@ -206,7 +206,7 @@
 		busy = true;
 		return async ({ result, update }) => {
 			busy = false;
-			await update();
+			await update({ navigate: false });
 			if (result.type === 'success') toast.success(t('apps.telegram_disconnected'));
 		};
 	}}

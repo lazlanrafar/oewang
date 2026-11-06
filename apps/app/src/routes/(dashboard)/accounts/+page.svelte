@@ -110,7 +110,7 @@
 
 	const toastOnSuccess: SubmitFunction = () => async ({ result, update }) => {
 		if (result.type === 'success') toast.success(t('accounts.updated'));
-		await update();
+		await update({ navigate: false });
 	};
 
 	const closeOnSuccess: SubmitFunction = () => {
@@ -121,7 +121,7 @@
 				formOpen = false;
 				toast.success(editing ? t('accounts.updated') : t('accounts.created'));
 			}
-			await update();
+			await update({ navigate: false });
 		};
 	};
 
@@ -214,7 +214,7 @@
 	class="hidden"
 	use:enhance={() => async ({ result, update }) => {
 		if (result.type === 'success') toast.success(t('accounts.deleted'));
-		await update();
+		await update({ navigate: false });
 	}}
 >
 	<input type="hidden" name="id" value={deleting?.id ?? ''} />
