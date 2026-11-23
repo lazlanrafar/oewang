@@ -49,7 +49,10 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
     final vm = ref.watch(accountsVmProvider);
     final canWrite = ref.watch(canWriteProvider);
     final palette = context.palette;
-    ref.listen<int>(walletsRevisionProvider, (_, _) => vm.load());
+    ref
+      ..listen<int>(walletsRevisionProvider, (_, _) => vm.load())
+      // The tab stays mounted, and a saved transaction moves a balance.
+      ..listen<int>(transactionsRevisionProvider, (_, _) => vm.load());
 
     return Scaffold(
       body: SafeArea(

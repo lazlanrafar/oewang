@@ -1,3 +1,4 @@
+import 'package:decimal/decimal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -25,6 +26,7 @@ import 'package:oewang/data/repositories_fake/wallet_groups_repository_fake.dart
 import 'package:oewang/data/repositories_fake/wallets_repository_fake.dart';
 import 'package:oewang/data/repositories_fake/workspaces_repository_fake.dart';
 import 'package:oewang/domain/models/category.dart';
+import 'package:oewang/domain/models/money.dart';
 import 'package:oewang/domain/models/session.dart';
 import 'package:oewang/domain/models/wallet.dart';
 
@@ -90,6 +92,28 @@ void main() {
       expect(find.byIcon(Icons.edit_outlined), findsNothing);
       final row = tester.widget<ListTile>(find.byType(ListTile).first);
       expect(row.onTap, isNull);
+    });
+
+    testWidgets('a saved transaction reloads the balances', (tester) async {
+      // The tab stays mounted under the others; an expense moves a balance.
+      final wallets = WalletsRepositoryFake();
+      await tester.pumpWidget(
+        _app('owner', const WalletsScreen(), wallets: wallets),
+      );
+      await tester.pumpAndSettle();
+      Finder cash(int v) => find.descendant(
+        of: find.widgetWithText(ListTile, 'Cash'),
+        matching: find.text(Money(amount: Decimal.fromInt(v)).format()),
+      );
+      expect(cash(625000), findsOneWidget);
+      await tester.runAsync(
+        () => wallets.adjust('w-cash', Decimal.fromInt(575000)),
+      );
+      ProviderScope.containerOf(
+        tester.element(find.byType(WalletsScreen)),
+      ).read(transactionsRevisionProvider.notifier).bump();
+      await tester.pumpAndSettle();
+      expect(cash(575000), findsOneWidget);
     });
 
     testWidgets('a tick writes the totals flag', (tester) async {
