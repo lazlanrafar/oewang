@@ -6,6 +6,7 @@ import 'package:oewang/data/services/api/auth_interceptor.dart';
 import 'package:oewang/data/services/api/owe1/owe1_interceptor.dart';
 import 'package:oewang/data/services/api/owe1/owe1_protocol.dart';
 import 'package:oewang/data/services/api/owe1/owe1_session.dart';
+import 'package:oewang/data/services/api/owe1/owe1_stream.dart';
 import 'package:oewang/data/services/storage/secure_storage_service.dart';
 
 final _log = createLogger('http');
@@ -76,6 +77,30 @@ class ApiClient {
   );
 
   Future<Response<dynamic>> delete(String path) => _dio.delete<dynamic>(path);
+
+  /// A `POST` answered with `text/event-stream`, each event opened in order.
+  ///
+  /// A refusal before the stream opens throws like any other call, after the
+  /// same one-retry rules. Cancelling [cancelToken] drops the connection,
+  /// which is what stops the generation upstream (CHAT-9).
+  Future<Stream<SseFrame>> stream(
+    String path, {
+    Object? data,
+    CancelToken? cancelToken,
+  }) async {
+    final res = await _dio.post<dynamic>(
+      path,
+      data: data,
+      cancelToken: cancelToken,
+      options: Options(
+        headers: {'accept': 'text/event-stream'},
+        // Between events, not for the whole turn: a tool round can be slow.
+        receiveTimeout: const Duration(minutes: 2),
+        extra: {Owe1Interceptor.streamKey: true},
+      ),
+    );
+    return Owe1Interceptor.openEventStream(res);
+  }
 }
 
 /// `envelope.data` of a successful response.

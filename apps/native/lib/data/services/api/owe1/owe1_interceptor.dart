@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:oewang/data/services/api/owe1/owe1_protocol.dart';
 import 'package:oewang/data/services/api/owe1/owe1_session.dart';
+import 'package:oewang/data/services/api/owe1/owe1_stream.dart';
 
 /// Seals every request and opens every response (D113, MOB-2).
 ///
@@ -28,6 +29,26 @@ class Owe1Interceptor extends Interceptor {
   static const _plainBody = 'owe1.body';
   static const _plainQuery = 'owe1.query';
   static const _retried = 'owe1.retried';
+
+  /// Set in `Options.extra` for a `text/event-stream` answer: the body is
+  /// left as bytes and opened event by event by [openEventStream].
+  static const streamKey = 'owe1.stream';
+
+  /// The opened frames of a stream response from this interceptor.
+  static Stream<SseFrame> openEventStream(Response<dynamic> response) {
+    final body = response.data;
+    if (body is! ResponseBody) {
+      throw const Owe1Exception('TRANSPORT_UNEXPECTED_RESPONSE');
+    }
+    final options = response.requestOptions;
+    final session = options.extra[_session] as Owe1Session;
+    return openEvents(
+      body.stream,
+      key: session.keys.serverToClient,
+      sessionId: session.id,
+      requestId: options.extra[_requestId] as String,
+    );
+  }
 
   @override
   Future<void> onRequest(
@@ -75,7 +96,9 @@ class Owe1Interceptor extends Interceptor {
                 )).toJson(),
               )
         ..contentType = owe1ContentType
-        ..responseType = ResponseType.plain
+        ..responseType = options.extra[streamKey] == true
+            ? ResponseType.stream
+            : ResponseType.plain
         ..extra[_session] = session
         ..extra[_requestId] = requestId;
       handler.next(options);
@@ -94,7 +117,12 @@ class Owe1Interceptor extends Interceptor {
     ResponseInterceptorHandler handler,
   ) async {
     try {
-      response.data = await _open(response);
+      final isEventStream =
+          response.requestOptions.extra[streamKey] == true &&
+          (response.headers.value(Headers.contentTypeHeader) ?? '').contains(
+            'text/event-stream',
+          );
+      if (!isEventStream) response.data = await _open(response);
       handler.next(response);
     } on Object catch (e, st) {
       handler.reject(
@@ -143,7 +171,12 @@ class Owe1Interceptor extends Interceptor {
 
   /// The envelope as JSON, or null for an empty answer (a `204`).
   Future<Object?> _open(Response<dynamic> response) async {
-    final raw = response.data;
+    var raw = response.data;
+    // A stream request answered with an envelope (a refusal before the
+    // stream opened): read it whole and open it like any other.
+    if (raw is ResponseBody) {
+      raw = await utf8.decodeStream(raw.stream.cast<List<int>>());
+    }
     if (response.statusCode == 204 || raw == null || raw == '') return null;
     if (raw is! String) throw const Owe1Exception('unexpected body type');
 
