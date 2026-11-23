@@ -401,8 +401,8 @@ Requirements: CHAT-2, CHAT-9, SEC-7
 First token measured at 2.35 seconds end to end through all three hops. The
 encryption is not what costs it: the gateway prepends its own system prompt,
 which made the turn 3,600 input tokens before ours were counted (D67). The
-criterion stands open against the model actually configured, and is a model
-choice rather than a code change.
+criterion was a model choice rather than a code change: with `cx/gpt-5.6-luna`
+it holds (2026-11-23, above), and production still has to be pointed at it.
 
 ### US-029: Tool execution endpoint
 Requirements: CHAT-4, CHAT-15, AI-8, SEC-23, SEC-24, SEC-25, OPS-1
