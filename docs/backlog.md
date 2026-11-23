@@ -200,10 +200,10 @@ Requirements: WAL-1, WAL-2, WAL-3, WAL-4, WAL-5, WAL-6, UI-1, UI-6, UI-8
 - [x] A `member` sees the page with no add button, no group select and View alone in the row menu
 - [x] Search and the group filter live in the URL and are applied on the server, so a filtered view can be shared and restored (UI-8)
 - [x] Every string on the screen resolves through `en.json`; no literals in markup (UI-1)
-- [ ] The page is usable at 375 px, with the cards stacking and the table scrolling inside its own box (UI-6)
+- [x] The page is usable at 375 px, with the cards stacking and the table scrolling inside its own box (UI-6). `e2e/accounts.spec.ts` checks it at 375 px; the header buttons go icon-only below `sm`, as on transactions
 - [x] Unit tests cover `walletTotals`: only flagged wallets count, a foreign wallet converts, and the wallets left out for want of a rate are reported
 - [x] Rust tests cover the adjustment: up writes one income, down writes one expense, an unchanged target writes nothing, a foreign wallet lands on its target in its own currency, and a `member` is refused
-- [ ] Verify in browser
+- [x] Verify in browser (2026-11-23: drag within and across groups, groups sheet add, rename and delete, in Brave; keyboard reorder, groups sheet and 375 px in Playwright)
 - [x] Group create, rename, reorder and delete reach the screen, from a **Manage groups** sheet on the accounts page
 - [x] A wallet's `sort_order` can be set again: a drag handle (or the arrow keys on it) in the accounts table moves a wallet within its group
 

@@ -226,13 +226,19 @@
 
 		{#if canEdit}
 			<div class="flex shrink-0 items-center gap-2">
-				<Button variant="outline" onclick={() => (groupsOpen = true)}>
+				<!-- Icons alone below `sm`, as on the transactions header, so the
+				     search keeps its room at phone width (UI-6). -->
+				<Button
+					variant="outline"
+					aria-label={t('accounts.manage_groups')}
+					onclick={() => (groupsOpen = true)}
+				>
 					<FolderCog />
-					{t('accounts.manage_groups')}
+					<span class="hidden sm:inline-block">{t('accounts.manage_groups')}</span>
 				</Button>
-				<Button onclick={openNew}>
+				<Button aria-label={t('accounts.add')} onclick={openNew}>
 					<Plus />
-					{t('accounts.add')}
+					<span class="hidden sm:inline-block">{t('accounts.add')}</span>
 				</Button>
 			</div>
 		{/if}
