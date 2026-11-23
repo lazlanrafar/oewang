@@ -45,26 +45,9 @@ class AuthRepositoryRemote implements AuthRepository {
         ),
       );
 
-  /// Every auth route answers with a new pair; store it before anything else
-  /// can use the old one.
   Future<Result<Session, AppError>> _open(
     Future<Response<dynamic>> Function() send,
-  ) async {
-    try {
-      final data = envelopeData(await send());
-      if (data is! Map<String, dynamic>) {
-        return const Failure(UnknownError('Unexpected session response'));
-      }
-      final dto = LoginResponseDto.fromJson(data);
-      await storage.writeTokens(
-        accessToken: dto.accessToken,
-        refreshToken: dto.refreshToken,
-      );
-      return Success(dto.toDomain());
-    } on DioException catch (e) {
-      return Failure(mapDioError(e));
-    }
-  }
+  ) => openSession(storage, send);
 
   @override
   Future<Session?> currentSession() async {
@@ -108,5 +91,27 @@ Map<String, dynamic> decodeJwtClaims(String token) {
     return decoded is Map<String, dynamic> ? decoded : const {};
   } on FormatException {
     return const {};
+  }
+}
+
+/// Every auth route answers with a new pair; store it before anything else
+/// can use the old one. Shared with passkey sign-in.
+Future<Result<Session, AppError>> openSession(
+  SecureStorageService storage,
+  Future<Response<dynamic>> Function() send,
+) async {
+  try {
+    final data = envelopeData(await send());
+    if (data is! Map<String, dynamic>) {
+      return const Failure(UnknownError('Unexpected session response'));
+    }
+    final dto = LoginResponseDto.fromJson(data);
+    await storage.writeTokens(
+      accessToken: dto.accessToken,
+      refreshToken: dto.refreshToken,
+    );
+    return Success(dto.toDomain());
+  } on DioException catch (e) {
+    return Failure(mapDioError(e));
   }
 }

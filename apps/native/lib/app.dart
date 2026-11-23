@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oewang/config/dependencies.dart';
@@ -11,6 +13,8 @@ class OewangApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = ref.watch(transactionColorSchemeProvider);
     final mode = ref.watch(themeModeProvider);
+    // Push taps open screens for the life of the app (PUSH-1); idempotent.
+    unawaited(ref.read(pushServiceProvider).start());
     return MaterialApp.router(
       title: 'Oewang',
       theme: AppTheme.light(transactionScheme: scheme),
