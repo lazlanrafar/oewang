@@ -19,7 +19,7 @@ How the web app is structured and written. It is a BFF as much as a UI: it holds
 | Language | Svelte 5 with runes, TypeScript in strict mode |
 | Styling | Tailwind CSS v4, CSS-first config |
 | Components | shadcn-svelte, generated into the repo, owned by the repo |
-| Table | No table library. `molecules/data-table` is written here: a flex row of fixed-width cells per record, with sorting, column visibility, resizing, selection, sticky columns, sticky day groups, row virtualisation and column reordering all written against its own row model (D57, D76) |
+| Table | No table library. `molecules/data-table` is written here: a flex row of fixed-width cells per record, with sorting, column visibility, resizing, selection, sticky columns, sticky day groups, row virtualisation, column reordering and dragging rows into a new order (off unless the page passes `onReorder`) all written against its own row model (D57, D76) |
 | Forms | Superforms with a Zod adapter |
 | Icons | Lucide Svelte |
 | Theme | mode-watcher, light by default (`defaultMode="light"` on the component and the same fallback in the bootstrap); the toggle still offers dark and system. The before-paint bootstrap is in `app.html` so it can carry the CSP nonce ([hardening](../security/hardening.md#browser-headers)) |

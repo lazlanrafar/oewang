@@ -40,6 +40,7 @@
 		onDeleteRow,
 		onSetDefault,
 		onGroupChange,
+		onReorder,
 		createLabel,
 		loading = false,
 		class: className
@@ -58,6 +59,11 @@
 		onDeleteRow?: (account: Wallet) => void;
 		onSetDefault?: (account: Wallet) => void;
 		onGroupChange?: (account: Wallet, groupId: string) => void;
+		/**
+		 * One group's wallets, top first, after a drag. Set only when the order
+		 * can be saved: an owner or admin, on an unfiltered list.
+		 */
+		onReorder?: (ids: string[], account: Wallet) => void;
 		/** The create row's text, resolved by the caller (UI-1). */
 		createLabel?: (typed: string) => string;
 		/** Rows are on their way: the table draws its skeleton (D108). */
@@ -87,7 +93,15 @@
 	columns={ACCOUNT_COLUMNS}
 	rows={accounts}
 	label={t('accounts.title')}
+	resizeLabel={(column) =>
+		t('common.resize_column', { name: t(`accounts.col_${column.key}` as 'accounts.col_name') })}
 	onRowClick={onOpenRow}
+	{onReorder}
+	reorderScope={(account) => account.group_id ?? ''}
+	reorderLabel={(account) => t('settings.reorder_label', { name: account.name })}
+	reorderHint={t('settings.reorder_hint')}
+	reorderMoved={(account, position, count) =>
+		t('settings.reorder_moved', { name: account.name, position, count })}
 >
 	{#snippet head(column)}
 		{#if column.key === 'actions'}
@@ -97,9 +111,10 @@
 		{/if}
 	{/snippet}
 
-	{#snippet cell(column, account)}
+	{#snippet cell(column, account, handle)}
 		{#if column.key === 'name'}
 			<span class="flex min-w-0 items-center gap-1.5 px-4 font-medium">
+				{#if handle}{@render handle(account)}{/if}
 				<span class="truncate">{account.name}</span>
 				{#if account.is_default}
 					<Star

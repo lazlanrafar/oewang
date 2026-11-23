@@ -51,6 +51,7 @@
 		"name": "Name",
 		"create": "Create",
 		"create_named": "Create “{name}”",
+		"resize_column": "Resize {name}",
 		"saving": "Saving",
 		"view": "View"
 	},
@@ -677,6 +678,7 @@
 	"accounts": {
 		"title": "Accounts",
 		"search_placeholder": "Search accounts",
+		"name_placeholder": "Cash",
 		"add": "Add account",
 		"edit": "Edit account",
 		"new": "New account",
@@ -715,7 +717,14 @@
 		"deleted": "Account deleted",
 		"default_set": "Default account changed",
 		"group_updated": "Group changed",
-		"group_created": "Group created"
+		"group_created": "Group created",
+		"manage_groups": "Manage groups",
+		"groups_title": "Account groups",
+		"groups_description": "Groups order the accounts table and its filter.",
+		"groups_empty": "No groups yet.",
+		"group_name_placeholder": "Savings",
+		"group_deleted": "Group deleted",
+		"order_saved": "Order saved"
 	},
 	"budget": {
 		"search_placeholder": "Search categories",

@@ -3,7 +3,7 @@ import type { Actions } from '@sveltejs/kit';
 import { INVALIDATION_KEYS } from '$lib/chat-invalidation';
 import { run, text } from '$lib/server/form-action';
 import * as ledger from '$lib/server/ledger';
-import type { Category } from '$lib/server/ledger';
+import { reorder, sortOrderChanges } from '$lib/reorder';
 import type { PageServerLoad } from './$types';
 
 type CategoryType = 'income' | 'expense';
@@ -53,31 +53,12 @@ export const actions: Actions = {
 			const order = reorder(siblings, form.getAll('ids').map(String));
 
 			await Promise.all(
-				order
-					.map((row, index) => ({ row, index }))
-					.filter(({ row, index }) => row.sort_order !== index)
-					.map(({ row, index }) =>
-						ledger.updateCategory(row.id, { sort_order: index }, locals.accessToken)
-					)
+				sortOrderChanges(order).map(({ id, sort_order }) =>
+					ledger.updateCategory(id, { sort_order }, locals.accessToken)
+				)
 			);
 		}),
 
 	deleteCategory: async ({ request, locals }) =>
 		run(request, (form) => ledger.deleteCategory(text(form, 'id'), locals.accessToken))
 };
-
-/**
- * The rows of this type in the order the browser sent.
- *
- * The browser's list is a request, not the truth: an id that is not one of
- * this type's rows is dropped, and a row it left out (one created in
- * another tab since the page loaded) keeps its place after the rest.
- * Positions are rewritten from the result rather than nudged, because
- * seeded rows all carry `sort_order` 0 and nudging one would move nothing.
- */
-function reorder(siblings: Category[], ids: string[]): Category[] {
-	const byId = new Map(siblings.map((row) => [row.id, row]));
-	const listed = [...new Set(ids)].flatMap((id) => byId.get(id) ?? []);
-	const rest = siblings.filter((row) => !listed.includes(row));
-	return [...listed, ...rest];
-}

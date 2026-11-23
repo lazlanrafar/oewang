@@ -50,6 +50,9 @@ pub struct WalletView {
     pub is_included_in_totals: bool,
     pub is_default: bool,
     pub sort_order: i32,
+    /// Locks the currency field (WAL-6). Null on a single-wallet read, like
+    /// `group_name`; the API still refuses a locked change either way.
+    pub has_transactions: Option<bool>,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -88,6 +91,7 @@ impl From<WalletListRow> for WalletView {
             is_included_in_totals: row.is_included_in_totals,
             is_default: row.is_default,
             sort_order: row.sort_order,
+            has_transactions: Some(row.has_transactions),
             created_at: row.created_at.to_rfc3339(),
             updated_at: row.updated_at.to_rfc3339(),
         }
@@ -106,6 +110,7 @@ impl From<WalletRow> for WalletView {
             is_included_in_totals: row.is_included_in_totals,
             is_default: row.is_default,
             sort_order: row.sort_order,
+            has_transactions: None,
             created_at: row.created_at.to_rfc3339(),
             updated_at: row.updated_at.to_rfc3339(),
         }
@@ -553,6 +558,7 @@ mod tests {
             is_included_in_totals: true,
             is_default: true,
             sort_order: 0,
+            has_transactions: None,
             created_at: "2026-11-02T00:00:00+00:00".into(),
             updated_at: "2026-11-02T00:00:00+00:00".into(),
         };

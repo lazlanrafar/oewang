@@ -51,6 +51,8 @@ pub struct WalletListRow {
     pub is_included_in_totals: bool,
     pub is_default: bool,
     pub sort_order: i32,
+    /// Any live transaction on either leg, so the form can lock the currency (WAL-6).
+    pub has_transactions: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -205,6 +207,12 @@ pub async fn list_wallets(
         WalletListRow,
         r#"SELECT w.id, w.group_id, g.name AS "group_name?", w.name, w.currency_code,
                   w.balance, w.is_included_in_totals, w.is_default, w.sort_order,
+                  EXISTS(
+                    SELECT 1 FROM transactions t
+                    WHERE t.workspace_id = w.workspace_id
+                      AND (t.wallet_id = w.id OR t.to_wallet_id = w.id)
+                      AND t.deleted_at IS NULL
+                  ) AS "has_transactions!",
                   w.created_at, w.updated_at
            FROM wallets w
            LEFT JOIN wallet_groups g

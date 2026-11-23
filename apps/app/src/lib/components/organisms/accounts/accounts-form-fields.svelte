@@ -91,7 +91,7 @@
 			required
 			autofocus
 			value={account?.name ?? ''}
-			placeholder="Cash"
+			placeholder={t('accounts.name_placeholder')}
 		/>
 		<FieldError message={fieldErrors?.name} />
 	</div>

@@ -276,6 +276,23 @@ async fn should_lock_a_wallet_currency_once_it_has_a_live_transaction(pool: PgPo
 }
 
 #[sqlx::test(migrations = "../../migrations")]
+async fn should_flag_a_wallet_with_a_live_transaction_in_the_list(pool: PgPool) {
+    fixture(&pool, "IDR").await;
+    let cash = make_wallet(&pool, "Cash", None).await;
+    let bank = make_wallet(&pool, "Bank", None).await;
+
+    let flag = |rows: &[oewang_db::repositories::wallets::WalletListRow], id: &str| {
+        rows.iter().find(|r| r.id == id).unwrap().has_transactions
+    };
+    let rows = service::list_wallets(&pool, WORKSPACE).await.unwrap();
+    assert!(!flag(&rows, &cash) && !flag(&rows, &bank));
+
+    insert_transaction(&pool, "txn_1", &cash, None).await;
+    let rows = service::list_wallets(&pool, WORKSPACE).await.unwrap();
+    assert!(flag(&rows, &cash) && !flag(&rows, &bank));
+}
+
+#[sqlx::test(migrations = "../../migrations")]
 async fn should_lock_the_workspace_currency_once_any_transaction_exists(pool: PgPool) {
     fixture(&pool, "IDR").await;
     let wallet = make_wallet(&pool, "Cash", None).await;

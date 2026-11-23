@@ -25,6 +25,8 @@ export type Wallet = {
 	is_included_in_totals: boolean;
 	is_default: boolean;
 	sort_order: number;
+	/** Any live transaction, which locks the currency (WAL-6). Null on a single-wallet read. */
+	has_transactions: boolean | null;
 	created_at: string;
 	updated_at: string;
 };

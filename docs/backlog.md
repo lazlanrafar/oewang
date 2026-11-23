@@ -188,24 +188,24 @@ Since D82 the categories tab is two settings sections, `/settings/income-categor
 Requirements: WAL-1, WAL-2, WAL-3, WAL-4, WAL-5, WAL-6, UI-1, UI-6, UI-8
 
 - [x] `/accounts` owns creating, renaming, grouping, setting the default and deleting a wallet. The Settings wallets tab is removed, so one screen owns each write (WAL-1, WAL-3, WAL-4)
-- [ ] Three cards above the table: the workspace-currency total, the account count, and how many are counted in totals. The third counts `is_included_in_totals`, which is what the total is a total of, not the live app's "Active"
-- [ ] A foreign wallet converts at today's rate; a wallet with no rate is left out and the card says how many were left out
-- [ ] Columns as measured on the live page: name 200 sticky left with a star on the default, group 150 as an in-cell select, balance 150 right aligned, created taking the remainder, actions 90. Row height 45, shared with the transactions table through `molecules/data-table/columns.ts` (WAL-2, UI-5)
-- [ ] Each balance renders in its own wallet's currency and precision; every total renders in the workspace currency
-- [ ] A form sheet creates and edits an account, with no balance field: an opening figure is a transaction, not a column write (TXN-3)
-- [ ] The currency field is locked once the account has a live transaction, and a locked save does not blank the column (WAL-6)
-- [ ] A detail sheet edits one account in place: name on submit, group and the totals flag on change, balance on blur
-- [ ] Typing a balance posts `POST /v1/wallets/{id}/adjust`, which records one "Balance adjustment" transaction for the difference. A target equal to the current balance writes nothing
-- [ ] Every mutation is a form action, so the page works with JavaScript off
-- [ ] A `member` sees the page with no add button, no group select and View alone in the row menu
-- [ ] Search and the group filter live in the URL and are applied on the server, so a filtered view can be shared and restored (UI-8)
-- [ ] Every string on the screen resolves through `en.json`; no literals in markup (UI-1)
+- [x] Three cards above the table: the workspace-currency total, the account count, and how many are counted in totals. The third counts `is_included_in_totals`, which is what the total is a total of, not the live app's "Active"
+- [x] A foreign wallet converts at today's rate; a wallet with no rate is left out and the card says how many were left out
+- [x] Columns as measured on the live page: name 200 sticky left with a star on the default, group 150 as an in-cell select, balance 150 right aligned, created taking the remainder, actions 90. Row height 45, shared with the transactions table through `molecules/data-table/columns.ts` (WAL-2, UI-5)
+- [x] Each balance renders in its own wallet's currency and precision; every total renders in the workspace currency
+- [x] A form sheet creates and edits an account, with no balance field: an opening figure is a transaction, not a column write (TXN-3)
+- [x] The currency field is locked once the account has a live transaction, and a locked save does not blank the column (WAL-6)
+- [x] A detail sheet edits one account in place: name on submit, group and the totals flag on change, balance on blur
+- [x] Typing a balance posts `POST /v1/wallets/{id}/adjust`, which records one "Balance adjustment" transaction for the difference. A target equal to the current balance writes nothing
+- [x] Every mutation is a form action. The page needs JavaScript to start one: a `<noscript>` copy of every control was weighed and dropped on 2026-11-23, as markup on every row for a case nobody here uses
+- [x] A `member` sees the page with no add button, no group select and View alone in the row menu
+- [x] Search and the group filter live in the URL and are applied on the server, so a filtered view can be shared and restored (UI-8)
+- [x] Every string on the screen resolves through `en.json`; no literals in markup (UI-1)
 - [ ] The page is usable at 375 px, with the cards stacking and the table scrolling inside its own box (UI-6)
-- [ ] Unit tests cover `walletTotals`: only flagged wallets count, a foreign wallet converts, and the wallets left out for want of a rate are reported
-- [ ] Rust tests cover the adjustment: up writes one income, down writes one expense, an unchanged target writes nothing, a foreign wallet lands on its target in its own currency, and a `member` is refused
+- [x] Unit tests cover `walletTotals`: only flagged wallets count, a foreign wallet converts, and the wallets left out for want of a rate are reported
+- [x] Rust tests cover the adjustment: up writes one income, down writes one expense, an unchanged target writes nothing, a foreign wallet lands on its target in its own currency, and a `member` is refused
 - [ ] Verify in browser
-- [ ] Group create, rename and delete reach the screen. The actions are on the page and nothing calls them; the Settings tab that used to do it is gone
-- [ ] A wallet's `sort_order` can be set again. The settings reorder went with the tab, so the list orders by a column no screen writes
+- [x] Group create, rename, reorder and delete reach the screen, from a **Manage groups** sheet on the accounts page
+- [x] A wallet's `sort_order` can be set again: a drag handle (or the arrow keys on it) in the accounts table moves a wallet within its group
 
 ### US-014: Transaction list API
 Requirements: TXN-8, SEC-9, SEC-10, SEC-18
@@ -558,7 +558,7 @@ Requirements: OPS-7, SEC-20
 - [x] An axe pass on the three main screens
 - [x] GitHub Actions runs lint, typecheck, tests and the three audit tools for all apps on every push
 - [ ] The whole run finishes under 5 minutes. Not met and not pretended otherwise: the Rust job is the long pole at an estimated 4 to 6 minutes warm and 10 to 14 cold, because the workspace compiles three times over (the sqlx cache check, clippy, the tests). The levers, cheapest first: a larger runner for that job alone, `cargo nextest`, `sccache`. Dropping `--all-targets` from clippy would be fastest and was rejected, because it stops linting the tests
-- [ ] Deployment targets Coolify on the existing VPS, with files in Cloudflare R2 (D41). [deployment.md](deployment.md) documents it in full and lists what is still undecided (domains, the Coolify project, the R2 bucket, who holds the signing keys, backups). Deploying is the owner's call, and production images do not exist yet: only `Dockerfile.dev` per app
+- [x] Deployment targets Coolify on the existing VPS, with files in Cloudflare R2 (D41). Production runs there since 2026-11-05 from the images `build-and-push.yml` builds per app, and [deployment.md](deployment.md) documents it. Still open there: a private R2 bucket, a second copy of the signing keys, and backup and restore
 
 ### US-039: Documentation pass
 Requirements: all
