@@ -14,7 +14,7 @@
 	import { messageForCode } from '$lib/errors';
 	import { t } from '$lib/i18n';
 	import { pageTitle } from '$lib/page-title';
-	import { passkeysSupported, signInWithPasskey } from '$lib/passkeys';
+	import { passkeySignInError, passkeysSupported, signInWithPasskey } from '$lib/passkeys';
 
 	let { form } = $props();
 
@@ -41,7 +41,7 @@
 		if (outcome.status === 'ok') {
 			await goto(outcome.data.location, { invalidateAll: true });
 		} else if (outcome.status === 'failed') {
-			passkeyError = outcome.code ? messageForCode(outcome.code) : t('auth.passkey_failed');
+			passkeyError = passkeySignInError(outcome.code);
 		}
 	}
 </script>
