@@ -5,7 +5,7 @@ platform :android do
   lane :android_internal do
     # Bundle is pre-built via flutter build appbundle --release in GitHub Actions step
     upload_to_play_store(
-      track: "internal",
+      track: ENV.fetch("PLAY_TRACK", "internal"),
       aab: "../build/app/outputs/bundle/release/app-release.aab",
       skip_upload_metadata: true,
       skip_upload_images: true,

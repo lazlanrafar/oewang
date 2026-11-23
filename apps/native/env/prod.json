@@ -1,0 +1,6 @@
+{
+  "API_URL": "https://api.oewang.com",
+  "OWE1_SIGNING_KEYS": "k-NKFQwP7Ry9kS:-WcLKHC7FC36KVjtP7IBn0uZtMIfkli2FItMIp5wM2g",
+  "APP_URL": "https://app.oewang.com",
+  "SENTRY_DSN": ""
+}
