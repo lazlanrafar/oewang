@@ -1,10 +1,20 @@
 import 'package:decimal/decimal.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:oewang/components/organisms/wallets/wallets_accounts_view_model.dart';
+import 'package:oewang/core/result/app_error.dart';
+import 'package:oewang/core/result/result.dart';
 import 'package:oewang/data/repositories_fake/wallet_groups_repository_fake.dart';
 import 'package:oewang/data/repositories_fake/wallets_repository_fake.dart';
 import 'package:oewang/data/repositories_fake/workspaces_repository_fake.dart';
 import 'package:oewang/domain/models/wallet.dart';
+import 'package:oewang/domain/models/workspace.dart';
+
+/// The workspace fetch has no connection.
+class _OfflineWorkspaces extends WorkspacesRepositoryFake {
+  @override
+  Future<Result<Workspace, AppError>> current() async =>
+      const Failure(NetworkError());
+}
 
 void main() {
   group('AccountsViewModel', () {
@@ -64,6 +74,31 @@ void main() {
       await vm.ready;
       expect(vm.sections, isEmpty);
       vm.dispose();
+    });
+
+    test('MOB-6 offline, adds up in the currency last seen instead of '
+        'failing on the workspace fetch', () async {
+      final vm = AccountsViewModel(
+        wallets: WalletsRepositoryFake(),
+        groups: WalletGroupsRepositoryFake(),
+        workspaces: _OfflineWorkspaces(),
+        lastCurrency: () async => 'IDR',
+      );
+      await vm.ready;
+      expect(vm.error, isNull);
+      expect(vm.assets.currency, 'IDR');
+      expect(vm.assets.amount, Decimal.fromInt(660999));
+      vm.dispose();
+
+      // Never seen online: the screen says why it cannot add up.
+      final cold = AccountsViewModel(
+        wallets: WalletsRepositoryFake(),
+        groups: WalletGroupsRepositoryFake(),
+        workspaces: _OfflineWorkspaces(),
+      );
+      await cold.ready;
+      expect(cold.error, isA<NetworkError>());
+      cold.dispose();
     });
   });
 }

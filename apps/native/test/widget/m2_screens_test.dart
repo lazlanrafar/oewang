@@ -1,3 +1,4 @@
+import 'package:decimal/decimal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -90,6 +91,25 @@ void main() {
       expect(find.byIcon(Icons.edit_outlined), findsNothing);
       final row = tester.widget<ListTile>(find.byType(ListTile).first);
       expect(row.onTap, isNull);
+    });
+
+    testWidgets('MOB-6 a saved transaction reloads the balances', (
+      tester,
+    ) async {
+      final wallets = WalletsRepositoryFake();
+      await tester.pumpWidget(
+        _app('admin', const WalletsScreen(), wallets: wallets),
+      );
+      await tester.pumpAndSettle();
+      expect(find.textContaining('700.000'), findsNothing);
+      await tester.runAsync(
+        () => wallets.adjust('w-cash', Decimal.fromInt(700000)),
+      );
+      ProviderScope.containerOf(
+        tester.element(find.byType(WalletsScreen)),
+      ).read(transactionsRevisionProvider.notifier).bump();
+      await tester.pumpAndSettle();
+      expect(find.textContaining('700.000'), findsWidgets);
     });
 
     testWidgets('a tick writes the totals flag', (tester) async {
