@@ -671,7 +671,7 @@
 	{phase}
 	{starting}
 	errorCode={statementError}
-	onStart={startStatement}
+	onStart={() => startStatement()}
 	onRetry={retryStatement}
 	onClose={closeStatement}
 />

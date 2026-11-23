@@ -276,9 +276,9 @@
 	 *
 	 * The API persists both messages, including a reply that was stopped
 	 * part way, so the stored conversation is the truth and the local copies
-	 * go. They stay if the refresh brought nothing new, which is what a
-	 * failed turn looks like, and the question remains on screen beside the
-	 * error rather than vanishing with it.
+	 * go. They stay if the refresh brought nothing new. A failed turn keeps
+	 * its error either way: the stored question can arrive without an answer,
+	 * and the reader still needs to know the answer is not coming.
 	 */
 	async function settle() {
 		const before = storedBefore;
@@ -286,7 +286,12 @@
 
 		if (data.conversation.messages.length > before) {
 			asked = null;
-			turn = IDLE_TURN;
+			// The API stores the question even when the turn fails, so a
+			// longer list is not success: a failure keeps its error on screen.
+			turn =
+				turn.status === 'failed'
+					? { ...IDLE_TURN, status: 'failed', errorCode: turn.errorCode }
+					: IDLE_TURN;
 		}
 	}
 
