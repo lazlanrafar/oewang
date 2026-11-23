@@ -26,6 +26,8 @@ mod response;
 mod routes;
 mod state;
 mod telegram;
+#[cfg(test)]
+mod test_support;
 mod transactions;
 mod usage;
 mod vault;

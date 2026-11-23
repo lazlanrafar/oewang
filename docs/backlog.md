@@ -118,6 +118,8 @@ Requirements: AUTH-7, AUTH-8, AUTH-9
 - [x] `GET /v1/auth/sessions` lists live sessions with user agent and last use
 - [x] Tests: rotation, reuse detection, expiry, revocation on password change
 
+Note (2026-11-23): AUTH-7 is now tested: the 15m/30d defaults (`config.rs`), a sign-in's token lifetimes and refresh row (`auth/account.rs`), and the httpOnly, SameSite=Lax, `__Host-`/Secure cookies with matching max-age (`apps/app/src/lib/server/session.test.ts`).
+
 ### US-009: Login and register UI
 Requirements: AUTH-3, UI-1, UI-7
 
@@ -590,6 +592,8 @@ Requirements: TG-1, TG-2, TG-3, TG-4, TG-9, TG-10
 - [x] clippy, `cargo test` (the link tests in `telegram/tests.rs`), `bun run check`
 - [ ] Verify in browser and in Telegram with a real bot
 
+Note (2026-11-23): `telegram/update_tests.rs` drives `poller::handle` with real update JSON against a stub Bot API and covers TG-2 (group refused, other account and bot sender in a linked chat), TG-4 (demoted member refused, departed member disconnected) and TG-10 (caption, text and bot token absent from captured logs). The real-bot check above still needs a human.
+
 ### US-041: Receipts from Telegram
 Requirements: TG-5, TG-6, TG-7, AI-2, AI-11
 
@@ -603,6 +607,8 @@ Requirements: TG-5, TG-6, TG-7, AI-2, AI-11
 - [x] Unit tests for the reply format, the button data, and categorize (pytest)
 - [ ] Verify with a real receipt: the transaction, its items and its attachment in the web app, and the totals equal to the dashboard's
 
+Note (2026-11-23): TG-5 end to end in `telegram/update_tests.rs`: a photo update through the vault, a stub AI service over real OWE1, and `create_with_items` gives an expense with items, category, `source = 'telegram'` and the photo attached; no total saves nothing; an unreachable reader queues a `receipt_jobs` row.
+
 ### US-042: The assistant in Telegram
 Requirements: TG-8, TG-10, CHAT-4, CHAT-6, CHAT-9
 
@@ -610,6 +616,8 @@ Requirements: TG-8, TG-10, CHAT-4, CHAT-6, CHAT-9
 - [x] The turn carries `channel: "telegram"`; the AI service then asks for plain text with no tables and no entity links, and the web prompt is unchanged (golden test)
 - [x] The per-workspace chat limit applies
 - [ ] Verify in Telegram: a question answered from the workspace's data, and a delete that asks before it happens
+
+Note (2026-11-23): TG-10's log test in `telegram/update_tests.rs` covers message text and an undeliverable reply; the assistant's streamed turn itself is not driven there.
 
 ## M8. Overview and the analysis canvas
 
@@ -710,6 +718,8 @@ Requirements: USG-1, USG-2, USG-3
 - [x] Tests: the headline summed from the features, missing token fields read as zero, tokens clamped into the column (Rust); usage in each extraction response and the chat `done` event (pytest)
 - [x] clippy, `cargo test`, `bun run check`, `ruff check` and `pytest` pass in the containers
 - [x] Verify in browser: a receipt parse and a chat turn each move the figures (2026-11-23, `e2e/ai-flows.spec.ts` against a live model)
+
+Note (2026-11-23): `usage/db_tests.rs` tests USG-1 (storage from ready, live rows of the workspace only; a delete leaves the total at once) and USG-2 (one row per call with feature, model and member; nothing for zero tokens; a refused or closed-pool write never fails the caller; the repository only inserts).
 
 ---
 
