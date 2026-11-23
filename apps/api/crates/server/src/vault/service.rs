@@ -525,6 +525,7 @@ fn internal(error: sqlx::Error) -> AppError {
 mod tests {
     use super::*;
 
+    /// VLT-8
     #[test]
     fn should_keep_a_filename_as_a_label_and_not_as_a_path() {
         assert_eq!(clean_name("receipt.jpg"), "receipt.jpg");

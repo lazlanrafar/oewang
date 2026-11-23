@@ -13,6 +13,7 @@ describe('tokenHasWorkspace', () => {
 		expect(tokenHasWorkspace(token({ sub: 'u', wid: 'w', role: 'owner' }))).toBe(true);
 	});
 
+	// WS-7
 	it('should see a session opened before the user had a workspace (D109)', () => {
 		expect(tokenHasWorkspace(token({ sub: 'u' }))).toBe(false);
 	});

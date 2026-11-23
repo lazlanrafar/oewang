@@ -130,6 +130,7 @@ mod tests {
         Secret::new("a-test-signing-secret-at-least-32-characters-long")
     }
 
+    /// AUTH-2
     #[test]
     fn should_round_trip_claims() {
         let issued = issue_access_token(
@@ -265,6 +266,7 @@ mod tests {
         assert_eq!(a.raw.len(), 43);
     }
 
+    /// AUTH-8
     #[test]
     fn should_hash_a_refresh_token_deterministically() {
         let token = issue_refresh_token();

@@ -368,6 +368,7 @@ mod tests {
     /// Every variant this test can name must have a code and a status. The
     /// catalog in docs/api/conventions.md is the specification; this keeps the
     /// enum honest about the two columns that matter.
+    /// OPS-4
     #[test]
     fn should_map_every_variant_to_a_code_and_a_status() {
         let samples = [

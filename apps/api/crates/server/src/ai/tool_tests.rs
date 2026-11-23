@@ -214,6 +214,7 @@ async fn should_let_a_member_read(pool: PgPool) {
     assert_eq!(outcome.result["meta"]["returned"], json!(0));
 }
 
+/// TXN-15
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_refuse_every_write_tool_for_a_member(pool: PgPool) {
     fixture(&pool).await;
@@ -368,6 +369,7 @@ async fn should_refuse_a_second_delete_in_one_turn(pool: PgPool) {
     assert_eq!(MAX_DELETES_PER_TURN, 1);
 }
 
+/// SEC-24
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_refuse_an_amount_above_the_ceiling(pool: PgPool) {
     fixture(&pool).await;
@@ -438,6 +440,7 @@ async fn should_challenge_a_delete_and_describe_the_row(pool: PgPool) {
     assert_eq!(live, 1, "a challenge deletes nothing");
 }
 
+/// SEC-25
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_not_honour_a_confirmed_flag_on_a_first_call(pool: PgPool) {
     fixture(&pool).await;
@@ -736,6 +739,7 @@ async fn should_answer_a_question_without_touching_anything(pool: PgPool) {
 
 // ----------------------------------------------------------- the summary
 
+/// CHAT-15
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_precompute_every_figure_in_a_summary(pool: PgPool) {
     fixture(&pool).await;
@@ -820,6 +824,7 @@ async fn should_leave_a_percentage_out_when_there_is_nothing_to_compare(pool: Pg
 /// Walks every result this suite produces and asserts that any key holding
 /// a bare decimal has a formatted twin beside it. A new tool that forgets
 /// one fails here rather than in a wrong sentence (D27).
+/// CHAT-15
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_pair_every_raw_figure_with_a_formatted_one(pool: PgPool) {
     fixture(&pool).await;

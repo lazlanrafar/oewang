@@ -175,6 +175,7 @@ mod tests {
         );
     }
 
+    /// TG-8
     #[test]
     fn should_drop_emphasis_and_heading_markers() {
         assert_eq!(plain("## Summary\n**Food**: Rp 10"), "Summary\nFood: Rp 10");

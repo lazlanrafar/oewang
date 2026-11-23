@@ -85,6 +85,7 @@ mod tests {
         (LocalStorage::new(root.path()), root)
     }
 
+    /// VLT-2
     #[tokio::test]
     async fn should_round_trip_bytes() {
         let (storage, _root) = store();

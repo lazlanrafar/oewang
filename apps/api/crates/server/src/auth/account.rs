@@ -433,6 +433,7 @@ mod tests {
         STANDARD.encode(out.into_inner())
     }
 
+    /// WS-5
     #[sqlx::test(migrations = "../../migrations")]
     async fn should_create_a_seeded_workspace_owned_by_the_caller(pool: PgPool) {
         fixture(&pool, "correct horse battery").await;
@@ -539,6 +540,7 @@ mod tests {
         ));
     }
 
+    /// AUTH-11
     #[sqlx::test(migrations = "../../migrations")]
     async fn should_rename_and_audit(pool: PgPool) {
         fixture(&pool, "correct horse battery").await;
@@ -559,6 +561,7 @@ mod tests {
         assert_eq!(audited, 2);
     }
 
+    /// AUTH-12
     #[sqlx::test(migrations = "../../migrations")]
     async fn should_change_the_password_only_with_the_current_one(pool: PgPool) {
         fixture(&pool, "correct horse battery").await;
@@ -605,6 +608,7 @@ mod tests {
         assert_eq!(live, 1, "only the session just issued");
     }
 
+    /// AUTH-13
     #[sqlx::test(migrations = "../../migrations")]
     async fn should_store_a_photo_as_a_small_square_and_remove_it(pool: PgPool) {
         fixture(&pool, "correct horse battery").await;
@@ -640,6 +644,7 @@ mod tests {
 mod color_tests {
     use super::normalize_color;
 
+    /// UI-9
     #[test]
     fn should_accept_a_hex_colour_and_lowercase_it() {
         assert_eq!(

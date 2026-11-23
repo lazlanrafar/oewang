@@ -60,6 +60,7 @@ fn caller(token_id: &str, workspace_ids: Option<Vec<String>>) -> McpCaller {
     }
 }
 
+/// MCP-2
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_store_only_the_hash_and_find_a_live_token(pool: PgPool) {
     fixture(&pool).await;
@@ -117,6 +118,7 @@ async fn should_store_only_the_hash_and_find_a_live_token(pool: PgPool) {
     );
 }
 
+/// MCP-3
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_refuse_a_grant_outside_the_persons_workspaces(pool: PgPool) {
     fixture(&pool).await;
@@ -144,6 +146,7 @@ async fn should_refuse_a_grant_outside_the_persons_workspaces(pool: PgPool) {
     ));
 }
 
+/// MCP-3
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_resolve_the_workspace_inside_the_grant_and_the_memberships(pool: PgPool) {
     fixture(&pool).await;
@@ -200,6 +203,7 @@ async fn should_resolve_the_workspace_inside_the_grant_and_the_memberships(pool:
     );
 }
 
+/// MCP-2
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_end_every_token_when_signing_out_everywhere(pool: PgPool) {
     fixture(&pool).await;
@@ -385,6 +389,43 @@ mod oauth_flow {
                 matches!(error, AppError::Validation(ref f) if f.contains_key(field)),
                 "{field}"
             );
+        }
+    }
+}
+
+/// MCP-4, MCP-5: every listed area has a tool, and nothing held back has one.
+#[test]
+fn should_cover_every_area_and_expose_nothing_held_back() {
+    let names: Vec<&str> = crate::mcp::tools::all().map(|tool| tool.name).collect();
+    for wanted in [
+        "list_transactions",
+        "add_transaction_item",
+        "list_wallets",
+        "list_wallet_groups",
+        "list_categories",
+        "get_budget_status",
+        "get_overview",
+        "list_items",
+        "list_exchange_rates",
+        "list_files",
+        "list_members",
+        "list_invites",
+        "get_assistant_settings",
+        "send_feedback",
+        "import_transactions",
+    ] {
+        assert!(names.contains(&wanted), "{wanted} is missing");
+    }
+    for name in &names {
+        for held_back in [
+            "delete_workspace",
+            "convert",
+            "token",
+            "password",
+            "bulk",
+            "download",
+        ] {
+            assert!(!name.contains(held_back), "{name} should not be exposed");
         }
     }
 }

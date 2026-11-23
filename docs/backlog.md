@@ -567,7 +567,7 @@ Requirements: all
 - [x] Each feature doc's "Update this doc when" list is accurate
 - [x] `docs/ENV_VARS.md` generated from the running configuration
 - [x] `CLAUDE.md` at the root points at the index and states the layer rules
-- [ ] Every requirement ID in the [PRD](prd.md#6-requirements) has a passing test or a browser-verified story, or is listed as not done with a reason. `scripts/coverage.py` proves all 184 are named by a story (every prefix, and ranges such as MCP-1 to MCP-8, since 2026-11-23) and runs in CI; the stronger half, that each is actually exercised, waits on the browser pass below
+- [x] Every requirement ID in the [PRD](prd.md#6-requirements) has a passing test or a browser-verified story, or is listed as not done with a reason. `scripts/coverage.py` checks both halves and runs in CI: each of the 184 is named by a story, and each is cited by a test file, named by a story whose "Verify in browser" box is ticked, or carries a written reason in [requirement coverage](reference/requirement-coverage.md), which the script regenerates and fails on when stale (134 tested, 26 browser-verified, 24 not done, 2026-11-23)
 
 
 ---

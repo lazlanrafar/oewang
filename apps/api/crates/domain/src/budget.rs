@@ -156,6 +156,7 @@ mod tests {
         assert_eq!(february.last_day().to_string(), "2028-02-29");
     }
 
+    /// BUD-2
     #[test]
     fn should_place_the_thresholds_where_the_old_page_drew_them() {
         let cases = [

@@ -129,6 +129,7 @@ async fn upload(
 
 // ------------------------------------------------------------- the round trip
 
+/// SEC-8
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_take_a_file_in_chunks_and_give_it_back(pool: PgPool) {
     fixture(&pool).await;
@@ -154,6 +155,7 @@ async fn should_take_a_file_in_chunks_and_give_it_back(pool: PgPool) {
     assert_eq!(read, bytes, "what went in is what comes back");
 }
 
+/// SEC-13
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_build_the_key_from_ids_and_never_from_the_filename(pool: PgPool) {
     fixture(&pool).await;
@@ -507,6 +509,7 @@ async fn attach_to_new_transaction(pool: &PgPool, transaction_id: &str, file_id:
     .unwrap();
 }
 
+/// VLT-6
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_list_only_this_workspaces_ready_files_with_their_use(pool: PgPool) {
     fixture(&pool).await;
@@ -570,6 +573,7 @@ async fn should_list_only_this_workspaces_ready_files_with_their_use(pool: PgPoo
     assert_eq!(total, 0);
 }
 
+/// VLT-6
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_treat_search_wildcards_as_plain_characters(pool: PgPool) {
     fixture(&pool).await;
@@ -592,6 +596,7 @@ async fn should_treat_search_wildcards_as_plain_characters(pool: PgPool) {
     assert!(rows.is_empty(), "a typed % matches only a literal %");
 }
 
+/// VLT-8
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_rename_and_retag_a_file_and_audit_it(pool: PgPool) {
     fixture(&pool).await;
@@ -633,6 +638,7 @@ async fn should_rename_and_retag_a_file_and_audit_it(pool: PgPool) {
     assert!(matches!(refused, Err(AppError::Validation(_))));
 }
 
+/// VLT-11
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_detach_a_deleted_file_from_every_transaction(pool: PgPool) {
     fixture(&pool).await;
@@ -668,6 +674,7 @@ async fn should_detach_a_deleted_file_from_every_transaction(pool: PgPool) {
     assert_eq!(after["detached"], 2);
 }
 
+/// VLT-12
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_make_a_preview_once_and_keep_it(pool: PgPool) {
     fixture(&pool).await;
@@ -694,6 +701,7 @@ async fn should_make_a_preview_once_and_keep_it(pool: PgPool) {
     assert!(store.keys().is_empty(), "the preview goes with the file");
 }
 
+/// VLT-12
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_mark_a_pdf_as_having_no_preview(pool: PgPool) {
     fixture(&pool).await;

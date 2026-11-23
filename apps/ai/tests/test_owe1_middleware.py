@@ -69,6 +69,7 @@ def test_a_stale_timestamp_is_refused(owe1_client: Owe1TestClient) -> None:
     assert abs(error["server_time"] - owe1.now_secs()) <= 2
 
 
+# SEC-5
 def test_a_plaintext_query_string_is_refused(owe1_client: Owe1TestClient) -> None:
     response, _ = owe1_client.request("GET", "/v1/session", plaintext_query="limit=5")
     assert response.json()["error"]["code"] == "CRYPTO_QUERY_NOT_ENCRYPTED"

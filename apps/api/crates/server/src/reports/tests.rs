@@ -61,6 +61,7 @@ fn should_refuse_a_reversed_or_overlong_range() {
     );
 }
 
+/// OVR-2
 #[test]
 fn should_compare_with_the_period_of_equal_length_before() {
     let previous = range("2026-11-01", "2026-11-30").previous();
@@ -73,6 +74,7 @@ fn should_move_a_leap_day_to_the_28th_a_year_earlier() {
     assert_eq!(before, range("2027-02-01", "2027-02-28"));
 }
 
+/// OVR-3
 #[test]
 fn should_average_over_every_month_including_empty_ones() {
     assert_eq!(service::average(dec("300"), dec("4")), dec("75"));
@@ -240,6 +242,7 @@ async fn ledger(pool: &PgPool) {
     .await;
 }
 
+/// OVR-2
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_build_the_overview_from_this_workspace_only(pool: PgPool) {
     ledger(&pool).await;
@@ -325,6 +328,7 @@ async fn analyse(pool: &PgPool, turns: &TurnStore, tool: &str, args: Value) -> V
     .result
 }
 
+/// CHAT-16
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_leave_an_artifact_for_every_analysis_with_data(pool: PgPool) {
     ledger(&pool).await;
@@ -354,6 +358,7 @@ async fn should_leave_an_artifact_for_every_analysis_with_data(pool: PgPool) {
     }
 }
 
+/// CHAT-17
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_leave_no_artifact_for_an_empty_range(pool: PgPool) {
     ledger(&pool).await;

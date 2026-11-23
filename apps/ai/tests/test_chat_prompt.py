@@ -58,6 +58,7 @@ def test_the_date_block_is_precomputed() -> None:
     assert "- This year: 2026-01-01 to 2026-02-14" in prompt
 
 
+# CHAT-15
 def test_the_prompt_forbids_arithmetic() -> None:
     """D27 is the rule the whole product leans on: a model's arithmetic
     error looks exactly like a correct answer."""
@@ -128,6 +129,7 @@ def test_the_web_prompt_is_unchanged_by_the_channel_default() -> None:
     ) == build_system_prompt(role="owner", context=CONTEXT, settings=AgentSettings(), channel="web")
 
 
+# TG-8
 def test_a_telegram_turn_is_asked_for_plain_text_without_links() -> None:
     """A Telegram reply is sent with no parse mode, so Markdown would arrive
     as literal asterisks and an entity link is a route that only exists in

@@ -128,6 +128,7 @@ describe('toolCallsFromAttachments', () => {
 		]);
 	});
 
+	// CHAT-18
 	it('reads back the artifact an analysis call stored (D88)', () => {
 		const payload = { from: '2026-11-01', to: '2026-11-30' };
 		const calls = toolCallsFromAttachments({

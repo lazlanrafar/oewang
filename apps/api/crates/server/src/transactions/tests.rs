@@ -186,6 +186,7 @@ async fn should_move_the_balance_for_each_type(pool: PgPool) {
     assert_eq!(balance(&pool, &cash).await, decimal("50000"));
 }
 
+/// OPS-1
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_write_the_audit_row_in_the_same_transaction(pool: PgPool) {
     fixture(&pool, "IDR").await;
@@ -461,6 +462,7 @@ async fn should_not_call_the_rate_source_for_a_day_already_stored(pool: PgPool) 
 
 /// The rates list reads the newest snapshot on or before a day and states
 /// every currency in the workspace's own (FX-1, D96).
+/// FX-2
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_list_a_snapshot_against_the_workspace_currency(pool: PgPool) {
     use crate::fx::service::list_rates;
@@ -559,6 +561,7 @@ async fn total_expense(pool: &PgPool) -> Decimal {
 
 // ------------------------------------------------------------------ update
 
+/// TXN-4
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_reverse_the_old_effect_and_apply_the_new_one(pool: PgPool) {
     fixture(&pool, "IDR").await;
@@ -685,6 +688,7 @@ async fn should_record_before_and_after_on_an_update(pool: PgPool) {
 
 // ------------------------------------------------------------------ delete
 
+/// TXN-5
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_reverse_the_balance_when_a_transaction_is_deleted(pool: PgPool) {
     fixture(&pool, "IDR").await;
@@ -728,6 +732,7 @@ async fn should_reverse_the_balance_when_a_transaction_is_deleted(pool: PgPool) 
 /// The balance moves by a bound delta on a locked row, never by writing a
 /// total that was read a moment ago, which is the shape that loses a write
 /// under concurrency.
+/// TXN-6
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_give_the_exact_balance_when_two_writes_race(pool: PgPool) {
     fixture(&pool, "IDR").await;
@@ -752,6 +757,7 @@ async fn should_give_the_exact_balance_when_two_writes_race(pool: PgPool) {
 
 /// Two transfers in opposite directions cannot deadlock, because both lock
 /// their wallets in ascending ID order (D13).
+/// TXN-6
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_not_deadlock_on_opposite_transfers(pool: PgPool) {
     fixture(&pool, "IDR").await;

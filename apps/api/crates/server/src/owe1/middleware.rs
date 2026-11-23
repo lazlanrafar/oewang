@@ -310,6 +310,7 @@ mod tests {
         assert_eq!(error.code(), "CRYPTO_DECRYPT_FAILED");
     }
 
+    /// SEC-5
     #[test]
     fn should_reject_a_query_field_bound_to_another_request() {
         let field = sealed_field(&aad::query("cs_a", "GET", "/p", "req_1", 1), b"page=2");
