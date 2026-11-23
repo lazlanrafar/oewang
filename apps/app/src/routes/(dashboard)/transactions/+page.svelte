@@ -333,8 +333,22 @@
 	/** The files the sheet will submit with the transaction (TXN-13). */
 	let attachments = $state<UploadedFile[]>([]);
 
-	/** Rebuild the draft whenever the sheet points somewhere new. */
+	// A primitive, so a data reload that rebuilds the same row does not count as a new target.
+	const editingId = $derived(editing?.id ?? null);
+
+	/**
+	 * Rebuild the draft whenever the sheet points somewhere new, and only
+	 * then. Creating an account or category from a picker reloads every
+	 * load (invalidateAll), which hands back new `data` objects; reading
+	 * them tracked here wiped what the user had typed.
+	 */
 	$effect(() => {
+		void sheetParam;
+		void editingId;
+		untrack(rebuildDraft);
+	});
+
+	function rebuildDraft() {
 		const fresh = emptyDraft(
 			defaultWallet?.id ?? '',
 			defaultWallet?.currency_code ?? baseCurrency,
@@ -374,7 +388,7 @@
 					notes: editing.description ?? '',
 				}
 			: fresh;
-	});
+	}
 
 	const draftWalletCurrency = $derived(walletCurrencies[draft.accountId] ?? baseCurrency);
 

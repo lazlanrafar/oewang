@@ -11,6 +11,8 @@
 	 * It writes nothing itself. The form posts to the page's action, and the
 	 * page decides what a save means by passing its own `enhance`.
 	 */
+	import { untrack } from 'svelte';
+
 	import { Button } from '$lib/components/atoms/button';
 	import { Label } from '$lib/components/atoms/label';
 	import * as Sheet from '$lib/components/atoms/sheet';
@@ -52,10 +54,17 @@
 	let amount = $state('');
 
 	/* The sheet is reused for the next budget, so the fields follow it. */
+	// Keyed on the id, not the object: creating a category reloads the page
+	// data, and a new `budget` object for the same row must not wipe the input.
+	const budgetId = $derived(budget?.id ?? null);
+
 	$effect(() => {
 		if (!open) return;
-		categoryId = budget?.category_id ?? '';
-		amount = budget?.amount ? trimZeros(budget.amount) : '';
+		void budgetId;
+		untrack(() => {
+			categoryId = budget?.category_id ?? '';
+			amount = budget?.amount ? trimZeros(budget.amount) : '';
+		});
 	});
 
 	/** `2000000.0000` as `2000000`: the column's scale is not the user's. */
