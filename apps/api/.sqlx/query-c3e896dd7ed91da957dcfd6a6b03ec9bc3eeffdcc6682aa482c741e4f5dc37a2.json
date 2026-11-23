@@ -6,62 +6,134 @@
       {
         "ordinal": 0,
         "name": "id",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "transaction_import_jobs",
+            "name": "id"
+          }
+        }
       },
       {
         "ordinal": 1,
         "name": "workspace_id",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "transaction_import_jobs",
+            "name": "workspace_id"
+          }
+        }
       },
       {
         "ordinal": 2,
         "name": "user_id",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "transaction_import_jobs",
+            "name": "user_id"
+          }
+        }
       },
       {
         "ordinal": 3,
         "name": "status",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "transaction_import_jobs",
+            "name": "status"
+          }
+        }
       },
       {
         "ordinal": 4,
         "name": "vault_file_id",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "transaction_import_jobs",
+            "name": "vault_file_id"
+          }
+        }
       },
       {
         "ordinal": 5,
         "name": "imported",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "transaction_import_jobs",
+            "name": "imported"
+          }
+        }
       },
       {
         "ordinal": 6,
         "name": "skipped",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "transaction_import_jobs",
+            "name": "skipped"
+          }
+        }
       },
       {
         "ordinal": 7,
         "name": "duplicates",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "transaction_import_jobs",
+            "name": "duplicates"
+          }
+        }
       },
       {
         "ordinal": 8,
         "name": "error",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "transaction_import_jobs",
+            "name": "error"
+          }
+        }
       },
       {
         "ordinal": 9,
         "name": "review",
-        "type_info": "Jsonb"
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "transaction_import_jobs",
+            "name": "review"
+          }
+        }
       },
       {
         "ordinal": 10,
         "name": "created_at",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "transaction_import_jobs",
+            "name": "created_at"
+          }
+        }
       },
       {
         "ordinal": 11,
         "name": "updated_at",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "transaction_import_jobs",
+            "name": "updated_at"
+          }
+        }
       }
     ],
     "parameters": {

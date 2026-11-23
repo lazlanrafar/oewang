@@ -56,7 +56,7 @@ Recorded at scaffold time (US-001, 2026-11-02) so later drift is visible. The do
 |---|---|
 | Rust | 1.x via the `rust:1-bookworm` image, `rust-version` pinned at 1.84 |
 | Axum | 0.8 |
-| sqlx | 0.8 |
+| sqlx | 0.9 |
 | SvelteKit | 3.0 |
 | Svelte | 5.57 |
 | Vite | 8.3 |

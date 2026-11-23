@@ -185,7 +185,7 @@ pub struct SnapshotRateRow {
 /// CTEs every snapshot query starts from. A home currency the snapshot
 /// does not carry yields no rows rather than a wrong figure.
 fn push_snapshot<'a>(
-    builder: &mut QueryBuilder<'a, sqlx::Postgres>,
+    builder: &mut QueryBuilder<sqlx::Postgres>,
     home_code: &'a str,
     filters: &SnapshotFilters<'a>,
 ) {

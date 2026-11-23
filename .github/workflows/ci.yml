@@ -147,7 +147,7 @@ jobs:
       - name: Install sqlx-cli
         uses: taiki-e/install-action@v2
         with:
-          tool: sqlx-cli
+          tool: sqlx-cli@0.9.1
 
       - name: Format
         run: cargo fmt --all --check
@@ -189,12 +189,16 @@ jobs:
         with:
           tool: cargo-audit
 
-      # RUSTSEC-2023-0071 (Marvin attack, `rsa` 0.9.10, medium) has no
-      # fixed upgrade. The crate reaches Cargo.lock through `sqlx-mysql`,
-      # which `sqlx-macros-core` lists unconditionally; `cargo tree -i rsa`
-      # prints nothing, so it is never compiled and no MySQL driver runs
-      # here. The ignore is written out with its reason rather than hidden
-      # in an audit.toml, and it comes off the day sqlx ships a fix.
+      # RUSTSEC-2023-0071 (Marvin attack, `rsa`, medium). sqlx 0.9 took
+      # the old `rsa` 0.9 path out (`sqlx-mysql` no longer pulls it), but
+      # `rsa` 0.10.0-rc.19 stays through webauthn-rs -> crypto-glue, which
+      # cannot take the fixed 0.10.0 until crypto-glue stops asking for the
+      # `rsa/sha2` feature that 0.10.0 removed. That path is compiled: the
+      # passkey code verifies RS256 signatures with public keys. The attack
+      # recovers a private key from decryption timing, and this server holds
+      # no RSA private key, so there is nothing for it to recover. The ignore
+      # is written out with its reason rather than hidden in an audit.toml,
+      # and it comes off when webauthn-rs reaches `rsa` 0.10.0.
       # See docs/deployment.md, Open questions.
       - name: cargo audit
         working-directory: apps/api

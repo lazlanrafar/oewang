@@ -125,7 +125,7 @@ pub struct ItemPurchaseRow {
 /// The rows every query here starts from: live items on live transactions
 /// in one workspace, with the paying wallet's currency.
 fn push_purchases<'a>(
-    builder: &mut QueryBuilder<'a, sqlx::Postgres>,
+    builder: &mut QueryBuilder<sqlx::Postgres>,
     workspace_id: &'a str,
     filters: &ItemFilters<'a>,
 ) {

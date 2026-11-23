@@ -36,8 +36,10 @@ pub async fn connect(config: &PoolConfig) -> Result<PgPool, sqlx::Error> {
         .after_connect(move |conn, _meta| {
             Box::pin(async move {
                 // Set per connection rather than per query, so a repository
-                // cannot forget it.
-                sqlx::query(&format!("SET statement_timeout = {statement_timeout_ms}"))
+                // cannot forget it. `set_config` takes the value as a bound
+                // parameter, where `SET` would need it formatted into the SQL.
+                sqlx::query("SELECT set_config('statement_timeout', $1, false)")
+                    .bind(statement_timeout_ms.to_string())
                     .execute(conn)
                     .await?;
                 Ok(())
