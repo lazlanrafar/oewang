@@ -75,6 +75,8 @@ def test_sources() -> dict[str, str]:
         "apps/ai/tests/**/*.py",
         "apps/app/src/**/*.test.ts",
         "apps/app/e2e/**/*.spec.ts",
+        "apps/native/test/**/*.dart",
+        "apps/native/integration_test/**/*.dart",
     ):
         for path in ROOT.glob(pattern):
             if "node_modules" not in path.parts:

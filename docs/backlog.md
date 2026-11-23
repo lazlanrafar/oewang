@@ -885,3 +885,43 @@ Requirements: WS-5, WS-7, AUTH-14
 - [ ] Verify a real passkey registration and sign-in in a browser
   - 2026-11-23: `e2e/passkey.spec.ts` passes with Chromium's virtual WebAuthn authenticator (add, sign in with no password, last used, remove, a removed passkey refused). Left open for one sign-in with Touch ID, which a virtual authenticator cannot stand in for
 - [ ] Verify in production after deploy (`APP_URL` is the relying party)
+
+### US-063: Mobile foundation and online transactions (OEW-085)
+Requirements: MOB-1, MOB-2, MOB-3, MOB-4, MOB-5
+
+- [ ] `apps/native` copied from the old app; debts, contacts, sub-currencies and the old AES transport removed; Flutter pinned with fvm
+- [ ] OWE1 in Dart passes every case in `owe1-vectors.json`
+- [ ] Sign in, sign up, `/sync`, workspace create and switch, refresh rotation, sign out
+- [ ] Transaction screens (daily, calendar, monthly, summary, search, form) on `/v1/transactions*` and `/v1/overview`, money never a `double`
+- [ ] A viewer sees no write control
+- [ ] `flutter analyze` and `flutter test` pass; `scripts/ci-local.sh` runs them
+
+### US-064: Mobile accounts, categories, budgets, stats and settings (OEW-086)
+Requirements: MOB-4, MOB-5
+
+- [ ] Accounts and groups, categories, budgets, stats and settings screens on the web's routes, each in the old app's look
+
+### US-065: Mobile offline writes (OEW-087)
+Requirements: MOB-6, MOB-7
+
+- [ ] Client `id` on create for transactions, wallets and categories (D114, Rust tests)
+- [ ] `If-Match` and `409 STALE` on their `PATCH` (D115, Rust tests)
+- [ ] Drift cache and ordered write queue; conflicts shown with discard or apply anyway
+
+### US-066: Mobile chat, receipt scan and vault (OEW-088)
+Requirements: MOB-8
+
+- [ ] Chat with streaming, receipt scan to a draft, vault list, upload and download
+
+### US-067: Mobile passkeys, Telegram, invitation links and push (OEW-089)
+Requirements: MOB-9, PUSH-1, PUSH-2, PUSH-3, PUSH-4, PUSH-5
+
+- [ ] `apple-app-site-association` and `assetlinks.json` served by the app
+- [ ] Native passkey, Telegram deep link, `/accept-invite` opening the app
+- [ ] `device_tokens`, `POST/DELETE /v1/device-tokens`, FCM sender after commit (D116, Rust tests)
+- [ ] The four triggers, with `budget_alerts` holding each threshold once per month
+
+### US-068: Mobile store release (OEW-090)
+Requirements: MOB-1
+
+- [ ] Old signing material found or the upload key reset; version 2.0.0; manual GitHub Actions upload to TestFlight and Play internal

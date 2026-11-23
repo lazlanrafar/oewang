@@ -13,7 +13,7 @@ in browser" box ticked; or a written reason it is not done.
 
 - 145 with test evidence
 - 29 verified in browser only
-- 10 not done
+- 24 not done
 
 | ID | Evidence |
 |---|---|
@@ -84,6 +84,15 @@ in browser" box ticked; or a written reason it is not done.
 | MCP-7 | `apps/api/crates/server/src/mcp/tests.rs` |
 | MCP-8 | `apps/app/e2e/mcp-oauth.spec.ts` |
 | MCP-9 | `apps/api/crates/server/src/main.rs`, `apps/app/e2e/mcp-oauth.spec.ts` |
+| MOB-1 | not done: epic OEW-083 in progress; tests land with US-063 to US-068 |
+| MOB-2 | not done: epic OEW-083 in progress; tests land with US-063 to US-068 |
+| MOB-3 | not done: epic OEW-083 in progress; tests land with US-063 to US-068 |
+| MOB-4 | not done: epic OEW-083 in progress; tests land with US-063 to US-068 |
+| MOB-5 | not done: epic OEW-083 in progress; tests land with US-063 to US-068 |
+| MOB-6 | not done: epic OEW-083 in progress; tests land with US-063 to US-068 |
+| MOB-7 | not done: epic OEW-083 in progress; tests land with US-063 to US-068 |
+| MOB-8 | not done: epic OEW-083 in progress; tests land with US-063 to US-068 |
+| MOB-9 | not done: epic OEW-083 in progress; tests land with US-063 to US-068 |
 | OPS-1 | `apps/api/crates/server/src/accounts/tests.rs`, `apps/api/crates/server/src/transactions/tests.rs` |
 | OPS-2 | `apps/api/crates/server/src/ai/tests.rs`, `apps/api/crates/server/src/ai/tool_tests.rs` |
 | OPS-3 | `apps/ai/tests/test_chat_stream.py`, `apps/ai/tests/test_extraction_ladder.py`, `apps/ai/tests/test_extraction_pdf.py`, `apps/ai/tests/test_extraction_routes.py`, `apps/api/crates/server/src/ai/tool_tests.rs`, `apps/api/crates/server/src/hardening_tests.rs`, `apps/api/crates/server/src/main.rs`, `apps/api/crates/server/src/transactions/tests.rs` |
@@ -102,6 +111,11 @@ in browser" box ticked; or a written reason it is not done.
 | PLT-3 | `apps/ai/tests/test_health.py` |
 | PLT-4 | `apps/app/src/lib/security-headers.test.ts`, `apps/app/src/lib/server-boundary.test.ts` |
 | PLT-5 | not done: a build property (separate Dockerfiles, no shared package) held by the repository layout and review, not by a test |
+| PUSH-1 | not done: epic OEW-083 in progress; tests land with US-067 |
+| PUSH-2 | not done: epic OEW-083 in progress; tests land with US-067 |
+| PUSH-3 | not done: epic OEW-083 in progress; tests land with US-067 |
+| PUSH-4 | not done: epic OEW-083 in progress; tests land with US-067 |
+| PUSH-5 | not done: epic OEW-083 in progress; tests land with US-067 |
 | SEC-1 | `apps/ai/tests/test_extraction_routes.py`, `apps/ai/tests/test_rate_limit.py`, `apps/ai/tests/test_service_key.py` |
 | SEC-2 | `apps/ai/tests/test_owe1_vectors.py`, `apps/api/crates/domain/src/owe1/handshake.rs` |
 | SEC-3 | `apps/ai/tests/test_owe1_client.py`, `apps/api/crates/clients/src/owe1_client.rs` |
