@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:decimal/decimal.dart';
 import 'package:flutter/material.dart';
@@ -21,17 +22,22 @@ import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/domain/models/category.dart';
+import 'package:oewang/domain/models/receipt_draft.dart';
 import 'package:oewang/domain/models/transaction.dart';
 import 'package:oewang/domain/models/wallet.dart';
 
 final transactionFormVmProvider = ChangeNotifierProvider.autoDispose
-    .family<TransactionFormViewModel, Transaction?>(
-      (ref, editing) => TransactionFormViewModel(
+    .family<
+      TransactionFormViewModel,
+      ({Transaction? editing, ReceiptDraft? receipt})
+    >(
+      (ref, open) => TransactionFormViewModel(
         transactions: ref.watch(transactionsRepositoryProvider),
         wallets: ref.watch(walletsRepositoryProvider),
         categories: ref.watch(categoriesRepositoryProvider),
         vault: ref.watch(vaultRepositoryProvider),
-        editing: editing,
+        editing: open.editing,
+        receipt: open.receipt,
       ),
     );
 
@@ -44,10 +50,13 @@ T? _firstOrNull<T>(Iterable<T> items, bool Function(T) test) {
 }
 
 class TransactionFormScreen extends ConsumerStatefulWidget {
-  const TransactionFormScreen({super.key, this.transaction});
+  const TransactionFormScreen({super.key, this.transaction, this.receipt});
 
   /// When non-null the form opens in edit mode for this transaction.
   final Transaction? transaction;
+
+  /// A scanned receipt to prefill a new transaction from (MOB-8).
+  final ReceiptDraft? receipt;
 
   @override
   ConsumerState<TransactionFormScreen> createState() =>
@@ -92,7 +101,12 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final vm = ref.watch(transactionFormVmProvider(widget.transaction));
+    final vm = ref.watch(
+      transactionFormVmProvider((
+        editing: widget.transaction,
+        receipt: widget.receipt,
+      )),
+    );
     final palette = context.palette;
 
     final title = switch (vm.state.type) {
@@ -511,22 +525,22 @@ class _TransferWalletsRow extends StatelessWidget {
 
 /// One picked or already-uploaded receipt image. `localPath` is set for a
 /// freshly-picked image (gives an instant local preview while it uploads);
-/// `id`/`existingUrl` are set once it has a vault id (either immediately
+/// `id`/`existingBytes` are set once it has a vault id (either immediately
 /// after upload, or seeded from `vm.state.attachmentIds` in edit mode, where
-/// `existingUrl` is fetched lazily via a signed download URL).
+/// `existingBytes` is the thumbnail, fetched lazily).
 class _AttachmentTile {
-  _AttachmentTile.local(this.localPath) : id = null, existingUrl = null;
-  _AttachmentTile.existing(this.id) : localPath = null, existingUrl = null;
+  _AttachmentTile.local(this.localPath) : id = null, existingBytes = null;
+  _AttachmentTile.existing(this.id) : localPath = null, existingBytes = null;
 
   final String? localPath;
   String? id;
-  String? existingUrl;
+  Uint8List? existingBytes;
   bool uploading = false;
   AppError? error;
 
   ImageProvider? get preview {
     if (localPath != null) return FileImage(File(localPath!));
-    if (existingUrl != null) return NetworkImage(existingUrl!);
+    if (existingBytes != null) return MemoryImage(existingBytes!);
     return null;
   }
 }
@@ -558,12 +572,11 @@ class _DescriptionRowState extends ConsumerState<_DescriptionRow> {
     }
   }
 
+  // The tile shows the API's preview, never the whole file (D91).
   Future<void> _loadExistingUrl(_AttachmentTile tile) async {
-    final res = await ref
-        .read(vaultRepositoryProvider)
-        .getDownloadUrl(tile.id!);
+    final res = await ref.read(vaultRepositoryProvider).thumbnail(tile.id!);
     if (!mounted) return;
-    res.fold((url) => setState(() => tile.existingUrl = url), (_) {});
+    res.fold((bytes) => setState(() => tile.existingBytes = bytes), (_) {});
   }
 
   Future<void> _pickReceipt() async {

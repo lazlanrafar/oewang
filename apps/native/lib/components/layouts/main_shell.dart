@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:oewang/components/layouts/bottom_nav.dart';
 import 'package:oewang/components/layouts/fab.dart';
+import 'package:oewang/components/organisms/receipts/receipts_scan.dart';
 import 'package:oewang/components/organisms/sync/sync_status_banner.dart';
 import 'package:oewang/components/organisms/transactions/transactions_month_controller.dart';
 import 'package:oewang/config/dependencies.dart';
@@ -38,8 +39,22 @@ class MainShell extends ConsumerWidget {
 
     return Scaffold(
       body: navigationShell,
+      // Scan sits above Add on the Trans. tab, for writers only: the upload
+      // and the read are admin+ routes (MOB-8).
       floatingActionButton: showFab
-          ? OewangFab(onPressed: () => _onAddTransaction(context))
+          ? Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                FloatingActionButton.small(
+                  heroTag: 'scanReceipt',
+                  tooltip: 'Scan a receipt',
+                  onPressed: () => scanReceipt(context, ref),
+                  child: const Icon(Icons.document_scanner_outlined),
+                ),
+                const SizedBox(height: 12),
+                OewangFab(onPressed: () => _onAddTransaction(context)),
+              ],
+            )
           : null,
       bottomNavigationBar: Column(
         mainAxisSize: MainAxisSize.min,

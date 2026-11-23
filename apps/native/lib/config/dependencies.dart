@@ -12,8 +12,10 @@ import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/data/repositories/auth_repository.dart';
 import 'package:oewang/data/repositories/budgets_repository.dart';
 import 'package:oewang/data/repositories/categories_repository.dart';
+import 'package:oewang/data/repositories/chat_repository.dart';
 import 'package:oewang/data/repositories/feedback_repository.dart';
 import 'package:oewang/data/repositories/rates_repository.dart';
+import 'package:oewang/data/repositories/receipts_repository.dart';
 import 'package:oewang/data/repositories/transactions_repository.dart';
 import 'package:oewang/data/repositories/users_repository.dart';
 import 'package:oewang/data/repositories/vault_repository.dart';
@@ -26,8 +28,10 @@ import 'package:oewang/data/repositories_offline/wallets_repository_offline.dart
 import 'package:oewang/data/repositories_remote/auth_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/budgets_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/categories_repository_remote.dart';
+import 'package:oewang/data/repositories_remote/chat_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/feedback_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/rates_repository_remote.dart';
+import 'package:oewang/data/repositories_remote/receipts_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/transactions_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/users_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/vault_repository_remote.dart';
@@ -125,6 +129,14 @@ final syncStatusProvider = Provider<SyncStatus>((ref) {
   status.addListener(changed);
   ref.onDispose(() => status.removeListener(changed));
   return status.value;
+});
+
+final chatRepositoryProvider = Provider<ChatRepository>((ref) {
+  return ChatRepositoryRemote(ref.watch(apiClientProvider));
+});
+
+final receiptsRepositoryProvider = Provider<ReceiptsRepository>((ref) {
+  return ReceiptsRepositoryRemote(ref.watch(apiClientProvider));
 });
 
 final transactionsRepositoryProvider = Provider<TransactionsRepository>((ref) {

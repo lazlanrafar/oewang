@@ -76,7 +76,7 @@ Public keys are not secrets. The FCM config files (`google-services.json`, `Goog
 | `settings/feedback` | `POST /v1/feedback` |
 | new: chat | `/v1/ai/sessions*`, `POST /v1/ai/chat/stream` |
 | new: receipt scan | `POST /v1/ai/receipt/parse`, `POST /v1/receipts/pending` |
-| new: vault | `/v1/vault/files*` |
+| new: vault (also the form's attachment tiles, now thumbnails) | `/v1/vault/files*` |
 | new: Telegram | `/v1/integrations/telegram*` |
 
 Dropped from the old app with their API: debts (and its bottom tab, so the bar has four), contacts, sub-currencies, the separate transaction settings screen, Google and Apple sign-in (OAuth is a non-goal, so the email form shows without the old "Show other options" step), three locales (D15).
@@ -88,6 +88,17 @@ What the transaction screens read, and where they differ from the old app:
 - The old app's only delete was a swipe that one transaction setting turned on, and that setting went with its API. Deleting is in the edit form's app bar now, behind the same confirm dialog.
 - The transaction settings themselves run on the old defaults (month from the 1st, Daily tab first, swipe changes month).
 - A member (the read-only role) sees no add button, opens no row for editing and gets no delete (MOB-5).
+
+## Chat, receipt scan and vault (MOB-8)
+
+Adapted from the web app's screens with the old app's components and tokens.
+
+- **Entry points.** The More tab has an "Assistant" section with Chat and Vault, open to every role. Scan a receipt is a small button above the Trans. tab's add button, shown to writers only (the upload and the read are admin+). The Trans. header's right slot stays reserved for the sync status.
+- **Chat.** `/chat` lists sessions (newest first; long press to rename or delete, delete behind a confirm), `/chat/new` makes the session on the first message, `/chat/:id` opens one. `ApiClient.stream` posts the turn and opens each event under `OWE1|sse|session|request|seq` (`owe1/owe1_stream.dart`); a dropped, reordered or unsealed event ends the turn as failed. A stream that closes without `done` or `error` is also a failure. Stop cancels the subscription, which drops the connection (CHAT-9). Tool calls render as the web's one line ("Used N tools" when several); a `delete_transaction` refused with `CONFIRMATION_REQUIRED` (D20) is a failed call, and the assistant's question is answered in the next message.
+- **Analyses.** An `artifact` (spending, income, burn rate, budget) is drawn inline under its answer instead of in a side canvas, which a phone has no room for, with hatch bars (D93, `molecules/hatch_bar.dart`). Figures are the API's decimals; bar lengths read a double for geometry only (D89).
+- **Not yet on mobile:** Markdown rendering and tappable entity links (text shows the link label only), file attachments in the composer, chat suggestions.
+- **Receipt scan.** Camera or gallery through `image_picker`, re-encoded as JPEG at 2000 px and quality 85 (well under the 10 MB vault limit), uploaded in chunks, then `POST /v1/ai/receipt/parse` with the file id. A draft opens the transaction form prefilled (merchant as the name, date, total, the image attached); `RECEIPT_UNREADABLE` or a draft with neither total nor date opens it with only the image (AI-3). `AI_UNAVAILABLE` or `EXTRACTION_NO_ANSWER` offers `POST /v1/receipts/pending`. The category is not preselected yet, unlike the web.
+- **Vault.** `/vault`: search, type (images or PDFs) and sort on the server, 30 per page, tiles from `GET .../thumbnail`. A file opens in a sheet: image preview from the assembled chunks, metadata, "Open or share" through the system share sheet (`share_plus`), and for writers rename and delete, whose confirm says how many transactions lose the file (VLT-11). Tag editing and the linked transaction list stay web-only for now.
 
 ## Offline (D114, D115)
 
