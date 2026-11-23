@@ -6,112 +6,244 @@
       {
         "ordinal": 0,
         "name": "id",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "transactions",
+            "name": "id"
+          }
+        }
       },
       {
         "ordinal": 1,
         "name": "wallet_id",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "transactions",
+            "name": "wallet_id"
+          }
+        }
       },
       {
         "ordinal": 2,
         "name": "to_wallet_id",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "transactions",
+            "name": "to_wallet_id"
+          }
+        }
       },
       {
         "ordinal": 3,
         "name": "category_id",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "transactions",
+            "name": "category_id"
+          }
+        }
       },
       {
         "ordinal": 4,
         "name": "amount",
-        "type_info": "Numeric"
+        "type_info": "Numeric",
+        "origin": {
+          "Table": {
+            "table": "transactions",
+            "name": "amount"
+          }
+        }
       },
       {
         "ordinal": 5,
         "name": "to_amount",
-        "type_info": "Numeric"
+        "type_info": "Numeric",
+        "origin": {
+          "Table": {
+            "table": "transactions",
+            "name": "to_amount"
+          }
+        }
       },
       {
         "ordinal": 6,
         "name": "original_amount",
-        "type_info": "Numeric"
+        "type_info": "Numeric",
+        "origin": {
+          "Table": {
+            "table": "transactions",
+            "name": "original_amount"
+          }
+        }
       },
       {
         "ordinal": 7,
         "name": "original_currency_code",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "transactions",
+            "name": "original_currency_code"
+          }
+        }
       },
       {
         "ordinal": 8,
         "name": "exchange_rate",
-        "type_info": "Numeric"
+        "type_info": "Numeric",
+        "origin": {
+          "Table": {
+            "table": "transactions",
+            "name": "exchange_rate"
+          }
+        }
       },
       {
         "ordinal": 9,
         "name": "base_amount",
-        "type_info": "Numeric"
+        "type_info": "Numeric",
+        "origin": {
+          "Table": {
+            "table": "transactions",
+            "name": "base_amount"
+          }
+        }
       },
       {
         "ordinal": 10,
         "name": "base_rate",
-        "type_info": "Numeric"
+        "type_info": "Numeric",
+        "origin": {
+          "Table": {
+            "table": "transactions",
+            "name": "base_rate"
+          }
+        }
       },
       {
         "ordinal": 11,
         "name": "base_rate_source",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "transactions",
+            "name": "base_rate_source"
+          }
+        }
       },
       {
         "ordinal": 12,
         "name": "base_rate_date",
-        "type_info": "Date"
+        "type_info": "Date",
+        "origin": {
+          "Table": {
+            "table": "transactions",
+            "name": "base_rate_date"
+          }
+        }
       },
       {
         "ordinal": 13,
         "name": "date",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "transactions",
+            "name": "date"
+          }
+        }
       },
       {
         "ordinal": 14,
         "name": "type!",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "transactions",
+            "name": "type"
+          }
+        }
       },
       {
         "ordinal": 15,
         "name": "name",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "transactions",
+            "name": "name"
+          }
+        }
       },
       {
         "ordinal": 16,
         "name": "description",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "transactions",
+            "name": "description"
+          }
+        }
       },
       {
         "ordinal": 17,
         "name": "is_exported",
-        "type_info": "Bool"
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "transactions",
+            "name": "is_exported"
+          }
+        }
       },
       {
         "ordinal": 18,
         "name": "source",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "transactions",
+            "name": "source"
+          }
+        }
       },
       {
         "ordinal": 19,
         "name": "fingerprint",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "transactions",
+            "name": "fingerprint"
+          }
+        }
       },
       {
         "ordinal": 20,
         "name": "created_at",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "transactions",
+            "name": "created_at"
+          }
+        }
       },
       {
         "ordinal": 21,
         "name": "updated_at",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "transactions",
+            "name": "updated_at"
+          }
+        }
       }
     ],
     "parameters": {

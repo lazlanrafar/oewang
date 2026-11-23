@@ -148,7 +148,7 @@ fn selected(ids: Option<&[String]>) -> Option<&[String]> {
 /// A `LIKE` pattern is bound like any other value: it is never formatted
 /// into the statement (SEC-9).
 fn push_filters<'a>(
-    builder: &mut QueryBuilder<'a, sqlx::Postgres>,
+    builder: &mut QueryBuilder<sqlx::Postgres>,
     workspace_id: &'a str,
     filters: &TransactionFilters<'a>,
 ) {

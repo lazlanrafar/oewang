@@ -138,7 +138,7 @@ Enforcement: request and response bodies are never passed to the logger, and sec
 
 | Advisory | Where | Why it is accepted |
 |---|---|---|
-| RUSTSEC-2023-0071 | `rsa` 0.9.10, reached through `sqlx-mysql` | No fixed version exists. `sqlx-macros-core` lists `sqlx-mysql` unconditionally, but this build uses PostgreSQL only and `cargo tree -i rsa` finds no path that compiles it. Passed to `cargo audit --ignore` with this reasoning in the workflow, not hidden in a config file |
+| RUSTSEC-2023-0071 | `rsa` 0.10.0-rc.19, reached through `webauthn-rs` -> `crypto-glue` | The fix is `rsa` 0.10.0, which `crypto-glue` 0.2.2 cannot take (it asks for an `rsa` feature that 0.10.0 removed). The passkey code uses RSA only to verify RS256 signatures with public keys; the attack recovers a private key from decryption timing, and the API holds no RSA private key. The old path through `sqlx-mysql` (`rsa` 0.9) left with sqlx 0.9. Passed to `cargo audit --ignore` with this reasoning in the workflow, not hidden in a config file |
 | GHSA-gcqx-w48m-w2h4 | `deepmerge`, through `@sveltejs/vite-plugin-svelte` | Low. A build-time dependency: it never runs in the browser and never sees a request |
 
 ## Rate limits and resource limits

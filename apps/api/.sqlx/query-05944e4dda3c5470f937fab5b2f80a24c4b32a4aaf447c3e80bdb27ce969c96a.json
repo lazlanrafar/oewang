@@ -6,52 +6,112 @@
       {
         "ordinal": 0,
         "name": "id",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "mcp_tokens",
+            "name": "id"
+          }
+        }
       },
       {
         "ordinal": 1,
         "name": "user_id",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "mcp_tokens",
+            "name": "user_id"
+          }
+        }
       },
       {
         "ordinal": 2,
         "name": "kind",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "mcp_tokens",
+            "name": "kind"
+          }
+        }
       },
       {
         "ordinal": 3,
         "name": "name",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "mcp_tokens",
+            "name": "name"
+          }
+        }
       },
       {
         "ordinal": 4,
         "name": "client_id",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "mcp_tokens",
+            "name": "client_id"
+          }
+        }
       },
       {
         "ordinal": 5,
         "name": "token_prefix",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "mcp_tokens",
+            "name": "token_prefix"
+          }
+        }
       },
       {
         "ordinal": 6,
         "name": "workspace_ids",
-        "type_info": "TextArray"
+        "type_info": "TextArray",
+        "origin": {
+          "Table": {
+            "table": "mcp_tokens",
+            "name": "workspace_ids"
+          }
+        }
       },
       {
         "ordinal": 7,
         "name": "expires_at",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "mcp_tokens",
+            "name": "expires_at"
+          }
+        }
       },
       {
         "ordinal": 8,
         "name": "last_used_at",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "mcp_tokens",
+            "name": "last_used_at"
+          }
+        }
       },
       {
         "ordinal": 9,
         "name": "created_at",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "mcp_tokens",
+            "name": "created_at"
+          }
+        }
       }
     ],
     "parameters": {
