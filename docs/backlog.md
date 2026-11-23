@@ -314,7 +314,7 @@ Requirements: TXN-10
 Requirements: TXN-11, TXN-16, TXN-23, AI-9, SEC-18
 
 - [x] Four steps, ported from the old wizard
-- [ ] XLSX. CSV, semicolon and tab files are parsed in the browser. Still not built, and still deliberately: the only npm build of SheetJS carries a known prototype-pollution advisory and it would run in the browser, in the same context as the session. Reconfirmed 2026-11-03. The owner takes this one or it stays out
+- [x] XLSX. CSV, semicolon and tab files are still parsed in the browser; an `.xlsx` is read on the server by `POST /v1/transactions/import/xlsx` with `calamine`, first sheet only, and comes back as the same columns and rows of text, so steps 2 to 4 are unchanged (D111). SheetJS stays out: its only npm build carries a prototype-pollution advisory and would run in the session's context. Bounded at 512 KB, 32 MB unpacked, 5,000 rows and 100 columns, answering `SPREADSHEET_TOO_LARGE` or `SPREADSHEET_UNREADABLE`. Tests cover text, integer, decimal, date and empty cells, exact digits, the row cap and a zip bomb
 - [x] Prefilled step 2. `POST /v1/transactions/import/map-columns` now proxies the AI service (US-029 landed the hop). The step still works entirely by hand when the call fails, times out or maps nothing, which is the path that matters
 - [x] The mapping call failing or timing out leaves the step empty and the wizard still works by hand
 - [x] Rows are transformed in Rust. A test asserts no amount is ever sent to the model

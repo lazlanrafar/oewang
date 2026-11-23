@@ -62,6 +62,16 @@ webauthn-rs = { version = "0.6", features = ["danger-allow-state-serialisation",
 # JPEG encoder the preview is written with; nothing that parses PDF or SVG.
 image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp"] }
 
+# XLSX import (D111). Read on the server, never in the browser: the only npm
+# build of SheetJS carries a prototype-pollution advisory and would run in the
+# session's context. `chrono` turns a date cell into a date.
+calamine = { version = "0.38", default-features = false, features = ["chrono"] }
+# Already in the tree under calamine; named so the package can be measured
+# before calamine opens it (a zip bomb is checked, not discovered).
+zip = { version = "9", default-features = false }
+# Tests only: writes the .xlsx fixtures the reader is tested against.
+rust_xlsxwriter = { version = "0.104", default-features = false }
+
 # Clients
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "stream", "multipart"] }
 

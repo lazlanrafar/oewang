@@ -180,6 +180,7 @@ D103, BUD-1 to BUD-3. Every figure is computed by the API, with a `_formatted` t
 | POST | `/v1/transactions/bulk-delete` | admin+ | Soft-delete many, reversing each balance (TXN-14) |
 | POST | `/v1/transactions/import` | admin+ | Read an already-uploaded statement image or PDF. Returns `202 {job_id}` (AI-4) |
 | POST | `/v1/transactions/import/csv` | admin+ | A file's rows as they came out of it, plus a column mapping. Every figure and date is parsed in Rust (TXN-11, D28). Returns created, duplicate and skipped counts |
+| POST | `/v1/transactions/import/xlsx` | admin+ | An `.xlsx` as base64 in, its first sheet out as column names and rows of text, the shape a parsed CSV has. Writes nothing (TXN-11, D111) |
 | POST | `/v1/transactions/import/map-columns` | admin+ | Column names plus two sample rows in, a proposed mapping out (AI-9). Proxies the AI service, because the browser never calls it directly (PLT-4) |
 | GET | `/v1/transactions/import/{job_id}` | any | Poll an import job: status plus imported, skipped and duplicate counts, and whether it has gone stale (AI-6) |
 | GET | `/v1/transactions/{id}` | any | One transaction with items and attachments |
@@ -266,6 +267,22 @@ Answers `202 {"data": {"job_id": "clx…"}}` and the work continues in a task: t
 ```
 
 At most two sample rows travel, and every cell is clamped to 80 characters before the API forwards them (D28, [column mapping](../ai/service.md#csv-column-mapping)). A failure is relayed as it comes: step two of the wizard works by hand, and an empty step is a better answer than a guessed mapping.
+
+### `POST /v1/transactions/import/xlsx` body
+
+```json
+{ "data": "<standard base64 of the .xlsx, at most 512 KB>" }
+```
+
+Answers the shape the wizard's CSV parser produces, every cell a string:
+
+```json
+{ "data": { "columns": ["Tanggal", "Keterangan", "Debet"],
+            "rows": [ { "Tanggal": "2026-11-02", "Keterangan": "WARUNG TEKKO", "Debet": "87500.5" } ],
+            "dropped": 0 } }
+```
+
+First worksheet only. A number cell keeps the digits the file wrote; a date cell is `YYYY-MM-DD`, or `YYYY-MM-DDTHH:MM:SS` with a time. Nothing is stored and nothing is written: the rows go back to the wizard, which commits them through `/import/csv`. Over 512 KB, 32 MB unpacked, a million shared strings, 100 columns or the 5,000-row cap answers `SPREADSHEET_TOO_LARGE`; anything that is not a readable `.xlsx` answers `SPREADSHEET_UNREADABLE` (D111, [spreadsheet files](../features/transactions.md#spreadsheet-files-xlsx)).
 
 ## Transaction line items
 

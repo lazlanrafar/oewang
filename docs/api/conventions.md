@@ -179,6 +179,8 @@ Codes are stable, SCREAMING_SNAKE_CASE, and never reused for a different meaning
 | `UNSUPPORTED_FILE_TYPE` | 415 | Not JPEG, PNG, WebP or PDF |
 | `FILE_NOT_FOUND` | 404 | Unknown file in this workspace |
 | `THUMBNAIL_UNAVAILABLE` | 404 | The file exists but no preview can be made from it (a PDF, or bytes that do not decode) (D91) |
+| `SPREADSHEET_UNREADABLE` | 422 | The import file is not a readable `.xlsx`: not a zip, a corrupt package, or no worksheet (D111) |
+| `SPREADSHEET_TOO_LARGE` | 413 | The import spreadsheet is over a bound: 512 KB, 32 MB unpacked, a million shared strings, 100 columns or 5,000 rows (D111) |
 
 ### Transport
 

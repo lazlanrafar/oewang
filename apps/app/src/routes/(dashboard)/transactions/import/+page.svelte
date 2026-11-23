@@ -100,7 +100,35 @@
 	let categoryMatches = $state<Record<string, string>>({});
 	let mappingPending = $state(false);
 	let mappingFailed = $state(false);
+	/** Why the chosen file was not read, as an API code. */
+	let fileError = $state('');
+	let readingSpreadsheet = $state(false);
 
+	/**
+	 * An `.xlsx` is read on the server, never here (D111): the file goes to
+	 * the route beside this page and comes back as columns and rows of text,
+	 * the same shape `parseDelimited` gives a CSV.
+	 */
+	async function readSpreadsheet(chosen: File): Promise<ParsedFile | null> {
+		readingSpreadsheet = true;
+		try {
+			const response = await fetch('/transactions/import/xlsx', {
+				method: 'POST',
+				headers: { 'content-type': 'application/octet-stream' },
+				body: chosen
+			});
+			if (!response.ok) {
+				fileError = await failureCode(response);
+				return null;
+			}
+			return (await response.json()) as ParsedFile;
+		} catch {
+			fileError = 'STREAM_FAILED';
+			return null;
+		} finally {
+			readingSpreadsheet = false;
+		}
+	}
 
 	/*
 	 * A reload keeps the step but not the file: the rows live in this
@@ -127,7 +155,17 @@
 		if (!chosen) return;
 
 		fileName = chosen.name;
-		file = parseDelimited(await chosen.text());
+		fileError = '';
+		if (/\.xlsx$/i.test(chosen.name)) {
+			const sheet = await readSpreadsheet(chosen);
+			if (!sheet) {
+				input.value = '';
+				return;
+			}
+			file = sheet;
+		} else {
+			file = parseDelimited(await chosen.text());
+		}
 		mapping = {};
 		categoryMatches = {};
 
@@ -407,8 +445,18 @@
 				<Label for="import-file" class="text-subtle text-xs font-normal">
 					{t('import.file')}
 				</Label>
-				<Input id="import-file" type="file" accept=".csv,.tsv,.txt,text/csv" onchange={readFile} />
+				<Input
+					id="import-file"
+					type="file"
+					accept=".csv,.tsv,.txt,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+					disabled={readingSpreadsheet}
+					onchange={readFile}
+				/>
 				<p class="text-subtle text-xs">{t('import.file_hint')}</p>
+				{#if readingSpreadsheet}
+					<p class="text-subtle text-xs">{t('import.reading_spreadsheet')}</p>
+				{/if}
+				<FormError message={fileError ? messageForCode(fileError) : undefined} />
 			</div>
 		</section>
 

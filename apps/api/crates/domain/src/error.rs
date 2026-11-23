@@ -89,6 +89,13 @@ pub enum AppError {
     /// The file is there, but no preview can be made from it (D91).
     #[error("thumbnail unavailable")]
     ThumbnailUnavailable,
+    /// Not an `.xlsx`, or one calamine cannot read (D111).
+    #[error("spreadsheet unreadable")]
+    SpreadsheetUnreadable,
+    /// Over a bound of the spreadsheet import: bytes, unpacked size, rows or
+    /// columns (D111).
+    #[error("spreadsheet too large")]
+    SpreadsheetTooLarge,
 
     // -- transport (OWE1). Answered in plaintext; the caller may hold no key.
     #[error("crypto session unknown")]
@@ -180,6 +187,8 @@ impl AppError {
             UnsupportedFileType => "UNSUPPORTED_FILE_TYPE",
             FileNotFound => "FILE_NOT_FOUND",
             ThumbnailUnavailable => "THUMBNAIL_UNAVAILABLE",
+            SpreadsheetUnreadable => "SPREADSHEET_UNREADABLE",
+            SpreadsheetTooLarge => "SPREADSHEET_TOO_LARGE",
             CryptoSessionUnknown => "CRYPTO_SESSION_UNKNOWN",
             CryptoDecryptFailed => "CRYPTO_DECRYPT_FAILED",
             CryptoReplayDetected => "CRYPTO_REPLAY_DETECTED",
@@ -226,6 +235,7 @@ impl AppError {
             | AmountNotPositive
             | ReceiptUnreadable
             | StatementUnreadable
+            | SpreadsheetUnreadable
             | ToolArgsInvalid(_) => 422,
             MalformedRequest
             | CryptoDecryptFailed
@@ -235,7 +245,7 @@ impl AppError {
             | CryptoVersionUnsupported
             | ToolNotFound => 400,
             RateLimited { .. } => 429,
-            FileTooLarge => 413,
+            FileTooLarge | SpreadsheetTooLarge => 413,
             UnsupportedFileType => 415,
             FxRateUnavailable | AiUnavailable | ExtractionNoAnswer | TelegramDisabled => 503,
             Internal(_) => 500,
@@ -270,6 +280,10 @@ impl AppError {
             FxRateUnavailable => "Enter the exchange rate by hand.",
             FileTooLarge => "The limit is 10 MB.",
             UnsupportedFileType => "Accepted: JPEG, PNG, WebP and PDF.",
+            SpreadsheetUnreadable => "Save it as .xlsx again, or export it as CSV.",
+            SpreadsheetTooLarge => {
+                "Up to 512 KB, 5,000 rows and 100 columns. Split the file, or export it as CSV."
+            }
             CryptoSessionUnknown => "Run the handshake again and retry once.",
             CryptoClockSkew { .. } => "Correct the clock offset and retry once.",
             ConfirmationRequired(_) => "Ask the user to confirm, then call again.",
@@ -391,6 +405,8 @@ mod tests {
             AppError::UnsupportedFileType,
             AppError::FileNotFound,
             AppError::ThumbnailUnavailable,
+            AppError::SpreadsheetUnreadable,
+            AppError::SpreadsheetTooLarge,
             AppError::CryptoSessionUnknown,
             AppError::CryptoDecryptFailed,
             AppError::CryptoReplayDetected,
@@ -413,7 +429,7 @@ mod tests {
 
         // Every catalog entry but TRANSPORT_UNEXPECTED_RESPONSE, a
         // client-side condition with no server variant by design.
-        assert_eq!(samples.len(), 50);
+        assert_eq!(samples.len(), 52);
 
         let mut seen = std::collections::HashSet::new();
         for error in &samples {

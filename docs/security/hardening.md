@@ -159,6 +159,7 @@ Enforcement: request and response bodies are never passed to the logger, and sec
 | List `limit` parameter | 100 | [conventions](../api/conventions.md#pagination) |
 | Bulk operation size | 500 rows | SEC-18 |
 | Import rows per job | 5,000 | SEC-18 |
+| Import spreadsheet (`.xlsx`) | 512 KB file, 32 MB unpacked, 1,000,000 shared strings, 100 columns; rows as above | D111 |
 | Model calls per extracted document | 2 full passes plus 4 targeted field calls | AI-10 |
 | Wall clock per extracted document | 45 seconds | AI-10 |
 | Request timeout | 30 seconds, except the chat stream | SEC-19 |
@@ -166,7 +167,7 @@ Enforcement: request and response bodies are never passed to the logger, and sec
 | Database statement timeout | 10 seconds | SEC-19 |
 | Database pool | 20 connections, 5 second acquire timeout | SEC-19 |
 
-Every limit above is a configuration value with the listed default, not a literal buried in code, **except two**: the list `limit` parameter and the bulk-operation size. Those are part of the API contract rather than a deployment question. A client pages against them and a change to either is an API change with a client to update, not a knob an operator turns, so they are constants and a test fails if they move. `Config::default_rate_limits` is where the defaults live and a test asserts each one still equals the number in this table, so the two cannot drift apart quietly.
+Every limit above is a configuration value with the listed default, not a literal buried in code, **except two**: the list `limit` parameter and the bulk-operation size. Those are part of the API contract rather than a deployment question. A client pages against them and a change to either is an API change with a client to update, not a knob an operator turns, so they are constants and a test fails if they move. The spreadsheet bounds are constants as well (`oewang_domain::spreadsheet`), for a different reason: the file size is the vault chunk's, set by the body limit's arithmetic, and the rest bound what a hostile package can make the API allocate. `Config::default_rate_limits` is where the defaults live and a test asserts each one still equals the number in this table, so the two cannot drift apart quietly.
 
 **Credential routes** means the ones something can be guessed at: `register`, `login`, `refresh`, `forgot-password`, `reset-password` and `accept-invite`. An earlier draft of this table said `/v1/auth/*`, which was wrong: `/v1/auth/me` is read on every page load, and ten of those per fifteen minutes would lock a working session out of the product. The limit exists for guessing, so it covers what can be guessed.
 

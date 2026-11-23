@@ -485,6 +485,12 @@ fn protected_routes(state: AppState) -> Router<AppState> {
             "/v1/transactions/import/csv",
             post(transactions::handler::import_csv),
         )
+        // Step one for a spreadsheet: read on the server, never in the
+        // browser (D111). Answers the shape a parsed CSV has.
+        .route(
+            "/v1/transactions/import/xlsx",
+            post(transactions::handler::import_xlsx),
+        )
         // A statement that is a picture rather than a table. Answers 202
         // and a job id; the ladder runs in a task (AI-4, AI-6).
         .route(
