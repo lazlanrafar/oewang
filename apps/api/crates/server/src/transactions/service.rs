@@ -517,6 +517,22 @@ pub async fn bulk_create(
 
 /// Transform spreadsheet rows and commit them (TXN-11, D28).
 ///
+/// Read an `.xlsx` into column names and rows of cell text (D111).
+///
+/// Nothing is written and nothing is parsed into a number: the rows go back
+/// to the wizard, which commits them through [`import_rows`] exactly as it
+/// commits a CSV's.
+pub async fn read_spreadsheet(
+    bytes: Vec<u8>,
+    row_limit: usize,
+) -> Result<oewang_domain::spreadsheet::Sheet> {
+    // Inflating a package and walking its XML is CPU work; it stays off the
+    // async workers.
+    tokio::task::spawn_blocking(move || oewang_domain::spreadsheet::read_xlsx(&bytes, row_limit))
+        .await
+        .map_err(|error| AppError::Internal(anyhow::anyhow!(error)))?
+}
+
 /// The rows arrive as they came out of the file, with a mapping of which
 /// column holds what. Everything numeric happens here, in code: the model
 /// mapped column names once and never saw a row, so it cannot have moved a

@@ -336,6 +336,8 @@
 		"ai_unavailable": "The assistant could not be reached. Everything here still works by hand.",
 		"extraction_no_answer": "The receipt reader didn't answer in time, so this file wasn't read. It may be perfectly clear: try again in a moment, or enter it by hand.",
 		"receipt_unreadable": "That image could not be read as a receipt.",
+		"spreadsheet_unreadable": "That file could not be read as an .xlsx spreadsheet. Save it as .xlsx again, or export it as CSV.",
+		"spreadsheet_too_large": "That spreadsheet is too large: up to 512 KB, 5,000 rows and 100 columns. Split it, or export it as CSV.",
 		"telegram_disabled": "Telegram is not set up on this server yet.",
 		"workspace_currency_changed": "The workspace currency was just converted. Try again."
 	},
@@ -569,7 +571,7 @@
 	},
 	"import": {
 		"title": "Import transactions",
-		"subtitle": "A CSV from your bank. Four steps, and nothing is written until the last one.",
+		"subtitle": "A CSV or .xlsx from your bank. Four steps, and nothing is written until the last one.",
 		"step_file": "File",
 		"step_columns": "Columns",
 		"step_values": "Values",
@@ -578,7 +580,8 @@
 		"wallet_hint": "Every row lands in this wallet, in its currency.",
 		"file": "File",
 		"search_columns": "Search columns",
-		"file_hint": "CSV, semicolon or tab separated. Read in your browser; only the text crosses the wire.",
+		"file_hint": "CSV, semicolon or tab separated, or an Excel .xlsx. A CSV is read in your browser; a spreadsheet is read on the server, first sheet only.",
+		"reading_spreadsheet": "Reading the spreadsheet.",
 		"read_summary": "{name}: {rows} row(s) read.",
 		"mapping_pending": "Asking the assistant which column holds what.",
 		"mapping_failed": "The assistant could not propose a mapping. Set the columns yourself; nothing else changes.",

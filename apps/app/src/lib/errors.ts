@@ -39,7 +39,9 @@ const CODE_TO_KEY: Record<string, TranslationKey> = {
 	AI_UNAVAILABLE: 'errors.ai_unavailable',
 	EXTRACTION_NO_ANSWER: 'errors.extraction_no_answer',
 	TELEGRAM_DISABLED: 'errors.telegram_disabled',
-	RECEIPT_UNREADABLE: 'errors.receipt_unreadable'
+	RECEIPT_UNREADABLE: 'errors.receipt_unreadable',
+	SPREADSHEET_UNREADABLE: 'errors.spreadsheet_unreadable',
+	SPREADSHEET_TOO_LARGE: 'errors.spreadsheet_too_large'
 };
 
 export function messageForCode(code: string): string {

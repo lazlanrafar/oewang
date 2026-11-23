@@ -10,6 +10,7 @@ use axum::{
     response::IntoResponse,
     Json,
 };
+use base64::{engine::general_purpose::STANDARD, Engine};
 use chrono::{DateTime, NaiveDate, TimeZone, Utc};
 use oewang_db::repositories::{
     audit::AuditRow,
@@ -519,6 +520,13 @@ pub struct BulkUpdateBody {
     pub category_id: Option<String>,
 }
 
+/// An `.xlsx` to read, as standard base64: the vault chunk's encoding, so
+/// the bytes travel inside the OWE1 envelope like any file's (D111).
+#[derive(Debug, Deserialize)]
+pub struct SpreadsheetBody {
+    pub data: String,
+}
+
 /// A file's rows, as they came out of it, plus what each column holds.
 ///
 /// The amounts are strings exactly as the file wrote them. They are parsed
@@ -937,6 +945,31 @@ pub async fn import_csv(
 
     match result {
         Ok(outcome) => Ok(Json(Envelope::data(bulk_view(outcome), id))),
+        Err(error) => Err(ApiError::new(error, id)),
+    }
+}
+
+/// Step one of the wizard for a spreadsheet: the file in, its columns and
+/// rows of text out, the shape the browser makes of a CSV (D111). The same
+/// role as the import it leads to, though nothing is written here.
+pub async fn import_xlsx(
+    State(state): State<AppState>,
+    _auth: AuthWrite,
+    request_id: RequestId,
+    Json(body): Json<SpreadsheetBody>,
+) -> std::result::Result<Json<Envelope<oewang_domain::spreadsheet::Sheet>>, ApiError> {
+    let id = request_id.0;
+
+    let result = async {
+        let bytes = STANDARD
+            .decode(body.data.as_bytes())
+            .map_err(|_| AppError::validation([("data", "The file is not valid base64.")]))?;
+        service::read_spreadsheet(bytes, state.config.import_row_limit).await
+    }
+    .await;
+
+    match result {
+        Ok(sheet) => Ok(Json(Envelope::data(sheet, id))),
         Err(error) => Err(ApiError::new(error, id)),
     }
 }

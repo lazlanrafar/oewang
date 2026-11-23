@@ -16,6 +16,7 @@ pub mod money;
 pub mod owe1;
 pub mod receipt;
 pub mod secret;
+pub mod spreadsheet;
 pub mod tools;
 
 pub use auth::Role;
