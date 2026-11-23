@@ -293,7 +293,7 @@ fn review_of(
     })
 }
 
-fn mapping() -> ColumnMapping {
+pub(super) fn mapping() -> ColumnMapping {
     ColumnMapping {
         date: Some(COLUMN_DATE.into()),
         name: Some(COLUMN_DESCRIPTION.into()),
@@ -311,7 +311,7 @@ fn mapping() -> ColumnMapping {
 /// The direction decides which column the figure lands in, and nothing
 /// else about the figure is touched here: it stays the string the model
 /// produced until `csv_import::parse_amount` reads it (D12, D28).
-fn shape(row: &crate::ai::extraction::StatementRow) -> BTreeMap<String, String> {
+pub(super) fn shape(row: &crate::ai::extraction::StatementRow) -> BTreeMap<String, String> {
     let mut shaped = BTreeMap::new();
     shaped.insert(
         COLUMN_DATE.to_string(),

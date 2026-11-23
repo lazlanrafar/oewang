@@ -517,7 +517,7 @@ Requirements: AI-4, AI-5, AI-6, TXN-16, TXN-17, SEC-18, SEC-21
 - [x] Imported, skipped and duplicate counts written back on completion; capped at 5,000 rows
 - [x] A job `pending` past 10 minutes reports as stale and the modal offers a retry
 - [x] A failed job keeps its uploaded file, so a retry does not re-upload
-- [ ] Re-importing the same statement twice creates nothing the second time
+- [x] Re-importing the same statement twice creates nothing the second time. Tested through the job's own import step; it holds as long as extraction returns the same rows, which the PDF text path does and the vision fallback does not promise
 - [x] The modal polls every 2 seconds and shows the review screen
 - [ ] Verify in browser
 
@@ -567,7 +567,7 @@ Requirements: all
 - [x] Each feature doc's "Update this doc when" list is accurate
 - [x] `docs/ENV_VARS.md` generated from the running configuration
 - [x] `CLAUDE.md` at the root points at the index and states the layer rules
-- [ ] Every requirement ID in the [PRD](prd.md#6-requirements) has a passing test or a browser-verified story, or is listed as not done with a reason. `scripts/coverage.py` proves all 141 are named by a story and runs in CI; the stronger half, that each is actually exercised, waits on the browser pass below
+- [ ] Every requirement ID in the [PRD](prd.md#6-requirements) has a passing test or a browser-verified story, or is listed as not done with a reason. `scripts/coverage.py` proves all 184 are named by a story (every prefix, and ranges such as MCP-1 to MCP-8, since 2026-11-23) and runs in CI; the stronger half, that each is actually exercised, waits on the browser pass below
 
 
 ---

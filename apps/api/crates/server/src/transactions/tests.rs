@@ -2010,6 +2010,50 @@ mod statement_jobs {
         assert_eq!(stored["truncated"], false);
     }
 
+    /// The job's own import step, run twice over one statement's rows: the
+    /// second run writes nothing and counts every row as a duplicate (AI-6).
+    /// The model is left out because the rows it returns are the input here;
+    /// what is under test is everything after it.
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn should_create_nothing_when_a_statement_is_imported_again(pool: PgPool) {
+        fixture(&pool, "IDR").await;
+        let cash = wallet(&pool, "w_cash", "IDR").await;
+
+        let row = |date: &str, name: &str, amount: &str, direction: &str| {
+            statement::shape(&crate::ai::extraction::StatementRow {
+                date: Some(date.into()),
+                description: Some(name.into()),
+                amount: Some(amount.into()),
+                direction: Some(direction.into()),
+            })
+        };
+        let rows = vec![
+            row("2026-11-02", "WARUNG TEKKO", "87500", "expense"),
+            row("2026-11-01", "SALARY", "12000000", "income"),
+        ];
+
+        let mapping = statement::mapping();
+        let categories = std::collections::BTreeMap::new();
+        let import = || {
+            service::import_rows(
+                &pool,
+                actor().with_source(crate::audit::SOURCE_IMPORT),
+                &cash,
+                &mapping,
+                &rows,
+                &categories,
+                IMPORT_LIMIT,
+            )
+        };
+
+        let first = import().await.unwrap();
+        assert_eq!((first.created, first.duplicates), (2, 0));
+
+        let again = import().await.unwrap();
+        assert_eq!((again.created, again.duplicates), (0, 2));
+        assert_eq!(balance(&pool, &cash).await, decimal("11912500"));
+    }
+
     #[sqlx::test(migrations = "../../migrations")]
     async fn should_record_a_failure_as_a_code_and_nothing_else(pool: PgPool) {
         fixture(&pool, "IDR").await;

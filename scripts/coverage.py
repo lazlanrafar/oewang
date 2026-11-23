@@ -17,12 +17,14 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-PREFIXES = "PLT|AUTH|TXN|VLT|CHAT|AI|UI|SEC|OPS|TG|OVR|USG"
 
 #: A requirement is *defined* by a row in one of the PRD's tables, which is
-#: what distinguishes a definition from the hundreds of references.
-DEFINITION = re.compile(rf"^\|\s*((?:{PREFIXES})-\d+)\s*\|")
-REFERENCE = re.compile(rf"(?:{PREFIXES})-\d+")
+#: what distinguishes a definition from the hundreds of references. Any
+#: prefix: a fixed list once skipped every area added after it (BUD, MCP...).
+DEFINITION = re.compile(r"^\|\s*([A-Z]+-\d+)\s*\|")
+REFERENCE = re.compile(r"[A-Z]+-\d+")
+#: "MCP-1 to MCP-8" names all eight, as a story's requirements line does.
+RANGE = re.compile(r"\b([A-Z]+)-(\d+) to \1-(\d+)\b")
 
 
 def main() -> int:
@@ -33,7 +35,10 @@ def main() -> int:
         if (match := DEFINITION.match(line))
     }
 
-    named = set(REFERENCE.findall((ROOT / "docs/backlog.md").read_text()))
+    backlog = (ROOT / "docs/backlog.md").read_text()
+    named = set(REFERENCE.findall(backlog))
+    for prefix, low, high in RANGE.findall(backlog):
+        named.update(f"{prefix}-{n}" for n in range(int(low), int(high) + 1))
     missing = sorted(
         defined - named, key=lambda id: (id.split("-")[0], int(id.split("-")[1]))
     )
