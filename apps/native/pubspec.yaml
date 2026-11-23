@@ -47,6 +47,11 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
+  # sentry_flutter 10 ships only as a Swift package, so iOS resolves plugins
+  # through SwiftPM (CocoaPods stays for the plugins that still need it).
+  config:
+    enable-swift-package-manager: true
+
   # Configuration comes from --dart-define-from-file=env/<name>.json, never
   # from a bundled asset (docs/features/mobile.md#configuration).
   assets:
