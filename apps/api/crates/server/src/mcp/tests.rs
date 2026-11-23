@@ -484,6 +484,7 @@ fn state(pool: &PgPool) -> crate::state::AppState {
         max_file_bytes: 10 * 1024 * 1024,
         import_row_limit: 5000,
         trust_proxy_headers: false,
+        app_relay_key: None,
     };
     crate::state::AppState {
         db: pool.clone(),
