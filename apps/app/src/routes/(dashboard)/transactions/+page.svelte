@@ -88,18 +88,20 @@
 	 * filters: a changed filter is a different list and resets it, while a
 	 * changed page number is more of the same list and appends.
 	 */
-	const held = pagedRows<TransactionRow>();
+	const loaded = $derived({
+		rows: data.transactions.map((transaction) => toRow(transaction)),
+		page: data.meta.page ?? 1,
+		key: data.filterKey
+	});
+	// Seeded from the load, so the server render and the first paint show the rows.
+	const held = pagedRows<TransactionRow>(untrack(() => loaded));
 
 	$effect(() => {
 		// Only `data` is read inside the tracked part. `update` reads the
 		// rows and the page it is holding, and those are state this effect
 		// writes: tracked, the effect would depend on its own output and run
 		// until the browser gave up, which is exactly what it did.
-		const next = {
-			rows: data.transactions.map((transaction) => toRow(transaction)),
-			page: data.meta.page ?? 1,
-			key: data.filterKey
-		};
+		const next = loaded;
 		untrack(() => held.update(next));
 	});
 

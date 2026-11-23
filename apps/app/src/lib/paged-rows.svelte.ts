@@ -35,14 +35,21 @@ export type PagedRows<T extends { id: string }> = {
  * the call site and the state stays genuinely private: there is no instance
  * for a component to assign `rows` on by accident.
  */
-export function pagedRows<T extends { id: string }>(): PagedRows<T> & {
+export function pagedRows<T extends { id: string }>(
+	/**
+	 * The page the load already returned. The update effect never runs on the
+	 * server and runs only after the first paint, so without this the first
+	 * render shows the empty state over rows the load did return.
+	 */
+	first?: PageOfRows<T>
+): PagedRows<T> & {
 	update(next: PageOfRows<T>): void;
 } {
-	let rows = $state<T[]>([]);
-	let lastPage = $state(0);
+	let rows = $state<T[]>(first?.rows ?? []);
+	let lastPage = $state(first?.page ?? 0);
 	// Null rather than an empty string, because an empty query string is a
 	// real key: the unfiltered list.
-	let key = $state<string | null>(null);
+	let key = $state<string | null>(first?.key ?? null);
 
 	return {
 		get rows() {
