@@ -696,7 +696,7 @@ Requirements: VLT-13, VLT-5, VLT-7, TXN-13
 - [x] Form sheet: tiles plus the picker; a drop uploads straight to the vault
 - [x] Detail sheet: the Attachments section open by default; a writer removes a tile or adds through the picker, and the change saves at once through `?/setAttachments`
 - [x] An attachment tile opens the vault file sheet over the detail sheet (`?file=` on `/transactions`)
-- [ ] Verify in browser: attach from the picker, remove a tile in the detail sheet, open a file over a transaction
+- [x] Verify in browser: attach from the picker, remove a tile in the detail sheet, open a file over a transaction (2026-11-23, `e2e/vault.spec.ts`)
 
 ### US-050: Usage tracking and the settings page
 Requirements: USG-1, USG-2, USG-3
@@ -782,7 +782,7 @@ Requirements: AUTH-11, AUTH-12, AUTH-13
 - [x] `GET/PUT/DELETE /v1/auth/me/avatar`: sniffed, decoded under limits, stored as a 256px JPEG, removed after commit (Rust test); the browser shrinks a photo to 512px before sending it
 - [x] Sessions listed; Sign out of all devices asks first
 - [x] clippy, `cargo test`, `bun run check` and `bun run test` pass in the containers
-- [ ] Verify in browser: change a password, sign out of all devices
+- [x] Verify in browser: change a password, sign out of all devices (2026-11-23, `e2e/workspace.spec.ts`: a second browser loses its session)
 
 ### US-053: Receipts wait for the reader
 Requirements: AI-12
@@ -825,7 +825,7 @@ Requirements: WS-3, WS-4, WAL-6, FB-1
 - [x] `feedback` table (migration 0015) and `POST /v1/feedback`, any role, audited (Rust tests); `/settings/feedback` form
 - [x] clippy, `cargo test`, `bun run check` and `bun run test` pass in the containers
 - [x] Verified locally: invite and copy the link, a wrong-address accept is refused and leaves the link usable, revoke keeps the Invitations tab, the locked currency explains itself, feedback lands in the table
-- [ ] Verify locally: accept as the invited account, change a role, remove a member, change the currency of a workspace with no transactions
+- [x] Verify locally: accept as the invited account, change a role, remove a member, change the currency of a workspace with no transactions (2026-11-23, `e2e/workspace.spec.ts`)
 - [ ] Verify in production after deploy
 
 ### US-059: Convert the workspace currency
@@ -836,7 +836,7 @@ Requirements: WAL-6, WAL-7
 - [x] `/settings/currency`: when locked, an owner picks the new currency (`?to=`), gets the newest stored rate to edit, a warning that all data will use this one rate, and a confirm that needs the new code typed
 - [x] clippy, `cargo test`, `bun run check` and `bun run test` pass in the containers
 - [x] Verified locally: the warning, the prefilled rate and counts, the confirm dialog (no conversion run on the real local workspace)
-- [ ] Verify end to end on a throwaway workspace: convert, then check transactions, overview and budgets read in the new currency
+- [x] Verify end to end on a throwaway workspace: convert, then check transactions, overview and budgets read in the new currency (2026-11-23, `e2e/workspace.spec.ts`: IDR to USD, then overview, budgets and the transaction detail read USD)
 - [ ] Verify in production after deploy
 
 ## M13. MCP

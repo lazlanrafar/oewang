@@ -12,13 +12,13 @@ name or a comment); a backlog story that names the ID and has its "Verify
 in browser" box ticked; or a written reason it is not done.
 
 - 134 with test evidence
-- 26 verified in browser only
-- 24 not done
+- 28 verified in browser only
+- 22 not done
 
 | ID | Evidence |
 |---|---|
 | AI-1 | `apps/api/crates/server/src/ai/service.rs`, `apps/api/crates/server/src/main.rs` |
-| AI-2 | `apps/api/crates/server/src/ai/service.rs`, `apps/api/crates/server/src/main.rs` |
+| AI-2 | `apps/api/crates/server/src/ai/service.rs`, `apps/api/crates/server/src/main.rs`, `apps/app/e2e/ai-flows.spec.ts` |
 | AI-3 | `apps/api/crates/server/src/ai/service.rs` |
 | AI-4 | `apps/api/crates/server/src/main.rs`, `apps/api/crates/server/src/transactions/tests.rs` |
 | AI-5 | `apps/api/crates/server/src/transactions/statement.rs` |
@@ -116,7 +116,7 @@ in browser" box ticked; or a written reason it is not done.
 | SEC-12 | `apps/api/crates/domain/src/files.rs` |
 | SEC-13 | `apps/api/crates/domain/src/files.rs`, `apps/api/crates/server/src/vault/tests.rs` |
 | SEC-14 | not done: an absence: no handler takes a URL to fetch; a test cannot show something is missing everywhere |
-| SEC-15 | `apps/app/src/lib/security-headers.test.ts` |
+| SEC-15 | `apps/app/e2e/vault.spec.ts`, `apps/app/src/lib/security-headers.test.ts` |
 | SEC-16 | `apps/api/crates/server/src/hardening_tests.rs` |
 | SEC-17 | `apps/api/crates/server/src/hardening_tests.rs` |
 | SEC-18 | `apps/api/crates/server/src/hardening_tests.rs`, `apps/api/crates/server/src/main.rs`, `apps/api/crates/server/src/transactions/tests.rs`, `apps/api/crates/server/src/vault/tests.rs` |
@@ -150,7 +150,7 @@ in browser" box ticked; or a written reason it is not done.
 | TXN-10 | `apps/api/crates/server/src/transactions/tests.rs` |
 | TXN-11 | `apps/api/crates/server/src/transactions/tests.rs` |
 | TXN-12 | `apps/api/crates/server/src/transactions/tests.rs`, `apps/app/src/lib/receipt.test.ts` |
-| TXN-13 | verified in browser by US-019, US-024 |
+| TXN-13 | verified in browser by US-019, US-024, US-049 |
 | TXN-14 | verified in browser by US-020 |
 | TXN-15 | `apps/ai/tests/test_auth_integration.py`, `apps/api/crates/server/src/ai/tool_tests.rs` |
 | TXN-16 | `apps/api/crates/server/src/transactions/tests.rs` |
@@ -161,12 +161,12 @@ in browser" box ticked; or a written reason it is not done.
 | TXN-21 | verified in browser by US-018 |
 | TXN-22 | `apps/api/crates/server/src/transactions/tests.rs` |
 | TXN-23 | `apps/api/crates/server/src/transactions/tests.rs` |
-| UI-1 | verified in browser by US-006, US-009 |
+| UI-1 | verified in browser by US-006, US-009, US-013 |
 | UI-2 | verified in browser by US-017, US-018, US-031 |
 | UI-3 | verified in browser by US-006 |
 | UI-4 | verified in browser by US-019 |
 | UI-5 | verified in browser by US-013, US-018 |
-| UI-6 | `apps/app/e2e/accessibility.spec.ts` |
+| UI-6 | `apps/app/e2e/accessibility.spec.ts`, `apps/app/e2e/accounts.spec.ts` |
 | UI-7 | `apps/app/e2e/accessibility.spec.ts` |
 | UI-8 | `apps/app/e2e/transactions.spec.ts` |
 | UI-9 | `apps/api/crates/server/src/auth/account.rs`, `apps/app/src/lib/colors.test.ts` |
@@ -180,19 +180,19 @@ in browser" box ticked; or a written reason it is not done.
 | VLT-4 | `apps/api/crates/server/src/vault/tests.rs` |
 | VLT-5 | `apps/api/crates/server/src/transactions/tests.rs` |
 | VLT-6 | `apps/api/crates/server/src/vault/tests.rs` |
-| VLT-7 | not done: the file sheet is UI only; US-048 and US-049 have unticked browser boxes |
+| VLT-7 | verified in browser by US-049 |
 | VLT-8 | `apps/api/crates/server/src/vault/service.rs`, `apps/api/crates/server/src/vault/tests.rs` |
 | VLT-9 | `apps/api/crates/domain/src/files.rs` |
 | VLT-10 | not done: the count of transactions carrying a file is tested (vault/tests.rs, used_by), the newest-20 list in the sheet is not |
 | VLT-11 | `apps/api/crates/server/src/vault/tests.rs` |
 | VLT-12 | `apps/api/crates/server/src/vault/tests.rs`, `apps/app/src/lib/files.test.ts` |
-| VLT-13 | not done: attachment tiles and the vault picker are UI only; US-049 has an unticked browser box |
-| WAL-1 | verified in browser by US-013 |
+| VLT-13 | verified in browser by US-049 |
+| WAL-1 | verified in browser by US-013, US-013 |
 | WAL-2 | `apps/api/crates/server/src/accounts/handler.rs`, `apps/api/crates/server/src/accounts/tests.rs`, `apps/app/src/lib/wallets.test.ts` |
 | WAL-3 | `apps/api/crates/server/src/accounts/tests.rs` |
 | WAL-4 | `apps/api/crates/server/src/accounts/tests.rs` |
-| WAL-5 | verified in browser by US-018 |
-| WAL-6 | verified in browser by US-018 |
+| WAL-5 | verified in browser by US-013, US-018 |
+| WAL-6 | verified in browser by US-013, US-018 |
 | WAL-7 | `apps/api/crates/server/src/main.rs`, `apps/api/crates/server/src/workspaces/currency_tests.rs` |
 | WS-1 | verified in browser by US-051 |
 | WS-2 | verified in browser by US-051 |
