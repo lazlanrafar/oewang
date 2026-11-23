@@ -46,10 +46,10 @@ Future<void> main() async {
 Breadcrumb? _stripHttpBreadcrumb(Breadcrumb? crumb, Hint hint) {
   if (crumb == null || crumb.type != 'http') return crumb;
   final data = crumb.data ?? const <String, dynamic>{};
-  return crumb.copyWith(
-    data: {
+  // Sentry 9 made Breadcrumb mutable and dropped copyWith.
+  return crumb
+    ..data = {
       if (data['method'] != null) 'method': data['method'],
       if (data['status_code'] != null) 'status_code': data['status_code'],
-    },
-  );
+    };
 }
