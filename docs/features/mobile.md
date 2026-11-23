@@ -173,7 +173,9 @@ SCREENSHOT_DIR=/tmp/shots fvm flutter drive -d <simulator id> \
   --dart-define-from-file=env/dev.json
 ```
 
-`scripts/ci-local.sh` runs both in its `native` stage.
+The M2 screens (accounts and their opening balance, groups, include in totals, categories, a budget and the expense that spends it, stats, profile name, colours, feedback, members, then the read-only role) are `integration_test/m2_screens_flow_test.dart`. It signs in as its own owner and viewer, passed as `--dart-define=M2_EMAIL=... M2_PASSWORD=... M2_VIEWER_EMAIL=... M2_VIEWER_PASSWORD=...`; add `M2_SIGNUP=true` and `M2_VIEWER_SIGNUP=true` on the first run only, since register is rate limited. Push permission is faked out there: the iOS prompt is a system alert that outlives the app and blanks simulator screenshots.
+
+`scripts/ci-local.sh` runs the analyzer and `flutter test` in its `native` stage; the device flows run by hand.
 
 ## Release
 
