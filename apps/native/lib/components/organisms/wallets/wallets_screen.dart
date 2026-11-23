@@ -18,6 +18,7 @@ final accountsVmProvider =
         wallets: ref.watch(walletsRepositoryProvider),
         groups: ref.watch(walletGroupsRepositoryProvider),
         workspaces: ref.watch(workspacesRepositoryProvider),
+        lastCurrency: () => ref.read(syncServiceProvider).lastCurrency(),
       ),
     );
 
@@ -49,7 +50,10 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
     final vm = ref.watch(accountsVmProvider);
     final canWrite = ref.watch(canWriteProvider);
     final palette = context.palette;
-    ref.listen<int>(walletsRevisionProvider, (_, _) => vm.load());
+    ref
+      ..listen<int>(walletsRevisionProvider, (_, _) => vm.load())
+      // A saved transaction moves balances; this tab stays mounted in the shell.
+      ..listen<int>(transactionsRevisionProvider, (_, _) => vm.load());
 
     return Scaffold(
       body: SafeArea(

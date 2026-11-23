@@ -22,7 +22,7 @@ apps/native/lib/
     repositories/  abstract interfaces
     repositories_remote/   one per resource, over ApiClient
     repositories_fake/     in-memory, for widget tests
-    repositories_offline/  transactions, wallets, categories: cache reads, queued writes (MOB-6)
+    repositories_offline/  transactions, wallets, categories: cache reads, queued writes; wallet groups: cache reads (MOB-6)
     services/api/  ApiClient (Dio), auth interceptor, owe1/ (handshake, envelope)
     services/db/   drift: cached rows and the write queue (MOB-6)
     services/sync/ queue replay and conflict handling (MOB-6, MOB-7)
@@ -131,10 +131,10 @@ As built (`lib/data/services/{db,sync}`, `lib/data/repositories_offline/`):
 - A write goes straight to the API when the device is online and nothing is queued or in conflict. Offline, behind a queue, or when that request gets no answer, it is queued and applied to the cache at once. A direct edit sends no `If-Match`, like the web; a queued one always does.
 - When an entry lands, the edits queued behind it for the same row take the `updated_at` it answered as their base. A conflict holds back later entries for its row only. Discarding it does not rebase them, so each later edit is checked against the current row in turn rather than applied silently.
 - `401` and `429` are retried like a `5xx`. A `404` on a delete counts as done. A refused entry stays in the banner until it is discarded; discarding puts back the row as it was before the change.
-- Reads: wallets and categories refresh whole from the API when online and answer from the cache. A whole month of transactions (what the month tabs read) refreshes every page on its first page and answers from the cache; other ranges read the API online and the cached months offline. The month summary falls back to the cached rows' `base_amount` and the last workspace currency seen. A row queued offline holds its own amount as `base_amount` until it syncs, and a queued transfer between two currencies estimates the receiving side with the sent amount.
+- Reads: wallets, wallet groups and categories refresh whole from the API when online and answer from the cache, so the account form can still pick a group offline. A whole month of transactions (what the month tabs read) refreshes every page on its first page and answers from the cache; other ranges read the API online and the cached months offline. The month summary falls back to the cached rows' `base_amount` and the last workspace currency seen; the Accounts tab adds up in that same currency when the workspace cannot be fetched, and reloads after every transaction save, queued or sent. A row queued offline holds its own amount as `base_amount` until it syncs, and a queued transfer between two currencies estimates the receiving side with the sent amount.
 - Replay runs on start, when connectivity returns, when the app comes back to the foreground, after a workspace change, and on a backoff timer (2 s doubling to 5 min) after a failed attempt. There is no background task.
 - A member never queues: the write goes to the API, which refuses it, or the network error is shown.
-- Not offline: wallet and category reorder, a wallet's opening balance (`/adjust`), attachments.
+- Not offline: wallet and category reorder, wallet group writes, a wallet's opening balance (`/adjust`), attachments.
 
 ## Push (D116)
 

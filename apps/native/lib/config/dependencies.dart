@@ -30,6 +30,7 @@ import 'package:oewang/data/repositories/wallets_repository.dart';
 import 'package:oewang/data/repositories/workspaces_repository.dart';
 import 'package:oewang/data/repositories_offline/categories_repository_offline.dart';
 import 'package:oewang/data/repositories_offline/transactions_repository_offline.dart';
+import 'package:oewang/data/repositories_offline/wallet_groups_repository_offline.dart';
 import 'package:oewang/data/repositories_offline/wallets_repository_offline.dart';
 import 'package:oewang/data/repositories_remote/auth_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/budgets_repository_remote.dart';
@@ -177,7 +178,12 @@ final walletsRepositoryProvider = Provider<WalletsRepository>((ref) {
 });
 
 final walletGroupsRepositoryProvider = Provider<WalletGroupsRepository>((ref) {
-  return WalletGroupsRepositoryRemote(ref.watch(apiClientProvider));
+  final api = ref.watch(apiClientProvider);
+  return WalletGroupsRepositoryOffline(
+    remote: WalletGroupsRepositoryRemote(api),
+    api: api,
+    sync: ref.watch(syncServiceProvider),
+  );
 });
 
 /// Bumped whenever a wallet is created/edited/deleted so account-related

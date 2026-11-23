@@ -1,6 +1,7 @@
 import 'package:decimal/decimal.dart';
 import 'package:flutter/foundation.dart';
 import 'package:oewang/core/result/app_error.dart';
+import 'package:oewang/core/result/result.dart';
 import 'package:oewang/data/repositories/wallet_groups_repository.dart';
 import 'package:oewang/data/repositories/wallets_repository.dart';
 import 'package:oewang/data/repositories/workspaces_repository.dart';
@@ -33,15 +34,21 @@ class AccountsViewModel extends ChangeNotifier {
     required WalletsRepository wallets,
     required WalletGroupsRepository groups,
     required WorkspacesRepository workspaces,
+    Future<String?> Function()? lastCurrency,
   }) : _wallets = wallets,
        _groups = groups,
-       _workspaces = workspaces {
+       _workspaces = workspaces,
+       _lastCurrency = lastCurrency ?? (() async => null) {
     ready = load();
   }
 
   final WalletsRepository _wallets;
   final WalletGroupsRepository _groups;
   final WorkspacesRepository _workspaces;
+
+  /// The workspace currency last seen online, so the tab still adds up
+  /// offline (MOB-6) instead of failing on the workspace fetch.
+  final Future<String?> Function() _lastCurrency;
 
   /// Resolves once the initial [load] completes — await in tests instead of
   /// guessing a delay.
@@ -80,10 +87,14 @@ class AccountsViewModel extends ChangeNotifier {
       _error ??= e;
       return <WalletGroup>[];
     });
-    _currency = workspaceRes.fold((w) => w.currencyCode, (e) {
-      _error ??= e;
-      return '';
-    });
+    switch (workspaceRes) {
+      case Success(:final value):
+        _currency = value.currencyCode;
+      case Failure(:final error):
+        final last = await _lastCurrency();
+        if (last == null) _error ??= error;
+        _currency = last ?? '';
+    }
 
     final byGroup = <String?, List<Wallet>>{};
     for (final w in allWallets) {

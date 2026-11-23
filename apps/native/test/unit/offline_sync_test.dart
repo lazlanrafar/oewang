@@ -11,9 +11,11 @@ import 'package:oewang/data/repositories/transactions_repository.dart';
 import 'package:oewang/data/repositories/wallets_repository.dart';
 import 'package:oewang/data/repositories_offline/categories_repository_offline.dart';
 import 'package:oewang/data/repositories_offline/transactions_repository_offline.dart';
+import 'package:oewang/data/repositories_offline/wallet_groups_repository_offline.dart';
 import 'package:oewang/data/repositories_offline/wallets_repository_offline.dart';
 import 'package:oewang/data/repositories_remote/categories_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/transactions_repository_remote.dart';
+import 'package:oewang/data/repositories_remote/wallet_groups_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/wallets_repository_remote.dart';
 import 'package:oewang/data/services/api/api_client.dart';
 import 'package:oewang/data/services/db/app_database.dart';
@@ -32,6 +34,7 @@ class FakeApi implements HttpClientAdapter {
     'wallets': {},
     'categories': {},
     'transactions': {},
+    'wallet-groups': {},
   };
   final deleted = <String>{};
   final log = <String>[];
@@ -226,6 +229,11 @@ class Harness {
       api: api,
       sync: sync,
     );
+    groups = WalletGroupsRepositoryOffline(
+      remote: WalletGroupsRepositoryRemote(api),
+      api: api,
+      sync: sync,
+    );
   }
 
   final server = FakeApi();
@@ -235,6 +243,7 @@ class Harness {
   late final TransactionsRepositoryOffline transactions;
   late final WalletsRepositoryOffline wallets;
   late final CategoriesRepositoryOffline categories;
+  late final WalletGroupsRepositoryOffline groups;
   int synced = 0;
 
   Future<void> offline() async {
@@ -650,5 +659,16 @@ void main() {
     );
     expect(res, isA<Failure<Category, AppError>>());
     expect(await h.queue(), isEmpty);
+  });
+
+  test('MOB-6: offline, wallet groups read from the cache, so the account '
+      'form can still pick one', () async {
+    h.server
+      ..seed('wallet-groups', {'id': 'g1', 'name': 'Cash'})
+      ..seed('wallet-groups', {'id': 'g2', 'name': 'Bank'});
+    expect((await h.groups.list()).ok.map((g) => g.name), ['Cash', 'Bank']);
+    await h.offline();
+    h.server.unreachable = true;
+    expect((await h.groups.list()).ok.map((g) => g.name), ['Cash', 'Bank']);
   });
 }
