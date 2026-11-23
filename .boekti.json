@@ -1,0 +1,11 @@
+{
+  "url": "https://boekti.lazlanrafar.com",
+  "organization": "lazlanrafar",
+  "project": "OEW",
+  "agents": [
+    {
+      "name": "oewang",
+      "path": "."
+    }
+  ]
+}

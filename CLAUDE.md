@@ -133,3 +133,13 @@ New requirement IDs are appended, never renumbered.
 Do not add these back without a new PRD. Each was considered and rejected, and the reasoning is in [docs/prd.md](docs/prd.md#non-goals-for-v1) and [docs/security/ai-safety.md](docs/security/ai-safety.md#what-is-deliberately-not-built):
 
 Invoices, debts, contacts, document RAG over the vault (the vault itself came back in D90), billing and quotas (usage is recorded but never limited, D92), integrations, OAuth login, notifications, a background worker, web search in chat, external app tools, bulk write tools, embedding-based tool selection, and a second UI locale.
+
+<!-- boekti:start -->
+## Boekti
+
+This repo reports agent sessions to Boekti (project `OEW`, see `.boekti.json`). Hooks report the session and claim edited files: do not check Boekti yourself or poll it.
+
+- A denied edit means another session holds the file: comment on the ticket, never work around it.
+- Starting a ticket, changing docs, saving a project fact or finishing: read `.agents/skills/boekti/SKILL.md` first and follow it.
+- No Boekti block at session start: call `list_memories` (project `OEW`) once.
+<!-- boekti:end -->

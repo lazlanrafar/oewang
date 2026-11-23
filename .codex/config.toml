@@ -1,0 +1,3 @@
+[mcp_servers.boekti]
+url = "https://boekti.lazlanrafar.com/mcp"
+bearer_token_env_var = "BOEKTI_TOKEN"
