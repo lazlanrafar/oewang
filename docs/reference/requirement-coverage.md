@@ -12,8 +12,8 @@ name or a comment); a backlog story that names the ID and has its "Verify
 in browser" box ticked; or a written reason it is not done.
 
 - 134 with test evidence
-- 28 verified in browser only
-- 22 not done
+- 29 verified in browser only
+- 21 not done
 
 | ID | Evidence |
 |---|---|
@@ -180,10 +180,10 @@ in browser" box ticked; or a written reason it is not done.
 | VLT-4 | `apps/api/crates/server/src/vault/tests.rs` |
 | VLT-5 | `apps/api/crates/server/src/transactions/tests.rs` |
 | VLT-6 | `apps/api/crates/server/src/vault/tests.rs` |
-| VLT-7 | verified in browser by US-049 |
+| VLT-7 | verified in browser by US-048, US-049 |
 | VLT-8 | `apps/api/crates/server/src/vault/service.rs`, `apps/api/crates/server/src/vault/tests.rs` |
 | VLT-9 | `apps/api/crates/domain/src/files.rs` |
-| VLT-10 | not done: the count of transactions carrying a file is tested (vault/tests.rs, used_by), the newest-20 list in the sheet is not |
+| VLT-10 | verified in browser by US-048 |
 | VLT-11 | `apps/api/crates/server/src/vault/tests.rs` |
 | VLT-12 | `apps/api/crates/server/src/vault/tests.rs`, `apps/app/src/lib/files.test.ts` |
 | VLT-13 | verified in browser by US-049 |

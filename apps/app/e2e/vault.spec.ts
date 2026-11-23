@@ -221,7 +221,9 @@ test.describe('the vault page and file sheet (US-048)', () => {
 		await expect(sheet.getByText('PDF').first()).toBeVisible();
 		// SEC-15: `frame-src blob:` lets the frame load.
 		expect(csp).toEqual([]);
-		// Headless Chromium has no PDF viewer, so the frame paints blank here.
+		// Headless Chromium has no PDF viewer, so the frame paints blank there;
+		// a headed Chromium-family browser draws the page after a moment.
+		await page.waitForTimeout(2000);
 		await page.screenshot({ path: SHOT('pdf-preview') });
 	});
 

@@ -683,7 +683,7 @@ Requirements: VLT-6, VLT-7, VLT-8, VLT-9, VLT-10, VLT-11, UI-8
 - [x] `organisms/vault/vault-file-sheet`: preview box, rename, date created, format and size, tags with suggestions and a custom input, linked transactions, "View full" with its menu, delete behind a confirmation that counts the transactions
 - [x] File proxy routes under `/vault/files` (begin, chunks, complete, the JSON list, the thumbnail); writes post to `/vault?/update` and `/vault?/delete`
 - [x] CSP `frame-src blob:` for the PDF frame, with the header snapshot test updated (SEC-15)
-- [ ] Verify in browser: upload by drop, rename, tag, delete with a count, a PDF and an image preview, dark mode
+- [x] Verify in browser: upload by drop, rename, tag, delete with a count, a PDF and an image preview, dark mode (2026-11-23, `e2e/vault.spec.ts`; the PDF page checked headed in Brave, since headless Chromium has no PDF viewer)
 
 ### US-049: Tiles and the picker on transactions
 Requirements: VLT-13, VLT-5, VLT-7, TXN-13
