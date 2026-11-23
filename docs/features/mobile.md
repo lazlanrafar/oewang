@@ -113,7 +113,7 @@ Adapted from the web app's screens with the old app's components and tokens.
 - **Chat.** `/chat` lists sessions (newest first; long press to rename or delete, delete behind a confirm), `/chat/new` makes the session on the first message, `/chat/:id` opens one. `ApiClient.stream` posts the turn and opens each event under `OWE1|sse|session|request|seq` (`owe1/owe1_stream.dart`); a dropped, reordered or unsealed event ends the turn as failed. A stream that closes without `done` or `error` is also a failure. Stop cancels the subscription, which drops the connection (CHAT-9). Tool calls render as the web's one line ("Used N tools" when several); a `delete_transaction` refused with `CONFIRMATION_REQUIRED` (D20) is a failed call, and the assistant's question is answered in the next message.
 - **Analyses.** An `artifact` (spending, income, burn rate, budget) is drawn inline under its answer instead of in a side canvas, which a phone has no room for, with hatch bars (D93, `molecules/hatch_bar.dart`). Figures are the API's decimals; bar lengths read a double for geometry only (D89).
 - **Not yet on mobile:** Markdown rendering and tappable entity links (text shows the link label only), file attachments in the composer, chat suggestions.
-- **Receipt scan.** Camera or gallery through `image_picker`, re-encoded as JPEG at 2000 px and quality 85 (well under the 10 MB vault limit), uploaded in chunks, then `POST /v1/ai/receipt/parse` with the file id. A draft opens the transaction form prefilled (merchant as the name, date, total, the image attached); `RECEIPT_UNREADABLE` or a draft with neither total nor date opens it with only the image (AI-3). `AI_UNAVAILABLE` or `EXTRACTION_NO_ANSWER` offers `POST /v1/receipts/pending`. The category is not preselected yet, unlike the web.
+- **Receipt scan.** Camera or gallery through `image_picker`, re-encoded as JPEG at 2000 px and quality 85 (well under the 10 MB vault limit), uploaded in chunks, then `POST /v1/ai/receipt/parse` with the file id. A draft opens the transaction form prefilled (merchant as the name, date, total, the image attached); `RECEIPT_UNREADABLE` or a draft with neither total nor date opens it with only the image (AI-3). `AI_UNAVAILABLE`, `EXTRACTION_NO_ANSWER` or a parse that runs out of time (the client's 30 s wait, or the API's own 30 s `408`) offers `POST /v1/receipts/pending`: the image is already in the vault, so a timeout is a reader that did not answer. The category is not preselected yet, unlike the web.
 - **Vault.** `/vault`: search, type (images or PDFs) and sort on the server, 30 per page, tiles from `GET .../thumbnail`. A file opens in a sheet: image preview from the assembled chunks, metadata, "Open or share" through the system share sheet (`share_plus`), and for writers rename and delete, whose confirm says how many transactions lose the file (VLT-11). Tag editing and the linked transaction list stay web-only for now.
 
 ## Offline (D114, D115)
@@ -173,7 +173,21 @@ SCREENSHOT_DIR=/tmp/shots fvm flutter drive -d <simulator id> \
   --dart-define-from-file=env/dev.json
 ```
 
-`scripts/ci-local.sh` runs both in its `native` stage.
+The M4 path (receipt scan, then the vault, then a chat turn over the sealed stream) is `integration_test/m4_ai_flow_test.dart`. It replaces the photo picker's platform with one that returns fixture files, and needs the real AI service. Copy the fixtures out of `~/Documents` first: a simulator app that opens a file there blocks on macOS privacy and freezes.
+
+```bash
+mkdir -p /tmp/oew-fixtures && cp integration_test/fixtures/* /tmp/oew-fixtures/
+fvm flutter drive -d <simulator id> \
+  --driver=test_driver/integration_test.dart \
+  --target=integration_test/m4_ai_flow_test.dart \
+  --dart-define-from-file=env/dev.json \
+  --dart-define=FIXTURES=/tmp/oew-fixtures \
+  --dart-define=M4_EMAIL=<email> --dart-define=M4_PASSWORD=<password>
+```
+
+Without `M4_EMAIL` it signs up a new account and prints the credentials. The receipt step accepts either outcome: the prefilled form, saved, or the queue offer when the reader does not answer; the run prints `M4_RECEIPT` with which one happened.
+
+`scripts/ci-local.sh` runs analyze and the unit tests in its `native` stage; the device paths run by hand.
 
 ## Release
 

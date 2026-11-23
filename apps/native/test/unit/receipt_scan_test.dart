@@ -88,6 +88,18 @@ void main() {
       }
     });
 
+    test('a parse that times out offers the queue too', () async {
+      for (final error in <AppError>[
+        const NetworkError(),
+        const ServerError(statusCode: 408, message: 'Request Timeout'),
+      ]) {
+        final outcome = await scanner(
+          ReceiptsRepositoryFake((_) => Failure(error)),
+        ).scan(image);
+        expect(outcome, isA<ReceiptScanBusy>());
+      }
+    });
+
     test('an unreadable image opens the form with only the file', () async {
       final outcome = await scanner(
         ReceiptsRepositoryFake((_) => _refused('RECEIPT_UNREADABLE')),

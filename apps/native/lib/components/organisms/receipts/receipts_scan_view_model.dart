@@ -57,7 +57,8 @@ class ReceiptScanViewModel {
       case Success(:final value):
         return ReceiptScanDraft(value, readable: !value.isEmpty);
       case Failure(:final error)
-          when ReceiptsRepository.readerBusyCodes.contains(error.code):
+          when ReceiptsRepository.readerBusyCodes.contains(error.code) ||
+              _timedOut(error):
         return ReceiptScanBusy(id);
       case Failure(:final error) when error.code == 'RECEIPT_UNREADABLE':
         return ReceiptScanDraft(ReceiptDraft(vaultFileId: id), readable: false);
@@ -65,6 +66,11 @@ class ReceiptScanViewModel {
         return ReceiptScanFailed(error);
     }
   }
+
+  /// The upload just went through, so a parse that ran out of time (the
+  /// client's wait or the API's 408) is a reader that did not answer.
+  static bool _timedOut(AppError e) =>
+      e is NetworkError || (e is ServerError && e.statusCode == 408);
 
   Future<Result<void, AppError>> queue(String vaultFileId) =>
       _receipts.queue(vaultFileId);
