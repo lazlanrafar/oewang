@@ -75,7 +75,13 @@ _SPELLED = re.compile(r"\b(\d{1,2})\s+([A-Za-z]{3,9})\.?\s+(\d{4})\b")
 
 #: A figure at the end of a line, which is where every receipt and every
 #: statement puts one.
-_TRAILING_AMOUNT = re.compile(r"([0-9][0-9.,  ]*[0-9]|[0-9])\s*$")
+# A figure that starts a token: a digit glued to a word ("MWT00KT3") is part
+# of that word, never the amount's first digit. Spaces inside a figure are
+# only thousands groups of exactly three ("1 234 567"), so "KT3 87500" and
+# "x 2 87500" read 87500, not 387500 or 287500.
+_TRAILING_AMOUNT = re.compile(
+    r"(?<!\S)(\d{1,3}(?:[ \u00a0]\d{3})+(?:[.,]\d{1,4})?|[0-9][0-9.,]*[0-9]|[0-9])\s*$"
+)
 
 #: Grouping separators, resolved only where the pattern leaves no doubt.
 _GROUPED_DOT = re.compile(r"^\d{1,3}(?:\.\d{3})+$")
