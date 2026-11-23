@@ -12,12 +12,16 @@
 //
 // Screenshots land in $SCREENSHOT_DIR (default build/integration_screenshots).
 
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:oewang/app.dart';
 import 'package:oewang/components/atoms/inputs/contexts/input_context_currency.dart';
+import 'package:oewang/components/organisms/auth/auth_onboarding_screen.dart';
+import 'package:oewang/components/organisms/auth/auth_register_screen.dart';
+import 'package:oewang/components/organisms/transactions/transactions_form_screen.dart';
 import 'package:oewang/components/organisms/transactions/transactions_row.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/config/env.dart';
@@ -41,7 +45,12 @@ void main() {
     final end = DateTime.now().add(timeout);
     while (DateTime.now().isBefore(end)) {
       await tester.pump(const Duration(milliseconds: 200));
-      if (finder.evaluate().isNotEmpty) return;
+      if (finder.evaluate().isNotEmpty) {
+        // A page that has just appeared is still sliding in, and a tap during
+        // the transition lands nowhere. Let it finish.
+        await tester.pump(const Duration(milliseconds: 600));
+        return;
+      }
     }
     fail('timed out waiting for $finder');
   }
@@ -52,6 +61,28 @@ void main() {
   }
 
   Finder field(int index) => find.byType(TextField).at(index);
+
+  /// Closes the keyboard and taps a button by its label. The keyboard pushes
+  /// buttons below the fold, and a screen left underneath in the route stack
+  /// can hold a second widget with the same label.
+  Future<void> press(WidgetTester tester, String label) async {
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.ensureVisible(find.text(label).last);
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.text(label).last);
+  }
+
+  /// Saves the transaction form and waits for it to close: the form shows the
+  /// same note and figure as the list behind it.
+  Future<void> saveForm(WidgetTester tester) async {
+    await press(tester, 'Save');
+    for (var i = 0; i < 100; i++) {
+      if (find.byType(TransactionFormScreen).evaluate().isEmpty) return;
+      await tester.pump(const Duration(milliseconds: 200));
+    }
+    fail('the transaction form did not close after Save');
+  }
 
   Future<void> keypad(WidgetTester tester, String digits) async {
     for (final d in digits.split('')) {
@@ -68,6 +99,8 @@ void main() {
 
   testWidgets('MOB-3 MOB-4 sign in, sync, create a workspace, and '
       'create, edit and delete a transaction', (tester) async {
+    // main() does this before the app starts; push needs it (PUSH-1).
+    await Firebase.initializeApp();
     await SecureStorageService().clear();
     final prefs = await PreferencesService.open();
     await tester.pumpWidget(
@@ -93,8 +126,14 @@ void main() {
 
     // 2. Sign out from More.
     await tester.tap(find.text('More'));
-    await waitFor(tester, find.text('Log out'));
-    await tester.scrollUntilVisible(find.text('Log out'), 300);
+    // The list builds lazily and Log out sits below the fold, so wait for the
+    // screen, then scroll to it.
+    await waitFor(tester, find.byType(Scrollable));
+    await tester.scrollUntilVisible(
+      find.text('Log out'),
+      300,
+      scrollable: find.byType(Scrollable).last,
+    );
     await tester.tap(find.text('Log out'));
     await waitFor(tester, find.text('Log out').last);
     await tester.tap(find.text('Log out').last);
@@ -105,17 +144,37 @@ void main() {
     await tester.tap(find.text('Sign up'));
     await waitFor(tester, find.text('Create account'));
     final stamp = DateTime.now().millisecondsSinceEpoch;
-    await tester.enterText(field(0), 'Mobile Test');
-    await tester.enterText(field(1), 'mobile-$stamp@oewang.local');
-    await tester.enterText(field(2), 'mobile-test-password-1');
-    await tester.enterText(field(3), 'mobile-test-password-1');
+    // The login screen stays mounted under the pushed register screen, so
+    // count fields inside the register screen only.
+    Finder signUpField(int i) => find
+        .descendant(
+          of: find.byType(RegisterScreen),
+          matching: find.byType(TextField),
+        )
+        .at(i);
+    await tester.enterText(signUpField(0), 'Mobile Test');
+    await tester.enterText(signUpField(1), 'mobile-$stamp@oewang.local');
+    await tester.enterText(signUpField(2), 'mobile-test-password-1');
+    await tester.enterText(signUpField(3), 'mobile-test-password-1');
     await tester.pump();
-    await tester.tap(find.text('Create account'));
+    // The keyboard pushes the button below the fold; a tap there hits nothing.
+    await tester.ensureVisible(find.text('Create account').last);
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.text('Create account').last);
     await waitFor(tester, find.text('Create workspace'));
-    await tester.enterText(field(0), 'Mobile $stamp');
+    await tester.enterText(
+      find
+          .descendant(
+            of: find.byType(OnboardingScreen),
+            matching: find.byType(TextField),
+          )
+          .first,
+      'Mobile $stamp',
+    );
     await tester.pump();
-    await shot(tester, '03-create-workspace');
-    await tester.tap(find.text('Continue'));
+    await tester.ensureVisible(find.text('Continue').last);
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.text('Continue').last);
     await waitFor(tester, find.text('Trans.'));
     await waitFor(tester, find.text('No transactions this month'));
     await shot(tester, '04-new-workspace-empty');
@@ -143,29 +202,46 @@ void main() {
     await waitFor(tester, find.text(walletName));
     await tester.tap(find.text(walletName).last);
     await tester.pump(const Duration(milliseconds: 500));
-    await tester.enterText(field(0), 'Nasi goreng');
+    await tester.enterText(
+      find
+          .descendant(
+            of: find.byType(TransactionFormScreen),
+            matching: find.byType(TextField),
+          )
+          .first,
+      'Nasi goreng',
+    );
     await tester.pump();
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pump(const Duration(milliseconds: 300));
     await shot(tester, '05-form-create');
-    await tester.tap(find.text('Save'));
+    await saveForm(tester);
     await waitFor(tester, find.text('Nasi goreng'));
     await shot(tester, '06-created');
 
     // 5. Edit: append a zero to the amount, 25.000 -> 250.000.
     await tester.tap(find.text('Nasi goreng'));
-    await waitFor(tester, find.textContaining('25.000'));
-    await tester.tap(find.textContaining('25.000'));
+    final formAmount = find.descendant(
+      of: find.byType(TransactionFormScreen),
+      matching: find.textContaining('25.000'),
+    );
+    await waitFor(tester, formAmount);
+    await tester.tap(formAmount.first);
     await waitFor(tester, find.byType(AmountKeypad));
     await keypad(tester, '0');
     await shot(tester, '07-form-edit');
-    await tester.tap(find.text('Save'));
+    await saveForm(tester);
     await waitFor(tester, find.textContaining('250.000'));
     await shot(tester, '08-edited');
 
     // 6. Delete from the edit form.
     await tester.tap(find.text('Nasi goreng'));
     await waitFor(tester, find.byTooltip('Delete'));
-    await tester.tap(find.byTooltip('Delete'));
+    // Let the form's route finish sliding in; a tap mid-transition misses.
+    await tester.pump(const Duration(milliseconds: 600));
+    await tester.tap(find.byTooltip('Delete').last);
     await waitFor(tester, find.text('Delete transaction?'));
+    await tester.pump(const Duration(milliseconds: 400));
     await tester.tap(find.text('Delete').last);
     await waitFor(tester, find.text('No transactions this month'));
     await shot(tester, '09-deleted');
