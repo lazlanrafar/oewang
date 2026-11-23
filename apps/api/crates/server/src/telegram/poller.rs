@@ -179,7 +179,7 @@ fn start_worker(
 
 /// One update, start to finish. A failure is logged by its code and
 /// answered with an apology; it never stops the chat's queue.
-async fn handle(state: &AppState, bot: &Bot, update: Update) {
+pub(super) async fn handle(state: &AppState, bot: &Bot, update: Update) {
     let chat_id = chat_of(&update);
 
     let result = if let Some(query) = update.callback_query {

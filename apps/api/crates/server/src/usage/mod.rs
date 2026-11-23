@@ -130,6 +130,9 @@ fn clamp(tokens: i64) -> i32 {
 }
 
 #[cfg(test)]
+mod db_tests;
+
+#[cfg(test)]
 mod tests {
     use super::*;
 

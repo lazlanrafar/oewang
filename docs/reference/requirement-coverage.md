@@ -11,9 +11,9 @@ Evidence is, in order of preference: a test file that cites the ID (in a
 name or a comment); a backlog story that names the ID and has its "Verify
 in browser" box ticked; or a written reason it is not done.
 
-- 138 with test evidence
-- 31 verified in browser only
-- 15 not done
+- 145 with test evidence
+- 29 verified in browser only
+- 10 not done
 
 | ID | Evidence |
 |---|---|
@@ -35,7 +35,7 @@ in browser" box ticked; or a written reason it is not done.
 | AUTH-4 | `apps/api/crates/server/src/auth/workspace_param.rs`, `apps/api/crates/server/src/main.rs` |
 | AUTH-5 | `apps/ai/tests/test_auth_integration.py` |
 | AUTH-6 | `apps/api/crates/server/src/main.rs` |
-| AUTH-7 | not done: the 15 minute and 30 day defaults (config.rs) and the httpOnly cookies (session.ts) are not asserted by any test |
+| AUTH-7 | `apps/api/crates/server/src/auth/account.rs`, `apps/api/crates/server/src/config.rs`, `apps/app/src/lib/server/session.test.ts` |
 | AUTH-8 | `apps/api/crates/server/src/auth/token.rs` |
 | AUTH-9 | `apps/ai/tests/test_auth_integration.py` |
 | AUTH-10 | `apps/ai/tests/test_auth_integration.py` |
@@ -129,15 +129,15 @@ in browser" box ticked; or a written reason it is not done.
 | SEC-25 | `apps/api/crates/server/src/ai/tool_tests.rs`, `apps/api/crates/server/src/ai/turns.rs` |
 | SEC-26 | `apps/ai/tests/test_chat_tools.py`, `apps/api/crates/domain/src/tools.rs` |
 | TG-1 | `apps/api/crates/server/src/telegram/tests.rs` |
-| TG-2 | not done: the private-chat and same-sender checks in telegram/message.rs need a Telegram update fixture; only the bot-account refusal at link time is tested |
+| TG-2 | `apps/api/crates/server/src/telegram/update_tests.rs` |
 | TG-3 | `apps/api/crates/server/src/telegram/tests.rs` |
-| TG-4 | not done: the membership re-read on each update in telegram/message.rs is untested; only a token whose member left is refused at link time |
-| TG-5 | not done: saving a receipt from Telegram runs the vault, the AI extraction and the bot together; no fixture covers the whole path, and US-041 has no ticked browser box |
+| TG-4 | `apps/api/crates/server/src/telegram/update_tests.rs` |
+| TG-5 | `apps/api/crates/server/src/telegram/update_tests.rs` |
 | TG-6 | `apps/api/crates/server/src/telegram/reply.rs` |
 | TG-7 | `apps/ai/tests/test_receipt_categorize.py` |
 | TG-8 | `apps/ai/tests/test_chat_prompt.py`, `apps/api/crates/server/src/telegram/render.rs` |
 | TG-9 | `apps/api/crates/server/src/telegram/tests.rs` |
-| TG-10 | not done: no test asserts that Telegram text, files and the bot token stay out of the logs (hardening_tests.rs covers configured secrets only) |
+| TG-10 | `apps/api/crates/server/src/telegram/update_tests.rs` |
 | TXN-1 | `apps/app/e2e/transactions.spec.ts` |
 | TXN-2 | `apps/api/crates/server/src/accounts/tests.rs` |
 | TXN-3 | `apps/api/crates/server/src/accounts/handler.rs`, `apps/api/crates/server/src/main.rs` |
@@ -171,8 +171,8 @@ in browser" box ticked; or a written reason it is not done.
 | UI-8 | `apps/app/e2e/transactions.spec.ts` |
 | UI-9 | `apps/api/crates/server/src/auth/account.rs`, `apps/app/src/lib/colors.test.ts` |
 | UI-10 | not done: the error pages are UI only; US-056 has no browser box |
-| USG-1 | verified in browser by US-050 |
-| USG-2 | verified in browser by US-050 |
+| USG-1 | `apps/api/crates/server/src/usage/db_tests.rs` |
+| USG-2 | `apps/api/crates/server/src/telegram/update_tests.rs`, `apps/api/crates/server/src/usage/db_tests.rs` |
 | USG-3 | `apps/api/crates/server/src/usage/handler.rs` |
 | VLT-1 | `apps/api/crates/server/src/hardening_tests.rs` |
 | VLT-2 | `apps/api/crates/clients/src/storage/local.rs`, `apps/api/crates/clients/src/storage/s3.rs` |
