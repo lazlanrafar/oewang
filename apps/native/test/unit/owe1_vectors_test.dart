@@ -7,6 +7,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:oewang/data/services/api/owe1/owe1_protocol.dart';
+import 'package:oewang/data/services/api/owe1/owe1_stream.dart';
 
 File _vectorsFile() {
   final fromEnv = Platform.environment['OWE1_VECTORS_PATH'];
@@ -140,6 +141,23 @@ void main() {
         expect(utf8.decode(opened), message['plaintext']);
       });
     }
+
+    test(
+      'MOB-8 opens the stream_event vector as the first SSE frame',
+      () async {
+        final message = messages['stream_event'] as Map<String, dynamic>;
+        final frame =
+            'event: token\ndata: ${jsonEncode(message['sealed'])}\n\n';
+        final frames = await openEvents(
+          Stream.value(utf8.encode(frame)),
+          key: keys.serverToClient,
+          sessionId: sessionId,
+          requestId: requestId,
+        ).toList();
+        expect(frames.single.event, 'token');
+        expect(frames.single.data, message['plaintext']);
+      },
+    );
 
     test('refuses a message under the wrong associated data', () async {
       final message = messages['response'] as Map<String, dynamic>;

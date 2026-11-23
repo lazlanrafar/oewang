@@ -10,6 +10,8 @@ import 'package:oewang/components/organisms/budgets/budgets_form_screen.dart';
 import 'package:oewang/components/organisms/budgets/budgets_setting_screen.dart';
 import 'package:oewang/components/organisms/categories/categories_form_screen.dart';
 import 'package:oewang/components/organisms/categories/categories_list_screen.dart';
+import 'package:oewang/components/organisms/chat/chat_screen.dart';
+import 'package:oewang/components/organisms/chat/chat_sessions_screen.dart';
 import 'package:oewang/components/organisms/settings/currency/settings_main_currency_screen.dart';
 import 'package:oewang/components/organisms/settings/feedback/feedback_form_screen.dart';
 import 'package:oewang/components/organisms/settings/settings_screen.dart';
@@ -18,6 +20,7 @@ import 'package:oewang/components/organisms/stats/stats_screen.dart';
 import 'package:oewang/components/organisms/transactions/transactions_form_screen.dart';
 import 'package:oewang/components/organisms/transactions/transactions_screen.dart';
 import 'package:oewang/components/organisms/transactions/transactions_search_screen.dart';
+import 'package:oewang/components/organisms/vault/vault_screen.dart';
 import 'package:oewang/components/organisms/wallets/wallets_account_form_screen.dart';
 import 'package:oewang/components/organisms/wallets/wallets_account_group_form_screen.dart';
 import 'package:oewang/components/organisms/wallets/wallets_account_group_screen.dart';
@@ -28,6 +31,7 @@ import 'package:oewang/components/organisms/wallets/wallets_screen.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/domain/models/budget_status.dart';
 import 'package:oewang/domain/models/category.dart' as cat;
+import 'package:oewang/domain/models/receipt_draft.dart';
 import 'package:oewang/domain/models/transaction.dart';
 import 'package:oewang/domain/models/wallet.dart';
 import 'package:oewang/domain/models/wallet_group.dart';
@@ -59,7 +63,11 @@ class AppRoutes {
   static const String budgetSettings = '/settings/budget';
   static const String budgetForm = '/settings/budget/add';
   static const String feedbackForm = '/settings/feedback';
+  static const String chat = '/chat';
+  static const String chatNew = '/chat/new';
+  static const String vault = '/vault';
 
+  static String chatFor(String id) => '/chat/$id';
   static String accountEditFor(String id) => '/accounts/edit/$id';
   static String budgetEditFor(String id) => '/settings/budget/edit/$id';
   static String categoryEditFor(String id) => '/settings/categories/edit/$id';
@@ -157,8 +165,14 @@ GoRouter buildAppRouter(Ref ref) {
       ),
       GoRoute(
         path: AppRoutes.transactionForm,
-        builder: (context, state) =>
-            TransactionFormScreen(transaction: state.extra as Transaction?),
+        builder: (context, state) => TransactionFormScreen(
+          transaction: state.extra is Transaction
+              ? state.extra! as Transaction
+              : null,
+          receipt: state.extra is ReceiptDraft
+              ? state.extra! as ReceiptDraft
+              : null,
+        ),
       ),
       GoRoute(
         path: AppRoutes.transactionSearch,
@@ -266,6 +280,23 @@ GoRouter buildAppRouter(Ref ref) {
       GoRoute(
         path: AppRoutes.feedbackForm,
         builder: (context, state) => const FeedbackFormScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.chat,
+        builder: (context, state) => const ChatSessionsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.chatNew,
+        builder: (context, state) => const ChatScreen(),
+      ),
+      GoRoute(
+        path: '/chat/:id',
+        builder: (context, state) =>
+            ChatScreen(sessionId: state.pathParameters['id']),
+      ),
+      GoRoute(
+        path: AppRoutes.vault,
+        builder: (context, state) => const VaultScreen(),
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>

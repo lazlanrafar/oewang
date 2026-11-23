@@ -11,6 +11,7 @@ import 'package:oewang/data/repositories/vault_repository.dart';
 import 'package:oewang/data/repositories/wallets_repository.dart';
 import 'package:oewang/domain/models/category.dart';
 import 'package:oewang/domain/models/new_transaction_draft.dart';
+import 'package:oewang/domain/models/receipt_draft.dart';
 import 'package:oewang/domain/models/transaction.dart';
 import 'package:oewang/domain/models/vault_file.dart';
 import 'package:oewang/domain/models/wallet.dart';
@@ -101,12 +102,14 @@ class TransactionFormViewModel extends ChangeNotifier {
     required CategoriesRepository categories,
     required VaultRepository vault,
     Transaction? editing,
+    ReceiptDraft? receipt,
   }) : _transactions = transactions,
        _wallets = wallets,
        _categories = categories,
        _vault = vault,
        _editingId = editing?.id {
     if (editing != null) _state = _stateFrom(editing);
+    if (receipt != null) _state = _stateFromReceipt(receipt);
     save = Command<NewTransactionDraft, Transaction>(_runSave)
       ..addListener(notifyListeners);
     _loadPickers();
@@ -289,6 +292,20 @@ class TransactionFormViewModel extends ChangeNotifier {
       note: t.name ?? '',
       description: t.description ?? '',
       attachmentIds: t.attachments.map((a) => a.id).toList(),
+    );
+  }
+
+  /// Seeds a new expense from a scanned receipt, the image already
+  /// attached (AI-3). What the reader could not answer stays empty for the
+  /// person to fill; nothing is saved until they do (AI-2).
+  static TransactionFormState _stateFromReceipt(ReceiptDraft r) {
+    final initial = TransactionFormState.initial();
+    return TransactionFormState(
+      type: TransactionType.expense,
+      date: r.date ?? initial.date,
+      amount: r.total ?? Decimal.zero,
+      note: r.merchant ?? '',
+      attachmentIds: [r.vaultFileId],
     );
   }
 

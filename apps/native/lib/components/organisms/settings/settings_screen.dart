@@ -36,6 +36,18 @@ class SettingsScreen extends ConsumerWidget {
                   children: [
                     const UserProfileHeader(),
                     const WorkspaceCard(),
+                    const SectionLabel('Assistant'),
+                    ListRow(
+                      icon: Icons.chat_bubble_outline,
+                      title: 'Chat',
+                      onTap: () => context.push(AppRoutes.chat),
+                    ),
+                    ListRow(
+                      icon: Icons.inventory_2_outlined,
+                      title: 'Vault',
+                      subtitle: 'Receipts, statements and attachments',
+                      onTap: () => context.push(AppRoutes.vault),
+                    ),
                     const SectionLabel('Trans.'),
                     ListRow(
                       icon: Icons.repeat,
