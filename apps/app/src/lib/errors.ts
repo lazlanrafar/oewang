@@ -41,6 +41,7 @@ const CODE_TO_KEY: Record<string, TranslationKey> = {
 	TELEGRAM_DISABLED: 'errors.telegram_disabled',
 	RECEIPT_UNREADABLE: 'errors.receipt_unreadable',
 	SPREADSHEET_UNREADABLE: 'errors.spreadsheet_unreadable',
+	WORKSPACE_ID_NOT_ALLOWED: 'errors.workspace_id_not_allowed',
 	SPREADSHEET_TOO_LARGE: 'errors.spreadsheet_too_large'
 };
 

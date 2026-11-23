@@ -496,6 +496,7 @@ export type TranslationKey =
 	| 'errors.wallet_not_found'
 	| 'errors.workspace_currency_changed'
 	| 'errors.workspace_currency_locked'
+	| 'errors.workspace_id_not_allowed'
 	| 'files.add_or_upload'
 	| 'files.attachments'
 	| 'files.choose'

@@ -337,6 +337,7 @@
 		"extraction_no_answer": "The receipt reader didn't answer in time, so this file wasn't read. It may be perfectly clear: try again in a moment, or enter it by hand.",
 		"receipt_unreadable": "That image could not be read as a receipt.",
 		"spreadsheet_unreadable": "That file could not be read as an .xlsx spreadsheet. Save it as .xlsx again, or export it as CSV.",
+		"workspace_id_not_allowed": "That request named a workspace itself. Reload the page and try again.",
 		"spreadsheet_too_large": "That spreadsheet is too large: up to 512 KB, 5,000 rows and 100 columns. Split it, or export it as CSV.",
 		"telegram_disabled": "Telegram is not set up on this server yet.",
 		"workspace_currency_changed": "The workspace currency was just converted. Try again."
