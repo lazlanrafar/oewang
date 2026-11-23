@@ -11,8 +11,8 @@ import 'package:oewang/domain/models/money.dart';
 import 'package:oewang/domain/models/wallet.dart';
 import 'package:oewang/domain/models/wallet_group.dart';
 
-/// IMG_2250 — checkbox-driven Include-in-Totals editor. Selection is local;
-/// persistence lands when the wallet settings endpoint is wired.
+/// IMG_2250 — checkbox-driven Include-in-Totals editor. Each tick writes the
+/// wallet's `is_included_in_totals` at once; a refused write puts it back.
 class IncludeInTotalsScreen extends ConsumerStatefulWidget {
   const IncludeInTotalsScreen({super.key});
 
@@ -22,12 +22,31 @@ class IncludeInTotalsScreen extends ConsumerStatefulWidget {
 }
 
 class _IncludeInTotalsScreenState extends ConsumerState<IncludeInTotalsScreen> {
-  final Set<String> _excluded = <String>{};
+  /// Ticks changed on this screen, ahead of the next list read.
+  final Map<String, bool> _included = {};
+
+  Future<void> _toggle(Wallet w) async {
+    final next = !(_included[w.id] ?? w.isIncludedInTotals);
+    setState(() => _included[w.id] = next);
+    final res = await ref
+        .read(walletsRepositoryProvider)
+        .setIncludedInTotals(w.id, included: next);
+    if (!mounted) return;
+    res.fold((_) => ref.read(walletsRevisionProvider.notifier).bump(), (e) {
+      setState(() => _included[w.id] = !next);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final groupsAsync = ref.watch(_groupsProvider);
     final walletsAsync = ref.watch(_walletsProvider);
+    final canWrite = ref.watch(canWriteProvider);
+    final currency =
+        ref.watch(currentWorkspaceProvider).valueOrNull?.currencyCode ?? '';
     final tx = Theme.of(context).extension<TransactionColors>()!;
     final palette = context.palette;
 
@@ -42,14 +61,12 @@ class _IncludeInTotalsScreenState extends ConsumerState<IncludeInTotalsScreen> {
             data: (wallets) => _Body(
               groups: groups,
               wallets: wallets,
-              excluded: _excluded,
-              onToggle: (id) => setState(() {
-                if (_excluded.contains(id)) {
-                  _excluded.remove(id);
-                } else {
-                  _excluded.add(id);
-                }
-              }),
+              currency: currency,
+              excluded: {
+                for (final w in wallets)
+                  if (!(_included[w.id] ?? w.isIncludedInTotals)) w.id,
+              },
+              onToggle: canWrite ? _toggle : null,
               tx: tx,
               palette: palette,
             ),
@@ -72,6 +89,7 @@ final _groupsProvider = FutureProvider.autoDispose<List<WalletGroup>>((
 });
 
 final _walletsProvider = FutureProvider.autoDispose<List<Wallet>>((ref) async {
+  ref.watch(walletsRevisionProvider);
   final res = await ref.watch(walletsRepositoryProvider).list();
   return res.fold((w) => w, (_) => const []);
 });
@@ -80,6 +98,7 @@ class _Body extends StatelessWidget {
   const _Body({
     required this.groups,
     required this.wallets,
+    required this.currency,
     required this.excluded,
     required this.onToggle,
     required this.tx,
@@ -88,17 +107,23 @@ class _Body extends StatelessWidget {
 
   final List<WalletGroup> groups;
   final List<Wallet> wallets;
+
+  /// The workspace currency; foreign wallets stay out of the sums, as on
+  /// the Accounts tab.
+  final String currency;
   final Set<String> excluded;
-  final ValueChanged<String> onToggle;
+
+  /// Null for a member, who sees the ticks and cannot change them (MOB-5).
+  final ValueChanged<Wallet>? onToggle;
   final TransactionColors tx;
   final OewangPalette palette;
 
   @override
   Widget build(BuildContext context) {
-    final included = wallets.where((w) => !excluded.contains(w.id)).toList();
-    var assets = Money.zero();
-    var liabilities = Money.zero();
-    for (final w in included) {
+    var assets = Money.zero(currency: currency);
+    var liabilities = Money.zero(currency: currency);
+    for (final w in wallets) {
+      if (excluded.contains(w.id) || w.currency != currency) continue;
       if (w.balance >= Decimal.zero) {
         assets += Money(amount: w.balance, currency: w.currency);
       } else {
@@ -109,6 +134,11 @@ class _Body extends StatelessWidget {
     for (final w in wallets) {
       byGroup.putIfAbsent(w.groupId, () => <Wallet>[]).add(w);
     }
+    Widget rowFor(Wallet w) => _Row(
+      wallet: w,
+      excluded: excluded.contains(w.id),
+      onToggle: onToggle == null ? null : () => onToggle!(w),
+    );
     return Column(
       children: [
         _SummaryRow(
@@ -128,13 +158,16 @@ class _Body extends StatelessWidget {
                     name: g.name,
                     subtotal: _subtotal(byGroup[g.id]!, excluded),
                   ),
-                  for (final w in byGroup[g.id]!)
-                    _Row(
-                      wallet: w,
-                      excluded: excluded.contains(w.id),
-                      onToggle: () => onToggle(w.id),
-                    ),
+                  for (final w in byGroup[g.id]!) rowFor(w),
                 ],
+              // Ungrouped wallets, which the old screen left off the list.
+              if ((byGroup[null] ?? const []).isNotEmpty) ...[
+                _GroupHeader(
+                  name: 'Others',
+                  subtotal: _subtotal(byGroup[null]!, excluded),
+                ),
+                for (final w in byGroup[null]!) rowFor(w),
+              ],
             ],
           ),
         ),
@@ -143,9 +176,9 @@ class _Body extends StatelessWidget {
   }
 
   Money _subtotal(List<Wallet> ws, Set<String> excluded) {
-    var total = Money.zero();
+    var total = Money.zero(currency: currency);
     for (final w in ws) {
-      if (excluded.contains(w.id)) continue;
+      if (excluded.contains(w.id) || w.currency != currency) continue;
       total += Money(amount: w.balance, currency: w.currency);
     }
     return total;
@@ -167,7 +200,7 @@ class _SummaryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final total = Money(amount: assets.amount - liabilities.amount);
+    final total = assets - liabilities;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Row(
@@ -256,7 +289,7 @@ class _Row extends StatelessWidget {
   });
   final Wallet wallet;
   final bool excluded;
-  final VoidCallback onToggle;
+  final VoidCallback? onToggle;
 
   @override
   Widget build(BuildContext context) {
@@ -272,7 +305,7 @@ class _Row extends StatelessWidget {
           children: [
             Checkbox(
               value: !excluded,
-              onChanged: (_) => onToggle(),
+              onChanged: onToggle == null ? null : (_) => onToggle!(),
               visualDensity: VisualDensity.compact,
               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
               fillColor: WidgetStateProperty.resolveWith(

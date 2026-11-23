@@ -58,12 +58,17 @@ class WalletsRepositoryOffline implements WalletsRepository {
     );
   }
 
-  // shortcut: an opening balance (draft.balance) is not sent; the API takes
-  // it through `/adjust`, which the accounts screens own (OEW-086).
+  /// The opening balance is not part of the body: the form sends it through
+  /// [adjust] once the wallet exists (TXN-3).
   @override
   Future<Result<Wallet, AppError>> create(NewWalletDraft draft) async {
     final id = cuid();
-    final body = {'id': id, 'name': draft.name, 'group_id': draft.groupId};
+    final body = {
+      'id': id,
+      'name': draft.name,
+      'group_id': draft.groupId,
+      if (draft.currencyCode != null) 'currency_code': draft.currencyCode,
+    };
     return _write(QueueOp.create, id, body, {
       'is_included_in_totals': true,
       'is_default': false,
@@ -74,7 +79,25 @@ class WalletsRepositoryOffline implements WalletsRepository {
 
   @override
   Future<Result<Wallet, AppError>> update(String id, NewWalletDraft draft) =>
-      _patch(id, {'name': draft.name, 'group_id': draft.groupId});
+      _patch(id, {
+        'name': draft.name,
+        'group_id': draft.groupId,
+        if (draft.currencyCode != null) 'currency_code': draft.currencyCode,
+      });
+
+  /// Needs a connection, and the wallet on the API: the difference is a
+  /// transaction the API works out from its own balance.
+  // shortcut: a wallet created while offline gets its balance on the next
+  // save once the queue has sent it; queue the adjustment if that bites.
+  @override
+  Future<Result<Wallet, AppError>> adjust(String id, Decimal balance) async {
+    if (!_sync.online) {
+      return const Failure(
+        NetworkError('Setting a balance needs a connection'),
+      );
+    }
+    return _remote.adjust(id, balance);
+  }
 
   @override
   Future<Result<void, AppError>> setIncludedInTotals(
@@ -124,11 +147,4 @@ class WalletsRepositoryOffline implements WalletsRepository {
   @override
   Future<Result<void, AppError>> delete(String id) =>
       _sync.write(kind: _kind, op: QueueOp.delete, entityId: id).mapRow((_) {});
-
-  /// Needs a connection.
-  @override
-  Future<Result<void, AppError>> reorder(
-    List<String> orderedIds, {
-    String? groupId,
-  }) => _remote.reorder(orderedIds, groupId: groupId);
 }

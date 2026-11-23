@@ -7,9 +7,7 @@ import 'package:oewang/data/repositories_remote/dio_error_mapper.dart';
 import 'package:oewang/data/services/api/api_client.dart';
 import 'package:oewang/domain/models/wallet_group.dart';
 
-// shortcut: still the old app's routes and bodies, so these calls fail
-// against the new API and the screen shows its error or empty state. Ported
-// with the account group screens in M2 (OEW-086).
+/// `/v1/wallet-groups*`, listed in `sort_order`.
 class WalletGroupsRepositoryRemote implements WalletGroupsRepository {
   WalletGroupsRepositoryRemote(this._api);
   final ApiClient _api;
@@ -58,7 +56,7 @@ class WalletGroupsRepositoryRemote implements WalletGroupsRepository {
     required String name,
   }) async {
     try {
-      final res = await _api.put('/wallet-groups/$id', data: {'name': name});
+      final res = await _api.patch('/wallet-groups/$id', data: {'name': name});
       final json = (res.data as Map<String, dynamic>)['data'];
       if (json is! Map<String, dynamic>) {
         return const Failure(
@@ -85,23 +83,21 @@ class WalletGroupsRepositoryRemote implements WalletGroupsRepository {
     }
   }
 
+  /// There is no bulk route: each group's `sort_order` is its index, one
+  /// PATCH per group, as the web's drag does.
   @override
   Future<Result<void, AppError>> reorder(List<String> orderedIds) async {
     try {
-      await _api.put(
-        '/wallet-groups/reorder',
-        data: {
-          'updates': [
-            for (var i = 0; i < orderedIds.length; i++)
-              {'id': orderedIds[i], 'sortOrder': i},
-          ],
-        },
-      );
+      await Future.wait([
+        for (var i = 0; i < orderedIds.length; i++)
+          _api.patch(
+            '/wallet-groups/${orderedIds[i]}',
+            data: {'sort_order': i},
+          ),
+      ]);
       return const Success(null);
     } on DioException catch (e) {
       return Failure(mapDioError(e));
-    } on Exception {
-      return const Failure(UnknownError());
     }
   }
 }

@@ -10,6 +10,7 @@ class WorkspaceDto {
     required this.slug,
     required this.currencyCode,
     required this.role,
+    this.currencyLocked = false,
   });
 
   factory WorkspaceDto.fromJson(Map<String, dynamic> json) => WorkspaceDto(
@@ -18,6 +19,7 @@ class WorkspaceDto {
     slug: json['slug'] as String?,
     currencyCode: json['currency_code'] as String? ?? '',
     role: json['role'] as String? ?? 'member',
+    currencyLocked: json['currency_locked'] as bool? ?? false,
   );
 
   final String id;
@@ -26,8 +28,15 @@ class WorkspaceDto {
   final String currencyCode;
   final String role;
 
-  Workspace toDomain() =>
-      Workspace(id: id, name: name, currencyCode: currencyCode);
+  /// Only on `GET /v1/workspaces/current` (WAL-6).
+  final bool currencyLocked;
+
+  Workspace toDomain() => Workspace(
+    id: id,
+    name: name,
+    currencyCode: currencyCode,
+    currencyLocked: currencyLocked,
+  );
 
   WorkspaceMembership toMembership() =>
       WorkspaceMembership(id: id, name: name, role: role, slug: slug);

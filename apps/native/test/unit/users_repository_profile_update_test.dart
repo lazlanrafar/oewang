@@ -27,7 +27,7 @@ void main() {
       final repo = UsersRepositoryFake();
       final res = await repo.uploadAvatar(File('/tmp/test.png'));
       final url = res.fold((ok) => ok, (_) => '');
-      expect(url, startsWith('fake://avatars/'));
+      expect(url, startsWith('fake-'));
 
       final fresh = await repo.getProfile();
       final profile = fresh.fold((ok) => ok, (_) => null);

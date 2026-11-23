@@ -12,6 +12,7 @@ import 'package:oewang/core/constants/legal_links.dart';
 import 'package:oewang/core/router/app_router.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
+import 'package:oewang/data/dto/currency_catalog.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// IMG_1844 + IMG_2244 — More tab. Grouped list of settings entries.
@@ -106,8 +107,18 @@ class SettingsScreen extends ConsumerWidget {
                     ListRow(
                       icon: Icons.payments_outlined,
                       title: 'Main Currency Setting',
-                      subtitle: 'IDR(Rp)',
+                      subtitle: _currencyLabel(
+                        ref
+                            .watch(currentWorkspaceProvider)
+                            .valueOrNull
+                            ?.currencyCode,
+                      ),
                       onTap: () => context.push(AppRoutes.mainCurrency),
+                    ),
+                    ListRow(
+                      icon: Icons.group_outlined,
+                      title: 'Members',
+                      onTap: () => context.push(AppRoutes.members),
                     ),
                     ListRow(
                       icon: Icons.notifications_none,
@@ -174,6 +185,13 @@ class SettingsScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  /// "IDR(Rp)", as the old row read.
+  static String? _currencyLabel(String? code) {
+    if (code == null || code.isEmpty) return null;
+    final info = CurrencyCatalog.all.where((c) => c.code == code).firstOrNull;
+    return info == null ? code : '$code(${info.symbol})';
   }
 
   void _comingSoon(BuildContext context, String label) {

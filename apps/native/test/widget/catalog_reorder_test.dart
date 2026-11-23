@@ -44,7 +44,11 @@ void main() {
       final repo = Categories();
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [categoriesRepositoryProvider.overrideWithValue(repo)],
+          overrides: [
+            categoriesRepositoryProvider.overrideWithValue(repo),
+            // Reordering is a write (MOB-5).
+            canWriteProvider.overrideWithValue(true),
+          ],
           child: MaterialApp(
             theme: AppTheme.light(),
             home: const CategoryListScreen(type: CategoryType.expense),
@@ -70,7 +74,10 @@ void main() {
       final repo = Groups();
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [walletGroupsRepositoryProvider.overrideWithValue(repo)],
+          overrides: [
+            walletGroupsRepositoryProvider.overrideWithValue(repo),
+            canWriteProvider.overrideWithValue(true),
+          ],
           child: MaterialApp(
             theme: AppTheme.light(),
             home: const AccountGroupScreen(),

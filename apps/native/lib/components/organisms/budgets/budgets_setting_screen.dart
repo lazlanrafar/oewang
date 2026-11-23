@@ -13,12 +13,10 @@ import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/domain/models/budget_status.dart';
 import 'package:oewang/domain/models/money.dart';
 
-final _budgetsProvider = FutureProvider.autoDispose<List<BudgetStatus>>((
-  ref,
-) async {
+final _budgetsProvider = FutureProvider.autoDispose<BudgetMonth>((ref) async {
   ref.watch(budgetsRevisionProvider);
   final res = await ref.watch(budgetsRepositoryProvider).status();
-  return res.fold((b) => b, (_) => const []);
+  return res.fold((m) => m, (_) => BudgetMonth.empty());
 });
 
 /// Budget Setting — list of per-category monthly budgets with create / edit /
@@ -67,6 +65,7 @@ class BudgetSettingScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(_budgetsProvider);
+    final canWrite = ref.watch(canWriteProvider);
     final palette = context.palette;
 
     return Scaffold(
@@ -74,45 +73,52 @@ class BudgetSettingScreen extends ConsumerWidget {
         title: 'Budget',
         backLabel: 'Settings',
         actions: [
-          IconButton(
-            onPressed: () => _add(context, ref),
-            icon: Icon(Icons.add, color: palette.foreground),
-          ),
+          if (canWrite)
+            IconButton(
+              onPressed: () => _add(context, ref),
+              icon: Icon(Icons.add, color: palette.foreground),
+            ),
         ],
       ),
       body: SafeArea(
         child: async.when(
-          data: (budgets) {
+          data: (month) {
+            final budgets = month.budgets;
             if (budgets.isEmpty) {
-              return _Empty(onAdd: () => _add(context, ref));
+              return _Empty(onAdd: canWrite ? () => _add(context, ref) : null);
             }
             return Column(
               children: [
-                _SummaryHeader(budgets: budgets),
+                _SummaryHeader(totals: month.totals),
                 Divider(height: 1, color: palette.border),
                 Expanded(
                   child: ListView(
                     children: [
                       for (final b in budgets)
-                        Dismissible(
-                          key: ValueKey(b.id),
-                          direction: DismissDirection.endToStart,
-                          confirmDismiss: (_) =>
-                              _confirmDelete(context, ref, b),
-                          background: Container(
-                            color: OewangColors.coral,
-                            alignment: Alignment.centerRight,
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: const Icon(
-                              Icons.delete,
-                              color: Colors.white,
+                        if (!canWrite)
+                          _BudgetRow(budget: b)
+                        else
+                          Dismissible(
+                            key: ValueKey(b.id),
+                            direction: DismissDirection.endToStart,
+                            confirmDismiss: (_) =>
+                                _confirmDelete(context, ref, b),
+                            background: Container(
+                              color: OewangColors.coral,
+                              alignment: Alignment.centerRight,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                              ),
+                              child: const Icon(
+                                Icons.delete,
+                                color: Colors.white,
+                              ),
+                            ),
+                            child: _BudgetRow(
+                              budget: b,
+                              onTap: () => _edit(context, ref, b),
                             ),
                           ),
-                          child: _BudgetRow(
-                            budget: b,
-                            onTap: () => _edit(context, ref, b),
-                          ),
-                        ),
                     ],
                   ),
                 ),
@@ -133,13 +139,12 @@ class BudgetSettingScreen extends ConsumerWidget {
 }
 
 class _SummaryHeader extends StatelessWidget {
-  const _SummaryHeader({required this.budgets});
-  final List<BudgetStatus> budgets;
+  const _SummaryHeader({required this.totals});
+  final BudgetTotals totals;
 
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    final totals = BudgetTotals.fromStatuses(budgets);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
@@ -212,9 +217,11 @@ class _SummaryCell extends StatelessWidget {
 }
 
 class _BudgetRow extends StatelessWidget {
-  const _BudgetRow({required this.budget, required this.onTap});
+  const _BudgetRow({required this.budget, this.onTap});
   final BudgetStatus budget;
-  final VoidCallback onTap;
+
+  /// Null for a member, who reads the budget and cannot edit it (MOB-5).
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -292,7 +299,9 @@ class _BudgetRow extends StatelessWidget {
 
 class _Empty extends StatelessWidget {
   const _Empty({required this.onAdd});
-  final VoidCallback onAdd;
+
+  /// Null for a member: the empty state then has no create button.
+  final VoidCallback? onAdd;
 
   @override
   Widget build(BuildContext context) {
@@ -318,8 +327,10 @@ class _Empty extends StatelessWidget {
               fontSize: 13,
             ),
           ),
-          const SizedBox(height: 16),
-          Button(label: 'Create Budget', fullWidth: false, onPressed: onAdd),
+          if (onAdd != null) ...[
+            const SizedBox(height: 16),
+            Button(label: 'Create Budget', fullWidth: false, onPressed: onAdd),
+          ],
         ],
       ),
     );

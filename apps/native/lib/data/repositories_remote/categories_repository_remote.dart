@@ -7,9 +7,7 @@ import 'package:oewang/data/repositories_remote/dio_error_mapper.dart';
 import 'package:oewang/data/services/api/api_client.dart';
 import 'package:oewang/domain/models/category.dart';
 
-// shortcut: only `list` is on the new API (the transaction form reads it).
-// The writes still send the old app's bodies; they are ported with the
-// category screens in M2 (OEW-086).
+/// `/v1/categories*`, listed in `sort_order`.
 class CategoriesRepositoryRemote implements CategoriesRepository {
   CategoriesRepositoryRemote(this._api);
   final ApiClient _api;
@@ -78,23 +76,18 @@ class CategoriesRepositoryRemote implements CategoriesRepository {
     }
   }
 
+  /// There is no bulk route: each category's `sort_order` is its index, one
+  /// PATCH per category, as the web's drag does.
   @override
   Future<Result<void, AppError>> reorder(List<String> orderedIds) async {
     try {
-      await _api.put(
-        '/categories/reorder',
-        data: {
-          'updates': [
-            for (var i = 0; i < orderedIds.length; i++)
-              {'id': orderedIds[i], 'sortOrder': i},
-          ],
-        },
-      );
+      await Future.wait([
+        for (var i = 0; i < orderedIds.length; i++)
+          _api.patch('/categories/${orderedIds[i]}', data: {'sort_order': i}),
+      ]);
       return const Success(null);
     } on DioException catch (e) {
       return Failure(mapDioError(e));
-    } on Exception {
-      return const Failure(UnknownError());
     }
   }
 

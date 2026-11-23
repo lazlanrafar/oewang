@@ -8,19 +8,12 @@ import 'package:oewang/data/repositories/wallets_repository.dart';
 import 'package:oewang/domain/models/wallet.dart';
 import 'package:oewang/domain/models/wallet_group.dart';
 
-// ponytail: the workspace base/main currency is IDR app-wide (the rates API
-// uses IDR as its base and there's no workspace main-currency endpoint yet).
-// Currency is display-only on this form because the wallet API has no currency
-// field; the selectable options come from the global subCurrenciesProvider,
-// resolved in the screen.
-const mainCurrencyCode = 'IDR';
-
 class AccountFormState {
   const AccountFormState({
     this.groupId,
     this.name = '',
     this.balance,
-    this.currencyCode = mainCurrencyCode,
+    this.currencyCode,
     this.description = '',
   });
 
@@ -29,7 +22,9 @@ class AccountFormState {
 
   /// Null reads as zero. A [Decimal], never a double (D12).
   final Decimal? balance;
-  final String currencyCode;
+
+  /// Null is the workspace currency (WAL-5).
+  final String? currencyCode;
   final String description;
 
   bool get isValid => name.trim().isNotEmpty && groupId != null;
@@ -58,7 +53,8 @@ class AccountFormViewModel extends ChangeNotifier {
     Wallet? editing,
   }) : _wallets = wallets,
        _groups = groups,
-       _editingId = editing?.id {
+       _editingId = editing?.id,
+       _startBalance = editing?.balance ?? Decimal.zero {
     if (editing != null) _state = _stateFrom(editing);
     save = Command<NewWalletDraft, Wallet>(_runSave)
       ..addListener(notifyListeners);
@@ -68,6 +64,9 @@ class AccountFormViewModel extends ChangeNotifier {
   final WalletsRepository _wallets;
   final WalletGroupsRepository _groups;
   final String? _editingId;
+
+  /// The balance the form opened with; a save adjusts only when it moved.
+  final Decimal _startBalance;
 
   bool get isEditing => _editingId != null;
 
@@ -111,8 +110,8 @@ class AccountFormViewModel extends ChangeNotifier {
     if (!_state.isValid) return null;
     final draft = NewWalletDraft(
       name: _state.name.trim(),
-      balance: _state.balance,
       groupId: _state.groupId,
+      currencyCode: _state.currencyCode,
     );
     await save.run(draft);
     final ok = save.result;
@@ -122,10 +121,21 @@ class AccountFormViewModel extends ChangeNotifier {
     return null;
   }
 
-  /// Dispatches the Save command to create (new) or update (editing).
-  Future<Result<Wallet, AppError>> _runSave(NewWalletDraft draft) {
+  /// Creates or updates, then moves the balance to the typed figure through
+  /// `/adjust` when it differs: a balance is never a column write (TXN-3).
+  Future<Result<Wallet, AppError>> _runSave(NewWalletDraft draft) async {
     final id = _editingId;
-    return id == null ? _wallets.create(draft) : _wallets.update(id, draft);
+    final saved = id == null
+        ? await _wallets.create(draft)
+        : await _wallets.update(id, draft);
+    final target = _state.balance ?? Decimal.zero;
+    return switch (saved) {
+      Success(:final value) when target != _startBalance => _wallets.adjust(
+        value.id,
+        target,
+      ),
+      _ => saved,
+    };
   }
 
   static AccountFormState _stateFrom(Wallet w) => AccountFormState(

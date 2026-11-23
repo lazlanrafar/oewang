@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:oewang/core/result/app_error.dart';
 import 'package:oewang/core/result/result.dart';
@@ -31,8 +32,26 @@ class UsersRepositoryFake implements UsersRepository {
   );
 
   UserProfile _profile;
+  Uint8List? _avatar;
 
   UserProfile get profile => _profile;
+
+  UserProfile _copy({
+    String? name,
+    String? profilePicture,
+    String? incomeColor,
+    String? expenseColor,
+    bool colors = false,
+  }) => UserProfile(
+    id: _profile.id,
+    email: _profile.email,
+    name: name ?? _profile.name,
+    profilePicture: profilePicture ?? _profile.profilePicture,
+    incomeColor: colors ? incomeColor : _profile.incomeColor,
+    expenseColor: colors ? expenseColor : _profile.expenseColor,
+    activeWorkspaceId: _profile.activeWorkspaceId,
+    workspaces: _profile.workspaces,
+  );
 
   @override
   Future<Result<UserProfile, AppError>> getProfile() async {
@@ -46,30 +65,33 @@ class UsersRepositoryFake implements UsersRepository {
     String? mobile,
   }) async {
     await Future<void>.delayed(const Duration(milliseconds: 10));
-    _profile = UserProfile(
-      id: _profile.id,
-      email: _profile.email,
-      name: name ?? _profile.name,
-      profilePicture: _profile.profilePicture,
-      activeWorkspaceId: _profile.activeWorkspaceId,
-      workspaces: _profile.workspaces,
-    );
+    _profile = _copy(name: name);
     return Success(_profile);
   }
 
   @override
   Future<Result<String, AppError>> uploadAvatar(File file) async {
     await Future<void>.delayed(const Duration(milliseconds: 10));
-    final url = 'fake://avatars/${file.path.hashCode}';
-    _profile = UserProfile(
-      id: _profile.id,
-      email: _profile.email,
-      name: _profile.name,
-      profilePicture: url,
-      activeWorkspaceId: _profile.activeWorkspaceId,
-      workspaces: _profile.workspaces,
+    final version = 'fake-${file.path.hashCode}';
+    _avatar = Uint8List(0);
+    _profile = _copy(profilePicture: version);
+    return Success(version);
+  }
+
+  @override
+  Future<Result<Uint8List?, AppError>> avatar() async => Success(_avatar);
+
+  @override
+  Future<Result<void, AppError>> updateColors({
+    required String? incomeColor,
+    required String? expenseColor,
+  }) async {
+    _profile = _copy(
+      incomeColor: incomeColor,
+      expenseColor: expenseColor,
+      colors: true,
     );
-    return Success(url);
+    return const Success<void, AppError>(null);
   }
 
   @override
@@ -79,7 +101,6 @@ class UsersRepositoryFake implements UsersRepository {
       id: _profile.id,
       email: '',
       name: 'Deleted user',
-      activeWorkspaceId: null,
       workspaces: const [],
     );
     return const Success<void, AppError>(null);

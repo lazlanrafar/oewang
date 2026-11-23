@@ -89,6 +89,22 @@ What the transaction screens read, and where they differ from the old app:
 - The transaction settings themselves run on the old defaults (month from the 1st, Daily tab first, swipe changes month).
 - A member (the read-only role) sees no add button, opens no row for editing and gets no delete (MOB-5).
 
+What the other screens read, and where they differ from the old app:
+
+| Screen | Reads | Differs |
+|---|---|---|
+| `settings/members` (new) | `GET /v1/workspaces/current/members` | Read-only list; invites, role changes and removal stay on the web |
+| `stats` (Stats, Budget tabs) | `GET /v1/overview` for the period, `GET /v1/budgets?month=` | Category totals and shares are the API's: the top six and one "Other" row, where the old list had every category. The Budget tab's remaining, percent and bar come from the budgets answer |
+| `stats` (Note tab) | every page of `GET /v1/transactions` | The API has no per-note total, so the tab adds the rows' `base_amount` (workspace currency) per note, as the old app added amounts |
+| `budgets/*` | `/v1/budgets*` | Totals, remaining and percent are the API's, past 100% when over |
+| `wallets/*` | `/v1/wallets*`, `/v1/wallet-groups*` | The form's amount is the balance to reach: a change posts it to `/v1/wallets/{id}/adjust`, never a column write, and needs a connection (the wallet itself still saves offline). Assets, Liabilities, Total and group subtotals add balances in the workspace currency only; a foreign wallet is listed in its own currency and left out of every sum, since the API has no wallet total. "Include in totals" writes `is_included_in_totals` on each tick and now lists ungrouped wallets. Group and category order is one `sort_order` PATCH per row; wallet order has no screen. The "Card expenses display config" row is gone: it was never saved and the API has no such setting |
+| `settings/currency/settings_main_currency_screen` | `/v1/workspaces/current`, `.../currency/preview`, `.../currency/convert` | Owner only. A plain change while no transaction exists; after that, a conversion at a rate the owner confirms. The unit-position and decimal-point rows are gone (never saved) |
+| `settings/style` | `PUT /v1/auth/me/colors` | Holds the old income-expense colour choice too, now saved on the user. Blue/red is stored as the default (null); red/blue as `#f87171`/`#60a5fa`. A custom web colour reads as the default |
+| `settings/profile` | `/v1/auth/me`, `/v1/auth/me/avatar` | The photo is fetched as bytes, keyed by its version id |
+| `settings/feedback` | `POST /v1/feedback` | No screenshot: the route takes none |
+
+Delete Account stays in Settings because the stores require it, and says it is not available: the API has no self-service erase route yet.
+
 ## Chat, receipt scan and vault (MOB-8)
 
 Adapted from the web app's screens with the old app's components and tokens.

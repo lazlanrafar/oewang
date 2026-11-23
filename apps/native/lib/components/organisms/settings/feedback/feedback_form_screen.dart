@@ -1,8 +1,5 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:oewang/components/atoms/button.dart';
 import 'package:oewang/components/atoms/inputs/input.dart';
 import 'package:oewang/components/molecules/page_app_bar.dart';
@@ -18,6 +15,7 @@ final feedbackFormVmProvider = ChangeNotifierProvider.autoDispose(
       FeedbackFormViewModel(feedback: ref.watch(feedbackRepositoryProvider)),
 );
 
+/// Settings → Send Feedback (`POST /v1/feedback`, FB-1).
 class FeedbackFormScreen extends ConsumerStatefulWidget {
   const FeedbackFormScreen({super.key});
 
@@ -26,17 +24,6 @@ class FeedbackFormScreen extends ConsumerStatefulWidget {
 }
 
 class _FeedbackFormScreenState extends ConsumerState<FeedbackFormScreen> {
-  Future<void> _pickScreenshot(FeedbackFormViewModel vm) async {
-    final picked = await ImagePicker().pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 1024,
-      maxHeight: 1024,
-      imageQuality: 90,
-    );
-    if (picked == null) return;
-    vm.setScreenshot(File(picked.path));
-  }
-
   Future<void> _onSend(FeedbackFormViewModel vm) async {
     await vm.submit();
     if (!mounted) return;
@@ -83,40 +70,7 @@ class _FeedbackFormScreenState extends ConsumerState<FeedbackFormScreen> {
                       onChanged: vm.setMessage,
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Row(
-                      children: [
-                        TextButton.icon(
-                          onPressed: () => _pickScreenshot(vm),
-                          icon: const Icon(Icons.image_outlined),
-                          label: Text(
-                            vm.state.screenshot == null
-                                ? 'Attach screenshot'
-                                : 'Change screenshot',
-                          ),
-                        ),
-                        if (vm.state.screenshot != null)
-                          IconButton(
-                            tooltip: 'Remove',
-                            onPressed: () => vm.setScreenshot(null),
-                            icon: const Icon(Icons.close),
-                          ),
-                      ],
-                    ),
-                  ),
-                  if (vm.state.screenshot != null)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: ClipRRect(
-                        child: Image.file(
-                          vm.state.screenshot!,
-                          height: 120,
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                    ),
+                  // No screenshot: `POST /v1/feedback` takes no attachment.
                   if (vm.save.error != null)
                     Padding(
                       padding: const EdgeInsets.symmetric(

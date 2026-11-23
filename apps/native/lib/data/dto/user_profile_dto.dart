@@ -42,6 +42,8 @@ class UserProfileDto {
     required this.workspaces,
     this.name,
     this.profilePicture,
+    this.incomeColor,
+    this.expenseColor,
     this.activeWorkspaceId,
   });
 
@@ -56,9 +58,10 @@ class UserProfileDto {
       id: user['id'] as String,
       email: user['email'] as String? ?? '',
       name: user['name'] as String?,
-      // `profile_picture` is now a photo version id, fetched as bytes from
-      // `/v1/auth/me/avatar` (D94), not a URL the old header can load.
-      // shortcut: initials only until the avatar is ported in M2 (OEW-086).
+      // A photo version id; the bytes come from `/v1/auth/me/avatar` (D94).
+      profilePicture: user['profile_picture'] as String?,
+      incomeColor: user['income_color'] as String?,
+      expenseColor: user['expense_color'] as String?,
       activeWorkspaceId: workspace?['id'] as String?,
       workspaces: workspaces,
     );
@@ -68,6 +71,8 @@ class UserProfileDto {
   final String email;
   final String? name;
   final String? profilePicture;
+  final String? incomeColor;
+  final String? expenseColor;
   final String? activeWorkspaceId;
   final List<WorkspaceMembershipDto> workspaces;
 
@@ -76,6 +81,8 @@ class UserProfileDto {
     email: email,
     name: name,
     profilePicture: profilePicture,
+    incomeColor: incomeColor,
+    expenseColor: expenseColor,
     activeWorkspaceId: activeWorkspaceId,
     workspaces: workspaces.map((w) => w.toDomain()).toList(),
   );

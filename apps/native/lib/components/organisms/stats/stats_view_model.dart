@@ -1,6 +1,6 @@
-import 'package:decimal/decimal.dart';
 import 'package:flutter/foundation.dart';
 import 'package:oewang/domain/models/money.dart';
+import 'package:oewang/domain/models/overview.dart';
 import 'package:oewang/domain/models/transaction.dart';
 
 /// Single slice rendered by [StatsScreen]: emoji + category + amount + %.
@@ -21,53 +21,18 @@ class StatsSlice {
   final double percent;
 }
 
-/// Aggregates a month's transactions into per-category slices for one mode
-/// (income or expense). Pure function; the screen drives the input itself.
-List<StatsSlice> aggregateStats({
-  required List<Transaction> transactions,
-  required bool incomeMode,
-}) {
-  final byCategory = <String?, ({String label, Money amount})>{};
-  for (final t in transactions) {
-    final matches = incomeMode ? t.isIncome : t.isExpense;
-    if (!matches) continue;
-    final key = t.category?.id;
-    final label = t.category?.name ?? t.name ?? 'Uncategorized';
-    final prev = byCategory[key] ?? (label: label, amount: Money.zero());
-    byCategory[key] = (label: label, amount: prev.amount + t.amount);
-  }
-
-  var total = Money.zero();
-  for (final v in byCategory.values) {
-    total += v.amount;
-  }
-
-  final slices = <StatsSlice>[];
-  byCategory.forEach((id, v) {
-    // A share for drawing the chart, not money: a double is fine here.
-    final pct = total.amount == Decimal.zero
-        ? 0.0
-        : (v.amount.amount * Decimal.fromInt(100) / total.amount).toDouble();
-    slices.add(
-      StatsSlice(
-        categoryId: id,
-        label: v.label,
-        amount: v.amount,
-        percent: pct.clamp(0, 100).toDouble(),
-      ),
-    );
-  });
-  slices.sort((a, b) => b.amount.amount.compareTo(a.amount.amount));
-  return slices;
-}
-
-Money sumOfSlices(List<StatsSlice> slices) {
-  var t = Money.zero();
-  for (final s in slices) {
-    t += s.amount;
-  }
-  return t;
-}
+/// The API's category breakdown as chart slices, in the API's order (largest
+/// first, "Other" last). Every amount and share is the API's (D27).
+List<StatsSlice> slicesFrom(List<CategoryShare> shares) => [
+  for (final c in shares)
+    StatsSlice(
+      categoryId: c.id,
+      label: c.label,
+      amount: c.total,
+      // A share for drawing the chart, not money: a double is fine here.
+      percent: (c.sharePercent?.toDouble() ?? 0).clamp(0, 100).toDouble(),
+    ),
+];
 
 /// One row of the Note tab: a note (transaction name), how many transactions
 /// carry it, and their summed amount.
@@ -84,20 +49,30 @@ class NoteRow {
   final Money amount;
 }
 
-/// Aggregates a month's transactions by their note (`name`) for one mode.
+/// Aggregates a period's transactions by their note (`name`) for one mode.
 /// Transactions with no note collapse into a single blank-label row (mirrors
 /// the WMoney Note tab). Sorted by count desc, then amount desc.
+///
+/// Sums each row's `base_amount`, the workspace-currency figure the API
+/// stored at write time and sums itself, so two currencies never add up.
+// shortcut: the API has no per-note total, so this adds the rows' decimals
+// as the old screen did; a `group=name` summary would replace it.
 List<NoteRow> aggregateNotes({
   required List<Transaction> transactions,
   required bool incomeMode,
+  required String currency,
 }) {
   final byNote = <String, ({int count, Money amount})>{};
   for (final t in transactions) {
     final matches = incomeMode ? t.isIncome : t.isExpense;
     if (!matches) continue;
     final key = (t.name ?? '').trim();
-    final prev = byNote[key] ?? (count: 0, amount: Money.zero());
-    byNote[key] = (count: prev.count + 1, amount: prev.amount + t.amount);
+    final prev =
+        byNote[key] ?? (count: 0, amount: Money.zero(currency: currency));
+    byNote[key] = (
+      count: prev.count + 1,
+      amount: prev.amount + Money(amount: t.baseAmount, currency: currency),
+    );
   }
 
   final rows =

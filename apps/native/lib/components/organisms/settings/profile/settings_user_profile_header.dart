@@ -1,6 +1,6 @@
 import 'dart:io';
+import 'dart:typed_data';
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -22,6 +22,13 @@ final userProfileProvider = FutureProvider.autoDispose<UserProfile?>((
   final res = await ref.read(usersRepositoryProvider).getProfile();
   return res.fold((ok) => ok, (_) => null);
 });
+
+/// The photo's bytes, keyed by its version id so an upload refetches.
+final _avatarBytesProvider = FutureProvider.autoDispose
+    .family<Uint8List?, String>((ref, version) async {
+      final res = await ref.watch(usersRepositoryProvider).avatar();
+      return res.fold((bytes) => bytes, (_) => null);
+    });
 
 /// Inline profile header that sits at the very top of the More tab — centered
 /// medium avatar with a camera badge, name (tap pencil to edit), email below.
@@ -54,11 +61,12 @@ class _BodyState extends ConsumerState<_Body> {
   Future<void> _pickAvatar() async {
     if (_saving) return;
     final picker = ImagePicker();
+    // Small enough for the API's 700 KB cap; it stores a 256px square.
     final picked = await picker.pickImage(
       source: ImageSource.gallery,
-      maxWidth: 1024,
-      maxHeight: 1024,
-      imageQuality: 90,
+      maxWidth: 512,
+      maxHeight: 512,
+      imageQuality: 85,
     );
     if (picked == null || !mounted) return;
     setState(() => _saving = true);
@@ -192,7 +200,7 @@ class _BodyState extends ConsumerState<_Body> {
   }
 }
 
-class _Avatar extends StatelessWidget {
+class _Avatar extends ConsumerWidget {
   const _Avatar({
     required this.profile,
     required this.palette,
@@ -204,7 +212,7 @@ class _Avatar extends StatelessWidget {
   final double size;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final initial = profile.displayName.isNotEmpty
         ? profile.displayName[0].toUpperCase()
         : '?';
@@ -223,18 +231,17 @@ class _Avatar extends StatelessWidget {
       ),
     );
 
-    final url = profile.profilePicture;
-    if (url == null || url.isEmpty || url.startsWith('fake://')) {
-      return fallback;
-    }
+    final version = profile.profilePicture;
+    if (version == null) return fallback;
+    final bytes = ref.watch(_avatarBytesProvider(version)).valueOrNull;
+    if (bytes == null || bytes.isEmpty) return fallback;
     return ClipOval(
-      child: CachedNetworkImage(
-        imageUrl: url,
+      child: Image.memory(
+        bytes,
         width: size,
         height: size,
         fit: BoxFit.cover,
-        placeholder: (_, _) => fallback,
-        errorWidget: (_, _, _) => fallback,
+        errorBuilder: (_, _, _) => fallback,
       ),
     );
   }

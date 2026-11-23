@@ -4,16 +4,15 @@ import 'package:oewang/core/result/result.dart';
 import 'package:oewang/domain/models/wallet.dart';
 
 class NewWalletDraft {
-  const NewWalletDraft({
-    required this.name,
-    required this.balance,
-    this.groupId,
-  });
+  const NewWalletDraft({required this.name, this.groupId, this.currencyCode});
   final String name;
 
-  /// Sent as a decimal string (D12).
-  final Decimal? balance;
+  /// Null detaches the wallet from its group.
   final String? groupId;
+
+  /// Null means the workspace currency on create (WAL-5) and "unchanged" on
+  /// update.
+  final String? currencyCode;
 }
 
 abstract class WalletsRepository {
@@ -22,12 +21,9 @@ abstract class WalletsRepository {
   Future<Result<Wallet, AppError>> update(String id, NewWalletDraft draft);
   Future<Result<void, AppError>> delete(String id);
 
-  /// Reorders wallets within [groupId] (null = ungrouped). [orderedIds] is the
-  /// new top-to-bottom order for that group.
-  Future<Result<void, AppError>> reorder(
-    List<String> orderedIds, {
-    String? groupId,
-  });
+  /// `POST /v1/wallets/{id}/adjust`: brings the balance to [balance] through
+  /// one "Balance adjustment" transaction, never a column write (TXN-3).
+  Future<Result<Wallet, AppError>> adjust(String id, Decimal balance);
 
   /// Toggles whether a wallet counts toward Assets / Liabilities / Total.
   Future<Result<void, AppError>> setIncludedInTotals(

@@ -1,4 +1,3 @@
-import 'package:decimal/decimal.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,6 +14,7 @@ import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/data/repositories/transactions_repository.dart';
 import 'package:oewang/domain/models/budget_status.dart';
 import 'package:oewang/domain/models/money.dart';
+import 'package:oewang/domain/models/overview.dart';
 import 'package:oewang/domain/models/transaction.dart';
 
 /// Period the Stats header filters by (the "M / W / Y" button).
@@ -53,27 +53,54 @@ enum StatsPeriod {
   }
 }
 
-/// Transactions in an inclusive `(from, to)` range. Keyed by the record so each
-/// distinct range caches separately; rebuilt on the transactions revision.
+/// `GET /v1/overview` for an inclusive `(from, to)` range: the Stats and
+/// Budget tabs' totals and category shares, all from the API (D27).
+final _overviewProvider = FutureProvider.autoDispose
+    .family<Overview, (DateTime, DateTime)>((ref, range) async {
+      ref.watch(transactionsRevisionProvider);
+      final res = await ref
+          .watch(overviewRepositoryProvider)
+          .overview(from: range.$1, to: range.$2);
+      return res.fold((o) => o, (e) => throw e);
+    });
+
+/// The Note tab reads at most this many pages of [_notePageSize] rows.
+const _maxNotePages = 20;
+const _notePageSize = 100;
+
+/// Every transaction in an inclusive `(from, to)` range, all pages, for the
+/// Note tab alone. Rebuilt on the transactions revision.
 final _rangeTransactionsProvider = FutureProvider.autoDispose
     .family<List<Transaction>, (DateTime, DateTime)>((ref, range) async {
       ref.watch(transactionsRevisionProvider);
-      final res = await ref
-          .watch(transactionsRepositoryProvider)
-          .list(TransactionsListQuery(from: range.$1, to: range.$2));
-      return res.fold((txs) => txs, (_) => <Transaction>[]);
+      final repo = ref.watch(transactionsRepositoryProvider);
+      final rows = <Transaction>[];
+      for (var page = 1; page <= _maxNotePages; page++) {
+        final res = await repo.list(
+          TransactionsListQuery(
+            from: range.$1,
+            to: range.$2,
+            page: page,
+            limit: _notePageSize,
+          ),
+        );
+        final batch = res.fold((txs) => txs, (e) => throw e);
+        rows.addAll(batch);
+        if (batch.length < _notePageSize) break;
+      }
+      return rows;
     });
 
-/// Per-category budget status for [month], keyed so each month caches its own.
-/// Bumped with the budgets revision so edits in Budget Setting reflect here.
-/// (The budget API is monthly, so the Budget tab always uses the anchor month.)
+/// The month's budgets, keyed so each month caches its own. Bumped with the
+/// budgets revision so edits in Budget Setting reflect here. (The budget API
+/// is monthly, so the Budget tab always uses the anchor month.)
 final _budgetStatusProvider = FutureProvider.autoDispose
-    .family<List<BudgetStatus>, DateTime>((ref, month) async {
+    .family<BudgetMonth, DateTime>((ref, month) async {
       ref.watch(budgetsRevisionProvider);
       final res = await ref
           .watch(budgetsRepositoryProvider)
           .status(month: month.month, year: month.year);
-      return res.fold((s) => s, (_) => const <BudgetStatus>[]);
+      return res.fold((m) => m, (_) => BudgetMonth.empty());
     });
 
 /// IMG_1834 — Stats tab.
@@ -187,8 +214,11 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
   @override
   Widget build(BuildContext context) {
     final range = rangeFor(_anchor, _period);
-    final async = ref.watch(_rangeTransactionsProvider((range.from, range.to)));
+    final key = (range.from, range.to);
+    final overview = ref.watch(_overviewProvider(key));
     final palette = context.palette;
+    List<StatsSlice> slices(Overview o) =>
+        slicesFrom(_incomeMode ? o.incomeCategories : o.expenseCategories);
 
     return Scaffold(
       body: SafeArea(
@@ -209,55 +239,65 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
             _ModeToggle(
               incomeMode: _incomeMode,
               onChanged: (v) => setState(() => _incomeMode = v),
-              totalMoney: async.maybeWhen(
-                data: (txs) {
-                  final slices = aggregateStats(
-                    transactions: txs,
-                    incomeMode: _incomeMode,
-                  );
-                  return sumOfSlices(slices);
-                },
+              totalMoney: overview.maybeWhen(
+                data: (o) => _incomeMode ? o.income : o.expense,
                 orElse: Money.zero,
               ),
             ),
             Divider(height: 1, color: palette.border),
             Expanded(
-              child: async.when(
-                data: (txs) => switch (_topIndex) {
-                  0 => _StatsBody(
-                    slices: aggregateStats(
-                      transactions: txs,
-                      incomeMode: _incomeMode,
-                    ),
+              child: switch (_topIndex) {
+                0 => overview.when(
+                  data: (o) => _StatsBody(
+                    slices: slices(o),
                     chartPalette: _chartPalette,
                   ),
-                  1 => _BudgetBody(
+                  loading: _loading,
+                  error: _error,
+                ),
+                1 => overview.when(
+                  data: (o) => _BudgetBody(
                     statusAsync: ref.watch(
                       _budgetStatusProvider(
                         DateTime(_anchor.year, _anchor.month),
                       ),
                     ),
-                    slices: aggregateStats(
-                      transactions: txs,
-                      incomeMode: _incomeMode,
-                    ),
+                    slices: slices(o),
                   ),
-                  _ => _NoteBody(
-                    rows: aggregateNotes(
-                      transactions: txs,
-                      incomeMode: _incomeMode,
-                    ),
-                  ),
-                },
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (e, _) => _ErrorView(message: e.toString()),
-              ),
+                  loading: _loading,
+                  error: _error,
+                ),
+                _ =>
+                  ref
+                      .watch(_rangeTransactionsProvider(key))
+                      .when(
+                        data: (txs) => _NoteBody(
+                          rows: aggregateNotes(
+                            transactions: txs,
+                            incomeMode: _incomeMode,
+                            currency:
+                                ref
+                                    .watch(currentWorkspaceProvider)
+                                    .valueOrNull
+                                    ?.currencyCode ??
+                                '',
+                          ),
+                        ),
+                        loading: _loading,
+                        error: _error,
+                      ),
+              },
             ),
           ],
         ),
       ),
     );
   }
+
+  static Widget _loading() => const Center(child: CircularProgressIndicator());
+
+  static Widget _error(Object e, StackTrace _) =>
+      _ErrorView(message: e.toString());
 }
 
 class _TopPills extends StatelessWidget {
@@ -729,15 +769,13 @@ class _NoteRowTile extends StatelessWidget {
 class _BudgetBody extends StatelessWidget {
   const _BudgetBody({required this.statusAsync, required this.slices});
 
-  final AsyncValue<List<BudgetStatus>> statusAsync;
+  final AsyncValue<BudgetMonth> statusAsync;
   final List<StatsSlice> slices;
 
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    final totals = BudgetTotals.fromStatuses(
-      statusAsync.valueOrNull ?? const [],
-    );
+    final totals = statusAsync.valueOrNull?.totals ?? BudgetTotals.zero();
     return ListView(
       padding: EdgeInsets.zero,
       children: [
@@ -757,17 +795,13 @@ class _BudgetHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    final remaining = totals.totalBudget - totals.totalSpent;
+    final remaining = totals.remaining;
     // Fraction of the current month elapsed — drives the "Today" marker.
     final now = DateTime.now();
     final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
     final todayFrac = (now.day / daysInMonth).clamp(0.0, 1.0);
-    // A bar length, not money: a double is fine here.
-    final spentFrac = totals.totalBudget.amount <= Decimal.zero
-        ? 0.0
-        : (totals.totalSpent.amount / totals.totalBudget.amount)
-              .toDouble()
-              .clamp(0.0, 1.0);
+    // A bar length from the API's percent, not money.
+    final spentFrac = (totals.percent / 100).clamp(0.0, 1.0);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),

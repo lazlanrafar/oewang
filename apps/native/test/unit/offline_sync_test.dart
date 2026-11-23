@@ -289,9 +289,7 @@ void main() {
   test('MOB-6: a wallet, category and transaction made offline replay in '
       'order under their client ids', () async {
     await h.offline();
-    final w = (await h.wallets.create(
-      NewWalletDraft(name: 'Cash', balance: Decimal.zero),
-    )).ok;
+    final w = (await h.wallets.create(const NewWalletDraft(name: 'Cash'))).ok;
     final c = (await h.categories.create(
       name: 'Food',
       type: CategoryType.expense,
@@ -465,7 +463,7 @@ void main() {
       await h.offline();
       await h.wallets.update(
         'wcash000000000000000000000',
-        const NewWalletDraft(name: 'Mine', balance: null),
+        const NewWalletDraft(name: 'Mine'),
       );
       await h.categories.update(
         id: 'cfood000000000000000000000',
@@ -528,7 +526,7 @@ void main() {
       () async {
         await h.wallets.update(
           'wcash000000000000000000000',
-          const NewWalletDraft(name: 'Mine again', balance: null),
+          const NewWalletDraft(name: 'Mine again'),
         );
         h.server.editElsewhere('wallets', 'wcash000000000000000000000', {
           'name': 'Web name',

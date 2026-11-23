@@ -2,23 +2,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:oewang/components/organisms/auth/auth_sync.dart';
 import 'package:oewang/core/result/app_error.dart';
 import 'package:oewang/core/result/result.dart';
-import 'package:oewang/data/repositories/workspaces_repository.dart';
 import 'package:oewang/data/repositories_fake/auth_repository_fake.dart';
 import 'package:oewang/data/repositories_fake/workspaces_repository_fake.dart';
 import 'package:oewang/domain/models/session.dart';
-import 'package:oewang/domain/models/workspace.dart';
 import 'package:oewang/domain/models/workspace_membership.dart';
 
-class _Offline implements WorkspacesRepository {
+class _Offline extends WorkspacesRepositoryFake {
   @override
   Future<Result<List<WorkspaceMembership>, AppError>> list() async =>
       const Failure(NetworkError());
-
-  @override
-  Future<Result<Workspace, AppError>> create({
-    required String name,
-    required String currencyCode,
-  }) => throw UnimplementedError();
 }
 
 void main() {

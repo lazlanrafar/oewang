@@ -15,6 +15,7 @@ import 'package:oewang/components/organisms/chat/chat_sessions_screen.dart';
 import 'package:oewang/components/organisms/invite/invite_accept_screen.dart';
 import 'package:oewang/components/organisms/settings/currency/settings_main_currency_screen.dart';
 import 'package:oewang/components/organisms/settings/feedback/feedback_form_screen.dart';
+import 'package:oewang/components/organisms/settings/members/settings_members_screen.dart';
 import 'package:oewang/components/organisms/settings/settings_screen.dart';
 import 'package:oewang/components/organisms/settings/style/settings_style_screen.dart';
 import 'package:oewang/components/organisms/settings/telegram/settings_telegram_screen.dart';
@@ -70,6 +71,7 @@ class AppRoutes {
   static const String chatNew = '/chat/new';
   static const String vault = '/vault';
   static const String telegram = '/settings/telegram';
+  static const String members = '/settings/members';
 
   static String chatFor(String id) => '/chat/$id';
   static String accountEditFor(String id) => '/accounts/edit/$id';
@@ -261,6 +263,10 @@ GoRouter buildAppRouter(Ref ref) {
       GoRoute(
         path: AppRoutes.mainCurrency,
         builder: (context, state) => const MainCurrencyScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.members,
+        builder: (context, state) => const MembersScreen(),
       ),
       GoRoute(
         path: AppRoutes.accountsSettings,

@@ -17,6 +17,7 @@ import 'package:oewang/data/repositories/chat_repository.dart';
 import 'package:oewang/data/repositories/device_tokens_repository.dart';
 import 'package:oewang/data/repositories/feedback_repository.dart';
 import 'package:oewang/data/repositories/invites_repository.dart';
+import 'package:oewang/data/repositories/overview_repository.dart';
 import 'package:oewang/data/repositories/passkeys_repository.dart';
 import 'package:oewang/data/repositories/rates_repository.dart';
 import 'package:oewang/data/repositories/receipts_repository.dart';
@@ -37,6 +38,7 @@ import 'package:oewang/data/repositories_remote/chat_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/device_tokens_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/feedback_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/invites_repository_remote.dart';
+import 'package:oewang/data/repositories_remote/overview_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/passkeys_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/rates_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/receipts_repository_remote.dart';
@@ -57,6 +59,7 @@ import 'package:oewang/data/services/storage/secure_storage_service.dart';
 import 'package:oewang/data/services/sync/sync_service.dart';
 import 'package:oewang/domain/models/session.dart';
 import 'package:oewang/domain/models/transaction_settings.dart';
+import 'package:oewang/domain/models/workspace.dart';
 
 /// Root env provider. Built once at startup by main.dart.
 final envProvider = Provider<EnvConfig>((ref) {
@@ -158,6 +161,10 @@ final transactionsRepositoryProvider = Provider<TransactionsRepository>((ref) {
     api: api,
     sync: ref.watch(syncServiceProvider),
   );
+});
+
+final overviewRepositoryProvider = Provider<OverviewRepository>((ref) {
+  return OverviewRepositoryRemote(ref.watch(apiClientProvider));
 });
 
 final walletsRepositoryProvider = Provider<WalletsRepository>((ref) {
@@ -277,21 +284,48 @@ final transactionsRevisionProvider =
       TransactionsRevisionController.new,
     );
 
-/// Active income/expense color scheme, kept in local prefs so the choice
-/// survives restart.
-// shortcut: device-only; the API keeps the colours on the user
-// (`PUT /v1/auth/me/colors`, UI-12), wired with the style screen in M2 (OEW-086).
+/// Active income/expense color scheme. The API keeps it on the user
+/// (`PUT /v1/auth/me/colors`, UI-9); local prefs only paint the first frame
+/// before `/v1/auth/me` answers, and after a sign-in it is read again.
 class TransactionColorSchemeController
     extends Notifier<TransactionColorScheme> {
   @override
-  TransactionColorScheme build() =>
-      ref.read(preferencesServiceProvider).readTransactionColorScheme();
+  TransactionColorScheme build() {
+    final userId = ref.watch(
+      sessionControllerProvider.select((s) => s.valueOrNull?.userId),
+    );
+    if (userId != null) unawaited(_pull());
+    return ref.read(preferencesServiceProvider).readTransactionColorScheme();
+  }
 
-  Future<void> set(TransactionColorScheme scheme) async {
+  Future<void> _pull() async {
+    final res = await ref.read(usersRepositoryProvider).getProfile();
+    if (res case Success(:final value)) {
+      await _apply(TransactionColorScheme.fromApi(value.incomeColor));
+    }
+  }
+
+  Future<void> _apply(TransactionColorScheme scheme) async {
     state = scheme;
     await ref
         .read(preferencesServiceProvider)
         .writeTransactionColorScheme(scheme);
+  }
+
+  /// Saves [scheme] on the user. Returns the error, after putting the old
+  /// scheme back, or null.
+  Future<AppError?> set(TransactionColorScheme scheme) async {
+    final before = state;
+    await _apply(scheme);
+    final colors = scheme.apiColors;
+    final res = await ref
+        .read(usersRepositoryProvider)
+        .updateColors(incomeColor: colors.income, expenseColor: colors.expense);
+    if (res case Failure(:final error)) {
+      await _apply(before);
+      return error;
+    }
+    return null;
   }
 }
 
@@ -411,3 +445,25 @@ final canWriteProvider = Provider<bool>(
     sessionControllerProvider.select((s) => s.valueOrNull?.canWrite ?? false),
   ),
 );
+
+/// Whether the current role is `owner`: the workspace currency is theirs
+/// alone to change (WAL-7).
+final isOwnerProvider = Provider<bool>(
+  (ref) => ref.watch(
+    sessionControllerProvider.select((s) => s.valueOrNull?.role == 'owner'),
+  ),
+);
+
+/// `GET /v1/workspaces/current`: the base currency every total is in, and
+/// whether it is locked. Refetched when the session changes workspace;
+/// invalidate it after changing the currency.
+final currentWorkspaceProvider = FutureProvider.autoDispose<Workspace?>((
+  ref,
+) async {
+  final id = ref.watch(
+    sessionControllerProvider.select((s) => s.valueOrNull?.workspaceId),
+  );
+  if (id == null) return null;
+  final res = await ref.watch(workspacesRepositoryProvider).current();
+  return res.fold((w) => w, (_) => null);
+});

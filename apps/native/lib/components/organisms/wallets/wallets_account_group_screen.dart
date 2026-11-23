@@ -93,15 +93,17 @@ class _AccountGroupScreenState extends ConsumerState<AccountGroupScreen> {
       if (data != null) setState(() => _items = List.of(data));
     });
     final palette = context.palette;
+    final canWrite = ref.watch(canWriteProvider);
     return Scaffold(
       appBar: PageAppBar(
         title: 'Account Group',
         backLabel: 'Accounts',
         actions: [
-          IconButton(
-            onPressed: _add,
-            icon: Icon(Icons.add, color: palette.foreground),
-          ),
+          if (canWrite)
+            IconButton(
+              onPressed: _add,
+              icon: Icon(Icons.add, color: palette.foreground),
+            ),
         ],
       ),
       body: SafeArea(
@@ -109,18 +111,20 @@ class _AccountGroupScreenState extends ConsumerState<AccountGroupScreen> {
           data: (items) {
             final list = _items.isEmpty ? items : _items;
             return ReorderableListView.builder(
+              // A member gets no long-press drag either (MOB-5).
+              buildDefaultDragHandles: canWrite,
               itemCount: list.length,
               onReorderItem: _reorder,
               itemBuilder: (context, i) => SwipeActionRow(
                 key: ValueKey(list[i].id),
-                dragIndex: i,
+                dragIndex: canWrite ? i : null,
                 title: list[i].name,
                 isOpen: _openId == list[i].id,
                 onToggleOpen: () => setState(
                   () => _openId = _openId == list[i].id ? null : list[i].id,
                 ),
-                onDelete: () => _delete(list[i]),
-                onEdit: () => _edit(list[i]),
+                onDelete: canWrite ? () => _delete(list[i]) : null,
+                onEdit: canWrite ? () => _edit(list[i]) : null,
               ),
             );
           },
