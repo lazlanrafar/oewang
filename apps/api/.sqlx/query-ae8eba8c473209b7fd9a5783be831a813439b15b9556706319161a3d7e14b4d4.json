@@ -1,0 +1,65 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE device_tokens SET deleted_at = now(), updated_at = now()\n           WHERE user_id = $1 AND token = $2 AND deleted_at IS NULL\n           RETURNING id, platform, created_at, last_seen_at",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "device_tokens",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "platform",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "device_tokens",
+            "name": "platform"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "device_tokens",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "last_seen_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "device_tokens",
+            "name": "last_seen_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "ae8eba8c473209b7fd9a5783be831a813439b15b9556706319161a3d7e14b4d4"
+}

@@ -89,14 +89,21 @@ Dropped from the old app with their API: debts, contacts, sub-currencies, the se
 
 ## Push (D116)
 
-| Event | Who | Opens |
+| Event | Who | `route` |
 |---|---|---|
-| Queued receipt done or failed | the person who queued it | the transaction draft, or the vault file |
-| Import job done or failed | the person who started it | transactions |
-| Budget reaches 80%, then 100% | every member with a device | budgets, that month |
-| Invitation | the invited account, if it exists | the accept-invite flow |
+| Queued receipt done | the person who queued it | `/transactions?detail={transaction_id}` |
+| Queued receipt failed | the person who queued it | `/vault?file={vault_file_id}` |
+| Statement import job done or failed | the person who started it | `/transactions` |
+| Budget reaches 80%, then 100% | every member with a device | `/budgets?month=YYYY-MM` |
+| Invitation | the invited account, if it exists | `/workspaces` |
 
-The data payload is `{ "route": "/budgets?month=2026-11" }` and the like; the app maps it to a go_router location. Text is built and formatted by the API.
+The data payload is `{ "route": "/budgets?month=2026-11" }` and the like; the app maps it to a go_router location. Text is built and formatted by the API. The receipt and import routes are the web's own (the receipt notice opens `/transactions?detail=`, the vault opens `?file=`).
+
+- A receipt sent from Telegram is answered in Telegram, where it was sent, and is not pushed.
+- The invitation push opens the workspace list, not the accept-invite flow: the invitation token is a credential and a push is shown on a lock screen, so it never carries one. The email, sent either way, holds the link that accepts.
+- A budget push goes to members' devices whatever workspace their app has open; the route names the month, not the workspace.
+- Devices register through `POST /v1/device-tokens` and are removed through `DELETE /v1/device-tokens` ([endpoints](../api/endpoints.md#auth)). Both need a session with a workspace, because the change is audited in it; the app registers again after creating, joining or switching to one.
+- Push is off when `FCM_SERVICE_ACCOUNT_JSON` is unset ([deployment](../deployment.md)).
 
 ## Checks
 

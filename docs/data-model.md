@@ -20,11 +20,11 @@ PostgreSQL 16. This doc is the source of truth for every table and column. No ot
 | Timestamps | `created_at` and `updated_at`, both `timestamptz` with `DEFAULT now()`. Every timestamp column is `timestamptz`: a naive timestamp means whatever the writer's clock meant, which is wrong for a product with a workspace timezone (changed at US-002, from the old app's `timestamp`). |
 | Money | `decimal(19,4)`. Read in Rust as `rust_decimal::Decimal`. Serialized as a string (D12). |
 | Naming | `snake_case` for tables and columns, plural table names. |
-| Migrations | sqlx SQL files under `apps/api/migrations/`, one per logical group: identity, accounts, vault, ledger, chat, audit. Vault precedes ledger because `transaction_attachments` references it. Later changes are numbered after them; the newest is `0010_vault_usage.sql` (D90 to D92). |
+| Migrations | sqlx SQL files under `apps/api/migrations/`, one per logical group: identity, accounts, vault, ledger, chat, audit. Vault precedes ledger because `transaction_attachments` references it. Later changes are numbered after them; the newest is `0019_push.sql` (D116). |
 
 ## Tables in scope
 
-Thirty tables. The sixteen carried from the old app's schema, plus `refresh_tokens` and `password_reset_tokens` (D38, AUTH-10), `passkeys` and `passkey_ceremonies` (D110), `exchange_rates` (D44), the three Telegram tables (D83), `ai_usage` (D92), `budgets` (D103), `feedback` (D104), and `mcp_tokens`, `oauth_clients` and `oauth_codes` (D106). Carried (see [legacy app](reference/legacy-app.md#schema-mapping)) with the billing, quota and integration columns stripped (D8).
+Thirty-two tables. The sixteen carried from the old app's schema, plus `refresh_tokens` and `password_reset_tokens` (D38, AUTH-10), `passkeys` and `passkey_ceremonies` (D110), `exchange_rates` (D44), the three Telegram tables (D83), `ai_usage` (D92), `budgets` (D103), `feedback` (D104), `mcp_tokens`, `oauth_clients` and `oauth_codes` (D106), and `device_tokens` and `budget_alerts` (D116). Carried (see [legacy app](reference/legacy-app.md#schema-mapping)) with the billing, quota and integration columns stripped (D8).
 
 ```mermaid
 erDiagram
@@ -59,6 +59,8 @@ erDiagram
     users ||--o{ mcp_tokens : "holds"
     oauth_clients ||--o{ mcp_tokens : "granted"
     oauth_clients ||--o{ oauth_codes : "redeems"
+    users ||--o{ device_tokens : "is pushed at"
+    budgets ||--o{ budget_alerts : "announced in"
 ```
 
 ### Identity and tenancy
@@ -144,6 +146,22 @@ A WebAuthn credential a user signs in with (AUTH-14, D110). Belongs to a person,
 | `name` | text | Shown in the list; defaults to the device it was made on |
 | `created_at`, `last_used_at` | timestamptz | |
 | `deleted_at` | timestamptz | Soft delete |
+
+#### `device_tokens`
+
+Migration `0019`, D116, PUSH-1. A phone the API can push to through FCM. Belongs to a person, not a workspace, like `passkeys`: one device receives the pushes for every workspace its owner is in, so a workspace column would either duplicate the row per workspace or pick one arbitrarily. It is filtered by `user_id` and `deleted_at IS NULL`; the one read that starts from a workspace (a budget push to every member) joins through a live `user_workspaces` row. Registration and removal are audited in the session's workspace, as a passkey is; retiring a token FCM reports dead is housekeeping and is not.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | text | CUID2, primary key |
+| `user_id` | text | FK users, cascade |
+| `platform` | text | `ios` or `android` |
+| `token` | text | The FCM registration token. A credential for pushing to the device: never logged, never in an audit row or a response |
+| `created_at`, `updated_at` | timestamptz | |
+| `last_seen_at` | timestamptz | Refreshed on every registration, which the app repeats at sign-in |
+| `deleted_at` | timestamptz | Soft delete: on sign-out, or when FCM answers `UNREGISTERED` or an `INVALID_ARGUMENT` naming the token |
+
+Indexes: `device_tokens_token_idx` unique on `(token) WHERE deleted_at IS NULL`, so a token registered again, by anyone, moves to that person instead of being pushed to two accounts; `device_tokens_user_idx (user_id) WHERE deleted_at IS NULL`.
 
 #### `passkey_ceremonies`
 
@@ -239,6 +257,21 @@ Migration `0014`, D103. A monthly limit on one expense category, in the workspac
 | `created_at`, `updated_at`, `deleted_at` | timestamptz | |
 
 Indexes: `budgets_workspace_idx (workspace_id) WHERE deleted_at IS NULL`, and `budgets_one_per_category_idx` unique on `(workspace_id, category_id) WHERE deleted_at IS NULL`, so a category has one live budget whatever two saves race. The old app's `period` column is not carried: it was never read.
+
+#### `budget_alerts`
+
+Migration `0019`, D116, PUSH-3. One row per budget, month and threshold that has been pushed. Append-only, like `audit_logs`: nothing updates or deletes a row, and nothing reads one back; the unique key is the whole point.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | text | CUID2, primary key |
+| `workspace_id` | text | FK workspaces, cascade |
+| `budget_id` | text | FK budgets, cascade |
+| `month` | date | The month's first day (`CHECK` day = 1) |
+| `threshold` | smallint | `80` or `100` |
+| `created_at` | timestamptz | |
+
+Index: `budget_alerts_once_idx` unique on `(budget_id, month, threshold)`. After a transaction write commits, the API reads the month's budget status (the same figures the page shows, D27) and inserts a row for each threshold the budget has reached with `ON CONFLICT DO NOTHING`; only a row that was actually inserted is pushed, so two writes racing past 80% push once, and a new month starts with no rows. A jump past both inserts both and pushes only the 100% one.
 
 #### `feedback`
 

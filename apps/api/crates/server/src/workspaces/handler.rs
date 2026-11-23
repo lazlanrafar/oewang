@@ -415,6 +415,7 @@ pub async fn create_invite(
         .mailer
         .send_workspace_invite(&invitation.email, &invitation.raw_token)
         .await;
+    crate::push::service::invited(&state.db, &auth.workspace_id, &invitation.email).await;
 
     let created = InviteCreated {
         id: invitation.id,

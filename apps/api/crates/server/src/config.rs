@@ -54,6 +54,11 @@ pub struct Config {
     /// poller starts and the Apps page says the bot is not configured.
     pub telegram: Option<TelegramConfig>,
 
+    /// The Firebase service account key file's JSON, for push (D116).
+    /// Optional everywhere: without it no push is sent and nothing else
+    /// changes.
+    pub fcm_service_account_json: Option<Secret>,
+
     /// `local` or `s3` (D19).
     pub storage_backend: String,
     pub storage_local_path: String,
@@ -272,6 +277,7 @@ impl Config {
             fx_access_key: optional("FX_ACCESS_KEY").map(Secret::new),
 
             telegram: telegram_config()?,
+            fcm_service_account_json: optional("FCM_SERVICE_ACCOUNT_JSON").map(Secret::new),
 
             storage_backend: storage_backend.clone(),
             storage_local_path: optional("STORAGE_LOCAL_PATH")

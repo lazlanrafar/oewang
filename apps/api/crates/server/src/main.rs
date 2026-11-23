@@ -20,6 +20,7 @@ mod limits;
 mod mcp;
 mod owe1;
 mod passkeys;
+mod push;
 mod receipts;
 mod reports;
 mod response;
@@ -185,6 +186,19 @@ async fn main() -> anyhow::Result<()> {
         username: bot.username.clone(),
     });
 
+    // Push is optional everywhere (D116). A key file that is set but
+    // unreadable stops the start, rather than every push failing later.
+    match &config.fcm_service_account_json {
+        Some(json) => {
+            push::install(Arc::new(oewang_clients::FcmClient::new(
+                json.expose(),
+                oewang_clients::push::FCM_URL,
+            )?));
+            tracing::info!("push ready (fcm)");
+        }
+        None => tracing::info!("push off: FCM_SERVICE_ACCOUNT_JSON is not set"),
+    }
+
     // Built from APP_URL, so a deployment whose address cannot be a relying
     // party refuses to start rather than failing at the first passkey.
     let webauthn = Arc::new(passkeys::service::relying_party(&config.app_url)?);
@@ -318,6 +332,11 @@ fn protected_routes(state: AppState) -> Router<AppState> {
         .route(
             "/v1/auth/passkeys/{id}",
             axum::routing::delete(passkeys::handler::remove),
+        )
+        // Push devices (D116). The token is in the body on both.
+        .route(
+            "/v1/device-tokens",
+            post(push::handler::register).delete(push::handler::remove),
         )
         .route(
             "/v1/auth/passkey/sign-in/start",

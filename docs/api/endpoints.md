@@ -53,6 +53,8 @@ These four are the only plaintext routes ([exceptions](encryption.md#plaintext-e
 | DELETE | `/v1/auth/passkeys/{id}` | any | Soft-delete one of your own passkeys. Audited `passkey.removed` |
 | POST | `/v1/auth/passkey/sign-in/start` | public | `{ceremony_id, options}`: request options for any passkey the browser holds for the site |
 | POST | `/v1/auth/passkey/sign-in/finish` | public | `{ceremony_id, credential}`. A session, as login answers. Any failure is `INVALID_CREDENTIALS` |
+| POST | `/v1/device-tokens` | any | `{token, platform}`, platform `ios` or `android` (PUSH-1, D116). Registers the caller's device for push; a token already live, for anyone, moves to the caller and its `last_seen_at` is refreshed. 201 with `{id, platform, created_at, last_seen_at}`, never the token. Audited `device_token.registered` |
+| DELETE | `/v1/device-tokens` | any | `{token}` in the body, not the path: it is long and a path reaches access logs. Soft-deletes the caller's own device, on sign-out. 204 also when the token is unknown, someone else's or already retired. Audited `device_token.removed` when a row was removed |
 
 `POST /v1/auth/register`
 

@@ -201,6 +201,9 @@ impl Run {
         {
             tracing::error!(job_id = %self.job_id, %error, "the import job outcome was lost");
         }
+
+        let imported = (status == "succeeded").then_some(counts.0);
+        crate::push::service::import_finished(&self.pool, &self.user_id, imported).await;
     }
 
     /// The outcome and the rows it describes, so the caller can pair them
