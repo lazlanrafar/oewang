@@ -64,8 +64,16 @@ class ApiClient {
   Future<Response<dynamic>> put(String path, {Object? data}) =>
       _dio.put<dynamic>(path, data: data);
 
-  Future<Response<dynamic>> patch(String path, {Object? data}) =>
-      _dio.patch<dynamic>(path, data: data);
+  /// [headers] carries `If-Match` for a queued edit (D115).
+  Future<Response<dynamic>> patch(
+    String path, {
+    Object? data,
+    Map<String, String>? headers,
+  }) => _dio.patch<dynamic>(
+    path,
+    data: data,
+    options: headers == null ? null : Options(headers: headers),
+  );
 
   Future<Response<dynamic>> delete(String path) => _dio.delete<dynamic>(path);
 }

@@ -1,5 +1,8 @@
+import 'dart:async';
+
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart' show ThemeMode;
+import 'package:flutter/material.dart' show AppLifecycleListener, ThemeMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oewang/components/organisms/auth/auth_sync.dart';
 import 'package:oewang/config/env.dart';
@@ -17,6 +20,9 @@ import 'package:oewang/data/repositories/vault_repository.dart';
 import 'package:oewang/data/repositories/wallet_groups_repository.dart';
 import 'package:oewang/data/repositories/wallets_repository.dart';
 import 'package:oewang/data/repositories/workspaces_repository.dart';
+import 'package:oewang/data/repositories_offline/categories_repository_offline.dart';
+import 'package:oewang/data/repositories_offline/transactions_repository_offline.dart';
+import 'package:oewang/data/repositories_offline/wallets_repository_offline.dart';
 import 'package:oewang/data/repositories_remote/auth_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/budgets_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/categories_repository_remote.dart';
@@ -29,8 +35,10 @@ import 'package:oewang/data/repositories_remote/wallet_groups_repository_remote.
 import 'package:oewang/data/repositories_remote/wallets_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/workspaces_repository_remote.dart';
 import 'package:oewang/data/services/api/api_client.dart';
+import 'package:oewang/data/services/db/app_database.dart';
 import 'package:oewang/data/services/storage/preferences_service.dart';
 import 'package:oewang/data/services/storage/secure_storage_service.dart';
+import 'package:oewang/data/services/sync/sync_service.dart';
 import 'package:oewang/domain/models/session.dart';
 import 'package:oewang/domain/models/transaction_settings.dart';
 
@@ -73,12 +81,68 @@ final vaultRepositoryProvider = Provider<VaultRepository>((ref) {
   return VaultRepositoryRemote(ref.watch(apiClientProvider));
 });
 
+final appDatabaseProvider = Provider<AppDatabase>((ref) {
+  final db = AppDatabase.open();
+  ref.onDispose(db.close);
+  return db;
+});
+
+/// The offline write queue (MOB-6). Replays when the connection returns,
+/// when the app comes back to the foreground, and on a workspace change.
+final syncServiceProvider = Provider<SyncService>((ref) {
+  final sync = SyncService(
+    db: ref.watch(appDatabaseProvider),
+    api: ref.watch(apiClientProvider),
+    workspaceId: () =>
+        ref.read(sessionControllerProvider).valueOrNull?.workspaceId,
+    canWrite: () => ref.read(canWriteProvider),
+    onSynced: () => ref
+      ..read(transactionsRevisionProvider.notifier).bump()
+      ..read(walletsRevisionProvider.notifier).bump(),
+  );
+  void connectivity(List<ConnectivityResult> r) =>
+      sync.setOnline(online: r.any((c) => c != ConnectivityResult.none));
+  final net = Connectivity();
+  unawaited(net.checkConnectivity().then(connectivity));
+  final sub = net.onConnectivityChanged.listen(connectivity);
+  final lifecycle = AppLifecycleListener(
+    onResume: () => unawaited(sync.drain()),
+  );
+  ref
+    ..listen(sessionControllerProvider, (_, _) => unawaited(sync.drain()))
+    ..onDispose(() {
+      unawaited(sub.cancel());
+      lifecycle.dispose();
+      sync.dispose();
+    });
+  return sync;
+});
+
+/// What the sync banner shows, updated as the queue moves.
+final syncStatusProvider = Provider<SyncStatus>((ref) {
+  final status = ref.watch(syncServiceProvider).status;
+  void changed() => ref.invalidateSelf();
+  status.addListener(changed);
+  ref.onDispose(() => status.removeListener(changed));
+  return status.value;
+});
+
 final transactionsRepositoryProvider = Provider<TransactionsRepository>((ref) {
-  return TransactionsRepositoryRemote(ref.watch(apiClientProvider));
+  final api = ref.watch(apiClientProvider);
+  return TransactionsRepositoryOffline(
+    remote: TransactionsRepositoryRemote(api),
+    api: api,
+    sync: ref.watch(syncServiceProvider),
+  );
 });
 
 final walletsRepositoryProvider = Provider<WalletsRepository>((ref) {
-  return WalletsRepositoryRemote(ref.watch(apiClientProvider));
+  final api = ref.watch(apiClientProvider);
+  return WalletsRepositoryOffline(
+    remote: WalletsRepositoryRemote(api),
+    api: api,
+    sync: ref.watch(syncServiceProvider),
+  );
 });
 
 final walletGroupsRepositoryProvider = Provider<WalletGroupsRepository>((ref) {
@@ -99,7 +163,12 @@ final walletsRevisionProvider =
     );
 
 final categoriesRepositoryProvider = Provider<CategoriesRepository>((ref) {
-  return CategoriesRepositoryRemote(ref.watch(apiClientProvider));
+  final api = ref.watch(apiClientProvider);
+  return CategoriesRepositoryOffline(
+    remote: CategoriesRepositoryRemote(api),
+    api: api,
+    sync: ref.watch(syncServiceProvider),
+  );
 });
 
 final budgetsRepositoryProvider = Provider<BudgetsRepository>((ref) {
