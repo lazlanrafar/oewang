@@ -168,6 +168,7 @@ The SvelteKit server reads these from the process environment.
 | `API_URL` | yes | Internal URL of `api` |
 | `CRYPTO_SIGNING_PUBLIC_KEYS` | yes | The API's pinned public keys. `apps/app/src/lib/server/api.ts` throws at startup when `APP_ENV=production` and this is empty |
 | `OWE1_ENABLED` | no | Anything other than the string `false` is on |
+| `ADDRESS_HEADER`, `XFF_DEPTH` | yes behind a proxy | adapter-node's own: `X-Forwarded-For` and `1` behind Coolify's proxy. Without them every address the session list shows is the proxy's (docs/security/auth.md) |
 
 `OWE1_VECTORS_PATH` is a test-only variable. It does not belong in a deployed environment.
 

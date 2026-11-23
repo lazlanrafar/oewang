@@ -470,15 +470,76 @@ pub(crate) fn session_context<'a>(
         jwt_secret: &state.config.jwt_secret,
         access_ttl: state.config.access_token_ttl,
         refresh_ttl: state.config.refresh_token_ttl,
-        user_agent: headers
-            .get(header::USER_AGENT)
-            .and_then(|value| value.to_str().ok()),
-        // Set by the reverse proxy. Shown in the session list, never used for
-        // authorization, because a client can claim anything here.
-        ip: headers
-            .get("x-forwarded-for")
-            .and_then(|value| value.to_str().ok())
-            .and_then(|value| value.split(',').next())
-            .map(str::trim),
+        user_agent: client_user_agent(headers),
+        ip: client_ip(headers),
+    }
+}
+
+/// Set by the app on every call it makes for a browser request.
+const CLIENT_USER_AGENT: &str = "x-client-user-agent";
+const CLIENT_IP: &str = "x-client-ip";
+
+/// The browser's user agent, as the app relays it.
+///
+/// The request's own `user-agent` is the app server's fetch ("Bun"), so the
+/// relayed header wins. Shown in the session list, never used for
+/// authorization.
+fn client_user_agent(headers: &HeaderMap) -> Option<&str> {
+    header_str(headers, CLIENT_USER_AGENT)
+        .or_else(|| header_str(headers, header::USER_AGENT.as_str()))
+}
+
+/// The browser's address, as the app relays it. `x-forwarded-for` is not
+/// read: only the app reaches this route, and anything else that sends one
+/// would be naming an address it chose. Not an address, not recorded.
+fn client_ip(headers: &HeaderMap) -> Option<&str> {
+    header_str(headers, CLIENT_IP).filter(|value| value.parse::<std::net::IpAddr>().is_ok())
+}
+
+fn header_str<'a>(headers: &'a HeaderMap, name: &str) -> Option<&'a str> {
+    headers
+        .get(name)
+        .and_then(|value| value.to_str().ok())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+}
+
+#[cfg(test)]
+mod client_tests {
+    use super::*;
+    use axum::http::HeaderValue;
+
+    fn headers(pairs: &[(&'static str, &'static str)]) -> HeaderMap {
+        let mut map = HeaderMap::new();
+        for (name, value) in pairs {
+            map.insert(*name, HeaderValue::from_static(value));
+        }
+        map
+    }
+
+    #[test]
+    fn should_prefer_the_relayed_browser_user_agent() {
+        let map = headers(&[
+            ("user-agent", "Bun/1.3"),
+            (CLIENT_USER_AGENT, "Mozilla/5.0 (Macintosh)"),
+        ]);
+        assert_eq!(client_user_agent(&map), Some("Mozilla/5.0 (Macintosh)"));
+    }
+
+    #[test]
+    fn should_fall_back_to_the_request_user_agent() {
+        let map = headers(&[("user-agent", "curl/8"), (CLIENT_USER_AGENT, " ")]);
+        assert_eq!(client_user_agent(&map), Some("curl/8"));
+    }
+
+    #[test]
+    fn should_record_only_a_relayed_address_that_parses() {
+        assert_eq!(
+            client_ip(&headers(&[(CLIENT_IP, "203.0.113.7")])),
+            Some("203.0.113.7")
+        );
+        assert_eq!(client_ip(&headers(&[(CLIENT_IP, "::1")])), Some("::1"));
+        assert_eq!(client_ip(&headers(&[(CLIENT_IP, "evil, 1.2.3.4")])), None);
+        assert_eq!(client_ip(&headers(&[("x-forwarded-for", "1.2.3.4")])), None);
     }
 }
