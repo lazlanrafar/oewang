@@ -147,9 +147,11 @@ Enforcement: request and response bodies are never passed to the logger, and sec
 
 | Scope | Limit | Requirement |
 |---|---|---|
-| Credential routes | 10 requests per 15 minutes per IP | AUTH-6 |
-| Authenticated routes | 300 per minute per IP | OPS-5 |
-| Unauthenticated routes | 30 per minute per IP | OPS-5 |
+| Credential routes | 10 requests per 15 minutes per browser address | AUTH-6 |
+| `login`, `register`, `forgot-password` | 10 per 15 minutes per email address, per route | AUTH-6, D112 |
+| Credential routes, all callers together | 1,000 per 15 minutes per source | D112 |
+| Authenticated routes | 300 per minute per browser address | OPS-5 |
+| Unauthenticated routes | 30 per minute per browser address | OPS-5 |
 | `POST /v1/handshake` | 30 per minute per IP | [encryption](../api/encryption.md#handshake) |
 | Chat stream | 20 turns per minute per workspace | SEC-17 |
 | Request body | 1 MB, except file chunk routes | SEC-18 |
@@ -177,7 +179,18 @@ The window slides rather than resetting on the minute. A fixed window lets a cal
 
 The counters live in process memory, so a restart forgives everyone and a second instance counts separately. Both are acceptable: this bounds abuse and spend, it is not accounting, and the alternative is a shared store on the request path of every call (D10). The daily upload ceiling is the exception and is counted from the rows, because a day is long enough that a restart must not hand anybody a fresh allowance.
 
-Behind a reverse proxy every request arrives from the proxy, so `X-Forwarded-For` is read only when `TRUST_PROXY_HEADERS` says there is one in front. Anyone can send that header, and a limiter that believes it is a limiter anyone can step around.
+### Whose address is counted
+
+The API's only intended caller is the SvelteKit server, so every user arrives from the same address. Counted by that address, one person guessing passwords locks everyone out, and a limit raised to stop that lets each account be guessed at freely. That was the state before D112.
+
+So there are two addresses, and the limiter (`apps/api/crates/server/src/limits.rs`) keeps them apart:
+
+- **The source** is what connected: the peer, or behind the proxy the last `X-Forwarded-For` entry, the one the proxy itself appended. Never the first entry: anything left of the last came from the caller. `X-Forwarded-For` is read at all only when `TRUST_PROXY_HEADERS` says there is a proxy in front.
+- **The browser's address** is `x-client-ip`, which the app sets from `event.getClientAddress()`. It is believed only when the request also carries `x-relay-key` equal to `APP_RELAY_KEY`, compared in constant time. The API's domain is routed from the internet and the OWE1 handshake is open to anyone, so "came through OWE1" does not mean "came from the app"; the key is what does. A request without it is counted against its source and its `x-client-ip` is ignored.
+
+Every per-address budget counts the browser's address when there is a vouched one and the source's otherwise. Credential routes count twice more: against the source's ceiling, after the caller's own budget so a caller already refused does not spend what everybody shares, and, in the handler after decryption, against the normalised email for `login`, `register` and `forgot-password`, because one account guessed at from a thousand addresses is still one account ([auth](auth.md#rate-limits) has the trade-offs). The layer stays outside OWE1: a flood costs a hash lookup and a key comparison, not a key agreement.
+
+The relay key is required in production; the API refuses to start without one of at least 32 characters. The browser's address is only as good as the app's `ADDRESS_HEADER` and `XFF_DEPTH` ([deployment](../deployment.md#app)): set wrong, every browser is the proxy's address and the per-address budgets collapse into one again.
 
 ### Why each matters
 
@@ -206,6 +219,7 @@ A body limit layer stops a large body before a handler allocates for it. A state
 | Secrets in logs | A representative workload runs against a captured log sink; known secret values must not appear |
 | Upload type sniffing | A PHP file renamed to `.jpg`, an SVG, and an oversized file are each rejected |
 | Rate limits | The auth bucket is exhausted and the next request returns 429 with `Retry-After` |
+| Whose address is counted | Two browsers behind the app's one address are limited apart; one email is limited however many addresses try it; the ceiling still stops everyone; an `x-client-ip` without the relay key is ignored (`limits.rs` tests) |
 | Replay | A captured OWE1 request is replayed and returns `CRYPTO_REPLAY_DETECTED` |
 | Tamper | A flipped bit in a ciphertext returns `CRYPTO_DECRYPT_FAILED` |
 | CSP | A response header snapshot test, so a loosened policy shows up in review |

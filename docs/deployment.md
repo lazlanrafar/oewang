@@ -127,7 +127,8 @@ Values marked **secret** go in Coolify's secret store, not in a plain environmen
 | `EMAIL_FROM` | yes | Sender identity on reset and invite mail |
 | `FX_API_URL` | no | Defaults to `https://api.apilayer.net/exchangerate` (D96) |
 | `FX_ACCESS_KEY` | yes, **secret** | APILayer Exchange Rate key. Without it no rates are fetched; writes still work from the cache or a typed rate (TXN-22). The free plan is 100 calls a month and the job spends about 30, so one key covers production and one local machine, not more |
-| `TRUST_PROXY_HEADERS` | yes | **Set this to `true`.** Behind a proxy every request arrives from the proxy, so with it off the rate limiter buckets the whole internet together. With it on, `x-forwarded-for` is read, which is only safe because the proxy is the only thing that can reach the port. Both halves of that sentence have to be true at once |
+| `TRUST_PROXY_HEADERS` | yes | **Set this to `true`.** Behind a proxy every request arrives from the proxy, so with it off the rate limiter buckets the whole internet together. With it on, the last `x-forwarded-for` entry is read, the one the proxy appended, which is only safe because the proxy is the only thing that can reach the port. Both halves of that sentence have to be true at once |
+| `APP_RELAY_KEY` | yes | At least 32 random characters, the same value as on `app`. The API refuses to start in production without it. It is what makes the app's `x-client-ip` believable, so the rate limits count each browser rather than the app's one address ([hardening](security/hardening.md#whose-address-is-counted), D112) |
 | `RATE_LIMIT_*`, `UPLOADS_PER_WORKSPACE_PER_DAY`, `REQUEST_TIMEOUT_SECS`, `BODY_LIMIT_BYTES` | no | Limits, documented in [hardening](security/hardening.md#rate-limits-and-resource-limits) |
 | `RUST_LOG` | no | Production wants something quieter than the development default, for example `oewang_api=info,warn`. The binary is `oewang-api`, so its log target is `oewang_api`; a filter naming `oewang_server` silences every line |
 
@@ -168,7 +169,8 @@ The SvelteKit server reads these from the process environment.
 | `API_URL` | yes | Internal URL of `api` |
 | `CRYPTO_SIGNING_PUBLIC_KEYS` | yes | The API's pinned public keys. `apps/app/src/lib/server/api.ts` throws at startup when `APP_ENV=production` and this is empty |
 | `OWE1_ENABLED` | no | Anything other than the string `false` is on |
-| `ADDRESS_HEADER`, `XFF_DEPTH` | yes behind a proxy | adapter-node's own: `X-Forwarded-For` and `1` behind Coolify's proxy. Without them every address the session list shows is the proxy's (docs/security/auth.md) |
+| `ADDRESS_HEADER`, `XFF_DEPTH` | yes behind a proxy | adapter-node's own. `X-Forwarded-For`, and the depth is the number of proxies in front: `2` behind Cloudflare and Coolify's Traefik once Traefik trusts Cloudflare's ranges ([reverse proxy](#reverse-proxy)), `1` behind Traefik alone. Wrong, and every browser is the proxy's address: the session list shows it and the API's per-address rate limits collapse into one |
+| `APP_RELAY_KEY` | yes | The same value as on `api`. Sent with `x-client-ip`; without it the API ignores the address (D112) |
 
 `OWE1_VECTORS_PATH` is a test-only variable. It does not belong in a deployed environment.
 
@@ -283,7 +285,8 @@ Coolify's proxy terminates TLS and is the only thing that may reach a container 
 Three further proxy requirements:
 
 - **Do not buffer responses.** Chat streams server-sent events through `app` from `api`. A buffering proxy turns a streamed answer into a long pause and then a wall of text.
-- **Set `x-forwarded-for` honestly**, and set `TRUST_PROXY_HEADERS=true` on the API so the rate limiter reads it. The header is only trustworthy because nothing else can reach the port; if that ever stops being true, this setting has to come back off.
+- **Set `x-forwarded-for` honestly**, and set `TRUST_PROXY_HEADERS=true` on the API so the rate limiter reads it. The API reads only the last entry, the one the proxy appended. The header is only trustworthy because nothing else can reach the port; if that ever stops being true, this setting has to come back off.
+- **Cloudflare is in front of Traefik.** Both domains are proxied by Cloudflare, so Traefik's peer is a Cloudflare edge. Traefik discards forwarded headers from a peer it does not trust and writes its own, which makes every browser's address a Cloudflare edge's. Trust Cloudflare's published ranges on Traefik's entry points (`--entrypoints.http.forwardedHeaders.trustedIPs=...` and the same for `https`, from cloudflare.com/ips) and set `XFF_DEPTH=2` on `app`: Cloudflare's entry is then second from the right, and anything a browser sent sits to its left, unread. `CF-Connecting-IP` is not used, because anyone who finds the origin's address can send it straight to Traefik; a request that skips Cloudflare has one entry, so adapter-node finds no address at depth 2 and the API counts it against the app's own (D112).
 - **Leave the security headers to the application.** The CSP is issued by SvelteKit with a per-request nonce (`apps/app/vite.config.ts`, SEC-15). A proxy that adds its own `Content-Security-Policy` will fight it and break hydration quietly.
 
 ## Deploy order

@@ -120,7 +120,7 @@ Requirement IDs are referenced by every other doc and by each backlog story. The
 | AUTH-3 | The token is stored in an `httpOnly` cookie set by the SvelteKit server. Client-side JavaScript never reads it. |
 | AUTH-4 | The API derives `workspace_id` only from JWT claims, and rejects any `workspace_id` supplied in a body or query string. |
 | AUTH-5 | An unknown email and a wrong password return the same error and take comparable time. |
-| AUTH-6 | Authentication endpoints are rate limited to 10 requests per 15 minutes per IP address. |
+| AUTH-6 | Authentication endpoints are rate limited to 10 requests per 15 minutes per browser address, and sign-in, sign-up and password reset also per email address (D112). |
 | AUTH-7 | A session is a 15 minute access JWT plus a 30 day refresh token, both in `httpOnly` cookies (D38). |
 | AUTH-8 | Refresh and password reset tokens are stored as SHA-256 hashes. The raw token is never persisted. |
 | AUTH-9 | A refresh rotates the token. Reusing a rotated token revokes every token descended from that login. |

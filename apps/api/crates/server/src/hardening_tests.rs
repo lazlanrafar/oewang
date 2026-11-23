@@ -146,6 +146,13 @@ fn should_default_every_limit_to_the_documented_value() {
         (10, 900)
     );
     assert_eq!(
+        (
+            limits.credential_ceiling.max,
+            limits.credential_ceiling.window_secs
+        ),
+        (1000, 900)
+    );
+    assert_eq!(
         (limits.handshake.max, limits.handshake.window_secs),
         (30, 60)
     );

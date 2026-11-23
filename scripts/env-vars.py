@@ -43,6 +43,7 @@ SECRETS = {
     "DATABASE_URL",
     "JWT_SECRET",
     "AI_SERVICE_API_KEY",
+    "APP_RELAY_KEY",
     "AI_API_KEY",
     "RESEND_API_KEY",
     "FX_ACCESS_KEY",
