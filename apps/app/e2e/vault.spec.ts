@@ -274,7 +274,7 @@ test.describe('the vault page and file sheet (US-048)', () => {
 			() => expect(page.getByRole('alertdialog')).toBeVisible({ timeout: 1000 })
 		);
 		const confirm = page.getByRole('alertdialog');
-		await expect(confirm).toContainText('It is attached to 1 transactions');
+		await expect(confirm).toContainText('It is attached to 1 transaction');
 		await page.screenshot({ path: SHOT('delete-confirm') });
 		await confirm.getByRole('button', { name: 'Delete' }).click();
 

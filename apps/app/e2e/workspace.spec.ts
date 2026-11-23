@@ -257,7 +257,7 @@ test.describe('US-059 convert the workspace currency', () => {
 		await page.locator('#convert-confirm').fill('USD');
 		await shot(page, 'convert-confirm');
 		await confirm.getByRole('button', { name: 'Convert to USD' }).click();
-		await expect(page.getByText(/Converted to USD\. 1 transactions and 1 budgets/)).toBeVisible();
+		await expect(page.getByText(/Converted to USD\. 1 transaction and 1 budget recalculated/)).toBeVisible();
 		await shot(page, 'converted');
 
 		await page.reload();
