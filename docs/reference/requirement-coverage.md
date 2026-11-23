@@ -92,7 +92,7 @@ in browser" box ticked; or a written reason it is not done.
 | MOB-6 | `apps/api/crates/server/src/accounts/tests.rs`, `apps/api/crates/server/src/offline.rs`, `apps/api/crates/server/src/transactions/tests.rs`, `apps/native/integration_test/m3_offline_flow_test.dart`, `apps/native/test/unit/accounts_view_model_test.dart`, `apps/native/test/unit/offline_sync_test.dart`, `apps/native/test/widget/m2_screens_test.dart` |
 | MOB-7 | `apps/api/crates/domain/src/error.rs`, `apps/api/crates/server/src/accounts/tests.rs`, `apps/api/crates/server/src/offline.rs`, `apps/api/crates/server/src/transactions/tests.rs`, `apps/native/integration_test/m3_offline_flow_test.dart`, `apps/native/test/unit/offline_sync_test.dart` |
 | MOB-8 | `apps/native/test/unit/chat_view_model_test.dart`, `apps/native/test/unit/owe1_stream_test.dart`, `apps/native/test/unit/owe1_vectors_test.dart`, `apps/native/test/unit/receipt_scan_test.dart`, `apps/native/test/unit/vault_repository_remote_test.dart`, `apps/native/test/widget/chat_vault_screens_test.dart` |
-| MOB-9 | `apps/app/src/routes/.well-known/apple-app-site-association/server.test.ts`, `apps/native/test/unit/invite_link_test.dart`, `apps/native/test/unit/telegram_view_model_test.dart` |
+| MOB-9 | `apps/app/src/routes/.well-known/apple-app-site-association/server.test.ts`, `apps/native/integration_test/m5_integrations_flow_test.dart`, `apps/native/test/unit/invite_link_test.dart`, `apps/native/test/unit/telegram_view_model_test.dart` |
 | OPS-1 | `apps/api/crates/server/src/accounts/tests.rs`, `apps/api/crates/server/src/transactions/tests.rs` |
 | OPS-2 | `apps/api/crates/server/src/ai/tests.rs`, `apps/api/crates/server/src/ai/tool_tests.rs` |
 | OPS-3 | `apps/ai/tests/test_chat_stream.py`, `apps/ai/tests/test_extraction_ladder.py`, `apps/ai/tests/test_extraction_pdf.py`, `apps/ai/tests/test_extraction_routes.py`, `apps/api/crates/server/src/ai/tool_tests.rs`, `apps/api/crates/server/src/hardening_tests.rs`, `apps/api/crates/server/src/main.rs`, `apps/api/crates/server/src/transactions/tests.rs` |
@@ -111,7 +111,7 @@ in browser" box ticked; or a written reason it is not done.
 | PLT-3 | `apps/ai/tests/test_health.py` |
 | PLT-4 | `apps/app/src/lib/security-headers.test.ts`, `apps/app/src/lib/server-boundary.test.ts` |
 | PLT-5 | not done: a build property (separate Dockerfiles, no shared package) held by the repository layout and review, not by a test |
-| PUSH-1 | `apps/native/integration_test/m2_screens_flow_test.dart`, `apps/native/integration_test/transactions_flow_test.dart`, `apps/native/test/unit/push_route_test.dart`, `apps/native/test/unit/push_service_test.dart` |
+| PUSH-1 | `apps/native/integration_test/m2_screens_flow_test.dart`, `apps/native/integration_test/m5_integrations_flow_test.dart`, `apps/native/integration_test/transactions_flow_test.dart`, `apps/native/test/unit/push_route_test.dart`, `apps/native/test/unit/push_service_test.dart` |
 | PUSH-2 | `apps/api/crates/server/src/push/tests.rs` |
 | PUSH-3 | `apps/api/crates/server/src/push/tests.rs` |
 | PUSH-4 | `apps/api/crates/server/src/push/tests.rs` |
