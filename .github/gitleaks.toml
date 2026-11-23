@@ -8,6 +8,10 @@
 #   - the OWE1 test vectors and the fixtures around them, which hold
 #     fixed key material generated for the test and published in the
 #     repository on purpose.
+#   - an MCP token's `token_prefix`: the first characters the API keeps to
+#     tell tokens apart, shown in the UI and in design-system specimens.
+#     A prefix cannot be used as a token. Matched on the whole
+#     `token_prefix: '...'` text, so a full token anywhere else still fails.
 #
 # Nothing here allowlists a path that could hold a live credential. The
 # real .env is gitignored and is not a scanned path.
@@ -24,4 +28,8 @@ paths = [
   '''^apps/api/crates/domain/testdata/.*''',
   '''^apps/api/seeds/.*\.sql$''',
   '''^apps/ai/tests/golden/.*''',
+]
+regexTarget = "match"
+regexes = [
+  '''token_prefix: 'owm_[A-Za-z0-9]{1,12}'?''',
 ]
