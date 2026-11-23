@@ -11,9 +11,9 @@ Evidence is, in order of preference: a test file that cites the ID (in a
 name or a comment); a backlog story that names the ID and has its "Verify
 in browser" box ticked; or a written reason it is not done.
 
-- 151 with test evidence
+- 155 with test evidence
 - 29 verified in browser only
-- 18 not done
+- 14 not done
 
 | ID | Evidence |
 |---|---|
@@ -85,10 +85,10 @@ in browser" box ticked; or a written reason it is not done.
 | MCP-8 | `apps/app/e2e/mcp-oauth.spec.ts` |
 | MCP-9 | `apps/api/crates/server/src/main.rs`, `apps/app/e2e/mcp-oauth.spec.ts` |
 | MOB-1 | not done: epic OEW-083 in progress; tests land with US-063 to US-068 |
-| MOB-2 | not done: epic OEW-083 in progress; tests land with US-063 to US-068 |
-| MOB-3 | not done: epic OEW-083 in progress; tests land with US-063 to US-068 |
-| MOB-4 | not done: epic OEW-083 in progress; tests land with US-063 to US-068 |
-| MOB-5 | not done: epic OEW-083 in progress; tests land with US-063 to US-068 |
+| MOB-2 | `apps/native/integration_test/transactions_flow_test.dart`, `apps/native/test/unit/api_client_test.dart`, `apps/native/test/unit/owe1_vectors_test.dart` |
+| MOB-3 | `apps/native/integration_test/transactions_flow_test.dart`, `apps/native/test/unit/auth_sync_test.dart` |
+| MOB-4 | `apps/native/integration_test/transactions_flow_test.dart`, `apps/native/test/unit/amount_format_test.dart`, `apps/native/test/unit/month_transactions_test.dart`, `apps/native/test/unit/transaction_dto_test.dart`, `apps/native/test/widget/transactions_daily_screen_test.dart` |
+| MOB-5 | `apps/native/test/unit/auth_sync_test.dart`, `apps/native/test/widget/transactions_daily_screen_test.dart` |
 | MOB-6 | `apps/api/crates/server/src/accounts/tests.rs`, `apps/api/crates/server/src/offline.rs`, `apps/api/crates/server/src/transactions/tests.rs` |
 | MOB-7 | `apps/api/crates/domain/src/error.rs`, `apps/api/crates/server/src/accounts/tests.rs`, `apps/api/crates/server/src/offline.rs`, `apps/api/crates/server/src/transactions/tests.rs` |
 | MOB-8 | not done: epic OEW-083 in progress; tests land with US-063 to US-068 |

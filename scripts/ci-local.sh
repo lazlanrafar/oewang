@@ -89,6 +89,10 @@ step "ai: pytest" in_container ai uv run pytest -q
 step "app: check" in_container app bun run check
 step "app: test" in_container app bun run test
 
+# -- native: on the host, not in a container (iOS needs Xcode, D113).
+step "native: analyze" bash -c 'cd apps/native && flutter pub get >/dev/null && flutter analyze'
+step "native: test" bash -c 'cd apps/native && flutter test'
+
 
 printf '\n\033[1m== Summary\033[0m\n'
 for name in "${passed[@]}"; do printf '  \033[32mpass\033[0m  %s\n' "$name"; done
