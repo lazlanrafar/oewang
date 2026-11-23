@@ -853,7 +853,7 @@ Requirements: MCP-1 to MCP-8
 - [x] A refused MCP token no longer signs the relaying browser out (bug found while testing)
 - [x] clippy, `cargo test`, `bun run check`, `bun run test` pass in the containers
 - [x] Verified locally: initialize, tools/list, list_workspaces, a 401 for a bad token; imported a 431-row Money Manager export into Latoe through MCP (409 rows via `import_transactions`, 11 transfers via `create_transaction`, 3 wallets created), totals matching the file
-- [ ] Verify with Claude Code itself (`claude mcp add --transport http … --header`)
+- [x] Verify with Claude Code itself (`claude mcp add --transport http … --header`) (2026-11-23, locally: `claude -p --mcp-config` with a personal token listed 53 tools and called `list_wallets`)
 - [ ] Verify in production after deploy
 
 ### US-061: OAuth for MCP connector apps
