@@ -5,6 +5,8 @@ analyzer:
     - "**/*.g.dart"
     - "**/*.freezed.dart"
     - "**/generated_plugin_registrant.dart"
+    # SwiftPM checks plugin sources out here during an iOS build.
+    - "build/**"
   errors:
     prefer_const_constructors: error
     prefer_const_constructors_in_immutables: error
