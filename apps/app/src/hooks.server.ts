@@ -41,6 +41,8 @@ const PUBLIC_PREFIXES = [
 	// endpoint are called by apps, not people. The consent page,
 	// `/oauth/authorize`, is not listed: it needs the person signed in.
 	'/.well-known/oauth-',
+	// Fetched by Apple for the iOS app's links and passkeys (D113).
+	'/.well-known/apple-app-site-association',
 	'/oauth/register',
 	'/oauth/token'
 ];
