@@ -76,7 +76,8 @@ class ApiClient {
     options: headers == null ? null : Options(headers: headers),
   );
 
-  Future<Response<dynamic>> delete(String path) => _dio.delete<dynamic>(path);
+  Future<Response<dynamic>> delete(String path, {Object? data}) =>
+      _dio.delete<dynamic>(path, data: data);
 
   /// A `POST` answered with `text/event-stream`, each event opened in order.
   ///

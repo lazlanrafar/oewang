@@ -8,14 +8,19 @@ import 'package:oewang/components/organisms/auth/auth_sync.dart';
 import 'package:oewang/config/env.dart';
 import 'package:oewang/core/result/app_error.dart';
 import 'package:oewang/core/result/result.dart';
+import 'package:oewang/core/router/app_router.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/data/repositories/auth_repository.dart';
 import 'package:oewang/data/repositories/budgets_repository.dart';
 import 'package:oewang/data/repositories/categories_repository.dart';
 import 'package:oewang/data/repositories/chat_repository.dart';
+import 'package:oewang/data/repositories/device_tokens_repository.dart';
 import 'package:oewang/data/repositories/feedback_repository.dart';
+import 'package:oewang/data/repositories/invites_repository.dart';
+import 'package:oewang/data/repositories/passkeys_repository.dart';
 import 'package:oewang/data/repositories/rates_repository.dart';
 import 'package:oewang/data/repositories/receipts_repository.dart';
+import 'package:oewang/data/repositories/telegram_repository.dart';
 import 'package:oewang/data/repositories/transactions_repository.dart';
 import 'package:oewang/data/repositories/users_repository.dart';
 import 'package:oewang/data/repositories/vault_repository.dart';
@@ -29,9 +34,13 @@ import 'package:oewang/data/repositories_remote/auth_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/budgets_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/categories_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/chat_repository_remote.dart';
+import 'package:oewang/data/repositories_remote/device_tokens_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/feedback_repository_remote.dart';
+import 'package:oewang/data/repositories_remote/invites_repository_remote.dart';
+import 'package:oewang/data/repositories_remote/passkeys_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/rates_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/receipts_repository_remote.dart';
+import 'package:oewang/data/repositories_remote/telegram_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/transactions_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/users_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/vault_repository_remote.dart';
@@ -40,6 +49,9 @@ import 'package:oewang/data/repositories_remote/wallets_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/workspaces_repository_remote.dart';
 import 'package:oewang/data/services/api/api_client.dart';
 import 'package:oewang/data/services/db/app_database.dart';
+import 'package:oewang/data/services/passkeys/passkey_authenticator.dart';
+import 'package:oewang/data/services/push/push_messaging.dart';
+import 'package:oewang/data/services/push/push_service.dart';
 import 'package:oewang/data/services/storage/preferences_service.dart';
 import 'package:oewang/data/services/storage/secure_storage_service.dart';
 import 'package:oewang/data/services/sync/sync_service.dart';
@@ -211,6 +223,46 @@ final workspacesRepositoryProvider = Provider<WorkspacesRepository>((ref) {
   return WorkspacesRepositoryRemote(ref.watch(apiClientProvider));
 });
 
+final invitesRepositoryProvider = Provider<InvitesRepository>((ref) {
+  return InvitesRepositoryRemote(ref.watch(apiClientProvider));
+});
+
+final telegramRepositoryProvider = Provider<TelegramRepository>((ref) {
+  return TelegramRepositoryRemote(ref.watch(apiClientProvider));
+});
+
+final passkeysRepositoryProvider = Provider<PasskeysRepository>((ref) {
+  return PasskeysRepositoryRemote(
+    api: ref.watch(apiClientProvider),
+    storage: ref.watch(secureStorageProvider),
+  );
+});
+
+final devicePasskeysProvider = Provider<DevicePasskeys>(
+  (ref) => DevicePasskeys(),
+);
+
+final deviceTokensRepositoryProvider = Provider<DeviceTokensRepository>((ref) {
+  return DeviceTokensRepositoryRemote(ref.watch(apiClientProvider));
+});
+
+final pushMessagingProvider = Provider<PushMessaging>(
+  (ref) => FirebasePushMessaging(),
+);
+
+/// Push (PUSH-1, D116): the session controller tells it every change, so it
+/// registers this device; the app widget starts it, so a tapped push opens
+/// its screen.
+final pushServiceProvider = Provider<PushService>((ref) {
+  final service = PushService(
+    messaging: ref.watch(pushMessagingProvider),
+    deviceTokens: ref.watch(deviceTokensRepositoryProvider),
+    open: (location) => ref.read(appRouterProvider).go(location),
+  );
+  ref.onDispose(service.dispose);
+  return service;
+});
+
 /// Monotonically increasing integer bumped whenever a transaction is
 /// successfully created. Screens that show transaction lists watch this and
 /// reload when it changes.
@@ -275,6 +327,13 @@ final themeModeProvider = NotifierProvider<ThemeModeController, ThemeMode>(
 class SessionController extends Notifier<AsyncValue<Session?>> {
   @override
   AsyncValue<Session?> build() {
+    // Every way into a workspace (sign-in, create, join, switch) registers
+    // the device for push again; the route needs that workspace session.
+    listenSelf(
+      (_, next) => unawaited(
+        ref.read(pushServiceProvider).sessionChanged(next.valueOrNull),
+      ),
+    );
     _bootstrap();
     return const AsyncValue.loading();
   }
@@ -330,6 +389,8 @@ class SessionController extends Notifier<AsyncValue<Session?>> {
   }
 
   Future<void> clear() async {
+    // While the tokens still work: the route needs this session.
+    await ref.read(pushServiceProvider).signingOut();
     await ref.read(authRepositoryProvider).logout();
     state = const AsyncValue.data(null);
   }

@@ -12,10 +12,12 @@ import 'package:oewang/components/organisms/categories/categories_form_screen.da
 import 'package:oewang/components/organisms/categories/categories_list_screen.dart';
 import 'package:oewang/components/organisms/chat/chat_screen.dart';
 import 'package:oewang/components/organisms/chat/chat_sessions_screen.dart';
+import 'package:oewang/components/organisms/invite/invite_accept_screen.dart';
 import 'package:oewang/components/organisms/settings/currency/settings_main_currency_screen.dart';
 import 'package:oewang/components/organisms/settings/feedback/feedback_form_screen.dart';
 import 'package:oewang/components/organisms/settings/settings_screen.dart';
 import 'package:oewang/components/organisms/settings/style/settings_style_screen.dart';
+import 'package:oewang/components/organisms/settings/telegram/settings_telegram_screen.dart';
 import 'package:oewang/components/organisms/stats/stats_screen.dart';
 import 'package:oewang/components/organisms/transactions/transactions_form_screen.dart';
 import 'package:oewang/components/organisms/transactions/transactions_screen.dart';
@@ -29,6 +31,7 @@ import 'package:oewang/components/organisms/wallets/wallets_accounts_settings_sc
 import 'package:oewang/components/organisms/wallets/wallets_include_in_totals_screen.dart';
 import 'package:oewang/components/organisms/wallets/wallets_screen.dart';
 import 'package:oewang/config/dependencies.dart';
+import 'package:oewang/core/router/invite_route.dart';
 import 'package:oewang/domain/models/budget_status.dart';
 import 'package:oewang/domain/models/category.dart' as cat;
 import 'package:oewang/domain/models/receipt_draft.dart';
@@ -66,6 +69,7 @@ class AppRoutes {
   static const String chat = '/chat';
   static const String chatNew = '/chat/new';
   static const String vault = '/vault';
+  static const String telegram = '/settings/telegram';
 
   static String chatFor(String id) => '/chat/$id';
   static String accountEditFor(String id) => '/accounts/edit/$id';
@@ -96,6 +100,9 @@ GoRouter buildAppRouter(Ref ref) {
   return GoRouter(
     initialLocation: AppRoutes.splash,
     refreshListenable: refresh,
+    // A location no route matches (a push naming a screen this build lacks)
+    // opens home rather than an error page.
+    onException: (_, _, router) => router.go(AppRoutes.trans),
     redirect: (context, state) {
       // go_router has no route for the app's own oewang:// scheme (the old
       // OAuth callback); bounce such a link home rather than "Page Not Found".
@@ -112,9 +119,18 @@ GoRouter buildAppRouter(Ref ref) {
       // cached an empty result (autoDispose only fixed it once the user
       // navigated away and back). Gating here fixes it for every screen at
       // once instead of patching each data provider.
+      // The location is kept as `next`, so a link or a push that opened the
+      // app still lands where it pointed once the session is known.
       if (session.isLoading) {
-        return loc == AppRoutes.splash ? null : AppRoutes.splash;
+        if (loc == AppRoutes.splash) return null;
+        return Uri(
+          path: AppRoutes.splash,
+          queryParameters: {'next': _relative(state.uri)},
+        ).toString();
       }
+      final next = loc == AppRoutes.splash
+          ? state.uri.queryParameters['next']
+          : null;
 
       final value = session.valueOrNull;
       final loggedIn = value != null;
@@ -130,6 +146,19 @@ GoRouter buildAppRouter(Ref ref) {
         AppRoutes.onboarding,
       };
 
+      final invite = inviteRoute(
+        wanted: next == null ? state.uri : Uri.parse(next),
+        location: loc,
+        signedIn: loggedIn,
+        pending: ref.read(pendingInviteProvider),
+        registerLocation: AppRoutes.register,
+      );
+      if (invite.stash != null) {
+        ref.read(pendingInviteProvider.notifier).state = invite.stash;
+      }
+      if (invite.redirect != null) return invite.redirect;
+      if (invite.stay) return null;
+
       if (!loggedIn) {
         return publicRoutes.contains(loc) ? null : AppRoutes.login;
       }
@@ -139,9 +168,8 @@ GoRouter buildAppRouter(Ref ref) {
       }
       // Logged in with a workspace → keep them out of the auth flow and off
       // the now-resolved splash screen.
-      if (authFlowRoutes.contains(loc) || loc == AppRoutes.splash) {
-        return AppRoutes.trans;
-      }
+      if (loc == AppRoutes.splash) return next ?? AppRoutes.trans;
+      if (authFlowRoutes.contains(loc)) return AppRoutes.trans;
       return null;
     },
     routes: [
@@ -162,6 +190,15 @@ GoRouter buildAppRouter(Ref ref) {
       GoRoute(
         path: AppRoutes.onboarding,
         builder: (context, state) => const OnboardingScreen(),
+      ),
+      GoRoute(
+        path: acceptInvitePath,
+        builder: (context, state) =>
+            InviteAcceptScreen(token: state.uri.queryParameters['token']),
+      ),
+      GoRoute(
+        path: AppRoutes.telegram,
+        builder: (context, state) => const TelegramScreen(),
       ),
       GoRoute(
         path: AppRoutes.transactionForm,
@@ -345,3 +382,7 @@ GoRouter buildAppRouter(Ref ref) {
 }
 
 final appRouterProvider = Provider<GoRouter>(buildAppRouter);
+
+/// Path and query only: a universal link arrives with the site's host.
+String _relative(Uri uri) =>
+    Uri(path: uri.path, query: uri.hasQuery ? uri.query : null).toString();

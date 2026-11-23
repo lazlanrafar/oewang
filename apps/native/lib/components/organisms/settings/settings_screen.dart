@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:oewang/components/atoms/section_label.dart';
 import 'package:oewang/components/molecules/confirm_dialog.dart';
 import 'package:oewang/components/molecules/list_row.dart';
+import 'package:oewang/components/organisms/auth/auth_passkey_view_model.dart';
 import 'package:oewang/components/organisms/settings/profile/settings_user_profile_header.dart';
 import 'package:oewang/components/organisms/settings/workspace/settings_workspace_card.dart';
 import 'package:oewang/config/dependencies.dart';
@@ -135,6 +136,12 @@ class SettingsScreen extends ConsumerWidget {
                       onTap: () => _comingSoon(context, 'Language'),
                     ),
                     ListRow(
+                      icon: Icons.send_outlined,
+                      title: 'Telegram',
+                      onTap: () => context.push(AppRoutes.telegram),
+                    ),
+                    const _AddPasskeyRow(),
+                    ListRow(
                       icon: Icons.privacy_tip_outlined,
                       title: 'Privacy Policy',
                       onTap: () async => launchUrl(
@@ -210,6 +217,32 @@ class SettingsScreen extends ConsumerWidget {
         context,
       ).showSnackBar(SnackBar(content: Text(error.message)));
     }
+  }
+}
+
+/// Shown only where passkeys work on this device (MOB-9).
+class _AddPasskeyRow extends ConsumerWidget {
+  const _AddPasskeyRow();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final vm = ref.watch(passkeyViewModelProvider);
+    if (!vm.supported) return const SizedBox.shrink();
+    return ListRow(
+      icon: Icons.key_outlined,
+      title: 'Add a passkey',
+      subtitle: 'Sign in with Face ID or Touch ID',
+      onTap: () async {
+        if (vm.running) return;
+        final added = await vm.add();
+        if (!context.mounted) return;
+        final message = added ? 'Passkey added.' : vm.error;
+        if (message == null) return;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(message)));
+      },
+    );
   }
 }
 

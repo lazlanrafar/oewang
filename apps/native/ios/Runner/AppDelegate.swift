@@ -1,4 +1,5 @@
 import Flutter
+import FirebaseCore
 import UIKit
 import UserNotifications
 
@@ -8,8 +9,7 @@ import UserNotifications
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
-    // Push (FCM) returns in a later story (PUSH-1, D116); GoogleService-Info.plist
-    // stays in the bundle so that story only has to add the Dart side back.
+    FirebaseApp.configure()
     UNUserNotificationCenter.current().delegate = self
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }

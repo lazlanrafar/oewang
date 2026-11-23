@@ -6,6 +6,7 @@ import 'package:oewang/components/atoms/button.dart';
 import 'package:oewang/components/atoms/inputs/input.dart';
 import 'package:oewang/components/molecules/legal_disclaimer_text.dart';
 import 'package:oewang/components/organisms/auth/auth_login_view_model.dart';
+import 'package:oewang/components/organisms/auth/auth_passkey_view_model.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/router/app_router.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
@@ -53,9 +54,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
+  /// A discoverable passkey: no email typed first (D110).
+  Future<void> _onPasskey() async {
+    final session = await ref.read(passkeyViewModelProvider).signIn();
+    if (session == null || !mounted) return;
+    final error = await ref
+        .read(sessionControllerProvider.notifier)
+        .enter(session);
+    if (error != null && mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.message)));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final vm = ref.watch(loginViewModelProvider);
+    final passkey = ref.watch(passkeyViewModelProvider);
     final palette = context.palette;
 
     return Scaffold(
@@ -121,6 +137,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   loading: vm.submit.running,
                   onPressed: vm.canSubmit ? _onSubmit : null,
                 ),
+                if (passkey.supported) ...[
+                  const SizedBox(height: OewangSpacing.md),
+                  Button(
+                    label: 'Sign in with a passkey',
+                    variant: ButtonVariant.outlined,
+                    loading: passkey.running,
+                    onPressed: _onPasskey,
+                  ),
+                  if (passkey.error != null) ...[
+                    const SizedBox(height: OewangSpacing.sm),
+                    Text(
+                      passkey.error!,
+                      textAlign: TextAlign.center,
+                      style: OewangFonts.sans(
+                        color: OewangColors.coral,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ],
                 const SizedBox(height: OewangSpacing.lg),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,

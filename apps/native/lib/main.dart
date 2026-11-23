@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +10,8 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // From the bundled google-services.json / GoogleService-Info.plist (PUSH-1).
+  await Firebase.initializeApp();
   final env = EnvConfig.fromDefines();
   final prefs = await PreferencesService.open();
 
