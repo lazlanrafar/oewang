@@ -11,9 +11,9 @@ Evidence is, in order of preference: a test file that cites the ID (in a
 name or a comment); a backlog story that names the ID and has its "Verify
 in browser" box ticked; or a written reason it is not done.
 
-- 135 with test evidence
+- 138 with test evidence
 - 31 verified in browser only
-- 18 not done
+- 15 not done
 
 | ID | Evidence |
 |---|---|
@@ -75,15 +75,15 @@ in browser" box ticked; or a written reason it is not done.
 | FX-2 | `apps/api/crates/server/src/transactions/tests.rs` |
 | ITM-1 | `apps/api/crates/server/src/items/tests.rs` |
 | ITM-2 | `apps/api/crates/server/src/items/tests.rs` |
-| MCP-1 | not done: the JSON-RPC relay at /mcp lives in the app route and the API handler; no test drives a request through it |
+| MCP-1 | `apps/app/e2e/mcp-oauth.spec.ts` |
 | MCP-2 | `apps/api/crates/server/src/mcp/tests.rs` |
 | MCP-3 | `apps/api/crates/server/src/mcp/tests.rs` |
 | MCP-4 | `apps/api/crates/server/src/mcp/tests.rs` |
 | MCP-5 | `apps/api/crates/server/src/mcp/tests.rs` |
 | MCP-6 | `apps/api/crates/server/src/mcp/budget.rs` |
-| MCP-7 | not done: Ctx::auth sets source mcp on every MCP write (mcp/registry.rs), but no test reads the audit row it leaves |
-| MCP-8 | not done: the 401 with WWW-Authenticate is set in apps/app/src/routes/mcp/+server.ts, a route no unit test reaches |
-| MCP-9 | `apps/api/crates/server/src/main.rs` |
+| MCP-7 | `apps/api/crates/server/src/mcp/tests.rs` |
+| MCP-8 | `apps/app/e2e/mcp-oauth.spec.ts` |
+| MCP-9 | `apps/api/crates/server/src/main.rs`, `apps/app/e2e/mcp-oauth.spec.ts` |
 | OPS-1 | `apps/api/crates/server/src/accounts/tests.rs`, `apps/api/crates/server/src/transactions/tests.rs` |
 | OPS-2 | `apps/api/crates/server/src/ai/tests.rs`, `apps/api/crates/server/src/ai/tool_tests.rs` |
 | OPS-3 | `apps/ai/tests/test_chat_stream.py`, `apps/ai/tests/test_extraction_ladder.py`, `apps/ai/tests/test_extraction_pdf.py`, `apps/ai/tests/test_extraction_routes.py`, `apps/api/crates/server/src/ai/tool_tests.rs`, `apps/api/crates/server/src/hardening_tests.rs`, `apps/api/crates/server/src/main.rs`, `apps/api/crates/server/src/transactions/tests.rs` |
