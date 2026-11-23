@@ -24,11 +24,12 @@ oewang is a personal finance tracker. This repository is a ground-up rewrite of 
 16. [Usage](features/usage.md): where model tokens are recorded, how storage is derived, and the settings page that shows both.
 17. [Budgets](features/budgets.md): monthly limits per expense category, what counts as spent, the page and the chat canvas.
 18. [MCP](features/mcp.md): external AI apps over the Model Context Protocol, tokens, tools, caps and confirmation.
-19. [AI service](ai/service.md): the Python service, its tool catalog, prompt, and streaming protocol.
-20. Best practices: [Rust API](best-practices/rust-api.md) and [Svelte app](best-practices/svelte-app.md).
-21. [Backlog](backlog.md): the implementation stories, in order, each mapped to requirement IDs.
-22. [Legacy app](reference/legacy-app.md): what the old implementation contains, what the rewrite takes from it, what it drops.
-23. [Midday research](research/midday.md): reverse engineering of a second reference implementation, and the proposals taken from it.
+19. [Mobile](features/mobile.md): the Flutter app, its direct OWE1 transport, offline queue and push notifications.
+20. [AI service](ai/service.md): the Python service, its tool catalog, prompt, and streaming protocol.
+21. Best practices: [Rust API](best-practices/rust-api.md) and [Svelte app](best-practices/svelte-app.md).
+22. [Backlog](backlog.md): the implementation stories, in order, each mapped to requirement IDs.
+23. [Legacy app](reference/legacy-app.md): what the old implementation contains, what the rewrite takes from it, what it drops.
+24. [Midday research](research/midday.md): reverse engineering of a second reference implementation, and the proposals taken from it.
 
 ## Doc map
 

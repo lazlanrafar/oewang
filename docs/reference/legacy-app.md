@@ -23,7 +23,7 @@ A Turborepo monorepo, Bun as package manager and runtime, version 2.2.0 at the t
 | `apps/website` | Next.js | 3003 | Dropped |
 | `apps/ai` | FastAPI, Python 3.12 | 3004 | Replaced by `apps/ai`, much smaller |
 | `apps/worker` | Go, asynq | 3005 | Dropped. One job moved into the API as a tokio task (D10) |
-| `apps/native` | Flutter | n/a | Dropped |
+| `apps/native` | Flutter | n/a | Ported by D113 to `apps/native`, on the new API: debts, contacts and sub-currencies stay out |
 
 ### Packages
 
@@ -56,7 +56,7 @@ None survive. The rewrite has no shared package layer: the three apps speak HTTP
 | Integrations, Telegram webhook handling | Telegram rebuilt, not ported (D83 to D86): linking by one-time token instead of `/start <slug>___<user>`, long polling from the API instead of a webhook into the Go worker, receipts saved on arrival. Every other integration is out of scope |
 | The MCP server and its OAuth 2.1 client registration | Rebuilt by D106, from the flows only: the old one stored tokens in plaintext and skipped redirect, membership and scope checks |
 | OAuth login providers | D21 |
-| Notifications, push, device tokens, realtime invalidation | Out of scope |
+| Notifications, realtime invalidation | Out of scope. Push and device tokens came back with D116, for four events and with no in-app inbox |
 | Anomaly detection, transaction classification, the advisor endpoint | Out of scope. The advisor had no caller even in the old app |
 | Canvas artifacts and chat charts | Spending, income and burn rate came back with D88, built by the API rather than by the AI service, and stored on the tool call. Budget followed with D103. The debt canvas stays out with its feature |
 | Three locales (`en`, `id`, `ja`) | English only, through a dictionary (D15) |

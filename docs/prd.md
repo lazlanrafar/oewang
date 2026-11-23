@@ -33,20 +33,20 @@ Each of these exists in the old app and is deliberately left out. Adding any of 
 
 - Invoices: creation, sending, the public invoice page, payment tracking.
 - Debts and receivables, including the related chat tools.
-- ~~Budgets.~~ Budgets came back with D103 (BUD-1 to BUD-4, section 6.15), with their chat canvas. Still out: budget-exceeded notifications, with every other notification.
+- ~~Budgets.~~ Budgets came back with D103 (BUD-1 to BUD-4, section 6.15), with their chat canvas. Budget alerts at 80% and 100% came back as push notifications with D116 (PUSH-3); every other kind of notification stays out.
 - Contacts and bill splitting.
 - ~~Vault as a browsable feature: `vault_files` exists only to back attachments and receipts.~~ The vault page came back with D90 (VLT-6 to VLT-13). Still out: document RAG and a `search_documents` tool.
 - Billing: plans, Mayar payments, AI token quotas, storage limits, the upgrade flow. Usage is recorded and shown (section 6.13, D92), never limited.
 - Integrations: third-party connectors and webhooks. Telegram was on this list until D83 moved it into section 6.11, and MCP until D106 (section 6.17); nothing else on the old Apps page came with them (Gmail, Outlook).
 - The admin dashboard and the marketing website.
-- The Flutter mobile app and offline sync.
+- ~~The Flutter mobile app and offline sync.~~ The mobile app came back with D113 (MOB-1 to MOB-9, section 6.18), with offline writes for transactions, wallets and categories (D114, D115).
 - The Go background worker (D10).
 - ~~The MCP server and its OAuth client registration.~~ The MCP server came back with D106 (MCP-1 to MCP-9, section 6.17).
 - OAuth login. Email and password, and passkeys (D21, D110).
 - Application-layer payload encryption (D9).
 - Web search in chat. Canvas artifacts and chat charts were on this list until D88 brought the analysis canvas back for spending, income and burn rate, and D103 added the budget canvas; the debt canvas stays out with its feature.
 - Anomaly detection and transaction classification.
-- Notifications: in-app centre, push, email alerts.
+- Notifications: in-app centre and email alerts. Push to the mobile app came back with D116 (PUSH-1 to PUSH-5, section 6.19), for four events only.
 - A second UI locale. The i18n layer ships, `en.json` is the only dictionary (D15).
 - Realtime multi-client sync. A client refetches after its own mutation.
 - Application-layer encryption of the browser-to-web-app hop, for v1 (D26). The two service hops are encrypted (D22); see [which hops are protected](api/encryption.md#which-hops-are-protected) for why the browser hop is different, and [Q8](#10-open-questions).
@@ -397,6 +397,34 @@ Added by D106. Specified in [features/mcp.md](features/mcp.md).
 | MCP-7 | Every write made through MCP is audited with source `mcp` (imports keep `import`). |
 | MCP-8 | A refused token gets 401 with `WWW-Authenticate` pointing at the protected-resource metadata. It never affects the browser session of whoever relays it. |
 | MCP-9 | OAuth 2.1 for connector apps (claude.ai, ChatGPT): discovery metadata, dynamic client registration, PKCE S256 only, exact redirect URIs, a consent page with the workspace choice, single-use codes, rotating refresh tokens. Connected apps are listed and disconnectable in Account → MCP. |
+
+### 6.18 Mobile (MOB)
+
+Added by D113, from the old Flutter app. Specified in [features/mobile.md](features/mobile.md).
+
+| ID | Requirement |
+|---|---|
+| MOB-1 | A Flutter app in `apps/native` for iOS and Android, under the old app's store identity (`com.oewang.app`). Each screen ported from the old Flutter app keeps its look; screens the old app never had (chat, receipt scan, vault, passkeys, Telegram) are adapted from the web app with the old app's components and tokens. |
+| MOB-2 | The app calls the API directly, never through the web app (D113). Every body is OWE1, with the API's signing key pinned in the build; the access and refresh tokens live only in the platform's secure storage and are never logged. |
+| MOB-3 | Sign-in, sign-up, the `/sync` workspace check (D109), workspace creation and switching, sign-out, as on the web. |
+| MOB-4 | Transactions (daily, calendar, monthly, summary, search, form), accounts and groups, categories, budgets, stats and settings, on the same routes as the web. Every figure comes from the API (D27); no amount is ever a `double` (D12). |
+| MOB-5 | A viewer sees no control that writes. The API still refuses the write. |
+| MOB-6 | Creating, editing and deleting transactions, wallets and categories work offline. Writes queue on the device and replay in order when the connection returns. A balance shown offline is a local estimate, replaced by the API's figure after the queue drains. |
+| MOB-7 | A queued edit whose row changed or was deleted elsewhere is refused by the API (`409 STALE`, D115). The app shows the conflict and the person chooses to discard their change or apply it over the current row. Nothing is overwritten silently. |
+| MOB-8 | Chat with streaming answers, receipt scanning from the camera or gallery, and the vault, on the web's routes. |
+| MOB-9 | Passkey sign-in, Telegram linking through its deep link, and invitation links (`/accept-invite?token=`) that open the app: a signed-out person registers with the invited address filled in, then the invitation is accepted. |
+
+### 6.19 Push notifications (PUSH)
+
+Added by D116. Specified in [features/mobile.md](features/mobile.md#push).
+
+| ID | Requirement |
+|---|---|
+| PUSH-1 | The app registers its FCM token after sign-in and removes it on sign-out. A token FCM reports invalid is soft-deleted. |
+| PUSH-2 | A receipt queued for later reading, or an import job, that ends (done or failed) pushes to the person who started it. |
+| PUSH-3 | A budget whose month's spending first reaches 80%, and then 100%, of its limit pushes once per threshold per month to every member with a registered device. A transaction that jumps past both sends only the 100% push. |
+| PUSH-4 | An invitation to a workspace pushes to the invited address when it belongs to an account with a registered device. The email is sent either way. |
+| PUSH-5 | A push is sent after the transaction that caused it commits and never delays or fails it. A push carries a title, a body and the screen to open; never an amount the API did not format, a token or file contents. |
 
 ## 7. Success metrics
 

@@ -166,6 +166,8 @@ Codes are stable, SCREAMING_SNAKE_CASE, and never reused for a different meaning
 | `TRANSFER_AMOUNT_REQUIRED` | 422 | `to_amount` missing on a transfer, or set on a non-transfer (TXN-18) |
 | `WALLET_CURRENCY_LOCKED` | 409 | Changing a wallet's currency once it has a live transaction (WAL-6) |
 | `WORKSPACE_CURRENCY_LOCKED` | 409 | Changing the workspace currency once any transaction exists (WAL-6) |
+| `ID_TAKEN` | 409 | A create's client `id` already names a row the caller cannot have (D114) |
+| `STALE` | 409 | `If-Match` no longer matches the row, or the row is deleted; `details.current` holds the row or null (D115) |
 | `WORKSPACE_CURRENCY_CHANGED` | 409 | A transaction write whose rate was resolved before a currency conversion committed. Retry (D105) |
 | `MCP_TOKEN_INVALID` | 401 | An MCP token that is unknown, revoked or expired (D106) |
 | `FX_RATE_UNAVAILABLE` | 503 | No rate could be resolved: the source did not answer and no cached rate has ever existed for this pair. The user may still enter one by hand (TXN-22) |
@@ -249,7 +251,8 @@ A client that parses money into a floating point number is a bug, in any languag
 | `X-Owe-Request-Id` | in and out | A ULID, unique per message. Doubles as the envelope's `request_id` |
 | `X-Owe-Timestamp` | in | Unix seconds, within 120 seconds of server time |
 | `X-Owe-Query` | in | The encrypted query string. Required even when empty |
-| `Idempotency-Key` | in | Optional on create endpoints. A repeat within 24 hours returns the first result |
+| `Idempotency-Key` | in | Superseded by D114 and never built. A create that must be safe to repeat takes a client `id` instead |
+| `If-Match` | in | Optional on `PATCH` of transactions, wallets and categories: the `updated_at` the client last saw (D115) |
 | `Retry-After` | out | Set on 429 |
 
 ## Rate limits
@@ -272,8 +275,8 @@ Exceeding a limit returns `RATE_LIMITED` with `Retry-After`.
 ## Idempotency
 
 - `GET` and `DELETE` are idempotent by nature. Deleting an already-deleted row returns 204.
-- `POST` creates accept `Idempotency-Key`. The key, the route and the caller's workspace form the cache key, held for 24 hours.
-- `PATCH` is last-write-wins. There is no optimistic concurrency header; the only contended rows are wallet balances, and those are protected by row locks, not by the client (D13).
+- ~~`POST` creates accept `Idempotency-Key`.~~ Superseded by D114 before it was built. `POST /v1/transactions`, `/v1/wallets` and `/v1/categories` accept an optional client `id` (a CUID2). A repeat with an id that already names a row in the caller's workspace answers that row with 200 and changes nothing: no second balance change, no second audit row. An id that names a row in another workspace, or a different kind of row, answers `409 ID_TAKEN`.
+- `PATCH` is last-write-wins unless the request carries `If-Match` (D115). With it, on transactions, wallets and categories, a row whose `updated_at` differs, or that is soft-deleted, answers `409 STALE` with the current row (null when deleted) in `error.details.current`. Wallet balances are still protected by row locks, not by the client (D13).
 
 ## Related docs
 

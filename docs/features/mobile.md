@@ -1,0 +1,117 @@
+# Feature: Mobile app
+
+Status: v1 draft, 2026-11-23. Part of the [oewang docs](../README.md). Implements [PRD](../prd.md#618-mobile-mob) MOB-1 to MOB-9 and PUSH-1 to PUSH-5. Decisions: [D113 to D116](../architecture.md#decision-log). Tracked as epic OEW-083.
+
+The old Flutter app, ported to `apps/native` and moved onto the new API. Screens the old app had keep their look; the data layer underneath is new.
+
+## Update this doc when
+
+- Adding, removing or restyling a screen, or changing which API route it reads.
+- Changing what can be written offline, how the queue replays, or how a conflict is shown.
+- Changing a push trigger, its text, or the screen it opens.
+- Changing how the app is configured, built, checked or released.
+
+## Shape
+
+```
+apps/native/lib/
+  config/          env (dart-define), dependency wiring (Riverpod providers)
+  core/            Result, Command, router (go_router), theme tokens, money formatting
+  data/
+    dto/           wire shapes, decimal strings kept as strings
+    repositories/  abstract interfaces
+    repositories_remote/   one per resource, over ApiClient
+    repositories_fake/     in-memory, for widget tests
+    services/api/  ApiClient (Dio), auth interceptor, owe1/ (handshake, envelope)
+    services/db/   drift: cached rows and the write queue (MOB-6)
+    services/sync/ queue replay and conflict handling
+  domain/models/   what screens use
+  components/      atoms, molecules, organisms (screen + view model), layouts
+```
+
+This is the old app's structure (MVVM, repository with a fake per interface, Riverpod, go_router), kept so a ported screen moves over with its view model.
+
+## Configuration
+
+Set at build time with `--dart-define-from-file=env/<name>.json`, never from a bundled `.env` asset:
+
+| Key | Meaning |
+|---|---|
+| `API_URL` | `https://api.oewang.com` in release, `http://10.0.2.2:3002` (Android emulator) or `http://localhost:3002` (iOS simulator) in dev |
+| `OWE1_SIGNING_KEYS` | The API's pinned Ed25519 public keys, `kid:base64,...`, same format as the web app's `CRYPTO_SIGNING_PUBLIC_KEYS` |
+| `APP_URL` | `https://app.oewang.com`, for links that open the web (legal pages, invitations) |
+| `SENTRY_DSN` | Empty disables Sentry |
+
+Public keys are not secrets. The FCM config files (`google-services.json`, `GoogleService-Info.plist`) are committed as the old app did; they identify the Firebase project and grant nothing.
+
+## Transport (D113)
+
+- Every request after the handshake is OWE1, sealed and opened by a Dio interceptor. `CRYPTO_SESSION_UNKNOWN` runs one new handshake and retries once.
+- `Authorization: Bearer <access>`; on `401 UNAUTHENTICATED` the auth interceptor calls `/v1/auth/refresh` once with the stored refresh token, stores the rotated pair, and retries. A failed refresh signs out.
+- Money arrives and leaves as decimal strings and is held as `Decimal` (package `decimal`). A `double` amount is a bug.
+- Nothing logs a token, a key, a decrypted body or file contents (OPS-3). The Dio log interceptor is off in release and prints method, path and status only in debug.
+
+## Screen port map
+
+| Old screen (`references/oewang-old/apps/native/lib/components/organisms/`) | Route(s) |
+|---|---|
+| `auth/auth_login_screen` | `POST /v1/auth/login`, `/v1/auth/passkey/sign-in/*` |
+| `auth/auth_register_screen` | `POST /v1/auth/register` |
+| `auth/auth_onboarding_screen` | `POST /v1/workspaces` (name and base currency, D109) |
+| splash, `/sync` check | `GET /v1/auth/me`, `GET /v1/workspaces`, `POST /v1/auth/switch-workspace` |
+| `transactions/*` daily, calendar, monthly, search | `GET /v1/transactions` |
+| `transactions/transactions_summary_screen` | `GET /v1/transactions/summary`, `GET /v1/overview` |
+| `transactions/transactions_form_screen` | `POST`, `PATCH`, `DELETE /v1/transactions[/{id}]` |
+| `stats/stats_screen` | `GET /v1/transactions/summary`, `GET /v1/overview` |
+| `wallets/*` | `/v1/wallets*`, `/v1/wallet-groups*` |
+| `categories/*` | `/v1/categories*` |
+| `budgets/*` | `/v1/budgets*` |
+| `settings/profile` | `/v1/auth/me`, `/v1/auth/me/avatar` |
+| `settings/style` | `PUT /v1/auth/me/colors` |
+| `settings/currency/settings_main_currency_screen` | `/v1/workspaces/current/currency/*` |
+| `settings/workspace/*` | `GET /v1/workspaces`, `POST /v1/auth/switch-workspace` |
+| `settings/feedback` | `POST /v1/feedback` |
+| new: chat | `/v1/ai/sessions*`, `POST /v1/ai/chat/stream` |
+| new: receipt scan | `POST /v1/ai/receipt/parse`, `POST /v1/receipts/pending` |
+| new: vault | `/v1/vault/files*` |
+| new: Telegram | `/v1/integrations/telegram*` |
+
+Dropped from the old app with their API: debts, contacts, sub-currencies, the separate transaction settings screen, three locales (D15).
+
+## Offline (D114, D115)
+
+- Offline writes cover transactions, wallets and categories. Everything else needs a connection and says so.
+- Each create gets a CUID2 on the device, used as the row's `id` locally and sent to the API (D114). A transaction made offline can name a wallet or category made offline.
+- The queue is a drift table, replayed strictly in order, one request at a time. A create is safe to replay; a `200` for an existing id is success.
+- A queued edit carries `If-Match` with the `updated_at` it was based on. `409 STALE` stops that entry and shows the conflict: discard (drop the entry, take `details.current`) or apply anyway (resend without `If-Match`). Later entries for other rows keep going.
+- Any other `4xx` marks the entry failed with the API's message, shown in the sync banner; a `5xx` or a network error leaves it queued and retries with backoff.
+- A wallet balance shown while entries are queued is the cached balance plus the queued deltas, marked as an estimate. After the queue drains the app refetches and shows the API's figure.
+
+## Push (D116)
+
+| Event | Who | Opens |
+|---|---|---|
+| Queued receipt done or failed | the person who queued it | the transaction draft, or the vault file |
+| Import job done or failed | the person who started it | transactions |
+| Budget reaches 80%, then 100% | every member with a device | budgets, that month |
+| Invitation | the invited account, if it exists | the accept-invite flow |
+
+The data payload is `{ "route": "/budgets?month=2026-11" }` and the like; the app maps it to a go_router location. Text is built and formatted by the API.
+
+## Checks
+
+Flutter runs on the host, pinned by `apps/native/.fvmrc` (an exception to running everything in containers: iOS builds need Xcode).
+
+```bash
+cd apps/native
+fvm flutter analyze
+fvm flutter test
+```
+
+`scripts/ci-local.sh` runs both in its `native` stage.
+
+## Related docs
+
+- [PRD](../prd.md#618-mobile-mob) and [decision log](../architecture.md#decision-log)
+- [Payload encryption](../api/encryption.md) and [API conventions](../api/conventions.md#idempotency)
+- [Legacy app](../reference/legacy-app.md)
