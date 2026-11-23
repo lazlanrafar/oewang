@@ -11,6 +11,7 @@ class Wallet extends Equatable {
     Decimal? balance,
     this.currency = 'IDR',
     this.isIncludedInTotals = true,
+    this.balanceIsEstimate = false,
   }) : balance = balance ?? Decimal.zero;
 
   final String id;
@@ -25,6 +26,10 @@ class Wallet extends Equatable {
   /// Whether this wallet counts toward the Assets / Liabilities / Total.
   final bool isIncludedInTotals;
 
+  /// The cached balance plus writes still queued on this device (MOB-6),
+  /// shown as an estimate until the API's figure replaces it.
+  final bool balanceIsEstimate;
+
   @override
   List<Object?> get props => [
     id,
@@ -33,5 +38,6 @@ class Wallet extends Equatable {
     balance,
     currency,
     isIncludedInTotals,
+    balanceIsEstimate,
   ];
 }

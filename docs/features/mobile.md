@@ -22,9 +22,10 @@ apps/native/lib/
     repositories/  abstract interfaces
     repositories_remote/   one per resource, over ApiClient
     repositories_fake/     in-memory, for widget tests
+    repositories_offline/  transactions, wallets, categories: cache reads, queued writes (MOB-6)
     services/api/  ApiClient (Dio), auth interceptor, owe1/ (handshake, envelope)
-    services/db/   drift: cached rows and the write queue (MOB-6, not yet: OEW-087)
-    services/sync/ queue replay and conflict handling (not yet: OEW-087)
+    services/db/   drift: cached rows and the write queue (MOB-6)
+    services/sync/ queue replay and conflict handling (MOB-6, MOB-7)
   domain/models/   what screens use
   components/      atoms, molecules, organisms (screen + view model), layouts
 ```
@@ -96,6 +97,17 @@ What the transaction screens read, and where they differ from the old app:
 - A queued edit carries `If-Match` with the `updated_at` it was based on. `409 STALE` stops that entry and shows the conflict: discard (drop the entry, take `details.current`) or apply anyway (resend without `If-Match`). Later entries for other rows keep going.
 - Any other `4xx` marks the entry failed with the API's message, shown in the sync banner; a `5xx` or a network error leaves it queued and retries with backoff.
 - A wallet balance shown while entries are queued is the cached balance plus the queued deltas, marked as an estimate. After the queue drains the app refetches and shows the API's figure.
+
+As built (`lib/data/services/{db,sync}`, `lib/data/repositories_offline/`):
+
+- The store is two drift tables written in plain SQL, so there is no codegen step. `cached_rows` holds each row as the JSON the API sent, so `updated_at` goes back as `If-Match` byte for byte; `write_queue` holds kind, op, entity id, the request body, the cached row at queue time (`before_json`, what a discarded failure puts back and the old side of a balance delta), the base `updated_at`, status (`queued`, `sending`, `failed`, `conflict`), the API's message, `details.current` on a conflict, attempts and created_at. Both are keyed by workspace, so a workspace switch neither shows nor replays another workspace's rows.
+- A write goes straight to the API when the device is online and nothing is queued or in conflict. Offline, behind a queue, or when that request gets no answer, it is queued and applied to the cache at once. A direct edit sends no `If-Match`, like the web; a queued one always does.
+- When an entry lands, the edits queued behind it for the same row take the `updated_at` it answered as their base. A conflict holds back later entries for its row only. Discarding it does not rebase them, so each later edit is checked against the current row in turn rather than applied silently.
+- `401` and `429` are retried like a `5xx`. A `404` on a delete counts as done. A refused entry stays in the banner until it is discarded; discarding puts back the row as it was before the change.
+- Reads: wallets and categories refresh whole from the API when online and answer from the cache. A whole month of transactions (what the month tabs read) refreshes every page on its first page and answers from the cache; other ranges read the API online and the cached months offline. The month summary falls back to the cached rows' `base_amount` and the last workspace currency seen. A row queued offline holds its own amount as `base_amount` until it syncs, and a queued transfer between two currencies estimates the receiving side with the sent amount.
+- Replay runs on start, when connectivity returns, when the app comes back to the foreground, after a workspace change, and on a backoff timer (2 s doubling to 5 min) after a failed attempt. There is no background task.
+- A member never queues: the write goes to the API, which refuses it, or the network error is shown.
+- Not offline: wallet and category reorder, a wallet's opening balance (`/adjust`), attachments.
 
 ## Push (D116)
 

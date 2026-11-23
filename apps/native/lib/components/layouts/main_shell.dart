@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:oewang/components/layouts/bottom_nav.dart';
 import 'package:oewang/components/layouts/fab.dart';
+import 'package:oewang/components/organisms/sync/sync_status_banner.dart';
 import 'package:oewang/components/organisms/transactions/transactions_month_controller.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/router/app_router.dart';
@@ -40,10 +41,16 @@ class MainShell extends ConsumerWidget {
       floatingActionButton: showFab
           ? OewangFab(onPressed: () => _onAddTransaction(context))
           : null,
-      bottomNavigationBar: OewangBottomNav(
-        currentIndex: index,
-        onSelect: _onSelect,
-        month: month,
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SyncStatusBanner(),
+          OewangBottomNav(
+            currentIndex: index,
+            onSelect: _onSelect,
+            month: month,
+          ),
+        ],
       ),
     );
   }

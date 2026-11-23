@@ -268,6 +268,16 @@ class _AccountsList extends StatelessWidget {
                     w.name,
                     style: OewangFonts.sans(color: palette.foreground),
                   ),
+                  // Queued writes not yet on the API (MOB-6).
+                  subtitle: w.balanceIsEstimate
+                      ? Text(
+                          'Estimate, syncing',
+                          style: OewangFonts.sans(
+                            color: palette.mutedForeground,
+                            fontSize: 12,
+                          ),
+                        )
+                      : null,
                   trailing: MoneyText(
                     amount: Money(amount: w.balance, currency: w.currency),
                     color: palette.foreground,
