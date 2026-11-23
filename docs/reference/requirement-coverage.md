@@ -111,7 +111,7 @@ in browser" box ticked; or a written reason it is not done.
 | PLT-3 | `apps/ai/tests/test_health.py` |
 | PLT-4 | `apps/app/src/lib/security-headers.test.ts`, `apps/app/src/lib/server-boundary.test.ts` |
 | PLT-5 | not done: a build property (separate Dockerfiles, no shared package) held by the repository layout and review, not by a test |
-| PUSH-1 | not done: epic OEW-083 in progress; tests land with US-067 |
+| PUSH-1 | not done: the API half (register, remove, retire a dead token) is tested in apps/api/crates/server/src/push/tests.rs; registering after sign-in and removing on sign-out are the app's, and land with US-067 |
 | PUSH-2 | `apps/api/crates/server/src/push/tests.rs` |
 | PUSH-3 | `apps/api/crates/server/src/push/tests.rs` |
 | PUSH-4 | `apps/api/crates/server/src/push/tests.rs` |
