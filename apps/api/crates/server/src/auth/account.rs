@@ -561,6 +561,49 @@ mod tests {
         assert_eq!(audited, 2);
     }
 
+    /// AUTH-7: a sign-in under the default lifetimes hands back an access
+    /// token that expires 15 minutes after it was issued, and a refresh
+    /// token whose stored row expires 30 days out.
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn should_sign_in_with_the_default_token_lifetimes(pool: PgPool) {
+        use crate::config::{parse_duration, ACCESS_TOKEN_TTL, REFRESH_TOKEN_TTL};
+
+        fixture(&pool, "correct horse battery").await;
+        let secret = Secret::new("a-test-secret-that-is-long-enough-for-hs256");
+        let session = SessionContext {
+            jwt_secret: &secret,
+            access_ttl: parse_duration("OEWANG_TEST_UNSET_ACCESS_TTL", ACCESS_TOKEN_TTL).unwrap(),
+            refresh_ttl: parse_duration("OEWANG_TEST_UNSET_REFRESH_TTL", REFRESH_TOKEN_TTL)
+                .unwrap(),
+            user_agent: None,
+            ip: None,
+        };
+
+        let issued =
+            crate::auth::service::login(&pool, "me@example.com", "correct horse battery", session)
+                .await
+                .unwrap();
+
+        let claims =
+            crate::auth::token::verify_access_token(&secret, &issued.access_token).unwrap();
+        assert_eq!(claims.exp - claims.iat, 15 * 60);
+        assert_eq!(issued.access_expires_at, claims.exp);
+
+        let thirty_days: i64 = 30 * 24 * 60 * 60;
+        let stored: i64 = sqlx::query_scalar(
+            "SELECT extract(epoch FROM expires_at - created_at)::bigint FROM refresh_tokens",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert!(
+            (stored - thirty_days).abs() <= 5,
+            "the refresh row lives {stored}s"
+        );
+        let now = chrono::Utc::now().timestamp();
+        assert!((issued.refresh_expires_at - now - thirty_days).abs() <= 5);
+    }
+
     /// AUTH-12
     #[sqlx::test(migrations = "../../migrations")]
     async fn should_change_the_password_only_with_the_current_one(pool: PgPool) {

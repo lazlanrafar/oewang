@@ -113,6 +113,10 @@ pub struct TelegramConfig {
     pub api_url: String,
 }
 
+/// The session's two lifetimes when nothing overrides them (AUTH-7, D38).
+pub(crate) const ACCESS_TOKEN_TTL: &str = "15m";
+pub(crate) const REFRESH_TOKEN_TTL: &str = "30d";
+
 #[derive(Debug, thiserror::Error)]
 pub enum ConfigError {
     #[error("{0} is required but not set")]
@@ -231,8 +235,8 @@ impl Config {
             db_statement_timeout: Duration::from_secs(parse_or("DB_STATEMENT_TIMEOUT_SECS", 10)?),
 
             jwt_secret: Secret::new(jwt_secret),
-            access_token_ttl: parse_duration("ACCESS_TOKEN_TTL", "15m")?,
-            refresh_token_ttl: parse_duration("REFRESH_TOKEN_TTL", "30d")?,
+            access_token_ttl: parse_duration("ACCESS_TOKEN_TTL", ACCESS_TOKEN_TTL)?,
+            refresh_token_ttl: parse_duration("REFRESH_TOKEN_TTL", REFRESH_TOKEN_TTL)?,
 
             app_url: optional("APP_URL").unwrap_or_else(|| "http://localhost:3000".into()),
             resend_api_key: resend_api_key.map(Secret::new),
@@ -390,7 +394,7 @@ where
 }
 
 /// Accepts `15m`, `30d`, `90s`, `12h`, or a bare number of seconds.
-fn parse_duration(name: &'static str, default: &str) -> Result<Duration, ConfigError> {
+pub(crate) fn parse_duration(name: &'static str, default: &str) -> Result<Duration, ConfigError> {
     let raw = optional(name).unwrap_or_else(|| default.to_string());
     let raw = raw.trim();
 
@@ -432,6 +436,15 @@ mod tests {
             Duration::from_secs(90)
         );
         std::env::remove_var("TEST_TTL");
+    }
+
+    /// AUTH-7
+    #[test]
+    fn should_default_to_a_fifteen_minute_and_a_thirty_day_token() {
+        let access = parse_duration("OEWANG_TEST_UNSET_ACCESS_TTL", ACCESS_TOKEN_TTL).unwrap();
+        let refresh = parse_duration("OEWANG_TEST_UNSET_REFRESH_TTL", REFRESH_TOKEN_TTL).unwrap();
+        assert_eq!(access, Duration::from_secs(15 * 60));
+        assert_eq!(refresh, Duration::from_secs(30 * 24 * 60 * 60));
     }
 
     #[test]
