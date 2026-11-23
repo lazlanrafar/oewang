@@ -89,8 +89,8 @@ in browser" box ticked; or a written reason it is not done.
 | MOB-3 | `apps/native/integration_test/transactions_flow_test.dart`, `apps/native/test/unit/auth_sync_test.dart` |
 | MOB-4 | `apps/native/integration_test/transactions_flow_test.dart`, `apps/native/test/unit/amount_format_test.dart`, `apps/native/test/unit/month_transactions_test.dart`, `apps/native/test/unit/transaction_dto_test.dart`, `apps/native/test/widget/transactions_daily_screen_test.dart` |
 | MOB-5 | `apps/native/test/unit/auth_sync_test.dart`, `apps/native/test/widget/transactions_daily_screen_test.dart` |
-| MOB-6 | `apps/api/crates/server/src/accounts/tests.rs`, `apps/api/crates/server/src/offline.rs`, `apps/api/crates/server/src/transactions/tests.rs` |
-| MOB-7 | `apps/api/crates/domain/src/error.rs`, `apps/api/crates/server/src/accounts/tests.rs`, `apps/api/crates/server/src/offline.rs`, `apps/api/crates/server/src/transactions/tests.rs` |
+| MOB-6 | `apps/api/crates/server/src/accounts/tests.rs`, `apps/api/crates/server/src/offline.rs`, `apps/api/crates/server/src/transactions/tests.rs`, `apps/native/test/unit/offline_sync_test.dart` |
+| MOB-7 | `apps/api/crates/domain/src/error.rs`, `apps/api/crates/server/src/accounts/tests.rs`, `apps/api/crates/server/src/offline.rs`, `apps/api/crates/server/src/transactions/tests.rs`, `apps/native/test/unit/offline_sync_test.dart` |
 | MOB-8 | not done: epic OEW-083 in progress; tests land with US-063 to US-068 |
 | MOB-9 | not done: epic OEW-083 in progress; tests land with US-063 to US-068 |
 | OPS-1 | `apps/api/crates/server/src/accounts/tests.rs`, `apps/api/crates/server/src/transactions/tests.rs` |
