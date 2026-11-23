@@ -24,6 +24,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     auth::extractor::{Auth, AuthWrite},
+    offline::{self, IfMatch},
     response::{ApiError, RequestId},
     state::AppState,
     transactions::{
@@ -74,6 +75,8 @@ pub struct TransactionView {
     pub is_exported: bool,
     pub source: String,
     pub created_at: String,
+    /// The row's version: send it back verbatim as `If-Match` (D115).
+    pub updated_at: String,
 }
 
 impl From<TransactionListRow> for TransactionView {
@@ -110,6 +113,7 @@ impl From<TransactionListRow> for TransactionView {
             is_exported: row.is_exported,
             source: row.source,
             created_at: row.created_at.to_rfc3339(),
+            updated_at: row.updated_at.to_rfc3339(),
         }
     }
 }
@@ -448,6 +452,9 @@ impl ListQuery {
 
 #[derive(Debug, Deserialize)]
 pub struct TransactionBody {
+    /// A client-made CUID2, so a repeated create is answered rather than
+    /// booked twice (D114). Only `POST /v1/transactions` reads it.
+    pub id: Option<String>,
     pub r#type: TransactionType,
     pub wallet_id: String,
     pub to_wallet_id: Option<String>,
@@ -820,21 +827,25 @@ pub async fn create(
             .map(ItemBody::input)
             .collect::<Result<Vec<_>>>()?;
 
-        let row = service::create_with_items(
+        service::create_with_id(
             &state.db,
             auth.actor()
                 .with_source(client_source(auth.source, body.source.as_deref())?),
+            body.id.as_deref(),
             input,
             &items,
         )
-        .await?;
-        service::find(&state.db, &auth.workspace_id, &row.id).await
+        .await
     }
     .await;
 
     match result {
-        Ok(row) => Ok((
-            StatusCode::CREATED,
+        Ok((row, created)) => Ok((
+            if created {
+                StatusCode::CREATED
+            } else {
+                StatusCode::OK
+            },
             Json(Envelope::data(TransactionView::from(row), id)),
         )),
         Err(error) => Err(ApiError::new(error, id)),
@@ -846,13 +857,21 @@ pub async fn update(
     auth: AuthWrite,
     Path(transaction_id): Path<String>,
     request_id: RequestId,
+    if_match: IfMatch,
     Json(body): Json<TransactionBody>,
 ) -> std::result::Result<Json<Envelope<TransactionView>>, ApiError> {
     let id = request_id.0;
 
     let result = async {
         let input = body.input()?;
-        service::update(&state.db, auth.actor(), &transaction_id, input).await?;
+        let updated =
+            service::update(&state.db, auth.actor(), &transaction_id, input, if_match.0).await;
+        offline::with_current(updated, async {
+            service::find(&state.db, &auth.workspace_id, &transaction_id)
+                .await
+                .map(TransactionView::from)
+        })
+        .await?;
         service::find(&state.db, &auth.workspace_id, &transaction_id).await
     }
     .await;

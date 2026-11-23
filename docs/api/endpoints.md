@@ -126,8 +126,8 @@ Returns `NOT_A_MEMBER` if the user has no live membership row.
 |---|---|---|---|
 | GET | `/v1/wallets` | any | List with balances in each wallet's own currency. Ordered so a group's wallets are contiguous, with `group_name` joined and `has_transactions` (any live transaction on either leg, which locks the currency, WAL-6); ungrouped wallets come last. Both are null on a single-wallet read |
 | GET | `/v1/wallets/{id}` | any | One wallet |
-| POST | `/v1/wallets` | admin+ | Create. `currency_code` optional, defaults to the workspace currency (WAL-5) |
-| PATCH | `/v1/wallets/{id}` | admin+ | Update name, group, sort order, totals flag. Currency only while the wallet has no live transaction, otherwise `WALLET_CURRENCY_LOCKED` (WAL-6) |
+| POST | `/v1/wallets` | admin+ | Create. `currency_code` optional, defaults to the workspace currency (WAL-5). Optional client `id` (D114, [below](#client-ids-and-if-match)) |
+| PATCH | `/v1/wallets/{id}` | admin+ | Update name, group, sort order, totals flag. Currency only while the wallet has no live transaction, otherwise `WALLET_CURRENCY_LOCKED` (WAL-6). Optional `If-Match`, otherwise `STALE` (D115) |
 | POST | `/v1/wallets/{id}/set-default` | admin+ | Make default, clearing the previous default in the same transaction (WAL-3) |
 | POST | `/v1/wallets/{id}/adjust` | admin+ | Correct a balance to a stated figure. Body `{ "balance": "100000" }` as a decimal string. Answers with the updated wallet |
 | DELETE | `/v1/wallets/{id}` | admin+ | Soft delete. `WALLET_HAS_TRANSACTIONS` if any live transaction references it (WAL-4) |
@@ -151,8 +151,8 @@ The response is a suggestion. The rate the user confirms is sent back on the tra
 | Method | Path | Role | Description |
 |---|---|---|---|
 | GET | `/v1/categories` | any | List. Query: `type=income\|expense` |
-| POST | `/v1/categories` | admin+ | Create |
-| PATCH | `/v1/categories/{id}` | admin+ | Update name, type or sort order |
+| POST | `/v1/categories` | admin+ | Create. Optional client `id` (D114, [below](#client-ids-and-if-match)) |
+| PATCH | `/v1/categories/{id}` | admin+ | Update name, type or sort order. Optional `If-Match`, otherwise `STALE` (D115) |
 | DELETE | `/v1/categories/{id}` | admin+ | Soft delete. Sets `category_id` to null on its transactions (CAT-2) and deletes its budget (BUD-4) |
 
 ## Budgets
@@ -176,7 +176,7 @@ D103, BUD-1 to BUD-3. Every figure is computed by the API, with a `_formatted` t
 | GET | `/v1/transactions/summary` | any | Totals by category, wallet and type for a date range |
 | GET | `/v1/overview` | any | The overview's figures for `?from&to` (both required, days, at most 60 months): income, expense and net with the previous equal-length period, zero-filled months, monthly averages, top categories per type. Built by the same report module as the analysis canvases (D87, D88) |
 | GET | `/v1/transactions/export` | any | CSV download honouring the active filters (TXN-10) |
-| POST | `/v1/transactions` | admin+ | Create. Adjusts wallet balances (TXN-3) |
+| POST | `/v1/transactions` | admin+ | Create. Adjusts wallet balances (TXN-3). Optional client `id` (D114); `/bulk` ignores it |
 | POST | `/v1/transactions/bulk` | admin+ | Create many. Used by the CSV wizard commit (TXN-11) |
 | POST | `/v1/transactions/bulk-update` | admin+ | Set the category of many; `category_id: null` clears it (TXN-14) |
 | POST | `/v1/transactions/bulk-delete` | admin+ | Soft-delete many, reversing each balance (TXN-14) |
@@ -187,7 +187,7 @@ D103, BUD-1 to BUD-3. Every figure is computed by the API, with a `_formatted` t
 | GET | `/v1/transactions/import/{job_id}` | any | Poll an import job: status plus imported, skipped and duplicate counts, and whether it has gone stale (AI-6) |
 | GET | `/v1/transactions/{id}` | any | One transaction with items and attachments |
 | GET | `/v1/transactions/{id}/history` | any | Audit history for this transaction: actor, surface, before and after, newest first (OPS-8) |
-| PATCH | `/v1/transactions/{id}` | admin+ | Update. Re-applies the balance delta (TXN-4) |
+| PATCH | `/v1/transactions/{id}` | admin+ | Update. Re-applies the balance delta (TXN-4). Optional `If-Match`, otherwise `STALE` (D115) |
 | DELETE | `/v1/transactions/{id}` | admin+ | Soft delete. Reverses the balance (TXN-5) |
 
 ### `GET /v1/transactions` query parameters
@@ -228,6 +228,26 @@ D103, BUD-1 to BUD-3. Every figure is computed by the API, with a `_formatted` t
 `items` and `attachment_ids` are optional. Both are written inside the same database transaction as the transaction insert, so confirming a receipt is one act that either happens or does not: a create followed by six item calls is six acts that can each half-fail, and a crash after the third leaves a transaction whose items do not add up with nothing saying why. Items move no money; only the transaction's own `amount` does (TXN-12). `PATCH` ignores `items`, because editing one needs to address it, which the item routes do.
 
 `source` is optional and is `web` or `receipt`. It names the surface for the audit row (OPS-8) and it is a claim, deliberately a narrow one: `chat` and `import` are written by the API's own paths, so a client naming either is refused. Without it a write is `web`.
+
+### Client ids and If-Match
+
+The offline queue's two tools (MOB-6, MOB-7), on transactions, wallets and categories alike.
+
+**Client `id` on create (D114).** `POST /v1/transactions`, `/v1/wallets` and `/v1/categories` take an optional top-level `id`: a CUID2 of 24 to 32 lowercase letters and digits, starting with a letter, otherwise `VALIDATION_FAILED` on `id`. Without it the API makes the id, as before.
+
+| The id… | Answer |
+|---|---|
+| is free | `201`, the row created under that id |
+| names a row of the same kind in this workspace, live or deleted | `200`, that row as it is now, and nothing written: no balance moves, no audit row. Checked before the body, so a repeat still answers after the wallet it names is gone |
+| names a row in another workspace, or a row of another kind | `409 ID_TAKEN`, without the row |
+
+A repeat of a deleted row answers the row as it was when deleted, and does not bring it back; a `GET` of it then answers 404, which is how the client learns. The primary key settles two concurrent creates with one id: one row, the other call answers it with 200. The kind check across tables is a read before the write, so two creates of different kinds racing on one id are not stopped; a client that makes its ids with CUID2 never produces that.
+
+**`If-Match` on `PATCH` (D115).** The header carries the row's `updated_at`, sent back exactly as the API gave it, for example `If-Match: 2026-11-23T04:05:06.123456+00:00` (quotes around it are allowed). It is compared as an instant, so `Z` and `+00:00` agree, at the microsecond the API emits; a value re-serialized through a millisecond clock no longer matches and is answered `STALE`. A value that is not RFC 3339 is `VALIDATION_FAILED` on `If-Match`.
+
+When the row's `updated_at` differs, or the row is deleted, the answer is `409 STALE` with `error.details.current`: the row as it reads now, in the shape a successful `PATCH` answers with, or `null` when it is deleted. Nothing changes and nothing is audited. The check runs under the row lock the update takes, so no write lands between it and the update. A row that never existed, or is another workspace's, stays a 404. Without the header `PATCH` is last-write-wins, as before.
+
+Every edit of one of these rows moves its `updated_at`. A wallet's balance moving under a transaction does not: the balance is derived, never edited through `PATCH`, and counting it would make every queued wallet edit stale the moment a transaction landed on that wallet.
 
 ### `POST /v1/transactions/import` body
 

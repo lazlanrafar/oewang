@@ -26,7 +26,7 @@ use sqlx::{Postgres, Transaction};
 
 use crate::{
     audit::{log, snapshot, Actor},
-    fx,
+    fx, offline,
 };
 
 pub use oewang_db::repositories::transactions::{
@@ -131,7 +131,7 @@ pub async fn list(
 }
 
 pub async fn find(pool: &PgPool, workspace_id: &str, id: &str) -> Result<TransactionListRow> {
-    repo::find_detail(pool, workspace_id, id)
+    repo::find_detail(pool, workspace_id, id, false)
         .await
         .map_err(internal)?
         .ok_or(AppError::TransactionNotFound)
@@ -192,6 +192,59 @@ pub async fn create_with_items(
     input: TransactionInput<'_>,
     items: &[ItemInput<'_>],
 ) -> Result<TransactionRow> {
+    insert_with_items(pool, actor, &cuid2::create_id(), input, items)
+        .await?
+        .ok_or_else(|| AppError::Internal(anyhow::anyhow!("a generated id was already taken")))
+}
+
+/// The create `POST /v1/transactions` runs: the row as the list reads it,
+/// and whether this call made it (D114).
+///
+/// With a client `id` that already names a transaction of this workspace,
+/// live or deleted, nothing is written and that row is the answer: a replay
+/// after a lost response must not book the money twice, nor bring back a
+/// row deleted in between. It is checked before the body is, so a replay
+/// still answers after the wallet it names is gone.
+pub async fn create_with_id(
+    pool: &PgPool,
+    actor: Actor<'_>,
+    id: Option<&str>,
+    input: TransactionInput<'_>,
+    items: &[ItemInput<'_>],
+) -> Result<(TransactionListRow, bool)> {
+    if let Some(id) = id {
+        offline::validate_id(id)?;
+        if offline::is_repeat(pool, actor.workspace_id, offline::TRANSACTION, id).await? {
+            return Ok((repeated(pool, actor.workspace_id, id).await?, false));
+        }
+    }
+
+    let id = id.map_or_else(cuid2::create_id, str::to_string);
+    match insert_with_items(pool, actor, &id, input, items).await? {
+        Some(_) => Ok((find(pool, actor.workspace_id, &id).await?, true)),
+        // A concurrent create with the same id committed first.
+        None => Ok((repeated(pool, actor.workspace_id, &id).await?, false)),
+    }
+}
+
+/// The row a repeated create names. `None` means the id is held by another
+/// workspace, which is answered without the row.
+async fn repeated(pool: &PgPool, workspace_id: &str, id: &str) -> Result<TransactionListRow> {
+    repo::find_detail(pool, workspace_id, id, true)
+        .await
+        .map_err(internal)?
+        .ok_or(AppError::IdTaken)
+}
+
+/// `None` when `id` is already taken: the database transaction is dropped,
+/// which rolls back the balance it had moved.
+async fn insert_with_items(
+    pool: &PgPool,
+    actor: Actor<'_>,
+    id: &str,
+    input: TransactionInput<'_>,
+    items: &[ItemInput<'_>],
+) -> Result<Option<TransactionRow>> {
     for item in items {
         validate_item(item)?;
     }
@@ -201,15 +254,18 @@ pub async fn create_with_items(
     let mut tx = pool.begin().await.map_err(internal)?;
     ensure_currency(&mut tx, actor.workspace_id, &prepared.workspace_currency).await?;
 
+    // Wallets are locked before the insert, never after: the insert's
+    // foreign keys take a share lock on them, and two creates that each hold
+    // that share lock and then ask for the update lock deadlock.
     let moves = net(prepared.shape.effect());
     apply_moves(&mut tx, actor.workspace_id, &moves).await?;
 
-    let row = repo::insert(
-        &mut *tx,
-        new_row(&cuid2::create_id(), actor, &input, &prepared, None),
-    )
-    .await
-    .map_err(internal)?;
+    let Some(row) = repo::insert(&mut *tx, new_row(id, actor, &input, &prepared, None))
+        .await
+        .map_err(internal)?
+    else {
+        return Ok(None);
+    };
 
     sync_attachments(&mut tx, actor.workspace_id, &row.id, input.attachment_ids).await?;
 
@@ -250,7 +306,7 @@ pub async fn create_with_items(
 
     tx.commit().await.map_err(internal)?;
     crate::push::service::budgets_after_write(pool, actor.workspace_id, [row.date]).await;
-    Ok(row)
+    Ok(Some(row))
 }
 
 // ------------------------------------------------------------------ update
@@ -260,21 +316,34 @@ pub async fn create_with_items(
 /// All nine type transitions, plus a changed amount, wallet or destination,
 /// go through this one path: there is no per-transition branch, because
 /// reversal is the negation of an effect and nothing else.
+///
+/// `if_match` is the `updated_at` the client last read (D115). It is checked
+/// on the row read here and again by the update statement under its row
+/// lock, which also proves the balance reversed below is the row's current
+/// effect. Without it the edit is last-write-wins, as it always was.
 pub async fn update(
     pool: &PgPool,
     actor: Actor<'_>,
     id: &str,
     input: TransactionInput<'_>,
+    if_match: Option<DateTime<Utc>>,
 ) -> Result<TransactionRow> {
     let prepared = prepare(pool, actor.workspace_id, &input).await?;
 
     let mut tx = pool.begin().await.map_err(internal)?;
     ensure_currency(&mut tx, actor.workspace_id, &prepared.workspace_currency).await?;
 
-    let before = repo::find(&mut *tx, actor.workspace_id, id)
+    let Some(before) = repo::find(&mut *tx, actor.workspace_id, id)
         .await
         .map_err(internal)?
-        .ok_or(AppError::TransactionNotFound)?;
+    else {
+        let not_found = AppError::TransactionNotFound;
+        let kind = offline::TRANSACTION;
+        return Err(
+            offline::missing(&mut *tx, actor.workspace_id, kind, id, if_match, not_found).await,
+        );
+    };
+    offline::check(if_match, before.updated_at)?;
 
     let old_effect = effect_of(&before)?;
     let moves = net(reverse(&old_effect)
@@ -287,10 +356,14 @@ pub async fn update(
         actor.workspace_id,
         id,
         new_row(id, actor, &input, &prepared, before.fingerprint.as_deref()),
+        if_match,
     )
     .await
     .map_err(internal)?
-    .ok_or(AppError::TransactionNotFound)?;
+    .ok_or(match if_match {
+        Some(_) => AppError::Stale(None),
+        None => AppError::TransactionNotFound,
+    })?;
 
     sync_attachments(&mut tx, actor.workspace_id, id, input.attachment_ids).await?;
 
@@ -486,7 +559,10 @@ pub async fn bulk_create(
                     new_row(&cuid2::create_id(), actor, input, &prepared, Some(&print)),
                 )
                 .await
-                .map_err(internal)?;
+                .map_err(internal)?
+                .ok_or_else(|| {
+                    AppError::Internal(anyhow::anyhow!("a generated id was already taken"))
+                })?;
 
                 log(
                     &mut tx,

@@ -4,7 +4,7 @@
 //! audit row inside it (D14, OPS-1). Handlers parse and map to HTTP;
 //! repositories run SQL.
 
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use oewang_db::{
     repositories::{accounts, categories, wallets},
     PgPool,
@@ -23,6 +23,7 @@ use oewang_db::repositories::{
 pub use crate::audit::Actor;
 use crate::{
     audit::{log, snapshot},
+    offline,
     transactions::service::{self as ledger, TransactionInput},
 };
 
@@ -176,6 +177,28 @@ pub async fn create_wallet(
     actor: Actor<'_>,
     input: NewWalletInput<'_>,
 ) -> Result<WalletRow> {
+    create_wallet_with_id(pool, actor, None, input)
+        .await
+        .map(|(wallet, _)| wallet)
+}
+
+/// The create `POST /v1/wallets` runs, and whether this call made the row.
+///
+/// A client `id` that already names a wallet of this workspace, live or
+/// deleted, writes nothing and answers that wallet (D114).
+pub async fn create_wallet_with_id(
+    pool: &PgPool,
+    actor: Actor<'_>,
+    id: Option<&str>,
+    input: NewWalletInput<'_>,
+) -> Result<(WalletRow, bool)> {
+    if let Some(id) = id {
+        offline::validate_id(id)?;
+        if offline::is_repeat(pool, actor.workspace_id, offline::WALLET, id).await? {
+            return repeated_wallet(pool, actor.workspace_id, id).await;
+        }
+    }
+
     let name = clean_name("name", input.name)?;
     let currency = input
         .currency_code
@@ -201,10 +224,11 @@ pub async fn create_wallet(
         require_group(&mut tx, actor.workspace_id, group_id).await?;
     }
 
-    let wallet = wallets::insert_wallet(
+    let id = id.map_or_else(cuid2::create_id, str::to_string);
+    let Some(wallet) = wallets::insert_wallet(
         &mut *tx,
         NewWallet {
-            id: &cuid2::create_id(),
+            id: &id,
             workspace_id: actor.workspace_id,
             group_id: input.group_id,
             name: &name,
@@ -214,7 +238,12 @@ pub async fn create_wallet(
         },
     )
     .await
-    .map_err(internal)?;
+    .map_err(internal)?
+    else {
+        // A concurrent create with the same id committed first.
+        drop(tx);
+        return repeated_wallet(pool, actor.workspace_id, &id).await;
+    };
 
     log(
         &mut tx,
@@ -228,7 +257,17 @@ pub async fn create_wallet(
     .await?;
 
     tx.commit().await.map_err(internal)?;
-    Ok(wallet)
+    Ok((wallet, true))
+}
+
+/// The wallet a repeated create names. `None` means the id is held by
+/// another workspace, which is answered without the row.
+async fn repeated_wallet(pool: &PgPool, workspace_id: &str, id: &str) -> Result<(WalletRow, bool)> {
+    wallets::find_wallet_with_deleted(pool, workspace_id, id)
+        .await
+        .map_err(internal)?
+        .map(|wallet| (wallet, false))
+        .ok_or(AppError::IdTaken)
 }
 
 #[derive(Debug, Default)]
@@ -241,11 +280,14 @@ pub struct WalletPatchInput<'a> {
     pub sort_order: Option<i32>,
 }
 
+/// `if_match` is the `updated_at` the client last read, checked on the
+/// locked row (D115). Without it the edit is last-write-wins.
 pub async fn update_wallet(
     pool: &PgPool,
     actor: Actor<'_>,
     id: &str,
     input: WalletPatchInput<'_>,
+    if_match: Option<DateTime<Utc>>,
 ) -> Result<WalletRow> {
     let name = input
         .name
@@ -260,10 +302,18 @@ pub async fn update_wallet(
 
     // Locked, because the currency check below and a concurrent transaction
     // write must not disagree about whether this wallet has transactions.
-    let before = wallets::lock_wallet(&mut *tx, actor.workspace_id, id)
+    // The same lock makes the If-Match check below final.
+    let Some(before) = wallets::lock_wallet(&mut *tx, actor.workspace_id, id)
         .await
         .map_err(internal)?
-        .ok_or(AppError::WalletNotFound)?;
+    else {
+        let not_found = AppError::WalletNotFound;
+        let kind = offline::WALLET;
+        return Err(
+            offline::missing(&mut *tx, actor.workspace_id, kind, id, if_match, not_found).await,
+        );
+    };
+    offline::check(if_match, before.updated_at)?;
 
     // Re-sending the currency the wallet already has is not a change, and a
     // locked wallet should not reject a patch that only renames it.
@@ -511,6 +561,13 @@ pub async fn list_categories(
         .map_err(internal)
 }
 
+pub async fn find_category(pool: &PgPool, workspace_id: &str, id: &str) -> Result<CategoryRow> {
+    categories::find_category(pool, workspace_id, id)
+        .await
+        .map_err(internal)?
+        .ok_or(AppError::CategoryNotFound)
+}
+
 pub async fn create_category(
     pool: &PgPool,
     actor: Actor<'_>,
@@ -518,21 +575,50 @@ pub async fn create_category(
     kind: &str,
     sort_order: Option<i32>,
 ) -> Result<CategoryRow> {
+    create_category_with_id(pool, actor, None, name, kind, sort_order)
+        .await
+        .map(|(category, _)| category)
+}
+
+/// The create `POST /v1/categories` runs, and whether this call made the
+/// row. A client `id` that already names a category of this workspace, live
+/// or deleted, writes nothing and answers that category (D114).
+pub async fn create_category_with_id(
+    pool: &PgPool,
+    actor: Actor<'_>,
+    id: Option<&str>,
+    name: &str,
+    kind: &str,
+    sort_order: Option<i32>,
+) -> Result<(CategoryRow, bool)> {
+    if let Some(id) = id {
+        offline::validate_id(id)?;
+        if offline::is_repeat(pool, actor.workspace_id, offline::CATEGORY, id).await? {
+            return repeated_category(pool, actor.workspace_id, id).await;
+        }
+    }
+
     let name = clean_name("name", name)?;
     let kind = validate_type(kind)?;
 
     let mut tx = pool.begin().await.map_err(internal)?;
 
-    let category = categories::insert_category(
+    let id = id.map_or_else(cuid2::create_id, str::to_string);
+    let Some(category) = categories::insert_category(
         &mut *tx,
-        &cuid2::create_id(),
+        &id,
         actor.workspace_id,
         &name,
         &kind,
         sort_order.unwrap_or(0),
     )
     .await
-    .map_err(internal)?;
+    .map_err(internal)?
+    else {
+        // A concurrent create with the same id committed first.
+        drop(tx);
+        return repeated_category(pool, actor.workspace_id, &id).await;
+    };
 
     log(
         &mut tx,
@@ -546,9 +632,25 @@ pub async fn create_category(
     .await?;
 
     tx.commit().await.map_err(internal)?;
-    Ok(category)
+    Ok((category, true))
 }
 
+/// The category a repeated create names. `None` means the id is held by
+/// another workspace, which is answered without the row.
+async fn repeated_category(
+    pool: &PgPool,
+    workspace_id: &str,
+    id: &str,
+) -> Result<(CategoryRow, bool)> {
+    categories::find_category_with_deleted(pool, workspace_id, id)
+        .await
+        .map_err(internal)?
+        .map(|category| (category, false))
+        .ok_or(AppError::IdTaken)
+}
+
+/// `if_match` is the `updated_at` the client last read (D115). Checked on
+/// the row read here, and again by the update statement under its row lock.
 pub async fn update_category(
     pool: &PgPool,
     actor: Actor<'_>,
@@ -556,16 +658,24 @@ pub async fn update_category(
     name: Option<&str>,
     kind: Option<&str>,
     sort_order: Option<i32>,
+    if_match: Option<DateTime<Utc>>,
 ) -> Result<CategoryRow> {
     let name = name.map(|value| clean_name("name", value)).transpose()?;
     let kind = kind.map(validate_type).transpose()?;
 
     let mut tx = pool.begin().await.map_err(internal)?;
 
-    let before = categories::find_category(&mut *tx, actor.workspace_id, id)
+    let Some(before) = categories::find_category(&mut *tx, actor.workspace_id, id)
         .await
         .map_err(internal)?
-        .ok_or(AppError::CategoryNotFound)?;
+    else {
+        let not_found = AppError::CategoryNotFound;
+        let kind = offline::CATEGORY;
+        return Err(
+            offline::missing(&mut *tx, actor.workspace_id, kind, id, if_match, not_found).await,
+        );
+    };
+    offline::check(if_match, before.updated_at)?;
 
     let after = categories::update_category(
         &mut *tx,
@@ -574,10 +684,14 @@ pub async fn update_category(
         name.as_deref(),
         kind.as_deref(),
         sort_order,
+        if_match,
     )
     .await
     .map_err(internal)?
-    .ok_or(AppError::CategoryNotFound)?;
+    .ok_or(match if_match {
+        Some(_) => AppError::Stale(None),
+        None => AppError::CategoryNotFound,
+    })?;
 
     log(
         &mut tx,

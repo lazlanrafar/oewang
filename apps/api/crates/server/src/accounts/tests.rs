@@ -239,6 +239,7 @@ async fn should_lock_a_wallet_currency_once_it_has_a_live_transaction(pool: PgPo
             currency_code: Some("EUR"),
             ..Default::default()
         },
+        None,
     )
     .await
     .unwrap();
@@ -254,6 +255,7 @@ async fn should_lock_a_wallet_currency_once_it_has_a_live_transaction(pool: PgPo
             currency_code: Some("USD"),
             ..Default::default()
         },
+        None,
     )
     .await
     .unwrap_err();
@@ -270,6 +272,7 @@ async fn should_lock_a_wallet_currency_once_it_has_a_live_transaction(pool: PgPo
             currency_code: Some("eur"),
             ..Default::default()
         },
+        None,
     )
     .await
     .unwrap();
@@ -357,6 +360,7 @@ async fn should_never_move_a_balance_through_a_wallet_patch(pool: PgPool) {
             name: Some("Renamed"),
             ..Default::default()
         },
+        None,
     )
     .await
     .unwrap();
@@ -376,6 +380,7 @@ async fn should_write_an_audit_row_for_every_wallet_mutation(pool: PgPool) {
             name: Some("Petty cash"),
             ..Default::default()
         },
+        None,
     )
     .await
     .unwrap();
@@ -612,6 +617,7 @@ async fn should_tell_an_absent_group_apart_from_an_explicit_null(pool: PgPool) {
             group_id: Some(Some(&group.id)),
             ..Default::default()
         },
+        None,
     )
     .await
     .unwrap();
@@ -626,6 +632,7 @@ async fn should_tell_an_absent_group_apart_from_an_explicit_null(pool: PgPool) {
             name: Some("BCA Main"),
             ..Default::default()
         },
+        None,
     )
     .await
     .unwrap();
@@ -640,6 +647,7 @@ async fn should_tell_an_absent_group_apart_from_an_explicit_null(pool: PgPool) {
             group_id: Some(None),
             ..Default::default()
         },
+        None,
     )
     .await
     .unwrap();
@@ -773,4 +781,274 @@ async fn default_ids(pool: &PgPool) -> Vec<String> {
         .filter(|wallet| wallet.is_default)
         .map(|wallet| wallet.id)
         .collect()
+}
+
+// ---------------------------------------------------------- offline writes
+
+/// Client ids on create (D114) and `If-Match` on edit (D115).
+mod offline_writes {
+    use axum::extract::{Json, Path, State};
+    use oewang_db::repositories::categories::CategoryRow;
+    use oewang_domain::Role;
+
+    use super::*;
+    use crate::{
+        accounts::handler::{self, UpdateCategoryBody, UpdateWalletBody},
+        auth::extractor::AuthWrite,
+        offline::IfMatch,
+        response::RequestId,
+        test_support,
+    };
+
+    const ID: &str = "wz4a98xxat96iws9zmbrgj3a";
+
+    fn cash() -> NewWalletInput<'static> {
+        NewWalletInput {
+            name: "Cash",
+            group_id: None,
+            currency_code: None,
+            is_included_in_totals: None,
+            sort_order: None,
+        }
+    }
+
+    async fn food(
+        pool: &PgPool,
+        actor: Actor<'_>,
+        id: &str,
+    ) -> Result<(CategoryRow, bool), AppError> {
+        service::create_category_with_id(pool, actor, Some(id), "Food", "expense", None).await
+    }
+
+    fn rename(name: &str) -> WalletPatchInput<'_> {
+        WalletPatchInput {
+            name: Some(name),
+            ..Default::default()
+        }
+    }
+
+    /// MOB-6: a wallet made offline is made once, and a repeat after a
+    /// delete answers the deleted wallet rather than a new one.
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn should_create_a_wallet_once_under_a_client_id(pool: PgPool) {
+        fixture(&pool, "IDR").await;
+
+        let (wallet, created) = service::create_wallet_with_id(&pool, actor(), Some(ID), cash())
+            .await
+            .unwrap();
+        assert!(created);
+        assert_eq!(wallet.id, ID);
+
+        let (again, created) = service::create_wallet_with_id(&pool, actor(), Some(ID), cash())
+            .await
+            .unwrap();
+        assert!(!created);
+        assert_eq!(again.updated_at, wallet.updated_at);
+        assert_eq!(audit_actions(&pool, ID).await, vec!["wallet.created"]);
+
+        service::delete_wallet(&pool, actor(), ID).await.unwrap();
+        let (deleted, created) = service::create_wallet_with_id(&pool, actor(), Some(ID), cash())
+            .await
+            .unwrap();
+        assert!(!created);
+        assert_eq!(deleted.id, ID);
+        assert!(service::find_wallet(&pool, WORKSPACE, ID).await.is_err());
+        assert_eq!(
+            audit_actions(&pool, ID).await,
+            vec!["wallet.created", "wallet.deleted"]
+        );
+    }
+
+    /// MOB-6: a category id held by another workspace, or by a wallet, is a
+    /// conflict; a bad id is a validation error.
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn should_create_a_category_once_and_refuse_a_foreign_id(pool: PgPool) {
+        fixture(&pool, "IDR").await;
+        sqlx::query(
+            "INSERT INTO workspaces (id, name, slug, currency_code)
+             VALUES ('ws_other', 'Other', 'other', 'IDR')",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        let theirs = Actor::web("ws_other", USER);
+
+        assert!(food(&pool, actor(), ID).await.unwrap().1);
+        assert!(!food(&pool, actor(), ID).await.unwrap().1);
+        assert!(matches!(
+            food(&pool, theirs, ID).await,
+            Err(AppError::IdTaken)
+        ));
+
+        let (wallet, _) = service::create_wallet_with_id(
+            &pool,
+            actor(),
+            Some("cz4a98xxat96iws9zmbrgj3a"),
+            cash(),
+        )
+        .await
+        .unwrap();
+        assert!(matches!(
+            food(&pool, actor(), &wallet.id).await,
+            Err(AppError::IdTaken)
+        ));
+        assert!(matches!(
+            food(&pool, actor(), "short").await,
+            Err(AppError::Validation(_))
+        ));
+
+        let count: i64 = sqlx::query_scalar("SELECT count(*) FROM categories WHERE id = $1")
+            .bind(ID)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(count, 1);
+    }
+
+    /// MOB-6: concurrent creates with one wallet id make one wallet.
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn should_make_one_wallet_when_creates_with_one_id_race(pool: PgPool) {
+        fixture(&pool, "IDR").await;
+
+        let mut handles = Vec::new();
+        for _ in 0..8 {
+            let pool = pool.clone();
+            handles.push(tokio::spawn(async move {
+                service::create_wallet_with_id(&pool, actor(), Some(ID), cash())
+                    .await
+                    .unwrap()
+                    .1
+            }));
+        }
+        let mut made = 0;
+        for handle in handles {
+            made += usize::from(handle.await.unwrap());
+        }
+
+        assert_eq!(made, 1);
+        assert_eq!(audit_actions(&pool, ID).await, vec!["wallet.created"]);
+    }
+
+    /// MOB-7: a matching version lets a wallet edit through and moves it;
+    /// a stale one or a deleted wallet is refused and changes nothing.
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn should_check_if_match_on_a_wallet_edit(pool: PgPool) {
+        fixture(&pool, "IDR").await;
+        let id = make_wallet(&pool, "Cash", None).await;
+        let seen = service::find_wallet(&pool, WORKSPACE, &id)
+            .await
+            .unwrap()
+            .updated_at;
+
+        let after = service::update_wallet(&pool, actor(), &id, rename("Petty"), Some(seen))
+            .await
+            .unwrap();
+        assert!(after.updated_at > seen);
+
+        let stale = service::update_wallet(&pool, actor(), &id, rename("Lost"), Some(seen)).await;
+        assert!(matches!(stale, Err(AppError::Stale(None))), "{stale:?}");
+        assert_eq!(
+            service::find_wallet(&pool, WORKSPACE, &id)
+                .await
+                .unwrap()
+                .name,
+            "Petty"
+        );
+        assert_eq!(
+            audit_actions(&pool, &id).await,
+            vec!["wallet.created", "wallet.updated"]
+        );
+
+        service::delete_wallet(&pool, actor(), &id).await.unwrap();
+        let gone =
+            service::update_wallet(&pool, actor(), &id, rename("X"), Some(after.updated_at)).await;
+        assert!(matches!(gone, Err(AppError::Stale(None))), "{gone:?}");
+        let plain = service::update_wallet(&pool, actor(), &id, rename("X"), None).await;
+        assert!(matches!(plain, Err(AppError::WalletNotFound)), "{plain:?}");
+    }
+
+    /// MOB-7: a transaction landing on a wallet moves its balance, not its
+    /// version, so a queued rename of the same wallet still goes through.
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn should_not_make_a_wallet_stale_by_moving_its_balance(pool: PgPool) {
+        fixture(&pool, "IDR").await;
+        let id = make_wallet(&pool, "Cash", None).await;
+        let seen = service::find_wallet(&pool, WORKSPACE, &id)
+            .await
+            .unwrap()
+            .updated_at;
+
+        service::adjust_wallet_balance(&pool, actor(), &id, decimal("5000"))
+            .await
+            .unwrap();
+
+        let after = service::update_wallet(&pool, actor(), &id, rename("Petty"), Some(seen))
+            .await
+            .unwrap();
+        assert_eq!(after.balance, decimal("5000"));
+    }
+
+    /// MOB-7 through the handlers: a stale category edit carries the current
+    /// row in `details.current`, and a deleted wallet carries null.
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn should_carry_the_current_row_when_an_edit_is_stale(pool: PgPool) {
+        fixture(&pool, "IDR").await;
+        let state = test_support::state(pool.clone(), test_support::NOWHERE);
+        let owner = || AuthWrite {
+            user_id: USER.into(),
+            workspace_id: WORKSPACE.into(),
+            role: Role::Owner,
+            source: "web",
+        };
+
+        let (category, _) =
+            service::create_category_with_id(&pool, actor(), Some(ID), "Food", "expense", None)
+                .await
+                .unwrap();
+        service::update_category(&pool, actor(), ID, Some("Meals"), None, None, None)
+            .await
+            .unwrap();
+        let body: UpdateCategoryBody = serde_json::from_str(r#"{"name":"Groceries"}"#).unwrap();
+        let Err(refused) = handler::update_category(
+            State(state.clone()),
+            owner(),
+            Path(ID.into()),
+            RequestId("r1".into()),
+            IfMatch(Some(category.updated_at)),
+            Json(body),
+        )
+        .await
+        else {
+            panic!("a stale edit is refused");
+        };
+        let details = refused.error.to_body("r1").details.unwrap();
+        assert_eq!(details["current"]["name"], "Meals");
+
+        let wallet = make_wallet(&pool, "Cash", None).await;
+        let seen = service::find_wallet(&pool, WORKSPACE, &wallet)
+            .await
+            .unwrap()
+            .updated_at;
+        service::delete_wallet(&pool, actor(), &wallet)
+            .await
+            .unwrap();
+        let body: UpdateWalletBody = serde_json::from_str(r#"{"name":"X"}"#).unwrap();
+        let Err(refused) = handler::update_wallet(
+            State(state),
+            owner(),
+            Path(wallet),
+            RequestId("r2".into()),
+            IfMatch(Some(seen)),
+            Json(body),
+        )
+        .await
+        else {
+            panic!("an edit of a deleted wallet is refused");
+        };
+        assert_eq!(refused.error.code(), "STALE");
+        assert_eq!(
+            refused.error.to_body("r2").details,
+            Some(serde_json::json!({ "current": null }))
+        );
+    }
 }

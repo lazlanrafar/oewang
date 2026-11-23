@@ -11,9 +11,9 @@ Evidence is, in order of preference: a test file that cites the ID (in a
 name or a comment); a backlog story that names the ID and has its "Verify
 in browser" box ticked; or a written reason it is not done.
 
-- 149 with test evidence
+- 151 with test evidence
 - 29 verified in browser only
-- 20 not done
+- 18 not done
 
 | ID | Evidence |
 |---|---|
@@ -89,8 +89,8 @@ in browser" box ticked; or a written reason it is not done.
 | MOB-3 | not done: epic OEW-083 in progress; tests land with US-063 to US-068 |
 | MOB-4 | not done: epic OEW-083 in progress; tests land with US-063 to US-068 |
 | MOB-5 | not done: epic OEW-083 in progress; tests land with US-063 to US-068 |
-| MOB-6 | not done: epic OEW-083 in progress; tests land with US-063 to US-068 |
-| MOB-7 | not done: epic OEW-083 in progress; tests land with US-063 to US-068 |
+| MOB-6 | `apps/api/crates/server/src/accounts/tests.rs`, `apps/api/crates/server/src/offline.rs`, `apps/api/crates/server/src/transactions/tests.rs` |
+| MOB-7 | `apps/api/crates/domain/src/error.rs`, `apps/api/crates/server/src/accounts/tests.rs`, `apps/api/crates/server/src/offline.rs`, `apps/api/crates/server/src/transactions/tests.rs` |
 | MOB-8 | not done: epic OEW-083 in progress; tests land with US-063 to US-068 |
 | MOB-9 | not done: epic OEW-083 in progress; tests land with US-063 to US-068 |
 | OPS-1 | `apps/api/crates/server/src/accounts/tests.rs`, `apps/api/crates/server/src/transactions/tests.rs` |
@@ -111,7 +111,7 @@ in browser" box ticked; or a written reason it is not done.
 | PLT-3 | `apps/ai/tests/test_health.py` |
 | PLT-4 | `apps/app/src/lib/security-headers.test.ts`, `apps/app/src/lib/server-boundary.test.ts` |
 | PLT-5 | not done: a build property (separate Dockerfiles, no shared package) held by the repository layout and review, not by a test |
-| PUSH-1 | not done: the API half (register, remove, retire a dead token) is tested in apps/api/crates/server/src/push/tests.rs; registering after sign-in and removing on sign-out are the app's, and land with US-067 |
+| PUSH-1 | not done: epic OEW-083 in progress; tests land with US-067 |
 | PUSH-2 | `apps/api/crates/server/src/push/tests.rs` |
 | PUSH-3 | `apps/api/crates/server/src/push/tests.rs` |
 | PUSH-4 | `apps/api/crates/server/src/push/tests.rs` |

@@ -83,6 +83,8 @@ Validation error, with per-field detail:
 }
 ```
 
+An error may also carry `details`, an object, when the client needs more than a message to act on it. Only `STALE` has one so far: `details.current` is the row as it reads now, or `null` when it is deleted (D115). The key is absent on every other error.
+
 The web app maps `code` to a dictionary key and renders that. It never renders `message` directly to the user (UI-1). `message` and `hint` exist for developers, logs and agents.
 
 ## Resources and URLs

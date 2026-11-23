@@ -1,0 +1,30 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT 'transaction' AS \"kind!\", workspace_id AS \"workspace_id!\"\n             FROM transactions WHERE id = $1\n           UNION ALL\n           SELECT 'wallet', workspace_id FROM wallets WHERE id = $1\n           UNION ALL\n           SELECT 'category', workspace_id FROM categories WHERE id = $1\n           LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "kind!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "workspace_id!",
+        "type_info": "Text",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      null,
+      null
+    ]
+  },
+  "hash": "de2ee539dea9bf1d6b0205b2baf6e64fcc4472bc4605510274fcf00e0af95aa6"
+}

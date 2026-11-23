@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE wallets SET balance = balance + $3\n           WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Numeric"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6f4e9a253dcb338d7f5ed8fa6b13f059b82729d3a6683da7e03dfeb2c4de1fb6"
+}
