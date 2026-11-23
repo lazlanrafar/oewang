@@ -87,6 +87,9 @@ services:
       # Empty in development: the client reads what the AI service publishes
       # at /.well-known/oewang-keys. Pinned everywhere else.
       AI_SIGNING_PUBLIC_KEYS: ""
+      # Shared with app below: the key that makes x-client-ip believable
+      # (D112). A real secret everywhere but here.
+      APP_RELAY_KEY: dev-relay-key-not-a-secret-0123456789
     ports:
       - "3002:3002"
     volumes:
@@ -154,6 +157,7 @@ services:
       API_URL: http://api:3002
       ORIGIN: http://localhost:3000
       OWE1_VECTORS_PATH: /contract/owe1-vectors.json
+      APP_RELAY_KEY: dev-relay-key-not-a-secret-0123456789
     ports:
       - "3000:3000"
     volumes:

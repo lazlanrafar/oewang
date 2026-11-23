@@ -25,6 +25,13 @@ import { clearSession } from './session';
 const API_URL = process.env.API_URL ?? 'http://api:3002';
 
 /**
+ * Proves to the API that this server, not whoever reached its public
+ * address, names the browser's address (D112). The API counts its rate
+ * limits against that address; without the key every user is this server.
+ */
+const APP_RELAY_KEY = process.env.APP_RELAY_KEY?.trim() || null;
+
+/**
  * Plaintext mode, which only development may turn on (D22).
  *
  * With encryption on, an unsealed answer is refused rather than read: an
@@ -306,19 +313,24 @@ export async function apiStream(options: StreamOptions): Promise<ReadableStream<
 }
 
 /**
- * Who the browser is, for the API's session list.
+ * Who the browser is, for the API's session list and rate limits.
  *
  * The API sees this server's own fetch, so without these every session reads
- * "Bun" with no address. Sent on every call; the API reads them only where it
- * records a session. Exported so the rule is tested without a request.
+ * "Bun" with no address and every user shares one rate limit. The address
+ * goes with the relay key or the API ignores it (D112). Exported so the rule
+ * is tested without a request.
  */
 export function clientHeaders(
 	userAgent: string | null,
-	address: string | null
+	address: string | null,
+	relayKey: string | null = APP_RELAY_KEY
 ): Record<string, string> {
 	const headers: Record<string, string> = {};
 	if (userAgent) headers['x-client-user-agent'] = userAgent;
-	if (address) headers['x-client-ip'] = address;
+	if (address) {
+		headers['x-client-ip'] = address;
+		if (relayKey) headers['x-relay-key'] = relayKey;
+	}
 	return headers;
 }
 

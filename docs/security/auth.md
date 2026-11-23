@@ -72,7 +72,7 @@ When the API answers 401 to a call that carried the access token, the SvelteKit 
 
 The refresh token is opaque, not a JWT. It carries no claims, so it proves nothing on its own: the server looks it up. Only its SHA-256 is stored (AUTH-8), so a database leak does not yield usable tokens.
 
-Each refresh token row also records the browser's user agent and address, for the session list in Account (`GET /v1/auth/sessions`). The API never sees the browser, so the SvelteKit server relays both on every call as `x-client-user-agent` and `x-client-ip` (`clientHeaders` in `src/lib/server/api.ts`), and the API prefers them over the request's own `user-agent`, which is the app server's fetch. An address that does not parse as an IP is dropped, and `x-forwarded-for` is not read for this. Both values are display only, never used for authorization: they are believed only because the app is the only caller of these routes (D5) and every call there is OWE1 (D22). Behind a proxy the app needs `ADDRESS_HEADER` set ([deployment](../deployment.md#app)), or every address is the proxy's.
+Each refresh token row also records the browser's user agent and address, for the session list in Account (`GET /v1/auth/sessions`). The API never sees the browser, so the SvelteKit server relays both on every call as `x-client-user-agent` and `x-client-ip` (`clientHeaders` in `src/lib/server/api.ts`), and the API prefers them over the request's own `user-agent`, which is the app server's fetch. An address that does not parse as an IP is dropped, and `x-forwarded-for` is not read for this. The address is believed only when the same request carries `x-relay-key` matching `APP_RELAY_KEY`, compared in constant time (D112): the API's domain is routed from the internet and the OWE1 handshake is open to anyone, so neither D5 nor D22 proves the app sent the header. Without the key the session row records no address. Neither value is used for authorization; the address is what the [rate limits](#rate-limits) count against. Behind a proxy the app needs `ADDRESS_HEADER` and `XFF_DEPTH` set ([deployment](../deployment.md#app)), or every address is the proxy's.
 
 ### Rotation and reuse detection
 
@@ -132,7 +132,7 @@ Email and password are the only way in (D21), so a forgotten password with no re
 2. If the user exists, generate 32 random bytes, store the SHA-256 with a 1 hour expiry (AUTH-10), and send the raw token in a link by email (D40).
 3. `POST /v1/auth/reset-password` with the token and a new password. The token must exist, be unexpired and unused.
 4. On success: set the new hash, mark the token used, and revoke every refresh token for that user.
-5. Rate limited with the rest of `/v1/auth/*`: 10 requests per 15 minutes per IP (AUTH-6).
+5. Rate limited like the other credential routes: 10 requests per 15 minutes per browser address, and 10 per 15 minutes per email address (AUTH-6, D112).
 
 A reset link is a bearer credential in an email. It is single use, short lived, and never logged.
 
@@ -254,11 +254,19 @@ Internal routes are bound to the internal network in deployment and additionally
 
 | Scope | Limit |
 |---|---|
-| `/v1/auth/*` | 10 requests per 15 minutes per IP (AUTH-6) |
-| Authenticated routes | 300 per minute per IP |
-| Unauthenticated routes | 30 per minute per IP |
+| Credential routes | 10 requests per 15 minutes per browser address (AUTH-6) |
+| `login`, `register`, `forgot-password` | Also 10 per 15 minutes per email address, each route on its own (D112) |
+| Credential routes, all callers | 1,000 per 15 minutes per source, the backstop (D112) |
+| Authenticated routes | 300 per minute per browser address |
+| Unauthenticated routes | 30 per minute per browser address |
 
-Limits are per IP address. A shared office address can exhaust the auth bucket; that is accepted at this scale and is visible in the logs when it happens.
+The API's only intended caller is the SvelteKit server, so the connecting address is the same for every user. The limits therefore count against the browser's address as the app relays it in `x-client-ip`, and only when the request also carries the relay key (D112). A request without the key, which is anything that reaches the API's public domain directly, is counted against its own address and its `x-client-ip` is ignored, so a caller cannot pick its own bucket.
+
+The per-address budget alone would let one account be guessed at from as many addresses as an attacker has, so `login`, `register` and `forgot-password` also count against the normalised email, after decryption (the email is inside the OWE1 body). The route is part of that key: a flood of wrong passwords against an account does not also block its owner's password reset. The cost, accepted: anyone can hold one account's password sign-in at its limit by guessing at it. Passkey sign-in names no email and is not affected.
+
+The ceiling counts every credential call from one source, which in production is the app. It is the backstop against many addresses at once, and it is a lever too: an attacker with a hundred addresses can fill it and stop everyone signing in or refreshing until the window slides. It is set high for that reason, and `RATE_LIMIT_CREDENTIAL_CEILING` moves it.
+
+A shared office address can still exhaust its own credential budget; that is accepted at this scale and is visible in the logs when it happens.
 
 ## Logging rules
 

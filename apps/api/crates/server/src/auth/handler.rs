@@ -168,6 +168,7 @@ pub async fn register(
     headers: HeaderMap,
     Json(body): Json<RegisterRequest>,
 ) -> std::result::Result<(StatusCode, Json<Envelope<SessionResponse>>), ApiError> {
+    count_account(&state, "register", &body.email, &request_id)?;
     let context = session_context(&state, &headers);
 
     let issued = service::register(
@@ -192,6 +193,7 @@ pub async fn login(
     headers: HeaderMap,
     Json(body): Json<LoginRequest>,
 ) -> std::result::Result<Json<Envelope<SessionResponse>>, ApiError> {
+    count_account(&state, "login", &body.email, &request_id)?;
     let context = session_context(&state, &headers);
 
     let issued = service::login(&state.db, &body.email, &body.password, context)
@@ -438,6 +440,7 @@ pub async fn forgot_password(
     request_id: RequestId,
     Json(body): Json<ForgotPasswordRequest>,
 ) -> std::result::Result<StatusCode, ApiError> {
+    count_account(&state, "forgot-password", &body.email, &request_id)?;
     let outcome = service::begin_password_reset(&state.db, &body.email)
         .await
         .map_err(|error| ApiError::new(error, request_id.0))?;
@@ -462,6 +465,23 @@ pub async fn reset_password(
 
 // ------------------------------------------------------------- internals
 
+/// The per-account budget (AUTH-6, D112). Here rather than in the limiter
+/// layer because the email is inside the encrypted body.
+fn count_account(
+    state: &AppState,
+    action: &str,
+    email: &str,
+    request_id: &RequestId,
+) -> std::result::Result<(), ApiError> {
+    state
+        .rate_limits
+        .check_account(action, email, crate::owe1::session::now_secs())
+        .map_err(|error| {
+            tracing::info!(action, "an account was rate limited");
+            ApiError::new(error, request_id.0.clone())
+        })
+}
+
 pub(crate) fn session_context<'a>(
     state: &'a AppState,
     headers: &'a HeaderMap,
@@ -471,13 +491,12 @@ pub(crate) fn session_context<'a>(
         access_ttl: state.config.access_token_ttl,
         refresh_ttl: state.config.refresh_token_ttl,
         user_agent: client_user_agent(headers),
-        ip: client_ip(headers),
+        ip: client_ip(state, headers),
     }
 }
 
 /// Set by the app on every call it makes for a browser request.
 const CLIENT_USER_AGENT: &str = "x-client-user-agent";
-const CLIENT_IP: &str = "x-client-ip";
 
 /// The browser's user agent, as the app relays it.
 ///
@@ -489,11 +508,12 @@ fn client_user_agent(headers: &HeaderMap) -> Option<&str> {
         .or_else(|| header_str(headers, header::USER_AGENT.as_str()))
 }
 
-/// The browser's address, as the app relays it. `x-forwarded-for` is not
-/// read: only the app reaches this route, and anything else that sends one
-/// would be naming an address it chose. Not an address, not recorded.
-fn client_ip(headers: &HeaderMap) -> Option<&str> {
-    header_str(headers, CLIENT_IP).filter(|value| value.parse::<std::net::IpAddr>().is_ok())
+/// The browser's address, only when the app vouches for it with the relay
+/// key (D112). The session list is where a user spots a sign-in that was
+/// not theirs, so an address a caller chose does not belong in it.
+fn client_ip<'a>(state: &AppState, headers: &'a HeaderMap) -> Option<&'a str> {
+    crate::limits::relayed_client_ip(state.config.app_relay_key.as_ref(), headers)?;
+    header_str(headers, crate::limits::CLIENT_IP)
 }
 
 fn header_str<'a>(headers: &'a HeaderMap, name: &str) -> Option<&'a str> {
@@ -530,16 +550,5 @@ mod client_tests {
     fn should_fall_back_to_the_request_user_agent() {
         let map = headers(&[("user-agent", "curl/8"), (CLIENT_USER_AGENT, " ")]);
         assert_eq!(client_user_agent(&map), Some("curl/8"));
-    }
-
-    #[test]
-    fn should_record_only_a_relayed_address_that_parses() {
-        assert_eq!(
-            client_ip(&headers(&[(CLIENT_IP, "203.0.113.7")])),
-            Some("203.0.113.7")
-        );
-        assert_eq!(client_ip(&headers(&[(CLIENT_IP, "::1")])), Some("::1"));
-        assert_eq!(client_ip(&headers(&[(CLIENT_IP, "evil, 1.2.3.4")])), None);
-        assert_eq!(client_ip(&headers(&[("x-forwarded-for", "1.2.3.4")])), None);
     }
 }

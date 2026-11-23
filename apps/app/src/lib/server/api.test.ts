@@ -29,10 +29,19 @@ describe('plaintextAllowed', () => {
 
 describe('clientHeaders', () => {
 	it('relays the browser, not this server, to the session list', () => {
-		expect(clientHeaders('Mozilla/5.0 (Macintosh)', '203.0.113.7')).toEqual({
+		expect(clientHeaders('Mozilla/5.0 (Macintosh)', '203.0.113.7', null)).toEqual({
 			'x-client-user-agent': 'Mozilla/5.0 (Macintosh)',
 			'x-client-ip': '203.0.113.7'
 		});
+	});
+
+	it('vouches for the address with the relay key, so the API limits each browser', () => {
+		expect(clientHeaders(null, '203.0.113.7', 'k'.repeat(32))).toEqual({
+			'x-client-ip': '203.0.113.7',
+			'x-relay-key': 'k'.repeat(32)
+		});
+		// No address, nothing to vouch for: the key is not sent on its own.
+		expect(clientHeaders(null, null, 'k'.repeat(32))).toEqual({});
 	});
 
 	it('sends nothing it does not know', () => {

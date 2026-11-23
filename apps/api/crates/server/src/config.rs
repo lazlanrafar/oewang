@@ -95,6 +95,10 @@ pub struct Config {
     /// puts a proxy in front: anyone can send that header, and a limiter
     /// that believes it is one anyone can step around.
     pub trust_proxy_headers: bool,
+    /// The key the app presents with `x-client-ip`, so the API believes
+    /// the address it names (D112). Required in production: without it
+    /// every browser counts as the app's one address.
+    pub app_relay_key: Option<Secret>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -131,6 +135,9 @@ impl Config {
             // Per address. Guessing a password, a refresh token or a reset
             // token (AUTH-6).
             credential: Limit::new(10, 900),
+            // Per source, before the relayed address is believed: the
+            // backstop on every credential call the app makes (D112).
+            credential_ceiling: Limit::new(1000, 900),
             handshake: Limit::new(30, 60),
             authenticated: Limit::new(300, 60),
             anonymous: Limit::new(30, 60),
@@ -220,6 +227,17 @@ impl Config {
             });
         }
 
+        // The app's word for the browser's address is what the limiter
+        // counts against; without the key every user shares one budget.
+        let app_relay_key = optional("APP_RELAY_KEY");
+        if app_env == AppEnv::Production && app_relay_key.as_ref().is_none_or(|key| key.len() < 32)
+        {
+            return Err(ConfigError::Invalid {
+                name: "APP_RELAY_KEY",
+                reason: "must be at least 32 characters in production".into(),
+            });
+        }
+
         Ok(Self {
             app_env,
             port: parse_or("API_PORT", 3002)?,
@@ -289,6 +307,13 @@ impl Config {
                             defaults.credential.window_secs,
                         )?,
                     ),
+                    credential_ceiling: crate::limits::Limit::new(
+                        parse_or(
+                            "RATE_LIMIT_CREDENTIAL_CEILING",
+                            defaults.credential_ceiling.max,
+                        )?,
+                        defaults.credential_ceiling.window_secs,
+                    ),
                     handshake: crate::limits::Limit::new(
                         parse_or("RATE_LIMIT_HANDSHAKE", defaults.handshake.max)?,
                         defaults.handshake.window_secs,
@@ -316,6 +341,7 @@ impl Config {
             trust_proxy_headers: optional("TRUST_PROXY_HEADERS")
                 .map(|value| value == "true")
                 .unwrap_or(false),
+            app_relay_key: app_relay_key.map(Secret::new),
         })
     }
 }
