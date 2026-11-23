@@ -90,6 +90,7 @@ The web app maps `code` to a dictionary key and renders that. It never renders `
 - Base path `/v1`. Internal, service-to-service routes live under `/v1/internal`.
 - Resources are plural nouns: `/v1/transactions`, `/v1/wallets`.
 - The workspace is never in the path. It comes from the JWT (AUTH-4). `/v1/transactions` means "transactions of the workspace this token is scoped to".
+- Nor in the body or the query. A request whose JSON body has a top-level `workspace_id`, or whose query string has one, is refused with `WORKSPACE_ID_NOT_ALLOWED` before any handler runs, rather than the field being silently ignored, so a client that thinks it chose a workspace finds out. One layer does this for every protected route (`auth/workspace_param.rs`). Two routes are registered outside it, because naming a workspace is their job and each checks the name against the membership row: `POST /v1/auth/switch-workspace` and the internal `POST /v1/internal/tools/execute` (D4). An MCP tool call's `workspace_id` argument is nested in the JSON-RPC `params`, so the layer does not see it; the MCP service checks it against the token's grant (D106). `workspace_ids` (plural), the set an MCP token is granted, is a different field and is allowed.
 - Sub-resources nest one level at most: `/v1/transactions/{id}/items/{item_id}`.
 - Actions that are not CRUD use a verb segment on the collection: `/v1/transactions/export`, `/v1/transactions/bulk`, `/v1/auth/switch-workspace`.
 
@@ -134,6 +135,7 @@ Codes are stable, SCREAMING_SNAKE_CASE, and never reused for a different meaning
 | `NO_WORKSPACE` | 403 | A session with no workspace yet, on a route that reads or writes one (D109) |
 | `LAST_OWNER` | 409 | Removing or demoting the only owner (WS-4) |
 | `INVITE_INVALID` | 404 | Unknown, already accepted, or expired invite token |
+| `WORKSPACE_ID_NOT_ALLOWED` | 400 | A body or query string named `workspace_id`. The workspace comes from the token (AUTH-4) |
 
 ### Validation and general
 

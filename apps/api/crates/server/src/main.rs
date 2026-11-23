@@ -302,10 +302,6 @@ fn protected_routes(state: AppState) -> Router<AppState> {
             post(auth::handler::change_password),
         )
         .route("/v1/auth/sessions", get(auth::handler::sessions))
-        .route(
-            "/v1/auth/switch-workspace",
-            post(auth::handler::switch_workspace),
-        )
         // Passkeys (D110). Signing in with one is public; the rest take the
         // token.
         .route("/v1/auth/passkeys", get(passkeys::handler::list))
@@ -567,14 +563,6 @@ fn protected_routes(state: AppState) -> Router<AppState> {
             "/v1/ai/settings",
             get(ai::handler::get_settings).patch(ai::handler::update_settings),
         )
-        // Internal. Service to service, gated by the key rather than by a
-        // token, and never routable from the internet (OPS-6). The caller
-        // is the AI service; who the call is for arrives in the body and is
-        // re-checked against the membership row (D4, CHAT-4).
-        .route(
-            "/v1/internal/tools/execute",
-            post(ai::handler::execute_tool),
-        )
         // Telegram (D83 to D86). The member's own link in the token's
         // workspace; the bot itself is reached by long polling, not by a
         // route (D84).
@@ -610,6 +598,24 @@ fn protected_routes(state: AppState) -> Router<AppState> {
         .route(
             "/v1/vault/files/{id}/complete",
             post(vault::handler::complete),
+        )
+        // Inside OWE1, so it reads the plaintext (AUTH-4).
+        .layer(axum::middleware::from_fn(
+            auth::workspace_param::reject_workspace_id,
+        ))
+        // The two routes whose job is to name a workspace, outside that
+        // layer. Switching names the one to switch into, checked against the
+        // membership row (NOT_A_MEMBER). A tool call from the AI service
+        // states who it acts for, checked against the membership row too (D4,
+        // CHAT-4); it is internal, gated by the service key and never routable
+        // from the internet (OPS-6).
+        .route(
+            "/v1/auth/switch-workspace",
+            post(auth::handler::switch_workspace),
+        )
+        .route(
+            "/v1/internal/tools/execute",
+            post(ai::handler::execute_tool),
         )
         .layer(axum::middleware::from_fn_with_state(
             state,

@@ -122,7 +122,7 @@ The second index matters: authentication resolves membership by `user_id` alone 
 | `expires_at` | timestamp | 30 days from issue |
 | `used_at` | timestamp | Set on rotation. A second use of the same row is a reuse |
 | `revoked_at` | timestamp | Set on logout, password change, or reuse detection |
-| `user_agent`, `ip` | text | For the user's session list. Truncated, never used for authorization |
+| `user_agent`, `ip` | text | For the user's session list: the browser's, as the app relays them ([auth](security/auth.md#the-session-cookies)). Truncated, never used for authorization |
 | `created_at` | timestamp | |
 
 ```sql

@@ -7,7 +7,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { plaintextAllowed } from './api';
+import { clientHeaders, plaintextAllowed } from './api';
 
 describe('plaintextAllowed', () => {
 	it('refuses an unsealed answer while encryption is on', () => {
@@ -24,5 +24,19 @@ describe('plaintextAllowed', () => {
 
 	it('allows plaintext with encryption off, which only development may do', () => {
 		expect(plaintextAllowed(false, false)).toBe(true);
+	});
+});
+
+describe('clientHeaders', () => {
+	it('relays the browser, not this server, to the session list', () => {
+		expect(clientHeaders('Mozilla/5.0 (Macintosh)', '203.0.113.7')).toEqual({
+			'x-client-user-agent': 'Mozilla/5.0 (Macintosh)',
+			'x-client-ip': '203.0.113.7'
+		});
+	});
+
+	it('sends nothing it does not know', () => {
+		expect(clientHeaders(null, null)).toEqual({});
+		expect(clientHeaders('', '')).toEqual({});
 	});
 });

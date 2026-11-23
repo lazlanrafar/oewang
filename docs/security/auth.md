@@ -16,7 +16,7 @@ How a user proves who they are, how the system decides what they may do, and how
 - Email and password, and passkeys added once signed in (D21, D110). No OAuth providers.
 - Passwords hashed with Argon2id.
 - The session is a short-lived access JWT plus a rotating refresh token, both in `httpOnly` cookies set by the SvelteKit server (D6, D38).
-- The API derives the workspace and the role from JWT claims and from nothing else (AUTH-4). A session opened at sign-up has neither until the user creates or joins a workspace (D109).
+- The API derives the workspace and the role from JWT claims and from nothing else (AUTH-4), and refuses a request that names one in its body or query with `WORKSPACE_ID_NOT_ALLOWED`. Only switching workspace and the AI service's internal tool call name one, and both are checked against the membership row ([conventions](../api/conventions.md#resources-and-urls)). A session opened at sign-up has neither until the user creates or joins a workspace (D109).
 - Three roles per workspace: `owner`, `admin`, `member`.
 - The AI service authenticates with a shared service key, never with a user token (D4).
 
@@ -71,6 +71,8 @@ In production both names carry the `__Host-` prefix, so the browser refuses them
 When the API answers 401 to a call that carried the access token, the SvelteKit server clears both cookies and redirects to `/login?next=`, rather than failing the page. A rotated `JWT_SECRET` or a removed user then costs a sign-in, not an error page.
 
 The refresh token is opaque, not a JWT. It carries no claims, so it proves nothing on its own: the server looks it up. Only its SHA-256 is stored (AUTH-8), so a database leak does not yield usable tokens.
+
+Each refresh token row also records the browser's user agent and address, for the session list in Account (`GET /v1/auth/sessions`). The API never sees the browser, so the SvelteKit server relays both on every call as `x-client-user-agent` and `x-client-ip` (`clientHeaders` in `src/lib/server/api.ts`), and the API prefers them over the request's own `user-agent`, which is the app server's fetch. An address that does not parse as an IP is dropped, and `x-forwarded-for` is not read for this. Both values are display only, never used for authorization: they are believed only because the app is the only caller of these routes (D5) and every call there is OWE1 (D22). Behind a proxy the app needs `ADDRESS_HEADER` set ([deployment](../deployment.md#app)), or every address is the proxy's.
 
 ### Rotation and reuse detection
 

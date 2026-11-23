@@ -305,6 +305,41 @@ export async function apiStream(options: StreamOptions): Promise<ReadableStream<
 	}
 }
 
+/**
+ * Who the browser is, for the API's session list.
+ *
+ * The API sees this server's own fetch, so without these every session reads
+ * "Bun" with no address. Sent on every call; the API reads them only where it
+ * records a session. Exported so the rule is tested without a request.
+ */
+export function clientHeaders(
+	userAgent: string | null,
+	address: string | null
+): Record<string, string> {
+	const headers: Record<string, string> = {};
+	if (userAgent) headers['x-client-user-agent'] = userAgent;
+	if (address) headers['x-client-ip'] = address;
+	return headers;
+}
+
+/** The current request's browser, or nothing outside a request. */
+function browserHeaders(): Record<string, string> {
+	let event;
+	try {
+		event = getRequestEvent();
+	} catch {
+		return {};
+	}
+	let address: string | null = null;
+	try {
+		// adapter-node reads ADDRESS_HEADER behind a proxy (docs/deployment.md#app).
+		address = event.getClientAddress();
+	} catch {
+		// No address is known; the session row just shows none.
+	}
+	return clientHeaders(event.request.headers.get('user-agent'), address);
+}
+
 type PreparedRequest = {
 	method: string;
 	requestId: string;
@@ -336,6 +371,7 @@ function prepare(options: RequestOptions, active: Session): PreparedRequest {
 	};
 
 	if (options.token) headers.authorization = `Bearer ${options.token}`;
+	Object.assign(headers, browserHeaders());
 
 	let payload: string | undefined;
 	if (options.body !== undefined) {

@@ -36,6 +36,9 @@ pub enum AppError {
     ResetTokenInvalid,
     #[error("mcp token is invalid")]
     McpTokenInvalid,
+    /// A body or query named a workspace. It comes from the token (AUTH-4).
+    #[error("workspace_id is taken from the token, never from the request")]
+    WorkspaceIdNotAllowed,
 
     // -- validation and general
     #[error("validation failed")]
@@ -164,6 +167,7 @@ impl AppError {
             LastOwner => "LAST_OWNER",
             InviteInvalid => "INVITE_INVALID",
             McpTokenInvalid => "MCP_TOKEN_INVALID",
+            WorkspaceIdNotAllowed => "WORKSPACE_ID_NOT_ALLOWED",
             ResetTokenInvalid => "RESET_TOKEN_INVALID",
             Validation(_) => "VALIDATION_FAILED",
             MalformedRequest => "MALFORMED_REQUEST",
@@ -238,6 +242,7 @@ impl AppError {
             | SpreadsheetUnreadable
             | ToolArgsInvalid(_) => 422,
             MalformedRequest
+            | WorkspaceIdNotAllowed
             | CryptoDecryptFailed
             | CryptoReplayDetected
             | CryptoClockSkew { .. }
@@ -264,6 +269,7 @@ impl AppError {
             LastOwner => "Promote another member to owner first.",
             NoWorkspace => "Create a workspace or accept an invitation, then switch into it.",
             McpTokenInvalid => "Create a new token in Account, MCP, or connect again.",
+            WorkspaceIdNotAllowed => "Drop workspace_id; switch workspace to act in another one.",
             Validation(_) | ToolArgsInvalid(_) => "Fix the listed fields and try again.",
             WalletNotFound => "Reload your wallets and pick one that still exists.",
             WalletHasTransactions => "Move or delete its transactions first.",
@@ -382,6 +388,7 @@ mod tests {
             AppError::InviteInvalid,
             AppError::ResetTokenInvalid,
             AppError::McpTokenInvalid,
+            AppError::WorkspaceIdNotAllowed,
             AppError::Validation(FieldErrors::new()),
             AppError::MalformedRequest,
             AppError::NotFound,
@@ -430,7 +437,7 @@ mod tests {
 
         // Every catalog entry but TRANSPORT_UNEXPECTED_RESPONSE, a
         // client-side condition with no server variant by design.
-        assert_eq!(samples.len(), 52);
+        assert_eq!(samples.len(), 53);
 
         let mut seen = std::collections::HashSet::new();
         for error in &samples {
