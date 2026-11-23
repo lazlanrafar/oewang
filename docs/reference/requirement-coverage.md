@@ -11,14 +11,14 @@ Evidence is, in order of preference: a test file that cites the ID (in a
 name or a comment); a backlog story that names the ID and has its "Verify
 in browser" box ticked; or a written reason it is not done.
 
-- 134 with test evidence
+- 135 with test evidence
 - 28 verified in browser only
-- 22 not done
+- 21 not done
 
 | ID | Evidence |
 |---|---|
 | AI-1 | `apps/api/crates/server/src/ai/service.rs`, `apps/api/crates/server/src/main.rs` |
-| AI-2 | `apps/api/crates/server/src/ai/service.rs`, `apps/api/crates/server/src/main.rs`, `apps/app/e2e/ai-flows.spec.ts` |
+| AI-2 | `apps/api/crates/server/src/ai/service.rs`, `apps/api/crates/server/src/main.rs` |
 | AI-3 | `apps/api/crates/server/src/ai/service.rs` |
 | AI-4 | `apps/api/crates/server/src/main.rs`, `apps/api/crates/server/src/transactions/tests.rs` |
 | AI-5 | `apps/api/crates/server/src/transactions/statement.rs` |
@@ -32,7 +32,7 @@ in browser" box ticked; or a written reason it is not done.
 | AUTH-1 | `apps/app/e2e/login.spec.ts` |
 | AUTH-2 | `apps/api/crates/server/src/auth/token.rs` |
 | AUTH-3 | `apps/app/e2e/login.spec.ts`, `apps/app/src/lib/server-boundary.test.ts` |
-| AUTH-4 | not done: workspace_id is read only from the token (Auth extractor, audit.rs), but a stray workspace_id in a body or query is ignored rather than rejected, and no test pins either half |
+| AUTH-4 | `apps/api/crates/server/src/auth/workspace_param.rs`, `apps/api/crates/server/src/main.rs` |
 | AUTH-5 | `apps/ai/tests/test_auth_integration.py` |
 | AUTH-6 | `apps/api/crates/server/src/main.rs` |
 | AUTH-7 | not done: the 15 minute and 30 day defaults (config.rs) and the httpOnly cookies (session.ts) are not asserted by any test |

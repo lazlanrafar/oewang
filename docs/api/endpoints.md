@@ -12,7 +12,7 @@ The full route catalog, grouped by module. This doc is the source of truth for r
 ## Conventions recap
 
 - Base path `/v1`. Envelope, errors, pagination and encoding are in [conventions](conventions.md).
-- The workspace is never in the path. It comes from the JWT (AUTH-4).
+- The workspace is never in the path. It comes from the JWT (AUTH-4). A `workspace_id` at the top level of a body, or in the query string, is refused with `WORKSPACE_ID_NOT_ALLOWED`, except on `POST /v1/auth/switch-workspace` and `POST /v1/internal/tools/execute`, whose job is to name one ([conventions](conventions.md#resources-and-urls)).
 - Role column values: `public` (no token), `any` (any member), `admin+` (`owner` or `admin`), `owner`, `service` (service key only).
 - Role rules are in [auth](../security/auth.md#permission-matrix).
 

@@ -16,7 +16,7 @@ How a user proves who they are, how the system decides what they may do, and how
 - Email and password, and passkeys added once signed in (D21, D110). No OAuth providers.
 - Passwords hashed with Argon2id.
 - The session is a short-lived access JWT plus a rotating refresh token, both in `httpOnly` cookies set by the SvelteKit server (D6, D38).
-- The API derives the workspace and the role from JWT claims and from nothing else (AUTH-4). A session opened at sign-up has neither until the user creates or joins a workspace (D109).
+- The API derives the workspace and the role from JWT claims and from nothing else (AUTH-4), and refuses a request that names one in its body or query with `WORKSPACE_ID_NOT_ALLOWED`. Only switching workspace and the AI service's internal tool call name one, and both are checked against the membership row ([conventions](../api/conventions.md#resources-and-urls)). A session opened at sign-up has neither until the user creates or joins a workspace (D109).
 - Three roles per workspace: `owner`, `admin`, `member`.
 - The AI service authenticates with a shared service key, never with a user token (D4).
 
