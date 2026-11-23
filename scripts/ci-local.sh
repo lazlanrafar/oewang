@@ -63,7 +63,7 @@ step "app: test" in_container app bun run test
 
 if $E2E; then
 	step "e2e: journeys and axe" bash -c \
-		'cd apps/app && E2E_BASE_URL=http://localhost:3000 E2E_CHAT=0 bun run test:e2e'
+		'cd apps/app && E2E_BASE_URL=http://localhost:3000 E2E_CHAT=0 bun run test:e2e -- --workers=2'
 fi
 
 printf '\n\033[1m== Summary\033[0m\n'

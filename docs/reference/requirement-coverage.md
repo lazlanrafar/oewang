@@ -12,8 +12,8 @@ name or a comment); a backlog story that names the ID and has its "Verify
 in browser" box ticked; or a written reason it is not done.
 
 - 135 with test evidence
-- 29 verified in browser only
-- 20 not done
+- 31 verified in browser only
+- 18 not done
 
 | ID | Evidence |
 |---|---|
@@ -162,7 +162,7 @@ in browser" box ticked; or a written reason it is not done.
 | TXN-22 | `apps/api/crates/server/src/transactions/tests.rs` |
 | TXN-23 | `apps/api/crates/server/src/transactions/tests.rs` |
 | UI-1 | verified in browser by US-006, US-009, US-013 |
-| UI-2 | verified in browser by US-017, US-018, US-031 |
+| UI-2 | verified in browser by US-017, US-018, US-031, US-034 |
 | UI-3 | verified in browser by US-006 |
 | UI-4 | verified in browser by US-019 |
 | UI-5 | verified in browser by US-013, US-018 |
@@ -171,8 +171,8 @@ in browser" box ticked; or a written reason it is not done.
 | UI-8 | `apps/app/e2e/transactions.spec.ts` |
 | UI-9 | `apps/api/crates/server/src/auth/account.rs`, `apps/app/src/lib/colors.test.ts` |
 | UI-10 | not done: the error pages are UI only; US-056 has no browser box |
-| USG-1 | not done: storage used is a SQL aggregate in the usage repository; no test reads it |
-| USG-2 | not done: token parsing and clamping are unit-tested (usage/mod.rs), but the append-only write, and that a failed record never fails the call, are not |
+| USG-1 | verified in browser by US-050 |
+| USG-2 | verified in browser by US-050 |
 | USG-3 | `apps/api/crates/server/src/usage/handler.rs` |
 | VLT-1 | `apps/api/crates/server/src/hardening_tests.rs` |
 | VLT-2 | `apps/api/crates/clients/src/storage/local.rs`, `apps/api/crates/clients/src/storage/s3.rs` |

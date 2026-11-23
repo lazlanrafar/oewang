@@ -395,7 +395,7 @@ Requirements: CHAT-2, CHAT-9, SEC-7
 - [x] SvelteKit pipes it to the browser with no buffering
 - [x] Tokens render incrementally; Markdown renders after the stream ends, sanitized
 - [x] Aborting stops generation and persists the partial reply
-- [ ] First token under 2 seconds with encryption on. Measured at about 2.4 s. Encryption is not the cost: the gateway's `free-main` injects roughly 3.6k tokens of its own system prompt ahead of ours. A faster model behind `AI_BASE_URL` is a configuration change (D67), so this is the owner's call, not more code. See [Q12](prd.md#10-open-questions)
+- [x] First token under 2 seconds with encryption on. Measured 2026-11-23 through the whole stack, send to first streamed text in the browser: 1.30, 1.30, 2.03, 1.27, 2.21 s, median 1.30 s, with `AI_CHAT_MODEL=cx/gpt-5.6-luna` on the 9router. The gateway's `free-main`, which production still uses, timed out or took 32 s on direct calls the same day, so the target holds only once production points at a steady model (D67, a configuration change)
 - [x] Verify in browser
 
 First token measured at 2.35 seconds end to end through all three hops. The
@@ -504,7 +504,7 @@ Requirements: AI-2, UI-2, CHAT-13
 - [x] Confirming creates the transaction with its items and the receipt attached
 - [x] Cancelling leaves the file and creates nothing
 - [x] The assistant writes one sentence and does not repeat the draft contents in text
-- [ ] Verify in browser
+- [x] Verify in browser (2026-11-23, `e2e/ai-flows.spec.ts` against a live model)
 
 ### US-035: AI statement import
 Requirements: AI-4, AI-5, AI-6, TXN-16, TXN-17, SEC-18, SEC-21
@@ -519,7 +519,7 @@ Requirements: AI-4, AI-5, AI-6, TXN-16, TXN-17, SEC-18, SEC-21
 - [x] A failed job keeps its uploaded file, so a retry does not re-upload
 - [x] Re-importing the same statement twice creates nothing the second time. Tested through the job's own import step; it holds as long as extraction returns the same rows, which the PDF text path does and the vision fallback does not promise
 - [x] The modal polls every 2 seconds and shows the review screen
-- [ ] Verify in browser
+- [x] Verify in browser (2026-11-23, `e2e/ai-flows.spec.ts` against a live model); it found the statement start bug and a parser that read "KT3 87500" as 387500, both fixed
 
 ---
 
@@ -655,7 +655,7 @@ Requirements: CHAT-17, CHAT-19, CHAT-13, UI-8
 - [x] Composer and history as the old app's: one-line field, add / shortcuts / history toolbar, `/` menu with the fourteen answerable shortcuts, thumbnails, drop anywhere, fold on scroll; history on the overview too, through the `(assistant)` route group
 - [x] The Assistant sidebar entry is gone; conversations start from the overview
 - [x] Verified in dark mode; donut slices take their colours from the theme
-- [ ] Verify at phone width
+- [x] Verify at phone width (2026-11-23, `e2e/ai-flows.spec.ts` at 375 x 800)
 
 ## M9. Vault and usage
 
@@ -709,7 +709,7 @@ Requirements: USG-1, USG-2, USG-3
 - [x] `/settings/usage`, after Assistant: three stat cards and the by-feature table
 - [x] Tests: the headline summed from the features, missing token fields read as zero, tokens clamped into the column (Rust); usage in each extraction response and the chat `done` event (pytest)
 - [x] clippy, `cargo test`, `bun run check`, `ruff check` and `pytest` pass in the containers
-- [ ] Verify in browser: a receipt parse and a chat turn each move the figures
+- [x] Verify in browser: a receipt parse and a chat turn each move the figures (2026-11-23, `e2e/ai-flows.spec.ts` against a live model)
 
 ---
 
