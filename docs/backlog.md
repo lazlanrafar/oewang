@@ -873,4 +873,5 @@ Requirements: WS-5, WS-7, AUTH-14
 - [x] Passkeys added and removed in Account, Security; "Sign in with a passkey" on the login page (Rust tests cover ceremonies, ownership and removal)
 - [x] Verified locally through the app's routes: sign up, check page, create workspace, overview, sign in again
 - [ ] Verify a real passkey registration and sign-in in a browser
+  - 2026-11-23: `e2e/passkey.spec.ts` passes with Chromium's virtual WebAuthn authenticator (add, sign in with no password, last used, remove, a removed passkey refused). Left open for one sign-in with Touch ID, which a virtual authenticator cannot stand in for
 - [ ] Verify in production after deploy (`APP_URL` is the relying party)

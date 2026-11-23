@@ -42,7 +42,7 @@ in browser" box ticked; or a written reason it is not done.
 | AUTH-11 | `apps/api/crates/server/src/auth/account.rs` |
 | AUTH-12 | `apps/api/crates/server/src/auth/account.rs` |
 | AUTH-13 | `apps/api/crates/server/src/auth/account.rs` |
-| AUTH-14 | `apps/api/crates/server/src/passkeys/tests.rs` |
+| AUTH-14 | `apps/api/crates/server/src/passkeys/tests.rs`, `apps/app/e2e/passkey.spec.ts`, `apps/app/src/lib/passkeys.test.ts` |
 | BUD-1 | `apps/api/crates/server/src/budgets/tests.rs` |
 | BUD-2 | `apps/api/crates/domain/src/budget.rs`, `apps/api/crates/server/src/budgets/service.rs`, `apps/api/crates/server/src/budgets/tests.rs` |
 | BUD-3 | not done: the server sort is parsed in budgets/handler.rs without a test, and the page is UI only; US-057 has no browser box |

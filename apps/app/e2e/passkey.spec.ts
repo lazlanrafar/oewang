@@ -86,8 +86,6 @@ test.describe('passkeys', () => {
 	});
 
 	test('a removed passkey no longer signs in', async ({ page }) => {
-		// OEW-082: the running stack still says "email and password"; drop once the fix ships.
-		test.fail();
 		const { cdp, id } = await virtualAuthenticator(page);
 
 		await signIn(page);
