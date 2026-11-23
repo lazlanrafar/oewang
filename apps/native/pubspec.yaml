@@ -1,7 +1,9 @@
 name: oewang
 description: "Oewang mobile — Financial OS"
 publish_to: 'none'
-version: 1.0.0+6
+# The store build number is +N plus the release workflow's run number
+# (docs/deployment.md#mobile). Raise the name for a new version; never lower +N.
+version: 2.0.0+7
 
 environment:
   sdk: ^3.11.0

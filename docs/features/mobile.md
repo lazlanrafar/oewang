@@ -42,7 +42,7 @@ Set at build time with `--dart-define-from-file=env/<name>.json`, never from a b
 | `APP_URL` | `https://app.oewang.com`, for links that open the web (legal pages, invitations) |
 | `SENTRY_DSN` | Empty disables Sentry |
 
-`apps/native/env/dev.json` is committed for the local stack (iOS simulator on `localhost:3002`). Its key is the one the local API generated on first start, so on another machine replace it with what `GET http://localhost:3002/.well-known/oewang-keys` answers. Other environments' files are gitignored and made where the app is built.
+`apps/native/env/dev.json` is committed for the local stack (iOS simulator on `localhost:3002`). Its key is the one the local API generated on first start, so on another machine replace it with what `GET http://localhost:3002/.well-known/oewang-keys` answers. `apps/native/env/prod.json` is committed too and is what the store builds use; the release workflow checks it against production ([Deployment, Mobile](../deployment.md#mobile)). Other environments' files are gitignored and made where the app is built.
 
 Public keys are not secrets. The FCM config files (`google-services.json`, `GoogleService-Info.plist`) are committed as the old app did; they identify the Firebase project and grant nothing.
 
@@ -135,6 +135,10 @@ SCREENSHOT_DIR=/tmp/shots fvm flutter drive -d <simulator id> \
 ```
 
 `scripts/ci-local.sh` runs both in its `native` stage.
+
+## Release
+
+Version `2.0.0+7` in `pubspec.yaml`. Store builds come only from `.github/workflows/mobile-release.yml`, run by hand; its secrets, the build number rule and the owner's manual steps are in [Deployment, Mobile](../deployment.md#mobile).
 
 ## Related docs
 

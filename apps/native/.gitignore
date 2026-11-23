@@ -47,10 +47,12 @@ app.*.map.json
 # fvm per-project link to the pinned SDK
 .fvm/
 
-# Build configuration: only the local stack file is committed; any other
-# environment file is made where it is built (docs/features/mobile.md).
+# Build configuration: the local stack file and the store build's file are
+# committed (public values only); any other environment file is made where
+# it is built (docs/features/mobile.md).
 env/*.json
 !env/dev.json
+!env/prod.json
 
 # Never bundle a .env: configuration comes from --dart-define-from-file.
 .env*

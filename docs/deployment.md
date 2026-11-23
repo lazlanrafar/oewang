@@ -300,6 +300,55 @@ Three further proxy requirements:
 
 `api` before `ai` because the AI service's client pins the API's signing key and reads nothing from it at startup, but every call it makes needs the API up. `app` last because it is the only thing the user sees, so it should be the last to change.
 
+## Mobile
+
+`apps/native` ships through `.github/workflows/mobile-release.yml`: Android to the Play internal track, iOS to TestFlight, identity `com.oewang.app`, Apple team `P9VXA8S55P`. It runs only by hand, like `ci.yml`:
+
+```bash
+gh workflow run mobile-release.yml --ref development -f platform=both   # or android, ios
+```
+
+Without `--ref` it builds the default branch. A `check` job on Linux runs first: `env/prod.json` must point at `https://api.oewang.com` and `https://app.oewang.com` and must hold every key `GET https://api.oewang.com/.well-known/oewang-keys` publishes, then `flutter analyze` and `flutter test`. Only then do the two build jobs start. The Flutter version comes from `apps/native/.fvmrc`.
+
+**Release configuration** is `apps/native/env/prod.json`, committed, public values only. After an [OWE1 key rotation](#owe1-signing-keys) update its `OWE1_SIGNING_KEYS` and ship a new build before the old key is retired: an installed app pinned only to the old key refuses every handshake. `SENTRY_DSN` stays empty in the file and is filled in at build time from the `NATIVE_SENTRY_DSN` secret, if set.
+
+**Build number** = the `+N` of `version:` in `apps/native/pubspec.yaml` plus the workflow's run number (so `2.0.0+7` and run 1 upload build 8). Both stores reject a number they have seen, and the run number only goes up, so uploads never collide. Raise the version name for a release users should see as new; never lower `+N`. Re-running a finished run reuses its number, so dispatch a new run instead of re-running one whose upload succeeded.
+
+**Closed testing and production are manual.** CI stops at the internal track. Play Console, the track, Create release, Add from library picks the bundle CI uploaded.
+
+### GitHub secrets
+
+Set with `gh secret set NAME` on `lazlanrafar/oewang`. The source of every value is the Boekti vault (project `OEW`); never the repository, a commit or a log. On 2026-11-23 none of these existed on the repository.
+
+| Secret | Job | Value |
+|---|---|---|
+| `ANDROID_KEYSTORE_BASE64` | android | `base64 -i upload-keystore.jks` |
+| `ANDROID_KEYSTORE_PASSWORD` | android | keystore password |
+| `ANDROID_KEY_ALIAS` | android | key alias, usually `upload` |
+| `ANDROID_KEY_PASSWORD` | android | key password |
+| `PLAY_SERVICE_ACCOUNT_JSON` | android | the service account's whole JSON key file |
+| `IOS_CERT_P12_BASE64` | ios | `base64 -i dist_cert.p12`, the Apple Distribution certificate with its private key |
+| `IOS_CERT_PASSWORD` | ios | the `.p12` export password |
+| `IOS_PROVISIONING_PROFILE_BASE64` | ios | `base64 -i profile.mobileprovision`, App Store profile for `com.oewang.app` |
+| `PROVISIONING_PROFILE_NAME` | ios | that profile's name as the Developer portal shows it |
+| `ASC_KEY_ID` | ios | App Store Connect API key ID |
+| `ASC_ISSUER_ID` | ios | App Store Connect issuer ID |
+| `ASC_API_KEY_P8` | ios | the `.p8` file's text |
+| `NATIVE_SENTRY_DSN` | both, optional | the Flutter project's DSN; blank ships without Sentry |
+
+A missing required secret fails its job before anything is built, naming the secret. The keychain password is generated per run and needs no secret.
+
+### Manual steps for the owner
+
+1. **Android upload key.** It is not on the development laptop. Look for the old app's `upload-keystore.jks` and its passwords in the password manager or the Boekti vault. If it is lost, and the app is enrolled in Play App Signing, request an upload key reset in Play Console (Setup, App integrity, App signing, Request upload key reset) with a new keystore from `keytool -genkey -v -keystore upload-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload`; Google takes a day or two. Store the file and both passwords in the vault before setting the secrets.
+2. **Play service account.** Play Console, Setup, API access: link a Google Cloud service account, grant it Release manager on the app, download its JSON key.
+3. **App Store Connect API key.** Users and Access, Integrations, App Store Connect API: create a key with the App Manager role. The `.p8` downloads once; store it in the vault at once, with the key ID and issuer ID.
+4. **iOS signing.** In the Developer portal for team `P9VXA8S55P`: an Apple Distribution certificate exported as `.p12` with a password, and an App Store provisioning profile for `com.oewang.app` with Push Notifications and Sign in with Apple, which `Runner.entitlements` asks for.
+5. Put every value in the Boekti vault, then set the secrets above from it.
+6. Dispatch the workflow against `development`, then check both jobs: `gh run view <id> --json jobs -q '.jobs[] | "\(.name): \(.conclusion)"'`.
+
+Locally, without `android/key.properties`, `flutter build appbundle --release` signs with the debug key (`android/app/build.gradle.kts`). Such a build installs on a device but Play refuses it.
+
 ## Open questions
 
 Each of these needs the repository owner's decision. None of them is a value this document should guess.
