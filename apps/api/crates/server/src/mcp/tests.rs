@@ -429,3 +429,116 @@ fn should_cover_every_area_and_expose_nothing_held_back() {
         }
     }
 }
+
+// ------------------------------------------------------------ tool calls
+
+/// Everything a tool can reach, pointed at nothing outside the test: the
+/// console mailer, local files in a temp directory, an AI service and a
+/// rate source nobody calls. Only the database is real.
+fn state(pool: &PgPool) -> crate::state::AppState {
+    use std::{sync::Arc, time::Duration};
+
+    use oewang_domain::Secret;
+
+    use crate::config::{AppEnv, Config};
+
+    let scratch = std::env::temp_dir().join(format!("oewang-mcp-{}", cuid2::create_id()));
+    std::fs::create_dir_all(&scratch).unwrap();
+    let unused = "http://127.0.0.1:9".to_string();
+    let config = Config {
+        app_env: AppEnv::Development,
+        port: 0,
+        database_url: Secret::from(String::new()),
+        migration_database_url: None,
+        db_max_connections: 1,
+        db_acquire_timeout: Duration::from_secs(5),
+        db_statement_timeout: Duration::from_secs(5),
+        jwt_secret: Secret::from("x".repeat(32)),
+        access_token_ttl: Duration::from_secs(900),
+        refresh_token_ttl: Duration::from_secs(3600),
+        app_url: "http://localhost:3000".into(),
+        resend_api_key: None,
+        email_from: "test@example.com".into(),
+        ai_service_url: unused.clone(),
+        ai_service_api_key: Secret::from(String::new()),
+        ai_signing_public_keys: vec![],
+        ai_request_timeout: Duration::from_secs(1),
+        fx_api_url: unused.clone(),
+        fx_access_key: None,
+        telegram: None,
+        storage_backend: "local".into(),
+        storage_local_path: scratch.join("files").display().to_string(),
+        s3_endpoint: String::new(),
+        s3_bucket: String::new(),
+        s3_region: String::new(),
+        s3_access_key_id: String::new(),
+        s3_secret_access_key: Secret::from(String::new()),
+        crypto_signing_key_file: scratch.join("signing.pem"),
+        owe1_enabled: false,
+        chat_max_tool_amount: oewang_domain::tools::default_max_tool_amount(),
+        request_timeout: Duration::from_secs(5),
+        chat_stream_timeout: Duration::from_secs(5),
+        body_limit_bytes: 1024 * 1024,
+        rate_limits: Config::default_rate_limits(),
+        uploads_per_day: 200,
+        max_file_bytes: 10 * 1024 * 1024,
+        import_row_limit: 5000,
+        trust_proxy_headers: false,
+    };
+    crate::state::AppState {
+        db: pool.clone(),
+        owe1_signer: Arc::new(
+            crate::owe1::Owe1Signer::load_or_create(&config.crypto_signing_key_file, true).unwrap(),
+        ),
+        owe1_sessions: crate::owe1::SessionStore::new(),
+        mailer: oewang_clients::Mailer::console(config.app_url.clone()),
+        rates: oewang_clients::RatesClient::new(unused.clone(), None),
+        files: oewang_clients::FileStore::Local(oewang_clients::storage::LocalStorage::new(
+            config.storage_local_path.clone(),
+        )),
+        ai: Arc::new(
+            oewang_clients::Owe1Client::new(
+                unused,
+                Secret::from(String::new()),
+                vec![],
+                true,
+                Duration::from_secs(1),
+            )
+            .unwrap(),
+        ),
+        turns: crate::ai::turns::TurnStore::new(),
+        mcp: crate::mcp::budget::McpBudget::new(),
+        rate_limits: crate::limits::RateLimiter::new(Config::default_rate_limits()),
+        telegram: None,
+        webauthn: Arc::new(crate::passkeys::service::relying_party(&config.app_url).unwrap()),
+        config: Arc::new(config),
+    }
+}
+
+/// MCP-7: a write through an MCP tool runs the web's handler, and the audit
+/// row it leaves names the person and says it came from `mcp`.
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_audit_a_tool_write_with_source_mcp(pool: PgPool) {
+    fixture(&pool).await;
+    let state = state(&pool);
+
+    let created = service::call(
+        &state,
+        &caller("tok_audit", Some(vec!["ws_a".into()])),
+        "req_audit",
+        "create_category",
+        json!({ "name": "Groceries", "type": "expense" }),
+    )
+    .await
+    .unwrap();
+
+    let (workspace_id, user_id, source): (String, String, String) =
+        sqlx::query_as("SELECT workspace_id, user_id, source FROM audit_logs WHERE entity_id = $1")
+            .bind(created["id"].as_str().unwrap())
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert_eq!(workspace_id, "ws_a");
+    assert_eq!(user_id, USER, "the person, not the app that called");
+    assert_eq!(source, "mcp");
+}
