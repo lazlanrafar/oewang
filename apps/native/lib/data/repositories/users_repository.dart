@@ -1,0 +1,24 @@
+import 'dart:io';
+
+import 'package:oewang/core/result/app_error.dart';
+import 'package:oewang/core/result/result.dart';
+import 'package:oewang/domain/models/user_profile.dart';
+
+abstract class UsersRepository {
+  Future<Result<UserProfile, AppError>> getProfile();
+
+  /// Updates the editable fields of the user profile. Returns the new profile.
+  Future<Result<UserProfile, AppError>> updateProfile({
+    String? name,
+    String? mobile,
+  });
+
+  /// Uploads a new avatar via multipart and returns the signed URL the server
+  /// stored on the user record.
+  Future<Result<String, AppError>> uploadAvatar(File file);
+
+  /// Permanently erases the user's personal data (anonymizes the user row,
+  /// soft-deletes memberships/notifications, server-side audit logged). The
+  /// caller must clear the local session afterward — this does not log out.
+  Future<Result<void, AppError>> deleteAccount();
+}

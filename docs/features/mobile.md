@@ -23,8 +23,8 @@ apps/native/lib/
     repositories_remote/   one per resource, over ApiClient
     repositories_fake/     in-memory, for widget tests
     services/api/  ApiClient (Dio), auth interceptor, owe1/ (handshake, envelope)
-    services/db/   drift: cached rows and the write queue (MOB-6)
-    services/sync/ queue replay and conflict handling
+    services/db/   drift: cached rows and the write queue (MOB-6, not yet: OEW-087)
+    services/sync/ queue replay and conflict handling (not yet: OEW-087)
   domain/models/   what screens use
   components/      atoms, molecules, organisms (screen + view model), layouts
 ```
@@ -42,12 +42,14 @@ Set at build time with `--dart-define-from-file=env/<name>.json`, never from a b
 | `APP_URL` | `https://app.oewang.com`, for links that open the web (legal pages, invitations) |
 | `SENTRY_DSN` | Empty disables Sentry |
 
+`apps/native/env/dev.json` is committed for the local stack (iOS simulator on `localhost:3002`). Its key is the one the local API generated on first start, so on another machine replace it with what `GET http://localhost:3002/.well-known/oewang-keys` answers. Other environments' files are gitignored and made where the app is built.
+
 Public keys are not secrets. The FCM config files (`google-services.json`, `GoogleService-Info.plist`) are committed as the old app did; they identify the Firebase project and grant nothing.
 
 ## Transport (D113)
 
-- Every request after the handshake is OWE1, sealed and opened by a Dio interceptor. `CRYPTO_SESSION_UNKNOWN` runs one new handshake and retries once.
-- `Authorization: Bearer <access>`; on `401 UNAUTHENTICATED` the auth interceptor calls `/v1/auth/refresh` once with the stored refresh token, stores the rotated pair, and retries. A failed refresh signs out.
+- Every request after the handshake is OWE1, sealed and opened by a Dio interceptor (`lib/data/services/api/owe1/`), checked against `owe1-vectors.json` by `test/unit/owe1_vectors_test.dart`. The query string travels only in `X-Owe-Query`. The handshake's `server_time` sets the clock offset every timestamp uses, since a phone's clock is the user's to set. `CRYPTO_SESSION_UNKNOWN` and `CRYPTO_CLOCK_SKEW` run one new handshake and retry once. An unsealed answer other than a marked transport error is refused.
+- `Authorization: Bearer <access>`; on `401 UNAUTHENTICATED` the auth interceptor calls `/v1/auth/refresh` once with the stored refresh token, stores the rotated pair, and retries. Concurrent 401s share that one refresh, because reusing a rotated refresh token revokes the family (AUTH-9). A refresh the API refuses (400, 401, 403) clears the tokens and signs out; no answer, a rate limit or a 5xx keeps them and surfaces the error.
 - Money arrives and leaves as decimal strings and is held as `Decimal` (package `decimal`). A `double` amount is a bug.
 - Nothing logs a token, a key, a decrypted body or file contents (OPS-3). The Dio log interceptor is off in release and prints method, path and status only in debug.
 
@@ -76,7 +78,15 @@ Public keys are not secrets. The FCM config files (`google-services.json`, `Goog
 | new: vault | `/v1/vault/files*` |
 | new: Telegram | `/v1/integrations/telegram*` |
 
-Dropped from the old app with their API: debts, contacts, sub-currencies, the separate transaction settings screen, three locales (D15).
+Dropped from the old app with their API: debts (and its bottom tab, so the bar has four), contacts, sub-currencies, the separate transaction settings screen, Google and Apple sign-in (OAuth is a non-goal, so the email form shows without the old "Show other options" step), three locales (D15).
+
+What the transaction screens read, and where they differ from the old app:
+
+- A month is loaded whole, every page of `GET /v1/transactions`, so the day, week and calendar groupings never stop at the first 100 rows as the old app did.
+- The month's income and expense in the header and the Monthly tab come from `GET /v1/transactions/summary` (D27). Day, week and calendar subtotals add the rows' `base_amount` as `Decimal`, exactly, which is what the API sums too; the summary tab's per-wallet expense adds `amount` within one wallet. `GET /v1/overview` is read by the stats port (M2), not by the transaction tabs.
+- The old app's only delete was a swipe that one transaction setting turned on, and that setting went with its API. Deleting is in the edit form's app bar now, behind the same confirm dialog.
+- The transaction settings themselves run on the old defaults (month from the 1st, Daily tab first, swipe changes month).
+- A member (the read-only role) sees no add button, opens no row for editing and gets no delete (MOB-5).
 
 ## Offline (D114, D115)
 
@@ -113,6 +123,15 @@ Flutter runs on the host, pinned by `apps/native/.fvmrc` (an exception to runnin
 cd apps/native
 fvm flutter analyze
 fvm flutter test
+```
+
+The end-to-end path against the running stack (sign in through `/sync`, sign up, create a workspace, create, edit and delete a transaction) is an integration test, with screenshots:
+
+```bash
+SCREENSHOT_DIR=/tmp/shots fvm flutter drive -d <simulator id> \
+  --driver=test_driver/integration_test.dart \
+  --target=integration_test/transactions_flow_test.dart \
+  --dart-define-from-file=env/dev.json
 ```
 
 `scripts/ci-local.sh` runs both in its `native` stage.
