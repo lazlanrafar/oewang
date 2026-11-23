@@ -11,6 +11,10 @@
 #      cached target directory.
 #   2. Cache everything that is expensive to rebuild: the Cargo registry
 #      and target directory, the uv cache, the bun install cache.
+#   3. No debuginfo in the Rust build. Nobody attaches a debugger to a CI
+#      binary, and dropping it took a warm rebuild from 9 s to 5 s and the
+#      target directory from 2.7 GB to 1.5 GB (measured 2026-11-23), which
+#      is also the cache this job restores and saves on every run.
 #
 # Local development runs every check inside a container (see CLAUDE.md).
 # CI does not: building the dev images on a runner costs more than it
@@ -124,6 +128,8 @@ jobs:
 
     env:
       DATABASE_URL: postgres://oewang:oewang@localhost:5432/oewang
+      # Rule 3 above. The test profile inherits it from dev.
+      CARGO_PROFILE_DEV_DEBUG: "0"
 
     steps:
       - uses: actions/checkout@v4

@@ -557,7 +557,7 @@ Requirements: OPS-7, SEC-20
 - [x] Playwright covers log in, create a transaction, and a chat message that creates a transaction
 - [x] An axe pass on the three main screens
 - [x] GitHub Actions runs lint, typecheck, tests and the three audit tools for all apps on every push
-- [ ] The whole run finishes under 5 minutes. Not met and not pretended otherwise: the Rust job is the long pole at an estimated 4 to 6 minutes warm and 10 to 14 cold, because the workspace compiles three times over (the sqlx cache check, clippy, the tests). The levers, cheapest first: a larger runner for that job alone, `cargo nextest`, `sccache`. Dropping `--all-targets` from clippy would be fastest and was rejected, because it stops linting the tests
+- [ ] The whole run finishes under 5 minutes. Not met and not pretended otherwise: the Rust job is the long pole at an estimated 4 to 6 minutes warm and 10 to 14 cold, because the workspace compiles three times over (the sqlx cache check, clippy, the tests). Debuginfo is off in that job since 2026-11-23 (warm rebuild 9 s to 5 s, cache 2.7 GB to 1.5 GB locally); unchecked until one run on GitHub is timed. The levers left, cheapest first: a larger runner for that job alone, `cargo nextest`, `sccache`. Dropping `--all-targets` from clippy would be fastest and was rejected, because it stops linting the tests
 - [x] Deployment targets Coolify on the existing VPS, with files in Cloudflare R2 (D41). Production runs there since 2026-11-05 from the images `build-and-push.yml` builds per app, and [deployment.md](deployment.md) documents it. Still open there: a private R2 bucket, a second copy of the signing keys, and backup and restore
 
 ### US-039: Documentation pass
