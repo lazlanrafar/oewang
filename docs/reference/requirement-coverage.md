@@ -11,9 +11,9 @@ Evidence is, in order of preference: a test file that cites the ID (in a
 name or a comment); a backlog story that names the ID and has its "Verify
 in browser" box ticked; or a written reason it is not done.
 
-- 155 with test evidence
+- 158 with test evidence
 - 29 verified in browser only
-- 14 not done
+- 11 not done
 
 | ID | Evidence |
 |---|---|
@@ -87,12 +87,12 @@ in browser" box ticked; or a written reason it is not done.
 | MOB-1 | not done: epic OEW-083 in progress; tests land with US-063 to US-068 |
 | MOB-2 | `apps/native/integration_test/transactions_flow_test.dart`, `apps/native/test/unit/api_client_test.dart`, `apps/native/test/unit/owe1_vectors_test.dart` |
 | MOB-3 | `apps/native/integration_test/transactions_flow_test.dart`, `apps/native/test/unit/auth_sync_test.dart` |
-| MOB-4 | `apps/native/integration_test/transactions_flow_test.dart`, `apps/native/test/unit/amount_format_test.dart`, `apps/native/test/unit/month_transactions_test.dart`, `apps/native/test/unit/transaction_dto_test.dart`, `apps/native/test/widget/transactions_daily_screen_test.dart` |
-| MOB-5 | `apps/native/test/unit/auth_sync_test.dart`, `apps/native/test/widget/transactions_daily_screen_test.dart` |
+| MOB-4 | `apps/native/integration_test/transactions_flow_test.dart`, `apps/native/test/unit/accounts_view_model_test.dart`, `apps/native/test/unit/amount_format_test.dart`, `apps/native/test/unit/month_transactions_test.dart`, `apps/native/test/unit/repositories_remote_m2_test.dart`, `apps/native/test/unit/stats_view_model_test.dart`, `apps/native/test/unit/transaction_dto_test.dart`, `apps/native/test/unit/user_profile_dto_test.dart`, `apps/native/test/widget/m2_screens_test.dart`, `apps/native/test/widget/transactions_daily_screen_test.dart` |
+| MOB-5 | `apps/native/test/unit/auth_sync_test.dart`, `apps/native/test/widget/catalog_reorder_test.dart`, `apps/native/test/widget/chat_vault_screens_test.dart`, `apps/native/test/widget/m2_screens_test.dart`, `apps/native/test/widget/transactions_daily_screen_test.dart` |
 | MOB-6 | `apps/api/crates/server/src/accounts/tests.rs`, `apps/api/crates/server/src/offline.rs`, `apps/api/crates/server/src/transactions/tests.rs`, `apps/native/test/unit/offline_sync_test.dart` |
 | MOB-7 | `apps/api/crates/domain/src/error.rs`, `apps/api/crates/server/src/accounts/tests.rs`, `apps/api/crates/server/src/offline.rs`, `apps/api/crates/server/src/transactions/tests.rs`, `apps/native/test/unit/offline_sync_test.dart` |
-| MOB-8 | not done: epic OEW-083 in progress; tests land with US-063 to US-068 |
-| MOB-9 | not done: epic OEW-083 in progress; tests land with US-063 to US-068 |
+| MOB-8 | `apps/native/test/unit/chat_view_model_test.dart`, `apps/native/test/unit/owe1_stream_test.dart`, `apps/native/test/unit/owe1_vectors_test.dart`, `apps/native/test/unit/receipt_scan_test.dart`, `apps/native/test/unit/vault_repository_remote_test.dart`, `apps/native/test/widget/chat_vault_screens_test.dart` |
+| MOB-9 | `apps/native/test/unit/invite_link_test.dart`, `apps/native/test/unit/telegram_view_model_test.dart` |
 | OPS-1 | `apps/api/crates/server/src/accounts/tests.rs`, `apps/api/crates/server/src/transactions/tests.rs` |
 | OPS-2 | `apps/api/crates/server/src/ai/tests.rs`, `apps/api/crates/server/src/ai/tool_tests.rs` |
 | OPS-3 | `apps/ai/tests/test_chat_stream.py`, `apps/ai/tests/test_extraction_ladder.py`, `apps/ai/tests/test_extraction_pdf.py`, `apps/ai/tests/test_extraction_routes.py`, `apps/api/crates/server/src/ai/tool_tests.rs`, `apps/api/crates/server/src/hardening_tests.rs`, `apps/api/crates/server/src/main.rs`, `apps/api/crates/server/src/transactions/tests.rs` |
@@ -111,7 +111,7 @@ in browser" box ticked; or a written reason it is not done.
 | PLT-3 | `apps/ai/tests/test_health.py` |
 | PLT-4 | `apps/app/src/lib/security-headers.test.ts`, `apps/app/src/lib/server-boundary.test.ts` |
 | PLT-5 | not done: a build property (separate Dockerfiles, no shared package) held by the repository layout and review, not by a test |
-| PUSH-1 | not done: the API half (register, remove, retire a dead token) is tested in apps/api/crates/server/src/push/tests.rs; registering after sign-in and removing on sign-out are the app's, and land with US-067 |
+| PUSH-1 | `apps/native/test/unit/push_route_test.dart`, `apps/native/test/unit/push_service_test.dart` |
 | PUSH-2 | `apps/api/crates/server/src/push/tests.rs` |
 | PUSH-3 | `apps/api/crates/server/src/push/tests.rs` |
 | PUSH-4 | `apps/api/crates/server/src/push/tests.rs` |
@@ -154,7 +154,7 @@ in browser" box ticked; or a written reason it is not done.
 | TG-10 | `apps/api/crates/server/src/telegram/update_tests.rs` |
 | TXN-1 | `apps/app/e2e/transactions.spec.ts` |
 | TXN-2 | `apps/api/crates/server/src/accounts/tests.rs` |
-| TXN-3 | `apps/api/crates/server/src/accounts/handler.rs`, `apps/api/crates/server/src/main.rs` |
+| TXN-3 | `apps/api/crates/server/src/accounts/handler.rs`, `apps/api/crates/server/src/main.rs`, `apps/native/test/unit/repositories_remote_m2_test.dart` |
 | TXN-4 | `apps/api/crates/server/src/transactions/tests.rs` |
 | TXN-5 | `apps/api/crates/server/src/transactions/tests.rs` |
 | TXN-6 | `apps/api/crates/server/src/transactions/tests.rs` |

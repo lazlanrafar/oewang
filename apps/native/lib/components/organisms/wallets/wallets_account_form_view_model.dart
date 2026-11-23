@@ -63,10 +63,12 @@ class AccountFormViewModel extends ChangeNotifier {
 
   final WalletsRepository _wallets;
   final WalletGroupsRepository _groups;
-  final String? _editingId;
+  // Set by the first successful create, so a retry after a failed adjust
+  // updates that wallet instead of creating a second one.
+  String? _editingId;
 
   /// The balance the form opened with; a save adjusts only when it moved.
-  final Decimal _startBalance;
+  Decimal _startBalance;
 
   bool get isEditing => _editingId != null;
 
@@ -129,13 +131,16 @@ class AccountFormViewModel extends ChangeNotifier {
         ? await _wallets.create(draft)
         : await _wallets.update(id, draft);
     final target = _state.balance ?? Decimal.zero;
-    return switch (saved) {
-      Success(:final value) when target != _startBalance => _wallets.adjust(
-        value.id,
-        target,
-      ),
-      _ => saved,
-    };
+    if (saved case Success(:final value) when id == null) {
+      _editingId = value.id;
+      _startBalance = value.balance;
+    }
+    if (saved case Success(:final value) when target != _startBalance) {
+      final adjusted = await _wallets.adjust(value.id, target);
+      if (adjusted case Success()) _startBalance = target;
+      return adjusted;
+    }
+    return saved;
   }
 
   static AccountFormState _stateFrom(Wallet w) => AccountFormState(
