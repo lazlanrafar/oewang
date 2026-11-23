@@ -397,7 +397,13 @@ of them is obvious from the markup:
   out by the next one. One rowgroup around the whole body would let the first
   day's header ride over every other day. No scroll listener, no measurement.
   The group row carries `role="row"` and a single `role="cell"`, because a
-  rowgroup may hold nothing but rows (D65).
+  rowgroup may hold nothing but rows (D65). That cell is as wide as the
+  visible box (the scroller's `clientWidth`) and sticky at `left: 0`: spanning
+  the full column width put the day's totals past the right edge whenever the
+  columns are wider than the screen, as they are at 1280px.
+- **The first page renders on the server.** `pagedRows()` is seeded with the
+  load's page, so SSR and the first paint show the rows rather than "No
+  transactions yet"; the update effect only takes later pages.
 - **Three sticky things coexist, so there is a z ladder**: the column header at
   `z-40`, a day group header at `z-30`, the sticky cells at `z-20`. The order
   is the order they pass each other: a day header slides under the column

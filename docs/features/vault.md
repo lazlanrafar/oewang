@@ -51,8 +51,8 @@ The load reads the first page, the storage figure and, when `?file=` is set, tha
 `organisms/vault/vault-file-sheet`. The header is the old `FilePreviewSheet`'s; the body is the old detail panel's.
 
 - **Header.** Name, the subtype in capitals, open in a new tab, download, close.
-- **Preview.** A 16:9 box (`molecules/file-preview`, variant `box`): the image itself, or the PDF in an iframe. Both come from a Blob URL built from the chunks and revoked when the sheet closes.
-- **Name.** The pen button turns it into a field.
+- **Preview.** A 16:9 box (`molecules/file-preview`, variant `box`): the image itself, or the PDF in an iframe. Both come from a Blob URL built from the chunks and revoked when the sheet closes. It fetches again only when the file's id, type or size changes, so a rename or a tag change keeps it.
+- **Name.** The pen button turns it into a field. Enter or leaving the field saves once; the blur that follows a submit does not save again.
 - **Metadata.** Date created, format, file size.
 - **Tags.** Removable badges (Badge variant `tag`), suggested chips (Invoice, Transaction, Receipt, Report, Contract, Document) and a custom input. Limits in VLT-9.
 - **Linked transactions.** The newest 20, each a link to `/transactions?detail=<id>`, with the exact count.
