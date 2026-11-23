@@ -13,6 +13,7 @@ function call(overrides: Partial<ToolCall> = {}): ToolCall {
 }
 
 describe('invalidationsForTool', () => {
+	// OVR-5
 	it('invalidates the whole derived surface after a transaction write', () => {
 		// A new transaction moves a wallet balance and every total computed
 		// from it, so the table is not the only thing that went stale.

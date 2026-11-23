@@ -125,6 +125,7 @@ async fn audit_actions(pool: &PgPool, entity_id: &str) -> Vec<String> {
     .unwrap()
 }
 
+/// BUD-2
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_count_only_this_months_live_expenses_in_the_workspace_currency(pool: PgPool) {
     fixture(&pool).await;
@@ -236,6 +237,7 @@ async fn should_count_only_this_months_live_expenses_in_the_workspace_currency(p
     assert_eq!(status.currency_code, "IDR");
 }
 
+/// BUD-1
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_allow_one_budget_per_expense_category(pool: PgPool) {
     fixture(&pool).await;
@@ -271,6 +273,7 @@ async fn should_allow_one_budget_per_expense_category(pool: PgPool) {
     );
 }
 
+/// BUD-1
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_change_only_the_limit_and_audit_it(pool: PgPool) {
     fixture(&pool).await;
@@ -295,6 +298,7 @@ async fn should_change_only_the_limit_and_audit_it(pool: PgPool) {
     );
 }
 
+/// BUD-4
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_retire_the_budget_with_its_category(pool: PgPool) {
     fixture(&pool).await;

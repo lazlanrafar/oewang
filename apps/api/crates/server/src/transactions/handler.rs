@@ -1252,6 +1252,7 @@ mod tests {
         assert!(parse_day(Some("last tuesday"), DayEdge::Start).is_err());
     }
 
+    /// SEC-10
     #[test]
     fn should_map_an_unknown_sort_to_the_default_rather_than_an_error() {
         let query = ListQuery {

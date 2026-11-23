@@ -97,6 +97,7 @@ fn should_take_the_relying_party_from_the_app_url() {
 
 // ----------------------------------------------------------- registration
 
+/// AUTH-14
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_ask_for_a_discoverable_credential(pool: PgPool) {
     user(&pool, USER).await;
@@ -159,6 +160,7 @@ async fn should_refuse_an_expired_ceremony(pool: PgPool) {
 
 // ---------------------------------------------------------------- removal
 
+/// AUTH-14
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_remove_only_your_own_passkey_and_audit_it(pool: PgPool) {
     user(&pool, USER).await;
@@ -191,6 +193,7 @@ async fn should_remove_only_your_own_passkey_and_audit_it(pool: PgPool) {
 
 // ---------------------------------------------------------------- sign in
 
+/// AUTH-14
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_refuse_a_sign_in_whose_ceremony_is_unknown_or_used(pool: PgPool) {
     let secret = secret();
@@ -228,6 +231,7 @@ async fn should_refuse_a_sign_in_whose_ceremony_is_unknown_or_used(pool: PgPool)
 
 // ------------------------------------------------- sessions, no workspace
 
+/// WS-5
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_open_a_session_without_a_workspace_for_a_new_user(pool: PgPool) {
     let secret = secret();
@@ -257,6 +261,7 @@ async fn should_open_a_session_without_a_workspace_for_a_new_user(pool: PgPool) 
     assert_eq!(refreshed.workspace_id, None);
 }
 
+/// WS-7
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_scope_a_sign_in_to_the_first_workspace_when_there_is_one(pool: PgPool) {
     let secret = secret();

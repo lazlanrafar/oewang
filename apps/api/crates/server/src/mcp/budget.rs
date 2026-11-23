@@ -129,6 +129,7 @@ impl McpBudget {
 mod tests {
     use super::*;
 
+    /// MCP-6
     #[test]
     fn should_cap_writes_and_deletes_per_minute_per_token() {
         let budget = McpBudget::new();
@@ -144,6 +145,7 @@ mod tests {
         budget.spend("t", Spend::Delete, 60).unwrap();
     }
 
+    /// MCP-6
     #[test]
     fn should_answer_a_challenge_once_for_the_exact_call() {
         let budget = McpBudget::new();

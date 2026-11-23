@@ -243,6 +243,7 @@ mod tests {
         assert_eq!(from_server, from_client);
     }
 
+    /// SEC-2
     #[test]
     fn should_derive_different_keys_per_direction() {
         let keys = derive_keys(

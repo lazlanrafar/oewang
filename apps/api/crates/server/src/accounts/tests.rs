@@ -143,6 +143,7 @@ async fn should_default_a_new_wallet_to_the_workspace_currency(pool: PgPool) {
     assert_eq!(explicit.currency_code, "EUR", "normalized on the way in");
 }
 
+/// WAL-2
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_leave_exactly_one_default_when_the_default_moves(pool: PgPool) {
     fixture(&pool, "IDR").await;
@@ -195,6 +196,7 @@ async fn should_pass_the_default_on_when_the_default_wallet_is_deleted(pool: PgP
     );
 }
 
+/// WAL-4
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_refuse_to_delete_a_wallet_with_live_transactions(pool: PgPool) {
     fixture(&pool, "IDR").await;
@@ -395,6 +397,7 @@ async fn should_write_an_audit_row_for_every_wallet_mutation(pool: PgPool) {
     );
 }
 
+/// OPS-1
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_roll_the_audit_row_back_with_a_refused_mutation(pool: PgPool) {
     fixture(&pool, "IDR").await;

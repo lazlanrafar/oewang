@@ -5,6 +5,7 @@ import { canvasParams, isArtifactCanvas, readCanvas, type CanvasState } from './
 const at = (query: string) => new URL(`https://oewang.test/chat/clx1${query}`);
 
 describe('readCanvas', () => {
+	// CHAT-13
 	it('reads a kind and an id', () => {
 		expect(readCanvas(at('?canvas=receipt&id=clxfile'))).toEqual({
 			kind: 'receipt',
@@ -35,6 +36,7 @@ describe('readCanvas', () => {
 });
 
 describe('canvasParams', () => {
+	// CHAT-13
 	it('writes the kind and the id', () => {
 		const state: CanvasState = { kind: 'receipt', id: 'clxfile' };
 		expect(canvasParams(state)).toEqual({ canvas: 'receipt', id: 'clxfile' });
@@ -55,6 +57,7 @@ describe('canvasParams', () => {
 });
 
 describe('analysis canvases (D88)', () => {
+	// CHAT-17
 	it('reads each analysis kind, keyed by its tool call', () => {
 		for (const kind of ['spending', 'income', 'burn-rate', 'budget']) {
 			const state = readCanvas(at(`?canvas=${kind}&id=toolu_1`));

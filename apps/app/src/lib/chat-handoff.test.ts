@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { handOff, takeHandoff } from './chat-handoff';
 
 describe('chat handoff', () => {
+	// OVR-4
 	it('hands the message to the session it was left for, once', () => {
 		handOff('ses_1', { message: 'Where did my money go?', files: [] });
 

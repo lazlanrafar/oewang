@@ -77,6 +77,7 @@ describe('parseImportJob', () => {
 		expect(parsed).toMatchObject({ imported: 0, skipped: 0, duplicates: 0 });
 	});
 
+	// TXN-17
 	it('keeps the file id, so a retry does not upload again', () => {
 		expect(parseImportJob({ id: 'clxjob', vault_file_id: 'clxfile' })?.vault_file_id).toBe(
 			'clxfile'
@@ -150,6 +151,7 @@ describe('jobPhase', () => {
 		expect(jobPhase(job())).toBe('pending');
 	});
 
+	// TXN-17
 	it('offers a retry on a stale one', () => {
 		// The alternative is a modal that spins forever (P12).
 		expect(jobPhase(job({ stale: true }))).toBe('stale');

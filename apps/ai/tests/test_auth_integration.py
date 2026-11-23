@@ -177,6 +177,7 @@ def unique(prefix: str) -> str:
 # ------------------------------------------------------------- registration
 
 
+# WS-5
 def test_register_opens_a_session_with_no_workspace():
     client = Client()
     session = client.register(unique("fresh"), workspace=False)
@@ -200,6 +201,7 @@ def test_register_opens_a_session_with_no_workspace():
     assert body["error"]["code"] == "NO_WORKSPACE"
 
 
+# WS-5
 def test_the_first_workspace_makes_the_user_its_owner():
     client = Client()
     session = client.register(unique("owner"))
@@ -468,6 +470,7 @@ def test_the_last_owner_cannot_be_removed_or_demoted():
     assert body["error"]["code"] == "LAST_OWNER"
 
 
+# TXN-15
 def test_a_member_cannot_write():
     owner, member = Client(), Client()
     owner.register(unique("ownerw"))

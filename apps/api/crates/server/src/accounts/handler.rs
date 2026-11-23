@@ -546,6 +546,7 @@ mod tests {
         assert_eq!(body.name.as_deref(), Some("Cash"));
     }
 
+    /// WAL-2
     #[test]
     fn should_serialize_a_balance_as_a_string() {
         let view = WalletView {

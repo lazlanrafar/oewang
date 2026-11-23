@@ -971,6 +971,7 @@ mod budget_tests {
         assert!(!truncated);
     }
 
+    /// AI-8
     #[test]
     fn should_cut_a_list_over_the_budget_and_say_so() {
         // Each row is about 1 KiB, so the budget is reached well before the

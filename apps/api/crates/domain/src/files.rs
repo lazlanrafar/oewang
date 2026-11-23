@@ -189,6 +189,7 @@ mod tests {
         assert_eq!(sniff(b"<?php system($_GET['c']); ?>"), None);
     }
 
+    /// SEC-12
     #[test]
     fn should_refuse_svg_and_html_however_they_are_dressed() {
         for markup in [
@@ -216,6 +217,7 @@ mod tests {
         assert_eq!(sniff(&pdf), Some("application/pdf"));
     }
 
+    /// SEC-12
     #[test]
     fn should_refuse_bytes_that_do_not_match_what_was_declared() {
         assert_eq!(verify_type("image/jpeg", JPEG).unwrap(), "image/jpeg");
@@ -272,11 +274,13 @@ mod tests {
         assert_eq!(chunk_count(MAX_FILE_BYTES), 20);
     }
 
+    /// SEC-13
     #[test]
     fn should_build_a_key_from_ids_and_nothing_else() {
         assert_eq!(storage_key("w1", "f1"), "wsp/w1/f1");
     }
 
+    /// VLT-9
     #[test]
     fn should_trim_and_dedupe_tags_keeping_the_first_spelling() {
         let tags = vec![
@@ -288,6 +292,7 @@ mod tests {
         assert_eq!(normalize_tags(&tags).unwrap(), vec!["Receipt", "Invoice"]);
     }
 
+    /// VLT-9
     #[test]
     fn should_refuse_too_many_or_too_long_tags() {
         let many: Vec<String> = (0..11).map(|n| format!("t{n}")).collect();

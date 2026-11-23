@@ -1276,6 +1276,7 @@ mod tests {
         assert!(matches!(error, Owe1ClientError::Malformed(_)), "{error}");
     }
 
+    /// SEC-3
     #[tokio::test]
     async fn should_refuse_a_handshake_it_cannot_verify() {
         // Verify or stop. Never fall back to plaintext.

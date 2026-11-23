@@ -120,6 +120,7 @@ mod tests {
         }
     }
 
+    /// USG-3
     #[test]
     fn should_sum_the_features_into_the_headline() {
         let view = summarize(vec![

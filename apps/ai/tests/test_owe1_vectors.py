@@ -51,6 +51,7 @@ def keys(vectors: dict) -> owe1.SessionKeys:
     )
 
 
+# SEC-2
 def test_derives_the_same_keys_as_the_rust_implementation(vectors, keys):
     derived = vectors["derived"]
     assert owe1.b64(keys.client_to_server) == derived["k_c2s"]

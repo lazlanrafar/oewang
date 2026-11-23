@@ -70,6 +70,7 @@ def test_every_tool_has_a_name_a_description_and_an_object_schema() -> None:
         assert isinstance(definition["input_schema"]["properties"], dict)
 
 
+# SEC-26
 def test_the_catalog_is_exactly_the_fifteen_tools_the_api_knows() -> None:
     assert [definition["name"] for definition in tools.TOOL_DEFINITIONS] == RUST_TOOL_NAMES
     assert len(tools.TOOL_DEFINITIONS) == 15

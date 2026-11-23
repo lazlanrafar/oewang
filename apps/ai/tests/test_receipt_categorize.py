@@ -50,6 +50,7 @@ def test_a_category_it_was_shown_comes_back(owe1_client: Owe1TestClient) -> None
     assert_no_tools(scripted)
 
 
+# TG-7
 def test_a_category_it_was_not_shown_is_dropped(owe1_client: Owe1TestClient) -> None:
     """Rule 1. A reworded or invented name would not match an id in the
     API, so it never leaves here."""
@@ -85,6 +86,7 @@ def test_an_answer_that_is_not_json_is_a_refusal(owe1_client: Owe1TestClient) ->
     assert body["error"]["code"] == "CATEGORIZE_FAILED"
 
 
+# TG-7
 def test_the_model_sees_strings_and_no_document(owe1_client: Owe1TestClient) -> None:
     scripted = ScriptedClient(answer("🍜 Food"))
     model.set_model_client(scripted)
@@ -96,6 +98,7 @@ def test_the_model_sees_strings_and_no_document(owe1_client: Owe1TestClient) -> 
     assert json.loads(content)["categories"] == CATEGORIES
 
 
+# TG-7
 def test_clean_category_keeps_only_an_exact_name() -> None:
     assert clean_category({"category": " 🍜 Food "}, CATEGORIES) == "🍜 Food"
     assert clean_category({"category": "food"}, CATEGORIES) is None

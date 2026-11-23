@@ -84,6 +84,7 @@ mod tests {
         assert_ne!(response("cs_a", "r", 200), stream_event("cs_a", "r", 200));
     }
 
+    /// SEC-4
     #[test]
     fn should_differ_when_any_bound_field_differs() {
         let base = request("cs_a", "GET", "/p", "r", 1);

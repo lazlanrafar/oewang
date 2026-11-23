@@ -176,6 +176,7 @@ mod tests {
         assert!(SessionStore::new().keys("cs_missing", 0).is_none());
     }
 
+    /// SEC-6
     #[test]
     fn should_detect_a_replayed_request_id() {
         let store = SessionStore::new();
@@ -239,6 +240,7 @@ mod tests {
         assert!(timestamp_acceptable(1000 - 120, 1000));
     }
 
+    /// SEC-6
     #[test]
     fn should_reject_timestamps_outside_the_tolerance() {
         assert!(!timestamp_acceptable(1000 + 121, 1000));

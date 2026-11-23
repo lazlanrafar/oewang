@@ -7,6 +7,7 @@ describe('thumbnailSrc', () => {
 		expect(thumbnailSrc({ id: 'f1', type: 'image/png' })).toBe('/vault/files/f1/thumbnail');
 	});
 
+	// VLT-12
 	it('asks for nothing when the API said there is no preview (D91)', () => {
 		expect(thumbnailSrc({ id: 'f1', type: 'image/png', thumbnail: false })).toBeNull();
 	});

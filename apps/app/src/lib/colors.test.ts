@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { categoryColorClass, colorStyle, isHexColor } from './colors';
 
 describe('colorStyle', () => {
+	// UI-9
 	it('should override only the colours that are set', () => {
 		expect(colorStyle({ income_color: '#10bc99', expense_color: null })).toBe(
 			'--color-green: #10bc99'

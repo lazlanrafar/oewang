@@ -825,6 +825,7 @@ mod tests {
         }
     }
 
+    /// SEC-26
     #[test]
     fn should_know_every_tool_by_name_and_nothing_else() {
         for tool in Tool::ALL {
@@ -1040,6 +1041,7 @@ mod tests {
         }
     }
 
+    /// BUD-5
     #[test]
     fn should_read_an_optional_month_for_the_budget_tool() {
         assert!(!Tool::GetBudgetStatus.is_write());
