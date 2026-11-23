@@ -466,6 +466,7 @@ fn state(pool: &PgPool) -> crate::state::AppState {
         fx_api_url: unused.clone(),
         fx_access_key: None,
         telegram: None,
+        fcm_service_account_json: None,
         storage_backend: "local".into(),
         storage_local_path: scratch.join("files").display().to_string(),
         s3_endpoint: String::new(),

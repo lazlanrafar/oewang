@@ -37,6 +37,7 @@ Read by `apps/api/crates/server/src/config.rs` at startup.
 | `DB_MAX_CONNECTIONS` | `20` |
 | `DB_STATEMENT_TIMEOUT_SECS` | `10` |
 | `EMAIL_FROM` | unset |
+| `FCM_SERVICE_ACCOUNT_JSON` | secret |
 | `FX_ACCESS_KEY` | secret |
 | `FX_API_URL` | unset |
 | `IMPORT_ROW_LIMIT` | `crate::transactions::service::IMPORT_LIMIT` |

@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT d.id, d.token\n           FROM device_tokens d\n           JOIN user_workspaces m\n             ON m.user_id = d.user_id AND m.workspace_id = $1 AND m.deleted_at IS NULL\n           WHERE d.deleted_at IS NULL\n           ORDER BY d.created_at, d.id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "device_tokens",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "token",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "device_tokens",
+            "name": "token"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "09128bd88ee68e988ae6534be511b318b59492578ad1a2f1c5c9d0e15181285e"
+}

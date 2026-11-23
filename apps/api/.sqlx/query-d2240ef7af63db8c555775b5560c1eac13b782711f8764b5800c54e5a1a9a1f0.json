@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE device_tokens SET deleted_at = now(), updated_at = now()\n           WHERE id = $1 AND deleted_at IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d2240ef7af63db8c555775b5560c1eac13b782711f8764b5800c54e5a1a9a1f0"
+}

@@ -249,6 +249,7 @@ pub async fn create_with_items(
     .await?;
 
     tx.commit().await.map_err(internal)?;
+    crate::push::service::budgets_after_write(pool, actor.workspace_id, [row.date]).await;
     Ok(row)
 }
 
@@ -305,6 +306,7 @@ pub async fn update(
     .await?;
 
     tx.commit().await.map_err(internal)?;
+    crate::push::service::budgets_after_write(pool, actor.workspace_id, [after.date]).await;
     Ok(after)
 }
 
@@ -512,6 +514,12 @@ pub async fn bulk_create(
     }
 
     tx.commit().await.map_err(internal)?;
+    crate::push::service::budgets_after_write(
+        pool,
+        actor.workspace_id,
+        inputs.iter().map(|input| input.date),
+    )
+    .await;
     Ok(outcome)
 }
 
@@ -684,6 +692,12 @@ pub async fn bulk_update(
     }
 
     tx.commit().await.map_err(internal)?;
+    crate::push::service::budgets_after_write(
+        pool,
+        actor.workspace_id,
+        after.iter().map(|row| row.date),
+    )
+    .await;
     Ok(before.len())
 }
 

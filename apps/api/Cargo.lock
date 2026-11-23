@@ -2239,6 +2239,7 @@ dependencies = [
  "chrono",
  "ed25519-dalek",
  "hmac 0.12.1",
+ "jsonwebtoken",
  "oewang-domain",
  "rand 0.8.8",
  "reqwest",

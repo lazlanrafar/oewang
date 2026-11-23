@@ -11,9 +11,9 @@ Evidence is, in order of preference: a test file that cites the ID (in a
 name or a comment); a backlog story that names the ID and has its "Verify
 in browser" box ticked; or a written reason it is not done.
 
-- 145 with test evidence
+- 149 with test evidence
 - 29 verified in browser only
-- 24 not done
+- 20 not done
 
 | ID | Evidence |
 |---|---|
@@ -111,11 +111,11 @@ in browser" box ticked; or a written reason it is not done.
 | PLT-3 | `apps/ai/tests/test_health.py` |
 | PLT-4 | `apps/app/src/lib/security-headers.test.ts`, `apps/app/src/lib/server-boundary.test.ts` |
 | PLT-5 | not done: a build property (separate Dockerfiles, no shared package) held by the repository layout and review, not by a test |
-| PUSH-1 | not done: epic OEW-083 in progress; tests land with US-067 |
-| PUSH-2 | not done: epic OEW-083 in progress; tests land with US-067 |
-| PUSH-3 | not done: epic OEW-083 in progress; tests land with US-067 |
-| PUSH-4 | not done: epic OEW-083 in progress; tests land with US-067 |
-| PUSH-5 | not done: epic OEW-083 in progress; tests land with US-067 |
+| PUSH-1 | not done: the API half (register, remove, retire a dead token) is tested in apps/api/crates/server/src/push/tests.rs; registering after sign-in and removing on sign-out are the app's, and land with US-067 |
+| PUSH-2 | `apps/api/crates/server/src/push/tests.rs` |
+| PUSH-3 | `apps/api/crates/server/src/push/tests.rs` |
+| PUSH-4 | `apps/api/crates/server/src/push/tests.rs` |
+| PUSH-5 | `apps/api/crates/clients/src/push.rs`, `apps/api/crates/server/src/push/mod.rs`, `apps/api/crates/server/src/push/tests.rs` |
 | SEC-1 | `apps/ai/tests/test_extraction_routes.py`, `apps/ai/tests/test_rate_limit.py`, `apps/ai/tests/test_service_key.py` |
 | SEC-2 | `apps/ai/tests/test_owe1_vectors.py`, `apps/api/crates/domain/src/owe1/handshake.rs` |
 | SEC-3 | `apps/ai/tests/test_owe1_client.py`, `apps/api/crates/clients/src/owe1_client.rs` |

@@ -61,6 +61,7 @@ pub fn config() -> Config {
         fx_api_url: NOWHERE.into(),
         fx_access_key: None,
         telegram: None,
+        fcm_service_account_json: None,
         storage_backend: "local".into(),
         storage_local_path: String::new(),
         s3_endpoint: String::new(),
