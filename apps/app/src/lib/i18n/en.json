@@ -422,7 +422,7 @@
 		"usage_title": "Usage",
 		"usage_description": "What this workspace stores and what the assistant has spent. Recorded and shown, with no limit for now.",
 		"usage_storage": "Storage",
-		"usage_storage_detail": "{count} files in the vault",
+		"usage_storage_detail": "{count} {count|file|files} in the vault",
 		"usage_tokens_month": "AI tokens this month",
 		"usage_tokens_total": "AI tokens, all time",
 		"usage_tokens_detail": "{input} in · {output} out",
@@ -511,7 +511,7 @@
 		"currency_convert_confirm_title": "Convert the workspace to {to}?",
 		"currency_convert_confirm_body": "Every transaction and budget is recalculated at 1 {from} = {rate} {to}, including those from before today. This cannot be undone exactly. Type {to} to confirm.",
 		"currency_convert_confirm_label": "Type {to} to confirm",
-		"currency_convert_done": "Converted to {to}. {count} transactions and {budgets} budgets recalculated."
+		"currency_convert_done": "Converted to {to}. {count} {count|transaction|transactions} and {budgets} {budgets|budget|budgets} recalculated."
 	},
 	"txn": {
 		"search_placeholder": "Search transactions",
@@ -893,7 +893,7 @@
 		},
 		"storage": {
 			"usage": "{used} used",
-			"files": "{count} files",
+			"files": "{count} {count|file|files}",
 			"title": "Vault Storage"
 		},
 		"details": {
@@ -938,7 +938,7 @@
 		"delete_confirm": {
 			"title": "Delete {name}?",
 			"description": "The file is removed from the vault.",
-			"used": "It is attached to {count} transactions and will be removed from them too.",
+			"used": "It is attached to {count} {count|transaction|transactions} and will be removed from them too.",
 			"confirm": "Delete"
 		},
 		"toasts": {
@@ -1053,7 +1053,7 @@
 			"password_title": "Change password",
 			"current_label": "Current password",
 			"new_label": "New password",
-			"new_hint": "At least 8 characters.",
+			"new_hint": "At least 10 characters.",
 			"change": "Change password",
 			"changed": "Password changed. Every other session was signed out.",
 			"sessions_title": "Active sessions",

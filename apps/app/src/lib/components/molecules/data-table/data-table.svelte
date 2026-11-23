@@ -225,6 +225,8 @@
 	 * always lands on a column boundary instead of halfway through one.
 	 */
 	let scroller = $state<HTMLDivElement | null>(null);
+	/** The visible width, which a group heading spans instead of the whole table. */
+	let viewWidth = $state<number | undefined>(undefined);
 	let canScrollLeft = $state(false);
 	let canScrollRight = $state(false);
 	let isScrollable = $state(false);
@@ -467,6 +469,7 @@
 	     move it sideways, and a bar along a ruled box reads as a column. -->
 	<div
 		bind:this={scroller}
+		bind:clientWidth={viewWidth}
 		onscroll={readScroll}
 		class="border-border scrollbar-hide min-h-0 w-full flex-1 overflow-auto border-x border-b"
 	>
@@ -595,14 +598,22 @@
 							`z-30` puts the heading under the column header's `z-40`
 							and over the sticky cells' `z-20`. It carries a `row` and a
 							`cell` role because a rowgroup may hold nothing else.
+							The cell is as wide as the visible box and sticks to its
+							left edge: spanning the whole table put anything pushed
+							right (a day's totals) past the edge of a table wider than
+							the screen.
 						-->
 						<div
 							data-group-row
 							role="row"
-							class="border-border bg-row-group sticky z-30 flex w-full min-w-full items-center gap-2 border-b px-4"
+							class="border-border bg-row-group sticky z-30 flex w-full min-w-full items-center border-b"
 							style="top: {GROUP_STICK_TOP}px; height: {GROUP_ROW_HEIGHT}px"
 						>
-							<div role="cell" class="flex h-full w-full items-center gap-2">
+							<div
+								role="cell"
+								class="sticky left-0 flex h-full w-full min-w-0 items-center gap-2 overflow-hidden px-4"
+								style:width={viewWidth ? `${viewWidth}px` : undefined}
+							>
 								{@render groupRow({
 									key: block.key,
 									rows: block.rows,

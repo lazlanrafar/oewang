@@ -397,6 +397,7 @@ src/lib/i18n/
 
 - Every user-facing string resolves through `t("transactions.form.amount_label")` (UI-1).
 - A build script generates the key union from `en.json`, so an unknown key is a typecheck error.
+- A count picks its word with `{count|file|files}`: `"{count} {count|file|files}"` reads "1 file" and "2 files", by `Intl.PluralRules`. A formatted value ("1,234") counts by its digits. Write a new counted string this way, not "file(s)".
 - No locale segment in the URL and no negotiation for now (D15). Adding `id.json` later means a file, a store and a switcher, with no change at call sites.
 - Error codes from the API map to dictionary keys through one table, so a new code without a string is caught at build time.
 - Every page sets its document title with `pageTitle(...)` from `$lib/page-title`, most specific part first: `pageTitle(t('settings.assistant_title'), t('settings.title'))` gives "Assistant | Settings | Oewang", the old app's `%s | Oewang` template. The root layout sets no title, because a second `<title>` in the head is the one a browser shows.

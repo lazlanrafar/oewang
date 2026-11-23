@@ -181,8 +181,6 @@ test.describe('the vault page and file sheet (US-048)', () => {
 	});
 
 	test('saves a rename once', async ({ page }) => {
-		// Bug: Enter submits rename(), which unmounts the input; its onblur then calls rename() again before `file` refreshes, so a second PATCH and a second toast go out.
-		test.fail();
 		await signIn(page);
 		await openVault(page);
 		const name = `${uniqueName('once').replace(' ', '-')}.png`;

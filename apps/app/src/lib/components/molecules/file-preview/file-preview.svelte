@@ -52,8 +52,14 @@
 	const isImage = $derived(file.type.startsWith('image/'));
 	const isPdf = $derived(file.type === 'application/pdf');
 
+	// The fetch keys on these, not on `file`: a rename or a tag change hands a
+	// new object for the same bytes, and that must not fetch them again.
+	const fileId = $derived(file.id);
+	const fileType = $derived(file.type);
+	const fileSize = $derived(file.size);
+
 	$effect(() => {
-		const target = { file_id: file.id, type: file.type, size: file.size };
+		const target = { file_id: fileId, type: fileType, size: fileSize };
 		let url: string | null = null;
 		let cancelled = false;
 		failed = false;

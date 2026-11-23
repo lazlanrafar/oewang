@@ -35,6 +35,7 @@
 		showChevron = true,
 		disabled = false,
 		id,
+		ariaLabel,
 		selected,
 		item: itemSnippet,
 		create: createSnippet
@@ -52,6 +53,8 @@
 		showChevron?: boolean;
 		disabled?: boolean;
 		id?: string;
+		/** Names the trigger when no visible label points at it. */
+		ariaLabel?: string;
 		/** How the chosen value is drawn in the trigger. */
 		selected?: Snippet<[ComboboxItem]>;
 		/** How a row is drawn in the list. */
@@ -111,6 +114,7 @@
 				data-slot="combobox-trigger"
 				class={cn('relative w-full justify-between font-normal', triggerClass)}
 				{id}
+				aria-label={ariaLabel}
 			>
 				<span class="truncate pr-3 text-ellipsis">
 					{#if current}
