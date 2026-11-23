@@ -54,7 +54,7 @@ class WalletsRepositoryFake implements WalletsRepository {
       id: 'w-fake-${_nextId++}',
       name: draft.name,
       groupId: draft.groupId,
-      balance: draft.balance,
+      currency: draft.currencyCode ?? 'IDR',
     );
     _store.add(created);
     return Success(created);
@@ -64,22 +64,31 @@ class WalletsRepositoryFake implements WalletsRepository {
   Future<Result<Wallet, AppError>> update(
     String id,
     NewWalletDraft draft,
-  ) async {
-    final i = _store.indexWhere((w) => w.id == id);
-    if (i == -1) {
-      return const Failure(
-        ServerError(statusCode: 404, message: 'Wallet not found'),
-      );
-    }
-    final updated = Wallet(
+  ) async => _replace(
+    id,
+    (w) => Wallet(
       id: id,
       name: draft.name,
       groupId: draft.groupId,
-      balance: draft.balance,
-    );
-    _store[i] = updated;
-    return Success(updated);
-  }
+      balance: w.balance,
+      currency: draft.currencyCode ?? w.currency,
+      isIncludedInTotals: w.isIncludedInTotals,
+    ),
+  );
+
+  @override
+  Future<Result<Wallet, AppError>> adjust(String id, Decimal balance) async =>
+      _replace(
+        id,
+        (w) => Wallet(
+          id: id,
+          name: w.name,
+          groupId: w.groupId,
+          balance: balance,
+          currency: w.currency,
+          isIncludedInTotals: w.isIncludedInTotals,
+        ),
+      );
 
   @override
   Future<Result<void, AppError>> delete(String id) async {
@@ -88,36 +97,31 @@ class WalletsRepositoryFake implements WalletsRepository {
   }
 
   @override
-  Future<Result<void, AppError>> reorder(
-    List<String> orderedIds, {
-    String? groupId,
-  }) async {
-    _store.sort(
-      (a, b) => orderedIds.indexOf(a.id).compareTo(orderedIds.indexOf(b.id)),
-    );
-    return const Success(null);
-  }
-
-  @override
   Future<Result<void, AppError>> setIncludedInTotals(
     String id, {
     required bool included,
   }) async {
+    final res = _replace(
+      id,
+      (w) => Wallet(
+        id: w.id,
+        name: w.name,
+        groupId: w.groupId,
+        balance: w.balance,
+        currency: w.currency,
+        isIncludedInTotals: included,
+      ),
+    );
+    return res.fold((_) => const Success(null), Failure.new);
+  }
+
+  Result<Wallet, AppError> _replace(String id, Wallet Function(Wallet) next) {
     final i = _store.indexWhere((w) => w.id == id);
     if (i == -1) {
       return const Failure(
         ServerError(statusCode: 404, message: 'Wallet not found'),
       );
     }
-    final w = _store[i];
-    _store[i] = Wallet(
-      id: w.id,
-      name: w.name,
-      groupId: w.groupId,
-      balance: w.balance,
-      currency: w.currency,
-      isIncludedInTotals: included,
-    );
-    return const Success(null);
+    return Success(_store[i] = next(_store[i]));
   }
 }

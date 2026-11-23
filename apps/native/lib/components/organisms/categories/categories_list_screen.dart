@@ -88,16 +88,18 @@ class _CategoryListScreenState extends ConsumerState<CategoryListScreen> {
       if (data != null) setState(() => _items = List.of(data));
     });
     final palette = context.palette;
+    final canWrite = ref.watch(canWriteProvider);
     final title = widget.type == cat.CategoryType.income ? 'Income' : 'Exp.';
     return Scaffold(
       appBar: PageAppBar(
         title: title,
         backLabel: 'Settings',
         actions: [
-          IconButton(
-            onPressed: _add,
-            icon: Icon(Icons.add, color: palette.foreground),
-          ),
+          if (canWrite)
+            IconButton(
+              onPressed: _add,
+              icon: Icon(Icons.add, color: palette.foreground),
+            ),
         ],
       ),
       body: SafeArea(
@@ -105,11 +107,13 @@ class _CategoryListScreenState extends ConsumerState<CategoryListScreen> {
           data: (items) {
             final list = _items.isEmpty ? items : _items;
             return ReorderableListView.builder(
+              // A member gets no long-press drag either (MOB-5).
+              buildDefaultDragHandles: canWrite,
               itemCount: list.length,
               onReorderItem: _reorder,
               itemBuilder: (context, i) => SwipeActionRow(
                 key: ValueKey(list[i].id),
-                dragIndex: i,
+                dragIndex: canWrite ? i : null,
                 title: list[i].name,
                 leading: list[i].emoji != null
                     ? Text(list[i].emoji!, style: const TextStyle(fontSize: 18))
@@ -118,14 +122,16 @@ class _CategoryListScreenState extends ConsumerState<CategoryListScreen> {
                 onToggleOpen: () => setState(
                   () => _openId = _openId == list[i].id ? null : list[i].id,
                 ),
-                onDelete: () => _delete(list[i]),
-                onEdit: () async {
-                  final saved = await context.push<bool>(
-                    AppRoutes.categoryEditFor(list[i].id),
-                    extra: list[i],
-                  );
-                  if (saved ?? false) _bump();
-                },
+                onDelete: canWrite ? () => _delete(list[i]) : null,
+                onEdit: canWrite
+                    ? () async {
+                        final saved = await context.push<bool>(
+                          AppRoutes.categoryEditFor(list[i].id),
+                          extra: list[i],
+                        );
+                        if (saved ?? false) _bump();
+                      }
+                    : null,
               ),
             );
           },

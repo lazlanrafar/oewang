@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:oewang/core/result/app_error.dart';
 import 'package:oewang/data/repositories/wallet_groups_repository.dart';
 import 'package:oewang/data/repositories/wallets_repository.dart';
+import 'package:oewang/data/repositories/workspaces_repository.dart';
 import 'package:oewang/domain/models/money.dart';
 import 'package:oewang/domain/models/wallet.dart';
 import 'package:oewang/domain/models/wallet_group.dart';
@@ -19,19 +20,28 @@ class AccountGroupSection {
   final Money subtotal;
 }
 
-/// View-model for the Accounts tab (IMG_1835). Loads wallets + groups, then
-/// computes Assets / Liabilities / Total + per-group sections.
+/// View-model for the Accounts tab (IMG_1835). Loads wallets, groups and the
+/// workspace currency, then sums Assets / Liabilities / Total per section.
+///
+/// The sums add balances the API sent as decimals, in the workspace currency
+/// only: a foreign wallet shows its own balance and stays out of every total,
+/// because adding two currencies is wrong and converting is the API's job.
+// shortcut: the API has no wallet-totals figure, so foreign wallets are left
+// out rather than converted; a `/v1/wallets` total would replace these sums.
 class AccountsViewModel extends ChangeNotifier {
   AccountsViewModel({
     required WalletsRepository wallets,
     required WalletGroupsRepository groups,
+    required WorkspacesRepository workspaces,
   }) : _wallets = wallets,
-       _groups = groups {
+       _groups = groups,
+       _workspaces = workspaces {
     ready = load();
   }
 
   final WalletsRepository _wallets;
   final WalletGroupsRepository _groups;
+  final WorkspacesRepository _workspaces;
 
   /// Resolves once the initial [load] completes — await in tests instead of
   /// guessing a delay.
@@ -40,6 +50,7 @@ class AccountsViewModel extends ChangeNotifier {
   bool _loading = true;
   AppError? _error;
   List<AccountGroupSection> _sections = const [];
+  String _currency = '';
   Money _assets = Money.zero();
   Money _liabilities = Money.zero();
 
@@ -48,15 +59,18 @@ class AccountsViewModel extends ChangeNotifier {
   List<AccountGroupSection> get sections => _sections;
   Money get assets => _assets;
   Money get liabilities => _liabilities;
-  Money get total => Money(amount: _assets.amount - _liabilities.amount);
+  Money get total => _assets - _liabilities;
 
   Future<void> load() async {
     _loading = true;
     _error = null;
     notifyListeners();
 
-    final groupsRes = await _groups.list();
-    final walletsRes = await _wallets.list();
+    final (groupsRes, walletsRes, workspaceRes) = await (
+      _groups.list(),
+      _wallets.list(),
+      _workspaces.current(),
+    ).wait;
 
     final allWallets = walletsRes.fold((w) => w, (e) {
       _error = e;
@@ -66,87 +80,53 @@ class AccountsViewModel extends ChangeNotifier {
       _error ??= e;
       return <WalletGroup>[];
     });
+    _currency = workspaceRes.fold((w) => w.currencyCode, (e) {
+      _error ??= e;
+      return '';
+    });
 
     final byGroup = <String?, List<Wallet>>{};
     for (final w in allWallets) {
       byGroup.putIfAbsent(w.groupId, () => <Wallet>[]).add(w);
     }
 
-    var assets = Money.zero();
-    var liabilities = Money.zero();
-    final sections = <AccountGroupSection>[];
-    for (final g in allGroups) {
-      final ws = byGroup[g.id] ?? const <Wallet>[];
-      // Skip groups with no accounts — they'd render as an empty header.
-      if (ws.isEmpty) continue;
-      var subtotal = Money.zero();
-      for (final w in ws) {
-        subtotal += Money(amount: w.balance, currency: w.currency);
-        // Excluded wallets still show in the list but don't move the totals.
-        if (!w.isIncludedInTotals) continue;
-        if (w.balance >= Decimal.zero) {
-          assets += Money(amount: w.balance, currency: w.currency);
-        } else {
-          liabilities += Money(amount: -w.balance, currency: w.currency);
-        }
-      }
-      sections.add(
-        AccountGroupSection(group: g, wallets: ws, subtotal: subtotal),
-      );
-    }
-    // Tail: wallets without a group.
-    final ungrouped = byGroup[null] ?? const <Wallet>[];
-    if (ungrouped.isNotEmpty) {
-      var subtotal = Money.zero();
-      for (final w in ungrouped) {
-        subtotal += Money(amount: w.balance, currency: w.currency);
-        // Excluded wallets still show in the list but don't move the totals.
-        if (!w.isIncludedInTotals) continue;
-        if (w.balance >= Decimal.zero) {
-          assets += Money(amount: w.balance, currency: w.currency);
-        } else {
-          liabilities += Money(amount: -w.balance, currency: w.currency);
-        }
-      }
-      sections.add(
-        AccountGroupSection(
-          group: const WalletGroup(id: '', name: 'Others'),
-          wallets: ungrouped,
-          subtotal: subtotal,
-        ),
-      );
-    }
+    _assets = Money.zero(currency: _currency);
+    _liabilities = Money.zero(currency: _currency);
+    final sections = <AccountGroupSection>[
+      for (final g in allGroups)
+        // Skip groups with no accounts — they'd render as an empty header.
+        if (byGroup[g.id]?.isNotEmpty ?? false) _section(g, byGroup[g.id]!),
+      // Tail: wallets without a group.
+      if (byGroup[null]?.isNotEmpty ?? false)
+        _section(const WalletGroup(id: '', name: 'Others'), byGroup[null]!),
+    ];
 
     _sections = sections;
-    _assets = assets;
-    _liabilities = liabilities;
     _loading = false;
     notifyListeners();
+  }
+
+  /// One group's subtotal; adds the counted wallets to the totals.
+  AccountGroupSection _section(WalletGroup g, List<Wallet> ws) {
+    var subtotal = Money.zero(currency: _currency);
+    for (final w in ws) {
+      if (w.currency != _currency) continue;
+      final m = Money(amount: w.balance, currency: w.currency);
+      subtotal += m;
+      // Excluded wallets still show in the list but don't move the totals.
+      if (!w.isIncludedInTotals) continue;
+      if (w.balance >= Decimal.zero) {
+        _assets += m;
+      } else {
+        _liabilities += m.negate();
+      }
+    }
+    return AccountGroupSection(group: g, wallets: ws, subtotal: subtotal);
   }
 
   /// Deletes a wallet then reloads. Returns the error message on failure.
   Future<String?> deleteWallet(String id) async {
     final err = (await _wallets.delete(id)).fold((_) => null, (e) => e.message);
-    if (err == null) await load();
-    return err;
-  }
-
-  /// Toggles whether a wallet counts toward the totals, then reloads.
-  Future<String?> toggleIncluded(Wallet w) async {
-    final err = (await _wallets.setIncludedInTotals(
-      w.id,
-      included: !w.isIncludedInTotals,
-    )).fold((_) => null, (e) => e.message);
-    if (err == null) await load();
-    return err;
-  }
-
-  /// Persists a new order for the wallets in [groupId] (null = Others).
-  Future<String?> reorderGroup(String? groupId, List<String> orderedIds) async {
-    final err = (await _wallets.reorder(
-      orderedIds,
-      groupId: groupId,
-    )).fold((_) => null, (e) => e.message);
     if (err == null) await load();
     return err;
   }

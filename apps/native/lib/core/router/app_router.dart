@@ -12,6 +12,7 @@ import 'package:oewang/components/organisms/categories/categories_form_screen.da
 import 'package:oewang/components/organisms/categories/categories_list_screen.dart';
 import 'package:oewang/components/organisms/settings/currency/settings_main_currency_screen.dart';
 import 'package:oewang/components/organisms/settings/feedback/feedback_form_screen.dart';
+import 'package:oewang/components/organisms/settings/members/settings_members_screen.dart';
 import 'package:oewang/components/organisms/settings/settings_screen.dart';
 import 'package:oewang/components/organisms/settings/style/settings_style_screen.dart';
 import 'package:oewang/components/organisms/stats/stats_screen.dart';
@@ -59,6 +60,7 @@ class AppRoutes {
   static const String budgetSettings = '/settings/budget';
   static const String budgetForm = '/settings/budget/add';
   static const String feedbackForm = '/settings/feedback';
+  static const String members = '/settings/members';
 
   static String accountEditFor(String id) => '/accounts/edit/$id';
   static String budgetEditFor(String id) => '/settings/budget/edit/$id';
@@ -210,6 +212,10 @@ GoRouter buildAppRouter(Ref ref) {
       GoRoute(
         path: AppRoutes.mainCurrency,
         builder: (context, state) => const MainCurrencyScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.members,
+        builder: (context, state) => const MembersScreen(),
       ),
       GoRoute(
         path: AppRoutes.accountsSettings,

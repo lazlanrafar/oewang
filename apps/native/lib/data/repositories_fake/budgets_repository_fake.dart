@@ -5,39 +5,59 @@ import 'package:oewang/data/repositories/budgets_repository.dart';
 import 'package:oewang/domain/models/budget_status.dart';
 import 'package:oewang/domain/models/money.dart';
 
+/// In-memory budgets. It plays the API, so it works out the figures the API
+/// would send; nothing outside a fake does (D27).
 class BudgetsRepositoryFake implements BudgetsRepository {
   BudgetsRepositoryFake({List<BudgetStatus>? seed})
     : _store = List<BudgetStatus>.of(seed ?? _seed);
 
   static final _seed = <BudgetStatus>[
-    BudgetStatus(
-      id: 'b-food',
-      categoryId: 'cat-food',
-      categoryName: 'Food',
-      amount: Money(amount: Decimal.fromInt(1500000)),
-      spent: Money(amount: Decimal.fromInt(124500)),
-      percentage: 8,
-    ),
-    BudgetStatus(
-      id: 'b-rent',
-      categoryId: 'cat-rent',
-      categoryName: 'Rent',
-      amount: Money(amount: Decimal.fromInt(2000000)),
-      spent: Money(amount: Decimal.fromInt(1800000)),
-      percentage: 90,
-    ),
+    _line('b-food', 'cat-food', 'Food', 1500000, 124500),
+    _line('b-rent', 'cat-rent', 'Rent', 2000000, 1800000),
   ];
+
+  static BudgetStatus _line(
+    String id,
+    String categoryId,
+    String name,
+    int amount,
+    int spent,
+  ) => BudgetStatus(
+    id: id,
+    categoryId: categoryId,
+    categoryName: name,
+    amount: Money(amount: Decimal.fromInt(amount)),
+    spent: Money(amount: Decimal.fromInt(spent)),
+    remaining: Money(amount: Decimal.fromInt(amount - spent)),
+    percentage: amount == 0 ? 0 : spent * 100 ~/ amount,
+  );
 
   final List<BudgetStatus> _store;
   var _seq = 0;
 
   @override
-  Future<Result<List<BudgetStatus>, AppError>> status({
-    int? month,
-    int? year,
-  }) async {
+  Future<Result<BudgetMonth, AppError>> status({int? month, int? year}) async {
     await Future<void>.delayed(const Duration(milliseconds: 10));
-    return Success(List<BudgetStatus>.unmodifiable(_store));
+    var budget = Money.zero();
+    var spent = Money.zero();
+    for (final b in _store) {
+      budget += b.amount;
+      spent += b.spent;
+    }
+    final percent = budget.isZero
+        ? 0
+        : (spent.amount * Decimal.fromInt(100) / budget.amount).floor().toInt();
+    return Success(
+      BudgetMonth(
+        totals: BudgetTotals(
+          totalBudget: budget,
+          totalSpent: spent,
+          remaining: budget - spent,
+          percent: percent,
+        ),
+        budgets: List<BudgetStatus>.unmodifiable(_store),
+      ),
+    );
   }
 
   @override
@@ -52,6 +72,7 @@ class BudgetsRepositoryFake implements BudgetsRepository {
         categoryName: categoryId,
         amount: Money(amount: amount),
         spent: Money.zero(),
+        remaining: Money(amount: amount),
         percentage: 0,
       ),
     );
@@ -76,6 +97,7 @@ class BudgetsRepositoryFake implements BudgetsRepository {
       categoryName: b.categoryName,
       amount: Money(amount: amount),
       spent: b.spent,
+      remaining: Money(amount: amount - b.spent.amount),
       percentage: b.percentage,
     );
     return const Success(null);

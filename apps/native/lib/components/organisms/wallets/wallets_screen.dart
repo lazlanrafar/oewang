@@ -17,6 +17,7 @@ final accountsVmProvider =
       (ref) => AccountsViewModel(
         wallets: ref.watch(walletsRepositoryProvider),
         groups: ref.watch(walletGroupsRepositoryProvider),
+        workspaces: ref.watch(workspacesRepositoryProvider),
       ),
     );
 
@@ -46,6 +47,7 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
   @override
   Widget build(BuildContext context) {
     final vm = ref.watch(accountsVmProvider);
+    final canWrite = ref.watch(canWriteProvider);
     final palette = context.palette;
     ref.listen<int>(walletsRevisionProvider, (_, _) => vm.load());
 
@@ -54,6 +56,7 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
         child: Column(
           children: [
             _Header(
+              canWrite: canWrite,
               editing: _editing,
               onAdd: () => context.push(AppRoutes.accountForm),
               onToggleEdit: () => setState(() {
@@ -84,7 +87,8 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
                     )
                   : _AccountsList(
                       sections: vm.sections,
-                      editing: _editing,
+                      canWrite: canWrite,
+                      editing: _editing && canWrite,
                       openId: _openId,
                       onToggleOpen: (id) =>
                           setState(() => _openId = _openId == id ? null : id),
@@ -100,10 +104,14 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
 
 class _Header extends StatelessWidget {
   const _Header({
+    required this.canWrite,
     required this.editing,
     required this.onAdd,
     required this.onToggleEdit,
   });
+
+  /// A member sees neither the pencil nor the plus (MOB-5).
+  final bool canWrite;
   final bool editing;
   final VoidCallback onAdd;
   final VoidCallback onToggleEdit;
@@ -135,15 +143,19 @@ class _Header extends StatelessWidget {
             ),
           ),
           const Spacer(),
-          if (!editing)
+          if (canWrite) ...[
+            if (!editing)
+              IconButton(
+                onPressed: onToggleEdit,
+                icon: Icon(Icons.edit_outlined, color: fg),
+              ),
             IconButton(
-              onPressed: onToggleEdit,
-              icon: Icon(Icons.edit_outlined, color: fg),
+              onPressed: onAdd,
+              icon: Icon(Icons.add, color: fg),
             ),
-          IconButton(
-            onPressed: onAdd,
-            icon: Icon(Icons.add, color: fg),
-          ),
+          ] else
+            // Balances the title against the left slot.
+            const SizedBox(width: 48),
         ],
       ),
     );
@@ -219,6 +231,7 @@ class _Cell extends StatelessWidget {
 class _AccountsList extends StatelessWidget {
   const _AccountsList({
     required this.sections,
+    required this.canWrite,
     required this.editing,
     required this.openId,
     required this.onToggleOpen,
@@ -226,6 +239,7 @@ class _AccountsList extends StatelessWidget {
   });
 
   final List<AccountGroupSection> sections;
+  final bool canWrite;
   final bool editing;
   final String? openId;
   final ValueChanged<String> onToggleOpen;
@@ -262,8 +276,12 @@ class _AccountsList extends StatelessWidget {
                 )
               else ...[
                 ListTile(
-                  onTap: () =>
-                      context.push(AppRoutes.accountEditFor(w.id), extra: w),
+                  onTap: canWrite
+                      ? () => context.push(
+                          AppRoutes.accountEditFor(w.id),
+                          extra: w,
+                        )
+                      : null,
                   title: Text(
                     w.name,
                     style: OewangFonts.sans(color: palette.foreground),

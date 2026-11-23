@@ -55,7 +55,7 @@ final _budgetTotalsProvider = FutureProvider.autoDispose
       final res = await ref
           .watch(budgetsRepositoryProvider)
           .status(month: month.month, year: month.year);
-      return res.fold(BudgetTotals.fromStatuses, (_) => BudgetTotals.zero());
+      return res.fold((m) => m.totals, (_) => BudgetTotals.zero());
     });
 
 class _ErrorText extends StatelessWidget {

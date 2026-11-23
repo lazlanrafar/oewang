@@ -1,3 +1,4 @@
+import 'package:decimal/decimal.dart';
 import 'package:oewang/core/result/app_error.dart';
 import 'package:oewang/core/result/result.dart';
 import 'package:oewang/domain/models/workspace.dart';
@@ -13,4 +14,22 @@ abstract class WorkspacesRepository {
     required String name,
     required String currencyCode,
   });
+
+  /// `GET /v1/workspaces/current`, with `currency_locked` (WAL-6).
+  Future<Result<Workspace, AppError>> current();
+
+  /// `PATCH /v1/workspaces/current` with a new currency, while unlocked.
+  Future<Result<void, AppError>> setCurrency(String currencyCode);
+
+  /// `GET /v1/workspaces/current/currency/preview?to=` (owner, WAL-7).
+  Future<Result<CurrencyPreview, AppError>> previewConversion(String to);
+
+  /// `POST /v1/workspaces/current/currency/convert` (owner, WAL-7, D105).
+  Future<Result<void, AppError>> convertCurrency({
+    required String currencyCode,
+    required Decimal rate,
+  });
+
+  /// `GET /v1/workspaces/current/members`.
+  Future<Result<List<WorkspaceMember>, AppError>> members();
 }

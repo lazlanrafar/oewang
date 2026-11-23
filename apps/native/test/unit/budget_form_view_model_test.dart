@@ -33,6 +33,7 @@ void main() {
           categoryName: 'Food',
           amount: Money(amount: Decimal.fromInt(1000000)),
           spent: Money(amount: Decimal.fromInt(0)),
+          remaining: Money(amount: Decimal.fromInt(1000000)),
           percentage: 0,
         ),
       );

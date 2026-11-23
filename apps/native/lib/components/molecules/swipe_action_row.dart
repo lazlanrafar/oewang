@@ -30,7 +30,10 @@ class SwipeActionRow extends StatelessWidget {
   final String title;
   final bool isOpen;
   final VoidCallback onToggleOpen;
-  final VoidCallback onDelete;
+
+  /// Null hides the minus toggle and the Delete action, for a role that
+  /// cannot write (MOB-5).
+  final VoidCallback? onDelete;
 
   /// Optional edit button; hidden when null.
   final VoidCallback? onEdit;
@@ -45,24 +48,28 @@ class SwipeActionRow extends StatelessWidget {
       child: Stack(
         children: [
           // Delete action behind, pinned to the right edge.
-          Positioned(
-            top: 0,
-            bottom: 0,
-            right: 0,
-            width: _kDeleteWidth,
-            child: GestureDetector(
-              onTap: onDelete,
-              child: ColoredBox(
-                color: OewangColors.coral,
-                child: Center(
-                  child: Text(
-                    'Delete',
-                    style: OewangFonts.sans(color: Colors.white, fontSize: 15),
+          if (onDelete != null)
+            Positioned(
+              top: 0,
+              bottom: 0,
+              right: 0,
+              width: _kDeleteWidth,
+              child: GestureDetector(
+                onTap: onDelete,
+                child: ColoredBox(
+                  color: OewangColors.coral,
+                  child: Center(
+                    child: Text(
+                      'Delete',
+                      style: OewangFonts.sans(
+                        color: Colors.white,
+                        fontSize: 15,
+                      ),
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
           // Foreground row — slides left to reveal the Delete action.
           AnimatedPositioned(
             duration: const Duration(milliseconds: 180),
@@ -85,15 +92,18 @@ class SwipeActionRow extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                   child: Row(
                     children: [
-                      IconButton(
-                        tooltip: 'Delete',
-                        onPressed: onToggleOpen,
-                        icon: const Icon(
-                          Icons.remove_circle,
-                          color: OewangColors.coral,
-                          size: 18,
-                        ),
-                      ),
+                      if (onDelete != null)
+                        IconButton(
+                          tooltip: 'Delete',
+                          onPressed: onToggleOpen,
+                          icon: const Icon(
+                            Icons.remove_circle,
+                            color: OewangColors.coral,
+                            size: 18,
+                          ),
+                        )
+                      else
+                        const SizedBox(width: 8),
                       if (leading != null) ...[
                         leading!,
                         const SizedBox(width: 8),

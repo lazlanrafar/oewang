@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:oewang/data/dto/user_profile_dto.dart';
 
 void main() {
-  group('UserProfileDto.fromMe', () {
+  group('MOB-4 UserProfileDto.fromMe', () {
     test('reads GET /v1/auth/me plus the GET /v1/workspaces rows', () {
       final dto = UserProfileDto.fromMe(
         {
@@ -11,6 +11,8 @@ void main() {
             'email': 'a@b.com',
             'name': 'Alice',
             'profile_picture': 'v-123',
+            'income_color': '#f87171',
+            'expense_color': null,
           },
           'workspace': {'id': 'ws-1', 'name': 'Personal'},
           'role': 'owner',
@@ -32,8 +34,10 @@ void main() {
       expect(profile.id, 'u-1');
       expect(profile.email, 'a@b.com');
       expect(profile.activeWorkspaceId, 'ws-1');
-      // A photo version id, not a URL the header can load (M2).
-      expect(profile.profilePicture, isNull);
+      // A photo version id; the bytes come from /v1/auth/me/avatar.
+      expect(profile.profilePicture, 'v-123');
+      expect(profile.incomeColor, '#f87171');
+      expect(profile.expenseColor, isNull);
       expect(profile.workspaces.length, 2);
       expect(profile.activeWorkspace?.name, 'Personal');
       expect(profile.displayName, 'Alice');

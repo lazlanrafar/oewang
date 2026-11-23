@@ -24,17 +24,13 @@ final accountFormVmProvider = ChangeNotifierProvider.autoDispose
       ),
     );
 
-/// Main currency (IDR) first, then the given workspace currency codes that
-/// exist in the catalog.
-// shortcut: sub-currencies went with their API, so only the main currency is
-// offered; wallet currencies come from `/v1/fx/currencies` in M2 (OEW-086).
+/// The workspace currency first, then the wallet's own when it differs.
+// shortcut: no other currency is offered (sub-currencies went with their
+// API), so a foreign wallet is made on the web; a picker over
+// `/v1/fx/currencies` would lift that.
 List<CurrencyInfo> _currencyOptionsFrom(List<String> codes) {
-  final main = CurrencyCatalog.all.firstWhere(
-    (c) => c.code == mainCurrencyCode,
-  );
-  final options = <CurrencyInfo>[main];
-  for (final code in codes) {
-    if (code == mainCurrencyCode) continue;
+  final options = <CurrencyInfo>[];
+  for (final code in codes.toSet()) {
     final info = _firstOrNull(CurrencyCatalog.all, (c) => c.code == code);
     if (info != null) options.add(info);
   }
@@ -50,7 +46,8 @@ T? _firstOrNull<T>(Iterable<T> items, bool Function(T) test) {
 }
 
 /// IMG_1836 — create/edit wallet form. Description is captured locally but
-/// dropped on save (the API doesn't accept it).
+/// dropped on save (the API doesn't accept it). The amount is the balance to
+/// arrive at: a change saves through `/v1/wallets/{id}/adjust` (TXN-3).
 class AccountFormScreen extends ConsumerStatefulWidget {
   const AccountFormScreen({super.key, this.wallet});
 
@@ -97,7 +94,13 @@ class _AccountFormScreenState extends ConsumerState<AccountFormScreen> {
   @override
   Widget build(BuildContext context) {
     final vm = ref.watch(accountFormVmProvider(widget.wallet));
-    final currencyOptions = _currencyOptionsFrom(const []);
+    final base =
+        ref.watch(currentWorkspaceProvider).valueOrNull?.currencyCode ?? '';
+    final currency = vm.state.currencyCode ?? base;
+    final currencyOptions = _currencyOptionsFrom([
+      if (base.isNotEmpty) base,
+      ?widget.wallet?.currency,
+    ]);
 
     return Scaffold(
       appBar: PageAppBar(
@@ -147,7 +150,7 @@ class _AccountFormScreenState extends ConsumerState<AccountFormScreen> {
                       labelWidth: _labelWidth,
                       amount: vm.state.balance,
                       onAmountChanged: vm.setBalance,
-                      currency: vm.state.currencyCode,
+                      currency: currency,
                     ),
                     FormFieldRow(
                       label: 'Currency',
@@ -155,7 +158,7 @@ class _AccountFormScreenState extends ConsumerState<AccountFormScreen> {
                       underline: true,
                       child: _CurrencyPicker(
                         options: currencyOptions,
-                        selectedCode: vm.state.currencyCode,
+                        selectedCode: currency,
                         onSelect: vm.setCurrency,
                       ),
                     ),

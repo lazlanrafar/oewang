@@ -1,30 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:oewang/components/molecules/page_app_bar.dart';
-import 'package:oewang/components/organisms/wallets/wallets_card_expenses_display_sheet.dart';
 import 'package:oewang/core/router/app_router.dart';
-import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 
 /// IMG_2247 — Accounts Setting hub.
-class AccountsSettingsScreen extends StatefulWidget {
+///
+/// The old "Card expenses display config" row is gone: it was only ever held
+/// on the screen, and the API has no card wallets or display setting to save
+/// it to.
+class AccountsSettingsScreen extends StatelessWidget {
   const AccountsSettingsScreen({super.key});
-
-  @override
-  State<AccountsSettingsScreen> createState() => _AccountsSettingsScreenState();
-}
-
-class _AccountsSettingsScreenState extends State<AccountsSettingsScreen> {
-  CardExpensesDisplayMode _cardMode = CardExpensesDisplayMode.atTheTime;
-
-  Future<void> _openCardModeSheet() async {
-    final picked = await CardExpensesDisplaySheet.show(
-      context,
-      current: _cardMode,
-    );
-    if (picked != null && mounted) setState(() => _cardMode = picked);
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -45,16 +32,6 @@ class _AccountsSettingsScreenState extends State<AccountsSettingsScreen> {
               label: 'Include in totals',
               onTap: () => context.push(AppRoutes.includeInTotals),
             ),
-            _Row(
-              label: 'Card expenses display config',
-              trailing: Text(
-                _cardMode == CardExpensesDisplayMode.atTheTime
-                    ? 'A. At the time'
-                    : 'B. Lump sum',
-                style: OewangFonts.sans(color: OewangColors.coral),
-              ),
-              onTap: _openCardModeSheet,
-            ),
           ],
         ),
       ),
@@ -63,10 +40,9 @@ class _AccountsSettingsScreenState extends State<AccountsSettingsScreen> {
 }
 
 class _Row extends StatelessWidget {
-  const _Row({required this.label, required this.onTap, this.trailing});
+  const _Row({required this.label, required this.onTap});
 
   final String label;
-  final Widget? trailing;
   final VoidCallback onTap;
 
   @override
@@ -87,7 +63,6 @@ class _Row extends StatelessWidget {
                 style: OewangFonts.sans(color: palette.foreground),
               ),
             ),
-            if (trailing != null) trailing!,
           ],
         ),
       ),

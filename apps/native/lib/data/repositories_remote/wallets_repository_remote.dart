@@ -8,9 +8,8 @@ import 'package:oewang/data/repositories_remote/dio_error_mapper.dart';
 import 'package:oewang/data/services/api/api_client.dart';
 import 'package:oewang/domain/models/wallet.dart';
 
-// shortcut: only `list` is on the new API (the transaction form reads it).
-// Create, update, delete, reorder and the totals flag still send the old
-// app's bodies; they are ported with the accounts screens in M2 (OEW-086).
+/// `/v1/wallets*`. Balances are never written: the form's amount goes
+/// through [adjust] (TXN-3).
 class WalletsRepositoryRemote implements WalletsRepository {
   WalletsRepositoryRemote(this._api);
   final ApiClient _api;
@@ -18,107 +17,58 @@ class WalletsRepositoryRemote implements WalletsRepository {
   @override
   Future<Result<List<Wallet>, AppError>> list() async {
     try {
-      final res = await _api.get('/wallets');
-      final data = (res.data as Map<String, dynamic>)['data'];
-      if (data is! List) return const Success<List<Wallet>, AppError>([]);
-      final wallets = data
-          .whereType<Map<String, dynamic>>()
-          .map(WalletDto.fromJson)
-          .map((dto) => dto.toDomain())
-          .toList();
-      return Success(wallets);
+      final data = envelopeData(await _api.get('/wallets'));
+      return Success([
+        for (final row in (data as List?) ?? const [])
+          WalletDto.fromJson(row as Map<String, dynamic>).toDomain(),
+      ]);
     } on DioException catch (e) {
       return Failure(mapDioError(e));
-    } on Exception {
-      return const Failure(UnknownError());
     }
   }
 
   @override
-  Future<Result<Wallet, AppError>> create(NewWalletDraft draft) async {
-    try {
-      final res = await _api.post(
-        '/wallets',
-        data: {
-          'name': draft.name,
-          if (draft.groupId != null) 'groupId': draft.groupId,
-          'balance': (draft.balance ?? Decimal.zero).toString(),
-        },
-      );
-      final json = (res.data as Map<String, dynamic>)['data'];
-      if (json is! Map<String, dynamic>) {
-        return const Failure(
-          ServerError(statusCode: 500, message: 'Unexpected create response'),
-        );
-      }
-      return Success(WalletDto.fromJson(json).toDomain());
-    } on DioException catch (e) {
-      return Failure(mapDioError(e));
-    } on Exception {
-      return const Failure(UnknownError());
-    }
-  }
+  Future<Result<Wallet, AppError>> create(NewWalletDraft draft) => _wallet(
+    () => _api.post(
+      '/wallets',
+      data: {
+        'name': draft.name,
+        'group_id': draft.groupId,
+        if (draft.currencyCode != null) 'currency_code': draft.currencyCode,
+      },
+    ),
+  );
 
   @override
-  Future<Result<Wallet, AppError>> update(
-    String id,
-    NewWalletDraft draft,
-  ) async {
-    try {
-      final res = await _api.put(
-        '/wallets/$id',
-        data: {
-          'name': draft.name,
-          'groupId': draft.groupId,
-          'balance': (draft.balance ?? Decimal.zero).toString(),
-        },
+  Future<Result<Wallet, AppError>> update(String id, NewWalletDraft draft) =>
+      _wallet(
+        () => _api.patch(
+          '/wallets/$id',
+          data: {
+            'name': draft.name,
+            // An explicit null detaches the wallet from its group.
+            'group_id': draft.groupId,
+            if (draft.currencyCode != null) 'currency_code': draft.currencyCode,
+          },
+        ),
       );
-      final json = (res.data as Map<String, dynamic>)['data'];
-      if (json is! Map<String, dynamic>) {
-        return const Failure(
-          ServerError(statusCode: 500, message: 'Unexpected update response'),
-        );
-      }
-      return Success(WalletDto.fromJson(json).toDomain());
-    } on DioException catch (e) {
-      return Failure(mapDioError(e));
-    } on Exception {
-      return const Failure(UnknownError());
-    }
-  }
+
+  @override
+  Future<Result<Wallet, AppError>> adjust(String id, Decimal balance) =>
+      _wallet(
+        () => _api.post(
+          '/wallets/$id/adjust',
+          data: {'balance': balance.toString()},
+        ),
+      );
 
   @override
   Future<Result<void, AppError>> delete(String id) async {
     try {
       await _api.delete('/wallets/$id');
-      return const Success(null);
+      return const Success<void, AppError>(null);
     } on DioException catch (e) {
       return Failure(mapDioError(e));
-    } on Exception {
-      return const Failure(UnknownError());
-    }
-  }
-
-  @override
-  Future<Result<void, AppError>> reorder(
-    List<String> orderedIds, {
-    String? groupId,
-  }) async {
-    try {
-      await _api.put(
-        '/wallets/reorder',
-        data: {
-          'updates': [
-            for (var i = 0; i < orderedIds.length; i++)
-              {'id': orderedIds[i], 'sortOrder': i, 'groupId': groupId},
-          ],
-        },
-      );
-      return const Success(null);
-    } on DioException catch (e) {
-      return Failure(mapDioError(e));
-    } on Exception {
-      return const Failure(UnknownError());
     }
   }
 
@@ -127,13 +77,26 @@ class WalletsRepositoryRemote implements WalletsRepository {
     String id, {
     required bool included,
   }) async {
+    final res = await _wallet(
+      () =>
+          _api.patch('/wallets/$id', data: {'is_included_in_totals': included}),
+    );
+    return res.fold(
+      (_) => const Success<void, AppError>(null),
+      Failure<void, AppError>.new,
+    );
+  }
+
+  Future<Result<Wallet, AppError>> _wallet(
+    Future<Response<dynamic>> Function() send,
+  ) async {
     try {
-      await _api.put('/wallets/$id', data: {'isIncludedInTotals': included});
-      return const Success(null);
+      final data = envelopeData(await send());
+      return Success(
+        WalletDto.fromJson(data! as Map<String, dynamic>).toDomain(),
+      );
     } on DioException catch (e) {
       return Failure(mapDioError(e));
-    } on Exception {
-      return const Failure(UnknownError());
     }
   }
 }

@@ -125,6 +125,22 @@ enum TransactionColorScheme {
       _ => TransactionColorScheme.blueRed,
     };
   }
+
+  /// What `PUT /v1/auth/me/colors` stores for this scheme (UI-9). The default
+  /// is null and null, so the web keeps drawing its own defaults.
+  ({String? income, String? expense}) get apiColors => switch (this) {
+    TransactionColorScheme.blueRed => (income: null, expense: null),
+    TransactionColorScheme.redBlue => (income: '#f87171', expense: '#60a5fa'),
+  };
+
+  /// The scheme for the user's stored income colour.
+  // shortcut: the web lets a user pick any colour; the app keeps its two
+  // schemes, so anything but red income reads as the default. Draw the
+  // stored colours directly if the app ever offers the web's presets.
+  static TransactionColorScheme fromApi(String? incomeColor) =>
+      incomeColor?.toLowerCase() == '#f87171'
+      ? TransactionColorScheme.redBlue
+      : TransactionColorScheme.blueRed;
 }
 
 /// Carries the active [TransactionColorScheme] through the widget tree.

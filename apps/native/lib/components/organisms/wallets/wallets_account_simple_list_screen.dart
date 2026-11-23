@@ -81,6 +81,7 @@ class _AccountSimpleListScreenState
   Widget build(BuildContext context) {
     final groupsAsync = ref.watch(_groupsProvider);
     final walletsAsync = ref.watch(_walletsProvider);
+    final canWrite = ref.watch(canWriteProvider);
     final palette = context.palette;
 
     return Scaffold(
@@ -88,16 +89,17 @@ class _AccountSimpleListScreenState
         title: 'Accounts',
         backLabel: 'Accounts',
         actions: [
-          IconButton(
-            onPressed: _add,
-            icon: Icon(Icons.add, color: palette.foreground),
-          ),
+          if (canWrite)
+            IconButton(
+              onPressed: _add,
+              icon: Icon(Icons.add, color: palette.foreground),
+            ),
         ],
       ),
       body: SafeArea(
         child: groupsAsync.when(
           data: (groups) => walletsAsync.when(
-            data: (wallets) => _buildList(groups, wallets),
+            data: (wallets) => _buildList(groups, wallets, canWrite: canWrite),
             loading: () => const Center(child: CircularProgressIndicator()),
             error: _error,
           ),
@@ -108,7 +110,11 @@ class _AccountSimpleListScreenState
     );
   }
 
-  Widget _buildList(List<WalletGroup> groups, List<Wallet> wallets) {
+  Widget _buildList(
+    List<WalletGroup> groups,
+    List<Wallet> wallets, {
+    required bool canWrite,
+  }) {
     final byGroup = <String?, List<Wallet>>{};
     for (final w in wallets) {
       byGroup.putIfAbsent(w.groupId, () => <Wallet>[]).add(w);
@@ -119,8 +125,8 @@ class _AccountSimpleListScreenState
       isOpen: _openId == w.id,
       onToggleOpen: () =>
           setState(() => _openId = _openId == w.id ? null : w.id),
-      onDelete: () => _delete(w),
-      onEdit: () => _edit(w),
+      onDelete: canWrite ? () => _delete(w) : null,
+      onEdit: canWrite ? () => _edit(w) : null,
     );
     return ListView(
       children: [

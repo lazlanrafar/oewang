@@ -2,7 +2,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
 import 'package:oewang/domain/models/workspace_membership.dart';
 
-/// Combined profile returned by `GET /v1/users/me`.
+/// `GET /v1/auth/me` plus the `GET /v1/workspaces` rows.
 @immutable
 class UserProfile extends Equatable {
   const UserProfile({
@@ -11,13 +11,22 @@ class UserProfile extends Equatable {
     required this.workspaces,
     this.name,
     this.profilePicture,
+    this.incomeColor,
+    this.expenseColor,
     this.activeWorkspaceId,
   });
 
   final String id;
   final String email;
   final String? name;
+
+  /// The photo's version id, or null for initials. Changes with each upload,
+  /// so it keys the cached bytes.
   final String? profilePicture;
+
+  /// `#rrggbb`, or null for the default (UI-9).
+  final String? incomeColor;
+  final String? expenseColor;
   final String? activeWorkspaceId;
   final List<WorkspaceMembership> workspaces;
 
@@ -42,6 +51,8 @@ class UserProfile extends Equatable {
     email,
     name,
     profilePicture,
+    incomeColor,
+    expenseColor,
     activeWorkspaceId,
     workspaces,
   ];

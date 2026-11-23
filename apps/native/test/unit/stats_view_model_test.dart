@@ -2,88 +2,31 @@ import 'package:decimal/decimal.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:oewang/components/organisms/stats/stats_view_model.dart';
 import 'package:oewang/domain/models/money.dart';
+import 'package:oewang/domain/models/overview.dart';
 import 'package:oewang/domain/models/transaction.dart';
 
 void main() {
-  group('aggregateStats', () {
-    test('groups expenses by category and computes percentages', () {
-      final txs = <Transaction>[
-        Transaction(
-          id: 't1',
-          type: TransactionType.expense,
-          amount: Money(amount: Decimal.fromInt(1800000)),
-          date: DateTime(2026, 1, 5),
-          walletId: 'w',
-          category: const NamedRef(id: 'cat-rent', name: 'Rent'),
+  group('MOB-4 slicesFrom', () {
+    test("keeps the API's order, totals and shares, and names Other", () {
+      final slices = slicesFrom([
+        CategoryShare(
+          id: 'cat-rent',
+          name: 'Rent',
+          total: Money(amount: Decimal.fromInt(1800000)),
+          sharePercent: Decimal.parse('92.19'),
         ),
-        Transaction(
-          id: 't2',
-          type: TransactionType.expense,
-          amount: Money(amount: Decimal.fromInt(124500)),
-          date: DateTime(2026, 1, 4),
-          walletId: 'w',
-          category: const NamedRef(id: 'cat-food', name: 'Food'),
+        CategoryShare(
+          other: true,
+          total: Money(amount: Decimal.fromInt(152500)),
+          sharePercent: Decimal.parse('7.81'),
         ),
-        Transaction(
-          id: 't3',
-          type: TransactionType.expense,
-          amount: Money(amount: Decimal.fromInt(28000)),
-          date: DateTime(2026, 1, 4),
-          walletId: 'w',
-          category: const NamedRef(id: 'cat-laundry', name: 'Laundry'),
-        ),
-        // Income ignored in expense mode.
-        Transaction(
-          id: 't4',
-          type: TransactionType.income,
-          amount: Money(amount: Decimal.fromInt(5000000)),
-          date: DateTime(2026, 1, 1),
-          walletId: 'w',
-          category: const NamedRef(id: 'cat-salary', name: 'Salary'),
-        ),
-      ];
-
-      final slices = aggregateStats(transactions: txs, incomeMode: false);
-      expect(slices.length, 3);
-      // Sorted by amount descending.
-      expect(slices.first.label, 'Rent');
-      expect(slices[1].label, 'Food');
-      expect(slices.last.label, 'Laundry');
-      // Total = 1.952.500. Rent percent ≈ 92.18%.
+        CategoryShare(total: Money(amount: Decimal.zero)),
+      ]);
+      expect(slices.map((s) => s.label), ['Rent', 'Other', 'Uncategorized']);
+      expect(slices.first.amount.amount, Decimal.fromInt(1800000));
       expect(slices.first.percent.round(), 92);
-      expect(slices[1].percent.round(), 6);
-      expect(sumOfSlices(slices).amount, Decimal.fromInt(1952500));
-    });
-
-    test('income mode picks only income transactions', () {
-      final txs = <Transaction>[
-        Transaction(
-          id: 't1',
-          type: TransactionType.income,
-          amount: Money(amount: Decimal.fromInt(1000)),
-          date: DateTime(2026, 1, 5),
-          walletId: 'w',
-          category: const NamedRef(id: 'cat-salary', name: 'Salary'),
-        ),
-        Transaction(
-          id: 't2',
-          type: TransactionType.expense,
-          amount: Money(amount: Decimal.fromInt(1000000)),
-          date: DateTime(2026, 1, 4),
-          walletId: 'w',
-          category: const NamedRef(id: 'cat-rent', name: 'Rent'),
-        ),
-      ];
-      final slices = aggregateStats(transactions: txs, incomeMode: true);
-      expect(slices.length, 1);
-      expect(slices.first.label, 'Salary');
-      expect(slices.first.percent.round(), 100);
-    });
-
-    test('empty input yields empty slices', () {
-      final slices = aggregateStats(transactions: const [], incomeMode: false);
-      expect(slices, isEmpty);
-      expect(sumOfSlices(slices).amount, Decimal.fromInt(0));
+      // No share from the API draws as an empty slice, never a guess.
+      expect(slices.last.percent, 0);
     });
   });
 
@@ -91,7 +34,9 @@ void main() {
     Transaction exp(String? name, int amount) => Transaction(
       id: 't-$name-$amount',
       type: TransactionType.expense,
-      amount: Money(amount: Decimal.fromInt(amount)),
+      amount: Money(amount: Decimal.fromInt(amount), currency: 'USD'),
+      // The workspace-currency figure is what the Note tab adds.
+      baseAmount: Decimal.fromInt(amount * 2),
       date: DateTime(2026, 1, 5),
       walletId: 'w',
       name: name,
@@ -106,12 +51,17 @@ void main() {
         exp('Snack', 5000),
         exp('Snack', 5000),
       ];
-      final rows = aggregateNotes(transactions: txs, incomeMode: false);
+      final rows = aggregateNotes(
+        transactions: txs,
+        incomeMode: false,
+        currency: 'IDR',
+      );
       expect(rows.length, 3);
       // Coffee (count 3) first.
       expect(rows[0].label, 'Coffee');
       expect(rows[0].count, 3);
-      expect(rows[0].amount.amount, Decimal.fromInt(60000));
+      expect(rows[0].amount.amount, Decimal.fromInt(120000));
+      expect(rows[0].amount.currency, 'IDR');
       // Snack and Rent both count: Snack=2, Rent=1 → Snack before Rent.
       expect(rows[1].label, 'Snack');
       expect(rows[1].count, 2);
@@ -122,11 +72,12 @@ void main() {
       final rows = aggregateNotes(
         transactions: [exp(null, 100), exp('', 200)],
         incomeMode: false,
+        currency: 'IDR',
       );
       expect(rows.length, 1);
       expect(rows.first.label, '');
       expect(rows.first.count, 2);
-      expect(rows.first.amount.amount, Decimal.fromInt(300));
+      expect(rows.first.amount.amount, Decimal.fromInt(600));
     });
 
     test('respects income/expense mode', () {
@@ -141,7 +92,11 @@ void main() {
           name: 'Salary',
         ),
       ];
-      final income = aggregateNotes(transactions: txs, incomeMode: true);
+      final income = aggregateNotes(
+        transactions: txs,
+        incomeMode: true,
+        currency: 'IDR',
+      );
       expect(income.length, 1);
       expect(income.first.label, 'Salary');
     });

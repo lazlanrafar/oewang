@@ -2,52 +2,34 @@ import 'package:decimal/decimal.dart';
 import 'package:oewang/domain/models/budget_status.dart';
 import 'package:oewang/domain/models/money.dart';
 
-class BudgetStatusDto {
-  const BudgetStatusDto({
-    required this.id,
-    required this.categoryId,
-    required this.categoryName,
-    required this.amount,
-    required this.spent,
-    required this.percentage,
-  });
+/// `GET /v1/budgets` (`BudgetStatus` in the API): totals plus one line per
+/// budget. Money fields are decimal strings, never parsed through a double
+/// (D12); a malformed one throws, because it is a wire bug and not a zero.
+abstract final class BudgetMonthDto {
+  static BudgetMonth fromJson(Map<String, dynamic> json) {
+    final currency = json['currency_code'] as String;
+    Money money(Map<String, dynamic> m, String key) =>
+        Money(amount: Decimal.parse(m[key] as String), currency: currency);
 
-  factory BudgetStatusDto.fromJson(Map<String, dynamic> json) {
-    return BudgetStatusDto(
-      id: json['id'] as String,
-      categoryId: (json['categoryId'] ?? json['category_id']) as String,
-      categoryName:
-          (json['categoryName'] ?? json['category_name']) as String? ?? '',
-      amount: _readNum(json['amount']),
-      spent: _readNum(json['spent']),
-      percentage: _readInt(json['percentage']),
+    return BudgetMonth(
+      totals: BudgetTotals(
+        totalBudget: money(json, 'budgeted'),
+        totalSpent: money(json, 'spent'),
+        remaining: money(json, 'remaining'),
+        percent: (json['percent'] as num).toInt(),
+      ),
+      budgets: [
+        for (final row in json['budgets'] as List)
+          BudgetStatus(
+            id: (row as Map<String, dynamic>)['id'] as String,
+            categoryId: row['category_id'] as String,
+            categoryName: row['category_name'] as String? ?? '',
+            amount: money(row, 'amount'),
+            spent: money(row, 'spent'),
+            remaining: money(row, 'remaining'),
+            percentage: (row['percent'] as num).toInt(),
+          ),
+      ],
     );
-  }
-
-  final String id;
-  final String categoryId;
-  final String categoryName;
-  final Decimal amount;
-  final Decimal spent;
-  final int percentage;
-
-  BudgetStatus toDomain() => BudgetStatus(
-    id: id,
-    categoryId: categoryId,
-    categoryName: categoryName,
-    amount: Money(amount: amount),
-    spent: Money(amount: spent),
-    percentage: percentage,
-  );
-
-  /// A decimal string; never parsed through a double (D12).
-  static Decimal _readNum(Object? v) =>
-      v is String ? Decimal.tryParse(v) ?? Decimal.zero : Decimal.zero;
-
-  static int _readInt(Object? v) {
-    if (v is int) return v;
-    if (v is num) return v.round();
-    if (v is String) return int.tryParse(v) ?? 0;
-    return 0;
   }
 }

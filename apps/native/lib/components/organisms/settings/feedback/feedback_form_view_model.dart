@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/foundation.dart';
 import 'package:oewang/core/command/command.dart';
 import 'package:oewang/core/result/app_error.dart';
@@ -7,26 +5,16 @@ import 'package:oewang/core/result/result.dart';
 import 'package:oewang/data/repositories/feedback_repository.dart';
 
 class FeedbackFormState {
-  const FeedbackFormState({
-    this.type = FeedbackType.bug,
-    this.message = '',
-    this.screenshot,
-  });
+  const FeedbackFormState({this.type = FeedbackType.bug, this.message = ''});
 
   final FeedbackType type;
   final String message;
-  final File? screenshot;
 
-  FeedbackFormState copyWith({
-    FeedbackType? type,
-    String? message,
-    File? screenshot,
-    bool clearScreenshot = false,
-  }) => FeedbackFormState(
-    type: type ?? this.type,
-    message: message ?? this.message,
-    screenshot: clearScreenshot ? null : (screenshot ?? this.screenshot),
-  );
+  FeedbackFormState copyWith({FeedbackType? type, String? message}) =>
+      FeedbackFormState(
+        type: type ?? this.type,
+        message: message ?? this.message,
+      );
 }
 
 /// Owns the feedback form state and the Send command. Fire-and-forget — there
@@ -55,18 +43,10 @@ class FeedbackFormViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setScreenshot(File? file) {
-    _state = _state.copyWith(screenshot: file, clearScreenshot: file == null);
-    notifyListeners();
-  }
-
   Future<void> submit() => save.run(null);
 
-  Future<Result<void, AppError>> _runSave(void _) => _feedback.submit(
-    type: _state.type,
-    message: _state.message.trim(),
-    screenshot: _state.screenshot,
-  );
+  Future<Result<void, AppError>> _runSave(void _) =>
+      _feedback.submit(type: _state.type, message: _state.message.trim());
 
   @override
   void dispose() {

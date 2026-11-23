@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:oewang/core/result/app_error.dart';
@@ -43,14 +45,56 @@ class UsersRepositoryRemote implements UsersRepository {
     }
   }
 
-  // shortcut: avatar upload is `PUT /v1/auth/me/avatar` with base64 bytes,
-  // ported with the profile screen in M2 (OEW-086).
   @override
-  Future<Result<String, AppError>> uploadAvatar(File file) async =>
-      const Failure(UnknownError('Changing the photo is not available yet'));
+  Future<Result<String, AppError>> uploadAvatar(File file) async {
+    try {
+      final data = envelopeData(
+        await _api.put(
+          '/auth/me/avatar',
+          data: {'data': base64Encode(await file.readAsBytes())},
+        ),
+      );
+      return Success(
+        (data! as Map<String, dynamic>)['profile_picture'] as String,
+      );
+    } on DioException catch (e) {
+      return Failure(mapDioError(e));
+    }
+  }
 
-  // shortcut: the new API has no self-service erase route yet; the screen
-  // keeps its button and says so. Revisit with the settings port (OEW-086).
+  @override
+  Future<Result<Uint8List?, AppError>> avatar() async {
+    try {
+      final data = envelopeData(await _api.get('/auth/me/avatar'));
+      return Success(
+        base64Decode((data! as Map<String, dynamic>)['data'] as String),
+      );
+    } on DioException catch (e) {
+      // No photo is a 404, not an error to show.
+      if (e.response?.statusCode == 404) return const Success(null);
+      return Failure(mapDioError(e));
+    }
+  }
+
+  @override
+  Future<Result<void, AppError>> updateColors({
+    required String? incomeColor,
+    required String? expenseColor,
+  }) async {
+    try {
+      await _api.put(
+        '/auth/me/colors',
+        data: {'income_color': incomeColor, 'expense_color': expenseColor},
+      );
+      return const Success<void, AppError>(null);
+    } on DioException catch (e) {
+      return Failure(mapDioError(e));
+    }
+  }
+
+  // shortcut: the API has no self-service erase route, so this refuses and
+  // the screen says so. The row stays because the stores require in-app
+  // account deletion; wire it when the API gains the route.
   @override
   Future<Result<void, AppError>> deleteAccount() async =>
       const Failure(UnknownError('Deleting the account is not available yet'));
