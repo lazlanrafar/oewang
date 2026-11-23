@@ -56,6 +56,26 @@ pub async fn find_category(
     .await
 }
 
+/// The same read, deleted rows included. Only a repeated create reads this:
+/// it answers the row its id names even when deleted since (D114).
+pub async fn find_category_with_deleted(
+    executor: impl PgExecutor<'_>,
+    workspace_id: &str,
+    id: &str,
+) -> Result<Option<CategoryRow>, sqlx::Error> {
+    sqlx::query_as!(
+        CategoryRow,
+        r#"SELECT id, name, type AS "type!", sort_order, created_at, updated_at
+           FROM categories
+           WHERE workspace_id = $1 AND id = $2"#,
+        workspace_id,
+        id
+    )
+    .fetch_optional(executor)
+    .await
+}
+
+/// `None` when the id is already taken, by a row of any workspace (D114).
 pub async fn insert_category(
     executor: impl PgExecutor<'_>,
     id: &str,
@@ -63,11 +83,12 @@ pub async fn insert_category(
     name: &str,
     kind: &str,
     sort_order: i32,
-) -> Result<CategoryRow, sqlx::Error> {
+) -> Result<Option<CategoryRow>, sqlx::Error> {
     sqlx::query_as!(
         CategoryRow,
         r#"INSERT INTO categories (id, workspace_id, name, type, sort_order)
            VALUES ($1, $2, $3, $4, $5)
+           ON CONFLICT (id) DO NOTHING
            RETURNING id, name, type AS "type!", sort_order, created_at, updated_at"#,
         id,
         workspace_id,
@@ -75,10 +96,12 @@ pub async fn insert_category(
         kind,
         sort_order
     )
-    .fetch_one(executor)
+    .fetch_optional(executor)
     .await
 }
 
+/// `if_match`, when set, is checked by this statement under its own row
+/// lock, so no write can land between the check and the update (D115).
 pub async fn update_category(
     executor: impl PgExecutor<'_>,
     workspace_id: &str,
@@ -86,6 +109,7 @@ pub async fn update_category(
     name: Option<&str>,
     kind: Option<&str>,
     sort_order: Option<i32>,
+    if_match: Option<DateTime<Utc>>,
 ) -> Result<Option<CategoryRow>, sqlx::Error> {
     sqlx::query_as!(
         CategoryRow,
@@ -95,12 +119,14 @@ pub async fn update_category(
                sort_order = COALESCE($5, sort_order),
                updated_at = now()
            WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL
+             AND ($6::timestamptz IS NULL OR updated_at = $6)
            RETURNING id, name, type AS "type!", sort_order, created_at, updated_at"#,
         workspace_id,
         id,
         name,
         kind,
-        sort_order
+        sort_order,
+        if_match
     )
     .fetch_optional(executor)
     .await

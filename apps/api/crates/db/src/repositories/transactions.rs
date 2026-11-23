@@ -66,6 +66,8 @@ pub struct TransactionListRow {
     pub is_exported: bool,
     pub source: String,
     pub created_at: DateTime<Utc>,
+    /// The version a client sends back in `If-Match` (D115).
+    pub updated_at: DateTime<Utc>,
 }
 
 /// Every filter the list accepts (docs/api/endpoints.md).
@@ -210,7 +212,7 @@ const LIST_SELECT: &str = r#"
            t.amount, t.to_amount, t.original_amount, t.original_currency_code, t.exchange_rate,
            t.base_amount, t.base_rate, t.base_rate_source, t.base_rate_date,
            t.date, t.type, t.name, t.description, t.is_exported, t.source,
-           t.created_at
+           t.created_at, t.updated_at
     FROM transactions t
     JOIN wallets w ON w.id = t.wallet_id
     LEFT JOIN wallets tw ON tw.id = t.to_wallet_id
@@ -469,10 +471,14 @@ pub async fn find(
 ///
 /// Its own statement rather than the list with an id filter, because the
 /// detail sheet asks for exactly one row and the macro can check it.
+///
+/// `with_deleted` is for one caller only: a repeated create answers the row
+/// its id names even when it was deleted since (D114).
 pub async fn find_detail(
     executor: impl PgExecutor<'_>,
     workspace_id: &str,
     id: &str,
+    with_deleted: bool,
 ) -> Result<Option<TransactionListRow>, sqlx::Error> {
     sqlx::query_as!(
         TransactionListRow,
@@ -483,14 +489,15 @@ pub async fn find_detail(
                   t.amount, t.to_amount, t.original_amount, t.original_currency_code,
                   t.exchange_rate, t.base_amount, t.base_rate, t.base_rate_source,
                   t.base_rate_date, t.date, t.type AS "type!", t.name, t.description,
-                  t.is_exported, t.source, t.created_at
+                  t.is_exported, t.source, t.created_at, t.updated_at
            FROM transactions t
            JOIN wallets w ON w.id = t.wallet_id
            LEFT JOIN wallets tw ON tw.id = t.to_wallet_id
            LEFT JOIN categories c ON c.id = t.category_id
-           WHERE t.workspace_id = $1 AND t.id = $2 AND t.deleted_at IS NULL"#,
+           WHERE t.workspace_id = $1 AND t.id = $2 AND (t.deleted_at IS NULL OR $3)"#,
         workspace_id,
-        id
+        id,
+        with_deleted
     )
     .fetch_optional(executor)
     .await
@@ -521,10 +528,13 @@ pub struct NewTransaction<'a> {
     pub fingerprint: Option<&'a str>,
 }
 
+/// `None` when the id is already taken, by a row of any workspace: the
+/// primary key, not a read before the write, is what makes two concurrent
+/// creates with one client id produce one row (D114).
 pub async fn insert(
     executor: impl PgExecutor<'_>,
     new: NewTransaction<'_>,
-) -> Result<TransactionRow, sqlx::Error> {
+) -> Result<Option<TransactionRow>, sqlx::Error> {
     sqlx::query_as!(
         TransactionRow,
         r#"INSERT INTO transactions
@@ -534,6 +544,7 @@ pub async fn insert(
               date, type, name, description, source, fingerprint)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
                    $15, $16, $17, $18, $19, $20)
+           ON CONFLICT (id) DO NOTHING
            RETURNING id, wallet_id, to_wallet_id, category_id, amount, to_amount,
                      original_amount, original_currency_code, exchange_rate,
                      base_amount, base_rate, base_rate_source, base_rate_date,
@@ -560,7 +571,7 @@ pub async fn insert(
         new.source,
         new.fingerprint
     )
-    .fetch_one(executor)
+    .fetch_optional(executor)
     .await
 }
 
@@ -570,11 +581,15 @@ pub async fn insert(
 /// the old effect and applies the new one, so the service has already built
 /// the whole new row and a partial write would be the harder thing to reason
 /// about.
+///
+/// `if_match`, when set, is checked by this statement under its own row
+/// lock, so no write can land between the check and the update (D115).
 pub async fn update(
     executor: impl PgExecutor<'_>,
     workspace_id: &str,
     id: &str,
     new: NewTransaction<'_>,
+    if_match: Option<DateTime<Utc>>,
 ) -> Result<Option<TransactionRow>, sqlx::Error> {
     sqlx::query_as!(
         TransactionRow,
@@ -585,6 +600,7 @@ pub async fn update(
                date = $15, type = $16, name = $17, description = $18,
                updated_at = now()
            WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL
+             AND ($19::timestamptz IS NULL OR updated_at = $19)
            RETURNING id, wallet_id, to_wallet_id, category_id, amount, to_amount,
                      original_amount, original_currency_code, exchange_rate,
                      base_amount, base_rate, base_rate_source, base_rate_date,
@@ -607,7 +623,8 @@ pub async fn update(
         new.date,
         new.kind,
         new.name,
-        new.description
+        new.description,
+        if_match
     )
     .fetch_optional(executor)
     .await
@@ -768,6 +785,10 @@ pub async fn lock_wallets(
 /// An addition rather than a write of a computed total: two concurrent
 /// creates then cannot each read the same balance and write the same sum.
 /// The row is already locked by `lock_wallets` when this runs.
+///
+/// `updated_at` stays put: it is the wallet's version for `If-Match`, and a
+/// balance is derived, never edited, so a transaction landing on the wallet
+/// must not make a queued rename of it stale (D115).
 pub async fn apply_delta(
     executor: impl PgExecutor<'_>,
     workspace_id: &str,
@@ -775,7 +796,7 @@ pub async fn apply_delta(
     delta: Decimal,
 ) -> Result<u64, sqlx::Error> {
     sqlx::query!(
-        r#"UPDATE wallets SET balance = balance + $3, updated_at = now()
+        r#"UPDATE wallets SET balance = balance + $3
            WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL"#,
         workspace_id,
         wallet_id,

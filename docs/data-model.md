@@ -199,7 +199,7 @@ The server half of a passkey registration or sign-in in progress (D110). `user_i
 | `is_included_in_totals` | boolean | Default true |
 | `is_default` | boolean | Default false. At most one true per workspace (WAL-3) |
 | `sort_order` | integer | Default 0 |
-| `created_at`, `updated_at`, `deleted_at` | timestamp | |
+| `created_at`, `updated_at`, `deleted_at` | timestamp | `updated_at` moves when the wallet is edited, not when a transaction moves its balance: it is the version `If-Match` compares (D115) |
 
 ```sql
 CREATE INDEX wallets_workspace_idx ON wallets (workspace_id) WHERE deleted_at IS NULL;

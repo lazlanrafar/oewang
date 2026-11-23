@@ -11,9 +11,9 @@ Evidence is, in order of preference: a test file that cites the ID (in a
 name or a comment); a backlog story that names the ID and has its "Verify
 in browser" box ticked; or a written reason it is not done.
 
-- 145 with test evidence
+- 147 with test evidence
 - 29 verified in browser only
-- 24 not done
+- 22 not done
 
 | ID | Evidence |
 |---|---|
@@ -89,8 +89,8 @@ in browser" box ticked; or a written reason it is not done.
 | MOB-3 | not done: epic OEW-083 in progress; tests land with US-063 to US-068 |
 | MOB-4 | not done: epic OEW-083 in progress; tests land with US-063 to US-068 |
 | MOB-5 | not done: epic OEW-083 in progress; tests land with US-063 to US-068 |
-| MOB-6 | not done: epic OEW-083 in progress; tests land with US-063 to US-068 |
-| MOB-7 | not done: epic OEW-083 in progress; tests land with US-063 to US-068 |
+| MOB-6 | `apps/api/crates/server/src/accounts/tests.rs`, `apps/api/crates/server/src/offline.rs`, `apps/api/crates/server/src/transactions/tests.rs` |
+| MOB-7 | `apps/api/crates/domain/src/error.rs`, `apps/api/crates/server/src/accounts/tests.rs`, `apps/api/crates/server/src/offline.rs`, `apps/api/crates/server/src/transactions/tests.rs` |
 | MOB-8 | not done: epic OEW-083 in progress; tests land with US-063 to US-068 |
 | MOB-9 | not done: epic OEW-083 in progress; tests land with US-063 to US-068 |
 | OPS-1 | `apps/api/crates/server/src/accounts/tests.rs`, `apps/api/crates/server/src/transactions/tests.rs` |

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "UPDATE transactions\n           SET wallet_id = $3, to_wallet_id = $4, category_id = $5, amount = $6, to_amount = $7,\n               original_amount = $8, original_currency_code = $9, exchange_rate = $10,\n               base_amount = $11, base_rate = $12, base_rate_source = $13, base_rate_date = $14,\n               date = $15, type = $16, name = $17, description = $18,\n               updated_at = now()\n           WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL\n           RETURNING id, wallet_id, to_wallet_id, category_id, amount, to_amount,\n                     original_amount, original_currency_code, exchange_rate,\n                     base_amount, base_rate, base_rate_source, base_rate_date,\n                     date, type AS \"type!\", name, description, is_exported,\n                     source, fingerprint, created_at, updated_at",
+  "query": "INSERT INTO transactions\n             (id, workspace_id, wallet_id, to_wallet_id, category_id, amount, to_amount,\n              original_amount, original_currency_code, exchange_rate,\n              base_amount, base_rate, base_rate_source, base_rate_date,\n              date, type, name, description, source, fingerprint)\n           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,\n                   $15, $16, $17, $18, $19, $20)\n           ON CONFLICT (id) DO NOTHING\n           RETURNING id, wallet_id, to_wallet_id, category_id, amount, to_amount,\n                     original_amount, original_currency_code, exchange_rate,\n                     base_amount, base_rate, base_rate_source, base_rate_date,\n                     date, type AS \"type!\", name, description, is_exported,\n                     source, fingerprint, created_at, updated_at",
   "describe": {
     "columns": [
       {
@@ -265,6 +265,8 @@
         "Timestamptz",
         "Text",
         "Text",
+        "Text",
+        "Text",
         "Text"
       ]
     },
@@ -293,5 +295,5 @@
       false
     ]
   },
-  "hash": "e748ffadda170e16a8e1c2bb8123440fb0ccdf0500af0cbe6a6712361f0a73ed"
+  "hash": "7c6a05ceab7b7199dc36a0962a73a0c7b322ace54fdd42aaf5b7ad5435aa9151"
 }

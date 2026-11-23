@@ -77,6 +77,14 @@ pub enum AppError {
     TransferAmountRequired,
     #[error("amount must be greater than zero")]
     AmountNotPositive,
+    /// A create's client `id` names a row the caller cannot have: another
+    /// workspace's, or another kind's. Never says which (D114).
+    #[error("id already taken")]
+    IdTaken,
+    /// `If-Match` no longer matches, or the row is deleted. Carries the row
+    /// as it is now, or `None` when it is deleted (D115).
+    #[error("row changed since it was read")]
+    Stale(Option<serde_json::Value>),
     #[error("import job not found")]
     ImportJobNotFound,
     #[error("no exchange rate could be resolved")]
@@ -185,6 +193,8 @@ impl AppError {
             DestinationNotAllowed => "DESTINATION_NOT_ALLOWED",
             TransferAmountRequired => "TRANSFER_AMOUNT_REQUIRED",
             AmountNotPositive => "AMOUNT_NOT_POSITIVE",
+            IdTaken => "ID_TAKEN",
+            Stale(_) => "STALE",
             ImportJobNotFound => "IMPORT_JOB_NOT_FOUND",
             FxRateUnavailable => "FX_RATE_UNAVAILABLE",
             FileTooLarge => "FILE_TOO_LARGE",
@@ -227,7 +237,9 @@ impl AppError {
             | WorkspaceCurrencyLocked
             | WorkspaceCurrencyChanged
             | ConfirmationRequired(_)
-            | ToolCapExceeded => 409,
+            | ToolCapExceeded
+            | IdTaken
+            | Stale(_) => 409,
             InviteInvalid | ResetTokenInvalid | NotFound | WalletNotFound | CategoryNotFound
             | TransactionNotFound | ImportJobNotFound | FileNotFound | ThumbnailUnavailable
             | SessionNotFound => 404,
@@ -283,6 +295,10 @@ impl AppError {
                 "A transfer needs a destination wallet and a destination amount."
             }
             TransferSameWallet => "Pick a different destination wallet.",
+            IdTaken => "Create it again with a new id, or without one.",
+            Stale(_) => {
+                "Compare with details.current, then discard the change or send it again without If-Match."
+            }
             FxRateUnavailable => "Enter the exchange rate by hand.",
             FileTooLarge => "The limit is 10 MB.",
             UnsupportedFileType => "Accepted: JPEG, PNG, WebP and PDF.",
@@ -347,6 +363,9 @@ pub struct ErrorBody {
     pub hint: Option<&'static str>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub fields: Option<FieldErrors>,
+    /// Structured detail beyond `fields`. Only `STALE` carries any (D115).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub details: Option<serde_json::Value>,
     pub request_id: String,
 }
 
@@ -362,6 +381,10 @@ impl AppError {
             },
             hint: self.hint(),
             fields: self.fields().cloned(),
+            details: match self {
+                AppError::Stale(current) => Some(serde_json::json!({ "current": current })),
+                _ => None,
+            },
             request_id: request_id.into(),
         }
     }
@@ -407,6 +430,8 @@ mod tests {
             AppError::DestinationNotAllowed,
             AppError::TransferAmountRequired,
             AppError::AmountNotPositive,
+            AppError::IdTaken,
+            AppError::Stale(None),
             AppError::ImportJobNotFound,
             AppError::FxRateUnavailable,
             AppError::FileTooLarge,
@@ -437,7 +462,7 @@ mod tests {
 
         // Every catalog entry but TRANSPORT_UNEXPECTED_RESPONSE, a
         // client-side condition with no server variant by design.
-        assert_eq!(samples.len(), 53);
+        assert_eq!(samples.len(), 55);
 
         let mut seen = std::collections::HashSet::new();
         for error in &samples {
@@ -457,6 +482,17 @@ mod tests {
         assert_eq!(body.code, "INTERNAL_ERROR");
         assert!(!body.message.contains("secret"));
         assert!(body.fields.is_none());
+    }
+
+    /// MOB-7: the current row travels in `details.current`, null when deleted.
+    #[test]
+    fn should_carry_the_current_row_in_details_when_stale() {
+        let body = AppError::Stale(None).to_body("req-1");
+        assert_eq!(body.details, Some(serde_json::json!({ "current": null })));
+
+        let body = AppError::Stale(Some(serde_json::json!({ "id": "a" }))).to_body("req-1");
+        assert_eq!(body.details.unwrap()["current"]["id"], "a");
+        assert!(AppError::IdTaken.to_body("req-1").details.is_none());
     }
 
     #[test]

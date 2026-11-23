@@ -5,6 +5,7 @@ pub mod budgets;
 pub mod categories;
 pub mod feedback;
 pub mod fx;
+pub mod ids;
 pub mod items;
 pub mod mcp;
 pub mod passkeys;

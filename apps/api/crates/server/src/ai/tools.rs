@@ -786,7 +786,7 @@ async fn update_transaction(
         attachment_ids: None,
     };
 
-    transactions::service::update(pool, actor, &id, input).await?;
+    transactions::service::update(pool, actor, &id, input, None).await?;
     let detail = transactions::service::find(pool, actor.workspace_id, &id).await?;
 
     Ok(written(&detail, "Updated"))

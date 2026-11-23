@@ -18,6 +18,7 @@ mod images;
 mod items;
 mod limits;
 mod mcp;
+mod offline;
 mod owe1;
 mod passkeys;
 mod receipts;

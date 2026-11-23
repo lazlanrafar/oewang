@@ -244,6 +244,26 @@ pub async fn find_wallet(
     .await
 }
 
+/// The same read, deleted rows included. Only a repeated create reads this:
+/// it answers the row its id names even when deleted since (D114).
+pub async fn find_wallet_with_deleted(
+    executor: impl PgExecutor<'_>,
+    workspace_id: &str,
+    id: &str,
+) -> Result<Option<WalletRow>, sqlx::Error> {
+    sqlx::query_as!(
+        WalletRow,
+        r#"SELECT id, group_id, name, currency_code, balance, is_included_in_totals,
+                  is_default, sort_order, created_at, updated_at
+           FROM wallets
+           WHERE workspace_id = $1 AND id = $2"#,
+        workspace_id,
+        id
+    )
+    .fetch_optional(executor)
+    .await
+}
+
 /// The same read with the row locked.
 ///
 /// A currency change and a transaction write both have to agree on whether
@@ -288,15 +308,17 @@ pub async fn lock_wallets(
     .await
 }
 
+/// `None` when the id is already taken, by a row of any workspace (D114).
 pub async fn insert_wallet(
     executor: impl PgExecutor<'_>,
     wallet: NewWallet<'_>,
-) -> Result<WalletRow, sqlx::Error> {
+) -> Result<Option<WalletRow>, sqlx::Error> {
     sqlx::query_as!(
         WalletRow,
         r#"INSERT INTO wallets
              (id, workspace_id, group_id, name, currency_code, is_included_in_totals, sort_order)
            VALUES ($1, $2, $3, $4, $5, $6, $7)
+           ON CONFLICT (id) DO NOTHING
            RETURNING id, group_id, name, currency_code, balance, is_included_in_totals,
                      is_default, sort_order, created_at, updated_at"#,
         wallet.id,
@@ -307,7 +329,7 @@ pub async fn insert_wallet(
         wallet.is_included_in_totals,
         wallet.sort_order
     )
-    .fetch_one(executor)
+    .fetch_optional(executor)
     .await
 }
 
