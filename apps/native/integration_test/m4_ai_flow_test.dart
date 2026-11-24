@@ -91,7 +91,13 @@ class _FixturePicker extends ImagePickerPlatform {
 }
 
 void main() {
-  IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  // Pushing the action sheet from inside a long press makes the Navigator
+  // cancel the held pointer. That cancel is a device event, which the live
+  // binding drops by default, and the pointer's up is lost with it: the
+  // row's long-press recognizer stays mid-gesture and never fires again
+  // (OEW-088). A real device delivers the cancel; so does the binding now.
+  IntegrationTestWidgetsFlutterBinding.ensureInitialized()
+      .shouldPropagateDevicePointerEvents = true;
 
   Future<void> waitFor(
     WidgetTester tester,
@@ -369,7 +375,15 @@ void main() {
     );
     await shot(tester, '07-chat-answer');
 
-    // 5. Rename and delete the session from the list.
+    // 5. Rename and delete the session from the list. A run that failed
+    // here left its renamed chat behind; drop those so one row matches.
+    final chats = container.read(chatRepositoryProvider);
+    final listed = await chats.listSessions();
+    if (listed case Success(:final value)) {
+      for (final s in value.where((s) => s.title == 'M4 spending')) {
+        await chats.delete(s.id);
+      }
+    }
     await back(tester);
     final sessions = find.byType(ChatSessionsScreen);
     await waitFor(
