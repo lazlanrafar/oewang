@@ -10,6 +10,7 @@ import {
 	formatRate,
 	isNegative,
 	isZero,
+	trimZeros,
 	lerpDecimal,
 	multiplyDecimals,
 	negate,
@@ -167,6 +168,13 @@ describe('compareDecimals', () => {
 	it('should take the size of a figure without its sign', () => {
 		expect(absDecimal('-87500.0000')).toBe('87500.0000');
 		expect(absDecimal('87500.0000')).toBe('87500.0000');
+	});
+
+	it('should drop the zeroes the API pads a figure with', () => {
+		expect(trimZeros('50000.0000')).toBe('50000');
+		expect(trimZeros('12.5000')).toBe('12.5');
+		expect(trimZeros('1000')).toBe('1000');
+		expect(trimZeros('')).toBe('');
 	});
 });
 

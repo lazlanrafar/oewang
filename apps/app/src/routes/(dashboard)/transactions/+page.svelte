@@ -70,7 +70,7 @@
 	import { messageForCode } from '$lib/errors';
 	import { t } from '$lib/i18n';
 	import { pageTitle } from '$lib/page-title';
-	import { absDecimal } from '$lib/money';
+	import { absDecimal, trimZeros } from '$lib/money';
 	import { toDetail } from '$lib/transaction-detail';
 	import { isoDay, toRow } from '$lib/transactions';
 	import { readParam, readText, readValues, reloading, writeParams } from '$lib/url-state';
@@ -378,13 +378,13 @@
 					// original figure when the entry currency differed. Reopening
 					// it with the wallet-currency figure beside the entry currency
 					// would convert an already converted number.
-					amount: absDecimal(editing.original_amount ?? editing.amount),
+					amount: trimZeros(absDecimal(editing.original_amount ?? editing.amount)),
 					currency: editing.original_currency_code ?? editing.wallet_currency_code,
 					exchangeRate: editing.exchange_rate ?? '',
 					baseRate: editing.base_rate,
 					accountId: editing.wallet_id,
 					toAccountId: editing.to_wallet_id ?? '',
-					toAmount: editing.to_amount ?? '',
+					toAmount: trimZeros(editing.to_amount ?? ''),
 					categoryId: editing.category_id ?? '',
 					date: isoDay(editing.date),
 					notes: editing.description ?? '',
@@ -854,7 +854,13 @@
 		</div>
 	</div>
 
-	<FormError message={form?.code ? messageForCode(form.code) : undefined} />
+	<FormError
+		message={form?.fields?.original_currency_code
+			? t('errors.foreign_entry_same_wallet')
+			: form?.code
+				? messageForCode(form.code)
+				: undefined}
+	/>
 
 	<TransactionsDataTable
 		loading={reloading(RELOAD_KEYS)}
@@ -1214,7 +1220,9 @@
 <ConfirmDialog
 	bind:open={confirmDelete}
 	title={t('txn.delete_title')}
-	description={t('txn.delete_confirm')}
+	description={data.detail?.debts?.payment
+		? t('txn.delete_confirm_payment', { name: data.detail.debts.payment.debt.contact_name })
+		: t('txn.delete_confirm')}
 	confirmLabel={t('common.delete')}
 	cancelLabel={t('common.cancel')}
 	onConfirm={() => deleteForm?.requestSubmit()}

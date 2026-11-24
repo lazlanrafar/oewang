@@ -150,6 +150,14 @@
 	let rowCategory = $state<Record<string, string>>({});
 	let rowWallet = $state<Record<string, string>>({});
 
+	// An in-cell pick shows at once, until the page's reload brings the saved
+	// rows: then the rows speak, so a change the API refused reverts.
+	$effect(() => {
+		void rows;
+		rowCategory = {};
+		rowWallet = {};
+	});
+
 	/**
 	 * Column widths, which the handles on the header edges change.
 	 *

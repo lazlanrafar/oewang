@@ -339,7 +339,7 @@
 				bind:value={draft.exchangeRate}
 				class="font-mono"
 				inputmode="decimal"
-				readonly={locked}
+				disabled={locked}
 			/>
 			{#if convertedAmount}
 				<p class="text-body font-mono">

@@ -250,6 +250,11 @@ export function absDecimal(value: string): string {
 	return trimmed.startsWith('-') ? trimmed.slice(1) : trimmed;
 }
 
+/** `50000.0000` as `50000`, `12.5000` as `12.5`: the API's scale, not what a person typed. */
+export function trimZeros(value: string): string {
+	return value.includes('.') ? value.replace(/\.?0+$/, '') : value;
+}
+
 /** Negate a decimal string. */
 export function negate(value: string): string {
 	const trimmed = value.trim();
