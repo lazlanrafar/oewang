@@ -14,6 +14,8 @@ import 'package:oewang/data/repositories/auth_repository.dart';
 import 'package:oewang/data/repositories/budgets_repository.dart';
 import 'package:oewang/data/repositories/categories_repository.dart';
 import 'package:oewang/data/repositories/chat_repository.dart';
+import 'package:oewang/data/repositories/contacts_repository.dart';
+import 'package:oewang/data/repositories/debts_repository.dart';
 import 'package:oewang/data/repositories/device_tokens_repository.dart';
 import 'package:oewang/data/repositories/feedback_repository.dart';
 import 'package:oewang/data/repositories/invites_repository.dart';
@@ -29,6 +31,8 @@ import 'package:oewang/data/repositories/wallet_groups_repository.dart';
 import 'package:oewang/data/repositories/wallets_repository.dart';
 import 'package:oewang/data/repositories/workspaces_repository.dart';
 import 'package:oewang/data/repositories_offline/categories_repository_offline.dart';
+import 'package:oewang/data/repositories_offline/contacts_repository_offline.dart';
+import 'package:oewang/data/repositories_offline/debts_repository_offline.dart';
 import 'package:oewang/data/repositories_offline/transactions_repository_offline.dart';
 import 'package:oewang/data/repositories_offline/wallet_groups_repository_offline.dart';
 import 'package:oewang/data/repositories_offline/wallets_repository_offline.dart';
@@ -36,6 +40,8 @@ import 'package:oewang/data/repositories_remote/auth_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/budgets_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/categories_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/chat_repository_remote.dart';
+import 'package:oewang/data/repositories_remote/contacts_repository_remote.dart';
+import 'package:oewang/data/repositories_remote/debts_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/device_tokens_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/feedback_repository_remote.dart';
 import 'package:oewang/data/repositories_remote/invites_repository_remote.dart';
@@ -118,7 +124,8 @@ final syncServiceProvider = Provider<SyncService>((ref) {
     canWrite: () => ref.read(canWriteProvider),
     onSynced: () => ref
       ..read(transactionsRevisionProvider.notifier).bump()
-      ..read(walletsRevisionProvider.notifier).bump(),
+      ..read(walletsRevisionProvider.notifier).bump()
+      ..read(debtsRevisionProvider.notifier).bump(),
   );
   void connectivity(List<ConnectivityResult> r) =>
       sync.setOnline(online: r.any((c) => c != ConnectivityResult.none));
@@ -207,6 +214,37 @@ final categoriesRepositoryProvider = Provider<CategoriesRepository>((ref) {
     sync: ref.watch(syncServiceProvider),
   );
 });
+
+final debtsRepositoryProvider = Provider<DebtsRepository>((ref) {
+  final api = ref.watch(apiClientProvider);
+  return DebtsRepositoryOffline(
+    remote: DebtsRepositoryRemote(api),
+    api: api,
+    sync: ref.watch(syncServiceProvider),
+  );
+});
+
+final contactsRepositoryProvider = Provider<ContactsRepository>((ref) {
+  final api = ref.watch(apiClientProvider);
+  return ContactsRepositoryOffline(
+    remote: ContactsRepositoryRemote(api),
+    api: api,
+    sync: ref.watch(syncServiceProvider),
+  );
+});
+
+/// Bumped after a debt, payment or contact write so the Debt tab and the
+/// contacts screen reload. A payment through a wallet also moves balances,
+/// so it bumps the wallets and transactions revisions too.
+class DebtsRevisionController extends Notifier<int> {
+  @override
+  int build() => 0;
+  void bump() => state = state + 1;
+}
+
+final debtsRevisionProvider = NotifierProvider<DebtsRevisionController, int>(
+  DebtsRevisionController.new,
+);
 
 final budgetsRepositoryProvider = Provider<BudgetsRepository>((ref) {
   return BudgetsRepositoryRemote(ref.watch(apiClientProvider));
@@ -421,7 +459,8 @@ class SessionController extends Notifier<AsyncValue<Session?>> {
         ref
           ..read(transactionsRevisionProvider.notifier).bump()
           ..read(walletsRevisionProvider.notifier).bump()
-          ..read(budgetsRevisionProvider.notifier).bump();
+          ..read(budgetsRevisionProvider.notifier).bump()
+          ..read(debtsRevisionProvider.notifier).bump();
         return null;
       case Failure(:final error):
         return error;

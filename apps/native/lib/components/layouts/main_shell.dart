@@ -9,7 +9,7 @@ import 'package:oewang/components/organisms/transactions/transactions_month_cont
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/router/app_router.dart';
 
-/// Hosts the 4-tab bottom-nav shell. Each tab is its own [StatefulShellBranch]
+/// Hosts the 5-tab bottom-nav shell. Each tab is its own [StatefulShellBranch]
 /// so back-stacks are preserved per tab.
 class MainShell extends ConsumerWidget {
   const MainShell({required this.navigationShell, super.key});

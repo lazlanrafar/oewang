@@ -67,9 +67,13 @@ class WalletsRepositoryOffline implements WalletsRepository {
     }
     final cached = await _db.row(ws, 'meta', _totalsId);
     if (cached == null) return const Failure(NetworkError());
-    final queued = (await _db.entries(
-      ws,
-    )).any((e) => e.isPending && (e.kind == 'transactions' || e.kind == _kind));
+    final queued = (await _db.entries(ws)).any(
+      (e) =>
+          e.isPending &&
+          (e.kind == 'transactions' ||
+              e.kind == _kind ||
+              paymentDebtId(e.kind) != null),
+    );
     return Success(walletTotalsFromJson(cached, isEstimate: queued));
   }
 

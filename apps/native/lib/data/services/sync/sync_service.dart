@@ -36,8 +36,9 @@ class SyncStatus {
   bool get isIdle => online && pending == 0 && failed == 0 && conflicts == 0;
 }
 
-/// Offline writes for transactions, wallets and categories (MOB-6, MOB-7,
-/// D114, D115; docs/features/mobile.md#offline-d114-d115).
+/// Offline writes for transactions, wallets, categories, debts, debt
+/// payments and contacts (MOB-6, MOB-7, MOB-10, D114, D115;
+/// docs/features/mobile.md#offline-d114-d115).
 ///
 /// A write goes straight to the API when the device is online and nothing
 /// is queued; otherwise, or when that request cannot reach the API, it is
@@ -157,11 +158,13 @@ class SyncService {
 
   Future<void> _drainPasses() async {
     _retry?.cancel();
+    // The refresh is inside the loop: a drain asked for while it runs
+    // would otherwise set _again after the last check and be lost.
     do {
       _again = false;
       await _drainOnce();
+      await _refresh();
     } while (_again);
-    await _refresh();
   }
 
   Future<void> _drainOnce() async {
@@ -253,8 +256,11 @@ class SyncService {
       final error = mapDioError(ex);
       final status = ex.response?.statusCode;
       if (_transient(error, status)) return _Retry(error);
-      // Already gone is what a delete wanted.
-      if (e.op == QueueOp.delete && status == 404) return const _Done(null);
+      // Already gone is what a delete wanted; a merge whose contact is gone
+      // was answered before and its response lost.
+      if ((e.op == QueueOp.delete || isMergeKind(e.kind)) && status == 404) {
+        return const _Done(null);
+      }
       if (error.code == 'STALE') {
         final body = ex.response?.data;
         final details = body is Map ? body['error'] : null;
@@ -305,6 +311,10 @@ class SyncService {
   /// The API took [e] and answered [row] (null for a delete).
   Future<void> _landed(QueueEntry e, Json? row) async {
     final ws = e.workspaceId;
+    final debtId = paymentDebtId(e.kind);
+    if (debtId != null) return _paymentLanded(e, debtId, row);
+    // The offline repository moved the debts when it queued the merge.
+    if (isMergeKind(e.kind)) return;
     if (e.kind == 'transactions') {
       // The API moved the balances; keep the cached figure in step, so an
       // estimate never counts this write twice or not at all.
@@ -324,6 +334,67 @@ class SyncService {
     if (!later) await db.putRow(ws, e.kind, row);
   }
 
+  /// A payment answers `{payment, debt, transaction}` (DEBT-4); a cancel
+  /// answers nothing. Either way the wallet the API moved is kept in step.
+  Future<void> _paymentLanded(QueueEntry e, String debtId, Json? row) async {
+    final ws = e.workspaceId;
+    if (e.op == QueueOp.delete) {
+      final effect = await paymentEffect(ws, debtId, e.before);
+      await _addToBalances(ws, {
+        for (final MapEntry(key: id, value: d) in effect.entries) id: -d,
+      });
+      await db.removeRow(ws, e.kind, e.entityId);
+      return;
+    }
+    if (row == null) return;
+    final transaction = row['transaction'] as Json?;
+    await _addToBalances(ws, transactionEffect(transaction));
+    final payment = row['payment'] as Json?;
+    if (payment != null) {
+      await db.putRow(ws, e.kind, {
+        ...payment,
+        'debt_id': debtId,
+        'transaction': ?transaction,
+      });
+    }
+    // A debt with writes still queued behind this one already shows them.
+    final later = (await db.entries(ws)).any(
+      (x) =>
+          x.id > e.id &&
+          x.isPending &&
+          (x.entityId == debtId || paymentDebtId(x.kind) == debtId),
+    );
+    final debt = row['debt'] as Json?;
+    if (debt != null && !later) await db.putRow(ws, 'debts', debt);
+  }
+
+  /// How a cached or queued payment row moves its wallet: the transaction
+  /// the API wrote when it has answered, otherwise the payment's own figures
+  /// (an expense for a payable, an income for a receivable).
+  Future<Map<String, Decimal>> paymentEffect(
+    String ws,
+    String debtId,
+    Json? payment,
+  ) async {
+    if (payment == null) return const {};
+    final transaction = payment['transaction'];
+    if (transaction is Json) return transactionEffect(transaction);
+    final wallet = payment['wallet_id'] as String?;
+    if (wallet == null) return const {};
+    final debt = await db.row(ws, 'debts', debtId);
+    final rate = payment['exchange_rate'] as String?;
+    // shortcut: a queued payment in another currency with no rate typed
+    // estimates the wallet amount 1:1 until the API resolves the rate.
+    final amount =
+        Decimal.parse(payment['amount'] as String) *
+        (rate == null ? Decimal.one : Decimal.parse(rate));
+    return transactionEffect({
+      'type': debt?['type'] == 'payable' ? 'expense' : 'income',
+      'amount': '$amount',
+      'wallet_id': wallet,
+    });
+  }
+
   Future<void> _addToBalances(String ws, Map<String, Decimal> delta) async {
     for (final MapEntry(key: id, value: d) in delta.entries) {
       final wallet = await db.row(ws, 'wallets', id);
@@ -340,7 +411,25 @@ class SyncService {
   Future<Map<String, Decimal>> pendingBalanceDeltas(String ws) async {
     final out = <String, Decimal>{};
     for (final e in await db.entries(ws)) {
-      if (e.kind != 'transactions' || !e.isPending) continue;
+      if (!e.isPending) continue;
+      final debtId = paymentDebtId(e.kind);
+      if (debtId != null) {
+        final effect = e.op == QueueOp.delete
+            ? {
+                for (final MapEntry(key: id, value: d) in (await paymentEffect(
+                  ws,
+                  debtId,
+                  e.before,
+                )).entries)
+                  id: -d,
+              }
+            : await paymentEffect(ws, debtId, e.payload);
+        for (final MapEntry(key: id, value: d) in effect.entries) {
+          out[id] = (out[id] ?? Decimal.zero) + d;
+        }
+        continue;
+      }
+      if (e.kind != 'transactions') continue;
       // A transaction body is whole, so it is the row's new side.
       final after = e.op == QueueOp.delete ? null : e.payload;
       for (final MapEntry(key: id, value: d) in transactionDelta(
@@ -400,6 +489,25 @@ class SyncService {
   }
 }
 
+/// The queue kind of a debt's payments. A kind is the request path, so a
+/// payment posts to `/debts/{id}/payments` and a cancel deletes
+/// `/debts/{id}/payments/{payment_id}` (MOB-10).
+String paymentKind(String debtId) => 'debts/$debtId/payments';
+
+/// The debt a payment kind belongs to, or null for any other kind.
+String? paymentDebtId(String kind) {
+  final parts = kind.split('/');
+  return parts.length == 3 && parts[0] == 'debts' && parts[2] == 'payments'
+      ? parts[1]
+      : null;
+}
+
+/// The queue kind of merging contact [id] into another (CON-4).
+String mergeKind(String id) => 'contacts/$id/merge';
+
+bool isMergeKind(String kind) =>
+    kind.startsWith('contacts/') && kind.endsWith('/merge');
+
 /// How a transaction row (a `TransactionView` or a request body) moves the
 /// balance of each wallet it names. Exact decimals only (D12).
 Map<String, Decimal> transactionEffect(Json? row) {
@@ -433,6 +541,14 @@ Map<String, Decimal> transactionDelta(Json? before, Json? after) {
     out[id] = (out[id] ?? Decimal.zero) - d;
   }
   return out;
+}
+
+extension WriteResult on Result<Json?, AppError> {
+  /// Success without the row, for writes that answer nothing useful.
+  Result<void, AppError> discard() => switch (this) {
+    Success() => const Success(null),
+    Failure(:final error) => Failure(error),
+  };
 }
 
 extension SyncWriteResult on Future<Result<Json?, AppError>> {

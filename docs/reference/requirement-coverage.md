@@ -11,9 +11,9 @@ Evidence is, in order of preference: a test file that cites the ID (in a
 name or a comment); a backlog story that names the ID and has its "Verify
 in browser" box ticked; or a written reason it is not done.
 
-- 171 with test evidence
+- 173 with test evidence
 - 29 verified in browser only
-- 19 not done
+- 17 not done
 
 | ID | Evidence |
 |---|---|
@@ -84,12 +84,12 @@ in browser" box ticked; or a written reason it is not done.
 | DEBT-8 | `apps/api/crates/server/src/ai/tool_tests.rs`, `apps/api/crates/server/src/debts/tests.rs`, `apps/api/crates/server/src/mcp/tests.rs` |
 | DEBT-9 | `apps/api/crates/server/src/debts/tests.rs` |
 | DEBT-10 | `apps/api/crates/domain/src/debt.rs`, `apps/api/crates/server/src/debts/tests.rs` |
-| DEBT-11 | not done: the API side is built and tested (US-070); the screen is US-071 |
+| DEBT-11 | not done: specified 2026-11-24 (D120), built in US-071 |
 | DEBT-12 | not done: specified 2026-11-24 (D120), built in US-071 |
-| DEBT-13 | not done: the API side is built and tested (US-070); the screen is US-071 |
+| DEBT-13 | not done: specified 2026-11-24 (D120), built in US-071 |
 | DEBT-14 | not done: specified 2026-11-24 (D120), built in US-072 |
 | DEBT-15 | not done: specified 2026-11-24 (D120), built in US-072 |
-| DEBT-16 | not done: specified 2026-11-24 (D120), built in US-073 |
+| DEBT-16 | `apps/native/test/unit/debt_view_models_test.dart`, `apps/native/test/widget_test.dart` |
 | FB-1 | `apps/api/crates/server/src/main.rs` |
 | FX-1 | `apps/api/crates/server/src/transactions/tests.rs` |
 | FX-2 | `apps/api/crates/server/src/transactions/tests.rs` |
@@ -113,7 +113,7 @@ in browser" box ticked; or a written reason it is not done.
 | MOB-7 | `apps/api/crates/domain/src/error.rs`, `apps/api/crates/server/src/accounts/tests.rs`, `apps/api/crates/server/src/offline.rs`, `apps/api/crates/server/src/transactions/tests.rs`, `apps/native/integration_test/m3_offline_flow_test.dart`, `apps/native/test/unit/offline_sync_test.dart` |
 | MOB-8 | `apps/native/integration_test/m4_ai_flow_test.dart`, `apps/native/test/unit/chat_view_model_test.dart`, `apps/native/test/unit/owe1_stream_test.dart`, `apps/native/test/unit/owe1_vectors_test.dart`, `apps/native/test/unit/receipt_scan_test.dart`, `apps/native/test/unit/vault_repository_remote_test.dart`, `apps/native/test/widget/chat_vault_screens_test.dart` |
 | MOB-9 | `apps/app/src/routes/.well-known/apple-app-site-association/server.test.ts`, `apps/app/src/routes/.well-known/assetlinks.json/server.test.ts`, `apps/native/integration_test/m5_integrations_flow_test.dart`, `apps/native/test/unit/invite_link_test.dart`, `apps/native/test/unit/telegram_view_model_test.dart` |
-| MOB-10 | not done: specified 2026-11-24 (D120), built in US-073 |
+| MOB-10 | `apps/native/test/unit/offline_debts_test.dart` |
 | OPS-1 | `apps/api/crates/server/src/accounts/tests.rs`, `apps/api/crates/server/src/transactions/tests.rs` |
 | OPS-2 | `apps/api/crates/server/src/ai/tests.rs`, `apps/api/crates/server/src/ai/tool_tests.rs` |
 | OPS-3 | `apps/ai/tests/test_chat_stream.py`, `apps/ai/tests/test_extraction_ladder.py`, `apps/ai/tests/test_extraction_pdf.py`, `apps/ai/tests/test_extraction_routes.py`, `apps/api/crates/server/src/ai/tool_tests.rs`, `apps/api/crates/server/src/hardening_tests.rs`, `apps/api/crates/server/src/main.rs`, `apps/api/crates/server/src/transactions/tests.rs` |
