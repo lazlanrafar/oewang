@@ -1074,3 +1074,46 @@ async fn release(gate: sqlx::Transaction<'static, sqlx::Postgres>) {
     tokio::time::sleep(std::time::Duration::from_millis(300)).await;
     gate.commit().await.unwrap();
 }
+
+/// DEBT-8: moving a foreign-entry payment to a wallet in the entry's own
+/// currency is refused for being a payment, not as an invalid foreign entry.
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_refuse_moving_a_foreign_payment_as_locked(pool: PgPool) {
+    fixture(&pool).await;
+    let budi = contact(&pool, "Budi").await;
+    let id = debt_in(&pool, &budi, "payable", "100", Some("USD")).await;
+    let input = PayInput {
+        amount: d("40"),
+        wallet_id: Some(CASH),
+        date: day(20),
+        exchange_rate: Some(d("16000")),
+    };
+    let (paid, _) = service::pay(&pool, actor(), &id, None, input)
+        .await
+        .unwrap();
+    let transaction = paid.transaction.unwrap();
+
+    let moved = TransactionInput {
+        kind: TransactionType::Expense,
+        wallet_id: USD,
+        to_wallet_id: None,
+        category_id: None,
+        amount: d("640000"),
+        to_amount: None,
+        original_amount: Some(d("40")),
+        original_currency_code: Some("USD"),
+        exchange_rate: Some(d("16000")),
+        requested_base_rate: None,
+        date: day(20),
+        name: Some("Budi"),
+        description: None,
+        attachment_ids: None,
+    };
+    let refused = ledger::update(&pool, actor(), &transaction.id, moved, None)
+        .await
+        .unwrap_err();
+    assert!(
+        matches!(refused, AppError::PaymentTransactionLocked),
+        "{refused:?}"
+    );
+}

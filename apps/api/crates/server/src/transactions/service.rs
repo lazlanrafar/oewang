@@ -364,6 +364,7 @@ pub async fn update(
     input: TransactionInput<'_>,
     if_match: Option<DateTime<Utc>>,
 ) -> Result<TransactionRow> {
+    refuse_payment_move(pool, actor.workspace_id, id, &input).await?;
     let prepared = prepare(pool, actor.workspace_id, &input).await?;
 
     let mut tx = pool.begin().await.map_err(internal)?;
@@ -418,6 +419,35 @@ pub async fn update(
     tx.commit().await.map_err(internal)?;
     crate::push::service::budgets_after_write(pool, actor.workspace_id, [after.date]).await;
     Ok(after)
+}
+
+/// The same refusal, before `prepare`: moving a payment to another wallet
+/// or direction would otherwise fail its validation (a foreign entry in the
+/// new wallet's own currency) and the client would learn the wrong reason.
+async fn refuse_payment_move(
+    pool: &PgPool,
+    workspace_id: &str,
+    id: &str,
+    input: &TransactionInput<'_>,
+) -> Result<()> {
+    let Some(before) = repo::find(pool, workspace_id, id).await.map_err(internal)? else {
+        return Ok(());
+    };
+    let moved = before.wallet_id != input.wallet_id
+        || before.r#type != input.kind.as_str()
+        || before.to_wallet_id.as_deref() != input.to_wallet_id
+        || before.original_currency_code.as_deref() != input.original_currency_code;
+    if !moved {
+        return Ok(());
+    }
+    let payments = debts::payments_for_transactions(pool, workspace_id, &[before.id])
+        .await
+        .map_err(internal)?;
+    if payments.is_empty() {
+        Ok(())
+    } else {
+        Err(AppError::PaymentTransactionLocked)
+    }
 }
 
 /// A debt payment's transaction keeps what the payment is: its money, its
