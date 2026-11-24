@@ -1095,3 +1095,74 @@ mod settings {
         );
     }
 }
+
+/// A debt payment paid through `wal_cash`, for the delete-route tests.
+async fn a_debt_payment(pool: &PgPool) -> (String, String) {
+    use crate::{
+        audit::Actor,
+        contacts::service::{self as contacts, ContactInput},
+        debts::service::{self as debts, DebtInput, PayInput},
+    };
+    let actor = Actor::web(WORKSPACE, OWNER);
+    let contact = ContactInput {
+        name: "Budi",
+        email: None,
+        phone: None,
+        note: None,
+    };
+    let (contact, _) = contacts::create_with_id(pool, actor, None, contact)
+        .await
+        .unwrap();
+    let debt = DebtInput {
+        kind: "payable",
+        contact_id: &contact.id,
+        amount: "1000".parse().unwrap(),
+        currency_code: None,
+        due_date: None,
+        description: None,
+        source_transaction_id: None,
+    };
+    let (debt, _) = debts::create_with_id(pool, actor, None, debt)
+        .await
+        .unwrap();
+    let pay = PayInput {
+        amount: "1000".parse().unwrap(),
+        wallet_id: Some("wal_cash"),
+        date: chrono::Utc::now(),
+        exchange_rate: None,
+    };
+    let (paid, _) = debts::pay(pool, actor, &debt.id, None, pay).await.unwrap();
+    (debt.id, paid.transaction.unwrap().id)
+}
+
+/// DEBT-8: the chat's `delete_transaction` cancels the payment it deletes.
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_cancel_a_debt_payment_deleted_through_the_chat_tool(pool: PgPool) {
+    fixture(&pool).await;
+    let turns = store();
+    let (debt_id, transaction_id) = a_debt_payment(&pool).await;
+
+    let challenge = run(
+        &pool,
+        &turns,
+        "delete_transaction",
+        json!({ "transaction_id": transaction_id }),
+    )
+    .await
+    .unwrap_err();
+    assert_eq!(challenge.code(), "CONFIRMATION_REQUIRED");
+    run(
+        &pool,
+        &turns,
+        "delete_transaction",
+        json!({ "transaction_id": transaction_id, "confirmed": true }),
+    )
+    .await
+    .unwrap();
+
+    let debt = crate::debts::service::find(&pool, WORKSPACE, &debt_id)
+        .await
+        .unwrap();
+    assert_eq!(debt.status, "unpaid");
+    assert_eq!(debt.remaining_amount, "1000".parse::<Decimal>().unwrap());
+}

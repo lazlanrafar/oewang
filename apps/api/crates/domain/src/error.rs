@@ -90,6 +90,30 @@ pub enum AppError {
     #[error("no exchange rate could be resolved")]
     FxRateUnavailable,
 
+    // -- debts and contacts (D120, D121)
+    #[error("contact not found")]
+    ContactNotFound,
+    #[error("contact has debts")]
+    ContactHasDebts,
+    #[error("a contact cannot be merged into itself")]
+    ContactMergeSelf,
+    #[error("debt not found")]
+    DebtNotFound,
+    #[error("payment not found")]
+    PaymentNotFound,
+    #[error("debt has payments")]
+    DebtHasPayments,
+    #[error("amount is below what is already paid")]
+    AmountBelowPaid,
+    #[error("payment exceeds the remaining amount")]
+    PaymentExceedsRemaining,
+    #[error("every debt must be in the wallet's currency")]
+    BulkPayCurrencyMismatch,
+    #[error("split source is not an expense")]
+    SplitSourceNotExpense,
+    #[error("this transaction is a debt payment")]
+    PaymentTransactionLocked,
+
     // -- files
     #[error("file too large")]
     FileTooLarge,
@@ -197,6 +221,17 @@ impl AppError {
             Stale(_) => "STALE",
             ImportJobNotFound => "IMPORT_JOB_NOT_FOUND",
             FxRateUnavailable => "FX_RATE_UNAVAILABLE",
+            ContactNotFound => "CONTACT_NOT_FOUND",
+            ContactHasDebts => "CONTACT_HAS_DEBTS",
+            ContactMergeSelf => "CONTACT_MERGE_SELF",
+            DebtNotFound => "DEBT_NOT_FOUND",
+            PaymentNotFound => "PAYMENT_NOT_FOUND",
+            DebtHasPayments => "DEBT_HAS_PAYMENTS",
+            AmountBelowPaid => "AMOUNT_BELOW_PAID",
+            PaymentExceedsRemaining => "PAYMENT_EXCEEDS_REMAINING",
+            BulkPayCurrencyMismatch => "BULK_PAY_CURRENCY_MISMATCH",
+            SplitSourceNotExpense => "SPLIT_SOURCE_NOT_EXPENSE",
+            PaymentTransactionLocked => "PAYMENT_TRANSACTION_LOCKED",
             FileTooLarge => "FILE_TOO_LARGE",
             UnsupportedFileType => "UNSUPPORTED_FILE_TYPE",
             FileNotFound => "FILE_NOT_FOUND",
@@ -239,10 +274,13 @@ impl AppError {
             | ConfirmationRequired(_)
             | ToolCapExceeded
             | IdTaken
-            | Stale(_) => 409,
+            | Stale(_)
+            | ContactHasDebts
+            | DebtHasPayments
+            | PaymentTransactionLocked => 409,
             InviteInvalid | ResetTokenInvalid | NotFound | WalletNotFound | CategoryNotFound
             | TransactionNotFound | ImportJobNotFound | FileNotFound | ThumbnailUnavailable
-            | SessionNotFound => 404,
+            | SessionNotFound | ContactNotFound | DebtNotFound | PaymentNotFound => 404,
             Validation(_)
             | TransferRequiresDestination
             | TransferSameWallet
@@ -252,7 +290,12 @@ impl AppError {
             | ReceiptUnreadable
             | StatementUnreadable
             | SpreadsheetUnreadable
-            | ToolArgsInvalid(_) => 422,
+            | ToolArgsInvalid(_)
+            | ContactMergeSelf
+            | AmountBelowPaid
+            | PaymentExceedsRemaining
+            | BulkPayCurrencyMismatch
+            | SplitSourceNotExpense => 422,
             MalformedRequest
             | WorkspaceIdNotAllowed
             | CryptoDecryptFailed
@@ -300,6 +343,12 @@ impl AppError {
                 "Compare with details.current, then discard the change or send it again without If-Match."
             }
             FxRateUnavailable => "Enter the exchange rate by hand.",
+            ContactHasDebts => "Delete its debts, or merge it into another contact.",
+            DebtHasPayments => "Cancel its payments first.",
+            AmountBelowPaid => "Enter at least the amount already paid.",
+            PaymentExceedsRemaining => "Pay at most the remaining amount.",
+            BulkPayCurrencyMismatch => "Pay debts in another currency separately.",
+            PaymentTransactionLocked => "Change the payment from its debt instead.",
             FileTooLarge => "The limit is 10 MB.",
             UnsupportedFileType => "Accepted: JPEG, PNG, WebP and PDF.",
             SpreadsheetUnreadable => "Save it as .xlsx again, or export it as CSV.",
@@ -457,12 +506,23 @@ mod tests {
             AppError::ConfirmationRequired(FieldErrors::new()),
             AppError::ToolCapExceeded,
             AppError::TelegramDisabled,
+            AppError::ContactNotFound,
+            AppError::ContactHasDebts,
+            AppError::ContactMergeSelf,
+            AppError::DebtNotFound,
+            AppError::PaymentNotFound,
+            AppError::DebtHasPayments,
+            AppError::AmountBelowPaid,
+            AppError::PaymentExceedsRemaining,
+            AppError::BulkPayCurrencyMismatch,
+            AppError::SplitSourceNotExpense,
+            AppError::PaymentTransactionLocked,
             AppError::Internal(anyhow::anyhow!("boom")),
         ];
 
         // Every catalog entry but TRANSPORT_UNEXPECTED_RESPONSE, a
         // client-side condition with no server variant by design.
-        assert_eq!(samples.len(), 55);
+        assert_eq!(samples.len(), 66);
 
         let mut seen = std::collections::HashSet::new();
         for error in &samples {

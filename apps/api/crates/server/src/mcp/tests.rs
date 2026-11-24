@@ -548,3 +548,64 @@ async fn should_audit_a_tool_write_with_source_mcp(pool: PgPool) {
     assert_eq!(user_id, USER, "the person, not the app that called");
     assert_eq!(source, "mcp");
 }
+
+/// DEBT-8: MCP's `delete_transaction` runs the web's delete, which cancels
+/// the debt payment it deletes.
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_cancel_a_debt_payment_deleted_through_the_mcp_tool(pool: PgPool) {
+    use crate::{
+        contacts::service::{self as contacts, ContactInput},
+        debts::service::{self as debts, DebtInput, PayInput},
+    };
+    fixture(&pool).await;
+    sqlx::query(
+        "INSERT INTO wallets (id, workspace_id, name, currency_code) VALUES ('w_mcp', 'ws_a', 'Cash', 'IDR')",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+    let contact = ContactInput {
+        name: "Budi",
+        email: None,
+        phone: None,
+        note: None,
+    };
+    let (contact, _) = contacts::create_with_id(&pool, actor(), None, contact)
+        .await
+        .unwrap();
+    let debt = DebtInput {
+        kind: "receivable",
+        contact_id: &contact.id,
+        amount: "500".parse().unwrap(),
+        currency_code: None,
+        due_date: None,
+        description: None,
+        source_transaction_id: None,
+    };
+    let (debt, _) = debts::create_with_id(&pool, actor(), None, debt)
+        .await
+        .unwrap();
+    let pay = PayInput {
+        amount: "200".parse().unwrap(),
+        wallet_id: Some("w_mcp"),
+        date: chrono::Utc::now(),
+        exchange_rate: None,
+    };
+    let (paid, _) = debts::pay(&pool, actor(), &debt.id, None, pay)
+        .await
+        .unwrap();
+    let transaction_id = paid.transaction.unwrap().id;
+
+    let state = state(&pool);
+    let who = caller("tok_debt", Some(vec!["ws_a".into()]));
+    let args = json!({ "id": transaction_id });
+    let first = service::call(&state, &who, "req_1", "delete_transaction", args.clone()).await;
+    assert!(matches!(first, Err(AppError::ConfirmationRequired(_))));
+    let confirmed = json!({ "id": transaction_id, "confirmed": true });
+    service::call(&state, &who, "req_2", "delete_transaction", confirmed)
+        .await
+        .unwrap();
+
+    let after = debts::find(&pool, "ws_a", &debt.id).await.unwrap();
+    assert_eq!(after.status, "unpaid");
+}

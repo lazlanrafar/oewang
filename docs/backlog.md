@@ -944,21 +944,21 @@ Requirements: DEBT-1 to DEBT-16, CON-1 to CON-4, MOB-10
 ### US-070: Contacts, debts and payments in the API (OEW-107)
 Requirements: CON-1, CON-3, CON-4, DEBT-1 to DEBT-10
 
-- [ ] Migration 0020: `contacts`, `debts`, `debt_payments` with the amount, remaining and status `CHECK`s; every write audited in its transaction (Rust tests)
-- [ ] Status derived from the remaining amount; `AMOUNT_BELOW_PAID`; type and currency fixed and delete refused with `DEBT_HAS_PAYMENTS` (Rust tests)
-- [ ] A payment writes an expense for a payable and an income for a receivable, none without a wallet; `PAYMENT_EXCEEDS_REMAINING` (Rust tests)
-- [ ] Two concurrent payments cannot together exceed the remaining amount (Rust test with two connections)
-- [ ] A payment from a wallet in another currency stores `original_amount`, `original_currency_code` and the rate, and the remaining drops in the debt's currency (Rust test)
-- [ ] Bulk pay writes one transaction per debt and is all or nothing: one failing debt leaves every balance and remaining amount as it was; `BULK_PAY_CURRENCY_MISMATCH` (Rust tests)
-- [ ] Cancelling a payment soft-deletes its transaction, reverses the balance and restores remaining and status (Rust test)
-- [ ] Every transaction delete route cancels the payment: single delete, bulk delete, the chat tool and the MCP tool (one Rust test each)
-- [ ] `PAYMENT_TRANSACTION_LOCKED` on amount, wallet, type, destination, original and rate changes; items, name, description, category, date and attachments still edit (Rust tests)
-- [ ] Deleting a debt's source transaction clears the link and leaves the debt (Rust test)
-- [ ] Split bill: 100,000 IDR between the person and two contacts gives 33,333 each with the remainder left to the person; 10.00 USD in three gives 3.33; names matched case-insensitively, duplicates dropped, unknown names created, 0 or 21 contacts refused (Rust tests)
-- [ ] A create replayed with the same client `id` answers the first row and pays once (D114, Rust test); `If-Match` on debt and contact `PATCH` (D115)
-- [ ] `CONTACT_HAS_DEBTS`; merge moves live debts and soft-deletes the merged contact (Rust tests)
-- [ ] Summary figures in the workspace currency and the overdue count against `?today=` (Rust tests)
-- [ ] clippy and `cargo test` pass in the containers
+- [x] Migration 0020: `contacts`, `debts`, `debt_payments` with the amount, remaining and status `CHECK`s; every write audited in its transaction (Rust tests)
+- [x] Status derived from the remaining amount; `AMOUNT_BELOW_PAID`; type and currency fixed and delete refused with `DEBT_HAS_PAYMENTS` (Rust tests)
+- [x] A payment writes an expense for a payable and an income for a receivable, none without a wallet; `PAYMENT_EXCEEDS_REMAINING` (Rust tests)
+- [x] Two concurrent payments cannot together exceed the remaining amount (Rust test with two connections)
+- [x] A payment from a wallet in another currency stores `original_amount`, `original_currency_code` and the rate, and the remaining drops in the debt's currency (Rust test)
+- [x] Bulk pay writes one transaction per debt and is all or nothing: one failing debt leaves every balance and remaining amount as it was; `BULK_PAY_CURRENCY_MISMATCH` (Rust tests)
+- [x] Cancelling a payment soft-deletes its transaction, reverses the balance and restores remaining and status (Rust test)
+- [x] Every transaction delete route cancels the payment: single delete, bulk delete, the chat tool and the MCP tool (one Rust test each)
+- [x] `PAYMENT_TRANSACTION_LOCKED` on amount, wallet, type, destination, original and rate changes; items, name, description, category, date and attachments still edit (Rust tests)
+- [x] Deleting a debt's source transaction clears the link and leaves the debt (Rust test)
+- [x] Split bill: 100,000 IDR between the person and two contacts gives 33,333 each with the remainder left to the person; 10.00 USD in three gives 3.33; names matched case-insensitively, duplicates dropped, unknown names created, 0 or 21 contacts refused (Rust tests)
+- [x] A create replayed with the same client `id` answers the first row and pays once (D114, Rust test); `If-Match` on debt and contact `PATCH` (D115)
+- [x] `CONTACT_HAS_DEBTS`; merge moves live debts and soft-deletes the merged contact (Rust tests)
+- [x] Summary figures in the workspace currency and the overdue count against `?today=` (Rust tests)
+- [x] clippy and `cargo test` pass in the containers
 
 ### US-071: Debts and contacts pages in the web app (OEW-108)
 Requirements: CON-2, DEBT-11, DEBT-12, DEBT-13

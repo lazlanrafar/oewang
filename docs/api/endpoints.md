@@ -218,7 +218,9 @@ D120 and D121, DEBT-1 to DEBT-10. Rules in [features/debts.md](../features/debts
 
 ### `GET /v1/debts/summary` response
 
-`{ currency_code, owed_to_you, you_owe, net, overdue_count }`. `owed_to_you` sums the remaining amount of live receivables, `you_owe` of live payables, each converted to the workspace currency as `GET /v1/wallets/totals` does (D117); `net` is the first minus the second. `overdue_count` counts unpaid and partial debts whose `due_date` is before `today`. The cards cover every debt, whatever the list's filters.
+`{ currency_code, owed_to_you, you_owe, net, open_count, overdue_count, left_out }`, each money field with its `_formatted` twin (`net_formatted` signed). `owed_to_you` sums the remaining amount of live receivables, `you_owe` of live payables, each converted to the workspace currency as `GET /v1/wallets/totals` does (D117); `net` is the first minus the second. `open_count` counts unpaid and partial debts, `overdue_count` those whose `due_date` is before `today`, and `left_out` the currencies with no stored rate to the workspace currency, whose debts are not in the sums. The cards cover every debt, whatever the list's filters.
+
+A debt answers with `paid_amount` and `overdue` beside its stored figures, each money field with a `_formatted` twin. `GET /v1/debts/{id}` adds `payments` and `source_transaction`. `GET /v1/transactions/{id}/debts` answers `{ debts, payment }`: the debts made from the transaction, and `{ payment, debt }` when the transaction is a payment, otherwise null.
 
 ### `POST /v1/debts/{id}/payments` body
 
@@ -232,11 +234,11 @@ D120 and D121, DEBT-1 to DEBT-10. Rules in [features/debts.md](../features/debts
 }
 ```
 
-`amount` is in the debt's currency, above zero and at most the remaining amount (`PAYMENT_EXCEEDS_REMAINING`). `id`, `wallet_id` and `exchange_rate` are optional. With `wallet_id` the API writes one transaction (`expense` for a payable, `income` for a receivable); when the wallet's currency differs from the debt's, the payment is its `original_amount`, and `exchange_rate`, when absent, resolves as any transaction's does ([rate resolution](../data-model.md#rate-resolution-at-write-time)). Answers `201 { payment, debt, transaction }`, `transaction` null without a wallet.
+`amount` is in the debt's currency, above zero and at most the remaining amount (`PAYMENT_EXCEEDS_REMAINING`). `id`, `wallet_id`, `date` (default: now) and `exchange_rate` are optional. With `wallet_id` the API writes one transaction (`expense` for a payable, `income` for a receivable); when the wallet's currency differs from the debt's, the payment is its `original_amount`, and `exchange_rate`, when absent, resolves as any transaction's does ([rate resolution](../data-model.md#rate-resolution-at-write-time)). Answers `201 { payment, debt, transaction }`, `transaction` null without a wallet; a repeated client `id` answers `200` with the first call's payment (D114). A debt whose type or currency changed between the read and the lock answers `409 STALE`; send it again.
 
 ### `POST /v1/debts/bulk-pay` body
 
-`{ "wallet_id"?, "date", "payments": [{ "id"?, "debt_id", "amount" }] }`, 1 to 50 payments. Each follows the single payment's rules. With a wallet, every debt must be in its currency, otherwise `BULK_PAY_CURRENCY_MISMATCH`. Any refusal refuses the whole call.
+`{ "wallet_id"?, "date"?, "payments": [{ "id"?, "debt_id", "amount" }] }`, 1 to 50 payments. Answers a list of `{ payment, debt, transaction }`. When every payment carries a client `id` already taken by this workspace, the call is a replay and answers `200` with what the first call wrote; some but not all is `ID_TAKEN`. Each follows the single payment's rules. With a wallet, every debt must be in its currency, otherwise `BULK_PAY_CURRENCY_MISMATCH`. Any refusal refuses the whole call.
 
 ### `POST /v1/debts/split` body
 

@@ -1,6 +1,6 @@
 # Feature: Debts and contacts
 
-Status: specified, 2026-11-24, not built. Part of the [oewang docs](../README.md). Implements [PRD](../prd.md#620-debts-debt) DEBT-1 to DEBT-16 and CON-1 to CON-4. Decisions: [D120, D121 and D122](../architecture.md#decision-log). Stories: US-069 to US-073 (epic OEW-105).
+Status: API built 2026-11-24 (US-070); screens, tools and mobile not built. Part of the [oewang docs](../README.md). Implements [PRD](../prd.md#620-debts-debt) DEBT-1 to DEBT-16 and CON-1 to CON-4. Decisions: [D120, D121 and D122](../architecture.md#decision-log). Stories: US-069 to US-073 (epic OEW-105).
 
 A debt records money owed between the person and one contact: `payable` when they owe it, `receivable` when it is owed to them. Payments bring the remaining amount down to zero. A payment made through a wallet writes the transaction that moves the money; everything else about a debt is bookkeeping that no balance sees. Ported from the old app's debts and contacts, with its bugs fixed rather than carried.
 
@@ -29,7 +29,7 @@ A debt records money owed between the person and one contact: `payable` when the
 | A debt made from a transaction keeps `origin = from_transaction`. Deleting the source clears `source_transaction_id`; the debt is untouched (D121) | `transactions::service::delete` |
 | Deleting a contact with a live debt, paid or not, is `CONTACT_HAS_DEBTS` | `contacts::service::delete` |
 | Merging contact A into B moves A's live debts to B and soft-deletes A, in one transaction | `contacts::service::merge` |
-| Every write leaves an audit row in the same transaction: `contact.*`, `debt.created`, `debt.updated`, `debt.deleted`, `debt.paid`, `debt.payment_cancelled`, plus the transaction's own `transaction.created` or `transaction.deleted` | `audit::log` |
+| Every write leaves an audit row in the same transaction: `contact.created`, `.updated`, `.deleted`, `.merged`; `debt.created`, `debt.updated`, `debt.deleted`; `debt.paid` and `debt.payment_cancelled` on the payment (entity `debt_payment`) with a `debt.updated` on its debt; plus the transaction's own `transaction.created` or `transaction.deleted` | `audit::log` |
 | Admins and owners write; members read (Role) | Auth extractor |
 
 `remaining_amount` and `status` are stored, not computed per read, because the list filters and sorts on them. Only the debt service writes them, inside the payment's transaction.

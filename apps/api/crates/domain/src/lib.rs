@@ -8,6 +8,7 @@
 pub mod auth;
 pub mod budget;
 pub mod csv_import;
+pub mod debt;
 pub mod envelope;
 pub mod error;
 pub mod files;

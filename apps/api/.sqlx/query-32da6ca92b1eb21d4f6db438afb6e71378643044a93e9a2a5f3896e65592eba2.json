@@ -1,0 +1,47 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT type AS \"type!\", currency_code, sum(remaining_amount) AS \"remaining!\"\n           FROM debts\n           WHERE workspace_id = $1 AND deleted_at IS NULL AND status <> 'paid'\n           GROUP BY type, currency_code\n           ORDER BY type, currency_code",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "type!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "debts",
+            "name": "type"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "currency_code",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "debts",
+            "name": "currency_code"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "remaining!",
+        "type_info": "Numeric",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      null
+    ]
+  },
+  "hash": "32da6ca92b1eb21d4f6db438afb6e71378643044a93e9a2a5f3896e65592eba2"
+}

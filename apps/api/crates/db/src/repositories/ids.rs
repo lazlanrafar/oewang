@@ -1,10 +1,10 @@
-//! Who holds an id, across the three tables a client may name ids in (D114).
+//! Who holds an id, across the tables a client may name ids in (D114).
 
 use sqlx::PgExecutor;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct IdHolder {
-    /// `transaction`, `wallet` or `category`.
+    /// `transaction`, `wallet`, `category`, `contact`, `debt` or `debt_payment`.
     pub kind: String,
     pub workspace_id: String,
 }
@@ -26,6 +26,12 @@ pub async fn holder(
            SELECT 'wallet', workspace_id FROM wallets WHERE id = $1
            UNION ALL
            SELECT 'category', workspace_id FROM categories WHERE id = $1
+           UNION ALL
+           SELECT 'contact', workspace_id FROM contacts WHERE id = $1
+           UNION ALL
+           SELECT 'debt', workspace_id FROM debts WHERE id = $1
+           UNION ALL
+           SELECT 'debt_payment', workspace_id FROM debt_payments WHERE id = $1
            LIMIT 1"#,
         id
     )

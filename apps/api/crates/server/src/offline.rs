@@ -22,6 +22,9 @@ use crate::response::{ApiError, RequestId};
 pub const TRANSACTION: &str = "transaction";
 pub const WALLET: &str = "wallet";
 pub const CATEGORY: &str = "category";
+pub const CONTACT: &str = "contact";
+pub const DEBT: &str = "debt";
+pub const DEBT_PAYMENT: &str = "debt_payment";
 
 // ------------------------------------------------------------- client ids
 

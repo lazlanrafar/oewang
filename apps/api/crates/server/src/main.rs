@@ -10,6 +10,8 @@ mod audit;
 mod auth;
 mod budgets;
 mod config;
+mod contacts;
+mod debts;
 mod feedback;
 mod fx;
 #[cfg(test)]
@@ -457,6 +459,37 @@ fn protected_routes(state: AppState) -> Router<AppState> {
             "/v1/budgets/{id}",
             axum::routing::patch(budgets::handler::update).delete(budgets::handler::delete),
         )
+        // Contacts and debts (D120, D121). The fixed sub-paths come before
+        // `{id}`, so `/summary` is never read as a debt id.
+        .route(
+            "/v1/contacts",
+            get(contacts::handler::list).post(contacts::handler::create),
+        )
+        .route(
+            "/v1/contacts/{id}",
+            get(contacts::handler::get)
+                .patch(contacts::handler::update)
+                .delete(contacts::handler::delete),
+        )
+        .route("/v1/contacts/{id}/merge", post(contacts::handler::merge))
+        .route(
+            "/v1/debts",
+            get(debts::handler::list).post(debts::handler::create),
+        )
+        .route("/v1/debts/summary", get(debts::handler::summary))
+        .route("/v1/debts/bulk-pay", post(debts::handler::bulk_pay))
+        .route("/v1/debts/split", post(debts::handler::split))
+        .route(
+            "/v1/debts/{id}",
+            get(debts::handler::get)
+                .patch(debts::handler::update)
+                .delete(debts::handler::delete),
+        )
+        .route("/v1/debts/{id}/payments", post(debts::handler::pay))
+        .route(
+            "/v1/debts/{id}/payments/{payment_id}",
+            axum::routing::delete(debts::handler::cancel_payment),
+        )
         // MCP (D106): the JSON-RPC endpoint the app's `/mcp` relays, and
         // the account area's tokens and connected apps.
         .route("/v1/mcp", post(mcp::handler::rpc))
@@ -547,6 +580,10 @@ fn protected_routes(state: AppState) -> Router<AppState> {
         .route(
             "/v1/transactions/{id}/history",
             get(transactions::handler::history),
+        )
+        .route(
+            "/v1/transactions/{id}/debts",
+            get(debts::handler::for_transaction),
         )
         .route(
             "/v1/transactions/{id}/items",

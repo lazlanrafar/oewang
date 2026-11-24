@@ -10,7 +10,7 @@
 
 use chrono::{DateTime, NaiveDate, Utc};
 use oewang_db::{
-    repositories::{accounts, audit, categories, transactions as repo, vault, wallets},
+    repositories::{accounts, audit, categories, debts, transactions as repo, vault, wallets},
     PgPool,
 };
 use oewang_domain::{
@@ -79,7 +79,7 @@ pub struct TransactionInput<'a> {
 }
 
 /// Everything the service worked out before it opened a transaction.
-struct Prepared {
+pub(crate) struct Prepared {
     shape: TransactionShape,
     foreign: Option<ForeignEntry>,
     /// What the source wallet's balance is denominated in. Carried here
@@ -252,18 +252,7 @@ async fn insert_with_items(
     let prepared = prepare(pool, actor.workspace_id, &input).await?;
 
     let mut tx = pool.begin().await.map_err(internal)?;
-    ensure_currency(&mut tx, actor.workspace_id, &prepared.workspace_currency).await?;
-
-    // Wallets are locked before the insert, never after: the insert's
-    // foreign keys take a share lock on them, and two creates that each hold
-    // that share lock and then ask for the update lock deadlock.
-    let moves = net(prepared.shape.effect());
-    apply_moves(&mut tx, actor.workspace_id, &moves).await?;
-
-    let Some(row) = repo::insert(&mut *tx, new_row(id, actor, &input, &prepared, None))
-        .await
-        .map_err(internal)?
-    else {
+    let Some(row) = write_row(&mut tx, actor, id, &input, &prepared).await? else {
         return Ok(None);
     };
 
@@ -309,6 +298,53 @@ async fn insert_with_items(
     Ok(Some(row))
 }
 
+/// Lock the wallets, move the balances and insert the row, on the caller's
+/// transaction. `None` when `id` is already taken.
+async fn write_row(
+    tx: &mut Transaction<'_, Postgres>,
+    actor: Actor<'_>,
+    id: &str,
+    input: &TransactionInput<'_>,
+    prepared: &Prepared,
+) -> Result<Option<TransactionRow>> {
+    ensure_currency(tx, actor.workspace_id, &prepared.workspace_currency).await?;
+
+    // Wallets are locked before the insert, never after: the insert's
+    // foreign keys take a share lock on them, and two creates that each hold
+    // that share lock and then ask for the update lock deadlock.
+    let moves = net(prepared.shape.effect());
+    apply_moves(tx, actor.workspace_id, &moves).await?;
+
+    repo::insert(&mut **tx, new_row(id, actor, input, prepared, None))
+        .await
+        .map_err(internal)
+}
+
+/// A create inside someone else's database transaction: a debt payment
+/// writes its transaction and its payment row together, or neither (D121).
+/// `prepared` comes from [`prepare`], run before that transaction opened.
+pub(crate) async fn write_created(
+    tx: &mut Transaction<'_, Postgres>,
+    actor: Actor<'_>,
+    input: &TransactionInput<'_>,
+    prepared: &Prepared,
+) -> Result<TransactionRow> {
+    let row = write_row(tx, actor, &cuid2::create_id(), input, prepared)
+        .await?
+        .ok_or_else(|| AppError::Internal(anyhow::anyhow!("a generated id was already taken")))?;
+    log(
+        tx,
+        actor,
+        "transaction.created",
+        ENTITY,
+        &row.id,
+        None,
+        snapshot(&row)?,
+    )
+    .await?;
+    Ok(row)
+}
+
 // ------------------------------------------------------------------ update
 
 /// Reverse the old effect, apply the new one, atomically (TXN-4).
@@ -344,6 +380,7 @@ pub async fn update(
         );
     };
     offline::check(if_match, before.updated_at)?;
+    refuse_payment_change(&mut tx, actor.workspace_id, &before, &prepared).await?;
 
     let old_effect = effect_of(&before)?;
     let moves = net(reverse(&old_effect)
@@ -381,6 +418,39 @@ pub async fn update(
     tx.commit().await.map_err(internal)?;
     crate::push::service::budgets_after_write(pool, actor.workspace_id, [after.date]).await;
     Ok(after)
+}
+
+/// A debt payment's transaction keeps what the payment is: its money, its
+/// wallet and its direction. Name, category, date, items and attachments
+/// stay editable (DEBT-8, D121).
+async fn refuse_payment_change(
+    tx: &mut Transaction<'_, Postgres>,
+    workspace_id: &str,
+    before: &TransactionRow,
+    prepared: &Prepared,
+) -> Result<()> {
+    let foreign = prepared.foreign.as_ref();
+    let unchanged = before.amount == prepared.shape.amount
+        && before.wallet_id == prepared.shape.wallet_id
+        && before.r#type == prepared.shape.kind.as_str()
+        && before.to_wallet_id == prepared.shape.to_wallet_id
+        && before.original_amount == foreign.map(|f| f.original_amount)
+        && before.original_currency_code.as_deref()
+            == foreign.map(|f| f.original_currency_code.as_str())
+        && before.exchange_rate == foreign.map(|f| f.exchange_rate);
+    if unchanged {
+        return Ok(());
+    }
+
+    let ids = [before.id.clone()];
+    let payments = debts::payments_for_transactions(&mut **tx, workspace_id, &ids)
+        .await
+        .map_err(internal)?;
+    if payments.is_empty() {
+        Ok(())
+    } else {
+        Err(AppError::PaymentTransactionLocked)
+    }
 }
 
 /// Make the join rows match the set the client sent (TXN-13).
@@ -428,21 +498,32 @@ async fn sync_attachments(
 /// Soft delete, reversing the balance it moved (TXN-5).
 pub async fn delete(pool: &PgPool, actor: Actor<'_>, id: &str) -> Result<()> {
     let mut tx = pool.begin().await.map_err(internal)?;
+    delete_in(&mut tx, actor, id).await?;
+    tx.commit().await.map_err(internal)?;
+    Ok(())
+}
 
-    let before = repo::find(&mut *tx, actor.workspace_id, id)
+/// The delete on the caller's transaction. Cancelling a debt payment comes
+/// through here too, so a payment and its transaction always go together.
+pub(crate) async fn delete_in(
+    tx: &mut Transaction<'_, Postgres>,
+    actor: Actor<'_>,
+    id: &str,
+) -> Result<()> {
+    let before = repo::find(&mut **tx, actor.workspace_id, id)
         .await
         .map_err(internal)?
         .ok_or(AppError::TransactionNotFound)?;
 
     let moves = net(reverse(&effect_of(&before)?));
-    apply_moves(&mut tx, actor.workspace_id, &moves).await?;
+    apply_moves(tx, actor.workspace_id, &moves).await?;
 
-    repo::soft_delete(&mut *tx, actor.workspace_id, id)
+    repo::soft_delete(&mut **tx, actor.workspace_id, id)
         .await
         .map_err(internal)?;
 
     log(
-        &mut tx,
+        tx,
         actor,
         "transaction.deleted",
         ENTITY,
@@ -452,8 +533,7 @@ pub async fn delete(pool: &PgPool, actor: Actor<'_>, id: &str) -> Result<()> {
     )
     .await?;
 
-    tx.commit().await.map_err(internal)?;
-    Ok(())
+    crate::debts::service::release_transactions(tx, actor, &[id.to_string()]).await
 }
 
 // -------------------------------------------------------------------- bulk
@@ -813,6 +893,9 @@ pub async fn bulk_delete(pool: &PgPool, actor: Actor<'_>, ids: &[String]) -> Res
         .await?;
     }
 
+    let deleted: Vec<String> = rows.iter().map(|row| row.id.clone()).collect();
+    crate::debts::service::release_transactions(&mut tx, actor, &deleted).await?;
+
     tx.commit().await.map_err(internal)?;
     Ok(rows.len())
 }
@@ -913,7 +996,7 @@ fn quote(value: &str) -> String {
 /// Everything that can be worked out before the transaction opens,
 /// including the rate lookup, so the transaction holds its locks only for
 /// the writes.
-async fn prepare(
+pub(crate) async fn prepare(
     pool: &PgPool,
     workspace_id: &str,
     input: &TransactionInput<'_>,
