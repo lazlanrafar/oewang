@@ -1,0 +1,6 @@
+{
+  "API_URL": "http://10.0.2.2:3002",
+  "OWE1_SIGNING_KEYS": "k-QM_3pvmdq-vR:R9lb-h2ZeHpITjsEg3YFq3F2XXuo_SWO7aE3IpUesw0",
+  "APP_URL": "http://10.0.2.2:3000",
+  "SENTRY_DSN": ""
+}

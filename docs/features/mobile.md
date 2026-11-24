@@ -44,7 +44,9 @@ Set at build time with `--dart-define-from-file=env/<name>.json`, never from a b
 | `SENTRY_DSN` | Empty disables Sentry |
 | `PASSKEYS_ANDROID` | `true` shows the passkey buttons on Android. Absent or `false` (the default) hides them. Set it in `env/prod.json` only once `ANDROID_CERT_SHA256` holds the release signing key (D119, [Deployment, Mobile](../deployment.md#mobile)) |
 
-`apps/native/env/dev.json` is committed for the local stack (iOS simulator on `localhost:3002`). Its key is the one the local API generated on first start, so on another machine replace it with what `GET http://localhost:3002/.well-known/oewang-keys` answers. `apps/native/env/prod.json` is committed too and is what the store builds use; the release workflow checks it against production ([Deployment, Mobile](../deployment.md#mobile)). Other environments' files are gitignored and made where the app is built.
+`apps/native/env/dev.json` is committed for the local stack (iOS simulator on `localhost:3002`), and `apps/native/env/dev-android.json` is the same file for the Android emulator, which reaches the host at `10.0.2.2`. Their key is the one the local API generated on first start, so on another machine replace it in both with what `GET http://localhost:3002/.well-known/oewang-keys` answers.
+
+Plain HTTP to the local stack is allowed in debug builds only: `android/app/src/debug/` holds a network security config that permits cleartext to `10.0.2.2` and `localhost`, so a release build keeps Android's HTTPS-only default. Dart's own `HttpClient` does not consult that policy (the API calls worked without it); it covers anything going through the platform's network stack. `apps/native/env/prod.json` is committed too and is what the store builds use; the release workflow checks it against production ([Deployment, Mobile](../deployment.md#mobile)). Other environments' files are gitignored and made where the app is built.
 
 Public keys are not secrets. The FCM config files (`google-services.json`, `GoogleService-Info.plist`) are committed as the old app did; they identify the Firebase project and grant nothing.
 
@@ -191,6 +193,25 @@ fvm flutter drive -d <simulator id> \
 ```
 
 Without `M4_EMAIL` it signs up a new account and prints the credentials. The receipt step accepts either outcome: the prefilled form, saved, or the queue offer when the reader does not answer; the run prints `M4_RECEIPT` with which one happened.
+
+### On an Android emulator
+
+The same flows run on an emulator (Pixel 8, API 36 image with Play services) against the local stack, with `env/dev-android.json` and `-d emulator-5554`. What differs from the simulator:
+
+- **Host side.** An emulator's `/tmp` is not the Mac's, and its screen and keys are reached through adb. Pipe the run into `integration_test/android_host.sh`: it echoes the output, saves `adb exec-out screencap` to `$SHOTS/<name>.png` on each screenshot line (`M2SHOT`, `M3SHOT`, `M4_SHOT`, `M5MARK`) and presses the system back key on `BACKKEY`. M2 prints `M2SHOT` when it cannot write its request file. M1 uses the binding's own screenshots, which on Android need the surface swapped for an image once; the test does that.
+- **Fixtures.** Push them where the app can read them: `adb shell mkdir -p /data/local/tmp/oew-fixtures && adb push integration_test/fixtures/* /data/local/tmp/oew-fixtures/`, then `--dart-define=FIXTURES=/data/local/tmp/oew-fixtures`. `flutter drive` uninstalls the app after each run, so nothing can be put in the app's own directories beforehand.
+- **Passkeys.** M5 expects the passkey buttons exactly where the device offers them: on Android only in a `PASSKEYS_ANDROID=true` build (D119).
+- **Back key.** `integration_test/android_back_flow_test.dart` presses the real back key (through the host script) over the add form's keypad panel, the form, a pushed settings screen, the workspace sheet, the log-out dialog, and two chat screens with the keyboard up. Each press closes only what is on top. It signs in as an existing owner: `--dart-define=BACK_EMAIL=... --dart-define=BACK_PASSWORD=...`. Back at a tab's root leaves the app, so that one is checked by hand.
+- **Gboard.** Its "Try out your stylus" card can cover the screen after a pointer tap on a text field; `adb shell settings put secure stylus_handwriting_enabled 0` keeps it away from screenshots.
+
+```bash
+fvm flutter drive -d emulator-5554 \
+  --driver=test_driver/integration_test.dart \
+  --target=integration_test/m3_offline_flow_test.dart \
+  --dart-define-from-file=env/dev-android.json \
+  --dart-define=M3_EMAIL=<email> --dart-define=M3_PASSWORD=<password> \
+  2>&1 | SHOTS=/tmp/oew-android/m3 integration_test/android_host.sh
+```
 
 `scripts/ci-local.sh` runs the analyzer and `flutter test` in its `native` stage; the device flows run by hand.
 

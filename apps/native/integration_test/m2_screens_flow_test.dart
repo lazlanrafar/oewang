@@ -20,7 +20,8 @@
 //
 // Evidence: at each `snap` the test writes /tmp/oew-m2/req-<name> and holds
 // the screen; a host loop answers with `xcrun simctl io <udid> screenshot`.
-// `binding.takeScreenshot` goes blank once the keyboard has opened.
+// On Android, where that path is not the host's, it prints `M2SHOT <name>`
+// instead. `binding.takeScreenshot` goes blank once the keyboard has opened.
 
 import 'dart:io';
 
@@ -134,6 +135,12 @@ void main() {
     try {
       req.writeAsStringSync(name);
     } on FileSystemException {
+      // An emulator's /tmp is not the host's: ask through the run's output
+      // instead (`adb exec-out screencap` on the line).
+      debugPrint('M2SHOT $name');
+      for (var i = 0; i < 12; i++) {
+        await tester.pump(const Duration(milliseconds: 250));
+      }
       return;
     }
     for (var i = 0; i < 25 && req.existsSync(); i++) {

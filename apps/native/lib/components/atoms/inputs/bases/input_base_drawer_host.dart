@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:oewang/components/atoms/inputs/bases/input_base_drawer_metrics.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
@@ -82,7 +83,7 @@ class _FormDrawerHostState extends State<FormDrawerHost> {
           final open = _controller.isOpen;
           // A real split: the form occupies the top, the input panel the bottom.
           // Flat, square, full-width — no scrim, no rounded corners.
-          return Column(
+          final split = Column(
             children: [
               Expanded(child: widget.child),
               if (open)
@@ -106,6 +107,16 @@ class _FormDrawerHostState extends State<FormDrawerHost> {
                   ),
                 ),
             ],
+          );
+          // Android's back key closes an open panel before the form: the
+          // panel is not a route, so back would otherwise drop the whole form
+          // and what was typed. iOS keeps its swipe back, which needs canPop.
+          return PopScope(
+            canPop: !open || defaultTargetPlatform != TargetPlatform.android,
+            onPopInvokedWithResult: (didPop, _) {
+              if (!didPop) _controller.close();
+            },
+            child: split,
           );
         },
       ),
