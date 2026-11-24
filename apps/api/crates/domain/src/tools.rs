@@ -760,7 +760,15 @@ impl<'a> Reader<'a> {
 
     /// An identifier, which is a string with a tighter bound. Nothing is
     /// looked up here; an id that does not exist is the service's answer.
+    ///
+    /// A blank id is how a model leaves an optional one out, so it reads as
+    /// absent; a required id still fails its `require`.
     fn id(&mut self, name: &'static str) -> Option<String> {
+        if let Some(Value::String(raw)) = self.get(name) {
+            if raw.trim().is_empty() {
+                return None;
+            }
+        }
         let value = self.text(name)?;
         if value.chars().count() > MAX_ID {
             self.reject(name, "That is not an id.");
@@ -1154,6 +1162,23 @@ mod tests {
         assert_eq!(args.amount, Some(Decimal::from_str("50000.00").unwrap()));
         assert_eq!(args.name.as_deref(), Some("Lunch"));
         assert_eq!(args.date.unwrap().to_rfc3339(), "2026-11-03T00:00:00+00:00");
+    }
+
+    #[test]
+    fn should_read_a_blank_optional_id_as_absent() {
+        let call = parse(
+            Tool::SplitBill,
+            json!({ "amount": "90000", "name": "Lunch", "category_id": " ", "contact_names": ["Ani"] }),
+        )
+        .unwrap();
+        let ToolCall::SplitBill(args) = call else {
+            panic!("wrong variant")
+        };
+        assert_eq!(args.category_id, None);
+
+        let missing =
+            fields(parse(Tool::PayDebt, json!({ "debt_id": " ", "amount": "10" })).unwrap_err());
+        assert_eq!(missing["debt_id"], "This argument is required.");
     }
 
     #[test]
