@@ -1,13 +1,17 @@
 import 'package:cuid2/cuid2.dart';
 import 'package:decimal/decimal.dart';
+import 'package:dio/dio.dart';
 import 'package:oewang/core/result/app_error.dart';
 import 'package:oewang/core/result/result.dart';
 import 'package:oewang/data/dto/wallet_dto.dart';
+import 'package:oewang/data/dto/wallet_totals_dto.dart';
 import 'package:oewang/data/repositories/wallets_repository.dart';
+import 'package:oewang/data/repositories_remote/dio_error_mapper.dart';
 import 'package:oewang/data/services/api/api_client.dart';
 import 'package:oewang/data/services/db/app_database.dart';
 import 'package:oewang/data/services/sync/sync_service.dart';
 import 'package:oewang/domain/models/wallet.dart';
+import 'package:oewang/domain/models/wallet_totals.dart';
 
 const _kind = 'wallets';
 
@@ -42,6 +46,34 @@ class WalletsRepositoryOffline implements WalletsRepository {
       for (final r in await _db.rows(ws, _kind)) _toDomain(r, deltas),
     ]);
   }
+
+  /// The API's answer, kept as sent; offline, the last one kept. Either is
+  /// an estimate while transaction or wallet writes are still queued, since
+  /// the API has not seen them.
+  // shortcut: queued deltas are not added to the cached totals, only
+  // flagged; add them if a stale offline total confuses anyone.
+  @override
+  Future<Result<WalletTotals, AppError>> totals() async {
+    final ws = _sync.workspaceId;
+    if (ws == null) return _remote.totals();
+    if (_sync.online) {
+      try {
+        final data = envelopeData(await _api.get('/wallets/totals'));
+        await _db.putRow(ws, 'meta', {...data! as Json, 'id': _totalsId});
+      } on DioException catch (e) {
+        final error = mapDioError(e);
+        if (error is! NetworkError) return Failure(error);
+      }
+    }
+    final cached = await _db.row(ws, 'meta', _totalsId);
+    if (cached == null) return const Failure(NetworkError());
+    final queued = (await _db.entries(
+      ws,
+    )).any((e) => e.isPending && (e.kind == 'transactions' || e.kind == _kind));
+    return Success(walletTotalsFromJson(cached, isEstimate: queued));
+  }
+
+  static const _totalsId = 'wallet-totals';
 
   static Wallet _toDomain(Json row, Map<String, Decimal> deltas) {
     final w = WalletDto.fromJson(row);

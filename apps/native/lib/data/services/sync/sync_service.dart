@@ -353,14 +353,6 @@ class SyncService {
     return out;
   }
 
-  /// The workspace currency as last seen online (the month summary stores
-  /// it), for figures shown offline.
-  Future<String?> lastCurrency() async {
-    final ws = workspaceId;
-    final meta = ws == null ? null : await db.row(ws, 'meta', 'currency');
-    return meta?['code'] as String?;
-  }
-
   /// Entries that need the person: refused, or in conflict.
   Future<List<QueueEntry>> issues() async {
     final ws = workspaceId;

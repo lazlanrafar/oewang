@@ -2,10 +2,12 @@ import 'package:decimal/decimal.dart';
 import 'package:oewang/core/result/app_error.dart';
 import 'package:oewang/core/result/result.dart';
 import 'package:oewang/data/repositories/wallets_repository.dart';
+import 'package:oewang/domain/models/money.dart';
 import 'package:oewang/domain/models/wallet.dart';
+import 'package:oewang/domain/models/wallet_totals.dart';
 
 class WalletsRepositoryFake implements WalletsRepository {
-  WalletsRepositoryFake({List<Wallet>? seed})
+  WalletsRepositoryFake({List<Wallet>? seed, this.totalsSeed})
     : _store =
           (seed ??
                   <Wallet>[
@@ -45,6 +47,28 @@ class WalletsRepositoryFake implements WalletsRepository {
   Future<Result<List<Wallet>, AppError>> list() async {
     await Future<void>.delayed(const Duration(milliseconds: 10));
     return Success(List<Wallet>.unmodifiable(_store));
+  }
+
+  /// The API's answer for the seed wallets (all IDR); a test that needs
+  /// other figures passes its own.
+  final WalletTotals? totalsSeed;
+
+  @override
+  Future<Result<WalletTotals, AppError>> totals() async {
+    Money idr(int v) => Money(amount: Decimal.fromInt(v));
+    return Success(
+      totalsSeed ??
+          WalletTotals(
+            total: idr(-1418001),
+            assets: idr(660999),
+            liabilities: idr(2079000),
+            groups: [
+              GroupTotal(id: 'g-cash', subtotal: idr(625000)),
+              GroupTotal(id: 'g-accounts', subtotal: idr(-95501)),
+              GroupTotal(id: 'g-debit', subtotal: idr(-1947500)),
+            ],
+          ),
+    );
   }
 
   @override

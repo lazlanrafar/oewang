@@ -17,8 +17,6 @@ final accountsVmProvider =
       (ref) => AccountsViewModel(
         wallets: ref.watch(walletsRepositoryProvider),
         groups: ref.watch(walletGroupsRepositoryProvider),
-        workspaces: ref.watch(workspacesRepositoryProvider),
-        lastCurrency: () => ref.read(syncServiceProvider).lastCurrency(),
       ),
     );
 
@@ -73,6 +71,7 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
               assets: vm.assets,
               liabilities: vm.liabilities,
               total: vm.total,
+              note: totalsNote(leftOut: vm.leftOut, estimate: vm.isEstimate),
             ),
             Divider(height: 1, color: palette.border),
             Expanded(
@@ -166,16 +165,28 @@ class _Header extends StatelessWidget {
   }
 }
 
+/// Says why a total is not the whole story: wallets left out for want of a
+/// rate (as the web's card does), or writes still queued (MOB-6).
+String? totalsNote({required int leftOut, required bool estimate}) {
+  final parts = [
+    if (leftOut > 0) '$leftOut left out, no rate',
+    if (estimate) 'Estimate, syncing',
+  ];
+  return parts.isEmpty ? null : parts.join(' · ');
+}
+
 class _SummaryRow extends StatelessWidget {
   const _SummaryRow({
     required this.assets,
     required this.liabilities,
     required this.total,
+    this.note,
   });
 
   final Money assets;
   final Money liabilities;
   final Money total;
+  final String? note;
 
   @override
   Widget build(BuildContext context) {
@@ -183,25 +194,39 @@ class _SummaryRow extends StatelessWidget {
     final palette = context.palette;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
+      child: Column(
         children: [
-          Expanded(
-            child: _Cell(label: 'Assets', value: assets, color: tx.income),
+          Row(
+            children: [
+              Expanded(
+                child: _Cell(label: 'Assets', value: assets, color: tx.income),
+              ),
+              Expanded(
+                child: _Cell(
+                  label: 'Liabilities',
+                  value: liabilities,
+                  color: tx.expense,
+                ),
+              ),
+              Expanded(
+                child: _Cell(
+                  label: 'Total',
+                  value: total,
+                  color: palette.foreground,
+                ),
+              ),
+            ],
           ),
-          Expanded(
-            child: _Cell(
-              label: 'Liabilities',
-              value: liabilities,
-              color: tx.expense,
+          if (note != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              note!,
+              style: OewangFonts.sans(
+                color: palette.mutedForeground,
+                fontSize: 12,
+              ),
             ),
-          ),
-          Expanded(
-            child: _Cell(
-              label: 'Total',
-              value: total,
-              color: palette.foreground,
-            ),
-          ),
+          ],
         ],
       ),
     );

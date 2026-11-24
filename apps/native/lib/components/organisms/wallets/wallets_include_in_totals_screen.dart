@@ -1,8 +1,8 @@
-import 'package:decimal/decimal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oewang/components/atoms/money_text.dart';
 import 'package:oewang/components/molecules/page_app_bar.dart';
+import 'package:oewang/components/organisms/wallets/wallets_screen.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
@@ -10,6 +10,7 @@ import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/domain/models/money.dart';
 import 'package:oewang/domain/models/wallet.dart';
 import 'package:oewang/domain/models/wallet_group.dart';
+import 'package:oewang/domain/models/wallet_totals.dart';
 
 /// IMG_2250 — checkbox-driven Include-in-Totals editor. Each tick writes the
 /// wallet's `is_included_in_totals` at once; a refused write puts it back.
@@ -45,8 +46,8 @@ class _IncludeInTotalsScreenState extends ConsumerState<IncludeInTotalsScreen> {
     final groupsAsync = ref.watch(_groupsProvider);
     final walletsAsync = ref.watch(_walletsProvider);
     final canWrite = ref.watch(canWriteProvider);
-    final currency =
-        ref.watch(currentWorkspaceProvider).valueOrNull?.currencyCode ?? '';
+    // The API's figures (D117); they catch up once a tick has been saved.
+    final totals = ref.watch(_totalsProvider).valueOrNull;
     final tx = Theme.of(context).extension<TransactionColors>()!;
     final palette = context.palette;
 
@@ -61,7 +62,7 @@ class _IncludeInTotalsScreenState extends ConsumerState<IncludeInTotalsScreen> {
             data: (wallets) => _Body(
               groups: groups,
               wallets: wallets,
-              currency: currency,
+              totals: totals,
               excluded: {
                 for (final w in wallets)
                   if (!(_included[w.id] ?? w.isIncludedInTotals)) w.id,
@@ -88,6 +89,12 @@ final _groupsProvider = FutureProvider.autoDispose<List<WalletGroup>>((
   return res.fold((g) => g, (_) => const []);
 });
 
+final _totalsProvider = FutureProvider.autoDispose<WalletTotals?>((ref) async {
+  ref.watch(walletsRevisionProvider);
+  final res = await ref.watch(walletsRepositoryProvider).totals();
+  return res.fold((t) => t, (_) => null);
+});
+
 final _walletsProvider = FutureProvider.autoDispose<List<Wallet>>((ref) async {
   ref.watch(walletsRevisionProvider);
   final res = await ref.watch(walletsRepositoryProvider).list();
@@ -98,7 +105,7 @@ class _Body extends StatelessWidget {
   const _Body({
     required this.groups,
     required this.wallets,
-    required this.currency,
+    required this.totals,
     required this.excluded,
     required this.onToggle,
     required this.tx,
@@ -108,9 +115,8 @@ class _Body extends StatelessWidget {
   final List<WalletGroup> groups;
   final List<Wallet> wallets;
 
-  /// The workspace currency; foreign wallets stay out of the sums, as on
-  /// the Accounts tab.
-  final String currency;
+  /// Null until the API answers; the figures then show zero.
+  final WalletTotals? totals;
   final Set<String> excluded;
 
   /// Null for a member, who sees the ticks and cannot change them (MOB-5).
@@ -120,16 +126,8 @@ class _Body extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var assets = Money.zero(currency: currency);
-    var liabilities = Money.zero(currency: currency);
-    for (final w in wallets) {
-      if (excluded.contains(w.id) || w.currency != currency) continue;
-      if (w.balance >= Decimal.zero) {
-        assets += Money(amount: w.balance, currency: w.currency);
-      } else {
-        liabilities += Money(amount: -w.balance, currency: w.currency);
-      }
-    }
+    final zero = Money.zero(currency: totals?.total.currency ?? 'IDR');
+    Money subtotal(String? id) => totals?.group(id)?.subtotal ?? zero;
     final byGroup = <String?, List<Wallet>>{};
     for (final w in wallets) {
       byGroup.putIfAbsent(w.groupId, () => <Wallet>[]).add(w);
@@ -142,8 +140,13 @@ class _Body extends StatelessWidget {
     return Column(
       children: [
         _SummaryRow(
-          assets: assets,
-          liabilities: liabilities,
+          assets: totals?.assets ?? zero,
+          liabilities: totals?.liabilities ?? zero,
+          total: totals?.total ?? zero,
+          note: totalsNote(
+            leftOut: totals?.leftOut ?? 0,
+            estimate: totals?.isEstimate ?? false,
+          ),
           tx: tx,
           palette: palette,
         ),
@@ -154,18 +157,12 @@ class _Body extends StatelessWidget {
               // Only render a group header when it actually has accounts.
               for (final g in groups)
                 if ((byGroup[g.id] ?? const []).isNotEmpty) ...[
-                  _GroupHeader(
-                    name: g.name,
-                    subtotal: _subtotal(byGroup[g.id]!, excluded),
-                  ),
+                  _GroupHeader(name: g.name, subtotal: subtotal(g.id)),
                   for (final w in byGroup[g.id]!) rowFor(w),
                 ],
               // Ungrouped wallets, which the old screen left off the list.
               if ((byGroup[null] ?? const []).isNotEmpty) ...[
-                _GroupHeader(
-                  name: 'Others',
-                  subtotal: _subtotal(byGroup[null]!, excluded),
-                ),
+                _GroupHeader(name: 'Others', subtotal: subtotal(null)),
                 for (final w in byGroup[null]!) rowFor(w),
               ],
             ],
@@ -174,54 +171,62 @@ class _Body extends StatelessWidget {
       ],
     );
   }
-
-  Money _subtotal(List<Wallet> ws, Set<String> excluded) {
-    var total = Money.zero(currency: currency);
-    for (final w in ws) {
-      if (excluded.contains(w.id) || w.currency != currency) continue;
-      total += Money(amount: w.balance, currency: w.currency);
-    }
-    return total;
-  }
 }
 
 class _SummaryRow extends StatelessWidget {
   const _SummaryRow({
     required this.assets,
     required this.liabilities,
+    required this.total,
     required this.tx,
     required this.palette,
+    this.note,
   });
 
   final Money assets;
   final Money liabilities;
+  final Money total;
+  final String? note;
   final TransactionColors tx;
   final OewangPalette palette;
 
   @override
   Widget build(BuildContext context) {
-    final total = assets - liabilities;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: Row(
+      child: Column(
         children: [
-          Expanded(
-            child: _Cell(label: 'Account', value: assets, color: tx.income),
+          Row(
+            children: [
+              Expanded(
+                child: _Cell(label: 'Account', value: assets, color: tx.income),
+              ),
+              Expanded(
+                child: _Cell(
+                  label: 'Liabilities',
+                  value: liabilities,
+                  color: tx.expense,
+                ),
+              ),
+              Expanded(
+                child: _Cell(
+                  label: 'Total',
+                  value: total,
+                  color: palette.foreground,
+                ),
+              ),
+            ],
           ),
-          Expanded(
-            child: _Cell(
-              label: 'Liabilities',
-              value: liabilities,
-              color: tx.expense,
+          if (note != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              note!,
+              style: OewangFonts.sans(
+                color: palette.mutedForeground,
+                fontSize: 12,
+              ),
             ),
-          ),
-          Expanded(
-            child: _Cell(
-              label: 'Total',
-              value: total,
-              color: palette.foreground,
-            ),
-          ),
+          ],
         ],
       ),
     );
