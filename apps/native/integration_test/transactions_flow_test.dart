@@ -12,6 +12,8 @@
 //
 // Screenshots land in $SCREENSHOT_DIR (default build/integration_screenshots).
 
+import 'dart:io';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -21,6 +23,7 @@ import 'package:oewang/app.dart';
 import 'package:oewang/components/atoms/inputs/contexts/input_context_currency.dart';
 import 'package:oewang/components/organisms/auth/auth_onboarding_screen.dart';
 import 'package:oewang/components/organisms/auth/auth_register_screen.dart';
+import 'package:oewang/components/organisms/settings/settings_screen.dart';
 import 'package:oewang/components/organisms/transactions/transactions_form_screen.dart';
 import 'package:oewang/components/organisms/transactions/transactions_row.dart';
 import 'package:oewang/config/dependencies.dart';
@@ -55,7 +58,14 @@ void main() {
     fail('timed out waiting for $finder');
   }
 
+  var surfaceIsImage = false;
   Future<void> shot(WidgetTester tester, String name) async {
+    // Android draws to a surface the binding cannot read back until it is
+    // swapped for an image, once; iOS needs no swap.
+    if (Platform.isAndroid && !surfaceIsImage) {
+      await binding.convertFlutterSurfaceToImage();
+      surfaceIsImage = true;
+    }
     await tester.pump(const Duration(milliseconds: 400));
     await binding.takeScreenshot(name);
   }
@@ -128,12 +138,20 @@ void main() {
     await tester.tap(find.text('More'));
     // The list builds lazily and Log out sits below the fold, so wait for the
     // screen, then scroll to it.
-    await waitFor(tester, find.byType(Scrollable));
+    final settingsList = find.descendant(
+      of: find.byType(SettingsScreen),
+      matching: find.byType(Scrollable),
+    );
+    await waitFor(tester, settingsList);
     await tester.scrollUntilVisible(
       find.text('Log out'),
       300,
-      scrollable: find.byType(Scrollable).last,
+      scrollable: settingsList.first,
     );
+    // Built is not shown: the row can sit in the list's cache area, just
+    // below its edge, on a screen of another height.
+    await tester.ensureVisible(find.text('Log out'));
+    await tester.pump(const Duration(milliseconds: 300));
     await tester.tap(find.text('Log out'));
     await waitFor(tester, find.text('Log out').last);
     await tester.tap(find.text('Log out').last);

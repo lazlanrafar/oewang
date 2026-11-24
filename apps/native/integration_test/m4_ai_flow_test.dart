@@ -13,7 +13,9 @@
 //     --dart-define=FIXTURES=/tmp/oew-fixtures \
 //     [--dart-define=M4_EMAIL=... --dart-define=M4_PASSWORD=...]
 //
-// Simulator only: the fixtures are read from the host's disk. Copy
+// On an Android emulator, adb push the fixtures to /data/local/tmp/oew-fixtures
+// and pass that (docs/features/mobile.md). On a simulator the fixtures are
+// read from the host's disk. Copy
 // integration_test/fixtures to /tmp/oew-fixtures first: a simulator app that
 // opens a file under ~/Documents blocks forever on macOS privacy (TCC), and
 // `open` blocking freezes the whole UI isolate. Without

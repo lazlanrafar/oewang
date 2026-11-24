@@ -27,7 +27,8 @@
 // The test prints `M5MARK <name>` and holds the screen still for a moment, so
 // a host script can take `xcrun simctl io <udid> screenshot` and read the
 // database at that point: `binding.takeScreenshot` comes back blank once the
-// keyboard has opened.
+// keyboard has opened. On an emulator, pipe the run into
+// integration_test/android_host.sh, which uses adb instead.
 
 import 'dart:async';
 import 'dart:convert';
@@ -61,7 +62,6 @@ import 'package:oewang/data/repositories/device_tokens_repository.dart';
 import 'package:oewang/data/repositories/wallets_repository.dart';
 import 'package:oewang/data/repositories_remote/device_tokens_repository_remote.dart';
 import 'package:oewang/data/services/api/api_client.dart';
-import 'package:oewang/data/services/passkeys/passkey_authenticator.dart';
 import 'package:oewang/data/services/push/push_messaging.dart';
 import 'package:oewang/data/services/storage/preferences_service.dart';
 import 'package:oewang/data/services/storage/secure_storage_service.dart';
@@ -86,7 +86,7 @@ class _FakeMessaging implements PushMessaging {
   final taps = StreamController<String?>.broadcast();
 
   @override
-  String get platform => 'ios';
+  String get platform => Platform.isIOS ? 'ios' : 'android';
 
   @override
   Future<bool> requestPermission() async => true;
@@ -209,6 +209,9 @@ void main() {
           )
           .first,
     );
+    // Built is not shown: the row can sit just below the list's edge.
+    await tester.ensureVisible(find.text('Log out'));
+    await tester.pump(const Duration(milliseconds: 300));
     await tester.tap(find.text('Log out'));
     await waitFor(tester, find.text('Log out').last);
     await tester.tap(find.text('Log out').last);
@@ -288,35 +291,44 @@ void main() {
     int registered(String? ws) =>
         calls.where((c) => c == 'register:ok:$ws').length;
 
-    // 1. Passkeys (MOB-9): the button shows on iOS. The simulator build is
+    // 1. Passkeys (MOB-9): the button shows where the device offers them,
+    // iOS, or Android in a PASSKEYS_ANDROID build (D119). A local build is
     // not associated with the relying party, so a tap ends in a message.
-    await waitFor(tester, find.text('Sign in with a passkey'));
-    await mark(tester, '01-login-passkey-button');
-    await tester.tap(find.text('Sign in with a passkey'));
-    await tester.pump(const Duration(milliseconds: 500));
-    await waitUntil(
-      tester,
-      () => !container.read(passkeyViewModelProvider).running,
-      'the passkey ceremony to end',
-      timeout: const Duration(seconds: 30),
-    );
-    final passkeyError = container.read(passkeyViewModelProvider).error;
-    say('M5INFO passkey sign-in on the simulator: $passkeyError');
-    // What the device itself said, which the screen deliberately hides.
-    final started = await container
-        .read(passkeysRepositoryProvider)
-        .signInStart();
-    final options = started.fold((c) => c.options, (e) => fail('start: $e'));
-    say('M5INFO passkey rp: ${options['rpId']}');
-    try {
-      await DevicePasskeys().get(options);
-      say('M5INFO passkey device: no error');
-    } on Object catch (e) {
-      say('M5INFO passkey device: ${e.runtimeType}: $e');
+    final passkeys = await container.read(devicePasskeysProvider).supported();
+    say('M5INFO passkeys offered: $passkeys');
+    if (passkeys) {
+      await waitFor(tester, find.text('Sign in with a passkey'));
+      await mark(tester, '01-login-passkey-button');
+      await tester.tap(find.text('Sign in with a passkey'));
+      await tester.pump(const Duration(milliseconds: 500));
+      await waitUntil(
+        tester,
+        () => !container.read(passkeyViewModelProvider).running,
+        'the passkey ceremony to end',
+        timeout: const Duration(seconds: 30),
+      );
+      final passkeyError = container.read(passkeyViewModelProvider).error;
+      say('M5INFO passkey sign-in on the simulator: $passkeyError');
+      // What the device itself said, which the screen deliberately hides.
+      final started = await container
+          .read(passkeysRepositoryProvider)
+          .signInStart();
+      final options = started.fold((c) => c.options, (e) => fail('start: $e'));
+      say('M5INFO passkey rp: ${options['rpId']}');
+      try {
+        await container.read(devicePasskeysProvider).get(options);
+        say('M5INFO passkey device: no error');
+      } on Object catch (e) {
+        say('M5INFO passkey device: ${e.runtimeType}: $e');
+      }
+      expect(find.byType(LoginScreen), findsOneWidget);
+      expect(container.read(sessionControllerProvider).valueOrNull, isNull);
+      await mark(tester, '02-login-passkey-tapped');
+    } else {
+      await waitFor(tester, find.text('Login'));
+      expect(find.text('Sign in with a passkey'), findsNothing);
+      await mark(tester, '01-login-no-passkey-button');
     }
-    expect(find.byType(LoginScreen), findsOneWidget);
-    expect(container.read(sessionControllerProvider).valueOrNull, isNull);
-    await mark(tester, '02-login-passkey-tapped');
 
     // 2. Push (PUSH-1): signing in registers the device in the workspace.
     await tester.enterText(fieldIn(LoginScreen, 0), _owner);
@@ -377,8 +389,11 @@ void main() {
           )
           .first,
     );
-    // Shown only where passkeys work, which iOS is.
-    expect(find.text('Add a passkey'), findsOneWidget);
+    // Shown only where passkeys are offered.
+    expect(
+      find.text('Add a passkey'),
+      passkeys ? findsOneWidget : findsNothing,
+    );
     await tester.tap(find.text('Telegram'));
     await waitFor(tester, find.byType(TelegramScreen));
     final telegramState = find.descendant(
