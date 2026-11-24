@@ -939,6 +939,9 @@
 		if (!open && detailParam !== '') closeDetail();
 	}}
 	transaction={detail}
+	debts={data.detail?.debts ?? []}
+	debtHref={(id) => `/debts?debt=${encodeURIComponent(id)}`}
+	onCreateDebt={() => goto(`/debts?source=${encodeURIComponent(detailParam)}`)}
 	{canEdit}
 	onEdit={editFromDetail}
 	onDelete={() => (confirmDelete = true)}

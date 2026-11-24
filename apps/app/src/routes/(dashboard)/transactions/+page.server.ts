@@ -3,6 +3,7 @@ import { fail, type Actions } from '@sveltejs/kit';
 import { INVALIDATION_KEYS } from '$lib/chat-invalidation';
 import { ApiError } from '$lib/server/api';
 import { currentMonth } from '$lib/month-range';
+import * as debtsApi from '$lib/server/debts';
 import * as ledger from '$lib/server/ledger';
 import * as vault from '$lib/server/vault';
 
@@ -139,12 +140,17 @@ async function loadEditing(id: string, token?: string) {
 
 async function loadDetail(id: string, token?: string) {
 	try {
-		const [transaction, history] = await Promise.all([
+		const [transaction, history, debts] = await Promise.all([
 			ledger.readTransaction(id, token),
-			ledger.transactionHistory(id, token)
+			ledger.transactionHistory(id, token),
+			// The debts this row made or settles (DEBT-12). Never fails the sheet.
+			debtsApi.transactionDebts(id, token).then(
+				(result) => result.data ?? [],
+				() => []
+			)
 		]);
 		if (!transaction.data) return null;
-		return { transaction: transaction.data, history: history.data ?? [] };
+		return { transaction: transaction.data, history: history.data ?? [], debts };
 	} catch {
 		return null;
 	}

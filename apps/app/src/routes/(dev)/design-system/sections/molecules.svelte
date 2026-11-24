@@ -25,6 +25,7 @@
 	import { SelectCurrency } from '$lib/components/molecules/select-currency';
 	import { SelectGroup } from '$lib/components/molecules/select-group';
 	import { SelectCategory } from '$lib/components/molecules/select-category';
+	import { SelectContact } from '$lib/components/molecules/select-contact';
 	import { CurrencyInput } from '$lib/components/molecules/currency-input';
 	import { DataTable, DataTableEmptyState } from '$lib/components/molecules/data-table';
 	import { DataTableFilter } from '$lib/components/molecules/data-table-filter';
@@ -78,6 +79,13 @@
 		{ id: 'group-cash', name: 'Cash' },
 		{ id: 'group-bank', name: 'Bank' }
 	];
+	/* Fictional people for the contact picker (D80); nothing here is real. */
+	const sampleContacts = [
+		{ id: 'contact-ani', name: 'Ani' },
+		{ id: 'contact-budi', name: 'Budi' },
+		{ id: 'contact-citra', name: 'Citra' }
+	];
+	let contact = $state('contact-budi');
 	let group = $state('group-bank');
 	let column = $state('Amount');
 
@@ -324,6 +332,7 @@
 		<SelectGroup groups={sampleAccountGroups} bind:value={group} />
 		<SelectCurrency currencies={['IDR', 'USD', 'SGD', 'EUR']} bind:value={currency} />
 		<SelectColumn columns={['Date', 'Description', 'Amount', 'Balance']} bind:value={column} />
+		<SelectContact contacts={sampleContacts} bind:value={contact} />
 	</div>
 </Specimen>
 

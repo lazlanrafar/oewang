@@ -2,8 +2,10 @@
 	/**
 	 * The overview tab's figures (D87, OVR-2).
 	 *
-	 * Ported from the old app's `overview-cards.tsx`, minus budget usage and
-	 * debt balance, which stay out of v1 (PRD non-goals). Every figure is the
+	 * Ported from the old app's `overview-cards.tsx`, minus budget usage,
+	 * which stays on its own page. Debt balance came back with debts (D120,
+	 * DEBT-13): the net position the debts page shows, in the workspace
+	 * currency, and how many debts are open. Every figure is the
 	 * API's formatted string, and every card covers the whole selected range,
 	 * which the old cards claimed and did not do: they showed the last month
 	 * under a label for the year.
@@ -12,6 +14,7 @@
 	 * assistant about it, as the old cards did.
 	 */
 	import Flame from '@lucide/svelte/icons/flame';
+	import HandCoins from '@lucide/svelte/icons/hand-coins';
 	import PieChart from '@lucide/svelte/icons/chart-pie';
 	import Receipt from '@lucide/svelte/icons/receipt';
 	import TrendingUp from '@lucide/svelte/icons/trending-up';
@@ -21,6 +24,7 @@
 	import { t } from '$lib/i18n';
 	import { formatMoney } from '$lib/money';
 	import { rangeLabel, shareLabel, type Overview } from '$lib/reports';
+	import type { DebtSummary } from '$lib/server/debts';
 	import type { WalletTotals } from '$lib/wallets';
 
 	import { StatCard } from '../../molecules/stat-card/index.js';
@@ -29,11 +33,14 @@
 	let {
 		overview,
 		balance,
+		debts,
 		onAsk
 	}: {
 		overview: Overview;
 		/** Streamed: it waits on today's rates, the rest of the page does not. */
 		balance: Promise<{ totals: WalletTotals; currency: string }>;
+		/** Streamed too; null when the debt figures could not be read. */
+		debts: Promise<{ summary: DebtSummary; open: number } | null>;
 		onAsk: (message: string) => void;
 	} = $props();
 
@@ -96,6 +103,23 @@
 		ariaLabel={t('overview.card_ask', { label: t('overview.card_burn') })}
 		onclick={() => ask('overview.ask_burn')}
 	/>
+	{#await debts}
+		<StatCard label={t('overview.card_debts')} icon={HandCoins} value="" loading />
+	{:then resolved}
+		{#if resolved}
+			<StatCard
+				label={t('overview.card_debts')}
+				icon={HandCoins}
+				value={{
+					value: resolved.summary.net,
+					format: (value) => formatMoney(value, resolved.summary.currency_code, { signed: true })
+				}}
+				hint={t('overview.card_debts_hint', { count: resolved.open })}
+				ariaLabel={t('overview.card_ask', { label: t('overview.card_debts') })}
+				onclick={() => onAsk(t('overview.ask_debts'))}
+			/>
+		{/if}
+	{/await}
 	{#await balance}
 		<StatCard label={t('overview.card_balance')} icon={Wallet} value="" loading />
 	{:then resolved}

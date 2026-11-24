@@ -2,12 +2,14 @@
 	/**
 	 * Questions to start from, under the cards (D87).
 	 *
-	 * Ported from the old app's chip row, minus the budget and debt chips.
+	 * Ported from the old app's chip row, minus the budget chip. The debt chip
+	 * came back with debts (D120, DEBT-13).
 	 * Each asks about the range on screen, so the answer is about what the
 	 * reader is looking at.
 	 */
 	import ChartPie from '@lucide/svelte/icons/chart-pie';
 	import Flame from '@lucide/svelte/icons/flame';
+	import Receipt from '@lucide/svelte/icons/receipt';
 	import List from '@lucide/svelte/icons/list';
 	import ListOrdered from '@lucide/svelte/icons/list-ordered';
 	import CalendarRange from '@lucide/svelte/icons/calendar-range';
@@ -34,6 +36,7 @@
 		{ label: 'overview.chip_monthly', ask: 'overview.ask_monthly', icon: CalendarRange },
 		{ label: 'overview.chip_top', ask: 'overview.ask_top', icon: ListOrdered },
 		{ label: 'overview.chip_burn', ask: 'overview.ask_burn', icon: Flame },
+		{ label: 'overview.chip_debts', ask: 'overview.ask_debts', icon: Receipt },
 		{ label: 'overview.chip_income', ask: 'overview.ask_income', icon: TrendingUp }
 	];
 </script>

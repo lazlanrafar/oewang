@@ -48,7 +48,7 @@ The person types the payment in the debt's currency and can correct the rate unt
 
 ## Bulk pay
 
-`POST /v1/debts/bulk-pay` pays 1 to 50 debts at once, each by an amount the sheet prefills with its remaining amount. One payment and one transaction per debt, all or nothing. With a wallet, every debt must be in the wallet's currency, otherwise `BULK_PAY_CURRENCY_MISMATCH`: a per-debt rate does not fit one sheet. The old app wrote one combined expense and one combined income, which made cancelling one payment impossible without touching the others (D121).
+`POST /v1/debts/bulk-pay` pays 1 to 50 debts at once. On the web it is the contact sheet's Settle all, as in the old app: the contact's open debts, ticked by default, each settled in full from one account, with a total per currency. One payment and one transaction per debt, all or nothing. With a wallet, every debt must be in the wallet's currency, otherwise `BULK_PAY_CURRENCY_MISMATCH`: a per-debt rate does not fit one sheet. The old app wrote one combined expense and one combined income, which made cancelling one payment impossible without touching the others (D121).
 
 ## Split bill
 
@@ -61,18 +61,18 @@ As in the old app, split bill has no screen: it is a chat and MCP tool and an AP
 `/debts`, in the Finance group after Budget. The old page, ported exactly:
 
 - **Cards**: Owed to you, You owe, Net position (each converted to the workspace currency as `GET /v1/wallets/totals` does, D117), and Overdue (a count, red when above 0). From `GET /v1/debts/summary`, every figure computed in the API (D27).
-- **Header**: the filter bar (search on contact name and description; facets Status and Type) on the left, New debt on the right.
-- **Table**: select, Type, Contact, Description, Summary (amount and remaining), Status, Due date, row menu (View details, Edit, Delete; Pay is in the detail sheet). Selecting rows shows the bulk edit bar: bulk pay and Delete.
-- **Sheets**: debt form (type, amount with currency, contact with `<SelectContact creatable />`, due date, description), detail (figures, payments with Cancel, the source transaction), payment (amount, wallet optional, date, rate when currencies differ), bulk pay.
-- **Empty states**: "No debts yet" with New debt; "No debts match" with Clear filters.
+- **Header**: the filter bar (search on contact name and description; facets Status and Type) on the left, Add Debt on the right.
+- **Table**: select, Type, Contact, Description, Summary (amount and remaining), Status, Due date, row menu (View details, Edit, Delete; Pay is in the detail sheet). Selecting rows shows the old bulk edit bar, whose one action is Delete: one call per debt, stopping at the first refusal (a debt with payments). A contact's name opens that contact's sheet on `/contacts`.
+- **Sheets**: debt form (type, amount with currency, contact with `<SelectContact creatable />`, due date, description), detail (figures, payments with Cancel, the source transaction), payment (amount, wallet optional, date, rate when currencies differ). `?debt=` opens the detail and `?source=` the form for a debt made from that transaction.
+- **Empty states**: "No debts found" with Add First Debt; "No debts match" with Clear filters.
 
-`?search=`, `?status=`, `?type=`, `?contact_id=`, `?sort=` (default `due_date`, no due date last), `?order=` and `?page=` live in the URL (UI-8). Overdue means `due_date` before the person's local date, which the page sends as `?today=`; the API has no workspace timezone to use, and falls back to the UTC date when a client sends none.
+`?search=`, `?status=`, `?type=`, `?contact_id=`, `?sort=` (default `due_date`, no due date last), `?order=` and `?page=` live in the URL (UI-8). Overdue means `due_date` before the person's local date. The rows mark it against the browser's own date; the Overdue card is the API's count against the UTC date, because the server render has no reader's time zone to send as `?today=` (a shortcut: the two can differ for a few hours around midnight).
 
-Elsewhere on the web: the overview shows the old Debt balance card (the summary's `net` and the open count) and its prompt chip, "Show my outstanding debts and receivables, including who owes whom and the remaining balances."; the transaction detail sheet lists related debts and payments and has Create debt, which opens the debt form with the transaction as its source.
+Elsewhere on the web: the overview shows the old Debt balance card (the summary's `net` and the open count, streamed so the overview never waits on it) and its prompt chip, "Show my outstanding debts and receivables, including who owes whom and the remaining balances."; the transaction detail sheet lists related debts and payments and has Create debt, which opens the debt form with the transaction as its source.
 
 ## The contacts page
 
-`/contacts`, after Debts. Cards: Total, Added this month, With email, With phone. Table: Name, Email, Phone, row menu (Edit, Merge into…, Delete); the old Website and Location columns go with their fields. Search covers name, email and phone. Form: name (required), email, phone, note. The detail sheet lists the contact's debts. The old address, VAT, website and billing fields are not carried: they served invoices, which stay out.
+`/contacts`, first in the Workspace group, where the old app had it. `?contact=` opens a contact's sheet: phone, what they owe and are owed (one figure per currency), every debt as the old timeline, Settle all, the note, Quick Edit, Merge into… and Delete. Cards: Total, Added this month, With email, With phone. Table: Name, Email, Phone, row menu (Edit, Merge into…, Delete); the old Website and Location columns go with their fields. Search covers name, email and phone. Form: name (required), email, phone, note. The old address, VAT, website and billing fields are not carried: they served invoices, which stay out.
 
 ## Chat and MCP
 
