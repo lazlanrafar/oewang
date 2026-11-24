@@ -86,6 +86,9 @@ class VaultViewModel extends ChangeNotifier {
     return null;
   }
 
+  /// One file's metadata by id, for a push that names it (PUSH-5).
+  Future<Result<VaultFile, AppError>> file(String id) => _repo.get(id);
+
   Future<Result<Uint8List, AppError>> download(VaultFile file) =>
       _repo.download(file);
 

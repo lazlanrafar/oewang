@@ -12,12 +12,18 @@ import 'package:oewang/components/organisms/transactions/transactions_sub_tab_ca
 import 'package:oewang/components/organisms/transactions/transactions_summary_row.dart';
 import 'package:oewang/components/organisms/transactions/transactions_summary_screen.dart';
 import 'package:oewang/config/dependencies.dart';
+import 'package:oewang/core/result/app_error.dart';
+import 'package:oewang/core/result/result.dart';
 import 'package:oewang/core/router/app_router.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/domain/models/transaction.dart';
 
 class TransactionsScreen extends ConsumerStatefulWidget {
-  const TransactionsScreen({super.key});
+  const TransactionsScreen({super.key, this.detail});
+
+  /// A transaction id from a tapped push (`?detail=`, PUSH-5): its edit form
+  /// opens over the list.
+  final String? detail;
 
   @override
   ConsumerState<TransactionsScreen> createState() => _TransactionsScreenState();
@@ -45,6 +51,42 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     super.initState();
     _anchorMonth = ref.read(monthControllerProvider);
     _monthPageController = PageController(initialPage: _anchorPage);
+    _openDetail(widget.detail);
+  }
+
+  @override
+  void didUpdateWidget(TransactionsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.detail != oldWidget.detail) _openDetail(widget.detail);
+  }
+
+  /// After this frame, since it navigates: drops `detail` from the location
+  /// (so the same push opens it again), loads the row and opens its form.
+  void _openDetail(String? id) {
+    if (id == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      final router = GoRouter.of(context);
+      final messenger = ScaffoldMessenger.of(context);
+      router.go(AppRoutes.trans);
+      // A viewer opens nothing that writes (MOB-5).
+      if (!ref.read(canWriteProvider)) return;
+      final res = await ref.read(transactionsRepositoryProvider).get(id);
+      switch (res) {
+        case Success(:final value):
+          await router.push(AppRoutes.transactionForm, extra: value);
+        case Failure(:final error):
+          messenger.showSnackBar(
+            SnackBar(
+              content: Text(
+                error is ServerError && error.statusCode == 404
+                    ? 'That transaction was deleted or no longer exists.'
+                    : error.message,
+              ),
+            ),
+          );
+      }
+    });
   }
 
   @override

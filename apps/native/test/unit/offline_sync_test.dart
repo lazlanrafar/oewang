@@ -98,6 +98,11 @@ class FakeApi implements HttpClientAdapter {
         ? Map<String, dynamic>.from(o.data as Map)
         : <String, dynamic>{};
     switch (method) {
+      case 'GET' when parts.length == 2:
+        final row = table[parts[1]];
+        return row == null || deleted.contains(parts[1])
+            ? _error(404, 'TRANSACTION_NOT_FOUND', 'Not found')
+            : _ok(200, row);
       case 'GET':
         return _ok(200, [
           for (final r in table.values)
@@ -671,4 +676,42 @@ void main() {
     h.server.unreachable = true;
     expect((await h.groups.list()).ok.map((g) => g.name), ['Cash', 'Bank']);
   });
+
+  test(
+    'PUSH-5: get(id) reads the API online and the cached row offline',
+    () async {
+      h.server.seed('wallets', {
+        'id': 'wcash000000000000000000000',
+        'name': 'Cash',
+        'balance': '0',
+        'currency_code': 'IDR',
+      });
+      await h.wallets.list();
+      final t = (await h.transactions.create(
+        draft('wcash000000000000000000000', '20'),
+      )).ok;
+
+      expect(
+        (await h.transactions.get(t.id)).ok.amount.amount,
+        Decimal.parse('20'),
+      );
+      expect(h.server.log.last, 'GET /transactions/${t.id}');
+      final missing = await h.transactions.get('gone');
+      expect(missing, isA<Failure<Transaction, AppError>>());
+      expect(
+        (missing as Failure<Transaction, AppError>).error.code,
+        'TRANSACTION_NOT_FOUND',
+      );
+
+      await h.offline();
+      h.server.unreachable = true;
+      expect((await h.transactions.get(t.id)).ok.id, t.id);
+      expect(
+        (await h.transactions.get('never-cached')
+                as Failure<Transaction, AppError>)
+            .error,
+        isA<NetworkError>(),
+      );
+    },
+  );
 }

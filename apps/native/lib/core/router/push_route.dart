@@ -24,8 +24,6 @@ String pushLocation(Object? route) {
           ? AppRoutes.trans
           : '${AppRoutes.trans}?detail=$detail';
     case '/vault':
-      // shortcut: no screen reads `detail`, `file` or `month` yet, so a push
-      // opens the list, not the item; read them there when that is wanted.
       final file = param('file', _id);
       return file == null ? '/vault' : '/vault?file=$file';
     case '/budgets':
