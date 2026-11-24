@@ -985,8 +985,8 @@ Requirements: DEBT-14, DEBT-15
 ### US-073: Debts and contacts on mobile, offline (OEW-110)
 Requirements: DEBT-16, MOB-10
 
-- [ ] Debts and contacts screens ported from the old Flutter app
-- [ ] Debt, payment and contact writes queue offline with client ids and `If-Match`; a queued payment's wallet delta joins the balance estimate
+- [x] Debts and contacts screens ported from the old Flutter app
+- [x] Debt, payment and contact writes queue offline with client ids and `If-Match`; a queued payment's wallet delta joins the balance estimate
 - [ ] A replay refused by the API (for example `PAYMENT_EXCEEDS_REMAINING`) is marked failed and shown in the sync banner; a `STALE` edit offers discard or apply anyway
-- [ ] `fvm flutter analyze` and `fvm flutter test` pass
+- [x] `fvm flutter analyze` and `fvm flutter test` pass
 - [ ] Verified on a device: pay offline, reconnect, the payment lands once and the balance matches the API

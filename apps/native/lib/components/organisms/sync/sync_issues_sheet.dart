@@ -5,6 +5,7 @@ import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/data/services/db/app_database.dart';
+import 'package:oewang/data/services/sync/sync_service.dart';
 
 /// The queued writes that need the person (MOB-7): an edit whose row changed
 /// or was deleted elsewhere (`409 STALE`), and a write the API refused.
@@ -106,7 +107,17 @@ class _Issue extends StatelessWidget {
     'transactions': 'Transaction',
     'wallets': 'Account',
     'categories': 'Category',
+    'debts': 'Debt',
+    'contacts': 'Contact',
   };
+
+  static String _thing(String kind) =>
+      _things[kind] ??
+      (paymentDebtId(kind) != null
+          ? 'Payment'
+          : isMergeKind(kind)
+          ? 'Contact merge'
+          : kind);
 
   static const _acts = {
     QueueOp.create: 'new',
@@ -133,7 +144,8 @@ class _Issue extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '${_things[e.kind] ?? e.kind} ${_acts[e.op]}'
+            '${_thing(e.kind)}'
+            '${isMergeKind(e.kind) ? '' : ' ${_acts[e.op]}'}'
             '${name is String && name.isNotEmpty ? ': $name' : ''}',
             style: OewangFonts.sans(color: palette.foreground),
           ),

@@ -12,6 +12,10 @@ import 'package:oewang/components/organisms/categories/categories_form_screen.da
 import 'package:oewang/components/organisms/categories/categories_list_screen.dart';
 import 'package:oewang/components/organisms/chat/chat_screen.dart';
 import 'package:oewang/components/organisms/chat/chat_sessions_screen.dart';
+import 'package:oewang/components/organisms/contacts/contacts_form_screen.dart';
+import 'package:oewang/components/organisms/contacts/contacts_screen.dart';
+import 'package:oewang/components/organisms/debts/debts_form_screen.dart';
+import 'package:oewang/components/organisms/debts/debts_screen.dart';
 import 'package:oewang/components/organisms/invite/invite_accept_screen.dart';
 import 'package:oewang/components/organisms/settings/currency/settings_main_currency_screen.dart';
 import 'package:oewang/components/organisms/settings/feedback/feedback_form_screen.dart';
@@ -35,6 +39,8 @@ import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/router/invite_route.dart';
 import 'package:oewang/domain/models/budget_status.dart';
 import 'package:oewang/domain/models/category.dart' as cat;
+import 'package:oewang/domain/models/contact.dart';
+import 'package:oewang/domain/models/debt.dart';
 import 'package:oewang/domain/models/receipt_draft.dart';
 import 'package:oewang/domain/models/transaction.dart';
 import 'package:oewang/domain/models/wallet.dart';
@@ -48,6 +54,7 @@ class AppRoutes {
   static const String register = '/register';
   static const String onboarding = '/onboarding';
   static const String trans = '/trans';
+  static const String debts = '/debts';
   static const String stats = '/stats';
   static const String accounts = '/accounts';
   static const String more = '/more';
@@ -72,8 +79,13 @@ class AppRoutes {
   static const String vault = '/vault';
   static const String telegram = '/settings/telegram';
   static const String members = '/settings/members';
+  static const String debtForm = '/debts/new';
+  static const String contacts = '/contacts';
+  static const String contactForm = '/contacts/new';
 
   static String chatFor(String id) => '/chat/$id';
+  static String debtEditFor(String id) => '/debts/edit/$id';
+  static String contactEditFor(String id) => '/contacts/edit/$id';
   static String accountEditFor(String id) => '/accounts/edit/$id';
   static String budgetEditFor(String id) => '/settings/budget/edit/$id';
   static String categoryEditFor(String id) => '/settings/categories/edit/$id';
@@ -212,6 +224,38 @@ GoRouter buildAppRouter(Ref ref) {
               ? state.extra! as ReceiptDraft
               : null,
         ),
+      ),
+      GoRoute(
+        path: AppRoutes.debtForm,
+        builder: (context, state) => const DebtFormScreen(),
+      ),
+      GoRoute(
+        path: '/debts/edit/:id',
+        builder: (context, state) {
+          final debt = state.extra as Debt?;
+          if (debt == null) {
+            return const Scaffold(body: Center(child: Text('Missing debt')));
+          }
+          return DebtFormScreen(debt: debt);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.contacts,
+        builder: (context, state) => const ContactsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.contactForm,
+        builder: (context, state) => const ContactFormScreen(),
+      ),
+      GoRoute(
+        path: '/contacts/edit/:id',
+        builder: (context, state) {
+          final contact = state.extra as Contact?;
+          if (contact == null) {
+            return const Scaffold(body: Center(child: Text('Missing contact')));
+          }
+          return ContactFormScreen(contact: contact);
+        },
       ),
       GoRoute(
         path: AppRoutes.transactionSearch,
@@ -356,6 +400,15 @@ GoRouter buildAppRouter(Ref ref) {
                     detail: state.uri.queryParameters['detail'],
                   ),
                 ),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.debts,
+                pageBuilder: (context, state) =>
+                    const NoTransitionPage(child: DebtsScreen()),
               ),
             ],
           ),

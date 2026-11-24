@@ -3,8 +3,8 @@ import 'package:intl/intl.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
 
-/// 4-tab bottom navigation: Trans · Stats · Accounts · More. (Debt went with
-/// its API in the port to the new API.)
+/// 5-tab bottom navigation: Trans · Debt · Stats · Accounts · More, as in
+/// the old app (Debt came back with D120).
 class OewangBottomNav extends StatelessWidget {
   const OewangBottomNav({
     required this.currentIndex,
@@ -21,6 +21,7 @@ class OewangBottomNav extends StatelessWidget {
 
   static const List<_NavItem> _items = [
     _NavItem(label: 'Trans', icon: Icons.menu_book_outlined),
+    _NavItem(label: 'Debt', icon: Icons.handshake_outlined),
     _NavItem(label: 'Stats', icon: Icons.bar_chart),
     _NavItem(label: 'Accounts', icon: Icons.savings_outlined),
     _NavItem(label: 'More', icon: Icons.more_horiz),
