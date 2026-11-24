@@ -17,6 +17,8 @@
 #     Firebase project and grants nothing by itself; Google ships it inside
 #     every app build. It is restricted to the app and Firebase APIs in the
 #     Google Cloud console, which is where its protection lives (D116).
+#   - an `android:apk-key-hash:` origin: the hash of a public signing
+#     certificate, which Android sends in every passkey ceremony (D119).
 #
 # Nothing here allowlists a path that could hold a live credential. The
 # real .env is gitignored and is not a scanned path.
@@ -39,4 +41,5 @@ paths = [
 regexTarget = "match"
 regexes = [
   '''token_prefix: 'owm_[A-Za-z0-9]{1,12}'?''',
+  '''apk-key-hash:[A-Za-z0-9_-]{43}''',
 ]
