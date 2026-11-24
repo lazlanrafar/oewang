@@ -115,7 +115,7 @@ in browser" box ticked; or a written reason it is not done.
 | PUSH-2 | `apps/api/crates/server/src/push/tests.rs` |
 | PUSH-3 | `apps/api/crates/server/src/push/tests.rs` |
 | PUSH-4 | `apps/api/crates/server/src/push/tests.rs` |
-| PUSH-5 | `apps/api/crates/clients/src/push.rs`, `apps/api/crates/server/src/push/mod.rs`, `apps/api/crates/server/src/push/tests.rs` |
+| PUSH-5 | `apps/api/crates/clients/src/push.rs`, `apps/api/crates/server/src/push/mod.rs`, `apps/api/crates/server/src/push/tests.rs`, `apps/native/integration_test/m5_integrations_flow_test.dart`, `apps/native/test/unit/offline_sync_test.dart`, `apps/native/test/unit/push_items_repository_test.dart`, `apps/native/test/widget/push_items_test.dart` |
 | SEC-1 | `apps/ai/tests/test_extraction_routes.py`, `apps/ai/tests/test_rate_limit.py`, `apps/ai/tests/test_service_key.py` |
 | SEC-2 | `apps/ai/tests/test_owe1_vectors.py`, `apps/api/crates/domain/src/owe1/handshake.rs` |
 | SEC-3 | `apps/ai/tests/test_owe1_client.py`, `apps/api/crates/clients/src/owe1_client.rs` |
