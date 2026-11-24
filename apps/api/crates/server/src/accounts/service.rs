@@ -10,8 +10,11 @@ use oewang_db::{
     PgPool,
 };
 use oewang_domain::{
+    format_money,
     ledger::{round_money, TransactionType},
-    validate_currency_code, AppError, Result,
+    validate_currency_code,
+    wallet_totals::{GroupTotal, WalletBalance},
+    AppError, Result,
 };
 use rust_decimal::Decimal;
 
@@ -160,6 +163,103 @@ pub async fn find_wallet(pool: &PgPool, workspace_id: &str, id: &str) -> Result<
         .await
         .map_err(internal)?
         .ok_or(AppError::WalletNotFound)
+}
+
+/// The figures above the wallet list, in the workspace currency (D117).
+#[derive(Debug, serde::Serialize)]
+pub struct WalletTotalsView {
+    pub currency_code: String,
+    #[serde(with = "rust_decimal::serde::str")]
+    pub total: Decimal,
+    pub total_formatted: String,
+    #[serde(with = "rust_decimal::serde::str")]
+    pub assets: Decimal,
+    pub assets_formatted: String,
+    /// The negative counted balances as a positive figure; `total` is
+    /// `assets - liabilities`.
+    #[serde(with = "rust_decimal::serde::str")]
+    pub liabilities: Decimal,
+    pub liabilities_formatted: String,
+    pub count: usize,
+    pub counted: usize,
+    pub left_out: usize,
+    pub missing_currencies: Vec<String>,
+    pub groups: Vec<GroupTotalView>,
+}
+
+/// Every live group in list order, then the ungrouped wallets (`id` and
+/// `name` null) when there are any.
+#[derive(Debug, serde::Serialize)]
+pub struct GroupTotalView {
+    pub id: Option<String>,
+    pub name: Option<String>,
+    #[serde(with = "rust_decimal::serde::str")]
+    pub subtotal: Decimal,
+    pub subtotal_formatted: String,
+    pub left_out: usize,
+}
+
+/// Converts at the newest stored snapshot, the rates the currency pickers
+/// show (FX-2), so no rate source is called here (D96).
+pub async fn wallet_totals(pool: &PgPool, workspace_id: &str) -> Result<WalletTotalsView> {
+    let (rows, groups, (home, snapshot)) = tokio::try_join!(
+        list_wallets(pool, workspace_id),
+        list_groups(pool, workspace_id),
+        crate::fx::service::list_currencies(pool, workspace_id),
+    )?;
+
+    let rates = snapshot
+        .into_iter()
+        .map(|row| (row.currency_code, row.rate))
+        .collect();
+    let balances: Vec<_> = rows
+        .iter()
+        .map(|row| WalletBalance {
+            group_id: row.group_id.as_deref(),
+            currency_code: &row.currency_code,
+            balance: row.balance,
+            is_included_in_totals: row.is_included_in_totals,
+        })
+        .collect();
+    let mut totals = oewang_domain::wallet_totals::wallet_totals(&balances, &home, &rates);
+
+    let money = |value: Decimal| format_money(value, &home, false);
+    let group = |id: Option<String>, name: Option<String>, sum: GroupTotal| GroupTotalView {
+        id,
+        name,
+        subtotal: sum.subtotal,
+        subtotal_formatted: money(sum.subtotal),
+        left_out: sum.left_out,
+    };
+    let mut views: Vec<GroupTotalView> = groups
+        .into_iter()
+        .map(|g| {
+            let sum = totals
+                .groups
+                .remove(&Some(g.id.clone()))
+                .unwrap_or_default();
+            group(Some(g.id), Some(g.name), sum)
+        })
+        .collect();
+    if let Some(sum) = totals.groups.remove(&None) {
+        views.push(group(None, None, sum));
+    }
+
+    let total = totals.total();
+    Ok(WalletTotalsView {
+        total_formatted: money(total),
+        total,
+        assets_formatted: money(totals.assets),
+        assets: totals.assets,
+        liabilities_formatted: money(totals.liabilities),
+        liabilities: totals.liabilities,
+        count: totals.count,
+        counted: totals.counted,
+        left_out: totals.left_out,
+        missing_currencies: totals.missing_currencies,
+        groups: views,
+        currency_code: home,
+    })
 }
 
 #[derive(Debug)]

@@ -125,6 +125,7 @@ Returns `NOT_A_MEMBER` if the user has no live membership row.
 | Method | Path | Role | Description |
 |---|---|---|---|
 | GET | `/v1/wallets` | any | List with balances in each wallet's own currency. Ordered so a group's wallets are contiguous, with `group_name` joined and `has_transactions` (any live transaction on either leg, which locks the currency, WAL-6); ungrouped wallets come last. Both are null on a single-wallet read |
+| GET | `/v1/wallets/totals` | any | What the wallets add up to in the workspace currency (D117): `currency_code`, `total`, `assets`, `liabilities` (a positive figure; `total = assets - liabilities`), each with a `_formatted` twin; `count`, `counted` (`is_included_in_totals`), `left_out` (counted wallets with no rate in the newest snapshot) and `missing_currencies`; `groups`, every live group in list order and then the ungrouped wallets (`id` and `name` null) when there are any, each `{ id, name, subtotal, subtotal_formatted, left_out }`. Only counted wallets move any figure |
 | GET | `/v1/wallets/{id}` | any | One wallet |
 | POST | `/v1/wallets` | admin+ | Create. `currency_code` optional, defaults to the workspace currency (WAL-5). Optional client `id` (D114, [below](#client-ids-and-if-match)) |
 | PATCH | `/v1/wallets/{id}` | admin+ | Update name, group, sort order, totals flag. Currency only while the wallet has no live transaction, otherwise `WALLET_CURRENCY_LOCKED` (WAL-6). Optional `If-Match`, otherwise `STALE` (D115) |

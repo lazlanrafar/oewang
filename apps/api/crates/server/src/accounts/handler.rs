@@ -295,6 +295,17 @@ pub async fn list_wallets(
     )))
 }
 
+pub async fn wallet_totals(
+    State(state): State<AppState>,
+    auth: Auth,
+    request_id: RequestId,
+) -> std::result::Result<Json<Envelope<service::WalletTotalsView>>, ApiError> {
+    match service::wallet_totals(&state.db, &auth.workspace_id).await {
+        Ok(view) => Ok(Json(Envelope::data(view, request_id.0))),
+        Err(error) => Err(ApiError::new(error, request_id.0)),
+    }
+}
+
 pub async fn get_wallet(
     State(state): State<AppState>,
     auth: Auth,

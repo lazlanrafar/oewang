@@ -62,6 +62,8 @@ A wallet in the workspace currency contributes its balance. A foreign wallet is 
 
 A wallet whose currency has no rate today is **left out**, and the card says how many were left out. An honest partial figure beats a whole one that is wrong, and refusing to render the screen because one rate is unavailable would be worse than either. It is the same behaviour the Settings group total already had, in `inBaseCurrency`, which both screens share.
 
+The API answers the same figures at `GET /v1/wallets/totals` (D117), which the mobile app reads. The page still computes its own; a change to the rule here is a change to `oewang_domain::wallet_totals` too, until the page reads the endpoint.
+
 The cards describe the workspace, not the filtered view. A search narrows the table only; a total that moved with it would read as money having disappeared.
 
 ## The table

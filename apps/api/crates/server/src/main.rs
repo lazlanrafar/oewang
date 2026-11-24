@@ -414,6 +414,8 @@ fn protected_routes(state: AppState) -> Router<AppState> {
             "/v1/wallets",
             get(accounts::handler::list_wallets).post(accounts::handler::create_wallet),
         )
+        // In the workspace currency, so no client sums money (D117).
+        .route("/v1/wallets/totals", get(accounts::handler::wallet_totals))
         .route(
             "/v1/wallets/{id}",
             get(accounts::handler::get_wallet)
