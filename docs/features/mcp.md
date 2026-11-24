@@ -36,7 +36,7 @@ For apps that sign in instead of taking a pasted token (claude.ai and ChatGPT co
 |---|---|---|
 | Discovery | `/.well-known/oauth-protected-resource[/mcp]`, `/.well-known/oauth-authorization-server` (app) | Built from the request's origin; `/mcp`'s 401 points at the first |
 | Registration | `POST /oauth/register` (app) → `/v1/oauth/register` | Public clients only (`none` auth). Redirect URIs: https, http to localhost/127.0.0.1/[::1], or an app's own scheme; never `javascript:`, `data:`, `file:` and the like. The name is the app's claim and the consent page says so |
-| Consent | `/oauth/authorize` (app page, session required) | Never redirects until the client exists and the redirect URI is one it registered, exactly. `response_type=code` and PKCE S256 are required. The person picks every workspace or some. Not frameable |
+| Consent | `/oauth/authorize` (app page, session required) | Never redirects until the client exists and the redirect URI is one it registered, exactly. `response_type=code` and PKCE S256 are required. The person picks every workspace or some. Not frameable. Allow and Deny answer with a page that navigates back to the app (meta refresh and a link), not a 303: browsers apply the page's `form-action 'self'` to where a form post is redirected |
 | Code | `/v1/oauth/authorize` | Single use, ten minutes, bound to client, redirect URI and challenge; stored as SHA-256 |
 | Token | `POST /oauth/token` (app, form or JSON) → `/v1/oauth/token` | The code is claimed in one statement before anything is compared, so a failed check spends it. Access token one hour, refresh token thirty days, rotated on every use; presenting a spent refresh token revokes the whole grant |
 

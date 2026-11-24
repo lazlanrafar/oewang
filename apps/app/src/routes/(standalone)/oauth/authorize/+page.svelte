@@ -28,12 +28,23 @@
 	let picked = $state<string[]>([]);
 </script>
 
-<svelte:head><title>{pageTitle(t('oauth.title'))}</title></svelte:head>
+<svelte:head>
+	<title>{pageTitle(t('oauth.title'))}</title>
+	{#if form?.redirect_to}
+		<!-- Navigates, rather than redirecting the form post: see backFromForm. -->
+		<meta http-equiv="refresh" content={`0;url=${form.redirect_to}`} />
+	{/if}
+</svelte:head>
 
 <main class="mx-auto flex min-h-svh max-w-md flex-col justify-center gap-6 px-4 py-10">
 	<Logo class="size-8" />
 
-	{#if data.invalid}
+	{#if form?.redirect_to}
+		<p class="text-sm">{t('oauth.returning', { host: new URL(form.redirect_to).host })}</p>
+		<Button href={form.redirect_to} variant="outline">
+			{t('oauth.continue', { host: new URL(form.redirect_to).host })}
+		</Button>
+	{:else if data.invalid}
 		<h1 class="text-lg font-medium">{t('oauth.invalid_title')}</h1>
 		<p class="text-subtle text-sm">{t('oauth.invalid_body')}</p>
 	{:else}

@@ -1164,6 +1164,8 @@
 		"allow": "Allow",
 		"deny": "Deny",
 		"invalid_title": "This connection request cannot be used",
-		"invalid_body": "The app sent an incomplete or unknown request. Start connecting again from the app."
+		"invalid_body": "The app sent an incomplete or unknown request. Start connecting again from the app.",
+		"returning": "Taking you back to {host}.",
+		"continue": "Continue to {host}"
 	}
 }
