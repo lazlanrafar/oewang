@@ -559,7 +559,7 @@ Requirements: OPS-7, SEC-20
 - [x] Playwright covers log in, create a transaction, and a chat message that creates a transaction
 - [x] An axe pass on the three main screens
 - [x] GitHub Actions runs lint, typecheck, tests and the three audit tools for all apps on every push
-- [ ] The whole run finishes under 5 minutes. Not met and not pretended otherwise: the Rust job is the long pole at an estimated 4 to 6 minutes warm and 10 to 14 cold, because the workspace compiles three times over (the sqlx cache check, clippy, the tests). Debuginfo is off in that job since 2026-11-23 (warm rebuild 9 s to 5 s, cache 2.7 GB to 1.5 GB locally); unchecked until one run on GitHub is timed. The levers left, cheapest first: a larger runner for that job alone, `cargo nextest`, `sccache`. Dropping `--all-targets` from clippy would be fastest and was rejected, because it stops linting the tests
+- [ ] The whole run finishes under 5 minutes. Not met and not pretended otherwise: the Rust job is the long pole at an estimated 4 to 6 minutes warm and 10 to 14 cold, because the workspace compiles three times over (the sqlx cache check, clippy, the tests). Debuginfo is off in that job since 2026-11-23 (warm rebuild 9 s to 5 s, cache 2.7 GB to 1.5 GB locally); unchecked until one run on GitHub is timed. The levers left, cheapest first: a larger runner for that job alone, `cargo nextest`, `sccache`. Dropping `--all-targets` from clippy would be fastest and was rejected, because it stops linting the tests Measured on 2026-11-24 with `scripts/ci-local.sh --e2e`, which now prints each step's time: 442 s warm, all green (journeys 221 s, api test 47 s, app check 52 s). The groups run one after another; side by side would save about two minutes but pinned every core of the owner's laptop, so the owner chose CPU over the target. GitHub CI stays manual and unmeasured (OEW-058 branch holds an untested speed-up).
 - [x] Deployment targets Coolify on the existing VPS, with files in Cloudflare R2 (D41). Production runs there since 2026-11-05 from the images `build-and-push.yml` builds per app, and [deployment.md](deployment.md) documents it. Still open there: a private R2 bucket, a second copy of the signing keys, and backup and restore
 
 ### US-039: Documentation pass
@@ -819,7 +819,7 @@ Requirements: BUD-1, BUD-2, BUD-3, BUD-4, BUD-5
 - [x] Every list screen's search is the transactions filter bar, with facets: budgets (status), accounts (group, currency), items (currency), rates (search only)
 - [x] clippy, `cargo test`, ruff, pytest, `bun run check` and `bun run test` pass in the containers
 - [x] Verified locally: create a budget, figures match the database, October shows over budget in red, the month and filters survive a reload, the chat answers with the canvas and it survives a reload
-- [ ] Verify in production after deploy
+- [x] Verify in production after deploy (2026-11-24, release 8e9ed34: pages and figures checked read-only on app.oewang.com; the write flows were verified end to end on the local stack with the same code, no test account on production)
 
 ## M12. Workspace settings
 
@@ -836,7 +836,7 @@ Requirements: WS-3, WS-4, WAL-6, FB-1
 - [x] clippy, `cargo test`, `bun run check` and `bun run test` pass in the containers
 - [x] Verified locally: invite and copy the link, a wrong-address accept is refused and leaves the link usable, revoke keeps the Invitations tab, the locked currency explains itself, feedback lands in the table
 - [x] Verify locally: accept as the invited account, change a role, remove a member, change the currency of a workspace with no transactions (2026-11-23, `e2e/workspace.spec.ts`)
-- [ ] Verify in production after deploy
+- [x] Verify in production after deploy (2026-11-24, release 8e9ed34: pages and figures checked read-only on app.oewang.com; the write flows were verified end to end on the local stack with the same code, no test account on production)
 
 ### US-059: Convert the workspace currency
 Requirements: WAL-6, WAL-7
@@ -847,7 +847,7 @@ Requirements: WAL-6, WAL-7
 - [x] clippy, `cargo test`, `bun run check` and `bun run test` pass in the containers
 - [x] Verified locally: the warning, the prefilled rate and counts, the confirm dialog (no conversion run on the real local workspace)
 - [x] Verify end to end on a throwaway workspace: convert, then check transactions, overview and budgets read in the new currency (2026-11-23, `e2e/workspace.spec.ts`: IDR to USD, then overview, budgets and the transaction detail read USD)
-- [ ] Verify in production after deploy
+- [ ] Verify in production after deploy (not run: converting the owner's real workspace recalculates every amount; the page and the convert control render on production)
 
 ## M13. MCP
 
@@ -864,7 +864,7 @@ Requirements: MCP-1 to MCP-8
 - [x] clippy, `cargo test`, `bun run check`, `bun run test` pass in the containers
 - [x] Verified locally: initialize, tools/list, list_workspaces, a 401 for a bad token; imported a 431-row Money Manager export into Latoe through MCP (409 rows via `import_transactions`, 11 transfers via `create_transaction`, 3 wallets created), totals matching the file
 - [x] Verify with Claude Code itself (`claude mcp add --transport http … --header`) (2026-11-23, locally: `claude -p --mcp-config` with a personal token listed 53 tools and called `list_wallets`)
-- [ ] Verify in production after deploy
+- [x] Verify in production after deploy (2026-11-24, release 8e9ed34: /account/mcp renders, `POST /mcp` without a token answers 401 with `resource_metadata`, both OAuth metadata documents answer 200; token creation not exercised on production)
 
 ### US-061: OAuth for MCP connector apps
 Requirements: MCP-9
@@ -971,7 +971,7 @@ Requirements: CON-2, DEBT-11, DEBT-12, DEBT-13
 - [x] Filters, sort and page survive a reload (UI-8); every string in `en.json`
 - [x] `bun run check` and `bun run test` pass in the containers
 - [x] Verified locally: create, pay from a foreign-currency wallet, cancel, bulk pay, delete the payment transaction from Transactions and see the debt reopen, merge two contacts
-- [ ] Verify in production after deploy
+- [x] Verify in production after deploy (2026-11-24, release 8e9ed34: pages and figures checked read-only on app.oewang.com; the write flows were verified end to end on the local stack with the same code, no test account on production)
 
 ### US-072: Debt and contact tools in chat and MCP (OEW-109)
 Requirements: DEBT-14, DEBT-15
