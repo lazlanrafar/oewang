@@ -858,8 +858,6 @@
 		"card_income": "Total income",
 		"card_expense": "Total expenses",
 		"card_net": "Net income",
-		"card_top_expense": "Top expense",
-		"card_top_expense_none": "No recorded expenses",
 		"card_burn": "Average monthly burn",
 		"card_balance": "Tracked balance",
 		"card_balance_hint": "{count} included accounts",

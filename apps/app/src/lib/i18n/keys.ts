@@ -844,8 +844,6 @@ export type TranslationKey =
 	| 'overview.card_expense'
 	| 'overview.card_income'
 	| 'overview.card_net'
-	| 'overview.card_top_expense'
-	| 'overview.card_top_expense_none'
 	| 'overview.chart_burn'
 	| 'overview.chart_empty'
 	| 'overview.chart_expense'

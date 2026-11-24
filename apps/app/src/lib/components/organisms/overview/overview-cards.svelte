@@ -15,7 +15,6 @@
 	 */
 	import Flame from '@lucide/svelte/icons/flame';
 	import HandCoins from '@lucide/svelte/icons/hand-coins';
-	import PieChart from '@lucide/svelte/icons/chart-pie';
 	import Receipt from '@lucide/svelte/icons/receipt';
 	import TrendingUp from '@lucide/svelte/icons/trending-up';
 	import Wallet from '@lucide/svelte/icons/wallet';
@@ -23,7 +22,7 @@
 
 	import { t } from '$lib/i18n';
 	import { formatMoney } from '$lib/money';
-	import { rangeLabel, shareLabel, type Overview } from '$lib/reports';
+	import { rangeLabel, type Overview } from '$lib/reports';
 	import type { DebtSummary } from '$lib/server/debts';
 	import type { WalletTotals } from '$lib/wallets';
 
@@ -51,7 +50,6 @@
 	const signed = (value: string) => formatMoney(value, overview.currency_code, { signed: true });
 
 	const range = $derived(rangeLabel(overview.from, overview.to));
-	const top = $derived(overview.expense_categories.find((share) => !share.other) ?? null);
 	const ask = (key: Parameters<typeof t>[0]) => onAsk(t(key, { range }));
 </script>
 
@@ -86,14 +84,6 @@
 		hint={range}
 		ariaLabel={t('overview.card_ask', { label: t('overview.card_net') })}
 		onclick={() => ask('overview.ask_net')}
-	/>
-	<StatCard
-		label={t('overview.card_top_expense')}
-		icon={PieChart}
-		value={top ? shareLabel(top) : t('overview.card_top_expense_none')}
-		hint={top ? `${money(top.total)} · ${top.share_formatted ?? ''}` : range}
-		ariaLabel={t('overview.card_ask', { label: t('overview.card_top_expense') })}
-		onclick={() => ask('overview.ask_top')}
 	/>
 	<StatCard
 		label={t('overview.card_burn')}
