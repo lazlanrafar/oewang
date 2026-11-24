@@ -3,10 +3,12 @@ import 'package:dio/dio.dart';
 import 'package:oewang/core/result/app_error.dart';
 import 'package:oewang/core/result/result.dart';
 import 'package:oewang/data/dto/wallet_dto.dart';
+import 'package:oewang/data/dto/wallet_totals_dto.dart';
 import 'package:oewang/data/repositories/wallets_repository.dart';
 import 'package:oewang/data/repositories_remote/dio_error_mapper.dart';
 import 'package:oewang/data/services/api/api_client.dart';
 import 'package:oewang/domain/models/wallet.dart';
+import 'package:oewang/domain/models/wallet_totals.dart';
 
 /// `/v1/wallets*`. Balances are never written: the form's amount goes
 /// through [adjust] (TXN-3).
@@ -22,6 +24,16 @@ class WalletsRepositoryRemote implements WalletsRepository {
         for (final row in (data as List?) ?? const [])
           WalletDto.fromJson(row as Map<String, dynamic>).toDomain(),
       ]);
+    } on DioException catch (e) {
+      return Failure(mapDioError(e));
+    }
+  }
+
+  @override
+  Future<Result<WalletTotals, AppError>> totals() async {
+    try {
+      final data = envelopeData(await _api.get('/wallets/totals'));
+      return Success(walletTotalsFromJson(data! as Map<String, dynamic>));
     } on DioException catch (e) {
       return Failure(mapDioError(e));
     }

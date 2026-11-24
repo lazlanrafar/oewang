@@ -18,6 +18,7 @@ pub mod receipt;
 pub mod secret;
 pub mod spreadsheet;
 pub mod tools;
+pub mod wallet_totals;
 
 pub use auth::Role;
 pub use envelope::{Envelope, Meta, Page, PageMeta};

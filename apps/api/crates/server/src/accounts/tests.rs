@@ -773,6 +773,116 @@ async fn should_not_reach_another_workspaces_rows(pool: PgPool) {
     ));
 }
 
+// ------------------------------------------------------- wallet totals (D117)
+
+/// A balance set straight on the row: only a transaction moves one in the
+/// product, and these tests are about what the balances add up to.
+async fn set_balance(pool: &PgPool, wallet_id: &str, balance: &str) {
+    sqlx::query("UPDATE wallets SET balance = $2::numeric WHERE id = $1")
+        .bind(wallet_id)
+        .bind(balance)
+        .execute(pool)
+        .await
+        .unwrap();
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn mob_4_should_total_workspace_currency_wallets_with_liabilities_apart(pool: PgPool) {
+    fixture(&pool, "IDR").await;
+    let group = service::create_group(&pool, actor(), "Cash", None)
+        .await
+        .unwrap()
+        .id;
+    let cash = make_wallet(&pool, "Cash", None).await;
+    let card = make_wallet(&pool, "Card", None).await;
+    let hidden = make_wallet(&pool, "Hidden", None).await;
+    sqlx::query("UPDATE wallets SET group_id = $1 WHERE id IN ($2, $3)")
+        .bind(&group)
+        .bind(&cash)
+        .bind(&hidden)
+        .execute(&pool)
+        .await
+        .unwrap();
+    sqlx::query("UPDATE wallets SET is_included_in_totals = false WHERE id = $1")
+        .bind(&hidden)
+        .execute(&pool)
+        .await
+        .unwrap();
+    set_balance(&pool, &cash, "625000").await;
+    set_balance(&pool, &card, "-131500").await;
+    set_balance(&pool, &hidden, "999999").await;
+
+    let totals = service::wallet_totals(&pool, WORKSPACE).await.unwrap();
+
+    assert_eq!(totals.currency_code, "IDR");
+    assert_eq!(totals.assets, decimal("625000"));
+    assert_eq!(totals.liabilities, decimal("131500"));
+    assert_eq!(totals.total, decimal("493500"));
+    assert_eq!(totals.total_formatted, "Rp 493.500");
+    assert_eq!((totals.count, totals.counted, totals.left_out), (3, 2, 0));
+    assert_eq!(totals.groups.len(), 2);
+    assert_eq!(totals.groups[0].id.as_deref(), Some(group.as_str()));
+    assert_eq!(totals.groups[0].name.as_deref(), Some("Cash"));
+    assert_eq!(
+        totals.groups[0].subtotal,
+        decimal("625000"),
+        "the excluded wallet is not counted"
+    );
+    assert_eq!(totals.groups[1].id, None, "ungrouped last");
+    assert_eq!(totals.groups[1].subtotal_formatted, "-Rp 131.500");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn mob_4_should_convert_a_foreign_wallet_and_leave_out_one_with_no_rate(pool: PgPool) {
+    fixture(&pool, "IDR").await;
+    // A stored snapshot against USD, as the daily job writes it (D96): one
+    // euro is 16000 / 0.5 = 32000 rupiah.
+    sqlx::query(
+        "INSERT INTO exchange_rates (id, base_code, quote_code, date, rate, source) VALUES
+           ('r1', 'USD', 'USD', current_date, 1, 'api'),
+           ('r2', 'USD', 'IDR', current_date, 16000, 'api'),
+           ('r3', 'USD', 'EUR', current_date, 0.5, 'api')",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+    let rupiah = make_wallet(&pool, "Cash", None).await;
+    let euro = make_wallet(&pool, "Euro", Some("EUR")).await;
+    let gold = make_wallet(&pool, "Gold", Some("XAU")).await;
+    set_balance(&pool, &rupiah, "100000").await;
+    set_balance(&pool, &euro, "10").await;
+    set_balance(&pool, &gold, "3").await;
+
+    let totals = service::wallet_totals(&pool, WORKSPACE).await.unwrap();
+
+    assert_eq!(totals.total, decimal("420000"), "100000 + 10 x 32000");
+    assert_eq!((totals.counted, totals.left_out), (3, 1));
+    assert_eq!(totals.missing_currencies, vec!["XAU".to_string()]);
+    assert_eq!(totals.groups.len(), 1);
+    assert_eq!(totals.groups[0].left_out, 1);
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn mob_4_should_not_total_another_workspaces_wallets(pool: PgPool) {
+    fixture(&pool, "IDR").await;
+    let wallet = make_wallet(&pool, "Cash", None).await;
+    set_balance(&pool, &wallet, "5000").await;
+    sqlx::query(
+        "INSERT INTO workspaces (id, name, slug, currency_code)
+         VALUES ('ws_other', 'Other', 'other', 'IDR')",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    let other = service::wallet_totals(&pool, "ws_other").await.unwrap();
+    assert_eq!((other.count, other.total), (0, Decimal::ZERO));
+    assert!(other.groups.is_empty());
+
+    let own = service::wallet_totals(&pool, WORKSPACE).await.unwrap();
+    assert_eq!((own.count, own.total), (1, decimal("5000")));
+}
+
 async fn default_ids(pool: &PgPool) -> Vec<String> {
     service::list_wallets(pool, WORKSPACE)
         .await

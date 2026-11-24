@@ -1,43 +1,46 @@
 import 'package:decimal/decimal.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:oewang/components/organisms/wallets/wallets_accounts_view_model.dart';
+import 'package:oewang/components/organisms/wallets/wallets_screen.dart';
 import 'package:oewang/core/result/app_error.dart';
 import 'package:oewang/core/result/result.dart';
 import 'package:oewang/data/repositories_fake/wallet_groups_repository_fake.dart';
 import 'package:oewang/data/repositories_fake/wallets_repository_fake.dart';
-import 'package:oewang/data/repositories_fake/workspaces_repository_fake.dart';
+import 'package:oewang/domain/models/money.dart';
 import 'package:oewang/domain/models/wallet.dart';
-import 'package:oewang/domain/models/workspace.dart';
+import 'package:oewang/domain/models/wallet_totals.dart';
 
-/// The workspace fetch has no connection.
-class _OfflineWorkspaces extends WorkspacesRepositoryFake {
+/// The totals read has no connection and nothing cached.
+class _NoTotals extends WalletsRepositoryFake {
   @override
-  Future<Result<Workspace, AppError>> current() async =>
+  Future<Result<WalletTotals, AppError>> totals() async =>
       const Failure(NetworkError());
 }
 
+Money _idr(int v) => Money(amount: Decimal.fromInt(v));
+
 void main() {
   group('AccountsViewModel', () {
-    test('aggregates assets / liabilities / total from fake wallets', () async {
+    test('MOB-4 shows the API totals and group subtotals', () async {
       final vm = AccountsViewModel(
         wallets: WalletsRepositoryFake(),
         groups: WalletGroupsRepositoryFake(),
-        workspaces: WorkspacesRepositoryFake(),
       );
       await vm.ready;
 
-      // Default fixtures: Cash 625k + Shopee 35.999 = 660.999 positive assets.
-      // Liabilities: 131.500 (Gopay) + 1.947.500 (BCA) = 2.079.000.
       expect(vm.assets.amount, Decimal.fromInt(660999));
       expect(vm.liabilities.amount, Decimal.fromInt(2079000));
-      expect(vm.total.amount, Decimal.fromInt(660999 - 2079000));
+      expect(vm.total.amount, Decimal.fromInt(-1418001));
       expect(vm.sections.length, 3); // Cash, Accounts, Debit Card
       expect(vm.sections.first.group.name, 'Cash');
+      expect(vm.sections.first.subtotal.amount, Decimal.fromInt(625000));
       expect(vm.sections[1].group.name, 'Accounts');
+      expect(vm.sections[1].subtotal.amount, Decimal.fromInt(-95501));
       vm.dispose();
     });
 
-    test('MOB-4 leaves a foreign wallet out of every sum', () async {
+    test('MOB-4 a foreign wallet keeps its own balance in its row; the total '
+        'and the left-out count come from the API', () async {
       final vm = AccountsViewModel(
         wallets: WalletsRepositoryFake(
           seed: [
@@ -49,56 +52,57 @@ void main() {
               currency: 'USD',
             ),
           ],
+          totalsSeed: WalletTotals(
+            total: _idr(801000),
+            assets: _idr(801000),
+            liabilities: _idr(0),
+            leftOut: 1,
+            groups: [GroupTotal(id: null, subtotal: _idr(801000))],
+          ),
         ),
         groups: WalletGroupsRepositoryFake(seed: const []),
-        workspaces: WorkspacesRepositoryFake(),
       );
       await vm.ready;
-      expect(vm.assets.amount, Decimal.fromInt(1000));
-      expect(vm.assets.currency, 'IDR');
-      // Both still listed, under Others.
-      expect(vm.sections.single.wallets.length, 2);
-      expect(vm.sections.single.subtotal.amount, Decimal.fromInt(1000));
+
+      expect(vm.total.amount, Decimal.fromInt(801000));
+      expect(vm.leftOut, 1);
+      final others = vm.sections.single;
+      expect(others.group.name, 'Others');
+      expect(others.subtotal.amount, Decimal.fromInt(801000));
+      expect(others.wallets.last.currency, 'USD');
+      expect(others.wallets.last.balance, Decimal.fromInt(50));
       vm.dispose();
     });
 
-    test('places ungrouped wallets into an "Others" tail section', () async {
-      final wallets = WalletsRepositoryFake(seed: const []);
-      // No groups in the fake either.
-      final groups = WalletGroupsRepositoryFake(seed: const []);
+    test('has no sections without wallets', () async {
       final vm = AccountsViewModel(
-        wallets: wallets,
-        groups: groups,
-        workspaces: WorkspacesRepositoryFake(),
+        wallets: WalletsRepositoryFake(seed: const []),
+        groups: WalletGroupsRepositoryFake(seed: const []),
       );
       await vm.ready;
       expect(vm.sections, isEmpty);
       vm.dispose();
     });
 
-    test('MOB-6 offline, adds up in the currency last seen instead of '
-        'failing on the workspace fetch', () async {
+    test('MOB-6 says why it cannot add up when no totals were ever '
+        'fetched', () async {
       final vm = AccountsViewModel(
-        wallets: WalletsRepositoryFake(),
+        wallets: _NoTotals(),
         groups: WalletGroupsRepositoryFake(),
-        workspaces: _OfflineWorkspaces(),
-        lastCurrency: () async => 'IDR',
       );
       await vm.ready;
-      expect(vm.error, isNull);
-      expect(vm.assets.currency, 'IDR');
-      expect(vm.assets.amount, Decimal.fromInt(660999));
+      expect(vm.error, isA<NetworkError>());
       vm.dispose();
-
-      // Never seen online: the screen says why it cannot add up.
-      final cold = AccountsViewModel(
-        wallets: WalletsRepositoryFake(),
-        groups: WalletGroupsRepositoryFake(),
-        workspaces: _OfflineWorkspaces(),
-      );
-      await cold.ready;
-      expect(cold.error, isA<NetworkError>());
-      cold.dispose();
     });
+  });
+
+  test('MOB-4 the note says how many were left out and when it is an '
+      'estimate', () {
+    expect(totalsNote(leftOut: 0, estimate: false), isNull);
+    expect(totalsNote(leftOut: 2, estimate: false), '2 left out, no rate');
+    expect(
+      totalsNote(leftOut: 1, estimate: true),
+      '1 left out, no rate · Estimate, syncing',
+    );
   });
 }

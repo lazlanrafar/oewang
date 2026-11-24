@@ -2,6 +2,7 @@ import 'package:decimal/decimal.dart';
 import 'package:oewang/core/result/app_error.dart';
 import 'package:oewang/core/result/result.dart';
 import 'package:oewang/domain/models/wallet.dart';
+import 'package:oewang/domain/models/wallet_totals.dart';
 
 class NewWalletDraft {
   const NewWalletDraft({required this.name, this.groupId, this.currencyCode});
@@ -17,6 +18,10 @@ class NewWalletDraft {
 
 abstract class WalletsRepository {
   Future<Result<List<Wallet>, AppError>> list();
+
+  /// `GET /v1/wallets/totals`: Assets, Liabilities, Total and the group
+  /// subtotals, converted and summed by the API (D117).
+  Future<Result<WalletTotals, AppError>> totals();
   Future<Result<Wallet, AppError>> create(NewWalletDraft draft);
   Future<Result<Wallet, AppError>> update(String id, NewWalletDraft draft);
   Future<Result<void, AppError>> delete(String id);

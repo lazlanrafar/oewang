@@ -40,6 +40,16 @@ class FakeApi implements HttpClientAdapter {
   final log = <String>[];
   final ifMatches = <String?>[];
 
+  /// What `GET /wallets/totals` answers (D117).
+  Json totals = {
+    'currency_code': 'IDR',
+    'total': '1000.0000',
+    'assets': '1500.0000',
+    'liabilities': '500.0000',
+    'left_out': 1,
+    'groups': <Json>[],
+  };
+
   /// The device thinks it is online, but nothing gets through.
   bool unreachable = false;
 
@@ -91,6 +101,7 @@ class FakeApi implements HttpClientAdapter {
   }
 
   ResponseBody _handle(String method, String path, RequestOptions o) {
+    if (path == '/wallets/totals') return _ok(200, totals);
     final parts = path.split('/').where((p) => p.isNotEmpty).toList();
     final kind = parts[0];
     final table = rows[kind]!;
@@ -659,6 +670,28 @@ void main() {
     );
     expect(res, isA<Failure<Category, AppError>>());
     expect(await h.queue(), isEmpty);
+  });
+
+  test('MOB-4 MOB-6: offline, wallet totals are the last answer, an '
+      'estimate while writes are queued', () async {
+    // Never fetched online: nothing to show.
+    await h.offline();
+    expect(await h.wallets.totals(), isA<Failure<dynamic, AppError>>());
+
+    await h.online();
+    final fresh = (await h.wallets.totals()).ok;
+    expect(fresh.total.amount, Decimal.parse('1000'));
+    expect(fresh.liabilities.amount, Decimal.parse('500'));
+    expect(fresh.leftOut, 1);
+    expect(fresh.isEstimate, isFalse);
+
+    await h.offline();
+    h.server.unreachable = true;
+    expect((await h.wallets.totals()).ok.isEstimate, isFalse);
+    await h.wallets.create(const NewWalletDraft(name: 'Gold'));
+    final cached = (await h.wallets.totals()).ok;
+    expect(cached.total.amount, Decimal.parse('1000'));
+    expect(cached.isEstimate, isTrue);
   });
 
   test('MOB-6: offline, wallet groups read from the cache, so the account '
