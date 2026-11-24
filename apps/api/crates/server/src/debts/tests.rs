@@ -996,3 +996,81 @@ async fn should_refuse_debt_and_contact_writes_to_a_member(pool: PgPool) {
         .unwrap();
     assert!(!role.can_write());
 }
+
+/// DEBT-7: two cancels of one payment at once give the money back once.
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_restore_the_remaining_amount_once_for_concurrent_cancels(pool: PgPool) {
+    fixture(&pool).await;
+    let budi = contact(&pool, "Budi").await;
+    let id = debt(&pool, &budi, "payable", "100").await;
+    service::pay(&pool, actor(), &id, None, pay_input("30", None))
+        .await
+        .unwrap();
+    let (paid, _) = service::pay(&pool, actor(), &id, None, pay_input("30", None))
+        .await
+        .unwrap();
+
+    // Hold the debt row so both cancels read the payment as live before
+    // either can lock, which is the interleaving a double click produces.
+    let gate = hold(&pool, "SELECT id FROM debts WHERE id = $1 FOR UPDATE", &id).await;
+    let cancel = || {
+        let (pool, id, payment) = (pool.clone(), id.clone(), paid.payment.id.clone());
+        tokio::spawn(async move { service::cancel_payment(&pool, actor(), &id, &payment).await })
+    };
+    let (one, two) = (cancel(), cancel());
+    release(gate).await;
+    let results = [one.await.unwrap(), two.await.unwrap()];
+
+    assert_eq!(results.iter().filter(|r| r.is_ok()).count(), 1);
+    assert_eq!(remaining(&pool, &id).await, (d("70"), "partial".into()));
+}
+
+/// DEBT-8, TXN-5: two deletes of one payment transaction at once reverse
+/// the balance and cancel the payment once.
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_reverse_once_for_concurrent_deletes_of_a_payment_transaction(pool: PgPool) {
+    fixture(&pool).await;
+    let budi = contact(&pool, "Budi").await;
+    let id = debt(&pool, &budi, "payable", "100").await;
+    let (paid, _) = service::pay(&pool, actor(), &id, None, pay_input("40", Some(CASH)))
+        .await
+        .unwrap();
+    let transaction = paid.transaction.unwrap().id;
+
+    // Hold the wallet so both deletes read the row as live before either
+    // can lock it.
+    let gate = hold(
+        &pool,
+        "SELECT id FROM wallets WHERE id = $1 FOR UPDATE",
+        CASH,
+    )
+    .await;
+    let delete = || {
+        let (pool, transaction) = (pool.clone(), transaction.clone());
+        tokio::spawn(async move { ledger::delete(&pool, actor(), &transaction).await })
+    };
+    let (one, two) = (delete(), delete());
+    release(gate).await;
+    let results = [one.await.unwrap(), two.await.unwrap()];
+
+    assert_eq!(results.iter().filter(|r| r.is_ok()).count(), 1);
+    assert_eq!(balance(&pool, CASH).await, d("0"));
+    assert_eq!(remaining(&pool, &id).await, (d("100"), "unpaid".into()));
+}
+
+/// Lock one row in a transaction of its own, so concurrent callers queue
+/// behind it after doing their unlocked reads.
+async fn hold(
+    pool: &PgPool,
+    sql: &'static str,
+    id: &str,
+) -> sqlx::Transaction<'static, sqlx::Postgres> {
+    let mut gate = pool.begin().await.unwrap();
+    sqlx::query(sql).bind(id).execute(&mut *gate).await.unwrap();
+    gate
+}
+
+async fn release(gate: sqlx::Transaction<'static, sqlx::Postgres>) {
+    tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+    gate.commit().await.unwrap();
+}

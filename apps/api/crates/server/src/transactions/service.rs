@@ -518,9 +518,14 @@ pub(crate) async fn delete_in(
     let moves = net(reverse(&effect_of(&before)?));
     apply_moves(tx, actor.workspace_id, &moves).await?;
 
-    repo::soft_delete(&mut **tx, actor.workspace_id, id)
+    // A second delete of the same row waited on the wallet lock and finds it
+    // already gone: refusing here rolls back the balance it just reversed.
+    let deleted = repo::soft_delete(&mut **tx, actor.workspace_id, id)
         .await
         .map_err(internal)?;
+    if deleted == 0 {
+        return Err(AppError::TransactionNotFound);
+    }
 
     log(
         tx,
@@ -876,9 +881,14 @@ pub async fn bulk_delete(pool: &PgPool, actor: Actor<'_>, ids: &[String]) -> Res
     let moves = net(all);
     apply_moves(&mut tx, actor.workspace_id, &moves).await?;
 
-    repo::soft_delete_many(&mut *tx, actor.workspace_id, ids)
+    // Rows another delete took while this one waited on the wallet locks
+    // were reversed twice above; refusing rolls the whole selection back.
+    let deleted = repo::soft_delete_many(&mut *tx, actor.workspace_id, ids)
         .await
         .map_err(internal)?;
+    if deleted != rows.len() as u64 {
+        return Err(AppError::Stale(None));
+    }
 
     for row in &rows {
         log(

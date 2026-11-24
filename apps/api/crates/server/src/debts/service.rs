@@ -794,9 +794,14 @@ async fn cancel(
         .collect();
 
     for payment in payments {
-        repo::soft_delete_payment(&mut **tx, actor.workspace_id, &payment.id)
+        // A concurrent cancel of the same payment waited on the debt lock;
+        // giving the money back twice would inflate the remaining amount.
+        let cancelled = repo::soft_delete_payment(&mut **tx, actor.workspace_id, &payment.id)
             .await
             .map_err(internal)?;
+        if cancelled == 0 {
+            return Err(AppError::PaymentNotFound);
+        }
         log(
             tx,
             actor,
