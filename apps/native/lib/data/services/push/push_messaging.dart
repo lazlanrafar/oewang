@@ -84,6 +84,14 @@ class FirebasePushMessaging implements PushMessaging {
       ),
       onDidReceiveNotificationResponse: (r) => _taps.add(r.payload),
     );
+    // Made up front, not on the first foreground push: FCM shows background
+    // pushes in the manifest's default channel, and falls back to
+    // "Miscellaneous" while that channel does not exist.
+    await _local
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >()
+        ?.createNotificationChannel(_channel);
     FirebaseMessaging.onMessage.listen(_showForeground);
   }
 
@@ -94,19 +102,27 @@ class FirebasePushMessaging implements PushMessaging {
       id: message.messageId?.hashCode ?? message.hashCode,
       title: notification.title,
       body: notification.body,
-      notificationDetails: const NotificationDetails(
+      notificationDetails: NotificationDetails(
         android: AndroidNotificationDetails(
-          'oewang_channel_default',
-          'General Notifications',
-          channelDescription: 'Receipts, imports, budgets and invitations',
+          _channel.id,
+          _channel.name,
+          channelDescription: _channel.description,
           importance: Importance.high,
           priority: Priority.high,
         ),
-        iOS: DarwinNotificationDetails(),
+        iOS: const DarwinNotificationDetails(),
       ),
       payload: _route(message),
     );
   }
+
+  /// Also named in AndroidManifest.xml as FCM's default channel.
+  static const _channel = AndroidNotificationChannel(
+    'oewang_channel_default',
+    'General Notifications',
+    description: 'Receipts, imports, budgets and invitations',
+    importance: Importance.high,
+  );
 
   static String? _route(RemoteMessage message) =>
       message.data['route'] as String?;
