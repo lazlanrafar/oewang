@@ -1,4 +1,4 @@
-"""The fifteen tool definitions the model sees (D17, D88, D103).
+"""The twenty-one tool definitions the model sees (D17, D88, D103, D120).
 
 **The specification for this module is `apps/api/crates/domain/src/tools.rs`.**
 That file is the validator: it parses every tool call the model produces, and
@@ -409,6 +409,150 @@ GET_BUDGET_STATUS = {
     ),
 }
 
+DEBT_TYPES = ["payable", "receivable"]
+
+#: The most people one split may name besides the user, mirroring
+#: `MAX_SPLIT_CONTACTS` (DEBT-10).
+MAX_SPLIT_CONTACTS = 20
+
+_CONFIRM_NOTE = (
+    "True only on a second call, after the user agreed in their own turn to "
+    "exactly what the first call's answer described."
+)
+
+#: Debts (D120). Every debt id comes from get_outstanding_debts; a contact is
+#: named, never looked up by id, and the API matches or creates it.
+GET_OUTSTANDING_DEBTS = {
+    "name": "get_outstanding_debts",
+    "description": (
+        "Every unpaid and partly paid debt: who, which way (payable: the user owes "
+        "them; receivable: they owe the user), the amount, what remains, the "
+        "currency, the status and the due date, with the debt ids. Call it before "
+        "pay_debt, update_debt or delete_debt to get the exact id; never guess one. "
+        "Every figure is computed and formatted; quote them."
+    ),
+    "input_schema": _schema({}),
+}
+
+CREATE_DEBT = {
+    "name": "create_debt",
+    "description": (
+        "Record money owed between the user and one person. payable when the user "
+        "owes them, receivable when they owe the user. Name the person as the user "
+        "did: the API matches an existing contact by name or creates one. This "
+        "moves no money and touches no wallet."
+    ),
+    "input_schema": _schema(
+        {
+            "type": {
+                "type": "string",
+                "enum": list(DEBT_TYPES),
+                "description": "payable (the user owes) or receivable (owed to the user).",
+            },
+            "contact_name": _text("The other person, in the user's words."),
+            "amount": _money("What is owed, in the debt's currency."),
+            "currency_code": _text(
+                "An ISO 4217 code, when the debt is not in the workspace currency. "
+                "Omit it otherwise."
+            ),
+            "description": _text("What it was for, when the user said."),
+            "due_date": _date("When it is due, when the user said."),
+        },
+        required=["type", "contact_name", "amount"],
+    ),
+}
+
+PAY_DEBT = {
+    "name": "pay_debt",
+    "description": (
+        "Record a payment against one debt, at most what remains. It writes the "
+        "transaction that moves the money: an expense for a payable debt, income "
+        "for a receivable one, dated today. Without wallet_id the default wallet "
+        "is used. Get debt_id from get_outstanding_debts first; never guess it."
+    ),
+    "input_schema": _schema(
+        {
+            "debt_id": _id("The debt, from get_outstanding_debts."),
+            "amount": _money("What was paid, in the debt's currency."),
+            "wallet_id": _id(
+                "The wallet the money left or reached. Use an id from the prompt; "
+                "omit it for the default wallet."
+            ),
+        },
+        required=["debt_id", "amount"],
+    ),
+}
+
+UPDATE_DEBT = {
+    "name": "update_debt",
+    "description": (
+        "Change a debt's amount, description or due date. Send only what changes. "
+        "The amount cannot go below what was already paid. Get debt_id from "
+        "get_outstanding_debts first; never guess it."
+    ),
+    "input_schema": _schema(
+        {
+            "debt_id": _id("The debt, from get_outstanding_debts."),
+            "amount": _money("The new total owed, in the debt's currency."),
+            "description": _text("What it was for."),
+            "due_date": _date("When it is due."),
+        },
+        required=["debt_id"],
+    ),
+}
+
+DELETE_DEBT = {
+    "name": "delete_debt",
+    "description": (
+        "Delete one debt that has no payments. The first call is answered with "
+        "CONFIRMATION_REQUIRED and the debt's details; show those to the user and "
+        "ask. Only after they agree, in a later turn, call again with confirmed "
+        "set to true. Setting it on the first call does nothing."
+    ),
+    "input_schema": _schema(
+        {
+            "debt_id": _id("The debt, from get_outstanding_debts."),
+            "confirmed": {"type": "boolean", "description": _CONFIRM_NOTE},
+        },
+        required=["debt_id"],
+    ),
+}
+
+SPLIT_BILL = {
+    "name": "split_bill",
+    "description": (
+        "Split an expense equally between the user and other people: it records the "
+        "expense and a receivable for each person. Name the others only, never the "
+        f"user; 1 to {MAX_SPLIT_CONTACTS} people. The first call writes nothing and "
+        "is answered with CONFIRMATION_REQUIRED and the split as the API computed "
+        "it: each person and share, what the user keeps, the contacts it would "
+        "create. Show that to the user exactly as given and ask. Only after they "
+        "agree, in a later turn, call again with the same arguments and confirmed "
+        "set to true. Any change to the people or the amount needs a new "
+        "confirmation. Never compute the shares yourself."
+    ),
+    "input_schema": _schema(
+        {
+            "amount": _money("The whole bill, in the wallet's currency."),
+            "name": _text("What the bill was, in the user's words."),
+            "wallet_id": _id(
+                "The wallet that paid. Use an id from the prompt; omit it for the "
+                "default wallet."
+            ),
+            "category_id": _id("The expense category. Omit it rather than guessing one."),
+            "contact_names": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": MAX_SPLIT_CONTACTS,
+                "description": "The other people, as the user named them.",
+                "items": {"type": "string", "minLength": 1, "maxLength": MAX_TEXT},
+            },
+            "confirmed": {"type": "boolean", "description": _CONFIRM_NOTE},
+        },
+        required=["amount", "name", "contact_names"],
+    ),
+}
+
 #: The catalog, in the order `Tool::ALL` lists it in the Rust validator.
 TOOL_DEFINITIONS: list[dict[str, Any]] = [
     GET_WORKSPACE_CONTEXT,
@@ -419,12 +563,18 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
     GET_INCOME_SUMMARY,
     GET_BURN_RATE,
     GET_BUDGET_STATUS,
+    GET_OUTSTANDING_DEBTS,
     CREATE_TRANSACTION,
     UPDATE_TRANSACTION,
     DELETE_TRANSACTION,
     ADD_TRANSACTION_ITEMS,
     CREATE_WALLET,
     CREATE_CATEGORY,
+    CREATE_DEBT,
+    PAY_DEBT,
+    UPDATE_DEBT,
+    DELETE_DEBT,
+    SPLIT_BILL,
     PRESENT_CHOICES,
 ]
 
@@ -443,6 +593,7 @@ def tool_definition(name: str) -> dict[str, Any] | None:
 __all__ = [
     "MAX_CHOICES",
     "MAX_ITEMS",
+    "MAX_SPLIT_CONTACTS",
     "MONEY_FIELDS",
     "TOOL_DEFINITIONS",
     "TOOL_NAMES",

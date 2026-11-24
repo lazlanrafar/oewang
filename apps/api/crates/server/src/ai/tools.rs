@@ -156,6 +156,14 @@ pub async fn execute(
         ToolCall::AddTransactionItems(args) => add_items(pool, actor, args).await,
         ToolCall::CreateWallet(args) => create_wallet(pool, actor, args).await,
         ToolCall::CreateCategory(args) => create_category(pool, actor, args).await,
+        // shortcut: the debt tools parse but do not run yet; OEW-109 stage 2
+        // wires them to the debt services once OEW-107 lands.
+        ToolCall::GetOutstandingDebts
+        | ToolCall::CreateDebt(_)
+        | ToolCall::PayDebt(_)
+        | ToolCall::UpdateDebt(_)
+        | ToolCall::DeleteDebt(_)
+        | ToolCall::SplitBill(_) => Err(AppError::ToolNotFound),
         ToolCall::PresentChoices(args) => present_choices(args),
     }
 }

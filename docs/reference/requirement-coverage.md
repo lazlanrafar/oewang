@@ -11,9 +11,9 @@ Evidence is, in order of preference: a test file that cites the ID (in a
 name or a comment); a backlog story that names the ID and has its "Verify
 in browser" box ticked; or a written reason it is not done.
 
-- 171 with test evidence
+- 172 with test evidence
 - 29 verified in browser only
-- 19 not done
+- 18 not done
 
 | ID | Evidence |
 |---|---|
@@ -87,7 +87,7 @@ in browser" box ticked; or a written reason it is not done.
 | DEBT-11 | not done: the API side is built and tested (US-070); the screen is US-071 |
 | DEBT-12 | not done: specified 2026-11-24 (D120), built in US-071 |
 | DEBT-13 | not done: the API side is built and tested (US-070); the screen is US-071 |
-| DEBT-14 | not done: specified 2026-11-24 (D120), built in US-072 |
+| DEBT-14 | `apps/ai/tests/test_chat_tools.py`, `apps/api/crates/domain/src/tools.rs` |
 | DEBT-15 | not done: specified 2026-11-24 (D120), built in US-072 |
 | DEBT-16 | not done: specified 2026-11-24 (D120), built in US-073 |
 | FB-1 | `apps/api/crates/server/src/main.rs` |
