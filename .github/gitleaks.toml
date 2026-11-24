@@ -13,6 +13,10 @@
 #     tell tokens apart, shown in the UI and in design-system specimens.
 #     A prefix cannot be used as a token. Matched on the whole
 #     `token_prefix: '...'` text, so a full token anywhere else still fails.
+#   - the Android app's Firebase config file. Its API key identifies the
+#     Firebase project and grants nothing by itself; Google ships it inside
+#     every app build. It is restricted to the app and Firebase APIs in the
+#     Google Cloud console, which is where its protection lives (D116).
 #
 # Nothing here allowlists a path that could hold a live credential. The
 # real .env is gitignored and is not a scanned path.
@@ -30,6 +34,7 @@ paths = [
   '''^apps/api/crates/clients/testdata/.*''',
   '''^apps/api/seeds/.*\.sql$''',
   '''^apps/ai/tests/golden/.*''',
+  '''^apps/native/android/app/google-services\.json$''',
 ]
 regexTarget = "match"
 regexes = [
