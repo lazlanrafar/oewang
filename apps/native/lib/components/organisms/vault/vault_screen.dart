@@ -3,11 +3,15 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:oewang/components/molecules/page_app_bar.dart';
 import 'package:oewang/components/organisms/vault/vault_file_sheet.dart';
 import 'package:oewang/components/organisms/vault/vault_view_model.dart';
 import 'package:oewang/config/dependencies.dart';
+import 'package:oewang/core/result/app_error.dart';
+import 'package:oewang/core/result/result.dart';
+import 'package:oewang/core/router/app_router.dart';
 import 'package:oewang/core/theme/oewang_palette.dart';
 import 'package:oewang/core/theme/oewang_radius.dart';
 import 'package:oewang/core/theme/oewang_typography.dart';
@@ -20,7 +24,11 @@ final vaultVmProvider = ChangeNotifierProvider.autoDispose<VaultViewModel>(
 /// The workspace's files (D90), as the web's `/vault` grid: search, type and
 /// sort on the server, 30 at a time, previews from the API's thumbnails.
 class VaultScreen extends ConsumerStatefulWidget {
-  const VaultScreen({super.key});
+  const VaultScreen({super.key, this.file});
+
+  /// A file id from a tapped push (`?file=`, PUSH-5): its sheet opens over
+  /// the grid.
+  final String? file;
 
   @override
   ConsumerState<VaultScreen> createState() => _VaultScreenState();
@@ -28,6 +36,50 @@ class VaultScreen extends ConsumerStatefulWidget {
 
 class _VaultScreenState extends ConsumerState<VaultScreen> {
   final _search = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _openFile(widget.file);
+  }
+
+  @override
+  void didUpdateWidget(VaultScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.file != oldWidget.file) _openFile(widget.file);
+  }
+
+  /// After this frame, since it navigates: drops `file` from the location
+  /// (so the same push opens it again), loads the file and opens its sheet.
+  void _openFile(String? id) {
+    if (id == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      GoRouter.of(context).go(AppRoutes.vault);
+      final vm = ref.read(vaultVmProvider);
+      final res = await vm.file(id);
+      if (!mounted) return;
+      switch (res) {
+        case Success(:final value):
+          await showVaultFileSheet(
+            context,
+            vm: vm,
+            file: value,
+            canWrite: ref.read(canWriteProvider),
+          );
+        case Failure(:final error):
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                error is ServerError && error.statusCode == 404
+                    ? 'That file was deleted or no longer exists.'
+                    : error.message,
+              ),
+            ),
+          );
+      }
+    });
+  }
 
   @override
   void dispose() {

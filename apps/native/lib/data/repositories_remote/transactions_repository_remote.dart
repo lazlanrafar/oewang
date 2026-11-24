@@ -82,6 +82,10 @@ class TransactionsRepositoryRemote implements TransactionsRepository {
   }
 
   @override
+  Future<Result<Transaction, AppError>> get(String id) =>
+      _write(() => _api.get('/transactions/$id'));
+
+  @override
   Future<Result<Transaction, AppError>> create(NewTransactionDraft draft) =>
       _write(
         () => _api.post('/transactions', data: TransactionDto.body(draft)),
@@ -95,6 +99,7 @@ class TransactionsRepositoryRemote implements TransactionsRepository {
     () => _api.patch('/transactions/$id', data: TransactionDto.body(draft)),
   );
 
+  /// One row out of the envelope; a read uses it too.
   Future<Result<Transaction, AppError>> _write(
     Future<Response<dynamic>> Function() send,
   ) async {

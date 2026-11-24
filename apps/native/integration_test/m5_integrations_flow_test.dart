@@ -30,6 +30,10 @@
 // keyboard has opened.
 
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:decimal/decimal.dart';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
@@ -46,26 +50,33 @@ import 'package:oewang/components/organisms/settings/settings_screen.dart';
 import 'package:oewang/components/organisms/settings/telegram/settings_telegram_screen.dart';
 import 'package:oewang/components/organisms/settings/workspace/settings_workspace_card.dart';
 import 'package:oewang/components/organisms/settings/workspace/settings_workspace_switcher_sheet.dart';
+import 'package:oewang/components/organisms/transactions/transactions_form_screen.dart';
 import 'package:oewang/components/organisms/transactions/transactions_screen.dart';
-import 'package:oewang/components/organisms/vault/vault_screen.dart';
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/config/env.dart';
 import 'package:oewang/core/result/app_error.dart';
 import 'package:oewang/core/result/result.dart';
 import 'package:oewang/core/router/app_router.dart';
 import 'package:oewang/data/repositories/device_tokens_repository.dart';
+import 'package:oewang/data/repositories/wallets_repository.dart';
 import 'package:oewang/data/repositories_remote/device_tokens_repository_remote.dart';
 import 'package:oewang/data/services/api/api_client.dart';
 import 'package:oewang/data/services/passkeys/passkey_authenticator.dart';
 import 'package:oewang/data/services/push/push_messaging.dart';
 import 'package:oewang/data/services/storage/preferences_service.dart';
 import 'package:oewang/data/services/storage/secure_storage_service.dart';
+import 'package:oewang/domain/models/new_transaction_draft.dart';
+import 'package:oewang/domain/models/transaction.dart';
 
 const _users = String.fromEnvironment('M5_USERS');
 const _run = String.fromEnvironment('M5_RUN');
 const _password = String.fromEnvironment('M5_PASSWORD');
 const _owner = 'm5-owner-$_users@oewang.local';
 const _invitee = 'm5-invitee-$_users@oewang.local';
+
+/// A 1x1 PNG, the smallest image the vault takes, for the file push.
+const _onePixelPng =
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
 
 /// FCM without FCM: permission granted, a fixed token, taps fed by the test.
 class _FakeMessaging implements PushMessaging {
@@ -390,24 +401,59 @@ void main() {
       expect(uri.host, 't.me');
     }
 
-    // 5. Push taps open the screen the payload names, and nothing else.
+    // 5. Push taps open the item the payload names (PUSH-5), and nothing
+    // else. A real transaction and a real vault file to name, in this run's
+    // workspace.
+    final wallet =
+        (await container
+                .read(walletsRepositoryProvider)
+                .create(const NewWalletDraft(name: 'M5 cash')))
+            .fold((w) => w, (e) => fail('wallet: $e'));
+    const txName = 'M5 receipt $_run';
+    final tx =
+        (await container
+                .read(transactionsRepositoryProvider)
+                .create(
+                  NewTransactionDraft(
+                    type: TransactionType.expense,
+                    amount: Decimal.parse('42000'),
+                    date: DateTime.now(),
+                    walletId: wallet.id,
+                    note: txName,
+                  ),
+                ))
+            .fold((t) => t, (e) => fail('transaction: $e'));
+    final png = File('${Directory.systemTemp.path}/m5-push-$_run.png')
+      ..writeAsBytesSync(base64.decode(_onePixelPng));
+    final file = (await container.read(vaultRepositoryProvider).upload(png))
+        .fold((f) => f, (e) => fail('vault upload: $e'));
+    say('M5INFO push items: transaction ${tx.id}, file ${file.id}');
+
     final trans = find.byType(TransactionsScreen);
     final budgets = find.byType(BudgetSettingScreen);
-    // The last five are refused payloads; only the first five are pictured.
+    final txForm = find.descendant(
+      of: find.byType(TransactionFormScreen),
+      matching: find.text(txName),
+    );
+    final fileSheet = find.text('Open or share');
+    // The first five are pictured; the last five are refused payloads.
     final taps = <(String?, String, Finder)>[
+      // The form is pushed: the location is the list under it, without
+      // `detail`.
+      ('/transactions?detail=${tx.id}', AppRoutes.trans, txForm),
+      ('/vault?file=${file.id}', AppRoutes.vault, fileSheet),
+      (
+        '/budgets?month=2026-10',
+        '${AppRoutes.budgetSettings}?month=2026-10',
+        find.text('Budget, Oct 2026'),
+      ),
       (
         '/transactions?detail=abc123',
-        '${AppRoutes.trans}?detail=abc123',
-        trans,
-      ),
-      ('/transactions', AppRoutes.trans, trans),
-      ('/vault?file=f1', '/vault?file=f1', find.byType(VaultScreen)),
-      (
-        '/budgets?month=2026-11',
-        '${AppRoutes.budgetSettings}?month=2026-11',
-        budgets,
+        AppRoutes.trans,
+        find.text('That transaction was deleted or no longer exists.'),
       ),
       ('/workspaces', AppRoutes.more, find.byType(SettingsScreen)),
+      ('/transactions', AppRoutes.trans, trans),
       ('/budgets?month=2026-13', AppRoutes.budgetSettings, budgets),
       ('/transactions?detail=../x', AppRoutes.trans, trans),
       ('https://evil.example/transactions', AppRoutes.trans, trans),
@@ -422,10 +468,16 @@ void main() {
       await waitFor(tester, find.byType(TelegramScreen));
       expect(location(), AppRoutes.telegram);
       messaging.taps.add(route);
-      await waitUntil(tester, () => location() == want, 'tap $route -> $want');
       await waitFor(tester, screen);
+      await waitUntil(tester, () => location() == want, 'tap $route -> $want');
       if (i < 5) await mark(tester, '07-tap-${i + 1}');
     }
+    // The tap's parameter is spent, so the same push opens it again.
+    router.go(AppRoutes.trans);
+    await waitFor(tester, trans);
+    messaging.taps.add('/transactions?detail=${tx.id}');
+    await waitFor(tester, txForm);
+    expect(location(), AppRoutes.trans);
 
     // 6. Invitation (MOB-9), the wrong account first: the owner opens the
     // invitee's link. A refused accept is rolled back, so the token still

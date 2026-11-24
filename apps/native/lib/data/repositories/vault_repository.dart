@@ -17,6 +17,10 @@ abstract class VaultRepository {
     int page = 1,
   });
 
+  /// `GET /v1/vault/files/{id}`: one live file's metadata, for a push that
+  /// names it (PUSH-5). A deleted or unknown id is the API's `404`.
+  Future<Result<VaultFile, AppError>> get(String id);
+
   /// A 320x320 JPEG preview (D91). `THUMBNAIL_UNAVAILABLE` for a PDF.
   Future<Result<Uint8List, AppError>> thumbnail(String id);
 

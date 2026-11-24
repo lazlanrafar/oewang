@@ -300,7 +300,8 @@ GoRouter buildAppRouter(Ref ref) {
       ),
       GoRoute(
         path: AppRoutes.budgetSettings,
-        builder: (context, state) => const BudgetSettingScreen(),
+        builder: (context, state) =>
+            BudgetSettingScreen(month: state.uri.queryParameters['month']),
       ),
       GoRoute(
         path: AppRoutes.budgetForm,
@@ -339,7 +340,8 @@ GoRouter buildAppRouter(Ref ref) {
       ),
       GoRoute(
         path: AppRoutes.vault,
-        builder: (context, state) => const VaultScreen(),
+        builder: (context, state) =>
+            VaultScreen(file: state.uri.queryParameters['file']),
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
@@ -349,8 +351,11 @@ GoRouter buildAppRouter(Ref ref) {
             routes: [
               GoRoute(
                 path: AppRoutes.trans,
-                pageBuilder: (context, state) =>
-                    const NoTransitionPage(child: TransactionsScreen()),
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: TransactionsScreen(
+                    detail: state.uri.queryParameters['detail'],
+                  ),
+                ),
               ),
             ],
           ),

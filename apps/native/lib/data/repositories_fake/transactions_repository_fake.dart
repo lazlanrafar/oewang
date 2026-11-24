@@ -58,6 +58,12 @@ class TransactionsRepositoryFake implements TransactionsRepository {
   }
 
   @override
+  Future<Result<Transaction, AppError>> get(String id) async {
+    final i = _items.indexWhere((t) => t.id == id);
+    return i == -1 ? const Failure(_notFound) : Success(_items[i]);
+  }
+
+  @override
   Future<Result<Transaction, AppError>> create(
     NewTransactionDraft draft,
   ) async {
@@ -72,15 +78,7 @@ class TransactionsRepositoryFake implements TransactionsRepository {
     NewTransactionDraft draft,
   ) async {
     final i = _items.indexWhere((t) => t.id == id);
-    if (i == -1) {
-      return const Failure(
-        ServerError(
-          statusCode: 404,
-          message: 'Transaction not found',
-          code: 'TRANSACTION_NOT_FOUND',
-        ),
-      );
-    }
+    if (i == -1) return const Failure(_notFound);
     return Success(_items[i] = _from(id, draft));
   }
 
@@ -100,6 +98,12 @@ class TransactionsRepositoryFake implements TransactionsRepository {
     categoryId: d.categoryId,
     name: d.note,
     description: d.description,
+  );
+
+  static const _notFound = ServerError(
+    statusCode: 404,
+    message: 'Transaction not found',
+    code: 'TRANSACTION_NOT_FOUND',
   );
 
   static DateTime _day(DateTime d) => DateTime(d.year, d.month, d.day);

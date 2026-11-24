@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:oewang/components/atoms/button.dart';
 import 'package:oewang/components/atoms/money_text.dart';
 import 'package:oewang/components/molecules/confirm_dialog.dart';
@@ -13,16 +14,32 @@ import 'package:oewang/core/theme/oewang_typography.dart';
 import 'package:oewang/domain/models/budget_status.dart';
 import 'package:oewang/domain/models/money.dart';
 
-final _budgetsProvider = FutureProvider.autoDispose<BudgetMonth>((ref) async {
-  ref.watch(budgetsRevisionProvider);
-  final res = await ref.watch(budgetsRepositoryProvider).status();
-  return res.fold((m) => m, (_) => BudgetMonth.empty());
-});
+/// Keyed by the month shown; null is the API's default, this month.
+final _budgetsProvider = FutureProvider.autoDispose
+    .family<BudgetMonth, DateTime?>((ref, month) async {
+      ref.watch(budgetsRevisionProvider);
+      final res = await ref
+          .watch(budgetsRepositoryProvider)
+          .status(month: month?.month, year: month?.year);
+      return res.fold((m) => m, (_) => BudgetMonth.empty());
+    });
 
 /// Budget Setting — list of per-category monthly budgets with create / edit /
 /// swipe-to-delete, plus a summary header (total budgeted vs spent).
 class BudgetSettingScreen extends ConsumerWidget {
-  const BudgetSettingScreen({super.key});
+  const BudgetSettingScreen({super.key, this.month});
+
+  /// `YYYY-MM` from a tapped budget push (`?month=`, PUSH-5); null or
+  /// malformed shows this month.
+  final String? month;
+
+  DateTime? get _month {
+    final m = month;
+    if (m == null || !RegExp(r'^\d{4}-(0[1-9]|1[0-2])$').hasMatch(m)) {
+      return null;
+    }
+    return DateTime.parse('$m-01');
+  }
 
   void _bump(WidgetRef ref) =>
       ref.read(budgetsRevisionProvider.notifier).bump();
@@ -64,13 +81,16 @@ class BudgetSettingScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final async = ref.watch(_budgetsProvider);
+    final shown = _month;
+    final async = ref.watch(_budgetsProvider(shown));
     final canWrite = ref.watch(canWriteProvider);
     final palette = context.palette;
 
     return Scaffold(
       appBar: PageAppBar(
-        title: 'Budget',
+        title: shown == null
+            ? 'Budget'
+            : 'Budget, ${DateFormat('MMM yyyy').format(shown)}',
         backLabel: 'Settings',
         actions: [
           if (canWrite)

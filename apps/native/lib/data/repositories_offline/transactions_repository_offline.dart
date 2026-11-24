@@ -138,6 +138,25 @@ class TransactionsRepositoryOffline implements TransactionsRepository {
     );
   }
 
+  /// The API's row online; offline, or when the request gets no answer, the
+  /// cached one.
+  @override
+  Future<Result<Transaction, AppError>> get(String id) async {
+    final ws = _sync.workspaceId;
+    if (ws == null) return _remote.get(id);
+    if (_sync.online) {
+      final res = await _remote.get(id);
+      if (res is! Failure<Transaction, AppError> ||
+          res.error is! NetworkError) {
+        return res;
+      }
+    }
+    final row = await _db.row(ws, _kind, id);
+    return row == null
+        ? const Failure(NetworkError())
+        : Success(TransactionDto.fromJson(row).toDomain());
+  }
+
   @override
   Future<Result<Transaction, AppError>> create(NewTransactionDraft draft) {
     final id = cuid();

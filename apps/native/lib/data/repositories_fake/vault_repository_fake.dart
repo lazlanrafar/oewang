@@ -40,6 +40,20 @@ class VaultRepositoryFake implements VaultRepository {
   ));
 
   @override
+  Future<Result<VaultFile, AppError>> get(String id) async {
+    final i = files.indexWhere((f) => f.id == id);
+    return i == -1
+        ? const Failure(
+            ServerError(
+              statusCode: 404,
+              message: 'File not found',
+              code: 'FILE_NOT_FOUND',
+            ),
+          )
+        : Success(files[i]);
+  }
+
+  @override
   Future<Result<Uint8List, AppError>> thumbnail(String id) async =>
       const Failure(
         ServerError(

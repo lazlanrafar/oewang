@@ -86,6 +86,11 @@ class VaultRepositoryRemote implements VaultRepository {
   });
 
   @override
+  Future<Result<VaultFile, AppError>> get(String id) => _call(
+    () async => VaultFile.fromJson(_data(await _api.get('/vault/files/$id'))),
+  );
+
+  @override
   Future<Result<Uint8List, AppError>> thumbnail(String id) => _call(
     () async => base64.decode(
       _data(await _api.get('/vault/files/$id/thumbnail'))['data'] as String,
