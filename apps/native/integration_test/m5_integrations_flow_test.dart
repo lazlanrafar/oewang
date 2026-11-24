@@ -187,6 +187,10 @@ void main() {
   /// Taps a button below text fields. No "done" key first: on the last
   /// field it submits the form, and the button turns into a spinner.
   Future<void> press(WidgetTester tester, Finder target) async {
+    // Unfocus instead: an Android keyboard still sliding away moves the
+    // button after ensureVisible, and the tap lands on the page behind it.
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pump(const Duration(milliseconds: 600));
     await tester.ensureVisible(target.last);
     await tester.pump(const Duration(milliseconds: 300));
     await tester.tap(target.last);
