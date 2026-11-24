@@ -8,7 +8,7 @@
 
 use chrono::Utc;
 use oewang_db::repositories::accounts::{self, WorkspaceMembershipRow};
-use oewang_domain::{AppError, FieldErrors, Result};
+use oewang_domain::{AppError, Result};
 use serde_json::{json, Map, Value};
 use sqlx::PgPool;
 
@@ -41,7 +41,8 @@ pub async fn workspaces(db: &PgPool, caller: &McpCaller) -> Result<Vec<Workspace
 }
 
 /// `tools/list`: every tool, with `workspace_id` added when the token can
-/// reach more than one workspace and `confirmed` on every delete.
+/// reach more than one workspace and `confirmed` on every call that is asked
+/// first (D122).
 pub async fn list(state: &AppState, caller: &McpCaller) -> Result<Value> {
     let many = workspaces(&state.db, caller).await?.len() != 1;
     let mut listed = vec![describe(&LIST_WORKSPACES, false)];
@@ -61,12 +62,12 @@ fn describe(tool: &ToolDef, needs_workspace: bool) -> Value {
                 }),
             );
         }
-        if tool.spend == Spend::Delete {
+        if tool.spend.needs_confirmation() {
             properties.insert(
                 CONFIRM_ARG.into(),
                 json!({
                     "type": "boolean",
-                    "description": "Leave out on the first call. The server answers CONFIRMATION_REQUIRED; show the user what will be deleted, and only after they agree call again with confirmed: true."
+                    "description": "Leave out on the first call. The server answers CONFIRMATION_REQUIRED; show the user what will be deleted or written, and only after they agree call again with confirmed: true."
                 }),
             );
         }
@@ -83,7 +84,7 @@ fn describe(tool: &ToolDef, needs_workspace: bool) -> Value {
         "inputSchema": schema,
         "annotations": {
             "readOnlyHint": tool.spend == Spend::Read,
-            "destructiveHint": tool.spend == Spend::Delete,
+            "destructiveHint": tool.spend.needs_confirmation(),
             "openWorldHint": false
         }
     })
@@ -130,18 +131,25 @@ pub async fn call(
     let role = current_role(&state.db, &workspace_id, &caller.user_id).await?;
 
     let confirmed = take_confirmed(&mut arguments);
-    if tool.spend == Spend::Delete {
+    if tool.spend.needs_confirmation() {
         // The exact call, workspace included, is what the user agrees to.
         let key = format!("{} {} {}", tool.name, workspace_id, arguments);
         let answered = confirmed && state.mcp.take_challenge(&caller.token_id, &key, now);
         if !answered {
             state.mcp.spend(&caller.token_id, Spend::Read, now)?;
+            // What the call would write, computed by the API, so the person
+            // agrees to figures rather than to a description (D122). Read
+            // before the challenge is recorded: a call that cannot run is
+            // refused, not confirmed.
+            let mut fields =
+                tools::preview(&state.db, &workspace_id, tool.name, &arguments).await?;
             state.mcp.challenge(&caller.token_id, &key, now);
-            let mut fields = FieldErrors::new();
-            fields.insert(
-                CONFIRM_ARG.into(),
-                "Nothing was deleted. Show the user exactly what will be deleted and ask; only after they agree, call again with the same arguments and confirmed: true, within five minutes.".into(),
-            );
+            let message = if tool.spend == Spend::Delete {
+                "Nothing was deleted. Show the user exactly what will be deleted and ask; only after they agree, call again with the same arguments and confirmed: true, within five minutes."
+            } else {
+                "Nothing was written. Show the user exactly what will be written, as given here, and ask; only after they agree, call again with the same arguments and confirmed: true, within five minutes."
+            };
+            fields.insert(CONFIRM_ARG.into(), message.into());
             return Err(AppError::ConfirmationRequired(fields));
         }
     }

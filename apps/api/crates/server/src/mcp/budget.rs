@@ -31,6 +31,16 @@ pub enum Spend {
     Read,
     Write,
     Delete,
+    /// A write the person agrees to first, like a delete, counted as a
+    /// write: `split_bill`, which writes many rows in one call (D122).
+    Confirmed,
+}
+
+impl Spend {
+    /// Whether a call runs only as the second of two (CHAT-6's rule).
+    pub fn needs_confirmation(self) -> bool {
+        matches!(self, Spend::Delete | Spend::Confirmed)
+    }
 }
 
 #[derive(Debug, Default)]

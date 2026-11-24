@@ -609,3 +609,190 @@ async fn should_cancel_a_debt_payment_deleted_through_the_mcp_tool(pool: PgPool)
     let after = debts::find(&pool, "ws_a", &debt.id).await.unwrap();
     assert_eq!(after.status, "unpaid");
 }
+
+// -------------------------------------------------------------- debts
+
+/// DEBT-15, D122: the debt and contact tools are listed, and the ones that
+/// delete or write many rows ask first.
+#[test]
+fn should_list_the_debt_tools_and_confirm_the_risky_ones() {
+    use crate::mcp::budget::Spend;
+
+    let tools: Vec<(&str, Spend)> = crate::mcp::tools::all()
+        .map(|tool| (tool.name, tool.spend))
+        .collect();
+    let spend = |name: &str| {
+        tools
+            .iter()
+            .find(|(tool, _)| *tool == name)
+            .unwrap_or_else(|| panic!("{name} is missing"))
+            .1
+    };
+
+    for read in ["get_outstanding_debts", "list_contacts"] {
+        assert_eq!(spend(read), Spend::Read, "{read}");
+    }
+    for write in [
+        "create_debt",
+        "pay_debt",
+        "update_debt",
+        "create_contact",
+        "update_contact",
+    ] {
+        assert_eq!(spend(write), Spend::Write, "{write}");
+    }
+    for delete in ["delete_debt", "delete_contact", "merge_contacts"] {
+        assert_eq!(spend(delete), Spend::Delete, "{delete}");
+    }
+    assert_eq!(spend("split_bill"), Spend::Confirmed);
+    assert!(Spend::Confirmed.needs_confirmation());
+    assert!(!Spend::Write.needs_confirmation());
+}
+
+async fn debt_fixture(pool: &PgPool) {
+    fixture(pool).await;
+    sqlx::query(
+        "INSERT INTO wallets (id, workspace_id, name, currency_code, is_default)
+         VALUES ('w_debt', 'ws_a', 'Cash', 'IDR', true)",
+    )
+    .execute(pool)
+    .await
+    .unwrap();
+}
+
+async fn count(pool: &PgPool, sql: &'static str) -> i64 {
+    sqlx::query_scalar(sql).fetch_one(pool).await.unwrap()
+}
+
+/// DEBT-15: a debt may name its contact, matched or created as in the chat.
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_create_a_debt_for_a_contact_named_in_the_call(pool: PgPool) {
+    debt_fixture(&pool).await;
+    let state = state(&pool);
+    let who = caller("tok_named", Some(vec!["ws_a".into()]));
+
+    let created = service::call(
+        &state,
+        &who,
+        "req_1",
+        "create_debt",
+        json!({ "type": "receivable", "contact_name": "Budi", "amount": "75000" }),
+    )
+    .await
+    .unwrap();
+    assert_eq!(created["contact_name"], "Budi");
+    assert_eq!(created["status"], "unpaid");
+
+    service::call(
+        &state,
+        &who,
+        "req_2",
+        "create_debt",
+        json!({ "type": "payable", "contact_name": "BUDI", "amount": "5000" }),
+    )
+    .await
+    .unwrap();
+    assert_eq!(count(&pool, "SELECT count(*) FROM contacts").await, 1);
+
+    let neither = service::call(
+        &state,
+        &who,
+        "req_3",
+        "create_debt",
+        json!({ "type": "payable", "amount": "5000" }),
+    )
+    .await
+    .unwrap_err();
+    assert_eq!(neither.code(), "VALIDATION_FAILED");
+
+    let listed = service::call(&state, &who, "req_4", "get_outstanding_debts", json!({}))
+        .await
+        .unwrap();
+    assert_eq!(listed["debts"]["rows"].as_array().unwrap().len(), 2);
+    assert!(listed["totals"]["net_formatted"].is_string());
+}
+
+/// DEBT-15, D122: the first split answers with the split the API computed
+/// and writes nothing; the same call confirmed writes it.
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_show_a_split_over_mcp_before_writing_it(pool: PgPool) {
+    debt_fixture(&pool).await;
+    let state = state(&pool);
+    let who = caller("tok_split", Some(vec!["ws_a".into()]));
+    let split = json!({
+        "wallet_id": "w_debt",
+        "amount": "90000",
+        "name": "Dinner",
+        "date": "2026-11-24T19:00:00Z",
+        "contact_names": ["Ani", "Budi"]
+    });
+
+    let first = service::call(&state, &who, "req_1", "split_bill", split.clone())
+        .await
+        .unwrap_err();
+    let AppError::ConfirmationRequired(fields) = first else {
+        panic!("expected a challenge, got {}", first.code())
+    };
+    assert_eq!(fields["people"], "Ani (new contact), Budi (new contact)");
+    assert!(
+        fields["share_each"].contains("30"),
+        "{}",
+        fields["share_each"]
+    );
+    assert!(fields["confirmed"].starts_with("Nothing was written"));
+    assert_eq!(count(&pool, "SELECT count(*) FROM debts").await, 0);
+    assert_eq!(count(&pool, "SELECT count(*) FROM transactions").await, 0);
+
+    let mut confirmed = split.clone();
+    confirmed["confirmed"] = json!(true);
+    let written = service::call(&state, &who, "req_2", "split_bill", confirmed)
+        .await
+        .unwrap();
+    assert_eq!(written["debts"].as_array().unwrap().len(), 2);
+    assert_eq!(count(&pool, "SELECT count(*) FROM debts").await, 2);
+}
+
+/// CON-4, DEBT-15: a merge is confirmed like a delete, then moves the debts.
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_confirm_a_contact_merge_over_mcp(pool: PgPool) {
+    debt_fixture(&pool).await;
+    let state = state(&pool);
+    let who = caller("tok_merge", Some(vec!["ws_a".into()]));
+    let debt = service::call(
+        &state,
+        &who,
+        "req_1",
+        "create_debt",
+        json!({ "type": "receivable", "contact_name": "Budi S", "amount": "1000" }),
+    )
+    .await
+    .unwrap();
+    let keep = service::call(
+        &state,
+        &who,
+        "req_2",
+        "create_contact",
+        json!({ "name": "Budi" }),
+    )
+    .await
+    .unwrap();
+    let merge = json!({
+        "id": debt["contact_id"],
+        "into_id": keep["id"],
+    });
+
+    let first = service::call(&state, &who, "req_3", "merge_contacts", merge.clone()).await;
+    assert!(matches!(first, Err(AppError::ConfirmationRequired(_))));
+
+    let mut confirmed = merge.clone();
+    confirmed["confirmed"] = json!(true);
+    service::call(&state, &who, "req_4", "merge_contacts", confirmed)
+        .await
+        .unwrap();
+    let moved: String = sqlx::query_scalar("SELECT contact_id FROM debts WHERE id = $1")
+        .bind(debt["id"].as_str().unwrap())
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(moved, keep["id"].as_str().unwrap());
+}

@@ -69,8 +69,9 @@ impl Ctx {
 pub type ToolFuture = Pin<Box<dyn Future<Output = Result<Value>> + Send>>;
 pub type Handler = fn(Ctx, Value) -> ToolFuture;
 
-/// One tool. `spend` decides the caps and the annotations; a `Delete` tool
-/// also gets the two-step confirmation and a `confirmed` argument.
+/// One tool. `spend` decides the caps and the annotations; a `Delete` or
+/// `Confirmed` tool also gets the two-step confirmation and a `confirmed`
+/// argument (D122).
 pub struct ToolDef {
     pub name: &'static str,
     pub description: &'static str,

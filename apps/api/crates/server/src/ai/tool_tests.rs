@@ -1166,3 +1166,391 @@ async fn should_cancel_a_debt_payment_deleted_through_the_chat_tool(pool: PgPool
     assert_eq!(debt.status, "unpaid");
     assert_eq!(debt.remaining_amount, "1000".parse::<Decimal>().unwrap());
 }
+
+// ------------------------------------------------------------------ debts
+
+/// A debt the chat recorded, by name.
+async fn a_debt(pool: &PgPool, turns: &TurnStore, kind: &str, name: &str, amount: &str) -> String {
+    let outcome = run(
+        pool,
+        turns,
+        "create_debt",
+        json!({ "type": kind, "contact_name": name, "amount": amount }),
+    )
+    .await
+    .unwrap();
+    outcome.result["id"].as_str().unwrap().to_string()
+}
+
+async fn count(pool: &PgPool, sql: &'static str) -> i64 {
+    sqlx::query_scalar(sql).fetch_one(pool).await.unwrap()
+}
+
+/// DEBT-14
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_refuse_every_debt_write_for_a_member(pool: PgPool) {
+    fixture(&pool).await;
+
+    let calls = [
+        (
+            "create_debt",
+            json!({ "type": "payable", "contact_name": "Budi", "amount": "1" }),
+        ),
+        ("pay_debt", json!({ "debt_id": "debt_x", "amount": "1" })),
+        ("update_debt", json!({ "debt_id": "debt_x", "amount": "2" })),
+        ("delete_debt", json!({ "debt_id": "debt_x" })),
+        (
+            "split_bill",
+            json!({ "amount": "300", "name": "Dinner", "contact_names": ["Ani"] }),
+        ),
+    ];
+    for (tool, args) in calls {
+        let error = call_as(&pool, &store(), MEMBER, "member", tool, args)
+            .await
+            .unwrap_err();
+        assert_eq!(error.code(), "TOOL_FORBIDDEN", "{tool}");
+    }
+
+    let reads = call_as(
+        &pool,
+        &store(),
+        MEMBER,
+        "member",
+        "get_outstanding_debts",
+        json!({}),
+    )
+    .await;
+    assert!(reads.is_ok(), "a member reads the debts");
+}
+
+/// DEBT-14: a contact named in a call is matched case-insensitively, or
+/// created once, and the write is the chat's.
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_record_a_debt_against_a_contact_named_in_the_call(pool: PgPool) {
+    fixture(&pool).await;
+    let turns = store();
+
+    let first = a_debt(&pool, &turns, "receivable", "Budi", "50000").await;
+    let second = a_debt(&pool, &turns, "payable", " budi ", "20000").await;
+
+    let contacts = count(
+        &pool,
+        "SELECT count(*) FROM contacts WHERE workspace_id = 'ws_test' AND deleted_at IS NULL",
+    )
+    .await;
+    assert_eq!(contacts, 1, "the second name matched the first contact");
+
+    let first = crate::debts::service::find(&pool, WORKSPACE, &first)
+        .await
+        .unwrap();
+    let second = crate::debts::service::find(&pool, WORKSPACE, &second)
+        .await
+        .unwrap();
+    assert_eq!(first.contact_id, second.contact_id);
+    assert_eq!(
+        first.currency_code, "IDR",
+        "the workspace currency by default"
+    );
+    assert_eq!(first.status, "unpaid");
+
+    let source: String = sqlx::query_scalar(
+        "SELECT source FROM audit_logs WHERE entity = 'debt' AND entity_id = $1",
+    )
+    .bind(&first.id)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(source, "chat");
+}
+
+/// DEBT-14: a refused debt leaves no contact behind.
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_not_make_a_contact_for_a_debt_it_refuses(pool: PgPool) {
+    fixture(&pool).await;
+
+    let error = run(
+        &pool,
+        &store(),
+        "create_debt",
+        json!({ "type": "payable", "contact_name": "Citra", "amount": "0" }),
+    )
+    .await
+    .unwrap_err();
+    assert_eq!(error.code(), "VALIDATION_FAILED");
+    assert_eq!(count(&pool, "SELECT count(*) FROM contacts").await, 0);
+}
+
+/// DEBT-14: the outstanding list leaves out a paid debt and carries the
+/// totals as the API formatted them.
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_list_only_the_debts_still_owed(pool: PgPool) {
+    fixture(&pool).await;
+    let turns = store();
+    let open = a_debt(&pool, &turns, "receivable", "Ani", "50000").await;
+    let settled = a_debt(&pool, &turns, "payable", "Budi", "10000").await;
+    run(
+        &pool,
+        &store(),
+        "pay_debt",
+        json!({ "debt_id": settled, "amount": "10000" }),
+    )
+    .await
+    .unwrap();
+
+    let outcome = run(&pool, &store(), "get_outstanding_debts", json!({}))
+        .await
+        .unwrap();
+    let debts = outcome.result["debts"].as_array().unwrap();
+    assert_eq!(debts.len(), 1);
+    assert_eq!(debts[0]["id"], open);
+    assert_eq!(debts[0]["remaining"], "50000.0000");
+    assert!(outcome.result["totals"]["owed_to_you"].is_string());
+}
+
+/// DEBT-14, DEBT-4: a payment without a wallet goes through the default
+/// one, writes its transaction and counts as a transaction created.
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_pay_a_debt_through_the_default_wallet(pool: PgPool) {
+    fixture(&pool).await;
+    let debt = a_debt(&pool, &store(), "payable", "Budi", "100000").await;
+
+    let outcome = run(
+        &pool,
+        &store(),
+        "pay_debt",
+        json!({ "debt_id": debt, "amount": "40000" }),
+    )
+    .await
+    .unwrap();
+    assert_eq!(outcome.result["wallet"], "Cash");
+    assert_eq!(outcome.result["debt"]["status"], "partial");
+    assert_eq!(outcome.result["debt"]["remaining"], "60000.0000");
+
+    let balance: Decimal = sqlx::query_scalar("SELECT balance FROM wallets WHERE id = 'wal_cash'")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(
+        balance,
+        "460000".parse::<Decimal>().unwrap(),
+        "paying a payable is an expense"
+    );
+
+    // The fourth transaction in a turn is refused, a payment included.
+    let turns = store();
+    for _ in 0..MAX_CREATED_TRANSACTIONS_PER_TURN {
+        run(
+            &pool,
+            &turns,
+            "pay_debt",
+            json!({ "debt_id": debt, "amount": "1" }),
+        )
+        .await
+        .unwrap();
+    }
+    let error = run(
+        &pool,
+        &turns,
+        "pay_debt",
+        json!({ "debt_id": debt, "amount": "1" }),
+    )
+    .await
+    .unwrap_err();
+    assert_eq!(error.code(), "TOOL_CAP_EXCEEDED");
+}
+
+/// DEBT-14, DEBT-5: in another currency the ceiling holds on what leaves
+/// the wallet, not on the figure the model typed.
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_hold_a_foreign_payment_to_the_ceiling_on_its_wallet_amount(pool: PgPool) {
+    fixture(&pool).await;
+    sqlx::query(
+        "INSERT INTO exchange_rates (id, base_code, quote_code, date, rate)
+         VALUES ('rate_usd', 'USD', 'IDR', CURRENT_DATE, 16000)",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+    let created = run(
+        &pool,
+        &store(),
+        "create_debt",
+        json!({ "type": "payable", "contact_name": "Sam", "amount": "100", "currency_code": "USD" }),
+    )
+    .await
+    .unwrap();
+    let debt = created.result["id"].as_str().unwrap().to_string();
+
+    let args = json!({ "debt_id": debt, "amount": "100" });
+    let low_ceiling = tools::execute(
+        &pool,
+        &store(),
+        "1000000".parse().unwrap(),
+        ToolRequest {
+            workspace_id: WORKSPACE,
+            user_id: OWNER,
+            claimed_role: "owner",
+            session_id: SESSION,
+            turn_id: TURN,
+            call_id: None,
+            tool: "pay_debt",
+            args: &args,
+        },
+    )
+    .await
+    .unwrap_err();
+    assert_eq!(
+        low_ceiling.code(),
+        "TOOL_ARGS_INVALID",
+        "1,600,000 IDR is above it"
+    );
+
+    let paid = run(&pool, &store(), "pay_debt", args.clone())
+        .await
+        .unwrap();
+    assert_eq!(paid.result["debt"]["status"], "paid");
+    let (amount, original): (Decimal, Decimal) =
+        sqlx::query_as("SELECT amount, original_amount FROM transactions WHERE id = $1")
+            .bind(paid.result["transaction_id"].as_str().unwrap())
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert_eq!(amount, "1600000".parse::<Decimal>().unwrap());
+    assert_eq!(original, "100".parse::<Decimal>().unwrap());
+}
+
+/// DEBT-14, DEBT-2: the service's rules reach the model unchanged.
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_refuse_an_amount_below_what_was_paid(pool: PgPool) {
+    fixture(&pool).await;
+    let debt = a_debt(&pool, &store(), "receivable", "Ani", "100000").await;
+    run(
+        &pool,
+        &store(),
+        "pay_debt",
+        json!({ "debt_id": debt, "amount": "80000" }),
+    )
+    .await
+    .unwrap();
+
+    let error = run(
+        &pool,
+        &store(),
+        "update_debt",
+        json!({ "debt_id": debt, "amount": "50000" }),
+    )
+    .await
+    .unwrap_err();
+    assert_eq!(error.code(), "AMOUNT_BELOW_PAID");
+
+    let updated = run(
+        &pool,
+        &store(),
+        "update_debt",
+        json!({ "debt_id": debt, "description": "Concert tickets", "due_date": "2026-12-24" }),
+    )
+    .await
+    .unwrap();
+    assert_eq!(updated.result["description"], "Concert tickets");
+    assert_eq!(updated.result["due_date"], "2026-12-24");
+}
+
+/// DEBT-14: a debt delete is challenged with the debt's own details, and a
+/// challenge on a transaction id never answers for a debt.
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_challenge_a_debt_delete_and_keep_it_apart(pool: PgPool) {
+    fixture(&pool).await;
+    let debt = a_debt(&pool, &store(), "payable", "Budi", "25000").await;
+    let turns = store();
+
+    // A transaction challenge under the same id says nothing about the debt.
+    turns.challenge(SESSION, &debt, crate::owe1::session::now_secs());
+    let error = run(
+        &pool,
+        &turns,
+        "delete_debt",
+        json!({ "debt_id": debt, "confirmed": true }),
+    )
+    .await
+    .unwrap_err();
+    let oewang_domain::AppError::ConfirmationRequired(target) = error else {
+        panic!("expected a challenge, got {}", error.code())
+    };
+    assert_eq!(target["contact"], "Budi");
+    assert!(target["remaining"].contains("25"));
+
+    run(
+        &pool,
+        &turns,
+        "delete_debt",
+        json!({ "debt_id": debt, "confirmed": true }),
+    )
+    .await
+    .unwrap();
+    let gone = crate::debts::service::find(&pool, WORKSPACE, &debt).await;
+    assert_eq!(gone.unwrap_err().code(), "DEBT_NOT_FOUND");
+}
+
+/// D122: the first split call writes nothing and shows the API's split; the
+/// same split confirmed writes it; a changed split is asked again.
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_show_a_split_before_writing_it(pool: PgPool) {
+    fixture(&pool).await;
+    a_debt(&pool, &store(), "receivable", "Ani", "1").await;
+    let turns = store();
+    let split = json!({
+        "amount": "100000",
+        "name": "Dinner",
+        "category_id": "cat_food",
+        "contact_names": ["ani", "Budi"]
+    });
+
+    let error = run(&pool, &turns, "split_bill", split.clone())
+        .await
+        .unwrap_err();
+    let oewang_domain::AppError::ConfirmationRequired(target) = error else {
+        panic!("expected a challenge, got {}", error.code())
+    };
+    assert_eq!(target["people"], "Ani, Budi (new contact)");
+    assert!(
+        target["share_each"].contains("33"),
+        "{}",
+        target["share_each"]
+    );
+    assert!(target["yours"].contains("33"), "{}", target["yours"]);
+    assert_ne!(
+        target["share_each"], target["yours"],
+        "the person keeps the remainder"
+    );
+    assert_eq!(
+        count(&pool, "SELECT count(*) FROM debts").await,
+        1,
+        "nothing written on the first call"
+    );
+    assert_eq!(count(&pool, "SELECT count(*) FROM contacts").await, 1);
+
+    // A different split is not the one the person saw.
+    let mut changed = split.clone();
+    changed["amount"] = json!("90000");
+    changed["confirmed"] = json!(true);
+    let error = run(&pool, &turns, "split_bill", changed).await.unwrap_err();
+    assert_eq!(error.code(), "CONFIRMATION_REQUIRED");
+
+    let mut confirmed = split.clone();
+    confirmed["confirmed"] = json!(true);
+    let outcome = run(&pool, &turns, "split_bill", confirmed.clone())
+        .await
+        .unwrap();
+    let receivables = outcome.result["receivables"].as_array().unwrap();
+    assert_eq!(receivables.len(), 2);
+    for receivable in receivables {
+        assert_eq!(receivable["amount"], "33333.0000");
+        assert_eq!(receivable["type"], "receivable");
+    }
+
+    // One confirmation answers one split: the same call again is asked again.
+    let error = run(&pool, &turns, "split_bill", confirmed)
+        .await
+        .unwrap_err();
+    assert_eq!(error.code(), "CONFIRMATION_REQUIRED");
+}

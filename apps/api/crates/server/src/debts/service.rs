@@ -983,24 +983,7 @@ pub async fn split(
     contact_ids: &[String],
     contact_names: &[String],
 ) -> Result<(ledger::TransactionListRow, Vec<DebtListRow>)> {
-    let mut seen_ids = HashSet::new();
-    let ids: Vec<&str> = contact_ids
-        .iter()
-        .map(|id| id.trim())
-        .filter(|id| !id.is_empty() && seen_ids.insert(id.to_string()))
-        .collect();
-    let mut seen_names = HashSet::new();
-    let names: Vec<&str> = contact_names
-        .iter()
-        .map(|name| name.trim())
-        .filter(|name| !name.is_empty() && seen_names.insert(name.to_lowercase()))
-        .collect();
-    if ids.len() + names.len() == 0 || ids.len() + names.len() > SPLIT_LIMIT {
-        return Err(AppError::validation([(
-            "contact_names",
-            "Split with 1 to 20 people.",
-        )]));
-    }
+    let (ids, names) = split_people(contact_ids, contact_names)?;
 
     // Worked out before the write opens: the source, its currency, and the
     // new expense's rate.
@@ -1125,6 +1108,156 @@ pub async fn split(
         debts.push(find(pool, actor.workspace_id, &id).await?);
     }
     Ok((transaction, debts))
+}
+
+/// The people a split names, trimmed and without repeats (a name compared
+/// case-insensitively), 1 to [`SPLIT_LIMIT`] of them.
+fn split_people<'a>(
+    contact_ids: &'a [String],
+    contact_names: &'a [String],
+) -> Result<(Vec<&'a str>, Vec<&'a str>)> {
+    let mut seen_ids = HashSet::new();
+    let ids: Vec<&str> = contact_ids
+        .iter()
+        .map(|id| id.trim())
+        .filter(|id| !id.is_empty() && seen_ids.insert(id.to_string()))
+        .collect();
+    let mut seen_names = HashSet::new();
+    let names: Vec<&str> = contact_names
+        .iter()
+        .map(|name| name.trim())
+        .filter(|name| !name.is_empty() && seen_names.insert(name.to_lowercase()))
+        .collect();
+    if ids.len() + names.len() == 0 || ids.len() + names.len() > SPLIT_LIMIT {
+        return Err(AppError::validation([(
+            "contact_names",
+            "Split with 1 to 20 people.",
+        )]));
+    }
+    Ok((ids, names))
+}
+
+/// What [`split`] would write, read without writing anything: the shown
+/// half of a confirmed split (D122). Every figure is computed here (D27).
+#[derive(Debug, Serialize)]
+pub struct SplitPreview {
+    pub currency_code: String,
+    #[serde(with = "rust_decimal::serde::str")]
+    pub amount: Decimal,
+    pub amount_formatted: String,
+    /// Each other person's share.
+    #[serde(with = "rust_decimal::serde::str")]
+    pub share: Decimal,
+    pub share_formatted: String,
+    /// What the person keeps: their own share plus the remainder.
+    #[serde(with = "rust_decimal::serde::str")]
+    pub yours: Decimal,
+    pub yours_formatted: String,
+    pub people: Vec<SplitPerson>,
+}
+
+impl SplitPreview {
+    /// The people as one line for a confirmation: "Ani, Budi (new contact)".
+    pub fn people_line(&self) -> String {
+        self.people
+            .iter()
+            .map(|person| {
+                if person.is_new {
+                    format!("{} (new contact)", person.name)
+                } else {
+                    person.name.clone()
+                }
+            })
+            .collect::<Vec<_>>()
+            .join(", ")
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub struct SplitPerson {
+    pub name: String,
+    /// No live contact has this name, so the split would create one.
+    pub is_new: bool,
+}
+
+pub async fn preview_split(
+    pool: &PgPool,
+    workspace_id: &str,
+    source: &SplitSource<'_>,
+    contact_ids: &[String],
+    contact_names: &[String],
+) -> Result<SplitPreview> {
+    let (ids, names) = split_people(contact_ids, contact_names)?;
+
+    let (amount, currency) = match source {
+        SplitSource::Existing(id) => {
+            let row = ledger::find(pool, workspace_id, id).await?;
+            if row.r#type != "expense" {
+                return Err(AppError::SplitSourceNotExpense);
+            }
+            (row.amount, row.wallet_currency_code)
+        }
+        SplitSource::New(expense) => {
+            let amount = validate_amount("amount", expense.amount)?;
+            let wallet = wallets::find_wallet(pool, workspace_id, expense.wallet_id)
+                .await
+                .map_err(internal)?
+                .ok_or(AppError::WalletNotFound)?;
+            (amount, wallet.currency_code)
+        }
+    };
+
+    // The same matching `split` does, so the preview names who it would.
+    let mut people = Vec::new();
+    let mut chosen = HashSet::new();
+    for id in ids {
+        let contact = contacts::find(pool, workspace_id, id)
+            .await
+            .map_err(internal)?
+            .ok_or(AppError::ContactNotFound)?;
+        if chosen.insert(contact.id.clone()) {
+            people.push(SplitPerson {
+                name: contact.name,
+                is_new: false,
+            });
+        }
+    }
+    for name in names {
+        match contacts::find_by_name(pool, workspace_id, name)
+            .await
+            .map_err(internal)?
+        {
+            Some(contact) if chosen.insert(contact.id.clone()) => people.push(SplitPerson {
+                name: contact.name,
+                is_new: false,
+            }),
+            Some(_) => {}
+            None => people.push(SplitPerson {
+                name: name.to_string(),
+                is_new: true,
+            }),
+        }
+    }
+
+    let share = split_share(amount, people.len(), &currency);
+    if share <= Decimal::ZERO {
+        return Err(AppError::validation([(
+            "amount",
+            "That amount is too small to split.",
+        )]));
+    }
+    let yours = amount - share * Decimal::from(people.len());
+
+    Ok(SplitPreview {
+        amount_formatted: format_money(amount, &currency, false),
+        share_formatted: format_money(share, &currency, false),
+        yours_formatted: format_money(yours, &currency, false),
+        currency_code: currency,
+        amount,
+        share,
+        yours,
+        people,
+    })
 }
 
 // ----------------------------------------------------------------- helpers

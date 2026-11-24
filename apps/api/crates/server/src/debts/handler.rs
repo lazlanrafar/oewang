@@ -540,24 +540,7 @@ pub async fn split(
     Json(body): Json<SplitBody>,
 ) -> std::result::Result<(StatusCode, Json<Envelope<SplitView>>), ApiError> {
     let result = async {
-        let source = match non_empty(&body.transaction_id) {
-            Some(transaction_id) => SplitSource::Existing(transaction_id),
-            None => {
-                let missing = || {
-                    AppError::validation([(
-                        "transaction_id",
-                        "Send a transaction_id, or wallet_id, amount, name and date.",
-                    )])
-                };
-                SplitSource::New(NewExpense {
-                    wallet_id: non_empty(&body.wallet_id).ok_or_else(missing)?,
-                    amount: money("amount", body.amount.as_deref().ok_or_else(missing)?)?,
-                    name: non_empty(&body.name).ok_or_else(missing)?,
-                    category_id: non_empty(&body.category_id),
-                    date: body.date.ok_or_else(missing)?,
-                })
-            }
-        };
+        let source = split_source(&body)?;
         service::split(
             &state.db,
             auth.actor(),
@@ -615,6 +598,28 @@ fn today(raw: &Option<String>) -> Result<NaiveDate> {
 }
 
 /// Parsed, never deserialized through a float (D12).
+/// The expense a split divides: an existing one, or a new one written from
+/// the body. Shared with MCP's preview, so the split it shows is the split
+/// this route would write (D122).
+pub(crate) fn split_source(body: &SplitBody) -> Result<SplitSource<'_>> {
+    if let Some(transaction_id) = non_empty(&body.transaction_id) {
+        return Ok(SplitSource::Existing(transaction_id));
+    }
+    let missing = || {
+        AppError::validation([(
+            "transaction_id",
+            "Send a transaction_id, or wallet_id, amount, name and date.",
+        )])
+    };
+    Ok(SplitSource::New(NewExpense {
+        wallet_id: non_empty(&body.wallet_id).ok_or_else(missing)?,
+        amount: money("amount", body.amount.as_deref().ok_or_else(missing)?)?,
+        name: non_empty(&body.name).ok_or_else(missing)?,
+        category_id: non_empty(&body.category_id),
+        date: body.date.ok_or_else(missing)?,
+    }))
+}
+
 fn money(field: &'static str, raw: &str) -> Result<Decimal> {
     raw.trim()
         .parse::<Decimal>()

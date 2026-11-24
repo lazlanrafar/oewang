@@ -164,6 +164,19 @@ pub(crate) async fn find_or_create(
     Ok(contact)
 }
 
+/// [`find_or_create`] in a transaction of its own, for a caller that names
+/// a contact before the write that uses it: `create_debt` in chat and MCP.
+pub async fn find_or_create_named(
+    pool: &PgPool,
+    actor: Actor<'_>,
+    name: &str,
+) -> Result<ContactRow> {
+    let mut tx = pool.begin().await.map_err(internal)?;
+    let contact = find_or_create(&mut tx, actor, name).await?;
+    tx.commit().await.map_err(internal)?;
+    Ok(contact)
+}
+
 /// `if_match` is the `updated_at` the client last read (D115).
 pub async fn update(
     pool: &PgPool,
