@@ -164,8 +164,9 @@ Enforcement: request and response bodies are never passed to the logger, and sec
 | Import spreadsheet (`.xlsx`) | 512 KB file, 32 MB unpacked, 1,000,000 shared strings, 100 columns; rows as above | D111 |
 | Model calls per extracted document | 2 full passes plus 4 targeted field calls | AI-10 |
 | Wall clock per extracted document | 45 seconds | AI-10 |
-| Request timeout | 30 seconds, except the chat stream | SEC-19 |
-| Chat stream timeout | 120 seconds | SEC-19 |
+| Request timeout | 30 seconds, except the routes that wait on the AI service | SEC-19 |
+| AI route timeout | The AI call timeout (60 seconds) plus 5, for chat stream, receipt parse and map-columns; covers producing the response, not a stream's body | SEC-19, D118 |
+| Chat stream timeout | 120 seconds for the whole turn, and 60 seconds (the AI call timeout) between two reads from the AI service | SEC-19, D118 |
 | Database statement timeout | 10 seconds | SEC-19 |
 | Database pool | 20 connections, 5 second acquire timeout | SEC-19 |
 

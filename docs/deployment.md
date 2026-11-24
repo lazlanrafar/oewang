@@ -114,7 +114,7 @@ Values marked **secret** go in Coolify's secret store, not in a plain environmen
 | `APP_URL` | yes | Public URL of the web app. Used in invite and password reset links |
 | `AI_SERVICE_URL` | yes | Internal URL of `ai` |
 | `AI_SERVICE_API_KEY` | yes, **secret** | Minimum 32 characters when `APP_ENV=production`. Compared in constant time |
-| `AI_REQUEST_TIMEOUT_SECS`, `CHAT_STREAM_TIMEOUT_SECS` | no | Budgets on the `api` to `ai` hop |
+| `AI_REQUEST_TIMEOUT_SECS`, `CHAT_STREAM_TIMEOUT_SECS` | no | Budgets on the `api` to `ai` hop. The first also bounds the routes that wait on the AI service, plus 5 seconds, in place of `REQUEST_TIMEOUT_SECS` (D118) |
 | `CHAT_MAX_TOOL_AMOUNT` | no | Blast-radius cap on one chat tool write (SEC-24, D25) |
 | `CRYPTO_SIGNING_KEY_FILE` | yes | Path to the mounted PEM. See [Signing keys](#owe1-signing-keys) |
 | `AI_SIGNING_PUBLIC_KEYS` | yes | The AI service's pinned public keys, `kid:base64url` pairs, comma separated. A production client with none refuses to start |
