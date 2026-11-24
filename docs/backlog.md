@@ -938,8 +938,8 @@ Requirements: DEBT-1 to DEBT-16, CON-1 to CON-4, MOB-10
 - [x] `features/debts.md` written from the scoping interview of 2026-11-24
 - [x] PRD sections 6.20 and 6.21 and MOB-10; the non-goals for debts, contacts and bill splitting struck
 - [x] D120 and D121 in the decision log
-- [ ] `contacts`, `debts` and `debt_payments` in the data model; routes in endpoints; error codes in conventions
-- [ ] Chat, MCP, mobile, overview and transactions docs point at the new rules
+- [x] `contacts`, `debts` and `debt_payments` in the data model; routes in endpoints; error codes in conventions
+- [x] Chat, MCP, mobile, overview and transactions docs point at the new rules
 
 ### US-070: Contacts, debts and payments in the API (OEW-107)
 Requirements: CON-1, CON-3, CON-4, DEBT-1 to DEBT-10
@@ -970,7 +970,7 @@ Requirements: CON-2, DEBT-11, DEBT-12, DEBT-13
 - [x] Overview Debt balance card (net from `GET /v1/debts/summary`, open count in the footer) and its prompt chip, as in the old app
 - [x] Filters, sort and page survive a reload (UI-8); every string in `en.json`
 - [x] `bun run check` and `bun run test` pass in the containers
-- [ ] Verified locally: create, pay from a foreign-currency wallet, cancel, bulk pay, delete the payment transaction from Transactions and see the debt reopen, merge two contacts
+- [x] Verified locally: create, pay from a foreign-currency wallet, cancel, bulk pay, delete the payment transaction from Transactions and see the debt reopen, merge two contacts
 - [ ] Verify in production after deploy
 
 ### US-072: Debt and contact tools in chat and MCP (OEW-109)
