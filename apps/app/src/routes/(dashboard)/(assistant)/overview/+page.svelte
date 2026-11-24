@@ -131,6 +131,7 @@
 		<OverviewCards
 			overview={data.overview}
 			balance={data.balance}
+			debts={data.debts}
 			onAsk={ask}
 		/>
 		<OverviewChips range={words} disabled={starting} onAsk={ask} />

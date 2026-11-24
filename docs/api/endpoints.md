@@ -175,7 +175,7 @@ D120, CON-1 to CON-4. Rules in [features/debts.md](../features/debts.md).
 
 | Method | Path | Role | Description |
 |---|---|---|---|
-| GET | `/v1/contacts` | any | Paginated list. Query: `search` (name, email, phone, contains), `sort=name\|created_at` (default `name`), `order=asc\|desc`, `page`, `per_page` |
+| GET | `/v1/contacts` | any | Paginated list. Query: `search` (name, email, phone, contains), `sort=name\|created_at` (default `name`), `order=asc\|desc`, `page`, `per_page` (default 25, at most 100; this list reads `per_page`, not the convention's `limit`) |
 | POST | `/v1/contacts` | admin+ | Create. Body: `{ "id"?, "name", "email"?, "phone"?, "note"? }`. Optional client `id` (D114) |
 | GET | `/v1/contacts/{id}` | any | One contact with its live debt counts (`debt_count`, `open_debt_count`) |
 | PATCH | `/v1/contacts/{id}` | admin+ | Update name, email, phone, note. Optional `If-Match` (D115) |
@@ -188,7 +188,7 @@ D120 and D121, DEBT-1 to DEBT-10. Rules in [features/debts.md](../features/debts
 
 | Method | Path | Role | Description |
 |---|---|---|---|
-| GET | `/v1/debts` | any | Paginated list with the contact's name. Query: `search` (contact name, description), `status=unpaid\|partial\|paid` (several allowed), `type=payable\|receivable`, `contact_id`, `today=YYYY-MM-DD` (marks `overdue`; default the UTC date), `sort=due_date\|amount\|remaining\|created_at\|contact` (default `due_date`), `order`, `page`, `per_page` |
+| GET | `/v1/debts` | any | Paginated list with the contact's name. Query: `search` (contact name, description), `status=unpaid\|partial\|paid` (several as one comma-separated value, `status=unpaid,partial`), `type=payable\|receivable`, `contact_id`, `today=YYYY-MM-DD` (marks `overdue`; default the UTC date), `sort=due_date\|amount\|remaining\|created_at\|contact` (default `due_date`), `order`, `page`, `per_page` (default 25, at most 100; not `limit`) |
 | GET | `/v1/debts/summary` | any | The page's cards. Query: `today=YYYY-MM-DD`. See below |
 | POST | `/v1/debts` | admin+ | Create. Optional client `id` (D114). See below |
 | GET | `/v1/debts/{id}` | any | One debt with its live payments (each with its transaction id and wallet) and its source transaction, if any |

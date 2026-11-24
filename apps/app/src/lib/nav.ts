@@ -3,9 +3,11 @@
  *
  * Grouping mirrors the live app: an unlabelled first group, then Finance,
  * then Workspace, then System. The item set is ours, not the live app's:
- * Calendar, Debts and Contacts belong to features this rewrite deliberately
- * drops (docs/prd.md#non-goals-for-v1). Budget came back on request (D103),
- * in its old place under Finance, after Accounts, with its piggy bank. Accounts is not among
+ * Calendar belongs to a feature this rewrite deliberately drops
+ * (docs/prd.md#non-goals-for-v1). Budget came back on request (D103),
+ * in its old place under Finance, after Accounts, with its piggy bank.
+ * Debts and Contacts came back with D120, in their old places: Debts after
+ * Budget with its hand of coins, Contacts first in Workspace. Accounts is not among
  * them and never was: wallets are specified in their own right as WAL-1 to
  * WAL-6. Apps came back with Telegram (D83), and Vault came back on request
  * (D90), both in the live app's Workspace group, Vault first with its old
@@ -26,6 +28,7 @@ import {
 	ArrowLeftRight,
 	Box,
 	ChartColumn,
+	HandCoins,
 	Landmark,
 	PiggyBank,
 	Plug,
@@ -67,12 +70,14 @@ export const navGroups: NavGroup[] = [
 		items: [
 			{ titleKey: 'nav.transactions', href: '/transactions', icon: Banknote },
 			{ titleKey: 'nav.accounts', href: '/accounts', icon: Landmark },
-			{ titleKey: 'nav.budget', href: '/budget', icon: PiggyBank }
+			{ titleKey: 'nav.budget', href: '/budget', icon: PiggyBank },
+			{ titleKey: 'nav.debts', href: '/debts', icon: HandCoins }
 		]
 	},
 	{
 		labelKey: 'nav.workspace_group',
 		items: [
+			{ titleKey: 'nav.contacts', href: '/contacts', icon: Users },
 			{ titleKey: 'nav.vault', href: '/vault', icon: Box },
 			{ titleKey: 'nav.apps', href: '/apps', icon: SquareDot }
 		]

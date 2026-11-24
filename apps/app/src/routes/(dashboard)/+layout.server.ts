@@ -1,6 +1,7 @@
 import type { LayoutServerLoad } from './$types';
 
 import { listWorkspaces, readWorkspaceMe } from '$lib/server/account';
+import * as contactsApi from '$lib/server/contacts';
 import * as ledger from '$lib/server/ledger';
 import { receiptNotices } from '$lib/server/receipts';
 import { SIDEBAR_COOKIE } from '$lib/components/organisms/layouts';
@@ -22,13 +23,16 @@ export const load: LayoutServerLoad = async ({ locals, cookies, url }) => {
 	 * claim inside it (AUTH-4): nothing here names one, so no page can be
 	 * served another workspace's rows.
 	 */
-	const [me, workspaces, wallets, groups, categories, currencies, notices] = await Promise.all([
+	const [me, workspaces, wallets, groups, categories, contacts, currencies, notices] = await Promise.all([
 		// A session with no workspace yet is sent to the check page (D109).
 		readWorkspaceMe(locals.accessToken, url),
 		listWorkspaces(locals.accessToken),
 		ledger.listWallets(locals.accessToken),
 		ledger.listWalletGroups(locals.accessToken),
 		ledger.listCategories(locals.accessToken),
+		// The contact picker's list (D80). Never blocks the shell: a failure
+		// leaves the picker empty rather than taking every page down.
+		contactsApi.pickerContacts(locals.accessToken).catch(() => []),
 		// The currency pickers' list, with today's rates (FX-2). A rate
 		// source that has never answered leaves it empty, and a picker then
 		// offers the workspace's own currencies, so it never blocks the shell.
@@ -62,6 +66,7 @@ export const load: LayoutServerLoad = async ({ locals, cookies, url }) => {
 				name: category.name,
 				type: category.type
 			})),
+			contacts,
 			currencies: (currencies?.data ?? []).map((currency) => ({
 				code: currency.currency_code,
 				rate: currency.rate,

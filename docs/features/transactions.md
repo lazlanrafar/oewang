@@ -134,7 +134,7 @@ File bytes arrive as chunks through the SvelteKit server's `/vault/files` routes
 
 Line items move no money: only the transaction's own `amount` does. When the items do not add up to it the sheet raises a badge and nothing more, because a receipt with a service charge on it legitimately does not add up (TXN-12).
 
-**Debts** is an accordion section shown when the row is a debt payment or the source of a debt: each debt with its contact, type, remaining amount and status, opening the debt's detail sheet. A writer also sees Create debt, which opens the debt form with this transaction as its source (DEBT-12).
+**Debts** is an accordion section shown when the row is a debt payment or the source of a debt: each debt with its contact, type, remaining amount and status, opening the debt's detail sheet. A writer also sees Create debt, which opens the debt form with this transaction as its source (DEBT-12). Editing a payment transaction shows its amount, account, type, destination and foreign entry read-only, with a line naming the debt and a link to it (DEBT-8).
 
 Every confirmation on this screen is the design system's alert dialog rather than the browser's `confirm`. The native one blocks the renderer until it is dismissed, which freezes the page, and it cannot be translated (UI-1, UI-4).
 

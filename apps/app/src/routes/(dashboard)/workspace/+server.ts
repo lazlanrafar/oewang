@@ -1,5 +1,6 @@
 import { json, error } from '@sveltejs/kit';
 
+import * as contactsApi from '$lib/server/contacts';
 import * as ledger from '$lib/server/ledger';
 import { ApiError } from '$lib/server/api';
 
@@ -44,6 +45,10 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 				if (!type) error(400, 'A category is income or expense');
 
 				const created = await ledger.createCategory({ name, type }, locals.accessToken);
+				return json({ id: created.data!.id, name: created.data!.name });
+			}
+			case 'contact': {
+				const created = await contactsApi.createContact({ name }, locals.accessToken);
 				return json({ id: created.data!.id, name: created.data!.name });
 			}
 			default:

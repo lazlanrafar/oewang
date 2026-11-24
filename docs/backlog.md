@@ -963,13 +963,13 @@ Requirements: CON-1, CON-3, CON-4, DEBT-1 to DEBT-10
 ### US-071: Debts and contacts pages in the web app (OEW-108)
 Requirements: CON-2, DEBT-11, DEBT-12, DEBT-13
 
-- [ ] `/debts` ported exactly from the old page: cards, filter bar with Status and Type facets, `molecules/data-table` with bulk selection, form, detail, payment and bulk pay sheets, both empty states
-- [ ] `/contacts` ported from the old page minus the invoice columns; merge dialog; detail sheet with the contact's debts
-- [ ] `molecules/select-contact`, creatable (D80)
-- [ ] Transaction detail: related debts and payments, Create debt; locked fields shown read-only on a payment transaction
-- [ ] Overview Debt balance card (net from `GET /v1/debts/summary`, open count in the footer) and its prompt chip, as in the old app
-- [ ] Filters, sort and page survive a reload (UI-8); every string in `en.json`
-- [ ] `bun run check` and `bun run test` pass in the containers
+- [x] `/debts` ported exactly from the old page: cards, filter bar with Status and Type facets, `molecules/data-table` with bulk selection, form, detail, payment and bulk pay sheets, both empty states
+- [x] `/contacts` ported from the old page minus the invoice columns; merge dialog; detail sheet with the contact's debts
+- [x] `molecules/select-contact`, creatable (D80)
+- [x] Transaction detail: related debts and payments, Create debt; locked fields shown read-only on a payment transaction
+- [x] Overview Debt balance card (net from `GET /v1/debts/summary`, open count in the footer) and its prompt chip, as in the old app
+- [x] Filters, sort and page survive a reload (UI-8); every string in `en.json`
+- [x] `bun run check` and `bun run test` pass in the containers
 - [ ] Verified locally: create, pay from a foreign-currency wallet, cancel, bulk pay, delete the payment transaction from Transactions and see the debt reopen, merge two contacts
 - [ ] Verify in production after deploy
 

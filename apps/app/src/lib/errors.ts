@@ -42,7 +42,18 @@ const CODE_TO_KEY: Record<string, TranslationKey> = {
 	RECEIPT_UNREADABLE: 'errors.receipt_unreadable',
 	SPREADSHEET_UNREADABLE: 'errors.spreadsheet_unreadable',
 	WORKSPACE_ID_NOT_ALLOWED: 'errors.workspace_id_not_allowed',
-	SPREADSHEET_TOO_LARGE: 'errors.spreadsheet_too_large'
+	SPREADSHEET_TOO_LARGE: 'errors.spreadsheet_too_large',
+	CONTACT_NOT_FOUND: 'errors.contact_not_found',
+	CONTACT_HAS_DEBTS: 'errors.contact_has_debts',
+	CONTACT_MERGE_SELF: 'errors.contact_merge_self',
+	DEBT_NOT_FOUND: 'errors.debt_not_found',
+	PAYMENT_NOT_FOUND: 'errors.payment_not_found',
+	DEBT_HAS_PAYMENTS: 'errors.debt_has_payments',
+	AMOUNT_BELOW_PAID: 'errors.amount_below_paid',
+	PAYMENT_EXCEEDS_REMAINING: 'errors.payment_exceeds_remaining',
+	BULK_PAY_CURRENCY_MISMATCH: 'errors.bulk_pay_currency_mismatch',
+	SPLIT_SOURCE_NOT_EXPENSE: 'errors.split_source_not_expense',
+	PAYMENT_TRANSACTION_LOCKED: 'errors.payment_transaction_locked'
 };
 
 export function messageForCode(code: string): string {
