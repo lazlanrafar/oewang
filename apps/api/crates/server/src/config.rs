@@ -42,6 +42,8 @@ pub struct Config {
     /// client with none refuses to start; in development the client
     /// reads what the service publishes (D22).
     pub ai_signing_public_keys: Vec<(String, [u8; 32])>,
+    /// One AI service call, and with a margin the routes that wait on one
+    /// (D118).
     pub ai_request_timeout: Duration,
 
     /// The daily rate source (D44, D96). Without a key no call is made and
@@ -76,6 +78,7 @@ pub struct Config {
     /// point stops there rather than in the ledger.
     pub chat_max_tool_amount: Decimal,
 
+    /// Every route but the ones that wait on the AI service (D118).
     pub request_timeout: Duration,
     /// The chat stream outlives the ordinary timeout by design: a turn with
     /// a tool loop in it is slower than any deadline worth setting on a

@@ -134,7 +134,7 @@ in browser" box ticked; or a written reason it is not done.
 | SEC-16 | `apps/api/crates/server/src/hardening_tests.rs` |
 | SEC-17 | `apps/api/crates/server/src/hardening_tests.rs` |
 | SEC-18 | `apps/api/crates/server/src/hardening_tests.rs`, `apps/api/crates/server/src/main.rs`, `apps/api/crates/server/src/transactions/tests.rs`, `apps/api/crates/server/src/vault/tests.rs` |
-| SEC-19 | `apps/api/crates/server/src/ai/tests.rs` |
+| SEC-19 | `apps/api/crates/server/src/ai/tests.rs`, `apps/api/crates/server/src/main.rs` |
 | SEC-20 | not done: a CI property: ci.yml runs cargo audit, bun audit and pip-audit, but CI runs only by hand (OPS-7) |
 | SEC-21 | `apps/ai/tests/extraction_support.py`, `apps/ai/tests/test_chat_stream.py`, `apps/ai/tests/test_extraction_ladder.py`, `apps/ai/tests/test_import_columns.py`, `apps/app/src/lib/markdown.test.ts` |
 | SEC-22 | `apps/ai/tests/test_extraction_ladder.py` |
