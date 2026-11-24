@@ -889,37 +889,39 @@ Requirements: WS-5, WS-7, AUTH-14
 ### US-063: Mobile foundation and online transactions (OEW-085)
 Requirements: MOB-1, MOB-2, MOB-3, MOB-4, MOB-5
 
-- [ ] `apps/native` copied from the old app; debts, contacts, sub-currencies and the old AES transport removed; Flutter pinned with fvm
-- [ ] OWE1 in Dart passes every case in `owe1-vectors.json`
-- [ ] Sign in, sign up, `/sync`, workspace create and switch, refresh rotation, sign out
-- [ ] Transaction screens (daily, calendar, monthly, summary, search, form) on `/v1/transactions*` and `/v1/overview`, money never a `double`
-- [ ] A viewer sees no write control
-- [ ] `flutter analyze` and `flutter test` pass; `scripts/ci-local.sh` runs them
+- [x] `apps/native` copied from the old app; debts, contacts, sub-currencies and the old AES transport removed; Flutter pinned with fvm
+- [x] OWE1 in Dart passes every case in `owe1-vectors.json`
+- [x] Sign in, sign up, `/sync`, workspace create and switch, refresh rotation, sign out
+- [x] Transaction screens (daily, calendar, monthly, summary, search, form) on `/v1/transactions*` and `/v1/overview`, money never a `double`
+- [x] A viewer sees no write control
+- [x] `flutter analyze` and `flutter test` pass; `scripts/ci-local.sh` runs them
 
 ### US-064: Mobile accounts, categories, budgets, stats and settings (OEW-086)
 Requirements: MOB-4, MOB-5
 
-- [ ] Accounts and groups, categories, budgets, stats and settings screens on the web's routes, each in the old app's look
+- [x] Accounts and groups, categories, budgets, stats and settings screens on the web's routes, each in the old app's look
 
 ### US-065: Mobile offline writes (OEW-087)
 Requirements: MOB-6, MOB-7
 
-- [ ] Client `id` on create for transactions, wallets and categories (D114, Rust tests)
-- [ ] `If-Match` and `409 STALE` on their `PATCH` (D115, Rust tests)
-- [ ] Drift cache and ordered write queue; conflicts shown with discard or apply anyway
+- [x] Client `id` on create for transactions, wallets and categories (D114, Rust tests)
+- [x] `If-Match` and `409 STALE` on their `PATCH` (D115, Rust tests)
+- [x] Drift cache and ordered write queue; conflicts shown with discard or apply anyway
 
 ### US-066: Mobile chat, receipt scan and vault (OEW-088)
 Requirements: MOB-8
 
-- [ ] Chat with streaming, receipt scan to a draft, vault list, upload and download
+- [x] Chat with streaming, receipt scan to a draft, vault list, upload and download
 
 ### US-067: Mobile passkeys, Telegram, invitation links and push (OEW-089)
 Requirements: MOB-9, PUSH-1, PUSH-2, PUSH-3, PUSH-4, PUSH-5
 
-- [ ] `apple-app-site-association` and `assetlinks.json` served by the app
-- [ ] Native passkey, Telegram deep link, `/accept-invite` opening the app
-- [ ] `device_tokens`, `POST/DELETE /v1/device-tokens`, FCM sender after commit (D116, Rust tests)
-- [ ] The four triggers, with `budget_alerts` holding each threshold once per month
+- [x] `apple-app-site-association` and `assetlinks.json` served by the app
+- [x] Native passkey, Telegram deep link, `/accept-invite` opening the app
+- [x] `device_tokens`, `POST/DELETE /v1/device-tokens`, FCM sender after commit (D116, Rust tests)
+- [x] The four triggers, with `budget_alerts` holding each threshold once per month
+- [ ] Verify on a real Android device: an FCM token (needs a fresh `google-services.json`, Firebase answers `API_KEY_INVALID` for the current key) and a passkey (needs `ANDROID_CERT_SHA256` and `PASSKEYS_ANDROID`, D119)
+- [ ] Verify a push on a real iPhone
 
 ### US-068: Mobile store release (OEW-090)
 Requirements: MOB-1
